@@ -1,0 +1,364 @@
+<div class="resource__body has-image ">
+        
+<div class="resource__content resource-content-inner-guide has-image" style="margin-bottom: -400px">
+  <div class="resource__left-column resource__left-column--shift-upwards has-image left-col-inner-guide" style="transform: translateY(-450px);">
+    <div class="resource__categories">
+              <div style="background-color:#800000" class="category category--primary">
+          <div class="category__text">
+            Final Examination &amp; Grades
+          </div>
+        </div>
+              <div style="background-color:#800000" class="category category--primary">
+          <div class="category__text">
+            Final Examination
+          </div>
+        </div>
+          </div>
+          <div class="resource__link">
+        <a href="/resource-library/final-examination-student">
+          Final Examination (Student)
+        </a>
+      </div>
+        <h1 class="resource__title">
+      Bad weather arrangement - In Case of Typhoon or Rainstorm (Final Exam)
+    </h1>
+    
+      <h3 class="resource__desc">
+        
+      </h3>
+      <div class="resource__access">
+                <div class="access-section ">
+  <div class="access-section__detail">
+          <div class="access-section__date">
+        22 May 2024
+      </div>
+        <div class="access-section__title ">
+        ALL
+    </div>
+  </div>
+  <div class="access-section__enquiries">
+          <span>
+        For Enquiries: 
+      </span>
+      <a class="access-section__enquiries_link" href="https://registry.hkust.edu.hk/enquiry">Click here to send us a message</a>
+      </div>
+</div>      </div>
+      <div class="resource__section">
+        <!-- content field defined at the top of this template -->
+
+
+        <!-- guide resource block  -->
+                  <div class="resource__section__body">
+            <div class="resource__section__title" data-id="guide-section-title-id-1">
+              
+            </div>
+            <div class="resource__section__text">
+              
+              
+            <div class="clearfix text-formatted field field--name-field-text field--type-text-long field--label-hidden field__item"><p><span><span><span lang="EN-HK" xml:lang="EN-HK"><span>The following arrangement only applies to <strong>centralized final examinations in Fall/Spring terms listed on the Final Examination Schedule (<a href="/finalexam-schedule">https://registry.hkust.edu.hk/finalexam-schedule</a>)</strong>.&nbsp; </span></span></span></span></p>
+
+<p><span><span><span lang="EN-HK" xml:lang="EN-HK"><span>Examinations that are arranged by instructors or those held during class hours should follow the <a href="/resource-library/bad-weather-arrangement-case-typhoon-or-rainstorm-class">CLASS Arrangement</a>.</span></span></span></span></p></div>
+      
+            </div>
+            
+                      </div>
+                  <div class="resource__section__body">
+            <div class="resource__section__title" data-id="guide-section-title-id-2">
+              Arrangement of Final Exam under weather warning signals
+            </div>
+            <div class="resource__section__text">
+              
+              
+            <div class="clearfix text-formatted field field--name-field-text field--type-text-long field--label-hidden field__item"><p style="margin-bottom:8px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><span lang="EN-HK" style="font-family:&quot;Muli-Regular&quot;,serif" xml:lang="EN-HK"><span style="color:#6b8299">If the following weather warning signal is <b>in effect</b></span></span></span></span></p>
+
+<div style="overflow-x:auto;"><table class="MsoTableGrid" style="border-collapse:collapse; border:none"><tbody><tr><td style="border-bottom:1px solid black; width:180px; padding:0in 7px 0in 7px; border-top:1px solid black; border-right:1px solid black; border-left:1px solid black" valign="top">
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">Amber</span></span></span></b><b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">/</span></span></span></b><b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">Red Rainstorm Warning</span></span></span></b><b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">, or </span></span></span></b><b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">Typhoon Signal No. 1 or 3</span></span></span></b></span></span></p>
+			</td>
+			<td style="border-bottom:1px solid black; width:516px; padding:0in 7px 0in 7px; border-top:1px solid black; border-right:1px solid black; border-left:none" valign="top">
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">A</span></span></span><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">ll scheduled (including online) </span></span></span><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">final </span></span></span><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">examinations will be held as usual.</span></span></span></span></span></p>
+			</td>
+		</tr><tr><td style="border-bottom:1px solid black; width:180px; padding:0in 7px 0in 7px; border-top:none; border-right:1px solid black; border-left:1px solid black" valign="top">
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">Black Rainstorm Warning</span></span></span></b> </span></span></p>
+			</td>
+			<td style="border-bottom:1px solid black; width:516px; padding:0in 7px 0in 7px; border-top:none; border-right:1px solid black; border-left:none" valign="top">
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><b><span style="font-size:11.0pt"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">A</span></span></span></b><b><span style="font-size:11.0pt"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">ll (including online) </span></span></span></b><b><span style="font-size:11.0pt"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">final </span></span></span></b><b><span style="font-size:11.0pt"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">examinations that have yet to start will normally be postponed</span></span></span></b><span style="font-size:11.0pt"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">.&nbsp; </span></span></span></span></span></p>
+
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">Final e</span></span></span><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">xaminations that have <b>already started</b> will normally continue until the end.&nbsp; </span></span></span></span></span></p>
+
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">Stay indoors wherever you are and do not leave until the warning is cancelled and the conditions are safe.</span></span></span></span></span></p>
+			</td>
+		</tr><tr><td style="border-bottom:1px solid black; width:180px; padding:0in 7px 0in 7px; border-top:none; border-right:1px solid black; border-left:1px solid black" valign="top">
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">Typhoon Signal No. 8</span></span></span></b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299"> is to be issued within 2 hours (pre-No. 8)</span></span></span></span></span></p>
+			</td>
+			<td style="border-bottom:1px solid black; width:516px; padding:0in 7px 0in 7px; border-top:none; border-right:1px solid black; border-left:none" valign="top">
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><b><span style="font-size:11.0pt"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">A</span></span></span></b><b><span style="font-size:11.0pt"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">ll (including online) final examinations that have yet to start will normally be postponed</span></span></span></b><span style="font-size:11.0pt"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">.&nbsp; </span></span></span></span></span></p>
+
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">Final e</span></span></span><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">xaminations that have <b>already started</b> will normally continue until the end, after which you should return to your place of residence if traffic and weather conditions permit within the 2-hour period.&nbsp; </span></span></span></span></span></p>
+
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">When the </span></span></span><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">Typhoon Signal </span></span></span><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">No. 8 has been issued, stay indoors wherever you are and do not leave until the warning is cancelled and the conditions are safe.</span></span></span></span></span></p>
+			</td>
+		</tr><tr><td style="border-bottom:1px solid black; width:180px; padding:0in 7px 0in 7px; border-top:none; border-right:1px solid black; border-left:1px solid black" valign="top">
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">“Extreme Conditions” after Super Typhoons</span></span></span></b></span></span></p>
+			</td>
+			<td style="border-bottom:1px solid black; width:516px; padding:0in 7px 0in 7px; border-top:none; border-right:1px solid black; border-left:none" valign="top">
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><b><span style="font-size:11.0pt"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">All (including online) final examinations will normally be postponed</span></span></span></b><span style="font-size:11.0pt"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">.&nbsp; </span></span></span></span></span></p>
+
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">Stay indoors wherever you are and do not leave until the warning is cancelled and the conditions are safe.</span></span></span></span></span></p>
+			</td>
+		</tr><tr><td style="border-bottom:1px solid black; width:180px; padding:0in 7px 0in 7px; border-top:none; border-right:1px solid black; border-left:1px solid black" valign="top">
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">Typhoon Signal No. 8 or above, Black Rainstorm Warning or “Extreme Conditions” Announcement is still in force at 4 pm</span></span></span></b></span></span></p>
+			</td>
+			<td style="border-bottom:1px solid black; width:516px; padding:0in 7px 0in 7px; border-top:none; border-right:1px solid black; border-left:none" valign="top">
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><b><span style="font-size:11.0pt"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">A</span></span></span></b><b><span style="font-size:11.0pt"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">ll (including online) evening final examinations will normally be postponed</span></span></span></b><span style="font-size:11.0pt"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">.&nbsp; </span></span></span></span></span></p>
+			</td>
+		</tr></tbody></table></div></div>
+      
+            </div>
+            
+                      </div>
+                  <div class="resource__section__body">
+            <div class="resource__section__title" data-id="guide-section-title-id-3">
+              Resumption of Final Examinations
+            </div>
+            <div class="resource__section__text">
+              
+              
+            <div class="clearfix text-formatted field field--name-field-text field--type-text-long field--label-hidden field__item"><p style="margin-bottom:8px"><span lang="EN-HK" style="font-size:12.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">If Typhoon Signal No. 8, Black Rainstorm Warning or “Extreme Conditions” Announcement is <b>cancelled</b></span></span></span></p>
+
+<div style="overflow-x:auto;"><table class="MsoTableGrid" style="border-collapse:collapse; border:none"><tbody><tr><td style="border-bottom:1px solid black; width:186px; padding:0in 7px 0in 7px; border-top:1px solid black; border-right:1px solid black; border-left:1px solid black" valign="top">
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">At or before 6:30</span></span></span></b><b> </b><b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">am</span></span></span></b></span></span></p>
+			</td>
+			<td style="border-bottom:1px solid black; width:510px; padding:0in 7px 0in 7px; border-top:1px solid black; border-right:1px solid black; border-left:none" valign="top">
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">Final e</span></span></span><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">xaminations (including online) starting <strong>from </strong><b>8:30</b></span></span></span><b> </b><b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">am</span></span></span></b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299"> and onwards will be held as scheduled.</span></span></span></span></span></p>
+			</td>
+		</tr><tr><td style="border-bottom:1px solid black; width:186px; padding:0in 7px 0in 7px; border-top:none; border-right:1px solid black; border-left:1px solid black" valign="top"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">At or before 9:30 am</span></span></span></b></span></span></td>
+			<td style="border-bottom:1px solid black; width:510px; padding:0in 7px 0in 7px; border-top:none; border-right:1px solid black; border-left:none" valign="top"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">Final </span></span></span><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">examinations (including online) starting <strong>from</strong> <b>12:30 pm</b> and onwards will be held as scheduled, while </span></span></span><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">final examinations (including online) starting <strong>before </strong><b>12:30 pm</b> will normally be postponed.</span></span></span></span></span></td>
+		</tr><tr><td style="border-bottom:1px solid black; width:186px; padding:0in 7px 0in 7px; border-top:none; border-right:1px solid black; border-left:1px solid black" valign="top">
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">At or before 1:30 pm</span></span></span></b></span></span></p>
+			</td>
+			<td style="border-bottom:1px solid black; width:510px; padding:0in 7px 0in 7px; border-top:none; border-right:1px solid black; border-left:none" valign="top">
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">Final </span></span></span><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">examinations (including online) starting<strong> from</strong> <b>4:30 pm</b> and onwards will be held as scheduled, while </span></span></span><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">final</span></span></span><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299"> examinations (including online) starting <strong>before </strong><b>4:30 pm</b> will normally be postponed.</span></span></span></span></span></p>
+			</td>
+		</tr><tr><td style="border-bottom:1px solid black; width:186px; padding:0in 7px 0in 7px; border-top:none; border-right:1px solid black; border-left:1px solid black" valign="top">
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">Before 4</span></span></span></b><b> </b><b><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">pm</span></span></span></b></span></span></p>
+			</td>
+			<td style="border-bottom:1px solid black; width:510px; padding:0in 7px 0in 7px; border-top:none; border-right:1px solid black; border-left:none" valign="top">
+			<p style="margin-bottom:4px"><span style="font-size:12pt"><span style="font-family:Calibri,sans-serif"><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">Final e</span></span></span><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">xaminations (including online) starting <strong>from</strong> <b>6 pm</b> and onwards will be held as scheduled, while </span></span></span><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">final </span></span></span><span lang="EN-HK" style="font-size:11.0pt" xml:lang="EN-HK"><span style="font-family:&quot;Muli-Regular&quot;,serif"><span style="color:#6b8299">examinations (including online) starting <strong>before </strong><b>6 pm</b> will normally be postponed.</span></span></span></span></span></p>
+			</td>
+		</tr></tbody></table></div><p>&nbsp;</p>
+</div>
+      
+            </div>
+            
+                      </div>
+                  <div class="resource__section__body">
+            <div class="resource__section__title" data-id="guide-section-title-id-4">
+              Important Notes
+            </div>
+            <div class="resource__section__text">
+              
+              
+            <div class="clearfix text-formatted field field--name-field-text field--type-text-long field--label-hidden field__item"><ol><li>The final examinations postponed due to adverse weather will be re-scheduled.&nbsp; Students will be informed of the revised examination arrangements as soon as practicable.</li>
+	<li>The arrangement for classes is available at:&nbsp;<a href="/resource-library/bad-weather-arrangement-case-typhoon-or-rainstorm-class ">Bad weather arrangement - In Case of Typhoon or Rainstorm (</a><a href="/resource-library/bad-weather-arrangement-case-typhoon-or-rainstorm-finalexam">C</a><a href="/resource-library/bad-weather-arrangement-case-typhoon-or-rainstorm-class ">lass)</a></li>
+	<li>The announcements of the Education Bureau for class suspension do not apply to the University.</li>
+</ol></div>
+      
+            </div>
+            
+                      </div>
+                <!-- END guide resource block -->
+
+
+        <!-- faq resource block -->
+                        <!-- END faq resource block -->
+
+
+        <!-- files forms block -->
+                <!-- END files forms block -->
+
+      </div>
+      </div>
+  <aside class="resource__right-column inner-guide has-image">
+      <div class="guide-list guide-list--inner ">
+  <div class="guide-list__title">
+    <span class="guide-list__circle"></span>
+    PAGES IN THIS GUIDE
+  </div>
+  <ol>
+          <li class="active ">
+        <a href="/resource-library/bad-weather-arrangement-case-typhoon-or-rainstorm-finalexam">1. Bad weather arrangement - In Case of Typhoon or Rainstorm (Final Exam)</a>
+      </li>
+          <li class=" ">
+        <a href="/resource-library/examination-regulations-student">2. Examination Regulations (Student)</a>
+      </li>
+          <li class=" ">
+        <a href="/resource-library/examination-timetable-and-venues">3. Examination Timetable and Venues</a>
+      </li>
+          <li class=" ">
+        <a href="/resource-library/grade-announcement">4. Grade Announcement</a>
+      </li>
+          <li class=" ">
+        <a href="/resource-library/grade-review">5. Grade Review</a>
+      </li>
+      </ol>
+</div>
+    
+            <div class="link-container">
+  <div class="guide-list list--links ">
+          <div class="guide-list__title">
+        <span class="guide-list__circle"></span>
+        RELATED FILES &amp; FORMS
+      </div>
+        <ul>
+
+              <li>
+          <a href="/resource-library/application-forms-current-students"> Application Forms for Current Students</a>
+        </li>
+              <li>
+          <a href="/resource-library/report-extenuating-circumstances-affecting-assessment"> Report on Extenuating Circumstances Affecting Assessment</a>
+        </li>
+              <li>
+          <a href="/resource-library/report-student-academic-misconduct"> Report on Student Academic Misconduct</a>
+        </li>
+              <li>
+          <a href="/resource-library/request-extension-grade-reporting-deadline"> Request for Extension of Grade Reporting Deadline</a>
+        </li>
+      
+          </ul>
+  </div>
+
+</div>
+        
+  
+  </aside>
+</div>
+
+          <div class="resource__card-container">
+        <div class="resource__heading-container">
+          <div class="resource__card-container__title">
+            Pages In this Guide
+          </div>
+          <div class="resource__card-container__cta">
+            <a class="button button--secondary" href="">Contents Page</a>
+          </div>
+        </div>
+                  <div class="guide-slider-area slick-initialized slick-slider"><div class="left slick-arrow slick-disabled" aria-disabled="true" style="display: block;"></div>
+                          <div class="slick-list draggable"><div class="slick-track" style="opacity: 1; width: 2945px; transform: translate3d(0px, 0px, 0px);"><a href="/resource-library/bad-weather-arrangement-case-typhoon-or-rainstorm-finalexam" class="card card--resource-library inner-guide active slick-slide slick-current slick-active" data-slick-index="0" aria-hidden="false" style="width: 559px;" tabindex="0">
+  <div class="card__number">
+    1
+  </div>
+  <div class="card__container">
+          <div>
+        CURRENT PAGE
+      </div>
+    
+        <div class="card__title">
+      Bad weather arrangement - In Case of Typhoon or Rainstorm (Final Exam)
+    </div>
+    <div class="card__detail">
+      
+    </div>
+  </div>
+</a><a href="/resource-library/examination-regulations-student" class="card card--resource-library inner-guide slick-slide slick-active" data-slick-index="1" aria-hidden="false" style="width: 559px;" tabindex="0">
+  <div class="card__number">
+    2
+  </div>
+  <div class="card__container">
+    
+          <div>
+        NEXT PAGE
+      </div>
+        <div class="card__title">
+      Examination Regulations (Student)
+    </div>
+    <div class="card__detail">
+      
+    </div>
+  </div>
+</a><a href="/resource-library/examination-timetable-and-venues" class="card card--resource-library inner-guide slick-slide slick-active" data-slick-index="2" aria-hidden="false" style="width: 559px;" tabindex="0">
+  <div class="card__number">
+    3
+  </div>
+  <div class="card__container">
+    
+        <div class="card__title">
+      Examination Timetable and Venues
+    </div>
+    <div class="card__detail">
+      
+    </div>
+  </div>
+</a><a href="/resource-library/grade-announcement" class="card card--resource-library inner-guide slick-slide" data-slick-index="3" aria-hidden="true" style="width: 559px;" tabindex="-1">
+  <div class="card__number">
+    4
+  </div>
+  <div class="card__container">
+    
+        <div class="card__title">
+      Grade Announcement
+    </div>
+    <div class="card__detail">
+      
+    </div>
+  </div>
+</a><a href="/resource-library/grade-review" class="card card--resource-library inner-guide slick-slide" data-slick-index="4" aria-hidden="true" style="width: 559px;" tabindex="-1">
+  <div class="card__number">
+    5
+  </div>
+  <div class="card__container">
+    
+        <div class="card__title">
+      Grade Review
+    </div>
+    <div class="card__detail">
+      
+    </div>
+  </div>
+</a></div></div>
+
+
+                          
+
+
+                          
+
+
+                          
+
+
+                          
+
+
+                      <div class="right slick-arrow" style="" aria-disabled="false"></div></div>
+              </div>
+           
+   <div class="undertablet-related-content inner-guide-tablet">
+     
+            <div class="link-container">
+  <div class="guide-list list--links ">
+          <div class="guide-list__title">
+        <span class="guide-list__circle"></span>
+        RELATED FILES &amp; FORMS
+      </div>
+        <ul>
+
+              <li>
+          <a href="/resource-library/application-forms-current-students"> Application Forms for Current Students</a>
+        </li>
+              <li>
+          <a href="/resource-library/report-extenuating-circumstances-affecting-assessment"> Report on Extenuating Circumstances Affecting Assessment</a>
+        </li>
+              <li>
+          <a href="/resource-library/report-student-academic-misconduct"> Report on Student Academic Misconduct</a>
+        </li>
+              <li>
+          <a href="/resource-library/request-extension-grade-reporting-deadline"> Request for Extension of Grade Reporting Deadline</a>
+        </li>
+      
+          </ul>
+  </div>
+
+</div>
+     
+        </div>
+  </div>
