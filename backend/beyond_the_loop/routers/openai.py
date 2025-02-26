@@ -557,15 +557,12 @@ async def generate_chat_completion(
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
-    idx = 0
-
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
 
-    chat_id = metadata.get("chat_id", "no_chat_id")
     has_chat_id = "chat_id" in metadata and metadata["chat_id"] is not None
 
     # Initialize the credit cost variable
