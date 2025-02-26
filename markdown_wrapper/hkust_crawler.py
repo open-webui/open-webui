@@ -8,7 +8,7 @@ from markdown_translator import translate_html_file_to_markdown
 visited_urls = set()
 NUM_LIMIT = 10
 
-def crawl(url, output_folder="output_hmtl"):
+def crawl(url, output_folder="output_html"):
     # 갯수 제한(테스트용): NUM_LIMIT 이하로 호출되도록 설정
     if visited_urls.__len__() > NUM_LIMIT:
         return
