@@ -34,7 +34,7 @@
 		contents = [];
 		messages.forEach((message) => {
 			if (message?.role !== 'user' && message?.content) {
-				const codeBlockContents = message.content.match(/```[\s\S]*?```/g);
+				const codeBlockContents = message.content.match(/`{3}[\s\S]*?`{3}/g);
 				let codeBlocks = [];
 
 				if (codeBlockContents) {
@@ -91,20 +91,20 @@
                         <head>
                             <meta charset="UTF-8">
                             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-							<${''}style>
-								body {
-									background-color: white; /* Ensure the iframe has a white background */
-								}
+                        <${''}style>
+                            body {
+                                background-color: white; /* Ensure the iframe has a white background */
+                            }
 
-								${cssContent}
-							</${''}style>
+                            ${cssContent}
+                        </${''}style>
                         </head>
                         <body>
                             ${htmlContent}
 
-							<${''}script>
-                            	${jsContent}
-							</${''}script>
+                            <${''}script>
+                                ${jsContent}
+                            </${''}script>
                         </body>
                         </html>
                     `;
@@ -121,11 +121,12 @@
 		});
 
 		if (contents.length === 0) {
-			showControls.set(false);
-			showArtifacts.set(false);
+			contents = [{ type: 'empty', content: '' }];
+		} else {
+			selectedContentIdx = contents ? contents.length - 1 : 0;
 		}
 
-		selectedContentIdx = contents ? contents.length - 1 : 0;
+		showArtifacts.set(true);
 	};
 
 	function navigateContent(direction: 'prev' | 'next') {
@@ -140,43 +141,57 @@
 	}
 
 	const iframeLoadHandler = () => {
-		iframeElement.contentWindow.addEventListener(
-			'click',
-			function (e) {
-				const target = e.target.closest('a');
-				if (target && target.href) {
-					e.preventDefault();
-					const url = new URL(target.href, iframeElement.baseURI);
-					if (url.origin === window.location.origin) {
-						iframeElement.contentWindow.history.pushState(
-							null,
-							'',
-							url.pathname + url.search + url.hash
-						);
-					} else {
-						console.log('External navigation blocked:', url.href);
+		if (iframeElement.contentWindow.addEventListener) {
+			iframeElement.contentWindow.addEventListener(
+				'click',
+				function (e) {
+					const target = e.target.closest('a');
+					if (target && target.href) {
+						e.preventDefault();
+						const url = new URL(target.href, iframeElement.baseURI);
+						if (url.origin === window.location.origin) {
+							if (iframeElement.contentWindow.history.pushState) {
+								iframeElement.contentWindow.history.pushState(
+									null,
+									'',
+									url.pathname + url.search + url.hash
+								);
+							}
+						} else {
+							console.log('External navigation blocked:', url.href);
+						}
 					}
-				}
-			},
-			true
-		);
+				},
+				true
+			);
 
-		// Cancel drag when hovering over iframe
-		iframeElement.contentWindow.addEventListener('mouseenter', function (e) {
-			e.preventDefault();
-			iframeElement.contentWindow.addEventListener('dragstart', (event) => {
-				event.preventDefault();
-			});
-		});
+			// Cancel drag when hovering over iframe
+			if (iframeElement.contentWindow.addEventListener) {
+				iframeElement.contentWindow.addEventListener('mouseenter', function (e) {
+					e.preventDefault();
+					if (iframeElement.contentWindow.addEventListener) {
+						iframeElement.contentWindow.addEventListener('dragstart', (event) => {
+							event.preventDefault();
+						});
+					}
+				});
+			}
+		}
 	};
 
 	const showFullScreen = () => {
 		if (iframeElement.requestFullscreen) {
-			iframeElement.requestFullscreen();
+			if (iframeElement.requestFullscreen) {
+				iframeElement.requestFullscreen();
+			}
 		} else if (iframeElement.webkitRequestFullscreen) {
-			iframeElement.webkitRequestFullscreen();
+			if (iframeElement.webkitRequestFullscreen) {
+				iframeElement.webkitRequestFullscreen();
+			}
 		} else if (iframeElement.msRequestFullscreen) {
-			iframeElement.msRequestFullscreen();
+			if (iframeElement.msRequestFullscreen) {
+				iframeElement.msRequestFullscreen();
+			}
 		}
 	};
 
@@ -231,92 +246,109 @@
 								className=" w-full h-full max-h-full overflow-hidden"
 								svg={contents[selectedContentIdx].content}
 							/>
+						{:else if contents[selectedContentIdx].type === 'empty'}
+							<div class="m-auto text-center mt-4">
+								<p class="text-2xl font-bold mb-4">Empty Page</p>
+								<p class="text-md text-gray-600">
+									There's nothing here to show! Ask your favorite LLM for some HTML code with some
+									styling to get started!
+								</p>
+							</div>
 						{/if}
 					</div>
 				{:else}
-					<div class="m-auto font-medium text-xs text-gray-900 dark:text-white">
-						{$i18n.t('No HTML, CSS, or JavaScript content found.')}
+					<div class="m-auto text-center mt-4 flex flex-col items-center">
+						<p class="text-2xl font-bold mb-4">No Content Available</p>
+						<p class="text-md text-gray-600">Sorry, no content is available to display.</p>
 					</div>
 				{/if}
 			</div>
 		</div>
-	</div>
 
-	{#if contents.length > 0}
-		<div class="flex justify-between items-center p-2.5 font-primar text-gray-900 dark:text-white">
-			<div class="flex items-center space-x-2">
-				<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
-					<button
-						class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition disabled:cursor-not-allowed"
-						on:click={() => navigateContent('prev')}
-						disabled={contents.length <= 1}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-							stroke-width="2.5"
-							class="size-3.5"
+		{#if contents.length > 0 && contents[selectedContentIdx].type !== 'empty'}
+			<div
+				class="flex justify-between items-center p-2.5 font-primar text-gray-900 dark:text-white"
+			>
+				<div class="flex items-center space-x-2">
+					<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
+						<button
+							class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition disabled:cursor-not-allowed"
+							on:click={() => navigateContent('prev')}
+							disabled={contents.length <= 1}
 						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M15.75 19.5 8.25 12l7.5-7.5"
-							/>
-						</svg>
-					</button>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+								stroke-width="2.5"
+								class="size-3.5"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M15.75 19.5 8.25 12l7.5-7.5"
+								/>
+							</svg>
+						</button>
 
-					<div class="text-xs self-center dark:text-gray-100 min-w-fit">
-						{$i18n.t('Version {{selectedVersion}} of {{totalVersions}}', {
-							selectedVersion: selectedContentIdx + 1,
-							totalVersions: contents.length
-						})}
+						<div class="text-xs self-center dark:text-gray-100 min-w-fit">
+							{$i18n.t('Version {{selectedVersion}} of {{totalVersions}}', {
+								selectedVersion: selectedContentIdx + 1,
+								totalVersions: contents.length
+							})}
+						</div>
+
+						<button
+							class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition disabled:cursor-not-allowed"
+							on:click={() => navigateContent('next')}
+							disabled={contents.length <= 1}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+								stroke-width="2.5"
+								class="size-3.5"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="m8.25 4.5 7.5 7.5-7.5 7.5"
+								/>
+							</svg>
+						</button>
 					</div>
+				</div>
 
+				<div class="flex items-center gap-1">
 					<button
-						class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition disabled:cursor-not-allowed"
-						on:click={() => navigateContent('next')}
-						disabled={contents.length <= 1}
+						class="copy-code-button bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+						on:click={() => {
+							copyToClipboard(contents[selectedContentIdx].content);
+							copied = true;
+
+							setTimeout(() => {
+								copied = false;
+							}, 2000);
+						}}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-							stroke-width="2.5"
-							class="size-3.5"
-						>
-							<path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-						</svg>
+						{copied ? $i18n.t('Copied') : $i18n.t('Copy')}
 					</button>
+
+					{#if contents[selectedContentIdx].type === 'iframe'}
+						<Tooltip content={$i18n.t('Open in full screen')}>
+							<button
+								class=" bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md p-0.5"
+								on:click={showFullScreen}
+							>
+								<ArrowsPointingOut className="size-3.5" />
+							</button>
+						</Tooltip>
+					{/if}
 				</div>
 			</div>
-
-			<div class="flex items-center gap-1">
-				<button
-					class="copy-code-button bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
-					on:click={() => {
-						copyToClipboard(contents[selectedContentIdx].content);
-						copied = true;
-
-						setTimeout(() => {
-							copied = false;
-						}, 2000);
-					}}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
-				>
-
-				{#if contents[selectedContentIdx].type === 'iframe'}
-					<Tooltip content={$i18n.t('Open in full screen')}>
-						<button
-							class=" bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md p-0.5"
-							on:click={showFullScreen}
-						>
-							<ArrowsPointingOut className="size-3.5" />
-						</button>
-					</Tooltip>
-				{/if}
-			</div>
-		</div>
-	{/if}
+		{/if}
+	</div>
 </div>
