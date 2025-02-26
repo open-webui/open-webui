@@ -577,29 +577,21 @@ def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **
     key = kwargs.get("key", "")
     user = kwargs.get("user")
 
-    if engine == "ollama":
-        if isinstance(text, list):
-            embeddings = generate_ollama_batch_embeddings(
-                **{"model": model, "texts": text, "url": url, "key": key, "user": user}
-            )
-        else:
-            embeddings = generate_ollama_batch_embeddings(
-                **{
-                    "model": model,
-                    "texts": [text],
-                    "url": url,
-                    "key": key,
-                    "user": user,
-                }
-            )
-        return embeddings[0] if isinstance(text, str) else embeddings
-    elif engine == "openai":
-        if isinstance(text, list):
-            embeddings = generate_openai_batch_embeddings(model, text, url, key, user)
-        else:
-            embeddings = generate_openai_batch_embeddings(model, [text], url, key, user)
+    match engine:
+        case "ollama":
+            embedding_engine = generate_ollama_batch_embeddings
+        case "openai":
+            embedding_engine = generate_openai_batch_embeddings
+        case _:
+            raise ValueError(f"Unknown embedding engine: {engine}")
 
-        return embeddings[0] if isinstance(text, str) else embeddings
+    if isinstance(text, list):
+        embeddings = embedding_engine(model, text, url, key, user)
+        return embeddings
+
+    embeddings = embedding_engine(model, [text], url, key, user)
+    # Return first item if embeddings is not None, else None
+    return next(iter(embeddings or []), None)
 
 
 import operator
