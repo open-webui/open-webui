@@ -13,7 +13,6 @@ def crawl(url, output_folder="output_html"):
     if visited_urls.__len__() > NUM_LIMIT:
         return
     
-    
     if url in visited_urls:
         return  # 이미 방문한 URL은 스킵
     
@@ -28,21 +27,35 @@ def crawl(url, output_folder="output_html"):
     soup = BeautifulSoup(response.text, 'html.parser')
     
     # 불필요한 태그 제거
-    for tag in soup(['img', 'script', 'style', 'iframe', 'noscript', 'meta', 'link', 'svg']):
+    for tag in soup(['script', 'style', 'iframe', 'noscript', 'meta', 'link', 'svg']):
         tag.decompose()
     
     # 상대경로 보정
-    for tag in soup.find_all(['a']):
+    for tag in soup.find_all(['a', 'img']):
         if tag.has_attr('href') and not tag['href'].startswith(('http', 'https')):
             tag['href'] = urljoin("https://registry.hkust.edu.hk/", tag['href'])
         if tag.has_attr('src') and not tag['src'].startswith(('http', 'https')):
             tag['src'] = urljoin("https://registry.hkust.edu.hk/", tag['src'])
+
+    # Base64 인코딩된 이미지 제거
+    for img_tag in soup.find_all("img"):
+        if img_tag.has_attr("src") and img_tag["src"].startswith("data:image"):
+            img_tag.decompose()  # Base64 이미지 태그 삭제
+
     
     # "resource-library" 포함된 링크 찾기
     for a_tag in soup.find_all("a", href=True):
         if "resource-library" in a_tag["href"]:
             next_url = urljoin(url, a_tag["href"])
             crawl(next_url, output_folder)
+        if "?page=" in a_tag["href"]:
+            next_url = urljoin(url, a_tag["href"].split("?page=")[0])
+            crawl(next_url, output_folder)
+    
+    content_for_staff = soup.find("div", class_="restricted-section")
+    if content_for_staff:
+        print("Staff page detected. Skipping...")
+        return
     
     # class가 "resource__left-column"인 div 찾기
     resource_div = soup.find("div", class_="resource__left-column")
@@ -50,6 +63,7 @@ def crawl(url, output_folder="output_html"):
         html_content = str(resource_div)
         title_div = soup.find("h1", class_="resource__title")
         title_text = title_div.get_text(strip=True) if title_div else "untitled"
+        title_text = title_text.replace("/", "_")  # '/'를 '_'로 변환
         title_text = "_".join(title_text.split())[:50]  # 공백을 '_'로 변환하고 길이 제한
         timestamp = time.strftime("%Y%m%d%H%M%S")
         input_file = f"{title_text}_{timestamp}.html"
@@ -69,4 +83,3 @@ if __name__ == "__main__":
     with open("visited_urls.txt", "w", encoding="utf-8") as f:
         for url in visited_urls:
             f.write(f"{url}\n")
-    
