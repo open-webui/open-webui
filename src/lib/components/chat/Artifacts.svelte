@@ -259,7 +259,7 @@
 				{:else}
 					<div class="m-auto text-center mt-4 flex flex-col items-center">
 						<p class="text-2xl font-bold mb-4">{$i18n.t('No Content Available')}</p>
-						<p class="text-md text-gray-600">{$i18n.t("Sorry, no content is available to display.")}.</p>
+						<p class="text-md text-gray-600">{$i18n.t("Sorry, no content is available to display")}.</p>
 					</div>
 				{/if}
 			</div>
