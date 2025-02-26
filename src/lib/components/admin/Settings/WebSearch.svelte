@@ -118,14 +118,18 @@
 				</div>
 
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Full Context Mode')}</div>
+					<div class=" self-center text-xs font-medium">
+						<Tooltip content={$i18n.t('Full Context Mode')} placement="top-start">
+							{$i18n.t('Bypass Embedding and Retrieval')}
+						</Tooltip>
+					</div>
 					<div class="flex items-center relative">
 						<Tooltip
-							content={webConfig.RAG_WEB_SEARCH_FULL_CONTEXT
-								? 'Inject the entire web results as context for comprehensive processing, this is recommended for complex queries.'
+							content={webConfig.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
+								? 'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
 								: 'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'}
 						>
-							<Switch bind:state={webConfig.RAG_WEB_SEARCH_FULL_CONTEXT} />
+							<Switch bind:state={webConfig.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL} />
 						</Tooltip>
 					</div>
 				</div>

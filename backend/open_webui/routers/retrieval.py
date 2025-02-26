@@ -352,6 +352,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "status": True,
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
+        "BYPASS_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         "enable_google_drive_integration": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "enable_onedrive_integration": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
         "content_extraction": {
@@ -378,7 +379,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         },
         "web": {
             "ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
-            "RAG_WEB_SEARCH_FULL_CONTEXT": request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT,
+            "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
             "search": {
                 "enabled": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "drive": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
@@ -473,11 +474,12 @@ class WebSearchConfig(BaseModel):
 class WebConfig(BaseModel):
     search: WebSearchConfig
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION: Optional[bool] = None
-    RAG_WEB_SEARCH_FULL_CONTEXT: Optional[bool] = None
+    BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
 
 
 class ConfigUpdateForm(BaseModel):
     RAG_FULL_CONTEXT: Optional[bool] = None
+    BYPASS_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
     pdf_extract_images: Optional[bool] = None
     enable_google_drive_integration: Optional[bool] = None
     enable_onedrive_integration: Optional[bool] = None
@@ -502,6 +504,12 @@ async def update_rag_config(
         form_data.RAG_FULL_CONTEXT
         if form_data.RAG_FULL_CONTEXT is not None
         else request.app.state.config.RAG_FULL_CONTEXT
+    )
+
+    request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL = (
+        form_data.BYPASS_EMBEDDING_AND_RETRIEVAL
+        if form_data.BYPASS_EMBEDDING_AND_RETRIEVAL is not None
+        else request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
     )
 
     request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = (
@@ -557,8 +565,8 @@ async def update_rag_config(
         request.app.state.config.ENABLE_RAG_WEB_SEARCH = form_data.web.search.enabled
         request.app.state.config.RAG_WEB_SEARCH_ENGINE = form_data.web.search.engine
 
-        request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT = (
-            form_data.web.RAG_WEB_SEARCH_FULL_CONTEXT
+        request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
+            form_data.web.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
         )
 
         request.app.state.config.SEARXNG_QUERY_URL = (
@@ -626,6 +634,7 @@ async def update_rag_config(
         "status": True,
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
+        "BYPASS_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         "file": {
             "max_size": request.app.state.config.FILE_MAX_SIZE,
             "max_count": request.app.state.config.FILE_MAX_COUNT,
@@ -650,7 +659,7 @@ async def update_rag_config(
         },
         "web": {
             "ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
-            "RAG_WEB_SEARCH_FULL_CONTEXT": request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT,
+            "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
             "search": {
                 "enabled": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "engine": request.app.state.config.RAG_WEB_SEARCH_ENGINE,
@@ -1019,36 +1028,45 @@ def process_file(
         hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)
 
-        try:
-            result = save_docs_to_vector_db(
-                request,
-                docs=docs,
-                collection_name=collection_name,
-                metadata={
-                    "file_id": file.id,
-                    "name": file.filename,
-                    "hash": hash,
-                },
-                add=(True if form_data.collection_name else False),
-                user=user,
-            )
-
-            if result:
-                Files.update_file_metadata_by_id(
-                    file.id,
-                    {
-                        "collection_name": collection_name,
+        if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
+            try:
+                result = save_docs_to_vector_db(
+                    request,
+                    docs=docs,
+                    collection_name=collection_name,
+                    metadata={
+                        "file_id": file.id,
+                        "name": file.filename,
+                        "hash": hash,
                     },
+                    add=(True if form_data.collection_name else False),
+                    user=user,
                 )
 
-                return {
-                    "status": True,
-                    "collection_name": collection_name,
-                    "filename": file.filename,
-                    "content": text_content,
-                }
-        except Exception as e:
-            raise e
+                if result:
+                    Files.update_file_metadata_by_id(
+                        file.id,
+                        {
+                            "collection_name": collection_name,
+                        },
+                    )
+
+                    return {
+                        "status": True,
+                        "collection_name": collection_name,
+                        "filename": file.filename,
+                        "content": text_content,
+                    }
+            except Exception as e:
+                raise e
+        else:
+            return {
+                "status": True,
+                "collection_name": None,
+                "filename": file.filename,
+                "content": text_content,
+            }
+
     except Exception as e:
         log.exception(e)
         if "No pandoc was found" in str(e):
@@ -1408,9 +1426,11 @@ async def process_web_search(
         )
         docs = await loader.aload()
 
-        if request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT:
+        if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
                 "status": True,
+                "collection_name": None,
+                "filenames": urls,
                 "docs": [
                     {
                         "content": doc.page_content,
@@ -1418,7 +1438,6 @@ async def process_web_search(
                     }
                     for doc in docs
                 ],
-                "filenames": urls,
                 "loaded_count": len(docs),
             }
         else:

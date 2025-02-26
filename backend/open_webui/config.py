@@ -1502,13 +1502,16 @@ VECTOR_DB = os.environ.get("VECTOR_DB", "chroma")
 # Chroma
 if VECTOR_DB == "chroma":
     import chromadb
+
     CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
     CHROMA_TENANT = os.environ.get("CHROMA_TENANT", chromadb.DEFAULT_TENANT)
     CHROMA_DATABASE = os.environ.get("CHROMA_DATABASE", chromadb.DEFAULT_DATABASE)
     CHROMA_HTTP_HOST = os.environ.get("CHROMA_HTTP_HOST", "")
     CHROMA_HTTP_PORT = int(os.environ.get("CHROMA_HTTP_PORT", "8000"))
     CHROMA_CLIENT_AUTH_PROVIDER = os.environ.get("CHROMA_CLIENT_AUTH_PROVIDER", "")
-    CHROMA_CLIENT_AUTH_CREDENTIALS = os.environ.get("CHROMA_CLIENT_AUTH_CREDENTIALS", "")
+    CHROMA_CLIENT_AUTH_CREDENTIALS = os.environ.get(
+        "CHROMA_CLIENT_AUTH_CREDENTIALS", ""
+    )
     # Comma-separated list of header=value pairs
     CHROMA_HTTP_HEADERS = os.environ.get("CHROMA_HTTP_HEADERS", "")
     if CHROMA_HTTP_HEADERS:
@@ -1607,6 +1610,14 @@ DOCUMENT_INTELLIGENCE_KEY = PersistentConfig(
     "rag.document_intelligence_key",
     os.getenv("DOCUMENT_INTELLIGENCE_KEY", ""),
 )
+
+
+BYPASS_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
+    "BYPASS_EMBEDDING_AND_RETRIEVAL",
+    "rag.bypass_embedding_and_retrieval",
+    os.environ.get("BYPASS_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
+)
+
 
 RAG_TOP_K = PersistentConfig(
     "RAG_TOP_K", "rag.top_k", int(os.environ.get("RAG_TOP_K", "3"))
@@ -1824,10 +1835,10 @@ RAG_WEB_SEARCH_ENGINE = PersistentConfig(
     os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
 )
 
-RAG_WEB_SEARCH_FULL_CONTEXT = PersistentConfig(
-    "RAG_WEB_SEARCH_FULL_CONTEXT",
-    "rag.web.search.full_context",
-    os.getenv("RAG_WEB_SEARCH_FULL_CONTEXT", "False").lower() == "true",
+BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
+    "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL",
+    "rag.web.search.bypass_embedding_and_retrieval",
+    os.getenv("BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
 )
 
 # You can provide a list of your own websites to filter after performing a web search.
