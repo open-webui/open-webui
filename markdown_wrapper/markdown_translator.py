@@ -65,7 +65,12 @@ def translate_markdown_from_html(html_text: str) -> str:
         max_completion_tokens=16000,
         stream=False,
     )
-    return response.choices[0].message.content
+    content = response.choices[0].message.content
+    if "```markdown" in content:
+        temp = content.split("```markdown")[1]
+        if "```" in temp:
+            return temp.split("```")[0]
+    return content
 
 def save_to_markdown(filename, markdown_text, output_folder):
     os.makedirs(output_folder, exist_ok=True)  # 폴더 생성
