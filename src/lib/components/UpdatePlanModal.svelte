@@ -187,7 +187,12 @@
           <p>Идеально для начинающих</p>
           <p>1 000 000 токенов</p>
           <div class="price">₽550</div>
-          <button on:click={() => openPaymentWindow('550', '1')}>Оплатить</button>
+          <button
+              on:click={() => openPaymentWindow('550', '1')}
+              on:touchstart={() => openPaymentWindow('550', '1')}
+          >
+              Оплатить
+          </button>
         </div>
 
         <!-- Карточка 2 -->
@@ -196,7 +201,12 @@
           <p>Для активных пользователей</p>
           <p>2 000 000 токенов</p>
           <div class="price">₽1000</div>
-          <button on:click={() => openPaymentWindow('1000', '2')}>Оплатить</button>
+          <button
+              on:click={() => openPaymentWindow('1000', '2')}
+              on:touchstart={() => openPaymentWindow('1000', '2')}
+          >
+              Оплатить
+          </button>
         </div>
 
         <!-- Карточка 3 -->
@@ -205,7 +215,12 @@
           <p>Для профессионалов</p>
           <p>5 000 000 токенов</p>
           <div class="price">₽2000</div>
-          <button on:click={() => openPaymentWindow('2000', '3')}>Оплатить</button>
+          <button
+              on:click={() => openPaymentWindow('2000', '3')}
+              on:touchstart={() => openPaymentWindow('2000', '3')}
+          >
+              Оплатить
+          </button>
         </div>
       </div>
 
