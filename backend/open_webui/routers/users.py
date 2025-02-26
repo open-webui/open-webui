@@ -66,6 +66,7 @@ class WorkspacePermissions(BaseModel):
     knowledge: bool = False
     prompts: bool = False
     tools: bool = False
+    public_sharing: bool = True
 
 
 class ChatPermissions(BaseModel):
