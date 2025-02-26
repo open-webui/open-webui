@@ -67,7 +67,7 @@ class CompletionTable:
             return None
 
 def calculate_saved_time_in_seconds(last_message, response_message):
-    print(last_message + " ----- " + response_message)
+    # print(last_message + " ----- " + response_message)
 
     writing_speed_per_word = 600 / 500  # 500 words in 600 seconds = 1.2 sec per word
     reading_speed_per_word = 400 / 500  # 500 words in 400 seconds = 0.8 sec per word

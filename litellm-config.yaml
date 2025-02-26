@@ -66,29 +66,6 @@ model_list:
       arena_elo: 1231
       knowledge_cutoff: 'November 2023'
       context_window: 1_000_000
-  - model_name: 'Mistral Medium'
-    litellm_params:
-      model: mistral/mistral-medium
-    model_info:
-      description: 'Good balance between performance and capacity.'
-      arena_elo: 1148
-      knowledge_cutoff: 'Unknown'
-      context_window: 32_000
-  - model_name: 'Mistral Large'
-    litellm_params:
-      model: mistral/mistral-large-latest
-    model_info:
-      description: 'Ideal for specialized and complex text and code generation.'
-      arena_elo: 1156
-      knowledge_cutoff: 'Unknown'
-      context_window: 32_000
-  - model_name: 'Perplexity'
-    litellm_params:
-      model: 'perplexity/llama-3-sonar-large-32k-online'
-    model_info:
-      max_input_tokens: '32000'
-      input_cost_per_token: 0.000001
-      output_cost_per_token: 0.000001
-      description: 'Optimal for search queries and research.'
+
 
 general_settings: {}
