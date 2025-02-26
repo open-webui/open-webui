@@ -183,7 +183,18 @@
 					</div>
 				{:else}
 					<div class="  my-auto pb-10 w-full dark:text-gray-100">
-						
+							<div class="mb-1">
+								<div class=" text-2xl font-medium">
+									{#if $config?.onboarding ?? false}
+										{$i18n.t(`Get started with {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+									{:else if mode === 'ldap'}
+										{$i18n.t(`Sign in to {{WEBUI_NAME}} with LDAP`, { WEBUI_NAME: $WEBUI_NAME })}
+									{:else if mode === 'signin'}
+										{$i18n.t(`Sign in to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+									{:else}
+										{$i18n.t(`Sign up to {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+									{/if}
+								</div>
 
 						{#if Object.keys($config?.oauth?.providers ?? {}).length > 0}
 							<div class="inline-flex items-center justify-center w-full">
@@ -191,7 +202,7 @@
 								{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
 									<span
 										class="px-3 text-sm font-medium text-gray-900 dark:text-white bg-transparent"
-										>{$i18n.t('or')}</span
+										>{$i18n.t('')}</span
 									>
 								{/if}
 
