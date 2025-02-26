@@ -162,7 +162,7 @@ def parse_section(section):
 
 try:
     changelog_path = BASE_DIR / "CHANGELOG.md"
-    with open(str(changelog_path.absolute()), "r", encoding="utf8") as file:
+    with open(changelog_path.absolute(), "r", encoding="utf8") as file:
         changelog_content = file.read()
 
 except Exception:
