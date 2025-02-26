@@ -29,7 +29,7 @@
 	let responseDone = false;
 
 	const autoScroll = async () => {
-		// Scroll to bottom only if the scroll is at the bottom give 50px buffer
+		// Scroll to bottom only if the scroll at the bottom gives 50px buffer
 		const responseContainer = document.getElementById('response-container');
 		if (
 			responseContainer.scrollHeight - responseContainer.clientHeight <=
@@ -60,14 +60,15 @@
 				role: message.role,
 				content: message.content
 			})),
-			stream: true // Enable streaming
+			stream: false // Disable streaming
 		});
 
 		if (res && res.ok) {
-			const reader = res.body.getReader();
-			const decoder = new TextDecoder();
+			//const reader = res.body.getReader();
+			//const decoder = new TextDecoder();
+			const response_data = await res.json();
 
-			const processStream = async () => {
+			/*const processStream = async () => {
 				while (true) {
 					// Read data chunks from the response stream
 					const { done, value } = await reader.read();
@@ -107,10 +108,12 @@
 						}
 					}
 				}
-			};
+			};*/
 
 			// Process the stream in the background
-			await processStream();
+			// await processStream();
+			responseContent += response_data.choices[0].message.content;
+			autoScroll()
 		} else {
 			toast.error('An error occurred while fetching the explanation');
 		}
@@ -136,14 +139,15 @@
 				role: message.role,
 				content: message.content
 			})),
-			stream: true // Enable streaming
+			stream: false // Disable streaming
 		});
 
 		if (res && res.ok) {
-			const reader = res.body.getReader();
-			const decoder = new TextDecoder();
+			//const reader = res.body.getReader();
+			//const decoder = new TextDecoder();
+			const response_data = await res.json();
 
-			const processStream = async () => {
+			/*const processStream = async () => {
 				while (true) {
 					// Read data chunks from the response stream
 					const { done, value } = await reader.read();
@@ -183,10 +187,12 @@
 						}
 					}
 				}
-			};
+			};*/
 
 			// Process the stream in the background
-			await processStream();
+			// await processStream();
+			responseContent += response_data.choices[0].message.content;
+			autoScroll()
 		} else {
 			toast.error('An error occurred while fetching the explanation');
 		}
