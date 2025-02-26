@@ -76,7 +76,7 @@ known_source_ext = [
     "jsx",
     "hs",
     "lhs",
-    "json"
+    "json",
 ]
 
 
