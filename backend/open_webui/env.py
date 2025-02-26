@@ -76,7 +76,9 @@ else:
 log = logging.getLogger(__name__)
 log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
 
-if "cuda_error" in locals():
+# Log cuda_error after setting up logging
+cuda_error = locals().get("cuda_error")
+if cuda_error is not None:
     log.exception(cuda_error)
 
 log_sources = [
