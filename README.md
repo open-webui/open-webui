@@ -1,5 +1,18 @@
 # Open WebUI 👋
 
+# Install Open WebUI: Open your terminal and run the following command to install Open WebUI:
+ 
+pip install open-webui 
+ 
+# Running Open WebUI: After installation, you can start Open WebUI by executing:
+ 
+ open-webui serve 
+ 
+# This will start the Open WebUI server, which you can access at http://localhost:8080
+
+
+
+
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
 ![GitHub watchers](https://img.shields.io/github/watchers/open-webui/open-webui?style=social)
