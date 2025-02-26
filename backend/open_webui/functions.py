@@ -148,23 +148,23 @@ async def generate_function_chat_completion(
         if isinstance(res, AsyncGenerator):
             return "".join([str(stream) async for stream in res])
 
-    def process_line(form_data: dict, line):
+    def process_line(form_data: dict, line: str | BaseModel | dict | bytes) -> str:
         if isinstance(line, BaseModel):
             line = line.model_dump_json()
             line = f"data: {line}"
-        if isinstance(line, dict):
+        elif isinstance(line, dict):
             line = f"data: {json.dumps(line)}"
-
-        try:
+        elif isinstance(line, bytes):
             line = line.decode("utf-8")
-        except Exception:
-            pass
 
+        assert isinstance(line, str), "line should be of type str"
+
+        # Don't use template when line contains data
         if line.startswith("data:"):
             return f"{line}\n\n"
-        else:
-            line = openai_chat_chunk_message_template(form_data["model"], line)
-            return f"data: {json.dumps(line)}\n\n"
+
+        line = openai_chat_chunk_message_template(form_data["model"], line)
+        return f"data: {json.dumps(line)}\n\n"
 
     def get_pipe_id(form_data: dict) -> str:
         pipe_id = form_data["model"]
