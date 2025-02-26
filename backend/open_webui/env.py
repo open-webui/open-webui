@@ -244,7 +244,7 @@ if FROM_INIT_PY:
                 shutil.copy2(item, dest)
 
         # Zip the data directory
-        shutil.make_archive(DATA_DIR.parent / "open_webui_data", "zip", DATA_DIR)
+        shutil.make_archive(str(DATA_DIR.parent / "open_webui_data"), "zip", DATA_DIR)
 
         # Remove the old data directory
         shutil.rmtree(DATA_DIR)
