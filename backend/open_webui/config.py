@@ -73,11 +73,6 @@ class Config(Base):
     updated_at = Column(DateTime, nullable=True, onupdate=func.now())
 
 
-def load_json_config():
-    with open(f"{DATA_DIR}/config.json", "r") as file:
-        return json.load(file)
-
-
 def save_to_db(data):
     with get_db() as db:
         existing_config = db.query(Config).first()
@@ -97,11 +92,14 @@ def reset_config():
         db.commit()
 
 
-# When initializing, check if config.json exists and migrate it to the database
-if os.path.exists(f"{DATA_DIR}/config.json"):
-    data = load_json_config()
+# Migrate the config.json to the database
+try:
+    with open(f"{DATA_DIR}/config.json", "r") as file:
+        data =  json.load(file)
     save_to_db(data)
     os.rename(f"{DATA_DIR}/config.json", f"{DATA_DIR}/old_config.json")
+except FileNotFoundError:
+    pass
 
 DEFAULT_CONFIG = {
     "version": 0,
