@@ -14,14 +14,13 @@
 
 	import { user, MODEL_DOWNLOAD_POOL, models, mobile, temporaryChatEnabled } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
-	import { capitalizeFirstLetter, sanitizeResponseContent, splitStream } from '$lib/utils';
+	import { sanitizeResponseContent, splitStream } from '$lib/utils';
 	import { getModels } from '$lib/apis';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 	import { goto } from '$app/navigation';
-	import { locale } from '$lib/stores/locale';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -219,18 +218,16 @@
 		}
 	};
 
-	// Create a reactive statement that recomputes descriptions when locale changes
 	$: descriptions = items.map((item) => {
 		return {
 			id: item.value,
 			desc:
-				$locale === 'fr-CA'
+				$i18n.language === 'fr-CA'
 					? (item.model?.info?.meta?.description_fr || '').trim()
 					: (item.model?.info?.meta?.description || '').trim()
 		};
 	});
 
-	// Get description helper that uses the reactive descriptions array
 	function getModelDesc(itemId) {
 		return descriptions.find((d) => d.id === itemId)?.desc || '';
 	}

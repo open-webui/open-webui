@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
-	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
+	import { createPicker } from '$lib/utils/google-drive-picker';
 
 	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
 	const dispatch = createEventDispatcher();
@@ -10,7 +10,6 @@
 		type Model,
 		mobile,
 		settings,
-		showSidebar,
 		models,
 		config,
 		showCallOverlay,
@@ -22,7 +21,6 @@
 	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { uploadFile } from '$lib/apis/files';
-	import { getTools } from '$lib/apis/tools';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
@@ -36,7 +34,6 @@
 	import XMark from '../icons/XMark.svelte';
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import { generateAutoCompletion } from '$lib/apis';
-	import { error, text } from '@sveltejs/kit';
 	import Image from '../common/Image.svelte';
 	import { deleteFileById } from '$lib/apis/files';
 
@@ -77,7 +74,6 @@
 	let loaded = false;
 	let recording = false;
 
-	let chatInputContainerElement;
 	let chatInputElement;
 
 	let filesInputElement;
@@ -86,8 +82,9 @@
 	let inputFiles;
 	let dragged = false;
 
-	let user = null;
 	export let placeholder = '';
+	let placeholderText = placeholder ? placeholder : $i18n.t('Send a Message');
+	$: placeholderText = placeholder ? placeholder : $i18n.t('Send a Message');
 
 	let visionCapableModels = [];
 	$: visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
@@ -726,7 +723,7 @@
 														navigator.maxTouchPoints > 0 ||
 														navigator.msMaxTouchPoints > 0
 													)}
-												placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
+												placeholder={placeholderText}
 												largeTextAsFile={$settings?.largeTextAsFile ?? false}
 												autocomplete={true}
 												generateAutoCompletion={async (text) => {
@@ -918,7 +915,7 @@
 											id="chat-input"
 											bind:this={chatInputElement}
 											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full py-3 px-1 rounded-xl resize-none h-[48px]"
-											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
+											placeholder={placeholderText}
 											aria-label={$i18n.t('Type your message here')}
 											title={$i18n.t('Type your message here')}
 											role="textbox"

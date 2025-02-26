@@ -14,8 +14,9 @@ const createI18nStore = (i18n: i18nType) => {
 		i18nWritable.set(i18n);
 	});
 	i18n.on('added', () => i18nWritable.set(i18n));
-	i18n.on('languageChanged', () => {
+	i18n.on('languageChanged', (locale) => {
 		i18nWritable.set(i18n);
+		localStorage.locale = locale;
 	});
 	return i18nWritable;
 };
@@ -41,7 +42,7 @@ export const initI18n = (defaultLocale: string | undefined) => {
 	let detectionOrder = defaultLocale
 		? ['querystring', 'localStorage']
 		: ['querystring', 'localStorage', 'navigator'];
-	let fallbackDefaultLocale = defaultLocale ? [defaultLocale] : ['en-US'];
+	let fallbackDefaultLocale = defaultLocale ? [defaultLocale] : ['en-GB'];
 
 	const loadResource = (language: string, namespace: string) =>
 		import(`./locales/${language}/${namespace}.json`);
