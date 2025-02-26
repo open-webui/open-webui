@@ -30,7 +30,7 @@ services:
     ports:
       - "8081:8080"
     volumes:
-      - ./searxng:/etc/searxng:rw
+      - searxng-config:/etc/searxng:rw
     env_file:
       - .env
     restart: unless-stopped
@@ -39,6 +39,12 @@ services:
 
 volumes:
   open-webui-data:
+  searxng-config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./searxng
 
 networks:
   shared-network:
