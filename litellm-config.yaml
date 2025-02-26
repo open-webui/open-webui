@@ -50,13 +50,14 @@ model_list:
       context_window: 1_000_000
   - model_name: 'Claude 3.5 Sonnet v2'
     litellm_params:
-      model: 'claude-3-sonnet-20240229'
-      api_key: os.environ/ANTHROPIC_API_KEY
-      max_tokens: 800
+      model: 'vertex_ai/claude-3-5-sonnet-v2@20241022'
+      vertex_project: 'beyond-chat-1111'
+      vertex_location: 'europe-west1'
     model_info:
       description: 'Lightning-fast responses for simple queries.'
       arena_elo: 1178
       knowledge_cutoff: 'February 2024'
       context_window: 200_000
+      max_tokens: 800
 
 general_settings: {}
