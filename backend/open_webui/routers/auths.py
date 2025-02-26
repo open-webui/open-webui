@@ -34,6 +34,7 @@ from fastapi.responses import RedirectResponse, Response
 from open_webui.config import (
     OPENID_PROVIDER_URL,
     ENABLE_OAUTH_SIGNUP,
+    ENABLE_LDAP
 )
 from pydantic import BaseModel
 from open_webui.utils.misc import parse_duration, validate_email_format
@@ -51,8 +52,10 @@ from open_webui.utils.access_control import get_permissions
 from typing import Optional, List
 
 from ssl import CERT_REQUIRED, PROTOCOL_TLS
-from ldap3 import Server, Connection, NONE, Tls
-from ldap3.utils.conv import escape_filter_chars
+
+if ENABLE_LDAP.value:
+    from ldap3 import Server, Connection, NONE, Tls
+    from ldap3.utils.conv import escape_filter_chars
 
 router = APIRouter()
 
