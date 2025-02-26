@@ -313,9 +313,11 @@ async def get_all_models_responses(request: Request) -> list:
                     )
             else:
                 request_tasks.append(asyncio.ensure_future(asyncio.sleep(0, None)))
-
+    if not request :
+        return {"data": []}
     responses = await asyncio.gather(*request_tasks)
-
+    if not responses:
+        return {"data": []}
     for idx, response in enumerate(responses):
         if response:
             url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
@@ -329,8 +331,9 @@ async def get_all_models_responses(request: Request) -> list:
             prefix_id = api_config.get("prefix_id", None)
 
             if prefix_id:
+                
                 for model in (
-                    response if isinstance(response, list) else response.get("data", [])
+                    response if isinstance(response, list) else response.get("data", []) if response.get("data", []) else []
                 ):
                     model["id"] = f"{prefix_id}.{model['id']}"
 
@@ -355,11 +358,14 @@ async def get_filtered_models(models, user):
 async def get_all_models(request: Request) -> dict[str, list]:
     log.info("get_all_models()")
 
-    if not request.app.state.config.ENABLE_OPENAI_API:
+    if not request or not request.app.state.config.ENABLE_OPENAI_API:
         return {"data": []}
 
     responses = await get_all_models_responses(request)
-
+    
+    if not responses:
+        return {"data": []}
+        
     def extract_data(response):
         if response and "data" in response:
             return response["data"]
@@ -507,7 +513,7 @@ async def verify_connection(
     key = form_data.key
 
     async with aiohttp.ClientSession(
-        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
+          trust_env=True,timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
     ) as session:
         try:
             async with session.get(
