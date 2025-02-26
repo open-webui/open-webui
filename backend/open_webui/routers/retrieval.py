@@ -913,7 +913,12 @@ def process_file(
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
 
-            VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
+            try:
+                # /files/{file_id}/data/content/update
+                VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
+            except:
+                # Audio file upload pipeline
+                pass
 
             docs = [
                 Document(
