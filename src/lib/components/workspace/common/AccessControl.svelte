@@ -9,14 +9,54 @@
 	import UserCircleSolid from '$lib/components/icons/UserCircleSolid.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
+	import { user } from '$lib/stores';
+
+	// Define types for the component
+	type AccessControlGroup = {
+		group_ids: string[];
+		user_ids: string[];
+	};
+
+	type AccessControlType = {
+		read: AccessControlGroup;
+		write: AccessControlGroup;
+	} | null;
+
+	type Group = {
+		id: string;
+		name: string;
+	};
+
+	type WorkspacePermissions = {
+		public_sharing: boolean;
+		[key: string]: boolean;
+	};
+
+	type UserPermissions = {
+		workspace: WorkspacePermissions;
+		[key: string]: any;
+	};
 
 	export let onChange: Function = () => {};
+	export let accessRoles: string[] = ['read'];
+	export let accessControl: AccessControlType = null;
+	export let userPermissions: UserPermissions | undefined = undefined;
 
-	export let accessRoles = ['read'];
-	export let accessControl = null;
+	let selectedGroupId: string = '';
+	let groups: Group[] = [];
 
-	let selectedGroupId = '';
-	let groups = [];
+	// Computed property to check if public sharing is allowed
+	$: publicSharingAllowed = userPermissions?.workspace?.public_sharing === true || $user?.role === 'admin';
+
+	// If public sharing is not allowed and current selection is public, force to private
+	$: if (!publicSharingAllowed && accessControl === null) {
+		accessControl = {
+			read: { group_ids: [], user_ids: [] },
+			write: { group_ids: [], user_ids: [] }
+		};
+		// Notify parent component of the change
+		onChange(accessControl);
+	}
 
 	onMount(async () => {
 		groups = await getGroups(localStorage.token);
@@ -44,9 +84,8 @@
 	}
 
 	const onSelectGroup = () => {
-		if (selectedGroupId !== '') {
+		if (selectedGroupId !== '' && accessControl !== null) {
 			accessControl.read.group_ids = [...accessControl.read.group_ids, selectedGroupId];
-
 			selectedGroupId = '';
 		}
 	};
@@ -104,17 +143,21 @@
 						} else {
 							accessControl = {
 								read: {
-									group_ids: []
+									group_ids: [],
+									user_ids: []
 								},
 								write: {
-									group_ids: []
+									group_ids: [],
+									user_ids: []
 								}
 							};
 						}
 					}}
 				>
 					<option class=" text-gray-700" value="private" selected>Private</option>
-					<option class=" text-gray-700" value="public" selected>Public</option>
+					{#if publicSharingAllowed}
+						<option class=" text-gray-700" value="public" selected>Public</option>
+					{/if}
 				</select>
 
 				<div class=" text-xs text-gray-400 font-medium">
@@ -152,7 +195,7 @@
 									<option class=" text-gray-700" value="" disabled selected
 										>{$i18n.t('Select a group')}</option
 									>
-									{#each groups.filter((group) => !accessControl.read.group_ids.includes(group.id)) as group}
+									{#each groups.filter((group) => accessControl !== null && !accessControl.read.group_ids.includes(group.id)) as group}
 										<option class=" text-gray-700" value={group.id}>{group.name}</option>
 									{/each}
 								</select>
@@ -193,7 +236,7 @@
 										class=""
 										type="button"
 										on:click={() => {
-											if (accessRoles.includes('write')) {
+											if (accessRoles.includes('write') && accessControl !== null) {
 												if (accessControl.write.group_ids.includes(group.id)) {
 													accessControl.write.group_ids = accessControl.write.group_ids.filter(
 														(group_id) => group_id !== group.id
@@ -207,7 +250,7 @@
 											}
 										}}
 									>
-										{#if accessControl.write.group_ids.includes(group.id)}
+										{#if accessControl !== null && accessControl.write.group_ids.includes(group.id)}
 											<Badge type={'success'} content={$i18n.t('Write')} />
 										{:else}
 											<Badge type={'info'} content={$i18n.t('Read')} />
@@ -218,9 +261,11 @@
 										class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 										type="button"
 										on:click={() => {
-											accessControl.read.group_ids = accessControl.read.group_ids.filter(
-												(id) => id !== group.id
-											);
+											if (accessControl !== null) {
+												accessControl.read.group_ids = accessControl.read.group_ids.filter(
+													(id) => id !== group.id
+												);
+											}
 										}}
 									>
 										<XMark />
