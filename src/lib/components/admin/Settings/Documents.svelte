@@ -320,6 +320,119 @@
 
 				<div class="  mb-2.5 flex flex-col w-full justify-between">
 					<div class="flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Content Extraction Engine')}
+						</div>
+
+						<div class="">
+							<select
+								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+								bind:value={contentExtractionEngine}
+								on:change={(e) => {
+									showDocumentIntelligenceConfig = e.target.value === 'document_intelligence';
+								}}
+							>
+								<option value="">{$i18n.t('Default')} </option>
+								<option value="tika">{$i18n.t('Tika')}</option>
+								<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
+							</select>
+						</div>
+					</div>
+					{#if contentExtractionEngine === 'tika'}
+						<div class="flex w-full mt-1">
+							<div class="flex-1 mr-2">
+								<input
+									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter Tika Server URL')}
+									bind:value={tikaServerUrl}
+								/>
+							</div>
+						</div>
+					{:else if contentExtractionEngine === 'document_intelligence'}
+						<div class="my-0.5 flex gap-2 pr-2">
+							<input
+								class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+								placeholder={$i18n.t('Enter Document Intelligence Endpoint')}
+								bind:value={documentIntelligenceEndpoint}
+							/>
+
+							<SensitiveInput
+								placeholder={$i18n.t('Enter Document Intelligence Key')}
+								bind:value={documentIntelligenceKey}
+							/>
+						</div>
+					{/if}
+				</div>
+
+				{#if contentExtractionEngine === ''}
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('PDF Extract Images (OCR)')}
+						</div>
+						<div class="flex items-center relative">
+							<Switch bind:state={pdfExtractImages} />
+						</div>
+					</div>
+				{/if}
+
+				<div class="  mb-2.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
+					<div class="flex items-center relative">
+						<select
+							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+							bind:value={textSplitter}
+						>
+							<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
+							<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
+						</select>
+					</div>
+				</div>
+
+				<div class="  mb-2.5 flex w-full justify-between">
+					<div class=" flex gap-1.5 w-full">
+						<div class="  w-full justify-between">
+							<div class="self-center text-xs font-medium min-w-fit mb-1">
+								{$i18n.t('Chunk Size')}
+							</div>
+							<div class="self-center">
+								<input
+									class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									type="number"
+									placeholder={$i18n.t('Enter Chunk Size')}
+									bind:value={chunkSize}
+									autocomplete="off"
+									min="0"
+								/>
+							</div>
+						</div>
+
+						<div class="w-full">
+							<div class=" self-center text-xs font-medium min-w-fit mb-1">
+								{$i18n.t('Chunk Overlap')}
+							</div>
+
+							<div class="self-center">
+								<input
+									class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									type="number"
+									placeholder={$i18n.t('Enter Chunk Overlap')}
+									bind:value={chunkOverlap}
+									autocomplete="off"
+									min="0"
+								/>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="mb-3">
+				<div class=" mb-2.5 text-base font-medium">{$i18n.t('Embedding')}</div>
+
+				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+				<div class="  mb-2.5 flex flex-col w-full justify-between">
+					<div class="flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Model Engine')}</div>
 						<div class="flex items-center relative">
 							<select
@@ -640,116 +753,6 @@
 								)}
 							/>
 						</Tooltip>
-					</div>
-				</div>
-			</div>
-
-			<div class="mb-3">
-				<div class=" mb-2.5 text-base font-medium">{$i18n.t('Content')}</div>
-
-				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
-
-				<div class="  mb-2.5 flex flex-col w-full justify-between">
-					<div class="flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Content Extraction Engine')}
-						</div>
-
-						<div class="">
-							<select
-								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-								bind:value={contentExtractionEngine}
-								on:change={(e) => {
-									showDocumentIntelligenceConfig = e.target.value === 'document_intelligence';
-								}}
-							>
-								<option value="">{$i18n.t('Default')} </option>
-								<option value="tika">{$i18n.t('Tika')}</option>
-								<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
-							</select>
-						</div>
-					</div>
-					{#if contentExtractionEngine === ''}
-						<div class="flex w-full mt-1">
-							<div class="flex w-full justify-between items-center text-xs">
-								<div class=" text-xs font-medium">{$i18n.t('PDF Extract Images (OCR)')}</div>
-
-								<div>
-									<Switch bind:state={pdfExtractImages} />
-								</div>
-							</div>
-						</div>
-					{:else if contentExtractionEngine === 'tika'}
-						<div class="flex w-full mt-1">
-							<div class="flex-1 mr-2">
-								<input
-									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-									placeholder={$i18n.t('Enter Tika Server URL')}
-									bind:value={tikaServerUrl}
-								/>
-							</div>
-						</div>
-					{:else if contentExtractionEngine === 'document_intelligence'}
-						<div class="my-0.5 flex gap-2 pr-2">
-							<input
-								class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-								placeholder={$i18n.t('Enter Document Intelligence Endpoint')}
-								bind:value={documentIntelligenceEndpoint}
-							/>
-
-							<SensitiveInput
-								placeholder={$i18n.t('Enter Document Intelligence Key')}
-								bind:value={documentIntelligenceKey}
-							/>
-						</div>
-					{/if}
-				</div>
-
-				<div class="  mb-2.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
-					<div class="flex items-center relative">
-						<select
-							class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
-							bind:value={textSplitter}
-						>
-							<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
-							<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
-						</select>
-					</div>
-				</div>
-
-				<div class=" flex gap-1.5">
-					<div class="  w-full justify-between">
-						<div class="self-center text-xs font-medium min-w-fit mb-1">
-							{$i18n.t('Chunk Size')}
-						</div>
-						<div class="self-center">
-							<input
-								class=" w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								type="number"
-								placeholder={$i18n.t('Enter Chunk Size')}
-								bind:value={chunkSize}
-								autocomplete="off"
-								min="0"
-							/>
-						</div>
-					</div>
-
-					<div class="w-full">
-						<div class=" self-center text-xs font-medium min-w-fit mb-1">
-							{$i18n.t('Chunk Overlap')}
-						</div>
-
-						<div class="self-center">
-							<input
-								class="w-full rounded-lg py-1.5 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								type="number"
-								placeholder={$i18n.t('Enter Chunk Overlap')}
-								bind:value={chunkOverlap}
-								autocomplete="off"
-								min="0"
-							/>
-						</div>
 					</div>
 				</div>
 			</div>
