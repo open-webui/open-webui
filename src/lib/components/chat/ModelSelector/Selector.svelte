@@ -101,14 +101,17 @@
 		}))
 		.filter(tag => tag.count > 1); // Only show collapse controls for tags with multiple models
 
-	// Get models that don't belong to any collapsible tag group
-	$: otherModels = items.filter(item => {
+	// Determine if we should use collapsible tags at all
+	$: useCollapsibleTags = uniqueTags.length > 0;
+
+	// Get models that don't belong to any collapsible tag group (only compute if using collapsible tags)
+	$: otherModels = useCollapsibleTags ? items.filter(item => {
 		const tags = item.model?.info?.meta?.tags || [];
 		// If no tags or all tags are unique (only one model with that tag)
 		return tags.length === 0 || tags.every(tag =>
 			!uniqueTags.some(uniqueTag => uniqueTag.name === tag.name)
 		);
-	});
+	}) : [];
 
 	// Count of models in "Other" category
 	$: otherCount = otherModels.length;
@@ -136,8 +139,8 @@
 			})
 		: [];
 
-	// Group items by their tags for nested display
-	$: groupedItems = !searchValue ? uniqueTags.reduce((acc, tag) => {
+	// Group items by their tags for nested display (only compute if using collapsible tags)
+	$: groupedItems = !searchValue && useCollapsibleTags ? uniqueTags.reduce((acc, tag) => {
 		acc[tag.name] = tagGroups[tag.name] || [];
 		return acc;
 	}, {} as Record<string, typeof items>) : {};
@@ -559,8 +562,9 @@
 						</div>
 					{/if}
 				{:else}
-					<!-- Grouped by tags -->
-					{#each uniqueTags as tag}
+					{#if useCollapsibleTags}
+						<!-- Grouped by tags -->
+						{#each uniqueTags as tag}
 						<div class="mb-3">
 							<button
 								class="flex items-center gap-1 px-2 py-1 mb-1 w-full text-left text-xs font-medium rounded-md bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -742,7 +746,6 @@
 																		}}
 																	>
 																		{tag.name}
-																		<!-- No +/- icons in tag names -->
 																	</div>
 																</Tooltip>
 															{/each}
@@ -808,7 +811,6 @@
 																}}
 															>
 																{tag.name}
-																<!-- No +/- icons in tag names -->
 															</div>
 														{/each}
 													</div>
@@ -935,7 +937,6 @@
 																		}}
 																	>
 																		{tag.name}
-																		<!-- No +/- icons in tag names -->
 																	</div>
 																</Tooltip>
 															{/each}
@@ -954,6 +955,163 @@
 								</div>
 							{/if}
 						</div>
+					{/if}
+					{:else}
+						<!-- Flat list of all models when no collapsible tags are needed -->
+						{#each items as item}
+							<button
+								aria-label="model-item"
+								class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer"
+								on:click={() => {
+									value = item.value;
+									show = false;
+								}}
+							>
+								<!-- Model item content -->
+								<div class="flex flex-col">
+									{#if $mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
+										<div class="flex gap-0.5 self-start h-full mb-1.5 -translate-x-1">
+											{#each item.model?.info?.meta.tags as tag}
+												<div
+													class="flex items-center text-xs font-bold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+												>
+													{tag.name}
+												</div>
+											{/each}
+										</div>
+									{/if}
+									<div class="flex items-center gap-2">
+										<div class="flex items-center min-w-fit">
+											<div class="line-clamp-1">
+												<div class="flex items-center min-w-fit">
+													<Tooltip
+														content={$user?.role === 'admin' ? (item?.value ?? '') : ''}
+														placement="top-start"
+													>
+														<img
+															src={item.model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+															alt="Model"
+															class="rounded-full size-5 flex items-center mr-2"
+														/>
+														{item.label}
+													</Tooltip>
+												</div>
+											</div>
+											{#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
+												<div class="flex ml-1 items-center translate-y-[0.5px]">
+													<Tooltip
+														content={`${
+															item.model.ollama?.details?.quantization_level
+																? item.model.ollama?.details?.quantization_level + ' '
+																: ''
+														}${
+															item.model.ollama?.size
+																? `(${(item.model.ollama?.size / 1024 ** 3).toFixed(1)}GB)`
+																: ''
+														}`}
+														className="self-end"
+													>
+														<span
+															class=" text-xs font-medium text-gray-600 dark:text-gray-400 line-clamp-1"
+															>{item.model.ollama?.details?.parameter_size ?? ''}</span
+														>
+													</Tooltip>
+												</div>
+											{/if}
+										</div>
+
+										{#if item.model?.direct}
+											<Tooltip content={`${'Direct'}`}>
+												<div class="translate-y-[1px]">
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 16 16"
+														fill="currentColor"
+														class="size-3"
+													>
+														<path
+															fill-rule="evenodd"
+															d="M2 2.75A.75.75 0 0 1 2.75 2C8.963 2 14 7.037 14 13.25a.75.75 0 0 1-1.5 0c0-5.385-4.365-9.75-9.75-9.75A.75.75 0 0 1 2 2.75Zm0 4.5a.75.75 0 0 1 .75-.75 6.75 6.75 0 0 1 6.75 6.75.75.75 0 0 1-1.5 0C8 10.35 5.65 8 2.75 8A.75.75 0 0 1 2 7.25ZM3.5 11a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
+															clip-rule="evenodd"
+														/>
+													</svg>
+												</div>
+											</Tooltip>
+										{:else if item.model.owned_by === 'openai'}
+											<Tooltip content={`${'External'}`}>
+												<div class="translate-y-[1px]">
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 16 16"
+														fill="currentColor"
+														class="size-3"
+													>
+														<path
+															fill-rule="evenodd"
+															d="M8.914 6.025a.75.75 0 0 1 1.06 0 3.5 3.5 0 0 1 0 4.95l-2 2a3.5 3.5 0 0 1-5.396-4.402.75.75 0 0 1 1.251.827 2 2 0 0 0 3.085 2.514l2-2a2 2 0 0 0 0-2.828.75.75 0 0 1 0-1.06Z"
+															clip-rule="evenodd"
+														/>
+														<path
+															fill-rule="evenodd"
+															d="M7.086 9.975a.75.75 0 0 1-1.06 0 3.5 3.5 0 0 1 0-4.95l2-2a3.5 3.5 0 0 1 5.396 4.402.75.75 0 0 1-1.251-.827 2 2 0 0 0-3.085-2.514l-2 2a2 2 0 0 0 0 2.828.75.75 0 0 1 0 1.06Z"
+															clip-rule="evenodd"
+														/>
+													</svg>
+												</div>
+											</Tooltip>
+										{/if}
+
+										{#if item.model?.info?.meta?.description}
+											<Tooltip
+												content={`${marked.parse(
+													sanitizeResponseContent(item.model?.info?.meta?.description).replaceAll(
+														'\n',
+														'<br>'
+													)
+												)}`}
+											>
+												<div class=" translate-y-[1px]">
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke-width="1.5"
+														stroke="currentColor"
+														class="w-4 h-4"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+														/>
+													</svg>
+												</div>
+											</Tooltip>
+										{/if}
+
+										{#if !$mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
+											<div class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px]">
+												{#each item.model?.info?.meta.tags as tag}
+													<Tooltip content={tag.name}>
+														<div
+															class="flex items-center text-xs font-bold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+														>
+															{tag.name}
+														</div>
+													</Tooltip>
+												{/each}
+											</div>
+										{/if}
+									</div>
+								</div>
+
+								{#if value === item.value}
+									<div class="ml-auto pl-2 pr-2 md:pr-0">
+										<Check />
+									</div>
+								{/if}
+							</button>
+						{/each}
 					{/if}
 				{/if}
 
