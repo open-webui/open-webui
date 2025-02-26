@@ -31,6 +31,8 @@ def search_duckduckgo(
         if ddgs_gen:
             # Convert the search results into a list
             search_results = [r for r in ddgs_gen]
+        else:
+            search_results = []
 
     if filter_list:
         search_results = get_filtered_results(search_results, filter_list)
