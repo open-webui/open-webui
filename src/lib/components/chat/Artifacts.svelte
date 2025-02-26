@@ -248,18 +248,18 @@
 							/>
 						{:else if contents[selectedContentIdx].type === 'empty'}
 							<div class="m-auto text-center mt-4">
-								<p class="text-2xl font-bold mb-4">Empty Page</p>
+								<p class="text-2xl font-bold mb-4">{$i18n.t("Empty Page")}</p>
 								<p class="text-md text-gray-600">
-									There's nothing here to show! Ask your favorite LLM for some HTML with some
-									styling to get started!
+									{$i18n.t("There's nothing here to show")}!
+									{$i18n.t("Ask your favorite LLM for some HTML code with some styling to get started")}.
 								</p>
 							</div>
 						{/if}
 					</div>
 				{:else}
 					<div class="m-auto text-center mt-4 flex flex-col items-center">
-						<p class="text-2xl font-bold mb-4">No Content Available</p>
-						<p class="text-md text-gray-600">Sorry, no content is available to display.</p>
+						<p class="text-2xl font-bold mb-4">{$i18n.t('No Content Available')}</p>
+						<p class="text-md text-gray-600">{$i18n.t("Sorry, no content is available to display.")}.</p>
 					</div>
 				{/if}
 			</div>
