@@ -1,10 +1,12 @@
+import os
+import time
 from openai import AzureOpenAI
 
 client = AzureOpenAI(
     api_key="1777ac2662f649a7bbc0c905d85eb7bd",
     api_version="2024-10-21",
     azure_endpoint="https://hkust.azure-api.net"
-    )
+)
 
 SYSTEM_PROMPT = '''
 You are an AI that performs the task of understanding advanced HTML content and converting it into Markdown format. Your job is to read all the information from the provided HTML code accurately, without missing any details, and generate a Markdown document while retaining the original language. The result should be a clear and structured document, categorizing information like titles, links, dates, descriptions, and lists.
@@ -47,40 +49,44 @@ Please adhere to the following guidelines:
 4. Consider readability and use appropriate headings and subheadings.
 5. Do not include any additional commentary, information, or instructions in your response. Provide only the generated Markdown content.
 '''
+
 def load_html_in_txt(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
         return f.read()
 
-def translate_markdown_from_html(chat_log):
-    chat_text = ''.join(chat_log)
-    prompt = SYSTEM_PROMPT + "## 입력\n\n{input}\n\n## 출력\n".format(input=chat_text)
-
+def translate_markdown_from_html(html_text: str) -> str:
+    if not html_text:
+        return None
+    prompt = SYSTEM_PROMPT + "\n\n## Input\n\n{input}\n\n## Output\n".format(input=html_text)
+    
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role":"user","content":prompt}],
+        messages=[{"role": "user", "content": prompt}],
         max_completion_tokens=16000,
         stream=False,
     )
-
     return response.choices[0].message.content
 
-def save_to_markdown(markdown_text, output_file):
-    with open(output_file, 'w', encoding='utf-8') as f:
+def save_to_markdown(filename, markdown_text, output_folder):
+    os.makedirs(output_folder, exist_ok=True)  # 폴더 생성
+    timestamp = time.strftime("%Y%m%d%H%M%S")  # 현재 시간을 기반으로 파일명 생성
+    output_file = f"{filename}_{timestamp}.md"
+    output_path = os.path.join(output_folder, output_file)
+    with open(output_path, 'w', encoding='utf-8') as f:
         f.write(markdown_text)
+    return output_path
 
-def translate_markdown_from_html(html_text: str) -> str | None:
-    if html_text is None:
-        return None
-    return translate_markdown_from_html(html_text)
-
-def main():
-    input_file = 'test_html.txt'
-    output_file = 'output_markdown.md'
+def translate_html_file_to_markdown(filename: str, input_file: str, output_folder: str = "output_markdown"):
     chat_log = load_html_in_txt(input_file)
     translated_markdown = translate_markdown_from_html(chat_log)
-    save_to_markdown(translated_markdown, output_file)
-
-
+    if translated_markdown:
+        return save_to_markdown(filename, translated_markdown, output_folder)
+    return None
 
 if __name__ == "__main__":
-    main()
+    input_file = 'test_html.txt'
+    output_folder = 'output'
+    filename = 'test_file'
+    result_path = translate_html_file_to_markdown(filename, input_file, output_folder)
+    if result_path:
+        print(f"Markdown file saved at: {result_path}")
