@@ -268,12 +268,11 @@ if FROM_INIT_PY:
 # Database
 ####################################
 
-# Check if the file exists
-if os.path.exists(f"{DATA_DIR}/ollama.db"):
-    # Rename the file
+# Attempt to migrate the database from Ollama-WebUI
+try:
     os.rename(f"{DATA_DIR}/ollama.db", f"{DATA_DIR}/webui.db")
     log.info("Database migrated from Ollama-WebUI successfully.")
-else:
+except OSError:
     pass
 
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
