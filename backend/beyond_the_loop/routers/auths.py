@@ -453,7 +453,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             company = Companies.create_company({
                 "id": company_id,
                 "name": f"{form_data.name}'s Company",
-                "credit_balance": 5000  # Initial credit balance
+                "credit_balance": 10000  # Initial credit balance
             })
             if not company:
                 raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_COMPANY_ERROR)
@@ -461,6 +461,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             company_id = NO_COMPANY
 
         hashed = get_password_hash(form_data.password)
+
         user = Auths.insert_new_auth(
             form_data.email.lower(),
             hashed,
