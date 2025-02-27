@@ -2376,6 +2376,7 @@ LDAP_SEARCH_FILTERS = PersistentConfig(
     "LDAP_SEARCH_FILTER",
     "ldap.server.search_filter",
     os.environ.get("LDAP_SEARCH_FILTER", ""),
+    os.environ.get("LDAP_SEARCH_FILTERS", ""),
 )
 
 LDAP_USE_TLS = PersistentConfig(
