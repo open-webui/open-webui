@@ -324,67 +324,76 @@ async def chat_web_search_handler(
     all_results = []
     log.info(f"generate queries: {queries}")
 
-    for searchQuery in queries:
-        await event_emitter(
-            {
-                "type": "status",
-                "data": {
-                    "action": "web_search",
-                    "description": 'Searching "{{searchQuery}}"',
-                    "query": searchQuery,
-                    "done": False,
-                },
-            }
-        )
+    # First emit a single status showing all search terms being processed together
+    await event_emitter(
+        {
+            "type": "status",
+            "data": {
+                "action": "web_search",
+                "description": f'Searching multiple terms: {", ".join(queries)}',
+                "queries": queries,
+                "done": False,
+            },
+        }
+    )
 
+    async def process_single_query(query):
         try:
             results = await process_web_search(
                 request,
-                SearchForm(
-                    **{
-                        "query": searchQuery,
-                    }
-                ),
+                SearchForm(**{"query": query}),
                 user=user,
             )
 
+            file_data = None
             if results:
-                all_results.append(results)
-                files = form_data.get("files", [])
-
                 if request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT:
-                    files.append(
-                        {
-                            "docs": results.get("docs", []),
-                            "name": searchQuery,
-                            "type": "web_search_docs",
-                            "urls": results["filenames"],
-                        }
-                    )
+                    file_data = {
+                        "docs": results.get("docs", []),
+                        "name": query,
+                        "type": "web_search_docs",
+                        "urls": results["filenames"],
+                    }
                 else:
-                    files.append(
-                        {
-                            "collection_name": results["collection_name"],
-                            "name": searchQuery,
-                            "type": "web_search_results",
-                            "urls": results["filenames"],
-                        }
-                    )
-                form_data["files"] = files
+                    file_data = {
+                        "collection_name": results["collection_name"],
+                        "name": query,
+                        "type": "web_search_results",
+                        "urls": results["filenames"],
+                    }
+                return (results, file_data, None)
+            return (None, None, None)
         except Exception as e:
             log.exception(e)
+            return (None, None, e)
+
+    tasks = [process_single_query(query) for query in queries]
+    results_list = await asyncio.gather(*tasks)
+
+    files = form_data.get("files", [])
+
+    for i, (result, file_data, error) in enumerate(results_list):
+        query = queries[i]
+        if error:
             await event_emitter(
                 {
                     "type": "status",
                     "data": {
                         "action": "web_search",
-                        "description": 'Error searching "{{searchQuery}}"',
-                        "query": searchQuery,
+                        "description": f'Error searching "{query}"',
+                        "query": query,
                         "done": True,
                         "error": True,
                     },
                 }
             )
+        elif result:
+            all_results.append(result)
+            if file_data:
+                files.append(file_data)
+
+    if files:
+        form_data["files"] = files
 
     if all_results:
         urls = []
