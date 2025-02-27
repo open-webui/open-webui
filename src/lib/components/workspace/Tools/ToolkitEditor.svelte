@@ -1,5 +1,5 @@
 <script>
-	import { getContext, createEventDispatcher, onMount, tick } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
 
@@ -12,8 +12,6 @@
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 
-	const dispatch = createEventDispatcher();
-
 	let formElement = null;
 	let loading = false;
 
@@ -22,6 +20,8 @@
 
 	export let edit = false;
 	export let clone = false;
+
+	export let onSave = () => {};
 
 	export let id = '';
 	export let name = '';
@@ -150,7 +150,7 @@ class Tools:
 
 	const saveHandler = async () => {
 		loading = true;
-		dispatch('save', {
+		onSave({
 			id,
 			name,
 			meta,
@@ -284,10 +284,10 @@ class Tools:
 						value={content}
 						{boilerplate}
 						lang="python"
-						on:change={(e) => {
-							_content = e.detail.value;
+						onChange={(e) => {
+							_content = e;
 						}}
-						on:save={() => {
+						onSave={() => {
 							if (formElement) {
 								formElement.requestSubmit();
 							}
