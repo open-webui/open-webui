@@ -117,9 +117,9 @@
 					}}
 					disabled={$user?.role === 'user'}
 				>
-					<option class=" text-gray-700" value="private" selected>Private</option>
+					<option class=" text-gray-700" value="private" selected>{$i18n.t('Private')}</option>
 					{#if $user?.role === 'admin'}
-						<option class=" text-gray-700" value="public">Public</option>
+						<option class=" text-gray-700" value="public">{$i18n.t('Public')}</option>
 					{/if}
 				</select>
 

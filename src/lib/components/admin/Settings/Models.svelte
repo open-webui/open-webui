@@ -3,13 +3,12 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
+	import { models as _models, user } from '$lib/stores';
 	import {
 		createNewModel,
-		deleteAllModels,
 		getBaseModels,
 		toggleModelById,
 		updateModelById
@@ -23,52 +22,32 @@
 
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
 	import { toast } from 'svelte-sonner';
-	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import ConfigureModelsModal from './Models/ConfigureModelsModal.svelte';
-	import Wrench from '$lib/components/icons/Wrench.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
 	import ManageModelsModal from './Models/ManageModelsModal.svelte';
-	import { locale } from '$lib/stores/locale'; // Import locale store
 
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
 
 	let models = null;
-
 	let workspaceModels = null;
 	let baseModels = null;
-
 	let filteredModels = [];
 	let selectedModelId = null;
-
 	let showConfigModal = false;
 	let showManageModal = false;
-
-	// Helper: return description based on reactive locale
-	function getModelDesc(model) {
-		return $locale === 'fr-CA'
-			? (model?.meta?.description_fr || '').trim()
-			: (model?.meta?.description || '').trim();
-	}
-
-	onMount(() => {
-		const updateLocale = () => {
-			// Use store's set method instead of direct assignment
-			locale.set(localStorage.locale || 'en-GB');
-		};
-		window.addEventListener('storage', updateLocale);
-		return () => window.removeEventListener('storage', updateLocale);
-	});
+	let searchValue = '';
 
 	$: filteredModels = models
 		?.filter((m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase()))
 		.map((model) => ({
 			...model,
-			description: $locale === 'fr-CA' ? model?.meta?.description_fr : model?.meta?.description
+			description: ($i18n.language === 'fr-CA'
+				? model?.meta?.description_fr || ''
+				: model?.meta?.description || ''
+			).trim()
 		}));
-
-	let searchValue = '';
 
 	const downloadModels = async (models) => {
 		let blob = new Blob([JSON.stringify(models)], {
@@ -94,7 +73,6 @@
 					...m,
 					id: m.id,
 					name: m.name,
-
 					is_active: true
 				};
 			}
@@ -105,17 +83,13 @@
 		model.base_model_id = null;
 
 		if (workspaceModels.find((m) => m.id === model.id)) {
-			const res = await updateModelById(localStorage.token, model.id, model).catch((error) => {
-				return null;
-			});
+			const res = await updateModelById(localStorage.token, model.id, model).catch(() => null);
 
 			if (res) {
 				toast.success($i18n.t('Model updated successfully'));
 			}
 		} else {
-			const res = await createNewModel(localStorage.token, model).catch((error) => {
-				return null;
-			});
+			const res = await createNewModel(localStorage.token, model).catch(() => null);
 
 			if (res) {
 				toast.success($i18n.t('Model updated successfully'));
@@ -136,14 +110,11 @@
 				params: {},
 				access_control: {},
 				is_active: model.is_active
-			}).catch((error) => {
-				return null;
-			});
+			}).catch(() => null);
 		} else {
 			await toggleModelById(localStorage.token, model.id);
 		}
 
-		// await init();
 		_models.set(await getModels(localStorage.token));
 	};
 
@@ -238,22 +209,14 @@
 
 							<div class=" flex-1 self-center {(model?.is_active ?? true) ? '' : 'text-gray-500'}">
 								<Tooltip
-									content={marked.parse(getModelDesc(model))}
+									content={marked.parse(model.description)}
 									className=" w-fit"
 									placement="top-start"
 								>
 									<div class="  font-semibold line-clamp-1">{model.name}</div>
 								</Tooltip>
 								<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1 text-gray-500">
-									<span class="line-clamp-1">
-										{#if model.description}
-											{model.description}
-										{:else if model.ollama?.digest}
-											{model.id} ({model.ollama.digest})
-										{:else}
-											{model.id}
-										{/if}
-									</span>
+									<span class="line-clamp-1">{model.description}</span>
 								</div>
 							</div>
 						</button>
@@ -316,12 +279,9 @@
 						accept=".json"
 						hidden
 						on:change={() => {
-							console.log(importFiles);
-
 							let reader = new FileReader();
 							reader.onload = async (event) => {
 								let savedModels = JSON.parse(event.target.result);
-								console.log(savedModels);
 
 								for (const model of savedModels) {
 									if (Object.keys(model).includes('base_model_id')) {
@@ -405,7 +365,6 @@
 			model={models.find((m) => m.id === selectedModelId)}
 			preset={false}
 			onSubmit={(model) => {
-				console.log(model);
 				upsertModelHandler(model);
 				selectedModelId = null;
 			}}

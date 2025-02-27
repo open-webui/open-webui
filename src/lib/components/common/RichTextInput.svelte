@@ -7,7 +7,7 @@
 	});
 	turndownService.escape = (string) => string;
 
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 	const eventDispatch = createEventDispatcher();
 
@@ -27,11 +27,13 @@
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
+	const i18n = getContext('i18n');
+
 	// create a lowlight instance with all languages loaded
 	const lowlight = createLowlight(all);
 
 	export let className = 'input-prose';
-	export let placeholder = 'Type here...';
+	export let placeholder = '';
 	export let value = '';
 	export let id = '';
 
@@ -43,6 +45,9 @@
 	export let largeTextAsFile = false;
 	export let title = '';
 	export let ariaLabel = '';
+
+	let placeholderText = placeholder ? placeholder : $i18n.t('Type here...');
+	$: placeholderText = placeholder ? placeholder : $i18n.t('Type here...');
 
 	let element;
 	let editor;
@@ -168,7 +173,7 @@
 				}),
 				Highlight,
 				Typography,
-				Placeholder.configure({ placeholder }),
+				Placeholder.configure({ placeholder: placeholderText }),
 				...(autocomplete
 					? [
 							AIAutocompletion.configure({
@@ -364,12 +369,22 @@
 		); // Update editor content
 		selectTemplate();
 	}
+
+	$: if (editor && placeholderText) {
+		const placeholderExtension = editor.extensionManager.extensions.find(
+			(ext) => ext.name === 'placeholder'
+		);
+		if (placeholderExtension) {
+			placeholderExtension.options.placeholder = placeholderText;
+			editor.view.dispatch(editor.view.state.tr); // Trigger a re-render
+		}
+	}
 </script>
 
 <div
 	bind:this={element}
 	class="relative w-full min-w-full h-full min-h-fit {className}"
-	data-placeholder={placeholder}
+	data-placeholder={placeholderText}
 	aria-label={ariaLabel}
 	{title}
 	role="textbox"

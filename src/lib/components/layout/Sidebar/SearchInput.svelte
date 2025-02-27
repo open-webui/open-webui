@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { getAllTags } from '$lib/apis/chats';
 	import { tags } from '$lib/stores';
-	import { locale } from '$lib/stores/locale';
 	import { getContext, createEventDispatcher, onMount, onDestroy } from 'svelte';
 	import { fade } from 'svelte/transition';
 
@@ -29,15 +28,15 @@
 
 	// Update tag prefixes based on current locale translations
 	$: tagPrefixes =
-		$locale === 'fr-CA'
+		$i18n.language === 'fr-CA'
 			? ['étiquette:', 'tag:'] // Keep both for backwards compatibility
 			: ['tag:', 'étiquette:']; // Keep both for backwards compatibility
 
 	// Watch for locale changes and update existing tag prefixes in the search value
-	$: if (value && $locale) {
+	$: if (value && $i18n.language) {
 		// Get the current primary prefix and old prefixes
 		const oldPrefixes =
-			$locale === 'fr-CA'
+			$i18n.language === 'fr-CA'
 				? ['tag:', 'étiquette:'] // If now in French, look for English prefixes
 				: ['étiquette:', 'tag:']; // If now in English, look for French prefixes
 

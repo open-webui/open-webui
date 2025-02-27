@@ -5,31 +5,15 @@
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
-	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import Tags from '$lib/components/chat/Tags.svelte';
-	import Share from '$lib/components/icons/Share.svelte';
-	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
-	import ArrowUpCircle from '$lib/components/icons/ArrowUpCircle.svelte';
-	import { locale } from '$lib/stores/locale';
-
-	import { config } from '$lib/stores';
 
 	const i18n = getContext('i18n');
-
-	// Compute whether a description exists for the current locale
-	$: modelDesc =
-		$locale === 'fr-CA'
-			? (model?.meta?.description_fr || '').trim()
-			: (model?.meta?.description || '').trim();
-	$: hasDescription = modelDesc.length > 0;
 
 	export let user;
 	export let model;
 
-	export let shareHandler: Function;
 	export let cloneHandler: Function;
 	export let exportHandler: Function;
 
@@ -60,18 +44,6 @@
 			align="start"
 			transition={flyAndScale}
 		>
-			{#if $config?.features.enable_community_sharing}
-				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-md"
-					on:click={() => {
-						shareHandler();
-					}}
-				>
-					<Share />
-					<div class="flex items-center">{$i18n.t('Share')}</div>
-				</DropdownMenu.Item>
-			{/if}
-
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
@@ -105,28 +77,6 @@
 				<GarbageBin strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</DropdownMenu.Item>
-
-			{#if hasDescription}
-				<div class="flex items-center gap-2">
-					<div class="translate-y-[1px]">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="w-4 h-4 {hasDescription ? 'text-blue-500' : 'text-gray-500'}"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-							>
-							</path>
-						</svg>
-					</div>
-				</div>
-			{/if}
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>
