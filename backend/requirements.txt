@@ -31,6 +31,9 @@ APScheduler==3.10.4
 
 RestrictedPython==8.0
 
+loguru==0.7.2
+asgiref==3.8.1
+
 # AI libraries
 openai
 anthropic

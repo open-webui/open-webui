@@ -40,6 +40,9 @@ dependencies = [
 
     "RestrictedPython==8.0",
 
+    "loguru==0.7.2",
+    "asgiref==3.8.1",
+
     "openai",
     "anthropic",
     "google-generativeai==0.7.2",
