@@ -1,7 +1,7 @@
 import { PublicClientApplication } from '@azure/msal-browser';
 import type { PopupRequest } from '@azure/msal-browser';
 
-let CLIENT_ID = '521ada3e-6154-4a35-b9d3-51faac8ac944';
+let CLIENT_ID = '';
 
 async function getCredentials() {
 	if (CLIENT_ID) return;
