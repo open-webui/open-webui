@@ -4,6 +4,7 @@ import ftfy
 import sys
 
 from langchain_community.document_loaders import (
+    AzureAIDocumentIntelligenceLoader,
     BSHTMLLoader,
     CSVLoader,
     Docx2txtLoader,
@@ -76,6 +77,7 @@ known_source_ext = [
     "jsx",
     "hs",
     "lhs",
+    "json",
 ]
 
 
@@ -147,6 +149,27 @@ class Loader:
                     file_path=file_path,
                     mime_type=file_content_type,
                 )
+        elif (
+            self.engine == "document_intelligence"
+            and self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT") != ""
+            and self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY") != ""
+            and (
+                file_ext in ["pdf", "xls", "xlsx", "docx", "ppt", "pptx"]
+                or file_content_type
+                in [
+                    "application/vnd.ms-excel",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "application/vnd.ms-powerpoint",
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                ]
+            )
+        ):
+            loader = AzureAIDocumentIntelligenceLoader(
+                file_path=file_path,
+                api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
+                api_key=self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY"),
+            )
         else:
             if file_ext == "pdf":
                 loader = PyPDFLoader(

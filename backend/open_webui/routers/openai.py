@@ -98,9 +98,15 @@ def openai_o1_o3_handler(payload):
         payload["max_completion_tokens"] = payload["max_tokens"]
         del payload["max_tokens"]
 
-    # Fix: O1 does not support the "system" parameter, Modify "system" to "user"
+    # Fix: o1 and o3 do not support the "system" role directly.
+    # For older models like "o1-mini" or "o1-preview", use role "user".
+    # For newer o1/o3 models, replace "system" with "developer".
     if payload["messages"][0]["role"] == "system":
-        payload["messages"][0]["role"] = "user"
+        model_lower = payload["model"].lower()
+        if model_lower.startswith("o1-mini") or model_lower.startswith("o1-preview"):
+            payload["messages"][0]["role"] = "user"
+        else:
+            payload["messages"][0]["role"] = "developer"
 
     return payload
 
@@ -804,7 +810,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         if r is not None:
             try:
                 res = await r.json()
-                print(res)
+                log.error(res)
                 if "error" in res:
                     detail = f"External: {res['error']['message'] if 'message' in res['error'] else res['error']}"
             except Exception:

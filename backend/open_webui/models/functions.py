@@ -105,7 +105,7 @@ class FunctionsTable:
                 else:
                     return None
         except Exception as e:
-            print(f"Error creating tool: {e}")
+            log.exception(f"Error creating a new function: {e}")
             return None
 
     def get_function_by_id(self, id: str) -> Optional[FunctionModel]:
@@ -170,7 +170,7 @@ class FunctionsTable:
                 function = db.get(Function, id)
                 return function.valves if function.valves else {}
             except Exception as e:
-                print(f"An error occurred: {e}")
+                log.exception(f"Error getting function valves by id {id}: {e}")
                 return None
 
     def update_function_valves_by_id(
@@ -202,7 +202,9 @@ class FunctionsTable:
 
             return user_settings["functions"]["valves"].get(id, {})
         except Exception as e:
-            print(f"An error occurred: {e}")
+            log.exception(
+                f"Error getting user values by id {id} and user id {user_id}: {e}"
+            )
             return None
 
     def update_user_valves_by_id_and_user_id(
@@ -225,7 +227,9 @@ class FunctionsTable:
 
             return user_settings["functions"]["valves"][id]
         except Exception as e:
-            print(f"An error occurred: {e}")
+            log.exception(
+                f"Error updating user valves by id {id} and user_id {user_id}: {e}"
+            )
             return None
 
     def update_function_by_id(self, id: str, updated: dict) -> Optional[FunctionModel]:
