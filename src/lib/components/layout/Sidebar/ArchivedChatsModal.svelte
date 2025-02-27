@@ -7,12 +7,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import {
-		archiveChatById,
-		deleteChatById,
-		getAllArchivedChats,
-		getArchivedChatList
-	} from '$lib/apis/chats';
+	import { archiveChatById, deleteChatById, getArchivedChatList } from '$lib/apis/chats';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -41,14 +36,6 @@
 		});
 
 		chats = await getArchivedChatList(localStorage.token);
-	};
-
-	const exportChatsHandler = async () => {
-		const chats = await getAllArchivedChats(localStorage.token);
-		let blob = new Blob([JSON.stringify(chats)], {
-			type: 'application/json'
-		});
-		saveAs(blob, `${$i18n.t('archived-chat-export')}-${Date.now()}.json`);
 	};
 
 	const unarchiveAllHandler = async () => {
@@ -229,15 +216,6 @@
 								}}
 							>
 								{$i18n.t('Unarchive All Archived Chats')}
-							</button>
-
-							<button
-								class="px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
-								on:click={() => {
-									exportChatsHandler();
-								}}
-							>
-								{$i18n.t('Export All Archived Chats')}
 							</button>
 						</div>
 					</div>
