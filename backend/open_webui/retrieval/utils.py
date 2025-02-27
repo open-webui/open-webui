@@ -5,6 +5,7 @@ from typing import Optional, Union
 
 import asyncio
 import requests
+import hashlib
 
 from huggingface_hub import snapshot_download
 from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
@@ -175,45 +176,40 @@ def merge_get_results(get_results: list[dict]) -> dict:
 
 def merge_and_sort_query_results(
     query_results: list[dict], k: int, reverse: bool = False
-) -> list[dict]:
+) -> dict:
     # Initialize lists to store combined data
-    combined_distances = []
-    combined_documents = []
-    combined_metadatas = []
+    combined = []
+    seen_hashes = set()  # To store unique document hashes
 
     for data in query_results:
-        combined_distances.extend(data["distances"][0])
-        combined_documents.extend(data["documents"][0])
-        combined_metadatas.extend(data["metadatas"][0])
+        distances = data["distances"][0]
+        documents = data["documents"][0]
+        metadatas = data["metadatas"][0]
 
-    # Create a list of tuples (distance, document, metadata)
-    combined = list(zip(combined_distances, combined_documents, combined_metadatas))
+        for distance, document, metadata in zip(distances, documents, metadatas):
+            if isinstance(document, str):
+                doc_hash = hashlib.md5(
+                    document.encode()
+                ).hexdigest()  # Compute a hash for uniqueness
+
+                if doc_hash not in seen_hashes:
+                    seen_hashes.add(doc_hash)
+                    combined.append((distance, document, metadata))
 
     # Sort the list based on distances
     combined.sort(key=lambda x: x[0], reverse=reverse)
 
-    # We don't have anything :-(
-    if not combined:
-        sorted_distances = []
-        sorted_documents = []
-        sorted_metadatas = []
-    else:
-        # Unzip the sorted list
-        sorted_distances, sorted_documents, sorted_metadatas = zip(*combined)
+    # Slice to keep only the top k elements
+    sorted_distances, sorted_documents, sorted_metadatas = (
+        zip(*combined[:k]) if combined else ([], [], [])
+    )
 
-        # Slicing the lists to include only k elements
-        sorted_distances = list(sorted_distances)[:k]
-        sorted_documents = list(sorted_documents)[:k]
-        sorted_metadatas = list(sorted_metadatas)[:k]
-
-    # Create the output dictionary
-    result = {
-        "distances": [sorted_distances],
-        "documents": [sorted_documents],
-        "metadatas": [sorted_metadatas],
+    # Create and return the output dictionary
+    return {
+        "distances": [list(sorted_distances)],
+        "documents": [list(sorted_documents)],
+        "metadatas": [list(sorted_metadatas)],
     }
-
-    return result
 
 
 def get_all_items_from_collections(collection_names: list[str]) -> dict:
