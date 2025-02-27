@@ -20,6 +20,7 @@ from sqlalchemy.sql import exists
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
+
 class Chat(Base):
     __tablename__ = "chat"
 

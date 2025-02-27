@@ -202,7 +202,9 @@ class MilvusClient:
             log.debug(all_results)
             return self._result_to_get_result([all_results])
         except Exception as e:
-            log.exception(f"Error querying collection {collection_name} with limit {limit}: {e}")
+            log.exception(
+                f"Error querying collection {collection_name} with limit {limit}: {e}"
+            )
             return None
 
     def get(self, collection_name: str) -> Optional[GetResult]:

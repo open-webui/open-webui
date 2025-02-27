@@ -190,7 +190,9 @@ class PgvectorClient:
                     )
                     self.session.add(new_chunk)
             self.session.commit()
-            log.info(f"Upserted {len(items)} items into collection '{collection_name}'.")
+            log.info(
+                f"Upserted {len(items)} items into collection '{collection_name}'."
+            )
         except Exception as e:
             self.session.rollback()
             log.exception(f"Error during upsert: {e}")
