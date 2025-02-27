@@ -1500,10 +1500,11 @@ Ensure that the tools are effectively utilized to achieve the highest-quality an
 VECTOR_DB = os.environ.get("VECTOR_DB", "chroma")
 
 # Chroma
+CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
+
 if VECTOR_DB == "chroma":
     import chromadb
 
-    CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
     CHROMA_TENANT = os.environ.get("CHROMA_TENANT", chromadb.DEFAULT_TENANT)
     CHROMA_DATABASE = os.environ.get("CHROMA_DATABASE", chromadb.DEFAULT_DATABASE)
     CHROMA_HTTP_HOST = os.environ.get("CHROMA_HTTP_HOST", "")
@@ -2415,7 +2416,7 @@ LDAP_SEARCH_BASE = PersistentConfig(
 LDAP_SEARCH_FILTERS = PersistentConfig(
     "LDAP_SEARCH_FILTER",
     "ldap.server.search_filter",
-    os.environ.get("LDAP_SEARCH_FILTER", ""),
+    os.environ.get("LDAP_SEARCH_FILTER", os.environ.get("LDAP_SEARCH_FILTERS", "")),
 )
 
 LDAP_USE_TLS = PersistentConfig(
