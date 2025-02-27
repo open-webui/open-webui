@@ -1,5 +1,6 @@
 import { PublicClientApplication } from '@azure/msal-browser';
 import type { PopupRequest } from '@azure/msal-browser';
+import { v4 as uuidv4 } from 'uuid';
 
 let CLIENT_ID = '';
 
@@ -94,7 +95,7 @@ const params = {
 	authentication: {},
 	messaging: {
 		origin: window?.location?.origin,
-		channelId: crypto.randomUUID()
+		channelId: uuidv4()
 	},
 	typesAndSources: {
 		mode: 'files',
