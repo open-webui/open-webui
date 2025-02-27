@@ -3,7 +3,7 @@ import requests
 
 router = APIRouter()
 
-RAG_SERVER_URL = "http://localhost:8001/alfred-oi/api/query"  # 네 RAG 서버 URL
+RAG_SERVER_URL = "http://localhost:8001/alfred-oi/api/query"  #
 
 @router.post("/alfred-oi/query")
 async def query_rag(payload: dict):

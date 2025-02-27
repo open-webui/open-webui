@@ -100,10 +100,12 @@ docker compose restart open-webui
 ----------------------------------
 # 파이썬 환경 설정
 ----------------------------------
-cd ../backend
+cd backend
 python3 -m venv venv
-source venv/bin/activate  # Mac/Linux
+source venv/bin/activate
 pip install -r requirements.txt
+
+pnpm build
 
 ---
 cd backend
@@ -111,14 +113,26 @@ source venv/bin/activate  # Mac/Linux
 python3 main.py
 
 ---
+### 1. backend 실행
+cd backend 
+conda activate openwebui
+start.sh
+
+### 2. frontend 실행
+cd frontend 
 pnpm dev
-pnpm build
 
 
 
 ----------------------------------
 # 작업이력
 ----------------------------------
+
+## 2024/02/24
+
+### 신규 화면 추가
+
+
 
 ## 2024/02/20
 ### 소스 수정
