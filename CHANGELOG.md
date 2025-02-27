@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **✏️ Chat Items**: Renaming chat items when in a chat folder now changes instantly.
 - **📂 Archived Chats**: Removed JSON exportation.
 - **📌 Pinned Chats**: Pinned chats now see an unpinning option.
-- **🌗 Prompt View**: Fix visual issues and now displays text color correctly based on dark/light mode.
+- **🖼️ Prompt View**: Fix visual issues and now displays text color correctly based on dark/light mode.
 
 ## [0.5.7-ccv2-1.1.1] - 2025-02-21
 
