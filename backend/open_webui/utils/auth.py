@@ -205,7 +205,8 @@ def get_current_user(
         else:
             # Refresh the user's last active timestamp asynchronously
             # to prevent blocking the request
-            background_tasks.add_task(Users.update_user_last_active_by_id, user.id)
+            if background_tasks:
+                background_tasks.add_task(Users.update_user_last_active_by_id, user.id)
         return user
     else:
         raise HTTPException(
