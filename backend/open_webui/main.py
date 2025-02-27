@@ -839,7 +839,7 @@ async def chat_completion(
     user=Depends(get_verified_user),
 ):
     if not request.app.state.MODELS:
-        await get_all_models(request)
+        await get_all_models(request, user)
 
     tasks = form_data.pop("background_tasks", None)
     try:

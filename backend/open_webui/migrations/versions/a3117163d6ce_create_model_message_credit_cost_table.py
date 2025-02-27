@@ -39,7 +39,7 @@ def upgrade() -> None:
             {'model_name': 'GPT 4o', 'message_credit_cost': 20},
             {'model_name': 'GPT 4o Mini', 'message_credit_cost': 1},
             {'model_name': 'Claude 3 Haiku', 'message_credit_cost': 2},
-            {'model_name': 'Claude 3.5 Sonnet', 'message_credit_cost': 25},
+            {'model_name': 'Claude 3.5 Sonnet v2', 'message_credit_cost': 25},
             {'model_name': 'Gemini 1.5 Pro', 'message_credit_cost': 2},
             {'model_name': 'Perplexity', 'message_credit_cost': 25},
             {'model_name': 'GPT 3.5 Turbo', 'message_credit_cost': 25},

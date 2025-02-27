@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  litellm:
+    container_name: litellm
+    image: ghcr.io/berriai/litellm:main-v1.61.7
+    env_file:
+      - .env
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./litellm-config.yaml:/app/config.yaml
+      - ~/.config/gcloud:/root/.config/gcloud
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+  beyond-the-loop:
+    image: ghcr.io/philszalay/beyond-the-loop:main
+    container_name: beyond-the-loop
+    env_file:
+      - .env
+    environment:
+      - OPENAI_API_BASE_URL=http://litellm:4000/v1
+      - DATABASE_URL=sqlite:////app/backend/data/database.sqlite
+    volumes:
+      - ./backend/data:/app/backend/data
+    depends_on:
+      - litellm
+    ports:
+      - "8080:8080"
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    restart: unless-stopped
+
+volumes:
+  beyond-the-loop: {}
+  litellm: {}

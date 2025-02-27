@@ -22,6 +22,7 @@ from beyond_the_loop.models.companies import Companies
 from beyond_the_loop.models.companies import EIGHTY_PERCENT_CREDIT_LIMIT
 from beyond_the_loop.models.completions import Completions
 from beyond_the_loop.services.email_service import EmailService
+from beyond_the_loop.models.completions import calculate_saved_time_in_seconds
 
 from open_webui.config import (
     CACHE_DIR,
@@ -556,55 +557,55 @@ async def generate_chat_completion(
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
-    idx = 0
-
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
 
-    # Subtract credits from the company's balance (if possible)
-    model_message_credit_cost = ModelMessageCreditCosts.get_cost_by_model(model_id)
+    has_chat_id = "chat_id" in metadata and metadata["chat_id"] is not None
 
-    # Get current credit balance once
-    current_balance = Companies.get_credit_balance(user.company_id)
-    
-    # Check if company has sufficient credits
-    if current_balance < model_message_credit_cost:
-        email_service = EmailService()
-        email_service.send_budget_mail_100(to_email=user.email, recipient_name=user.name)
+    # Initialize the credit cost variable
+    model_message_credit_cost = 0
 
-        raise HTTPException(
-            status_code=402,  # 402 Payment Required
-            detail=f"Insufficient credits. This operation requires {model_message_credit_cost} credits.",
-        )
+    if has_chat_id:
+        model_message_credit_cost = ModelMessageCreditCosts.get_cost_by_model(model_id)
 
-    # Check 80% threshold
-    if current_balance - model_message_credit_cost < EIGHTY_PERCENT_CREDIT_LIMIT:  # If balance is less than 125% of required (which means we're below 80%)
-        email_service = EmailService()
-        
-        should_send_budget_email_80 = True  # Default to sending email
+        # Get current credit balance
+        current_balance = Companies.get_credit_balance(user.company_id)
 
-        if Companies.get_auto_recharge(user.company_id):
-            try:
-                # Trigger auto-recharge using the charge_customer endpoint
-                await charge_customer(user)
-                # Note: The webhook will handle adding the credits when payment succeeds
-                should_send_budget_email_80 = False  # Don't send email if auto-recharge succeeded
-            except HTTPException as e:
-                print(f"Auto-recharge failed: {str(e)}")
-            except Exception as e:
-                print(f"Unexpected error during auto-recharge: {str(e)}")
+        # Check if company has sufficient credits
+        if current_balance < model_message_credit_cost:
+            email_service = EmailService()
+            email_service.send_budget_mail_100(to_email=user.email, recipient_name=user.name)
 
-        if should_send_budget_email_80:
-            email_service.send_budget_mail_80(to_email=user.email, recipient_name=user.name)
+            raise HTTPException(
+                status_code=402,  # 402 Payment Required
+                detail=f"Insufficient credits. This operation requires {model_message_credit_cost} credits.",
+            )
 
-    # Subtract credits from balance
-    Companies.subtract_credit_balance(user.company_id, model_message_credit_cost)
+        # Check 80% threshold
+        if current_balance - model_message_credit_cost < EIGHTY_PERCENT_CREDIT_LIMIT:  # If balance is less than 125% of required (which means we're below 80%)
+            email_service = EmailService()
 
-    # Add completion to completion table
-    Completions.insert_new_completion(user.id, metadata["chat_id"], model_id, model_message_credit_cost)
+            should_send_budget_email_80 = True  # Default to sending email
+
+            if Companies.get_auto_recharge(user.company_id):
+                try:
+                    # Trigger auto-recharge using the charge_customer endpoint
+                    await charge_customer(user)
+                    # Note: The webhook will handle adding the credits when payment succeeds
+                    should_send_budget_email_80 = False  # Don't send email if auto-recharge succeeded
+                except HTTPException as e:
+                    print(f"Auto-recharge failed: {str(e)}")
+                except Exception as e:
+                    print(f"Unexpected error during auto-recharge: {str(e)}")
+
+            if should_send_budget_email_80:
+                email_service.send_budget_mail_80(to_email=user.email, recipient_name=user.name)
+
+        # Subtract credits from balance
+        Companies.subtract_credit_balance(user.company_id, model_message_credit_cost)
 
     # Check model info and override the payload
     if model_info:
@@ -689,6 +690,11 @@ async def generate_chat_completion(
     streaming = False
     response = None
 
+    # Parse payload once for both streaming and non-streaming cases
+    payload_dict = json.loads(payload)
+    last_user_message = next((msg['content'] for msg in reversed(payload_dict['messages']) 
+                            if msg['role'] == 'user'), '')
+
     try:
         session = aiohttp.ClientSession(
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
@@ -725,8 +731,28 @@ async def generate_chat_completion(
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
+            
+            async def insert_completion_if_streaming_is_done():
+                full_response = ""
+                async for chunk in r.content:
+                    chunk_str = chunk.decode()
+                    if chunk_str.startswith('data: '):
+                        try:
+                            data = json.loads(chunk_str[6:])
+                            delta = data.get('choices', [{}])[0].get('delta', {}).get('content', '')
+                            if delta:  # Only use it if there's actual content
+                                full_response += delta
+                            elif data.get('choices', [{}])[0].get('finish_reason'):
+                                # End of stream
+                                # Add completion to completion table if it's a chat message from the user
+                                if has_chat_id:
+                                    Completions.insert_new_completion(user.id, metadata["chat_id"], model_id, model_message_credit_cost, calculate_saved_time_in_seconds(last_user_message, full_response))
+                        except json.JSONDecodeError:
+                            print(f"\n{chunk_str}")
+                    yield chunk
+
             return StreamingResponse(
-                r.content,
+                insert_completion_if_streaming_is_done(),
                 status_code=r.status,
                 headers=dict(r.headers),
                 background=BackgroundTask(
@@ -741,6 +767,13 @@ async def generate_chat_completion(
                 response = await r.text()
 
             r.raise_for_status()
+
+            if has_chat_id:
+                # Add completion to completion table
+                response_content = response.get('choices', [{}])[0].get('message', {}).get('content', '')
+
+                Completions.insert_new_completion(user.id, metadata["chat_id"], model_id, model_message_credit_cost, calculate_saved_time_in_seconds(last_user_message, response_content))
+
             return response
     except Exception as e:
         log.exception(e)
@@ -826,7 +859,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                 res = await r.json()
                 print(res)
                 if "error" in res:
-                    detail = f"External: {res['error']['message'] if 'message' in res['error'] else res['error']}"
+                    detail = f"External Error: {res['error']['message'] if 'message' in res['error'] else res['error']}"
             except Exception:
                 detail = f"External: {e}"
         raise HTTPException(

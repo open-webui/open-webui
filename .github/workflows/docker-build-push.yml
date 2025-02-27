@@ -111,6 +111,7 @@ jobs:
           key: ${{ secrets.PROD_EC2_SSH_KEY }}
           script: |
             cd ~/beyond-the-loop
+            docker-compose down
             docker-compose pull
             docker-compose up -d
 
@@ -171,5 +172,6 @@ jobs:
           key: ${{ secrets.STAGING_EC2_SSH_KEY }}
           script: |
             cd ~/beyond-the-loop
+            docker-compose down
             docker-compose pull
             docker-compose up -d

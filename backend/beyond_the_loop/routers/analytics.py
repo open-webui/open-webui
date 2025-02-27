@@ -383,3 +383,88 @@ async def get_total_chats(
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching chat stats: {e}")
+
+
+@router.get("/stats/saved-time-in-seconds")
+async def get_saved_time_in_seconds(
+    start_date: str = Query(None, description="Start date in YYYY-MM-DD format (optional)"),
+    end_date: str = Query(None, description="End date in YYYY-MM-DD format (optional)"),
+    user=Depends(get_verified_user)
+):
+    """
+    Returns total saved time in seconds for the last 12 months or within a specified time frame,
+    filtered by the user's completions.
+    """
+    try:
+        current_date = datetime.now()
+        one_year_ago = current_date.replace(day=1) - timedelta(days=365)
+
+        # Parse start_date
+        if start_date:
+            start_date_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        else:
+            start_date_dt = one_year_ago  # Default to one year ago
+
+        # Parse end_date
+        if end_date:
+            end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
+        else:
+            end_date_dt = current_date  # Default to current date
+
+        if start_date_dt > end_date_dt:
+            raise HTTPException(status_code=400, detail="Start date must be before end date.")
+
+        # Ensure end_date includes the entire day
+        end_date_dt = end_date_dt.replace(hour=23, minute=59, second=59)
+
+        with get_db() as db:
+            query = db.query(
+                func.strftime('%Y-%m', func.datetime(Completion.created_at, 'unixepoch')).label("month"),
+                func.sum(Completion.time_saved_in_seconds).label("total_saved_time")
+            ).filter(
+                func.datetime(Completion.created_at, 'unixepoch') >= start_date_dt.strftime('%Y-%m-%d 00:00:00'),
+                func.datetime(Completion.created_at, 'unixepoch') <= end_date_dt.strftime('%Y-%m-%d %H:%M:%S')
+            )
+
+            query = query.filter(Completion.user_id == user.id)
+
+            # Execute the query and fetch results
+            results = query.group_by("month").order_by("month").all()
+
+            # Convert results to a dictionary
+            monthly_saved_time = {row[0]: int(row[1]) if row[1] is not None else 0 for row in results}
+
+        # Generate all months within the specified range
+        months = []
+        current_month = start_date_dt.replace(day=1)
+        end_month = end_date_dt.replace(day=1)
+
+        while current_month <= end_month:
+            months.append(current_month.strftime('%Y-%m'))
+            # Move to the first day of next month
+            if current_month.month == 12:
+                current_month = current_month.replace(year=current_month.year + 1, month=1)
+            else:
+                current_month = current_month.replace(month=current_month.month + 1)
+
+        saved_time_data = {month: monthly_saved_time.get(month, 0) for month in months}
+
+        # Calculate percentage changes month-over-month
+        percentage_changes = {}
+        previous_value = None
+        for month, value in saved_time_data.items():
+            if previous_value is not None:
+                change = ((value - previous_value) / previous_value) * 100 if previous_value != 0 else None
+                percentage_changes[month] = round(change, 2) if change is not None else "N/A"
+            else:
+                percentage_changes[month] = "N/A"
+            previous_value = value
+
+        return {
+            "monthly_saved_time_in_seconds": saved_time_data,
+            "percentage_changes": percentage_changes
+        }
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching saved time stats: {e}")

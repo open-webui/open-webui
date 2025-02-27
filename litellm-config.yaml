@@ -15,7 +15,6 @@ model_list:
       arena_elo: 1287
       knowledge_cutoff: "October 2023"
       context_window: 128000
-
   - model_name: "GPT 3.5 Turbo"
     litellm_params:
       model: "azure/gpt-35-turbo"
@@ -27,5 +26,38 @@ model_list:
       arena_elo: 1116
       knowledge_cutoff: "September 2021"
       context_window: 16000
+  - model_name: 'Gemini 1.5 Pro'
+    litellm_params:
+      model: 'gemini-1.5-pro'
+      vertex_project: 'beyond-chat-1111'
+      vertex_location: 'europe-west3'
+      max_tokens: 800
+    model_info:
+      description: "Google's leading model with a very large context window."
+      arena_elo: 1265
+      knowledge_cutoff: 'November 2023'
+      context_window: 2_000_000
+  - model_name: 'Gemini 1.5 Flash'
+    litellm_params:
+      max_tokens: 800
+      model: 'gemini-1.5-flash-001'
+      vertex_project: 'beyond-chat-1111'
+      vertex_location: 'europe-west3'
+    model_info:
+      description: 'Optimized for speed and efficiency.'
+      arena_elo: 1231
+      knowledge_cutoff: 'November 2023'
+      context_window: 1_000_000
+  - model_name: 'Claude 3.5 Sonnet v2'
+    litellm_params:
+      model: 'vertex_ai/claude-3-5-sonnet-v2@20241022'
+      vertex_project: 'beyond-chat-1111'
+      vertex_location: 'europe-west1'
+    model_info:
+      description: 'Lightning-fast responses for simple queries.'
+      arena_elo: 1178
+      knowledge_cutoff: 'February 2024'
+      context_window: 200_000
+      max_tokens: 800
 
 general_settings: {}
