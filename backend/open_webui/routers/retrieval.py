@@ -31,6 +31,7 @@ from langchain_core.documents import Document
 from open_webui.models.files import FileModel, Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
+from open_webui.models.functions import Functions
 
 
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
@@ -710,6 +711,10 @@ def save_docs_to_vector_db(
     log.info(
         f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
     )
+
+    print("NEW PARSER HERE")
+    print(Functions.get_functions_by_type("parser"))
+    print(Functions.get_functions())
 
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and "hash" in metadata:
