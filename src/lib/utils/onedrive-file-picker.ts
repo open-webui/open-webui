@@ -1,3 +1,5 @@
+import { v4 as uuidv4 } from 'uuid';
+
 let CLIENT_ID = '';
 
 async function getCredentials() {
@@ -84,7 +86,7 @@ const params = {
 	authentication: {},
 	messaging: {
 		origin: window?.location?.origin,
-		channelId: crypto.randomUUID()
+		channelId: uuidv4()
 	},
 	typesAndSources: {
 		mode: 'files',
