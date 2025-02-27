@@ -101,6 +101,10 @@
 		// Revoke the URL to release memory
 		window.URL.revokeObjectURL(url);
 	};
+
+	$: if (show) {
+		checkPinned();
+	}
 </script>
 
 <Dropdown

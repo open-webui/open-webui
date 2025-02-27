@@ -3,6 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import AccessControl from '../common/AccessControl.svelte';
 	import { user } from '$lib/stores';
+	import { goto } from '$app/navigation';
 
 	export let onSubmit: Function;
 	export let edit = false;
@@ -171,10 +172,20 @@
 		</div>
 
 		<div class="flex justify-end mt-2">
+			<!-- Move Cancel button here -->
 			<button
-				class="text-sm px-4 py-2 transition rounded-lg {loading
-					? 'cursor-not-allowed bg-gray-100 dark:bg-gray-800'
-					: 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800'} flex"
+				class="text-sm px-4 py-2 transition rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white"
+				on:click={() => goto('/workspace/prompts')}
+				type="button"
+			>
+				<div class="self-center font-medium">
+					{$i18n.t('Cancel')}
+				</div>
+			</button>
+			<button
+				class="text-sm px-4 py-2 ml-2 transition rounded-lg {loading
+					? 'cursor-not-allowed bg-gray-900 dark:bg-gray-100'
+					: 'bg-gray-900 hover:bg-gray-850 text-white dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800'} flex"
 				type="submit"
 				disabled={loading}
 			>
