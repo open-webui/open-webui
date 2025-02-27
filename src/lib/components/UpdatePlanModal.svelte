@@ -79,6 +79,8 @@
     z-index: 1000; /* Убедитесь, что модальное окно поверх других элементов */
     overflow: auto; /* Добавляем прокрутку, если содержимое не помещается */
     padding: 20px; /* Отступы для мобильных устройств */
+    z-index: 1000; /* Модальное окно поверх других элементов */
+
   }
 
   .modal-content {
@@ -90,6 +92,7 @@
     max-width: 1200px; /* Максимальная ширина */
     max-height: 90vh; /* Максимальная высота (90% высоты экрана) */
     overflow-y: auto; /* Прокрутка, если содержимое не помещается */
+    z-index: 1001; /* Контент модального окна поверх оверлея */
   }
 
   /* Адаптивность для мобильных устройств */
@@ -154,6 +157,8 @@
     font-size: 1rem;
     cursor: pointer;
     transition: background 0.3s;
+    pointer-events: auto; /* Разрешить события указателя */
+    z-index: 1002; /* Убедитесь, что кнопки поверх модального окна */
   }
 
   .card button:hover {
@@ -189,7 +194,7 @@
           <div class="price">₽550</div>
           <button
               on:click={() => openPaymentWindow('550', '1')}
-              on:touchstart={() => openPaymentWindow('550', '1')}
+              on:touchstart|preventDefault={() => openPaymentWindow('550', '1')}
           >
               Оплатить
           </button>
