@@ -5,4 +5,4 @@ resources:
   - ../base
 
 patches:
-- path: ollama-statefulset-gpu.yaml
+  - path: ollama-statefulset-gpu.yaml

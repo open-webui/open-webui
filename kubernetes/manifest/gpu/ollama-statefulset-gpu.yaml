@@ -11,7 +11,7 @@ spec:
   template:
     spec:
       containers:
-      - name: ollama
-        resources:
-          limits:
-            nvidia.com/gpu: "1"
+        - name: ollama
+          resources:
+            limits:
+              nvidia.com/gpu: "1"

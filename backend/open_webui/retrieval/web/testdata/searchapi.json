@@ -88,7 +88,10 @@
 			"domain": "openai.com",
 			"displayed_link": "https://openai.com › chatgpt",
 			"snippet": "ChatGPT helps you get answers, find inspiration and be more productive. It is free to use and easy to try. Just ask and ChatGPT can help with writing, ...",
-			"snippet_highlighted_words": ["ChatGPT", "ChatGPT"],
+			"snippet_highlighted_words": [
+				"ChatGPT",
+				"ChatGPT"
+			],
 			"sitelinks": {
 				"expanded": [
 					{
@@ -128,7 +131,10 @@
 			"domain": "chatgpt.com",
 			"displayed_link": "https://chatgpt.com",
 			"snippet": "ChatGPT helps you get answers, find inspiration and be more productive. It is free to use and easy to try. Just ask and ChatGPT can help with writing, learning,",
-			"snippet_highlighted_words": ["ChatGPT", "ChatGPT"],
+			"snippet_highlighted_words": [
+				"ChatGPT",
+				"ChatGPT"
+			],
 			"favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAAAAABXZoBIAAABGElEQVR4Aa3SIWzCUBSF4d8rDA6LnMfiMPjU18xiJjHPCxzBVePqaqsrK6sqK5qgnmjybzShzQKb4tjv3mvuwX/yHhya9i8cDgCXlziwKm99TnIM5RN+rlQvkO5Z97+wP1FpAbkadwwzWgAOW4L2rcppxoZLjc2i1xMEzZYzblMrbBILzpaQV0wYqUfcbNNk3+kZPibsaEek1oqjxj3DA6W8Y5uobs7kuggTphvNOKWq6/HQlQl70sF4oNaS2NNaMzxQ4Krt9rBPliMW82akubKqDFSuR9x9TiiF8QsybfnBLtDNePhQm3ifSOyAyhlvpKoZy0pzsuiM2kKSwlWNhKd/FiHsFsXtVrB5XbAAEHyN2jTv7+1TvgE1rn+XcUk3JAAAAABJRU5ErkJggg=="
 		},
 		{
@@ -139,7 +145,9 @@
 			"domain": "openai.com",
 			"displayed_link": "https://openai.com",
 			"snippet": "ChatGPT on your desktop. Chat about email, screenshots, files, and anything on your screen. Chat about email, screenshots, files ...",
-			"snippet_highlighted_words": ["ChatGPT"],
+			"snippet_highlighted_words": [
+				"ChatGPT"
+			],
 			"sitelinks": {
 				"inline": [
 					{
@@ -170,13 +178,21 @@
 			"domain": "play.google.com",
 			"displayed_link": "https://play.google.com › store › apps › details › id=com...",
 			"snippet": "With the official ChatGPT app, get instant answers and inspiration wherever you are. This app is free and brings you the newest model improvements from ...",
-			"snippet_highlighted_words": ["ChatGPT"],
+			"snippet_highlighted_words": [
+				"ChatGPT"
+			],
 			"rich_snippet": {
 				"detected_extensions": {
 					"rating": 4.8,
 					"reviews": 3113820
 				},
-				"extensions": ["Rating: 4.8", "3,113,820 votes", "Free", "Android", "Business/Productivity"]
+				"extensions": [
+					"Rating: 4.8",
+					"3,113,820 votes",
+					"Free",
+					"Android",
+					"Business/Productivity"
+				]
 			},
 			"favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADNklEQVR4AcXUA4wdURiG4VPbtu32mmvUtm3bts2gnNq2bbtBbSzn3n79M8nZrvdcZZO8yUTzPUMGIFmLOlBJTXhtqcPUUaoDxRwp16aObORuHcNpxmwnUjM5/uICam0PyKza2miJSmoGOlH0HlIGjwPUm9tOqrXdD6qt9RANEb39VEGPAXym/5YMK9ehxu5ahKgbH4I3m0rjdoDfBEj+EwDDyrUiiO9UR7ffAd8pMvzHAyJ3Ivr74R7AtD8SIRATURO1ttWBakuCCN4BqrDLAApRiAmAcflm1NilJUSwCAJqqcm8nBs7pRu4y+gCIAoRqdwJ07LtdCfUSSLUlEZqjBQbevwctVvX1QUA7zd8pkYIIfh41o2d0Xh7ICJOpAFOsic0ZHYBIIZQKynjaLQtCPLJVKCrRyQhaAjUYaqIMCBxxA5CqAgRRIjmUMapzBu7oHG0cZmPx2welU4AkARi6T7U3KWHanuAgshCV952hy/sJ1MmNs77Q5mcAHBEuIKwLD6Mmrv1yCS1QMftfsApJjLO+0A1cxjAEb5TwxRE/uX30PmkFrjAgJPRn7lQklMAXwL4TAtB8UVA927PIA8sBNxikC+mhHzMgwA+7j0tFEWXAN1GXkGksSzkMpXxdWBZ/L3LYLvMRBHfqLbCAD7uNT0MJRYDfYedQ4S5FOymonjvbcD7Slb86Fsa9psM9itJIuxUsPhLGG282BJg8ODjgL4QbKbieO+nxyc/NT55a/CughXfu5dLCrGGyir2GcYzPoTGYSiESFNJGtfhk69aSUH4qPG+YoKIc1Q58R+R+Hj8iJ5lYbuUArazKd/QkL9Tv2Lfqb9hpfGiSYzHh3hXxjv05/Di/e23GB8TB/Bxy4xw5YUbMfAwjRdJajw6Yun7KpaM37uWY/YbBDjpIICP023HxH47AV0ehJtLi4wfp0pR7H01M6OvwnGA/9Rf0v/xHTSeF2GWMviQ+PhzykoxJVcA1eZBKh5jvGxi47+oHnzULYCacyFN7is0Po9KRzG3Am7XbzopxFoeoZZyCY0foIrwIbcDZFPxzN+9qy2JZ/whZeADngJEP0k76gB1kOooOuwKIFn7B3LHHIJtp64TAAAAAElFTkSuQmCC",
 			"thumbnail": "data:image/jpeg;base64,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"
@@ -189,13 +205,21 @@
 			"domain": "apps.apple.com",
 			"displayed_link": "https://apps.apple.com › app › chatgpt",
 			"snippet": "This official app is free, syncs your history across devices, and brings you the newest model improvements from OpenAI. With ChatGPT in your pocket ...",
-			"snippet_highlighted_words": ["ChatGPT"],
+			"snippet_highlighted_words": [
+				"ChatGPT"
+			],
 			"rich_snippet": {
 				"detected_extensions": {
 					"rating": 4.9,
 					"reviews": 1026513
 				},
-				"extensions": ["Rating: 4.9", "1,026,513 reviews", "Free", "iOS", "Business/Productivity"]
+				"extensions": [
+					"Rating: 4.9",
+					"1,026,513 reviews",
+					"Free",
+					"iOS",
+					"Business/Productivity"
+				]
 			},
 			"favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAC5UlEQVR4Aa1XQ3hkQRjc+ynX2OZtbfu+tm3b1nlt27a9O4qNS5xxbdd+cTKvXydT31fJoPuvmvf6/ejw86dBlX6CwwQXCq6t5cLaz/xV4+ld6F8r9NdgsCAjIwf5+UUoLCwBydf8jN+JNQbBddzjDQM+gocErRSyWm2QgWu4lntq9/q01UAfwYKCgmK43W6ognu4lzEE+6oamCboLC0tR3vBGIwlOF2vgZm5uQWoqamBXrhcLpw5cxZ79uxFKxCxrGBMxpYZ6Eu33KAXNDp+/AQEBgbzv8Y6Kxi7+e1ofuAKVS/7zp27KE7i6dNnem5HAbVaM3CYh0YF/PWRkdEUpxHoQe3BPNTcQJCgTc9pT0tLh8VigdPpBLFv3368evVKBC7A16/fkJmZKX06qCXo39jAej67Wnjx4iVGjBiJ0NBwBAeHYsCAgTh48BCuXLmCKVOmIioqBrwS4eGRGDduPMxmMzyBWtRsbMCglWSePXuOkJAwCuhmnz79YLVaPSUrGjDWGQhgCvWEyspKdOrURUk8JiYO799/0Exg1KQ2DQxjHveEO3fuKomTPBcyUJPaNLCQxcQTNm3arGzAYDBABmoK7UU0sE7rAC5dukxJPCgoRPy6DMhATWpLDWzbtl35Cty//0DBgOQW3LhxU9nAsGEj4HA4dN0CySHkwvy6bKfECRMmISsrS34IZY8hMXnyFAZV5rFjx6WPoa5E9PnzZ2XxpKQUlJaWaiUik1IqXrBgkZKB06fPwBOKiv4fwA3Ni5FdK3NVVFSgd+++usRnzJilXIzII7JynJOTAxaa7t17Yt68+bh37z6+fPmKCxcuYvToMejVqzdWrVrNMi0rx4cVGxIFKDQkCi2ZAhRaMklTavWqeF6epCltxuneasvLyurb8lmqg0lfLw4m/dozmh0RtBUV6R/NuJZ7avf6eGs4ZeIwMoVmZrYcTvkZv+MarlUZTlUZIDi8diRfX8uFtZ8FqMb7Bx+2VJbBTrlcAAAAAElFTkSuQmCC"
 		},
@@ -207,7 +231,9 @@
 			"domain": "www.zdnet.com",
 			"displayed_link": "https://www.zdnet.com › ... › Artificial Intelligence",
 			"snippet": "ChatGPT is an AI chatbot with natural language processing (NLP) that allows you to have human-like conversations to complete various tasks. The ...",
-			"snippet_highlighted_words": ["ChatGPT"],
+			"snippet_highlighted_words": [
+				"ChatGPT"
+			],
 			"date": "Jun 17, 2024",
 			"favicon": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAMAAABF0y+mAAAAMFBMVEXQ/0rQ/0vM+0oDAxDV/0yixjxlfCpTZiV/nDK75USTtTg7SR/F8Uiu1UAfJhhyjC65DF56AAAAAXRSTlP3Yz+/2QAAANRJREFUKJHdkkGSxCAIRaOAAore/7YDJNPVSVfPAeYtdPEK5FMex1/U8pV/JutMatwVH9JaouTH1ok3SWsEjWGNBXve5JQ5qS+XJLJB8V3iZK8AZhBEAb5JBVjNEFPaU65tIibR1saiZ2XgbzpDH1H2ZtWttB316SSpZ5TeWymNtSfK501X2wFWo23mVR7DE49f2VYrkdPONVaEXmq9JHVIGUQSl/ia1jxFyOYT2YeUletTIyJ5SEIf4WoLfJNCE73EhJKoJHv9hHjFyQNzeefp8jvHD3ZbC4DWezICAAAAAElFTkSuQmCC"
 		}

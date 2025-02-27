@@ -40,14 +40,20 @@
 	"2692": "hammer_and_pick",
 	"2693": "anchor",
 	"2694": "crossed_swords",
-	"2695": ["medical_symbol", "staff_of_aesculapius"],
+	"2695": [
+		"medical_symbol",
+		"staff_of_aesculapius"
+	],
 	"2696": "scales",
 	"2697": "alembic",
 	"2699": "gear",
 	"2702": "scissors",
 	"2705": "white_check_mark",
 	"2708": "airplane",
-	"2709": ["email", "envelope"],
+	"2709": [
+		"email",
+		"envelope"
+	],
 	"2712": "black_nib",
 	"2714": "heavy_check_mark",
 	"2716": "heavy_multiplication_x",
@@ -60,7 +66,10 @@
 	"2753": "question",
 	"2754": "grey_question",
 	"2755": "grey_exclamation",
-	"2757": ["exclamation", "heavy_exclamation_mark"],
+	"2757": [
+		"exclamation",
+		"heavy_exclamation_mark"
+	],
 	"2763": "heavy_heart_exclamation_mark_ornament",
 	"2764": "heart",
 	"2795": "heavy_plus_sign",
@@ -150,7 +159,10 @@
 	"1F1E8-1F1F0": "flag-ck",
 	"1F1E8-1F1F1": "flag-cl",
 	"1F1E8-1F1F2": "flag-cm",
-	"1F1E8-1F1F3": ["cn", "flag-cn"],
+	"1F1E8-1F1F3": [
+		"cn",
+		"flag-cn"
+	],
 	"1F1E8-1F1F4": "flag-co",
 	"1F1E8-1F1F5": "flag-cp",
 	"1F1E8-1F1F7": "flag-cr",
@@ -160,7 +172,10 @@
 	"1F1E8-1F1FD": "flag-cx",
 	"1F1E8-1F1FE": "flag-cy",
 	"1F1E8-1F1FF": "flag-cz",
-	"1F1E9-1F1EA": ["de", "flag-de"],
+	"1F1E9-1F1EA": [
+		"de",
+		"flag-de"
+	],
 	"1F1E9-1F1EC": "flag-dg",
 	"1F1E9-1F1EF": "flag-dj",
 	"1F1E9-1F1F0": "flag-dk",
@@ -173,7 +188,10 @@
 	"1F1EA-1F1EC": "flag-eg",
 	"1F1EA-1F1ED": "flag-eh",
 	"1F1EA-1F1F7": "flag-er",
-	"1F1EA-1F1F8": ["es", "flag-es"],
+	"1F1EA-1F1F8": [
+		"es",
+		"flag-es"
+	],
 	"1F1EA-1F1F9": "flag-et",
 	"1F1EA-1F1FA": "flag-eu",
 	"1F1EB-1F1EE": "flag-fi",
@@ -181,9 +199,16 @@
 	"1F1EB-1F1F0": "flag-fk",
 	"1F1EB-1F1F2": "flag-fm",
 	"1F1EB-1F1F4": "flag-fo",
-	"1F1EB-1F1F7": ["fr", "flag-fr"],
+	"1F1EB-1F1F7": [
+		"fr",
+		"flag-fr"
+	],
 	"1F1EC-1F1E6": "flag-ga",
-	"1F1EC-1F1E7": ["gb", "uk", "flag-gb"],
+	"1F1EC-1F1E7": [
+		"gb",
+		"uk",
+		"flag-gb"
+	],
 	"1F1EC-1F1E9": "flag-gd",
 	"1F1EC-1F1EA": "flag-ge",
 	"1F1EC-1F1EB": "flag-gf",
@@ -217,11 +242,17 @@
 	"1F1EE-1F1F6": "flag-iq",
 	"1F1EE-1F1F7": "flag-ir",
 	"1F1EE-1F1F8": "flag-is",
-	"1F1EE-1F1F9": ["it", "flag-it"],
+	"1F1EE-1F1F9": [
+		"it",
+		"flag-it"
+	],
 	"1F1EF-1F1EA": "flag-je",
 	"1F1EF-1F1F2": "flag-jm",
 	"1F1EF-1F1F4": "flag-jo",
-	"1F1EF-1F1F5": ["jp", "flag-jp"],
+	"1F1EF-1F1F5": [
+		"jp",
+		"flag-jp"
+	],
 	"1F1F0-1F1EA": "flag-ke",
 	"1F1F0-1F1EC": "flag-kg",
 	"1F1F0-1F1ED": "flag-kh",
@@ -229,7 +260,10 @@
 	"1F1F0-1F1F2": "flag-km",
 	"1F1F0-1F1F3": "flag-kn",
 	"1F1F0-1F1F5": "flag-kp",
-	"1F1F0-1F1F7": ["kr", "flag-kr"],
+	"1F1F0-1F1F7": [
+		"kr",
+		"flag-kr"
+	],
 	"1F1F0-1F1FC": "flag-kw",
 	"1F1F0-1F1FE": "flag-ky",
 	"1F1F0-1F1FF": "flag-kz",
@@ -298,7 +332,10 @@
 	"1F1F7-1F1EA": "flag-re",
 	"1F1F7-1F1F4": "flag-ro",
 	"1F1F7-1F1F8": "flag-rs",
-	"1F1F7-1F1FA": ["ru", "flag-ru"],
+	"1F1F7-1F1FA": [
+		"ru",
+		"flag-ru"
+	],
 	"1F1F7-1F1FC": "flag-rw",
 	"1F1F8-1F1E6": "flag-sa",
 	"1F1F8-1F1E7": "flag-sb",
@@ -342,7 +379,10 @@
 	"1F1FA-1F1EC": "flag-ug",
 	"1F1FA-1F1F2": "flag-um",
 	"1F1FA-1F1F3": "flag-un",
-	"1F1FA-1F1F8": ["us", "flag-us"],
+	"1F1FA-1F1F8": [
+		"us",
+		"flag-us"
+	],
 	"1F1FA-1F1FE": "flag-uy",
 	"1F1FA-1F1FF": "flag-uz",
 	"1F1FB-1F1E6": "flag-va",
@@ -395,7 +435,10 @@
 	"1F311": "new_moon",
 	"1F312": "waxing_crescent_moon",
 	"1F313": "first_quarter_moon",
-	"1F314": ["moon", "waxing_gibbous_moon"],
+	"1F314": [
+		"moon",
+		"waxing_gibbous_moon"
+	],
 	"1F315": "full_moon",
 	"1F316": "waning_gibbous_moon",
 	"1F317": "last_quarter_moon",
@@ -409,13 +452,28 @@
 	"1F31F": "star2",
 	"1F320": "stars",
 	"1F321": "thermometer",
-	"1F324": ["mostly_sunny", "sun_small_cloud"],
-	"1F325": ["barely_sunny", "sun_behind_cloud"],
-	"1F326": ["partly_sunny_rain", "sun_behind_rain_cloud"],
+	"1F324": [
+		"mostly_sunny",
+		"sun_small_cloud"
+	],
+	"1F325": [
+		"barely_sunny",
+		"sun_behind_cloud"
+	],
+	"1F326": [
+		"partly_sunny_rain",
+		"sun_behind_rain_cloud"
+	],
 	"1F327": "rain_cloud",
 	"1F328": "snow_cloud",
-	"1F329": ["lightning", "lightning_cloud"],
-	"1F32A": ["tornado", "tornado_cloud"],
+	"1F329": [
+		"lightning",
+		"lightning_cloud"
+	],
+	"1F32A": [
+		"tornado",
+		"tornado_cloud"
+	],
 	"1F32B": "fog",
 	"1F32C": "wind_blowing_face",
 	"1F32D": "hotdog",
@@ -490,7 +548,10 @@
 	"1F370": "cake",
 	"1F371": "bento",
 	"1F372": "stew",
-	"1F373": ["fried_egg", "cooking"],
+	"1F373": [
+		"fried_egg",
+		"cooking"
+	],
 	"1F374": "fork_and_knife",
 	"1F375": "tea",
 	"1F376": "sake",
@@ -570,7 +631,10 @@
 	"1F3C3-200D-2642-FE0F": "man-running",
 	"1F3C3-200D-2642-FE0F-200D-27A1-FE0F": "man_running_facing_right",
 	"1F3C3-200D-27A1-FE0F": "person_running_facing_right",
-	"1F3C3": ["runner", "running"],
+	"1F3C3": [
+		"runner",
+		"running"
+	],
 	"1F3C4-200D-2640-FE0F": "woman-surfing",
 	"1F3C4-200D-2642-FE0F": "man-surfing",
 	"1F3C4": "surfer",
@@ -621,7 +685,10 @@
 	"1F3EB": "school",
 	"1F3EC": "department_store",
 	"1F3ED": "factory",
-	"1F3EE": ["izakaya_lantern", "lantern"],
+	"1F3EE": [
+		"izakaya_lantern",
+		"lantern"
+	],
 	"1F3EF": "japanese_castle",
 	"1F3F0": "european_castle",
 	"1F3F3-FE0F-200D-1F308": "rainbow-flag",
@@ -673,8 +740,14 @@
 	"1F41A": "shell",
 	"1F41B": "bug",
 	"1F41C": "ant",
-	"1F41D": ["bee", "honeybee"],
-	"1F41E": ["ladybug", "lady_beetle"],
+	"1F41D": [
+		"bee",
+		"honeybee"
+	],
+	"1F41E": [
+		"ladybug",
+		"lady_beetle"
+	],
 	"1F41F": "fish",
 	"1F420": "tropical_fish",
 	"1F421": "blowfish",
@@ -690,7 +763,10 @@
 	"1F429": "poodle",
 	"1F42A": "dromedary_camel",
 	"1F42B": "camel",
-	"1F42C": ["dolphin", "flipper"],
+	"1F42C": [
+		"dolphin",
+		"flipper"
+	],
 	"1F42D": "mouse",
 	"1F42E": "cow",
 	"1F42F": "tiger",
@@ -709,7 +785,10 @@
 	"1F43B": "bear",
 	"1F43C": "panda_face",
 	"1F43D": "pig_nose",
-	"1F43E": ["feet", "paw_prints"],
+	"1F43E": [
+		"feet",
+		"paw_prints"
+	],
 	"1F43F": "chipmunk",
 	"1F440": "eyes",
 	"1F441-FE0F-200D-1F5E8-FE0F": "eye-in-speech-bubble",
@@ -722,18 +801,30 @@
 	"1F447": "point_down",
 	"1F448": "point_left",
 	"1F449": "point_right",
-	"1F44A": ["facepunch", "punch"],
+	"1F44A": [
+		"facepunch",
+		"punch"
+	],
 	"1F44B": "wave",
 	"1F44C": "ok_hand",
-	"1F44D": ["+1", "thumbsup"],
-	"1F44E": ["-1", "thumbsdown"],
+	"1F44D": [
+		"+1",
+		"thumbsup"
+	],
+	"1F44E": [
+		"-1",
+		"thumbsdown"
+	],
 	"1F44F": "clap",
 	"1F450": "open_hands",
 	"1F451": "crown",
 	"1F452": "womans_hat",
 	"1F453": "eyeglasses",
 	"1F454": "necktie",
-	"1F455": ["shirt", "tshirt"],
+	"1F455": [
+		"shirt",
+		"tshirt"
+	],
 	"1F456": "jeans",
 	"1F457": "dress",
 	"1F458": "kimono",
@@ -742,7 +833,10 @@
 	"1F45B": "purse",
 	"1F45C": "handbag",
 	"1F45D": "pouch",
-	"1F45E": ["mans_shoe", "shoe"],
+	"1F45E": [
+		"mans_shoe",
+		"shoe"
+	],
 	"1F45F": "athletic_shoe",
 	"1F460": "high_heel",
 	"1F461": "sandal",
@@ -840,14 +934,30 @@
 	"1F469-200D-2764-FE0F-200D-1F48B-200D-1F469": "woman-kiss-woman",
 	"1F469": "woman",
 	"1F46A": "family",
-	"1F46B": ["man_and_woman_holding_hands", "woman_and_man_holding_hands", "couple"],
-	"1F46C": ["two_men_holding_hands", "men_holding_hands"],
-	"1F46D": ["two_women_holding_hands", "women_holding_hands"],
+	"1F46B": [
+		"man_and_woman_holding_hands",
+		"woman_and_man_holding_hands",
+		"couple"
+	],
+	"1F46C": [
+		"two_men_holding_hands",
+		"men_holding_hands"
+	],
+	"1F46D": [
+		"two_women_holding_hands",
+		"women_holding_hands"
+	],
 	"1F46E-200D-2640-FE0F": "female-police-officer",
 	"1F46E-200D-2642-FE0F": "male-police-officer",
 	"1F46E": "cop",
-	"1F46F-200D-2640-FE0F": ["women-with-bunny-ears-partying", "woman-with-bunny-ears-partying"],
-	"1F46F-200D-2642-FE0F": ["men-with-bunny-ears-partying", "man-with-bunny-ears-partying"],
+	"1F46F-200D-2640-FE0F": [
+		"women-with-bunny-ears-partying",
+		"woman-with-bunny-ears-partying"
+	],
+	"1F46F-200D-2642-FE0F": [
+		"men-with-bunny-ears-partying",
+		"man-with-bunny-ears-partying"
+	],
 	"1F46F": "dancers",
 	"1F470-200D-2640-FE0F": "woman_with_veil",
 	"1F470-200D-2642-FE0F": "man_with_veil",
@@ -918,11 +1028,18 @@
 	"1F4A2": "anger",
 	"1F4A3": "bomb",
 	"1F4A4": "zzz",
-	"1F4A5": ["boom", "collision"],
+	"1F4A5": [
+		"boom",
+		"collision"
+	],
 	"1F4A6": "sweat_drops",
 	"1F4A7": "droplet",
 	"1F4A8": "dash",
-	"1F4A9": ["hankey", "poop", "shit"],
+	"1F4A9": [
+		"hankey",
+		"poop",
+		"shit"
+	],
 	"1F4AA": "muscle",
 	"1F4AB": "dizzy",
 	"1F4AC": "speech_balloon",
@@ -967,14 +1084,20 @@
 	"1F4D3": "notebook",
 	"1F4D4": "notebook_with_decorative_cover",
 	"1F4D5": "closed_book",
-	"1F4D6": ["book", "open_book"],
+	"1F4D6": [
+		"book",
+		"open_book"
+	],
 	"1F4D7": "green_book",
 	"1F4D8": "blue_book",
 	"1F4D9": "orange_book",
 	"1F4DA": "books",
 	"1F4DB": "name_badge",
 	"1F4DC": "scroll",
-	"1F4DD": ["memo", "pencil"],
+	"1F4DD": [
+		"memo",
+		"pencil"
+	],
 	"1F4DE": "telephone_receiver",
 	"1F4DF": "pager",
 	"1F4E0": "fax",
@@ -1050,7 +1173,10 @@
 	"1F527": "wrench",
 	"1F528": "hammer",
 	"1F529": "nut_and_bolt",
-	"1F52A": ["hocho", "knife"],
+	"1F52A": [
+		"hocho",
+		"knife"
+	],
 	"1F52B": "gun",
 	"1F52C": "microscope",
 	"1F52D": "telescope",
@@ -1118,7 +1244,10 @@
 	"1F58C": "lower_left_paintbrush",
 	"1F58D": "lower_left_crayon",
 	"1F590": "raised_hand_with_fingers_splayed",
-	"1F595": ["middle_finger", "reversed_hand_with_middle_finger_extended"],
+	"1F595": [
+		"middle_finger",
+		"reversed_hand_with_middle_finger_extended"
+	],
 	"1F596": "spock-hand",
 	"1F5A4": "black_heart",
 	"1F5A5": "desktop_computer",
@@ -1152,7 +1281,10 @@
 	"1F603": "smiley",
 	"1F604": "smile",
 	"1F605": "sweat_smile",
-	"1F606": ["laughing", "satisfied"],
+	"1F606": [
+		"laughing",
+		"satisfied"
+	],
 	"1F607": "innocent",
 	"1F608": "smiling_imp",
 	"1F609": "wink",
@@ -1266,7 +1398,10 @@
 	"1F694": "oncoming_police_car",
 	"1F695": "taxi",
 	"1F696": "oncoming_taxi",
-	"1F697": ["car", "red_car"],
+	"1F697": [
+		"car",
+		"red_car"
+	],
 	"1F698": "oncoming_automobile",
 	"1F699": "blue_car",
 	"1F69A": "truck",
@@ -1384,13 +1519,19 @@
 	"1F915": "face_with_head_bandage",
 	"1F916": "robot_face",
 	"1F917": "hugging_face",
-	"1F918": ["the_horns", "sign_of_the_horns"],
+	"1F918": [
+		"the_horns",
+		"sign_of_the_horns"
+	],
 	"1F919": "call_me_hand",
 	"1F91A": "raised_back_of_hand",
 	"1F91B": "left-facing_fist",
 	"1F91C": "right-facing_fist",
 	"1F91D": "handshake",
-	"1F91E": ["crossed_fingers", "hand_with_index_and_middle_fingers_crossed"],
+	"1F91E": [
+		"crossed_fingers",
+		"hand_with_index_and_middle_fingers_crossed"
+	],
 	"1F91F": "i_love_you_hand_sign",
 	"1F920": "face_with_cowboy_hat",
 	"1F921": "clown_face",
@@ -1402,14 +1543,38 @@
 	"1F926-200D-2642-FE0F": "man-facepalming",
 	"1F926": "face_palm",
 	"1F927": "sneezing_face",
-	"1F928": ["face_with_raised_eyebrow", "face_with_one_eyebrow_raised"],
-	"1F929": ["star-struck", "grinning_face_with_star_eyes"],
-	"1F92A": ["zany_face", "grinning_face_with_one_large_and_one_small_eye"],
-	"1F92B": ["shushing_face", "face_with_finger_covering_closed_lips"],
-	"1F92C": ["face_with_symbols_on_mouth", "serious_face_with_symbols_covering_mouth"],
-	"1F92D": ["face_with_hand_over_mouth", "smiling_face_with_smiling_eyes_and_hand_covering_mouth"],
-	"1F92E": ["face_vomiting", "face_with_open_mouth_vomiting"],
-	"1F92F": ["exploding_head", "shocked_face_with_exploding_head"],
+	"1F928": [
+		"face_with_raised_eyebrow",
+		"face_with_one_eyebrow_raised"
+	],
+	"1F929": [
+		"star-struck",
+		"grinning_face_with_star_eyes"
+	],
+	"1F92A": [
+		"zany_face",
+		"grinning_face_with_one_large_and_one_small_eye"
+	],
+	"1F92B": [
+		"shushing_face",
+		"face_with_finger_covering_closed_lips"
+	],
+	"1F92C": [
+		"face_with_symbols_on_mouth",
+		"serious_face_with_symbols_covering_mouth"
+	],
+	"1F92D": [
+		"face_with_hand_over_mouth",
+		"smiling_face_with_smiling_eyes_and_hand_covering_mouth"
+	],
+	"1F92E": [
+		"face_vomiting",
+		"face_with_open_mouth_vomiting"
+	],
+	"1F92F": [
+		"exploding_head",
+		"shocked_face_with_exploding_head"
+	],
 	"1F930": "pregnant_woman",
 	"1F931": "breast-feeding",
 	"1F932": "palms_up_together",
@@ -1418,7 +1583,10 @@
 	"1F935-200D-2640-FE0F": "woman_in_tuxedo",
 	"1F935-200D-2642-FE0F": "man_in_tuxedo",
 	"1F935": "person_in_tuxedo",
-	"1F936": ["mrs_claus", "mother_christmas"],
+	"1F936": [
+		"mrs_claus",
+		"mother_christmas"
+	],
 	"1F937-200D-2640-FE0F": "woman-shrugging",
 	"1F937-200D-2642-FE0F": "man-shrugging",
 	"1F937": "shrug",
@@ -1830,7 +1998,10 @@
 	"25FC": "black_medium_square",
 	"25FD": "white_medium_small_square",
 	"25FE": "black_medium_small_square",
-	"260E": ["phone", "telephone"],
+	"260E": [
+		"phone",
+		"telephone"
+	],
 	"261D": "point_up",
 	"262A": "star_and_crescent",
 	"262E": "peace_symbol",
@@ -1873,7 +2044,10 @@
 	"26F2": "fountain",
 	"26F3": "golf",
 	"26F4": "ferry",
-	"26F5": ["boat", "sailboat"],
+	"26F5": [
+		"boat",
+		"sailboat"
+	],
 	"26F7": "skier",
 	"26F8": "ice_skate",
 	"26F9-FE0F-200D-2640-FE0F": "woman-bouncing-ball",
@@ -1882,7 +2056,10 @@
 	"26FA": "tent",
 	"26FD": "fuelpump",
 	"270A": "fist",
-	"270B": ["hand", "raised_hand"],
+	"270B": [
+		"hand",
+		"raised_hand"
+	],
 	"270C": "v",
 	"270D": "writing_hand",
 	"270F": "pencil2",

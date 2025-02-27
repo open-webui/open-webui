@@ -196,7 +196,9 @@
 	"knowledge_graph": {
 		"title": "",
 		"type": "Fast-food restaurant company",
-		"image_urls": ["https://serpstack-assets.apilayer.net/2418910010831954152.png"],
+		"image_urls": [
+			"https://serpstack-assets.apilayer.net/2418910010831954152.png"
+		],
 		"description": "McDonald\u0027s Corporation is an American multinational fast food chain, founded in 1940 as a restaurant operated by Richard and Maurice McDonald, in San Bernardino, California, United States.",
 		"source": {
 			"name": "Wikipedia",

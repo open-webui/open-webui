@@ -485,7 +485,9 @@
 					"logo": false
 				},
 				"age": "March 6, 2023",
-				"extra_snippets": ["Configuration for Python planets (e.g. http://planetpython.org)"]
+				"extra_snippets": [
+					"Configuration for Python planets (e.g. http://planetpython.org)"
+				]
 			},
 			{
 				"title": "Online Python Compiler (Interpreter)",

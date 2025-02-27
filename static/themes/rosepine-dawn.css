@@ -3,7 +3,7 @@
 	stroke: #d7827e !important;
 }
 
-.rose-pine-dawn .app > * {
+.rose-pine-dawn .app>* {
 	background-color: #faf4ed !important;
 }
 
@@ -34,27 +34,22 @@
 	padding-top: 0.6rem;
 }
 
-.rose-pine-dawn
-	.text-white.bg-gray-100.dark\:text-gray-800.dark\:bg-gray-600.disabled.transition.rounded-lg.p-1.mr-0\.5.w-7.h-7.self-center {
+.rose-pine-dawn .text-white.bg-gray-100.dark\:text-gray-800.dark\:bg-gray-600.disabled.transition.rounded-lg.p-1.mr-0\.5.w-7.h-7.self-center {
 	background-color: #cecacd;
 	transition: background-color 0.2s ease-out linear;
 }
 
-.rose-pine-dawn
-	.bg-black.text-white.hover\:bg-gray-900.dark\:bg-white.dark\:text-black.dark\:hover\:bg-gray-100.transition.rounded-lg.p-1.mr-0\.5.w-7.h-7.self-center {
+.rose-pine-dawn .bg-black.text-white.hover\:bg-gray-900.dark\:bg-white.dark\:text-black.dark\:hover\:bg-gray-100.transition.rounded-lg.p-1.mr-0\.5.w-7.h-7.self-center {
 	background-color: #286983;
 	transition: background-color 0.2s ease-out linear;
 }
 
-.rose-pine-dawn
-	.bg-black.text-white.hover\:bg-gray-900.dark\:bg-white.dark\:text-black.dark\:hover\:bg-gray-100.transition.rounded-lg.p-1.mr-0\.5.w-7.h-7.self-center
-	> * {
+.rose-pine-dawn .bg-black.text-white.hover\:bg-gray-900.dark\:bg-white.dark\:text-black.dark\:hover\:bg-gray-100.transition.rounded-lg.p-1.mr-0\.5.w-7.h-7.self-center>* {
 	fill: #56949f !important;
 	transition: fill 0.2s ease-out linear;
 }
 
-.rose-pine-dawn
-	.w-full.flex.justify-between.rounded-md.px-3.py-2.hover\:bg-gray-900.bg-gray-900.transition.whitespace-nowrap.text-ellipsis {
+.rose-pine-dawn .w-full.flex.justify-between.rounded-md.px-3.py-2.hover\:bg-gray-900.bg-gray-900.transition.whitespace-nowrap.text-ellipsis {
 	background-color: #56526e;
 	font-weight: bold;
 }
@@ -96,28 +91,23 @@
 	background: #cecacd;
 }
 
-.rose-pine-dawn
-	.m-auto.rounded-xl.max-w-full.w-\[40rem\].mx-2.bg-gray-50.dark\:bg-gray-900.shadow-3xl {
+.rose-pine-dawn .m-auto.rounded-xl.max-w-full.w-\[40rem\].mx-2.bg-gray-50.dark\:bg-gray-900.shadow-3xl {
 	background-color: #f2e9e1;
 }
 
-.rose-pine-dawn
-	.w-full.rounded.p-4.text-sm.dark\:text-gray-300.dark\:bg-gray-800.outline-none.resize-none {
+.rose-pine-dawn .w-full.rounded.p-4.text-sm.dark\:text-gray-300.dark\:bg-gray-800.outline-none.resize-none {
 	background-color: #cecacd;
 }
 
-.rose-pine-dawn
-	.w-full.rounded.py-2.px-4.text-sm.dark\:text-gray-300.dark\:bg-gray-800.outline-none.svelte-1vx7r9s {
+.rose-pine-dawn .w-full.rounded.py-2.px-4.text-sm.dark\:text-gray-300.dark\:bg-gray-800.outline-none.svelte-1vx7r9s {
 	background-color: #cecacd;
 }
 
-.rose-pine-dawn
-	.px-2\.5.py-2\.5.min-w-fit.rounded-lg.flex-1.md\:flex-none.flex.text-right.transition.bg-gray-200.dark\:bg-gray-700 {
+.rose-pine-dawn .px-2\.5.py-2\.5.min-w-fit.rounded-lg.flex-1.md\:flex-none.flex.text-right.transition.bg-gray-200.dark\:bg-gray-700 {
 	background-color: #dfdad9;
 }
 
-.rose-pine-dawn
-	.px-2\.5.py-2\.5.min-w-fit.rounded-lg.flex-1.md\:flex-none.flex.text-right.transition.hover\:bg-gray-300.dark\:hover\:bg-gray-800:hover {
+.rose-pine-dawn .px-2\.5.py-2\.5.min-w-fit.rounded-lg.flex-1.md\:flex-none.flex.text-right.transition.hover\:bg-gray-300.dark\:hover\:bg-gray-800:hover {
 	background-color: #cecacd;
 }
 
@@ -125,7 +115,7 @@
 	background-color: #56949f;
 }
 
-.rose-pine-dawn #chat-search > * {
+.rose-pine-dawn #chat-search>* {
 	background-color: #dfdad9 !important;
 }
 

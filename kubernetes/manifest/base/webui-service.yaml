@@ -4,7 +4,7 @@ metadata:
   name: open-webui-service
   namespace: open-webui
 spec:
-  type: NodePort  # Use LoadBalancer if you're on a cloud that supports it
+  type: NodePort # Use LoadBalancer if you're on a cloud that supports it
   selector:
     app: open-webui
   ports:

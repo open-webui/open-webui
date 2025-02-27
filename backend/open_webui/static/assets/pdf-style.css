@@ -28,7 +28,8 @@ html {
 	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'NotoSans', 'NotoSansJP', 'NotoSansKR',
 		'NotoSansSC', 'Twemoji', 'STSong-Light', 'MSung-Light', 'HeiseiMin-W3', 'HYSMyeongJo-Medium',
 		Roboto, 'Helvetica Neue', Arial, sans-serif;
-	font-size: 14px; /* Default font size */
+	font-size: 14px;
+	/* Default font size */
 	line-height: 1.5;
 }
 
@@ -101,21 +102,26 @@ p {
 
 /* Additional Text Utilities */
 .text-muted {
-	color: #6c757d; /* Muted text color */
+	color: #6c757d;
+	/* Muted text color */
 }
 
 /* Small Text */
 small {
-	font-size: 80%; /* Smaller font size relative to the base */
-	color: #6c757d; /* Lighter text color for secondary information */
+	font-size: 80%;
+	/* Smaller font size relative to the base */
+	color: #6c757d;
+	/* Lighter text color for secondary information */
 	margin-bottom: 0;
 	margin-top: 0;
 }
 
 /* Strong Element Styles */
 strong {
-	font-weight: bolder; /* Ensures the text is bold */
-	color: inherit; /* Inherits the color from its parent element */
+	font-weight: bolder;
+	/* Ensures the text is bold */
+	color: inherit;
+	/* Inherits the color from its parent element */
 }
 
 /* link */
@@ -134,34 +140,44 @@ a:hover {
 ol,
 ul,
 li {
-	padding-left: 40px; /* Increase padding to move bullet points to the right */
-	margin-left: 20px; /* Indent lists from the left */
+	padding-left: 40px;
+	/* Increase padding to move bullet points to the right */
+	margin-left: 20px;
+	/* Indent lists from the left */
 }
 
 /* Ordered list styles */
 ol {
-	list-style-type: decimal; /* Use numbers for ordered lists */
-	margin-bottom: 10px; /* Space after each list */
+	list-style-type: decimal;
+	/* Use numbers for ordered lists */
+	margin-bottom: 10px;
+	/* Space after each list */
 }
 
 ol li {
-	margin-bottom: 0.5rem; /* Space between ordered list items */
+	margin-bottom: 0.5rem;
+	/* Space between ordered list items */
 }
 
 /* Unordered list styles */
 ul {
-	list-style-type: disc; /* Use bullets for unordered lists */
-	margin-bottom: 10px; /* Space after each list */
+	list-style-type: disc;
+	/* Use bullets for unordered lists */
+	margin-bottom: 10px;
+	/* Space after each list */
 }
 
 ul li {
-	margin-bottom: 0.5rem; /* Space between unordered list items */
+	margin-bottom: 0.5rem;
+	/* Space between unordered list items */
 }
 
 /* List item styles */
 li {
-	margin-bottom: 5px; /* Space between list items */
-	line-height: 1.5; /* Line height for better readability */
+	margin-bottom: 5px;
+	/* Space between list items */
+	line-height: 1.5;
+	/* Line height for better readability */
 }
 
 /* Nested lists */
@@ -170,8 +186,10 @@ ol ul,
 ul ol,
 ul ul {
 	padding-left: 20px;
-	margin-left: 30px; /* Further indent nested lists */
-	margin-bottom: 0; /* Remove extra margin at the bottom of nested lists */
+	margin-left: 30px;
+	/* Further indent nested lists */
+	margin-bottom: 0;
+	/* Remove extra margin at the bottom of nested lists */
 }
 
 /* Code blocks */
@@ -179,12 +197,18 @@ pre {
 	background-color: #f4f4f4;
 	padding: 10px;
 	overflow-x: auto;
-	max-width: 100%; /* Ensure it doesn't overflow the page */
-	width: 80%; /* Set a specific width for a container-like appearance */
-	margin: 0 1em; /* Center the pre block */
-	box-sizing: border-box; /* Include padding in the width */
-	border: 1px solid #ccc; /* Optional: Add a border for better definition */
-	border-radius: 4px; /* Optional: Add rounded corners */
+	max-width: 100%;
+	/* Ensure it doesn't overflow the page */
+	width: 80%;
+	/* Set a specific width for a container-like appearance */
+	margin: 0 1em;
+	/* Center the pre block */
+	box-sizing: border-box;
+	/* Include padding in the width */
+	border: 1px solid #ccc;
+	/* Optional: Add a border for better definition */
+	border-radius: 4px;
+	/* Optional: Add rounded corners */
 }
 
 code {
@@ -192,7 +216,8 @@ code {
 	background-color: #f4f4f4;
 	padding: 2px 4px;
 	border-radius: 4px;
-	box-sizing: border-box; /* Include padding in the width */
+	box-sizing: border-box;
+	/* Include padding in the width */
 }
 
 .message {
@@ -207,7 +232,8 @@ table {
 	width: 100%;
 	margin-bottom: 1rem;
 	color: #212529;
-	border-collapse: collapse; /* Removes the space between borders */
+	border-collapse: collapse;
+	/* Removes the space between borders */
 }
 
 th,
@@ -223,7 +249,7 @@ thead th {
 	border-bottom: 2px solid #dee2e6;
 }
 
-tbody + tbody {
+tbody+tbody {
 	border-top: 2px solid #dee2e6;
 }
 
@@ -259,7 +285,7 @@ tbody + tbody {
 }
 
 /* Remove top margin of <ul> following a <p> */
-.markdown-section p + ul {
+.markdown-section p+ul {
 	margin-top: 0;
 }
 
@@ -270,7 +296,7 @@ tbody + tbody {
 }
 
 /* Add a rule to reset margin-bottom for <p> not followed by <ul> */
-.markdown-section p + ul {
+.markdown-section p+ul {
 	margin-top: 0;
 }
 
@@ -285,7 +311,7 @@ tbody + tbody {
 }
 
 /* Avoid margins for nested lists */
-.markdown-section li > ul {
+.markdown-section li>ul {
 	margin-top: 0;
 	margin-bottom: 0;
 }
