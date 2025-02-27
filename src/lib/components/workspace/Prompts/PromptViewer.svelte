@@ -3,6 +3,7 @@
 	import { user, showSidebar, mobile } from '$lib/stores';
 	import { getPromptByCommand } from '$lib/apis/prompts';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
+	import { goto } from '$app/navigation';
 
 	const i18n = getContext('i18n');
 
@@ -71,7 +72,10 @@
 							class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
 						>
 							{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
-								<a class="min-w-fit rounded-full p-1.5 transition" href="/workspace/prompts">
+								<a
+									class="min-w-fit rounded-full p-1.5 transition dark:text-gray-300"
+									href="/workspace/prompts"
+								>
 									{$i18n.t('Prompts')}
 								</a>
 							{/if}
@@ -91,33 +95,48 @@
 					</div>
 				{:else if prompt}
 					<div class="flex flex-col max-w-lg mx-auto mt-10 mb-10">
-						<div class="text-2xl font-medium font-primary mb-4">
+						<div class="text-2xl font-medium font-primary mb-4 dark:text-gray-300">
 							{$i18n.t('View prompt')}
 						</div>
 
 						<div class="w-full flex flex-col gap-2.5">
 							<div class="w-full">
-								<div class="text-sm mb-2">{$i18n.t('Title')}</div>
-								<div class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850">
+								<div class="text-sm mb-2 dark:text-gray-300">{$i18n.t('Title')}</div>
+								<div
+									class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850 dark:text-gray-300"
+								>
 									{prompt.title}
 								</div>
 							</div>
 
 							<div class="w-full">
-								<div class="text-sm mb-2">{$i18n.t('Command')}</div>
-								<div class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850">
+								<div class="text-sm mb-2 dark:text-gray-300">{$i18n.t('Command')}</div>
+								<div
+									class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850 dark:text-gray-300"
+								>
 									{prompt.command}
 								</div>
 							</div>
 
 							<div>
-								<div class="text-sm mb-2">{$i18n.t('Prompt Content')}</div>
+								<div class="text-sm mb-2 dark:text-gray-300">{$i18n.t('Prompt Content')}</div>
 								<div
-									class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850 whitespace-pre-wrap"
+									class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850 dark:text-gray-300 whitespace-pre-wrap"
 								>
 									{prompt.content}
 								</div>
 							</div>
+						</div>
+						<!-- Add close button here -->
+						<div class="flex justify-end mt-2">
+							<button
+								class="text-sm px-4 py-2 transition rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white"
+								on:click={() => goto('/workspace/prompts')}
+							>
+								<div class="self-center font-medium">
+									{$i18n.t('Close')}
+								</div>
+							</button>
 						</div>
 					</div>
 				{:else}
