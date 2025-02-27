@@ -72,7 +72,10 @@
 							class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
 						>
 							{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
-								<a class="min-w-fit rounded-full p-1.5 transition dark:text-gray-300" href="/workspace/prompts">
+								<a
+									class="min-w-fit rounded-full p-1.5 transition dark:text-gray-300"
+									href="/workspace/prompts"
+								>
 									{$i18n.t('Prompts')}
 								</a>
 							{/if}
@@ -99,21 +102,27 @@
 						<div class="w-full flex flex-col gap-2.5">
 							<div class="w-full">
 								<div class="text-sm mb-2 dark:text-gray-300">{$i18n.t('Title')}</div>
-								<div class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850 dark:text-gray-300">
+								<div
+									class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850 dark:text-gray-300"
+								>
 									{prompt.title}
 								</div>
 							</div>
 
 							<div class="w-full">
 								<div class="text-sm mb-2 dark:text-gray-300">{$i18n.t('Command')}</div>
-								<div class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850 dark:text-gray-300">
+								<div
+									class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850 dark:text-gray-300"
+								>
 									{prompt.command}
 								</div>
 							</div>
 
 							<div>
 								<div class="text-sm mb-2 dark:text-gray-300">{$i18n.t('Prompt Content')}</div>
-								<div class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850 dark:text-gray-300 whitespace-pre-wrap">
+								<div
+									class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850 dark:text-gray-300 whitespace-pre-wrap"
+								>
 									{prompt.content}
 								</div>
 							</div>
