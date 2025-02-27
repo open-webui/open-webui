@@ -71,19 +71,20 @@
 	const editChatTitle = async (id, title) => {
 		if (title === '') {
 			toast.error($i18n.t('Title cannot be an empty string.'));
-		} else {
-			await updateChatById(localStorage.token, id, {
-				title: title
-			});
-
-			if (id === $chatId) {
-				_chatTitle.set(title);
-			}
-
-			currentChatPage.set(1);
-			await chats.set(await getChatList(localStorage.token, $currentChatPage));
-			await pinnedChats.set(await getPinnedChatList(localStorage.token));
+			return;
 		}
+
+		await updateChatById(localStorage.token, id, { title });
+
+		if (id === $chatId) {
+			_chatTitle.set(title);
+		}
+
+		dispatch('change', { type: 'rename', chatId: id, title });
+
+		currentChatPage.set(1);
+		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		await pinnedChats.set(await getPinnedChatList(localStorage.token));
 	};
 
 	const cloneChatHandler = async (id) => {
@@ -242,6 +243,13 @@
 				bind:value={chatTitle}
 				id="chat-title-input-{id}"
 				class=" bg-transparent w-full outline-none mr-10"
+				on:keydown={(e) => {
+					if (e.key === 'Enter') {
+						editChatTitle(id, chatTitle);
+						confirmEdit = false;
+						chatTitle = '';
+					}
+				}}
 			/>
 		</div>
 	{:else}
