@@ -66,7 +66,7 @@ async def generate_direct_chat_completion(
     user: Any,
     models: dict,
 ):
-    print("generate_direct_chat_completion")
+    log.info("generate_direct_chat_completion")
 
     metadata = form_data.pop("metadata", {})
 
@@ -103,7 +103,7 @@ async def generate_direct_chat_completion(
             }
         )
 
-        print("res", res)
+        log.info(f"res: {res}")
 
         if res.get("status", False):
             # Define a generator to stream responses
@@ -285,7 +285,7 @@ chat_completion = generate_chat_completion
 
 async def chat_completed(request: Request, form_data: dict, user: Any):
     if not request.app.state.MODELS:
-        await get_all_models(request)
+        await get_all_models(request, user=user)
 
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
@@ -351,7 +351,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
         raise Exception(f"Action not found: {action_id}")
 
     if not request.app.state.MODELS:
-        await get_all_models(request)
+        await get_all_models(request, user=user)
 
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
@@ -432,7 +432,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
                             )
                         )
                 except Exception as e:
-                    print(e)
+                    log.exception(f"Failed to get user values: {e}")
 
                 params = {**params, "__user__": __user__}
 

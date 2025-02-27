@@ -123,6 +123,8 @@
 		if (contents.length === 0) {
 			showControls.set(false);
 			showArtifacts.set(false);
+
+			toast.error($i18n.t('No HTML, CSS, or JavaScript content found.'));
 		}
 
 		selectedContentIdx = contents ? contents.length - 1 : 0;
