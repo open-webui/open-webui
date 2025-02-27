@@ -1936,6 +1936,12 @@ EXA_API_KEY = PersistentConfig(
     os.getenv("EXA_API_KEY", ""),
 )
 
+PERPLEXITY_API_KEY = PersistentConfig(
+    "PERPLEXITY_API_KEY",
+    "rag.web.search.perplexity_api_key",
+    os.getenv("PERPLEXITY_API_KEY", ""),
+)
+
 RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     "RAG_WEB_SEARCH_RESULT_COUNT",
     "rag.web.search.result_count",
