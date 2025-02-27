@@ -1328,19 +1328,19 @@
 								{/if}
 							{/if}
 						{/if}
-
-						{#if message.done && showRateComment}
-							<RateComment
-								bind:message
-								bind:show={showRateComment}
-								on:save={async (e) => {
-									await feedbackHandler(null, {
-										...e.detail
-									});
-								}}
-							/>
-						{/if}
 					</div>
+
+					{#if message.done && showRateComment}
+						<RateComment
+							bind:message
+							bind:show={showRateComment}
+							on:save={async (e) => {
+								await feedbackHandler(null, {
+									...e.detail
+								});
+							}}
+						/>
+					{/if}
 				{/if}
 			</div>
 		</div>
