@@ -51,6 +51,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@azure/msal-browser": "^4.5.0",
 		"@codemirror/lang-javascript": "^6.2.2",
 		"@codemirror/lang-python": "^6.1.6",
 		"@codemirror/language-data": "^6.5.1",
