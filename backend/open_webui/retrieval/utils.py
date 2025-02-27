@@ -5,6 +5,7 @@ from typing import Optional, Union
 
 import asyncio
 import requests
+import hashlib
 
 from huggingface_hub import snapshot_download
 from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
@@ -14,8 +15,10 @@ from langchain_core.documents import Document
 
 from open_webui.config import VECTOR_DB
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
-from open_webui.utils.misc import get_last_user_message
+from open_webui.utils.misc import get_last_user_message, calculate_sha256_string
+
 from open_webui.models.users import UserModel
+from open_webui.models.files import Files
 
 from open_webui.env import (
     SRC_LOG_LEVELS,
@@ -80,7 +83,7 @@ def query_doc(
 
         return result
     except Exception as e:
-        print(e)
+        log.exception(f"Error querying doc {collection_name} with limit {k}: {e}")
         raise e
 
 
@@ -93,7 +96,7 @@ def get_doc(collection_name: str, user: UserModel = None):
 
         return result
     except Exception as e:
-        print(e)
+        log.exception(f"Error getting doc {collection_name}: {e}")
         raise e
 
 
@@ -173,59 +176,40 @@ def merge_get_results(get_results: list[dict]) -> dict:
 
 def merge_and_sort_query_results(
     query_results: list[dict], k: int, reverse: bool = False
-) -> list[dict]:
+) -> dict:
     # Initialize lists to store combined data
-    combined_distances = []
-    combined_documents = []
-    combined_metadatas = []
-    combined_ids = []
+    combined = []
+    seen_hashes = set()  # To store unique document hashes
 
     for data in query_results:
-        combined_distances.extend(data["distances"][0])
-        combined_documents.extend(data["documents"][0])
-        combined_metadatas.extend(data["metadatas"][0])
-        # DISTINCT(chunk_id,file_id) - in case if id (chunk_ids) become ordinals
-        combined_ids.extend(
-            [
-                f"{id}-{meta['file_id']}"
-                for id, meta in zip(data["ids"][0], data["metadatas"][0])
-            ]
-        )
+        distances = data["distances"][0]
+        documents = data["documents"][0]
+        metadatas = data["metadatas"][0]
 
-    # Create a list of tuples (distance, document, metadata, ids)
-    combined = list(
-        zip(combined_distances, combined_documents, combined_metadatas, combined_ids)
-    )
+        for distance, document, metadata in zip(distances, documents, metadatas):
+            if isinstance(document, str):
+                doc_hash = hashlib.md5(
+                    document.encode()
+                ).hexdigest()  # Compute a hash for uniqueness
+
+                if doc_hash not in seen_hashes:
+                    seen_hashes.add(doc_hash)
+                    combined.append((distance, document, metadata))
 
     # Sort the list based on distances
     combined.sort(key=lambda x: x[0], reverse=reverse)
 
-    sorted_distances = []
-    sorted_documents = []
-    sorted_metadatas = []
-    # Otherwise we don't have anything :-(
-    if combined:
-        # Unzip the sorted list
-        all_distances, all_documents, all_metadatas, all_ids = zip(*combined)
-        seen_ids = set()
-        # Slicing the lists to include only k elements
-        for index, id in enumerate(all_ids):
-            if id not in seen_ids:
-                sorted_distances.append(all_distances[index])
-                sorted_documents.append(all_documents[index])
-                sorted_metadatas.append(all_metadatas[index])
-                seen_ids.add(id)
-                if len(sorted_distances) >= k:
-                    break
+    # Slice to keep only the top k elements
+    sorted_distances, sorted_documents, sorted_metadatas = (
+        zip(*combined[:k]) if combined else ([], [], [])
+    )
 
-    # Create the output dictionary
-    result = {
-        "distances": [sorted_distances],
-        "documents": [sorted_documents],
-        "metadatas": [sorted_metadatas],
+    # Create and return the output dictionary
+    return {
+        "distances": [list(sorted_distances)],
+        "documents": [list(sorted_documents)],
+        "metadatas": [list(sorted_metadatas)],
     }
-
-    return result
 
 
 def get_all_items_from_collections(collection_names: list[str]) -> dict:
@@ -355,6 +339,7 @@ def get_embedding_function(
 
 
 def get_sources_from_files(
+    request,
     files,
     queries,
     embedding_function,
@@ -372,19 +357,64 @@ def get_sources_from_files(
     relevant_contexts = []
 
     for file in files:
+
+        context = None
         if file.get("docs"):
+            # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
             context = {
                 "documents": [[doc.get("content") for doc in file.get("docs")]],
                 "metadatas": [[doc.get("metadata") for doc in file.get("docs")]],
             }
         elif file.get("context") == "full":
+            # Manual Full Mode Toggle
             context = {
                 "documents": [[file.get("file").get("data", {}).get("content")]],
                 "metadatas": [[{"file_id": file.get("id"), "name": file.get("name")}]],
             }
-        else:
-            context = None
+        elif (
+            file.get("type") != "web_search"
+            and request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
+        ):
+            # BYPASS_EMBEDDING_AND_RETRIEVAL
+            if file.get("type") == "collection":
+                file_ids = file.get("data", {}).get("file_ids", [])
 
+                documents = []
+                metadatas = []
+                for file_id in file_ids:
+                    file_object = Files.get_file_by_id(file_id)
+
+                    if file_object:
+                        documents.append(file_object.data.get("content", ""))
+                        metadatas.append(
+                            {
+                                "file_id": file_id,
+                                "name": file_object.filename,
+                                "source": file_object.filename,
+                            }
+                        )
+
+                context = {
+                    "documents": [documents],
+                    "metadatas": [metadatas],
+                }
+
+            elif file.get("id"):
+                file_object = Files.get_file_by_id(file.get("id"))
+                if file_object:
+                    context = {
+                        "documents": [[file_object.data.get("content", "")]],
+                        "metadatas": [
+                            [
+                                {
+                                    "file_id": file.get("id"),
+                                    "name": file_object.filename,
+                                    "source": file_object.filename,
+                                }
+                            ]
+                        ],
+                    }
+        else:
             collection_names = []
             if file.get("type") == "collection":
                 if file.get("legacy"):
@@ -447,6 +477,7 @@ def get_sources_from_files(
         if context:
             if "data" in file:
                 del file["data"]
+
             relevant_contexts.append({**context, "file": file})
 
     sources = []
@@ -543,7 +574,7 @@ def generate_openai_batch_embeddings(
         else:
             raise "Something went wrong :/"
     except Exception as e:
-        print(e)
+        log.exception(f"Error generating openai batch embeddings: {e}")
         return None
 
 
@@ -577,7 +608,7 @@ def generate_ollama_batch_embeddings(
         else:
             raise "Something went wrong :/"
     except Exception as e:
-        print(e)
+        log.exception(f"Error generating ollama batch embeddings: {e}")
         return None
 
 
