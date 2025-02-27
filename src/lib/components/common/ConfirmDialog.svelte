@@ -45,6 +45,9 @@
 		mounted = true;
 	});
 
+	$: cancelLabel = $i18n.t('Cancel');
+	$: confirmLabel = $i18n.t('Confirm');
+
 	$: if (mounted) {
 		if (show && modalElement) {
 			document.body.appendChild(modalElement);

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount, getContext, tick } from 'svelte';
 	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
-	import { locale } from '$lib/stores/locale';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -15,7 +14,6 @@
 	import { getFunctions } from '$lib/apis/functions';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
 	import AccessControl from '../common/AccessControl.svelte';
-	import { stringify } from 'postcss';
 	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
@@ -39,30 +37,8 @@
 
 	let loaded = false;
 
-	// ///////////
-	// model
-	// ///////////
-
 	let id = '';
 	let name = '';
-
-	let enableDescription = true;
-
-	onMount(() => {
-		const updateLocale = () => {
-			// Use store's set method instead of direct assignment
-			locale.set(localStorage.locale || 'en-GB');
-		};
-		window.addEventListener('storage', updateLocale);
-		return () => window.removeEventListener('storage', updateLocale);
-	});
-
-	// Use $locale in reactive statements
-	$: enableDescription = model
-		? $locale === 'fr-CA'
-			? model?.meta?.description_fr !== null
-			: model?.meta?.description !== null
-		: true;
 
 	$: if (!edit) {
 		if (name) {
@@ -120,15 +96,9 @@
 
 	// Add validation logic
 	function validateDescription() {
-		if (enableDescription) {
-			if (!info.meta.description?.trim() || !info.meta.description_fr?.trim()) {
-				toast.error($i18n.t('Both English and French descriptions are required.'));
-				return false;
-			}
-		} else {
-			// If default selected, nullify both descriptions
-			info.meta.description = null;
-			info.meta.description_fr = null;
+		if (!info.meta.description?.trim() || !info.meta.description_fr?.trim()) {
+			toast.error($i18n.t('Both English and French descriptions are required.'));
+			return false;
 		}
 		return true;
 	}
@@ -222,12 +192,6 @@
 			await tick();
 
 			id = model.id;
-
-			// Use locale toggle for description: if locale is 'fr-CA', check description_fr, else description.
-			enableDescription =
-				localStorage.locale === 'fr-CA'
-					? model?.meta?.description_fr !== null
-					: model?.meta?.description !== null;
 
 			if (model.base_model_id) {
 				const base_model = $models
@@ -465,8 +429,8 @@
 								}}
 								type="button"
 							>
-								Reset Image</button
-							>
+								{$i18n.t('Reset Image')}
+							</button>
 						</div>
 					</div>
 				</div>
@@ -525,44 +489,24 @@
 					<div class="my-1">
 						<div class="mb-1 flex w-full justify-between items-center">
 							<div class=" self-center text-sm font-semibold">{$i18n.t('Description')}</div>
-
-							<button
-								class="p-1 text-xs flex rounded transition"
-								type="button"
-								on:click={() => {
-									enableDescription = !enableDescription;
-									if (!enableDescription) {
-										info.meta.description = null;
-										info.meta.description_fr = null;
-									}
-								}}
-							>
-								{#if !enableDescription}
-									<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-								{:else}
-									<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-								{/if}
-							</button>
 						</div>
 
-						{#if enableDescription}
-							<div>
-								<Textarea
-									bind:value={info.meta.description}
-									placeholder={$i18n.t('Enter English description')}
-									className="text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden"
-									required={enableDescription}
-								/>
-							</div>
-							<div class="mt-2">
-								<Textarea
-									bind:value={info.meta.description_fr}
-									placeholder={$i18n.t('Enter French description')}
-									className="text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden"
-									required={enableDescription}
-								/>
-							</div>
-						{/if}
+						<div>
+							<Textarea
+								bind:value={info.meta.description}
+								placeholder={$i18n.t('Enter English description')}
+								className="text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden"
+								required
+							/>
+						</div>
+						<div class="mt-2">
+							<Textarea
+								bind:value={info.meta.description_fr}
+								placeholder={$i18n.t('Enter French description')}
+								className="text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden"
+								required
+							/>
+						</div>
 					</div>
 
 					<div class=" mt-2 my-1">
@@ -604,7 +548,7 @@
 								<div>
 									<Textarea
 										className=" text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden "
-										placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
+										placeholder={$i18n.t('Write your model system prompt content here')}
 										rows={4}
 										bind:value={info.params.system}
 									/>

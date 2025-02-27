@@ -1,17 +1,11 @@
 <script lang="ts">
 	import { marked } from 'marked';
-
 	import { toast } from 'svelte-sonner';
-	import Sortable from 'sortablejs';
-
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
-
-	import { onMount, getContext, tick } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
-	const i18n = getContext('i18n');
-
-	import { WEBUI_NAME, config, mobile, models as _models, settings, user } from '$lib/stores';
+	import { WEBUI_NAME, config, models as _models, user } from '$lib/stores';
 	import {
 		createNewModel,
 		deleteModelById,
@@ -19,10 +13,8 @@
 		toggleModelById,
 		updateModelById
 	} from '$lib/apis/models';
-
 	import { getModels } from '$lib/apis';
 	import { getGroups } from '$lib/apis/groups';
-
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import ModelMenu from './Models/ModelMenu.svelte';
 	import ModelDeleteConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -34,43 +26,29 @@
 	import Switch from '../common/Switch.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
-	import { locale } from '$lib/stores/locale';
+
+	const i18n = getContext('i18n');
 
 	let shiftKey = false;
-
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
 	let loaded = false;
-
 	let models = [];
-
 	let filteredModels = [];
 	let selectedModel = null;
-
 	let showModelDeleteConfirm = false;
-
 	let group_ids = [];
-
-	$: if (models) {
-		filteredModels = models.filter(
-			(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
-		);
-	}
-
-	$: descriptions =
-		models?.map((model) => ({
-			id: model.id,
-			desc:
-				$locale === 'fr-CA'
-					? (model?.meta?.description_fr || '').trim()
-					: (model?.meta?.description || '').trim()
-		})) || [];
-
-	function getModelDesc(modelId) {
-		return descriptions.find((d) => d.id === modelId)?.desc || '';
-	}
-
 	let searchValue = '';
+
+	$: filteredModels = models
+		?.filter((m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase()))
+		.map((model) => ({
+			...model,
+			description: ($i18n.language === 'fr-CA'
+				? model?.meta?.description_fr || ''
+				: model?.meta?.description || ''
+			).trim()
+		}));
 
 	const deleteModelHandler = async (model) => {
 		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
@@ -95,27 +73,6 @@
 		goto('/workspace/models/create');
 	};
 
-	const shareModelHandler = async (model) => {
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
-
-		const url = 'https://openwebui.com';
-
-		const tab = await window.open(`${url}/models/create`, '_blank');
-
-		// Define the event handler function
-		const messageHandler = (event) => {
-			if (event.origin !== url) return;
-			if (event.data === 'loaded') {
-				tab.postMessage(JSON.stringify(model), '*');
-
-				// Remove the event listener after handling the message
-				window.removeEventListener('message', messageHandler);
-			}
-		};
-
-		window.addEventListener('message', messageHandler, false);
-	};
-
 	const hideModelHandler = async (model) => {
 		let info = model.info;
 
@@ -134,8 +91,6 @@
 			...info.meta,
 			hidden: !(info?.meta?.hidden ?? false)
 		};
-
-		console.log(info);
 
 		const res = await updateModelById(localStorage.token, info.id, info);
 
@@ -276,7 +231,7 @@
 					>
 						<div class=" flex-1 self-center {model.is_active ? '' : 'text-gray-500'}">
 							<Tooltip
-								content={marked.parse(getModelDesc(model.id))}
+								content={marked.parse(model.description)}
 								className=" w-fit"
 								placement="top-start"
 							>
@@ -285,7 +240,7 @@
 
 							<div class="flex gap-1 text-xs overflow-hidden">
 								<div class="line-clamp-1">
-									{getModelDesc(model.id)}
+									{model.description}
 								</div>
 							</div>
 						</div>
@@ -349,9 +304,6 @@
 							<ModelMenu
 								user={$user}
 								{model}
-								shareHandler={() => {
-									shareModelHandler(model);
-								}}
 								cloneHandler={() => {
 									cloneModelHandler(model);
 								}}
