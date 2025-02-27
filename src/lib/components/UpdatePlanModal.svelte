@@ -56,7 +56,8 @@
     try {
       const paymentLink = await generatePaymentLink(price, id);
       // Открываем новое окно с платежной страницей
-      window.open(paymentLink, "_blank", "width=600,height=800");
+      window.location.href = paymentLink; // Переход на страницу оплаты
+
     } catch (error) {
       console.error("Ошибка при генерации ссылки на оплату:", error);
       alert("Не удалось сформировать платёжную ссылку. Пожалуйста, попробуйте позже.");
