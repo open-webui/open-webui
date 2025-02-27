@@ -1,10 +1,10 @@
 fastapi==0.115.7
 uvicorn[standard]==0.30.6
-pydantic==2.9.2
+pydantic==2.10.6
 python-multipart==0.0.18
 
 python-socketio==5.11.3
-python-jose==3.3.0
+python-jose==3.4.0
 passlib[bcrypt]==1.7.4
 
 requests==2.32.3
@@ -45,7 +45,7 @@ chromadb==0.6.2
 pymilvus==2.5.0
 qdrant-client~=1.12.0
 opensearch-py==2.8.0
-
+playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
 
 transformers
 sentence-transformers==3.3.1
@@ -59,7 +59,7 @@ fpdf2==2.8.2
 pymdown-extensions==10.14.2
 docx2txt==0.8
 python-pptx==1.0.0
-unstructured==0.16.11
+unstructured==0.16.17
 nltk==3.9.1
 Markdown==3.7
 pypandoc==1.13
@@ -103,5 +103,12 @@ pytest-docker~=3.1.1
 googleapis-common-protos==1.63.2
 google-cloud-storage==2.19.0
 
+azure-identity==1.20.0
+azure-storage-blob==12.24.1
+
+
 ## LDAP
 ldap3==2.9.1
+
+## Firecrawl
+firecrawl-py==1.12.0

@@ -101,7 +101,7 @@ li p {
 
 /* Dark theme scrollbar styles */
 .dark ::-webkit-scrollbar-thumb {
-	background-color: rgba(33, 33, 33, 0.8); /* Darker color for dark theme */
+	background-color: rgba(42, 42, 42, 0.8); /* Darker color for dark theme */
 	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
 }
 
