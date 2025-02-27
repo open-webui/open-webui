@@ -130,8 +130,6 @@ async function downloadOneDriveFile(fileInfo: any): Promise<Blob> {
 	return await downloadResponse.blob();
 }
 
-// OneDrive 피커 결과 인터페이스 정의
-
 // Open OneDrive file picker and return selected file metadata
 export async function openOneDrivePicker(): Promise<any | null> {
 	if (typeof window === 'undefined') {
