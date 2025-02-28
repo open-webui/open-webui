@@ -12,9 +12,12 @@ from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
     WEBSOCKET_MANAGER,
     WEBSOCKET_REDIS_URL,
+    WEBSOCKET_REDIS_CERTS,
+    WEBSOCKET_REDIS_USERNAME,
+    WEBSOCKET_REDIS_PASSWORD,
 )
 from open_webui.utils.auth import decode_token
-from open_webui.socket.utils import RedisDict, RedisLock
+from open_webui.socket.utils import RedisDict, RedisLock, azure_credential_service
 
 from open_webui.env import (
     GLOBAL_LOG_LEVEL,
@@ -26,9 +29,23 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
-
+redis_options = {}
+redis_password = WEBSOCKET_REDIS_PASSWORD
+redis_username = WEBSOCKET_REDIS_USERNAME
 if WEBSOCKET_MANAGER == "redis":
-    mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
+    if not redis_password and azure_credential_service:
+       redis_password = azure_credential_service.get_token()
+       redis_username = azure_credential_service.extract_username_from_token(redis_password)
+    if redis_password and redis_username:
+       redis_options["username"] = redis_username
+       redis_options["password"] = redis_password
+    if WEBSOCKET_REDIS_URL.startswith("rediss") and WEBSOCKET_REDIS_CERTS:
+        redis_options["ssl_ca_certs"] = WEBSOCKET_REDIS_CERTS
+
+    mgr = socketio.AsyncRedisManager(
+        WEBSOCKET_REDIS_URL,
+        redis_options=redis_options
+    )
     sio = socketio.AsyncServer(
         cors_allowed_origins=[],
         async_mode="asgi",
@@ -54,14 +71,27 @@ TIMEOUT_DURATION = 3
 
 if WEBSOCKET_MANAGER == "redis":
     log.debug("Using Redis to manage websockets.")
-    SESSION_POOL = RedisDict("open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL)
-    USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
-    USAGE_POOL = RedisDict("open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL)
 
+    SESSION_POOL = RedisDict(
+        "open-webui:session_pool",
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_options=redis_options
+    )
+    USER_POOL = RedisDict(
+        "open-webui:user_pool",
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_options=redis_options
+    )
+    USAGE_POOL = RedisDict(
+        "open-webui:usage_pool",
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_options=redis_options
+    )
     clean_up_lock = RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,
         lock_name="usage_cleanup_lock",
         timeout_secs=TIMEOUT_DURATION * 2,
+        redis_options=redis_options
     )
     aquire_func = clean_up_lock.aquire_lock
     renew_func = clean_up_lock.renew_lock
