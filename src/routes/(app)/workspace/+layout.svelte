@@ -14,6 +14,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 
+	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 
 	const i18n = getContext('i18n');
@@ -48,6 +49,8 @@
 		{$i18n.t('Workspace')} | {$WEBUI_NAME}
 	</title>
 </svelte:head>
+
+<Sidebar />
 
 {#if loaded}
 	<div
