@@ -1187,9 +1187,13 @@ def process_web(
         content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {content}")
-        save_docs_to_vector_db(
-            request, docs, collection_name, overwrite=True, user=user
-        )
+
+        if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+            save_docs_to_vector_db(
+                request, docs, collection_name, overwrite=True, user=user
+            )
+        else:
+            collection_name = None
 
         return {
             "status": True,
@@ -1201,6 +1205,7 @@ def process_web(
                 },
                 "meta": {
                     "name": form_data.url,
+                    "source": form_data.url,
                 },
             },
         }
