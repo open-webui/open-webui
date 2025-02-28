@@ -6,6 +6,7 @@
 
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
+	import { getAifredConfig, updateAifredConfig, getAifredModels } from '$lib/apis/aifred';
 	import { getModels as _getModels } from '$lib/apis';
 	import { getDirectConnectionsConfig, setDirectConnectionsConfig } from '$lib/apis/configs';
 
@@ -17,6 +18,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 
 	import OpenAIConnection from './Connections/OpenAIConnection.svelte';
+	import AifredConnection from './Connections/AifredConnection.svelte';
 	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 	import OllamaConnection from './Connections/OllamaConnection.svelte';
 
@@ -38,13 +40,20 @@
 	let OPENAI_API_BASE_URLS = [''];
 	let OPENAI_API_CONFIGS = {};
 
+	let AIFRED_API_KEYS = [''];
+	let AIFRED_API_BASE_URLS = [''];
+	let AIFRED_API_CONFIGS = {};
+
+
 	let ENABLE_OPENAI_API: null | boolean = null;
 	let ENABLE_OLLAMA_API: null | boolean = null;
+	let ENABLE_AIFRED_API: null | boolean = null;
 
 	let directConnectionsConfig = null;
 
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
+	let showAddAifredConnectionModal = false;
 	let showAddOllamaConnectionModal = false;
 
 	const updateOpenAIHandler = async () => {
@@ -79,6 +88,43 @@
 
 			if (res) {
 				toast.success($i18n.t('OpenAI API settings updated'));
+				await models.set(await getModels());
+			}
+		}
+	};
+
+	const updateAifredHandler = async () => {
+		if (ENABLE_AIFRED_API !== null) {
+			// Remove trailing slashes
+			AIFRED_API_BASE_URLS = AIFRED_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
+
+			// Check if API KEYS length is same than API URLS length
+			if (AIFRED_API_KEYS.length !== AIFRED_API_BASE_URLS.length) {
+				// if there are more keys than urls, remove the extra keys
+				if (AIFRED_API_KEYS.length > AIFRED_API_BASE_URLS.length) {
+					AIFRED_API_KEYS = AIFRED_API_KEYS.slice(0, AIFRED_API_BASE_URLS.length);
+				}
+
+				// if there are more urls than keys, add empty keys
+				if (AIFRED_API_KEYS.length < AIFRED_API_BASE_URLS.length) {
+					const diff = AIFRED_API_BASE_URLS.length - AIFRED_API_KEYS.length;
+					for (let i = 0; i < diff; i++) {
+						AIFRED_API_KEYS.push('');
+					}
+				}
+			}
+
+			const res = await updateAifredConfig(localStorage.token, {
+				ENABLE_AIFRED_API: ENABLE_AIFRED_API,
+				AIFRED_API_BASE_URLS: AIFRED_API_BASE_URLS,
+				AIFRED_API_KEYS: AIFRED_API_KEYS,
+				AIFRED_API_CONFIGS: AIFRED_API_CONFIGS
+			}).catch((error) => {
+				toast.error(`${error}`);
+			});
+
+			if (res) {
+				toast.success($i18n.t('Aifred API settings updated'));
 				await models.set(await getModels());
 			}
 		}
@@ -125,6 +171,15 @@
 		await updateOpenAIHandler();
 	};
 
+	const addAifredConnectionHandler = async (connection) => {
+		AIFRED_API_BASE_URLS = [...AIFRED_API_BASE_URLS, connection.url];
+		AIFRED_API_KEYS = [...AIFRED_API_KEYS, connection.key];
+		AIFRED_API_CONFIGS[AIFRED_API_BASE_URLS.length - 1] = connection.config;
+
+		await updateAifredHandler();
+	};
+
+
 	const addOllamaConnectionHandler = async (connection) => {
 		OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, connection.url];
 		OLLAMA_API_CONFIGS[OLLAMA_BASE_URLS.length - 1] = {
@@ -136,9 +191,11 @@
 	};
 
 	onMount(async () => {
+		debugger;
 		if ($user.role === 'admin') {
 			let ollamaConfig = {};
 			let openaiConfig = {};
+			let aifredConfig = {};
 
 			await Promise.all([
 				(async () => {
@@ -148,16 +205,24 @@
 					openaiConfig = await getOpenAIConfig(localStorage.token);
 				})(),
 				(async () => {
+					aifredConfig = await getAifredConfig(localStorage.token);
+				})(),
+				(async () => {
 					directConnectionsConfig = await getDirectConnectionsConfig(localStorage.token);
 				})()
 			]);
 
 			ENABLE_OPENAI_API = openaiConfig.ENABLE_OPENAI_API;
+			ENABLE_AIFRED_API = aifredConfig.ENABLE_AIFRED_API;
 			ENABLE_OLLAMA_API = ollamaConfig.ENABLE_OLLAMA_API;
 
 			OPENAI_API_BASE_URLS = openaiConfig.OPENAI_API_BASE_URLS;
 			OPENAI_API_KEYS = openaiConfig.OPENAI_API_KEYS;
 			OPENAI_API_CONFIGS = openaiConfig.OPENAI_API_CONFIGS;
+
+			AIFRED_API_BASE_URLS = aifredConfig.AIFRED_API_BASE_URLS;
+			AIFRED_API_KEYS = aifredConfig.AIFRED_API_KEYS;
+			AIFRED_API_CONFIGS = aifredConfig.AIFRED_API_CONFIGS;
 
 			OLLAMA_BASE_URLS = ollamaConfig.OLLAMA_BASE_URLS;
 			OLLAMA_API_CONFIGS = ollamaConfig.OLLAMA_API_CONFIGS;
@@ -190,11 +255,32 @@
 					}
 				}
 			}
+			debugger;
+			if (ENABLE_AIFRED_API) {
+				// get url and idx
+				for (const [idx, url] of AIFRED_API_BASE_URLS.entries()) {
+					if (!AIFRED_API_CONFIGS[idx]) {
+						// Legacy support, url as key
+						AIFRED_API_CONFIGS[idx] = AIFRED_API_CONFIGS[url] || {};
+					}
+				}
+				AIFRED_API_BASE_URLS.forEach(async (url, idx) => {
+					AIFRED_API_CONFIGS[idx] = AIFRED_API_CONFIGS[idx] || {};
+					if (!(AIFRED_API_CONFIGS[idx]?.enable ?? true)) {
+						return;
+					}
+					const res = await getAifredModels(localStorage.token, idx);
+					if (res.pipelines) {
+						pipelineUrls[url] = true;
+					}
+				});
+			}
 		}
 	});
 
 	const submitHandler = async () => {
 		updateOpenAIHandler();
+		updateAifredHandler();
 		updateOllamaHandler();
 		updateDirectConnectionsHandler();
 
@@ -208,6 +294,11 @@
 />
 
 <AddConnectionModal
+	bind:show={showAddAifredConnectionModal}
+	onSubmit={addAifredConnectionHandler}
+/>
+
+<AddConnectionModal
 	ollama
 	bind:show={showAddOllamaConnectionModal}
 	onSubmit={addOllamaConnectionHandler}
@@ -215,7 +306,75 @@
 
 <form class="flex flex-col h-full justify-between text-sm" on:submit|preventDefault={submitHandler}>
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
-		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && directConnectionsConfig !== null}
+		{#if ENABLE_AIFRED_API !== null && ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && directConnectionsConfig !== null}
+			<div class="my-2">
+				<div class="mt-2 space-y-2 pr-1.5">
+					<div class="flex justify-between items-center text-sm">
+						<div class="  font-medium">{$i18n.t('Aifred API')}</div>
+
+						<div class="flex items-center">
+							<div class="">
+								<Switch
+									bind:state={ENABLE_AIFRED_API}
+									on:change={async () => {
+										updateAifredHandler();
+									}}
+								/>
+							</div>
+						</div>
+					</div>
+
+					{#if ENABLE_AIFRED_API}
+						<hr class=" border-gray-100 dark:border-gray-850" />
+
+						<div class="">
+							<div class="flex justify-between items-center">
+								<div class="font-medium">{$i18n.t('Manage Aifred API Connections')}</div>
+
+								<Tooltip content={$i18n.t(`Add Connection`)}>
+									<button
+										class="px-1"
+										on:click={() => {
+											showAddAifredConnectionModal = true;
+										}}
+										type="button"
+									>
+										<Plus />
+									</button>
+								</Tooltip>
+							</div>
+
+							<div class="flex flex-col gap-1.5 mt-1.5">
+								{#each AIFRED_API_BASE_URLS as url, idx}
+									<AifredConnection
+										pipeline={pipelineUrls[url] ? true : false}
+										bind:url
+										bind:key={AIFRED_API_KEYS[idx]}
+										bind:config={AIFRED_API_CONFIGS[idx]}
+										onSubmit={() => {
+											updateAifredHandler();
+										}}
+										onDelete={() => {
+											AIFRED_API_BASE_URLS = AIFRED_API_BASE_URLS.filter(
+												(url, urlIdx) => idx !== urlIdx
+											);
+											AIFRED_API_KEYS = AIFRED_API_KEYS.filter((key, keyIdx) => idx !== keyIdx);
+
+											let newConfig = {};
+											AIFRED_API_BASE_URLS.forEach((url, newIdx) => {
+												newConfig[newIdx] = AIFRED_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
+											});
+											AIFRED_API_CONFIGS = newConfig;
+										}}
+									/>
+								{/each}
+							</div>
+						</div>
+					{/if}
+
+				</div>
+			</div>
+
 			<div class="my-2">
 				<div class="mt-2 space-y-2 pr-1.5">
 					<div class="flex justify-between items-center text-sm">
@@ -367,7 +526,7 @@
 						<div class="">
 							<Switch
 								bind:state={directConnectionsConfig.ENABLE_DIRECT_CONNECTIONS}
-								on:change={async () => {
+								on:change={async () => {debugger;
 									updateDirectConnectionsHandler();
 								}}
 							/>

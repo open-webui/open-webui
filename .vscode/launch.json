@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "FastAPI Debug",
+        "type": "python",
+        "request": "launch",
+        "module": "uvicorn",
+        "args": [
+          "open_webui.main:app",
+          "--host", "0.0.0.0",
+          "--port", "8080",
+          "--reload"
+        ],
+        "cwd": "${workspaceFolder}/backend",
+        "env": {
+          "WEBUI_SECRET_KEY": "your_secret_key",
+          "PORT": "8080",
+          "USE_OLLAMA_DOCKER": "true",
+          "USE_CUDA_DOCKER": "false"
+        },
+        "console": "integratedTerminal",
+        "justMyCode": false
+      }
+    ]
+  }
+  

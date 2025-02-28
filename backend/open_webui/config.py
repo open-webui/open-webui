@@ -775,21 +775,17 @@ OLLAMA_API_CONFIGS = PersistentConfig(
 ####################################
 # OPENAI_API
 ####################################
-
-
 ENABLE_OPENAI_API = PersistentConfig(
     "ENABLE_OPENAI_API",
     "openai.enable",
     os.environ.get("ENABLE_OPENAI_API", "True").lower() == "true",
 )
 
-
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_API_BASE_URL = os.environ.get("GEMINI_API_BASE_URL", "")
-
 
 if OPENAI_API_BASE_URL == "":
     OPENAI_API_BASE_URL = "https://api.openai.com/v1"
@@ -830,6 +826,61 @@ try:
 except Exception:
     pass
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
+
+
+####################################
+# AIFRED_API
+####################################
+ENABLE_AIFRED_API = PersistentConfig(
+    "ENABLE_AIFRED_API",
+    "aifred.enable",
+    os.environ.get("ENABLE_AIFRED_API", "True").lower() == "true",
+)
+
+AIFRED_API_KEY = os.environ.get("AIFRED_API_KEY", "")
+AIFRED_API_BASE_URL = os.environ.get("AIFRED_API_BASE_URL", "")
+
+if AIFRED_API_BASE_URL == "":
+    AIFRED_API_BASE_URL = "http://api.aifred.com/v1"
+
+AIFRED_API_KEYS = os.environ.get("AIFRED_API_KEYS", "")
+AIFRED_API_KEYS = AIFRED_API_KEYS if AIFRED_API_KEYS != "" else AIFRED_API_KEY
+
+AIFRED_API_KEYS = [url.strip() for url in AIFRED_API_KEYS.split(";")]
+AIFRED_API_KEYS = PersistentConfig(
+    "AIFRED_API_KEYS", "aifred.api_keys", AIFRED_API_KEYS
+)
+
+AIFRED_API_BASE_URLS = os.environ.get("AIFRED_API_BASE_URLS", "")
+AIFRED_API_BASE_URLS = (
+    AIFRED_API_BASE_URLS if AIFRED_API_BASE_URLS != "" else AIFRED_API_BASE_URL
+)
+
+AIFRED_API_BASE_URLS = [
+    url.strip() if url != "" else "http://api.aifred.com/v1"
+    for url in AIFRED_API_BASE_URLS.split(";")
+]
+AIFRED_API_BASE_URLS = PersistentConfig(
+    "AIFRED_API_BASE_URLS", "aifred.api_base_urls", AIFRED_API_BASE_URLS
+)
+
+AIFRED_API_CONFIGS = PersistentConfig(
+    "AIFRED_API_CONFIGS",
+    "aifred.api_configs",
+    {},
+)
+
+# Get the actual Aifred API key based on the base URL
+AIFRED_API_KEY = ""
+try:
+    AIFRED_API_KEY = AIFRED_API_KEYS.value[
+        AIFRED_API_BASE_URLS.value.index("http://api.aifred.com/v1")
+    ]
+except Exception:
+    pass
+AIFRED_API_BASE_URL = "https://api.aifred.com/v1"
+
+
 
 ####################################
 # WEBUI

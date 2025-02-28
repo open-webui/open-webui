@@ -1,43 +1,68 @@
-import { OPENAI_API_BASE_URL, AIFRED_API_BASE_URL, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+import { AIFRED_API_BASE_URL, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
-export const getOpenAIConfig = async (token: string = '') => {
+export const getAifredConfig = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/config`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
+	try {
+		console.log("API BASE URL:", AIFRED_API_BASE_URL);
+		console.log("Fetching from:", `${AIFRED_API_BASE_URL}/config`);
+
+		const res = await fetch(`${AIFRED_API_BASE_URL}/config`, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				...(token && { authorization: `Bearer ${token}` })
 			}
-			return null;
 		});
 
-	if (error) {
-		throw error;
+		const text = await res.text();  // JSON 대신 원본 응답을 출력
+		console.log("Response:", text);
+
+		if (!res.ok) {
+			throw new Error(`API Error: ${res.status} - ${text}`);
+		}
+
+		const json = JSON.parse(text);
+		return json;
+
+	} catch (err) {
+		console.error("Fetch Error:", err);
+		throw err;
 	}
-
-	return res;
 };
 
-type OpenAIConfig = {
-	ENABLE_OPENAI_API: boolean;
-	OPENAI_API_BASE_URLS: string[];
-	OPENAI_API_KEYS: string[];
-	OPENAI_API_CONFIGS: object;
-};
+// export const getAifredConfig = async (token: string = '') => {debugger;
+// 	let error = null;
+	
+// 	const res = await fetch(`${AIFRED_API_BASE_URL}/config`, {
+// 		method: 'GET',
+// 		headers: {
+// 			Accept: 'application/json',
+// 			'Content-Type': 'application/json',
+// 			...(token && { authorization: `Bearer ${token}` })
+// 		}
+// 	})
+// 	.then(async (res) => {
+// 		if (!res.ok) throw await res.json();
+// 		return res.json();
+// 	})
+// 	.catch((err) => {
+// 		console.log(err);
+// 		if ('detail' in err) {
+// 			error = err.detail;
+// 		} else {
+// 			error = 'Server connection failed';
+// 		}
+// 		return null;
+// 	});
+
+// 	if (error) {
+// 		throw error;
+// 	}
+
+// 	return res;
+// };
 
 type AifredConfig = {
 	ENABLE_AIFRED_API: boolean;
@@ -46,10 +71,10 @@ type AifredConfig = {
 	AIFRED_API_CONFIGS: object;
 };
 
-export const updateOpenAIConfig = async (token: string = '', config: OpenAIConfig) => {
+export const updateAifredConfig = async (token: string = '', config: AifredConfig) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/config/update`, {
+	const res = await fetch(`${AIFRED_API_BASE_URL}/config/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -81,10 +106,10 @@ export const updateOpenAIConfig = async (token: string = '', config: OpenAIConfi
 	return res;
 };
 
-export const getOpenAIUrls = async (token: string = '') => {
+export const getAifredUrls = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/urls`, {
+	const res = await fetch(`${AIFRED_API_BASE_URL}/urls`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -110,13 +135,13 @@ export const getOpenAIUrls = async (token: string = '') => {
 		throw error;
 	}
 
-	return res.OPENAI_API_BASE_URLS;
+	return res.AIFRED_API_BASE_URLS;
 };
 
-export const updateOpenAIUrls = async (token: string = '', urls: string[]) => {
+export const updateAifredUrls = async (token: string = '', urls: string[]) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/urls/update`, {
+	const res = await fetch(`${AIFRED_API_BASE_URL}/urls/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -145,13 +170,13 @@ export const updateOpenAIUrls = async (token: string = '', urls: string[]) => {
 		throw error;
 	}
 
-	return res.OPENAI_API_BASE_URLS;
+	return res.AIFRED_API_BASE_URLS;
 };
 
-export const getOpenAIKeys = async (token: string = '') => {
+export const getAifredKeys = async (token: string = '') => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/keys`, {
+	const res = await fetch(`${AIFRED_API_BASE_URL}/keys`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -177,13 +202,13 @@ export const getOpenAIKeys = async (token: string = '') => {
 		throw error;
 	}
 
-	return res.OPENAI_API_KEYS;
+	return res.AIFRED_API_KEYS;
 };
 
-export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {
+export const updateAifredKeys = async (token: string = '', keys: string[]) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/keys/update`, {
+	const res = await fetch(`${AIFRED_API_BASE_URL}/keys/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -212,7 +237,7 @@ export const updateOpenAIKeys = async (token: string = '', keys: string[]) => {
 		throw error;
 	}
 
-	return res.OPENAI_API_KEYS;
+	return res.AIFRED_API_KEYS;
 };
 
 export const getOpenAIModelsDirect = async (url: string, key: string) => {
@@ -242,11 +267,11 @@ export const getOpenAIModelsDirect = async (url: string, key: string) => {
 	return res;
 };
 
-export const getOpenAIModels = async (token: string, urlIdx?: number) => {
+export const getAifredModels = async (token: string, urlIdx?: number) => {
 	let error = null;
 
 	const res = await fetch(
-		`${OPENAI_API_BASE_URL}/models${typeof urlIdx === 'number' ? `/${urlIdx}` : ''}`,
+		`${AIFRED_API_BASE_URL}/models${typeof urlIdx === 'number' ? `/${urlIdx}` : ''}`,
 		{
 			method: 'GET',
 			headers: {
@@ -261,7 +286,7 @@ export const getOpenAIModels = async (token: string, urlIdx?: number) => {
 			return res.json();
 		})
 		.catch((err) => {
-			error = `OpenAI: ${err?.error?.message ?? 'Network Problem'}`;
+			error = `Aifred: ${err?.error?.message ?? 'Network Problem'}`;
 			return [];
 		});
 
@@ -272,14 +297,14 @@ export const getOpenAIModels = async (token: string, urlIdx?: number) => {
 	return res;
 };
 
-export const verifyOpenAIConnection = async (
+export const verifyAifredConnection = async (
 	token: string = '',
-	url: string = 'https://api.openai.com/v1',
+	url: string = 'https://api.aifred.com/v1',
 	key: string = '',
 	direct: boolean = false
 ) => {
 	if (!url) {
-		throw 'OpenAI: URL is required';
+		throw 'Aifred: URL is required';
 	}
 
 	let error = null;
@@ -299,7 +324,7 @@ export const verifyOpenAIConnection = async (
 				return res.json();
 			})
 			.catch((err) => {
-				error = `OpenAI: ${err?.error?.message ?? 'Network Problem'}`;
+				error = `Aifred: ${err?.error?.message ?? 'Network Problem'}`;
 				return [];
 			});
 
@@ -307,7 +332,7 @@ export const verifyOpenAIConnection = async (
 			throw error;
 		}
 	} else {
-		res = await fetch(`${OPENAI_API_BASE_URL}/verify`, {
+		res = await fetch(`${AIFRED_API_BASE_URL}/verify`, {
 			method: 'POST',
 			headers: {
 				Accept: 'application/json',
@@ -324,7 +349,7 @@ export const verifyOpenAIConnection = async (
 				return res.json();
 			})
 			.catch((err) => {
-				error = `OpenAI: ${err?.error?.message ?? 'Network Problem'}`;
+				error = `Aifred: ${err?.error?.message ?? 'Network Problem'}`;
 				return [];
 			});
 
@@ -365,7 +390,7 @@ export const chatCompletion = async (
 	return [res, controller];
 };
 
-export const generateOpenAIChatCompletion = async (
+export const generateAifredChatCompletion = async (
 	token: string = '',
 	body: object,
 	url: string = `${WEBUI_BASE_URL}/api`
@@ -396,7 +421,7 @@ export const generateOpenAIChatCompletion = async (
 	return res;
 };
 
-export const synthesizeOpenAISpeech = async (
+export const synthesizeAifredSpeech = async (
 	token: string = '',
 	speaker: string = 'alloy',
 	text: string = '',
@@ -404,7 +429,7 @@ export const synthesizeOpenAISpeech = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${OPENAI_API_BASE_URL}/audio/speech`, {
+	const res = await fetch(`${AIFRED_API_BASE_URL}/audio/speech`, {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${token}`,
