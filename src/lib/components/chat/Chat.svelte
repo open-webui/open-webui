@@ -86,7 +86,13 @@
 
 	export let chatIdProp = '';
 
+	export function newChat() {
+		chatId.set('');
+		initNewChat();
+	}
+
 	let loaded = false;
+
 	const eventTarget = new EventTarget();
 	let controlPane;
 	let controlPaneComponent;
