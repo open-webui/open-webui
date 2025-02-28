@@ -1899,7 +1899,7 @@
 <div
 	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 		? '  md:max-w-[calc(100%-260px)]'
-		: ' '} w-full max-w-full flex flex-col bg-white dark:bg-white text-black dark:text-black"
+		: ' '} w-full max-w-full flex flex-col bg-white text-black"
 	id="chat-container"
 >
 	{#if chatIdProp === '' || (!loading && chatIdProp)}
@@ -1912,7 +1912,7 @@
 				/>
 
 				<div
-					class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
+					class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 z-0"
 				/>
 			{/if}
 
