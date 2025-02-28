@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 
 	import { WEBUI_NAME, showSidebar, user } from '$lib/stores';
+	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
 	import { page } from '$app/stores';
 
@@ -23,6 +24,8 @@
 		{$i18n.t('Admin Panel')} | {$WEBUI_NAME}
 	</title>
 </svelte:head>
+
+<Sidebar />
 
 {#if loaded}
 	<div
