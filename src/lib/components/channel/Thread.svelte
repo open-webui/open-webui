@@ -1,220 +1,210 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
+	import { run } from 'svelte/legacy';
 
-  import { goto } from '$app/navigation';
+	import { goto } from '$app/navigation';
 
-  import { socket, user } from '$lib/stores';
+	import { socket, user } from '$lib/stores';
 
-  import { getChannelThreadMessages, sendMessage } from '$lib/apis/channels';
+	import { getChannelThreadMessages, sendMessage } from '$lib/apis/channels';
 
-  import XMark from '$lib/components/icons/XMark.svelte';
-  import MessageInput from './MessageInput.svelte';
-  import Messages from './Messages.svelte';
-  import { onDestroy, onMount, tick } from 'svelte';
-  import { toast } from 'svelte-sonner';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import MessageInput from './MessageInput.svelte';
+	import Messages from './Messages.svelte';
+	import { onDestroy, onMount, tick } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
+	interface Props {
+		threadId?: any;
+		channel?: any;
+		onClose?: any;
+	}
 
-  interface Props {
-    threadId?: any;
-    channel?: any;
-    onClose?: any;
-  }
+	let { threadId = null, channel = null, onClose = () => {} }: Props = $props();
 
-  let { threadId = null, channel = null, onClose = () => {} }: Props = $props();
+	let messages = $state(null);
+	let top = $state(false);
 
-  let messages = $state(null);
-  let top = $state(false);
+	let typingUsers = $state([]);
+	let typingUsersTimeout = {};
 
-  let typingUsers = $state([]);
-  let typingUsersTimeout = {};
+	let messagesContainerElement = $state(null);
 
-  let messagesContainerElement = $state(null);
+	const scrollToBottom = () => {
+		messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
+	};
 
+	const initHandler = async () => {
+		messages = null;
+		top = false;
 
-  const scrollToBottom = () => {
-    messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
-  };
+		typingUsers = [];
+		typingUsersTimeout = {};
 
-  const initHandler = async () => {
-    messages = null;
-    top = false;
+		if (channel) {
+			messages = await getChannelThreadMessages(localStorage.token, channel.id, threadId);
 
-    typingUsers = [];
-    typingUsersTimeout = {};
+			if (messages.length < 50) {
+				top = true;
+			}
 
-    if (channel) {
-      messages = await getChannelThreadMessages(localStorage.token, channel.id, threadId);
+			await tick();
+			scrollToBottom();
+		} else {
+			goto('/');
+		}
+	};
 
-      if (messages.length < 50) {
-        top = true;
-      }
+	const channelEventHandler = async (event) => {
+		console.log(event);
+		if (event.channel_id === channel.id) {
+			const type = event?.data?.type ?? null;
+			const data = event?.data?.data ?? null;
 
-      await tick();
-      scrollToBottom();
-    } else {
-      goto('/');
-    }
-  };
+			if (type === 'message') {
+				if ((data?.parent_id ?? null) === threadId) {
+					if (messages) {
+						messages = [data, ...messages];
 
-  const channelEventHandler = async (event) => {
-    console.log(event);
-    if (event.channel_id === channel.id) {
-      const type = event?.data?.type ?? null;
-      const data = event?.data?.data ?? null;
+						if (typingUsers.find((user) => user.id === event.user.id)) {
+							typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
+						}
+					}
+				}
+			} else if (type === 'message:update') {
+				if (messages) {
+					const idx = messages.findIndex((message) => message.id === data.id);
 
-      if (type === 'message') {
-        if ((data?.parent_id ?? null) === threadId) {
-          if (messages) {
-            messages = [data, ...messages];
+					if (idx !== -1) {
+						messages[idx] = data;
+					}
+				}
+			} else if (type === 'message:delete') {
+				if (messages) {
+					messages = messages.filter((message) => message.id !== data.id);
+				}
+			} else if (type.includes('message:reaction')) {
+				if (messages) {
+					const idx = messages.findIndex((message) => message.id === data.id);
+					if (idx !== -1) {
+						messages[idx] = data;
+					}
+				}
+			} else if (type === 'typing' && event.message_id === threadId) {
+				if (event.user.id === $user.id) {
+					return;
+				}
 
-            if (typingUsers.find((user) => user.id === event.user.id)) {
-              typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
-            }
-          }
-        }
-      } else if (type === 'message:update') {
-        if (messages) {
-          const idx = messages.findIndex((message) => message.id === data.id);
+				typingUsers = data.typing
+					? [
+							...typingUsers,
+							...(typingUsers.find((user) => user.id === event.user.id)
+								? []
+								: [
+										{
+											id: event.user.id,
+											name: event.user.name
+										}
+									])
+						]
+					: typingUsers.filter((user) => user.id !== event.user.id);
 
-          if (idx !== -1) {
-            messages[idx] = data;
-          }
-        }
-      } else if (type === 'message:delete') {
-        if (messages) {
-          messages = messages.filter((message) => message.id !== data.id);
-        }
-      } else if (type.includes('message:reaction')) {
-        if (messages) {
-          const idx = messages.findIndex((message) => message.id === data.id);
-          if (idx !== -1) {
-            messages[idx] = data;
-          }
-        }
-      } else if (type === 'typing' && event.message_id === threadId) {
-        if (event.user.id === $user.id) {
-          return;
-        }
+				if (typingUsersTimeout[event.user.id]) {
+					clearTimeout(typingUsersTimeout[event.user.id]);
+				}
 
-        typingUsers = data.typing
-          ? [
-            ...typingUsers,
-            ...(typingUsers.find((user) => user.id === event.user.id)
-              ? []
-              : [
-                {
-                  id: event.user.id,
-                  name: event.user.name
-                }
-              ])
-          ]
-          : typingUsers.filter((user) => user.id !== event.user.id);
+				typingUsersTimeout[event.user.id] = setTimeout(() => {
+					typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
+				}, 5000);
+			}
+		}
+	};
 
-        if (typingUsersTimeout[event.user.id]) {
-          clearTimeout(typingUsersTimeout[event.user.id]);
-        }
+	const submitHandler = async ({ content, data }) => {
+		if (!content) {
+			return;
+		}
 
-        typingUsersTimeout[event.user.id] = setTimeout(() => {
-          typingUsers = typingUsers.filter((user) => user.id !== event.user.id);
-        }, 5000);
-      }
-    }
-  };
+		const res = await sendMessage(localStorage.token, channel.id, {
+			parent_id: threadId,
+			content: content,
+			data: data
+		}).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+	};
 
-  const submitHandler = async ({ content, data }) => {
-    if (!content) {
-      return;
-    }
+	const onChange = async () => {
+		$socket?.emit('channel-events', {
+			channel_id: channel.id,
+			message_id: threadId,
+			data: {
+				type: 'typing',
+				data: {
+					typing: true
+				}
+			}
+		});
+	};
 
-    const res = await sendMessage(localStorage.token, channel.id, {
-      parent_id: threadId,
-      content: content,
-      data: data
-    }).catch((error) => {
-      toast.error(`${error}`);
-      return null;
-    });
-  };
+	onMount(() => {
+		$socket?.on('channel-events', channelEventHandler);
+	});
 
-  const onChange = async () => {
-    $socket?.emit('channel-events', {
-      channel_id: channel.id,
-      message_id: threadId,
-      data: {
-        type: 'typing',
-        data: {
-          typing: true
-        }
-      }
-    });
-  };
-
-  onMount(() => {
-    $socket?.on('channel-events', channelEventHandler);
-  });
-
-  onDestroy(() => {
-    $socket?.off('channel-events', channelEventHandler);
-  });
-  run(() => {
-    if (threadId) {
-      initHandler();
-    }
-  });
+	onDestroy(() => {
+		$socket?.off('channel-events', channelEventHandler);
+	});
+	run(() => {
+		if (threadId) {
+			initHandler();
+		}
+	});
 </script>
 
 {#if channel}
-  <div class="flex flex-col w-full h-full bg-gray-50 dark:bg-gray-850">
-    <div class="flex items-center justify-between px-3.5 pt-3">
-      <div class=" font-medium text-lg">Thread</div>
+	<div class="flex flex-col w-full h-full bg-gray-50 dark:bg-gray-850">
+		<div class="flex items-center justify-between px-3.5 pt-3">
+			<div class=" font-medium text-lg">Thread</div>
 
-      <div>
-        <button
-          class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 p-2"
-          onclick={() => {
-            onClose();
-          }}
-        >
-          <XMark />
-        </button>
-      </div>
-    </div>
+			<div>
+				<button
+					class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 p-2"
+					onclick={() => {
+						onClose();
+					}}
+				>
+					<XMark />
+				</button>
+			</div>
+		</div>
 
-    <div
-      bind:this={messagesContainerElement}
-      class=" max-h-full w-full overflow-y-auto pt-3"
-    >
-      <Messages
-        id={threadId}
-        {channel}
-        {messages}
-        onLoad={async () => {
-          const newMessages = await getChannelThreadMessages(
-            localStorage.token,
-            channel.id,
-            threadId,
-            messages.length
-          );
+		<div bind:this={messagesContainerElement} class=" max-h-full w-full overflow-y-auto pt-3">
+			<Messages
+				id={threadId}
+				{channel}
+				{messages}
+				onLoad={async () => {
+					const newMessages = await getChannelThreadMessages(
+						localStorage.token,
+						channel.id,
+						threadId,
+						messages.length
+					);
 
-          messages = [...messages, ...newMessages];
+					messages = [...messages, ...newMessages];
 
-          if (newMessages.length < 50) {
-            top = true;
-            return;
-          }
-        }}
-        thread={true}
-        {top}
-      />
+					if (newMessages.length < 50) {
+						top = true;
+						return;
+					}
+				}}
+				thread={true}
+				{top}
+			/>
 
-      <div class=" pb-[1rem]">
-        <MessageInput
-          id={threadId}
-          {onChange}
-          onSubmit={submitHandler}
-          {typingUsers}
-        />
-      </div>
-    </div>
-  </div>
+			<div class=" pb-[1rem]">
+				<MessageInput id={threadId} {onChange} onSubmit={submitHandler} {typingUsers} />
+			</div>
+		</div>
+	</div>
 {/if}

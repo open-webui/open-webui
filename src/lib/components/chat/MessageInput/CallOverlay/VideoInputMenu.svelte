@@ -1,58 +1,58 @@
 <script lang="ts">
-  import { DropdownMenu } from 'bits-ui';
-  import { flyAndScale } from '$lib/utils/transitions';
-  import { getContext, createEventDispatcher } from 'svelte';
+	import { DropdownMenu } from 'bits-ui';
+	import { flyAndScale } from '$lib/utils/transitions';
+	import { getContext, createEventDispatcher } from 'svelte';
 
-  const i18n = getContext('i18n');
-  const dispatch = createEventDispatcher();
+	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
-  import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
 
-  interface Props {
-    onClose?: Function;
-    devices: any;
-    children?: import('svelte').Snippet;
-  }
+	interface Props {
+		onClose?: Function;
+		devices: any;
+		children?: import('svelte').Snippet;
+	}
 
-  let { onClose = () => {}, devices, children }: Props = $props();
+	let { onClose = () => {}, devices, children }: Props = $props();
 
-  let show = $state(false);
+	let show = $state(false);
 </script>
 
 <Dropdown
-  bind:show
-  on:change={(e) => {
-    if (e.detail === false) {
-      onClose();
-    }
-  }}
+	bind:show
+	on:change={(e) => {
+		if (e.detail === false) {
+			onClose();
+		}
+	}}
 >
-  {@render children?.()}
+	{@render children?.()}
 
-  {#snippet content()}
-    <div >
-      <DropdownMenu.Content
-        class="w-full max-w-[180px] rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-9999 bg-white dark:bg-gray-900 dark:text-white shadow-xs"
-        align="start"
-        side="top"
-        sideOffset={6}
-        transition={flyAndScale}
-      >
-        {#each devices as device}
-          <DropdownMenu.Item
-            class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-            on:click={() => {
-              dispatch('change', device.deviceId);
-            }}
-          >
-            <div class="flex items-center">
-              <div class=" line-clamp-1">
-                {device?.label ?? 'Camera'}
-              </div>
-            </div>
-          </DropdownMenu.Item>
-        {/each}
-      </DropdownMenu.Content>
-    </div>
-  {/snippet}
+	{#snippet content()}
+		<div>
+			<DropdownMenu.Content
+				class="w-full max-w-[180px] rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-9999 bg-white dark:bg-gray-900 dark:text-white shadow-xs"
+				align="start"
+				side="top"
+				sideOffset={6}
+				transition={flyAndScale}
+			>
+				{#each devices as device}
+					<DropdownMenu.Item
+						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+						on:click={() => {
+							dispatch('change', device.deviceId);
+						}}
+					>
+						<div class="flex items-center">
+							<div class=" line-clamp-1">
+								{device?.label ?? 'Camera'}
+							</div>
+						</div>
+					</DropdownMenu.Item>
+				{/each}
+			</DropdownMenu.Content>
+		</div>
+	{/snippet}
 </Dropdown>

@@ -1,72 +1,66 @@
 <script lang="ts">
-  import { DropdownMenu } from 'bits-ui';
-  import { getContext } from 'svelte';
+	import { DropdownMenu } from 'bits-ui';
+	import { getContext } from 'svelte';
 
-  import { showSettings } from '$lib/stores';
-  import { flyAndScale } from '$lib/utils/transitions';
+	import { showSettings } from '$lib/stores';
+	import { flyAndScale } from '$lib/utils/transitions';
 
-  import Dropdown from '$lib/components/common/Dropdown.svelte';
-  import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
-  import Lifebuoy from '$lib/components/icons/Lifebuoy.svelte';
-  import Keyboard from '$lib/components/icons/Keyboard.svelte';
-  const i18n = getContext('i18n');
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
+	import Lifebuoy from '$lib/components/icons/Lifebuoy.svelte';
+	import Keyboard from '$lib/components/icons/Keyboard.svelte';
+	const i18n = getContext('i18n');
 
+	interface Props {
+		showDocsHandler: Function;
+		showShortcutsHandler: Function;
+		onClose?: Function;
+		children?: import('svelte').Snippet;
+	}
 
-  interface Props {
-    showDocsHandler: Function;
-    showShortcutsHandler: Function;
-    onClose?: Function;
-    children?: import('svelte').Snippet;
-  }
-
-  let {
-    showDocsHandler,
-    showShortcutsHandler,
-    onClose = () => {},
-    children
-  }: Props = $props();
+	let { showDocsHandler, showShortcutsHandler, onClose = () => {}, children }: Props = $props();
 </script>
 
 <Dropdown
-  on:change={(e) => {
-    if (e.detail === false) {
-      onClose();
-    }
-  }}
+	on:change={(e) => {
+		if (e.detail === false) {
+			onClose();
+		}
+	}}
 >
-  {@render children?.()}
+	{@render children?.()}
 
-  {#snippet content()}
-    <div >
-      <DropdownMenu.Content
-        class="w-full max-w-[200px] rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-        align="end"
-        side="top"
-        sideOffset={4}
-        transition={flyAndScale}
-      >
-        <DropdownMenu.Item
-          id="chat-share-button"
-          class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-          on:click={() => {
-            window.open('https://docs.openwebui.com', '_blank');
-          }}
-        >
-          <QuestionMarkCircle className="size-5" />
-          <div class="flex items-center">{$i18n.t('Documentation')}</div>
-        </DropdownMenu.Item>
+	{#snippet content()}
+		<div>
+			<DropdownMenu.Content
+				class="w-full max-w-[200px] rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+				align="end"
+				side="top"
+				sideOffset={4}
+				transition={flyAndScale}
+			>
+				<DropdownMenu.Item
+					id="chat-share-button"
+					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					on:click={() => {
+						window.open('https://docs.openwebui.com', '_blank');
+					}}
+				>
+					<QuestionMarkCircle className="size-5" />
+					<div class="flex items-center">{$i18n.t('Documentation')}</div>
+				</DropdownMenu.Item>
 
-        <DropdownMenu.Item
-          id="chat-share-button"
-          class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-          on:click={() => {
-            showShortcutsHandler();
-          }}
-        >
-          <Keyboard className="size-5" />
-          <div class="flex items-center">{$i18n.t('Keyboard shortcuts')}</div>
-        </DropdownMenu.Item>
-      </DropdownMenu.Content>
-    </div>
-  {/snippet}
+				<DropdownMenu.Item
+					id="chat-share-button"
+					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					on:click={() => {
+						showShortcutsHandler();
+					}}
+				>
+					<Keyboard className="size-5" />
+					<div class="flex items-center">{$i18n.t('Keyboard shortcuts')}</div>
+				</DropdownMenu.Item>
+			</DropdownMenu.Content>
+		</div>
+	{/snippet}
 </Dropdown>

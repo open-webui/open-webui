@@ -1,136 +1,133 @@
 <script lang="ts">
-  import { toast } from 'svelte-sonner';
-  import { DropdownMenu } from 'bits-ui';
-  import { getContext } from 'svelte';
+	import { toast } from 'svelte-sonner';
+	import { DropdownMenu } from 'bits-ui';
+	import { getContext } from 'svelte';
 
-  import fileSaver from 'file-saver';
-  const { saveAs } = fileSaver;
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
 
-  import { downloadChatAsPDF } from '$lib/apis/utils';
-  import { copyToClipboard, createMessagesList } from '$lib/utils';
+	import { downloadChatAsPDF } from '$lib/apis/utils';
+	import { copyToClipboard, createMessagesList } from '$lib/utils';
 
-  import {
-    showOverview,
-    showControls,
-    showArtifacts,
-    mobile,
-    temporaryChatEnabled
-  } from '$lib/stores';
-  import { flyAndScale } from '$lib/utils/transitions';
+	import {
+		showOverview,
+		showControls,
+		showArtifacts,
+		mobile,
+		temporaryChatEnabled
+	} from '$lib/stores';
+	import { flyAndScale } from '$lib/utils/transitions';
 
-  import Dropdown from '$lib/components/common/Dropdown.svelte';
-  import Tags from '$lib/components/chat/Tags.svelte';
-  import Map from '$lib/components/icons/Map.svelte';
-  import Clipboard from '$lib/components/icons/Clipboard.svelte';
-  import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
-  import Cube from '$lib/components/icons/Cube.svelte';
-  import { getChatById } from '$lib/apis/chats';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import Tags from '$lib/components/chat/Tags.svelte';
+	import Map from '$lib/components/icons/Map.svelte';
+	import Clipboard from '$lib/components/icons/Clipboard.svelte';
+	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
+	import Cube from '$lib/components/icons/Cube.svelte';
+	import { getChatById } from '$lib/apis/chats';
 
-  const i18n = getContext('i18n');
+	const i18n = getContext('i18n');
 
+	interface Props {
+		shareEnabled?: boolean;
+		shareHandler: Function;
+		downloadHandler: Function;
+		// export let tagHandler: Function;
+		chat: any;
+		onClose?: Function;
+		children?: import('svelte').Snippet;
+	}
 
-  
+	let {
+		shareEnabled = false,
+		shareHandler,
+		downloadHandler,
+		chat,
+		onClose = () => {},
+		children
+	}: Props = $props();
 
-  interface Props {
-    shareEnabled?: boolean;
-    shareHandler: Function;
-    downloadHandler: Function;
-    // export let tagHandler: Function;
-    chat: any;
-    onClose?: Function;
-    children?: import('svelte').Snippet;
-  }
+	const getChatAsText = async () => {
+		const history = chat.chat.history;
+		const messages = createMessagesList(history, history.currentId);
+		const chatText = messages.reduce((a, message, i, arr) => {
+			return `${a}### ${message.role.toUpperCase()}\n${message.content}\n\n`;
+		}, '');
 
-  let {
-    shareEnabled = false,
-    shareHandler,
-    downloadHandler,
-    chat,
-    onClose = () => {},
-    children
-  }: Props = $props();
+		return chatText.trim();
+	};
 
-  const getChatAsText = async () => {
-    const history = chat.chat.history;
-    const messages = createMessagesList(history, history.currentId);
-    const chatText = messages.reduce((a, message, i, arr) => {
-      return `${a}### ${message.role.toUpperCase()}\n${message.content}\n\n`;
-    }, '');
+	const downloadTxt = async () => {
+		const chatText = await getChatAsText();
 
-    return chatText.trim();
-  };
+		let blob = new Blob([chatText], {
+			type: 'text/plain'
+		});
 
-  const downloadTxt = async () => {
-    const chatText = await getChatAsText();
+		saveAs(blob, `chat-${chat.chat.title}.txt`);
+	};
 
-    let blob = new Blob([chatText], {
-      type: 'text/plain'
-    });
+	const downloadPdf = async () => {
+		const history = chat.chat.history;
+		const messages = createMessagesList(history, history.currentId);
+		const blob = await downloadChatAsPDF(localStorage.token, chat.chat.title, messages);
 
-    saveAs(blob, `chat-${chat.chat.title}.txt`);
-  };
+		// Create a URL for the blob
+		const url = window.URL.createObjectURL(blob);
 
-  const downloadPdf = async () => {
-    const history = chat.chat.history;
-    const messages = createMessagesList(history, history.currentId);
-    const blob = await downloadChatAsPDF(localStorage.token, chat.chat.title, messages);
+		// Create a link element to trigger the download
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `chat-${chat.chat.title}.pdf`;
 
-    // Create a URL for the blob
-    const url = window.URL.createObjectURL(blob);
+		// Append the link to the body and click it programmatically
+		document.body.appendChild(a);
+		a.click();
 
-    // Create a link element to trigger the download
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `chat-${chat.chat.title}.pdf`;
+		// Remove the link from the body
+		document.body.removeChild(a);
 
-    // Append the link to the body and click it programmatically
-    document.body.appendChild(a);
-    a.click();
+		// Revoke the URL to release memory
+		window.URL.revokeObjectURL(url);
+	};
 
-    // Remove the link from the body
-    document.body.removeChild(a);
+	const downloadJSONExport = async () => {
+		if (chat.id) {
+			let chatObj = null;
 
-    // Revoke the URL to release memory
-    window.URL.revokeObjectURL(url);
-  };
+			if (chat.id === 'local' || $temporaryChatEnabled) {
+				chatObj = chat;
+			} else {
+				chatObj = await getChatById(localStorage.token, chat.id);
+			}
 
-  const downloadJSONExport = async () => {
-    if (chat.id) {
-      let chatObj = null;
-
-      if (chat.id === 'local' || $temporaryChatEnabled) {
-        chatObj = chat;
-      } else {
-        chatObj = await getChatById(localStorage.token, chat.id);
-      }
-
-      let blob = new Blob([JSON.stringify([chatObj])], {
-        type: 'application/json'
-      });
-      saveAs(blob, `chat-export-${Date.now()}.json`);
-    }
-  };
+			let blob = new Blob([JSON.stringify([chatObj])], {
+				type: 'application/json'
+			});
+			saveAs(blob, `chat-export-${Date.now()}.json`);
+		}
+	};
 </script>
 
 <Dropdown
-  on:change={(e) => {
-    if (e.detail === false) {
-      onClose();
-    }
-  }}
+	on:change={(e) => {
+		if (e.detail === false) {
+			onClose();
+		}
+	}}
 >
-  {@render children?.()}
+	{@render children?.()}
 
-  {#snippet content()}
-    <div >
-      <DropdownMenu.Content
-        class="w-full max-w-[200px] rounded-xl px-1 py-1.5  z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-        align="end"
-        side="bottom"
-        sideOffset={8}
-        transition={flyAndScale}
-      >
-        <!-- <DropdownMenu.Item
+	{#snippet content()}
+		<div>
+			<DropdownMenu.Content
+				class="w-full max-w-[200px] rounded-xl px-1 py-1.5  z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+				align="end"
+				side="bottom"
+				sideOffset={8}
+				transition={flyAndScale}
+			>
+				<!-- <DropdownMenu.Item
   				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer dark:hover:bg-gray-800 rounded-md"
   				on:click={async () => {
   					await showSettings.set(!$showSettings);
@@ -158,160 +155,150 @@
   				<div class="flex items-center">{$i18n.t('Settings')}</div>
   			</DropdownMenu.Item> -->
 
-        {#if $mobile}
-          <DropdownMenu.Item
-            id="chat-controls-button"
-            class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-            on:click={async () => {
-              await showControls.set(true);
-              await showOverview.set(false);
-              await showArtifacts.set(false);
-            }}
-          >
-            <AdjustmentsHorizontal
-              className=" size-4"
-              strokeWidth="0.5"
-            />
-            <div class="flex items-center">{$i18n.t('Controls')}</div>
-          </DropdownMenu.Item>
-        {/if}
+				{#if $mobile}
+					<DropdownMenu.Item
+						id="chat-controls-button"
+						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+						on:click={async () => {
+							await showControls.set(true);
+							await showOverview.set(false);
+							await showArtifacts.set(false);
+						}}
+					>
+						<AdjustmentsHorizontal className=" size-4" strokeWidth="0.5" />
+						<div class="flex items-center">{$i18n.t('Controls')}</div>
+					</DropdownMenu.Item>
+				{/if}
 
-        {#if !$temporaryChatEnabled}
-          <DropdownMenu.Item
-            id="chat-share-button"
-            class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-            on:click={() => {
-              shareHandler();
-            }}
-          >
-            <svg
-              class="size-4"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                clip-rule="evenodd"
-                d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z"
-                fill-rule="evenodd"
-              />
-            </svg>
-            <div class="flex items-center">{$i18n.t('Share')}</div>
-          </DropdownMenu.Item>
-        {/if}
+				{#if !$temporaryChatEnabled}
+					<DropdownMenu.Item
+						id="chat-share-button"
+						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+						on:click={() => {
+							shareHandler();
+						}}
+					>
+						<svg
+							class="size-4"
+							fill="currentColor"
+							viewBox="0 0 24 24"
+							xmlns="http://www.w3.org/2000/svg"
+						>
+							<path
+								clip-rule="evenodd"
+								d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z"
+								fill-rule="evenodd"
+							/>
+						</svg>
+						<div class="flex items-center">{$i18n.t('Share')}</div>
+					</DropdownMenu.Item>
+				{/if}
 
-        <DropdownMenu.Item
-          id="chat-overview-button"
-          class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-          on:click={async () => {
-            await showControls.set(true);
-            await showOverview.set(true);
-            await showArtifacts.set(false);
-          }}
-        >
-          <Map
-            className=" size-4"
-            strokeWidth="1.5"
-          />
-          <div class="flex items-center">{$i18n.t('Overview')}</div>
-        </DropdownMenu.Item>
+				<DropdownMenu.Item
+					id="chat-overview-button"
+					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					on:click={async () => {
+						await showControls.set(true);
+						await showOverview.set(true);
+						await showArtifacts.set(false);
+					}}
+				>
+					<Map className=" size-4" strokeWidth="1.5" />
+					<div class="flex items-center">{$i18n.t('Overview')}</div>
+				</DropdownMenu.Item>
 
-        <DropdownMenu.Item
-          id="chat-overview-button"
-          class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-          on:click={async () => {
-            await showControls.set(true);
-            await showArtifacts.set(true);
-            await showOverview.set(false);
-          }}
-        >
-          <Cube
-            className=" size-4"
-            strokeWidth="1.5"
-          />
-          <div class="flex items-center">{$i18n.t('Artifacts')}</div>
-        </DropdownMenu.Item>
+				<DropdownMenu.Item
+					id="chat-overview-button"
+					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					on:click={async () => {
+						await showControls.set(true);
+						await showArtifacts.set(true);
+						await showOverview.set(false);
+					}}
+				>
+					<Cube className=" size-4" strokeWidth="1.5" />
+					<div class="flex items-center">{$i18n.t('Artifacts')}</div>
+				</DropdownMenu.Item>
 
-        <DropdownMenu.Sub>
-          <DropdownMenu.SubTrigger class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md">
-            <svg
-              class="size-4"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.5"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
+				<DropdownMenu.Sub>
+					<DropdownMenu.SubTrigger
+						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					>
+						<svg
+							class="size-4"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.5"
+							viewBox="0 0 24 24"
+							xmlns="http://www.w3.org/2000/svg"
+						>
+							<path
+								d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+						</svg>
 
-            <div class="flex items-center">{$i18n.t('Download')}</div>
-          </DropdownMenu.SubTrigger>
-          <DropdownMenu.SubContent
-            class="w-full rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
-            sideOffset={8}
-            transition={flyAndScale}
-          >
-            <DropdownMenu.Item
-              class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-              on:click={() => {
-                downloadJSONExport();
-              }}
-            >
-              <div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
-            </DropdownMenu.Item>
-            <DropdownMenu.Item
-              class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-              on:click={() => {
-                downloadTxt();
-              }}
-            >
-              <div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
-            </DropdownMenu.Item>
+						<div class="flex items-center">{$i18n.t('Download')}</div>
+					</DropdownMenu.SubTrigger>
+					<DropdownMenu.SubContent
+						class="w-full rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+						sideOffset={8}
+						transition={flyAndScale}
+					>
+						<DropdownMenu.Item
+							class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							on:click={() => {
+								downloadJSONExport();
+							}}
+						>
+							<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
+						</DropdownMenu.Item>
+						<DropdownMenu.Item
+							class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							on:click={() => {
+								downloadTxt();
+							}}
+						>
+							<div class="flex items-center line-clamp-1">{$i18n.t('Plain text (.txt)')}</div>
+						</DropdownMenu.Item>
 
-            <DropdownMenu.Item
-              class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-              on:click={() => {
-                downloadPdf();
-              }}
-            >
-              <div class="flex items-center line-clamp-1">{$i18n.t('PDF document (.pdf)')}</div>
-            </DropdownMenu.Item>
-          </DropdownMenu.SubContent>
-        </DropdownMenu.Sub>
+						<DropdownMenu.Item
+							class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							on:click={() => {
+								downloadPdf();
+							}}
+						>
+							<div class="flex items-center line-clamp-1">{$i18n.t('PDF document (.pdf)')}</div>
+						</DropdownMenu.Item>
+					</DropdownMenu.SubContent>
+				</DropdownMenu.Sub>
 
-        <DropdownMenu.Item
-          id="chat-copy-button"
-          class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-          on:click={async () => {
-            const res = await copyToClipboard(await getChatAsText()).catch((e) => {
-              console.error(e);
-            });
+				<DropdownMenu.Item
+					id="chat-copy-button"
+					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					on:click={async () => {
+						const res = await copyToClipboard(await getChatAsText()).catch((e) => {
+							console.error(e);
+						});
 
-            if (res) {
-              toast.success($i18n.t('Copied to clipboard'));
-            }
-          }}
-        >
-          <Clipboard
-            className=" size-4"
-            strokeWidth="1.5"
-          />
-          <div class="flex items-center">{$i18n.t('Copy')}</div>
-        </DropdownMenu.Item>
+						if (res) {
+							toast.success($i18n.t('Copied to clipboard'));
+						}
+					}}
+				>
+					<Clipboard className=" size-4" strokeWidth="1.5" />
+					<div class="flex items-center">{$i18n.t('Copy')}</div>
+				</DropdownMenu.Item>
 
-        {#if !$temporaryChatEnabled}
-          <hr class="border-gray-100 dark:border-gray-850 my-0.5" />
+				{#if !$temporaryChatEnabled}
+					<hr class="border-gray-100 dark:border-gray-850 my-0.5" />
 
-          <div class="flex p-1">
-            <Tags chatId={chat.id} />
-          </div>
-        {/if}
-      </DropdownMenu.Content>
-    </div>
-  {/snippet}
+					<div class="flex p-1">
+						<Tags chatId={chat.id} />
+					</div>
+				{/if}
+			</DropdownMenu.Content>
+		</div>
+	{/snippet}
 </Dropdown>

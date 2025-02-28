@@ -5,6 +5,7 @@ import ts from 'typescript-eslint';
 import * as svelteParser from 'svelte-eslint-parser';
 import * as typescriptParser from '@typescript-eslint/parser';
 import * as espree from 'espree';
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 import globals from 'globals';
 
 export default [
@@ -30,7 +31,8 @@ export default [
 	js.configs.recommended,
 	...ts.configs.recommended,
 	...svelte.configs['flat/all'],
-
+	eslintPluginPrettierRecommended,
+	...svelte.configs['flat/prettier'],
 	{
 		files: ['**/*.svelte'],
 		rules: {

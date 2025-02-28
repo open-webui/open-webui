@@ -964,9 +964,12 @@ export const getBackendConfig = async () => {
 	return res;
 };
 
-export type ChangelogKeys = 'date' | 'added' | 'changed' | 'fixed' | 'removed'
+export type ChangelogKeys = 'date' | 'added' | 'changed' | 'fixed' | 'removed';
 
-export type Changelog = Record<string, Record<ChangelogKeys, Record<string, {title: string, content: string}>>>
+export type Changelog = Record<
+	string,
+	Record<ChangelogKeys, Record<string, { title: string; content: string }>>
+>;
 
 export const getChangelog = async (): Promise<Changelog> => {
 	let error = null;

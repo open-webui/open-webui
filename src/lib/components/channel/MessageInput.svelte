@@ -1,608 +1,615 @@
 <script lang="ts">
-  import { run, preventDefault } from 'svelte/legacy';
+	import { run, preventDefault } from 'svelte/legacy';
 
-  import { toast } from 'svelte-sonner';
-  import { v4 as uuidv4 } from 'uuid';
+	import { toast } from 'svelte-sonner';
+	import { v4 as uuidv4 } from 'uuid';
 
-  import { tick, getContext, onMount, onDestroy } from 'svelte';
+	import { tick, getContext, onMount, onDestroy } from 'svelte';
 
-  const i18n = getContext('i18n');
+	const i18n = getContext('i18n');
 
-  import { config, mobile, settings, socket } from '$lib/stores';
-  import { blobToFile, compressImage } from '$lib/utils';
+	import { config, mobile, settings, socket } from '$lib/stores';
+	import { blobToFile, compressImage } from '$lib/utils';
 
-  import Tooltip from '../common/Tooltip.svelte';
-  import RichTextInput from '../common/RichTextInput.svelte';
-  import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
-  import InputMenu from './MessageInput/InputMenu.svelte';
-  import { uploadFile } from '$lib/apis/files';
-  import { WEBUI_API_BASE_URL } from '$lib/constants';
-  import FileItem from '../common/FileItem.svelte';
-  import Image from '../common/Image.svelte';
-  import { transcribeAudio } from '$lib/apis/audio';
-  import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import RichTextInput from '../common/RichTextInput.svelte';
+	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
+	import InputMenu from './MessageInput/InputMenu.svelte';
+	import { uploadFile } from '$lib/apis/files';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import FileItem from '../common/FileItem.svelte';
+	import Image from '../common/Image.svelte';
+	import { transcribeAudio } from '$lib/apis/audio';
+	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 
+	let draggedOver = $state(false);
 
+	let recording = $state(false);
+	let content = $state('');
+	let files = $state([]);
 
-  let draggedOver = $state(false);
+	let filesInputElement = $state();
+	let inputFiles = $state();
 
-  let recording = $state(false);
-  let content = $state('');
-  let files = $state([]);
+	interface Props {
+		placeholder?: any;
+		transparentBackground?: boolean;
+		id?: any;
+		typingUsers?: any;
+		onSubmit: Function;
+		onChange: Function;
+		scrollEnd?: boolean;
+		scrollToBottom?: Function;
+	}
 
-  let filesInputElement = $state();
-  let inputFiles = $state();
+	let {
+		placeholder = $i18n.t('Send a Message'),
+		transparentBackground = false,
+		id = null,
+		typingUsers = [],
+		onSubmit,
+		onChange,
+		scrollEnd = $bindable(true),
+		scrollToBottom = () => {}
+	}: Props = $props();
 
+	const screenCaptureHandler = async () => {
+		try {
+			// Request screen media
+			const mediaStream = await navigator.mediaDevices.getDisplayMedia({
+				video: { cursor: 'never' },
+				audio: false
+			});
+			// Once the user selects a screen, temporarily create a video element
+			const video = document.createElement('video');
+			video.srcObject = mediaStream;
+			// Ensure the video loads without affecting user experience or tab switching
+			await video.play();
+			// Set up the canvas to match the video dimensions
+			const canvas = document.createElement('canvas');
+			canvas.width = video.videoWidth;
+			canvas.height = video.videoHeight;
+			// Grab a single frame from the video stream using the canvas
+			const context = canvas.getContext('2d');
+			context.drawImage(video, 0, 0, canvas.width, canvas.height);
+			// Stop all video tracks (stop screen sharing) after capturing the image
+			mediaStream.getTracks().forEach((track) => track.stop());
 
-  interface Props {
-    placeholder?: any;
-    transparentBackground?: boolean;
-    id?: any;
-    typingUsers?: any;
-    onSubmit: Function;
-    onChange: Function;
-    scrollEnd?: boolean;
-    scrollToBottom?: Function;
-  }
+			// bring back focus to this current tab, so that the user can see the screen capture
+			window.focus();
 
-  let {
-    placeholder = $i18n.t('Send a Message'),
-    transparentBackground = false,
-    id = null,
-    typingUsers = [],
-    onSubmit,
-    onChange,
-    scrollEnd = $bindable(true),
-    scrollToBottom = () => {}
-  }: Props = $props();
+			// Convert the canvas to a Base64 image URL
+			const imageUrl = canvas.toDataURL('image/png');
+			// Add the captured image to the files array to render it
+			files = [...files, { type: 'image', url: imageUrl }];
+			// Clean memory: Clear video srcObject
+			video.srcObject = null;
+		} catch (error) {
+			// Handle any errors (e.g., user cancels screen sharing)
+			console.error('Error capturing screen:', error);
+		}
+	};
 
-  const screenCaptureHandler = async () => {
-    try {
-      // Request screen media
-      const mediaStream = await navigator.mediaDevices.getDisplayMedia({
-        video: { cursor: 'never' },
-        audio: false
-      });
-      // Once the user selects a screen, temporarily create a video element
-      const video = document.createElement('video');
-      video.srcObject = mediaStream;
-      // Ensure the video loads without affecting user experience or tab switching
-      await video.play();
-      // Set up the canvas to match the video dimensions
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      // Grab a single frame from the video stream using the canvas
-      const context = canvas.getContext('2d');
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      // Stop all video tracks (stop screen sharing) after capturing the image
-      mediaStream.getTracks().forEach((track) => track.stop());
+	const inputFilesHandler = async (inputFiles) => {
+		inputFiles.forEach((file) => {
+			console.log('Processing file:', {
+				name: file.name,
+				type: file.type,
+				size: file.size,
+				extension: file.name.split('.').at(-1)
+			});
 
-      // bring back focus to this current tab, so that the user can see the screen capture
-      window.focus();
+			if (
+				($config?.file?.max_size ?? null) !== null &&
+				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+			) {
+				console.log('File exceeds max size limit:', {
+					fileSize: file.size,
+					maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
+				});
+				toast.error(
+					$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
+						maxSize: $config?.file?.max_size
+					})
+				);
+				return;
+			}
 
-      // Convert the canvas to a Base64 image URL
-      const imageUrl = canvas.toDataURL('image/png');
-      // Add the captured image to the files array to render it
-      files = [...files, { type: 'image', url: imageUrl }];
-      // Clean memory: Clear video srcObject
-      video.srcObject = null;
-    } catch (error) {
-      // Handle any errors (e.g., user cancels screen sharing)
-      console.error('Error capturing screen:', error);
-    }
-  };
+			if (
+				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
+			) {
+				let reader = new FileReader();
 
-  const inputFilesHandler = async (inputFiles) => {
-    inputFiles.forEach((file) => {
-      console.log('Processing file:', {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        extension: file.name.split('.').at(-1)
-      });
+				reader.onload = async (event) => {
+					let imageUrl = event.target.result;
 
-      if (
-        ($config?.file?.max_size ?? null) !== null &&
-        file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
-      ) {
-        console.log('File exceeds max size limit:', {
-          fileSize: file.size,
-          maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
-        });
-        toast.error(
-          $i18n.t(`File size should not exceed {{maxSize}} MB.`, {
-            maxSize: $config?.file?.max_size
-          })
-        );
-        return;
-      }
+					if ($settings?.imageCompression ?? false) {
+						const width = $settings?.imageCompressionSize?.width ?? null;
+						const height = $settings?.imageCompressionSize?.height ?? null;
 
-      if (
-        ['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
-      ) {
-        let reader = new FileReader();
+						if (width || height) {
+							imageUrl = await compressImage(imageUrl, width, height);
+						}
+					}
 
-        reader.onload = async (event) => {
-          let imageUrl = event.target.result;
+					files = [
+						...files,
+						{
+							type: 'image',
+							url: `${imageUrl}`
+						}
+					];
+				};
 
-          if ($settings?.imageCompression ?? false) {
-            const width = $settings?.imageCompressionSize?.width ?? null;
-            const height = $settings?.imageCompressionSize?.height ?? null;
+				reader.readAsDataURL(file);
+			} else {
+				uploadFileHandler(file);
+			}
+		});
+	};
 
-            if (width || height) {
-              imageUrl = await compressImage(imageUrl, width, height);
-            }
-          }
+	const uploadFileHandler = async (file) => {
+		const tempItemId = uuidv4();
+		const fileItem = {
+			type: 'file',
+			file: '',
+			id: null,
+			url: '',
+			name: file.name,
+			collection_name: '',
+			status: 'uploading',
+			size: file.size,
+			error: '',
+			itemId: tempItemId
+		};
 
-          files = [
-            ...files,
-            {
-              type: 'image',
-              url: `${imageUrl}`
-            }
-          ];
-        };
+		if (fileItem.size == 0) {
+			toast.error($i18n.t('You cannot upload an empty file.'));
+			return null;
+		}
 
-        reader.readAsDataURL(file);
-      } else {
-        uploadFileHandler(file);
-      }
-    });
-  };
+		files = [...files, fileItem];
 
-  const uploadFileHandler = async (file) => {
-    const tempItemId = uuidv4();
-    const fileItem = {
-      type: 'file',
-      file: '',
-      id: null,
-      url: '',
-      name: file.name,
-      collection_name: '',
-      status: 'uploading',
-      size: file.size,
-      error: '',
-      itemId: tempItemId
-    };
+		try {
+			// During the file upload, file content is automatically extracted.
+			const uploadedFile = await uploadFile(localStorage.token, file);
 
-    if (fileItem.size == 0) {
-      toast.error($i18n.t('You cannot upload an empty file.'));
-      return null;
-    }
+			if (uploadedFile) {
+				console.log('File upload completed:', {
+					id: uploadedFile.id,
+					name: fileItem.name,
+					collection: uploadedFile?.meta?.collection_name
+				});
 
-    files = [...files, fileItem];
+				if (uploadedFile.error) {
+					console.warn('File upload warning:', uploadedFile.error);
+					toast.warning(uploadedFile.error);
+				}
 
-    try {
-      // During the file upload, file content is automatically extracted.
-      const uploadedFile = await uploadFile(localStorage.token, file);
+				fileItem.status = 'uploaded';
+				fileItem.file = uploadedFile;
+				fileItem.id = uploadedFile.id;
+				fileItem.collection_name =
+					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
+				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
 
-      if (uploadedFile) {
-        console.log('File upload completed:', {
-          id: uploadedFile.id,
-          name: fileItem.name,
-          collection: uploadedFile?.meta?.collection_name
-        });
+				files = files;
+			} else {
+				files = files.filter((item) => item?.itemId !== tempItemId);
+			}
+		} catch (e) {
+			toast.error(`${e}`);
+			files = files.filter((item) => item?.itemId !== tempItemId);
+		}
+	};
 
-        if (uploadedFile.error) {
-          console.warn('File upload warning:', uploadedFile.error);
-          toast.warning(uploadedFile.error);
-        }
+	const handleKeyDown = (event: KeyboardEvent) => {
+		if (event.key === 'Escape') {
+			console.log('Escape');
+			draggedOver = false;
+		}
+	};
 
-        fileItem.status = 'uploaded';
-        fileItem.file = uploadedFile;
-        fileItem.id = uploadedFile.id;
-        fileItem.collection_name =
-          uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
-        fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+	const onDragOver = (e) => {
+		e.preventDefault();
 
-        files = files;
-      } else {
-        files = files.filter((item) => item?.itemId !== tempItemId);
-      }
-    } catch (e) {
-      toast.error(`${e}`);
-      files = files.filter((item) => item?.itemId !== tempItemId);
-    }
-  };
+		// Check if a file is being draggedOver.
+		if (e.dataTransfer?.types?.includes('Files')) {
+			draggedOver = true;
+		} else {
+			draggedOver = false;
+		}
+	};
 
-  const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      console.log('Escape');
-      draggedOver = false;
-    }
-  };
+	const onDragLeave = () => {
+		draggedOver = false;
+	};
 
-  const onDragOver = (e) => {
-    e.preventDefault();
+	const onDrop = async (e) => {
+		e.preventDefault();
+		console.log(e);
 
-    // Check if a file is being draggedOver.
-    if (e.dataTransfer?.types?.includes('Files')) {
-      draggedOver = true;
-    } else {
-      draggedOver = false;
-    }
-  };
+		if (e.dataTransfer?.files) {
+			const inputFiles = Array.from(e.dataTransfer?.files);
+			if (inputFiles && inputFiles.length > 0) {
+				console.log(inputFiles);
+				inputFilesHandler(inputFiles);
+			}
+		}
 
-  const onDragLeave = () => {
-    draggedOver = false;
-  };
+		draggedOver = false;
+	};
 
-  const onDrop = async (e) => {
-    e.preventDefault();
-    console.log(e);
+	const submitHandler = async () => {
+		if (content === '' && files.length === 0) {
+			return;
+		}
 
-    if (e.dataTransfer?.files) {
-      const inputFiles = Array.from(e.dataTransfer?.files);
-      if (inputFiles && inputFiles.length > 0) {
-        console.log(inputFiles);
-        inputFilesHandler(inputFiles);
-      }
-    }
+		onSubmit({
+			content,
+			data: {
+				files: files
+			}
+		});
 
-    draggedOver = false;
-  };
+		content = '';
+		files = [];
 
-  const submitHandler = async () => {
-    if (content === '' && files.length === 0) {
-      return;
-    }
+		await tick();
 
-    onSubmit({
-      content,
-      data: {
-        files: files
-      }
-    });
+		const chatInputElement = document.getElementById(`chat-input-${id}`);
+		chatInputElement?.focus();
+	};
 
-    content = '';
-    files = [];
+	run(() => {
+		if (content) {
+			onChange();
+		}
+	});
 
-    await tick();
+	onMount(async () => {
+		window.setTimeout(() => {
+			const chatInput = document.getElementById(`chat-input-${id}`);
+			chatInput?.focus();
+		}, 0);
 
-    const chatInputElement = document.getElementById(`chat-input-${id}`);
-    chatInputElement?.focus();
-  };
+		window.addEventListener('keydown', handleKeyDown);
+		await tick();
 
-  run(() => {
-    if (content) {
-      onChange();
-    }
-  });
+		const dropzoneElement = document.getElementById('channel-container');
 
-  onMount(async () => {
-    window.setTimeout(() => {
-      const chatInput = document.getElementById(`chat-input-${id}`);
-      chatInput?.focus();
-    }, 0);
+		dropzoneElement?.addEventListener('dragover', onDragOver);
+		dropzoneElement?.addEventListener('drop', onDrop);
+		dropzoneElement?.addEventListener('dragleave', onDragLeave);
+	});
 
-    window.addEventListener('keydown', handleKeyDown);
-    await tick();
+	onDestroy(() => {
+		console.log('destroy');
+		window.removeEventListener('keydown', handleKeyDown);
 
-    const dropzoneElement = document.getElementById('channel-container');
+		const dropzoneElement = document.getElementById('channel-container');
 
-    dropzoneElement?.addEventListener('dragover', onDragOver);
-    dropzoneElement?.addEventListener('drop', onDrop);
-    dropzoneElement?.addEventListener('dragleave', onDragLeave);
-  });
-
-  onDestroy(() => {
-    console.log('destroy');
-    window.removeEventListener('keydown', handleKeyDown);
-
-    const dropzoneElement = document.getElementById('channel-container');
-
-    if (dropzoneElement) {
-      dropzoneElement?.removeEventListener('dragover', onDragOver);
-      dropzoneElement?.removeEventListener('drop', onDrop);
-      dropzoneElement?.removeEventListener('dragleave', onDragLeave);
-    }
-  });
+		if (dropzoneElement) {
+			dropzoneElement?.removeEventListener('dragover', onDragOver);
+			dropzoneElement?.removeEventListener('drop', onDrop);
+			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
+		}
+	});
 </script>
 
 <FilesOverlay show={draggedOver} />
 
 <input
-  bind:this={filesInputElement}
-  hidden
-  multiple
-  type="file"
-  bind:files={inputFiles}
-  onchange={async () => {
-    if (inputFiles && inputFiles.length > 0) {
-      inputFilesHandler(Array.from(inputFiles));
-    } else {
-      toast.error($i18n.t(`File not found.`));
-    }
+	bind:this={filesInputElement}
+	hidden
+	multiple
+	onchange={async () => {
+		if (inputFiles && inputFiles.length > 0) {
+			inputFilesHandler(Array.from(inputFiles));
+		} else {
+			toast.error($i18n.t(`File not found.`));
+		}
 
-    filesInputElement.value = '';
-  }}
+		filesInputElement.value = '';
+	}}
+	type="file"
+	bind:files={inputFiles}
 />
 <div class="bg-transparent">
-  <div
-    class="{($settings?.widescreenMode ?? null)
-      ? 'max-w-full'
-      : 'max-w-6xl'} px-2.5 mx-auto inset-x-0 relative"
-  >
-    <div class="absolute top-0 left-0 right-0 mx-auto inset-x-0 bg-transparent flex justify-center">
-      <div class="flex flex-col px-3 w-full">
-        <div class="relative">
-          {#if scrollEnd === false}
-            <div class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none">
-              <button
-                class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
-                onclick={() => {
-                  scrollEnd = true;
-                  scrollToBottom();
-                }}
-              >
-                <svg
-                  class="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    clip-rule="evenodd"
-                    d="M10 3a.75.75 0 01.75.75v10.638l3.96-4.158a.75.75 0 111.08 1.04l-5.25 5.5a.75.75 0 01-1.08 0l-5.25-5.5a.75.75 0 111.08-1.04l3.96 4.158V3.75A.75.75 0 0110 3z"
-                    fill-rule="evenodd"
-                  />
-                </svg>
-              </button>
-            </div>
-          {/if}
-        </div>
+	<div
+		class="{($settings?.widescreenMode ?? null)
+			? 'max-w-full'
+			: 'max-w-6xl'} px-2.5 mx-auto inset-x-0 relative"
+	>
+		<div class="absolute top-0 left-0 right-0 mx-auto inset-x-0 bg-transparent flex justify-center">
+			<div class="flex flex-col px-3 w-full">
+				<div class="relative">
+					{#if scrollEnd === false}
+						<div
+							class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none"
+						>
+							<button
+								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
+								onclick={() => {
+									scrollEnd = true;
+									scrollToBottom();
+								}}
+							>
+								<svg
+									class="w-5 h-5"
+									fill="currentColor"
+									viewBox="0 0 20 20"
+									xmlns="http://www.w3.org/2000/svg"
+								>
+									<path
+										clip-rule="evenodd"
+										d="M10 3a.75.75 0 01.75.75v10.638l3.96-4.158a.75.75 0 111.08 1.04l-5.25 5.5a.75.75 0 01-1.08 0l-5.25-5.5a.75.75 0 111.08-1.04l3.96 4.158V3.75A.75.75 0 0110 3z"
+										fill-rule="evenodd"
+									/>
+								</svg>
+							</button>
+						</div>
+					{/if}
+				</div>
 
-        <div class="relative">
-          <div class=" -mt-5">
-            {#if typingUsers.length > 0}
-              <div class=" text-xs px-4 mb-1">
-                <span class=" font-normal text-black dark:text-white">
-                  {typingUsers.map((user) => user.name).join(', ')}
-                </span>
-                {$i18n.t('is typing...')}
-              </div>
-            {/if}
-          </div>
-        </div>
-      </div>
-    </div>
+				<div class="relative">
+					<div class=" -mt-5">
+						{#if typingUsers.length > 0}
+							<div class=" text-xs px-4 mb-1">
+								<span class=" font-normal text-black dark:text-white">
+									{typingUsers.map((user) => user.name).join(', ')}
+								</span>
+								{$i18n.t('is typing...')}
+							</div>
+						{/if}
+					</div>
+				</div>
+			</div>
+		</div>
 
-    <div class="">
-      {#if recording}
-        <VoiceRecording
-          bind:recording
-          on:cancel={async () => {
-            recording = false;
+		<div class="">
+			{#if recording}
+				<VoiceRecording
+					bind:recording
+					on:cancel={async () => {
+						recording = false;
 
-            await tick();
-            document.getElementById(`chat-input-${id}`)?.focus();
-          }}
-          on:confirm={async (e) => {
-            const { text, filename } = e.detail;
-            content = `${content}${text} `;
-            recording = false;
+						await tick();
+						document.getElementById(`chat-input-${id}`)?.focus();
+					}}
+					on:confirm={async (e) => {
+						const { text, filename } = e.detail;
+						content = `${content}${text} `;
+						recording = false;
 
-            await tick();
-            document.getElementById(`chat-input-${id}`)?.focus();
-          }}
-        />
-      {:else}
-        <form
-          class="w-full flex gap-1.5"
-          onsubmit={preventDefault(() => {
-            submitHandler();
-          })}
-        >
-          <div
-            class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-600/5 dark:bg-gray-400/5 dark:text-gray-100"
-            dir={$settings?.chatDirection ?? 'LTR'}
-          >
-            {#if files.length > 0}
-              <div class="mx-2 mt-2.5 -mb-1 flex flex-wrap gap-2">
-                {#each files as file, fileIdx}
-                  {#if file.type === 'image'}
-                    <div class=" relative group">
-                      <div class="relative">
-                        <Image
-                          alt="input"
-                          imageClassName=" h-16 w-16 rounded-xl object-cover"
-                          src={file.url}
-                        />
-                      </div>
-                      <div class=" absolute -top-1 -right-1">
-                        <button
-                          class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
-                          type="button"
-                          onclick={() => {
-                            files.splice(fileIdx, 1);
-                            files = files;
-                          }}
-                        >
-                          <svg
-                            class="w-4 h-4"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  {:else}
-                    <FileItem
-                      name={file.name}
-                      dismissible={true}
-                      edit={true}
-                      item={file}
-                      loading={file.status === 'uploading'}
-                      size={file?.size}
-                      type={file.type}
-                      on:dismiss={() => {
-                        files.splice(fileIdx, 1);
-                        files = files;
-                      }}
-                      on:click={() => {
-                        console.log(file);
-                      }}
-                    />
-                  {/if}
-                {/each}
-              </div>
-            {/if}
+						await tick();
+						document.getElementById(`chat-input-${id}`)?.focus();
+					}}
+				/>
+			{:else}
+				<form
+					class="w-full flex gap-1.5"
+					onsubmit={preventDefault(() => {
+						submitHandler();
+					})}
+				>
+					<div
+						class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-600/5 dark:bg-gray-400/5 dark:text-gray-100"
+						dir={$settings?.chatDirection ?? 'LTR'}
+					>
+						{#if files.length > 0}
+							<div class="mx-2 mt-2.5 -mb-1 flex flex-wrap gap-2">
+								{#each files as file, fileIdx}
+									{#if file.type === 'image'}
+										<div class=" relative group">
+											<div class="relative">
+												<Image
+													alt="input"
+													imageClassName=" h-16 w-16 rounded-xl object-cover"
+													src={file.url}
+												/>
+											</div>
+											<div class=" absolute -top-1 -right-1">
+												<button
+													class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+													onclick={() => {
+														files.splice(fileIdx, 1);
+														files = files;
+													}}
+													type="button"
+												>
+													<svg
+														class="w-4 h-4"
+														fill="currentColor"
+														viewBox="0 0 20 20"
+														xmlns="http://www.w3.org/2000/svg"
+													>
+														<path
+															d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+														/>
+													</svg>
+												</button>
+											</div>
+										</div>
+									{:else}
+										<FileItem
+											name={file.name}
+											dismissible={true}
+											edit={true}
+											item={file}
+											loading={file.status === 'uploading'}
+											size={file?.size}
+											type={file.type}
+											on:dismiss={() => {
+												files.splice(fileIdx, 1);
+												files = files;
+											}}
+											on:click={() => {
+												console.log(file);
+											}}
+										/>
+									{/if}
+								{/each}
+							</div>
+						{/if}
 
-            <div class="px-2.5">
-              <div class="scrollbar-hidden font-primary text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto">
-                <RichTextInput
-                  id={`chat-input-${id}`}
-                  largeTextAsFile={$settings?.largeTextAsFile ?? false}
-                  messageInput={true}
-                  {placeholder}
-                  shiftEnter={!$mobile ||
-                    !(
-                      'ontouchstart' in window ||
-                      navigator.maxTouchPoints > 0 ||
-                      navigator.msMaxTouchPoints > 0
-                    )}
-                  bind:value={content}
-                  on:keydown={async (e) => {
-                    e = e.detail.event;
-                    const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
-                    if (
-                      !$mobile ||
-                      !(
-                        'ontouchstart' in window ||
-                        navigator.maxTouchPoints > 0 ||
-                        navigator.msMaxTouchPoints > 0
-                      )
-                    ) {
-                      // Prevent Enter key from creating a new line
+						<div class="px-2.5">
+							<div
+								class="scrollbar-hidden font-primary text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
+							>
+								<RichTextInput
+									id={`chat-input-${id}`}
+									largeTextAsFile={$settings?.largeTextAsFile ?? false}
+									messageInput={true}
+									{placeholder}
+									shiftEnter={!$mobile ||
+										!(
+											'ontouchstart' in window ||
+											navigator.maxTouchPoints > 0 ||
+											navigator.msMaxTouchPoints > 0
+										)}
+									bind:value={content}
+									on:keydown={async (e) => {
+										e = e.detail.event;
+										const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+										if (
+											!$mobile ||
+											!(
+												'ontouchstart' in window ||
+												navigator.maxTouchPoints > 0 ||
+												navigator.msMaxTouchPoints > 0
+											)
+										) {
+											// Prevent Enter key from creating a new line
 											// Uses keyCode '13' for Enter key for chinese/japanese keyboards
-                      if (e.keyCode === 13 && !e.shiftKey) {
-                        e.preventDefault();
-                      }
+											if (e.keyCode === 13 && !e.shiftKey) {
+												e.preventDefault();
+											}
 
-                      // Submit the content when Enter key is pressed
-                      if (content !== '' && e.keyCode === 13 && !e.shiftKey) {
-                        submitHandler();
-                      }
-                    }
+											// Submit the content when Enter key is pressed
+											if (content !== '' && e.keyCode === 13 && !e.shiftKey) {
+												submitHandler();
+											}
+										}
 
-                    if (e.key === 'Escape') {
-                      console.log('Escape');
-                    }
-                  }}
-                  on:paste={async (e) => {
-                    e = e.detail.event;
-                    console.log(e);
-                  }}
-                />
-              </div>
-            </div>
+										if (e.key === 'Escape') {
+											console.log('Escape');
+										}
+									}}
+									on:paste={async (e) => {
+										e = e.detail.event;
+										console.log(e);
+									}}
+								/>
+							</div>
+						</div>
 
-            <div class=" flex justify-between mb-2.5 mt-1.5 mx-0.5">
-              <div class="ml-1 self-end flex space-x-1">
-                <InputMenu
-                  {screenCaptureHandler}
-                  uploadFilesHandler={() => {
-                    filesInputElement.click();
-                  }}
-                >
-                  <button
-                    class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
-                    aria-label="More"
-                    type="button"
-                  >
-                    <svg
-                      class="size-5"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
-                    </svg>
-                  </button>
-                </InputMenu>
-              </div>
+						<div class=" flex justify-between mb-2.5 mt-1.5 mx-0.5">
+							<div class="ml-1 self-end flex space-x-1">
+								<InputMenu
+									{screenCaptureHandler}
+									uploadFilesHandler={() => {
+										filesInputElement.click();
+									}}
+								>
+									<button
+										class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
+										aria-label="More"
+										type="button"
+									>
+										<svg
+											class="size-5"
+											fill="currentColor"
+											viewBox="0 0 20 20"
+											xmlns="http://www.w3.org/2000/svg"
+										>
+											<path
+												d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+											/>
+										</svg>
+									</button>
+								</InputMenu>
+							</div>
 
-              <div class="self-end flex space-x-1 mr-1">
-                {#if content === ''}
-                  <Tooltip content={$i18n.t('Record voice')}>
-                    <button
-                      id="voice-input-button"
-                      class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
-                      aria-label="Voice Input"
-                      type="button"
-                      onclick={async () => {
-                        try {
-                          let stream = await navigator.mediaDevices
-                            .getUserMedia({ audio: true })
-                            .catch(function (err) {
-                              toast.error(
-                                $i18n.t(`Permission denied when accessing microphone: {{error}}`, {
-                                  error: err
-                                })
-                              );
-                              return null;
-                            });
+							<div class="self-end flex space-x-1 mr-1">
+								{#if content === ''}
+									<Tooltip content={$i18n.t('Record voice')}>
+										<button
+											id="voice-input-button"
+											class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
+											aria-label="Voice Input"
+											onclick={async () => {
+												try {
+													let stream = await navigator.mediaDevices
+														.getUserMedia({ audio: true })
+														.catch(function (err) {
+															toast.error(
+																$i18n.t(`Permission denied when accessing microphone: {{error}}`, {
+																	error: err
+																})
+															);
+															return null;
+														});
 
-                          if (stream) {
-                            recording = true;
-                            const tracks = stream.getTracks();
-                            tracks.forEach((track) => track.stop());
-                          }
-                          stream = null;
-                        } catch {
-                          toast.error($i18n.t('Permission denied when accessing microphone'));
-                        }
-                      }}
-                    >
-                      <svg
-                        class="w-5 h-5 translate-y-[0.5px]"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-                        <path d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z" />
-                      </svg>
-                    </button>
-                  </Tooltip>
-                {/if}
+													if (stream) {
+														recording = true;
+														const tracks = stream.getTracks();
+														tracks.forEach((track) => track.stop());
+													}
+													stream = null;
+												} catch {
+													toast.error($i18n.t('Permission denied when accessing microphone'));
+												}
+											}}
+											type="button"
+										>
+											<svg
+												class="w-5 h-5 translate-y-[0.5px]"
+												fill="currentColor"
+												viewBox="0 0 20 20"
+												xmlns="http://www.w3.org/2000/svg"
+											>
+												<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
+												<path
+													d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
+												/>
+											</svg>
+										</button>
+									</Tooltip>
+								{/if}
 
-                <div class=" flex items-center">
-                  <div class=" flex items-center">
-                    <Tooltip content={$i18n.t('Send message')}>
-                      <button
-                        id="send-message-button"
-                        class="{content !== '' || files.length !== 0
-                          ? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-                          : 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
-                        disabled={content === '' && files.length === 0}
-                        type="submit"
-                      >
-                        <svg
-                          class="size-5"
-                          fill="currentColor"
-                          viewBox="0 0 16 16"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            clip-rule="evenodd"
-                            d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-                            fill-rule="evenodd"
-                          />
-                        </svg>
-                      </button>
-                    </Tooltip>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </form>
-      {/if}
-    </div>
-  </div>
+								<div class=" flex items-center">
+									<div class=" flex items-center">
+										<Tooltip content={$i18n.t('Send message')}>
+											<button
+												id="send-message-button"
+												class="{content !== '' || files.length !== 0
+													? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+													: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+												disabled={content === '' && files.length === 0}
+												type="submit"
+											>
+												<svg
+													class="size-5"
+													fill="currentColor"
+													viewBox="0 0 16 16"
+													xmlns="http://www.w3.org/2000/svg"
+												>
+													<path
+														clip-rule="evenodd"
+														d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+														fill-rule="evenodd"
+													/>
+												</svg>
+											</button>
+										</Tooltip>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</form>
+			{/if}
+		</div>
+	</div>
 </div>

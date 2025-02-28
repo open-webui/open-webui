@@ -1,205 +1,203 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
+	import { run } from 'svelte/legacy';
 
-  import { getContext, createEventDispatcher, onDestroy } from 'svelte';
-  import { useSvelteFlow, useNodesInitialized, useStore } from '@xyflow/svelte';
+	import { getContext, createEventDispatcher, onDestroy } from 'svelte';
+	import { useSvelteFlow, useNodesInitialized, useStore } from '@xyflow/svelte';
 
-  const dispatch = createEventDispatcher();
-  const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
+	const i18n = getContext('i18n');
 
-  import { onMount, tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 
-  import { writable } from 'svelte/store';
-  import { models, showOverview, theme, user } from '$lib/stores';
+	import { writable } from 'svelte/store';
+	import { models, showOverview, theme, user } from '$lib/stores';
 
-  import '@xyflow/svelte/dist/style.css';
+	import '@xyflow/svelte/dist/style.css';
 
-  import CustomNode from './Overview/Node.svelte';
-  import Flow from './Overview/Flow.svelte';
-  import XMark from '../icons/XMark.svelte';
-  import ArrowLeft from '../icons/ArrowLeft.svelte';
+	import CustomNode from './Overview/Node.svelte';
+	import Flow from './Overview/Flow.svelte';
+	import XMark from '../icons/XMark.svelte';
+	import ArrowLeft from '../icons/ArrowLeft.svelte';
 
-  const { width, height } = useStore();
+	const { width, height } = useStore();
 
-  const { fitView, getViewport } = useSvelteFlow();
-  const nodesInitialized = useNodesInitialized();
+	const { fitView, getViewport } = useSvelteFlow();
+	const nodesInitialized = useNodesInitialized();
 
-  let { history } = $props();
+	let { history } = $props();
 
-  let selectedMessageId = $state(null);
+	let selectedMessageId = $state(null);
 
-  const nodes = writable([]);
-  const edges = writable([]);
+	const nodes = writable([]);
+	const edges = writable([]);
 
-  const nodeTypes = {
-    custom: CustomNode
-  };
+	const nodeTypes = {
+		custom: CustomNode
+	};
 
+	const focusNode = async () => {
+		if (selectedMessageId === null) {
+			await fitView({ nodes: [{ id: history.currentId }] });
+		} else {
+			await fitView({ nodes: [{ id: selectedMessageId }] });
+		}
 
+		selectedMessageId = null;
+	};
 
-  const focusNode = async () => {
-    if (selectedMessageId === null) {
-      await fitView({ nodes: [{ id: history.currentId }] });
-    } else {
-      await fitView({ nodes: [{ id: selectedMessageId }] });
-    }
+	const drawFlow = async () => {
+		const nodeList = [];
+		const edgeList = [];
+		const levelOffset = 150; // Vertical spacing between layers
+		const siblingOffset = 250; // Horizontal spacing between nodes at the same layer
 
-    selectedMessageId = null;
-  };
+		// Map to keep track of node positions at each level
+		let positionMap = new Map();
 
-  const drawFlow = async () => {
-    const nodeList = [];
-    const edgeList = [];
-    const levelOffset = 150; // Vertical spacing between layers
-    const siblingOffset = 250; // Horizontal spacing between nodes at the same layer
+		// Helper function to truncate labels
+		function createLabel(content) {
+			const maxLength = 100;
+			return content.length > maxLength ? content.substr(0, maxLength) + '...' : content;
+		}
 
-    // Map to keep track of node positions at each level
-    let positionMap = new Map();
+		// Create nodes and map children to ensure alignment in width
+		let layerWidths = {}; // Track widths of each layer
 
-    // Helper function to truncate labels
-    function createLabel(content) {
-      const maxLength = 100;
-      return content.length > maxLength ? content.substr(0, maxLength) + '...' : content;
-    }
+		Object.keys(history.messages).forEach((id) => {
+			const message = history.messages[id];
+			const level = message.parentId ? (positionMap.get(message.parentId)?.level ?? -1) + 1 : 0;
+			if (!layerWidths[level]) layerWidths[level] = 0;
 
-    // Create nodes and map children to ensure alignment in width
-    let layerWidths = {}; // Track widths of each layer
+			positionMap.set(id, {
+				id: message.id,
+				level,
+				position: layerWidths[level]++
+			});
+		});
 
-    Object.keys(history.messages).forEach((id) => {
-      const message = history.messages[id];
-      const level = message.parentId ? (positionMap.get(message.parentId)?.level ?? -1) + 1 : 0;
-      if (!layerWidths[level]) layerWidths[level] = 0;
+		// Adjust positions based on siblings count to centralize vertical spacing
+		Object.keys(history.messages).forEach((id) => {
+			const pos = positionMap.get(id);
+			const xOffset = pos.position * siblingOffset;
+			const y = pos.level * levelOffset;
+			const x = xOffset;
 
-      positionMap.set(id, {
-        id: message.id,
-        level,
-        position: layerWidths[level]++
-      });
-    });
+			nodeList.push({
+				id: pos.id,
+				type: 'custom',
+				data: {
+					user: $user,
+					message: history.messages[id],
+					model: $models.find((model) => model.id === history.messages[id].model)
+				},
+				position: { x, y }
+			});
 
-    // Adjust positions based on siblings count to centralize vertical spacing
-    Object.keys(history.messages).forEach((id) => {
-      const pos = positionMap.get(id);
-      const xOffset = pos.position * siblingOffset;
-      const y = pos.level * levelOffset;
-      const x = xOffset;
+			// Create edges
+			const parentId = history.messages[id].parentId;
+			if (parentId) {
+				edgeList.push({
+					id: parentId + '-' + pos.id,
+					source: parentId,
+					target: pos.id,
+					selectable: false,
+					class: ' dark:fill-gray-300 fill-gray-300',
+					type: 'smoothstep',
+					animated: history.currentId === id || recurseCheckChild(id, history.currentId)
+				});
+			}
+		});
 
-      nodeList.push({
-        id: pos.id,
-        type: 'custom',
-        data: {
-          user: $user,
-          message: history.messages[id],
-          model: $models.find((model) => model.id === history.messages[id].model)
-        },
-        position: { x, y }
-      });
+		await edges.set([...edgeList]);
+		await nodes.set([...nodeList]);
+	};
 
-      // Create edges
-      const parentId = history.messages[id].parentId;
-      if (parentId) {
-        edgeList.push({
-          id: parentId + '-' + pos.id,
-          source: parentId,
-          target: pos.id,
-          selectable: false,
-          class: ' dark:fill-gray-300 fill-gray-300',
-          type: 'smoothstep',
-          animated: history.currentId === id || recurseCheckChild(id, history.currentId)
-        });
-      }
-    });
+	const recurseCheckChild = (nodeId, currentId) => {
+		const node = history.messages[nodeId];
+		return (
+			node.childrenIds &&
+			node.childrenIds.some((id) => id === currentId || recurseCheckChild(id, currentId))
+		);
+	};
 
-    await edges.set([...edgeList]);
-    await nodes.set([...nodeList]);
-  };
+	onMount(() => {
+		drawFlow();
 
-  const recurseCheckChild = (nodeId, currentId) => {
-    const node = history.messages[nodeId];
-    return (
-      node.childrenIds &&
-      node.childrenIds.some((id) => id === currentId || recurseCheckChild(id, currentId))
-    );
-  };
+		nodesInitialized.subscribe(async (initialized) => {
+			if (initialized) {
+				await tick();
+				const res = await fitView({ nodes: [{ id: history.currentId }] });
+			}
+		});
 
-  onMount(() => {
-    drawFlow();
+		width.subscribe((value) => {
+			if (value) {
+				// fitView();
+				fitView({ nodes: [{ id: history.currentId }] });
+			}
+		});
 
-    nodesInitialized.subscribe(async (initialized) => {
-      if (initialized) {
-        await tick();
-        const res = await fitView({ nodes: [{ id: history.currentId }] });
-      }
-    });
+		height.subscribe((value) => {
+			if (value) {
+				// fitView();
+				fitView({ nodes: [{ id: history.currentId }] });
+			}
+		});
+	});
 
-    width.subscribe((value) => {
-      if (value) {
-        // fitView();
-        fitView({ nodes: [{ id: history.currentId }] });
-      }
-    });
+	onDestroy(() => {
+		console.log('Overview destroyed');
 
-    height.subscribe((value) => {
-      if (value) {
-        // fitView();
-        fitView({ nodes: [{ id: history.currentId }] });
-      }
-    });
-  });
-
-  onDestroy(() => {
-    console.log('Overview destroyed');
-
-    nodes.set([]);
-    edges.set([]);
-  });
-  run(() => {
-    if (history) {
-      drawFlow();
-    }
-  });
-  run(() => {
-    if (history && history.currentId) {
-      focusNode();
-    }
-  });
+		nodes.set([]);
+		edges.set([]);
+	});
+	run(() => {
+		if (history) {
+			drawFlow();
+		}
+	});
+	run(() => {
+		if (history && history.currentId) {
+			focusNode();
+		}
+	});
 </script>
 
 <div class="w-full h-full relative">
-  <div class=" absolute z-50 w-full flex justify-between dark:text-gray-100 px-4 py-3.5">
-    <div class="flex items-center gap-2.5">
-      <button
-        class="self-center p-0.5"
-        onclick={() => {
-          showOverview.set(false);
-        }}
-      >
-        <ArrowLeft className="size-3.5" />
-      </button>
-      <div class=" text-lg font-medium self-center font-primary">{$i18n.t('Chat Overview')}</div>
-    </div>
-    <button
-      class="self-center p-0.5"
-      onclick={() => {
-        dispatch('close');
-        showOverview.set(false);
-      }}
-    >
-      <XMark className="size-3.5" />
-    </button>
-  </div>
+	<div class=" absolute z-50 w-full flex justify-between dark:text-gray-100 px-4 py-3.5">
+		<div class="flex items-center gap-2.5">
+			<button
+				class="self-center p-0.5"
+				onclick={() => {
+					showOverview.set(false);
+				}}
+			>
+				<ArrowLeft className="size-3.5" />
+			</button>
+			<div class=" text-lg font-medium self-center font-primary">{$i18n.t('Chat Overview')}</div>
+		</div>
+		<button
+			class="self-center p-0.5"
+			onclick={() => {
+				dispatch('close');
+				showOverview.set(false);
+			}}
+		>
+			<XMark className="size-3.5" />
+		</button>
+	</div>
 
-  {#if $nodes.length > 0}
-    <Flow
-      {edges}
-      {nodeTypes}
-      {nodes}
-      on:nodeclick={(e) => {
-        console.log(e.detail.node.data);
-        dispatch('nodeclick', e.detail);
-        selectedMessageId = e.detail.node.data.message.id;
-        fitView({ nodes: [{ id: selectedMessageId }] });
-      }}
-    />
-  {/if}
+	{#if $nodes.length > 0}
+		<Flow
+			{edges}
+			{nodeTypes}
+			{nodes}
+			on:nodeclick={(e) => {
+				console.log(e.detail.node.data);
+				dispatch('nodeclick', e.detail);
+				selectedMessageId = e.detail.node.data.message.id;
+				fitView({ nodes: [{ id: selectedMessageId }] });
+			}}
+		/>
+	{/if}
 </div>

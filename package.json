@@ -37,6 +37,7 @@
     "eslint": "^9.21.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-cypress": "^4.1.0",
+    "eslint-plugin-prettier": "^5.2.3",
     "eslint-plugin-svelte": "^2.46.1",
     "espree": "^10.3.0",
     "globals": "^15.15.0",

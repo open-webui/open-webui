@@ -1,139 +1,135 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
+	import { run } from 'svelte/legacy';
 
-  import { createEventDispatcher, onMount } from 'svelte';
-  import { toast } from 'svelte-sonner';
+	import { createEventDispatcher, onMount } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
-  const dispatch = createEventDispatcher();
+	const dispatch = createEventDispatcher();
 
-  import { knowledge, prompts } from '$lib/stores';
+	import { knowledge, prompts } from '$lib/stores';
 
-  import { removeLastWordFromString } from '$lib/utils';
-  import { getPrompts } from '$lib/apis/prompts';
-  import { getKnowledgeBases } from '$lib/apis/knowledge';
+	import { removeLastWordFromString } from '$lib/utils';
+	import { getPrompts } from '$lib/apis/prompts';
+	import { getKnowledgeBases } from '$lib/apis/knowledge';
 
-  import Prompts from './Commands/Prompts.svelte';
-  import Knowledge from './Commands/Knowledge.svelte';
-  import Models from './Commands/Models.svelte';
-  import Spinner from '$lib/components/common/Spinner.svelte';
+	import Prompts from './Commands/Prompts.svelte';
+	import Knowledge from './Commands/Knowledge.svelte';
+	import Models from './Commands/Models.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
-  interface Props {
-    prompt?: string;
-    files?: any;
-  }
+	interface Props {
+		prompt?: string;
+		files?: any;
+	}
 
-  let { prompt = $bindable(''), files = $bindable([]) }: Props = $props();
+	let { prompt = $bindable(''), files = $bindable([]) }: Props = $props();
 
-  let loading = $state(false);
-  let commandElement = $state(null);
+	let loading = $state(false);
+	let commandElement = $state(null);
 
-  export const selectUp = () => {
-    commandElement?.selectUp();
-  };
+	export const selectUp = () => {
+		commandElement?.selectUp();
+	};
 
-  export const selectDown = () => {
-    commandElement?.selectDown();
-  };
+	export const selectDown = () => {
+		commandElement?.selectDown();
+	};
 
-  let command = $state('');
+	let command = $state('');
 
-  let show = $state(false);
+	let show = $state(false);
 
-
-  const init = async () => {
-    loading = true;
-    await Promise.all([
-      (async () => {
-        prompts.set(await getPrompts(localStorage.token));
-      })(),
-      (async () => {
-        knowledge.set(await getKnowledgeBases(localStorage.token));
-      })()
-    ]);
-    loading = false;
-  };
-  run(() => {
-    command = prompt?.split('\n').pop()?.split(' ')?.pop() ?? '';
-  });
-  run(() => {
-    show = ['/', '#', '@'].includes(command?.charAt(0)) || '\\#' === command.slice(0, 2);
-  });
-  run(() => {
-    if (show) {
-      init();
-    }
-  });
+	const init = async () => {
+		loading = true;
+		await Promise.all([
+			(async () => {
+				prompts.set(await getPrompts(localStorage.token));
+			})(),
+			(async () => {
+				knowledge.set(await getKnowledgeBases(localStorage.token));
+			})()
+		]);
+		loading = false;
+	};
+	run(() => {
+		command = prompt?.split('\n').pop()?.split(' ')?.pop() ?? '';
+	});
+	run(() => {
+		show = ['/', '#', '@'].includes(command?.charAt(0)) || '\\#' === command.slice(0, 2);
+	});
+	run(() => {
+		if (show) {
+			init();
+		}
+	});
 </script>
 
 {#if show}
-  {#if !loading}
-    {#if command?.charAt(0) === '/'}
-      <Prompts
-        bind:this={commandElement}
-        {command}
-        bind:prompt
-        bind:files
-      />
-    {:else if (command?.charAt(0) === '#' && command.startsWith('#') && !command.includes('# ')) || ('\\#' === command.slice(0, 2) && command.startsWith('#') && !command.includes('# '))}
-      <Knowledge
-        bind:this={commandElement}
-        command={command.includes('\\#') ? command.slice(2) : command}
-        bind:prompt
-        on:youtube={(e) => {
-          console.log(e);
-          dispatch('upload', {
-            type: 'youtube',
-            data: e.detail
-          });
-        }}
-        on:url={(e) => {
-          console.log(e);
-          dispatch('upload', {
-            type: 'web',
-            data: e.detail
-          });
-        }}
-        on:select={(e) => {
-          console.log(e);
-          if (files.find((f) => f.id === e.detail.id)) {
-            return;
-          }
+	{#if !loading}
+		{#if command?.charAt(0) === '/'}
+			<Prompts bind:this={commandElement} {command} bind:prompt bind:files />
+		{:else if (command?.charAt(0) === '#' && command.startsWith('#') && !command.includes('# ')) || ('\\#' === command.slice(0, 2) && command.startsWith('#') && !command.includes('# '))}
+			<Knowledge
+				bind:this={commandElement}
+				command={command.includes('\\#') ? command.slice(2) : command}
+				bind:prompt
+				on:youtube={(e) => {
+					console.log(e);
+					dispatch('upload', {
+						type: 'youtube',
+						data: e.detail
+					});
+				}}
+				on:url={(e) => {
+					console.log(e);
+					dispatch('upload', {
+						type: 'web',
+						data: e.detail
+					});
+				}}
+				on:select={(e) => {
+					console.log(e);
+					if (files.find((f) => f.id === e.detail.id)) {
+						return;
+					}
 
-          files = [
-            ...files,
-            {
-              ...e.detail,
-              status: 'processed'
-            }
-          ];
+					files = [
+						...files,
+						{
+							...e.detail,
+							status: 'processed'
+						}
+					];
 
-          dispatch('select');
-        }}
-      />
-    {:else if command?.charAt(0) === '@'}
-      <Models
-        bind:this={commandElement}
-        {command}
-        on:select={(e) => {
-          prompt = removeLastWordFromString(prompt, command);
+					dispatch('select');
+				}}
+			/>
+		{:else if command?.charAt(0) === '@'}
+			<Models
+				bind:this={commandElement}
+				{command}
+				on:select={(e) => {
+					prompt = removeLastWordFromString(prompt, command);
 
-          dispatch('select', {
-            type: 'model',
-            data: e.detail
-          });
-        }}
-      />
-    {/if}
-  {:else}
-    <div
-      id="commands-container"
-      class="px-2 mb-2 text-left w-full absolute bottom-0 left-0 right-0 z-10"
-    >
-      <div class="flex w-full rounded-xl border border-gray-100 dark:border-gray-850">
-        <div class="max-h-60 flex flex-col w-full rounded-xl bg-white dark:bg-gray-900 dark:text-gray-100">
-          <Spinner />
-        </div>
-      </div>
-    </div>
-  {/if}
+					dispatch('select', {
+						type: 'model',
+						data: e.detail
+					});
+				}}
+			/>
+		{/if}
+	{:else}
+		<div
+			id="commands-container"
+			class="px-2 mb-2 text-left w-full absolute bottom-0 left-0 right-0 z-10"
+		>
+			<div class="flex w-full rounded-xl border border-gray-100 dark:border-gray-850">
+				<div
+					class="max-h-60 flex flex-col w-full rounded-xl bg-white dark:bg-gray-900 dark:text-gray-100"
+				>
+					<Spinner />
+				</div>
+			</div>
+		</div>
+	{/if}
 {/if}

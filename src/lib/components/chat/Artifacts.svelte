@@ -1,90 +1,89 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
+	import { run } from 'svelte/legacy';
 
-  import { toast } from 'svelte-sonner';
-  import { onMount, getContext, createEventDispatcher } from 'svelte';
-  const i18n = getContext('i18n');
-  const dispatch = createEventDispatcher();
+	import { toast } from 'svelte-sonner';
+	import { onMount, getContext, createEventDispatcher } from 'svelte';
+	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
-  import { chatId, showArtifacts, showControls } from '$lib/stores';
-  import XMark from '../icons/XMark.svelte';
-  import { copyToClipboard, createMessagesList } from '$lib/utils';
-  import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
-  import Tooltip from '../common/Tooltip.svelte';
-  import SvgPanZoom from '../common/SVGPanZoom.svelte';
-  import ArrowLeft from '../icons/ArrowLeft.svelte';
+	import { chatId, showArtifacts, showControls } from '$lib/stores';
+	import XMark from '../icons/XMark.svelte';
+	import { copyToClipboard, createMessagesList } from '$lib/utils';
+	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import SvgPanZoom from '../common/SVGPanZoom.svelte';
+	import ArrowLeft from '../icons/ArrowLeft.svelte';
 
-  interface Props {
-    overlay?: boolean;
-    history: any;
-  }
+	interface Props {
+		overlay?: boolean;
+		history: any;
+	}
 
-  let { overlay = false, history }: Props = $props();
-  let messages = $state([]);
+	let { overlay = false, history }: Props = $props();
+	let messages = $state([]);
 
-  let contents: Array<{ type: string; content: string }> = $state([]);
-  let selectedContentIdx = $state(0);
+	let contents: Array<{ type: string; content: string }> = $state([]);
+	let selectedContentIdx = $state(0);
 
-  let copied = $state(false);
-  let iframeElement: HTMLIFrameElement = $state();
+	let copied = $state(false);
+	let iframeElement: HTMLIFrameElement = $state();
 
+	const getContents = () => {
+		contents = [];
+		messages.forEach((message) => {
+			if (message?.role !== 'user' && message?.content) {
+				const codeBlockContents = message.content.match(/```[\s\S]*?```/g);
+				let codeBlocks = [];
 
-  const getContents = () => {
-    contents = [];
-    messages.forEach((message) => {
-      if (message?.role !== 'user' && message?.content) {
-        const codeBlockContents = message.content.match(/```[\s\S]*?```/g);
-        let codeBlocks = [];
+				if (codeBlockContents) {
+					codeBlockContents.forEach((block) => {
+						const lang = block.split('\n')[0].replace('```', '').trim().toLowerCase();
+						const code = block.replace(/```[\s\S]*?\n/, '').replace(/```$/, '');
+						codeBlocks.push({ lang, code });
+					});
+				}
 
-        if (codeBlockContents) {
-          codeBlockContents.forEach((block) => {
-            const lang = block.split('\n')[0].replace('```', '').trim().toLowerCase();
-            const code = block.replace(/```[\s\S]*?\n/, '').replace(/```$/, '');
-            codeBlocks.push({ lang, code });
-          });
-        }
+				let htmlContent = '';
+				let cssContent = '';
+				let jsContent = '';
 
-        let htmlContent = '';
-        let cssContent = '';
-        let jsContent = '';
+				codeBlocks.forEach((block) => {
+					const { lang, code } = block;
 
-        codeBlocks.forEach((block) => {
-          const { lang, code } = block;
+					if (lang === 'html') {
+						htmlContent += code + '\n';
+					} else if (lang === 'css') {
+						cssContent += code + '\n';
+					} else if (lang === 'javascript' || lang === 'js') {
+						jsContent += code + '\n';
+					}
+				});
 
-          if (lang === 'html') {
-            htmlContent += code + '\n';
-          } else if (lang === 'css') {
-            cssContent += code + '\n';
-          } else if (lang === 'javascript' || lang === 'js') {
-            jsContent += code + '\n';
-          }
-        });
+				const inlineHtml = message.content.match(/<html>[\s\S]*?<\/html>/gi);
+				const inlineCss = message.content.match(/<style>[\s\S]*?<\/style>/gi);
+				const inlineJs = message.content.match(/<script>[\s\S]*?<\/script>/gi);
 
-        const inlineHtml = message.content.match(/<html>[\s\S]*?<\/html>/gi);
-        const inlineCss = message.content.match(/<style>[\s\S]*?<\/style>/gi);
-        const inlineJs = message.content.match(/<script>[\s\S]*?<\/script>/gi);
+				if (inlineHtml) {
+					inlineHtml.forEach((block) => {
+						const content = block.replace(/<\/?html>/gi, ''); // Remove <html> tags
+						htmlContent += content + '\n';
+					});
+				}
+				if (inlineCss) {
+					inlineCss.forEach((block) => {
+						const content = block.replace(/<\/?style>/gi, ''); // Remove <style> tags
+						cssContent += content + '\n';
+					});
+				}
+				if (inlineJs) {
+					inlineJs.forEach((block) => {
+						const content = block.replace(/<\/?script>/gi, ''); // Remove <script> tags
+						jsContent += content + '\n';
+					});
+				}
 
-        if (inlineHtml) {
-          inlineHtml.forEach((block) => {
-            const content = block.replace(/<\/?html>/gi, ''); // Remove <html> tags
-            htmlContent += content + '\n';
-          });
-        }
-        if (inlineCss) {
-          inlineCss.forEach((block) => {
-            const content = block.replace(/<\/?style>/gi, ''); // Remove <style> tags
-            cssContent += content + '\n';
-          });
-        }
-        if (inlineJs) {
-          inlineJs.forEach((block) => {
-            const content = block.replace(/<\/?script>/gi, ''); // Remove <script> tags
-            jsContent += content + '\n';
-          });
-        }
-
-        if (htmlContent || cssContent || jsContent) {
-          const renderedContent = `
+				if (htmlContent || cssContent || jsContent) {
+					const renderedContent = `
                         <!DOCTYPE html>
                         <html lang="en">
                         <head>
@@ -107,231 +106,224 @@
                         </body>
                         </html>
                     `;
-          contents = [...contents, { type: 'iframe', content: renderedContent }];
-        } else {
-          // Check for SVG content
-          for (const block of codeBlocks) {
-            if (block.lang === 'svg' || (block.lang === 'xml' && block.code.includes('<svg'))) {
-              contents = [...contents, { type: 'svg', content: block.code }];
-            }
-          }
-        }
-      }
-    });
+					contents = [...contents, { type: 'iframe', content: renderedContent }];
+				} else {
+					// Check for SVG content
+					for (const block of codeBlocks) {
+						if (block.lang === 'svg' || (block.lang === 'xml' && block.code.includes('<svg'))) {
+							contents = [...contents, { type: 'svg', content: block.code }];
+						}
+					}
+				}
+			}
+		});
 
-    if (contents.length === 0) {
-      showControls.set(false);
-      showArtifacts.set(false);
-    }
+		if (contents.length === 0) {
+			showControls.set(false);
+			showArtifacts.set(false);
+		}
 
-    selectedContentIdx = contents ? contents.length - 1 : 0;
-  };
+		selectedContentIdx = contents ? contents.length - 1 : 0;
+	};
 
-  function navigateContent(direction: 'prev' | 'next') {
-    console.log(selectedContentIdx);
+	function navigateContent(direction: 'prev' | 'next') {
+		console.log(selectedContentIdx);
 
-    selectedContentIdx =
-      direction === 'prev'
-        ? Math.max(selectedContentIdx - 1, 0)
-        : Math.min(selectedContentIdx + 1, contents.length - 1);
+		selectedContentIdx =
+			direction === 'prev'
+				? Math.max(selectedContentIdx - 1, 0)
+				: Math.min(selectedContentIdx + 1, contents.length - 1);
 
-    console.log(selectedContentIdx);
-  }
+		console.log(selectedContentIdx);
+	}
 
-  const iframeLoadHandler = () => {
-    iframeElement.contentWindow.addEventListener(
-      'click',
-      function (e) {
-        const target = e.target.closest('a');
-        if (target && target.href) {
-          e.preventDefault();
-          const url = new URL(target.href, iframeElement.baseURI);
-          if (url.origin === window.location.origin) {
-            iframeElement.contentWindow.history.pushState(
-              null,
-              '',
-              url.pathname + url.search + url.hash
-            );
-          } else {
-            console.log('External navigation blocked:', url.href);
-          }
-        }
-      },
-      true
-    );
+	const iframeLoadHandler = () => {
+		iframeElement.contentWindow.addEventListener(
+			'click',
+			function (e) {
+				const target = e.target.closest('a');
+				if (target && target.href) {
+					e.preventDefault();
+					const url = new URL(target.href, iframeElement.baseURI);
+					if (url.origin === window.location.origin) {
+						iframeElement.contentWindow.history.pushState(
+							null,
+							'',
+							url.pathname + url.search + url.hash
+						);
+					} else {
+						console.log('External navigation blocked:', url.href);
+					}
+				}
+			},
+			true
+		);
 
-    // Cancel drag when hovering over iframe
-    iframeElement.contentWindow.addEventListener('mouseenter', function (e) {
-      e.preventDefault();
-      iframeElement.contentWindow.addEventListener('dragstart', (event) => {
-        event.preventDefault();
-      });
-    });
-  };
+		// Cancel drag when hovering over iframe
+		iframeElement.contentWindow.addEventListener('mouseenter', function (e) {
+			e.preventDefault();
+			iframeElement.contentWindow.addEventListener('dragstart', (event) => {
+				event.preventDefault();
+			});
+		});
+	};
 
-  const showFullScreen = () => {
-    if (iframeElement.requestFullscreen) {
-      iframeElement.requestFullscreen();
-    } else if (iframeElement.webkitRequestFullscreen) {
-      iframeElement.webkitRequestFullscreen();
-    } else if (iframeElement.msRequestFullscreen) {
-      iframeElement.msRequestFullscreen();
-    }
-  };
+	const showFullScreen = () => {
+		if (iframeElement.requestFullscreen) {
+			iframeElement.requestFullscreen();
+		} else if (iframeElement.webkitRequestFullscreen) {
+			iframeElement.webkitRequestFullscreen();
+		} else if (iframeElement.msRequestFullscreen) {
+			iframeElement.msRequestFullscreen();
+		}
+	};
 
-  onMount(() => {});
-  run(() => {
-    if (history) {
-      messages = createMessagesList(history, history.currentId);
-      getContents();
-    } else {
-      messages = [];
-      getContents();
-    }
-  });
+	onMount(() => {});
+	run(() => {
+		if (history) {
+			messages = createMessagesList(history, history.currentId);
+			getContents();
+		} else {
+			messages = [];
+			getContents();
+		}
+	});
 </script>
 
 <div class=" w-full h-full relative flex flex-col bg-gray-50 dark:bg-gray-850">
-  <div class="w-full h-full flex-1 relative">
-    {#if overlay}
-      <div class=" absolute top-0 left-0 right-0 bottom-0 z-10"></div>
-    {/if}
+	<div class="w-full h-full flex-1 relative">
+		{#if overlay}
+			<div class=" absolute top-0 left-0 right-0 bottom-0 z-10"></div>
+		{/if}
 
-    <div class="absolute pointer-events-none z-50 w-full flex items-center justify-start p-4">
-      <button
-        class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
-        onclick={() => {
-          showArtifacts.set(false);
-        }}
-      >
-        <ArrowLeft className="size-3.5  text-gray-900 dark:text-white" />
-      </button>
-    </div>
+		<div class="absolute pointer-events-none z-50 w-full flex items-center justify-start p-4">
+			<button
+				class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
+				onclick={() => {
+					showArtifacts.set(false);
+				}}
+			>
+				<ArrowLeft className="size-3.5  text-gray-900 dark:text-white" />
+			</button>
+		</div>
 
-    <div class=" absolute pointer-events-none z-50 w-full flex items-center justify-end p-4">
-      <button
-        class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
-        onclick={() => {
-          dispatch('close');
-          showControls.set(false);
-          showArtifacts.set(false);
-        }}
-      >
-        <XMark className="size-3.5 text-gray-900 dark:text-white" />
-      </button>
-    </div>
+		<div class=" absolute pointer-events-none z-50 w-full flex items-center justify-end p-4">
+			<button
+				class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
+				onclick={() => {
+					dispatch('close');
+					showControls.set(false);
+					showArtifacts.set(false);
+				}}
+			>
+				<XMark className="size-3.5 text-gray-900 dark:text-white" />
+			</button>
+		</div>
 
-    <div class="flex-1 w-full h-full">
-      <div class=" h-full flex flex-col">
-        {#if contents.length > 0}
-          <div class="max-w-full w-full h-full">
-            {#if contents[selectedContentIdx].type === 'iframe'}
-              <iframe
-                bind:this={iframeElement}
-                class="w-full border-0 h-full rounded-none"
-                sandbox="allow-scripts allow-forms allow-same-origin"
-                srcdoc={contents[selectedContentIdx].content}
-                title="Content"
-                onload={iframeLoadHandler}
-></iframe>
-            {:else if contents[selectedContentIdx].type === 'svg'}
-              <SvgPanZoom
-                className=" w-full h-full max-h-full overflow-hidden"
-                svg={contents[selectedContentIdx].content}
-              />
-            {/if}
-          </div>
-        {:else}
-          <div class="m-auto font-medium text-xs text-gray-900 dark:text-white">
-            {$i18n.t('No HTML, CSS, or JavaScript content found.')}
-          </div>
-        {/if}
-      </div>
-    </div>
-  </div>
+		<div class="flex-1 w-full h-full">
+			<div class=" h-full flex flex-col">
+				{#if contents.length > 0}
+					<div class="max-w-full w-full h-full">
+						{#if contents[selectedContentIdx].type === 'iframe'}
+							<iframe
+								bind:this={iframeElement}
+								class="w-full border-0 h-full rounded-none"
+								onload={iframeLoadHandler}
+								sandbox="allow-scripts allow-forms allow-same-origin"
+								srcdoc={contents[selectedContentIdx].content}
+								title="Content"
+							></iframe>
+						{:else if contents[selectedContentIdx].type === 'svg'}
+							<SvgPanZoom
+								className=" w-full h-full max-h-full overflow-hidden"
+								svg={contents[selectedContentIdx].content}
+							/>
+						{/if}
+					</div>
+				{:else}
+					<div class="m-auto font-medium text-xs text-gray-900 dark:text-white">
+						{$i18n.t('No HTML, CSS, or JavaScript content found.')}
+					</div>
+				{/if}
+			</div>
+		</div>
+	</div>
 
-  {#if contents.length > 0}
-    <div class="flex justify-between items-center p-2.5 font-primar text-gray-900 dark:text-white">
-      <div class="flex items-center space-x-2">
-        <div
-          class="flex items-center gap-0.5 self-center min-w-fit"
-          dir="ltr"
-        >
-          <button
-            class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition disabled:cursor-not-allowed"
-            disabled={contents.length <= 1}
-            onclick={() => navigateContent('prev')}
-          >
-            <svg
-              class="size-3.5"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M15.75 19.5 8.25 12l7.5-7.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
+	{#if contents.length > 0}
+		<div class="flex justify-between items-center p-2.5 font-primar text-gray-900 dark:text-white">
+			<div class="flex items-center space-x-2">
+				<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
+					<button
+						class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition disabled:cursor-not-allowed"
+						disabled={contents.length <= 1}
+						onclick={() => navigateContent('prev')}
+					>
+						<svg
+							class="size-3.5"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2.5"
+							viewBox="0 0 24 24"
+							xmlns="http://www.w3.org/2000/svg"
+						>
+							<path
+								d="M15.75 19.5 8.25 12l7.5-7.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+						</svg>
+					</button>
 
-          <div class="text-xs self-center dark:text-gray-100 min-w-fit">
-            {$i18n.t('Version {{selectedVersion}} of {{totalVersions}}', {
-              selectedVersion: selectedContentIdx + 1,
-              totalVersions: contents.length
-            })}
-          </div>
+					<div class="text-xs self-center dark:text-gray-100 min-w-fit">
+						{$i18n.t('Version {{selectedVersion}} of {{totalVersions}}', {
+							selectedVersion: selectedContentIdx + 1,
+							totalVersions: contents.length
+						})}
+					</div>
 
-          <button
-            class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition disabled:cursor-not-allowed"
-            disabled={contents.length <= 1}
-            onclick={() => navigateContent('next')}
-          >
-            <svg
-              class="size-3.5"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="m8.25 4.5 7.5 7.5-7.5 7.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
+					<button
+						class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition disabled:cursor-not-allowed"
+						disabled={contents.length <= 1}
+						onclick={() => navigateContent('next')}
+					>
+						<svg
+							class="size-3.5"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2.5"
+							viewBox="0 0 24 24"
+							xmlns="http://www.w3.org/2000/svg"
+						>
+							<path d="m8.25 4.5 7.5 7.5-7.5 7.5" stroke-linecap="round" stroke-linejoin="round" />
+						</svg>
+					</button>
+				</div>
+			</div>
 
-      <div class="flex items-center gap-1">
-        <button
-          class="copy-code-button bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
-          onclick={() => {
-            copyToClipboard(contents[selectedContentIdx].content);
-            copied = true;
+			<div class="flex items-center gap-1">
+				<button
+					class="copy-code-button bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+					onclick={() => {
+						copyToClipboard(contents[selectedContentIdx].content);
+						copied = true;
 
-            setTimeout(() => {
-              copied = false;
-            }, 2000);
-          }}
-        >{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button>
+						setTimeout(() => {
+							copied = false;
+						}, 2000);
+					}}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
+				>
 
-        {#if contents[selectedContentIdx].type === 'iframe'}
-          <Tooltip content={$i18n.t('Open in full screen')}>
-            <button
-              class=" bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md p-0.5"
-              onclick={showFullScreen}
-            >
-              <ArrowsPointingOut className="size-3.5" />
-            </button>
-          </Tooltip>
-        {/if}
-      </div>
-    </div>
-  {/if}
+				{#if contents[selectedContentIdx].type === 'iframe'}
+					<Tooltip content={$i18n.t('Open in full screen')}>
+						<button
+							class=" bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md p-0.5"
+							onclick={showFullScreen}
+						>
+							<ArrowsPointingOut className="size-3.5" />
+						</button>
+					</Tooltip>
+				{/if}
+			</div>
+		</div>
+	{/if}
 </div>

@@ -1,532 +1,511 @@
 <script lang="ts">
-  import RecursiveFolder from './RecursiveFolder.svelte';
-  import { run } from 'svelte/legacy';
+	import RecursiveFolder from './RecursiveFolder.svelte';
+	import { run } from 'svelte/legacy';
 
-  import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
+	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 
-  const i18n = getContext('i18n');
-  const dispatch = createEventDispatcher();
+	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
-  import DOMPurify from 'dompurify';
-  import fileSaver from 'file-saver';
-  const { saveAs } = fileSaver;
+	import DOMPurify from 'dompurify';
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
 
-  import ChevronDown from '../../icons/ChevronDown.svelte';
-  import ChevronRight from '../../icons/ChevronRight.svelte';
-  import Collapsible from '../../common/Collapsible.svelte';
-  import DragGhost from '$lib/components/common/DragGhost.svelte';
+	import ChevronDown from '../../icons/ChevronDown.svelte';
+	import ChevronRight from '../../icons/ChevronRight.svelte';
+	import Collapsible from '../../common/Collapsible.svelte';
+	import DragGhost from '$lib/components/common/DragGhost.svelte';
 
-  import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
-  import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
-  import {
-    deleteFolderById,
-    updateFolderIsExpandedById,
-    updateFolderNameById,
-    updateFolderParentIdById
-  } from '$lib/apis/folders';
-  import { toast } from 'svelte-sonner';
-  import {
-    getChatById,
-    getChatsByFolderId,
-    importChat,
-    updateChatFolderIdById
-  } from '$lib/apis/chats';
-  import ChatItem from './ChatItem.svelte';
-  import FolderMenu from './Folders/FolderMenu.svelte';
-  import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
+	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import {
+		deleteFolderById,
+		updateFolderIsExpandedById,
+		updateFolderNameById,
+		updateFolderParentIdById
+	} from '$lib/apis/folders';
+	import { toast } from 'svelte-sonner';
+	import {
+		getChatById,
+		getChatsByFolderId,
+		importChat,
+		updateChatFolderIdById
+	} from '$lib/apis/chats';
+	import ChatItem from './ChatItem.svelte';
+	import FolderMenu from './Folders/FolderMenu.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
+	interface Props {
+		open?: boolean;
+		folders: any;
+		folderId: any;
+		className?: string;
+		parentDragged?: boolean;
+	}
 
+	let {
+		open = $bindable(false),
+		folders = $bindable(),
+		folderId,
+		className = '',
+		parentDragged = false
+	}: Props = $props();
 
+	let folderElement = $state();
 
-  interface Props {
-    open?: boolean;
-    folders: any;
-    folderId: any;
-    className?: string;
-    parentDragged?: boolean;
-  }
+	let edit = $state(false);
 
-  let {
-    open = $bindable(false),
-    folders = $bindable(),
-    folderId,
-    className = '',
-    parentDragged = false
-  }: Props = $props();
+	let draggedOver = $state(false);
+	let dragged = $state(false);
 
-  let folderElement = $state();
+	let name = $state('');
 
-  let edit = $state(false);
+	const onDragOver = (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		if (dragged || parentDragged) {
+			return;
+		}
+		draggedOver = true;
+	};
 
-  let draggedOver = $state(false);
-  let dragged = $state(false);
+	const onDrop = async (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		if (dragged || parentDragged) {
+			return;
+		}
 
-  let name = $state('');
+		if (folderElement.contains(e.target)) {
+			console.log('Dropped on the Button');
 
-  const onDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (dragged || parentDragged) {
-      return;
-    }
-    draggedOver = true;
-  };
+			if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+				// Iterate over all items in the DataTransferItemList use functional programming
+				for (const item of Array.from(e.dataTransfer.items)) {
+					// If dropped items aren't files, reject them
+					if (item.kind === 'file') {
+						const file = item.getAsFile();
+						if (file && file.type === 'application/json') {
+							console.log('Dropped file is a JSON file!');
 
-  const onDrop = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (dragged || parentDragged) {
-      return;
-    }
+							// Read the JSON file with FileReader
+							const reader = new FileReader();
+							reader.onload = async function (event) {
+								try {
+									const fileContent = JSON.parse(event.target.result);
+									open = true;
+									dispatch('import', {
+										folderId: folderId,
+										items: fileContent
+									});
+								} catch (error) {
+									console.error('Error parsing JSON file:', error);
+								}
+							};
 
-    if (folderElement.contains(e.target)) {
-      console.log('Dropped on the Button');
+							// Start reading the file
+							reader.readAsText(file);
+						} else {
+							console.error('Only JSON file types are supported.');
+						}
 
-      if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-        // Iterate over all items in the DataTransferItemList use functional programming
-        for (const item of Array.from(e.dataTransfer.items)) {
-          // If dropped items aren't files, reject them
-          if (item.kind === 'file') {
-            const file = item.getAsFile();
-            if (file && file.type === 'application/json') {
-              console.log('Dropped file is a JSON file!');
+						console.log(file);
+					} else {
+						// Handle the drag-and-drop data for folders or chats (same as before)
+						const dataTransfer = e.dataTransfer.getData('text/plain');
+						const data = JSON.parse(dataTransfer);
+						console.log(data);
 
-              // Read the JSON file with FileReader
-              const reader = new FileReader();
-              reader.onload = async function (event) {
-                try {
-                  const fileContent = JSON.parse(event.target.result);
-                  open = true;
-                  dispatch('import', {
-                    folderId: folderId,
-                    items: fileContent
-                  });
-                } catch (error) {
-                  console.error('Error parsing JSON file:', error);
-                }
-              };
+						const { type, id, item } = data;
 
-              // Start reading the file
-              reader.readAsText(file);
-            } else {
-              console.error('Only JSON file types are supported.');
-            }
+						if (type === 'folder') {
+							open = true;
+							if (id === folderId) {
+								return;
+							}
+							// Move the folder
+							const res = await updateFolderParentIdById(localStorage.token, id, folderId).catch(
+								(error) => {
+									toast.error(`${error}`);
+									return null;
+								}
+							);
 
-            console.log(file);
-          } else {
-            // Handle the drag-and-drop data for folders or chats (same as before)
-            const dataTransfer = e.dataTransfer.getData('text/plain');
-            const data = JSON.parse(dataTransfer);
-            console.log(data);
+							if (res) {
+								dispatch('update');
+							}
+						} else if (type === 'chat') {
+							open = true;
 
-            const { type, id, item } = data;
+							let chat = await getChatById(localStorage.token, id).catch((error) => {
+								return null;
+							});
+							if (!chat && item) {
+								chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
+							}
 
-            if (type === 'folder') {
-              open = true;
-              if (id === folderId) {
-                return;
-              }
-              // Move the folder
-              const res = await updateFolderParentIdById(localStorage.token, id, folderId).catch(
-                (error) => {
-                  toast.error(`${error}`);
-                  return null;
-                }
-              );
+							// Move the chat
+							const res = await updateChatFolderIdById(localStorage.token, chat.id, folderId).catch(
+								(error) => {
+									toast.error(`${error}`);
+									return null;
+								}
+							);
 
-              if (res) {
-                dispatch('update');
-              }
-            } else if (type === 'chat') {
-              open = true;
+							if (res) {
+								dispatch('update');
+							}
+						}
+					}
+				}
+			}
 
-              let chat = await getChatById(localStorage.token, id).catch((error) => {
-                return null;
-              });
-              if (!chat && item) {
-                chat = await importChat(localStorage.token, item.chat, item?.meta ?? {});
-              }
+			draggedOver = false;
+		}
+	};
 
-              // Move the chat
-              const res = await updateChatFolderIdById(localStorage.token, chat.id, folderId).catch(
-                (error) => {
-                  toast.error(`${error}`);
-                  return null;
-                }
-              );
+	const onDragLeave = (e) => {
+		e.preventDefault();
+		if (dragged || parentDragged) {
+			return;
+		}
 
-              if (res) {
-                dispatch('update');
-              }
-            }
-          }
-        }
-      }
+		draggedOver = false;
+	};
 
-      draggedOver = false;
-    }
-  };
+	const dragImage = new Image();
+	dragImage.src =
+		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
-  const onDragLeave = (e) => {
-    e.preventDefault();
-    if (dragged || parentDragged) {
-      return;
-    }
+	let x = $state();
+	let y = $state();
 
-    draggedOver = false;
-  };
+	const onDragStart = (event) => {
+		event.stopPropagation();
+		event.dataTransfer.setDragImage(dragImage, 0, 0);
 
-  const dragImage = new Image();
-  dragImage.src =
-    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+		// Set the data to be transferred
+		event.dataTransfer.setData(
+			'text/plain',
+			JSON.stringify({
+				type: 'folder',
+				id: folderId
+			})
+		);
 
-  let x = $state();
-  let y = $state();
+		dragged = true;
+		folderElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
+	};
 
-  const onDragStart = (event) => {
-    event.stopPropagation();
-    event.dataTransfer.setDragImage(dragImage, 0, 0);
+	const onDrag = (event) => {
+		event.stopPropagation();
 
-    // Set the data to be transferred
-    event.dataTransfer.setData(
-      'text/plain',
-      JSON.stringify({
-        type: 'folder',
-        id: folderId
-      })
-    );
+		x = event.clientX;
+		y = event.clientY;
+	};
 
-    dragged = true;
-    folderElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
-  };
+	const onDragEnd = (event) => {
+		event.stopPropagation();
 
-  const onDrag = (event) => {
-    event.stopPropagation();
+		folderElement.style.opacity = '1'; // Reset visual cue after drag
+		dragged = false;
+	};
 
-    x = event.clientX;
-    y = event.clientY;
-  };
+	onMount(() => {
+		open = folders[folderId].is_expanded;
+		if (folderElement) {
+			folderElement.addEventListener('dragover', onDragOver);
+			folderElement.addEventListener('drop', onDrop);
+			folderElement.addEventListener('dragleave', onDragLeave);
 
-  const onDragEnd = (event) => {
-    event.stopPropagation();
+			// Event listener for when dragging starts
+			folderElement.addEventListener('dragstart', onDragStart);
+			// Event listener for when dragging occurs (optional)
+			folderElement.addEventListener('drag', onDrag);
+			// Event listener for when dragging ends
+			folderElement.addEventListener('dragend', onDragEnd);
+		}
+	});
 
-    folderElement.style.opacity = '1'; // Reset visual cue after drag
-    dragged = false;
-  };
+	onDestroy(() => {
+		if (folderElement) {
+			folderElement.addEventListener('dragover', onDragOver);
+			folderElement.removeEventListener('drop', onDrop);
+			folderElement.removeEventListener('dragleave', onDragLeave);
 
-  onMount(() => {
-    open = folders[folderId].is_expanded;
-    if (folderElement) {
-      folderElement.addEventListener('dragover', onDragOver);
-      folderElement.addEventListener('drop', onDrop);
-      folderElement.addEventListener('dragleave', onDragLeave);
+			folderElement.removeEventListener('dragstart', onDragStart);
+			folderElement.removeEventListener('drag', onDrag);
+			folderElement.removeEventListener('dragend', onDragEnd);
+		}
+	});
 
-      // Event listener for when dragging starts
-      folderElement.addEventListener('dragstart', onDragStart);
-      // Event listener for when dragging occurs (optional)
-      folderElement.addEventListener('drag', onDrag);
-      // Event listener for when dragging ends
-      folderElement.addEventListener('dragend', onDragEnd);
-    }
-  });
+	let showDeleteConfirm = $state(false);
 
-  onDestroy(() => {
-    if (folderElement) {
-      folderElement.addEventListener('dragover', onDragOver);
-      folderElement.removeEventListener('drop', onDrop);
-      folderElement.removeEventListener('dragleave', onDragLeave);
+	const deleteHandler = async () => {
+		const res = await deleteFolderById(localStorage.token, folderId).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
 
-      folderElement.removeEventListener('dragstart', onDragStart);
-      folderElement.removeEventListener('drag', onDrag);
-      folderElement.removeEventListener('dragend', onDragEnd);
-    }
-  });
+		if (res) {
+			toast.success($i18n.t('Folder deleted successfully'));
+			dispatch('update');
+		}
+	};
 
-  let showDeleteConfirm = $state(false);
+	const nameUpdateHandler = async () => {
+		if (name === '') {
+			toast.error($i18n.t('Folder name cannot be empty'));
+			return;
+		}
 
-  const deleteHandler = async () => {
-    const res = await deleteFolderById(localStorage.token, folderId).catch((error) => {
-      toast.error(`${error}`);
-      return null;
-    });
+		if (name === folders[folderId].name) {
+			edit = false;
+			return;
+		}
 
-    if (res) {
-      toast.success($i18n.t('Folder deleted successfully'));
-      dispatch('update');
-    }
-  };
+		const currentName = folders[folderId].name;
 
-  const nameUpdateHandler = async () => {
-    if (name === '') {
-      toast.error($i18n.t('Folder name cannot be empty'));
-      return;
-    }
+		name = name.trim();
+		folders[folderId].name = name;
 
-    if (name === folders[folderId].name) {
-      edit = false;
-      return;
-    }
+		const res = await updateFolderNameById(localStorage.token, folderId, name).catch((error) => {
+			toast.error(`${error}`);
 
-    const currentName = folders[folderId].name;
+			folders[folderId].name = currentName;
+			return null;
+		});
 
-    name = name.trim();
-    folders[folderId].name = name;
+		if (res) {
+			folders[folderId].name = name;
+			toast.success($i18n.t('Folder name updated successfully'));
+			dispatch('update');
+		}
+	};
 
-    const res = await updateFolderNameById(localStorage.token, folderId, name).catch((error) => {
-      toast.error(`${error}`);
+	const isExpandedUpdateHandler = async () => {
+		const res = await updateFolderIsExpandedById(localStorage.token, folderId, open).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
+	};
 
-      folders[folderId].name = currentName;
-      return null;
-    });
+	let isExpandedUpdateTimeout;
 
-    if (res) {
-      folders[folderId].name = name;
-      toast.success($i18n.t('Folder name updated successfully'));
-      dispatch('update');
-    }
-  };
+	const isExpandedUpdateDebounceHandler = (open) => {
+		clearTimeout(isExpandedUpdateTimeout);
+		isExpandedUpdateTimeout = setTimeout(() => {
+			isExpandedUpdateHandler();
+		}, 500);
+	};
 
-  const isExpandedUpdateHandler = async () => {
-    const res = await updateFolderIsExpandedById(localStorage.token, folderId, open).catch(
-      (error) => {
-        toast.error(`${error}`);
-        return null;
-      }
-    );
-  };
+	run(() => {
+		isExpandedUpdateDebounceHandler(open);
+	});
 
-  let isExpandedUpdateTimeout;
+	const editHandler = async () => {
+		console.log('Edit');
+		await tick();
+		name = folders[folderId].name;
+		edit = true;
 
-  const isExpandedUpdateDebounceHandler = (open) => {
-    clearTimeout(isExpandedUpdateTimeout);
-    isExpandedUpdateTimeout = setTimeout(() => {
-      isExpandedUpdateHandler();
-    }, 500);
-  };
+		await tick();
 
-  run(() => {
-    isExpandedUpdateDebounceHandler(open);
-  });
+		// focus on the input
+		setTimeout(() => {
+			const input = document.getElementById(`folder-${folderId}-input`);
+			input.focus();
+		}, 100);
+	};
 
-  const editHandler = async () => {
-    console.log('Edit');
-    await tick();
-    name = folders[folderId].name;
-    edit = true;
+	const exportHandler = async () => {
+		const chats = await getChatsByFolderId(localStorage.token, folderId).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (!chats) {
+			return;
+		}
 
-    await tick();
+		const blob = new Blob([JSON.stringify(chats)], {
+			type: 'application/json'
+		});
 
-    // focus on the input
-    setTimeout(() => {
-      const input = document.getElementById(`folder-${folderId}-input`);
-      input.focus();
-    }, 100);
-  };
-
-  const exportHandler = async () => {
-    const chats = await getChatsByFolderId(localStorage.token, folderId).catch((error) => {
-      toast.error(`${error}`);
-      return null;
-    });
-    if (!chats) {
-      return;
-    }
-
-    const blob = new Blob([JSON.stringify(chats)], {
-      type: 'application/json'
-    });
-
-    saveAs(blob, `folder-${folders[folderId].name}-export-${Date.now()}.json`);
-  };
+		saveAs(blob, `folder-${folders[folderId].name}-export-${Date.now()}.json`);
+	};
 </script>
 
 <DeleteConfirmDialog
-  title={$i18n.t('Delete folder?')}
-  bind:show={showDeleteConfirm}
-  on:confirm={() => {
-    deleteHandler();
-  }}
+	title={$i18n.t('Delete folder?')}
+	bind:show={showDeleteConfirm}
+	on:confirm={() => {
+		deleteHandler();
+	}}
 >
-  <div class=" text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3">
-    {@html DOMPurify.sanitize(
-      $i18n.t('This will delete <strong>{{NAME}}</strong> and <strong>all its contents</strong>.', {
-        NAME: folders[folderId].name
-      })
-    )}
-  </div>
+	<div class=" text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3">
+		{@html DOMPurify.sanitize(
+			$i18n.t('This will delete <strong>{{NAME}}</strong> and <strong>all its contents</strong>.', {
+				NAME: folders[folderId].name
+			})
+		)}
+	</div>
 </DeleteConfirmDialog>
 
 {#if dragged && x && y}
-  <DragGhost
-    {x}
-    {y}
-  >
-    <div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
-      <div class="flex items-center gap-1">
-        <FolderOpen
-          className="size-3.5"
-          strokeWidth="2"
-        />
-        <div class=" text-xs text-white line-clamp-1">
-          {folders[folderId].name}
-        </div>
-      </div>
-    </div>
-  </DragGhost>
+	<DragGhost {x} {y}>
+		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
+			<div class="flex items-center gap-1">
+				<FolderOpen className="size-3.5" strokeWidth="2" />
+				<div class=" text-xs text-white line-clamp-1">
+					{folders[folderId].name}
+				</div>
+			</div>
+		</div>
+	</DragGhost>
 {/if}
 
-<div
-  bind:this={folderElement}
-  class="relative {className}"
-  draggable="true"
->
-  {#if draggedOver}
-    <div class="absolute top-0 left-0 w-full h-full rounded-xs bg-gray-100/50 dark:bg-gray-700/20 bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"></div>
-  {/if}
+<div bind:this={folderElement} class="relative {className}" draggable="true">
+	{#if draggedOver}
+		<div
+			class="absolute top-0 left-0 w-full h-full rounded-xs bg-gray-100/50 dark:bg-gray-700/20 bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
+		></div>
+	{/if}
 
-  <Collapsible
-    buttonClassName="w-full"
-    className="w-full"
-    hide={(folders[folderId]?.childrenIds ?? []).length === 0 &&
-      (folders[folderId].items?.chats ?? []).length === 0}
-    bind:open
-    on:change={(e) => {
-      dispatch('open', e.detail);
-    }}
-  >
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="w-full group">
-      <a
-        id="folder-{folderId}-button"
-        class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-        href="#"
-        ondblclick={(e) => {
-          e.preventDefault()
-          editHandler();
-        }}
-      >
-        <div class="text-gray-300 dark:text-gray-600">
-          {#if open}
-            <ChevronDown
-              className=" size-3"
-              strokeWidth="2.5"
-            />
-          {:else}
-            <ChevronRight
-              className=" size-3"
-              strokeWidth="2.5"
-            />
-          {/if}
-        </div>
+	<Collapsible
+		buttonClassName="w-full"
+		className="w-full"
+		hide={(folders[folderId]?.childrenIds ?? []).length === 0 &&
+			(folders[folderId].items?.chats ?? []).length === 0}
+		bind:open
+		on:change={(e) => {
+			dispatch('open', e.detail);
+		}}
+	>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div class="w-full group">
+			<a
+				id="folder-{folderId}-button"
+				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				href="#"
+				ondblclick={(e) => {
+					e.preventDefault();
+					editHandler();
+				}}
+			>
+				<div class="text-gray-300 dark:text-gray-600">
+					{#if open}
+						<ChevronDown className=" size-3" strokeWidth="2.5" />
+					{:else}
+						<ChevronRight className=" size-3" strokeWidth="2.5" />
+					{/if}
+				</div>
 
-        <div class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1">
-          {#if edit}
-            <input
-              id="folder-{folderId}-input"
-              class="w-full h-full bg-transparent text-gray-500 dark:text-gray-500 outline-hidden"
-              type="text"
-              bind:value={name}
-              onblur={() => {
-                nameUpdateHandler();
-                edit = false;
-              }}
-              onclick={(e) => {
-                // Prevent accidental collapse toggling when clicking inside input
-                e.stopPropagation();
-              }}
-              onmousedown={(e) => {
-                // Prevent accidental collapse toggling when clicking inside input
-                e.stopPropagation();
-              }}
-              onkeydown={(e) => {
-                if (e.key === 'Enter') {
-                  nameUpdateHandler();
-                  edit = false;
-                }
-              }}
-            />
-          {:else}
-            {folders[folderId].name}
-          {/if}
-        </div>
+				<div class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1">
+					{#if edit}
+						<input
+							id="folder-{folderId}-input"
+							class="w-full h-full bg-transparent text-gray-500 dark:text-gray-500 outline-hidden"
+							onblur={() => {
+								nameUpdateHandler();
+								edit = false;
+							}}
+							onclick={(e) => {
+								// Prevent accidental collapse toggling when clicking inside input
+								e.stopPropagation();
+							}}
+							onkeydown={(e) => {
+								if (e.key === 'Enter') {
+									nameUpdateHandler();
+									edit = false;
+								}
+							}}
+							onmousedown={(e) => {
+								// Prevent accidental collapse toggling when clicking inside input
+								e.stopPropagation();
+							}}
+							type="text"
+							bind:value={name}
+						/>
+					{:else}
+						{folders[folderId].name}
+					{/if}
+				</div>
 
-        <div
-          class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
-          onpointerup={(e) => {
-            e.stopPropagation();
-          }}
-        >
-          <FolderMenu
-            on:rename={() => {
-              editHandler();
-            }}
-            on:delete={() => {
-              showDeleteConfirm = true;
-            }}
-            on:export={() => {
-              exportHandler();
-            }}
-          >
-            <div class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto">
-              <EllipsisHorizontal
-                className="size-4"
-                strokeWidth="2.5"
-              />
-            </div>
-          </FolderMenu>
-        </div>
-      </a>
-    </div>
+				<div
+					class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+					onpointerup={(e) => {
+						e.stopPropagation();
+					}}
+				>
+					<FolderMenu
+						on:rename={() => {
+							editHandler();
+						}}
+						on:delete={() => {
+							showDeleteConfirm = true;
+						}}
+						on:export={() => {
+							exportHandler();
+						}}
+					>
+						<div class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto">
+							<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
+						</div>
+					</FolderMenu>
+				</div>
+			</a>
+		</div>
 
-    {#snippet content()}
-        <div
-        
-        class="w-full"
-      >
-        {#if (folders[folderId]?.childrenIds ?? []).length > 0 || (folders[folderId].items?.chats ?? []).length > 0}
-          <div class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900">
-            {#if folders[folderId]?.childrenIds}
-              {@const children = folders[folderId]?.childrenIds
-                .map((id) => folders[id])
-                .sort((a, b) =>
-                  a.name.localeCompare(b.name, undefined, {
-                    numeric: true,
-                    sensitivity: 'base'
-                  })
-                )}
+		{#snippet content()}
+			<div class="w-full">
+				{#if (folders[folderId]?.childrenIds ?? []).length > 0 || (folders[folderId].items?.chats ?? []).length > 0}
+					<div
+						class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
+					>
+						{#if folders[folderId]?.childrenIds}
+							{@const children = folders[folderId]?.childrenIds
+								.map((id) => folders[id])
+								.sort((a, b) =>
+									a.name.localeCompare(b.name, undefined, {
+										numeric: true,
+										sensitivity: 'base'
+									})
+								)}
 
-              {#each children as childFolder (`${folderId}-${childFolder.id}`)}
-                <RecursiveFolder
-                  folderId={childFolder.id}
-                  {folders}
-                  parentDragged={dragged}
-                  on:import={(e) => {
-                    dispatch('import', e.detail);
-                  }}
-                  on:update={(e) => {
-                    dispatch('update', e.detail);
-                  }}
-                  on:change={(e) => {
-                    dispatch('change', e.detail);
-                  }}
-                />
-              {/each}
-            {/if}
+							{#each children as childFolder (`${folderId}-${childFolder.id}`)}
+								<RecursiveFolder
+									folderId={childFolder.id}
+									{folders}
+									parentDragged={dragged}
+									on:import={(e) => {
+										dispatch('import', e.detail);
+									}}
+									on:update={(e) => {
+										dispatch('update', e.detail);
+									}}
+									on:change={(e) => {
+										dispatch('change', e.detail);
+									}}
+								/>
+							{/each}
+						{/if}
 
-            {#if folders[folderId].items?.chats}
-              {#each folders[folderId].items.chats as chat (chat.id)}
-                <ChatItem
-                  id={chat.id}
-                  title={chat.title}
-                  on:change={(e) => {
-                    dispatch('change', e.detail);
-                  }}
-                />
-              {/each}
-            {/if}
-          </div>
-        {/if}
-      </div>
-      {/snippet}
-  </Collapsible>
+						{#if folders[folderId].items?.chats}
+							{#each folders[folderId].items.chats as chat (chat.id)}
+								<ChatItem
+									id={chat.id}
+									title={chat.title}
+									on:change={(e) => {
+										dispatch('change', e.detail);
+									}}
+								/>
+							{/each}
+						{/if}
+					</div>
+				{/if}
+			</div>
+		{/snippet}
+	</Collapsible>
 </div>

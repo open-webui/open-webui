@@ -1,26 +1,28 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
+	import { run } from 'svelte/legacy';
 
-  import { createEventDispatcher, tick } from 'svelte';
-  import { Switch } from 'bits-ui';
-  interface Props {
-    state?: boolean;
-  }
+	import { createEventDispatcher, tick } from 'svelte';
+	import { Switch } from 'bits-ui';
+	interface Props {
+		state?: boolean;
+	}
 
-  let { state = $bindable(true) }: Props = $props();
+	let { state = $bindable(true) }: Props = $props();
 
-  const dispatch = createEventDispatcher();
+	const dispatch = createEventDispatcher();
 
-  run(() => {
-    dispatch('change', state);
-  });
+	run(() => {
+		dispatch('change', state);
+	});
 </script>
 
 <Switch.Root
-  class="flex h-5 min-h-5 w-9 shrink-0 cursor-pointer items-center rounded-full px-[3px] mx-[1px] transition  {state
-    ? ' bg-emerald-600'
-    : 'bg-gray-200 dark:bg-transparent'} outline outline-1 outline-gray-100 dark:outline-gray-800"
-  bind:checked={state}
+	class="flex h-5 min-h-5 w-9 shrink-0 cursor-pointer items-center rounded-full px-[3px] mx-[1px] transition  {state
+		? ' bg-emerald-600'
+		: 'bg-gray-200 dark:bg-transparent'} outline outline-1 outline-gray-100 dark:outline-gray-800"
+	bind:checked={state}
 >
-  <Switch.Thumb class="pointer-events-none block size-4 shrink-0 rounded-full bg-white transition-transform data-[state=checked]:translate-x-3.5 data-[state=unchecked]:translate-x-0 data-[state=unchecked]:shadow-mini " />
+	<Switch.Thumb
+		class="pointer-events-none block size-4 shrink-0 rounded-full bg-white transition-transform data-[state=checked]:translate-x-3.5 data-[state=unchecked]:translate-x-0 data-[state=unchecked]:shadow-mini "
+	/>
 </Switch.Root>

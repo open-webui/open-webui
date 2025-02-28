@@ -1,19 +1,19 @@
 <script lang="ts">
-  import Info from '$lib/components/icons/Info.svelte';
+	import Info from '$lib/components/icons/Info.svelte';
 
-  interface Props {
-    content?: string;
-  }
+	interface Props {
+		content?: string;
+	}
 
-  let { content = '' }: Props = $props();
+	let { content = '' }: Props = $props();
 </script>
 
 <div class="flex my-2 gap-2.5 border px-4 py-3 border-red-600/10 bg-red-600/10 rounded-lg">
-  <div class=" self-start mt-0.5">
-    <Info className="size-5 text-red-700 dark:text-red-400" />
-  </div>
+	<div class=" self-start mt-0.5">
+		<Info className="size-5 text-red-700 dark:text-red-400" />
+	</div>
 
-  <div class=" self-center text-sm">
-    {typeof content === 'string' ? content : JSON.stringify(content)}
-  </div>
+	<div class=" self-center text-sm">
+		{typeof content === 'string' ? content : JSON.stringify(content)}
+	</div>
 </div>

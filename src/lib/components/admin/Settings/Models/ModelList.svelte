@@ -1,81 +1,71 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
+	import { run } from 'svelte/legacy';
 
-  import Sortable from 'sortablejs';
+	import Sortable from 'sortablejs';
 
-  import { createEventDispatcher, getContext, onMount } from 'svelte';
-  const i18n = getContext('i18n');
+	import { createEventDispatcher, getContext, onMount } from 'svelte';
+	const i18n = getContext('i18n');
 
-  import { models } from '$lib/stores';
-  import Tooltip from '$lib/components/common/Tooltip.svelte';
-  import EllipsisVertical from '$lib/components/icons/EllipsisVertical.svelte';
+	import { models } from '$lib/stores';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import EllipsisVertical from '$lib/components/icons/EllipsisVertical.svelte';
 
-  let { modelIds = $bindable([]) } = $props();
+	let { modelIds = $bindable([]) } = $props();
 
-  let sortable = null;
-  let modelListElement = $state(null);
+	let sortable = null;
+	let modelListElement = $state(null);
 
-  const positionChangeHandler = () => {
-    const modelList = Array.from(modelListElement.children).map((child) =>
-      child.id.replace('model-item-', '')
-    );
+	const positionChangeHandler = () => {
+		const modelList = Array.from(modelListElement.children).map((child) =>
+			child.id.replace('model-item-', '')
+		);
 
-    modelIds = modelList;
-  };
+		modelIds = modelList;
+	};
 
+	const init = () => {
+		if (sortable) {
+			sortable.destroy();
+		}
 
-  const init = () => {
-    if (sortable) {
-      sortable.destroy();
-    }
-
-    if (modelListElement) {
-      sortable = Sortable.create(modelListElement, {
-        animation: 150,
-        onUpdate: async (event) => {
-          positionChangeHandler();
-        }
-      });
-    }
-  };
-  run(() => {
-    if (modelIds) {
-      init();
-    }
-  });
+		if (modelListElement) {
+			sortable = Sortable.create(modelListElement, {
+				animation: 150,
+				onUpdate: async (event) => {
+					positionChangeHandler();
+				}
+			});
+		}
+	};
+	run(() => {
+		if (modelIds) {
+			init();
+		}
+	});
 </script>
 
 {#if modelIds.length > 0}
-  <div
-    bind:this={modelListElement}
-    class="flex flex-col -translate-x-1"
-  >
-    {#each modelIds as modelId, modelIdx (modelId)}
-      <div
-        id="model-item-{modelId}"
-        class=" flex gap-2 w-full justify-between items-center"
-      >
-        <Tooltip
-          content={modelId}
-          placement="top-start"
-        >
-          <div class="flex items-center gap-1">
-            <EllipsisVertical className="size-4 cursor-move" />
+	<div bind:this={modelListElement} class="flex flex-col -translate-x-1">
+		{#each modelIds as modelId, modelIdx (modelId)}
+			<div id="model-item-{modelId}" class=" flex gap-2 w-full justify-between items-center">
+				<Tooltip content={modelId} placement="top-start">
+					<div class="flex items-center gap-1">
+						<EllipsisVertical className="size-4 cursor-move" />
 
-            <div class=" text-sm flex-1 py-1 rounded-lg">
-              {#if $models.find((model) => model.id === modelId)}
-                {$models.find((model) => model.id === modelId).name}
-              {:else}
-                {modelId}
-              {/if}
-            </div>
-          </div>
-        </Tooltip>
-      </div>
-    {/each}
-  </div>
+						<div class=" text-sm flex-1 py-1 rounded-lg">
+							{#if $models.find((model) => model.id === modelId)}
+								{$models.find((model) => model.id === modelId).name}
+							{:else}
+								{modelId}
+							{/if}
+						</div>
+					</div>
+				</Tooltip>
+			</div>
+		{/each}
+	</div>
 {:else}
-  <div class="text-gray-500 text-xs text-center py-2">
-    {$i18n.t('No models found')}
-  </div>
+	<div class="text-gray-500 text-xs text-center py-2">
+		{$i18n.t('No models found')}
+	</div>
 {/if}

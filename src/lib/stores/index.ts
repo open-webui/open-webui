@@ -28,17 +28,20 @@ export const USAGE_POOL: Writable<null | string[]> = writable(null);
 export const theme = writable('system');
 
 export const shortCodesToEmojis = writable(
-  Object.entries(emojiShortCodes).reduce((acc, [key, value]) => {
-    if (typeof value === 'string') {
-      acc[value] = key;
-    } else {
-      for (const v of value) {
-        acc[v] = key;
-      }
-    }
+	Object.entries(emojiShortCodes).reduce(
+		(acc, [key, value]) => {
+			if (typeof value === 'string') {
+				acc[value] = key;
+			} else {
+				for (const v of value) {
+					acc[v] = key;
+				}
+			}
 
-    return acc;
-  }, ({}) as Record<string, string>)
+			return acc;
+		},
+		{} as Record<string, string>
+	)
 );
 
 export const TTSWorker = writable(null);
@@ -82,132 +85,132 @@ export const playingNotificationSound = writable(false);
 export type Model = OpenAIModel | OllamaModel;
 
 type BaseModel = {
-  id: string;
-  name: string;
-  info?: ModelConfig;
-  owned_by: 'ollama' | 'openai' | 'arena';
+	id: string;
+	name: string;
+	info?: ModelConfig;
+	owned_by: 'ollama' | 'openai' | 'arena';
 };
 
 export interface OpenAIModel extends BaseModel {
-  owned_by: 'openai';
-  external: boolean;
-  source?: string;
+	owned_by: 'openai';
+	external: boolean;
+	source?: string;
 }
 
 export interface OllamaModel extends BaseModel {
-  owned_by: 'ollama';
-  details: OllamaModelDetails;
-  size: number;
-  description: string;
-  model: string;
-  modified_at: string;
-  digest: string;
-  ollama?: {
-    name?: string;
-    model?: string;
-    modified_at: string;
-    size?: number;
-    digest?: string;
-    details?: {
-      parent_model?: string;
-      format?: string;
-      family?: string;
-      families?: string[];
-      parameter_size?: string;
-      quantization_level?: string;
-    };
-    urls?: number[];
-  };
+	owned_by: 'ollama';
+	details: OllamaModelDetails;
+	size: number;
+	description: string;
+	model: string;
+	modified_at: string;
+	digest: string;
+	ollama?: {
+		name?: string;
+		model?: string;
+		modified_at: string;
+		size?: number;
+		digest?: string;
+		details?: {
+			parent_model?: string;
+			format?: string;
+			family?: string;
+			families?: string[];
+			parameter_size?: string;
+			quantization_level?: string;
+		};
+		urls?: number[];
+	};
 }
 
 type OllamaModelDetails = {
-  parent_model: string;
-  format: string;
-  family: string;
-  families: string[] | null;
-  parameter_size: string;
-  quantization_level: string;
+	parent_model: string;
+	format: string;
+	family: string;
+	families: string[] | null;
+	parameter_size: string;
+	quantization_level: string;
 };
 
 export type Settings = {
-  models?: string[];
-  conversationMode?: boolean;
-  speechAutoSend?: boolean;
-  responseAutoPlayback?: boolean;
-  audio?: AudioSettings;
-  showUsername?: boolean;
-  notificationEnabled?: boolean;
-  title?: TitleSettings;
-  splitLargeDeltas?: boolean;
-  chatDirection: 'LTR' | 'RTL';
+	models?: string[];
+	conversationMode?: boolean;
+	speechAutoSend?: boolean;
+	responseAutoPlayback?: boolean;
+	audio?: AudioSettings;
+	showUsername?: boolean;
+	notificationEnabled?: boolean;
+	title?: TitleSettings;
+	splitLargeDeltas?: boolean;
+	chatDirection: 'LTR' | 'RTL';
 
-  system?: string;
-  requestFormat?: string;
-  keepAlive?: string;
-  seed?: number;
-  temperature?: string;
-  repeat_penalty?: string;
-  top_k?: string;
-  top_p?: string;
-  num_ctx?: string;
-  num_batch?: string;
-  num_keep?: string;
-  options?: ModelOptions;
-  directConnections?: DirectConnectionsSettings;
-  prompts?: Prompt[];
-  documents?: Document[];
+	system?: string;
+	requestFormat?: string;
+	keepAlive?: string;
+	seed?: number;
+	temperature?: string;
+	repeat_penalty?: string;
+	top_k?: string;
+	top_p?: string;
+	num_ctx?: string;
+	num_batch?: string;
+	num_keep?: string;
+	options?: ModelOptions;
+	directConnections?: DirectConnectionsSettings;
+	prompts?: Prompt[];
+	documents?: Document[];
 };
 
 export type Connection = {
-  url: string,
-  key: string,
+	url: string;
+	key: string;
 };
 
 export type ConnectionConfig = {
-    enable: boolean;
-    prefixId: string;
-    modelIds: string[];
+	enable: boolean;
+	prefixId: string;
+	modelIds: string[];
 };
 
 export type DirectConnectionsSettings = {
-  ENABLE_OPENAI_API: boolean,
-  OPENAI_API_BASE_URLS: string[];
-  OPENAI_API_KEYS: string[];
-  OPENAI_API_CONFIGS: Record<string, ConnectionConfig>;
+	ENABLE_OPENAI_API: boolean;
+	OPENAI_API_BASE_URLS: string[];
+	OPENAI_API_KEYS: string[];
+	OPENAI_API_CONFIGS: Record<string, ConnectionConfig>;
 };
 
 type ModelOptions = {
-  stop?: boolean;
+	stop?: boolean;
 };
 
 type AudioSettings = {
-  STTEngine?: string;
-  TTSEngine?: string;
-  speaker?: string;
-  model?: string;
-  nonLocalVoices?: boolean;
+	STTEngine?: string;
+	TTSEngine?: string;
+	speaker?: string;
+	model?: string;
+	nonLocalVoices?: boolean;
 };
 
 type TitleSettings = {
-  auto?: boolean;
-  model?: string;
-  modelExternal?: string;
-  prompt?: string;
+	auto?: boolean;
+	model?: string;
+	modelExternal?: string;
+	prompt?: string;
 };
 
 type Prompt = {
-  command: string;
-  user_id: string;
-  title: string;
-  content: string;
-  timestamp: number;
+	command: string;
+	user_id: string;
+	title: string;
+	content: string;
+	timestamp: number;
 };
 
 type Document = {
-  collection_name: string;
-  filename: string;
-  name: string;
-  title: string;
+	collection_name: string;
+	filename: string;
+	name: string;
+	title: string;
 };
 
 type Config = {
@@ -240,16 +243,16 @@ type Config = {
 };
 
 type PromptSuggestion = {
-  content: string;
-  title: [string, string];
+	content: string;
+	title: [string, string];
 };
 
 type SessionUser = {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  profile_image_url: string;
-  // TODO: define permissions schema
-  permissions: Record<string, unknown>;
+	id: string;
+	email: string;
+	name: string;
+	role: string;
+	profile_image_url: string;
+	// TODO: define permissions schema
+	permissions: Record<string, unknown>;
 };

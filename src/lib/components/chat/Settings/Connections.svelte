@@ -26,7 +26,7 @@
 	let { saveSettings }: Props = $props();
 
 	let config = $state<DirectConnectionsSettingsType>({
-    ENABLE_OPENAI_API: true,
+		ENABLE_OPENAI_API: true,
 		OPENAI_API_BASE_URLS: [],
 		OPENAI_API_KEYS: [],
 		OPENAI_API_CONFIGS: {}
@@ -89,10 +89,10 @@
 
 <form
 	class="flex flex-col h-full justify-between text-sm"
-	onsubmitcapture={((e) => {
-    e.preventDefault()
-		updateHandler()
-	})}
+	onsubmitcapture={(e) => {
+		e.preventDefault();
+		updateHandler();
+	}}
 >
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
 		{#if config !== null}
@@ -105,10 +105,10 @@
 							<Tooltip content={$i18n.t(`Add Connection`)}>
 								<button
 									class="px-1"
-									type="button"
 									onclick={() => {
 										showConnectionModal = true;
 									}}
+									type="button"
 								>
 									<Plus />
 								</button>

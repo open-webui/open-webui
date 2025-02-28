@@ -1,116 +1,108 @@
 <script lang="ts">
-  import { Select } from 'bits-ui';
+	import { Select } from 'bits-ui';
 
-  import { flyAndScale } from '$lib/utils/transitions';
+	import { flyAndScale } from '$lib/utils/transitions';
 
-  import { createEventDispatcher } from 'svelte';
-  import ChevronDown from '../icons/ChevronDown.svelte';
-  import Check from '../icons/Check.svelte';
-  import Search from '../icons/Search.svelte';
+	import { createEventDispatcher } from 'svelte';
+	import ChevronDown from '../icons/ChevronDown.svelte';
+	import Check from '../icons/Check.svelte';
+	import Search from '../icons/Search.svelte';
 
-  const dispatch = createEventDispatcher();
+	const dispatch = createEventDispatcher();
 
+	interface Props {
+		value?: string;
+		placeholder?: string;
+		searchEnabled?: boolean;
+		searchPlaceholder?: string;
+		items?: any;
+		children?: import('svelte').Snippet;
+	}
 
-  interface Props {
-    value?: string;
-    placeholder?: string;
-    searchEnabled?: boolean;
-    searchPlaceholder?: string;
-    items?: any;
-    children?: import('svelte').Snippet;
-  }
+	let {
+		value = $bindable(''),
+		placeholder = 'Select a model',
+		searchEnabled = true,
+		searchPlaceholder = 'Search a model',
+		items = [
+			{ value: 'mango', label: 'Mango' },
+			{ value: 'watermelon', label: 'Watermelon' },
+			{ value: 'apple', label: 'Apple' },
+			{ value: 'pineapple', label: 'Pineapple' },
+			{ value: 'orange', label: 'Orange' }
+		],
+		children
+	}: Props = $props();
 
-  let {
-    value = $bindable(''),
-    placeholder = 'Select a model',
-    searchEnabled = true,
-    searchPlaceholder = 'Search a model',
-    items = [
-    { value: 'mango', label: 'Mango' },
-    { value: 'watermelon', label: 'Watermelon' },
-    { value: 'apple', label: 'Apple' },
-    { value: 'pineapple', label: 'Pineapple' },
-    { value: 'orange', label: 'Orange' }
-  ],
-    children
-  }: Props = $props();
+	let searchValue = $state('');
 
-  let searchValue = $state('');
-
-  let filteredItems = $derived(searchValue
-    ? items.filter((item) => item.value.toLowerCase().includes(searchValue.toLowerCase()))
-    : items);
+	let filteredItems = $derived(
+		searchValue
+			? items.filter((item) => item.value.toLowerCase().includes(searchValue.toLowerCase()))
+			: items
+	);
 </script>
 
 <Select.Root
-  {items}
-  onOpenChange={() => {
-    searchValue = '';
-  }}
-  onSelectedChange={(selectedItem) => {
-    value = selectedItem.value;
-  }}
-  selected={items.find((item) => item.value === value)}
+	{items}
+	onOpenChange={() => {
+		searchValue = '';
+	}}
+	onSelectedChange={(selectedItem) => {
+		value = selectedItem.value;
+	}}
+	selected={items.find((item) => item.value === value)}
 >
-  <Select.Trigger
-    class="relative w-full"
-    aria-label={placeholder}
-  >
-    <Select.Value
-      class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate text-lg font-semibold placeholder-gray-400  focus:outline-hidden"
-      {placeholder}
-    />
-    <ChevronDown
-      className="absolute end-2 top-1/2 -translate-y-[45%] size-3.5"
-      strokeWidth="2.5"
-    />
-  </Select.Trigger>
-  <Select.Content
-    class="w-full rounded-lg  bg-white dark:bg-gray-900 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/40  outline-hidden"
-    sideOffset={4}
-    transition={flyAndScale}
-  >
-    {#if children}{@render children()}{:else}
-      {#if searchEnabled}
-        <div class="flex items-center gap-2.5 px-5 mt-3.5 mb-3">
-          <Search
-            className="size-4"
-            strokeWidth="2.5"
-          />
+	<Select.Trigger class="relative w-full" aria-label={placeholder}>
+		<Select.Value
+			class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate text-lg font-semibold placeholder-gray-400  focus:outline-hidden"
+			{placeholder}
+		/>
+		<ChevronDown className="absolute end-2 top-1/2 -translate-y-[45%] size-3.5" strokeWidth="2.5" />
+	</Select.Trigger>
+	<Select.Content
+		class="w-full rounded-lg  bg-white dark:bg-gray-900 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/40  outline-hidden"
+		sideOffset={4}
+		transition={flyAndScale}
+	>
+		{#if children}{@render children()}{:else}
+			{#if searchEnabled}
+				<div class="flex items-center gap-2.5 px-5 mt-3.5 mb-3">
+					<Search className="size-4" strokeWidth="2.5" />
 
-          <input
-            class="w-full text-sm bg-transparent outline-hidden"
-            placeholder={searchPlaceholder}
-            bind:value={searchValue}
-          />
-        </div>
+					<input
+						class="w-full text-sm bg-transparent outline-hidden"
+						placeholder={searchPlaceholder}
+						bind:value={searchValue}
+					/>
+				</div>
 
-        <hr class="border-gray-100 dark:border-gray-850" />
-      {/if}
+				<hr class="border-gray-100 dark:border-gray-850" />
+			{/if}
 
-      <div class="px-3 my-2 max-h-80 overflow-y-auto">
-        {#each filteredItems as item}
-          <Select.Item
-            class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm  text-gray-700 dark:text-gray-100  outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg cursor-pointer data-highlighted:bg-muted"
-            label={item.label}
-            value={item.value}
-          >
-            {item.label}
+			<div class="px-3 my-2 max-h-80 overflow-y-auto">
+				{#each filteredItems as item}
+					<Select.Item
+						class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm  text-gray-700 dark:text-gray-100  outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg cursor-pointer data-highlighted:bg-muted"
+						label={item.label}
+						value={item.value}
+					>
+						{item.label}
 
-            {#if value === item.value}
-              <div class="ml-auto">
-                <Check />
-              </div>
-            {/if}
-          </Select.Item>
-        {:else}
-          <div>
-            <div class="block px-5 py-2 text-sm text-gray-700 dark:text-gray-100">
-              No results found
-            </div>
-          </div>
-        {/each}
-      </div>
-    {/if}
-  </Select.Content>
+						{#if value === item.value}
+							<div class="ml-auto">
+								<Check />
+							</div>
+						{/if}
+					</Select.Item>
+				{:else}
+					<div>
+						<div class="block px-5 py-2 text-sm text-gray-700 dark:text-gray-100">
+							No results found
+						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</Select.Content>
 </Select.Root>

@@ -1,188 +1,188 @@
 <script lang="ts">
-  import { toast } from 'svelte-sonner';
+	import { toast } from 'svelte-sonner';
 
-  import { goto } from '$app/navigation';
-  import { onMount, tick, getContext } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { onMount, tick, getContext } from 'svelte';
 
-  import { WEBUI_BASE_URL } from '$lib/constants';
-  import { WEBUI_NAME, config, user, models, settings, showSidebar } from '$lib/stores';
-  import { chatCompletion } from '$lib/apis/openai';
+	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_NAME, config, user, models, settings, showSidebar } from '$lib/stores';
+	import { chatCompletion } from '$lib/apis/openai';
 
-  import { splitStream } from '$lib/utils';
-  import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
-  import MenuLines from '../icons/MenuLines.svelte';
+	import { splitStream } from '$lib/utils';
+	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
+	import MenuLines from '../icons/MenuLines.svelte';
 
-  const i18n = getContext('i18n');
+	const i18n = getContext('i18n');
 
-  let loaded = false;
-  let text = $state('');
+	let loaded = false;
+	let text = $state('');
 
-  let selectedModelId = $state('');
+	let selectedModelId = $state('');
 
-  let loading = $state(false);
-  let stopResponseFlag = false;
+	let loading = $state(false);
+	let stopResponseFlag = false;
 
-  let textCompletionAreaElement: HTMLTextAreaElement = $state();
+	let textCompletionAreaElement: HTMLTextAreaElement = $state();
 
-  const scrollToBottom = () => {
-    const element = textCompletionAreaElement;
+	const scrollToBottom = () => {
+		const element = textCompletionAreaElement;
 
-    if (element) {
-      element.scrollTop = element?.scrollHeight;
-    }
-  };
+		if (element) {
+			element.scrollTop = element?.scrollHeight;
+		}
+	};
 
-  const stopResponse = () => {
-    stopResponseFlag = true;
-    console.log('stopResponse');
-  };
+	const stopResponse = () => {
+		stopResponseFlag = true;
+		console.log('stopResponse');
+	};
 
-  const textCompletionHandler = async () => {
-    const model = $models.find((model) => model.id === selectedModelId);
+	const textCompletionHandler = async () => {
+		const model = $models.find((model) => model.id === selectedModelId);
 
-    const [res, controller] = await chatCompletion(
-      localStorage.token,
-      {
-        model: model.id,
-        stream: true,
-        messages: [
-          {
-            role: 'assistant',
-            content: text
-          }
-        ]
-      },
-      `${WEBUI_BASE_URL}/api`
-    );
+		const [res, controller] = await chatCompletion(
+			localStorage.token,
+			{
+				model: model.id,
+				stream: true,
+				messages: [
+					{
+						role: 'assistant',
+						content: text
+					}
+				]
+			},
+			`${WEBUI_BASE_URL}/api`
+		);
 
-    if (res && res.ok) {
-      const reader = res.body
-        .pipeThrough(new TextDecoderStream())
-        .pipeThrough(splitStream('\n'))
-        .getReader();
+		if (res && res.ok) {
+			const reader = res.body
+				.pipeThrough(new TextDecoderStream())
+				.pipeThrough(splitStream('\n'))
+				.getReader();
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done || stopResponseFlag) {
-          if (stopResponseFlag) {
-            controller.abort('User: Stop Response');
-          }
-          break;
-        }
+			while (true) {
+				const { value, done } = await reader.read();
+				if (done || stopResponseFlag) {
+					if (stopResponseFlag) {
+						controller.abort('User: Stop Response');
+					}
+					break;
+				}
 
-        try {
-          let lines = value.split('\n');
+				try {
+					let lines = value.split('\n');
 
-          for (const line of lines) {
-            if (line !== '') {
-              if (line.includes('[DONE]')) {
-                console.log('done');
-              } else {
-                let data = JSON.parse(line.replace(/^data: /, ''));
-                console.log(data);
+					for (const line of lines) {
+						if (line !== '') {
+							if (line.includes('[DONE]')) {
+								console.log('done');
+							} else {
+								let data = JSON.parse(line.replace(/^data: /, ''));
+								console.log(data);
 
-                text += data.choices[0].delta.content ?? '';
-              }
-            }
-          }
-        } catch (error) {
-          console.log(error);
-        }
+								text += data.choices[0].delta.content ?? '';
+							}
+						}
+					}
+				} catch (error) {
+					console.log(error);
+				}
 
-        scrollToBottom();
-      }
-    }
-  };
+				scrollToBottom();
+			}
+		}
+	};
 
-  const submitHandler = async () => {
-    if (selectedModelId) {
-      loading = true;
-      await textCompletionHandler();
+	const submitHandler = async () => {
+		if (selectedModelId) {
+			loading = true;
+			await textCompletionHandler();
 
-      loading = false;
-      stopResponseFlag = false;
-    }
-  };
+			loading = false;
+			stopResponseFlag = false;
+		}
+	};
 
-  onMount(async () => {
-    if ($user?.role !== 'admin') {
-      await goto('/');
-    }
+	onMount(async () => {
+		if ($user?.role !== 'admin') {
+			await goto('/');
+		}
 
-    if ($settings?.models) {
-      selectedModelId = $settings?.models[0];
-    } else if ($config?.default_models) {
-      selectedModelId = $config?.default_models.split(',')[0];
-    } else {
-      selectedModelId = '';
-    }
-    loaded = true;
-  });
+		if ($settings?.models) {
+			selectedModelId = $settings?.models[0];
+		} else if ($config?.default_models) {
+			selectedModelId = $config?.default_models.split(',')[0];
+		} else {
+			selectedModelId = '';
+		}
+		loaded = true;
+	});
 </script>
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
-  <div class="mx-auto w-full md:px-0 h-full">
-    <div class=" flex flex-col h-full px-4">
-      <div class="flex flex-col justify-between mb-1 gap-1">
-        <div class="flex flex-col gap-1 w-full">
-          <div class="flex w-full">
-            <div class="overflow-hidden w-full">
-              <div class="max-w-full">
-                <Selector
-                  items={$models.map((model) => ({
-                    value: model.id,
-                    label: model.name,
-                    model: model
-                  }))}
-                  placeholder={$i18n.t('Select a model')}
-                  bind:value={selectedModelId}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+	<div class="mx-auto w-full md:px-0 h-full">
+		<div class=" flex flex-col h-full px-4">
+			<div class="flex flex-col justify-between mb-1 gap-1">
+				<div class="flex flex-col gap-1 w-full">
+					<div class="flex w-full">
+						<div class="overflow-hidden w-full">
+							<div class="max-w-full">
+								<Selector
+									items={$models.map((model) => ({
+										value: model.id,
+										label: model.name,
+										model: model
+									}))}
+									placeholder={$i18n.t('Select a model')}
+									bind:value={selectedModelId}
+								/>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
 
-      <div
-        id="messages-container"
-        class=" pt-0.5 pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
-      >
-        <div class=" h-full w-full flex flex-col">
-          <div class="flex-1">
-            <textarea
-              bind:this={textCompletionAreaElement}
-              id="text-completion-textarea"
-              class="w-full h-full p-3 bg-transparent border border-gray-100 dark:border-gray-850 outline-hidden resize-none rounded-lg text-sm"
-              placeholder={$i18n.t("You're a helpful assistant.")}
-              bind:value={text}
-></textarea>
-          </div>
-        </div>
-      </div>
+			<div
+				id="messages-container"
+				class=" pt-0.5 pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0"
+			>
+				<div class=" h-full w-full flex flex-col">
+					<div class="flex-1">
+						<textarea
+							bind:this={textCompletionAreaElement}
+							id="text-completion-textarea"
+							class="w-full h-full p-3 bg-transparent border border-gray-100 dark:border-gray-850 outline-hidden resize-none rounded-lg text-sm"
+							placeholder={$i18n.t("You're a helpful assistant.")}
+							bind:value={text}
+						></textarea>
+					</div>
+				</div>
+			</div>
 
-      <div class="pb-3 flex justify-end">
-        {#if !loading}
-          <button
-            class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-            onclick={() => {
-              submitHandler();
-            }}
-          >
-            {$i18n.t('Run')}
-          </button>
-        {:else}
-          <button
-            class="px-3 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-full"
-            onclick={() => {
-              stopResponse();
-            }}
-          >
-            {$i18n.t('Cancel')}
-          </button>
-        {/if}
-      </div>
-    </div>
-  </div>
+			<div class="pb-3 flex justify-end">
+				{#if !loading}
+					<button
+						class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+						onclick={() => {
+							submitHandler();
+						}}
+					>
+						{$i18n.t('Run')}
+					</button>
+				{:else}
+					<button
+						class="px-3 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-full"
+						onclick={() => {
+							stopResponse();
+						}}
+					>
+						{$i18n.t('Cancel')}
+					</button>
+				{/if}
+			</div>
+		</div>
+	</div>
 </div>
 
 <style>

@@ -1,32 +1,35 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+	import { onMount } from 'svelte';
 
-  interface Props {
-    imageUrls?: any;
-    duration?: number;
-  }
+	interface Props {
+		imageUrls?: any;
+		duration?: number;
+	}
 
-  let { imageUrls = [
-    '/assets/images/adam.jpg',
-    '/assets/images/galaxy.jpg',
-    '/assets/images/earth.jpg',
-    '/assets/images/space.jpg'
-  ], duration = 5000 }: Props = $props();
-  let selectedImageIdx = $state(0);
+	let {
+		imageUrls = [
+			'/assets/images/adam.jpg',
+			'/assets/images/galaxy.jpg',
+			'/assets/images/earth.jpg',
+			'/assets/images/space.jpg'
+		],
+		duration = 5000
+	}: Props = $props();
+	let selectedImageIdx = $state(0);
 
-  onMount(() => {
-    setInterval(() => {
-      selectedImageIdx = (selectedImageIdx + 1) % (imageUrls.length - 1);
-    }, duration);
-  });
+	onMount(() => {
+		setInterval(() => {
+			selectedImageIdx = (selectedImageIdx + 1) % (imageUrls.length - 1);
+		}, duration);
+	});
 </script>
 
 {#each imageUrls as imageUrl, idx (idx)}
-  <div
-    style:opacity={selectedImageIdx === idx ? 1 : 0}
-    style:background-image="url('{imageUrl}')"
-    class="image w-full h-full absolute top-0 left-0 bg-cover bg-center transition-opacity duration-1000"
-></div>
+	<div
+		style:opacity={selectedImageIdx === idx ? 1 : 0}
+		style:background-image="url('{imageUrl}')"
+		class="image w-full h-full absolute top-0 left-0 bg-cover bg-center transition-opacity duration-1000"
+	></div>
 {/each}
 
 <style>

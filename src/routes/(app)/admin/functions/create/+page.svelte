@@ -1,103 +1,103 @@
 <script>
-  import { toast } from 'svelte-sonner';
-  import { onMount, getContext } from 'svelte';
-  import { goto } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
+	import { onMount, getContext } from 'svelte';
+	import { goto } from '$app/navigation';
 
-  import { config, functions, models, settings } from '$lib/stores';
-  import { createNewFunction, getFunctions } from '$lib/apis/functions';
-  import FunctionEditor from '$lib/components/admin/Functions/FunctionEditor.svelte';
-  import { getModels } from '$lib/apis';
-  import { compareVersion, extractFrontmatter } from '$lib/utils';
-  import { WEBUI_VERSION } from '$lib/constants';
+	import { config, functions, models, settings } from '$lib/stores';
+	import { createNewFunction, getFunctions } from '$lib/apis/functions';
+	import FunctionEditor from '$lib/components/admin/Functions/FunctionEditor.svelte';
+	import { getModels } from '$lib/apis';
+	import { compareVersion, extractFrontmatter } from '$lib/utils';
+	import { WEBUI_VERSION } from '$lib/constants';
 
-  const i18n = getContext('i18n');
+	const i18n = getContext('i18n');
 
-  let mounted = $state(false);
-  let clone = $state(false);
-  let func = $state(null);
+	let mounted = $state(false);
+	let clone = $state(false);
+	let func = $state(null);
 
-  const saveHandler = async (data) => {
-    console.log(data);
+	const saveHandler = async (data) => {
+		console.log(data);
 
-    const manifest = extractFrontmatter(data.content);
-    if (compareVersion(manifest?.required_open_webui_version ?? '0.0.0', WEBUI_VERSION)) {
-      console.log('Version is lower than required');
-      toast.error(
-        $i18n.t(
-          'Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})',
-          {
-            OPEN_WEBUI_VERSION: WEBUI_VERSION,
-            REQUIRED_VERSION: manifest?.required_open_webui_version ?? '0.0.0'
-          }
-        )
-      );
-      return;
-    }
+		const manifest = extractFrontmatter(data.content);
+		if (compareVersion(manifest?.required_open_webui_version ?? '0.0.0', WEBUI_VERSION)) {
+			console.log('Version is lower than required');
+			toast.error(
+				$i18n.t(
+					'Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})',
+					{
+						OPEN_WEBUI_VERSION: WEBUI_VERSION,
+						REQUIRED_VERSION: manifest?.required_open_webui_version ?? '0.0.0'
+					}
+				)
+			);
+			return;
+		}
 
-    const res = await createNewFunction(localStorage.token, {
-      id: data.id,
-      name: data.name,
-      meta: data.meta,
-      content: data.content
-    }).catch((error) => {
-      toast.error(`${error}`);
-      return null;
-    });
+		const res = await createNewFunction(localStorage.token, {
+			id: data.id,
+			name: data.name,
+			meta: data.meta,
+			content: data.content
+		}).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
 
-    if (res) {
-      toast.success($i18n.t('Function created successfully'));
-      functions.set(await getFunctions(localStorage.token));
-      models.set(
-        await getModels(
-          localStorage.token,
-          $config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-        )
-      );
+		if (res) {
+			toast.success($i18n.t('Function created successfully'));
+			functions.set(await getFunctions(localStorage.token));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 
-      await goto('/admin/functions');
-    }
-  };
+			await goto('/admin/functions');
+		}
+	};
 
-  onMount(() => {
-    window.addEventListener('message', async (event) => {
-      if (
-        !['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
-          event.origin
-        )
-      )
-        return;
+	onMount(() => {
+		window.addEventListener('message', async (event) => {
+			if (
+				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:9999'].includes(
+					event.origin
+				)
+			)
+				return;
 
-      func = JSON.parse(event.data);
-      console.log(func);
-    });
+			func = JSON.parse(event.data);
+			console.log(func);
+		});
 
-    if (window.opener ?? false) {
-      window.opener.postMessage('loaded', '*');
-    }
+		if (window.opener ?? false) {
+			window.opener.postMessage('loaded', '*');
+		}
 
-    if (sessionStorage.function) {
-      func = JSON.parse(sessionStorage.function);
-      sessionStorage.removeItem('function');
+		if (sessionStorage.function) {
+			func = JSON.parse(sessionStorage.function);
+			sessionStorage.removeItem('function');
 
-      console.log(func);
-      clone = true;
-    }
+			console.log(func);
+			clone = true;
+		}
 
-    mounted = true;
-  });
+		mounted = true;
+	});
 </script>
 
 {#if mounted}
-  {#key func?.content}
-    <FunctionEditor
-      id={func?.id ?? ''}
-      name={func?.name ?? ''}
-      {clone}
-      content={func?.content ?? ''}
-      meta={func?.meta ?? { description: '' }}
-      onSave={(value) => {
-        saveHandler(value);
-      }}
-    />
-  {/key}
+	{#key func?.content}
+		<FunctionEditor
+			id={func?.id ?? ''}
+			name={func?.name ?? ''}
+			{clone}
+			content={func?.content ?? ''}
+			meta={func?.meta ?? { description: '' }}
+			onSave={(value) => {
+				saveHandler(value);
+			}}
+		/>
+	{/key}
 {/if}

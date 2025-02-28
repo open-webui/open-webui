@@ -1,304 +1,299 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
+	import { run } from 'svelte/legacy';
 
-  import { SvelteFlowProvider } from '@xyflow/svelte';
-  import { slide } from 'svelte/transition';
-  import { Pane, PaneResizer } from 'paneforge';
+	import { SvelteFlowProvider } from '@xyflow/svelte';
+	import { slide } from 'svelte/transition';
+	import { Pane, PaneResizer } from 'paneforge';
 
-  import { onDestroy, onMount, tick } from 'svelte';
-  import { mobile, showControls, showCallOverlay, showOverview, showArtifacts } from '$lib/stores';
+	import { onDestroy, onMount, tick } from 'svelte';
+	import { mobile, showControls, showCallOverlay, showOverview, showArtifacts } from '$lib/stores';
 
-  import Modal from '../common/Modal.svelte';
-  import Controls from './Controls/Controls.svelte';
-  import CallOverlay from './MessageInput/CallOverlay.svelte';
-  import Drawer from '../common/Drawer.svelte';
-  import Overview from './Overview.svelte';
-  import EllipsisVertical from '../icons/EllipsisVertical.svelte';
-  import Artifacts from './Artifacts.svelte';
-  import { min } from '@floating-ui/utils';
+	import Modal from '../common/Modal.svelte';
+	import Controls from './Controls/Controls.svelte';
+	import CallOverlay from './MessageInput/CallOverlay.svelte';
+	import Drawer from '../common/Drawer.svelte';
+	import Overview from './Overview.svelte';
+	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
+	import Artifacts from './Artifacts.svelte';
+	import { min } from '@floating-ui/utils';
 
+	interface Props {
+		history: any;
+		models?: any;
+		chatId?: any;
+		chatFiles?: any;
+		params?: any;
+		eventTarget: EventTarget;
+		submitPrompt: Function;
+		stopResponse: Function;
+		showMessage: Function;
+		files: any;
+		modelId: any;
+		pane: any;
+	}
 
+	let {
+		history = $bindable(),
+		models = [],
+		chatId = null,
+		chatFiles = $bindable([]),
+		params = $bindable({}),
+		eventTarget,
+		submitPrompt,
+		stopResponse,
+		showMessage,
+		files = $bindable(),
+		modelId,
+		pane = $bindable()
+	}: Props = $props();
 
+	let mediaQuery;
+	let largeScreen = $state(false);
+	let dragged = $state(false);
 
+	let minSize = $state(0);
 
-  interface Props {
-    history: any;
-    models?: any;
-    chatId?: any;
-    chatFiles?: any;
-    params?: any;
-    eventTarget: EventTarget;
-    submitPrompt: Function;
-    stopResponse: Function;
-    showMessage: Function;
-    files: any;
-    modelId: any;
-    pane: any;
-  }
+	export const openPane = () => {
+		if (parseInt(localStorage?.chatControlsSize)) {
+			pane.resize(parseInt(localStorage?.chatControlsSize));
+		} else {
+			pane.resize(minSize);
+		}
+	};
 
-  let {
-    history = $bindable(),
-    models = [],
-    chatId = null,
-    chatFiles = $bindable([]),
-    params = $bindable({}),
-    eventTarget,
-    submitPrompt,
-    stopResponse,
-    showMessage,
-    files = $bindable(),
-    modelId,
-    pane = $bindable()
-  }: Props = $props();
+	const handleMediaQuery = async (e) => {
+		if (e.matches) {
+			largeScreen = true;
 
-  let mediaQuery;
-  let largeScreen = $state(false);
-  let dragged = $state(false);
+			if ($showCallOverlay) {
+				showCallOverlay.set(false);
+				await tick();
+				showCallOverlay.set(true);
+			}
+		} else {
+			largeScreen = false;
 
-  let minSize = $state(0);
+			if ($showCallOverlay) {
+				showCallOverlay.set(false);
+				await tick();
+				showCallOverlay.set(true);
+			}
+			pane = null;
+		}
+	};
 
-  export const openPane = () => {
-    if (parseInt(localStorage?.chatControlsSize)) {
-      pane.resize(parseInt(localStorage?.chatControlsSize));
-    } else {
-      pane.resize(minSize);
-    }
-  };
+	const onMouseDown = (event) => {
+		dragged = true;
+	};
 
-  const handleMediaQuery = async (e) => {
-    if (e.matches) {
-      largeScreen = true;
+	const onMouseUp = (event) => {
+		dragged = false;
+	};
 
-      if ($showCallOverlay) {
-        showCallOverlay.set(false);
-        await tick();
-        showCallOverlay.set(true);
-      }
-    } else {
-      largeScreen = false;
+	onMount(() => {
+		// listen to resize 1024px
+		mediaQuery = window.matchMedia('(min-width: 1024px)');
 
-      if ($showCallOverlay) {
-        showCallOverlay.set(false);
-        await tick();
-        showCallOverlay.set(true);
-      }
-      pane = null;
-    }
-  };
+		mediaQuery.addEventListener('change', handleMediaQuery);
+		handleMediaQuery(mediaQuery);
 
-  const onMouseDown = (event) => {
-    dragged = true;
-  };
+		// Select the container element you want to observe
+		const container = document.getElementById('chat-container');
 
-  const onMouseUp = (event) => {
-    dragged = false;
-  };
+		// initialize the minSize based on the container width
+		minSize = Math.floor((350 / container.clientWidth) * 100);
 
-  onMount(() => {
-    // listen to resize 1024px
-    mediaQuery = window.matchMedia('(min-width: 1024px)');
+		// Create a new ResizeObserver instance
+		const resizeObserver = new ResizeObserver((entries) => {
+			for (let entry of entries) {
+				const width = entry.contentRect.width;
+				// calculate the percentage of 200px
+				const percentage = (350 / width) * 100;
+				// set the minSize to the percentage, must be an integer
+				minSize = Math.floor(percentage);
 
-    mediaQuery.addEventListener('change', handleMediaQuery);
-    handleMediaQuery(mediaQuery);
+				if ($showControls) {
+					if (pane && pane.isExpanded() && pane.getSize() < minSize) {
+						pane.resize(minSize);
+					}
+				}
+			}
+		});
 
-    // Select the container element you want to observe
-    const container = document.getElementById('chat-container');
+		// Start observing the container's size changes
+		resizeObserver.observe(container);
 
-    // initialize the minSize based on the container width
-    minSize = Math.floor((350 / container.clientWidth) * 100);
+		document.addEventListener('mousedown', onMouseDown);
+		document.addEventListener('mouseup', onMouseUp);
+	});
 
-    // Create a new ResizeObserver instance
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (let entry of entries) {
-        const width = entry.contentRect.width;
-        // calculate the percentage of 200px
-        const percentage = (350 / width) * 100;
-        // set the minSize to the percentage, must be an integer
-        minSize = Math.floor(percentage);
+	onDestroy(() => {
+		showControls.set(false);
 
-        if ($showControls) {
-          if (pane && pane.isExpanded() && pane.getSize() < minSize) {
-            pane.resize(minSize);
-          }
-        }
-      }
-    });
+		mediaQuery.removeEventListener('change', handleMediaQuery);
+		document.removeEventListener('mousedown', onMouseDown);
+		document.removeEventListener('mouseup', onMouseUp);
+	});
 
-    // Start observing the container's size changes
-    resizeObserver.observe(container);
+	const closeHandler = () => {
+		showControls.set(false);
+		showOverview.set(false);
+		showArtifacts.set(false);
 
-    document.addEventListener('mousedown', onMouseDown);
-    document.addEventListener('mouseup', onMouseUp);
-  });
+		if ($showCallOverlay) {
+			showCallOverlay.set(false);
+		}
+	};
 
-  onDestroy(() => {
-    showControls.set(false);
-
-    mediaQuery.removeEventListener('change', handleMediaQuery);
-    document.removeEventListener('mousedown', onMouseDown);
-    document.removeEventListener('mouseup', onMouseUp);
-  });
-
-  const closeHandler = () => {
-    showControls.set(false);
-    showOverview.set(false);
-    showArtifacts.set(false);
-
-    if ($showCallOverlay) {
-      showCallOverlay.set(false);
-    }
-  };
-
-  run(() => {
-    if (!chatId) {
-      closeHandler();
-    }
-  });
+	run(() => {
+		if (!chatId) {
+			closeHandler();
+		}
+	});
 </script>
 
 <SvelteFlowProvider>
-  {#if !largeScreen}
-    {#if $showControls}
-      <Drawer
-        show={$showControls}
-        on:close={() => {
-          showControls.set(false);
-        }}
-      >
-        <div
-          class=" {$showCallOverlay || $showOverview || $showArtifacts
-            ? ' h-screen  w-full'
-            : 'px-6 py-4'} h-full"
-        >
-          {#if $showCallOverlay}
-            <div class=" h-full max-h-[100dvh] bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center">
-              <CallOverlay
-                {chatId}
-                {eventTarget}
-                {modelId}
-                {stopResponse}
-                {submitPrompt}
-                bind:files
-                on:close={() => {
-                  showControls.set(false);
-                }}
-              />
-            </div>
-          {:else if $showArtifacts}
-            <Artifacts {history} />
-          {:else if $showOverview}
-            <Overview
-              {history}
-              on:nodeclick={(e) => {
-                showMessage(e.detail.node.data.message);
-              }}
-              on:close={() => {
-                showControls.set(false);
-              }}
-            />
-          {:else}
-            <Controls
-              {models}
-              on:close={() => {
-                showControls.set(false);
-              }}
-              bind:chatFiles
-              bind:params
-            />
-          {/if}
-        </div>
-      </Drawer>
-    {/if}
-  {:else}
-    <!-- if $showControls -->
+	{#if !largeScreen}
+		{#if $showControls}
+			<Drawer
+				show={$showControls}
+				on:close={() => {
+					showControls.set(false);
+				}}
+			>
+				<div
+					class=" {$showCallOverlay || $showOverview || $showArtifacts
+						? ' h-screen  w-full'
+						: 'px-6 py-4'} h-full"
+				>
+					{#if $showCallOverlay}
+						<div
+							class=" h-full max-h-[100dvh] bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
+						>
+							<CallOverlay
+								{chatId}
+								{eventTarget}
+								{modelId}
+								{stopResponse}
+								{submitPrompt}
+								bind:files
+								on:close={() => {
+									showControls.set(false);
+								}}
+							/>
+						</div>
+					{:else if $showArtifacts}
+						<Artifacts {history} />
+					{:else if $showOverview}
+						<Overview
+							{history}
+							on:nodeclick={(e) => {
+								showMessage(e.detail.node.data.message);
+							}}
+							on:close={() => {
+								showControls.set(false);
+							}}
+						/>
+					{:else}
+						<Controls
+							{models}
+							on:close={() => {
+								showControls.set(false);
+							}}
+							bind:chatFiles
+							bind:params
+						/>
+					{/if}
+				</div>
+			</Drawer>
+		{/if}
+	{:else}
+		<!-- if $showControls -->
 
-    {#if $showControls}
-      <PaneResizer class="relative flex w-2 items-center justify-center bg-background group">
-        <div class="z-10 flex h-7 w-5 items-center justify-center rounded-xs">
-          <EllipsisVertical className="size-4 invisible group-hover:visible" />
-        </div>
-      </PaneResizer>
-    {/if}
+		{#if $showControls}
+			<PaneResizer class="relative flex w-2 items-center justify-center bg-background group">
+				<div class="z-10 flex h-7 w-5 items-center justify-center rounded-xs">
+					<EllipsisVertical className="size-4 invisible group-hover:visible" />
+				</div>
+			</PaneResizer>
+		{/if}
 
-    <Pane
-      class="pt-8"
-      collapsible={true}
-      defaultSize={0}
-      onCollapse={() => {
-        showControls.set(false);
-      }}
-      onResize={(size) => {
-        console.log('size', size, minSize);
+		<Pane
+			class="pt-8"
+			collapsible={true}
+			defaultSize={0}
+			onCollapse={() => {
+				showControls.set(false);
+			}}
+			onResize={(size) => {
+				console.log('size', size, minSize);
 
-        if ($showControls && pane.isExpanded()) {
-          if (size < minSize) {
-            pane.resize(minSize);
-          }
+				if ($showControls && pane.isExpanded()) {
+					if (size < minSize) {
+						pane.resize(minSize);
+					}
 
-          if (size < minSize) {
-            localStorage.chatControlsSize = 0;
-          } else {
-            localStorage.chatControlsSize = size;
-          }
-        }
-      }}
-      bind:pane
-    >
-      {#if $showControls}
-        <div class="pr-4 pb-8 flex max-h-full min-h-full">
-          <div
-            class="w-full {($showOverview || $showArtifacts) && !$showCallOverlay
-              ? ' '
-              : 'px-4 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-100 dark:border-gray-850'}  rounded-xl z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
-          >
-            {#if $showCallOverlay}
-              <div class="w-full h-full flex justify-center">
-                <CallOverlay
-                  {chatId}
-                  {eventTarget}
-                  {modelId}
-                  {stopResponse}
-                  {submitPrompt}
-                  bind:files
-                  on:close={() => {
-                    showControls.set(false);
-                  }}
-                />
-              </div>
-            {:else if $showArtifacts}
-              <Artifacts
-                {history}
-                overlay={dragged}
-              />
-            {:else if $showOverview}
-              <Overview
-                {history}
-                on:nodeclick={(e) => {
-                  if (e.detail.node.data.message.favorite) {
-                    history.messages[e.detail.node.data.message.id].favorite = true;
-                  } else {
-                    history.messages[e.detail.node.data.message.id].favorite = null;
-                  }
+					if (size < minSize) {
+						localStorage.chatControlsSize = 0;
+					} else {
+						localStorage.chatControlsSize = size;
+					}
+				}
+			}}
+			bind:pane
+		>
+			{#if $showControls}
+				<div class="pr-4 pb-8 flex max-h-full min-h-full">
+					<div
+						class="w-full {($showOverview || $showArtifacts) && !$showCallOverlay
+							? ' '
+							: 'px-4 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-100 dark:border-gray-850'}  rounded-xl z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
+					>
+						{#if $showCallOverlay}
+							<div class="w-full h-full flex justify-center">
+								<CallOverlay
+									{chatId}
+									{eventTarget}
+									{modelId}
+									{stopResponse}
+									{submitPrompt}
+									bind:files
+									on:close={() => {
+										showControls.set(false);
+									}}
+								/>
+							</div>
+						{:else if $showArtifacts}
+							<Artifacts {history} overlay={dragged} />
+						{:else if $showOverview}
+							<Overview
+								{history}
+								on:nodeclick={(e) => {
+									if (e.detail.node.data.message.favorite) {
+										history.messages[e.detail.node.data.message.id].favorite = true;
+									} else {
+										history.messages[e.detail.node.data.message.id].favorite = null;
+									}
 
-                  showMessage(e.detail.node.data.message);
-                }}
-                on:close={() => {
-                  showControls.set(false);
-                }}
-              />
-            {:else}
-              <Controls
-                {models}
-                on:close={() => {
-                  showControls.set(false);
-                }}
-                bind:chatFiles
-                bind:params
-              />
-            {/if}
-          </div>
-        </div>
-      {/if}
-    </Pane>
-  {/if}
+									showMessage(e.detail.node.data.message);
+								}}
+								on:close={() => {
+									showControls.set(false);
+								}}
+							/>
+						{:else}
+							<Controls
+								{models}
+								on:close={() => {
+									showControls.set(false);
+								}}
+								bind:chatFiles
+								bind:params
+							/>
+						{/if}
+					</div>
+				</div>
+			{/if}
+		</Pane>
+	{/if}
 </SvelteFlowProvider>

@@ -1,73 +1,73 @@
 <!-- @migration-task Error while migrating Svelte code: can't migrate `let _state = 'unchecked';` to `$state` because there's a variable named state.
      Rename the variable and try again or migrate by hand. -->
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte';
-  const dispatch = createEventDispatcher();
+	import { createEventDispatcher } from 'svelte';
+	const dispatch = createEventDispatcher();
 
-  export let state = 'unchecked';
-  export let indeterminate = false;
+	export let state = 'unchecked';
+	export let indeterminate = false;
 
-  let _state = 'unchecked';
+	let _state = 'unchecked';
 
-  $: _state = state;
+	$: _state = state;
 </script>
 
 <button
-  class=" outline -outline-offset-1 outline-[1.5px] outline-gray-200 dark:outline-gray-600 {state !==
-    'unchecked'
-    ? 'bg-black outline-black '
-    : 'hover:outline-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'} text-white transition-all rounded-sm inline-block w-3.5 h-3.5 relative"
-  type="button"
-  on:click={() => {
-    if (_state === 'unchecked') {
-      _state = 'checked';
-      dispatch('change', _state);
-    } else if (_state === 'checked') {
-      _state = 'unchecked';
-      if (!indeterminate) {
-        dispatch('change', _state);
-      }
-    } else if (indeterminate) {
-      _state = 'checked';
-      dispatch('change', _state);
-    }
-  }}
+	class=" outline -outline-offset-1 outline-[1.5px] outline-gray-200 dark:outline-gray-600 {state !==
+	'unchecked'
+		? 'bg-black outline-black '
+		: 'hover:outline-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'} text-white transition-all rounded-sm inline-block w-3.5 h-3.5 relative"
+	type="button"
+	on:click={() => {
+		if (_state === 'unchecked') {
+			_state = 'checked';
+			dispatch('change', _state);
+		} else if (_state === 'checked') {
+			_state = 'unchecked';
+			if (!indeterminate) {
+				dispatch('change', _state);
+			}
+		} else if (indeterminate) {
+			_state = 'checked';
+			dispatch('change', _state);
+		}
+	}}
 >
-  <div class="top-0 left-0 absolute w-full flex justify-center">
-    {#if _state === 'checked'}
-      <svg
-        class="w-3.5 h-3.5"
-        aria-hidden="true"
-        fill="none"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="m5 12 4.7 4.5 9.3-9"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="3"
-        />
-      </svg>
-    {:else if indeterminate}
-      <svg
-        class="w-3 h-3.5 text-gray-800 dark:text-white"
-        aria-hidden="true"
-        fill="none"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M5 12h14"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="3"
-        />
-      </svg>
-    {/if}
-  </div>
+	<div class="top-0 left-0 absolute w-full flex justify-center">
+		{#if _state === 'checked'}
+			<svg
+				class="w-3.5 h-3.5"
+				aria-hidden="true"
+				fill="none"
+				viewBox="0 0 24 24"
+				xmlns="http://www.w3.org/2000/svg"
+			>
+				<path
+					d="m5 12 4.7 4.5 9.3-9"
+					stroke="currentColor"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="3"
+				/>
+			</svg>
+		{:else if indeterminate}
+			<svg
+				class="w-3 h-3.5 text-gray-800 dark:text-white"
+				aria-hidden="true"
+				fill="none"
+				viewBox="0 0 24 24"
+				xmlns="http://www.w3.org/2000/svg"
+			>
+				<path
+					d="M5 12h14"
+					stroke="currentColor"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="3"
+				/>
+			</svg>
+		{/if}
+	</div>
 
-  <!-- {checked} -->
+	<!-- {checked} -->
 </button>

@@ -1,195 +1,192 @@
 <script lang="ts">
-  import { onDestroy, onMount, tick, getContext, createEventDispatcher } from 'svelte';
-  const i18n = getContext('i18n');
-  const dispatch = createEventDispatcher();
+	import { onDestroy, onMount, tick, getContext, createEventDispatcher } from 'svelte';
+	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
-  import Markdown from './Markdown.svelte';
-  import { chatId, mobile, showArtifacts, showControls, showOverview } from '$lib/stores';
-  import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
-  import { createMessagesList } from '$lib/utils';
+	import Markdown from './Markdown.svelte';
+	import { chatId, mobile, showArtifacts, showControls, showOverview } from '$lib/stores';
+	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
+	import { createMessagesList } from '$lib/utils';
 
+	interface Props {
+		id: any;
+		content: any;
+		history: any;
+		model?: any;
+		sources?: any;
+		save?: boolean;
+		floatingButtons?: boolean;
+		onSourceClick?: any;
+		onTaskClick?: any;
+		onAddMessages?: any;
+	}
 
+	let {
+		id,
+		content,
+		history,
+		model = null,
+		sources = null,
+		save = false,
+		floatingButtons = true,
+		onSourceClick = () => {},
+		onTaskClick = () => {},
+		onAddMessages = () => {}
+	}: Props = $props();
 
+	let contentContainerElement = $state();
 
-  interface Props {
-    id: any;
-    content: any;
-    history: any;
-    model?: any;
-    sources?: any;
-    save?: boolean;
-    floatingButtons?: boolean;
-    onSourceClick?: any;
-    onTaskClick?: any;
-    onAddMessages?: any;
-  }
+	let floatingButtonsElement = $state();
 
-  let {
-    id,
-    content,
-    history,
-    model = null,
-    sources = null,
-    save = false,
-    floatingButtons = true,
-    onSourceClick = () => {},
-    onTaskClick = () => {},
-    onAddMessages = () => {}
-  }: Props = $props();
+	const updateButtonPosition = (event) => {
+		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
+		if (
+			!contentContainerElement?.contains(event.target) &&
+			!buttonsContainerElement?.contains(event.target)
+		) {
+			closeFloatingButtons();
+			return;
+		}
 
-  let contentContainerElement = $state();
+		setTimeout(async () => {
+			await tick();
 
-  let floatingButtonsElement = $state();
+			if (!contentContainerElement?.contains(event.target)) return;
 
-  const updateButtonPosition = (event) => {
-    const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
-    if (
-      !contentContainerElement?.contains(event.target) &&
-      !buttonsContainerElement?.contains(event.target)
-    ) {
-      closeFloatingButtons();
-      return;
-    }
+			let selection = window.getSelection();
 
-    setTimeout(async () => {
-      await tick();
+			if (selection.toString().trim().length > 0) {
+				const range = selection.getRangeAt(0);
+				const rect = range.getBoundingClientRect();
 
-      if (!contentContainerElement?.contains(event.target)) return;
+				const parentRect = contentContainerElement.getBoundingClientRect();
 
-      let selection = window.getSelection();
+				// Adjust based on parent rect
+				const top = rect.bottom - parentRect.top;
+				const left = rect.left - parentRect.left;
 
-      if (selection.toString().trim().length > 0) {
-        const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
+				if (buttonsContainerElement) {
+					buttonsContainerElement.style.display = 'block';
 
-        const parentRect = contentContainerElement.getBoundingClientRect();
+					// Calculate space available on the right
+					const spaceOnRight = parentRect.width - left;
+					let halfScreenWidth = $mobile ? window.innerWidth / 2 : window.innerWidth / 3;
 
-        // Adjust based on parent rect
-        const top = rect.bottom - parentRect.top;
-        const left = rect.left - parentRect.left;
+					if (spaceOnRight < halfScreenWidth) {
+						const right = parentRect.right - rect.right;
+						buttonsContainerElement.style.right = `${right}px`;
+						buttonsContainerElement.style.left = 'auto'; // Reset left
+					} else {
+						// Enough space, position using 'left'
+						buttonsContainerElement.style.left = `${left}px`;
+						buttonsContainerElement.style.right = 'auto'; // Reset right
+					}
+					buttonsContainerElement.style.top = `${top + 5}px`; // +5 to add some spacing
+				}
+			} else {
+				closeFloatingButtons();
+			}
+		}, 0);
+	};
 
-        if (buttonsContainerElement) {
-          buttonsContainerElement.style.display = 'block';
+	const closeFloatingButtons = () => {
+		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
+		if (buttonsContainerElement) {
+			buttonsContainerElement.style.display = 'none';
+		}
 
-          // Calculate space available on the right
-          const spaceOnRight = parentRect.width - left;
-          let halfScreenWidth = $mobile ? window.innerWidth / 2 : window.innerWidth / 3;
+		if (floatingButtonsElement) {
+			floatingButtonsElement.closeHandler();
+		}
+	};
 
-          if (spaceOnRight < halfScreenWidth) {
-            const right = parentRect.right - rect.right;
-            buttonsContainerElement.style.right = `${right}px`;
-            buttonsContainerElement.style.left = 'auto'; // Reset left
-          } else {
-            // Enough space, position using 'left'
-            buttonsContainerElement.style.left = `${left}px`;
-            buttonsContainerElement.style.right = 'auto'; // Reset right
-          }
-          buttonsContainerElement.style.top = `${top + 5}px`; // +5 to add some spacing
-        }
-      } else {
-        closeFloatingButtons();
-      }
-    }, 0);
-  };
+	const keydownHandler = (e) => {
+		if (e.key === 'Escape') {
+			closeFloatingButtons();
+		}
+	};
 
-  const closeFloatingButtons = () => {
-    const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
-    if (buttonsContainerElement) {
-      buttonsContainerElement.style.display = 'none';
-    }
+	onMount(() => {
+		if (floatingButtons) {
+			contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
+			document.addEventListener('mouseup', updateButtonPosition);
+			document.addEventListener('keydown', keydownHandler);
+		}
+	});
 
-    if (floatingButtonsElement) {
-      floatingButtonsElement.closeHandler();
-    }
-  };
-
-  const keydownHandler = (e) => {
-    if (e.key === 'Escape') {
-      closeFloatingButtons();
-    }
-  };
-
-  onMount(() => {
-    if (floatingButtons) {
-      contentContainerElement?.addEventListener('mouseup', updateButtonPosition);
-      document.addEventListener('mouseup', updateButtonPosition);
-      document.addEventListener('keydown', keydownHandler);
-    }
-  });
-
-  onDestroy(() => {
-    if (floatingButtons) {
-      contentContainerElement?.removeEventListener('mouseup', updateButtonPosition);
-      document.removeEventListener('mouseup', updateButtonPosition);
-      document.removeEventListener('keydown', keydownHandler);
-    }
-  });
+	onDestroy(() => {
+		if (floatingButtons) {
+			contentContainerElement?.removeEventListener('mouseup', updateButtonPosition);
+			document.removeEventListener('mouseup', updateButtonPosition);
+			document.removeEventListener('keydown', keydownHandler);
+		}
+	});
 </script>
 
 <div bind:this={contentContainerElement}>
-  <Markdown
-    {id}
-    {content}
-    {model}
-    {save}
-    sourceIds={(sources ?? []).reduce((acc, s) => {
-      let ids = [];
-      s.document.forEach((document, index) => {
-        if (model?.info?.meta?.capabilities?.citations == false) {
-          ids.push('N/A');
-          return ids;
-        }
+	<Markdown
+		{id}
+		{content}
+		{model}
+		{save}
+		sourceIds={(sources ?? []).reduce((acc, s) => {
+			let ids = [];
+			s.document.forEach((document, index) => {
+				if (model?.info?.meta?.capabilities?.citations == false) {
+					ids.push('N/A');
+					return ids;
+				}
 
-        const metadata = s.metadata?.[index];
-        const id = metadata?.source ?? 'N/A';
+				const metadata = s.metadata?.[index];
+				const id = metadata?.source ?? 'N/A';
 
-        if (metadata?.name) {
-          ids.push(metadata.name);
-          return ids;
-        }
+				if (metadata?.name) {
+					ids.push(metadata.name);
+					return ids;
+				}
 
-        if (id.startsWith('http://') || id.startsWith('https://')) {
-          ids.push(id);
-        } else {
-          ids.push(s?.source?.name ?? id);
-        }
+				if (id.startsWith('http://') || id.startsWith('https://')) {
+					ids.push(id);
+				} else {
+					ids.push(s?.source?.name ?? id);
+				}
 
-        return ids;
-      });
+				return ids;
+			});
 
-      acc = [...acc, ...ids];
+			acc = [...acc, ...ids];
 
-      // remove duplicates
-      return acc.filter((item, index) => acc.indexOf(item) === index);
-    }, [])}
-    on:update={(e) => {
-      dispatch('update', e.detail);
-    }}
-    on:code={(e) => {
-      const { lang, code } = e.detail;
+			// remove duplicates
+			return acc.filter((item, index) => acc.indexOf(item) === index);
+		}, [])}
+		on:update={(e) => {
+			dispatch('update', e.detail);
+		}}
+		on:code={(e) => {
+			const { lang, code } = e.detail;
 
-      if (
-        (['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
-        !$mobile &&
-        $chatId
-      ) {
-        showArtifacts.set(true);
-        showControls.set(true);
-      }
-    }}
-  />
+			if (
+				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
+				!$mobile &&
+				$chatId
+			) {
+				showArtifacts.set(true);
+				showControls.set(true);
+			}
+		}}
+	/>
 </div>
 
 {#if floatingButtons && model}
-  <FloatingButtons
-    bind:this={floatingButtonsElement}
-    {id}
-    messages={createMessagesList(history, id)}
-    model={model?.id}
-    onAdd={({ modelId, parentId, messages }) => {
-      console.log(modelId, parentId, messages);
-      onAddMessages({ modelId, parentId, messages });
-      closeFloatingButtons();
-    }}
-  />
+	<FloatingButtons
+		bind:this={floatingButtonsElement}
+		{id}
+		messages={createMessagesList(history, id)}
+		model={model?.id}
+		onAdd={({ modelId, parentId, messages }) => {
+			console.log(modelId, parentId, messages);
+			onAddMessages({ modelId, parentId, messages });
+			closeFloatingButtons();
+		}}
+	/>
 {/if}
