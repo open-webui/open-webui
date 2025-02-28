@@ -5,6 +5,7 @@ import base64
 import hmac
 import hashlib
 import requests
+import os
 
 
 from datetime import UTC, datetime, timedelta
@@ -13,15 +14,22 @@ from typing import Optional, Union, List, Dict
 from open_webui.models.users import Users
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.config import override_static
-from open_webui.env import WEBUI_SECRET_KEY, TRUSTED_SIGNATURE_KEY
+from open_webui.env import (
+    WEBUI_SECRET_KEY,
+    TRUSTED_SIGNATURE_KEY,
+    STATIC_DIR,
+    SRC_LOG_LEVELS,
+)
 
-from fastapi import Depends, HTTPException, Request, Response, status
+from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 
+
 logging.getLogger("passlib").setLevel(logging.ERROR)
 
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["OAUTH"])
 
 SESSION_SECRET = WEBUI_SECRET_KEY
 ALGORITHM = "HS256"
@@ -47,6 +55,19 @@ def verify_signature(payload: str, signature: str) -> bool:
         return False
 
 
+def override_static(path: str, content: str):
+    # Ensure path is safe
+    if "/" in path or ".." in path:
+        log.error(f"Invalid path: {path}")
+        return
+
+    file_path = os.path.join(STATIC_DIR, path)
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+    with open(file_path, "wb") as f:
+        f.write(base64.b64decode(content))  # Convert Base64 back to raw binary
+
+
 def get_license_data(app, key):
     if key:
         try:
@@ -69,11 +90,11 @@ def get_license_data(app, key):
 
                 return True
             else:
-                print(
+                log.error(
                     f"License: retrieval issue: {getattr(res, 'text', 'unknown error')}"
                 )
         except Exception as ex:
-            print(f"License: Uncaught Exception: {ex}")
+            log.exception(f"License: Uncaught Exception: {ex}")
     return False
 
 
@@ -129,6 +150,7 @@ def get_http_authorization_cred(auth_header: str):
 
 def get_current_user(
     request: Request,
+    background_tasks: BackgroundTasks,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
 ):
     token = None
@@ -181,7 +203,10 @@ def get_current_user(
                 detail=ERROR_MESSAGES.INVALID_TOKEN,
             )
         else:
-            Users.update_user_last_active_by_id(user.id)
+            # Refresh the user's last active timestamp asynchronously
+            # to prevent blocking the request
+            if background_tasks:
+                background_tasks.add_task(Users.update_user_last_active_by_id, user.id)
         return user
     else:
         raise HTTPException(

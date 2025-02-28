@@ -76,7 +76,7 @@
 	{#if token.type === 'hr'}
 		<hr class=" border-gray-100 dark:border-gray-850" />
 	{:else if token.type === 'heading'}
-		<svelte:element this={headerComponent(token.depth)}>
+		<svelte:element this={headerComponent(token.depth)} dir="auto">
 			<MarkdownInlineTokens id={`${id}-${tokenIdx}-h`} tokens={token.tokens} {onSourceClick} />
 		</svelte:element>
 	{:else if token.type === 'code'}
@@ -88,14 +88,14 @@
 				code={token?.text ?? ''}
 				{attributes}
 				{save}
-				on:code={(e) => {
-					dispatch('code', e.detail);
+				onCode={(value) => {
+					dispatch('code', value);
 				}}
-				on:save={(e) => {
+				onSave={(e) => {
 					dispatch('update', {
 						raw: token.raw,
 						oldContent: token.text,
-						newContent: e.detail
+						newContent: value
 					});
 				}}
 			/>
@@ -169,14 +169,14 @@
 			</div>
 		</div>
 	{:else if token.type === 'blockquote'}
-		<blockquote>
+		<blockquote dir="auto">
 			<svelte:self id={`${id}-${tokenIdx}`} tokens={token.tokens} {onTaskClick} {onSourceClick} />
 		</blockquote>
 	{:else if token.type === 'list'}
 		{#if token.ordered}
 			<ol start={token.start || 1}>
 				{#each token.items as item, itemIdx}
-					<li>
+					<li dir="auto" class="text-start">
 						{#if item?.task}
 							<input
 								class=" translate-y-[1px] -translate-x-1"
@@ -208,7 +208,7 @@
 		{:else}
 			<ul>
 				{#each token.items as item, itemIdx}
-					<li>
+					<li dir="auto" class="text-start">
 						{#if item?.task}
 							<input
 								class=" translate-y-[1px] -translate-x-1"
@@ -239,7 +239,12 @@
 			</ul>
 		{/if}
 	{:else if token.type === 'details'}
-		<Collapsible title={token.summary} attributes={token?.attributes} className="w-full space-y-1">
+		<Collapsible
+			title={token.summary}
+			attributes={token?.attributes}
+			className="w-full space-y-1"
+			dir="auto"
+		>
 			<div class=" mb-1.5" slot="content">
 				<svelte:self
 					id={`${id}-${tokenIdx}-d`}
@@ -268,7 +273,7 @@
 			onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
 		></iframe>
 	{:else if token.type === 'paragraph'}
-		<p>
+		<p dir="auto">
 			<MarkdownInlineTokens
 				id={`${id}-${tokenIdx}-p`}
 				tokens={token.tokens ?? []}
@@ -277,7 +282,7 @@
 		</p>
 	{:else if token.type === 'text'}
 		{#if top}
-			<p>
+			<p dir="auto">
 				{#if token.tokens}
 					<MarkdownInlineTokens id={`${id}-${tokenIdx}-t`} tokens={token.tokens} {onSourceClick} />
 				{:else}

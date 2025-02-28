@@ -13,6 +13,8 @@
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Markdown from './Markdown.svelte';
 	import Image from '$lib/components/common/Image.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	const i18n = getContext('i18n');
@@ -33,6 +35,8 @@
 
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
+
+	let showDeleteConfirm = false;
 
 	let edit = false;
 	let editedContent = '';
@@ -84,6 +88,14 @@
 		// console.log('UserMessage mounted');
 	});
 </script>
+
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete message?')}
+	on:confirm={() => {
+		deleteMessageHandler();
+	}}
+/>
 
 <div class=" flex w-full user-message" dir={$settings.chatDirection} id="message-{message.id}">
 	{#if !($settings?.chatBubble ?? true)}
@@ -340,7 +352,7 @@
 									<button
 										class="invisible group-hover:visible p-1 rounded-sm dark:hover:text-white hover:text-black transition"
 										on:click={() => {
-											deleteMessageHandler();
+											showDeleteConfirm = true;
 										}}
 									>
 										<svg
