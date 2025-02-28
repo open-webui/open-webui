@@ -53,7 +53,7 @@
 
 			if (!contentContainerElement?.contains(event.target)) return;
 
-			let selection = window.getSelection();
+			const selection = window.getSelection();
 
 			if (selection.toString().trim().length > 0) {
 				const range = selection.getRangeAt(0);
@@ -70,7 +70,7 @@
 
 					// Calculate space available on the right
 					const spaceOnRight = parentRect.width - left;
-					let halfScreenWidth = $mobile ? window.innerWidth / 2 : window.innerWidth / 3;
+					const halfScreenWidth = $mobile ? window.innerWidth / 2 : window.innerWidth / 3;
 
 					if (spaceOnRight < halfScreenWidth) {
 						const right = parentRect.right - rect.right;
@@ -130,7 +130,7 @@
 		{model}
 		{save}
 		sourceIds={(sources ?? []).reduce((acc, s) => {
-			let ids = [];
+			const ids = [];
 			s.document.forEach((document, index) => {
 				if (model?.info?.meta?.capabilities?.citations == false) {
 					ids.push('N/A');

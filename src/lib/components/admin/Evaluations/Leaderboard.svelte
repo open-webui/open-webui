@@ -26,7 +26,7 @@
 
 	let query = $state('');
 
-	let tagEmbeddings = new Map();
+	const tagEmbeddings = new Map();
 	let loadingLeaderboard = $state(true);
 	let debounceTimer;
 

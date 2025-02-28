@@ -33,7 +33,7 @@
 
 	const i18n = getContext('i18n');
 
-	let scanDirLoading = false;
+	const scanDirLoading = false;
 	let updateEmbeddingModelLoading = $state(false);
 	let updateRerankingModelLoading = $state(false);
 

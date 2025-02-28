@@ -23,7 +23,7 @@
 		lastWord = value ? value.split(' ').at(-1) : value;
 	});
 
-	let options = [
+	const options = [
 		{
 			name: 'tag:',
 			description: $i18n.t('search for tags')

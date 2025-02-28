@@ -51,7 +51,7 @@
 	};
 
 	let codeEditor = $state();
-	let boilerplate = `import os
+	const boilerplate = `import os
 import requests
 from datetime import datetime
 

@@ -422,7 +422,7 @@
 
 		const messages = createMessagesList(history, message.id);
 
-		let feedbackItem = {
+		const feedbackItem = {
 			type: 'rating',
 			data: {
 				...(updatedMessage?.annotation ? updatedMessage.annotation : {}),

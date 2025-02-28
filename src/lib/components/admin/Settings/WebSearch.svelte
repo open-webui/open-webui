@@ -19,7 +19,7 @@
 	let { saveHandler }: Props = $props();
 
 	let webConfig = $state(null);
-	let webSearchEngines = [
+	const webSearchEngines = [
 		'searxng',
 		'google_pse',
 		'brave',

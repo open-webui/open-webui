@@ -37,7 +37,7 @@
 			if (search === '') {
 				return true;
 			} else {
-				let name = user.name.toLowerCase();
+				const name = user.name.toLowerCase();
 				const query = search.toLowerCase();
 				return name.includes(query);
 			}

@@ -29,7 +29,7 @@
 
 	let models = $state(null);
 
-	let samplers = [
+	const samplers = [
 		'DPM++ 2M',
 		'DPM++ SDE',
 		'DPM++ 2M SDE',
@@ -51,7 +51,7 @@
 		'UniPC'
 	];
 
-	let schedulers = [
+	const schedulers = [
 		'Automatic',
 		'Uniform',
 		'Karras',

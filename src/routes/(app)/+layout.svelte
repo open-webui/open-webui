@@ -274,7 +274,7 @@
 									<button
 										class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 transition font-medium text-sm"
 										onclick={async () => {
-											let blob = new Blob([JSON.stringify(localDBChats)], {
+											const blob = new Blob([JSON.stringify(localDBChats)], {
 												type: 'application/json'
 											});
 											saveAs(blob, `chat-export-${Date.now()}.json`);

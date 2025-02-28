@@ -86,14 +86,14 @@
 	};
 
 	onMount(() => {
-		let legacy_documents = $knowledge
+		const legacy_documents = $knowledge
 			.filter((item) => item?.meta?.document)
 			.map((item) => ({
 				...item,
 				type: 'file'
 			}));
 
-		let legacy_collections =
+		const legacy_collections =
 			legacy_documents.length > 0
 				? [
 						{
@@ -121,13 +121,13 @@
 					]
 				: [];
 
-		let collections = $knowledge
+		const collections = $knowledge
 			.filter((item) => !item?.meta?.document)
 			.map((item) => ({
 				...item,
 				type: 'collection'
 			}));
-		let collection_files =
+		const collection_files =
 			$knowledge.length > 0
 				? [
 						...$knowledge

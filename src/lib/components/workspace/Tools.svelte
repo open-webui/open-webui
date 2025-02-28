@@ -113,7 +113,7 @@
 		});
 
 		if (_tool) {
-			let blob = new Blob([JSON.stringify([_tool])], {
+			const blob = new Blob([JSON.stringify([_tool])], {
 				type: 'application/json'
 			});
 			saveAs(blob, `tool-${_tool.id}-export-${Date.now()}.json`);
@@ -411,7 +411,7 @@
 						});
 
 						if (_tools) {
-							let blob = new Blob([JSON.stringify(_tools)], {
+							const blob = new Blob([JSON.stringify(_tools)], {
 								type: 'application/json'
 							});
 							saveAs(blob, `tools-export-${Date.now()}.json`);

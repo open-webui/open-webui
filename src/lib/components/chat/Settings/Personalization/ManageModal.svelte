@@ -35,7 +35,7 @@
 
 	let showClearConfirmDialog = $state(false);
 
-	let onClearConfirmed = async () => {
+	const onClearConfirmed = async () => {
 		const res = await deleteMemoriesByUserId(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 			return null;

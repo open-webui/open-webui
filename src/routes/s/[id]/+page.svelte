@@ -26,18 +26,18 @@
 	let loaded = $state(false);
 
 	let autoScroll = $state(true);
-	let processing = '';
+	const processing = '';
 	let messagesContainerElement: HTMLDivElement;
 
 	// let chatId = $page.params.id;
-	let showModelSelector = false;
+	const showModelSelector = false;
 	let selectedModels = $state(['']);
 
 	let chat = $state(null);
 	let user = $state(null);
 
 	let title = $state('');
-	let files = [];
+	const files = [];
 
 	let messages = $state([]);
 	let history = $state({

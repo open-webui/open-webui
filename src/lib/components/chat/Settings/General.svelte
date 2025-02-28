@@ -18,7 +18,7 @@
 	let { saveSettings, getModels }: Props = $props();
 
 	// General
-	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
+	const themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
 	let selectedTheme = $state('system');
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = $state([]);

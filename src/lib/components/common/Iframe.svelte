@@ -5,7 +5,7 @@
 <iframe
 	frameborder="0"
 	onload={(e) => {
-		let el = e.currentTarget as HTMLIFrameElement;
+		const el = e.currentTarget as HTMLIFrameElement;
 		if (el.contentWindow) {
 			el.style.height = el.contentWindow.document.body.scrollHeight + 20 + 'px';
 		}

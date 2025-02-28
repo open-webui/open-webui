@@ -14,7 +14,7 @@
 	function extractAttributes(input: string): Record<string, string> {
 		const regex = /(\w+)="([^"]*)"/g;
 		let match;
-		let attrs: Record<string, string> = {};
+		const attrs: Record<string, string> = {};
 
 		// Loop through all matches and populate the attributes object
 		while ((match = regex.exec(input)) !== null) {

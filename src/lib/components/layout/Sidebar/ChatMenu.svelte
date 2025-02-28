@@ -83,7 +83,7 @@
 		}
 
 		const chatText = await getChatAsText(chat);
-		let blob = new Blob([chatText], {
+		const blob = new Blob([chatText], {
 			type: 'text/plain'
 		});
 
@@ -123,7 +123,7 @@
 		const chat = await getChatById(localStorage.token, chatId);
 
 		if (chat) {
-			let blob = new Blob([JSON.stringify([chat])], {
+			const blob = new Blob([JSON.stringify([chat])], {
 				type: 'application/json'
 			});
 			saveAs(blob, `chat-export-${Date.now()}.json`);

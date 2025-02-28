@@ -67,7 +67,7 @@
 	};
 
 	const exportHandler = async (prompt) => {
-		let blob = new Blob([JSON.stringify([prompt])], {
+		const blob = new Blob([JSON.stringify([prompt])], {
 			type: 'application/json'
 		});
 		saveAs(blob, `prompt-export-${Date.now()}.json`);
@@ -293,7 +293,7 @@
 					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 					onclick={async () => {
 						// promptsImportInputElement.click();
-						let blob = new Blob([JSON.stringify(prompts)], {
+						const blob = new Blob([JSON.stringify(prompts)], {
 							type: 'application/json'
 						});
 						saveAs(blob, `prompts-export-${Date.now()}.json`);

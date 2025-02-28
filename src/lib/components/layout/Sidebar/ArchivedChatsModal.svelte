@@ -54,7 +54,7 @@
 
 	const exportChatsHandler = async () => {
 		const chats = await getAllArchivedChats(localStorage.token);
-		let blob = new Blob([JSON.stringify(chats)], {
+		const blob = new Blob([JSON.stringify(chats)], {
 			type: 'application/json'
 		});
 		saveAs(blob, `${$i18n.t('archived-chat-export')}-${Date.now()}.json`);

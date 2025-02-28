@@ -59,8 +59,8 @@
 	};
 
 	let isDarkMode = false;
-	let editorTheme = new Compartment();
-	let editorLanguage = new Compartment();
+	const editorTheme = new Compartment();
+	const editorLanguage = new Compartment();
 
 	languages.push(
 		LanguageDescription.of({
@@ -101,7 +101,7 @@
 		return false;
 	};
 
-	let extensions = [
+	const extensions = [
 		basicSetup,
 		keymap.of([{ key: 'Tab', run: acceptCompletion }, indentWithTab]),
 		indentUnit.of('    '),

@@ -145,14 +145,14 @@
 	};
 
 	const downloadModels = async (models) => {
-		let blob = new Blob([JSON.stringify(models)], {
+		const blob = new Blob([JSON.stringify(models)], {
 			type: 'application/json'
 		});
 		saveAs(blob, `models-export-${Date.now()}.json`);
 	};
 
 	const exportModelHandler = async (model) => {
-		let blob = new Blob([JSON.stringify([model])], {
+		const blob = new Blob([JSON.stringify([model])], {
 			type: 'application/json'
 		});
 		saveAs(blob, `${model.id}-${Date.now()}.json`);
@@ -160,7 +160,7 @@
 
 	onMount(async () => {
 		models = await getWorkspaceModels(localStorage.token);
-		let groups = await getGroups(localStorage.token);
+		const groups = await getGroups(localStorage.token);
 		group_ids = groups.map((group) => group.id);
 
 		loaded = true;
@@ -413,9 +413,9 @@
 					onchange={() => {
 						console.log(importFiles);
 
-						let reader = new FileReader();
+						const reader = new FileReader();
 						reader.onload = async (event) => {
-							let savedModels = JSON.parse(event.target.result);
+							const savedModels = JSON.parse(event.target.result);
 							console.log(savedModels);
 
 							for (const model of savedModels) {

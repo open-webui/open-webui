@@ -52,7 +52,7 @@
 		const siblingOffset = 250; // Horizontal spacing between nodes at the same layer
 
 		// Map to keep track of node positions at each level
-		let positionMap = new Map();
+		const positionMap = new Map();
 
 		// Helper function to truncate labels
 		function createLabel(content) {
@@ -61,7 +61,7 @@
 		}
 
 		// Create nodes and map children to ensure alignment in width
-		let layerWidths = {}; // Track widths of each layer
+		const layerWidths = {}; // Track widths of each layer
 
 		Object.keys(history.messages).forEach((id) => {
 			const message = history.messages[id];

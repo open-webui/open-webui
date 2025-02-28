@@ -363,7 +363,7 @@
 		detectSound();
 	};
 
-	let finishedMessages = {};
+	const finishedMessages = {};
 	let currentMessageId = null;
 	let currentUtterance = null;
 
@@ -513,7 +513,7 @@
 		return audioCache.get(content);
 	};
 
-	let messages = {};
+	const messages = {};
 
 	const monitorAndPlayAudio = async (id, signal) => {
 		while (!signal.aborted) {

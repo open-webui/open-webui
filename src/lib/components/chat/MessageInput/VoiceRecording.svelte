@@ -88,7 +88,7 @@
 		const domainData = new Uint8Array(bufferLength);
 		const timeDomainData = new Uint8Array(analyser.fftSize);
 
-		let lastSoundTime = Date.now();
+		const lastSoundTime = Date.now();
 
 		const detectSound = () => {
 			const processFrame = () => {

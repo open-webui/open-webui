@@ -167,9 +167,9 @@
 								hidden
 								onchange={(e) => {
 									const files = e.target.files ?? [];
-									let reader = new FileReader();
+									const reader = new FileReader();
 									reader.onload = (event) => {
-										let originalImageUrl = `${event.target.result}`;
+										const originalImageUrl = `${event.target.result}`;
 
 										const img = new Image();
 										img.src = originalImageUrl;

@@ -49,7 +49,7 @@
 	let searchValue = $state('');
 
 	const downloadModels = async (models) => {
-		let blob = new Blob([JSON.stringify(models)], {
+		const blob = new Blob([JSON.stringify(models)], {
 			type: 'application/json'
 		});
 		saveAs(blob, `models-export-${Date.now()}.json`);
@@ -324,9 +324,9 @@
 						onchange={() => {
 							console.log(importFiles);
 
-							let reader = new FileReader();
+							const reader = new FileReader();
 							reader.onload = async (event) => {
-								let savedModels = JSON.parse(event.target.result);
+								const savedModels = JSON.parse(event.target.result);
 								console.log(savedModels);
 
 								for (const model of savedModels) {

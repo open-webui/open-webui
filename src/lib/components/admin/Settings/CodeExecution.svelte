@@ -21,7 +21,7 @@
 
 	let config = $state(null);
 
-	let engines = ['pyodide', 'jupyter'];
+	const engines = ['pyodide', 'jupyter'];
 
 	const submitHandler = async () => {
 		const res = await setCodeExecutionConfig(localStorage.token, config);

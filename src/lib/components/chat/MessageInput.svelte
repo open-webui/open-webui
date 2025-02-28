@@ -96,7 +96,7 @@ https://svelte.dev/e/attribute_duplicate -->
 	let inputFiles;
 	let dragged = false;
 
-	let user = null;
+	const user = null;
 	export let placeholder = '';
 
 	let visionCapableModels = [];
@@ -243,7 +243,7 @@ https://svelte.dev/e/attribute_duplicate -->
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
 					return;
 				}
-				let reader = new FileReader();
+				const reader = new FileReader();
 				reader.onload = async (event) => {
 					let imageUrl = event.target.result;
 

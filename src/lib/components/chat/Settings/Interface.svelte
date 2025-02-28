@@ -264,9 +264,9 @@
 		accept="image/*"
 		hidden
 		onchange={() => {
-			let reader = new FileReader();
+			const reader = new FileReader();
 			reader.onload = (event) => {
-				let originalImageUrl = `${event.target.result}`;
+				const originalImageUrl = `${event.target.result}`;
 
 				backgroundImageUrl = originalImageUrl;
 				saveSettings({ backgroundImageUrl });

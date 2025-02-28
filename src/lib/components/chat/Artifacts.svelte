@@ -33,7 +33,7 @@
 		messages.forEach((message) => {
 			if (message?.role !== 'user' && message?.content) {
 				const codeBlockContents = message.content.match(/```[\s\S]*?```/g);
-				let codeBlocks = [];
+				const codeBlocks = [];
 
 				if (codeBlockContents) {
 					codeBlockContents.forEach((block) => {

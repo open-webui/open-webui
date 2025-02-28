@@ -36,8 +36,8 @@
 	});
 
 	onMount(() => {
-		let legacy_documents = $knowledge.filter((item) => item?.meta?.document);
-		let legacy_collections =
+		const legacy_documents = $knowledge.filter((item) => item?.meta?.document);
+		const legacy_collections =
 			legacy_documents.length > 0
 				? [
 						{

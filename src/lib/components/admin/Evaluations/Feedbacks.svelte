@@ -98,7 +98,7 @@
 		});
 
 		if (_feedbacks) {
-			let blob = new Blob([JSON.stringify(_feedbacks)], {
+			const blob = new Blob([JSON.stringify(_feedbacks)], {
 				type: 'application/json'
 			});
 			saveAs(blob, `feedback-history-export-${Date.now()}.json`);

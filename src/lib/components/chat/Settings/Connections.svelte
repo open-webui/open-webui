@@ -126,7 +126,7 @@
 											(key, keyIdx) => idx !== keyIdx
 										);
 
-										let newConfig = [];
+										const newConfig = [];
 										config.OPENAI_API_BASE_URLS.forEach((url, newIdx) => {
 											newConfig[newIdx] =
 												config.OPENAI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];

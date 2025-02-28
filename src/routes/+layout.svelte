@@ -3,7 +3,7 @@
 	import { spring } from 'svelte/motion';
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 
-	let loadingProgress = spring(0, {
+	const loadingProgress = spring(0, {
 		stiffness: 0.05
 	});
 
@@ -113,7 +113,7 @@
 		let stderr = null;
 
 		let executing = true;
-		let packages = [
+		const packages = [
 			code.includes('requests') ? 'requests' : null,
 			code.includes('bs4') ? 'beautifulsoup4' : null,
 			code.includes('numpy') ? 'numpy' : null,

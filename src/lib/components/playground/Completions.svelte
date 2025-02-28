@@ -71,14 +71,14 @@
 				}
 
 				try {
-					let lines = value.split('\n');
+					const lines = value.split('\n');
 
 					for (const line of lines) {
 						if (line !== '') {
 							if (line.includes('[DONE]')) {
 								console.log('done');
 							} else {
-								let data = JSON.parse(line.replace(/^data: /, ''));
+								const data = JSON.parse(line.replace(/^data: /, ''));
 								console.log(data);
 
 								text += data.choices[0].delta.content ?? '';

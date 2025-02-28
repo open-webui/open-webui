@@ -21,7 +21,7 @@
 	let selectedIdx = $state(0);
 	let filteredItems = $state([]);
 
-	let fuse = new Fuse(
+	const fuse = new Fuse(
 		$models
 			.filter((model) => !model?.info?.meta?.hidden)
 			.map((model) => {

@@ -123,7 +123,7 @@
 				history.currentId = messageId;
 			}
 		} else {
-			let childrenIds = Object.values(history.messages)
+			const childrenIds = Object.values(history.messages)
 				.filter((message) => message.parentId === null)
 				.map((message) => message.id);
 			let messageId = childrenIds[Math.max(childrenIds.indexOf(message.id) - 1, 0)];
@@ -173,7 +173,7 @@
 				history.currentId = messageId;
 			}
 		} else {
-			let childrenIds = Object.values(history.messages)
+			const childrenIds = Object.values(history.messages)
 				.filter((message) => message.parentId === null)
 				.map((message) => message.id);
 			let messageId =
@@ -216,10 +216,10 @@
 		if (history.messages[messageId].role === 'user') {
 			if (submit) {
 				// New user message
-				let userPrompt = content;
-				let userMessageId = uuidv4();
+				const userPrompt = content;
+				const userMessageId = uuidv4();
 
-				let userMessage = {
+				const userMessage = {
 					id: userMessageId,
 					parentId: history.messages[messageId].parentId,
 					childrenIds: [],
@@ -229,7 +229,7 @@
 					models: selectedModels
 				};
 
-				let messageParentId = history.messages[messageId].parentId;
+				const messageParentId = history.messages[messageId].parentId;
 
 				if (messageParentId !== null) {
 					history.messages[messageParentId].childrenIds = [
@@ -344,7 +344,7 @@
 	};
 	run(() => {
 		if (history.currentId) {
-			let _messages = [];
+			const _messages = [];
 
 			let message = history.messages[history.currentId];
 			while (message && _messages.length <= messagesCount) {

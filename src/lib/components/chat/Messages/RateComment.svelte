@@ -18,7 +18,7 @@
 
 	let { message, show = $bindable(false) }: Props = $props();
 
-	let LIKE_REASONS = [
+	const LIKE_REASONS = [
 		'accurate_information',
 		'followed_instructions_perfectly',
 		'showcased_creativity',
@@ -27,7 +27,7 @@
 		'thorough_explanation',
 		'other'
 	];
-	let DISLIKE_REASONS = [
+	const DISLIKE_REASONS = [
 		'dont_like_the_style',
 		'too_verbose',
 		'not_helpful',

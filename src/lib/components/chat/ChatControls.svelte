@@ -105,7 +105,7 @@
 
 		// Create a new ResizeObserver instance
 		const resizeObserver = new ResizeObserver((entries) => {
-			for (let entry of entries) {
+			for (const entry of entries) {
 				const width = entry.contentRect.width;
 				// calculate the percentage of 200px
 				const percentage = (350 / width) * 100;

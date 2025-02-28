@@ -97,7 +97,7 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 	let controlPaneComponent;
 
 	let autoScroll = true;
-	let processing = '';
+	const processing = '';
 	let messagesContainerElement: HTMLDivElement;
 
 	let navbarElement;
@@ -241,7 +241,7 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 
 		if (event.chat_id === $chatId) {
 			await tick();
-			let message = history.messages[event.message_id];
+			const message = history.messages[event.message_id];
 
 			if (message) {
 				const type = event?.data?.type ?? null;
@@ -1020,7 +1020,7 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 		let parentMessage = history.messages[parentId];
 		let currentParentId = parentMessage ? parentMessage.id : null;
 		for (const message of messages) {
-			let messageId = uuidv4();
+			const messageId = uuidv4();
 
 			if (message.role === 'user') {
 				const userMessage = {
@@ -1094,7 +1094,7 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 				message.content += choices[0]?.message?.content;
 			} else {
 				// Stream response
-				let value = choices[0]?.delta?.content ?? '';
+				const value = choices[0]?.delta?.content ?? '';
 				if (message.content == '' && value == '\n') {
 					console.log('Empty response');
 				} else {
@@ -1186,7 +1186,7 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 			}
 
 			// Emit chat event for TTS
-			let lastMessageContentPart =
+			const lastMessageContentPart =
 				getMessageContentParts(message.content, $config?.audio?.tts?.split_on ?? 'punctuation')?.at(
 					-1
 				) ?? '';
@@ -1298,8 +1298,8 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 		prompt = '';
 
 		// Create user message
-		let userMessageId = uuidv4();
-		let userMessage = {
+		const userMessageId = uuidv4();
+		const userMessage = {
 			id: userMessageId,
 			parentId: messages.length !== 0 ? messages.at(-1).id : null,
 			childrenIds: [],
@@ -1339,7 +1339,7 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 
 		const responseMessageIds: Record<PropertyKey, string> = {};
 		// If modelId is provided, use it, else use selected model
-		let selectedModelIds = modelId
+		const selectedModelIds = modelId
 			? [modelId]
 			: atSelectedModel !== undefined
 				? [atSelectedModel.id]
@@ -1350,8 +1350,8 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 			const model = $models.filter((m) => m.id === modelId).at(0);
 
 			if (model) {
-				let responseMessageId = uuidv4();
-				let responseMessage = {
+				const responseMessageId = uuidv4();
+				const responseMessage = {
 					parentId: parentId,
 					id: responseMessageId,
 					childrenIds: [],
@@ -1413,9 +1413,9 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 						);
 					}
 
-					let responseMessageId =
+					const responseMessageId =
 						responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
-					let responseMessage = _history.messages[responseMessageId];
+					const responseMessage = _history.messages[responseMessageId];
 
 					let userContext = null;
 					if ($settings?.memory ?? false) {
@@ -1707,10 +1707,10 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 	};
 
 	const submitMessage = async (parentId, prompt) => {
-		let userPrompt = prompt;
-		let userMessageId = uuidv4();
+		const userPrompt = prompt;
+		const userMessageId = uuidv4();
 
-		let userMessage = {
+		const userMessage = {
 			id: userMessageId,
 			parentId: parentId,
 			childrenIds: [],
@@ -1737,8 +1737,8 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 		console.log('regenerateResponse');
 
 		if (history.currentId) {
-			let userMessage = history.messages[message.parentId];
-			let userPrompt = userMessage.content;
+			const userMessage = history.messages[message.parentId];
+			const userPrompt = userMessage.content;
 
 			if ((userMessage?.models ?? [...selectedModels]).length == 1) {
 				// If user message has only one model selected, sendPrompt automatically selects it for regeneration

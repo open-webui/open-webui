@@ -60,7 +60,7 @@
 	const downloadTxt = async () => {
 		const chatText = await getChatAsText();
 
-		let blob = new Blob([chatText], {
+		const blob = new Blob([chatText], {
 			type: 'text/plain'
 		});
 
@@ -101,7 +101,7 @@
 				chatObj = await getChatById(localStorage.token, chat.id);
 			}
 
-			let blob = new Blob([JSON.stringify([chatObj])], {
+			const blob = new Blob([JSON.stringify([chatObj])], {
 				type: 'application/json'
 			});
 			saveAs(blob, `chat-export-${Date.now()}.json`);

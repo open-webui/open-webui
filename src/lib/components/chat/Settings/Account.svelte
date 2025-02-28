@@ -99,9 +99,9 @@
 			hidden
 			onchange={(e) => {
 				const files = profileImageInputElement.files ?? [];
-				let reader = new FileReader();
+				const reader = new FileReader();
 				reader.onload = (event) => {
-					let originalImageUrl = `${event.target.result}`;
+					const originalImageUrl = `${event.target.result}`;
 
 					const img = new Image();
 					img.src = originalImageUrl;

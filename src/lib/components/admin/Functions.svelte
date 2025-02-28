@@ -113,7 +113,7 @@
 		});
 
 		if (_function) {
-			let blob = new Blob([JSON.stringify([_function])], {
+			const blob = new Blob([JSON.stringify([_function])], {
 				type: 'application/json'
 			});
 			saveAs(blob, `function-${_function.id}-export-${Date.now()}.json`);
@@ -443,7 +443,7 @@
 				});
 
 				if (_functions) {
-					let blob = new Blob([JSON.stringify(_functions)], {
+					const blob = new Blob([JSON.stringify(_functions)], {
 						type: 'application/json'
 					});
 					saveAs(blob, `functions-export-${Date.now()}.json`);

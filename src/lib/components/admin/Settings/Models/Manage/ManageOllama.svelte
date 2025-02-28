@@ -95,11 +95,11 @@
 						const { value, done } = await reader.read();
 						if (done) break;
 
-						let lines = value.split('\n');
+						const lines = value.split('\n');
 
 						for (const line of lines) {
 							if (line !== '') {
-								let data = JSON.parse(line);
+								const data = JSON.parse(line);
 
 								console.log(data);
 								if (data.error) {
@@ -179,11 +179,11 @@
 					const { value, done } = await reader.read();
 					if (done) break;
 
-					let lines = value.split('\n');
+					const lines = value.split('\n');
 
 					for (const line of lines) {
 						if (line !== '') {
-							let data = JSON.parse(line);
+							const data = JSON.parse(line);
 							console.log(data);
 							if (data.error) {
 								throw data.error;
@@ -303,11 +303,11 @@
 				if (done) break;
 
 				try {
-					let lines = value.split('\n');
+					const lines = value.split('\n');
 
 					for (const line of lines) {
 						if (line !== '') {
-							let data = JSON.parse(line.replace(/^data: /, ''));
+							const data = JSON.parse(line.replace(/^data: /, ''));
 
 							if (data.progress) {
 								if (uploadMessage) {
@@ -354,12 +354,12 @@
 					if (done) break;
 
 					try {
-						let lines = value.split('\n');
+						const lines = value.split('\n');
 
 						for (const line of lines) {
 							if (line !== '') {
 								console.log(line);
-								let data = JSON.parse(line);
+								const data = JSON.parse(line);
 								console.log(data);
 
 								if (data.error) {
@@ -485,12 +485,12 @@
 				if (done) break;
 
 				try {
-					let lines = value.split('\n');
+					const lines = value.split('\n');
 
 					for (const line of lines) {
 						if (line !== '') {
 							console.log(line);
-							let data = JSON.parse(line);
+							const data = JSON.parse(line);
 							console.log(data);
 
 							if (data.error) {

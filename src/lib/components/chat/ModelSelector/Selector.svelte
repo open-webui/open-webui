@@ -150,11 +150,11 @@
 					const { value, done } = await reader.read();
 					if (done) break;
 
-					let lines = value.split('\n');
+					const lines = value.split('\n');
 
 					for (const line of lines) {
 						if (line !== '') {
-							let data = JSON.parse(line);
+							const data = JSON.parse(line);
 							console.log(data);
 							if (data.error) {
 								throw data.error;

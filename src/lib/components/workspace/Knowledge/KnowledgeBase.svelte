@@ -46,7 +46,7 @@
 	let largeScreen = $state(true);
 
 	let pane;
-	let showSidepanel = true;
+	const showSidepanel = true;
 	let minSize = 0;
 
 	type Knowledge = {
@@ -244,7 +244,7 @@
 						// Filter out files from hidden folders
 						.filter((file) => !hasHiddenFolder(file.webkitRelativePath));
 
-					let totalFiles = files.length;
+					const totalFiles = files.length;
 					let uploadedFiles = 0;
 
 					// Function to update the UI with the progress
@@ -460,7 +460,7 @@
 
 		// Create a new ResizeObserver instance
 		const resizeObserver = new ResizeObserver((entries) => {
-			for (let entry of entries) {
+			for (const entry of entries) {
 				const width = entry.contentRect.width;
 				// calculate the percentage of 300
 				const percentage = (300 / width) * 100;

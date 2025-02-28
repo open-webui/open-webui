@@ -61,7 +61,7 @@
 
 	let mermaidHtml = $state(null);
 
-	let highlightedCode = null;
+	const highlightedCode = null;
 	let executing = $state(false);
 
 	let stdout = $state(null);
@@ -117,7 +117,7 @@
 			' with '
 		];
 
-		for (let syntax of pythonSyntax) {
+		for (const syntax of pythonSyntax) {
 			if (str.includes(syntax)) {
 				return true;
 			}
@@ -209,7 +209,7 @@
 	};
 
 	const executePythonAsWorker = async (code) => {
-		let packages = [
+		const packages = [
 			code.includes('requests') ? 'requests' : null,
 			code.includes('bs4') ? 'beautifulsoup4' : null,
 			code.includes('numpy') ? 'numpy' : null,

@@ -45,8 +45,8 @@
 		})
 	}: Props = $props();
 
-	let customFieldName = '';
-	let customFieldValue = '';
+	const customFieldName = '';
+	const customFieldValue = '';
 
 	run(() => {
 		if (params) {

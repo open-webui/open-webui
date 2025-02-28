@@ -44,7 +44,7 @@
 	};
 
 	let codeEditor = $state();
-	let boilerplate = `"""
+	const boilerplate = `"""
 title: Example Filter
 author: open-webui
 author_url: https://github.com/open-webui

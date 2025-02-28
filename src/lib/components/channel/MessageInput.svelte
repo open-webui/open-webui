@@ -118,7 +118,7 @@
 			if (
 				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
 			) {
-				let reader = new FileReader();
+				const reader = new FileReader();
 
 				reader.onload = async (event) => {
 					let imageUrl = event.target.result;

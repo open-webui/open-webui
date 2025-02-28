@@ -140,7 +140,7 @@
 			// Legacy support for messages that don't have a modelIdx
 			// Find all messages that are children of the parent message and have the same model
 			if (modelMessageIds.length === 0) {
-				let modelMessages = parentMessage?.childrenIds
+				const modelMessages = parentMessage?.childrenIds
 					.map((id) => history.messages[id])
 					.filter((m) => m?.model === model);
 

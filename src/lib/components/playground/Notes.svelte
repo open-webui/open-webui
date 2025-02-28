@@ -15,7 +15,7 @@
 	let content = $state('');
 
 	let voiceInput = $state(false);
-	let loading = false;
+	const loading = false;
 </script>
 
 <div class="relative flex-1 w-full h-full flex justify-center overflow-auto px-5">

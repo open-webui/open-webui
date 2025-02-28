@@ -52,7 +52,7 @@
 	};
 
 	const exportChats = async () => {
-		let blob = new Blob([JSON.stringify(await getAllChats(localStorage.token))], {
+		const blob = new Blob([JSON.stringify(await getAllChats(localStorage.token))], {
 			type: 'application/json'
 		});
 		saveAs(blob, `chat-export-${Date.now()}.json`);
@@ -83,7 +83,7 @@
 		if (importFiles) {
 			console.log(importFiles);
 
-			let reader = new FileReader();
+			const reader = new FileReader();
 			reader.onload = (event) => {
 				let chats = JSON.parse(event.target.result);
 				console.log(chats);
