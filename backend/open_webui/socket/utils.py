@@ -1,8 +1,5 @@
 import base64
-<<<<<<< HEAD
-=======
 from datetime import datetime
->>>>>>> 7ea396441c3bf22b57ed0e42acccac1a75b1ce78
 import json
 import redis
 import uuid
@@ -16,18 +13,6 @@ from open_webui.env import (
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
-<<<<<<< HEAD
-
-class AzureCredentialService:
-    def __init__(self):
-        from azure.identity import DefaultAzureCredential
-        log.debug("Using DefaultAzureCredential provider for Redis Cache Authentication")
-        self.credential = DefaultAzureCredential()
-
-    def get_token(self):
-        token = self.credential.get_token("https://redis.azure.com/.default")
-        return token.token
-=======
 class AzureCredentialService:
     def __init__(self):
         from azure.identity import DefaultAzureCredential
@@ -43,7 +28,6 @@ class AzureCredentialService:
         else:
             log.error(f"Failed to get Microsoft Entra token for resource: {resource}")
             return None
->>>>>>> 7ea396441c3bf22b57ed0e42acccac1a75b1ce78
 
     def extract_username_from_token(self, token):
         parts = token.split('.')
@@ -60,46 +44,6 @@ class AzureCredentialService:
 
         return jwt['oid']
 
-<<<<<<< HEAD
-
-class RedisService:
-
-    def __init__(self, redis_url, ssl_ca_certs=None, username=None, password=None):
-        if not password and WEBSOCKET_REDIS_AZURE_CREDENTIALS:
-            azure_credential_service = AzureCredentialService()
-            password = azure_credential_service.get_token()
-            username = azure_credential_service.extract_username_from_token(password)
-
-        try:
-            masked_password = f"{password[:3]}***{password[-3:]}" if password else None
-            log.debug(f"redis_url: {redis_url}")
-            log.debug(f"redis_username: {username}")
-            log.debug(f"redis_password: {masked_password}")
-            log.debug(f"redis_ssl_ca_certs: {ssl_ca_certs}")
-            self.client = redis.Redis.from_url(
-                url=redis_url,
-                username=username,
-                password=password,
-                decode_responses=True,
-                ssl_ca_certs=ssl_ca_certs,
-                socket_timeout=5,
-            )
-
-            if self.client.ping():
-                log.debug(f"Connected to Redis: {redis_url}")
-            else:
-                log.error(f"Failed to connect to Redis: {redis_url}")
-
-        except ConnectionError as e:
-            log.error(f"Failed to connect to Redis: {redis_url} {e}")
-        except TimeoutError as e:
-            log.error(f"Timed out connecting to Redis: {redis_url} {e}")
-        except redis.AuthenticationError as e:
-            log.error(f"Authentication failed connecting to Redis: {redis_url} {e}")
-        except Exception as e:
-            log.error(f"Failed to connect to Redis: {redis_url} {e}")
-
-=======
 # Initialze global Azure credentials provider if enabled
 global azure_credential_service
 azure_credential_service = None
@@ -177,7 +121,6 @@ def reinit_onerror(func):
             cls.redis = cls.redis_service.get_client()
             return func(*args, **kwargs)
     return wrapper
->>>>>>> 7ea396441c3bf22b57ed0e42acccac1a75b1ce78
 
 class RedisLock:
     def __init__(self, redis_url, lock_name, timeout_secs, **redis_kwargs):
@@ -185,12 +128,8 @@ class RedisLock:
         self.lock_id = str(uuid.uuid4())
         self.timeout_secs = timeout_secs
         self.lock_obtained = False
-<<<<<<< HEAD
-        self.redis = RedisService(redis_url, **redis_kwargs).client
-=======
         self.redis_service = RedisService(redis_url, **redis_kwargs)
         self.redis = self.redis_service.get_client()
->>>>>>> 7ea396441c3bf22b57ed0e42acccac1a75b1ce78
 
     @reinit_onerror
     def aquire_lock(self):
@@ -217,12 +156,8 @@ class RedisLock:
 class RedisDict:
     def __init__(self, name, redis_url, **redis_kwargs):
         self.name = name
-<<<<<<< HEAD
-        self.redis = RedisService(redis_url, **redis_kwargs).client
-=======
         self.redis_service = RedisService(redis_url, **redis_kwargs)
         self.redis = self.redis_service.get_client()
->>>>>>> 7ea396441c3bf22b57ed0e42acccac1a75b1ce78
 
     @reinit_onerror
     def __setitem__(self, key, value):
