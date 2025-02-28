@@ -140,6 +140,7 @@ type Settings = {
 	title?: TitleSettings;
 	splitLargeDeltas?: boolean;
 	chatDirection: 'LTR' | 'RTL';
+	alternativeEnterBehavior?: boolean;
 
 	system?: string;
 	requestFormat?: string;
