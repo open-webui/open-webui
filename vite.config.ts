@@ -1,30 +1,24 @@
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
+import { defineConfig, type UserConfig } from 'vite';
 
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
-// /** @type {import('vite').Plugin} */
-// const viteServerConfig = {
-// 	name: 'log-request-middleware',
-// 	configureServer(server) {
-// 		server.middlewares.use((req, res, next) => {
-// 			res.setHeader('Access-Control-Allow-Origin', '*');
-// 			res.setHeader('Access-Control-Allow-Methods', 'GET');
-// 			res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-// 			res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-// 			next();
-// 		});
-// 	}
-// };
-
-export default defineConfig({
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default defineConfig(async (_): Promise<UserConfig> => ({
+	server: {
+		proxy: {
+			'/api': {
+				target: process.env.API_URL ?? 'localhost:8000',
+				changeOrigin: true,
+			}
+		}
+	},
 	plugins: [
 		sveltekit(),
 		viteStaticCopy({
 			targets: [
 				{
 					src: 'node_modules/onnxruntime-web/dist/*.jsep.*',
-
 					dest: 'wasm'
 				}
 			]
@@ -40,4 +34,4 @@ export default defineConfig({
 	worker: {
 		format: 'es'
 	}
-});
+}));

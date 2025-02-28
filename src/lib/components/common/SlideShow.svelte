@@ -1,27 +1,28 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+  import { onMount } from 'svelte';
 
-	export let imageUrls = [
-		'/assets/images/adam.jpg',
-		'/assets/images/galaxy.jpg',
-		'/assets/images/earth.jpg',
-		'/assets/images/space.jpg'
-	];
-	export let duration = 5000;
-	let selectedImageIdx = 0;
+  export let imageUrls = [
+    '/assets/images/adam.jpg',
+    '/assets/images/galaxy.jpg',
+    '/assets/images/earth.jpg',
+    '/assets/images/space.jpg'
+  ];
+  export let duration = 5000;
+  let selectedImageIdx = 0;
 
-	onMount(() => {
-		setInterval(() => {
-			selectedImageIdx = (selectedImageIdx + 1) % (imageUrls.length - 1);
-		}, duration);
-	});
+  onMount(() => {
+    setInterval(() => {
+      selectedImageIdx = (selectedImageIdx + 1) % (imageUrls.length - 1);
+    }, duration);
+  });
 </script>
 
 {#each imageUrls as imageUrl, idx (idx)}
-	<div
-		class="image w-full h-full absolute top-0 left-0 bg-cover bg-center transition-opacity duration-1000"
-		style="opacity: {selectedImageIdx === idx ? 1 : 0}; background-image: url('{imageUrl}')"
-	></div>
+  <div
+    style:opacity={selectedImageIdx === idx ? 1 : 0}
+    style:background-image="url('{imageUrl}')"
+    class="image w-full h-full absolute top-0 left-0 bg-cover bg-center transition-opacity duration-1000"
+  />
 {/each}
 
 <style>

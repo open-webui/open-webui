@@ -1,36 +1,36 @@
 <script>
-	import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher } from 'svelte';
 
-	const dispatch = createEventDispatcher();
+  const dispatch = createEventDispatcher();
 
-	import { theme } from '$lib/stores';
-	import { Background, Controls, SvelteFlow, BackgroundVariant } from '@xyflow/svelte';
+  import { theme } from '$lib/stores';
+  import { Background, Controls, SvelteFlow, BackgroundVariant } from '@xyflow/svelte';
 
-	export let nodes;
-	export let nodeTypes;
-	export let edges;
+  export let nodes;
+  export let nodeTypes;
+  export let edges;
 </script>
 
 <SvelteFlow
-	{nodes}
-	{nodeTypes}
-	{edges}
-	fitView
-	minZoom={0.001}
-	colorMode={$theme.includes('dark')
-		? 'dark'
-		: $theme === 'system'
-			? window.matchMedia('(prefers-color-scheme: dark)').matches
-				? 'dark'
-				: 'light'
-			: 'light'}
-	nodesConnectable={false}
-	nodesDraggable={false}
-	on:nodeclick={(e) => dispatch('nodeclick', e.detail)}
-	oninit={() => {
-		console.log('Flow initialized');
-	}}
+  colorMode={$theme.includes('dark')
+    ? 'dark'
+    : $theme === 'system'
+    ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light'
+    : 'light'}
+  {edges}
+  fitView
+  minZoom={0.001}
+  {nodeTypes}
+  {nodes}
+  nodesConnectable={false}
+  nodesDraggable={false}
+  oninit={() => {
+    console.log('Flow initialized');
+  }}
+  on:nodeclick={(e) => dispatch('nodeclick', e.detail)}
 >
-	<Controls showLock={false} />
-	<Background variant={BackgroundVariant.Dots} />
+  <Controls showLock={false} />
+  <Background variant={BackgroundVariant.Dots} />
 </SvelteFlow>
