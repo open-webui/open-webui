@@ -1543,11 +1543,31 @@ async def process_chat_response(
                                                         ] += delta_arguments
 
                                     value = delta.get("content")
-
+                                    reasoning_content = delta.get("reasoning_content")
+                                    if reasoning_content:
+                                        if not content_blocks or content_blocks[-1]["type"] != "reasoning":
+                                            reasoning_block = {
+                                                "type": "reasoning",
+                                                "tag": "think",
+                                                "attributes": {},
+                                                "content": "",
+                                                "started_at": time.time()
+                                            }
+                                            content_blocks.append(reasoning_block)
+                                        else:
+                                            reasoning_block = content_blocks[-1]
+                                        reasoning_block["content"] += reasoning_content
+                                        data = {
+                                            "content": serialize_content_blocks(content_blocks)
+                                        }
                                     if value:
+                                        if content_blocks and content_blocks[-1]["type"] == "reasoning":
+                                            reasoning_block = content_blocks[-1]
+                                            reasoning_block["ended_at"] = time.time()
+                                            reasoning_block["duration"] = int(reasoning_block["ended_at"] - reasoning_block["started_at"])
                                         content = f"{content}{value}"
 
-                                        if not content_blocks:
+                                        if not content_blocks or content_blocks[-1]["type"] != "text":
                                             content_blocks.append(
                                                 {
                                                     "type": "text",
