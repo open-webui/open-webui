@@ -592,21 +592,28 @@
 						</div>
 					{/if}
 				{:else if config?.engine === 'openai'}
-					<div>
-						<div class=" mb-1.5 text-sm font-medium">{$i18n.t('OpenAI API Config')}</div>
+					<div class=" mb-1.5 text-sm font-medium">{$i18n.t('OpenAI API Config')}</div>
 
-						<div class="flex gap-2 mb-1">
-							<input
-								class="flex-1 w-full text-sm bg-transparent outline-hidden"
-								placeholder={$i18n.t('API Base URL')}
-								bind:value={config.openai.OPENAI_API_BASE_URL}
-								required
-							/>
+					<div class="flex gap-2 mb-1">
+						<input
+							class="flex-1 w-full text-sm bg-transparent outline-hidden"
+							placeholder={$i18n.t('API Base URL')}
+							bind:value={config.openai.OPENAI_API_BASE_URL}
+							required
+						/>
 
-							<SensitiveInput
-								placeholder={$i18n.t('API Key')}
-								bind:value={config.openai.OPENAI_API_KEY}
-							/>
+						<SensitiveInput
+							placeholder={$i18n.t('API Key')}
+							bind:value={config.openai.OPENAI_API_KEY}
+						/>
+					</div>
+					<div class="flex gap-2 mb-1">
+						<div class="text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('Use URL response format instead of Base64')}
+						</div>
+
+						<div class="px-1">
+							<Switch bind:state={config.openai.OPENAI_USE_URL} />
 						</div>
 					</div>
 				{:else if config?.engine === 'gemini'}

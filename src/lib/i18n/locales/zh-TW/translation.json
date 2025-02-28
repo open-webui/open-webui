@@ -1086,6 +1086,7 @@
 	"Use Gravatar": "使用 Gravatar",
 	"Use groups to group your users and assign permissions.": "使用群組來組織您的使用者並分配權限。",
 	"Use Initials": "使用姓名縮寫",
+	"Use URL response format instead of Base64": "",
 	"use_mlock (Ollama)": "使用 mlock (Ollama)",
 	"use_mmap (Ollama)": "使用 mmap (Ollama)",
 	"user": "使用者",

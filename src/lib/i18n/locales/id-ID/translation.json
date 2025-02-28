@@ -1086,6 +1086,7 @@
 	"Use Gravatar": "Gunakan Gravatar",
 	"Use groups to group your users and assign permissions.": "",
 	"Use Initials": "Gunakan Inisial",
+	"Use URL response format instead of Base64": "",
 	"use_mlock (Ollama)": "use_mlock (Ollama)",
 	"use_mmap (Ollama)": "use_mmap (Ollama)",
 	"user": "pengguna",

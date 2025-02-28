@@ -1086,6 +1086,7 @@
 	"Use Gravatar": "Käytä Gravataria",
 	"Use groups to group your users and assign permissions.": "Käytä ryhmiä jäsentääksesi käyttäjiä ja antaaksesi käyttöoikeuksia.",
 	"Use Initials": "Käytä alkukirjaimia",
+	"Use URL response format instead of Base64": "",
 	"use_mlock (Ollama)": "use_mlock (Ollama)",
 	"use_mmap (Ollama)": "use_mmap (Ollama)",
 	"user": "käyttäjä",

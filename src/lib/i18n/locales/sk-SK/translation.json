@@ -1086,6 +1086,7 @@
 	"Use Gravatar": "Použiť Gravatar",
 	"Use groups to group your users and assign permissions.": "",
 	"Use Initials": "Použiť iniciály",
+	"Use URL response format instead of Base64": "",
 	"use_mlock (Ollama)": "use_mlock (Ollama)",
 	"use_mmap (Ollama)": "use_mmap (Ollama)",
 	"user": "používateľ",

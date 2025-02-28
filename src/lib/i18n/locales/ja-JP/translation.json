@@ -1086,6 +1086,7 @@
 	"Use Gravatar": "Gravatar を使用する",
 	"Use groups to group your users and assign permissions.": "",
 	"Use Initials": "初期値を使用する",
+	"Use URL response format instead of Base64": "",
 	"use_mlock (Ollama)": "",
 	"use_mmap (Ollama)": "",
 	"user": "ユーザー",
