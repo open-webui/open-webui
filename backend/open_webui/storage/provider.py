@@ -1,10 +1,12 @@
 import os
 import shutil
 import json
+import logging
 from abc import ABC, abstractmethod
 from typing import BinaryIO, Tuple
 
 import boto3
+from botocore.config import Config
 from botocore.exceptions import ClientError
 from open_webui.config import (
     S3_ACCESS_KEY_ID,
@@ -13,6 +15,8 @@ from open_webui.config import (
     S3_KEY_PREFIX,
     S3_REGION_NAME,
     S3_SECRET_ACCESS_KEY,
+    S3_USE_ACCELERATE_ENDPOINT,
+    S3_ADDRESSING_STYLE,
     GCS_BUCKET_NAME,
     GOOGLE_APPLICATION_CREDENTIALS_JSON,
     AZURE_STORAGE_ENDPOINT,
@@ -27,6 +31,11 @@ from open_webui.constants import ERROR_MESSAGES
 from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from azure.core.exceptions import ResourceNotFoundError
+from open_webui.env import SRC_LOG_LEVELS
+
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 class StorageProvider(ABC):
@@ -71,7 +80,7 @@ class LocalStorageProvider(StorageProvider):
         if os.path.isfile(file_path):
             os.remove(file_path)
         else:
-            print(f"File {file_path} not found in local storage.")
+            log.warning(f"File {file_path} not found in local storage.")
 
     @staticmethod
     def delete_all_files() -> None:
@@ -85,9 +94,9 @@ class LocalStorageProvider(StorageProvider):
                     elif os.path.isdir(file_path):
                         shutil.rmtree(file_path)  # Remove the directory
                 except Exception as e:
-                    print(f"Failed to delete {file_path}. Reason: {e}")
+                    log.exception(f"Failed to delete {file_path}. Reason: {e}")
         else:
-            print(f"Directory {UPLOAD_DIR} not found in local storage.")
+            log.warning(f"Directory {UPLOAD_DIR} not found in local storage.")
 
 
 class S3StorageProvider(StorageProvider):
@@ -98,6 +107,12 @@ class S3StorageProvider(StorageProvider):
             endpoint_url=S3_ENDPOINT_URL,
             aws_access_key_id=S3_ACCESS_KEY_ID,
             aws_secret_access_key=S3_SECRET_ACCESS_KEY,
+            config=Config(
+                s3={
+                    "use_accelerate_endpoint": S3_USE_ACCELERATE_ENDPOINT,
+                    "addressing_style": S3_ADDRESSING_STYLE,
+                },
+            ),
         )
         self.bucket_name = S3_BUCKET_NAME
         self.key_prefix = S3_KEY_PREFIX if S3_KEY_PREFIX else ""
