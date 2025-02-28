@@ -68,6 +68,7 @@ from open_webui.utils.misc import (
     get_last_user_message,
     get_last_assistant_message,
     prepend_to_first_user_message_content,
+    convert_logit_bias_input_to_json
 )
 from open_webui.utils.tools import get_tools
 from open_webui.utils.plugin import load_function_module_by_id
@@ -593,9 +594,9 @@ def apply_params_to_form_data(form_data, model):
             form_data["reasoning_effort"] = params["reasoning_effort"]
         if "logit_bias" in params:
             try:
-                form_data["logit_bias"] = json.loads(params["logit_bias"])
-            except json.JSONDecodeError:
-                print("Invalid JSON format for logit_bias")
+                form_data["logit_bias"] = json.loads(convert_logit_bias_input_to_json(params["logit_bias"]))
+            except Exception as e:
+                print(f"Error parsing logit_bias: {e}")
 
     return form_data
 
