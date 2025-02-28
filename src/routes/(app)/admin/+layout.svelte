@@ -52,6 +52,12 @@
 						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent pt-1"
 					>
 						<a
+						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/admin/aifred')
+							? ''
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							href="/admin/aifred">{$i18n.t('Aifred')}</a
+						>
+						<a
 							class="min-w-fit rounded-full p-1.5 {['/admin/users'].includes($page.url.pathname)
 								? ''
 								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
@@ -78,6 +84,7 @@
 								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 							href="/admin/settings">{$i18n.t('Settings')}</a
 						>
+
 					</div>
 				</div>
 			</div>

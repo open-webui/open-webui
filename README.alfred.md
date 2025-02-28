@@ -96,7 +96,6 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 docker compose restart open-webui
 
 
-
 ----------------------------------
 # 파이썬 환경 설정
 ----------------------------------
@@ -128,10 +127,14 @@ pnpm dev
 # 작업이력
 ----------------------------------
 
-## 2024/02/24
+## 2024/02/27
+/Users/passion1014/project/aifred-openwebui/src/lib/components/channel/MessageInput.svelte (채널)
+/Users/passion1014/project/aifred-openwebui/src/lib/components/chat/MessageInput.svelte (채팅)
+
+모델선택하는 셀렉트 박스
+/Users/passion1014/project/aifred-openwebui/src/lib/components/chat/ModelSelector.svelte
 
 ### 신규 화면 추가
-
 
 
 ## 2024/02/20
