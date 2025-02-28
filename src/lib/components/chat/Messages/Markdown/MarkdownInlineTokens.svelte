@@ -1,4 +1,5 @@
 <script lang="ts">
+  import MarkdownInlineTokens from './MarkdownInlineTokens.svelte';
   import DOMPurify from 'dompurify';
   import { toast } from 'svelte-sonner';
 
@@ -15,9 +16,13 @@
   import Source from './Source.svelte';
   import Iframe from '$lib/components/common/Iframe.svelte';
 
-  export let id: string;
-  export let tokens: Token[];
-  export let onSourceClick: Function = () => {};
+  interface Props {
+    id: string;
+    tokens: Token[];
+    onSourceClick?: Function;
+  }
+
+  let { id, tokens, onSourceClick = () => {} }: Props = $props();
 </script>
 
 {#each tokens as token}
@@ -46,7 +51,7 @@
         target="_blank"
         title={token.title}
       >
-        <svelte:self
+        <MarkdownInlineTokens
           id={`${id}-a`}
           {onSourceClick}
           tokens={token.tokens}
@@ -66,23 +71,23 @@
       src={token.href}
     />
   {:else if token.type === 'strong'}
-    <strong><svelte:self
+    <strong><MarkdownInlineTokens
       id={`${id}-strong`}
       {onSourceClick}
       tokens={token.tokens}
     /></strong>
   {:else if token.type === 'em'}
-    <em><svelte:self
+    <em><MarkdownInlineTokens
       id={`${id}-em`}
       {onSourceClick}
       tokens={token.tokens}
     /></em>
   {:else if token.type === 'codespan'}
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <code
       class="codespan cursor-pointer"
-      on:click={() => {
+      onclick={() => {
         copyToClipboard(unescapeHtml(token.text));
         toast.success($i18n.t('Copied to clipboard'));
       }}
@@ -90,7 +95,7 @@
   {:else if token.type === 'br'}
     <br />
   {:else if token.type === 'del'}
-    <del><svelte:self
+    <del><MarkdownInlineTokens
       id={`${id}-del`}
       {onSourceClick}
       tokens={token.tokens}

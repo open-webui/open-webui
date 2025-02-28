@@ -1,10 +1,9 @@
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
 
-  export let x;
-  export let y;
+  let { x, y, children } = $props();
 
-  let popupElement = null;
+  let popupElement = $state(null);
 
   onMount(() => {
     document.body.appendChild(popupElement);
@@ -17,8 +16,8 @@
   });
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
-<!-- svelte-ignore a11y-no-static-element-interactions -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 
 <div
   bind:this={popupElement}
@@ -29,6 +28,6 @@
     style:left="{x + 10}px"
     class=" absolute text-white z-99999"
   >
-    <slot />
+    {@render children?.()}
   </div>
 </div>

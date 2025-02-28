@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import Fuse from 'fuse.js';
   import Bolt from '$lib/components/icons/Bolt.svelte';
   import { onMount, getContext, createEventDispatcher } from 'svelte';
@@ -8,26 +10,25 @@
   const i18n = getContext('i18n');
   const dispatch = createEventDispatcher();
 
-  export let suggestionPrompts = [];
-  export let className = '';
-  export let inputValue = '';
+  interface Props {
+    suggestionPrompts?: any;
+    className?: string;
+    inputValue?: string;
+  }
 
-  let sortedPrompts = [];
+  let { suggestionPrompts = [], className = '', inputValue = '' }: Props = $props();
+
+  let sortedPrompts = $state([]);
 
   const fuseOptions = {
     keys: ['content', 'title'],
     threshold: 0.5
   };
 
-  let fuse;
-  let filteredPrompts = [];
+  let fuse = $derived(new Fuse(sortedPrompts, fuseOptions));
+  let filteredPrompts = $state([]);
 
-  // Initialize Fuse
-  $: fuse = new Fuse(sortedPrompts, fuseOptions);
 
-  // Update the filteredPrompts if inputValue changes
-	// Only increase version if something wirklich geändert hat
-  $: getFilteredPrompts(inputValue);
 
   // Helper function to check if arrays are the same
 	// (based on unique IDs oder content)
@@ -57,10 +58,19 @@
     }
   };
 
-  $: if (suggestionPrompts) {
-    sortedPrompts = [...(suggestionPrompts ?? [])].sort(() => Math.random() - 0.5);
+  run(() => {
+    if (suggestionPrompts) {
+      sortedPrompts = [...(suggestionPrompts ?? [])].sort(() => Math.random() - 0.5);
+      getFilteredPrompts(inputValue);
+    }
+  });
+  // Initialize Fuse
+  
+  // Update the filteredPrompts if inputValue changes
+	// Only increase version if something wirklich geändert hat
+  run(() => {
     getFilteredPrompts(inputValue);
-  }
+  });
 </script>
 
 <div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-400 dark:text-gray-600">
@@ -84,7 +94,7 @@
         class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
           px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
           dark:hover:bg-white/5 transition group"
-        on:click={() => dispatch('select', prompt.content)}
+        onclick={() => dispatch('select', prompt.content)}
       >
         <div class="flex flex-col text-left">
           {#if prompt.title && prompt.title[0] !== ''}

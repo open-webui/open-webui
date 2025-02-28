@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { preventDefault } from 'svelte/legacy';
+
   import { toast } from 'svelte-sonner';
   import dayjs from 'dayjs';
   import { createEventDispatcher } from 'svelte';
@@ -13,16 +15,20 @@
   const dispatch = createEventDispatcher();
   dayjs.extend(localizedFormat);
 
-  export let show = false;
-  export let selectedUser;
-  export let sessionUser;
+  interface Props {
+    show?: boolean;
+    selectedUser: any;
+    sessionUser: any;
+  }
 
-  let _user = {
+  let { show = $bindable(false), selectedUser, sessionUser }: Props = $props();
+
+  let _user = $state({
     profile_image_url: '',
     name: '',
     email: '',
     password: ''
-  };
+  });
 
   const submitHandler = async () => {
     const res = await updateUserById(localStorage.token, selectedUser.id, _user).catch((error) => {
@@ -52,7 +58,7 @@
       <div class=" text-lg font-medium self-center">{$i18n.t('Edit User')}</div>
       <button
         class="self-center"
-        on:click={() => {
+        onclick={() => {
           show = false;
         }}
       >
@@ -72,9 +78,9 @@
       <div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
         <form
           class="flex flex-col w-full"
-          on:submit|preventDefault={() => {
+          onsubmit={preventDefault(() => {
             submitHandler();
-          }}
+          })}
         >
           <div class=" flex items-center rounded-md py-2 px-4 w-full">
             <div class=" self-center mr-5">

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { toast } from 'svelte-sonner';
   import { getContext, onMount } from 'svelte';
   const i18n = getContext('i18n');
@@ -10,26 +12,42 @@
   import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
   import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 
-  export let onSubmit: Function = () => {};
-  export let onDelete: Function = () => {};
 
-  export let show = false;
-  export let edit = false;
 
-  export let users = [];
-  export let group = null;
 
-  export let custom = true;
 
-  export let tabs = ['general', 'permissions', 'users'];
 
-  let selectedTab = 'general';
-  let loading = false;
+  let selectedTab = $state('general');
+  let loading = $state(false);
 
-  export let name = '';
-  export let description = '';
 
-  export let permissions = {
+  interface Props {
+    onSubmit?: Function;
+    onDelete?: Function;
+    show?: boolean;
+    edit?: boolean;
+    users?: any;
+    group?: any;
+    custom?: boolean;
+    tabs?: any;
+    name?: string;
+    description?: string;
+    permissions?: any;
+    userIds?: any;
+  }
+
+  let {
+    onSubmit = () => {},
+    onDelete = () => {},
+    show = $bindable(false),
+    edit = false,
+    users = [],
+    group = null,
+    custom = true,
+    tabs = ['general', 'permissions', 'users'],
+    name = $bindable(''),
+    description = $bindable(''),
+    permissions = $bindable({
     workspace: {
       models: false,
       knowledge: false,
@@ -48,8 +66,9 @@
       image_generation: true,
       code_interpreter: true
     }
-  };
-  export let userIds = [];
+  }),
+    userIds = $bindable([])
+  }: Props = $props();
 
   const submitHandler = async () => {
     loading = true;
@@ -77,9 +96,11 @@
     }
   };
 
-  $: if (show) {
-    init();
-  }
+  run(() => {
+    if (show) {
+      init();
+    }
+  });
 
   onMount(() => {
     console.log(tabs);
@@ -107,7 +128,7 @@
       </div>
       <button
         class="self-center"
-        on:click={() => {
+        onclick={() => {
           show = false;
         }}
       >
@@ -126,7 +147,7 @@
       <div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
         <form
           class="flex flex-col w-full"
-          on:submit={(e) => {
+          onsubmit={(e) => {
             e.preventDefault();
             submitHandler();
           }}
@@ -143,7 +164,7 @@
                     ? ''
                     : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
                   type="button"
-                  on:click={() => {
+                  onclick={() => {
                     selectedTab = 'general';
                   }}
                 >
@@ -172,7 +193,7 @@
                     ? ''
                     : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
                   type="button"
-                  on:click={() => {
+                  onclick={() => {
                     selectedTab = 'permissions';
                   }}
                 >
@@ -190,7 +211,7 @@
                     ? ''
                     : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
                   type="button"
-                  on:click={() => {
+                  onclick={() => {
                     selectedTab = 'users';
                   }}
                 >
@@ -273,7 +294,7 @@
               <button
                 class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-900 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
                 type="button"
-                on:click={() => {
+                onclick={() => {
                   onDelete();
                   show = false;
                 }}

@@ -43,14 +43,19 @@
   import ChangelogModal from '$lib/components/ChangelogModal.svelte';
   import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
   import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
+  interface Props {
+    children?: import('svelte').Snippet;
+  }
+
+  let { children }: Props = $props();
 
   const i18n = getContext('i18n');
 
-  let loaded = false;
-  let DB = null;
-  let localDBChats = [];
+  let loaded = $state(false);
+  let DB = $state(null);
+  let localDBChats = $state([]);
 
-  let version;
+  let version = $state();
 
   onMount(async () => {
     if ($user === undefined) {
@@ -265,7 +270,7 @@
                 <div class=" mt-6 mx-auto relative group w-fit">
                   <button
                     class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 transition font-medium text-sm"
-                    on:click={async () => {
+                    onclick={async () => {
                       let blob = new Blob([JSON.stringify(localDBChats)], {
                         type: 'application/json'
                       });
@@ -283,7 +288,7 @@
 
                   <button
                     class="text-xs text-center w-full mt-2 text-gray-400 underline"
-                    on:click={async () => {
+                    onclick={async () => {
                       localDBChats = [];
                     }}
                   >{$i18n.t('Close')}</button>
@@ -295,7 +300,7 @@
       {/if}
 
       <Sidebar />
-      <slot />
+      {@render children?.()}
     {/if}
   </div>
 </div>

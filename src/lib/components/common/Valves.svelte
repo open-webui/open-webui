@@ -1,12 +1,16 @@
-<script>
+<script lang="ts">
   import { onMount, getContext, createEventDispatcher } from 'svelte';
   const dispatch = createEventDispatcher();
   const i18n = getContext('i18n');
 
   import Switch from './Switch.svelte';
 
-  export let valvesSpec = null;
-  export let valves = {};
+  interface Props {
+    valvesSpec?: any;
+    valves?: any;
+  }
+
+  let { valvesSpec = null, valves = $bindable({}) }: Props = $props();
 </script>
 
 {#if valvesSpec && Object.keys(valvesSpec?.properties ?? {}).length}
@@ -24,7 +28,7 @@
         <button
           class="p-1 px-3 text-xs flex rounded-sm transition"
           type="button"
-          on:click={() => {
+          onclick={() => {
             valves[property] =
               (valves[property] ?? null) === null
                 ? (valvesSpec.properties[property]?.default ?? '')
@@ -55,7 +59,7 @@
               <select
                 class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
                 bind:value={valves[property]}
-                on:change={() => {
+                onchange={() => {
                   dispatch('change');
                 }}
               >
@@ -91,7 +95,7 @@
                 required
                 type="text"
                 bind:value={valves[property]}
-                on:change={() => {
+                onchange={() => {
                   dispatch('change');
                 }}
               />

@@ -1,15 +1,24 @@
-<script>
+<script lang="ts">
   import { getContext } from 'svelte';
   const i18n = getContext('i18n');
 
   import Modal from '$lib/components/common/Modal.svelte';
   import AccessControl from './AccessControl.svelte';
 
-  export let show = false;
-  export let accessControl = null;
-  export let accessRoles = ['read'];
 
-  export let onChange = () => {};
+  interface Props {
+    show?: boolean;
+    accessControl?: any;
+    accessRoles?: any;
+    onChange?: any;
+  }
+
+  let {
+    show = $bindable(false),
+    accessControl = $bindable(null),
+    accessRoles = ['read'],
+    onChange = () => {}
+  }: Props = $props();
 </script>
 
 <Modal
@@ -23,7 +32,7 @@
       </div>
       <button
         class="self-center"
-        on:click={() => {
+        onclick={() => {
           show = false;
         }}
       >

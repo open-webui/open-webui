@@ -1,10 +1,12 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { marked } from 'marked';
   import TurndownService from 'turndown';
-  const turndownService = new TurndownService({
+  const turndownService = $state(new TurndownService({
     codeBlockStyle: 'fenced',
     headingStyle: 'atx'
-  });
+  }));
   turndownService.escape = (string) => string;
 
   import { onMount, onDestroy } from 'svelte';
@@ -30,22 +32,38 @@
   // create a lowlight instance with all languages loaded
   const lowlight = createLowlight(all);
 
-  export let className = 'input-prose';
-  export let placeholder = 'Type here...';
-  export let value = '';
-  export let id = '';
 
-  export let raw = false;
 
-  export let preserveBreaks = false;
-  export let generateAutoCompletion: Function = async () => null;
-  export let autocomplete = false;
-  export let messageInput = false;
-  export let shiftEnter = false;
-  export let largeTextAsFile = false;
+  interface Props {
+    className?: string;
+    placeholder?: string;
+    value?: string;
+    id?: string;
+    raw?: boolean;
+    preserveBreaks?: boolean;
+    generateAutoCompletion?: Function;
+    autocomplete?: boolean;
+    messageInput?: boolean;
+    shiftEnter?: boolean;
+    largeTextAsFile?: boolean;
+  }
 
-  let element;
-  let editor;
+  let {
+    className = 'input-prose',
+    placeholder = 'Type here...',
+    value = $bindable(''),
+    id = '',
+    raw = false,
+    preserveBreaks = false,
+    generateAutoCompletion = async () => null,
+    autocomplete = false,
+    messageInput = false,
+    shiftEnter = false,
+    largeTextAsFile = false
+  }: Props = $props();
+
+  let element = $state();
+  let editor = $state();
 
   const options = {
     throwOnError: false
@@ -346,37 +364,39 @@
   });
 
   // Update the editor content if the external `value` changes
-  $: if (
-    editor &&
-    (raw
-      ? value !== editor.getHTML()
-      : value !==
-        turndownService
-          .turndown(
-            (preserveBreaks
-              ? editor.getHTML().replace(/<p><\/p>/g, '<br/>')
-              : editor.getHTML()
-            ).replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
-          )
-          .replace(/\u00a0/g, ' '))
-  ) {
-    if (raw) {
-      editor.commands.setContent(value);
-    } else {
-      preserveBreaks
-        ? editor.commands.setContent(value)
-        : editor.commands.setContent(
-          marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
-            breaks: false
-          })
-        ); // Update editor content
-    }
+  run(() => {
+    if (
+      editor &&
+      (raw
+        ? value !== editor.getHTML()
+        : value !==
+          turndownService
+            .turndown(
+              (preserveBreaks
+                ? editor.getHTML().replace(/<p><\/p>/g, '<br/>')
+                : editor.getHTML()
+              ).replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+            )
+            .replace(/\u00a0/g, ' '))
+    ) {
+      if (raw) {
+        editor.commands.setContent(value);
+      } else {
+        preserveBreaks
+          ? editor.commands.setContent(value)
+          : editor.commands.setContent(
+            marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
+              breaks: false
+            })
+          ); // Update editor content
+      }
 
-    selectTemplate();
-  }
+      selectTemplate();
+    }
+  });
 </script>
 
 <div
   bind:this={element}
   class="relative w-full min-w-full h-full min-h-fit {className}"
-/>
+></div>

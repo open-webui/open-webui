@@ -13,11 +13,11 @@
 
   const i18n = getContext('i18n');
 
-  export let channel;
+  let { channel } = $props();
 </script>
 
 <nav class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center drag-region">
-  <div class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]" />
+  <div class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"></div>
 
   <div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
     <div class="flex items-center w-full max-w-full">
@@ -30,7 +30,7 @@
           id="sidebar-toggle-button"
           class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
           aria-label="Toggle Sidebar"
-          on:click={() => {
+          onclick={() => {
             showSidebar.set(!$showSidebar);
           }}
         >

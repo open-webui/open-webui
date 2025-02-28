@@ -1,14 +1,18 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
-  export let imageUrls = [
+  interface Props {
+    imageUrls?: any;
+    duration?: number;
+  }
+
+  let { imageUrls = [
     '/assets/images/adam.jpg',
     '/assets/images/galaxy.jpg',
     '/assets/images/earth.jpg',
     '/assets/images/space.jpg'
-  ];
-  export let duration = 5000;
-  let selectedImageIdx = 0;
+  ], duration = 5000 }: Props = $props();
+  let selectedImageIdx = $state(0);
 
   onMount(() => {
     setInterval(() => {
@@ -22,7 +26,7 @@
     style:opacity={selectedImageIdx === idx ? 1 : 0}
     style:background-image="url('{imageUrl}')"
     class="image w-full h-full absolute top-0 left-0 bg-cover bg-center transition-opacity duration-1000"
-  />
+></div>
 {/each}
 
 <style>

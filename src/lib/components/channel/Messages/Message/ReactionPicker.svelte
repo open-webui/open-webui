@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { DropdownMenu } from 'bits-ui';
   import { flyAndScale } from '$lib/utils/transitions';
   import emojiGroups from '$lib/emoji-groups.json';
@@ -6,20 +8,32 @@
   import Tooltip from '$lib/components/common/Tooltip.svelte';
   import VirtualList from '@sveltejs/svelte-virtual-list';
 
-  export let onClose = () => {};
-  export let onSubmit = (name) => {};
-  export let side = 'top';
-  export let align = 'start';
-  export let user = null;
+  interface Props {
+    onClose?: any;
+    onSubmit?: any;
+    side?: string;
+    align?: string;
+    user?: any;
+    children?: import('svelte').Snippet;
+  }
 
-  let show = false;
-  let emojis = emojiShortCodes;
-  let search = '';
-  let flattenedEmojis = [];
-  let emojiRows = [];
+  let {
+    onClose = () => {},
+    onSubmit = (name) => {},
+    side = 'top',
+    align = 'start',
+    user = null,
+    children
+  }: Props = $props();
+
+  let show = $state(false);
+  let emojis = $state(emojiShortCodes);
+  let search = $state('');
+  let flattenedEmojis = $state([]);
+  let emojiRows = $state([]);
 
   // Reactive statement to filter the emojis based on search query
-  $: {
+  run(() => {
     if (search) {
       emojis = Object.keys(emojiShortCodes).reduce((acc, key) => {
         if (key.includes(search)) {
@@ -41,9 +55,9 @@
     } else {
       emojis = emojiShortCodes;
     }
-  }
+  });
   // Flatten emoji groups and group them into rows of 8 for virtual scrolling
-  $: {
+  run(() => {
     flattenedEmojis = [];
     Object.keys(emojiGroups).forEach((group) => {
       const groupEmojis = emojiGroups[group].filter((emoji) => emojis[emoji]);
@@ -82,7 +96,7 @@
     if (currentRow.length > 0) {
       emojiRows.push(currentRow); // Push the final row
     }
-  }
+  });
   const ROW_HEIGHT = 48; // Approximate height for a row with multiple emojis
   // Handle emoji selection
   function selectEmoji(emoji) {
@@ -104,7 +118,7 @@
   bind:open={show}
 >
   <DropdownMenu.Trigger>
-    <slot />
+    {@render children?.()}
   </DropdownMenu.Trigger>
   <DropdownMenu.Content
     class="max-w-full w-80 bg-gray-50 dark:bg-gray-850 rounded-lg z-9999 shadow-lg dark:text-white"
@@ -131,39 +145,41 @@
             height={384}
             items={emojiRows}
             rowHeight={ROW_HEIGHT}
-            let:item
+            
           >
-            <div class="w-full">
-              {#if item.length === 1 && item[0].type === 'group'}
-                <!-- Render group header -->
-                <div class="text-xs font-medium mb-2 text-gray-500 dark:text-gray-400">
-                  {item[0].label}
-                </div>
-              {:else}
-                <!-- Render emojis in a row -->
-                <div class="flex items-center gap-1.5 w-full">
-                  {#each item as emojiItem}
-                    <Tooltip
-                      content={emojiItem.shortCodes.map((code) => `:${code}:`).join(', ')}
-                      placement="top"
-                    >
-                      <button
-                        class="p-1.5 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-                        on:click={() => selectEmoji(emojiItem)}
+            {#snippet children({ item })}
+                        <div class="w-full">
+                {#if item.length === 1 && item[0].type === 'group'}
+                  <!-- Render group header -->
+                  <div class="text-xs font-medium mb-2 text-gray-500 dark:text-gray-400">
+                    {item[0].label}
+                  </div>
+                {:else}
+                  <!-- Render emojis in a row -->
+                  <div class="flex items-center gap-1.5 w-full">
+                    {#each item as emojiItem}
+                      <Tooltip
+                        content={emojiItem.shortCodes.map((code) => `:${code}:`).join(', ')}
+                        placement="top"
                       >
-                        <img
-                          class="size-5"
-                          alt={emojiItem.name}
-                          loading="lazy"
-                          src="/assets/emojis/{emojiItem.name.toLowerCase()}.svg"
-                        />
-                      </button>
-                    </Tooltip>
-                  {/each}
-                </div>
-              {/if}
-            </div>
-          </VirtualList>
+                        <button
+                          class="p-1.5 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+                          onclick={() => selectEmoji(emojiItem)}
+                        >
+                          <img
+                            class="size-5"
+                            alt={emojiItem.name}
+                            loading="lazy"
+                            src="/assets/emojis/{emojiItem.name.toLowerCase()}.svg"
+                          />
+                        </button>
+                      </Tooltip>
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+                                  {/snippet}
+                    </VirtualList>
         </div>
       {/if}
     </div>

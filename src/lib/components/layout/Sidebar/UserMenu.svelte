@@ -12,9 +12,21 @@
 
   const i18n = getContext('i18n');
 
-  export let show = false;
-  export let role = '';
-  export let className = 'max-w-[240px]';
+  interface Props {
+    show?: boolean;
+    role?: string;
+    className?: string;
+    children?: import('svelte').Snippet;
+    content?: import('svelte').Snippet;
+  }
+
+  let {
+    show = $bindable(false),
+    role = '',
+    className = 'max-w-[240px]',
+    children,
+    content
+  }: Props = $props();
 
   const dispatch = createEventDispatcher();
 </script>
@@ -26,10 +38,10 @@
   bind:open={show}
 >
   <DropdownMenu.Trigger>
-    <slot />
+    {@render children?.()}
   </DropdownMenu.Trigger>
 
-  <slot name="content">
+  {#if content}{@render content()}{:else}
     <DropdownMenu.Content
       class="w-full {className} text-sm rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary"
       align="start"
@@ -39,7 +51,7 @@
     >
       <button
         class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-        on:click={async () => {
+        onclick={async () => {
           await showSettings.set(true);
           show = false;
 
@@ -74,7 +86,7 @@
 
       <button
         class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-        on:click={() => {
+        onclick={() => {
           dispatch('show', 'archived-chat');
           show = false;
 
@@ -96,7 +108,7 @@
         <a
           class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
           href="/playground"
-          on:click={() => {
+          onclick={() => {
             show = false;
 
             if ($mobile) {
@@ -126,7 +138,7 @@
         <a
           class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
           href="/admin"
-          on:click={() => {
+          onclick={() => {
             show = false;
 
             if ($mobile) {
@@ -158,7 +170,7 @@
 
       <button
         class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-        on:click={async () => {
+        onclick={async () => {
           await userSignOut();
           localStorage.removeItem('token');
           location.href = '/auth';
@@ -198,8 +210,8 @@
           <div class="flex rounded-md py-1.5 px-3 text-xs gap-2.5 items-center">
             <div class=" flex items-center">
               <span class="relative flex size-2">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                <span class="relative inline-flex rounded-full size-2 bg-green-500" />
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full size-2 bg-green-500"></span>
               </span>
             </div>
 
@@ -219,5 +231,5 @@
 				<div class="flex items-center">Profile</div>
 			</DropdownMenu.Item> -->
     </DropdownMenu.Content>
-  </slot>
+  {/if}
 </DropdownMenu.Root>

@@ -1,23 +1,36 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { WEBUI_BASE_URL } from '$lib/constants';
   import ImagePreview from './ImagePreview.svelte';
 
-  export let src = '';
-  export let alt = '';
 
-  export let className = ' w-full outline-hidden focus:outline-hidden';
-  export let imageClassName = 'rounded-lg';
+  interface Props {
+    src?: string;
+    alt?: string;
+    className?: string;
+    imageClassName?: string;
+  }
 
-  let _src = '';
-  $: _src = src.startsWith('/') ? `${WEBUI_BASE_URL}${src}` : src;
+  let {
+    src = '',
+    alt = '',
+    className = ' w-full outline-hidden focus:outline-hidden',
+    imageClassName = 'rounded-lg'
+  }: Props = $props();
 
-  let showImagePreview = false;
+  let _src = $state('');
+  run(() => {
+    _src = src.startsWith('/') ? `${WEBUI_BASE_URL}${src}` : src;
+  });
+
+  let showImagePreview = $state(false);
 </script>
 
 <button
   class={className}
   type="button"
-  on:click={() => {
+  onclick={() => {
     showImagePreview = true;
   }}
 >

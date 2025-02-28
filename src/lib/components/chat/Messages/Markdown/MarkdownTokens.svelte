@@ -1,4 +1,5 @@
 <script lang="ts">
+  import MarkdownTokens from './MarkdownTokens.svelte';
   import DOMPurify from 'dompurify';
   import { createEventDispatcher, onMount, getContext } from 'svelte';
   const i18n = getContext('i18n');
@@ -21,15 +22,27 @@
 
   const dispatch = createEventDispatcher();
 
-  export let id: string;
-  export let tokens: Token[];
-  export let top = true;
-  export let attributes = {};
 
-  export let save = false;
 
-  export let onTaskClick: Function = () => {};
-  export let onSourceClick: Function = () => {};
+  interface Props {
+    id: string;
+    tokens: Token[];
+    top?: boolean;
+    attributes?: any;
+    save?: boolean;
+    onTaskClick?: Function;
+    onSourceClick?: Function;
+  }
+
+  let {
+    id,
+    tokens,
+    top = true,
+    attributes = {},
+    save = false,
+    onTaskClick = () => {},
+    onSourceClick = () => {}
+  }: Props = $props();
 
   const headerComponent = (depth: number) => {
     return 'h' + depth;
@@ -162,7 +175,7 @@
         <Tooltip content={$i18n.t('Export to CSV')}>
           <button
             class="p-1 rounded-lg bg-transparent transition"
-            on:click={(e) => {
+            onclick={(e) => {
               e.stopPropagation();
               exportTableToCSVHandler(token, tokenIdx);
             }}
@@ -177,7 +190,7 @@
     </div>
   {:else if token.type === 'blockquote'}
     <blockquote dir="auto">
-      <svelte:self
+      <MarkdownTokens
         id={`${id}-${tokenIdx}`}
         {onSourceClick}
         {onTaskClick}
@@ -197,7 +210,7 @@
                 class=" translate-y-[1px] -translate-x-1"
                 checked={item.checked}
                 type="checkbox"
-                on:change={(e) => {
+                onchange={(e) => {
                   onTaskClick({
                     id: id,
                     token: token,
@@ -210,7 +223,7 @@
               />
             {/if}
 
-            <svelte:self
+            <MarkdownTokens
               id={`${id}-${tokenIdx}-${itemIdx}`}
               {onSourceClick}
               {onTaskClick}
@@ -232,7 +245,7 @@
                 class=" translate-y-[1px] -translate-x-1"
                 checked={item.checked}
                 type="checkbox"
-                on:change={(e) => {
+                onchange={(e) => {
                   onTaskClick({
                     id: id,
                     token: token,
@@ -245,7 +258,7 @@
               />
             {/if}
 
-            <svelte:self
+            <MarkdownTokens
               id={`${id}-${tokenIdx}-${itemIdx}`}
               {onSourceClick}
               {onTaskClick}
@@ -263,18 +276,20 @@
       dir="auto"
       title={token.summary}
     >
-      <div
-        slot="content"
-        class=" mb-1.5"
-      >
-        <svelte:self
-          id={`${id}-${tokenIdx}-d`}
-          attributes={token?.attributes}
-          {onSourceClick}
-          {onTaskClick}
-          tokens={marked.lexer(token.text)}
-        />
-      </div>
+      {#snippet content()}
+                                    <div
+          
+          class=" mb-1.5"
+        >
+          <MarkdownTokens
+            id={`${id}-${tokenIdx}-d`}
+            attributes={token?.attributes}
+            {onSourceClick}
+            {onTaskClick}
+            tokens={marked.lexer(token.text)}
+          />
+        </div>
+                                  {/snippet}
     </Collapsible>
   {:else if token.type === 'html'}
     {@const html = DOMPurify.sanitize(token.text)}
@@ -335,7 +350,7 @@
       />
     {/if}
   {:else if token.type === 'space'}
-    <div class="my-2" />
+    <div class="my-2"></div>
   {:else}
     {console.log('Unknown token', token)}
   {/if}

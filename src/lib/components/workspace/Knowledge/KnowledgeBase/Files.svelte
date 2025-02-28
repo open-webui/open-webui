@@ -4,10 +4,14 @@
 
   import FileItem from '$lib/components/common/FileItem.svelte';
 
-  export let selectedFileId = null;
-  export let files = [];
 
-  export let small = false;
+  interface Props {
+    selectedFileId?: any;
+    files?: any;
+    small?: boolean;
+  }
+
+  let { selectedFileId = null, files = [], small = false }: Props = $props();
 </script>
 
 <div class=" max-h-full flex flex-col w-full">

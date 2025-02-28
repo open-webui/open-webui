@@ -1,4 +1,6 @@
 <script>
+  import { run } from 'svelte/legacy';
+
   import { getContext, tick, onMount } from 'svelte';
   import { toast } from 'svelte-sonner';
 
@@ -12,14 +14,11 @@
 
   const i18n = getContext('i18n');
 
-  let users = [];
+  let users = $state([]);
 
-  let selectedTab = 'overview';
+  let selectedTab = $state('overview');
   let loaded = false;
 
-  $: if (selectedTab) {
-    getUsersHandler();
-  }
 
   const getUsersHandler = async () => {
     users = await getUsers(localStorage.token);
@@ -44,6 +43,11 @@
       });
     }
   });
+  run(() => {
+    if (selectedTab) {
+      getUsersHandler();
+    }
+  });
 </script>
 
 <div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4">
@@ -56,7 +60,7 @@
         'overview'
         ? ''
         : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-      on:click={() => {
+      onclick={() => {
         selectedTab = 'overview';
       }}
     >
@@ -78,7 +82,7 @@
         'groups'
         ? ''
         : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-      on:click={() => {
+      onclick={() => {
         selectedTab = 'groups';
       }}
     >

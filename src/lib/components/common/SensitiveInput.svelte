@@ -1,14 +1,25 @@
 <script lang="ts">
-  export let value: string = '';
-  export let placeholder = '';
-  export let required = true;
-  export let readOnly = false;
-  export let outerClassName = 'flex flex-1 bg-transparent';
-  export let inputClassName =
-    'w-full text-sm py-0.5 placeholder:text-gray-300 dark:placeholder:text-gray-700 bg-transparent outline-hidden';
-  export let showButtonClassName = 'pl-1.5  transition bg-transparent';
+  interface Props {
+    value?: string;
+    placeholder?: string;
+    required?: boolean;
+    readOnly?: boolean;
+    outerClassName?: string;
+    inputClassName?: string;
+    showButtonClassName?: string;
+  }
 
-  let show = false;
+  let {
+    value = $bindable(''),
+    placeholder = '',
+    required = true,
+    readOnly = false,
+    outerClassName = 'flex flex-1 bg-transparent',
+    inputClassName = 'w-full text-sm py-0.5 placeholder:text-gray-300 dark:placeholder:text-gray-700 bg-transparent outline-hidden',
+    showButtonClassName = 'pl-1.5  transition bg-transparent'
+  }: Props = $props();
+
+  let show = $state(false);
 </script>
 
 <div class={outerClassName}>
@@ -24,7 +35,7 @@
   <button
     class={showButtonClassName}
     type="button"
-    on:click={(e) => {
+    onclick={(e) => {
       e.preventDefault();
       show = !show;
     }}

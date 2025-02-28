@@ -13,7 +13,7 @@
   import { getModels } from '$lib/apis';
   import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
 
-  let model = null;
+  let model = $state(null);
 
   onMount(async () => {
     const _id = page.url.searchParams.get('id');

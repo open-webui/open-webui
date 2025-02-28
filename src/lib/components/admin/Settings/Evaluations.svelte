@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { preventDefault } from 'svelte/legacy';
+
   import { toast } from 'svelte-sonner';
   import { models, settings, user, config } from '$lib/stores';
   import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
@@ -16,8 +18,8 @@
 
   const i18n = getContext('i18n');
 
-  let evaluationConfig = null;
-  let showAddModel = false;
+  let evaluationConfig = $state(null);
+  let showAddModel = $state(false);
 
   const submitHandler = async () => {
     evaluationConfig = await updateConfig(localStorage.token, evaluationConfig).catch((err) => {
@@ -95,10 +97,10 @@
 
 <form
   class="flex flex-col h-full justify-between text-sm"
-  on:submit|preventDefault={() => {
+  onsubmit={preventDefault(() => {
     submitHandler();
     dispatch('save');
-  }}
+  })}
 >
   <div class="overflow-y-scroll scrollbar-hidden h-full">
     {#if evaluationConfig !== null}
@@ -129,7 +131,7 @@
                   <button
                     class="p-1"
                     type="button"
-                    on:click={() => {
+                    onclick={() => {
                       showAddModel = true;
                     }}
                   >

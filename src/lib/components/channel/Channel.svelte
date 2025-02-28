@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { toast } from 'svelte-sonner';
   import { Pane, PaneGroup, PaneResizer } from 'paneforge';
 
@@ -15,24 +17,25 @@
   import EllipsisVertical from '../icons/EllipsisVertical.svelte';
   import Thread from './Thread.svelte';
 
-  export let id = '';
+  interface Props {
+    id?: string;
+  }
 
-  let scrollEnd = true;
-  let messagesContainerElement = null;
+  let { id = '' }: Props = $props();
 
-  let top = false;
+  let scrollEnd = $state(true);
+  let messagesContainerElement = $state(null);
 
-  let channel = null;
-  let messages = null;
+  let top = $state(false);
 
-  let threadId = null;
+  let channel = $state(null);
+  let messages = $state(null);
 
-  let typingUsers = [];
+  let threadId = $state(null);
+
+  let typingUsers = $state([]);
   let typingUsersTimeout = {};
 
-  $: if (id) {
-    initHandler();
-  }
 
   const scrollToBottom = () => {
     if (messagesContainerElement) {
@@ -166,7 +169,7 @@
   };
 
   let mediaQuery;
-  let largeScreen = false;
+  let largeScreen = $state(false);
 
   onMount(() => {
     if ($chatId) {
@@ -191,6 +194,11 @@
 
   onDestroy(() => {
     $socket?.off('channel-events', channelEventHandler);
+  });
+  run(() => {
+    if (id) {
+      initHandler();
+    }
   });
 </script>
 
@@ -221,7 +229,7 @@
             bind:this={messagesContainerElement}
             id="messages-container"
             class=" pb-2.5 max-w-full z-10 scrollbar-hidden w-full h-full pt-6 flex-1 flex flex-col-reverse overflow-auto"
-            on:scroll={(e) => {
+            onscroll={(e) => {
               scrollEnd = Math.abs(messagesContainerElement.scrollTop) <= 50;
             }}
           >

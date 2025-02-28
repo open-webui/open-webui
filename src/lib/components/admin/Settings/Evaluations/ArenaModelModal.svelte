@@ -1,4 +1,6 @@
-<script>
+<script lang="ts">
+  import { run, preventDefault } from 'svelte/legacy';
+
   import { createEventDispatcher, getContext, onMount } from 'svelte';
   const i18n = getContext('i18n');
   const dispatch = createEventDispatcher();
@@ -11,17 +13,18 @@
   import { toast } from 'svelte-sonner';
   import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 
-  export let show = false;
-  export let edit = false;
 
-  export let model = null;
-
-  let name = '';
-  let id = '';
-
-  $: if (name) {
-    generateId();
+  interface Props {
+    show?: boolean;
+    edit?: boolean;
+    model?: any;
   }
+
+  let { show = $bindable(false), edit = false, model = null }: Props = $props();
+
+  let name = $state('');
+  let id = $state('');
+
 
   const generateId = () => {
     if (!edit) {
@@ -33,17 +36,17 @@
     }
   };
 
-  let profileImageUrl = '/favicon.png';
-  let description = '';
+  let profileImageUrl = $state('/favicon.png');
+  let description = $state('');
 
-  let selectedModelId = '';
-  let modelIds = [];
-  let filterMode = 'include';
+  let selectedModelId = $state('');
+  let modelIds = $state([]);
+  let filterMode = $state('include');
 
-  let accessControl = {};
+  let accessControl = $state({});
 
-  let imageInputElement;
-  let loading = false;
+  let imageInputElement = $state();
+  let loading = $state(false);
 
   const addModelHandler = () => {
     if (selectedModelId) {
@@ -106,12 +109,19 @@
     }
   };
 
-  $: if (show) {
-    initModel();
-  }
 
   onMount(() => {
     initModel();
+  });
+  run(() => {
+    if (name) {
+      generateId();
+    }
+  });
+  run(() => {
+    if (show) {
+      initModel();
+    }
   });
 </script>
 
@@ -130,7 +140,7 @@
       </div>
       <button
         class="self-center"
-        on:click={() => {
+        onclick={() => {
           show = false;
         }}
       >
@@ -149,9 +159,9 @@
       <div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
         <form
           class="flex flex-col w-full"
-          on:submit|preventDefault={() => {
+          onsubmit={preventDefault(() => {
             submitHandler();
-          }}
+          })}
         >
           <div class="px-1">
             <div class="flex justify-center pb-3">
@@ -160,7 +170,7 @@
                 accept="image/*"
                 hidden
                 type="file"
-                on:change={(e) => {
+                onchange={(e) => {
                   const files = e.target.files ?? [];
                   let reader = new FileReader();
                   reader.onload = (event) => {
@@ -221,7 +231,7 @@
               <button
                 class="relative rounded-full w-fit h-fit shrink-0"
                 type="button"
-                on:click={() => {
+                onclick={() => {
                   imageInputElement.click();
                 }}
               >
@@ -303,7 +313,7 @@
                   <button
                     class=" text-xs text-gray-500"
                     type="button"
-                    on:click={() => {
+                    onclick={() => {
                       filterMode = filterMode === 'include' ? 'exclude' : 'include';
                     }}
                   >
@@ -326,7 +336,7 @@
                       <div class="shrink-0">
                         <button
                           type="button"
-                          on:click={() => {
+                          onclick={() => {
                             modelIds = modelIds.filter((_, idx) => idx !== modelIdx);
                           }}
                         >
@@ -366,7 +376,7 @@
               <div>
                 <button
                   type="button"
-                  on:click={() => {
+                  onclick={() => {
                     addModelHandler();
                   }}
                 >
@@ -384,7 +394,7 @@
               <button
                 class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-gray-950 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
                 type="button"
-                on:click={() => {
+                onclick={() => {
                   dispatch('delete', model);
                   show = false;
                 }}

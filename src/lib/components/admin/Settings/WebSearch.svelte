@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { preventDefault } from 'svelte/legacy';
+
   import { getRAGConfig, updateRAGConfig } from '$lib/apis/retrieval';
   import Switch from '$lib/components/common/Switch.svelte';
 
@@ -10,9 +12,13 @@
 
   const i18n = getContext('i18n');
 
-  export let saveHandler: Function;
+  interface Props {
+    saveHandler: Function;
+  }
 
-  let webConfig = null;
+  let { saveHandler }: Props = $props();
+
+  let webConfig = $state(null);
   let webSearchEngines = [
     'searxng',
     'google_pse',
@@ -32,9 +38,9 @@
     'exa'
   ];
 
-  let youtubeLanguage = 'en';
+  let youtubeLanguage = $state('en');
   let youtubeTranslation = null;
-  let youtubeProxyUrl = '';
+  let youtubeProxyUrl = $state('');
 
   const submitHandler = async () => {
     // Convert domain filter string to array before sending
@@ -78,10 +84,10 @@
 
 <form
   class="flex flex-col h-full justify-between space-y-3 text-sm"
-  on:submit|preventDefault={async () => {
+  onsubmit={preventDefault(async () => {
     await submitHandler();
     saveHandler();
-  }}
+  })}
 >
   <div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
     {#if webConfig}

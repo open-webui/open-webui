@@ -29,16 +29,27 @@
 
   const i18n = getContext('i18n');
 
-  export let initNewChat: Function;
-  export let title: string = $WEBUI_NAME;
-  export let shareEnabled: boolean = false;
 
-  export let chat;
-  export let selectedModels;
-  export let showModelSelector = true;
+  interface Props {
+    initNewChat: Function;
+    title?: string;
+    shareEnabled?: boolean;
+    chat: any;
+    selectedModels: any;
+    showModelSelector?: boolean;
+  }
 
-  let showShareChatModal = false;
-  let showDownloadChatModal = false;
+  let {
+    initNewChat,
+    title = $WEBUI_NAME,
+    shareEnabled = false,
+    chat,
+    selectedModels = $bindable(),
+    showModelSelector = true
+  }: Props = $props();
+
+  let showShareChatModal = $state(false);
+  let showDownloadChatModal = $state(false);
 </script>
 
 <ShareChatModal
@@ -47,7 +58,7 @@
 />
 
 <nav class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center drag-region">
-  <div class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]" />
+  <div class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"></div>
 
   <div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
     <div class="flex items-center w-full max-w-full">
@@ -60,7 +71,7 @@
           id="sidebar-toggle-button"
           class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
           aria-label="Toggle Sidebar"
-          on:click={() => {
+          onclick={() => {
             showSidebar.set(!$showSidebar);
           }}
         >
@@ -122,7 +133,7 @@
             <button
               class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
               aria-label="Controls"
-              on:click={async () => {
+              onclick={async () => {
                 await showControls.set(!$showControls);
               }}
             >
@@ -141,7 +152,7 @@
             <button
               class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
               aria-label="Controls"
-              on:click={async () => {
+              onclick={async () => {
                 await showControls.set(!$showControls);
               }}
             >
@@ -162,7 +173,7 @@
               ? 'md:hidden'
               : ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
             aria-label="New Chat"
-            on:click={() => {
+            onclick={() => {
               initNewChat();
             }}
           >

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { preventDefault } from 'svelte/legacy';
+
   import { getBackendConfig } from '$lib/apis';
   import { setDefaultPromptSuggestions } from '$lib/apis/configs';
   import { config, models, settings, user } from '$lib/stores';
@@ -11,48 +13,52 @@
 
   const i18n = getContext('i18n');
 
-  export let saveSettings: Function;
+  interface Props {
+    saveSettings: Function;
+  }
 
-  let backgroundImageUrl = null;
-  let inputFiles = null;
-  let filesInputElement;
+  let { saveSettings }: Props = $props();
+
+  let backgroundImageUrl = $state(null);
+  let inputFiles = $state(null);
+  let filesInputElement = $state();
 
   // Addons
-  let titleAutoGenerate = true;
-  let autoTags = true;
+  let titleAutoGenerate = $state(true);
+  let autoTags = $state(true);
 
-  let responseAutoCopy = false;
-  let widescreenMode = false;
+  let responseAutoCopy = $state(false);
+  let widescreenMode = $state(false);
   let splitLargeChunks = false;
-  let scrollOnBranchChange = true;
-  let userLocation = false;
+  let scrollOnBranchChange = $state(true);
+  let userLocation = $state(false);
 
   // Interface
   let defaultModelId = '';
-  let showUsername = false;
-  let richTextInput = true;
-  let largeTextAsFile = false;
-  let notificationSound = true;
+  let showUsername = $state(false);
+  let richTextInput = $state(true);
+  let largeTextAsFile = $state(false);
+  let notificationSound = $state(true);
 
-  let landingPageMode = '';
-  let chatBubble = true;
-  let chatDirection: 'LTR' | 'RTL' = 'LTR';
+  let landingPageMode = $state('');
+  let chatBubble = $state(true);
+  let chatDirection: 'LTR' | 'RTL' = $state('LTR');
 
-  let imageCompression = false;
-  let imageCompressionSize = {
+  let imageCompression = $state(false);
+  let imageCompressionSize = $state({
     width: '',
     height: ''
-  };
+  });
 
   // Admin - Show Update Available Toast
-  let showUpdateToast = true;
-  let showChangelog = true;
+  let showUpdateToast = $state(true);
+  let showChangelog = $state(true);
 
-  let showEmojiInCall = false;
-  let voiceInterruption = false;
-  let hapticFeedback = false;
+  let showEmojiInCall = $state(false);
+  let voiceInterruption = $state(false);
+  let hapticFeedback = $state(false);
 
-  let webSearch = null;
+  let webSearch = $state(null);
 
   const toggleSplitLargeChunks = async () => {
     splitLargeChunks = !splitLargeChunks;
@@ -248,10 +254,10 @@
 
 <form
   class="flex flex-col h-full justify-between space-y-3 text-sm"
-  on:submit|preventDefault={() => {
+  onsubmit={preventDefault(() => {
     updateInterfaceHandler();
     dispatch('save');
-  }}
+  })}
 >
   <input
     bind:this={filesInputElement}
@@ -259,7 +265,7 @@
     hidden
     type="file"
     bind:files={inputFiles}
-    on:change={() => {
+    onchange={() => {
       let reader = new FileReader();
       reader.onload = (event) => {
         let originalImageUrl = `${event.target.result}`;
@@ -292,7 +298,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               toggleLandingPageMode();
             }}
           >
@@ -312,7 +318,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               toggleChatBubble();
             }}
           >
@@ -335,7 +341,7 @@
             <button
               class="p-1 px-3 text-xs flex rounded-sm transition"
               type="button"
-              on:click={() => {
+              onclick={() => {
                 toggleShowUsername();
               }}
             >
@@ -356,7 +362,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               toggleWidescreenMode();
             }}
           >
@@ -376,7 +382,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={toggleChangeChatDirection}
+            onclick={toggleChangeChatDirection}
           >
             {#if chatDirection === 'LTR'}
               <span class="ml-2 self-center">{$i18n.t('LTR')}</span>
@@ -396,7 +402,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               toggleNotificationSound();
             }}
           >
@@ -419,7 +425,7 @@
             <button
               class="p-1 px-3 text-xs flex rounded-sm transition"
               type="button"
-              on:click={() => {
+              onclick={() => {
                 toggleShowUpdateToast();
               }}
             >
@@ -441,7 +447,7 @@
             <button
               class="p-1 px-3 text-xs flex rounded-sm transition"
               type="button"
-              on:click={() => {
+              onclick={() => {
                 toggleShowChangelog();
               }}
             >
@@ -464,7 +470,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               toggleTitleAutoGenerate();
             }}
           >
@@ -484,7 +490,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               toggleAutoTags();
             }}
           >
@@ -506,7 +512,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               toggleResponseAutoCopy();
             }}
           >
@@ -528,7 +534,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               toggleRichTextInput();
             }}
           >
@@ -550,7 +556,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               toggleLargeTextAsFile();
             }}
           >
@@ -572,7 +578,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               if (backgroundImageUrl !== null) {
                 backgroundImageUrl = null;
                 saveSettings({ backgroundImageUrl });
@@ -597,7 +603,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               toggleUserLocation();
             }}
           >
@@ -617,7 +623,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               toggleHapticFeedback();
             }}
           >
@@ -661,7 +667,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               togglesScrollOnBranchChange();
             }}
           >
@@ -681,7 +687,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               toggleWebSearch();
             }}
           >
@@ -703,7 +709,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               toggleVoiceInterruption();
             }}
           >
@@ -723,7 +729,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               toggleEmojiInCall();
             }}
           >
@@ -745,7 +751,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               toggleImageCompression();
             }}
           >

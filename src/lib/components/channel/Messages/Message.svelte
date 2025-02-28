@@ -34,20 +34,32 @@
   import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
   import { formatDate } from '$lib/utils';
 
-  export let message;
-  export let showUserProfile = true;
-  export let thread = false;
 
-  export let onDelete: Function = () => {};
-  export let onEdit: Function = () => {};
-  export let onThread: Function = () => {};
-  export let onReaction: Function = () => {};
+  interface Props {
+    message: any;
+    showUserProfile?: boolean;
+    thread?: boolean;
+    onDelete?: Function;
+    onEdit?: Function;
+    onThread?: Function;
+    onReaction?: Function;
+  }
 
-  let showButtons = false;
+  let {
+    message,
+    showUserProfile = true,
+    thread = false,
+    onDelete = () => {},
+    onEdit = () => {},
+    onThread = () => {},
+    onReaction = () => {}
+  }: Props = $props();
 
-  let edit = false;
-  let editedContent = null;
-  let showDeleteConfirmDialog = false;
+  let showButtons = $state(false);
+
+  let edit = $state(false);
+  let editedContent = $state(null);
+  let showDeleteConfirmDialog = $state(false);
 </script>
 
 <ConfirmDialog
@@ -80,7 +92,7 @@
             <Tooltip content={$i18n.t('Add Reaction')}>
               <button
                 class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-                on:click={() => {
+                onclick={() => {
                   showButtons = true;
                 }}
               >
@@ -93,7 +105,7 @@
             <Tooltip content={$i18n.t('Reply in Thread')}>
               <button
                 class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-                on:click={() => {
+                onclick={() => {
                   onThread(message.id);
                 }}
               >
@@ -106,7 +118,7 @@
             <Tooltip content={$i18n.t('Edit')}>
               <button
                 class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-                on:click={() => {
+                onclick={() => {
                   edit = true;
                   editedContent = message.content;
                 }}
@@ -118,7 +130,7 @@
             <Tooltip content={$i18n.t('Delete')}>
               <button
                 class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-                on:click={() => (showDeleteConfirmDialog = true)}
+                onclick={() => (showDeleteConfirmDialog = true)}
               >
                 <GarbageBin />
               </button>
@@ -220,7 +232,7 @@
                 <button
                   id="close-edit-message-button"
                   class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
-                  on:click={() => {
+                  onclick={() => {
                     edit = false;
                     editedContent = null;
                   }}
@@ -231,7 +243,7 @@
                 <button
                   id="confirm-edit-message-button"
                   class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
-                  on:click={async () => {
+                  onclick={async () => {
                     onEdit(editedContent);
                     edit = false;
                     editedContent = null;
@@ -261,7 +273,7 @@
                       )
                         ? ' bg-blue-300/10 outline outline-blue-500/50 outline-1'
                         : 'bg-gray-300/10 dark:bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1'}"
-                      on:click={() => {
+                      onclick={() => {
                         onReaction(reaction.name);
                       }}
                     >
@@ -308,7 +320,7 @@
             <div class="flex items-center gap-1.5 -mt-0.5 mb-1.5">
               <button
                 class="flex items-center text-xs py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
-                on:click={() => {
+                onclick={() => {
                   onThread(message.id);
                 }}
               >

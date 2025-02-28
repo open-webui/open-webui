@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { toast } from 'svelte-sonner';
   import fileSaver from 'file-saver';
   const { saveAs } = fileSaver;
@@ -35,29 +37,31 @@
 
   const i18n = getContext('i18n');
 
-  let shiftKey = false;
+  let shiftKey = $state(false);
 
-  let functionsImportInputElement: HTMLInputElement;
-  let importFiles;
+  let functionsImportInputElement: HTMLInputElement = $state();
+  let importFiles = $state();
 
-  let showConfirm = false;
-  let query = '';
+  let showConfirm = $state(false);
+  let query = $state('');
 
-  let showManifestModal = false;
-  let showValvesModal = false;
-  let selectedFunction = null;
+  let showManifestModal = $state(false);
+  let showValvesModal = $state(false);
+  let selectedFunction = $state(null);
 
-  let showDeleteConfirm = false;
+  let showDeleteConfirm = $state(false);
 
-  let filteredItems = [];
-  $: filteredItems = $functions
-    .filter(
-      (f) =>
-        query === '' ||
-          f.name.toLowerCase().includes(query.toLowerCase()) ||
-          f.id.toLowerCase().includes(query.toLowerCase())
-    )
-    .sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
+  let filteredItems = $state([]);
+  run(() => {
+    filteredItems = $functions
+      .filter(
+        (f) =>
+          query === '' ||
+            f.name.toLowerCase().includes(query.toLowerCase()) ||
+            f.id.toLowerCase().includes(query.toLowerCase())
+      )
+      .sort((a, b) => a.type.localeCompare(b.type) || a.name.localeCompare(b.name));
+  });
 
   const shareHandler = async (func) => {
     const item = await getFunctionById(localStorage.token, func.id).catch((error) => {
@@ -200,7 +204,7 @@
   <div class="flex justify-between items-center">
     <div class="flex md:self-center text-xl items-center font-medium px-0.5">
       {$i18n.t('Functions')}
-      <div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
+      <div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850"></div>
       <span class="text-base font-lg text-gray-500 dark:text-gray-300">{filteredItems.length}</span>
     </div>
   </div>
@@ -269,7 +273,7 @@
             <button
               class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
               type="button"
-              on:click={() => {
+              onclick={() => {
                 deleteHandler(func);
               }}
             >
@@ -282,7 +286,7 @@
               <button
                 class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
                 type="button"
-                on:click={() => {
+                onclick={() => {
                   selectedFunction = func;
                   showManifestModal = true;
                 }}
@@ -296,7 +300,7 @@
             <button
               class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
               type="button"
-              on:click={() => {
+              onclick={() => {
                 selectedFunction = func;
                 showValvesModal = true;
               }}
@@ -394,7 +398,7 @@
       hidden
       type="file"
       bind:files={importFiles}
-      on:change={() => {
+      onchange={() => {
         console.log(importFiles);
         showConfirm = true;
       }}
@@ -402,7 +406,7 @@
 
     <button
       class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-      on:click={() => {
+      onclick={() => {
         functionsImportInputElement.click();
       }}
     >
@@ -426,7 +430,7 @@
 
     <button
       class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-      on:click={async () => {
+      onclick={async () => {
         const _functions = await exportFunctions(localStorage.token).catch((error) => {
           toast.error(`${error}`);
           return null;

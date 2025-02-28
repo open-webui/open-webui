@@ -10,9 +10,9 @@
 
   const i18n = getContext('i18n');
 
-  let mounted = false;
-  let clone = false;
-  let tool = null;
+  let mounted = $state(false);
+  let clone = $state(false);
+  let tool = $state(null);
 
   const saveHandler = async (data) => {
     console.log(data);

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { preventDefault } from 'svelte/legacy';
+
   import { toast } from 'svelte-sonner';
 
   import { onMount, getContext, createEventDispatcher } from 'svelte';
@@ -32,50 +34,50 @@
   const i18n = getContext('i18n');
 
   let scanDirLoading = false;
-  let updateEmbeddingModelLoading = false;
-  let updateRerankingModelLoading = false;
+  let updateEmbeddingModelLoading = $state(false);
+  let updateRerankingModelLoading = $state(false);
 
-  let showResetConfirm = false;
-  let showResetUploadDirConfirm = false;
+  let showResetConfirm = $state(false);
+  let showResetUploadDirConfirm = $state(false);
 
-  let embeddingEngine = '';
-  let embeddingModel = '';
-  let embeddingBatchSize = 1;
-  let rerankingModel = '';
+  let embeddingEngine = $state('');
+  let embeddingModel = $state('');
+  let embeddingBatchSize = $state(1);
+  let rerankingModel = $state('');
 
-  let fileMaxSize = null;
-  let fileMaxCount = null;
+  let fileMaxSize = $state(null);
+  let fileMaxCount = $state(null);
 
-  let contentExtractionEngine = 'default';
-  let tikaServerUrl = '';
+  let contentExtractionEngine = $state('default');
+  let tikaServerUrl = $state('');
   let showTikaServerUrl = false;
-  let documentIntelligenceEndpoint = '';
-  let documentIntelligenceKey = '';
+  let documentIntelligenceEndpoint = $state('');
+  let documentIntelligenceKey = $state('');
   let showDocumentIntelligenceConfig = false;
 
-  let textSplitter = '';
-  let chunkSize = 0;
-  let chunkOverlap = 0;
-  let pdfExtractImages = true;
+  let textSplitter = $state('');
+  let chunkSize = $state(0);
+  let chunkOverlap = $state(0);
+  let pdfExtractImages = $state(true);
 
-  let RAG_FULL_CONTEXT = false;
-  let BYPASS_EMBEDDING_AND_RETRIEVAL = false;
+  let RAG_FULL_CONTEXT = $state(false);
+  let BYPASS_EMBEDDING_AND_RETRIEVAL = $state(false);
 
-  let enableGoogleDriveIntegration = false;
-  let enableOneDriveIntegration = false;
+  let enableGoogleDriveIntegration = $state(false);
+  let enableOneDriveIntegration = $state(false);
 
-  let OpenAIUrl = '';
-  let OpenAIKey = '';
+  let OpenAIUrl = $state('');
+  let OpenAIKey = $state('');
 
-  let OllamaUrl = '';
-  let OllamaKey = '';
+  let OllamaUrl = $state('');
+  let OllamaKey = $state('');
 
-  let querySettings = {
+  let querySettings = $state({
     template: '',
     r: 0.0,
     k: 4,
     hybrid: false
-  };
+  });
 
   const embeddingModelUpdateHandler = async () => {
     if (embeddingEngine === '' && embeddingModel.split('/').length - 1 > 1) {
@@ -313,9 +315,9 @@
 
 <form
   class="flex flex-col h-full justify-between space-y-3 text-sm"
-  on:submit|preventDefault={() => {
+  onsubmit={preventDefault(() => {
     submitHandler();
-  }}
+  })}
 >
   <div class=" space-y-2.5 overflow-y-scroll scrollbar-hidden h-full pr-1.5">
     <div class="">
@@ -467,7 +469,7 @@
                   class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
                   placeholder="Select an embedding model engine"
                   bind:value={embeddingEngine}
-                  on:change={(e) => {
+                  onchange={(e) => {
                     if (e.target.value === 'ollama') {
                       embeddingModel = '';
                     } else if (e.target.value === 'openai') {
@@ -547,7 +549,7 @@
                     <button
                       class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
                       disabled={updateEmbeddingModelLoading}
-                      on:click={() => {
+                      onclick={() => {
                         embeddingModelUpdateHandler();
                       }}
                     >
@@ -665,7 +667,7 @@
                   <button
                     class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
                     disabled={updateRerankingModelLoading}
-                    on:click={() => {
+                    onclick={() => {
                       rerankingModelUpdateHandler();
                     }}
                   >
@@ -859,7 +861,7 @@
           <div class="flex items-center relative">
             <button
               class="text-xs"
-              on:click={() => {
+              onclick={() => {
                 showResetUploadDirConfirm = true;
               }}
             >
@@ -875,7 +877,7 @@
           <div class="flex items-center relative">
             <button
               class="text-xs"
-              on:click={() => {
+              onclick={() => {
                 showResetConfirm = true;
               }}
             >

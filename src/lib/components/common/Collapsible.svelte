@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { getContext, createEventDispatcher } from 'svelte';
   const i18n = getContext('i18n');
 
@@ -20,11 +22,8 @@
     }
   }
 
-  // Assuming $i18n.languages is an array of language codes
-  $: loadLocale($i18n.languages);
 
   const dispatch = createEventDispatcher();
-  $: dispatch('change', open);
 
   import { slide } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
@@ -33,18 +32,42 @@
   import ChevronDown from '../icons/ChevronDown.svelte';
   import Spinner from './Spinner.svelte';
 
-  export let open = false;
-  export let id = '';
-  export let className = '';
-  export let buttonClassName =
-    'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
-  export let title = null;
-  export let attributes = null;
 
-  export let grow = false;
 
-  export let disabled = false;
-  export let hide = false;
+  interface Props {
+    open?: boolean;
+    id?: string;
+    className?: string;
+    buttonClassName?: string;
+    title?: any;
+    attributes?: any;
+    grow?: boolean;
+    disabled?: boolean;
+    hide?: boolean;
+    children?: import('svelte').Snippet;
+    content?: import('svelte').Snippet;
+  }
+
+  let {
+    open = $bindable(false),
+    id = '',
+    className = '',
+    buttonClassName = 'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition',
+    title = null,
+    attributes = null,
+    grow = false,
+    disabled = false,
+    hide = false,
+    children,
+    content
+  }: Props = $props();
+  // Assuming $i18n.languages is an array of language codes
+  run(() => {
+    loadLocale($i18n.languages);
+  });
+  run(() => {
+    dispatch('change', open);
+  });
 </script>
 
 <div
@@ -52,11 +75,11 @@
   class={className}
 >
   {#if title !== null}
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div
       class="{buttonClassName} cursor-pointer"
-      on:pointerup={() => {
+      onpointerup={() => {
         if (!disabled) {
           open = !open;
         }
@@ -115,28 +138,28 @@
       </div>
     </div>
   {:else}
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div
       class="{buttonClassName} cursor-pointer"
-      on:pointerup={() => {
+      onpointerup={() => {
         if (!disabled) {
           open = !open;
         }
       }}
     >
       <div>
-        <slot />
+        {@render children?.()}
 
         {#if grow}
           {#if open && !hide}
             <div
-              on:pointerup={(e) => {
+              onpointerup={(e) => {
                 e.stopPropagation();
               }}
               transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}
             >
-              <slot name="content" />
+              {@render content?.()}
             </div>
           {/if}
         {/if}
@@ -147,7 +170,7 @@
   {#if !grow}
     {#if open && !hide}
       <div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-        <slot name="content" />
+        {@render content?.()}
       </div>
     {/if}
   {/if}

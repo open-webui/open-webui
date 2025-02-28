@@ -11,15 +11,25 @@
   import ManageOllamaModal from './ManageOllamaModal.svelte';
   import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
 
-  export let onDelete = () => {};
-  export let onSubmit = () => {};
 
-  export let url = '';
-  export let idx = 0;
-  export let config = {};
+  interface Props {
+    onDelete?: any;
+    onSubmit?: any;
+    url?: string;
+    idx?: number;
+    config?: any;
+  }
 
-  let showManageModal = false;
-  let showConfigModal = false;
+  let {
+    onDelete = () => {},
+    onSubmit = () => {},
+    url = $bindable(''),
+    idx = 0,
+    config = $bindable({})
+  }: Props = $props();
+
+  let showManageModal = $state(false);
+  let showConfigModal = $state(false);
 </script>
 
 <AddConnectionModal
@@ -53,7 +63,7 @@
     placement="top-start"
   >
     {#if !(config?.enable ?? true)}
-      <div class="absolute top-0 bottom-0 left-0 right-0 opacity-60 bg-white dark:bg-gray-900 z-10" />
+      <div class="absolute top-0 bottom-0 left-0 right-0 opacity-60 bg-white dark:bg-gray-900 z-10"></div>
     {/if}
 
     <input
@@ -71,7 +81,7 @@
       <button
         class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
         type="button"
-        on:click={() => {
+        onclick={() => {
           showManageModal = true;
         }}
       >
@@ -86,7 +96,7 @@
       <button
         class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
         type="button"
-        on:click={() => {
+        onclick={() => {
           showConfigModal = true;
         }}
       >

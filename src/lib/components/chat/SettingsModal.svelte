@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { getContext, tick } from 'svelte';
   import { toast } from 'svelte-sonner';
   import { config, models, settings, user } from '$lib/stores';
@@ -21,7 +23,11 @@
 
   const i18n = getContext('i18n');
 
-  export let show = false;
+  interface Props {
+    show?: boolean;
+  }
+
+  let { show = $bindable(false) }: Props = $props();
 
   interface SettingsTab {
     id: string;
@@ -289,8 +295,8 @@
     }
   ];
 
-  let search = '';
-  let visibleTabs = searchData.map((tab) => tab.id);
+  let search = $state('');
+  let visibleTabs = $state(searchData.map((tab) => tab.id));
   let searchDebounceTimeout;
 
   const searchSettings = (query: string): string[] => {
@@ -328,7 +334,7 @@
     );
   };
 
-  let selectedTab = 'general';
+  let selectedTab = $state('general');
 
   // Function to handle sideways scrolling
   const scrollHandler = (event) => {
@@ -355,11 +361,13 @@
     }
   };
 
-  $: if (show) {
-    addScrollListener();
-  } else {
-    removeScrollListener();
-  }
+  run(() => {
+    if (show) {
+      addScrollListener();
+    } else {
+      removeScrollListener();
+    }
+  });
 </script>
 
 <Modal
@@ -371,7 +379,7 @@
       <div class=" text-lg font-medium self-center">{$i18n.t('Settings')}</div>
       <button
         class="self-center"
-        on:click={() => {
+        onclick={() => {
           show = false;
         }}
       >
@@ -402,7 +410,7 @@
             class="w-full py-1.5 text-sm bg-transparent dark:text-gray-300 outline-hidden"
             placeholder={$i18n.t('Search')}
             bind:value={search}
-            on:input={searchDebounceHandler}
+            oninput={searchDebounceHandler}
           />
         </div>
 
@@ -414,7 +422,7 @@
                   'general'
                   ? ''
                   : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-                on:click={() => {
+                onclick={() => {
                   selectedTab = 'general';
                 }}
               >
@@ -440,7 +448,7 @@
                   'interface'
                   ? ''
                   : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-                on:click={() => {
+                onclick={() => {
                   selectedTab = 'interface';
                 }}
               >
@@ -467,7 +475,7 @@
                     'connections'
                     ? ''
                     : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-                  on:click={() => {
+                  onclick={() => {
                     selectedTab = 'connections';
                   }}
                 >
@@ -490,7 +498,7 @@
                   'personalization'
                   ? ''
                   : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-                on:click={() => {
+                onclick={() => {
                   selectedTab = 'personalization';
                 }}
               >
@@ -505,7 +513,7 @@
                   'audio'
                   ? ''
                   : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-                on:click={() => {
+                onclick={() => {
                   selectedTab = 'audio';
                 }}
               >
@@ -528,7 +536,7 @@
                   'chats'
                   ? ''
                   : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-                on:click={() => {
+                onclick={() => {
                   selectedTab = 'chats';
                 }}
               >
@@ -554,7 +562,7 @@
                   'account'
                   ? ''
                   : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-                on:click={() => {
+                onclick={() => {
                   selectedTab = 'account';
                 }}
               >
@@ -580,7 +588,7 @@
                   'about'
                   ? ''
                   : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-                on:click={() => {
+                onclick={() => {
                   selectedTab = 'about';
                 }}
               >
@@ -607,7 +615,7 @@
                     'admin'
                     ? ''
                     : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-                  on:click={async () => {
+                  onclick={async () => {
                     await goto('/admin/settings');
                     show = false;
                   }}

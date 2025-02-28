@@ -9,16 +9,27 @@
 
   import { connect } from 'socket.io-client';
 
-  export let onDelete = () => {};
-  export let onSubmit = () => {};
 
-  export let pipeline = false;
 
-  export let url = '';
-  export let key = '';
-  export let config = {};
+  interface Props {
+    onDelete?: any;
+    onSubmit?: any;
+    pipeline?: boolean;
+    url?: string;
+    key?: string;
+    config?: any;
+  }
 
-  let showConfigModal = false;
+  let {
+    onDelete = () => {},
+    onSubmit = () => {},
+    pipeline = false,
+    url = $bindable(''),
+    key = $bindable(''),
+    config = $bindable({})
+  }: Props = $props();
+
+  let showConfigModal = $state(false);
 </script>
 
 <AddConnectionModal
@@ -47,7 +58,7 @@
     placement="top-start"
   >
     {#if !(config?.enable ?? true)}
-      <div class="absolute top-0 bottom-0 left-0 right-0 opacity-60 bg-white dark:bg-gray-900 z-10" />
+      <div class="absolute top-0 bottom-0 left-0 right-0 opacity-60 bg-white dark:bg-gray-900 z-10"></div>
     {/if}
     <div class="flex w-full">
       <div class="flex-1 relative">
@@ -93,7 +104,7 @@
       <button
         class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
         type="button"
-        on:click={() => {
+        onclick={() => {
           showConfigModal = true;
         }}
       >

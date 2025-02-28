@@ -8,10 +8,15 @@
 
   import Dropdown from '$lib/components/common/Dropdown.svelte';
 
-  export let onClose: Function = () => {};
-  export let devices: any;
+  interface Props {
+    onClose?: Function;
+    devices: any;
+    children?: import('svelte').Snippet;
+  }
 
-  let show = false;
+  let { onClose = () => {}, devices, children }: Props = $props();
+
+  let show = $state(false);
 </script>
 
 <Dropdown
@@ -22,30 +27,32 @@
     }
   }}
 >
-  <slot />
+  {@render children?.()}
 
-  <div slot="content">
-    <DropdownMenu.Content
-      class="w-full max-w-[180px] rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-9999 bg-white dark:bg-gray-900 dark:text-white shadow-xs"
-      align="start"
-      side="top"
-      sideOffset={6}
-      transition={flyAndScale}
-    >
-      {#each devices as device}
-        <DropdownMenu.Item
-          class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-          on:click={() => {
-            dispatch('change', device.deviceId);
-          }}
-        >
-          <div class="flex items-center">
-            <div class=" line-clamp-1">
-              {device?.label ?? 'Camera'}
+  {#snippet content()}
+    <div >
+      <DropdownMenu.Content
+        class="w-full max-w-[180px] rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-9999 bg-white dark:bg-gray-900 dark:text-white shadow-xs"
+        align="start"
+        side="top"
+        sideOffset={6}
+        transition={flyAndScale}
+      >
+        {#each devices as device}
+          <DropdownMenu.Item
+            class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+            on:click={() => {
+              dispatch('change', device.deviceId);
+            }}
+          >
+            <div class="flex items-center">
+              <div class=" line-clamp-1">
+                {device?.label ?? 'Camera'}
+              </div>
             </div>
-          </div>
-        </DropdownMenu.Item>
-      {/each}
-    </DropdownMenu.Content>
-  </div>
+          </DropdownMenu.Item>
+        {/each}
+      </DropdownMenu.Content>
+    </div>
+  {/snippet}
 </Dropdown>

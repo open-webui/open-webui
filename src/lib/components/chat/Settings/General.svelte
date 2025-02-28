@@ -10,19 +10,23 @@
 
   import AdvancedParams from './Advanced/AdvancedParams.svelte';
 
-  export let saveSettings: Function;
-  export let getModels: Function;
+  interface Props {
+    saveSettings: Function;
+    getModels: Function;
+  }
+
+  let { saveSettings, getModels }: Props = $props();
 
   // General
   let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
-  let selectedTheme = 'system';
+  let selectedTheme = $state('system');
 
-  let languages: Awaited<ReturnType<typeof getLanguages>> = [];
-  let lang = $i18n.language;
-  let notificationEnabled = false;
-  let system = '';
+  let languages: Awaited<ReturnType<typeof getLanguages>> = $state([]);
+  let lang = $state($i18n.language);
+  let notificationEnabled = $state(false);
+  let system = $state('');
 
-  let showAdvanced = false;
+  let showAdvanced = $state(false);
 
   const toggleNotification = async () => {
     const permission = await Notification.requestPermission();
@@ -40,10 +44,10 @@
   };
 
   // Advanced
-  let requestFormat = '';
-  let keepAlive: string | null = null;
+  let requestFormat = $state('');
+  let keepAlive: string | null = $state(null);
 
-  let params = {
+  let params = $state({
     // Advanced
     stream_response: null,
     function_calling: null,
@@ -67,7 +71,7 @@
     num_keep: null,
     max_tokens: null,
     num_gpu: null
-  };
+  });
 
   const toggleRequestFormat = async () => {
     if (requestFormat === '') {
@@ -177,7 +181,7 @@
             class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
             placeholder="Select a theme"
             bind:value={selectedTheme}
-            on:change={() => themeChangeHandler(selectedTheme)}
+            onchange={() => themeChangeHandler(selectedTheme)}
           >
             <option value="system">⚙️ {$i18n.t('System')}</option>
             <option value="dark">🌑 {$i18n.t('Dark')}</option>
@@ -197,7 +201,7 @@
             class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
             placeholder="Select a language"
             bind:value={lang}
-            on:change={(e) => {
+            onchange={(e) => {
               $i18n.changeLanguage(lang);
             }}
           >
@@ -227,7 +231,7 @@
           <button
             class="p-1 px-3 text-xs flex rounded-sm transition"
             type="button"
-            on:click={() => {
+            onclick={() => {
               toggleNotification();
             }}
           >
@@ -250,7 +254,7 @@
           class="w-full rounded-lg p-4 text-sm bg-white dark:text-gray-300 dark:bg-gray-850 outline-hidden resize-none"
           rows="4"
           bind:value={system}
-        />
+></textarea>
       </div>
 
       <div class="mt-2 space-y-3 pr-1.5">
@@ -259,7 +263,7 @@
           <button
             class=" text-xs font-medium text-gray-500"
             type="button"
-            on:click={() => {
+            onclick={() => {
               showAdvanced = !showAdvanced;
             }}
           >{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}</button>
@@ -279,7 +283,7 @@
               <button
                 class="p-1 px-3 text-xs flex rounded-sm transition"
                 type="button"
-                on:click={() => {
+                onclick={() => {
                   keepAlive = keepAlive === null ? '5m' : null;
                 }}
               >
@@ -309,7 +313,7 @@
 
               <button
                 class="p-1 px-3 text-xs flex rounded-sm transition"
-                on:click={() => {
+                onclick={() => {
                   toggleRequestFormat();
                 }}
               >
@@ -339,7 +343,7 @@
   <div class="flex justify-end pt-3 text-sm font-medium">
     <button
       class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-      on:click={() => {
+      onclick={() => {
         saveSettings({
           system: system !== '' ? system : undefined,
           params: {

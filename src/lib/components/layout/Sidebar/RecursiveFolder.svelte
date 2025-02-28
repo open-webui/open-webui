@@ -1,4 +1,7 @@
-<script>
+<script lang="ts">
+  import RecursiveFolder from './RecursiveFolder.svelte';
+  import { run } from 'svelte/legacy';
+
   import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 
   const i18n = getContext('i18n');
@@ -32,23 +35,33 @@
   import FolderMenu from './Folders/FolderMenu.svelte';
   import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
-  export let open = false;
 
-  export let folders;
-  export let folderId;
 
-  export let className = '';
 
-  export let parentDragged = false;
+  interface Props {
+    open?: boolean;
+    folders: any;
+    folderId: any;
+    className?: string;
+    parentDragged?: boolean;
+  }
 
-  let folderElement;
+  let {
+    open = $bindable(false),
+    folders = $bindable(),
+    folderId,
+    className = '',
+    parentDragged = false
+  }: Props = $props();
 
-  let edit = false;
+  let folderElement = $state();
 
-  let draggedOver = false;
-  let dragged = false;
+  let edit = $state(false);
 
-  let name = '';
+  let draggedOver = $state(false);
+  let dragged = $state(false);
+
+  let name = $state('');
 
   const onDragOver = (e) => {
     e.preventDefault();
@@ -167,8 +180,8 @@
   dragImage.src =
     'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
-  let x;
-  let y;
+  let x = $state();
+  let y = $state();
 
   const onDragStart = (event) => {
     event.stopPropagation();
@@ -229,7 +242,7 @@
     }
   });
 
-  let showDeleteConfirm = false;
+  let showDeleteConfirm = $state(false);
 
   const deleteHandler = async () => {
     const res = await deleteFolderById(localStorage.token, folderId).catch((error) => {
@@ -291,7 +304,9 @@
     }, 500);
   };
 
-  $: isExpandedUpdateDebounceHandler(open);
+  run(() => {
+    isExpandedUpdateDebounceHandler(open);
+  });
 
   const editHandler = async () => {
     console.log('Edit');
@@ -366,7 +381,7 @@
   draggable="true"
 >
   {#if draggedOver}
-    <div class="absolute top-0 left-0 w-full h-full rounded-xs bg-gray-100/50 dark:bg-gray-700/20 bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none" />
+    <div class="absolute top-0 left-0 w-full h-full rounded-xs bg-gray-100/50 dark:bg-gray-700/20 bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"></div>
   {/if}
 
   <Collapsible
@@ -379,13 +394,13 @@
       dispatch('open', e.detail);
     }}
   >
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="w-full group">
       <a
         id="folder-{folderId}-button"
         class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
         href="#"
-        on:dblclick={(e) => {
+        ondblclick={(e) => {
           e.preventDefault()
           editHandler();
         }}
@@ -411,19 +426,19 @@
               class="w-full h-full bg-transparent text-gray-500 dark:text-gray-500 outline-hidden"
               type="text"
               bind:value={name}
-              on:blur={() => {
+              onblur={() => {
                 nameUpdateHandler();
                 edit = false;
               }}
-              on:click={(e) => {
+              onclick={(e) => {
                 // Prevent accidental collapse toggling when clicking inside input
                 e.stopPropagation();
               }}
-              on:mousedown={(e) => {
+              onmousedown={(e) => {
                 // Prevent accidental collapse toggling when clicking inside input
                 e.stopPropagation();
               }}
-              on:keydown={(e) => {
+              onkeydown={(e) => {
                 if (e.key === 'Enter') {
                   nameUpdateHandler();
                   edit = false;
@@ -437,7 +452,7 @@
 
         <div
           class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
-          on:pointerup={(e) => {
+          onpointerup={(e) => {
             e.stopPropagation();
           }}
         >
@@ -463,53 +478,55 @@
       </a>
     </div>
 
-    <div
-      slot="content"
-      class="w-full"
-    >
-      {#if (folders[folderId]?.childrenIds ?? []).length > 0 || (folders[folderId].items?.chats ?? []).length > 0}
-        <div class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900">
-          {#if folders[folderId]?.childrenIds}
-            {@const children = folders[folderId]?.childrenIds
-              .map((id) => folders[id])
-              .sort((a, b) =>
-                a.name.localeCompare(b.name, undefined, {
-                  numeric: true,
-                  sensitivity: 'base'
-                })
-              )}
+    {#snippet content()}
+        <div
+        
+        class="w-full"
+      >
+        {#if (folders[folderId]?.childrenIds ?? []).length > 0 || (folders[folderId].items?.chats ?? []).length > 0}
+          <div class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900">
+            {#if folders[folderId]?.childrenIds}
+              {@const children = folders[folderId]?.childrenIds
+                .map((id) => folders[id])
+                .sort((a, b) =>
+                  a.name.localeCompare(b.name, undefined, {
+                    numeric: true,
+                    sensitivity: 'base'
+                  })
+                )}
 
-            {#each children as childFolder (`${folderId}-${childFolder.id}`)}
-              <svelte:self
-                folderId={childFolder.id}
-                {folders}
-                parentDragged={dragged}
-                on:import={(e) => {
-                  dispatch('import', e.detail);
-                }}
-                on:update={(e) => {
-                  dispatch('update', e.detail);
-                }}
-                on:change={(e) => {
-                  dispatch('change', e.detail);
-                }}
-              />
-            {/each}
-          {/if}
+              {#each children as childFolder (`${folderId}-${childFolder.id}`)}
+                <RecursiveFolder
+                  folderId={childFolder.id}
+                  {folders}
+                  parentDragged={dragged}
+                  on:import={(e) => {
+                    dispatch('import', e.detail);
+                  }}
+                  on:update={(e) => {
+                    dispatch('update', e.detail);
+                  }}
+                  on:change={(e) => {
+                    dispatch('change', e.detail);
+                  }}
+                />
+              {/each}
+            {/if}
 
-          {#if folders[folderId].items?.chats}
-            {#each folders[folderId].items.chats as chat (chat.id)}
-              <ChatItem
-                id={chat.id}
-                title={chat.title}
-                on:change={(e) => {
-                  dispatch('change', e.detail);
-                }}
-              />
-            {/each}
-          {/if}
-        </div>
-      {/if}
-    </div>
+            {#if folders[folderId].items?.chats}
+              {#each folders[folderId].items.chats as chat (chat.id)}
+                <ChatItem
+                  id={chat.id}
+                  title={chat.title}
+                  on:change={(e) => {
+                    dispatch('change', e.detail);
+                  }}
+                />
+              {/each}
+            {/if}
+          </div>
+        {/if}
+      </div>
+      {/snippet}
   </Collapsible>
 </div>

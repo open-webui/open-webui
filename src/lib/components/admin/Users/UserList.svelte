@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { WEBUI_BASE_URL } from '$lib/constants';
   import { WEBUI_NAME, config, user, showSidebar } from '$lib/stores';
   import { goto } from '$app/navigation';
@@ -31,18 +31,18 @@
 
   const i18n = getContext('i18n');
 
-  export let users = [];
+  let { users = $bindable([]) } = $props();
 
-  let search = '';
-  let selectedUser = null;
+  let search = $state('');
+  let selectedUser = $state(null);
 
-  let page = 1;
+  let page = $state(1);
 
-  let showDeleteConfirmDialog = false;
-  let showAddUserModal = false;
+  let showDeleteConfirmDialog = $state(false);
+  let showAddUserModal = $state(false);
 
-  let showUserChatsModal = false;
-  let showEditUserModal = false;
+  let showUserChatsModal = $state(false);
+  let showEditUserModal = $state(false);
 
   const updateRoleHandler = async (id, role) => {
     const res = await updateUserRole(localStorage.token, id, role).catch((error) => {
@@ -65,8 +65,8 @@
     }
   };
 
-  let sortKey = 'created_at'; // default sort key
-  let sortOrder = 'asc'; // default sort order
+  let sortKey = $state('created_at'); // default sort key
+  let sortOrder = $state('asc'); // default sort order
 
   function setSortKey(key) {
     if (sortKey === key) {
@@ -77,9 +77,7 @@
     }
   }
 
-  let filteredUsers;
-
-  $: filteredUsers = users
+  let filteredUsers = $derived(users
     .filter((user) => {
       if (search === '') {
         return true;
@@ -95,7 +93,9 @@
       if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
       return 0;
     })
-    .slice((page - 1) * 20, page * 20);
+    .slice((page - 1) * 20, page * 20));
+
+  
 </script>
 
 <ConfirmDialog
@@ -130,7 +130,7 @@
 <div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
   <div class="flex md:self-center text-lg font-medium px-0.5">
     {$i18n.t('Users')}
-    <div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
+    <div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850"></div>
 
     <span class="text-lg font-medium text-gray-500 dark:text-gray-300">{users.length}</span>
   </div>
@@ -163,7 +163,7 @@
         <Tooltip content={$i18n.t('Add User')}>
           <button
             class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
-            on:click={() => {
+            onclick={() => {
               showAddUserModal = !showAddUserModal;
             }}
           >
@@ -182,7 +182,7 @@
         <th
           class="px-3 py-1.5 cursor-pointer select-none"
           scope="col"
-          on:click={() => setSortKey('role')}
+          onclick={() => setSortKey('role')}
         >
           <div class="flex gap-1.5 items-center">
             {$i18n.t('Role')}
@@ -204,7 +204,7 @@
         <th
           class="px-3 py-1.5 cursor-pointer select-none"
           scope="col"
-          on:click={() => setSortKey('name')}
+          onclick={() => setSortKey('name')}
         >
           <div class="flex gap-1.5 items-center">
             {$i18n.t('Name')}
@@ -226,7 +226,7 @@
         <th
           class="px-3 py-1.5 cursor-pointer select-none"
           scope="col"
-          on:click={() => setSortKey('email')}
+          onclick={() => setSortKey('email')}
         >
           <div class="flex gap-1.5 items-center">
             {$i18n.t('Email')}
@@ -249,7 +249,7 @@
         <th
           class="px-3 py-1.5 cursor-pointer select-none"
           scope="col"
-          on:click={() => setSortKey('last_active_at')}
+          onclick={() => setSortKey('last_active_at')}
         >
           <div class="flex gap-1.5 items-center">
             {$i18n.t('Last Active')}
@@ -271,7 +271,7 @@
         <th
           class="px-3 py-1.5 cursor-pointer select-none"
           scope="col"
-          on:click={() => setSortKey('created_at')}
+          onclick={() => setSortKey('created_at')}
         >
           <div class="flex gap-1.5 items-center">
             {$i18n.t('Created at')}
@@ -293,7 +293,7 @@
         <th
           class="px-3 py-1.5 cursor-pointer select-none"
           scope="col"
-          on:click={() => setSortKey('oauth_sub')}
+          onclick={() => setSortKey('oauth_sub')}
         >
           <div class="flex gap-1.5 items-center">
             {$i18n.t('OAuth ID')}
@@ -316,7 +316,7 @@
         <th
           class="px-3 py-2 text-right"
           scope="col"
-        />
+></th>
       </tr>
     </thead>
     <tbody class="">
@@ -325,7 +325,7 @@
           <td class="px-3 py-1 min-w-[7rem] w-28">
             <button
               class=" translate-y-0.5"
-              on:click={() => {
+              onclick={() => {
                 if (user.role === 'user') {
                   updateRoleHandler(user.id, 'admin');
                 } else if (user.role === 'pending') {
@@ -374,7 +374,7 @@
                 <Tooltip content={$i18n.t('Chats')}>
                   <button
                     class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-                    on:click={async () => {
+                    onclick={async () => {
                       showUserChatsModal = !showUserChatsModal;
                       selectedUser = user;
                     }}
@@ -387,7 +387,7 @@
               <Tooltip content={$i18n.t('Edit User')}>
                 <button
                   class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-                  on:click={async () => {
+                  onclick={async () => {
                     showEditUserModal = !showEditUserModal;
                     selectedUser = user;
                   }}
@@ -413,7 +413,7 @@
                 <Tooltip content={$i18n.t('Delete User')}>
                   <button
                     class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-                    on:click={async () => {
+                    onclick={async () => {
                       showDeleteConfirmDialog = true;
                       selectedUser = user;
                     }}

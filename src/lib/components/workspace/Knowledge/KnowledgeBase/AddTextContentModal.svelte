@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { preventDefault } from 'svelte/legacy';
+
   import { toast } from 'svelte-sonner';
   import dayjs from 'dayjs';
 
@@ -12,12 +14,16 @@
   import Mic from '$lib/components/icons/Mic.svelte';
   import Tooltip from '$lib/components/common/Tooltip.svelte';
   import VoiceRecording from '$lib/components/chat/MessageInput/VoiceRecording.svelte';
-  export let show = false;
+  interface Props {
+    show?: boolean;
+  }
 
-  let name = 'Untitled';
-  let content = '';
+  let { show = $bindable(false) }: Props = $props();
 
-  let voiceInput = false;
+  let name = $state('Untitled');
+  let content = $state('');
+
+  let voiceInput = $state(false);
 </script>
 
 <Modal
@@ -30,7 +36,7 @@
     <button
       class="self-center dark:text-white"
       type="button"
-      on:click={() => {
+      onclick={() => {
         show = false;
       }}
     >
@@ -40,7 +46,7 @@
   <div class="flex flex-col md:flex-row w-full h-full md:space-x-4 dark:text-gray-200">
     <form
       class="flex flex-col w-full h-full"
-      on:submit|preventDefault={() => {
+      onsubmit={preventDefault(() => {
         if (name.trim() === '' || content.trim() === '') {
           toast.error($i18n.t('Please fill in all fields.'));
           name = name.trim();
@@ -55,7 +61,7 @@
         show = false;
         name = '';
         content = '';
-      }}
+      })}
     >
       <div class=" flex-1 w-full h-full flex justify-center overflow-auto px-5 py-4">
         <div class=" max-w-3xl py-2 md:py-10 w-full flex flex-col gap-2">
@@ -104,7 +110,7 @@
               <button
                 class=" p-2 bg-gray-50 text-gray-700 dark:bg-gray-700 dark:text-white transition rounded-full"
                 type="button"
-                on:click={async () => {
+                onclick={async () => {
                   try {
                     let stream = await navigator.mediaDevices
                       .getUserMedia({ audio: true })

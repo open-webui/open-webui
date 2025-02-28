@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { io } from 'socket.io-client';
   import { spring } from 'svelte/motion';
   import PyodideWorker from '$lib/workers/pyodide.worker?worker';
@@ -46,12 +46,17 @@
   import NotificationToast from '$lib/components/NotificationToast.svelte';
   import AppSidebar from '$lib/components/app/AppSidebar.svelte';
   import { chatCompletion } from '$lib/apis/openai';
+  interface Props {
+    children?: import('svelte').Snippet;
+  }
+
+  let { children }: Props = $props();
 
   setContext('i18n', i18n);
 
   const bc = new BroadcastChannel('active-tab-channel');
 
-  let loaded = false;
+  let loaded = $state(false);
 
   const BREAKPOINT = 768;
 
@@ -575,11 +580,11 @@
       <AppSidebar />
 
       <div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
-        <slot />
+        {@render children?.()}
       </div>
     </div>
   {:else}
-    <slot />
+    {@render children?.()}
   {/if}
 {/if}
 

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { prompts, user } from '$lib/stores';
   import {
     findWordIndices,
@@ -14,21 +16,29 @@
 
   const i18n = getContext('i18n');
 
-  export let files;
 
-  export let prompt = '';
-  export let command = '';
-
-  let selectedPromptIdx = 0;
-  let filteredPrompts = [];
-
-  $: filteredPrompts = $prompts
-    .filter((p) => p.command.toLowerCase().includes(command.toLowerCase()))
-    .sort((a, b) => a.title.localeCompare(b.title));
-
-  $: if (command) {
-    selectedPromptIdx = 0;
+  interface Props {
+    files: any;
+    prompt?: string;
+    command?: string;
   }
+
+  let { files = $bindable(), prompt = $bindable(''), command = '' }: Props = $props();
+
+  let selectedPromptIdx = $state(0);
+  let filteredPrompts = $state([]);
+
+  run(() => {
+    filteredPrompts = $prompts
+      .filter((p) => p.command.toLowerCase().includes(command.toLowerCase()))
+      .sort((a, b) => a.title.localeCompare(b.title));
+  });
+
+  run(() => {
+    if (command) {
+      selectedPromptIdx = 0;
+    }
+  });
 
   export const selectUp = () => {
     selectedPromptIdx = Math.max(0, selectedPromptIdx - 1);
@@ -154,13 +164,13 @@
                 ? '  bg-gray-50 dark:bg-gray-850 selected-command-option-button'
                 : ''}"
               type="button"
-              on:click={() => {
+              onclick={() => {
                 confirmPrompt(prompt);
               }}
-              on:mousemove={() => {
+              onmousemove={() => {
                 selectedPromptIdx = promptIdx;
               }}
-              on:focus={() => {}}
+              onfocus={() => {}}
             >
               <div class=" font-medium text-black dark:text-gray-100">
                 {prompt.command}

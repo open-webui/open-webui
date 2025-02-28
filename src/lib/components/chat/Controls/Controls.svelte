@@ -10,11 +10,9 @@
   import Collapsible from '$lib/components/common/Collapsible.svelte';
 
   import { user } from '$lib/stores';
-  export let models = [];
-  export let chatFiles = [];
-  export let params = {};
+  let { models = [], chatFiles = $bindable([]), params = $bindable({}) } = $props();
 
-  let showValves = false;
+  let showValves = $state(false);
 </script>
 
 <div class=" dark:text-white">
@@ -22,7 +20,7 @@
     <div class=" text-lg font-medium self-center font-primary">{$i18n.t('Chat Controls')}</div>
     <button
       class="self-center"
-      on:click={() => {
+      onclick={() => {
         dispatch('close');
       }}
     >
@@ -38,32 +36,34 @@
           open={true}
           title={$i18n.t('Files')}
         >
-          <div
-            slot="content"
-            class="flex flex-col gap-1 mt-1.5"
-          >
-            {#each chatFiles as file, fileIdx}
-              <FileItem
-                name={file.name}
-                className="w-full"
-                dismissible={true}
-                edit={true}
-                item={file}
-                size={file?.size}
-                type={file.type}
-                url={file?.url ? file.url : null}
-                on:dismiss={() => {
-                  // Remove the file from the chatFiles array
+          {#snippet content()}
+                    <div
+              
+              class="flex flex-col gap-1 mt-1.5"
+            >
+              {#each chatFiles as file, fileIdx}
+                <FileItem
+                  name={file.name}
+                  className="w-full"
+                  dismissible={true}
+                  edit={true}
+                  item={file}
+                  size={file?.size}
+                  type={file.type}
+                  url={file?.url ? file.url : null}
+                  on:dismiss={() => {
+                    // Remove the file from the chatFiles array
 
-                  chatFiles.splice(fileIdx, 1);
-                  chatFiles = chatFiles;
-                }}
-                on:click={() => {
-                  console.log(file);
-                }}
-              />
-            {/each}
-          </div>
+                    chatFiles.splice(fileIdx, 1);
+                    chatFiles = chatFiles;
+                  }}
+                  on:click={() => {
+                    console.log(file);
+                  }}
+                />
+              {/each}
+            </div>
+                  {/snippet}
         </Collapsible>
 
         <hr class="my-2 border-gray-50 dark:border-gray-700/10" />
@@ -74,12 +74,14 @@
         title={$i18n.t('Valves')}
         bind:open={showValves}
       >
-        <div
-          slot="content"
-          class="text-sm"
-        >
-          <Valves show={showValves} />
-        </div>
+        {#snippet content()}
+                <div
+            
+            class="text-sm"
+          >
+            <Valves show={showValves} />
+          </div>
+              {/snippet}
       </Collapsible>
 
       <hr class="my-2 border-gray-50 dark:border-gray-700/10" />
@@ -89,17 +91,19 @@
         open={true}
         title={$i18n.t('System Prompt')}
       >
-        <div
-          slot="content"
-          class=""
-        >
-          <textarea
-            class="w-full text-xs py-1.5 bg-transparent outline-hidden resize-none"
-            placeholder={$i18n.t('Enter system prompt')}
-            rows="4"
-            bind:value={params.system}
-          />
-        </div>
+        {#snippet content()}
+                <div
+            
+            class=""
+          >
+            <textarea
+              class="w-full text-xs py-1.5 bg-transparent outline-hidden resize-none"
+              placeholder={$i18n.t('Enter system prompt')}
+              rows="4"
+              bind:value={params.system}
+></textarea>
+          </div>
+              {/snippet}
       </Collapsible>
 
       <hr class="my-2 border-gray-50 dark:border-gray-700/10" />
@@ -109,17 +113,19 @@
         open={true}
         title={$i18n.t('Advanced Params')}
       >
-        <div
-          slot="content"
-          class="text-sm mt-1.5"
-        >
-          <div>
-            <AdvancedParams
-              admin={$user?.role === 'admin'}
-              bind:params
-            />
+        {#snippet content()}
+                <div
+            
+            class="text-sm mt-1.5"
+          >
+            <div>
+              <AdvancedParams
+                admin={$user?.role === 'admin'}
+                bind:params
+              />
+            </div>
           </div>
-        </div>
+              {/snippet}
       </Collapsible>
     </div>
   {:else}

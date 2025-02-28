@@ -5,7 +5,7 @@
 
   const i18n = getContext('i18n');
 
-  let loaded = false;
+  let loaded = $state(false);
 
   onMount(async () => {
     if ($config) {
@@ -48,7 +48,7 @@
           <div class=" mt-6 mx-auto relative group w-fit">
             <button
               class="relative z-20 flex px-5 py-2 rounded-full bg-gray-100 hover:bg-gray-200 transition font-medium text-sm"
-              on:click={() => {
+              onclick={() => {
                 location.href = '/';
               }}
             >

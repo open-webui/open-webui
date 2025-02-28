@@ -1,5 +1,9 @@
 <script lang="ts">
-  export let className = 'size-4';
+  interface Props {
+    className?: string;
+  }
+
+  let { className = 'size-4' }: Props = $props();
 </script>
 
 <svg

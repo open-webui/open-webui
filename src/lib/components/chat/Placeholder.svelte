@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { toast } from 'svelte-sonner';
   import { marked } from 'marked';
 
@@ -18,27 +20,45 @@
 
   const i18n = getContext('i18n');
 
-  export let transparentBackground = false;
 
-  export let createMessagePair: Function;
-  export let stopResponse: Function;
 
-  export let autoScroll = false;
 
-  export let atSelectedModel: Model | undefined;
-  export let selectedModels: [''];
 
-  export let history;
 
-  export let prompt = '';
-  export let files = [];
 
-  export let selectedToolIds = [];
-  export let imageGenerationEnabled = false;
-  export let codeInterpreterEnabled = false;
-  export let webSearchEnabled = false;
+  interface Props {
+    transparentBackground?: boolean;
+    createMessagePair: Function;
+    stopResponse: Function;
+    autoScroll?: boolean;
+    atSelectedModel: Model | undefined;
+    selectedModels: [''];
+    history: any;
+    prompt?: string;
+    files?: any;
+    selectedToolIds?: any;
+    imageGenerationEnabled?: boolean;
+    codeInterpreterEnabled?: boolean;
+    webSearchEnabled?: boolean;
+  }
 
-  let models = [];
+  let {
+    transparentBackground = false,
+    createMessagePair,
+    stopResponse,
+    autoScroll = $bindable(false),
+    atSelectedModel = $bindable(),
+    selectedModels,
+    history,
+    prompt = $bindable(''),
+    files = $bindable([]),
+    selectedToolIds = $bindable([]),
+    imageGenerationEnabled = $bindable(false),
+    codeInterpreterEnabled = $bindable(false),
+    webSearchEnabled = $bindable(false)
+  }: Props = $props();
+
+  let models = $state([]);
 
   const selectSuggestionPrompt = async (p) => {
     let text = p;
@@ -77,13 +97,17 @@
     await tick();
   };
 
-  let selectedModelIdx = 0;
+  let selectedModelIdx = $state(0);
 
-  $: if (selectedModels.length > 0) {
-    selectedModelIdx = models.length - 1;
-  }
+  run(() => {
+    if (selectedModels.length > 0) {
+      selectedModelIdx = models.length - 1;
+    }
+  });
 
-  $: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
+  run(() => {
+    models = selectedModels.map((id) => $_models.find((m) => m.id === id));
+  });
 
   onMount(() => {});
 </script>
@@ -120,7 +144,7 @@
                 placement="top"
               >
                 <button
-                  on:click={() => {
+                  onclick={() => {
                     selectedModelIdx = modelIdx;
                   }}
                 >

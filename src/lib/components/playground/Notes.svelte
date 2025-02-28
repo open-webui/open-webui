@@ -11,10 +11,10 @@
   import Tooltip from '../common/Tooltip.svelte';
   import { toast } from 'svelte-sonner';
 
-  let name = '';
-  let content = '';
+  let name = $state('');
+  let content = $state('');
 
-  let voiceInput = false;
+  let voiceInput = $state(false);
   let loading = false;
 </script>
 
@@ -86,7 +86,7 @@
           <button
             class="cursor-pointer p-2.5 flex rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition shadow-xl"
             type="button"
-            on:click={async () => {
+            onclick={async () => {
               try {
                 let stream = await navigator.mediaDevices
                   .getUserMedia({ audio: true })

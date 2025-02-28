@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { toast } from 'svelte-sonner';
   import dayjs from 'dayjs';
   import relativeTime from 'dayjs/plugin/relativeTime';
@@ -27,14 +27,12 @@
 
   const i18n = getContext('i18n');
 
-  let loaded = false;
+  let loaded = $state(false);
 
-  export let users = [];
+  let { users = [] } = $props();
 
-  let groups = [];
-  let filteredGroups;
-
-  $: filteredGroups = groups.filter((user) => {
+  let groups = $state([]);
+  let filteredGroups = $derived(groups.filter((user) => {
     if (search === '') {
       return true;
     } else {
@@ -42,10 +40,11 @@
       const query = search.toLowerCase();
       return name.includes(query);
     }
-  });
+  }));
 
-  let search = '';
-  let defaultPermissions = {
+
+  let search = $state('');
+  let defaultPermissions = $state({
     workspace: {
       models: false,
       knowledge: false,
@@ -64,10 +63,10 @@
       image_generation: true,
       code_interpreter: true
     }
-  };
+  });
 
-  let showCreateGroupModal = false;
-  let showDefaultPermissionsModal = false;
+  let showCreateGroupModal = $state(false);
+  let showDefaultPermissionsModal = $state(false);
 
   const setGroups = async () => {
     groups = await getGroups(localStorage.token);
@@ -110,6 +109,7 @@
     }
     loaded = true;
   });
+  
 </script>
 
 {#if loaded}
@@ -120,7 +120,7 @@
   <div class="mt-0.5 mb-2 gap-1 flex flex-col md:flex-row justify-between">
     <div class="flex md:self-center text-lg font-medium px-0.5">
       {$i18n.t('Groups')}
-      <div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
+      <div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850"></div>
 
       <span class="text-lg font-medium text-gray-500 dark:text-gray-300">{groups.length}</span>
     </div>
@@ -153,7 +153,7 @@
           <Tooltip content={$i18n.t('Create Group')}>
             <button
               class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
-              on:click={() => {
+              onclick={() => {
                 showCreateGroupModal = !showCreateGroupModal;
               }}
             >
@@ -180,7 +180,7 @@
           <button
             class=" px-4 py-1.5 text-sm rounded-full bg-black hover:bg-gray-800 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition font-medium flex items-center space-x-1"
             aria-label={$i18n.t('Create Group')}
-            on:click={() => {
+            onclick={() => {
               showCreateGroupModal = true;
             }}
           >
@@ -195,7 +195,7 @@
 
           <div class="w-full">Users</div>
 
-          <div class="w-full" />
+          <div class="w-full"></div>
         </div>
 
         <hr class="mt-1.5 border-gray-100 dark:border-gray-850" />
@@ -224,7 +224,7 @@
 
     <button
       class="flex items-center justify-between rounded-lg w-full transition pt-1"
-      on:click={() => {
+      onclick={() => {
         showDefaultPermissionsModal = true;
       }}
     >

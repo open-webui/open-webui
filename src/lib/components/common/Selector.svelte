@@ -10,24 +10,36 @@
 
   const dispatch = createEventDispatcher();
 
-  export let value = '';
-  export let placeholder = 'Select a model';
-  export let searchEnabled = true;
-  export let searchPlaceholder = 'Search a model';
 
-  export let items = [
+  interface Props {
+    value?: string;
+    placeholder?: string;
+    searchEnabled?: boolean;
+    searchPlaceholder?: string;
+    items?: any;
+    children?: import('svelte').Snippet;
+  }
+
+  let {
+    value = $bindable(''),
+    placeholder = 'Select a model',
+    searchEnabled = true,
+    searchPlaceholder = 'Search a model',
+    items = [
     { value: 'mango', label: 'Mango' },
     { value: 'watermelon', label: 'Watermelon' },
     { value: 'apple', label: 'Apple' },
     { value: 'pineapple', label: 'Pineapple' },
     { value: 'orange', label: 'Orange' }
-  ];
+  ],
+    children
+  }: Props = $props();
 
-  let searchValue = '';
+  let searchValue = $state('');
 
-  $: filteredItems = searchValue
+  let filteredItems = $derived(searchValue
     ? items.filter((item) => item.value.toLowerCase().includes(searchValue.toLowerCase()))
-    : items;
+    : items);
 </script>
 
 <Select.Root
@@ -58,7 +70,7 @@
     sideOffset={4}
     transition={flyAndScale}
   >
-    <slot>
+    {#if children}{@render children()}{:else}
       {#if searchEnabled}
         <div class="flex items-center gap-2.5 px-5 mt-3.5 mb-3">
           <Search
@@ -99,6 +111,6 @@
           </div>
         {/each}
       </div>
-    </slot>
+    {/if}
   </Select.Content>
 </Select.Root>

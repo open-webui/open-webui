@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run, preventDefault } from 'svelte/legacy';
+
   import { toast } from 'svelte-sonner';
   import { getContext, onMount } from 'svelte';
   const i18n = getContext('i18n');
@@ -24,45 +26,50 @@
   import ModelDeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
   import Spinner from '$lib/components/common/Spinner.svelte';
 
-  let modelUploadInputElement: HTMLInputElement;
-  let showModelDeleteConfirm = false;
+  let modelUploadInputElement: HTMLInputElement = $state();
+  let showModelDeleteConfirm = $state(false);
 
-  let loading = true;
+  let loading = $state(true);
 
-  // Models
-  export let urlIdx: number | null = null;
+  
+  interface Props {
+    // Models
+    urlIdx?: number | null;
+  }
 
-  let ollamaModels = [];
+  let { urlIdx = null }: Props = $props();
 
-  let updateModelId = null;
-  let updateProgress = null;
-  let showExperimentalOllama = false;
+  let ollamaModels = $state([]);
+
+  let updateModelId = $state(null);
+  let updateProgress = $state(null);
+  let showExperimentalOllama = $state(false);
 
   const MAX_PARALLEL_DOWNLOADS = 3;
 
-  let modelTransferring = false;
-  let modelTag = '';
+  let modelTransferring = $state(false);
+  let modelTag = $state('');
 
-  let createModelLoading = false;
-  let createModelName = '';
-  let createModelObject = '';
+  let createModelLoading = $state(false);
+  let createModelName = $state('');
+  let createModelObject = $state('');
 
-  let createModelDigest = '';
-  let createModelPullProgress: null | number = null;
+  let createModelDigest = $state('');
+  let createModelPullProgress: null | number = $state(null);
 
   let digest = '';
   let pullProgress = null;
 
-  let modelUploadMode = 'file';
-  let modelInputFile: File[] | null = null;
-  let modelFileUrl = '';
-  let modelFileContent = `TEMPLATE """{{ .System }}\nUSER: {{ .Prompt }}\nASSISTANT: """\nPARAMETER num_ctx 4096\nPARAMETER stop "</s>"\nPARAMETER stop "USER:"\nPARAMETER stop "ASSISTANT:"`;
-  let modelFileDigest = '';
+  let modelUploadMode = $state('file');
+  let modelInputFile: File[] | null = $state(null);
+  let modelFileUrl = $state('');
+  let modelFileContent = $state(`TEMPLATE """{{ .System }}\nUSER: {{ .Prompt }}\nASSISTANT: """\nPARAMETER num_ctx 4096\nPARAMETER stop "</s>"\nPARAMETER stop "USER:"\nPARAMETER stop "ASSISTANT:"`);
+  let modelFileDigest = $state('');
 
-  let uploadProgress = null;
-  let uploadMessage = '';
+  let uploadProgress = $state(null);
+  let uploadMessage = $state('');
 
-  let deleteModelTag = '';
+  let deleteModelTag = $state('');
 
   const updateModelsHandler = async () => {
     for (const model of ollamaModels) {
@@ -548,9 +555,11 @@
     }
   };
 
-  $: if (urlIdx !== null) {
-    init();
-  }
+  run(() => {
+    if (urlIdx !== null) {
+      init();
+    }
+  });
 </script>
 
 <ModelDeleteConfirmDialog
@@ -579,7 +588,7 @@
                   class="flex gap-2 items-center bg-transparent rounded-lg transition"
                   aria-label="Update all models"
                   type="button"
-                  on:click={() => {
+                  onclick={() => {
                     updateModelsHandler();
                   }}
                 >
@@ -610,7 +619,7 @@
               class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
               disabled={modelTransferring}
               type="button"
-              on:click={() => {
+              onclick={() => {
                 pullModelHandler();
               }}
             >
@@ -697,7 +706,7 @@
                           class="text-gray-800 dark:text-gray-100"
                           aria-label="Cancel"
                           type="button"
-                          on:click={() => {
+                          onclick={() => {
                             cancelModelPullHandler(model);
                           }}
                         >
@@ -764,7 +773,7 @@
               class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
               aria-label="Delete model"
               type="button"
-              on:click={() => {
+              onclick={() => {
                 showModelDeleteConfirm = true;
               }}
             >
@@ -815,7 +824,7 @@
                 aria-label="Create model"
                 disabled={createModelLoading}
                 type="button"
-                on:click={() => {
+                onclick={() => {
                   createModelHandler();
                 }}
               >
@@ -865,7 +874,7 @@
             <button
               class=" text-xs font-medium text-gray-500"
               type="button"
-              on:click={() => {
+              onclick={() => {
                 showExperimentalOllama = !showExperimentalOllama;
               }}
             >{showExperimentalOllama ? $i18n.t('Hide') : $i18n.t('Show')}</button>
@@ -874,9 +883,9 @@
 
         {#if showExperimentalOllama}
           <form
-            on:submit|preventDefault={() => {
+            onsubmit={preventDefault(() => {
               uploadModelHandler();
-            }}
+            })}
           >
             <div class=" mb-2 flex w-full justify-between">
               <div class="  text-sm font-medium">{$i18n.t('Upload a GGUF model')}</div>
@@ -884,7 +893,7 @@
               <button
                 class="p-1 px-3 text-xs flex rounded-sm transition"
                 type="button"
-                on:click={() => {
+                onclick={() => {
                   if (modelUploadMode === 'file') {
                     modelUploadMode = 'url';
                   } else {
@@ -915,7 +924,7 @@
                       required
                       type="file"
                       bind:files={modelInputFile}
-                      on:change={() => {
+                      onchange={() => {
                         console.log(modelInputFile);
                       }}
                     />
@@ -923,7 +932,7 @@
                     <button
                       class="w-full rounded-lg text-left py-2 px-4 bg-gray-50 dark:text-gray-300 dark:bg-gray-850"
                       type="button"
-                      on:click={() => {
+                      onclick={() => {
                         modelUploadInputElement.click();
                       }}
                     >
@@ -1013,7 +1022,7 @@
                     class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-100 dark:bg-gray-850 outline-hidden resize-none"
                     rows="6"
                     bind:value={modelFileContent}
-                  />
+></textarea>
                 </div>
               </div>
             {/if}

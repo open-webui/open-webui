@@ -15,7 +15,7 @@
 
   const i18n = getContext('i18n');
 
-  let func = null;
+  let func = $state(null);
 
   const saveHandler = async (data) => {
     console.log(data);

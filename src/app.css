@@ -43,7 +43,7 @@ math {
 }
 
 .hljs {
-	@apply rounded-lg;
+	@apply rounded;
 }
 
 .input-prose {
@@ -84,7 +84,7 @@ math {
 }
 
 iframe {
-	@apply rounded-lg;
+	@apply rounded;
 }
 
 li p {
@@ -133,6 +133,7 @@ select {
 	0% {
 		background-position: 200% 0;
 	}
+
 	100% {
 		background-position: -200% 0;
 	}
@@ -145,7 +146,8 @@ select {
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	animation: shimmer 4s linear infinite;
-	color: #818286; /* Fallback color */
+	color: #818286;
+	/* Fallback color */
 }
 
 :global(.dark) .shimmer {
@@ -155,7 +157,8 @@ select {
 	-webkit-background-clip: text;
 	-webkit-text-fill-color: transparent;
 	animation: shimmer 4s linear infinite;
-	color: #a1a3a7; /* Darker fallback color for dark mode */
+	color: #a1a3a7;
+	/* Darker fallback color for dark mode */
 }
 
 @keyframes smoothFadeIn {
@@ -163,6 +166,7 @@ select {
 		opacity: 0;
 		transform: translateY(-10px);
 	}
+
 	100% {
 		opacity: 1;
 		transform: translateY(0);
@@ -177,41 +181,48 @@ select {
 	display: none;
 }
 
-.scrollbar-hidden:active::-webkit-scrollbar-thumb,
-.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
-.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
-	visibility: visible;
-}
-.scrollbar-hidden::-webkit-scrollbar-thumb {
-	visibility: hidden;
+@utility scrollbar-hidden {
+	&:active::-webkit-scrollbar-thumb,
+	&:focus::-webkit-scrollbar-thumb,
+	&:hover::-webkit-scrollbar-thumb {
+		visibility: visible;
+	}
+
+	&::-webkit-scrollbar-thumb {
+		visibility: hidden;
+	}
+
+	&::-webkit-scrollbar-corner {
+		display: none;
+	}
 }
 
-.scrollbar-hidden::-webkit-scrollbar-corner {
-	display: none;
-}
+@utility scrollbar-none {
+	-ms-overflow-style: none;
+	/* IE and Edge */
+	scrollbar-width: none;
+	/* Firefox */
+	&::-webkit-scrollbar {
+		display: none;
+		/* for Chrome, Safari and Opera */
+	}
 
-.scrollbar-none::-webkit-scrollbar {
-	display: none; /* for Chrome, Safari and Opera */
-}
-
-.scrollbar-none::-webkit-scrollbar-corner {
-	display: none;
-}
-
-.scrollbar-none {
-	-ms-overflow-style: none; /* IE and Edge */
-	scrollbar-width: none; /* Firefox */
+	&::-webkit-scrollbar-corner {
+		display: none;
+	}
 }
 
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
 	/* display: none; <- Crashes Chrome on hover */
 	-webkit-appearance: none;
-	margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+	margin: 0;
+	/* <-- Apparently some margin are still there even though it's hidden */
 }
 
 input[type='number'] {
-	-moz-appearance: textfield; /* Firefox */
+	-moz-appearance: textfield;
+	/* Firefox */
 }
 
 .cm-editor {
@@ -238,7 +249,7 @@ input[type='number'] {
 }
 
 .tippy-box[data-theme~='dark'] {
-	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
+	@apply rounded bg-gray-950 text-xs border border-gray-900 shadow-xl;
 }
 
 .password {
@@ -251,7 +262,7 @@ input[type='number'] {
 	padding: 3px 8px;
 	font-size: 0.8em;
 	font-weight: 600;
-	@apply rounded-md dark:bg-gray-800 bg-gray-100 mx-0.5;
+	@apply rounded dark:bg-gray-800 bg-gray-100 mx-0.5;
 }
 
 .svelte-flow {
@@ -318,7 +329,7 @@ input[type='number'] {
 	padding: 3px 8px;
 	font-size: 0.8em;
 	font-weight: 600;
-	@apply rounded-md dark:bg-gray-800 bg-gray-100 mx-0.5;
+	@apply rounded dark:bg-gray-800 bg-gray-100 mx-0.5;
 }
 
 /* Code styling */

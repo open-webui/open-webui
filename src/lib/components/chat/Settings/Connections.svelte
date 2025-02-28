@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { preventDefault } from 'svelte/legacy';
+
   import { toast } from 'svelte-sonner';
   import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
   import { getModels as _getModels } from '$lib/apis';
@@ -16,11 +18,15 @@
 
   import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 
-  export let saveSettings: Function;
+  interface Props {
+    saveSettings: Function;
+  }
 
-  let config = null;
+  let { saveSettings }: Props = $props();
 
-  let showConnectionModal = false;
+  let config = $state(null);
+
+  let showConnectionModal = $state(false);
 
   const addConnectionHandler = async (connection) => {
     config.OPENAI_API_BASE_URLS.push(connection.url);
@@ -75,9 +81,9 @@
 
 <form
   class="flex flex-col h-full justify-between text-sm"
-  on:submit|preventDefault={() => {
+  onsubmit={preventDefault(() => {
     updateHandler();
-  }}
+  })}
 >
   <div class=" overflow-y-scroll scrollbar-hidden h-full">
     {#if config !== null}
@@ -91,7 +97,7 @@
                 <button
                   class="px-1"
                   type="button"
-                  on:click={() => {
+                  onclick={() => {
                     showConnectionModal = true;
                   }}
                 >

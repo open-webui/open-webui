@@ -1,3 +1,5 @@
+<!-- @migration-task Error while migrating Svelte code: can't migrate `let state = false;` to `$state` because there's a variable named state.
+     Rename the variable and try again or migrate by hand. -->
 <script lang="ts">
   import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
   import ChevronUp from '$lib/components/icons/ChevronUp.svelte';

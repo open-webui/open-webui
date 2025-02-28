@@ -12,7 +12,7 @@
 
   const i18n = getContext('i18n');
 
-  let tool = null;
+  let tool = $state(null);
 
   const saveHandler = async (data) => {
     console.log(data);

@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { onDestroy, onMount, tick, getContext, createEventDispatcher } from 'svelte';
   const i18n = getContext('i18n');
   const dispatch = createEventDispatcher();
@@ -8,23 +8,38 @@
   import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
   import { createMessagesList } from '$lib/utils';
 
-  export let id;
-  export let content;
-  export let history;
-  export let model = null;
-  export let sources = null;
 
-  export let save = false;
-  export let floatingButtons = true;
 
-  export let onSourceClick = () => {};
-  export let onTaskClick = () => {};
 
-  export let onAddMessages = () => {};
+  interface Props {
+    id: any;
+    content: any;
+    history: any;
+    model?: any;
+    sources?: any;
+    save?: boolean;
+    floatingButtons?: boolean;
+    onSourceClick?: any;
+    onTaskClick?: any;
+    onAddMessages?: any;
+  }
 
-  let contentContainerElement;
+  let {
+    id,
+    content,
+    history,
+    model = null,
+    sources = null,
+    save = false,
+    floatingButtons = true,
+    onSourceClick = () => {},
+    onTaskClick = () => {},
+    onAddMessages = () => {}
+  }: Props = $props();
 
-  let floatingButtonsElement;
+  let contentContainerElement = $state();
+
+  let floatingButtonsElement = $state();
 
   const updateButtonPosition = (event) => {
     const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);

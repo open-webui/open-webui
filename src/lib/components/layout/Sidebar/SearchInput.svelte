@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run, stopPropagation } from 'svelte/legacy';
+
   import { getAllTags } from '$lib/apis/chats';
   import { tags } from '$lib/stores';
   import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
@@ -7,13 +9,19 @@
   const dispatch = createEventDispatcher();
   const i18n = getContext('i18n');
 
-  export let placeholder = '';
-  export let value = '';
+  interface Props {
+    placeholder?: string;
+    value?: string;
+  }
 
-  let selectedIdx = 0;
+  let { placeholder = '', value = $bindable('') }: Props = $props();
 
-  let lastWord = '';
-  $: lastWord = value ? value.split(' ').at(-1) : value;
+  let selectedIdx = $state(0);
+
+  let lastWord = $state('');
+  run(() => {
+    lastWord = value ? value.split(' ').at(-1) : value;
+  });
 
   let options = [
     {
@@ -21,37 +29,41 @@
       description: $i18n.t('search for tags')
     }
   ];
-  let focused = false;
+  let focused = $state(false);
   let loading = false;
 
-  let filteredOptions = options;
-  $: filteredOptions = options.filter((option) => {
-    return option.name.startsWith(lastWord);
+  let filteredOptions = $state(options);
+  run(() => {
+    filteredOptions = options.filter((option) => {
+      return option.name.startsWith(lastWord);
+    });
   });
 
-  let filteredTags = [];
-  $: filteredTags = lastWord.startsWith('tag:')
-    ? [
-      ...$tags,
-      {
-        id: 'none',
-        name: $i18n.t('Untagged')
-      }
-    ].filter((tag) => {
-      const tagName = lastWord.slice(4);
-      if (tagName) {
-        const tagId = tagName.replace(' ', '_').toLowerCase();
-
-        if (tag.id !== tagId) {
-          return tag.id.startsWith(tagId);
-        } else {
-          return false;
+  let filteredTags = $state([]);
+  run(() => {
+    filteredTags = lastWord.startsWith('tag:')
+      ? [
+        ...$tags,
+        {
+          id: 'none',
+          name: $i18n.t('Untagged')
         }
-      } else {
-        return true;
-      }
-    })
-    : [];
+      ].filter((tag) => {
+        const tagName = lastWord.slice(4);
+        if (tagName) {
+          const tagId = tagName.replace(' ', '_').toLowerCase();
+
+          if (tag.id !== tagId) {
+            return tag.id.startsWith(tagId);
+          } else {
+            return false;
+          }
+        } else {
+          return true;
+        }
+      })
+      : [];
+  });
 
   const initTags = async () => {
     loading = true;
@@ -107,14 +119,14 @@
       class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm bg-transparent dark:text-gray-300 outline-hidden"
       placeholder={placeholder ? placeholder : $i18n.t('Search')}
       bind:value
-      on:input={() => {
+      oninput={() => {
         dispatch('input');
       }}
-      on:focus={() => {
+      onfocus={() => {
         focused = true;
         initTags();
       }}
-      on:keydown={(e) => {
+      onkeydown={(e) => {
         if (e.key === 'Enter') {
           if (filteredTags.length > 0) {
             const tagElement = document.getElementById(`search-tag-${selectedIdx}`);
@@ -149,13 +161,13 @@
   </div>
 
   {#if focused && (filteredOptions.length > 0 || filteredTags.length > 0)}
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
       class="absolute top-0 mt-8 left-0 right-1 border dark:border-gray-900 bg-gray-50 dark:bg-gray-950 rounded-lg z-10 shadow-lg"
-      on:mouseenter={() => {
+      onmouseenter={() => {
         selectedIdx = null;
       }}
-      on:mouseleave={() => {
+      onmouseleave={() => {
         selectedIdx = 0;
       }}
       in:fade={{ duration: 50 }}
@@ -172,7 +184,7 @@
                   tagIdx
                   ? 'bg-gray-100 dark:bg-gray-900'
                   : ''}"
-                on:click|stopPropagation={async () => {
+                onclick={stopPropagation(async () => {
                   const words = value.split(' ');
 
                   words.pop();
@@ -181,7 +193,7 @@
                   value = words.join(' ');
 
                   dispatch('input');
-                }}
+                })}
               >
                 <div class="dark:text-gray-300 text-gray-700 font-medium line-clamp-1 shrink-0">
                   {tag.name}
@@ -206,7 +218,7 @@
                   optionIdx
                   ? 'bg-gray-100 dark:bg-gray-900'
                   : ''}"
-                on:click|stopPropagation={async () => {
+                onclick={stopPropagation(async () => {
                   const words = value.split(' ');
 
                   words.pop();
@@ -215,7 +227,7 @@
                   value = words.join(' ');
 
                   dispatch('input');
-                }}
+                })}
               >
                 <div class="dark:text-gray-300 text-gray-700 font-medium">{option.name}</div>
 

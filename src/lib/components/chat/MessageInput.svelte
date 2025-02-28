@@ -1,3 +1,5 @@
+<!-- @migration-task Error while migrating Svelte code: Attributes need to be unique
+https://svelte.dev/e/attribute_duplicate -->
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';

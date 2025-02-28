@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import { toast } from 'svelte-sonner';
   import { createEventDispatcher, tick, getContext, onMount, onDestroy } from 'svelte';
   import { config, settings } from '$lib/stores';
@@ -10,13 +12,17 @@
 
   const dispatch = createEventDispatcher();
 
-  export let recording = false;
-  export let className = ' p-2.5 w-full max-w-full';
+  interface Props {
+    recording?: boolean;
+    className?: string;
+  }
 
-  let loading = false;
+  let { recording = $bindable(false), className = ' p-2.5 w-full max-w-full' }: Props = $props();
+
+  let loading = $state(false);
   let confirmed = false;
 
-  let durationSeconds = 0;
+  let durationSeconds = $state(0);
   let durationCounter = null;
 
   let transcription = '';
@@ -32,11 +38,6 @@
     durationSeconds = 0;
   };
 
-  $: if (recording) {
-    startRecording();
-  } else {
-    stopRecording();
-  }
 
   const formatSeconds = (seconds) => {
     const minutes = Math.floor(seconds / 60);
@@ -54,7 +55,7 @@
   const MIN_DECIBELS = -45;
   let VISUALIZER_BUFFER_LENGTH = 300;
 
-  let visualizerData = Array(VISUALIZER_BUFFER_LENGTH).fill(0);
+  let visualizerData = $state(Array(VISUALIZER_BUFFER_LENGTH).fill(0));
 
   // Function to calculate the RMS level from time domain data
   const calculateRMS = (data: Uint8Array) => {
@@ -290,10 +291,9 @@
   };
 
   let resizeObserver;
-  let containerWidth;
+  let containerWidth = $state();
 
-  let maxVisibleItems = 300;
-  $: maxVisibleItems = Math.floor(containerWidth / 5); // 2px width + 0.5px gap
+  let maxVisibleItems = $state(300);
 
   onMount(() => {
     // listen to width changes
@@ -315,6 +315,16 @@
     // remove resize observer
     resizeObserver.disconnect();
   });
+  run(() => {
+    if (recording) {
+      startRecording();
+    } else {
+      stopRecording();
+    }
+  });
+  run(() => {
+    maxVisibleItems = Math.floor(containerWidth / 5);
+  }); // 2px width + 0.5px gap
 </script>
 
 <div
@@ -334,7 +344,7 @@
 
         rounded-full"
       type="button"
-      on:click={async () => {
+      onclick={async () => {
         stopRecording();
         dispatch('cancel');
       }}
@@ -372,7 +382,7 @@
                 : 'bg-indigo-500 dark:bg-indigo-400  '}
 
               inline-block h-full"
-          />
+></div>
         </div>
       {/each}
     </div>
@@ -496,7 +506,7 @@
         <button
           class="p-1.5 bg-indigo-500 text-white dark:bg-indigo-500 dark:text-blue-950 rounded-full"
           type="button"
-          on:click={async () => {
+          onclick={async () => {
             await confirmRecording();
           }}
         >
