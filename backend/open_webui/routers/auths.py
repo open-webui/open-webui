@@ -31,10 +31,7 @@ from open_webui.env import (
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response
-from open_webui.config import (
-    OPENID_PROVIDER_URL,
-    ENABLE_OAUTH_SIGNUP,
-)
+from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
 from pydantic import BaseModel
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.auth import (
@@ -51,8 +48,10 @@ from open_webui.utils.access_control import get_permissions
 from typing import Optional, List
 
 from ssl import CERT_REQUIRED, PROTOCOL_TLS
-from ldap3 import Server, Connection, NONE, Tls
-from ldap3.utils.conv import escape_filter_chars
+
+if ENABLE_LDAP.value:
+    from ldap3 import Server, Connection, NONE, Tls
+    from ldap3.utils.conv import escape_filter_chars
 
 router = APIRouter()
 
@@ -600,7 +599,7 @@ async def get_admin_details(request: Request, user=Depends(get_current_user)):
         admin_email = request.app.state.config.ADMIN_EMAIL
         admin_name = None
 
-        print(admin_email, admin_name)
+        log.info(f"Admin details - Email: {admin_email}, Name: {admin_name}")
 
         if admin_email:
             admin = Users.get_user_by_email(admin_email)

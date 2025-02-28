@@ -47,6 +47,10 @@
 
 	let codeEditor;
 
+	export const focus = () => {
+		codeEditor.focus();
+	};
+
 	let isDarkMode = false;
 	let editorTheme = new Compartment();
 	let editorLanguage = new Compartment();
@@ -79,7 +83,7 @@
 				});
 
 				_value = formattedCode;
-				onChange({ value: _value });
+				onChange(_value);
 				await tick();
 
 				toast.success($i18n.t('Code formatted successfully'));
@@ -98,7 +102,7 @@
 		EditorView.updateListener.of((e) => {
 			if (e.docChanged) {
 				_value = e.state.doc.toString();
-				onChange({ value: _value });
+				onChange(_value);
 			}
 		}),
 		editorTheme.of([]),
