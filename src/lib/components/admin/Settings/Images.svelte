@@ -664,14 +664,40 @@
 					<div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Image Size')}</div>
 					<div class="flex w-full">
 						<div class="flex-1 mr-2">
-							<Tooltip content={$i18n.t('Enter Image Size (e.g. 512x512)')} placement="top-start">
-								<input
-									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-									placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
-									bind:value={imageGenerationConfig.IMAGE_SIZE}
-									required
-								/>
-							</Tooltip>
+							{#if imageGenerationConfig?.MODEL?.toLowerCase().includes('dall-e-3')}
+								<Tooltip content={$i18n.t('Select DALL-E-3 image size')} placement="top-start">
+									<select
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={imageGenerationConfig.IMAGE_SIZE}
+										required
+									>
+										<option value="1024x1024">1024x1024</option>
+										<option value="1792x1024">1792x1024</option>
+										<option value="1024x1792">1024x1792</option>
+									</select>
+								</Tooltip>
+							{:else if imageGenerationConfig?.MODEL?.toLowerCase().includes('dall-e-2')}
+								<Tooltip content={$i18n.t('Select DALL-E-2 image size')} placement="top-start">
+									<select
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={imageGenerationConfig.IMAGE_SIZE}
+										required
+									>
+										<option value="256x256">256x256</option>
+										<option value="512x512">512x512</option>
+										<option value="1024x1024">1024x1024</option>
+									</select>
+								</Tooltip>
+							{:else}
+								<Tooltip content={$i18n.t('Enter Image Size (e.g. 512x512)')} placement="top-start">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										placeholder={$i18n.t('Enter Image Size (e.g. 512x512)')}
+										bind:value={imageGenerationConfig.IMAGE_SIZE}
+										required
+									/>
+								</Tooltip>
+							{/if}
 						</div>
 					</div>
 				</div>
