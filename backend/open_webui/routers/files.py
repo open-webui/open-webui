@@ -16,6 +16,7 @@ from open_webui.models.files import (
     Files,
 )
 from open_webui.routers.retrieval import ProcessFileForm, process_file
+from open_webui.routers.audio import transcribe
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
@@ -67,7 +68,22 @@ def upload_file(
         )
 
         try:
-            process_file(request, ProcessFileForm(file_id=id), user=user)
+            if file.content_type in [
+                "audio/mpeg",
+                "audio/wav",
+                "audio/ogg",
+                "audio/x-m4a",
+            ]:
+                file_path = Storage.get_file(file_path)
+                result = transcribe(request, file_path)
+                process_file(
+                    request,
+                    ProcessFileForm(file_id=id, content=result.get("text", "")),
+                    user=user,
+                )
+            else:
+                process_file(request, ProcessFileForm(file_id=id), user=user)
+
             file_item = Files.get_file_by_id(id=id)
         except Exception as e:
             log.exception(e)
@@ -273,7 +289,7 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
 
             # Check if the file already exists in the cache
             if file_path.is_file():
-                print(f"file_path: {file_path}")
+                log.info(f"file_path: {file_path}")
                 return FileResponse(file_path)
             else:
                 raise HTTPException(

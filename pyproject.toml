@@ -40,6 +40,9 @@ dependencies = [
 
     "RestrictedPython==8.0",
 
+    "loguru==0.7.2",
+    "asgiref==3.8.1",
+
     "openai",
     "anthropic",
     "google-generativeai==0.7.2",
@@ -78,6 +81,7 @@ dependencies = [
     "psutil",
     "sentencepiece",
     "soundfile==0.13.1",
+    "azure-ai-documentintelligence==1.0.0",
 
     "opencv-python-headless==4.11.0.86",
     "rapidocr-onnxruntime==1.3.24",
