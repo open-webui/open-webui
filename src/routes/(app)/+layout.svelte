@@ -38,7 +38,6 @@
 		temporaryChatEnabled
 	} from '$lib/stores';
 
-	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
@@ -297,7 +296,6 @@
 				</div>
 			{/if}
 
-			<Sidebar />
 			<slot />
 		{/if}
 	</div>
