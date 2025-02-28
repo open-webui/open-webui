@@ -444,6 +444,12 @@
 	});
 
 	onDestroy(() => {
+		// Explicitly forget possible previous chat to invalidate the
+		// chat and allow call to initNewChat() via onMount().
+		// At time of implementation onMount() only called initNewChat()
+		// when no chatId was set, preventing any second chat start via
+		// the startpage.
+		chatId.set('');
 		chatIdUnsubscriber?.();
 		window.removeEventListener('message', onMessageHandler);
 		$socket?.off('chat-events', chatEventHandler);
