@@ -88,6 +88,11 @@
 
 	export let chatIdProp = '';
 
+	export function newChat() {
+		chatId.set('');
+		initNewChat();
+	}
+
 	let loading = false;
 
 	const eventTarget = new EventTarget();
