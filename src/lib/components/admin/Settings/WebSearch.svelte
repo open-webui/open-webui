@@ -29,7 +29,8 @@
 		'tavily',
 		'jina',
 		'bing',
-		'exa'
+		'exa',
+		'perplexity'
 	];
 
 	let youtubeLanguage = 'en';
@@ -360,6 +361,17 @@
 										bind:value={webConfig.search.exa_api_key}
 									/>
 								</div>
+							</div>
+						{:else if webConfig.search.engine === 'perplexity'}
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Perplexity API Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Perplexity API Key')}
+									bind:value={webConfig.search.perplexity_api_key}
+								/>
 							</div>
 						{:else if webConfig.search.engine === 'bing'}
 							<div class="mb-2.5 flex w-full flex-col">
