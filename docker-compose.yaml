@@ -1,12 +1,14 @@
+# version: '3'
 services:
-  ollama:
-    volumes:
-      - ollama:/root/.ollama
-    container_name: ollama
-    pull_policy: always
-    tty: true
-    restart: unless-stopped
-    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+  # ollama 컨테이너 설정은 삭제
+  # ollama:
+  #   volumes:
+  #     - ollama:/root/.ollama
+  #   container_name: ollama
+  #   pull_policy: always
+  #   tty: true
+  #   restart: unless-stopped
+  #   image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
 
   open-webui:
     build:
@@ -18,17 +20,27 @@ services:
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
-    depends_on:
-      - ollama
+      - ./backend:/app/backend # 로컬 소스와 마운트
+      - ./frontend:/app/frontend # 로컬 소스와 마운트
+    # depends_on:
+    #   - ollama
     ports:
-      - ${OPEN_WEBUI_PORT-3000}:8080
+      # - ${OPEN_WEBUI_PORT-3000}:8080
+      - ${OPEN_WEBUI_PORT-8080}:8080
     environment:
-      - 'OLLAMA_BASE_URL=http://ollama:11434'
+      # - 'OLLAMA_BASE_URL=http://ollama:11434'
+      - 'OLLAMA_BASE_URL=http://host.docker.internal:11434'
       - 'WEBUI_SECRET_KEY='
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
 
 volumes:
-  ollama: {}
+  # ollama: {}
   open-webui: {}
+
+
+# 2024/02/20
+# - 올라마 컨테이너 삭제 + 로컬 url로 변경
+# - 로컬 디스크와 마운트
+# - OPEN_WEBUI_PORT 8080의 변경

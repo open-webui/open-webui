@@ -1,0 +1,823 @@
+.
+├── node_modules
+│   ├── @sveltejs
+│   │   ├── kit
+│   │   │   └── src
+│   │   │       └── runtime
+│   │   │           └── components
+│   │   │               ├── svelte-4
+│   │   │               │   ├── error.svelte
+│   │   │               │   └── layout.svelte
+│   │   │               └── svelte-5
+│   │   │                   ├── error.svelte
+│   │   │                   └── layout.svelte
+│   │   ├── svelte-virtual-list
+│   │   │   └── VirtualList.svelte
+│   │   └── vite-plugin-svelte-inspector
+│   │       └── src
+│   │           └── runtime
+│   │               └── Inspector.svelte
+│   ├── @xyflow
+│   │   └── svelte
+│   │       └── dist
+│   │           └── lib
+│   │               ├── components
+│   │               │   ├── Attribution
+│   │               │   │   └── Attribution.svelte
+│   │               │   ├── BaseEdge
+│   │               │   │   └── BaseEdge.svelte
+│   │               │   ├── CallOnMount
+│   │               │   │   └── CallOnMount.svelte
+│   │               │   ├── ConnectionLine
+│   │               │   │   └── ConnectionLine.svelte
+│   │               │   ├── EdgeLabel
+│   │               │   │   └── EdgeLabel.svelte
+│   │               │   ├── EdgeLabelRenderer
+│   │               │   │   └── EdgeLabelRenderer.svelte
+│   │               │   ├── EdgeWrapper
+│   │               │   │   └── EdgeWrapper.svelte
+│   │               │   ├── Handle
+│   │               │   │   └── Handle.svelte
+│   │               │   ├── KeyHandler
+│   │               │   │   └── KeyHandler.svelte
+│   │               │   ├── NodeSelection
+│   │               │   │   └── NodeSelection.svelte
+│   │               │   ├── NodeWrapper
+│   │               │   │   └── NodeWrapper.svelte
+│   │               │   ├── Selection
+│   │               │   │   └── Selection.svelte
+│   │               │   ├── SvelteFlowProvider
+│   │               │   │   └── SvelteFlowProvider.svelte
+│   │               │   ├── UserSelection
+│   │               │   │   └── UserSelection.svelte
+│   │               │   ├── ViewportPortal
+│   │               │   │   └── ViewportPortal.svelte
+│   │               │   ├── edges
+│   │               │   │   ├── BezierEdge.svelte
+│   │               │   │   ├── BezierEdgeInternal.svelte
+│   │               │   │   ├── SmoothStepEdge.svelte
+│   │               │   │   ├── SmoothStepEdgeInternal.svelte
+│   │               │   │   ├── StepEdge.svelte
+│   │               │   │   ├── StepEdgeInternal.svelte
+│   │               │   │   ├── StraightEdge.svelte
+│   │               │   │   └── StraightEdgeInternal.svelte
+│   │               │   └── nodes
+│   │               │       ├── DefaultNode.svelte
+│   │               │       ├── GroupNode.svelte
+│   │               │       ├── InputNode.svelte
+│   │               │       └── OutputNode.svelte
+│   │               ├── container
+│   │               │   ├── EdgeRenderer
+│   │               │   │   ├── EdgeRenderer.svelte
+│   │               │   │   └── MarkerDefinition
+│   │               │   │       ├── Marker.svelte
+│   │               │   │       └── MarkerDefinition.svelte
+│   │               │   ├── NodeRenderer
+│   │               │   │   └── NodeRenderer.svelte
+│   │               │   ├── Pane
+│   │               │   │   └── Pane.svelte
+│   │               │   ├── Panel
+│   │               │   │   └── Panel.svelte
+│   │               │   ├── SvelteFlow
+│   │               │   │   └── SvelteFlow.svelte
+│   │               │   ├── Viewport
+│   │               │   │   └── Viewport.svelte
+│   │               │   └── Zoom
+│   │               │       └── Zoom.svelte
+│   │               └── plugins
+│   │                   ├── Background
+│   │                   │   ├── Background.svelte
+│   │                   │   ├── DotPattern.svelte
+│   │                   │   └── LinePattern.svelte
+│   │                   ├── Controls
+│   │                   │   ├── ControlButton.svelte
+│   │                   │   ├── Controls.svelte
+│   │                   │   └── Icons
+│   │                   │       ├── Fit.svelte
+│   │                   │       ├── Lock.svelte
+│   │                   │       ├── Minus.svelte
+│   │                   │       ├── Plus.svelte
+│   │                   │       └── Unlock.svelte
+│   │                   ├── Minimap
+│   │                   │   ├── Minimap.svelte
+│   │                   │   └── MinimapNode.svelte
+│   │                   ├── NodeResizer
+│   │                   │   ├── NodeResizer.svelte
+│   │                   │   └── ResizeControl.svelte
+│   │                   └── NodeToolbar
+│   │                       └── NodeToolbar.svelte
+│   ├── bits-ui
+│   │   └── dist
+│   │       └── bits
+│   │           ├── accordion
+│   │           │   └── components
+│   │           │       ├── accordion-content.svelte
+│   │           │       ├── accordion-header.svelte
+│   │           │       ├── accordion-item.svelte
+│   │           │       ├── accordion-trigger.svelte
+│   │           │       └── accordion.svelte
+│   │           ├── alert-dialog
+│   │           │   └── components
+│   │           │       ├── alert-dialog-action.svelte
+│   │           │       ├── alert-dialog-cancel.svelte
+│   │           │       ├── alert-dialog-content.svelte
+│   │           │       ├── alert-dialog-description.svelte
+│   │           │       ├── alert-dialog-overlay.svelte
+│   │           │       ├── alert-dialog-portal.svelte
+│   │           │       ├── alert-dialog-title.svelte
+│   │           │       ├── alert-dialog-trigger.svelte
+│   │           │       └── alert-dialog.svelte
+│   │           ├── aspect-ratio
+│   │           │   └── components
+│   │           │       └── aspect-ratio.svelte
+│   │           ├── avatar
+│   │           │   └── components
+│   │           │       ├── avatar-fallback.svelte
+│   │           │       ├── avatar-image.svelte
+│   │           │       └── avatar.svelte
+│   │           ├── button
+│   │           │   └── components
+│   │           │       └── button.svelte
+│   │           ├── calendar
+│   │           │   └── components
+│   │           │       ├── calendar-cell.svelte
+│   │           │       ├── calendar-day.svelte
+│   │           │       ├── calendar-grid-body.svelte
+│   │           │       ├── calendar-grid-head.svelte
+│   │           │       ├── calendar-grid-row.svelte
+│   │           │       ├── calendar-grid.svelte
+│   │           │       ├── calendar-head-cell.svelte
+│   │           │       ├── calendar-header.svelte
+│   │           │       ├── calendar-heading.svelte
+│   │           │       ├── calendar-next-button.svelte
+│   │           │       ├── calendar-prev-button.svelte
+│   │           │       └── calendar.svelte
+│   │           ├── checkbox
+│   │           │   └── components
+│   │           │       ├── checkbox-indicator.svelte
+│   │           │       ├── checkbox-input.svelte
+│   │           │       └── checkbox.svelte
+│   │           ├── collapsible
+│   │           │   └── components
+│   │           │       ├── collapsible-content.svelte
+│   │           │       ├── collapsible-trigger.svelte
+│   │           │       └── collapsible.svelte
+│   │           ├── combobox
+│   │           │   └── components
+│   │           │       ├── combobox-arrow.svelte
+│   │           │       ├── combobox-content.svelte
+│   │           │       ├── combobox-group-label.svelte
+│   │           │       ├── combobox-group.svelte
+│   │           │       ├── combobox-hidden-input.svelte
+│   │           │       ├── combobox-input.svelte
+│   │           │       ├── combobox-item-indicator.svelte
+│   │           │       ├── combobox-item.svelte
+│   │           │       ├── combobox-label.svelte
+│   │           │       └── combobox.svelte
+│   │           ├── context-menu
+│   │           │   └── components
+│   │           │       ├── context-menu-content.svelte
+│   │           │       ├── context-menu-trigger.svelte
+│   │           │       └── context-menu.svelte
+│   │           ├── date-field
+│   │           │   └── components
+│   │           │       ├── date-field-input.svelte
+│   │           │       ├── date-field-label.svelte
+│   │           │       ├── date-field-segment.svelte
+│   │           │       └── date-field.svelte
+│   │           ├── date-picker
+│   │           │   └── components
+│   │           │       ├── date-picker-arrow.svelte
+│   │           │       ├── date-picker-calendar.svelte
+│   │           │       ├── date-picker-cell.svelte
+│   │           │       ├── date-picker-close.svelte
+│   │           │       ├── date-picker-content.svelte
+│   │           │       ├── date-picker-day.svelte
+│   │           │       ├── date-picker-field.svelte
+│   │           │       ├── date-picker-grid-body.svelte
+│   │           │       ├── date-picker-grid-head.svelte
+│   │           │       ├── date-picker-grid-row.svelte
+│   │           │       ├── date-picker-grid.svelte
+│   │           │       ├── date-picker-head-cell.svelte
+│   │           │       ├── date-picker-header.svelte
+│   │           │       ├── date-picker-heading.svelte
+│   │           │       ├── date-picker-input.svelte
+│   │           │       ├── date-picker-label.svelte
+│   │           │       ├── date-picker-next-button.svelte
+│   │           │       ├── date-picker-prev-button.svelte
+│   │           │       ├── date-picker-segment.svelte
+│   │           │       ├── date-picker-trigger.svelte
+│   │           │       └── date-picker.svelte
+│   │           ├── date-range-field
+│   │           │   └── components
+│   │           │       ├── date-range-field-input.svelte
+│   │           │       ├── date-range-field-label.svelte
+│   │           │       ├── date-range-field-segment.svelte
+│   │           │       └── date-range-field.svelte
+│   │           ├── date-range-picker
+│   │           │   └── components
+│   │           │       ├── date-range-picker-arrow.svelte
+│   │           │       ├── date-range-picker-calendar.svelte
+│   │           │       ├── date-range-picker-cell.svelte
+│   │           │       ├── date-range-picker-close.svelte
+│   │           │       ├── date-range-picker-content.svelte
+│   │           │       ├── date-range-picker-day.svelte
+│   │           │       ├── date-range-picker-field.svelte
+│   │           │       ├── date-range-picker-grid-body.svelte
+│   │           │       ├── date-range-picker-grid-head.svelte
+│   │           │       ├── date-range-picker-grid-row.svelte
+│   │           │       ├── date-range-picker-grid.svelte
+│   │           │       ├── date-range-picker-head-cell.svelte
+│   │           │       ├── date-range-picker-header.svelte
+│   │           │       ├── date-range-picker-heading.svelte
+│   │           │       ├── date-range-picker-input.svelte
+│   │           │       ├── date-range-picker-label.svelte
+│   │           │       ├── date-range-picker-next-button.svelte
+│   │           │       ├── date-range-picker-prev-button.svelte
+│   │           │       ├── date-range-picker-segment.svelte
+│   │           │       ├── date-range-picker-trigger.svelte
+│   │           │       └── date-range-picker.svelte
+│   │           ├── dialog
+│   │           │   └── components
+│   │           │       ├── dialog-close.svelte
+│   │           │       ├── dialog-content.svelte
+│   │           │       ├── dialog-description.svelte
+│   │           │       ├── dialog-overlay.svelte
+│   │           │       ├── dialog-portal.svelte
+│   │           │       ├── dialog-title.svelte
+│   │           │       ├── dialog-trigger.svelte
+│   │           │       └── dialog.svelte
+│   │           ├── label
+│   │           │   └── components
+│   │           │       └── label.svelte
+│   │           ├── link-preview
+│   │           │   └── components
+│   │           │       ├── link-preview-arrow.svelte
+│   │           │       ├── link-preview-content.svelte
+│   │           │       ├── link-preview-trigger.svelte
+│   │           │       └── link-preview.svelte
+│   │           ├── menu
+│   │           │   └── components
+│   │           │       ├── menu-arrow.svelte
+│   │           │       ├── menu-checkbox-indicator.svelte
+│   │           │       ├── menu-checkbox-item.svelte
+│   │           │       ├── menu-content.svelte
+│   │           │       ├── menu-group.svelte
+│   │           │       ├── menu-item.svelte
+│   │           │       ├── menu-label.svelte
+│   │           │       ├── menu-radio-group.svelte
+│   │           │       ├── menu-radio-indicator.svelte
+│   │           │       ├── menu-radio-item.svelte
+│   │           │       ├── menu-separator.svelte
+│   │           │       ├── menu-sub-content.svelte
+│   │           │       ├── menu-sub-trigger.svelte
+│   │           │       ├── menu-sub.svelte
+│   │           │       ├── menu-trigger.svelte
+│   │           │       └── menu.svelte
+│   │           ├── menubar
+│   │           │   └── components
+│   │           │       ├── menubar-menu.svelte
+│   │           │       ├── menubar-sub.svelte
+│   │           │       ├── menubar-trigger.svelte
+│   │           │       └── menubar.svelte
+│   │           ├── pagination
+│   │           │   └── components
+│   │           │       ├── pagination-next-button.svelte
+│   │           │       ├── pagination-page.svelte
+│   │           │       ├── pagination-prev-button.svelte
+│   │           │       └── pagination.svelte
+│   │           ├── pin-input
+│   │           │   └── components
+│   │           │       ├── pin-input-hidden-input.svelte
+│   │           │       ├── pin-input-input.svelte
+│   │           │       └── pin-input.svelte
+│   │           ├── popover
+│   │           │   └── components
+│   │           │       ├── popover-arrow.svelte
+│   │           │       ├── popover-close.svelte
+│   │           │       ├── popover-content.svelte
+│   │           │       ├── popover-trigger.svelte
+│   │           │       └── popover.svelte
+│   │           ├── progress
+│   │           │   └── components
+│   │           │       └── progress.svelte
+│   │           ├── radio-group
+│   │           │   └── components
+│   │           │       ├── radio-group-input.svelte
+│   │           │       ├── radio-group-item-indicator.svelte
+│   │           │       ├── radio-group-item.svelte
+│   │           │       └── radio-group.svelte
+│   │           ├── range-calendar
+│   │           │   └── components
+│   │           │       ├── range-calendar-cell.svelte
+│   │           │       ├── range-calendar-day.svelte
+│   │           │       ├── range-calendar-grid-body.svelte
+│   │           │       ├── range-calendar-grid-head.svelte
+│   │           │       ├── range-calendar-grid-row.svelte
+│   │           │       ├── range-calendar-grid.svelte
+│   │           │       ├── range-calendar-head-cell.svelte
+│   │           │       ├── range-calendar-header.svelte
+│   │           │       ├── range-calendar-heading.svelte
+│   │           │       ├── range-calendar-next-button.svelte
+│   │           │       ├── range-calendar-prev-button.svelte
+│   │           │       └── range-calendar.svelte
+│   │           ├── scroll-area
+│   │           │   └── components
+│   │           │       ├── scroll-area-content.svelte
+│   │           │       ├── scroll-area-corner.svelte
+│   │           │       ├── scroll-area-scrollbar-x.svelte
+│   │           │       ├── scroll-area-scrollbar-y.svelte
+│   │           │       ├── scroll-area-scrollbar.svelte
+│   │           │       ├── scroll-area-thumb-x.svelte
+│   │           │       ├── scroll-area-thumb-y.svelte
+│   │           │       ├── scroll-area-thumb.svelte
+│   │           │       ├── scroll-area-viewport.svelte
+│   │           │       └── scroll-area.svelte
+│   │           ├── select
+│   │           │   └── components
+│   │           │       ├── select-arrow.svelte
+│   │           │       ├── select-content.svelte
+│   │           │       ├── select-group.svelte
+│   │           │       ├── select-input.svelte
+│   │           │       ├── select-item-indicator.svelte
+│   │           │       ├── select-item.svelte
+│   │           │       ├── select-label.svelte
+│   │           │       ├── select-trigger.svelte
+│   │           │       ├── select-value.svelte
+│   │           │       └── select.svelte
+│   │           ├── separator
+│   │           │   └── components
+│   │           │       └── separator.svelte
+│   │           ├── slider
+│   │           │   └── components
+│   │           │       ├── slider-input.svelte
+│   │           │       ├── slider-range.svelte
+│   │           │       ├── slider-thumb.svelte
+│   │           │       ├── slider-tick.svelte
+│   │           │       └── slider.svelte
+│   │           ├── switch
+│   │           │   └── components
+│   │           │       ├── switch-input.svelte
+│   │           │       ├── switch-thumb.svelte
+│   │           │       └── switch.svelte
+│   │           ├── tabs
+│   │           │   └── components
+│   │           │       ├── tabs-content.svelte
+│   │           │       ├── tabs-list.svelte
+│   │           │       ├── tabs-trigger.svelte
+│   │           │       └── tabs.svelte
+│   │           ├── toggle
+│   │           │   └── components
+│   │           │       └── toggle.svelte
+│   │           ├── toggle-group
+│   │           │   └── components
+│   │           │       ├── toggle-group-item.svelte
+│   │           │       └── toggle-group.svelte
+│   │           ├── toolbar
+│   │           │   └── components
+│   │           │       ├── toolbar-button.svelte
+│   │           │       ├── toolbar-group-item.svelte
+│   │           │       ├── toolbar-group.svelte
+│   │           │       ├── toolbar-link.svelte
+│   │           │       └── toolbar.svelte
+│   │           └── tooltip
+│   │               └── components
+│   │                   ├── tooltip-arrow.svelte
+│   │                   ├── tooltip-content.svelte
+│   │                   ├── tooltip-trigger.svelte
+│   │                   └── tooltip.svelte
+│   ├── paneforge
+│   │   └── dist
+│   │       └── components
+│   │           ├── pane-group.svelte
+│   │           ├── pane-resizer.svelte
+│   │           └── pane.svelte
+│   ├── svelte-confetti
+│   │   └── dist
+│   │       └── Confetti.svelte
+│   └── svelte-sonner
+│       └── dist
+│           ├── Icon.svelte
+│           ├── Loader.svelte
+│           ├── Toast.svelte
+│           └── Toaster.svelte
+└── src
+    ├── lib
+    │   └── components
+    │       ├── AddConnectionModal.svelte
+    │       ├── AddFilesPlaceholder.svelte
+    │       ├── ChangelogModal.svelte
+    │       ├── NotificationToast.svelte
+    │       ├── OnBoarding.svelte
+    │       ├── admin
+    │       │   ├── Aifred.svelte
+    │       │   ├── Evaluations
+    │       │   │   ├── FeedbackMenu.svelte
+    │       │   │   ├── Feedbacks.svelte
+    │       │   │   └── Leaderboard.svelte
+    │       │   ├── Evaluations.svelte
+    │       │   ├── Functions
+    │       │   │   ├── FunctionEditor.svelte
+    │       │   │   └── FunctionMenu.svelte
+    │       │   ├── Functions.svelte
+    │       │   ├── Settings
+    │       │   │   ├── Audio.svelte
+    │       │   │   ├── CodeExecution.svelte
+    │       │   │   ├── Connections
+    │       │   │   │   ├── ManageOllamaModal.svelte
+    │       │   │   │   ├── OllamaConnection.svelte
+    │       │   │   │   └── OpenAIConnection.svelte
+    │       │   │   ├── Connections.svelte
+    │       │   │   ├── Database.svelte
+    │       │   │   ├── Documents.svelte
+    │       │   │   ├── Evaluations
+    │       │   │   │   ├── ArenaModelModal.svelte
+    │       │   │   │   └── Model.svelte
+    │       │   │   ├── Evaluations.svelte
+    │       │   │   ├── General.svelte
+    │       │   │   ├── Images.svelte
+    │       │   │   ├── Interface.svelte
+    │       │   │   ├── Models
+    │       │   │   │   ├── ConfigureModelsModal.svelte
+    │       │   │   │   ├── Manage
+    │       │   │   │   │   ├── ManageMultipleOllama.svelte
+    │       │   │   │   │   └── ManageOllama.svelte
+    │       │   │   │   ├── ManageModelsModal.svelte
+    │       │   │   │   └── ModelList.svelte
+    │       │   │   ├── Models.svelte
+    │       │   │   ├── Pipelines.svelte
+    │       │   │   └── WebSearch.svelte
+    │       │   ├── Settings.svelte
+    │       │   ├── Users
+    │       │   │   ├── Groups
+    │       │   │   │   ├── AddGroupModal.svelte
+    │       │   │   │   ├── Display.svelte
+    │       │   │   │   ├── EditGroupModal.svelte
+    │       │   │   │   ├── GroupItem.svelte
+    │       │   │   │   ├── Permissions.svelte
+    │       │   │   │   └── Users.svelte
+    │       │   │   ├── Groups.svelte
+    │       │   │   ├── UserList
+    │       │   │   │   ├── AddUserModal.svelte
+    │       │   │   │   ├── EditUserModal.svelte
+    │       │   │   │   └── UserChatsModal.svelte
+    │       │   │   └── UserList.svelte
+    │       │   └── Users.svelte
+    │       ├── app
+    │       │   └── AppSidebar.svelte
+    │       ├── channel
+    │       │   ├── Channel.svelte
+    │       │   ├── MessageInput
+    │       │   │   └── InputMenu.svelte
+    │       │   ├── MessageInput.svelte
+    │       │   ├── Messages
+    │       │   │   ├── Message
+    │       │   │   │   ├── ProfilePreview.svelte
+    │       │   │   │   └── ReactionPicker.svelte
+    │       │   │   └── Message.svelte
+    │       │   ├── Messages.svelte
+    │       │   ├── Navbar.svelte
+    │       │   └── Thread.svelte
+    │       ├── chat
+    │       │   ├── Artifacts.svelte
+    │       │   ├── Chat.svelte
+    │       │   ├── ChatControls.svelte
+    │       │   ├── ChatPlaceholder.svelte
+    │       │   ├── ContentRenderer
+    │       │   │   └── FloatingButtons.svelte
+    │       │   ├── Controls
+    │       │   │   ├── Controls.svelte
+    │       │   │   └── Valves.svelte
+    │       │   ├── MessageInput
+    │       │   │   ├── CallOverlay
+    │       │   │   │   └── VideoInputMenu.svelte
+    │       │   │   ├── CallOverlay.svelte
+    │       │   │   ├── Commands
+    │       │   │   │   ├── Knowledge.svelte
+    │       │   │   │   ├── Models.svelte
+    │       │   │   │   └── Prompts.svelte
+    │       │   │   ├── Commands.svelte
+    │       │   │   ├── FilesOverlay.svelte
+    │       │   │   ├── InputMenu.svelte
+    │       │   │   └── VoiceRecording.svelte
+    │       │   ├── MessageInput.svelte
+    │       │   ├── Messages
+    │       │   │   ├── Citations.svelte
+    │       │   │   ├── CitationsModal.svelte
+    │       │   │   ├── CodeBlock.svelte
+    │       │   │   ├── CodeExecutionModal.svelte
+    │       │   │   ├── CodeExecutions.svelte
+    │       │   │   ├── ContentRenderer.svelte
+    │       │   │   ├── Error.svelte
+    │       │   │   ├── Markdown
+    │       │   │   │   ├── KatexRenderer.svelte
+    │       │   │   │   ├── MarkdownInlineTokens.svelte
+    │       │   │   │   ├── MarkdownTokens.svelte
+    │       │   │   │   └── Source.svelte
+    │       │   │   ├── Markdown.svelte
+    │       │   │   ├── Message.svelte
+    │       │   │   ├── MultiResponseMessages.svelte
+    │       │   │   ├── Name.svelte
+    │       │   │   ├── ProfileImage.svelte
+    │       │   │   ├── RateComment.svelte
+    │       │   │   ├── ResponseMessage
+    │       │   │   │   └── WebSearchResults.svelte
+    │       │   │   ├── ResponseMessage.svelte
+    │       │   │   ├── Skeleton.svelte
+    │       │   │   └── UserMessage.svelte
+    │       │   ├── Messages.svelte
+    │       │   ├── ModelSelector
+    │       │   │   └── Selector.svelte
+    │       │   ├── ModelSelector.svelte
+    │       │   ├── Navbar.svelte
+    │       │   ├── Overview
+    │       │   │   ├── Flow.svelte
+    │       │   │   └── Node.svelte
+    │       │   ├── Overview.svelte
+    │       │   ├── Placeholder.svelte
+    │       │   ├── Settings
+    │       │   │   ├── About.svelte
+    │       │   │   ├── Account
+    │       │   │   │   └── UpdatePassword.svelte
+    │       │   │   ├── Account.svelte
+    │       │   │   ├── Advanced
+    │       │   │   │   └── AdvancedParams.svelte
+    │       │   │   ├── Audio.svelte
+    │       │   │   ├── Chats.svelte
+    │       │   │   ├── Connections
+    │       │   │   │   └── Connection.svelte
+    │       │   │   ├── Connections.svelte
+    │       │   │   ├── General.svelte
+    │       │   │   ├── Interface.svelte
+    │       │   │   ├── Personalization
+    │       │   │   │   ├── AddMemoryModal.svelte
+    │       │   │   │   ├── EditMemoryModal.svelte
+    │       │   │   │   └── ManageModal.svelte
+    │       │   │   └── Personalization.svelte
+    │       │   ├── SettingsModal.svelte
+    │       │   ├── ShareChatModal.svelte
+    │       │   ├── ShortcutsModal.svelte
+    │       │   ├── Suggestions.svelte
+    │       │   ├── TagChatModal.svelte
+    │       │   └── Tags.svelte
+    │       ├── common
+    │       │   ├── Badge.svelte
+    │       │   ├── Banner.svelte
+    │       │   ├── Checkbox.svelte
+    │       │   ├── CodeEditor.svelte
+    │       │   ├── Collapsible.svelte
+    │       │   ├── ConfirmDialog.svelte
+    │       │   ├── DragGhost.svelte
+    │       │   ├── Drawer.svelte
+    │       │   ├── Dropdown.svelte
+    │       │   ├── FileItem.svelte
+    │       │   ├── FileItemModal.svelte
+    │       │   ├── Folder.svelte
+    │       │   ├── Image.svelte
+    │       │   ├── ImagePreview.svelte
+    │       │   ├── Loader.svelte
+    │       │   ├── Marquee.svelte
+    │       │   ├── Modal.svelte
+    │       │   ├── Overlay.svelte
+    │       │   ├── Pagination.svelte
+    │       │   ├── RichTextInput.svelte
+    │       │   ├── SVGPanZoom.svelte
+    │       │   ├── Selector.svelte
+    │       │   ├── SensitiveInput.svelte
+    │       │   ├── Sidebar.svelte
+    │       │   ├── SlideShow.svelte
+    │       │   ├── Spinner.svelte
+    │       │   ├── Switch.svelte
+    │       │   ├── Tags
+    │       │   │   ├── TagInput.svelte
+    │       │   │   └── TagList.svelte
+    │       │   ├── Tags.svelte
+    │       │   ├── Textarea.svelte
+    │       │   ├── Tooltip.svelte
+    │       │   └── Valves.svelte
+    │       ├── icons
+    │       │   ├── AdjustmentsHorizontal.svelte
+    │       │   ├── ArchiveBox.svelte
+    │       │   ├── ArrowDownTray.svelte
+    │       │   ├── ArrowLeft.svelte
+    │       │   ├── ArrowPath.svelte
+    │       │   ├── ArrowRight.svelte
+    │       │   ├── ArrowRightCircle.svelte
+    │       │   ├── ArrowUpCircle.svelte
+    │       │   ├── ArrowsPointingOut.svelte
+    │       │   ├── BarsArrowUp.svelte
+    │       │   ├── Bolt.svelte
+    │       │   ├── BookOpen.svelte
+    │       │   ├── Bookmark.svelte
+    │       │   ├── BookmarkSlash.svelte
+    │       │   ├── CameraSolid.svelte
+    │       │   ├── ChartBar.svelte
+    │       │   ├── ChatBubble.svelte
+    │       │   ├── ChatBubbleOval.svelte
+    │       │   ├── ChatBubbleOvalEllipsis.svelte
+    │       │   ├── ChatBubbles.svelte
+    │       │   ├── Check.svelte
+    │       │   ├── ChevronDown.svelte
+    │       │   ├── ChevronLeft.svelte
+    │       │   ├── ChevronRight.svelte
+    │       │   ├── ChevronUp.svelte
+    │       │   ├── ChevronUpDown.svelte
+    │       │   ├── Clipboard.svelte
+    │       │   ├── CloudArrowUp.svelte
+    │       │   ├── Cog6.svelte
+    │       │   ├── Cog6Solid.svelte
+    │       │   ├── CommandLine.svelte
+    │       │   ├── CommandLineSolid.svelte
+    │       │   ├── Cube.svelte
+    │       │   ├── Document.svelte
+    │       │   ├── DocumentArrowDown.svelte
+    │       │   ├── DocumentArrowUpSolid.svelte
+    │       │   ├── DocumentChartBar.svelte
+    │       │   ├── DocumentDuplicate.svelte
+    │       │   ├── Download.svelte
+    │       │   ├── EllipsisHorizontal.svelte
+    │       │   ├── EllipsisVertical.svelte
+    │       │   ├── EyeSlash.svelte
+    │       │   ├── FaceSmile.svelte
+    │       │   ├── FloppyDisk.svelte
+    │       │   ├── FolderOpen.svelte
+    │       │   ├── GarbageBin.svelte
+    │       │   ├── GlobeAlt.svelte
+    │       │   ├── GlobeAltSolid.svelte
+    │       │   ├── Headphone.svelte
+    │       │   ├── Heart.svelte
+    │       │   ├── Home.svelte
+    │       │   ├── Info.svelte
+    │       │   ├── Keyboard.svelte
+    │       │   ├── Lifebuoy.svelte
+    │       │   ├── LightBlub.svelte
+    │       │   ├── Link.svelte
+    │       │   ├── LockClosed.svelte
+    │       │   ├── MagnifyingGlass.svelte
+    │       │   ├── Map.svelte
+    │       │   ├── MenuLines.svelte
+    │       │   ├── Merge.svelte
+    │       │   ├── Mic.svelte
+    │       │   ├── Minus.svelte
+    │       │   ├── Pencil.svelte
+    │       │   ├── PencilSolid.svelte
+    │       │   ├── PencilSquare.svelte
+    │       │   ├── Photo.svelte
+    │       │   ├── PhotoSolid.svelte
+    │       │   ├── Plus.svelte
+    │       │   ├── QuestionMarkCircle.svelte
+    │       │   ├── Reset.svelte
+    │       │   ├── Search.svelte
+    │       │   ├── Share.svelte
+    │       │   ├── Sparkles.svelte
+    │       │   ├── SparklesSolid.svelte
+    │       │   ├── Star.svelte
+    │       │   ├── User.svelte
+    │       │   ├── UserCircleSolid.svelte
+    │       │   ├── UserPlusSolid.svelte
+    │       │   ├── UsersSolid.svelte
+    │       │   ├── Wrench.svelte
+    │       │   ├── WrenchSolid.svelte
+    │       │   └── XMark.svelte
+    │       ├── layout
+    │       │   ├── Help
+    │       │   │   └── HelpMenu.svelte
+    │       │   ├── Help.svelte
+    │       │   ├── Navbar
+    │       │   │   └── Menu.svelte
+    │       │   ├── Navbar.svelte
+    │       │   ├── Overlay
+    │       │   │   └── AccountPending.svelte
+    │       │   ├── Sidebar
+    │       │   │   ├── ArchivedChatsModal.svelte
+    │       │   │   ├── ChannelItem.svelte
+    │       │   │   ├── ChannelModal.svelte
+    │       │   │   ├── ChatItem.svelte
+    │       │   │   ├── ChatMenu.svelte
+    │       │   │   ├── Folders
+    │       │   │   │   └── FolderMenu.svelte
+    │       │   │   ├── Folders.svelte
+    │       │   │   ├── RecursiveFolder.svelte
+    │       │   │   ├── SearchInput.svelte
+    │       │   │   └── UserMenu.svelte
+    │       │   ├── Sidebar.svelte
+    │       │   └── UpdateInfoToast.svelte
+    │       ├── playground
+    │       │   ├── Chat
+    │       │   │   ├── Message.svelte
+    │       │   │   └── Messages.svelte
+    │       │   ├── Chat.svelte
+    │       │   ├── Completions.svelte
+    │       │   └── Notes.svelte
+    │       └── workspace
+    │           ├── Knowledge
+    │           │   ├── CreateKnowledgeBase.svelte
+    │           │   ├── ItemMenu.svelte
+    │           │   ├── KnowledgeBase
+    │           │   │   ├── AddContentMenu.svelte
+    │           │   │   ├── AddTextContentModal.svelte
+    │           │   │   └── Files.svelte
+    │           │   └── KnowledgeBase.svelte
+    │           ├── Knowledge.svelte
+    │           ├── Models
+    │           │   ├── ActionsSelector.svelte
+    │           │   ├── Capabilities.svelte
+    │           │   ├── FiltersSelector.svelte
+    │           │   ├── Knowledge
+    │           │   │   └── Selector.svelte
+    │           │   ├── Knowledge.svelte
+    │           │   ├── ModelEditor.svelte
+    │           │   ├── ModelMenu.svelte
+    │           │   └── ToolsSelector.svelte
+    │           ├── Models.svelte
+    │           ├── Prompts
+    │           │   ├── PromptEditor.svelte
+    │           │   └── PromptMenu.svelte
+    │           ├── Prompts.svelte
+    │           ├── Tools
+    │           │   ├── ToolMenu.svelte
+    │           │   └── ToolkitEditor.svelte
+    │           ├── Tools.svelte
+    │           └── common
+    │               ├── AccessControl.svelte
+    │               ├── AccessControlModal.svelte
+    │               ├── ManifestModal.svelte
+    │               └── ValvesModal.svelte
+    └── routes
+        ├── (app)
+        │   ├── +layout.svelte
+        │   ├── +page.svelte
+        │   ├── admin
+        │   │   ├── +layout.svelte
+        │   │   ├── +page.svelte
+        │   │   ├── evaluations
+        │   │   │   └── +page.svelte
+        │   │   ├── functions
+        │   │   │   ├── +page.svelte
+        │   │   │   ├── create
+        │   │   │   │   └── +page.svelte
+        │   │   │   └── edit
+        │   │   │       └── +page.svelte
+        │   │   ├── settings
+        │   │   │   └── +page.svelte
+        │   │   └── users
+        │   │       └── +page.svelte
+        │   ├── c
+        │   │   └── [id]
+        │   │       └── +page.svelte
+        │   ├── channels
+        │   │   └── [id]
+        │   │       └── +page.svelte
+        │   ├── home
+        │   │   ├── +layout.svelte
+        │   │   └── +page.svelte
+        │   ├── playground
+        │   │   ├── +layout.svelte
+        │   │   ├── +page.svelte
+        │   │   ├── completions
+        │   │   │   └── +page.svelte
+        │   │   └── notes
+        │   │       └── +page.svelte
+        │   └── workspace
+        │       ├── +layout.svelte
+        │       ├── +page.svelte
+        │       ├── functions
+        │       │   └── create
+        │       │       └── +page.svelte
+        │       ├── knowledge
+        │       │   ├── +page.svelte
+        │       │   ├── [id]
+        │       │   │   └── +page.svelte
+        │       │   └── create
+        │       │       └── +page.svelte
+        │       ├── models
+        │       │   ├── +page.svelte
+        │       │   ├── create
+        │       │   │   └── +page.svelte
+        │       │   └── edit
+        │       │       └── +page.svelte
+        │       ├── prompts
+        │       │   ├── +page.svelte
+        │       │   ├── create
+        │       │   │   └── +page.svelte
+        │       │   └── edit
+        │       │       └── +page.svelte
+        │       └── tools
+        │           ├── +page.svelte
+        │           ├── create
+        │           │   └── +page.svelte
+        │           └── edit
+        │               └── +page.svelte
+        ├── +error.svelte
+        ├── +layout.svelte
+        ├── auth
+        │   └── +page.svelte
+        ├── error
+        │   └── +page.svelte
+        ├── s
+        │   └── [id]
+        │       └── +page.svelte
+        └── watch
+            └── +page.svelte
+
+222 directories, 599 files

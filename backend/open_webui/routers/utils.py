@@ -56,6 +56,7 @@ async def execute_code(
                 if request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH == "password"
                 else None
             ),
+            request.app.state.config.CODE_EXECUTION_JUPYTER_TIMEOUT,
         )
 
         return output
