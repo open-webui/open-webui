@@ -40,7 +40,7 @@
 	import 'tippy.js/dist/tippy.css';
 
 	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
-	import i18n, { initI18n, getLanguages } from '$lib/i18n';
+	import i18n, { initI18n, getLanguages, changeAllLanguage, changeHTMLLanguage } from '$lib/i18n';
 	import { bestMatchingLanguage } from '$lib/utils';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
@@ -464,7 +464,9 @@
 		// so `/error` can show something that's not `undefined`.
 
 		initI18n();
-		if (!localStorage.locale) {
+		if (localStorage.locale) {
+			changeHTMLLanguage(localStorage.locale);
+		} else {
 			const languages = await getLanguages();
 			const browserLanguages = navigator.languages
 				? navigator.languages
@@ -472,7 +474,7 @@
 			const lang = backendConfig.default_locale
 				? backendConfig.default_locale
 				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
-			$i18n.changeLanguage(lang);
+			changeAllLanguage(lang);
 		}
 
 		if (backendConfig) {

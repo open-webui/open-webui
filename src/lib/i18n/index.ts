@@ -1,7 +1,8 @@
 import i18next from 'i18next';
 import resourcesToBackend from 'i18next-resources-to-backend';
 import LanguageDetector from 'i18next-browser-languagedetector';
-import type { i18n as i18nType } from 'i18next';
+import type { i18n as i18nType, TFunction } from 'i18next';
+import {changeLanguage} from 'i18next'
 import { writable } from 'svelte/store';
 
 const createI18nStore = (i18n: i18nType) => {
@@ -70,6 +71,17 @@ export const initI18n = (defaultLocale: string | undefined) => {
 
 const i18n = createI18nStore(i18next);
 const isLoadingStore = createIsLoadingStore(i18next);
+
+export const changeHTMLLanguage = (lang: string) => {
+	document.documentElement.setAttribute('lang', lang);
+}
+
+export const changeAllLanguage = (lang: string) : Promise<TFunction> => {
+	// change html language
+	changeHTMLLanguage(lang);
+	// change i18n
+	return changeLanguage(lang);
+}
 
 export const getLanguages = async () => {
 	const languages = (await import(`./locales/languages.json`)).default;

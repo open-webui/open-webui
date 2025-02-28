@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
-	import { getLanguages } from '$lib/i18n';
+	import { changeAllLanguage, getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
 	import { models, settings, theme, user } from '$lib/stores';
@@ -198,7 +198,7 @@
 						bind:value={lang}
 						placeholder="Select a language"
 						on:change={(e) => {
-							$i18n.changeLanguage(lang);
+							changeAllLanguage(lang);
 						}}
 					>
 						{#each languages as language}
