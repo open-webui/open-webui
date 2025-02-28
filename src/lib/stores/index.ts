@@ -129,7 +129,7 @@ type OllamaModelDetails = {
   quantization_level: string;
 };
 
-type Settings = {
+export type Settings = {
   models?: string[];
   conversationMode?: boolean;
   speechAutoSend?: boolean;
@@ -153,6 +153,27 @@ type Settings = {
   num_batch?: string;
   num_keep?: string;
   options?: ModelOptions;
+  directConnections?: DirectConnectionsSettings;
+  prompts?: Prompt[];
+  documents?: Document[];
+};
+
+export type Connection = {
+  url: string,
+  key: string,
+};
+
+export type ConnectionConfig = {
+    enable: boolean;
+    prefixId: string;
+    modelIds: string[];
+};
+
+export type DirectConnectionsSettings = {
+  ENABLE_OPENAI_API: boolean,
+  OPENAI_API_BASE_URLS: string[];
+  OPENAI_API_KEYS: string[];
+  OPENAI_API_CONFIGS: Record<string, ConnectionConfig>;
 };
 
 type ModelOptions = {
@@ -229,4 +250,6 @@ type SessionUser = {
   name: string;
   role: string;
   profile_image_url: string;
+  // TODO: define permissions schema
+  permissions: Record<string, unknown>;
 };

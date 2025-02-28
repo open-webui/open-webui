@@ -1110,31 +1110,6 @@ https://svelte.dev/e/attribute_duplicate -->
                         const chatInput = document.getElementById('chat-input');
                         chatInput?.focus();
                       }}
-                      {screenCaptureHandler}
-                      uploadFilesHandler={() => {
-                        filesInputElement.click();
-                      }}
-                      uploadGoogleDriveHandler={async () => {
-                        try {
-                          const fileData = await createPicker();
-                          if (fileData) {
-                            const file = new File([fileData.blob], fileData.name, {
-                              type: fileData.blob.type
-                            });
-                            await uploadFileHandler(file);
-                          } else {
-                            console.log('No file was selected from Google Drive');
-                          }
-                        } catch (error) {
-                          console.error('Google Drive Error:', error);
-                          toast.error(
-                            $i18n.t('Error accessing Google Drive: {{error}}', {
-                              error: error.message
-                            })
-                          );
-                        }
-                      }}
-                      bind:selectedToolIds
                     >
                       <button
                         class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"

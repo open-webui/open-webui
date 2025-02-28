@@ -834,7 +834,7 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
       messagesContainerElement.scrollTop = messagesContainerElement.scrollHeight;
     }
   };
-  const chatCompletedHandler = async (chatId, modelId, responseMessageId, messages) => {
+  const chatCompletedHandler = async (cID, modelId, responseMessageId, messages) => {
     const res = await chatCompleted(localStorage.token, {
       model: modelId,
       messages: messages.map((m) => ({
@@ -847,7 +847,7 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
         ...(m.sources ? { sources: m.sources } : {})
       })),
       model_item: $models.find((m) => m.id === modelId),
-      chat_id: chatId,
+      chat_id: cID,
       session_id: $socket?.id,
       id: responseMessageId
     }).catch((error) => {
@@ -875,9 +875,9 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 
     await tick();
 
-    if ($chatId == chatId) {
+    if ($chatId == cID) {
       if (!$temporaryChatEnabled) {
-        chat = await updateChatById(localStorage.token, chatId, {
+        chat = await updateChatById(localStorage.token, cID, {
           models: selectedModels,
           messages: messages,
           history: history,
@@ -891,7 +891,7 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
     }
   };
 
-  const chatActionHandler = async (chatId, actionId, modelId, responseMessageId, event = null) => {
+  const chatActionHandler = async (cID, actionId, modelId, responseMessageId, event = null) => {
     const messages = createMessagesList(history, responseMessageId);
 
     const res = await chatAction(localStorage.token, actionId, {
@@ -906,7 +906,7 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
       })),
       ...(event ? { event: event } : {}),
       model_item: $models.find((m) => m.id === modelId),
-      chat_id: chatId,
+      chat_id: cID,
       session_id: $socket?.id,
       id: responseMessageId
     }).catch((error) => {
@@ -928,9 +928,9 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
       }
     }
 
-    if ($chatId == chatId) {
+    if ($chatId == cID) {
       if (!$temporaryChatEnabled) {
-        chat = await updateChatById(localStorage.token, chatId, {
+        chat = await updateChatById(localStorage.token, cID, {
           models: selectedModels,
           messages: messages,
           history: history,

@@ -266,11 +266,10 @@
               if (event.key === 'Enter') {
                 // Check if the current selection is inside a structured block (like codeBlock or list)
                 const { state } = view;
-                const { $head } = state.selection;
 
                 // Recursive function to check ancestors for specific node types
                 function isInside(nodeTypes: string[]): boolean {
-                  let currentNode = $head;
+                  let currentNode = state.selection.$head;
                   while (currentNode) {
                     if (nodeTypes.includes(currentNode.parent.type.name)) {
                       return true;
