@@ -123,8 +123,8 @@
     <Tooltip
       className="inline-tooltip"
       content={$i18n.t(
-        'Sets the random number seed to use for generation. Setting this to a specific number will make the model generate the same text for the same prompt. (Default: random)'
-      )}
+				'Sets the random number seed to use for generation. Setting this to a specific number will make the model generate the same text for the same prompt.'
+        )}
       placement="top-start"
     >
       <div class="flex w-full justify-between">
@@ -212,8 +212,8 @@
     <Tooltip
       className="inline-tooltip"
       content={$i18n.t(
-        'The temperature of the model. Increasing the temperature will make the model answer more creatively. (Default: 0.8)'
-      )}
+				'The temperature of the model. Increasing the temperature will make the model answer more creatively.'
+        )}
       placement="top-start"
     >
       <div class="flex w-full justify-between">
@@ -267,8 +267,8 @@
     <Tooltip
       className="inline-tooltip"
       content={$i18n.t(
-        'Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort. (Default: medium)'
-      )}
+				'Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort.'
+        )}
       placement="top-start"
     >
       <div class="flex w-full justify-between">
@@ -309,9 +309,7 @@
   <div class=" py-0.5 w-full justify-between">
     <Tooltip
       className="inline-tooltip"
-      content={$i18n.t(
-        'Enable Mirostat sampling for controlling perplexity. (Default: 0, 0 = Disabled, 1 = Mirostat, 2 = Mirostat 2.0)'
-      )}
+			content={$i18n.t('Enable Mirostat sampling for controlling perplexity.')}
       placement="top-start"
     >
       <div class="flex w-full justify-between">
@@ -365,8 +363,8 @@
     <Tooltip
       className="inline-tooltip"
       content={$i18n.t(
-        'Influences how quickly the algorithm responds to feedback from the generated text. A lower learning rate will result in slower adjustments, while a higher learning rate will make the algorithm more responsive. (Default: 0.1)'
-      )}
+				'Influences how quickly the algorithm responds to feedback from the generated text. A lower learning rate will result in slower adjustments, while a higher learning rate will make the algorithm more responsive.'
+        )}
       placement="top-start"
     >
       <div class="flex w-full justify-between">
@@ -416,18 +414,18 @@
     {/if}
   </div>
 
-  <div class=" py-0.5 w-full justify-between">
-    <Tooltip
-      className="inline-tooltip"
-      content={$i18n.t(
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
         'Controls the balance between coherence and diversity of the output. A lower value will result in more focused and coherent text. (Default: 5.0)'
       )}
-      placement="top-start"
-    >
-      <div class="flex w-full justify-between">
-        <div class=" self-center text-xs font-medium">
-          {$i18n.t('Mirostat Tau')}
-        </div>
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Mirostat Tau')}
+				</div>
 
         <button
           class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
@@ -472,33 +470,33 @@
     {/if}
   </div>
 
-  <div class=" py-0.5 w-full justify-between">
-    <Tooltip
-      className="inline-tooltip"
-      content={$i18n.t(
-        'Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)'
-      )}
-      placement="top-start"
-    >
-      <div class="flex w-full justify-between">
-        <div class=" self-center text-xs font-medium">
-          {$i18n.t('Top K')}
-        </div>
-        <button
-          class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
-          type="button"
-          onclick={() => {
-            params.top_k = (params?.top_k ?? null) === null ? 40 : null;
-          }}
-        >
-          {#if (params?.top_k ?? null) === null}
-            <span class="ml-2 self-center">{$i18n.t('Default')}</span>
-          {:else}
-            <span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-          {/if}
-        </button>
-      </div>
-    </Tooltip>
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative.'
+        )}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Top K')}
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					type="button"
+					on:click={() => {
+						params.top_k = (params?.top_k ?? null) === null ? 40 : null;
+					}}
+				>
+					{#if (params?.top_k ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
 
     {#if (params?.top_k ?? null) !== null}
       <div class="flex mt-0.5 space-x-2">
@@ -527,18 +525,18 @@
     {/if}
   </div>
 
-  <div class=" py-0.5 w-full justify-between">
-    <Tooltip
-      className="inline-tooltip"
-      content={$i18n.t(
-        'Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)'
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text.'
       )}
-      placement="top-start"
-    >
-      <div class="flex w-full justify-between">
-        <div class=" self-center text-xs font-medium">
-          {$i18n.t('Top P')}
-        </div>
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Top P')}
+				</div>
 
         <button
           class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
@@ -583,33 +581,33 @@
     {/if}
   </div>
 
-  <div class=" py-0.5 w-full justify-between">
-    <Tooltip
-      className="inline-tooltip"
-      content={$i18n.t(
-        'Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out. (Default: 0.0)'
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.'
       )}
-      placement="top-start"
-    >
-      <div class="flex w-full justify-between">
-        <div class=" self-center text-xs font-medium">
-          {$i18n.t('Min P')}
-        </div>
-        <button
-          class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
-          type="button"
-          onclick={() => {
-            params.min_p = (params?.min_p ?? null) === null ? 0.0 : null;
-          }}
-        >
-          {#if (params?.min_p ?? null) === null}
-            <span class="ml-2 self-center">{$i18n.t('Default')}</span>
-          {:else}
-            <span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-          {/if}
-        </button>
-      </div>
-    </Tooltip>
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Min P')}
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					type="button"
+					on:click={() => {
+						params.min_p = (params?.min_p ?? null) === null ? 0.0 : null;
+					}}
+				>
+					{#if (params?.min_p ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
 
     {#if (params?.min_p ?? null) !== null}
       <div class="flex mt-0.5 space-x-2">
@@ -638,18 +636,18 @@
     {/if}
   </div>
 
-  <div class=" py-0.5 w-full justify-between">
-    <Tooltip
-      className="inline-tooltip"
-      content={$i18n.t(
-        'Sets a scaling bias against tokens to penalize repetitions, based on how many times they have appeared. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. At 0, it is disabled. (Default: 1.1)'
-      )}
-      placement="top-start"
-    >
-      <div class="flex w-full justify-between">
-        <div class=" self-center text-xs font-medium">
-          {$i18n.t('Frequency Penalty')}
-        </div>
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Sets a scaling bias against tokens to penalize repetitions, based on how many times they have appeared. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. At 0, it is disabled.'
+        )}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Frequency Penalty')}
+				</div>
 
         <button
           class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
@@ -694,18 +692,18 @@
     {/if}
   </div>
 
-  <div class=" py-0.5 w-full justify-between">
-    <Tooltip
-      className="inline-tooltip"
-      content={$i18n.t(
-        'Sets a flat bias against tokens that have appeared at least once. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. At 0, it is disabled. (Default: 0)'
-      )}
-      placement="top-start"
-    >
-      <div class="flex w-full justify-between">
-        <div class=" self-center text-xs font-medium">
-          {$i18n.t('Presence Penalty')}
-        </div>
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Sets a flat bias against tokens that have appeared at least once. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. At 0, it is disabled.'
+        )}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Presence Penalty')}
+				</div>
 
         <button
           class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
@@ -750,18 +748,18 @@
     {/if}
   </div>
 
-  <div class=" py-0.5 w-full justify-between">
-    <Tooltip
-      className="inline-tooltip"
-      content={$i18n.t(
-        'Control the repetition of token sequences in the generated text. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 1.1) will be more lenient. At 1, it is disabled. (Default: 1.1)'
-      )}
-      placement="top-start"
-    >
-      <div class="flex w-full justify-between">
-        <div class=" self-center text-xs font-medium">
-          {$i18n.t('Repeat Penalty (Ollama)')}
-        </div>
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Control the repetition of token sequences in the generated text. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 1.1) will be more lenient. At 1, it is disabled.'
+        )}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Repeat Penalty (Ollama)')}
+				</div>
 
         <button
           class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
@@ -806,18 +804,17 @@
     {/if}
   </div>
 
-  <div class=" py-0.5 w-full justify-between">
-    <Tooltip
-      className="inline-tooltip"
-      content={$i18n.t(
-        'Sets how far back for the model to look back to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx)'
-      )}
-      placement="top-start"
-    >
-      <div class="flex w-full justify-between">
-        <div class=" self-center text-xs font-medium">
-          {$i18n.t('Repeat Last N')}
-        </div>
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+    content={$i18n.t('Sets how far back for the model to look back to prevent repetition.')}
+
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Repeat Last N')}
+				</div>
 
         <button
           class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
@@ -862,18 +859,18 @@
     {/if}
   </div>
 
-  <div class=" py-0.5 w-full justify-between">
-    <Tooltip
-      className="inline-tooltip"
-      content={$i18n.t(
-        'Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting. (default: 1)'
-      )}
-      placement="top-start"
-    >
-      <div class="flex w-full justify-between">
-        <div class=" self-center text-xs font-medium">
-          {$i18n.t('Tfs Z')}
-        </div>
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting.'
+        )}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Tfs Z')}
+				</div>
 
         <button
           class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
@@ -918,18 +915,17 @@
     {/if}
   </div>
 
-  <div class=" py-0.5 w-full justify-between">
-    <Tooltip
-      className="inline-tooltip"
-      content={$i18n.t(
-        'Sets the size of the context window used to generate the next token. (Default: 2048)'
-      )}
-      placement="top-start"
-    >
-      <div class="flex w-full justify-between">
-        <div class=" self-center text-xs font-medium">
-          {$i18n.t('Context Length')}
-        </div>
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+    content={$i18n.t('Sets the size of the context window used to generate the next token.')}
+
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Context Length')}
+				</div>
 
         <button
           class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
@@ -973,18 +969,18 @@
     {/if}
   </div>
 
-  <div class=" py-0.5 w-full justify-between">
-    <Tooltip
-      className="inline-tooltip"
-      content={$i18n.t(
-        'The batch size determines how many text requests are processed together at once. A higher batch size can increase the performance and speed of the model, but it also requires more memory.  (Default: 512)'
-      )}
-      placement="top-start"
-    >
-      <div class="flex w-full justify-between">
-        <div class=" self-center text-xs font-medium">
-          {$i18n.t('Batch Size (num_batch)')}
-        </div>
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'The batch size determines how many text requests are processed together at once. A higher batch size can increase the performance and speed of the model, but it also requires more memory.'
+        )}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Batch Size (num_batch)')}
+				</div>
 
         <button
           class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
@@ -1028,18 +1024,18 @@
     {/if}
   </div>
 
-  <div class=" py-0.5 w-full justify-between">
-    <Tooltip
-      className="inline-tooltip"
-      content={$i18n.t(
-        'This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics. (Default: 24)'
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.'
       )}
-      placement="top-start"
-    >
-      <div class="flex w-full justify-between">
-        <div class=" self-center text-xs font-medium">
-          {$i18n.t('Tokens To Keep On Context Refresh (num_keep)')}
-        </div>
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Tokens To Keep On Context Refresh (num_keep)')}
+				</div>
 
         <button
           class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
@@ -1083,18 +1079,18 @@
     {/if}
   </div>
 
-  <div class=" py-0.5 w-full justify-between">
-    <Tooltip
-      className="inline-tooltip"
-      content={$i18n.t(
-        'This option sets the maximum number of tokens the model can generate in its response. Increasing this limit allows the model to provide longer answers, but it may also increase the likelihood of unhelpful or irrelevant content being generated.  (Default: 128)'
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'This option sets the maximum number of tokens the model can generate in its response. Increasing this limit allows the model to provide longer answers, but it may also increase the likelihood of unhelpful or irrelevant content being generated.'
       )}
-      placement="top-start"
-    >
-      <div class="flex w-full justify-between">
-        <div class=" self-center text-xs font-medium">
-          {$i18n.t('Max Tokens (num_predict)')}
-        </div>
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Max Tokens (num_predict)')}
+				</div>
 
         <button
           class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"

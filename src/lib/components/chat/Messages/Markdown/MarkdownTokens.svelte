@@ -110,7 +110,7 @@
         onCode={(value) => {
           dispatch('code', value);
         }}
-        onSave={(e) => {
+        onSave={(value) => {
           dispatch('update', {
             raw: token.raw,
             oldContent: token.text,
