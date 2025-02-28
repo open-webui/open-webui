@@ -1,13 +1,19 @@
 import os
+import logging
 import torch
 import numpy as np
 from colbert.infra import ColBERTConfig
 from colbert.modeling.checkpoint import Checkpoint
 
+from open_webui.env import SRC_LOG_LEVELS
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["RAG"])
+
 
 class ColBERT:
     def __init__(self, name, **kwargs) -> None:
-        print("ColBERT: Loading model", name)
+        log.info("ColBERT: Loading model", name)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
         DOCKER = kwargs.get("env") == "docker"
