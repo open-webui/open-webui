@@ -101,7 +101,7 @@ async def process_pipeline_inlet_filter(request, payload, user, models):
                 if "detail" in res:
                     raise Exception(response.status, res["detail"])
             except Exception as e:
-                print(f"Connection error: {e}")
+                log.exception(f"Connection error: {e}")
 
     return payload
 
@@ -153,7 +153,7 @@ async def process_pipeline_outlet_filter(request, payload, user, models):
                 except Exception:
                     pass
             except Exception as e:
-                print(f"Connection error: {e}")
+                log.exception(f"Connection error: {e}")
 
     return payload
 
@@ -169,7 +169,7 @@ router = APIRouter()
 
 @router.get("/list")
 async def get_pipelines_list(request: Request, user=Depends(get_admin_user)):
-    responses = await get_all_models_responses(request)
+    responses = await get_all_models_responses(request, user)
     log.debug(f"get_pipelines_list: get_openai_models_responses returned {responses}")
 
     urlIdxs = [
@@ -196,7 +196,7 @@ async def upload_pipeline(
     file: UploadFile = File(...),
     user=Depends(get_admin_user),
 ):
-    print("upload_pipeline", urlIdx, file.filename)
+    log.info(f"upload_pipeline: urlIdx={urlIdx}, filename={file.filename}")
     # Check if the uploaded file is a python file
     if not (file.filename and file.filename.endswith(".py")):
         raise HTTPException(
@@ -231,7 +231,7 @@ async def upload_pipeline(
         return {**data}
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.exception(f"Connection error: {e}")
 
         detail = None
         status_code = status.HTTP_404_NOT_FOUND
@@ -282,7 +282,7 @@ async def add_pipeline(
         return {**data}
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.exception(f"Connection error: {e}")
 
         detail = None
         if r is not None:
@@ -327,7 +327,7 @@ async def delete_pipeline(
         return {**data}
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.exception(f"Connection error: {e}")
 
         detail = None
         if r is not None:
@@ -361,7 +361,7 @@ async def get_pipelines(
         return {**data}
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.exception(f"Connection error: {e}")
 
         detail = None
         if r is not None:
@@ -400,7 +400,7 @@ async def get_pipeline_valves(
         return {**data}
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.exception(f"Connection error: {e}")
 
         detail = None
         if r is not None:
@@ -440,7 +440,7 @@ async def get_pipeline_valves_spec(
         return {**data}
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.exception(f"Connection error: {e}")
 
         detail = None
         if r is not None:
@@ -482,7 +482,7 @@ async def update_pipeline_valves(
         return {**data}
     except Exception as e:
         # Handle connection error here
-        print(f"Connection error: {e}")
+        log.exception(f"Connection error: {e}")
 
         detail = None
 

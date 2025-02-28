@@ -129,6 +129,7 @@
 	export let isLastMessage = true;
 	export let readOnly = false;
 
+	let buttonsContainerElement: HTMLDivElement;
 	let showDeleteConfirm = false;
 
 	let model = null;
@@ -518,6 +519,18 @@
 		// console.log('ResponseMessage mounted');
 
 		await tick();
+		if (buttonsContainerElement) {
+			console.log(buttonsContainerElement);
+			buttonsContainerElement.addEventListener('wheel', function (event) {
+				// console.log(event.deltaY);
+
+				event.preventDefault();
+				if (event.deltaY !== 0) {
+					// Adjust horizontal scroll position based on vertical scroll
+					buttonsContainerElement.scrollLeft += event.deltaY;
+				}
+			});
+		}
 	});
 </script>
 
@@ -802,10 +815,11 @@
 				</div>
 
 				{#if !edit}
-					{#if message.done || siblings.length > 1}
-						<div
-							class=" flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
-						>
+					<div
+						bind:this={buttonsContainerElement}
+						class="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
+					>
+						{#if message.done || siblings.length > 1}
 							{#if siblings.length > 1}
 								<div class="flex self-center min-w-fit" dir="ltr">
 									<button
@@ -1313,8 +1327,8 @@
 									{/if}
 								{/if}
 							{/if}
-						</div>
-					{/if}
+						{/if}
+					</div>
 
 					{#if message.done && showRateComment}
 						<RateComment
