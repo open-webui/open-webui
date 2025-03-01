@@ -395,6 +395,7 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(periodic_usage_pool_cleanup())
     yield
 
+# Initialize Sentry SDK
 sentry_sdk.init(
     dsn="https://b1217291b54f9430967e880f798c2657@o4508900165484544.ingest.us.sentry.io/4508900173611008",
     # Add data like request headers and IP for users,
@@ -827,9 +828,6 @@ async def check_url(request: Request, call_next):
     response = await call_next(request)
     process_time = int(time.time()) - start_time
     response.headers["X-Process-Time"] = str(process_time)
-    #if "index" in request.url.path:
-    #    print(f"Request: {request.url.path}")
-    #    response.headers["Cache-Control"] = "no-cache"
     return response
 
 
