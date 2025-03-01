@@ -1617,7 +1617,7 @@ async def process_chat_response(
                                     }
                                 )
                         except Exception as e:
-                            done = "data: [DONE]" in line
+                            done = "[DONE]" in line
                             if done:
                                 pass
                             else:
