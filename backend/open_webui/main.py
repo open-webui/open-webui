@@ -26,7 +26,7 @@ from fastapi import (
     File,
     Form,
     HTTPException,
-    Request,
+    Request,    
     UploadFile,
     status,
     applications,
@@ -38,6 +38,8 @@ from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+
+import sentry_sdk
 
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -393,6 +395,21 @@ async def lifespan(app: FastAPI):
     asyncio.create_task(periodic_usage_pool_cleanup())
     yield
 
+sentry_sdk.init(
+    dsn="https://b1217291b54f9430967e880f798c2657@o4508900165484544.ingest.us.sentry.io/4508900173611008",
+    # Add data like request headers and IP for users,
+    # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+    send_default_pii=True,
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for tracing.
+    traces_sample_rate=1.0,
+    _experiments={
+        # Set continuous_profiling_auto_start to True
+        # to automatically start the profiler on when
+        # possible.
+        "continuous_profiling_auto_start": True,
+    },
+)
 
 app = FastAPI(
     docs_url="/docs" if ENV == "dev" else None,
@@ -810,6 +827,9 @@ async def check_url(request: Request, call_next):
     response = await call_next(request)
     process_time = int(time.time()) - start_time
     response.headers["X-Process-Time"] = str(process_time)
+    #if "index" in request.url.path:
+    #    print(f"Request: {request.url.path}")
+    #    response.headers["Cache-Control"] = "no-cache"
     return response
 
 
@@ -1187,6 +1207,10 @@ async def get_app_config(request: Request):
 class UrlForm(BaseModel):
     url: str
 
+
+@app.get("/sentry-debug")
+async def trigger_error():
+    division_by_zero = 1 / 0
 
 @app.get("/api/webhook")
 async def get_webhook_url(user=Depends(get_admin_user)):
