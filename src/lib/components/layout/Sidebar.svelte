@@ -895,7 +895,7 @@
 				{#if $user !== undefined}
 					<CreditMenu>
 						<button
-							class="flex items-center rounded-xl py-4.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							class="flex items-center rounded-xl py-4.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition border border-b-0 border-gray-400 dark:border-gray-600"
 							on:click={() => {
 								showCreditDropdown = !showCreditDropdown;
 							}}
@@ -912,7 +912,7 @@
 						}}
 					>
 						<button
-							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition border border-gray-300 dark:border-gray-700"
 							on:click={() => {
 								showDropdown = !showDropdown;
 							}}
