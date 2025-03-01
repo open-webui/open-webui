@@ -3,7 +3,7 @@ import time
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-from markdown_translator import translate_html_file_to_markdown
+from markdown_translator import translate_file_to_markdown
 
 visited_urls = set()
 NUM_LIMIT = 10
@@ -74,12 +74,14 @@ def crawl(url, output_folder="output_hmtl"):
             f.write(html_content)
         
         # 변환 함수 호출
-        translate_html_file_to_markdown(input_file, input_path)
+        translate_file_to_markdown(input_file, input_path)
 
 if __name__ == "__main__":
+    output_folder = "output_hmtl"
     start_url = "https://registry.hkust.edu.hk/resource-library"
-    crawl(start_url)
-
-    with open("visited_urls.txt", "w", encoding="utf-8") as f:
+    crawl(start_url, output_folder)
+            
+    with open(os.path.join(output_folder, "visited_urls.txt"), "w", encoding="utf-8") as f:
         for url in visited_urls:
             f.write(f"{url}\n")
+
