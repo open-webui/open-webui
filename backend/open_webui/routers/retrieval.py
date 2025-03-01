@@ -619,7 +619,9 @@ async def update_rag_config(
 
         request.app.state.config.EXA_API_KEY = form_data.web.search.exa_api_key
 
-        request.app.state.config.PERPLEXITY_API_KEY = form_data.web.search.perplexity_api_key
+        request.app.state.config.PERPLEXITY_API_KEY = (
+            form_data.web.search.perplexity_api_key
+        )
 
         request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = (
             form_data.web.search.result_count
