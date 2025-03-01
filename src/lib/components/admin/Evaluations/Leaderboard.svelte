@@ -13,7 +13,8 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import MagnifyingGlass from '$lib/components/icons/MagnifyingGlass.svelte';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	const EMBEDDING_MODEL = 'TaylorAI/bge-micro-v2';
 

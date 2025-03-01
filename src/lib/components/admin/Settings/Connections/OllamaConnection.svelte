@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';

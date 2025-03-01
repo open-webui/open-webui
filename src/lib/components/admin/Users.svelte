@@ -12,7 +12,8 @@
 	import UserList from './Users/UserList.svelte';
 	import Groups from './Users/Groups.svelte';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	let users = $state([]);
 

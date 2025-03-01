@@ -2,7 +2,8 @@
 	import { run } from 'svelte/legacy';
 
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
@@ -80,7 +81,7 @@
 					<div class="flex flex-row items-center gap-3 w-full text-sm">
 						<div class="flex items-center">
 							<Checkbox
-								state={userIds.includes(user.id) ? 'checked' : 'unchecked'}
+								checked={userIds.includes(user.id) ? 'checked' : 'unchecked'}
 								on:change={(e) => {
 									if (e.detail === 'checked') {
 										userIds = [...userIds, user.id];

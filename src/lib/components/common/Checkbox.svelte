@@ -1,40 +1,38 @@
-<!-- @migration-task Error while migrating Svelte code: can't migrate `let _state = 'unchecked';` to `$state` because there's a variable named state.
-     Rename the variable and try again or migrate by hand. -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
-	export let state = 'unchecked';
+	export let checked = 'unchecked';
 	export let indeterminate = false;
 
-	let _state = 'unchecked';
+	let _checked = 'unchecked';
 
-	$: _state = state;
+	$: _checked = checked;
 </script>
 
 <button
-	class=" outline -outline-offset-1 outline-[1.5px] outline-gray-200 dark:outline-gray-600 {state !==
+	class="-outline-offset-1 outline-[1.5px] outline-gray-200 dark:outline-gray-600 {checked !==
 	'unchecked'
 		? 'bg-black outline-black '
 		: 'hover:outline-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'} text-white transition-all rounded-sm inline-block w-3.5 h-3.5 relative"
 	type="button"
 	on:click={() => {
-		if (_state === 'unchecked') {
-			_state = 'checked';
-			dispatch('change', _state);
-		} else if (_state === 'checked') {
-			_state = 'unchecked';
+		if (_checked === 'unchecked') {
+			_checked = 'checked';
+			dispatch('change', _checked);
+		} else if (_checked === 'checked') {
+			_checked = 'unchecked';
 			if (!indeterminate) {
-				dispatch('change', _state);
+				dispatch('change', _checked);
 			}
 		} else if (indeterminate) {
-			_state = 'checked';
-			dispatch('change', _state);
+			_checked = 'checked';
+			dispatch('change', _checked);
 		}
 	}}
 >
 	<div class="top-0 left-0 absolute w-full flex justify-center">
-		{#if _state === 'checked'}
+		{#if _checked === 'checked'}
 			<svg
 				class="w-3.5 h-3.5"
 				aria-hidden="true"

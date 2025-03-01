@@ -13,7 +13,8 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	const dispatch = createEventDispatcher();
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	interface Props {
 		saveSettings: Function;

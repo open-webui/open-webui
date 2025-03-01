@@ -6,7 +6,8 @@
 
 	import { tick, getContext, onMount, onDestroy } from 'svelte';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	import { config, mobile, settings, socket } from '$lib/stores';
 	import { blobToFile, compressImage } from '$lib/utils';

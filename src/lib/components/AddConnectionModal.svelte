@@ -3,7 +3,8 @@
 
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount } from 'svelte';
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	import { models } from '$lib/stores';
 	import { verifyOpenAIConnection } from '$lib/apis/openai';

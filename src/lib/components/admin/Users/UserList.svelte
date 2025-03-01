@@ -29,7 +29,8 @@
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import About from '$lib/components/chat/Settings/About.svelte';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	let { users = $bindable([]) } = $props();
 

@@ -18,7 +18,8 @@
 	import Spinner from '../common/Spinner.svelte';
 	import { addReaction, deleteMessage, removeReaction, updateMessage } from '$lib/apis/channels';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	interface Props {
 		id?: any;

@@ -1,42 +1,31 @@
-<!-- @migration-task Error while migrating Svelte code: can't migrate `let state = false;` to `$state` because there's a variable named state.
-     Rename the variable and try again or migrate by hand. -->
 <script lang="ts">
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import MagnifyingGlass from '$lib/components/icons/MagnifyingGlass.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
+	import type { Snippet } from 'svelte';
 
-	export let status = { urls: [], query: '' };
-	let state = false;
+	let {
+		urls = $bindable([]),
+		query = $bindable(''),
+		children
+	}: { urls: string[]; query: string; children: Snippet } = $props();
+	let collapsedState = $state(false);
 </script>
 
-<Collapsible className="w-full space-y-1" bind:open={state}>
-	<div
-		class="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
-	>
-		<slot />
-
-		{#if state}
-			<ChevronUp className="size-3.5 " strokeWidth="3.5" />
-		{:else}
-			<ChevronDown className="size-3.5 " strokeWidth="3.5" />
-		{/if}
-	</div>
-	<div
-		slot="content"
-		class="text-sm border border-gray-300/30 dark:border-gray-700/50 rounded-xl mb-1.5"
-	>
-		{#if status?.query}
+{#snippet content()}
+	<div class="text-sm border border-gray-300/30 dark:border-gray-700/50 rounded-xl mb-1.5">
+		{#if query}
 			<a
 				class="flex w-full items-center p-3 px-4 border-b border-gray-300/30 dark:border-gray-700/50 group/item justify-between font-normal text-gray-800 dark:text-gray-300 no-underline"
-				href="https://www.google.com/search?q={status.query}"
+				href="https://www.google.com/search?q={query}"
 				target="_blank"
 			>
 				<div class="flex gap-2 items-center">
 					<MagnifyingGlass />
 
 					<div class=" line-clamp-1">
-						{status.query}
+						{query}
 					</div>
 				</div>
 
@@ -60,9 +49,9 @@
 			</a>
 		{/if}
 
-		{#each status.urls as url, urlIdx}
+		{#each urls as url, urlIdx}
 			<a
-				class="flex w-full items-center p-3 px-4 {urlIdx === status.urls.length - 1
+				class="flex w-full items-center p-3 px-4 {urlIdx === urls.length - 1
 					? ''
 					: 'border-b border-gray-300/30 dark:border-gray-700/50'} group/item justify-between font-normal text-gray-800 dark:text-gray-300"
 				href={url}
@@ -91,5 +80,19 @@
 				</div>
 			</a>
 		{/each}
+	</div>
+{/snippet}
+
+<Collapsible className="w-full space-y-1" bind:open={collapsedState} {content}>
+	<div
+		class="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+	>
+		{@render children?.()}
+
+		{#if collapsedState}
+			<ChevronUp className="size-3.5 " strokeWidth="3.5" />
+		{:else}
+			<ChevronDown className="size-3.5 " strokeWidth="3.5" />
+		{/if}
 	</div>
 </Collapsible>

@@ -22,8 +22,9 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import { getI18nContext } from '$lib/contexts';
 
-	const i18n: Writable<i18nType> = getContext('i18n');
+	const i18n = getI18nContext();
 
 	interface Props {
 		saveHandler: Function;

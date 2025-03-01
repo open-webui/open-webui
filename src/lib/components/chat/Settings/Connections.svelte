@@ -3,7 +3,8 @@
 	import { onMount, getContext } from 'svelte';
 	import { getModels as _getModels } from '$lib/apis';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	import {
 		settings,

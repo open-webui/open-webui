@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { run } from 'svelte/legacy';
 
-	import { getContext, createEventDispatcher } from 'svelte';
-	const i18n = getContext('i18n');
+	import { createEventDispatcher } from 'svelte';
+	const i18n = getI18nContext();
 
 	import dayjs from '$lib/dayjs';
 	import duration from 'dayjs/plugin/duration';
@@ -30,6 +30,7 @@
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
+	import { getI18nContext } from '$lib/contexts';
 
 	interface Props {
 		open?: boolean;

@@ -3,7 +3,8 @@
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	let { filters = [], selectedFilterIds = $bindable([]) } = $props();
 
@@ -38,7 +39,7 @@
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
 							<Checkbox
-								state={_filters[filter].selected ? 'checked' : 'unchecked'}
+								checked={_filters[filter].selected ? 'checked' : 'unchecked'}
 								on:change={(e) => {
 									_filters[filter].selected = e.detail === 'checked';
 									selectedFilterIds = Object.keys(_filters).filter((t) => _filters[t].selected);

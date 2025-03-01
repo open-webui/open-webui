@@ -6,7 +6,8 @@
 
 	import { models, settings, theme, user } from '$lib/stores';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
 

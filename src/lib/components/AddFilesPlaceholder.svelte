@@ -8,7 +8,8 @@
 	}
 
 	let { title = '', content = '', children }: Props = $props();
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 </script>
 
 <div class="px-3">

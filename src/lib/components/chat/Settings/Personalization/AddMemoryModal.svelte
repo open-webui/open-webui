@@ -10,7 +10,8 @@
 	const dispatch = createEventDispatcher();
 
 	let { show = $bindable() } = $props();
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	let loading = $state(false);
 	let content = $state('');

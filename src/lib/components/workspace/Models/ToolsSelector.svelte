@@ -6,7 +6,8 @@
 
 	let { tools = [], selectedToolIds = $bindable([]) } = $props();
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	onMount(() => {
 		_tools = tools.reduce((acc, tool) => {
@@ -36,7 +37,7 @@
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
 							<Checkbox
-								state={_tools[tool].selected ? 'checked' : 'unchecked'}
+								checked={_tools[tool].selected ? 'checked' : 'unchecked'}
 								on:change={(e) => {
 									_tools[tool].selected = e.detail === 'checked';
 									selectedToolIds = Object.keys(_tools).filter((t) => _tools[t].selected);

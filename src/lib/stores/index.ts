@@ -5,6 +5,7 @@ import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
+import type { KokoroWorker } from '$lib/workers/KokoroWorker';
 
 // Backend
 export const WEBUI_NAME = writable(APP_NAME);
@@ -44,7 +45,7 @@ export const shortCodesToEmojis = writable(
 	)
 );
 
-export const TTSWorker = writable(null);
+export const TTSWorker = writable<null | KokoroWorker>(null);
 
 export const chatId = writable('');
 export const chatTitle = writable('');
@@ -58,7 +59,7 @@ export const models: Writable<Model[]> = writable([]);
 
 export const prompts: Writable<null | Prompt[]> = writable(null);
 export const knowledge: Writable<null | Document[]> = writable(null);
-export const tools = writable(null);
+export const tools = writable<unknown[] | null>(null);
 export const functions = writable(null);
 
 export const banners: Writable<Banner[]> = writable([]);
@@ -143,7 +144,6 @@ export type Settings = {
 	title?: TitleSettings;
 	splitLargeDeltas?: boolean;
 	chatDirection: 'LTR' | 'RTL';
-
 	system?: string;
 	requestFormat?: string;
 	keepAlive?: string;
@@ -188,7 +188,16 @@ type AudioSettings = {
 	TTSEngine?: string;
 	speaker?: string;
 	model?: string;
+	tts?: TTS;
 	nonLocalVoices?: boolean;
+};
+
+type TTS = {
+	engineConfig?: TTSEngineConfig;
+};
+
+type TTSEngineConfig = {
+	dtype?: 'fp34' | 'fp32' | 'fp16' | 'fp8';
 };
 
 type TitleSettings = {

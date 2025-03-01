@@ -19,7 +19,8 @@
 	import Name from './Name.svelte';
 	import Skeleton from './Skeleton.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 	dayjs.extend(localizedFormat);
 
 	interface Props {

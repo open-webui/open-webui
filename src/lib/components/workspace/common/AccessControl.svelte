@@ -3,7 +3,8 @@
 
 	import { getContext, onMount } from 'svelte';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	import { getGroups } from '$lib/apis/groups';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';

@@ -10,7 +10,8 @@
 	import Modal from './common/Modal.svelte';
 	import { updateUserSettings } from '$lib/apis/users';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	interface Props {
 		show?: boolean;

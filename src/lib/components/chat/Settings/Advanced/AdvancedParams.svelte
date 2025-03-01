@@ -3,11 +3,12 @@
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
+	import { getI18nContext } from '$lib/contexts';
 
 	const dispatch = createEventDispatcher();
 
-	const i18n = getContext('i18n');
+	const i18n = getI18nContext();
 
 	interface Props {
 		admin?: boolean;
@@ -487,7 +488,7 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
-					on:click={() => {
+					onclick={() => {
 						params.top_k = (params?.top_k ?? null) === null ? 40 : null;
 					}}
 				>
@@ -598,7 +599,7 @@
 				<button
 					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
-					on:click={() => {
+					onclick={() => {
 						params.min_p = (params?.min_p ?? null) === null ? 0.0 : null;
 					}}
 				>

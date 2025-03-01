@@ -2,7 +2,8 @@
 	import { onMount, getContext } from 'svelte';
 	import Message from './Message.svelte';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	let { messages = $bindable([]) } = $props();
 </script>

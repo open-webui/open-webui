@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount, getContext } from 'svelte';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	let { message = $bindable(), idx, onDelete } = $props();
 

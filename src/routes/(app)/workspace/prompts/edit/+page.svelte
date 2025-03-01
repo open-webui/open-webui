@@ -4,7 +4,8 @@
 	import { prompts } from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	import { getPromptByCommand, getPrompts, updatePromptByCommand } from '$lib/apis/prompts';
 	import { page } from '$app/state';

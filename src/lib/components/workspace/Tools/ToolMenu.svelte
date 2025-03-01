@@ -14,7 +14,8 @@
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
 	import { config } from '$lib/stores';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	interface Props {
 		editHandler: Function;

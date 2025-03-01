@@ -49,7 +49,8 @@
 
 	let { children }: Props = $props();
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	let loaded = $state(false);
 	let DB = $state(null);

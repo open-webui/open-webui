@@ -16,7 +16,8 @@
 	import ArrowUpCircle from '$lib/components/icons/ArrowUpCircle.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	interface Props {
 		onClose?: Function;

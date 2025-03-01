@@ -1,112 +1,106 @@
-<!-- @migration-task Error while migrating Svelte code: Attributes need to be unique
-https://svelte.dev/e/attribute_duplicate -->
+
 <script lang="ts">
+	import { preventDefault, run } from 'svelte/legacy';
+
+	import { createPicker } from '$lib/utils/google-drive-picker';
+	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
-	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
-	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
 
-	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
+	import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import {
 		type Model,
-		mobile,
-		settings,
-		showSidebar,
-		models,
-		config,
-		showCallOverlay,
-		tools,
 		user as _user,
+		config,
+		mobile,
+		models,
+		settings,
+		showCallOverlay,
 		showControls,
+		tools,
 		TTSWorker
 	} from '$lib/stores';
 
-	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
-	import { transcribeAudio } from '$lib/apis/audio';
-	import { uploadFile } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
-	import { deleteFileById } from '$lib/apis/files';
+	import { deleteFileById, uploadFile } from '$lib/apis/files';
+	import { compressImage, createMessagesList, findWordIndices } from '$lib/utils';
 
-	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
+	import { PASTED_TEXT_CHARACTER_LIMIT, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
+	import Commands from './MessageInput/Commands.svelte';
+	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import InputMenu from './MessageInput/InputMenu.svelte';
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
-	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
-	import Commands from './MessageInput/Commands.svelte';
 
-	import RichTextInput from '../common/RichTextInput.svelte';
-	import Tooltip from '../common/Tooltip.svelte';
 	import FileItem from '../common/FileItem.svelte';
 	import Image from '../common/Image.svelte';
+	import RichTextInput from '../common/RichTextInput.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
 
-	import XMark from '../icons/XMark.svelte';
-	import Headphone from '../icons/Headphone.svelte';
-	import GlobeAlt from '../icons/GlobeAlt.svelte';
-	import PhotoSolid from '../icons/PhotoSolid.svelte';
-	import Photo from '../icons/Photo.svelte';
-	import CommandLine from '../icons/CommandLine.svelte';
+	import { getI18nContext } from '$lib/contexts';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+	import CommandLine from '../icons/CommandLine.svelte';
+	import GlobeAlt from '../icons/GlobeAlt.svelte';
+	import Headphone from '../icons/Headphone.svelte';
+	import Photo from '../icons/Photo.svelte';
+	import XMark from '../icons/XMark.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getI18nContext();
 
-	export let transparentBackground = false;
+	let selectedModelIds = $state([]);
 
-	export let onChange: Function = () => {};
-	export let createMessagePair: Function;
-	export let stopResponse: Function;
+	let loaded = $state(false);
+	let recording = $state(false);
 
-	export let autoScroll = false;
+	let filesInputElement = $state();
+	let commandsElement = $state();
 
-	export let atSelectedModel: Model | undefined = undefined;
-	export let selectedModels: [''];
+	let inputFiles = $state();
+	let dragged = $state(false);
 
-	let selectedModelIds = [];
-	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
+	interface Props {
+		transparentBackground?: boolean;
+		onChange?: Function;
+		createMessagePair: Function;
+		stopResponse: Function;
+		autoScroll?: boolean;
+		atSelectedModel?: Model | undefined;
+		selectedModels: [''];
+		history: any;
+		prompt?: string;
+		files?: any;
+		selectedToolIds?: any;
+		imageGenerationEnabled?: boolean;
+		webSearchEnabled?: boolean;
+		codeInterpreterEnabled?: boolean;
+		placeholder?: string;
+	}
 
-	export let history;
+	let {
+		transparentBackground = false,
+		onChange = () => {},
+		createMessagePair,
+		stopResponse,
+		autoScroll = $bindable(false),
+		atSelectedModel = $bindable(undefined),
+		selectedModels,
+		history,
+		prompt = $bindable(''),
+		files = $bindable([]),
+		selectedToolIds = $bindable([]),
+		imageGenerationEnabled = $bindable(false),
+		webSearchEnabled = $bindable(false),
+		codeInterpreterEnabled = $bindable(false),
+		placeholder = ''
+	}: Props = $props();
 
-	export let prompt = '';
-	export let files = [];
-
-	export let selectedToolIds = [];
-
-	export let imageGenerationEnabled = false;
-	export let webSearchEnabled = false;
-	export let codeInterpreterEnabled = false;
-
-	$: onChange({
-		prompt,
-		files,
-		selectedToolIds,
-		imageGenerationEnabled,
-		webSearchEnabled
-	});
-
-	let loaded = false;
-	let recording = false;
-
-	let chatInputContainerElement;
-	let chatInputElement;
-
-	let filesInputElement;
-	let commandsElement;
-
-	let inputFiles;
-	let dragged = false;
-
-	const user = null;
-	export let placeholder = '';
-
-	let visionCapableModels = [];
-	$: visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
-		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
-	);
+	let visionCapableModels = $state([]);
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
-		element.scrollTo({
+		element?.scrollTo({
 			top: element.scrollHeight,
 			behavior: 'smooth'
 		});
@@ -116,7 +110,6 @@ https://svelte.dev/e/attribute_duplicate -->
 		try {
 			// Request screen media
 			const mediaStream = await navigator.mediaDevices.getDisplayMedia({
-				video: { cursor: 'never' },
 				audio: false
 			});
 			// Once the user selects a screen, temporarily create a video element
@@ -130,7 +123,7 @@ https://svelte.dev/e/attribute_duplicate -->
 			canvas.height = video.videoHeight;
 			// Grab a single frame from the video stream using the canvas
 			const context = canvas.getContext('2d');
-			context.drawImage(video, 0, 0, canvas.width, canvas.height);
+			context?.drawImage(video, 0, 0, canvas.width, canvas.height);
 			// Stop all video tracks (stop screen sharing) after capturing the image
 			mediaStream.getTracks().forEach((track) => track.stop());
 
@@ -149,7 +142,7 @@ https://svelte.dev/e/attribute_duplicate -->
 		}
 	};
 
-	const uploadFileHandler = async (file, fullContext: boolean = false) => {
+	const uploadFileHandler = async (file: File, fullContext: boolean = false) => {
 		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
 			toast.error($i18n.t('You do not have permission to upload files.'));
 			return null;
@@ -339,6 +332,23 @@ https://svelte.dev/e/attribute_duplicate -->
 			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
 		}
 	});
+	run(() => {
+		selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
+	});
+	run(() => {
+		onChange({
+			prompt,
+			files,
+			selectedToolIds,
+			imageGenerationEnabled,
+			webSearchEnabled
+		});
+	});
+	run(() => {
+		visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
+			(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
+		);
+	});
 </script>
 
 <FilesOverlay show={dragged} />
@@ -357,8 +367,9 @@ https://svelte.dev/e/attribute_duplicate -->
 							class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none"
 						>
 							<button
+								aria-label={$i18n.t('scroll_to_bottom')}
 								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
-								on:click={() => {
+								onclick={() => {
 									autoScroll = true;
 									scrollToBottom();
 								}}
@@ -392,8 +403,8 @@ https://svelte.dev/e/attribute_duplicate -->
 											<span class="relative flex size-2">
 												<span
 													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"
-												/>
-												<span class="relative inline-flex rounded-full size-2 bg-yellow-500" />
+												></span>
+												<span class="relative inline-flex rounded-full size-2 bg-yellow-500"></span>
 											</span>
 										</div>
 										<div class="  text-ellipsis line-clamp-1 flex">
@@ -424,8 +435,8 @@ https://svelte.dev/e/attribute_duplicate -->
 											<span class="relative flex size-2">
 												<span
 													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"
-												/>
-												<span class="relative inline-flex rounded-full size-2 bg-blue-500" />
+												></span>
+												<span class="relative inline-flex rounded-full size-2 bg-blue-500"></span>
 											</span>
 										</div>
 										<div class=" translate-y-[0.5px]">{$i18n.t('Search the internet')}</div>
@@ -440,8 +451,8 @@ https://svelte.dev/e/attribute_duplicate -->
 											<span class="relative flex size-2">
 												<span
 													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"
-												/>
-												<span class="relative inline-flex rounded-full size-2 bg-teal-500" />
+												></span>
+												<span class="relative inline-flex rounded-full size-2 bg-teal-500"></span>
 											</span>
 										</div>
 										<div class=" translate-y-[0.5px]">{$i18n.t('Generate an image')}</div>
@@ -456,8 +467,8 @@ https://svelte.dev/e/attribute_duplicate -->
 											<span class="relative flex size-2">
 												<span
 													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
-												/>
-												<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+												></span>
+												<span class="relative inline-flex rounded-full size-2 bg-green-500"></span>
 											</span>
 										</div>
 										<div class=" translate-y-[0.5px]">{$i18n.t('Execute code for analysis')}</div>
@@ -485,7 +496,7 @@ https://svelte.dev/e/attribute_duplicate -->
 									<div>
 										<button
 											class="flex items-center dark:text-gray-500"
-											on:click={() => {
+											onclick={() => {
 												atSelectedModel = undefined;
 											}}
 										>
@@ -530,9 +541,7 @@ https://svelte.dev/e/attribute_duplicate -->
 						bind:this={filesInputElement}
 						hidden
 						multiple
-						type="file"
-						bind:files={inputFiles}
-						on:change={async () => {
+						onchange={async () => {
 							if (inputFiles && inputFiles.length > 0) {
 								const _inputFiles = Array.from(inputFiles);
 								inputFilesHandler(_inputFiles);
@@ -542,6 +551,8 @@ https://svelte.dev/e/attribute_duplicate -->
 
 							filesInputElement.value = '';
 						}}
+						type="file"
+						bind:files={inputFiles}
 					/>
 
 					{#if recording}
@@ -570,10 +581,10 @@ https://svelte.dev/e/attribute_duplicate -->
 					{:else}
 						<form
 							class="w-full flex gap-1.5"
-							on:submit|preventDefault={() => {
+							onsubmit={preventDefault(() => {
 								// check if selectedModels support image input
 								dispatch('submit', prompt);
-							}}
+							})}
 						>
 							<div
 								class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-600/5 dark:bg-gray-400/5 dark:text-gray-100"
@@ -618,12 +629,13 @@ https://svelte.dev/e/attribute_duplicate -->
 													</div>
 													<div class=" absolute -top-1 -right-1">
 														<button
+															aria-label={$i18n.t('Remove file', { ns: 'chat' })}
 															class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
-															type="button"
-															on:click={() => {
+															onclick={() => {
 																files.splice(fileIdx, 1);
 																files = files;
 															}}
+															type="button"
 														>
 															<svg
 																class="size-4"
@@ -880,34 +892,15 @@ https://svelte.dev/e/attribute_duplicate -->
 											bind:this={chatInputElement}
 											id="chat-input"
 											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none"
-											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
-											rows="1"
-											bind:value={prompt}
-											on:keypress={(e) => {
-												if (
-													!$mobile ||
-													!(
-														'ontouchstart' in window ||
-														navigator.maxTouchPoints > 0 ||
-														navigator.msMaxTouchPoints > 0
-													)
-												) {
-													// Prevent Enter key from creating a new line
-													if (e.key === 'Enter' && !e.shiftKey) {
-														e.preventDefault();
-													}
-
-													// Submit the prompt when Enter key is pressed
-													if (
-														(prompt !== '' || files.length > 0) &&
-														e.key === 'Enter' &&
-														!e.shiftKey
-													) {
-														dispatch('submit', prompt);
-													}
-												}
+											onfocus={async (e) => {
+												e.target.style.height = '';
+												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
 											}}
-											on:keydown={async (e) => {
+											oninput={async (e) => {
+												e.target.style.height = '';
+												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
+											}}
+											onkeydown={async (e) => {
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 												const commandsContainerElement =
 													document.getElementById('commands-container');
@@ -1024,15 +1017,31 @@ https://svelte.dev/e/attribute_duplicate -->
 													imageGenerationEnabled = false;
 												}
 											}}
-											on:input={async (e) => {
-												e.target.style.height = '';
-												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
+											onkeypress={(e) => {
+												if (
+													!$mobile ||
+													!(
+														'ontouchstart' in window ||
+														navigator.maxTouchPoints > 0 ||
+														navigator.msMaxTouchPoints > 0
+													)
+												) {
+													// Prevent Enter key from creating a new line
+													if (e.key === 'Enter' && !e.shiftKey) {
+														e.preventDefault();
+													}
+
+													// Submit the prompt when Enter key is pressed
+													if (
+														(prompt !== '' || files.length > 0) &&
+														e.key === 'Enter' &&
+														!e.shiftKey
+													) {
+														dispatch('submit', prompt);
+													}
+												}
 											}}
-											on:focus={async (e) => {
-												e.target.style.height = '';
-												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
-											}}
-											on:paste={async (e) => {
+											onpaste={async (e) => {
 												const clipboardData = e.clipboardData || window.clipboardData;
 
 												if (clipboardData && clipboardData.items) {
@@ -1070,7 +1079,10 @@ https://svelte.dev/e/attribute_duplicate -->
 													}
 												}
 											}}
-										/>
+											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
+											rows="1"
+											bind:value={prompt}
+										></textarea>
 									{/if}
 								</div>
 
@@ -1152,8 +1164,8 @@ https://svelte.dev/e/attribute_duplicate -->
 															($settings?.webSearch ?? false) === 'always'
 																? 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+															onclick={preventDefault(() => (webSearchEnabled = !webSearchEnabled))}
 															type="button"
-															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 														>
 															<GlobeAlt className="size-5" strokeWidth="1.75" />
 															<span
@@ -1170,9 +1182,10 @@ https://svelte.dev/e/attribute_duplicate -->
 															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {imageGenerationEnabled
 																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+															onclick={preventDefault(
+																() => (imageGenerationEnabled = !imageGenerationEnabled)
+															)}
 															type="button"
-															on:click|preventDefault={() =>
-																(imageGenerationEnabled = !imageGenerationEnabled)}
 														>
 															<Photo className="size-5" strokeWidth="1.75" />
 															<span
@@ -1189,9 +1202,10 @@ https://svelte.dev/e/attribute_duplicate -->
 															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {codeInterpreterEnabled
 																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+															onclick={preventDefault(
+																() => (codeInterpreterEnabled = !codeInterpreterEnabled)
+															)}
 															type="button"
-															on:click|preventDefault={() =>
-																(codeInterpreterEnabled = !codeInterpreterEnabled)}
 														>
 															<CommandLine className="size-5" strokeWidth="1.75" />
 															<span
@@ -1212,8 +1226,7 @@ https://svelte.dev/e/attribute_duplicate -->
 													id="voice-input-button"
 													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
 													aria-label="Voice Input"
-													type="button"
-													on:click={async () => {
+													onclick={async () => {
 														try {
 															let stream = await navigator.mediaDevices
 																.getUserMedia({ audio: true })
@@ -1239,6 +1252,7 @@ https://svelte.dev/e/attribute_duplicate -->
 															toast.error($i18n.t('Permission denied when accessing microphone'));
 														}
 													}}
+													type="button"
 												>
 													<svg
 														class="w-5 h-5 translate-y-[0.5px]"
@@ -1265,8 +1279,7 @@ https://svelte.dev/e/attribute_duplicate -->
 																? 'bg-blue-500 text-white hover:bg-blue-400 '
 																: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100'} transition rounded-full p-1.5 self-center"
 															aria-label="Call"
-															type="button"
-															on:click={async () => {
+															onclick={async () => {
 																if (selectedModels.length > 1) {
 																	toast.error($i18n.t('Select only one model to call'));
 
@@ -1318,6 +1331,7 @@ https://svelte.dev/e/attribute_duplicate -->
 																	);
 																}
 															}}
+															type="button"
 														>
 															<Headphone className="size-5" />
 														</button>
@@ -1327,6 +1341,7 @@ https://svelte.dev/e/attribute_duplicate -->
 												<div class=" flex items-center">
 													<Tooltip content={$i18n.t('Send message')}>
 														<button
+															aria-label={$i18n.t('Send message')}
 															id="send-message-button"
 															class="{!(prompt === '' && files.length === 0)
 																? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
@@ -1356,8 +1371,9 @@ https://svelte.dev/e/attribute_duplicate -->
 											<div class=" flex items-center">
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
+														aria-label={$i18n.t('Stop response')}
 														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
-														on:click={() => {
+														onclick={() => {
 															stopResponse();
 														}}
 													>

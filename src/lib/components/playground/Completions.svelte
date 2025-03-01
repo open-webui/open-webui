@@ -12,7 +12,8 @@
 	import Selector from '$lib/components/chat/ModelSelector/Selector.svelte';
 	import MenuLines from '../icons/MenuLines.svelte';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	let loaded = false;
 	let text = $state('');

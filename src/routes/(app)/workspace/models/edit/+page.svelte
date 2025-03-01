@@ -3,7 +3,8 @@
 	import { goto } from '$app/navigation';
 
 	import { onMount, getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	import { page } from '$app/state';
 	import { config, models, settings } from '$lib/stores';

@@ -1,181 +1,129 @@
-<!-- @migration-task Error while migrating Svelte code: Cannot subscribe to stores that are not declared at the top level of the component
-https://svelte.dev/e/store_invalid_scoped_subscription -->
 <script lang="ts">
-	import { v4 as uuidv4 } from 'uuid';
-	import { toast } from 'svelte-sonner';
-	import mermaid from 'mermaid';
-	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
+	import { run } from 'svelte/legacy';
 
-	import { getContext, onDestroy, onMount, tick } from 'svelte';
-	const i18n: Writable<i18nType> = getContext('i18n');
+	import { Pane, PaneGroup } from 'paneforge';
+	import { toast } from 'svelte-sonner';
+	import { v4 as uuidv4 } from 'uuid';
+
+	import { onDestroy, onMount, tick } from 'svelte';
+	import { getI18nContext } from '$lib/contexts';
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	import { get, type Unsubscriber, type Writable } from 'svelte/store';
-	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { type Unsubscriber } from 'svelte/store';
 
 	import {
+		tags as allTags,
+		banners,
 		chatId,
 		chats,
+		chatTitle,
 		config,
+		currentChatPage,
+		mobile,
 		type Model,
 		models,
-		tags as allTags,
 		settings,
-		showSidebar,
-		WEBUI_NAME,
-		banners,
-		user,
-		socket,
-		showControls,
-		showCallOverlay,
-		currentChatPage,
-		temporaryChatEnabled,
-		mobile,
-		showOverview,
-		chatTitle,
 		showArtifacts,
-		tools
+		showCallOverlay,
+		showControls,
+		showOverview,
+		showSidebar,
+		socket,
+		temporaryChatEnabled,
+		tools,
+		user,
+		WEBUI_NAME
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
 		copyToClipboard,
-		getMessageContentParts,
 		createMessagesList,
-		extractSentencesForAudio,
+		getMessageContentParts,
+		getPromptVariables,
 		promptTemplate,
-		splitStream,
-		sleep,
-		removeDetails,
-		getPromptVariables
+		removeDetails
 	} from '$lib/utils';
 
-	import { generateChatCompletion } from '$lib/apis/ollama';
+	import { chatAction, chatCompleted, generateMoACompletion, stopTask } from '$lib/apis';
 	import {
-		addTagById,
 		createNewChat,
-		deleteTagById,
-		deleteTagsById,
 		getAllTags,
 		getChatById,
 		getChatList,
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
-	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
-	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
-	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
-	import {
-		chatCompleted,
-		generateQueries,
-		chatAction,
-		generateMoACompletion,
-		stopTask
-	} from '$lib/apis';
+	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { processWeb, processYoutubeVideo } from '$lib/apis/retrieval';
+	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { getTools } from '$lib/apis/tools';
+	import { getAndUpdateUserLocation, getUserSettings } from '$lib/apis/users';
 
-	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/chat/Navbar.svelte';
-	import ChatControls from './ChatControls.svelte';
+	import Banner from '../common/Banner.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
-	import Placeholder from './Placeholder.svelte';
-	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import ChatControls from './ChatControls.svelte';
+	import Placeholder from './Placeholder.svelte';
+	const i18n = getI18nContext();
 
-	export let chatIdProp = '';
+	interface Props {
+		chatIdProp?: string;
+	}
 
-	let loading = false;
+	let { chatIdProp = '' }: Props = $props();
+
+	let loading = $state(false);
 
 	const eventTarget = new EventTarget();
-	let controlPane;
-	let controlPaneComponent;
+	let controlPane = $state();
+	let controlPaneComponent = $state();
 
-	let autoScroll = true;
+	let autoScroll = $state(true);
 	const processing = '';
-	let messagesContainerElement: HTMLDivElement;
+	let messagesContainerElement = $state<HTMLDivElement>();
 
-	let navbarElement;
+	let navbarElement = $state();
 
-	let showEventConfirmation = false;
-	let eventConfirmationTitle = '';
-	let eventConfirmationMessage = '';
-	let eventConfirmationInput = false;
-	let eventConfirmationInputPlaceholder = '';
-	let eventConfirmationInputValue = '';
-	let eventCallback = null;
+	let showEventConfirmation = $state(false);
+	let eventConfirmationTitle = $state('');
+	let eventConfirmationMessage = $state('');
+	let eventConfirmationInput = $state(false);
+	let eventConfirmationInputPlaceholder = $state('');
+	let eventConfirmationInputValue = $state('');
+	let eventCallback = $state(null);
 
 	let chatIdUnsubscriber: Unsubscriber | undefined;
 
-	let selectedModels = [''];
-	let atSelectedModel: Model | undefined;
-	let selectedModelIds = [];
-	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
+	let selectedModels = $state(['']);
+	let atSelectedModel: Model | undefined = $state();
+	let selectedModelIds = $state([]);
 
-	let selectedToolIds = [];
-	let imageGenerationEnabled = false;
-	let webSearchEnabled = false;
-	let codeInterpreterEnabled = false;
+	let selectedToolIds = $state([]);
+	let imageGenerationEnabled = $state(false);
+	let webSearchEnabled = $state(false);
+	let codeInterpreterEnabled = $state(false);
 	let chat = null;
 	let tags = [];
 
-	let history = {
+	let history = $state({
 		messages: {},
 		currentId: null
-	};
+	});
 
 	let taskId = null;
 
 	// Chat Input
-	let prompt = '';
-	let chatFiles = [];
-	let files = [];
-	let params = {};
-
-	$: if (chatIdProp) {
-		(async () => {
-			loading = true;
-			console.log(chatIdProp);
-
-			prompt = '';
-			files = [];
-			selectedToolIds = [];
-			webSearchEnabled = false;
-			imageGenerationEnabled = false;
-
-			if (chatIdProp && (await loadChat())) {
-				await tick();
-				loading = false;
-
-				if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
-					try {
-						const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
-
-						prompt = input.prompt;
-						files = input.files;
-						selectedToolIds = input.selectedToolIds;
-						webSearchEnabled = input.webSearchEnabled;
-						imageGenerationEnabled = input.imageGenerationEnabled;
-					} catch (e) {}
-				}
-
-				window.setTimeout(() => scrollToBottom(), 0);
-				const chatInput = document.getElementById('chat-input');
-				chatInput?.focus();
-			} else {
-				await goto('/');
-			}
-		})();
-	}
-
-	$: if (selectedModels && chatIdProp !== '') {
-		saveSessionSelectedModels();
-	}
+	let prompt = $state('');
+	let chatFiles = $state([]);
+	let files = $state([]);
+	let params = $state({});
 
 	const saveSessionSelectedModels = () => {
 		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
@@ -184,14 +132,6 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 		sessionStorage.selectedModels = JSON.stringify(selectedModels);
 		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
-
-	$: if (selectedModels) {
-		setToolIds();
-	}
-
-	$: if (atSelectedModel || selectedModels) {
-		setToolIds();
-	}
 
 	const setToolIds = async () => {
 		if (!$tools) {
@@ -205,7 +145,7 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
 		if (model) {
 			selectedToolIds = (model?.info?.meta?.toolIds ?? []).filter((id) =>
-				$tools.find((t) => t.id === id)
+				$tools?.find((t) => t.id === id)
 			);
 		}
 	};
@@ -1867,6 +1807,61 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 			}
 		}
 	};
+	run(() => {
+		selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
+	});
+	run(() => {
+		if (chatIdProp) {
+			(async () => {
+				loading = true;
+				console.log(chatIdProp);
+
+				prompt = '';
+				files = [];
+				selectedToolIds = [];
+				webSearchEnabled = false;
+				imageGenerationEnabled = false;
+
+				if (chatIdProp && (await loadChat())) {
+					await tick();
+					loading = false;
+
+					if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
+						try {
+							const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
+
+							prompt = input.prompt;
+							files = input.files;
+							selectedToolIds = input.selectedToolIds;
+							webSearchEnabled = input.webSearchEnabled;
+							imageGenerationEnabled = input.imageGenerationEnabled;
+						} catch (e) {}
+					}
+
+					window.setTimeout(() => scrollToBottom(), 0);
+					const chatInput = document.getElementById('chat-input');
+					chatInput?.focus();
+				} else {
+					await goto('/');
+				}
+			})();
+		}
+	});
+	run(() => {
+		if (selectedModels && chatIdProp !== '') {
+			saveSessionSelectedModels();
+		}
+	});
+	run(() => {
+		if (selectedModels) {
+			setToolIds();
+		}
+	});
+	run(() => {
+		if (atSelectedModel || selectedModels) {
+			setToolIds();
+		}
+	});
 </script>
 
 <svelte:head>
@@ -1877,7 +1872,7 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 	</title>
 </svelte:head>
 
-<audio id="audioElement" style:display="none" src="" />
+<audio id="audioElement" style:display="none" src=""></audio>
 
 <EventConfirmDialog
 	input={eventConfirmationInput}
@@ -1911,11 +1906,11 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 				class="absolute {$showSidebar
 					? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
 					: ''} top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
-			/>
+			></div>
 
 			<div
 				class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
-			/>
+			></div>
 		{/if}
 
 		<Navbar
@@ -1970,7 +1965,7 @@ https://svelte.dev/e/store_invalid_scoped_subscription -->
 							bind:this={messagesContainerElement}
 							id="messages-container"
 							class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
-							on:scroll={(e) => {
+							onscroll={(e) => {
 								autoScroll =
 									messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
 									messagesContainerElement.clientHeight + 5;

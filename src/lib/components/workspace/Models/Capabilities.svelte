@@ -4,7 +4,8 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { marked } from 'marked';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	const helpText = {
 		vision: $i18n.t('Model accepts image inputs'),
@@ -33,7 +34,7 @@
 		{#each Object.keys(capabilities) as capability}
 			<div class=" flex items-center gap-2 mr-3">
 				<Checkbox
-					state={capabilities[capability] ? 'checked' : 'unchecked'}
+					checked={capabilities[capability] ? 'checked' : 'unchecked'}
 					on:change={(e) => {
 						capabilities[capability] = e.detail === 'checked';
 					}}

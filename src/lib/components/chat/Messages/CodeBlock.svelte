@@ -17,7 +17,8 @@
 	import { executeCode } from '$lib/apis/utils';
 	import { toast } from 'svelte-sonner';
 
-	const i18n = getContext('i18n');
+	import { getI18nContext } from '$lib/contexts';
+const i18n = getContext('i18n');
 
 	interface Props {
 		id?: string;
