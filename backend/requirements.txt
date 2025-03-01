@@ -40,7 +40,7 @@ anthropic
 google-generativeai==0.7.2
 tiktoken
 
-langchain==0.3.7
+langchain==0.3.19
 langchain-community==0.3.18
 
 fake-useragent==1.5.1
