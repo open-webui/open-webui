@@ -124,7 +124,7 @@
 			toast.error('Model not selected');
 			return;
 		}
-		prompt = `Explain this section to me in more detail\n\n\`\`\`\n${selectedText}\n\`\`\``;
+		prompt = `${$i18n.t('Explain this section to me in more detail')}\n\n\`\`\`\n${selectedText}\n\`\`\``;
 
 		responseContent = '';
 		const [res, controller] = await chatCompletion(localStorage.token, {
@@ -309,7 +309,7 @@
 			</div>
 		{/if}
 	{:else}
-		<div class="bg-white dark:bg-gray-850 dark:text-gray-100 rounded-xl shadow-xl w-80 max-w-full">
+		<div class="bg-white dark:bg-gray-850 dark:text-gray-100 rounded-xl shadow-xl min-w-80 w-full max-w-full">
 			<div
 				class="bg-gray-50/50 dark:bg-gray-800 dark:text-gray-100 text-medium rounded-xl px-3.5 py-3 w-full"
 			>

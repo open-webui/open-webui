@@ -775,7 +775,7 @@
 											if (type === 'explain') {
 												submitMessage(
 													message.id,
-													`Explain this section to me in more detail\n\n\`\`\`\n${content}\n\`\`\``
+													`${$i18n.t('Explain this section to me in more detail')}\n\n\`\`\`\n${content}\n\`\`\``
 												);
 											} else if (type === 'ask') {
 												const input = e.detail?.input ?? '';

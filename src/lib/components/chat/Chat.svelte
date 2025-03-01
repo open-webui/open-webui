@@ -1248,8 +1248,9 @@
 		}
 		if (messages.length != 0 && messages.at(-1).error && !messages.at(-1).content) {
 			// Error in response
-			toast.error($i18n.t(`Oops! There was an error in the previous response.`));
-			return;
+			// 이전 응답에 에러가 있을 때는, warning만 띄워주고 정상 답변하도록 수정
+			toast.warning($i18n.t(`Oops! There was an error in the previous response.`));
+			// return;
 		}
 		if (
 			files.length > 0 &&
