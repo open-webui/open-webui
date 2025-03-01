@@ -68,7 +68,7 @@ from open_webui.utils.misc import (
     get_last_user_message,
     get_last_assistant_message,
     prepend_to_first_user_message_content,
-    convert_logit_bias_input_to_json
+    convert_logit_bias_input_to_json,
 )
 from open_webui.utils.tools import get_tools
 from open_webui.utils.plugin import load_function_module_by_id
@@ -613,14 +613,16 @@ def apply_params_to_form_data(form_data, model):
             form_data["reasoning_effort"] = params["reasoning_effort"]
         if "logit_bias" in params:
             try:
-                form_data["logit_bias"] = json.loads(convert_logit_bias_input_to_json(params["logit_bias"]))
+                form_data["logit_bias"] = json.loads(
+                    convert_logit_bias_input_to_json(params["logit_bias"])
+                )
             except Exception as e:
                 print(f"Error parsing logit_bias: {e}")
 
     return form_data
 
 
-async def process_chat_payload(request, form_data, metadata, user, model):
+async def process_chat_payload(request, form_data, user, metadata, model):
 
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
@@ -862,7 +864,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
 
 async def process_chat_response(
-    request, response, form_data, user, events, metadata, tasks
+    request, response, form_data, user, metadata, model, events, tasks
 ):
     async def background_tasks_handler():
         message_map = Chats.get_messages_by_chat_id(metadata["chat_id"])
@@ -1067,9 +1069,11 @@ async def process_chat_response(
         },
         "__metadata__": metadata,
         "__request__": request,
-        "__model__": metadata.get("model"),
+        "__model__": model,
     }
-    filter_ids = get_sorted_filter_ids(form_data.get("model"))
+    filter_ids = get_sorted_filter_ids(model)
+
+    print(f"{filter_ids=}")
 
     # Streaming response
     if event_emitter and event_caller:
