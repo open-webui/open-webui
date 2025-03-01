@@ -1,0 +1,9 @@
+/Users/Jiho/Public/hkust-open-webui/markdown_wrapper/pdf_list/Postgraduate Prospectus 2025-26.pdf
+/Users/Jiho/Public/hkust-open-webui/markdown_wrapper/pdf_list/Undergraduate Student Exchange Prospectus.pdf
+/Users/Jiho/Public/hkust-open-webui/markdown_wrapper/pdf_list/ENGINEERING.pdf
+/Users/Jiho/Public/hkust-open-webui/markdown_wrapper/pdf_list/NON-LOCAL Student Guide.pdf
+/Users/Jiho/Public/hkust-open-webui/markdown_wrapper/pdf_list/HKUST Admission Flyer 2025-26.pdf
+/Users/Jiho/Public/hkust-open-webui/markdown_wrapper/pdf_list/Our Campus Our Living Lab.pdf
+/Users/Jiho/Public/hkust-open-webui/markdown_wrapper/pdf_list/School of Science Brochure.pdf
+/Users/Jiho/Public/hkust-open-webui/markdown_wrapper/pdf_list/JCH Resident Handbook 2024-25.pdf
+/Users/Jiho/Public/hkust-open-webui/markdown_wrapper/pdf_list/UG Resident Handbook 2024-25.pdf
