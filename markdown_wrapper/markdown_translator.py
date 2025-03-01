@@ -121,7 +121,13 @@ def translate_markdown_from_text(text: str, system_prompt: str, is_first_chunk: 
             messages=[{"role": "user", "content": prompt}],
             max_tokens=16000,
         )
-        return response.choices[0].message.content.strip()
+        
+        content = response.choices[0].message.content
+        if "```markdown" in content:
+            temp = content.split("```markdown")[1]
+            if "```" in temp:
+                return temp.split("```")[0]
+        return content
     except Exception as e:
         print(f"API 오류 발생: {str(e)}")
         return ""
