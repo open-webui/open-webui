@@ -11,8 +11,8 @@
 			models: false,
 			knowledge: false,
 			prompts: false,
-			public_sharing: true
-			tools: false,
+			public_sharing: true,
+			tools: false
 		},
 		chat: {
 			controls: true,
