@@ -271,6 +271,10 @@ else:
     pass
 
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
+# DATABASE_URL = os.environ.get(
+#     "DATABASE_URL", 
+#     "postgresql://alfanse.ramnivas:12345678@localhost:5432/openwebui"
+# )
 
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:

@@ -40,6 +40,7 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import { processGoogleDriveLink } from '$lib/apis/googledrive';
 
 	let largeScreen = true;
 
@@ -57,6 +58,16 @@
 		files: any[];
 	};
 
+	export interface FileMetadata {
+		id: string;
+		name: string;
+		path: string;
+		meta: {
+			name: string;
+			content_type: string;
+			size: number;
+		};
+	}
 	let id = null;
 	let knowledge: Knowledge | null = null;
 	let query = '';
@@ -133,6 +144,20 @@
 
 		knowledge.files = [...(knowledge.files ?? []), fileItem];
 
+		// Check if the file is an audio file and transcribe/convert it to text file
+		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
+			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (res) {
+				console.log(res);
+				const blob = new Blob([res.text], { type: 'text/plain' });
+				file = blobToFile(blob, `${file.name}.txt`);
+			}
+		}
+
 		try {
 			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
 				toast.error(`${e}`);
@@ -158,6 +183,108 @@
 			toast.error(`${e}`);
 		}
 	};
+
+	// handle drive link
+	const validateDriveLink = (link: string): boolean => {
+		const driveRegex =
+			/https:\/\/(?:drive\.google\.com\/(?:file\/d\/|drive\/folders\/|open\?id=)|docs\.google\.com\/(?:document|spreadsheets|presentation)\/d\/)([\w-]+)/;
+		return driveRegex.test(link); // Returns true if link matches the pattern
+	};
+
+	// Extract the file or folder ID from a given Google Drive or Google Docs link
+	const extractDriveId = (link: string): string | null => {
+		const match = link.match(
+			/https:\/\/(?:drive\.google\.com\/(?:file\/d\/|drive\/folders\/|open\?id=)|docs\.google\.com\/(?:document|spreadsheets|presentation)\/d\/)([\w-]+)/
+		);
+		return match ? match[1] : null; // Return the captured fileId (or null if no match)
+	};
+
+	const handleDriveLink = async (link: string) => {
+		if (!validateDriveLink(link)) {
+			toast.error('Invalid Google Drive link');
+			return;
+		}
+
+		const driveId = extractDriveId(link);
+		if (!driveId) {
+			toast.error('Could not extract Drive ID');
+			return;
+		}
+
+		try {
+			toast.info('Processing Google Drive link...');
+
+			// Step 1: Fetch file metadata after uploading to DB
+			const files_metadata: FileMetadata[] = await processGoogleDriveLink(
+				localStorage.token,
+				driveId
+				
+			);
+			toast.success('Files uploaded successfully!');
+
+			// Step 2: Process each file metadata entry
+			for (const fileMetadata of files_metadata) {
+				const tempItemId = uuidv4();
+
+				// Create a temporary file entry for UI updates
+				const tempFileItem = {
+					type: 'file',
+					file: '', // No actual file since it's already uploaded
+					id: null, // Will be updated after successful addition
+					url: '', // Add URL if your backend provides it
+					name: fileMetadata.name || `File from Google Drive (${fileMetadata.id})`, // Use metadata name
+					size: fileMetadata.meta.size, // File size from metadata
+					status: 'processing', // Initial processing state
+					error: '',
+					itemId: tempItemId
+				};
+
+				// Check for empty or invalid files to prevent invalid uploads
+				if (tempFileItem.size === 0) {
+					toast.error('You cannot upload an empty file.');
+					continue;
+				}
+
+				// Add the temporary file entry to the knowledge object
+				knowledge.files = [...(knowledge.files ?? []), tempFileItem];
+
+				try {
+					// Step 2.1: Add the file to the knowledge base using the file ID from metadata
+					toast.info(`Adding file ${fileMetadata.name} to the knowledge base...`);
+					await addFileHandler(fileMetadata.id);
+
+					// Step 2.2: Update the file object in the knowledge.files array upon success
+					knowledge.files = knowledge.files.map((item) => {
+						if (item.itemId === tempItemId) {
+							item.id = fileMetadata.id; // Set the actual database file ID
+							item.status = 'uploaded'; // Mark as successfully uploaded
+						}
+						delete item.itemId; // Remove the temporary ID since it's no longer needed
+						return item;
+					});
+
+					toast.success(`File ${fileMetadata.name} added to the knowledge base successfully.`);
+				} catch (error) {
+					// Handle errors specific to adding this file
+					console.error(`Failed to add file ${fileMetadata.name} to the knowledge base`, error);
+					toast.error(`Failed to add file ${fileMetadata.name} to the knowledge base.`);
+
+					// Mark the file as errored in local state
+					knowledge.files = knowledge.files.map((item) => {
+						if (item.itemId === tempItemId) {
+							item.status = 'error';
+							item.error = 'Failed to process this file.';
+						}
+						return item;
+					});
+				}
+			}
+		} catch (err) {
+			console.error('Drive processing failed:', err);
+			toast.error('Failed to process Google Drive link');
+		}
+	};
+	//  handle drive link
 
 	const uploadDirectoryHandler = async () => {
 		// Check if File System Access API is supported
@@ -822,6 +949,9 @@
 										}}
 										on:sync={(e) => {
 											showSyncConfirmModal = true;
+										}}
+										on:addDriveLink={(e) => {
+											handleDriveLink(e.detail.link);
 										}}
 									/>
 								</div>
