@@ -139,7 +139,7 @@ def translate_file_to_markdown(filename: str, input_file: str, output_folder: st
     chunks, system_prompt = load_file_content(input_file)
     if not chunks or not system_prompt:
         return None
-    
+
     combined_md = []
     for i, chunk in enumerate(chunks):
         is_first = (i == 0)
@@ -158,6 +158,7 @@ def remove_duplicate_headers(text: str) -> str:
     lines = text.split('\n')
     filtered = [line for line in lines if not line.strip().startswith('# ')]
     return '\n'.join(filtered)
+
 
 def save_to_markdown(filename, markdown_text, output_folder):
     os.makedirs(output_folder, exist_ok=True)
