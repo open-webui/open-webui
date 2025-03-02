@@ -849,6 +849,8 @@
 			return null;
 		});
 
+		console.log('chatCompletedHandler', res);
+
 		if (res !== null && res.messages) {
 			// Update chat history with the new messages
 			for (const message of res.messages) {
@@ -862,6 +864,11 @@
 						...message
 					};
 				}
+			}
+
+			if (res.prompt) {
+				// Set the prompt for the next response from that supplied.
+				await setPrompt(res.prompt);
 			}
 		}
 
@@ -1626,6 +1633,13 @@
 
 		await tick();
 		scrollToBottom();
+	};
+
+	const setPrompt = async (newPrompt) => {
+		// Set prompt for the next response. Note: this only sets the prompt; it does not submit it, thereby keeping the human in the loop.
+		console.log('setPrompt', newPrompt);
+		prompt = newPrompt;
+		await tick();
 	};
 
 	const handleOpenAIError = async (error, responseMessage) => {
