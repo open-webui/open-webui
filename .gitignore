@@ -307,3 +307,8 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
+
+# LLM 학습용 raw 파일
+markdown_wrapper/pdf_list/*
+markdown_wrapper/output_hall_html/*
+markdown_wrapper/output_html/*
