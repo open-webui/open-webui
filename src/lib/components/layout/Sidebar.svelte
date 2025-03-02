@@ -475,7 +475,7 @@
 			? ''
 			: 'invisible'}"
 	>
-		<div class="px-1.5 flex justify-between space-x-1 text-gray-600">
+		<div class="px-1.5 flex justify-between space-x-1 text-black">
 			<button
 				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 transition"
 				on:click={() => {
@@ -526,7 +526,7 @@
 							alt="logo"
 						/>
 					</div>
-					<div class=" self-center font-medium text-sm text-gray-850 font-primary">
+					<div class=" self-center font-medium text-sm text-black font-primary">
 						{$i18n.t('New Chat')}
 					</div>
 				</div>
@@ -564,7 +564,7 @@
 		{/if} -->
 
 		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
-			<div class="px-1.5 flex justify-center text-gray-800">
+			<div class="px-1.5 flex justify-center text-black">
 				<a
 					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 transition"
 					href="/workspace"
