@@ -372,3 +372,11 @@ input[type='number'] {
 .hljs-strong {
 	font-weight: 700;
 }
+
+.bg-navy {
+	background-color: navy;
+}
+
+.text-white {
+	color: white;
+}
