@@ -58,16 +58,7 @@
 							v{WEBUI_VERSION}
 						</Tooltip>
 
-						<a
-							href="https://github.com/ephemeral172/open-webui/releases/tag/v{version.latest}"
-							target="_blank"
-						>
-							{updateAvailable === null
-								? $i18n.t('Checking for updates...')
-								: updateAvailable
-									? `(v${version.latest} ${$i18n.t('available!')})`
-									: $i18n.t('(latest)')}
-						</a>
+					
 					</div>
 
 				
