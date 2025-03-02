@@ -90,7 +90,7 @@
     background: white;
     border-radius: 10px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    padding: 20px;
+    padding: 10px;
     width: 90%; /* Ширина модального окна */
     max-width: 1200px; /* Максимальная ширина */
     max-height: 90vh; /* Максимальная высота (90% высоты экрана) */
@@ -103,7 +103,7 @@
     .modal-content {
       width: 100%; /* На мобильных устройствах занимает всю ширину */
       max-width: 100%;
-      max-height: 86vh; /* Ограничиваем высоту */
+      max-height: 80vh; /* Ограничиваем высоту */
       border-radius: 0; /* Убираем скругление углов */
       padding: 8px; /* Уменьшаем отступы для мобильных устройств */
     }
