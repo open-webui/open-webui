@@ -1,119 +1,63 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const getAdminDetails = async (token: string) => {
-	let error = null;
+async function apiRequest<T>(url: string, options: RequestInit): Promise<T> {
+	try {
+		const response = await fetch(url, options);
+		if (!response.ok) {
+			const errorData = await response.json();
+			throw new Error(errorData?.detail ?? 'An error occurred');
+		}
+		return await response.json();
+	} catch (error) {
+		console.error('Request failed:', error);
+		throw error;
+	}
+}
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/admin/details`, {
+export const getAdminDetails = async (token: string) => {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/admin/details`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const getAdminConfig = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/admin/config`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/admin/config`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const updateAdminConfig = async (token: string, body: object) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/admin/config`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/admin/config`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify(body)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const getSessionUser = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
 		credentials: 'include'
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const ldapUserSignIn = async (user: string, password: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/ldap`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/ldap`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'
@@ -123,56 +67,21 @@ export const ldapUserSignIn = async (user: string, password: string) => {
 			user: user,
 			password: password
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const getLdapConfig = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/admin/config/ldap`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/admin/config/ldap`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const updateLdapConfig = async (token: string = '', enable_ldap: boolean) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/admin/config/ldap`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/admin/config/ldap`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -181,83 +90,32 @@ export const updateLdapConfig = async (token: string = '', enable_ldap: boolean)
 		body: JSON.stringify({
 			enable_ldap: enable_ldap
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const getLdapServer = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/admin/config/ldap/server`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/admin/config/ldap/server`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const updateLdapServer = async (token: string = '', body: object) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/admin/config/ldap/server`, {
+	return await fetch(`${WEBUI_API_BASE_URL}/auths/admin/config/ldap/server`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify(body)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const userSignIn = async (email: string, password: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signin`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/signin`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'
@@ -267,23 +125,7 @@ export const userSignIn = async (email: string, password: string) => {
 			email: email,
 			password: password
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const userSignUp = async (
@@ -292,9 +134,7 @@ export const userSignUp = async (
 	password: string,
 	profile_image_url: string
 ) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signup`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/signup`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'
@@ -306,47 +146,17 @@ export const userSignUp = async (
 			password: password,
 			profile_image_url: profile_image_url
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const userSignOut = async () => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signout`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/signout`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json'
 		},
 		credentials: 'include'
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res;
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
+	});
 };
 
 export const addUser = async (
@@ -356,9 +166,7 @@ export const addUser = async (
 	password: string,
 	role: string = 'pending'
 ) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/add`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/add`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -370,28 +178,11 @@ export const addUser = async (
 			password: password,
 			role: role
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const updateUserProfile = async (token: string, name: string, profileImageUrl: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/update/profile`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/update/profile`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -401,28 +192,11 @@ export const updateUserProfile = async (token: string, name: string, profileImag
 			name: name,
 			profile_image_url: profileImageUrl
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const updateUserPassword = async (token: string, password: string, newPassword: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/update/password`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/update/password`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -432,82 +206,31 @@ export const updateUserPassword = async (token: string, password: string, newPas
 			password: password,
 			new_password: newPassword
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const getSignUpEnabledStatus = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signup/enabled`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/signup/enabled`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const getDefaultUserRole = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signup/user/role`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/signup/user/role`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const updateDefaultUserRole = async (token: string, role: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signup/user/role`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/signup/user/role`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -516,82 +239,31 @@ export const updateDefaultUserRole = async (token: string, role: string) => {
 		body: JSON.stringify({
 			role: role
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const toggleSignUpEnabledStatus = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signup/enabled/toggle`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/signup/enabled/toggle`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const getJWTExpiresDuration = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/token/expires`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/token/expires`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const updateJWTExpiresDuration = async (token: string, duration: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/token/expires/update`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/token/expires/update`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -600,95 +272,35 @@ export const updateJWTExpiresDuration = async (token: string, duration: string) 
 		body: JSON.stringify({
 			duration: duration
 		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+	});
 };
 
 export const createAPIKey = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_key`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/api_key`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-	if (error) {
-		throw error;
-	}
-	return res.api_key;
+	});
 };
 
 export const getAPIKey = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_key`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/api_key`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-	if (error) {
-		throw error;
-	}
-	return res.api_key;
+	});
 };
 
 export const deleteAPIKey = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_key`, {
+	return await apiRequest(`${WEBUI_API_BASE_URL}/auths/api_key`, {
 		method: 'DELETE',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-	if (error) {
-		throw error;
-	}
-	return res;
+	});
 };
