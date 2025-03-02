@@ -902,6 +902,15 @@
 						>
 							<div class="self-center font-semibold">Credit: HK$ {$credit}</div>
 						</button>
+						<button 
+							class="flex items-center rounded-xl py-4.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							on:click={() => {
+							const googleFormUrl = "https://forms.gle/BTaYgVu1qkPUQH3g7";
+							window.open(googleFormUrl, "_blank"); // Opens in a new tab
+						}}
+						>
+						<div class="self-center font-semibold">Rate Your Experience</div>
+					</button>	
 					</CreditMenu>
 					<UserMenu
 						role={$user.role}
