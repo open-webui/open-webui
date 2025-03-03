@@ -1,5 +1,5 @@
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import json
 import redis
 import uuid
@@ -17,19 +17,40 @@ class AzureCredentialService:
     def __init__(self):
         from azure.identity import DefaultAzureCredential
         self.credential = DefaultAzureCredential()
+        self.azure_token = { "access_token": None, "expiry_time": None }
+        self.resource = "https://redis.azure.com/.default"
+        self.get_token()
 
+    # get a token from credential provider, if new token received update azure token cache
     def get_token(self):
-        resource = "https://redis.azure.com/.default"
-        token = self.credential.get_token(resource)
-        if token:
-            expires_on = datetime.fromtimestamp(token.expires_on).strftime('%Y-%m-%d %H:%M:%S')
-            log.info(f"Receive Microsoft Entra token for resource: {resource}, expires on: {expires_on}")
-            return token.token
-        else:
-            log.error(f"Failed to get Microsoft Entra token for resource: {resource}")
+        token = self.credential.get_token(self.resource)
+        if not token:
+            log.error(f"Failed to retrieve Microsoft Entra token for resource: {self.resource}")
             return None
+        if token.token != self.azure_token["access_token"]:
+            self.azure_token.update({
+                'access_token': token.token,
+                'expiry_time': token.expires_on
+            })
+            expires_on = datetime.fromtimestamp(self.azure_token["expiry_time"]).strftime('%Y-%m-%d %H:%M:%S')
+            log.info(f"Receive Microsoft Entra token for resource: {self.resource}, expires on: {expires_on}")
+        return self.azure_token["access_token"]
 
-    def extract_username_from_token(self, token):
+    def get_time_to_expire(self):
+        if not self.azure_token["expiry_time"]:
+            return 0
+        time_to_expire = self.azure_token["expiry_time"] - datetime.now(timezone.utc).timestamp() - 300 # 5 mins grace
+        return max(time_to_expire, 0)
+
+    def is_expired(self):
+        if not self.azure_token["expiry_time"]:
+            return True
+        expiry_time = datetime.fromtimestamp(self.azure_token["expiry_time"], tz=timezone.utc)
+        return datetime.now(timezone.utc) >= (expiry_time - timedelta(minutes=5))
+
+    # extract username from token
+    @staticmethod
+    def get_username(token):
         parts = token.split('.')
         base64_str = parts[1]
 
@@ -44,11 +65,13 @@ class AzureCredentialService:
 
         return jwt['oid']
 
+
 # Initialze global Azure credentials provider if enabled
 global azure_credential_service
 azure_credential_service = None
 if WEBSOCKET_REDIS_AZURE_CREDENTIALS:
     azure_credential_service = AzureCredentialService()
+
 
 class RedisService:
 
@@ -63,7 +86,7 @@ class RedisService:
         token = None
         if get_credentials and azure_credential_service:
             token = azure_credential_service.get_token()
-            self.username = azure_credential_service.extract_username_from_token(token)
+            self.username = azure_credential_service.get_username(token)
         else:
             token = self.password
         try:
@@ -111,14 +134,13 @@ def reinit_onerror(func):
     def wrapper(*args, **kwargs):
         # Get the instance of the class
         instance = args[0]
-        cls = instance.__class__
         try:
             return func(*args, **kwargs)
         except Exception as e:
             log.exception(f'{func.__name__} error: {e}')
             log.info(f"Re-authenticate and initialize Redis Cache connection")
-            cls.redis_service.init_redis(True)
-            cls.redis = cls.redis_service.get_client()
+            instance.redis_service.init_redis(True)
+            instance.redis = instance.redis_service.get_client()
             return func(*args, **kwargs)
     return wrapper
 
