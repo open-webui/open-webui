@@ -46,10 +46,10 @@ def get_redis_manager():
         redis_options["ssl_ca_certs"] = WEBSOCKET_REDIS_CERTS
 
     try:
-    mgr = socketio.AsyncRedisManager(
-        WEBSOCKET_REDIS_URL,
-        redis_options=redis_options
-    )
+        mgr = socketio.AsyncRedisManager(
+            WEBSOCKET_REDIS_URL,
+            redis_options=redis_options
+        )
         return mgr
     except ConnectionError as e:
         log.exception(f"Could not connect to Redis: {e}")
