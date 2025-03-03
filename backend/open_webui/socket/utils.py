@@ -1,7 +1,20 @@
 import json
 import redis
 import uuid
+from urllib.parse import urlparse
 
+def parse_redis_sentinel_url(redis_url):
+    parsed_url = urlparse(redis_url)
+    if parsed_url.scheme != "redis":
+        raise ValueError("Invalid Redis URL scheme. Must be 'redis'.")
+
+    return {
+        "username": parsed_url.username or None,
+        "password": parsed_url.password or None,
+        "service": parsed_url.hostname or 'mymaster',
+        "port": parsed_url.port or 6379,
+        "db": int(parsed_url.path.lstrip("/") or 0),
+    }
 
 class RedisLock:
     def __init__(self, redis_url, lock_name, timeout_secs):
