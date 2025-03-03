@@ -12,6 +12,7 @@ from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
     WEBSOCKET_MANAGER,
     WEBSOCKET_REDIS_URL,
+    WEBSOCKET_REDIS_LOCK_TIMEOUT,
     WEBSOCKET_REDIS_CERTS,
     WEBSOCKET_REDIS_USERNAME,
     WEBSOCKET_REDIS_PASSWORD,
@@ -90,7 +91,7 @@ if WEBSOCKET_MANAGER == "redis":
     clean_up_lock = RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,
         lock_name="usage_cleanup_lock",
-        timeout_secs=TIMEOUT_DURATION * 2,
+        timeout_secs=WEBSOCKET_REDIS_LOCK_TIMEOUT,
         redis_options=redis_options
     )
     aquire_func = clean_up_lock.aquire_lock
