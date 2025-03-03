@@ -149,7 +149,7 @@ async def generate_direct_chat_completion(
             }
         )
 
-        if "error" in res:
+        if "error" in res and res["error"]:
             raise Exception(res["error"])
 
         return res
