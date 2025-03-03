@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
+	import TextWithGradient from '$lib/IONOS/components/TextWithGradient.svelte'
 	import AgentSelector from '$lib/IONOS/components/AgentSelector.svelte'
 	import PromptSelector from '$lib/IONOS/components/PromptSelector.svelte'
 	import Robot from '$lib/components/icons/Robot.svelte'
@@ -16,11 +17,13 @@
 </script>
 
 <content class="flex flex-col items-center pt-20 mx-3">
-	<h1 class="my-5 text-3xl text-center text-pink-300">
-		{$i18n.t('Welcome to IONOS GPT,', { ns: 'ionos' })}
-		<br>
-		{$i18n.t('Where AI becomes your ultimate team of experts!', { ns: 'ionos' })}
-	</h1>
+	<TextWithGradient>
+		<h1 class="my-5 text-3xl text-center">
+			{$i18n.t('Welcome to IONOS GPT,', { ns: 'ionos' })}
+			<br>
+			{$i18n.t('Where AI becomes your ultimate team of experts!', { ns: 'ionos' })}
+		</h1>
+	</TextWithGradient>
 
 	<p class="max-w-3xl mb-4 text-sm">
 		{$i18n.t('From ideas to execution, our virtual team is here to help — from writing and design to coding, they handle the details so you can focus on what matters. Get to know them and see how they can support your projects.', { ns: 'ionos' })}
