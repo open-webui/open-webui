@@ -2,7 +2,6 @@ import json
 import logging
 import os
 import shutil
-import base64
 
 from datetime import datetime
 from pathlib import Path
@@ -21,8 +20,6 @@ from open_webui.env import (
     OFFLINE_MODE,
     OPEN_WEBUI_DIR,
     WEBUI_AUTH,
-    WEBUI_FAVICON_URL,
-    WEBUI_NAME,
     log,
 )
 from open_webui.internal.db import Base, get_db
