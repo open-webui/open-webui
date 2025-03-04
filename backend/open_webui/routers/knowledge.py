@@ -300,39 +300,38 @@ def add_file_to_knowledge_by_id(
             detail=str(e),
         )
 
-    if knowledge:
-        data = knowledge.data or {}
-        file_ids = data.get("file_ids", [])
-
-        if form_data.file_id not in file_ids:
-            file_ids.append(form_data.file_id)
-            data["file_ids"] = file_ids
-
-            knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
-
-            if knowledge:
-                files = Files.get_files_by_ids(file_ids)
-
-                return KnowledgeFilesResponse(
-                    **knowledge.model_dump(),
-                    files=files,
-                )
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT("knowledge"),
-                )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("file_id"),
-            )
-    else:
+    if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+    data = knowledge.data or {}
+    file_ids: list = data.get("file_ids", [])
+
+    if form_data.file_id in file_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT("file_id"),
+        )
+
+    file_ids.append(form_data.file_id)
+    data["file_ids"] = file_ids
+
+    knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
+
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT("knowledge"),
+        )
+
+    files = Files.get_files_by_ids(file_ids)
+
+    return KnowledgeFilesResponse(
+        **knowledge.model_dump(),
+        files=files,
+    )
 
 @router.post("/{id}/file/update", response_model=Optional[KnowledgeFilesResponse])
 def update_file_from_knowledge_by_id(
@@ -449,39 +448,38 @@ def remove_file_from_knowledge_by_id(
     # Delete file from database
     Files.delete_file_by_id(form_data.file_id)
 
-    if knowledge:
-        data = knowledge.data or {}
-        file_ids = data.get("file_ids", [])
-
-        if form_data.file_id in file_ids:
-            file_ids.remove(form_data.file_id)
-            data["file_ids"] = file_ids
-
-            knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
-
-            if knowledge:
-                files = Files.get_files_by_ids(file_ids)
-
-                return KnowledgeFilesResponse(
-                    **knowledge.model_dump(),
-                    files=files,
-                )
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT("knowledge"),
-                )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("file_id"),
-            )
-    else:
+    if not knowledge:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+    data = knowledge.data or {}
+    file_ids: list = data.get("file_ids", [])
+
+    if form_data.file_id not in file_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT("file_id"),
+        )
+
+    file_ids.remove(form_data.file_id)
+    data["file_ids"] = file_ids
+
+    knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
+
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT("knowledge"),
+        )
+
+    files = Files.get_files_by_ids(file_ids)
+
+    return KnowledgeFilesResponse(
+        **knowledge.model_dump(),
+        files=files,
+    )
 
 ############################
 # DeleteKnowledgeById
