@@ -66,7 +66,7 @@ class JupyterCodeExecuter:
             await self.init_kernel()
             await self.execute_code()
         except Exception as err:
-            logger.error(err)
+            logger.exception("execute code failed, %s", err)
             self.result.stderr = f"Error: {err}"
         return self.result
 
