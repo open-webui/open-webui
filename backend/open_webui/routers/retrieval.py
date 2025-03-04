@@ -28,6 +28,11 @@ import tiktoken
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_core.documents import Document
 
+# *****
+from open_webui.utils.parser import DefaultParser, PARSING_TYPE
+from open_webui.functions import get_function_module_by_id
+# *****
+
 from open_webui.models.files import FileModel, Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
@@ -712,10 +717,6 @@ def save_docs_to_vector_db(
         f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
     )
 
-    print("NEW PARSER HERE")
-    print(Functions.get_functions_by_type("parser"))
-    print(Functions.get_functions())
-
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and "hash" in metadata:
         result = VECTOR_DB_CLIENT.query(
@@ -836,6 +837,38 @@ def save_docs_to_vector_db(
     except Exception as e:
         log.exception(e)
         raise e
+
+
+
+def get_parser_list_by_type(request, parser_type, active_only=False):
+
+    print(f"***** NEED TO ESTABLISH VERIFICATION HERE")
+    parser_files = Functions.get_functions_by_type("parser", active_only)
+    all_parsers = [get_function_module_by_id(request, pf.id) for pf in parser_files]
+
+    # bit wordy but allows users to set either a single type or a list of types
+    relevant_parsers = []
+    for parser in all_parsers:
+        # 1. single item needs to be moved to list
+        if type(parser.parser_type) == PARSING_TYPE:
+            parser.parser_type = [parser.parser_type]
+
+        # 2. all needs to be changed to list of all types. All overrides other settings
+        if PARSING_TYPE.ALL in parser.parser_type:
+            # ugly but new parser types will automatically be accounted for
+            parser.parser_type = [t for t in PARSING_TYPE]
+            parser.parser_type.remove(PARSING_TYPE.ALL)
+
+        # 3. list of viable items is now looked at
+        if parser_type in parser.parser_type:
+            relevant_parsers.append(parser)
+
+    # need to have at least one parsing option every time
+    if len(relevant_parsers) == 0:
+        log.info(f"No parsers for {parser_type}. Using DefaultParser")
+        relevant_parsers.append(DefaultParser(parser_type))
+
+    return relevant_parsers
 
 
 class ProcessFileForm(BaseModel):
@@ -961,34 +994,41 @@ def process_file(
         hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)
 
-        try:
-            result = save_docs_to_vector_db(
-                request,
-                docs=docs,
-                collection_name=collection_name,
-                metadata={
-                    "file_id": file.id,
-                    "name": file.filename,
-                    "hash": hash,
-                },
-                add=(True if form_data.collection_name else False),
-                user=user,
-            )
+        print("PROCESSING FILE")
+        parsers = get_parser_list_by_type(request, PARSING_TYPE.FILE)
 
-            if result:
-                Files.update_file_metadata_by_id(
-                    file.id,
-                    {
-                        "collection_name": collection_name,
+        try:
+            for parser in parsers:
+                print(type(parser))
+                print(parser)
+
+                result = parser.save_docs_to_vector_db(
+                    request,
+                    docs=docs,
+                    collection_name=collection_name,
+                    metadata={
+                        "file_id": file.id,
+                        "name": file.filename,
+                        "hash": hash,
                     },
+                    add=(True if form_data.collection_name else False),
+                    user=user,
                 )
 
-                return {
-                    "status": True,
-                    "collection_name": collection_name,
-                    "filename": file.filename,
-                    "content": text_content,
-                }
+                if result:
+                    Files.update_file_metadata_by_id(
+                        file.id,
+                        {
+                            "collection_name": collection_name,
+                        },
+                    )
+
+                    return {
+                        "status": True,
+                        "collection_name": collection_name,
+                        "filename": file.filename,
+                        "content": text_content,
+                    }
         except Exception as e:
             raise e
     except Exception as e:
@@ -1030,8 +1070,11 @@ def process_text(
     text_content = form_data.content
     log.debug(f"text_content: {text_content}")
 
-    result = save_docs_to_vector_db(request, docs, collection_name, user=user)
-    if result:
+    parsers = get_parser_list_by_type(request, PARSING_TYPE.TEXT)
+    results = [p.save_docs_to_vector_db(request, docs, collection_name, user=user) for p in parsers]
+
+    #result = save_docs_to_vector_db(request, docs, collection_name, user=user)
+    if all(results):
         return {
             "status": True,
             "collection_name": collection_name,
@@ -1063,9 +1106,15 @@ def process_youtube_video(
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")
 
-        save_docs_to_vector_db(
-            request, docs, collection_name, overwrite=True, user=user
-        )
+        parsers = get_parser_list_by_type(request, PARSING_TYPE.YOUTUBE)
+
+        for parser in parsers:
+            parser.save_docs_to_vector_db(
+                request, docs, collection_name, overwrite=True, user=user
+            )
+            #save_docs_to_vector_db(
+            #    request, docs, collection_name, overwrite=True, user=user
+            #)
 
         return {
             "status": True,
@@ -1105,10 +1154,16 @@ def process_web(
         docs = loader.load()
         content = " ".join([doc.page_content for doc in docs])
 
+        parsers = get_parser_list_by_type(request, PARSING_TYPE.WEB_CONTENT)
+
         log.debug(f"text_content: {content}")
-        save_docs_to_vector_db(
-            request, docs, collection_name, overwrite=True, user=user
-        )
+        for parser in parsers:
+            parser.save_docs_to_vector_db(
+                request, docs, collection_name, overwrite=True, user=user
+            )
+        #save_docs_to_vector_db(
+        #    request, docs, collection_name, overwrite=True, user=user
+        #)
 
         return {
             "status": True,
@@ -1347,9 +1402,15 @@ def process_web_search(
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
         )
         docs = loader.load()
-        save_docs_to_vector_db(
-            request, docs, collection_name, overwrite=True, user=user
-        )
+
+        parsers = get_parser_list_by_type(request, PARSING_TYPE.WEB_SEARCH)
+        for parser in parsers:
+            parser.save_docs_to_vector_db(
+                request, docs, collection_name, overwrite=True, user=user
+            )
+        #save_docs_to_vector_db(
+        #    request, docs, collection_name, overwrite=True, user=user
+        #)
 
         return {
             "status": True,
@@ -1591,13 +1652,15 @@ def process_files_batch(
     # Save all documents in one batch
     if all_docs:
         try:
-            save_docs_to_vector_db(
-                request=request,
-                docs=all_docs,
-                collection_name=collection_name,
-                add=True,
-                user=user,
-            )
+            parsers = get_parser_list_by_type(request, PARSING_TYPE.FILE)
+            for parser in parsers:
+                parser.save_docs_to_vector_db(
+                    request=request,
+                    docs=all_docs,
+                    collection_name=collection_name,
+                    add=True,
+                    user=user,
+                )
 
             # Update all files with collection name
             for result in results:
