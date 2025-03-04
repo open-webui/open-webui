@@ -71,9 +71,8 @@ def override_static(path: str, content: str):
 def get_license_data(app, key):
     if key:
         try:
-            # https://api.openwebui.com
             res = requests.post(
-                "http://localhost:5555/api/v1/license",
+                "https://api.openwebui.com/api/v1/license",
                 json={"key": key, "version": "1"},
                 timeout=5,
             )
