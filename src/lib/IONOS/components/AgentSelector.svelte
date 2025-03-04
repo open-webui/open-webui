@@ -7,15 +7,15 @@
 	const i18n = getContext('i18n');
 </script>
 
-<div class="flex flex-row gap-4 items-center h-96">
+<div class="flex flex-row gap-4 items-center">
 	{#each $agents as { id, name, subtitle, description, avatarUrl }}
 		<div
-			class="flex-0 transition group w-48 hover:w-60 pb-4 mx-6 hover:mx-0 bg-white text-left rounded-3xl shadow-xl cursor-pointer transition group"
+			class="flex-0 transition-[width,margin-left,margin-right,margin-top,margin-bottom] duration-[500ms] group w-44 hover:w-60 pb-4 mx-6 my-8 hover:mx-0 hover:my-0 bg-white text-left rounded-3xl shadow-xl cursor-pointer transition group"
 			data-id={id}
 			tabindex="0"
 			role="button"
 		>
-			<div class="overflow-hidden h-40 w-48 group-hover:w-60 group-hover:h-48 rounded-t-3xl">
+			<div class="overflow-hidden transition-[width,height] duration-[500ms] h-36 w-44 group-hover:w-60 group-hover:h-48 rounded-t-3xl">
 				<img
 					class="rounded-3xl rounded-b-none"
 					src={avatarUrl}
@@ -29,7 +29,7 @@
 				<h2 class="text-sm">
 					{subtitle}
 				</h2>
-				<div class="mt-0 overflow-hidden transition-[height] h-0 group-hover:h-36 group-hover:mt-4 ">
+				<div class="mt-0 overflow-hidden duration-[500ms] transition-[height,margin-top] h-0 group-hover:h-36 group-hover:mt-4 ">
 					<p class="text-xs">
 						{description}
 					</p>
