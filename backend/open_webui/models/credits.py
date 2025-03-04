@@ -84,7 +84,7 @@ class CreditsTable:
     def add_credit_by_user_id(self, user_id: str, amount: Decimal) -> Optional[CreditModel]:
         with get_db() as db:
             db.query(Credit).filter(Credit.user_id == user_id).update(
-                {"credit": Credit.credit + amount}, synchronize_session=False
+                {"credit": Credit.credit + amount, "updated_at": int(time.time())}, synchronize_session=False
             )
             db.commit()
         return self.get_credit_by_user_id(user_id=user_id)
