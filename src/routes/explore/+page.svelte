@@ -32,15 +32,15 @@
 	</span>
 </div>
 
-<div class="block py-5 my-16">
+<div class="block py-5 my-2">
 	<AgentSelector />
 </div>
 
-<h1 class="text-xl my-4">
+<h1 class="my-4 text-xl text-center">
 	{$i18n.t('Bringing your ideas to life is easy with our AI specialists', { ns: 'ionos' })}
 </h1>
 
-<p class="max-w-2xl text-sm">
+<p class="max-w-2xl text-sm text-center">
 	{$i18n.t('Whether you need great content, eye-catching designs, or clean code, your virtual team is here to help every step of the way.', { ns: 'ionos' })}
 </p>
 
