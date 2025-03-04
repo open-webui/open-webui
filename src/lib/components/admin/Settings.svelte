@@ -193,7 +193,7 @@
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'code-execution'
 				? ''
-				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+				: ' text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'}"
 			on:click={() => {
 				selectedTab = 'code-execution';
 			}}
