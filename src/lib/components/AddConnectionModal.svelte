@@ -83,6 +83,12 @@
 			return;
 		}
 
+		if (url.indexOf('openai.azure.com') >= 0 && modelIds.length === 0) {
+			loading = false;
+			toast.error('Add at least one deployment ID')
+			return;
+		}
+
 		const connection = {
 			url,
 			key,
@@ -179,28 +185,30 @@
 								</div>
 							</div>
 
-							<Tooltip content="Verify Connection" className="self-end -mb-1">
-								<button
-									class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
-									on:click={() => {
-										verifyHandler();
-									}}
-									type="button"
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4"
+							{#if !url.includes('openai.azure.com')}
+								<Tooltip content="Verify Connection" className="self-end -mb-1">
+									<button
+										class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
+										on:click={() => {
+											verifyHandler();
+										}}
+										type="button"
 									>
-										<path
-											fill-rule="evenodd"
-											d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
-											clip-rule="evenodd"
-										/>
-									</svg>
-								</button>
-							</Tooltip>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
+							{/if}
 
 							<div class="flex flex-col shrink-0 self-end">
 								<Tooltip content={enable ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
@@ -248,7 +256,13 @@
 
 						<div class="flex flex-col w-full">
 							<div class="mb-1 flex justify-between">
-								<div class="text-xs text-gray-500">{$i18n.t('Model IDs')}</div>
+								<div class="text-xs text-gray-500">
+									{#if url.includes('openai.azure.com')}
+										{$i18n.t('Deployments')}
+									{:else}
+										{$i18n.t('Model IDs')}
+									{/if}
+								</div>
 							</div>
 
 							{#if modelIds.length > 0}
@@ -277,6 +291,10 @@
 										{$i18n.t('Leave empty to include all models from "{{URL}}/api/tags" endpoint', {
 											URL: url
 										})}
+									{:else if url.includes('openai.azure.com')}
+										{$i18n.t('Enter all deployment IDs to include (required)', {
+											URL: url
+										})}
 									{:else}
 										{$i18n.t('Leave empty to include all models from "{{URL}}/models" endpoint', {
 											URL: url
@@ -294,7 +312,7 @@
 									? ''
 									: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 								bind:value={modelId}
-								placeholder={$i18n.t('Add a model ID')}
+								placeholder={url.includes('openai.azure.com') ? $i18n.t('Add a deployment ID') : $i18n.t('Add a model ID')}
 							/>
 
 							<div>

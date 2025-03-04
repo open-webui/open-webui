@@ -641,6 +641,7 @@ async def generate_chat_completion(
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
         payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
+    model_name = payload["model"]
 
     # Add user info to the payload if the model is a pipeline
     if "pipeline" in model and model.get("pipeline"):
@@ -682,10 +683,18 @@ async def generate_chat_completion(
 
         r = await session.request(
             method="POST",
-            url=f"{url}/chat/completions",
+            url=(
+                f"{url}/openai/deployments/{model_name}/chat/completions?api-version=2025-02-01-preview"
+                if "openai.azure.com" in url
+                else f"{url}/chat/completions"
+            ),
             data=payload,
             headers={
-                "Authorization": f"Bearer {key}",
+                **(
+                    {"api-key": key}
+                    if "openai.azure.com" in url
+                    else {"Authorization": f"Bearer {key}"}
+                ),
                 "Content-Type": "application/json",
                 **(
                     {
