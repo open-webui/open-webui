@@ -1459,6 +1459,18 @@ async def process_chat_response(
                     nonlocal content_blocks
 
                     response_tool_calls = []
+                    stream_filter_ids = []
+                    for filter_id in filter_ids:
+                        filter = Functions.get_function_by_id(filter_id)
+                        if not filter:
+                            continue
+                        if filter_id in request.app.state.FUNCTIONS:
+                            function_module = request.app.state.FUNCTIONS[filter_id]
+                        else:
+                            function_module, _, _ = load_function_module_by_id(filter_id)
+                            request.app.state.FUNCTIONS[filter_id] = function_module
+                        if hasattr(function_module, "stream"):
+                            stream_filter_ids.append(filter_id)
 
                     async for line in response.body_iterator:
                         line = line.decode("utf-8") if isinstance(line, bytes) else line
@@ -1480,7 +1492,7 @@ async def process_chat_response(
 
                             data, _ = await process_filter_functions(
                                 request=request,
-                                filter_ids=filter_ids,
+                                filter_ids=stream_filter_ids,
                                 filter_type="stream",
                                 form_data=data,
                                 extra_params=extra_params,
