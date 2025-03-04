@@ -1468,7 +1468,7 @@ async def process_chat_response(
                     response_tool_calls = []
 
                     with CreditDeduct(
-                            user=user, model=model, body=form_data, is_stream=isinstance(response, StreamingResponse)
+                        user=user, model=model, body=form_data, is_stream=isinstance(response, StreamingResponse)
                     ) as credit_deduct:
 
                         async for line in response.body_iterator:
