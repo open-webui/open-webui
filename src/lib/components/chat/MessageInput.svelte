@@ -676,7 +676,7 @@
 												bind:value={prompt}
 												id="chat-input"
 												messageInput={true}
-												shiftEnter={!($settings?.alternativeEnterBehavior ?? false) &&
+												shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
 													(!$mobile ||
 														!(
 															'ontouchstart' in window ||
@@ -810,12 +810,12 @@
 															//
 															// Depending on the user's settings, it will send the message
 															// either when Enter is pressed or when Ctrl+Enter is pressed.
-															const submitMessage =
-																($settings?.alternativeEnterBehavior ?? false)
-																	? e.keyCode === 13 && isCtrlPressed
-																	: e.keyCode === 13 && !e.shiftKey;
+															const enterPressed =
+																($settings?.ctrlEnterToSend ?? false)
+																	? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
+																	: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
 
-															if (submitMessage) {
+															if (enterPressed) {
 																e.preventDefault();
 																if (prompt !== '' || files.length > 0) {
 																	dispatch('submit', prompt);
@@ -882,38 +882,17 @@
 											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
-											on:keypress={(e) => {
-												if (
-													!$mobile ||
-													!(
-														'ontouchstart' in window ||
-														navigator.maxTouchPoints > 0 ||
-														navigator.msMaxTouchPoints > 0
-													)
-												) {
-													// Prevent Enter key from creating a new line
-													if (e.key === 'Enter' && !e.shiftKey) {
-														e.preventDefault();
-													}
-
-													// Submit the prompt when Enter key is pressed
-													if (
-														(prompt !== '' || files.length > 0) &&
-														e.key === 'Enter' &&
-														!e.shiftKey
-													) {
-														dispatch('submit', prompt);
-													}
-												}
-											}}
 											on:keydown={async (e) => {
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+
+												console.log('keydown', e);
 												const commandsContainerElement =
 													document.getElementById('commands-container');
 
 												if (e.key === 'Escape') {
 													stopResponse();
 												}
+
 												// Command/Ctrl + Shift + Enter to submit a message pair
 												if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
 													e.preventDefault();
@@ -949,51 +928,83 @@
 													editButton?.click();
 												}
 
-												if (commandsContainerElement && e.key === 'ArrowUp') {
-													e.preventDefault();
-													commandsElement.selectUp();
+												if (commandsContainerElement) {
+													if (commandsContainerElement && e.key === 'ArrowUp') {
+														e.preventDefault();
+														commandsElement.selectUp();
 
-													const commandOptionButton = [
-														...document.getElementsByClassName('selected-command-option-button')
-													]?.at(-1);
-													commandOptionButton.scrollIntoView({ block: 'center' });
-												}
+														const commandOptionButton = [
+															...document.getElementsByClassName('selected-command-option-button')
+														]?.at(-1);
+														commandOptionButton.scrollIntoView({ block: 'center' });
+													}
 
-												if (commandsContainerElement && e.key === 'ArrowDown') {
-													e.preventDefault();
-													commandsElement.selectDown();
+													if (commandsContainerElement && e.key === 'ArrowDown') {
+														e.preventDefault();
+														commandsElement.selectDown();
 
-													const commandOptionButton = [
-														...document.getElementsByClassName('selected-command-option-button')
-													]?.at(-1);
-													commandOptionButton.scrollIntoView({ block: 'center' });
-												}
+														const commandOptionButton = [
+															...document.getElementsByClassName('selected-command-option-button')
+														]?.at(-1);
+														commandOptionButton.scrollIntoView({ block: 'center' });
+													}
 
-												if (commandsContainerElement && e.key === 'Enter') {
-													e.preventDefault();
+													if (commandsContainerElement && e.key === 'Enter') {
+														e.preventDefault();
 
-													const commandOptionButton = [
-														...document.getElementsByClassName('selected-command-option-button')
-													]?.at(-1);
+														const commandOptionButton = [
+															...document.getElementsByClassName('selected-command-option-button')
+														]?.at(-1);
 
-													if (e.shiftKey) {
-														prompt = `${prompt}\n`;
-													} else if (commandOptionButton) {
+														if (e.shiftKey) {
+															prompt = `${prompt}\n`;
+														} else if (commandOptionButton) {
+															commandOptionButton?.click();
+														} else {
+															document.getElementById('send-message-button')?.click();
+														}
+													}
+
+													if (commandsContainerElement && e.key === 'Tab') {
+														e.preventDefault();
+
+														const commandOptionButton = [
+															...document.getElementsByClassName('selected-command-option-button')
+														]?.at(-1);
+
 														commandOptionButton?.click();
-													} else {
-														document.getElementById('send-message-button')?.click();
+													}
+												} else {
+													if (
+														!$mobile ||
+														!(
+															'ontouchstart' in window ||
+															navigator.maxTouchPoints > 0 ||
+															navigator.msMaxTouchPoints > 0
+														)
+													) {
+														console.log('keypress', e);
+														// Prevent Enter key from creating a new line
+														const isCtrlPressed = e.ctrlKey || e.metaKey;
+														const enterPressed =
+															($settings?.ctrlEnterToSend ?? false)
+																? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
+																: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
+
+														console.log('Enter pressed:', enterPressed);
+
+														if (enterPressed) {
+															e.preventDefault();
+														}
+
+														// Submit the prompt when Enter key is pressed
+														if ((prompt !== '' || files.length > 0) && enterPressed) {
+															dispatch('submit', prompt);
+														}
 													}
 												}
 
-												if (commandsContainerElement && e.key === 'Tab') {
-													e.preventDefault();
-
-													const commandOptionButton = [
-														...document.getElementsByClassName('selected-command-option-button')
-													]?.at(-1);
-
-													commandOptionButton?.click();
-												} else if (e.key === 'Tab') {
+												if (e.key === 'Tab') {
 													const words = findWordIndices(prompt);
 
 													if (words.length > 0) {

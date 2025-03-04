@@ -37,7 +37,7 @@
 	let landingPageMode = '';
 	let chatBubble = true;
 	let chatDirection: 'LTR' | 'RTL' = 'LTR';
-	let alternativeEnterBehavior = false;
+	let ctrlEnterToSend = false;
 
 	let imageCompression = false;
 	let imageCompressionSize = {
@@ -194,9 +194,9 @@
 		saveSettings({ chatDirection });
 	};
 
-	const toggleAlternativeEnterBehavior = async () => {
-		alternativeEnterBehavior = !alternativeEnterBehavior;
-		saveSettings({ alternativeEnterBehavior });
+	const togglectrlEnterToSend = async () => {
+		ctrlEnterToSend = !ctrlEnterToSend;
+		saveSettings({ ctrlEnterToSend });
 	};
 
 	const updateInterfaceHandler = async () => {
@@ -238,7 +238,7 @@
 		notificationSound = $settings.notificationSound ?? true;
 
 		hapticFeedback = $settings.hapticFeedback ?? false;
-		alternativeEnterBehavior = $settings.alternativeEnterBehavior ?? false;
+		ctrlEnterToSend = $settings.ctrlEnterToSend ?? false;
 
 		imageCompression = $settings.imageCompression ?? false;
 		imageCompressionSize = $settings.imageCompressionSize ?? { width: '', height: '' };
@@ -667,16 +667,12 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
-						class:bg-gray-100={alternativeEnterBehavior}
-						class:dark:bg-gray-800={alternativeEnterBehavior}
-						class:hover:bg-gray-200={alternativeEnterBehavior}
-						class:dark:hover:bg-gray-700={alternativeEnterBehavior}
 						on:click={() => {
-							toggleAlternativeEnterBehavior();
+							togglectrlEnterToSend();
 						}}
 						type="button"
 					>
-						{#if alternativeEnterBehavior === true}
+						{#if ctrlEnterToSend === true}
 							<span class="ml-2 self-center">{$i18n.t('Ctrl+Enter to Send')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Enter to Send')}</span>
