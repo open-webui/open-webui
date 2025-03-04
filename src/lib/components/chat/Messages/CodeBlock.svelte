@@ -11,6 +11,7 @@
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
 	import SvgPanZoom from '$lib/components/common/SVGPanZoom.svelte';
+	import { getCodeExecutionConfig } from '$lib/apis/configs';
 	import { config } from '$lib/stores';
 	import { executeCode } from '$lib/apis/utils';
 	import { toast } from 'svelte-sonner';
@@ -59,6 +60,8 @@
 
 	let copied = false;
 	let saved = false;
+
+    let code_ex = {};
 
 	const saveCode = () => {
 		saved = true;
@@ -388,6 +391,11 @@
 				securityLevel: 'loose'
 			});
 		}
+		const res = await getCodeExecutionConfig(localStorage.token);
+
+		if (res) {
+			code_ex = res;
+		}
 	});
 
 	onDestroy(() => {
@@ -418,21 +426,22 @@
 				class="sticky {stickyButtonsClassName} mb-1 py-1 pr-2.5 flex items-center justify-end z-10 text-xs text-black dark:text-white"
 			>
 				<div class="flex items-center gap-0.5 translate-y-[1px]">
-					{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
-						{#if executing}
-							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
-						{:else if run}
-							<button
-								class="run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
-								on:click={async () => {
-									code = _code;
-									await tick();
-									executePython(code);
-								}}>{$i18n.t('Run')}</button
-							>
+					{#if code_ex.ENABLE_CODE_EXECUTION}
+						{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
+							{#if executing}
+								<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
+							{:else if run}
+								<button
+									class="run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+									on:click={async () => {
+										code = _code;
+										await tick();
+										executePython(code);
+									}}>{$i18n.t('Run')}</button
+								>
+							{/if}
 						{/if}
 					{/if}
-
 					{#if save}
 						<button
 							class="save-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
