@@ -1142,9 +1142,10 @@ async def get_app_config(request: Request):
         if data is not None and "id" in data:
             user = Users.get_user_by_id(data["id"])
 
+    user_count = Users.get_num_users()
     onboarding = False
+
     if user is None:
-        user_count = Users.get_num_users()
         onboarding = user_count == 0
 
     return {
@@ -1213,6 +1214,14 @@ async def get_app_config(request: Request):
                     "api_key": GOOGLE_DRIVE_API_KEY.value,
                 },
                 "onedrive": {"client_id": ONEDRIVE_CLIENT_ID.value},
+                **(
+                    {
+                        "record_count": user_count,
+                        "active_entries": app.state.USER_COUNT,
+                    }
+                    if user.role == "admin"
+                    else {}
+                ),
             }
             if user is not None
             else {}
