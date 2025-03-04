@@ -87,8 +87,8 @@ def get_license_data(app, key):
                         setattr(app.state, "USER_COUNT", v)
                     elif k == "name":
                         setattr(app.state, "WEBUI_NAME", v)
-                    elif k == "info":
-                        setattr(app.state, "LICENSE_INFO", v)
+                    elif k == "metadata":
+                        setattr(app.state, "LICENSE_METADATA", v)
                 return True
             else:
                 log.error(
