@@ -1,4 +1,4 @@
-"""a description
+"""add credits
 
 Revision ID: 5189885cf572
 Revises: 3781e22d8b01
