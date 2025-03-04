@@ -155,7 +155,7 @@
 					>
 						<button
 							class="min-w-fit rounded-full p-1.5 {tab === ''
-								? ''
+								? 'text-[#57068c] dark:text-white'
 								: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'} transition"
 							type="button"
 							on:click={() => {
@@ -165,7 +165,7 @@
 
 						<button
 							class="min-w-fit rounded-full p-1.5 {tab === 'import'
-								? ''
+								? 'text-[#57068c] dark:text-white'
 								: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'} transition"
 							type="button"
 							on:click={() => {
