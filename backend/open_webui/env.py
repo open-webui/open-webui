@@ -78,6 +78,7 @@ log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
 
 if "cuda_error" in locals():
     log.exception(cuda_error)
+    del cuda_error
 
 log_sources = [
     "AUDIO",
