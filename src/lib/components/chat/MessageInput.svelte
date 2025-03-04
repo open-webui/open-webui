@@ -676,12 +676,13 @@
 												bind:value={prompt}
 												id="chat-input"
 												messageInput={true}
-												shiftEnter={!$mobile ||
-													!(
-														'ontouchstart' in window ||
-														navigator.maxTouchPoints > 0 ||
-														navigator.msMaxTouchPoints > 0
-													)}
+												shiftEnter={!($settings?.alternativeEnterBehavior ?? false) &&
+													(!$mobile ||
+														!(
+															'ontouchstart' in window ||
+															navigator.maxTouchPoints > 0 ||
+															navigator.msMaxTouchPoints > 0
+														))}
 												placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 												largeTextAsFile={$settings?.largeTextAsFile ?? false}
 												autocomplete={$config?.features.enable_autocomplete_generation}
@@ -805,19 +806,20 @@
 																navigator.msMaxTouchPoints > 0
 															)
 														) {
-															// Prevent Enter key from creating a new line
-															// Uses keyCode '13' for Enter key for chinese/japanese keyboards
-															if (e.keyCode === 13 && !e.shiftKey) {
-																e.preventDefault();
-															}
+															// Uses keyCode '13' for Enter key for chinese/japanese keyboards.
+															//
+															// Depending on the user's settings, it will send the message
+															// either when Enter is pressed or when Ctrl+Enter is pressed.
+															const submitMessage =
+																($settings?.alternativeEnterBehavior ?? false)
+																	? e.keyCode === 13 && isCtrlPressed
+																	: e.keyCode === 13 && !e.shiftKey;
 
-															// Submit the prompt when Enter key is pressed
-															if (
-																(prompt !== '' || files.length > 0) &&
-																e.keyCode === 13 &&
-																!e.shiftKey
-															) {
-																dispatch('submit', prompt);
+															if (submitMessage) {
+																e.preventDefault();
+																if (prompt !== '' || files.length > 0) {
+																	dispatch('submit', prompt);
+																}
 															}
 														}
 													}
