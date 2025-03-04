@@ -1553,30 +1553,51 @@ async def process_chat_response(
                                                         ] += delta_arguments
 
                                     value = delta.get("content")
+
                                     reasoning_content = delta.get("reasoning_content")
                                     if reasoning_content:
-                                        if not content_blocks or content_blocks[-1]["type"] != "reasoning":
+                                        if (
+                                            not content_blocks
+                                            or content_blocks[-1]["type"] != "reasoning"
+                                        ):
                                             reasoning_block = {
                                                 "type": "reasoning",
                                                 "start_tag": "think",
                                                 "end_tag": "/think",
-                                                "attributes": {"type": "reasoning_content"},
+                                                "attributes": {
+                                                    "type": "reasoning_content"
+                                                },
                                                 "content": "",
-                                                "started_at": time.time()
+                                                "started_at": time.time(),
                                             }
                                             content_blocks.append(reasoning_block)
                                         else:
                                             reasoning_block = content_blocks[-1]
+
                                         reasoning_block["content"] += reasoning_content
+
                                         data = {
-                                            "content": serialize_content_blocks(content_blocks)
+                                            "content": serialize_content_blocks(
+                                                content_blocks
+                                            )
                                         }
+
                                     if value:
-                                        if content_blocks and content_blocks[-1]["type"] == "reasoning" and content_blocks[-1].get("attributes", {}).get("type") == "reasoning_content":
+                                        if (
+                                            content_blocks
+                                            and content_blocks[-1]["type"]
+                                            == "reasoning"
+                                            and content_blocks[-1]
+                                            .get("attributes", {})
+                                            .get("type")
+                                            == "reasoning_content"
+                                        ):
                                             reasoning_block = content_blocks[-1]
-                                            reasoning_block["attributes"] = {}
                                             reasoning_block["ended_at"] = time.time()
-                                            reasoning_block["duration"] = int(reasoning_block["ended_at"] - reasoning_block["started_at"])
+                                            reasoning_block["duration"] = int(
+                                                reasoning_block["ended_at"]
+                                                - reasoning_block["started_at"]
+                                            )
 
                                             content_blocks.append(
                                                 {
@@ -1584,6 +1605,7 @@ async def process_chat_response(
                                                     "content": "",
                                                 }
                                             )
+
                                         content = f"{content}{value}"
                                         if not content_blocks:
                                             content_blocks.append(
