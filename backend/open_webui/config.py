@@ -1373,11 +1373,6 @@ Responses from models: {{responses}}"""
 # Code Interpreter
 ####################################
 
-ENABLE_CODE_EXECUTION = PersistentConfig(
-    "ENABLE_CODE_EXECUTION",
-    "code_execution.enable",
-    os.environ.get("ENABLE_CODE_EXECUTION", "True").lower() == "true",
-)
 
 CODE_EXECUTION_ENGINE = PersistentConfig(
     "CODE_EXECUTION_ENGINE",

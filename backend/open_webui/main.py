@@ -105,7 +105,6 @@ from open_webui.config import (
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
     # Code Execution
-    ENABLE_CODE_EXECUTION,
     CODE_EXECUTION_ENGINE,
     CODE_EXECUTION_JUPYTER_URL,
     CODE_EXECUTION_JUPYTER_AUTH,
@@ -659,7 +658,6 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
 #
 ########################################
 
-app.state.config.ENABLE_CODE_EXECUTION = ENABLE_CODE_EXECUTION
 app.state.config.CODE_EXECUTION_ENGINE = CODE_EXECUTION_ENGINE
 app.state.config.CODE_EXECUTION_JUPYTER_URL = CODE_EXECUTION_JUPYTER_URL
 app.state.config.CODE_EXECUTION_JUPYTER_AUTH = CODE_EXECUTION_JUPYTER_AUTH
