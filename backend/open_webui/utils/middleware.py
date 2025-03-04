@@ -2105,6 +2105,9 @@ async def process_chat_response(
             ) as credit_deduct:
 
                 async for data in original_generator:
+
+                    credit_deduct.run(response=data)
+
                     data, _ = await process_filter_functions(
                         request=request,
                         filter_ids=filter_ids,
@@ -2112,8 +2115,6 @@ async def process_chat_response(
                         form_data=data,
                         extra_params=extra_params,
                     )
-
-                    credit_deduct.run(response=data)
 
                     if data:
                         yield data
