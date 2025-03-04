@@ -24,13 +24,13 @@ def get_redis_connection(redis_url, sentinels, decode_responses=True):
     if sentinels:
         redis_config = parse_redis_sentinel_url(redis_url)
         sentinel = redis.sentinel.Sentinel(
-            self.sentinels,
+            sentinels,
             port=redis_config['port'],
             db=redis_config['db'],
             username=redis_config['username'],
             password=redis_config['password'],
             decode_responses=decode_responses
-        }
+        )
 
         # Get a master connection from Sentinel
         return sentinel.master_for(redis_config['service'])
