@@ -149,7 +149,7 @@ class ModelForm(BaseModel):
 
 class ModelsTable:
     def insert_new_model(
-            self, form_data: ModelForm, user_id: str
+        self, form_data: ModelForm, user_id: str
     ) -> Optional[ModelModel]:
         model = ModelModel(
             **{
@@ -201,14 +201,14 @@ class ModelsTable:
             ]
 
     def get_models_by_user_id(
-            self, user_id: str, permission: str = "write"
+        self, user_id: str, permission: str = "write"
     ) -> list[ModelUserResponse]:
         models = self.get_models()
         return [
             model
             for model in models
             if model.user_id == user_id
-               or has_access(user_id, permission, model.access_control)
+            or has_access(user_id, permission, model.access_control)
         ]
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
