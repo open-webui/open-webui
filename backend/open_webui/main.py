@@ -1191,6 +1191,7 @@ async def get_app_config(request: Request):
             {
                 "default_models": app.state.config.DEFAULT_MODELS,
                 "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
+                "user_count": user_count,
                 "code": {
                     "engine": app.state.config.CODE_EXECUTION_ENGINE,
                 },
@@ -1214,11 +1215,10 @@ async def get_app_config(request: Request):
                     "api_key": GOOGLE_DRIVE_API_KEY.value,
                 },
                 "onedrive": {"client_id": ONEDRIVE_CLIENT_ID.value},
+                "license_metadata": app.state.LICENSE_METADATA,
                 **(
                     {
-                        "record_count": user_count,
                         "active_entries": app.state.USER_COUNT,
-                        "license_metadata": app.state.LICENSE_METADATA,
                     }
                     if user.role == "admin"
                     else {}
