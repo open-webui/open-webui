@@ -220,6 +220,8 @@
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
 
+		console.log('chatEventHandler', event);
+
 		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
 			if (type === 'chat:completion') {
 				const { done, content, title } = data;
@@ -443,6 +445,7 @@
 		theme.set(localStorage.theme);
 
 		mobile.set(window.innerWidth < BREAKPOINT);
+
 		const onResize = () => {
 			if (window.innerWidth < BREAKPOINT) {
 				mobile.set(true);
@@ -450,8 +453,17 @@
 				mobile.set(false);
 			}
 		};
-
 		window.addEventListener('resize', onResize);
+
+		user.subscribe((value) => {
+			if (value) {
+				$socket?.off('chat-events', chatEventHandler);
+				$socket?.off('channel-events', channelEventHandler);
+
+				$socket?.on('chat-events', chatEventHandler);
+				$socket?.on('channel-events', channelEventHandler);
+			}
+		});
 
 		let backendConfig = null;
 		try {
@@ -493,9 +505,6 @@
 					if (sessionUser) {
 						// Save Session User to Store
 						$socket.emit('user-join', { auth: { token: sessionUser.token } });
-
-						$socket?.on('chat-events', chatEventHandler);
-						$socket?.on('channel-events', channelEventHandler);
 
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
