@@ -45,8 +45,8 @@
 						class="min-w-fit rounded-full p-1.5 {['/playground', '/playground/'].includes(
 							$page.url.pathname
 						)
-							? ''
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							? 'text-[#57068c] dark:text-white'
+							: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'} transition"
 						href="/playground">{$i18n.t('Chat')}</a
 					>
 
@@ -61,8 +61,8 @@
 						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
 							'/playground/completions'
 						)
-							? ''
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							? 'text-[#57068c] dark:text-white'
+							: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'} transition"
 						href="/playground/completions">{$i18n.t('Completions')}</a
 					>
 				</div>
