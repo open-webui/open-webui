@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
+	import AnimatedBackground from '$lib/IONOS/components/AnimatedBackground.svelte'
 	import TextWithGradient from '$lib/IONOS/components/TextWithGradient.svelte'
 	import AgentSelector from '$lib/IONOS/components/AgentSelector.svelte'
 	import PromptSelector from '$lib/IONOS/components/PromptSelector.svelte'
@@ -15,6 +16,8 @@
 		await initPromptsStore();
 	});
 </script>
+
+<AnimatedBackground />
 
 <content class="flex flex-col items-center pt-20 mx-3">
 	<TextWithGradient>
