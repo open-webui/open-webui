@@ -44,7 +44,7 @@
 					<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Code Interpreter')}</div>
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Code Execution')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
