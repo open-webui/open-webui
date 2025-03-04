@@ -3,14 +3,9 @@ import uuid
 import json
 from datetime import datetime
 from typing import Optional
-
 from enum import Enum
 
 from fastapi import Request
-
-from pydantic import BaseModel
-
-import sys
 
 import tiktoken
 
@@ -35,47 +30,11 @@ class PARSING_TYPE(Enum):
     WEB_SEARCH = 5
 
 
-def pre(request, **kwargs):
-    '''
-    called before the rest of the parser functions
-    '''
-
-    docs = kwargs.pop('docs', None)
-    collection_name = kwargs.pop('collection_name', None)
-
-    def _get_docs_info(docs: list[Document]) -> str:
-        docs_info = set()
-
-        # Trying to select relevant metadata identifying the document.
-        for doc in docs:
-            metadata = getattr(doc, "metadata", {})
-            doc_name = metadata.get("name", "")
-            if not doc_name:
-                doc_name = metadata.get("title", "")
-            if not doc_name:
-                doc_name = metadata.get("source", "")
-            if doc_name:
-                docs_info.add(doc_name)
-
-        return ", ".join(docs_info)
-
-    log.info(
-        f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
-    )
-
-
-class Parser:
-    # class Valves(BaseModel):
-    #    TEST_VALVE: str
-
+class DefaultParser:
     # Update valves/ environment variables based on your selected database
-    def __init__(self):
+    def __init__(self, parsing_type=PARSING_TYPE.ALL):
         self.name = "Default Parser"
-        self.type = PARSING_TYPE.ALL
-        print("ooooooooooooooooooooooooooooooooooooooooooooooo")
-
-
-
+        self.parsing_type = parsing_type
 
     def save_docs_to_vector_db(self,
                                request: Request,
@@ -83,27 +42,15 @@ class Parser:
                                collection_name,
                                metadata: Optional[dict] = None,
                                overwrite: bool = False,
-                               split: bool = True,
                                add: bool = False,
                                user=None,
                                ) -> bool:
-        print("AHHHHHHHHHHHHHHHHHHHH")
 
-
-        with open('output2.txt', 'w') as f:
-            f.write(f'test')
-            f.flush()
-
-
-        pre(request, docs=docs, collection_name=collection_name)
+        self.pre(request, docs=docs, collection_name=collection_name)
 
         texts, docs = self.split(request, docs)
         metadatas = self.metadata(request, collection_name, docs, metadata)
         embeddings = self.embed(request, texts, user)
-
-        with open('/home/daniel/output.txt', 'w') as f:
-            f.write(f'm: {len(metadatas)}, t: {len(texts)}, e: {len(embeddings)}')
-            f.flush()
 
         assert len(metadatas) == len(texts) and f"length mismatch: metadata {metadatas} vs texts {texts}"
         assert len(metadatas) == len(embeddings) and f"length mismatch: metadata {metadatas} vs embeddings {embeddings}"
@@ -112,16 +59,41 @@ class Parser:
 
         self.post(request)
 
+        return True
+
+    def pre(self, request, **kwargs):
+        '''
+        called before the rest of the parser functions
+        '''
+
+        docs = kwargs.pop('docs', None)
+        collection_name = kwargs.pop('collection_name', None)
+
+        def _get_docs_info(docs: list[Document]) -> str:
+            docs_info = set()
+
+            # Trying to select relevant metadata identifying the document.
+            for doc in docs:
+                metadata = getattr(doc, "metadata", {})
+                doc_name = metadata.get("name", "")
+                if not doc_name:
+                    doc_name = metadata.get("title", "")
+                if not doc_name:
+                    doc_name = metadata.get("source", "")
+                if doc_name:
+                    docs_info.add(doc_name)
+
+            return ", ".join(docs_info)
+
+        log.info(
+            f"{self.name}: save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
+        )
+
     def post(self, request, **kwargs):
         '''
         called after the rest of the parser functions
         '''
-        with open('output_p.txt', 'w') as f:
-            f.write(f'******************************** POST')
-            f.flush()
-
-        print("Executing my_method", flush=True)
-        sys.stdout.flush()  # Extra guarantee
+        pass
 
     def metadata(self, request, collection_name, docs, metadata):
         # Check if entries with the same hash (metadata.hash) already exist
@@ -136,8 +108,6 @@ class Parser:
                 if existing_doc_ids:
                     log.info(f"Document with hash {metadata['hash']} already exists")
                     raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
-
-        print()
 
         metadatas = [
             {
@@ -190,9 +160,6 @@ class Parser:
 
         docs = text_splitter.split_documents(docs)
 
-
-        # METADATA NEEDS TO BE GENERATED HERE
-
         if len(docs) == 0:
             raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
@@ -236,11 +203,6 @@ class Parser:
                     f"collection {collection_name} already exists, overwrite is False and add is False"
                 )
                 return True
-
-        log.info(f"test")
-        print(f"embeddings: {len(embeddings)}")
-        print(f"metadatas: {len(metadatas)}")
-        print(f"text: {len(texts)}")
 
         items = [
             {
