@@ -587,6 +587,14 @@ load_oauth_providers()
 
 STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static")).resolve()
 
+for file_path in (FRONTEND_BUILD_DIR / "static").glob("**/*"):
+    if file_path.is_file():
+        target_path = STATIC_DIR / file_path.relative_to(
+            (FRONTEND_BUILD_DIR / "static")
+        )
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(file_path, target_path)
+
 frontend_favicon = FRONTEND_BUILD_DIR / "static" / "favicon.png"
 
 if frontend_favicon.exists():
