@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Build Backend Package",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/build_package_backend_only.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}

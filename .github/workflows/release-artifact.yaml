@@ -1,0 +1,31 @@
+name: Release to GitHub Artifact
+on:
+  push:
+    branches:
+      - main
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Build wheel
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+          python -m build .
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v3
+        with:
+          name: open-webui-whl
+          path: dist/*.whl
