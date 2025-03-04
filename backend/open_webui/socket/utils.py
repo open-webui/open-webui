@@ -16,13 +16,35 @@ def parse_redis_sentinel_url(redis_url):
         "db": int(parsed_url.path.lstrip("/") or 0),
     }
 
+def get_redis_connection(redis_url, sentinels, decode_responses=True):
+    """
+    Creates a Redis connection from either a standard Redis URL or uses special
+    parsing to setup a Sentinel connection, if given an array of host/port tuples.
+    """
+    if sentinels:
+        redis_config = parse_redis_sentinel_url(redis_url)
+        sentinel = redis.sentinel.Sentinel(
+            self.sentinels,
+            port=redis_config['port'],
+            db=redis_config['db'],
+            username=redis_config['username'],
+            password=redis_config['password'],
+            decode_responses=decode_responses
+        }
+
+        # Get a master connection from Sentinel
+        return sentinel.master_for(redis_config['service'])
+    else:
+        # Standard Redis connection
+        return redis.Redis.from_url(redis_url, decode_responses=decode_responses)
+
 class RedisLock:
-    def __init__(self, redis_url, lock_name, timeout_secs):
+    def __init__(self, redis_url, lock_name, timeout_secs, sentinels=[]):
         self.lock_name = lock_name
         self.lock_id = str(uuid.uuid4())
         self.timeout_secs = timeout_secs
         self.lock_obtained = False
-        self.redis = redis.Redis.from_url(redis_url, decode_responses=True)
+        self.redis = get_redis_connection(redis_url, sentinels, decode_responses=True)
 
     def aquire_lock(self):
         # nx=True will only set this key if it _hasn't_ already been set
@@ -44,9 +66,9 @@ class RedisLock:
 
 
 class RedisDict:
-    def __init__(self, name, redis_url):
+    def __init__(self, name, redis_url, sentinels=[]):
         self.name = name
-        self.redis = redis.Redis.from_url(redis_url, decode_responses=True)
+        self.redis = get_redis_connection(redis_url, sentinels, decode_responses=True)
 
     def __setitem__(self, key, value):
         serialized_value = json.dumps(value)
