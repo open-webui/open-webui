@@ -17,7 +17,7 @@ elif VECTOR_DB == "pgvector":
 
     VECTOR_DB_CLIENT = PgvectorClient()
 elif VECTOR_DB == "elasticsearch":
-    from open_webui.retrieval.vector.dbs.elasticsearch import ElasticsearchClient 
+    from open_webui.retrieval.vector.dbs.elasticsearch import ElasticsearchClient
 
     VECTOR_DB_CLIENT = ElasticsearchClient()
 else:

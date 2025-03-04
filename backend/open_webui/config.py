@@ -659,11 +659,7 @@ if CUSTOM_NAME:
 # LICENSE_KEY
 ####################################
 
-LICENSE_KEY = PersistentConfig(
-    "LICENSE_KEY",
-    "license.key",
-    os.environ.get("LICENSE_KEY", ""),
-)
+LICENSE_KEY = os.environ.get("LICENSE_KEY", "")
 
 ####################################
 # STORAGE PROVIDER

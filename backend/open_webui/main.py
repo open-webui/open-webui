@@ -401,8 +401,8 @@ async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
         reset_config()
 
-    if app.state.config.LICENSE_KEY:
-        get_license_data(app, app.state.config.LICENSE_KEY)
+    if LICENSE_KEY:
+        get_license_data(app, LICENSE_KEY)
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     yield
@@ -420,7 +420,7 @@ oauth_manager = OAuthManager(app)
 app.state.config = AppConfig()
 
 app.state.WEBUI_NAME = WEBUI_NAME
-app.state.config.LICENSE_KEY = LICENSE_KEY
+app.state.LICENSE_DATA = None
 
 ########################################
 #
@@ -1218,6 +1218,7 @@ async def get_app_config(request: Request):
                     {
                         "record_count": user_count,
                         "active_entries": app.state.USER_COUNT,
+                        "license_data": app.state.LICENSE_DATA,
                     }
                     if user.role == "admin"
                     else {}
