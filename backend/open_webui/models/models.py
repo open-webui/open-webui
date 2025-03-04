@@ -2,21 +2,13 @@ import logging
 import time
 from typing import Optional
 
-from open_webui.internal.db import Base, JSONField, get_db
-from open_webui.env import SRC_LOG_LEVELS
-
-from open_webui.models.users import Users, UserResponse
-
-
 from pydantic import BaseModel, ConfigDict
+from sqlalchemy import JSON, BigInteger, Boolean, Column, Text
 
-from sqlalchemy import or_, and_, func
-from sqlalchemy.dialects import postgresql, sqlite
-from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
-
-
+from open_webui.env import SRC_LOG_LEVELS
+from open_webui.internal.db import Base, JSONField, get_db
+from open_webui.models.users import UserResponse, Users
 from open_webui.utils.access_control import has_access
-
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -95,6 +87,8 @@ class Model(Base):
     #      }
     #   }
 
+    price = Column(JSON, nullable=True)
+
     is_active = Column(Boolean, default=True)
 
     updated_at = Column(BigInteger)
@@ -111,6 +105,8 @@ class ModelModel(BaseModel):
     meta: ModelMeta
 
     access_control: Optional[dict] = None
+
+    price: Optional[dict] = None
 
     is_active: bool
     updated_at: int  # timestamp in epoch
@@ -139,13 +135,12 @@ class ModelForm(BaseModel):
     meta: ModelMeta
     params: ModelParams
     access_control: Optional[dict] = None
+    price: Optional[dict] = None
     is_active: bool = True
 
 
 class ModelsTable:
-    def insert_new_model(
-        self, form_data: ModelForm, user_id: str
-    ) -> Optional[ModelModel]:
+    def insert_new_model(self, form_data: ModelForm, user_id: str) -> Optional[ModelModel]:
         model = ModelModel(
             **{
                 **form_data.model_dump(),
@@ -191,19 +186,15 @@ class ModelsTable:
     def get_base_models(self) -> list[ModelModel]:
         with get_db() as db:
             return [
-                ModelModel.model_validate(model)
-                for model in db.query(Model).filter(Model.base_model_id == None).all()
+                ModelModel.model_validate(model) for model in db.query(Model).filter(Model.base_model_id == None).all()
             ]
 
-    def get_models_by_user_id(
-        self, user_id: str, permission: str = "write"
-    ) -> list[ModelUserResponse]:
+    def get_models_by_user_id(self, user_id: str, permission: str = "write") -> list[ModelUserResponse]:
         models = self.get_models()
         return [
             model
             for model in models
-            if model.user_id == user_id
-            or has_access(user_id, permission, model.access_control)
+            if model.user_id == user_id or has_access(user_id, permission, model.access_control)
         ]
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
@@ -235,11 +226,7 @@ class ModelsTable:
         try:
             with get_db() as db:
                 # update only the fields that are present in the model
-                result = (
-                    db.query(Model)
-                    .filter_by(id=id)
-                    .update(model.model_dump(exclude={"id"}))
-                )
+                db.query(Model).filter_by(id=id).update(model.model_dump(exclude={"id"}))
                 db.commit()
 
                 model = db.get(Model, id)
