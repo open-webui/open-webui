@@ -420,7 +420,7 @@ oauth_manager = OAuthManager(app)
 app.state.config = AppConfig()
 
 app.state.WEBUI_NAME = WEBUI_NAME
-app.state.LICENSE_DATA = None
+app.state.LICENSE_METADATA = None
 
 ########################################
 #
@@ -1218,7 +1218,7 @@ async def get_app_config(request: Request):
                     {
                         "record_count": user_count,
                         "active_entries": app.state.USER_COUNT,
-                        "license_data": app.state.LICENSE_DATA,
+                        "license_metadata": app.state.LICENSE_METADATA,
                     }
                     if user.role == "admin"
                     else {}
