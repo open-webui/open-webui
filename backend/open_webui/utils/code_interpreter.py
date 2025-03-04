@@ -54,7 +54,8 @@ class JupyterCodeExecuter:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if self.kernel_id:
             try:
-                await self.session.delete(f"/api/kernels/{self.kernel_id}", params=self.params)
+                async with self.session.delete(f"/api/kernels/{self.kernel_id}", params=self.params) as response:
+                    response.raise_for_status()
             except Exception as err:
                 logger.exception("close kernel failed, %s", err)
         await self.session.close()
