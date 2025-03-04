@@ -85,7 +85,7 @@
 
 					<div class="w-full mt-1">
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							type="text"
 							bind:value={name}
 							placeholder={$i18n.t('Name your knowledge base')}
@@ -99,7 +99,7 @@
 
 					<div class=" w-full mt-1">
 						<textarea
-							class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							rows="4"
 							bind:value={description}
 							placeholder={$i18n.t('Describe your knowledge base and objectives')}

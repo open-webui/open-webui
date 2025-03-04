@@ -26,6 +26,7 @@ from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
     BYPASS_MODEL_ACCESS_CONTROL,
 )
+from open_webui.models.users import UserModel
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENV, SRC_LOG_LEVELS
@@ -51,12 +52,25 @@ log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 ##########################################
 
 
-async def send_get_request(url, key=None):
+async def send_get_request(url, key=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
-                url, headers={**({"Authorization": f"Bearer {key}"} if key else {})}
+                url,
+                headers={
+                    **({"Authorization": f"Bearer {key}"} if key else {}),
+                    **(
+                        {
+                            "X-OpenWebUI-User-Name": user.name,
+                            "X-OpenWebUI-User-Id": user.id,
+                            "X-OpenWebUI-User-Email": user.email,
+                            "X-OpenWebUI-User-Role": user.role,
+                        }
+                        if ENABLE_FORWARD_USER_INFO_HEADERS and user
+                        else {}
+                    ),
+                },
             ) as response:
                 return await response.json()
     except Exception as e:
@@ -84,9 +98,15 @@ def openai_o1_o3_handler(payload):
         payload["max_completion_tokens"] = payload["max_tokens"]
         del payload["max_tokens"]
 
-    # Fix: O1 does not support the "system" parameter, Modify "system" to "user"
+    # Fix: o1 and o3 do not support the "system" role directly.
+    # For older models like "o1-mini" or "o1-preview", use role "user".
+    # For newer o1/o3 models, replace "system" with "developer".
     if payload["messages"][0]["role"] == "system":
-        payload["messages"][0]["role"] = "user"
+        model_lower = payload["model"].lower()
+        if model_lower.startswith("o1-mini") or model_lower.startswith("o1-preview"):
+            payload["messages"][0]["role"] = "user"
+        else:
+            payload["messages"][0]["role"] = "developer"
 
     return payload
 
@@ -247,7 +267,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         raise HTTPException(status_code=401, detail=ERROR_MESSAGES.OPENAI_NOT_FOUND)
 
 
-async def get_all_models_responses(request: Request) -> list:
+async def get_all_models_responses(request: Request, user: UserModel) -> list:
     if not request.app.state.config.ENABLE_OPENAI_API:
         return []
 
@@ -271,7 +291,9 @@ async def get_all_models_responses(request: Request) -> list:
         ):
             request_tasks.append(
                 send_get_request(
-                    f"{url}/models", request.app.state.config.OPENAI_API_KEYS[idx]
+                    f"{url}/models",
+                    request.app.state.config.OPENAI_API_KEYS[idx],
+                    user=user,
                 )
             )
         else:
@@ -291,6 +313,7 @@ async def get_all_models_responses(request: Request) -> list:
                         send_get_request(
                             f"{url}/models",
                             request.app.state.config.OPENAI_API_KEYS[idx],
+                            user=user,
                         )
                     )
                 else:
@@ -352,13 +375,13 @@ async def get_filtered_models(models, user):
 
 
 @cached(ttl=3)
-async def get_all_models(request: Request) -> dict[str, list]:
+async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
     log.info("get_all_models()")
 
     if not request.app.state.config.ENABLE_OPENAI_API:
         return {"data": []}
 
-    responses = await get_all_models_responses(request)
+    responses = await get_all_models_responses(request, user=user)
 
     def extract_data(response):
         if response and "data" in response:
@@ -418,7 +441,7 @@ async def get_models(
     }
 
     if url_idx is None:
-        models = await get_all_models(request)
+        models = await get_all_models(request, user=user)
     else:
         url = request.app.state.config.OPENAI_API_BASE_URLS[url_idx]
         key = request.app.state.config.OPENAI_API_KEYS[url_idx]
@@ -515,6 +538,16 @@ async def verify_connection(
                 headers={
                     "Authorization": f"Bearer {key}",
                     "Content-Type": "application/json",
+                    **(
+                        {
+                            "X-OpenWebUI-User-Name": user.name,
+                            "X-OpenWebUI-User-Id": user.id,
+                            "X-OpenWebUI-User-Email": user.email,
+                            "X-OpenWebUI-User-Role": user.role,
+                        }
+                        if ENABLE_FORWARD_USER_INFO_HEADERS
+                        else {}
+                    ),
                 },
             ) as r:
                 if r.status != 200:
@@ -587,7 +620,7 @@ async def generate_chat_completion(
                 detail="Model not found",
             )
 
-    await get_all_models(request)
+    await get_all_models(request, user=user)
     model = request.app.state.OPENAI_MODELS.get(model_id)
     if model:
         idx = model["urlIdx"]
@@ -777,7 +810,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         if r is not None:
             try:
                 res = await r.json()
-                print(res)
+                log.error(res)
                 if "error" in res:
                     detail = f"External: {res['error']['message'] if 'message' in res['error'] else res['error']}"
             except Exception:

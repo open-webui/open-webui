@@ -62,9 +62,17 @@
 				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:5173'].includes(
 					event.origin
 				)
-			)
+			) {
 				return;
-			model = JSON.parse(event.data);
+			}
+
+			let data = JSON.parse(event.data);
+
+			if (data?.info) {
+				data = data.info;
+			}
+
+			model = data;
 		});
 
 		if (window.opener ?? false) {

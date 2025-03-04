@@ -31,10 +31,7 @@ from open_webui.env import (
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response
-from open_webui.config import (
-    OPENID_PROVIDER_URL,
-    ENABLE_OAUTH_SIGNUP,
-)
+from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
 from pydantic import BaseModel
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.auth import (
@@ -51,8 +48,10 @@ from open_webui.utils.access_control import get_permissions
 from typing import Optional, List
 
 from ssl import CERT_REQUIRED, PROTOCOL_TLS
-from ldap3 import Server, Connection, NONE, Tls
-from ldap3.utils.conv import escape_filter_chars
+
+if ENABLE_LDAP.value:
+    from ldap3 import Server, Connection, NONE, Tls
+    from ldap3.utils.conv import escape_filter_chars
 
 router = APIRouter()
 
@@ -251,9 +250,11 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             user = Users.get_user_by_email(mail)
             if not user:
                 try:
+                    user_count = Users.get_num_users()
+
                     role = (
                         "admin"
-                        if Users.get_num_users() == 0
+                        if user_count == 0
                         else request.app.state.config.DEFAULT_USER_ROLE
                     )
 
@@ -413,6 +414,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
 @router.post("/signup", response_model=SessionUserResponse)
 async def signup(request: Request, response: Response, form_data: SignupForm):
+
     if WEBUI_AUTH:
         if (
             not request.app.state.config.ENABLE_SIGNUP
@@ -427,6 +429,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
             )
 
+    user_count = Users.get_num_users()
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -437,12 +440,10 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
     try:
         role = (
-            "admin"
-            if Users.get_num_users() == 0
-            else request.app.state.config.DEFAULT_USER_ROLE
+            "admin" if user_count == 0 else request.app.state.config.DEFAULT_USER_ROLE
         )
 
-        if Users.get_num_users() == 0:
+        if user_count == 0:
             # Disable signup after the first user is created
             request.app.state.config.ENABLE_SIGNUP = False
 
@@ -484,6 +485,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
             if request.app.state.config.WEBHOOK_URL:
                 post_webhook(
+                    request.app.state.WEBUI_NAME,
                     request.app.state.config.WEBHOOK_URL,
                     WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                     {
@@ -530,7 +532,8 @@ async def signout(request: Request, response: Response):
                             if logout_url:
                                 response.delete_cookie("oauth_id_token")
                                 return RedirectResponse(
-                                    url=f"{logout_url}?id_token_hint={oauth_id_token}"
+                                    headers=response.headers,
+                                    url=f"{logout_url}?id_token_hint={oauth_id_token}",
                                 )
                         else:
                             raise HTTPException(
@@ -596,7 +599,7 @@ async def get_admin_details(request: Request, user=Depends(get_current_user)):
         admin_email = request.app.state.config.ADMIN_EMAIL
         admin_name = None
 
-        print(admin_email, admin_name)
+        log.info(f"Admin details - Email: {admin_email}, Name: {admin_name}")
 
         if admin_email:
             admin = Users.get_user_by_email(admin_email)

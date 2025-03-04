@@ -21,6 +21,10 @@
 
 	export let boilerplate = '';
 	export let value = '';
+
+	export let onSave = () => {};
+	export let onChange = () => {};
+
 	let _value = '';
 
 	$: if (value) {
@@ -43,6 +47,10 @@
 
 	let codeEditor;
 
+	export const focus = () => {
+		codeEditor.focus();
+	};
+
 	let isDarkMode = false;
 	let editorTheme = new Compartment();
 	let editorLanguage = new Compartment();
@@ -63,7 +71,7 @@
 
 	export const formatPythonCodeHandler = async () => {
 		if (codeEditor) {
-			const res = await formatPythonCode(_value).catch((error) => {
+			const res = await formatPythonCode(localStorage.token, _value).catch((error) => {
 				toast.error(`${error}`);
 				return null;
 			});
@@ -75,7 +83,7 @@
 				});
 
 				_value = formattedCode;
-				dispatch('change', { value: _value });
+				onChange(_value);
 				await tick();
 
 				toast.success($i18n.t('Code formatted successfully'));
@@ -94,7 +102,7 @@
 		EditorView.updateListener.of((e) => {
 			if (e.docChanged) {
 				_value = e.state.doc.toString();
-				dispatch('change', { value: _value });
+				onChange(_value);
 			}
 		}),
 		editorTheme.of([]),
@@ -170,7 +178,8 @@
 		const keydownHandler = async (e) => {
 			if ((e.ctrlKey || e.metaKey) && e.key === 's') {
 				e.preventDefault();
-				dispatch('save');
+
+				onSave();
 			}
 
 			// Format code when Ctrl + Shift + F is pressed

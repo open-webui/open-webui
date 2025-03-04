@@ -2,6 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
+	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
 
 	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
 	const dispatch = createEventDispatcher();
@@ -173,22 +174,6 @@
 		}
 
 		files = [...files, fileItem];
-		// Check if the file is an audio file and transcribe/convert it to text file
-		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
-			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
-				toast.error(`${error}`);
-				return null;
-			});
-
-			if (res) {
-				console.log(res);
-				const blob = new Blob([res.text], { type: 'text/plain' });
-				file = blobToFile(blob, `${file.name}.txt`);
-
-				fileItem.name = file.name;
-				fileItem.size = file.size;
-			}
-		}
 
 		try {
 			// During the file upload, file content is automatically extracted.
@@ -249,7 +234,9 @@
 				return;
 			}
 
-			if (['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(file['type'])) {
+			if (
+				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
+			) {
 				if (visionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
 					return;
@@ -394,7 +381,7 @@
 				<div class="w-full relative">
 					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled || ($settings?.webSearch ?? false) === 'always' || imageGenerationEnabled || codeInterpreterEnabled}
 						<div
-							class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
+							class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-linear-to-t from-white dark:from-gray-900 z-10"
 						>
 							{#if selectedToolIds.length > 0}
 								<div class="flex items-center justify-between w-full">
@@ -413,7 +400,7 @@
 											}) as tool, toolIdx (toolIdx)}
 												<Tooltip
 													content={tool?.meta?.description ?? ''}
-													className=" {toolIdx !== 0 ? 'pl-0.5' : ''} flex-shrink-0"
+													className=" {toolIdx !== 0 ? 'pl-0.5' : ''} shrink-0"
 													placement="top"
 												>
 													{tool.name}
@@ -428,7 +415,7 @@
 								</div>
 							{/if}
 
-							{#if webSearchEnabled || ($settings?.webSearch ?? false) === 'always'}
+							{#if webSearchEnabled || ($config?.features?.enable_web_search && ($settings?.webSearch ?? false)) === 'always'}
 								<div class="flex items-center justify-between w-full">
 									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
 										<div class="pl-1">
@@ -682,7 +669,7 @@
 								<div class="px-2.5">
 									{#if $settings?.richTextInput ?? true}
 										<div
-											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
+											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
 										>
 											<RichTextInput
 												bind:this={chatInputElement}
@@ -825,7 +812,11 @@
 															}
 
 															// Submit the prompt when Enter key is pressed
-															if (prompt !== '' && e.keyCode === 13 && !e.shiftKey) {
+															if (
+																(prompt !== '' || files.length > 0) &&
+																e.keyCode === 13 &&
+																!e.shiftKey
+															) {
 																dispatch('submit', prompt);
 															}
 														}
@@ -886,7 +877,7 @@
 										<textarea
 											id="chat-input"
 											bind:this={chatInputElement}
-											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 resize-none"
+											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
 											on:keypress={(e) => {
@@ -904,7 +895,11 @@
 													}
 
 													// Submit the prompt when Enter key is pressed
-													if (prompt !== '' && e.key === 'Enter' && !e.shiftKey) {
+													if (
+														(prompt !== '' || files.length > 0) &&
+														e.key === 'Enter' &&
+														!e.shiftKey
+													) {
 														dispatch('submit', prompt);
 													}
 												}
@@ -1106,6 +1101,21 @@
 													);
 												}
 											}}
+											uploadOneDriveHandler={async () => {
+												try {
+													const fileData = await pickAndDownloadFile();
+													if (fileData) {
+														const file = new File([fileData.blob], fileData.name, {
+															type: fileData.blob.type || 'application/octet-stream'
+														});
+														await uploadFileHandler(file);
+													} else {
+														console.log('No file was selected from OneDrive');
+													}
+												} catch (error) {
+													console.error('OneDrive Error:', error);
+												}
+											}}
 											onClose={async () => {
 												await tick();
 
@@ -1114,7 +1124,7 @@
 											}}
 										>
 											<button
-												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-none focus:outline-none"
+												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
 												type="button"
 												aria-label="More"
 											>
@@ -1138,10 +1148,10 @@
 														<button
 															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 															type="button"
-															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
+															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
 																? 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'
-																: 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 														>
 															<GlobeAlt className="size-5" strokeWidth="1.75" />
 															<span
@@ -1158,7 +1168,7 @@
 															on:click|preventDefault={() =>
 																(imageGenerationEnabled = !imageGenerationEnabled)}
 															type="button"
-															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
+															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {imageGenerationEnabled
 																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
 														>
@@ -1177,7 +1187,7 @@
 															on:click|preventDefault={() =>
 																(codeInterpreterEnabled = !codeInterpreterEnabled)}
 															type="button"
-															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
+															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {codeInterpreterEnabled
 																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
 														>
@@ -1193,7 +1203,7 @@
 										</div>
 									</div>
 
-									<div class="self-end flex space-x-1 mr-1 flex-shrink-0">
+									<div class="self-end flex space-x-1 mr-1 shrink-0">
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
@@ -1283,14 +1293,17 @@
 
 																	stream = null;
 
-																	if (!$TTSWorker) {
-																		await TTSWorker.set(
-																			new KokoroWorker({
-																				dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
-																			})
-																		);
+																	if ($settings.audio?.tts?.engine === 'browser-kokoro') {
+																		// If the user has not initialized the TTS worker, initialize it
+																		if (!$TTSWorker) {
+																			await TTSWorker.set(
+																				new KokoroWorker({
+																					dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+																				})
+																			);
 
-																		await $TTSWorker.init();
+																			await $TTSWorker.init();
+																		}
 																	}
 
 																	showCallOverlay.set(true);

@@ -1,7 +1,7 @@
 from pymilvus import MilvusClient as Client
 from pymilvus import FieldSchema, DataType
 import json
-
+import logging
 from typing import Optional
 
 from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
@@ -10,6 +10,10 @@ from open_webui.config import (
     MILVUS_DB,
     MILVUS_TOKEN,
 )
+from open_webui.env import SRC_LOG_LEVELS
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 class MilvusClient:
@@ -168,7 +172,7 @@ class MilvusClient:
         try:
             # Loop until there are no more items to fetch or the desired limit is reached
             while remaining > 0:
-                print("remaining", remaining)
+                log.info(f"remaining: {remaining}")
                 current_fetch = min(
                     max_limit, remaining
                 )  # Determine how many items to fetch in this iteration
@@ -195,10 +199,12 @@ class MilvusClient:
                 if results_count < current_fetch:
                     break
 
-            print(all_results)
+            log.debug(all_results)
             return self._result_to_get_result([all_results])
         except Exception as e:
-            print(e)
+            log.exception(
+                f"Error querying collection {collection_name} with limit {limit}: {e}"
+            )
             return None
 
     def get(self, collection_name: str) -> Optional[GetResult]:
