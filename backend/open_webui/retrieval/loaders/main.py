@@ -1,4 +1,4 @@
-import requests
+0;54;35M0;54;35mimport requests
 import logging
 import ftfy
 import sys
@@ -9,7 +9,7 @@ from langchain_community.document_loaders import (
     CSVLoader,
     Docx2txtLoader,
     OutlookMessageLoader,
-    PyPDFLoader,
+    PyMuPDFLoader,
     TextLoader,
     UnstructuredEPubLoader,
     UnstructuredExcelLoader,
@@ -172,7 +172,7 @@ class Loader:
             )
         else:
             if file_ext == "pdf":
-                loader = PyPDFLoader(
+                loader = PyMuPDFLoader(
                     file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
                 )
             elif file_ext == "csv":
