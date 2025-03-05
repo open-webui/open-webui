@@ -45,7 +45,8 @@
 		},
 		features: {
 			web_search: true,
-			image_generation: true
+			image_generation: true,
+			code_interpreter: true
 		}
 	};
 	export let userIds = [];

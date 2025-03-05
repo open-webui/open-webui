@@ -2,8 +2,10 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { getContext, createEventDispatcher } from 'svelte';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	const dispatch = createEventDispatcher();
+	dayjs.extend(localizedFormat);
 
 	import { getChatListByUserId, deleteChatById, getArchivedChatList } from '$lib/apis/chats';
 
@@ -80,7 +82,7 @@
 						<div class="relative overflow-x-auto">
 							<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
 								<thead
-									class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-800"
+									class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-850"
 								>
 									<tr>
 										<th
@@ -130,7 +132,7 @@
 
 											<td class=" px-3 py-1 hidden md:flex h-[2.5rem] justify-end">
 												<div class="my-auto shrink-0">
-													{dayjs(chat.updated_at * 1000).format($i18n.t('MMMM DD, YYYY HH:mm'))}
+													{dayjs(chat.updated_at * 1000).format('LLL')}
 												</div>
 											</td>
 

@@ -1,37 +1,31 @@
 import asyncio
 import base64
+import io
 import json
 import logging
 import mimetypes
 import re
-import uuid
 from pathlib import Path
 from typing import Optional
 
 import requests
-
-
-from fastapi import Depends, FastAPI, HTTPException, Request, APIRouter
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-
-
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import ENV, SRC_LOG_LEVELS, ENABLE_FORWARD_USER_INFO_HEADERS
-
+from open_webui.env import ENABLE_FORWARD_USER_INFO_HEADERS, SRC_LOG_LEVELS
+from open_webui.routers.files import upload_file
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.images.comfyui import (
     ComfyUIGenerateImageForm,
     ComfyUIWorkflow,
     comfyui_generate_image,
 )
-
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["IMAGES"])
 
-IMAGE_CACHE_DIR = Path(CACHE_DIR).joinpath("./image/generations/")
+IMAGE_CACHE_DIR = CACHE_DIR / "image" / "generations"
 IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -61,6 +55,10 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
             "COMFYUI_WORKFLOW": request.app.state.config.COMFYUI_WORKFLOW,
             "COMFYUI_WORKFLOW_NODES": request.app.state.config.COMFYUI_WORKFLOW_NODES,
         },
+        "gemini": {
+            "GEMINI_API_BASE_URL": request.app.state.config.IMAGES_GEMINI_API_BASE_URL,
+            "GEMINI_API_KEY": request.app.state.config.IMAGES_GEMINI_API_KEY,
+        },
     }
 
 
@@ -84,6 +82,11 @@ class ComfyUIConfigForm(BaseModel):
     COMFYUI_WORKFLOW_NODES: list[dict]
 
 
+class GeminiConfigForm(BaseModel):
+    GEMINI_API_BASE_URL: str
+    GEMINI_API_KEY: str
+
+
 class ConfigForm(BaseModel):
     enabled: bool
     engine: str
@@ -91,6 +94,7 @@ class ConfigForm(BaseModel):
     openai: OpenAIConfigForm
     automatic1111: Automatic1111ConfigForm
     comfyui: ComfyUIConfigForm
+    gemini: GeminiConfigForm
 
 
 @router.post("/config/update")
@@ -108,6 +112,11 @@ async def update_config(
         form_data.openai.OPENAI_API_BASE_URL
     )
     request.app.state.config.IMAGES_OPENAI_API_KEY = form_data.openai.OPENAI_API_KEY
+
+    request.app.state.config.IMAGES_GEMINI_API_BASE_URL = (
+        form_data.gemini.GEMINI_API_BASE_URL
+    )
+    request.app.state.config.IMAGES_GEMINI_API_KEY = form_data.gemini.GEMINI_API_KEY
 
     request.app.state.config.AUTOMATIC1111_BASE_URL = (
         form_data.automatic1111.AUTOMATIC1111_BASE_URL
@@ -135,6 +144,8 @@ async def update_config(
     request.app.state.config.COMFYUI_BASE_URL = (
         form_data.comfyui.COMFYUI_BASE_URL.strip("/")
     )
+    request.app.state.config.COMFYUI_API_KEY = form_data.comfyui.COMFYUI_API_KEY
+
     request.app.state.config.COMFYUI_WORKFLOW = form_data.comfyui.COMFYUI_WORKFLOW
     request.app.state.config.COMFYUI_WORKFLOW_NODES = (
         form_data.comfyui.COMFYUI_WORKFLOW_NODES
@@ -160,6 +171,10 @@ async def update_config(
             "COMFYUI_API_KEY": request.app.state.config.COMFYUI_API_KEY,
             "COMFYUI_WORKFLOW": request.app.state.config.COMFYUI_WORKFLOW,
             "COMFYUI_WORKFLOW_NODES": request.app.state.config.COMFYUI_WORKFLOW_NODES,
+        },
+        "gemini": {
+            "GEMINI_API_BASE_URL": request.app.state.config.IMAGES_GEMINI_API_BASE_URL,
+            "GEMINI_API_KEY": request.app.state.config.IMAGES_GEMINI_API_KEY,
         },
     }
 
@@ -190,9 +205,17 @@ async def verify_url(request: Request, user=Depends(get_admin_user)):
             request.app.state.config.ENABLE_IMAGE_GENERATION = False
             raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
     elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
+
+        headers = None
+        if request.app.state.config.COMFYUI_API_KEY:
+            headers = {
+                "Authorization": f"Bearer {request.app.state.config.COMFYUI_API_KEY}"
+            }
+
         try:
             r = requests.get(
-                url=f"{request.app.state.config.COMFYUI_BASE_URL}/object_info"
+                url=f"{request.app.state.config.COMFYUI_BASE_URL}/object_info",
+                headers=headers,
             )
             r.raise_for_status()
             return True
@@ -229,6 +252,12 @@ def get_image_model(request):
             request.app.state.config.IMAGE_GENERATION_MODEL
             if request.app.state.config.IMAGE_GENERATION_MODEL
             else "dall-e-2"
+        )
+    elif request.app.state.config.IMAGE_GENERATION_ENGINE == "gemini":
+        return (
+            request.app.state.config.IMAGE_GENERATION_MODEL
+            if request.app.state.config.IMAGE_GENERATION_MODEL
+            else "imagen-3.0-generate-002"
         )
     elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
         return (
@@ -271,7 +300,6 @@ async def get_image_config(request: Request, user=Depends(get_admin_user)):
 async def update_image_config(
     request: Request, form_data: ImageConfigForm, user=Depends(get_admin_user)
 ):
-
     set_image_model(request, form_data.MODEL)
 
     pattern = r"^\d+x\d+$"
@@ -306,6 +334,10 @@ def get_models(request: Request, user=Depends(get_verified_user)):
                 {"id": "dall-e-2", "name": "DALL·E 2"},
                 {"id": "dall-e-3", "name": "DALL·E 3"},
             ]
+        elif request.app.state.config.IMAGE_GENERATION_ENGINE == "gemini":
+            return [
+                {"id": "imagen-3-0-generate-002", "name": "imagen-3.0 generate-002"},
+            ]
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
             # TODO - get models from comfyui
             headers = {
@@ -329,7 +361,7 @@ def get_models(request: Request, user=Depends(get_verified_user)):
             if model_node_id:
                 model_list_key = None
 
-                print(workflow[model_node_id]["class_type"])
+                log.info(workflow[model_node_id]["class_type"])
                 for key in info[workflow[model_node_id]["class_type"]]["input"][
                     "required"
                 ]:
@@ -383,40 +415,22 @@ class GenerateImageForm(BaseModel):
     negative_prompt: Optional[str] = None
 
 
-def save_b64_image(b64_str):
+def load_b64_image_data(b64_str):
     try:
-        image_id = str(uuid.uuid4())
-
         if "," in b64_str:
             header, encoded = b64_str.split(",", 1)
             mime_type = header.split(";")[0]
-
             img_data = base64.b64decode(encoded)
-            image_format = mimetypes.guess_extension(mime_type)
-
-            image_filename = f"{image_id}{image_format}"
-            file_path = IMAGE_CACHE_DIR / f"{image_filename}"
-            with open(file_path, "wb") as f:
-                f.write(img_data)
-            return image_filename
         else:
-            image_filename = f"{image_id}.png"
-            file_path = IMAGE_CACHE_DIR.joinpath(image_filename)
-
+            mime_type = "image/png"
             img_data = base64.b64decode(b64_str)
-
-            # Write the image data to a file
-            with open(file_path, "wb") as f:
-                f.write(img_data)
-            return image_filename
-
+        return img_data, mime_type
     except Exception as e:
-        log.exception(f"Error saving image: {e}")
+        log.exception(f"Error loading image data: {e}")
         return None
 
 
-def save_url_image(url, headers=None):
-    image_id = str(uuid.uuid4())
+def load_url_image_data(url, headers=None):
     try:
         if headers:
             r = requests.get(url, headers=headers)
@@ -426,18 +440,7 @@ def save_url_image(url, headers=None):
         r.raise_for_status()
         if r.headers["content-type"].split("/")[0] == "image":
             mime_type = r.headers["content-type"]
-            image_format = mimetypes.guess_extension(mime_type)
-
-            if not image_format:
-                raise ValueError("Could not determine image type from MIME type")
-
-            image_filename = f"{image_id}{image_format}"
-
-            file_path = IMAGE_CACHE_DIR.joinpath(f"{image_filename}")
-            with open(file_path, "wb") as image_file:
-                for chunk in r.iter_content(chunk_size=8192):
-                    image_file.write(chunk)
-            return image_filename
+            return r.content, mime_type
         else:
             log.error("Url does not point to an image.")
             return None
@@ -445,6 +448,20 @@ def save_url_image(url, headers=None):
     except Exception as e:
         log.exception(f"Error saving image: {e}")
         return None
+
+
+def upload_image(request, image_metadata, image_data, content_type, user):
+    image_format = mimetypes.guess_extension(content_type)
+    file = UploadFile(
+        file=io.BytesIO(image_data),
+        filename=f"generated-image{image_format}",  # will be converted to a unique ID on upload_file
+        headers={
+            "content-type": content_type,
+        },
+    )
+    file_item = upload_file(request, file, user, file_metadata=image_metadata)
+    url = request.app.url_path_for("get_file_content_by_id", id=file_item.id)
+    return url
 
 
 @router.post("/generations")
@@ -500,12 +517,49 @@ async def image_generations(
             images = []
 
             for image in res["data"]:
-                image_filename = save_b64_image(image["b64_json"])
-                images.append({"url": f"/cache/image/generations/{image_filename}"})
-                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_filename}.json")
+                if "url" in image:
+                    image_data, content_type = load_url_image_data(
+                        image["url"], headers
+                    )
+                else:
+                    image_data, content_type = load_b64_image_data(image["b64_json"])
 
-                with open(file_body_path, "w") as f:
-                    json.dump(data, f)
+                url = upload_image(request, data, image_data, content_type, user)
+                images.append({"url": url})
+            return images
+
+        elif request.app.state.config.IMAGE_GENERATION_ENGINE == "gemini":
+            headers = {}
+            headers["Content-Type"] = "application/json"
+            headers["x-goog-api-key"] = request.app.state.config.IMAGES_GEMINI_API_KEY
+
+            model = get_image_model(request)
+            data = {
+                "instances": {"prompt": form_data.prompt},
+                "parameters": {
+                    "sampleCount": form_data.n,
+                    "outputOptions": {"mimeType": "image/png"},
+                },
+            }
+
+            # Use asyncio.to_thread for the requests.post call
+            r = await asyncio.to_thread(
+                requests.post,
+                url=f"{request.app.state.config.IMAGES_GEMINI_API_BASE_URL}/models/{model}:predict",
+                json=data,
+                headers=headers,
+            )
+
+            r.raise_for_status()
+            res = r.json()
+
+            images = []
+            for image in res["predictions"]:
+                image_data, content_type = load_b64_image_data(
+                    image["bytesBase64Encoded"]
+                )
+                url = upload_image(request, data, image_data, content_type, user)
+                images.append({"url": url})
 
             return images
 
@@ -552,14 +606,15 @@ async def image_generations(
                         "Authorization": f"Bearer {request.app.state.config.COMFYUI_API_KEY}"
                     }
 
-                image_filename = save_url_image(image["url"], headers)
-                images.append({"url": f"/cache/image/generations/{image_filename}"})
-                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_filename}.json")
-
-                with open(file_body_path, "w") as f:
-                    json.dump(form_data.model_dump(exclude_none=True), f)
-
-            log.debug(f"images: {images}")
+                image_data, content_type = load_url_image_data(image["url"], headers)
+                url = upload_image(
+                    request,
+                    form_data.model_dump(exclude_none=True),
+                    image_data,
+                    content_type,
+                    user,
+                )
+                images.append({"url": url})
             return images
         elif (
             request.app.state.config.IMAGE_GENERATION_ENGINE == "automatic1111"
@@ -604,13 +659,15 @@ async def image_generations(
             images = []
 
             for image in res["images"]:
-                image_filename = save_b64_image(image)
-                images.append({"url": f"/cache/image/generations/{image_filename}"})
-                file_body_path = IMAGE_CACHE_DIR.joinpath(f"{image_filename}.json")
-
-                with open(file_body_path, "w") as f:
-                    json.dump({**data, "info": res["info"]}, f)
-
+                image_data, content_type = load_b64_image_data(image)
+                url = upload_image(
+                    request,
+                    {**data, "info": res["info"]},
+                    image_data,
+                    content_type,
+                    user,
+                )
+                images.append({"url": url})
             return images
     except Exception as e:
         error = e

@@ -5,10 +5,12 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import isToday from 'dayjs/plugin/isToday';
 import isYesterday from 'dayjs/plugin/isYesterday';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 dayjs.extend(relativeTime);
 dayjs.extend(isToday);
 dayjs.extend(isYesterday);
+dayjs.extend(localizedFormat);
 
 import { WEBUI_BASE_URL } from '$lib/constants';
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
@@ -24,46 +26,50 @@ function escapeRegExp(string: string): string {
 }
 
 export const replaceTokens = (content, sourceIds, char, user) => {
-	const charToken = /{{char}}/gi;
-	const userToken = /{{user}}/gi;
-	const videoIdToken = /{{VIDEO_FILE_ID_([a-f0-9-]+)}}/gi; // Regex to capture the video ID
-	const htmlIdToken = /{{HTML_FILE_ID_([a-f0-9-]+)}}/gi; // Regex to capture the HTML ID
+	const tokens = [
+		{ regex: /{{char}}/gi, replacement: char },
+		{ regex: /{{user}}/gi, replacement: user },
+		{
+			regex: /{{VIDEO_FILE_ID_([a-f0-9-]+)}}/gi,
+			replacement: (_, fileId) =>
+				`<video src="${WEBUI_BASE_URL}/api/v1/files/${fileId}/content" controls></video>`
+		},
+		{
+			regex: /{{HTML_FILE_ID_([a-f0-9-]+)}}/gi,
+			replacement: (_, fileId) =>
+				`<iframe src="${WEBUI_BASE_URL}/api/v1/files/${fileId}/content/html" width="100%" frameborder="0" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"></iframe>`
+		}
+	];
 
-	// Replace {{char}} if char is provided
-	if (char !== undefined && char !== null) {
-		content = content.replace(charToken, char);
-	}
+	// Replace tokens outside code blocks only
+	const processOutsideCodeBlocks = (text, replacementFn) => {
+		return text
+			.split(/(```[\s\S]*?```|`[\s\S]*?`)/)
+			.map((segment) => {
+				return segment.startsWith('```') || segment.startsWith('`')
+					? segment
+					: replacementFn(segment);
+			})
+			.join('');
+	};
 
-	// Replace {{user}} if user is provided
-	if (user !== undefined && user !== null) {
-		content = content.replace(userToken, user);
-	}
-
-	// Replace video ID tags with corresponding <video> elements
-	content = content.replace(videoIdToken, (match, fileId) => {
-		const videoUrl = `${WEBUI_BASE_URL}/api/v1/files/${fileId}/content`;
-		return `<video src="${videoUrl}" controls></video>`;
-	});
-
-	// Replace HTML ID tags with corresponding HTML content
-	content = content.replace(htmlIdToken, (match, fileId) => {
-		const htmlUrl = `${WEBUI_BASE_URL}/api/v1/files/${fileId}/content/html`;
-		return `<iframe src="${htmlUrl}" width="100%" frameborder="0" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"></iframe>`;
-	});
-
-	// Remove sourceIds from the content and replace them with <source_id>...</source_id>
-	if (Array.isArray(sourceIds)) {
-		sourceIds.forEach((sourceId) => {
-			// Escape special characters in the sourceId
-			const escapedSourceId = escapeRegExp(sourceId);
-
-			// Create a token based on the exact `[sourceId]` string
-			const sourceToken = `\\[${escapedSourceId}\\]`; // Escape special characters for RegExp
-			const sourceRegex = new RegExp(sourceToken, 'g'); // Match all occurrences of [sourceId]
-
-			content = content.replace(sourceRegex, `<source_id data="${sourceId}" />`);
+	// Apply replacements
+	content = processOutsideCodeBlocks(content, (segment) => {
+		tokens.forEach(({ regex, replacement }) => {
+			if (replacement !== undefined && replacement !== null) {
+				segment = segment.replace(regex, replacement);
+			}
 		});
-	}
+
+		if (Array.isArray(sourceIds)) {
+			sourceIds.forEach((sourceId, idx) => {
+				const regex = new RegExp(`\\[${idx}\\]`, 'g');
+				segment = segment.replace(regex, `<source_id data="${idx}" title="${sourceId}" />`);
+			});
+		}
+
+		return segment;
+	});
 
 	return content;
 };
@@ -295,11 +301,11 @@ export const formatDate = (inputDate) => {
 	const now = dayjs();
 
 	if (date.isToday()) {
-		return `Today at ${date.format('HH:mm')}`;
+		return `Today at ${date.format('LT')}`;
 	} else if (date.isYesterday()) {
-		return `Yesterday at ${date.format('HH:mm')}`;
+		return `Yesterday at ${date.format('LT')}`;
 	} else {
-		return `${date.format('DD/MM/YYYY')} at ${date.format('HH:mm')}`;
+		return `${date.format('L')} at ${date.format('LT')}`;
 	}
 };
 
@@ -666,8 +672,15 @@ export const cleanText = (content: string) => {
 	return removeFormattings(removeEmojis(content.trim()));
 };
 
-export const removeDetailsWithReasoning = (content) => {
-	return content.replace(/<details\s+type="reasoning"[^>]*>.*?<\/details>/gis, '').trim();
+export const removeDetails = (content, types) => {
+	for (const type of types) {
+		content = content.replace(
+			new RegExp(`<details\\s+type="${type}"[^>]*>.*?<\\/details>`, 'gis'),
+			''
+		);
+	}
+
+	return content;
 };
 
 // This regular expression matches code blocks marked by triple backticks
@@ -739,7 +752,7 @@ export const extractSentencesForAudio = (text: string) => {
 };
 
 export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {
-	content = removeDetailsWithReasoning(content);
+	content = removeDetails(content, ['reasoning', 'code_interpreter']);
 	const messageContentParts: string[] = [];
 
 	switch (split_on) {
@@ -762,6 +775,19 @@ export const blobToFile = (blob, fileName) => {
 	// Create a new File object from the Blob
 	const file = new File([blob], fileName, { type: blob.type });
 	return file;
+};
+
+export const getPromptVariables = (user_name, user_location) => {
+	return {
+		'{{USER_NAME}}': user_name,
+		'{{USER_LOCATION}}': user_location || 'Unknown',
+		'{{CURRENT_DATETIME}}': getCurrentDateTime(),
+		'{{CURRENT_DATE}}': getFormattedDate(),
+		'{{CURRENT_TIME}}': getFormattedTime(),
+		'{{CURRENT_WEEKDAY}}': getWeekday(),
+		'{{CURRENT_TIMEZONE}}': getUserTimezone(),
+		'{{USER_LANGUAGE}}': localStorage.getItem('locale') || 'en-US'
+	};
 };
 
 /**
@@ -827,6 +853,9 @@ export const promptTemplate = (
 	if (user_location) {
 		// Replace {{USER_LOCATION}} in the template with the current location
 		template = template.replace('{{USER_LOCATION}}', user_location);
+	} else {
+		// Replace {{USER_LOCATION}} in the template with 'Unknown' if no location is provided
+		template = template.replace('{{USER_LOCATION}}', 'LOCATION_UNKNOWN');
 	}
 
 	return template;
@@ -981,7 +1010,10 @@ export const bestMatchingLanguage = (supportedLanguages, preferredLanguages, def
 // Get the date in the format YYYY-MM-DD
 export const getFormattedDate = () => {
 	const date = new Date();
-	return date.toISOString().split('T')[0];
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
 };
 
 // Get the time in the format HH:MM:SS

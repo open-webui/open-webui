@@ -459,7 +459,7 @@ export const getChatById = async (token: string, id: string) => {
 			return json;
 		})
 		.catch((err) => {
-			error = err;
+			error = err.detail;
 
 			console.log(err);
 			return null;
@@ -580,7 +580,7 @@ export const toggleChatPinnedStatusById = async (token: string, id: string) => {
 	return res;
 };
 
-export const cloneChatById = async (token: string, id: string) => {
+export const cloneChatById = async (token: string, id: string, title?: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/clone`, {
@@ -589,7 +589,10 @@ export const cloneChatById = async (token: string, id: string) => {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		}
+		},
+		body: JSON.stringify({
+			...(title && { title: title })
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();

@@ -25,16 +25,13 @@ from open_webui.env import (
     WEBUI_AUTH,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
-    WEBUI_SESSION_COOKIE_SAME_SITE,
-    WEBUI_SESSION_COOKIE_SECURE,
+    WEBUI_AUTH_COOKIE_SAME_SITE,
+    WEBUI_AUTH_COOKIE_SECURE,
     SRC_LOG_LEVELS,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response
-from open_webui.config import (
-    OPENID_PROVIDER_URL,
-    ENABLE_OAUTH_SIGNUP,
-)
+from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
 from pydantic import BaseModel
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.auth import (
@@ -51,8 +48,10 @@ from open_webui.utils.access_control import get_permissions
 from typing import Optional, List
 
 from ssl import CERT_REQUIRED, PROTOCOL_TLS
-from ldap3 import Server, Connection, NONE, Tls
-from ldap3.utils.conv import escape_filter_chars
+
+if ENABLE_LDAP.value:
+    from ldap3 import Server, Connection, NONE, Tls
+    from ldap3.utils.conv import escape_filter_chars
 
 router = APIRouter()
 
@@ -95,8 +94,8 @@ async def get_session_user(
         value=token,
         expires=datetime_expires_at,
         httponly=True,  # Ensures the cookie is not accessible via JavaScript
-        samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
-        secure=WEBUI_SESSION_COOKIE_SECURE,
+        samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+        secure=WEBUI_AUTH_COOKIE_SECURE,
     )
 
     user_permissions = get_permissions(
@@ -164,7 +163,7 @@ async def update_password(
 ############################
 # LDAP Authentication
 ############################
-@router.post("/ldap", response_model=SigninResponse)
+@router.post("/ldap", response_model=SessionUserResponse)
 async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
     ENABLE_LDAP = request.app.state.config.ENABLE_LDAP
     LDAP_SERVER_LABEL = request.app.state.config.LDAP_SERVER_LABEL
@@ -231,9 +230,12 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
         entry = connection_app.entries[0]
         username = str(entry[f"{LDAP_ATTRIBUTE_FOR_USERNAME}"]).lower()
-        mail = str(entry[f"{LDAP_ATTRIBUTE_FOR_MAIL}"])
-        if not mail or mail == "" or mail == "[]":
-            raise HTTPException(400, f"User {form_data.user} does not have mail.")
+        email = str(entry[f"{LDAP_ATTRIBUTE_FOR_MAIL}"])
+        if not email or email == "" or email == "[]":
+            raise HTTPException(400, f"User {form_data.user} does not have email.")
+        else:
+            email = email.lower()
+
         cn = str(entry["cn"])
         user_dn = entry.entry_dn
 
@@ -248,17 +250,22 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             if not connection_user.bind():
                 raise HTTPException(400, f"Authentication failed for {form_data.user}")
 
-            user = Users.get_user_by_email(mail)
+            user = Users.get_user_by_email(email)
             if not user:
                 try:
+                    user_count = Users.get_num_users()
+
                     role = (
                         "admin"
-                        if Users.get_num_users() == 0
+                        if user_count == 0
                         else request.app.state.config.DEFAULT_USER_ROLE
                     )
 
                     user = Auths.insert_new_auth(
-                        email=mail, password=str(uuid.uuid4()), name=cn, role=role
+                        email=email,
+                        password=str(uuid.uuid4()),
+                        name=cn,
+                        role=role,
                     )
 
                     if not user:
@@ -271,7 +278,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 except Exception as err:
                     raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
 
-            user = Auths.authenticate_user_by_trusted_header(mail)
+            user = Auths.authenticate_user_by_trusted_header(email)
 
             if user:
                 token = create_token(
@@ -288,6 +295,10 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     httponly=True,  # Ensures the cookie is not accessible via JavaScript
                 )
 
+                user_permissions = get_permissions(
+                    user.id, request.app.state.config.USER_PERMISSIONS
+                )
+
                 return {
                     "token": token,
                     "token_type": "Bearer",
@@ -296,6 +307,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     "name": user.name,
                     "role": user.role,
                     "profile_image_url": user.profile_image_url,
+                    "permissions": user_permissions,
                 }
             else:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
@@ -378,8 +390,8 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             value=token,
             expires=datetime_expires_at,
             httponly=True,  # Ensures the cookie is not accessible via JavaScript
-            samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
-            secure=WEBUI_SESSION_COOKIE_SECURE,
+            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+            secure=WEBUI_AUTH_COOKIE_SECURE,
         )
 
         user_permissions = get_permissions(
@@ -408,6 +420,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
 @router.post("/signup", response_model=SessionUserResponse)
 async def signup(request: Request, response: Response, form_data: SignupForm):
+
     if WEBUI_AUTH:
         if (
             not request.app.state.config.ENABLE_SIGNUP
@@ -422,6 +435,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
             )
 
+    user_count = Users.get_num_users()
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -432,12 +446,10 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
     try:
         role = (
-            "admin"
-            if Users.get_num_users() == 0
-            else request.app.state.config.DEFAULT_USER_ROLE
+            "admin" if user_count == 0 else request.app.state.config.DEFAULT_USER_ROLE
         )
 
-        if Users.get_num_users() == 0:
+        if user_count == 0:
             # Disable signup after the first user is created
             request.app.state.config.ENABLE_SIGNUP = False
 
@@ -473,12 +485,13 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 value=token,
                 expires=datetime_expires_at,
                 httponly=True,  # Ensures the cookie is not accessible via JavaScript
-                samesite=WEBUI_SESSION_COOKIE_SAME_SITE,
-                secure=WEBUI_SESSION_COOKIE_SECURE,
+                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                secure=WEBUI_AUTH_COOKIE_SECURE,
             )
 
             if request.app.state.config.WEBHOOK_URL:
                 post_webhook(
+                    request.app.state.WEBUI_NAME,
                     request.app.state.config.WEBHOOK_URL,
                     WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                     {
@@ -525,7 +538,8 @@ async def signout(request: Request, response: Response):
                             if logout_url:
                                 response.delete_cookie("oauth_id_token")
                                 return RedirectResponse(
-                                    url=f"{logout_url}?id_token_hint={oauth_id_token}"
+                                    headers=response.headers,
+                                    url=f"{logout_url}?id_token_hint={oauth_id_token}",
                                 )
                         else:
                             raise HTTPException(
@@ -591,7 +605,7 @@ async def get_admin_details(request: Request, user=Depends(get_current_user)):
         admin_email = request.app.state.config.ADMIN_EMAIL
         admin_name = None
 
-        print(admin_email, admin_name)
+        log.info(f"Admin details - Email: {admin_email}, Name: {admin_name}")
 
         if admin_email:
             admin = Users.get_user_by_email(admin_email)

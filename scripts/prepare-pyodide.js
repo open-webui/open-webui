@@ -9,11 +9,45 @@ const packages = [
 	'scikit-learn',
 	'scipy',
 	'regex',
-	'seaborn'
+	'sympy',
+	'tiktoken',
+	'seaborn',
+	'pytz'
 ];
 
 import { loadPyodide } from 'pyodide';
+import { setGlobalDispatcher, ProxyAgent } from 'undici';
 import { writeFile, readFile, copyFile, readdir, rmdir } from 'fs/promises';
+
+/**
+ * Loading network proxy configurations from the environment variables.
+ * And the proxy config with lowercase name has the highest priority to use.
+ */
+function initNetworkProxyFromEnv() {
+	// we assume all subsequent requests in this script are HTTPS:
+	// https://cdn.jsdelivr.net
+	// https://pypi.org
+	// https://files.pythonhosted.org
+	const allProxy = process.env.all_proxy || process.env.ALL_PROXY;
+	const httpsProxy = process.env.https_proxy || process.env.HTTPS_PROXY;
+	const httpProxy = process.env.http_proxy || process.env.HTTP_PROXY;
+	const preferedProxy = httpsProxy || allProxy || httpProxy;
+	/**
+	 * use only http(s) proxy because socks5 proxy is not supported currently:
+	 * @see https://github.com/nodejs/undici/issues/2224
+	 */
+	if (!preferedProxy || !preferedProxy.startsWith('http')) return;
+	let preferedProxyURL;
+	try {
+		preferedProxyURL = new URL(preferedProxy).toString();
+	} catch {
+		console.warn(`Invalid network proxy URL: "${preferedProxy}"`);
+		return;
+	}
+	const dispatcher = new ProxyAgent({ uri: preferedProxyURL });
+	setGlobalDispatcher(dispatcher);
+	console.log(`Initialized network proxy "${preferedProxy}" from env`);
+}
 
 async function downloadPackages() {
 	console.log('Setting up pyodide + micropip');
@@ -81,5 +115,6 @@ async function copyPyodide() {
 	}
 }
 
+initNetworkProxyFromEnv();
 await downloadPackages();
 await copyPyodide();
