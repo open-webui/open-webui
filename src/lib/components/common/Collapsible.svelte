@@ -24,7 +24,15 @@
 	$: loadLocale($i18n.languages);
 
 	const dispatch = createEventDispatcher();
-	$: dispatch('change', open);
+
+	// Automatically open if operation is not done, and close when done
+	$: {
+		if (attributes?.done === 'false') {
+			open = true;   // Keep open when operation is still ongoing
+		} else if (attributes?.done === 'true') {
+			open = false;  // Close when the operation is done
+		}
+	}
 
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
@@ -63,8 +71,7 @@
 				class=" w-full font-medium flex items-center justify-between gap-2 {attributes?.done &&
 				attributes?.done !== 'true'
 					? 'shimmer'
-					: ''}
-			"
+					: ''}"
 			>
 				{#if attributes?.done && attributes?.done !== 'true'}
 					<div>
