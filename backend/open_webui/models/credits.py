@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import BigInteger, Column, Numeric, String
+from sqlalchemy import JSON, BigInteger, Column, Numeric, String
 
 from open_webui.internal.db import Base, get_db
 
@@ -25,6 +25,17 @@ class Credit(Base):
     created_at = Column(BigInteger)
 
 
+class CreditLog(Base):
+    __tablename__ = "credit_log"
+
+    id = Column(String, primary_key=True)
+    user_id = Column(String, index=True, nullable=False)
+    credit = Column(Numeric(precision=24, scale=12))
+    detail = Column(JSON, nullable=True)
+
+    created_at = Column(BigInteger)
+
+
 ####################
 # Forms
 ####################
@@ -37,6 +48,21 @@ class CreditModel(BaseModel):
     credit: Decimal = Field(default_factory=lambda: Decimal("0"))
     updated_at: int = Field(default_factory=lambda: int(time.time()))
     created_at: int = Field(default_factory=lambda: int(time.time()))
+
+
+class CreditLogModel(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str = Field(default_factory=lambda: uuid.uuid4().hex)
+    user_id: str
+    credit: Decimal = Field(default_factory=lambda: Decimal("0"))
+    detail: dict = Field(default_factory=lambda: {})
+    created_at: int = Field(default_factory=lambda: int(time.time()))
+
+
+class AddCreditModel(BaseModel):
+    user_id: str
+    amount: Decimal = Field(default_factory=lambda: Decimal("0"))
+    detail: dict = Field(default_factory=lambda: {})
 
 
 ####################
@@ -81,13 +107,18 @@ class CreditsTable:
         except Exception:
             return []
 
-    def add_credit_by_user_id(self, user_id: str, amount: Decimal) -> Optional[CreditModel]:
+    def add_credit_by_user_id(self, form_data: AddCreditModel) -> Optional[CreditModel]:
+        credit = self.init_credit_by_user_id(user_id=form_data.user_id)
+        log = CreditLogModel(
+            user_id=form_data.user_id, credit=credit.credit + form_data.amount, detail=form_data.detail
+        )
         with get_db() as db:
-            db.query(Credit).filter(Credit.user_id == user_id).update(
-                {"credit": Credit.credit + amount, "updated_at": int(time.time())}, synchronize_session=False
+            db.add(CreditLog(**log.model_dump()))
+            db.query(Credit).filter(Credit.user_id == form_data.user_id).update(
+                {"credit": Credit.credit + form_data.amount, "updated_at": int(time.time())}, synchronize_session=False
             )
             db.commit()
-        return self.get_credit_by_user_id(user_id=user_id)
+        return self.get_credit_by_user_id(form_data.user_id)
 
 
 Credits = CreditsTable()
