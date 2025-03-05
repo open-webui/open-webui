@@ -22,6 +22,7 @@
 </script>
 
 <AddConnectionModal
+	aifred
 	edit
 	bind:show={showConfigModal}
 	connection={{

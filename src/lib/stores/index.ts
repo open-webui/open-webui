@@ -79,17 +79,23 @@ export const currentChatPage = writable(1);
 export const isLastActiveTab = writable(true);
 export const playingNotificationSound = writable(false);
 
-export type Model = OpenAIModel | OllamaModel;
+export type Model = OpenAIModel | OllamaModel | AifredModel;
 
 type BaseModel = {
 	id: string;
 	name: string;
 	info?: ModelConfig;
-	owned_by: 'ollama' | 'openai' | 'arena';
+	owned_by: 'ollama' | 'openai' | 'aifred' | 'arena';
 };
 
 export interface OpenAIModel extends BaseModel {
 	owned_by: 'openai';
+	external: boolean;
+	source?: string;
+}
+
+export interface AifredModel extends BaseModel {
+	owned_by: 'aifred';
 	external: boolean;
 	source?: string;
 }

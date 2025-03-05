@@ -6,6 +6,7 @@
 	import { models } from '$lib/stores';
 	import { verifyOpenAIConnection } from '$lib/apis/openai';
 	import { verifyOllamaConnection } from '$lib/apis/ollama';
+	import { verifyAifredConnection } from '$lib/apis/aifred';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
@@ -22,6 +23,7 @@
 	export let edit = false;
 
 	export let ollama = false;
+	export let aifred = false;
 	export let direct = false;
 
 	export let connection = null;
@@ -59,9 +61,23 @@
 		}
 	};
 
+	const verifyAifredHandler = async () => {
+		const res = await verifyAifredConnection(localStorage.token, url, key, direct).catch(
+			(error) => {
+				toast.error(`${error}`);
+			}
+		);
+
+		if (res) {
+			toast.success($i18n.t('Server connection verified'));
+		}
+	};
+
 	const verifyHandler = () => {
 		if (ollama) {
 			verifyOllamaHandler();
+		} else if (aifred) {
+			verifyAifredHandler();
 		} else {
 			verifyOpenAIHandler();
 		}

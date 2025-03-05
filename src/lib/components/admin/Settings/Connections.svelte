@@ -191,7 +191,6 @@
 	};
 
 	onMount(async () => {
-		debugger;
 		if ($user.role === 'admin') {
 			let ollamaConfig = {};
 			let openaiConfig = {};
@@ -255,7 +254,7 @@
 					}
 				}
 			}
-			debugger;
+			
 			if (ENABLE_AIFRED_API) {
 				// get url and idx
 				for (const [idx, url] of AIFRED_API_BASE_URLS.entries()) {
@@ -527,7 +526,7 @@
 						<div class="">
 							<Switch
 								bind:state={directConnectionsConfig.ENABLE_DIRECT_CONNECTIONS}
-								on:change={async () => {debugger;
+								on:change={async () => {
 									updateDirectConnectionsHandler();
 								}}
 							/>

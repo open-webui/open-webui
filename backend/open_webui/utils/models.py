@@ -5,7 +5,7 @@ import sys
 from aiocache import cached
 from fastapi import Request
 
-from open_webui.routers import openai, ollama
+from open_webui.routers import openai, ollama, aifred
 from open_webui.functions import get_function_models
 
 
@@ -34,6 +34,7 @@ async def get_all_base_models(request: Request, user: UserModel = None):
     function_models = []
     openai_models = []
     ollama_models = []
+    aifred_models = []
 
     if request.app.state.config.ENABLE_OPENAI_API:
         openai_models = await openai.get_all_models(request, user=user)
@@ -53,8 +54,30 @@ async def get_all_base_models(request: Request, user: UserModel = None):
             for model in ollama_models["models"]
         ]
 
+    if request.app.state.config.ENABLE_AIFRED_API:
+        aifred_models = await aifred.get_all_models(request, user=user)
+        
+        # 'models' 키가 존재하지 않거나 빈 리스트인 경우 처리
+        models_list = aifred_models.get("data", [])
+
+        if not models_list:
+            aifred_models = []  # 빈 리스트로 처리하여 오류 방지
+        else:
+            aifred_models = [
+                {
+                    "id": model["id"],
+                    "name": model["name"],
+                    "object": "model",
+                    "created": int(time.time()),
+                    "owned_by": "aifred",
+                    "aifred": model,
+                }
+                for model in models_list
+            ]
+
+
     function_models = await get_function_models(request)
-    models = function_models + openai_models + ollama_models
+    models = function_models + openai_models + ollama_models + aifred_models
 
     return models
 

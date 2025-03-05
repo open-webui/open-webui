@@ -24,7 +24,7 @@ export const getModels = async (
 			console.log(err);
 			return null;
 		});
-
+debugger;
 	if (error) {
 		throw error;
 	}
