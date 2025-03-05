@@ -1500,13 +1500,13 @@ async def process_chat_response(
                             try:
                                 data = json.loads(data)
 
-                            data, _ = await process_filter_functions(
-                                request=request,
-                                filter_functions=filter_functions,
-                                filter_type="stream",
-                                form_data=data,
-                                extra_params=extra_params,
-                            )
+                                data, _ = await process_filter_functions(
+                                    request=request,
+                                    filter_functions=filter_functions,
+                                    filter_type="stream",
+                                    form_data=data,
+                                    extra_params=extra_params,
+                                )
 
                                 if data:
                                     if "selected_model_id" in data:
