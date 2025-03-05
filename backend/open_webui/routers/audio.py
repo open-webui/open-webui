@@ -473,28 +473,103 @@ def transcribe(request: Request, file_path):
     id = filename.split(".")[0]
 
     if request.app.state.config.STT_ENGINE == "":
-        if request.app.state.faster_whisper_model is None:
-            request.app.state.faster_whisper_model = set_faster_whisper_model(
-                request.app.state.config.WHISPER_MODEL
-            )
+        transcript = ""
+        language = ""
+        language_probability = 0
+        
+        if DEVICE_TYPE == "cuda":
+            # GPU mode: Use subprocess for complete VRAM release
+            import subprocess
+            import sys
+            import tempfile
+            
+            log.info("GPU mode: Running transcription in subprocess for VRAM release")
+            
+            # Create a temporary Python script for the subprocess
+            with tempfile.NamedTemporaryFile(suffix='.py', delete=False) as script_file:
+                script_path = script_file.name
+                script = f"""
+import json
+import os
+from faster_whisper import WhisperModel
 
-        model = request.app.state.faster_whisper_model
-        segments, info = model.transcribe(file_path, beam_size=5)
+# Initialize model with the same parameters as the main process
+model = WhisperModel(
+    model_size_or_path="{request.app.state.config.WHISPER_MODEL}",
+    device="cuda",
+    compute_type="int8",
+    download_root="{WHISPER_MODEL_DIR}",
+    local_files_only={not WHISPER_MODEL_AUTO_UPDATE}
+)
+
+# Perform transcription
+segments, info = model.transcribe("{file_path}", beam_size=5)
+transcript = "".join([segment.text for segment in list(segments)])
+
+# Return results as JSON
+result = {{
+    "text": transcript.strip(),
+    "language": info.language,
+    "language_probability": float(info.language_probability)
+}}
+
+print(json.dumps(result))
+"""
+                script_file.write(script.encode('utf-8'))
+            
+            try:
+                # Execute the subprocess
+                result = subprocess.run(
+                    [sys.executable, script_path],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                
+                # Parse results from subprocess
+                result_data = json.loads(result.stdout)
+                
+                transcript = result_data["text"]
+                language = result_data.get("language", "")
+                language_probability = result_data.get("language_probability", 0)
+                
+                log.info("GPU mode: Subprocess completed, VRAM automatically released")
+            except Exception as e:
+                log.exception(e)
+                raise e
+            finally:
+                # Clean up the temporary script file
+                if os.path.exists(script_path):
+                    os.unlink(script_path)
+        else:
+            # CPU mode: Use regular in-process transcription (original behavior)
+            if request.app.state.faster_whisper_model is None:
+                request.app.state.faster_whisper_model = set_faster_whisper_model(
+                    request.app.state.config.WHISPER_MODEL
+                )
+            
+            model = request.app.state.faster_whisper_model
+            segments, info = model.transcribe(file_path, beam_size=5)
+            
+            transcript = "".join([segment.text for segment in list(segments)])
+            language = info.language
+            language_probability = info.language_probability
+
+        # Common logging (outside the if-else branches)
         log.info(
             "Detected language '%s' with probability %f"
-            % (info.language, info.language_probability)
+            % (language, language_probability)
         )
 
-        transcript = "".join([segment.text for segment in list(segments)])
+        # Format and save result (common for both paths)
         data = {"text": transcript.strip()}
-
-        # save the transcript to a json file
         transcript_file = f"{file_dir}/{id}.json"
         with open(transcript_file, "w") as f:
             json.dump(data, f)
 
         log.debug(data)
         return data
+        
     elif request.app.state.config.STT_ENGINE == "openai":
         if is_mp4_audio(file_path):
             os.rename(file_path, file_path.replace(".wav", ".mp4"))
