@@ -3,8 +3,7 @@ name: Artifacts for GAIA Release
 on:
   push:
     branches:
-      - aigdat:feature/tmi/432-webui-integration # or whatever branch you want to use
-
+      - main
 jobs:
   release:
     runs-on: ubuntu-latest
