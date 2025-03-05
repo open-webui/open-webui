@@ -149,7 +149,7 @@ async def generate_direct_chat_completion(
             }
         )
 
-        if "error" in res:
+        if "error" in res and res["error"]:
             raise Exception(res["error"])
 
         return res
@@ -328,9 +328,14 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     }
 
     try:
+        filter_functions = [
+            Functions.get_function_by_id(filter_id)
+            for filter_id in get_sorted_filter_ids(model)
+        ]
+
         result, _ = await process_filter_functions(
             request=request,
-            filter_ids=get_sorted_filter_ids(model),
+            filter_functions=filter_functions,
             filter_type="outlet",
             form_data=data,
             extra_params=extra_params,
