@@ -22,14 +22,14 @@
 					alt="Model Avatar"
 				/>
 			</div>
-			<div class="px-4 cursor-default">
+			<div class="px-4 cursor-default overflow-hidden">
 				<h1 class="text-sm font-semibold mt-4">
 					{name}
 				</h1>
 				<h2 class="text-sm">
 					{subtitle}
 				</h2>
-				<div class="mt-0 overflow-hidden duration-[500ms] transition-[height,margin-top] h-0 group-hover:h-36 group-hover:mt-4 ">
+				<div class="mt-0 overflow-hidden duration-[500ms] transition-[height,margin-top] w-60 h-0 group-hover:h-36 group-hover:mt-4 ">
 					<p class="text-xs">
 						{description}
 					</p>
