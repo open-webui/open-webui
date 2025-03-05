@@ -10,29 +10,55 @@
 	let newPassword = '';
 	let newPasswordConfirm = '';
 
+	const isPasswordValid = (password: string): boolean => {
+		const minLength = 8;
+		const hasUpperCase = /[A-Z]/.test(password);
+		const hasLowerCase = /[a-z]/.test(password);
+		const hasNumber = /[0-9]/.test(password);
+		const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+		return (
+			password.length >= minLength &&
+			hasUpperCase &&
+			hasLowerCase &&
+			hasNumber &&
+			hasSpecialChar
+		);
+	};
+
 	const updatePasswordHandler = async () => {
-		if (newPassword === newPasswordConfirm) {
-			const res = await updateUserPassword(localStorage.token, currentPassword, newPassword).catch(
-				(error) => {
-					toast.error(`${error}`);
-					return null;
-				}
-			);
-
-			if (res) {
-				toast.success($i18n.t('Successfully updated.'));
-			}
-
-			currentPassword = '';
-			newPassword = '';
-			newPasswordConfirm = '';
-		} else {
+		if (newPassword !== newPasswordConfirm) {
 			toast.error(
 				`The passwords you entered don't quite match. Please double-check and try again.`
 			);
 			newPassword = '';
 			newPasswordConfirm = '';
+			return;
 		}
+
+		if (!isPasswordValid(newPassword)) {
+			toast.error(
+				`Password must be at least 8 characters long and include uppercase, lowercase, number, and special character.`
+			);
+			newPassword = '';
+			newPasswordConfirm = '';
+			return;
+		}
+
+		const res = await updateUserPassword(localStorage.token, currentPassword, newPassword).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
+
+		if (res) {
+			toast.success($i18n.t('Successfully updated.'));
+		}
+
+		currentPassword = '';
+		newPassword = '';
+		newPasswordConfirm = '';
 	};
 </script>
 
