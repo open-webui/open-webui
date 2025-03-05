@@ -17,6 +17,7 @@
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+	import Source from './Source.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -91,7 +92,7 @@
 				onCode={(value) => {
 					dispatch('code', value);
 				}}
-				onSave={(e) => {
+				onSave={(value) => {
 					dispatch('update', {
 						raw: token.raw,
 						oldContent: token.text,
@@ -261,6 +262,8 @@
 			{@html html}
 		{:else if token.text.includes(`<iframe src="${WEBUI_BASE_URL}/api/v1/files/`)}
 			{@html `${token.text}`}
+		{:else if token.text.includes(`<source_id`)}
+			<Source {id} {token} onClick={onSourceClick} />
 		{:else}
 			{token.text}
 		{/if}
