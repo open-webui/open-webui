@@ -1,7 +1,8 @@
-name: Generate wheel and release to GitHub Artifact
+name: Generate wheel to GitHub artifact
 on:
   release:
-    types: [created]
+    types: [created, published, edited]
+  workflow_dispatch:
 
 jobs:
   release:
