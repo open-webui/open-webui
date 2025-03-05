@@ -12,7 +12,8 @@
 		deleteAllModels,
 		getBaseModels,
 		toggleModelById,
-		updateModelById
+		updateModelById,
+		toggleAllModels
 	} from '$lib/apis/models';
 
 	import { getModels } from '$lib/apis';
@@ -44,15 +45,12 @@
 	let showConfigModal = false;
 	let showManageModal = false;
 
+	let disableAllModels = false;
+
 	$: if (models) {
 		filteredModels = models
 			.filter((m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase()))
 			.sort((a, b) => {
-				// // Check if either model is inactive and push them to the bottom
-				// if ((a.is_active ?? true) !== (b.is_active ?? true)) {
-				// 	return (b.is_active ?? true) - (a.is_active ?? true);
-				// }
-				// If both models' active states are the same, sort alphabetically
 				return a.name.localeCompare(b.name);
 			});
 	}
@@ -137,13 +135,23 @@
 			await toggleModelById(localStorage.token, model.id);
 		}
 
-		// await init();
+			_models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
+	};
+
+	const toggleAllModelsHandler = async () => {
+		await toggleAllModels(localStorage.token, disableAllModels);
 		_models.set(
 			await getModels(
 				localStorage.token,
 				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 			)
 		);
+		await init();
 	};
 
 	onMount(async () => {
@@ -188,6 +196,19 @@
 							}}
 						>
 							<Cog6 />
+						</button>
+					</Tooltip>
+
+					<Tooltip content={$i18n.t('Disable All Models')}>
+						<button
+							class=" p-1 rounded-full flex gap-1 items-center"
+							type="button"
+							on:click={async () => {
+								disableAllModels = !disableAllModels;
+								await toggleAllModelsHandler();
+							}}
+						>
+							<Wrench />
 						</button>
 					</Tooltip>
 				</div>

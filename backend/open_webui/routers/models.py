@@ -201,3 +201,20 @@ async def delete_model_by_id(id: str, user=Depends(get_verified_user)):
 async def delete_all_models(user=Depends(get_admin_user)):
     result = Models.delete_all_models()
     return result
+
+
+############################
+# ToggleAllModels
+############################
+
+
+@router.post("/toggle_all", response_model=bool)
+async def toggle_all_models(enable: bool, user=Depends(get_admin_user)):
+    result = Models.toggle_all_models(enable)
+    if result:
+        return result
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.DEFAULT("Error toggling all models"),
+        )

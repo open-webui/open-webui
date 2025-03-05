@@ -269,5 +269,15 @@ class ModelsTable:
         except Exception:
             return False
 
+    def toggle_all_models(self, enable: bool) -> bool:
+        try:
+            with get_db() as db:
+                db.query(Model).update({"is_active": enable})
+                db.commit()
+                return True
+        except Exception as e:
+            log.exception(f"Failed to toggle all models: {e}")
+            return False
+
 
 Models = ModelsTable()
