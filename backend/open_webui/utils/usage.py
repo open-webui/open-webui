@@ -56,11 +56,11 @@ class Calculator:
 
     def calculate_usage(
         self, model_id: str, messages: List[dict], response: Union[ChatCompletion, ChatCompletionChunk]
-    ) -> CompletionUsage:
+    ) -> (bool, CompletionUsage):
         try:
             # usage
             if response.usage is not None:
-                return response.usage
+                return True, response.usage
             # init
             messages = [MessageItem.model_validate(message) for message in messages]
             # calculate
@@ -79,7 +79,7 @@ class Calculator:
                     usage.completion_tokens = len(encoder.encode(choice.delta.content or ""))
             # total tokens
             usage.total_tokens = usage.prompt_tokens + usage.completion_tokens
-            return usage
+            return False, usage
         except Exception as err:
             logger.exception("[calculate_usage] failed: %s", err)
             raise err
@@ -135,9 +135,6 @@ class CreditDeduct:
         if not isinstance(response, (dict, bytes)):
             logger.warning("[credit_deduct] response is type of %s", type(response))
             return
-        # model price
-        if self.prompt_unit_price <= 0 and self.completion_unit_price <= 0:
-            return
         # prompt messages
         messages = self.body.get("messages", [])
         if not messages:
@@ -157,10 +154,15 @@ class CreditDeduct:
         else:
             response = ChatCompletion.model_validate(response)
         # usage
-        usage = calculator.calculate_usage(model_id=self.model["id"], messages=messages, response=response)
+        is_official_usage, usage = calculator.calculate_usage(
+            model_id=self.model["id"], messages=messages, response=response
+        )
+        if is_official_usage:
+            self.usage = usage
+            return
         if self.is_stream:
             self.usage.prompt_tokens = usage.prompt_tokens
             self.usage.completion_tokens += usage.completion_tokens
             self.usage.total_tokens = self.usage.prompt_tokens + self.usage.completion_tokens
-        else:
-            self.usage = usage
+            return
+        self.usage = usage
