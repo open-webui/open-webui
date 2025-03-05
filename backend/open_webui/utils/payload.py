@@ -62,6 +62,7 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
         "reasoning_effort": str,
         "seed": lambda x: x,
         "stop": lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
+        "logit_bias": lambda x: x,
     }
     return apply_model_params_to_body(params, form_data, mappings)
 
