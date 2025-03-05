@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     branches:
-      - main # or whatever branch you want to use
+      - aigdat:feature/tmi/432-webui-integration # or whatever branch you want to use
 
 jobs:
   release:
