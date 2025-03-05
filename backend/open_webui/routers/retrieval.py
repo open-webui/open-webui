@@ -36,7 +36,7 @@ from open_webui.models.documents import DocumentModel, DocumentDBs
 from open_webui.storage.provider import Storage
 
 
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT, VECTOR_DB
 
 # Document loaders
 from open_webui.retrieval.loaders.main import Loader
@@ -83,6 +83,7 @@ from open_webui.config import (
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+    RERANKING_MODEL_API_KEY,
     UPLOAD_DIR,
     DEFAULT_LOCALE,
 )
@@ -130,30 +131,46 @@ def get_rf(
 ):
     rf = None
     if reranking_model:
+        model_path = get_model_path(reranking_model, auto_update)
         if any(model in reranking_model for model in ["jinaai/jina-colbert-v2"]):
             try:
                 from open_webui.retrieval.models.colbert import ColBERT
 
+                log.info(f"Using ColBERT: {reranking_model}")
                 rf = ColBERT(
-                    get_model_path(reranking_model, auto_update),
+                    model_path,
                     env="docker" if DOCKER else None,
                 )
 
             except Exception as e:
                 log.error(f"ColBERT: {e}")
                 raise Exception(ERROR_MESSAGES.DEFAULT(e))
-        else:
+            
+        # Have this condition because get_model_path will return the reranking_model if having error
+        elif reranking_model == model_path:
             import sentence_transformers
 
             try:
+                log.info(f"Using CrossEncoder: {reranking_model}")
                 rf = sentence_transformers.CrossEncoder(
-                    get_model_path(reranking_model, auto_update),
+                    model_path,
                     device=DEVICE_TYPE,
                     trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
                 )
-            except:
-                log.error("CrossEncoder error")
-                raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
+            except Exception as e:
+                log.error(f"CrossEncoder error: {e}")
+                raise Exception(ERROR_MESSAGES.DEFAULT(e))
+            
+        elif reranking_model.startswith("jina-reranker"):
+            try:
+                from open_webui.retrieval.models.jina_remote import JinaRemoteReranker
+
+                log.info(f"Using JinaRemoteReranker: {reranking_model}")
+                rf = JinaRemoteReranker(reranking_model, RERANKING_MODEL_API_KEY)
+            except Exception as e:
+                log.error(f"JinaReranker error: {e}")
+                raise Exception(ERROR_MESSAGES.DEFAULT(e))
+
     return rf
 
 
@@ -748,10 +765,26 @@ def save_docs_to_vector_db(
             if existing_doc_ids:
                 log.info(f"Document with hash {metadata['hash']} already exists")
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
+
+    # Add file to a knowledge base collection
     if add:
-        file_collection_name = f'file-{metadata["file_id"]}'
-        file_data = VECTOR_DB_CLIENT.get_raw_data(file_collection_name)
-        VECTOR_DB_CLIENT.insert_raw_data(collection_name, file_data)
+        if VECTOR_DB in ["chroma", "qdrant"]:
+            file_collection_name = f"file-{metadata['file_id']}"
+        else:
+            raise ValueError(
+                ERROR_MESSAGES.DEFAULT(
+                    "Vector database not supported for file migration"
+                )
+            )
+
+        all_documents = VECTOR_DB_CLIENT.get_raw_data(
+            collection_name=file_collection_name
+        )
+        VECTOR_DB_CLIENT.insert_raw_data(
+            collection_name=collection_name,
+            documents=all_documents,
+            enable_hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+        )
         log.info(
             f"Migrate vectors from {file_collection_name} to {collection_name} successfully"
         )
@@ -909,6 +942,7 @@ def save_docs_to_vector_db(
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
             items=items,
+            enable_hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
         )
 
         return True
