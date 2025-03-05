@@ -37,7 +37,7 @@ const createIsLoadingStore = (i18n: i18nType) => {
 	return isLoading;
 };
 
-export const initI18n = (defaultLocale: string | undefined) => {
+export const initI18n = (defaultLocale?: string | undefined) => {
 	let detectionOrder = defaultLocale
 		? ['querystring', 'localStorage']
 		: ['querystring', 'localStorage', 'navigator'];
@@ -66,6 +66,9 @@ export const initI18n = (defaultLocale: string | undefined) => {
 				escapeValue: false // not needed for svelte as it escapes by default
 			}
 		});
+
+	const lang = i18next?.language || defaultLocale || 'en-US';
+	document.documentElement.setAttribute('lang', lang);
 };
 
 const i18n = createI18nStore(i18next);
@@ -75,5 +78,10 @@ export const getLanguages = async () => {
 	const languages = (await import(`./locales/languages.json`)).default;
 	return languages;
 };
+export const changeLanguage = (lang: string) => {
+	document.documentElement.setAttribute('lang', lang);
+	i18next.changeLanguage(lang);
+};
+
 export default i18n;
 export const isLoading = isLoadingStore;

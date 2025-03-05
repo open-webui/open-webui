@@ -110,7 +110,7 @@ class PDFGenerator:
             # When running using `pip install -e .` the static directory is in the site packages.
             # This path only works if `open-webui serve` is run from the root of this project.
             if not FONTS_DIR.exists():
-                FONTS_DIR = Path("./backend/static/fonts")
+                FONTS_DIR = Path(".") / "backend" / "static" / "fonts"
 
             pdf.add_font("NotoSans", "", f"{FONTS_DIR}/NotoSans-Regular.ttf")
             pdf.add_font("NotoSans", "b", f"{FONTS_DIR}/NotoSans-Bold.ttf")
