@@ -1,0 +1,42 @@
+# Deployment Configuration
+VERSION=2025_02_12
+IMAGE_BASE_NAME=koscomtechdev/open-webui
+CONTAINER_NAME=open-webui_deploy
+HOST_PORT=8080
+CONTAINER_PORT=8080
+LOCAL_CACHE_DIR=./backend/data/cache
+BUILDPLATFORM=linux/amd64
+CORS_ALLOW_ORIGIN=*
+ENV=dev  # for swagger
+
+# OAuth
+# ENABLE_OAUTH_SIGNUP=true
+# OAUTH_MERGE_ACCOUNTS_BY_EMAIL=true
+
+# OAUTH_CLIENT_ID=open-webui
+# OAUTH_CLIENT_SECRET=SECRETE
+# OPENID_PROVIDER_URL=http://host.docker.internal:8888/realms/myrealm/.well-known/openid-configuration
+# OPENID_PROVIDER_URL=http://host.docker.internal:8888/realms/myrealm/.well-known/openid-configuration
+# OAUTH_PROVIDER_NAME=keycloak
+# ENABLE_OAUTH_GROUP_MANAGEMENT=true
+
+
+# Application Configuration
+CHUNK_SIZE=800
+CHUNK_OVERLAP=200
+
+RAG_EMBEDDING_MODEL=jhgan/ko-sroberta-multitask
+
+# dev
+# OLLAMA_BASE_URL=http://localhost:11434
+# OFFLINE_MODE=false
+# DATA_DIR=./data
+# CACHE_DIR=./data/cache
+# SENTENCE_TRANSFORMERS_HOME=./data/cache/embeddings
+
+# prod
+OLLAMA_BASE_URL=http://host.docker.internal:11434
+OFFLINE_MODE=false
+DATA_DIR=/app/backend/data
+CACHE_DIR=/app/backend/data/cache
+SENTENCE_TRANSFORMERS_HOME=/app/backend/data/cache/embeddings

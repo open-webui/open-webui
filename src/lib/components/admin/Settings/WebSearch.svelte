@@ -373,6 +373,17 @@
 									bind:value={webConfig.search.perplexity_api_key}
 								/>
 							</div>
+						{:else if webConfig.search.engine === 'exa'}
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Exa API Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Exa API Key')}
+									bind:value={webConfig.search.exa_api_key}
+								/>
+							</div>
 						{:else if webConfig.search.engine === 'bing'}
 							<div class="mb-2.5 flex w-full flex-col">
 								<div>

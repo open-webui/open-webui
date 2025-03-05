@@ -1,3 +1,24 @@
+# 개발환경 실행
+```bash
+docker run \
+    -d \
+    --name open-webui_dev \
+    -v ~/.open_webui/cache/:/app/backend/data/cache \
+    --restart always \
+    ghcr.io/open-webui/open-webui:main \
+    sleep infinity
+
+
+apt update
+apt install npm
+npm ci
+npm run build
+
+# cd backend
+# bash start.sh
+# bash 실행 말고 .vscode 디버깅을 사용
+```
+
 # Open WebUI 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)

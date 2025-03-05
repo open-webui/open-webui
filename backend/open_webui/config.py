@@ -324,7 +324,7 @@ GOOGLE_CLIENT_SECRET = PersistentConfig(
 GOOGLE_OAUTH_SCOPE = PersistentConfig(
     "GOOGLE_OAUTH_SCOPE",
     "oauth.google.scope",
-    os.environ.get("GOOGLE_OAUTH_SCOPE", "openid email profile"),
+    os.environ.get("GOOGLE_OAUTH_SCOPE", "openid email profile").strip("\"").strip("'"),
 )
 
 GOOGLE_REDIRECT_URI = PersistentConfig(
@@ -354,7 +354,7 @@ MICROSOFT_CLIENT_TENANT_ID = PersistentConfig(
 MICROSOFT_OAUTH_SCOPE = PersistentConfig(
     "MICROSOFT_OAUTH_SCOPE",
     "oauth.microsoft.scope",
-    os.environ.get("MICROSOFT_OAUTH_SCOPE", "openid email profile"),
+    os.environ.get("MICROSOFT_OAUTH_SCOPE", "openid email profile").strip("\"").strip("'"),
 )
 
 MICROSOFT_REDIRECT_URI = PersistentConfig(
@@ -414,7 +414,7 @@ OPENID_REDIRECT_URI = PersistentConfig(
 OAUTH_SCOPES = PersistentConfig(
     "OAUTH_SCOPES",
     "oauth.oidc.scopes",
-    os.environ.get("OAUTH_SCOPES", "openid email profile"),
+    os.environ.get("OAUTH_SCOPES", "openid email profile").strip("\"").strip("'"),
 )
 
 OAUTH_PROVIDER_NAME = PersistentConfig(
@@ -694,6 +694,11 @@ GOOGLE_APPLICATION_CREDENTIALS_JSON = os.environ.get(
 AZURE_STORAGE_ENDPOINT = os.environ.get("AZURE_STORAGE_ENDPOINT", None)
 AZURE_STORAGE_CONTAINER_NAME = os.environ.get("AZURE_STORAGE_CONTAINER_NAME", None)
 AZURE_STORAGE_KEY = os.environ.get("AZURE_STORAGE_KEY", None)
+
+GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", None)
+GOOGLE_APPLICATION_CREDENTIALS_JSON = os.environ.get(
+    "GOOGLE_APPLICATION_CREDENTIALS_JSON", None
+)
 
 ####################################
 # File Upload DIR

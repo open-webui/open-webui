@@ -34,6 +34,18 @@
 	let tools = {};
 	let show = false;
 
+	let showImageGeneration = false;
+
+	$: showImageGeneration =
+		$config?.features?.enable_image_generation &&
+		($user.role === 'admin' || $user?.permissions?.features?.image_generation);
+
+	let showWebSearch = false;
+
+	$: showWebSearch =
+		$config?.features?.enable_web_search &&
+		($user.role === 'admin' || $user?.permissions?.features?.web_search);
+
 	$: if (show) {
 		init();
 	}

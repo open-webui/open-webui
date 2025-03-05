@@ -1,0 +1,14 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            // 1) dev_setting.sh를 실행해서 환경 변수를 추출
+            "label": "Generate env from dev_setting.sh",
+            "type": "shell",
+            // bash -c "source dev_setting.sh && env" 로 실행 후,
+            // 결과를 .vscode/dev_setting.env 로 저장
+            "command": "bash -c 'source dev_setting.sh && env > dev_setting.env'",
+            "problemMatcher": []
+        }
+    ]
+}
