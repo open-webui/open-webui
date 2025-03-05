@@ -1,0 +1,39 @@
+name: Generate wheel to GitHub artifact
+
+on:
+  release:
+    types: [created, published, edited]
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: write
+      actions: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.10
+
+      - name: Build wheel
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+          python -m build .
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          name: open-webui-whl
+          path: dist/*.whl
