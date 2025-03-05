@@ -72,7 +72,9 @@ class OpenSearchClient:
                 }
             }
         }
-        self.client.indices.create(index=f"{self.index_prefix}_{collection_name}", body=body)
+        self.client.indices.create(
+            index=f"{self.index_prefix}_{collection_name}", body=body
+        )
 
     def _create_batches(self, items: list[VectorItem], batch_size=100):
         for i in range(0, len(items), batch_size):
@@ -81,7 +83,9 @@ class OpenSearchClient:
     def has_collection(self, collection_name: str) -> bool:
         # has_collection here means has index.
         # We are simply adapting to the norms of the other DBs.
-        return self.client.indices.exists(index=f"{self.index_prefix}_{collection_name}")
+        return self.client.indices.exists(
+            index=f"{self.index_prefix}_{collection_name}"
+        )
 
     def delete_colleciton(self, collection_name: str):
         # delete_collection here means delete index.
@@ -154,8 +158,9 @@ class OpenSearchClient:
         return self._result_to_get_result(result)
 
     def insert(self, collection_name: str, items: list[VectorItem]):
-        self._create_index_if_not_exists(collection_name=collection_name,
-                                         dimension=len(items[0]["vector"]))
+        self._create_index_if_not_exists(
+            collection_name=collection_name, dimension=len(items[0]["vector"])
+        )
 
         for batch in self._create_batches(items):
             actions = [
@@ -174,8 +179,9 @@ class OpenSearchClient:
             self.client.bulk(actions)
 
     def upsert(self, collection_name: str, items: list[VectorItem]):
-        self._create_index_if_not_exists(collection_name=collection_name,
-                                         dimension=len(items[0]["vector"]))
+        self._create_index_if_not_exists(
+            collection_name=collection_name, dimension=len(items[0]["vector"])
+        )
 
         for batch in self._create_batches(items):
             actions = [

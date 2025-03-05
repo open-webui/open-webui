@@ -220,8 +220,6 @@
 		const type = event?.data?.type ?? null;
 		const data = event?.data?.data ?? null;
 
-		console.log('chatEventHandler', event);
-
 		if ((event.chat_id !== $chatId && !$temporaryChatEnabled) || isFocused) {
 			if (type === 'chat:completion') {
 				const { done, content, title } = data;

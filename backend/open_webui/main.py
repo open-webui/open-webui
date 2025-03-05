@@ -401,8 +401,8 @@ async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
         reset_config()
 
-    if app.state.config.LICENSE_KEY:
-        get_license_data(app, app.state.config.LICENSE_KEY)
+    if LICENSE_KEY:
+        get_license_data(app, LICENSE_KEY)
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     yield
@@ -420,7 +420,7 @@ oauth_manager = OAuthManager(app)
 app.state.config = AppConfig()
 
 app.state.WEBUI_NAME = WEBUI_NAME
-app.state.config.LICENSE_KEY = LICENSE_KEY
+app.state.LICENSE_METADATA = None
 
 ########################################
 #
@@ -1196,6 +1196,7 @@ async def get_app_config(request: Request):
             {
                 "default_models": app.state.config.DEFAULT_MODELS,
                 "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
+                "user_count": user_count,
                 "code": {
                     "engine": app.state.config.CODE_EXECUTION_ENGINE,
                 },
@@ -1219,9 +1220,9 @@ async def get_app_config(request: Request):
                     "api_key": GOOGLE_DRIVE_API_KEY.value,
                 },
                 "onedrive": {"client_id": ONEDRIVE_CLIENT_ID.value},
+                "license_metadata": app.state.LICENSE_METADATA,
                 **(
                     {
-                        "record_count": user_count,
                         "active_entries": app.state.USER_COUNT,
                     }
                     if user.role == "admin"

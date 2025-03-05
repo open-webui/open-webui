@@ -587,6 +587,14 @@ load_oauth_providers()
 
 STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static")).resolve()
 
+for file_path in (FRONTEND_BUILD_DIR / "static").glob("**/*"):
+    if file_path.is_file():
+        target_path = STATIC_DIR / file_path.relative_to(
+            (FRONTEND_BUILD_DIR / "static")
+        )
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(file_path, target_path)
+
 frontend_favicon = FRONTEND_BUILD_DIR / "static" / "favicon.png"
 
 if frontend_favicon.exists():
@@ -659,11 +667,7 @@ if CUSTOM_NAME:
 # LICENSE_KEY
 ####################################
 
-LICENSE_KEY = PersistentConfig(
-    "LICENSE_KEY",
-    "license.key",
-    os.environ.get("LICENSE_KEY", ""),
-)
+LICENSE_KEY = os.environ.get("LICENSE_KEY", "")
 
 ####################################
 # STORAGE PROVIDER
@@ -695,16 +699,16 @@ AZURE_STORAGE_KEY = os.environ.get("AZURE_STORAGE_KEY", None)
 # File Upload DIR
 ####################################
 
-UPLOAD_DIR = f"{DATA_DIR}/uploads"
-Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+UPLOAD_DIR = DATA_DIR / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 ####################################
 # Cache DIR
 ####################################
 
-CACHE_DIR = f"{DATA_DIR}/cache"
-Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
+CACHE_DIR = DATA_DIR / "cache"
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 ####################################

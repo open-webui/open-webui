@@ -234,8 +234,10 @@
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
 
 		if (items) {
-			tags = items.flatMap((item) => item.model?.info?.meta?.tags ?? []);
-			tags = [...new Set(tags)].map((tag) => tag.name).sort();
+			tags = items.flatMap((item) => item.model?.info?.meta?.tags ?? []).map((tag) => tag.name);
+
+			// Remove duplicates and sort
+			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
 	});
 
