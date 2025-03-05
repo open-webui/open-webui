@@ -23,7 +23,7 @@
 				/>
 			</div>
 			<div class="px-4 cursor-default">
-				<h1 class="text-base font-semibold mt-4">
+				<h1 class="text-sm font-semibold mt-4">
 					{name}
 				</h1>
 				<h2 class="text-sm">
