@@ -91,6 +91,11 @@ calculator = Calculator()
 class CreditDeduct:
     """
     Deduct Credit
+
+    Must be used as following, so __exit__ will be called on exit
+
+    with CreditDeduct(xxx) as credit_deduct:
+        credit_deduct.run(xxx)
     """
 
     def __init__(self, user: UserModel, model: dict, body: dict, is_stream: bool) -> None:
