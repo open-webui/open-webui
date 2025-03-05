@@ -29,9 +29,13 @@ import tiktoken
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_core.documents import Document
 
+from open_webui.utils.parser import DefaultParser, PARSING_TYPE
+from open_webui.functions import get_parsers_by_type
+
 from open_webui.models.files import FileModel, Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
+from open_webui.models.functions import Functions
 
 
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
@@ -753,158 +757,6 @@ async def update_query_settings(
 ####################################
 
 
-def save_docs_to_vector_db(
-    request: Request,
-    docs,
-    collection_name,
-    metadata: Optional[dict] = None,
-    overwrite: bool = False,
-    split: bool = True,
-    add: bool = False,
-    user=None,
-) -> bool:
-    def _get_docs_info(docs: list[Document]) -> str:
-        docs_info = set()
-
-        # Trying to select relevant metadata identifying the document.
-        for doc in docs:
-            metadata = getattr(doc, "metadata", {})
-            doc_name = metadata.get("name", "")
-            if not doc_name:
-                doc_name = metadata.get("title", "")
-            if not doc_name:
-                doc_name = metadata.get("source", "")
-            if doc_name:
-                docs_info.add(doc_name)
-
-        return ", ".join(docs_info)
-
-    log.info(
-        f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
-    )
-
-    # Check if entries with the same hash (metadata.hash) already exist
-    if metadata and "hash" in metadata:
-        result = VECTOR_DB_CLIENT.query(
-            collection_name=collection_name,
-            filter={"hash": metadata["hash"]},
-        )
-
-        if result is not None:
-            existing_doc_ids = result.ids[0]
-            if existing_doc_ids:
-                log.info(f"Document with hash {metadata['hash']} already exists")
-                raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
-
-    if split:
-        if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                add_start_index=True,
-            )
-        elif request.app.state.config.TEXT_SPLITTER == "token":
-            log.info(
-                f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
-            )
-
-            tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
-            text_splitter = TokenTextSplitter(
-                encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                add_start_index=True,
-            )
-        else:
-            raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
-
-        docs = text_splitter.split_documents(docs)
-
-    if len(docs) == 0:
-        raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
-
-    texts = [doc.page_content for doc in docs]
-    metadatas = [
-        {
-            **doc.metadata,
-            **(metadata if metadata else {}),
-            "embedding_config": json.dumps(
-                {
-                    "engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
-                    "model": request.app.state.config.RAG_EMBEDDING_MODEL,
-                }
-            ),
-        }
-        for doc in docs
-    ]
-
-    # ChromaDB does not like datetime formats
-    # for meta-data so convert them to string.
-    for metadata in metadatas:
-        for key, value in metadata.items():
-            if (
-                isinstance(value, datetime)
-                or isinstance(value, list)
-                or isinstance(value, dict)
-            ):
-                metadata[key] = str(value)
-
-    try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
-            log.info(f"collection {collection_name} already exists")
-
-            if overwrite:
-                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
-                log.info(f"deleting existing collection {collection_name}")
-            elif add is False:
-                log.info(
-                    f"collection {collection_name} already exists, overwrite is False and add is False"
-                )
-                return True
-
-        log.info(f"adding to collection {collection_name}")
-        embedding_function = get_embedding_function(
-            request.app.state.config.RAG_EMBEDDING_ENGINE,
-            request.app.state.config.RAG_EMBEDDING_MODEL,
-            request.app.state.ef,
-            (
-                request.app.state.config.RAG_OPENAI_API_BASE_URL
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                else request.app.state.config.RAG_OLLAMA_BASE_URL
-            ),
-            (
-                request.app.state.config.RAG_OPENAI_API_KEY
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                else request.app.state.config.RAG_OLLAMA_API_KEY
-            ),
-            request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-        )
-
-        embeddings = embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts)), user=user
-        )
-
-        items = [
-            {
-                "id": str(uuid.uuid4()),
-                "text": text,
-                "vector": embeddings[idx],
-                "metadata": metadatas[idx],
-            }
-            for idx, text in enumerate(texts)
-        ]
-
-        VECTOR_DB_CLIENT.insert(
-            collection_name=collection_name,
-            items=items,
-        )
-
-        return True
-    except Exception as e:
-        log.exception(e)
-        raise e
-
-
 class ProcessFileForm(BaseModel):
     file_id: str
     content: Optional[str] = None
@@ -1034,36 +886,38 @@ def process_file(
 
         hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)
+        parsers = get_parsers_by_type(request, PARSING_TYPE.FILE)
 
         if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
             try:
-                result = save_docs_to_vector_db(
-                    request,
-                    docs=docs,
-                    collection_name=collection_name,
-                    metadata={
-                        "file_id": file.id,
-                        "name": file.filename,
-                        "hash": hash,
-                    },
-                    add=(True if form_data.collection_name else False),
-                    user=user,
-                )
-
-                if result:
-                    Files.update_file_metadata_by_id(
-                        file.id,
-                        {
-                            "collection_name": collection_name,
+                for parser in parsers:
+                    result = parser.save_docs_to_vector_db(
+                        request,
+                        docs=docs,
+                        collection_name=collection_name,
+                        metadata={
+                            "file_id": file.id,
+                            "name": file.filename,
+                            "hash": hash,
                         },
+                        add=(True if form_data.collection_name else False),
+                        user=user,
                     )
 
-                    return {
-                        "status": True,
-                        "collection_name": collection_name,
-                        "filename": file.filename,
-                        "content": text_content,
-                    }
+                    if result:
+                        Files.update_file_metadata_by_id(
+                            file.id,
+                            {
+                                "collection_name": collection_name,
+                            },
+                        )
+
+                        return {
+                            "status": True,
+                            "collection_name": collection_name,
+                            "filename": file.filename,
+                            "content": text_content,
+                        }
             except Exception as e:
                 raise e
         else:
@@ -1113,8 +967,10 @@ def process_text(
     text_content = form_data.content
     log.debug(f"text_content: {text_content}")
 
-    result = save_docs_to_vector_db(request, docs, collection_name, user=user)
-    if result:
+    parsers = get_parsers_by_type(request, PARSING_TYPE.TEXT)
+    results = [p.save_docs_to_vector_db(request, docs, collection_name, user=user) for p in parsers]
+
+    if all(results):
         return {
             "status": True,
             "collection_name": collection_name,
@@ -1146,9 +1002,12 @@ def process_youtube_video(
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")
 
-        save_docs_to_vector_db(
-            request, docs, collection_name, overwrite=True, user=user
-        )
+        parsers = get_parsers_by_type(request, PARSING_TYPE.YOUTUBE)
+
+        for parser in parsers:
+            parser.save_docs_to_vector_db(
+                request, docs, collection_name, overwrite=True, user=user
+            )
 
         return {
             "status": True,
@@ -1188,12 +1047,16 @@ def process_web(
         docs = loader.load()
         content = " ".join([doc.page_content for doc in docs])
 
+
+
         log.debug(f"text_content: {content}")
 
         if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
-            save_docs_to_vector_db(
-                request, docs, collection_name, overwrite=True, user=user
-            )
+            parsers = get_parsers_by_type(request, PARSING_TYPE.WEB_CONTENT)
+            for parser in parsers:
+                parser.save_docs_to_vector_db(
+                    request, docs, collection_name, overwrite=True, user=user)
+
         else:
             collection_name = None
 
@@ -1444,6 +1307,7 @@ async def process_web_search(
             requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
             trust_env=request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
         )
+
         docs = await loader.aload()
 
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
@@ -1461,14 +1325,17 @@ async def process_web_search(
                 "loaded_count": len(docs),
             }
         else:
-            await run_in_threadpool(
-                save_docs_to_vector_db,
-                request,
-                docs,
-                collection_name,
-                overwrite=True,
-                user=user,
-            )
+            # TODO: ENABLE
+            parsers = get_parsers_by_type(request, PARSING_TYPE.WEB_SEARCH)
+            for parser in parsers:
+                await run_in_threadpool(
+                    parser.save_docs_to_vector_db,
+                    request,
+                    docs,
+                    collection_name,
+                    overwrite=True,
+                    user=user,
+                )
 
             return {
                 "status": True,
@@ -1711,13 +1578,15 @@ def process_files_batch(
     # Save all documents in one batch
     if all_docs:
         try:
-            save_docs_to_vector_db(
-                request=request,
-                docs=all_docs,
-                collection_name=collection_name,
-                add=True,
-                user=user,
-            )
+            parsers = get_parsers_by_type(request, PARSING_TYPE.FILE)
+            for parser in parsers:
+                parser.save_docs_to_vector_db(
+                    request=request,
+                    docs=all_docs,
+                    collection_name=collection_name,
+                    add=True,
+                    user=user,
+                )
 
             # Update all files with collection name
             for result in results:
