@@ -466,7 +466,7 @@
 		? 'md:relative w-[260px] max-w-[260px]'
 		: '-translate-x-[260px] w-[0px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  shrink-0 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
+		: 'transition-width duration-200 ease-in-out'}  shrink-0 bg-[#57068C] text-gray-50 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
         "
 	data-state={$showSidebar}
 >
@@ -475,9 +475,9 @@
 			? ''
 			: 'invisible'}"
 	>
-		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
+		<div class="px-1.5 flex justify-between space-x-1 text-gray-50 dark:text-gray-400">
 			<button
-				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-[#8900E1] dark:hover:bg-[#8951AE] transition"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
@@ -502,7 +502,7 @@
 
 			<a
 				id="sidebar-new-chat-button"
-				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
+				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-[#8900E1] dark:hover:bg-[#8951AE] transition no-drag-region"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -521,18 +521,18 @@
 					<div class="self-center mx-1.5">
 						<img
 							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class=" size-5 -translate-x-1.5 rounded-full"
+							src="{WEBUI_BASE_URL}/static/favicon-white.png"
+							class=" size-7 -translate-x-1.5 rounded-full"
 							alt="logo"
 						/>
 					</div>
-					<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
+					<div class=" self-center font-medium text-sm text-gray-50 dark:text-white font-primary">
 						{$i18n.t('New Chat')}
 					</div>
 				</div>
 
 				<div>
-					<PencilSquare className=" size-5" strokeWidth="2" />
+					<PencilSquare className=" size-5" strokeWidth="1.5" />
 				</div>
 			</a>
 		</div>
@@ -540,7 +540,7 @@
 		<!-- {#if $user?.role === 'admin'}
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-[#8900E1] dark:hover:bg-[#8951AE] transition"
 					href="/home"
 					on:click={() => {
 						selectedChatId = null;
@@ -564,9 +564,9 @@
 		{/if} -->
 
 		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+			<div class="px-1.5 flex justify-center text-gray-50 dark:text-gray-200">
 				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-[#8900E1] dark:hover:bg-[#8951AE] transition"
 					href="/workspace"
 					on:click={() => {
 						selectedChatId = null;
@@ -893,7 +893,7 @@
 						}}
 					>
 						<button
-							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-[#8900E1] dark:hover:bg-[#8951AE] transition"
 							on:click={() => {
 								showDropdown = !showDropdown;
 							}}

@@ -611,6 +611,25 @@ if frontend_loader.exists():
     except Exception as e:
         logging.error(f"An error occurred: {e}")
 
+frontend_favicon_violet = FRONTEND_BUILD_DIR / "static" / "favicon-violet.png"
+
+if frontend_favicon_violet.exists():
+    try:
+        shutil.copyfile(frontend_favicon_violet, STATIC_DIR / "favicon-violet.png")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+
+frontend_favicon_white = FRONTEND_BUILD_DIR / "static" / "favicon-white.png"
+
+if frontend_favicon_white.exists():
+    try:
+        shutil.copyfile(frontend_favicon_white, STATIC_DIR / "favicon-white.png")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+
+
+
+
 
 ####################################
 # CUSTOM_NAME (Legacy)
@@ -1072,7 +1091,7 @@ def validate_cors_origin(origin):
 # For production, you should only need one host as
 # fastapi serves the svelte-kit built frontend and backend from the same host and port.
 # To test CORS_ALLOW_ORIGIN locally, you can set something like
-# CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
+CORS_ALLOW_ORIGIN="http://localhost:5173;http://localhost:8080"
 # in your .env file depending on your frontend port, 5173 in this case.
 CORS_ALLOW_ORIGIN = os.environ.get("CORS_ALLOW_ORIGIN", "*").split(";")
 

@@ -531,7 +531,11 @@
 				}
 			});
 
-			await loadingProgress.set(100);
+			// Run loading progress and minimum timer in parallel
+			await Promise.all([
+				loadingProgress.set(100),
+				new Promise(resolve => setTimeout(resolve, 1500))
+			]);
 
 			document.getElementById('splash-screen')?.remove();
 
@@ -542,9 +546,14 @@
 			};
 
 			document.addEventListener('click', playAudio);
-
 			loaded = true;
 		} else {
+			// For non-'her' cases, also ensure minimum loading time
+			await Promise.all([
+				Promise.resolve(), // Any other loading tasks can go here
+				new Promise(resolve => setTimeout(resolve, 1500))
+			]);
+			
 			document.getElementById('splash-screen')?.remove();
 			loaded = true;
 		}
