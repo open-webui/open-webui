@@ -52,7 +52,7 @@ async def process_filter_functions(
         # Prepare handler function
         handler = getattr(function_module, filter_type, None)
         if not handler:
-                continue
+            continue
 
         # Check if the function has a file_handler variable
         if filter_type == "inlet" and hasattr(function_module, "file_handler"):
