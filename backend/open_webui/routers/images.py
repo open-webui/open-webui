@@ -144,8 +144,6 @@ async def update_config(
     request.app.state.config.COMFYUI_BASE_URL = (
         form_data.comfyui.COMFYUI_BASE_URL.strip("/")
     )
-    request.app.state.config.COMFYUI_API_KEY = form_data.comfyui.COMFYUI_API_KEY
-
     request.app.state.config.COMFYUI_WORKFLOW = form_data.comfyui.COMFYUI_WORKFLOW
     request.app.state.config.COMFYUI_WORKFLOW_NODES = (
         form_data.comfyui.COMFYUI_WORKFLOW_NODES
@@ -476,9 +474,7 @@ async def image_generations(
     try:
         if request.app.state.config.IMAGE_GENERATION_ENGINE == "openai":
             headers = {}
-            headers["Authorization"] = (
-                f"Bearer {request.app.state.config.IMAGES_OPENAI_API_KEY}"
-            )
+            headers["Authorization"] = f"Bearer {user.api_key}"
             headers["Content-Type"] = "application/json"
 
             if ENABLE_FORWARD_USER_INFO_HEADERS:

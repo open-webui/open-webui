@@ -166,6 +166,20 @@
 		<div
 			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-50 text-black dark:text-white"
 		>
+		<div class="bg-[#5612CC] w-full md:flex flex-col items-center justify-center min-h-screen hidden md:visible">
+			<img
+				crossorigin="anonymous"
+				src="{WEBUI_BASE_URL}/static/splash.png"
+				class="w-60 rounded-full dark:invert"
+				alt="logo"
+			/>
+
+			<!-- Links at the bottom -->
+			<div class="absolute bottom-10 w-full text-center">
+				<a href="https://www.aibrary.dev/privacy-policy" class="text-lg text-white hover:underline">Privacy Policy</a>
+				<a href="https://www.aibrary.dev/terms-of-service" class="ml-4 text-lg text-white hover:underline">Terms Of Service</a>
+			</div>
+		</div>
 			<div class="w-full sm:max-w-md px-10 min-h-screen flex flex-col text-center">
 				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
 					<div class=" my-auto pb-10 w-full">
@@ -270,6 +284,16 @@
 											required
 										/>
 									</div>
+								</div>
+							{/if}
+							{#if $WEBUI_NAME === "AiBrary"}
+								<div class="flex flex-col mt-4">
+									<a
+										href="https://www.aibrary.dev/auth/signin/chat"
+										class="bg-gray-700/5 hover:bg-[#5612CC] dark:bg-gray-100/5 dark:hover:bg-[#5612CC] dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+									>
+										signin
+									</a>
 								</div>
 							{/if}
 							<div class="mt-5">

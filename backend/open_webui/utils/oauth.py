@@ -1,6 +1,7 @@
 import base64
 import logging
 import mimetypes
+import os
 import sys
 import uuid
 
@@ -44,7 +45,9 @@ from open_webui.env import (
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
+from open_webui.config import WEBUI_URL
 
+from open_webui.utils.get_apikey_by_email import get_api_key_by_email
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -222,6 +225,8 @@ class OAuthManager:
         client = self.get_client(provider)
         if client is None:
             raise HTTPException(404)
+        if r_uri := os.environ.get("AIBRARY_SIGNIN_REDIRECT_URI"):
+            return RedirectResponse(url=r_uri)
         return await client.authorize_redirect(request, redirect_uri)
 
     async def handle_callback(self, request, provider, response):
@@ -399,6 +404,12 @@ class OAuthManager:
             data={"id": user.id},
             expires_delta=parse_duration(auth_manager_config.JWT_EXPIRES_IN),
         )
+        try: 
+            Users.update_user_api_key_by_id(user.id, get_api_key_by_email(user))
+        except Exception as e:
+            log.warning(
+                f"API-Key can't be fetched, please check your account on aibrary.dev/dashboard/api-key: {user_data}"
+            )
 
         if auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT and user.role != "admin":
             self.update_user_groups(
