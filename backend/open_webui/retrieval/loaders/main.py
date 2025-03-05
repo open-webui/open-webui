@@ -126,24 +126,43 @@ class DoclingLoader:
             raise ValueError("File path is required for DoclingLoader")
 
         with open(self.file_path, "rb") as f:
-            files = {"files": (self.file_path, f, self.mime_type or "application/octet-stream")}
-            
+            files = {
+                "files": (
+                    self.file_path,
+                    f,
+                    self.mime_type or "application/octet-stream",
+                )
+            }
+
             params = {
-            "from_formats": ["docx", "pptx", "html", "xml_pubmed", "image", "pdf", "asciidoc", "md", "xlsx", "xml_uspto", "json_docling"],
-            "to_formats": ["md"],
-            "image_export_mode": "placeholder",
-            "do_ocr": True,
-            "force_ocr": False,
-            "ocr_engine": "easyocr",
-            "ocr_lang": None,
-            "pdf_backend": "dlparse_v2",
-            "table_mode": "fast",
-            "abort_on_error": False,
-            "return_as_file": False,
-            "do_table_structure": True,
-            "include_images": True,
-            "images_scale": 2.0,
-        }
+                "from_formats": [
+                    "docx",
+                    "pptx",
+                    "html",
+                    "image",
+                    "pdf",
+                    "asciidoc",
+                    "md",
+                    "csv",
+                    "xlsx",
+                    "xml_uspto",
+                    "xml_jats",
+                    "json_docling",
+                ],
+                "to_formats": ["md"],
+                "image_export_mode": "placeholder",
+                "do_ocr": True,
+                "force_ocr": False,
+                "ocr_engine": "easyocr",
+                "ocr_lang": None,
+                "pdf_backend": "dlparse_v2",
+                "table_mode": "accurate",
+                "abort_on_error": False,
+                "return_as_file": False,
+                "do_table_structure": True,
+                "include_images": True,
+                "images_scale": 2.0,
+            }
 
             endpoint = f"{self.url}/v1alpha/convert/file"
             response = requests.post(endpoint, files=files, data=params)
@@ -154,7 +173,7 @@ class DoclingLoader:
             text = document_data.get("md_content", "<No text content found>")
 
             metadata = {"Content-Type": self.mime_type} if self.mime_type else {}
-            
+
             log.debug("Docling extracted text: %s", text)
 
             return [Document(page_content=text, metadata=metadata)]
