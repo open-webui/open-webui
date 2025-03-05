@@ -22,7 +22,7 @@ from open_webui.config import (
 )
 from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
-    AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST,
+    AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     BYPASS_MODEL_ACCESS_CONTROL,
 )
@@ -53,7 +53,7 @@ log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 
 
 async def send_get_request(url, key=None, user: UserModel = None):
-    timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
+    timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
@@ -192,7 +192,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         body = await request.body()
         name = hashlib.sha256(body).hexdigest()
 
-        SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
+        SPEECH_CACHE_DIR = CACHE_DIR / "audio" / "speech"
         SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
         file_path = SPEECH_CACHE_DIR.joinpath(f"{name}.mp3")
         file_body_path = SPEECH_CACHE_DIR.joinpath(f"{name}.json")
@@ -448,9 +448,7 @@ async def get_models(
 
         r = None
         async with aiohttp.ClientSession(
-            timeout=aiohttp.ClientTimeout(
-                total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST
-            )
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
         ) as session:
             try:
                 async with session.get(
@@ -530,7 +528,7 @@ async def verify_connection(
     key = form_data.key
 
     async with aiohttp.ClientSession(
-        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST)
+        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     ) as session:
         try:
             async with session.get(

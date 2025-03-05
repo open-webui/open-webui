@@ -105,7 +105,7 @@ async def create_new_tools(
             specs = get_tools_specs(TOOLS[form_data.id])
             tools = Tools.insert_new_tool(user.id, form_data, specs)
 
-            tool_cache_dir = Path(CACHE_DIR) / "tools" / form_data.id
+            tool_cache_dir = CACHE_DIR / "tools" / form_data.id
             tool_cache_dir.mkdir(parents=True, exist_ok=True)
 
             if tools:
