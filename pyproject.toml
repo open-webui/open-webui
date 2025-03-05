@@ -49,7 +49,7 @@ dependencies = [
     "tiktoken",
 
     "langchain==0.3.19",
-    "langchain-community==0.3.18",
+    "langchain-community==0.3.19",
 
     "fake-useragent==1.5.1",
     "chromadb==0.6.2",
@@ -65,7 +65,6 @@ dependencies = [
     "einops==0.8.0",
 
     "ftfy==6.2.3",
-    "pymupdf==1.25.3",
     "fpdf2==2.8.2",
     "pymdown-extensions==10.14.2",
     "docx2txt==0.8",
