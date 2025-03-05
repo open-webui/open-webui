@@ -1,4 +1,5 @@
 name: Generate wheel to GitHub artifact
+
 on:
   release:
     types: [created, published, edited]
