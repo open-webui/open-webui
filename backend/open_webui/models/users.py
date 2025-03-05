@@ -59,7 +59,7 @@ class UserModel(BaseModel):
 
     oauth_sub: Optional[str] = None
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra="allow")
 
 
 ####################
@@ -92,6 +92,7 @@ class UserUpdateForm(BaseModel):
     email: str
     profile_image_url: str
     password: Optional[str] = None
+    credit: Optional[float] = None
 
 
 class UsersTable:
