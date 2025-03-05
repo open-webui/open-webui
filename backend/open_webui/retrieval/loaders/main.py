@@ -119,14 +119,11 @@ class TikaLoader:
 
 class DoclingLoader:
     def __init__(self, url, file_path=None, mime_type=None):
-        self.url = url.rstrip("/")  # Ensure no trailing slash
+        self.url = url.rstrip("/")
         self.file_path = file_path
         self.mime_type = mime_type
 
     def load(self) -> list[Document]:
-        if self.file_path is None:
-            raise ValueError("File path is required for DoclingLoader")
-
         with open(self.file_path, "rb") as f:
             files = {
                 "files": (
@@ -167,10 +164,10 @@ class DoclingLoader:
             }
 
             endpoint = f"{self.url}/v1alpha/convert/file"
-            response = requests.post(endpoint, files=files, data=params)
+            r = requests.post(endpoint, files=files, data=params)
 
-        if response.ok:
-            result = response.json()
+        if r.ok:
+            result = r.json()
             document_data = result.get("document", {})
             text = document_data.get("md_content", "<No text content found>")
 
@@ -180,14 +177,14 @@ class DoclingLoader:
 
             return [Document(page_content=text, metadata=metadata)]
         else:
-            error_msg = f"Error calling Docling API: {response.status_code}"
-            if response.text:
+            error_msg = f"Error calling Docling API: {r.reason}"
+            if r.text:
                 try:
-                    error_data = response.json()
+                    error_data = r.json()
                     if "detail" in error_data:
                         error_msg += f" - {error_data['detail']}"
-                except:
-                    error_msg += f" - {response.text}"
+                except Exception:
+                    error_msg += f" - {r.text}"
             raise Exception(f"Error calling Docling: {error_msg}")
 
 
