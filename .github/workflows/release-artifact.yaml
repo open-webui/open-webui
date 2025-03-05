@@ -1,11 +1,19 @@
-name: Release to GitHub Artifact
+name: Generate wheel and release to GitHub Artifact
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ["Build and package frontend and backend"]
+    types:
+      - completed
+
 jobs:
   release:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: write
+      actions: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
