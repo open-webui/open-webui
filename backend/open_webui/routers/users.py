@@ -1,8 +1,10 @@
 import logging
-from typing import Optional
+from decimal import Decimal
+from typing import Optional, List
 
 from open_webui.models.auths import Auths
 from open_webui.models.chats import Chats
+from open_webui.models.credits import Credits, SetCreditForm
 from open_webui.models.users import (
     UserModel,
     UserRoleUpdateForm,
@@ -35,7 +37,14 @@ async def get_users(
     limit: Optional[int] = None,
     user=Depends(get_admin_user),
 ):
-    return Users.get_users(skip, limit)
+    users: List[UserModel] = Users.get_users(skip, limit)
+    credit_map = {
+        credit.user_id: {"credit": "%.4f" % credit.credit}
+        for credit in Credits.list_credits_by_user_id(user_ids=(user.id for user in users))
+    }
+    for user in users:
+        setattr(user, "credit", credit_map.get(user.id, {}).get("credit", 0))
+    return users
 
 
 ############################
@@ -288,6 +297,16 @@ async def update_user_by_id(
                 "profile_image_url": form_data.profile_image_url,
             },
         )
+
+        if form_data.credit is not None:
+            credit = Credits.set_credit_by_user_id(
+                SetCreditForm(
+                    user_id=user_id,
+                    credit=Decimal(form_data.credit),
+                    detail={"desc": f"updated by {session_user.id}"}
+                )
+            )
+            setattr(updated_user, "credit", "%.4f" % credit.credit)
 
         if updated_user:
             return updated_user
