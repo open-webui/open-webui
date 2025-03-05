@@ -41,7 +41,7 @@ google-generativeai==0.7.2
 tiktoken
 
 langchain==0.3.19
-langchain-community==0.3.18
+langchain-community==0.3.19
 
 fake-useragent==1.5.1
 chromadb==0.6.2
@@ -59,12 +59,12 @@ einops==0.8.0
 
 
 ftfy==6.2.3
-pymupdf==1.25.3
 fpdf2==2.8.2
 pymdown-extensions==10.14.2
 docx2txt==0.8
 python-pptx==1.0.0
 unstructured==0.16.17
+unstructured[pdf]
 nltk==3.9.1
 Markdown==3.7
 pypandoc==1.13
