@@ -65,7 +65,6 @@ async def process_filter_functions(
                 **(valves if valves else {})
             )
 
-
         try:
             # Prepare parameters
             sig = inspect.signature(handler)

@@ -6,7 +6,7 @@ let CLIENT_ID = '';
 
 async function getCredentials() {
 	if (CLIENT_ID) return;
-	
+
 	const response = await fetch('/api/config');
 	if (!response.ok) {
 		throw new Error('Failed to fetch OneDrive credentials');
@@ -18,7 +18,6 @@ async function getCredentials() {
 	}
 }
 
-
 let msalInstance: PublicClientApplication | null = null;
 
 // Initialize MSAL authentication
@@ -27,24 +26,26 @@ async function initializeMsal() {
 		if (!CLIENT_ID) {
 			await getCredentials();
 		}
-		
+
 		const msalParams = {
 			auth: {
 				authority: 'https://login.microsoftonline.com/consumers',
 				clientId: CLIENT_ID
 			}
 		};
-		
+
 		if (!msalInstance) {
 			msalInstance = new PublicClientApplication(msalParams);
 			if (msalInstance.initialize) {
 				await msalInstance.initialize();
 			}
 		}
-		
+
 		return msalInstance;
 	} catch (error) {
-		throw new Error('MSAL initialization failed: ' + (error instanceof Error ? error.message : String(error)));
+		throw new Error(
+			'MSAL initialization failed: ' + (error instanceof Error ? error.message : String(error))
+		);
 	}
 }
 
@@ -57,14 +58,14 @@ async function getToken(): Promise<string> {
 		if (!msalInstance) {
 			throw new Error('MSAL not initialized');
 		}
-		
+
 		const resp = await msalInstance.acquireTokenSilent(authParams);
 		accessToken = resp.accessToken;
 	} catch (err) {
 		if (!msalInstance) {
 			throw new Error('MSAL not initialized');
 		}
-		
+
 		try {
 			const resp = await msalInstance.loginPopup(authParams);
 			msalInstance.setActiveAccount(resp.account);
@@ -73,14 +74,17 @@ async function getToken(): Promise<string> {
 				accessToken = resp2.accessToken;
 			}
 		} catch (popupError) {
-			throw new Error('Failed to login: ' + (popupError instanceof Error ? popupError.message : String(popupError)));
+			throw new Error(
+				'Failed to login: ' +
+					(popupError instanceof Error ? popupError.message : String(popupError))
+			);
 		}
 	}
-	
+
 	if (!accessToken) {
 		throw new Error('Failed to acquire access token');
 	}
-	
+
 	return accessToken;
 }
 
@@ -105,7 +109,6 @@ const params = {
 		}
 	}
 };
-
 
 // Download file from OneDrive
 async function downloadOneDriveFile(fileInfo: any): Promise<Blob> {
@@ -228,17 +231,17 @@ export async function openOneDrivePicker(): Promise<any | null> {
 				if (!authToken) {
 					return reject(new Error('Failed to acquire access token'));
 				}
-				
+
 				pickerWindow = window.open('', 'OneDrivePicker', 'width=800,height=600');
 				if (!pickerWindow) {
 					return reject(new Error('Failed to open OneDrive picker window'));
 				}
-				
+
 				const queryString = new URLSearchParams({
 					filePicker: JSON.stringify(params)
 				});
 				const url = `${baseUrl}?${queryString.toString()}`;
-				
+
 				const form = pickerWindow.document.createElement('form');
 				form.setAttribute('action', url);
 				form.setAttribute('method', 'POST');
@@ -247,10 +250,10 @@ export async function openOneDrivePicker(): Promise<any | null> {
 				input.setAttribute('name', 'access_token');
 				input.setAttribute('value', authToken);
 				form.appendChild(input);
-				
+
 				pickerWindow.document.body.appendChild(form);
 				form.submit();
-				
+
 				window.addEventListener('message', handleWindowMessage);
 			} catch (err) {
 				if (pickerWindow) {
@@ -267,14 +270,14 @@ export async function openOneDrivePicker(): Promise<any | null> {
 // Pick and download file from OneDrive
 export async function pickAndDownloadFile(): Promise<{ blob: Blob; name: string } | null> {
 	const pickerResult = await openOneDrivePicker();
-	
+
 	if (!pickerResult || !pickerResult.items || pickerResult.items.length === 0) {
 		return null;
 	}
-	
+
 	const selectedFile = pickerResult.items[0];
 	const blob = await downloadOneDriveFile(selectedFile);
-	
+
 	return { blob, name: selectedFile.name };
 }
 
