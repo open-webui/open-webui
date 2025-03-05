@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
+	import Sortable from 'sortablejs';
 
 	import { getBackendConfig, getTaskConfig, updateTaskConfig } from '$lib/apis';
 	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
@@ -38,6 +39,25 @@
 
 	let promptSuggestions = [];
 	let banners: Banner[] = [];
+	let bannersSortable;
+
+	const updateBanners = async () => {
+                const sortedBanners = Array.from(document.querySelector('.banners-sortable').children).map((element, index) => {
+                                const idInput = element.querySelector('input[name="id"]');
+                                if (idInput) {
+                                                const banner = banners.find(b => b.id === idInput.value);
+                                                if (banner) {
+                                                                banner.position = index;
+                                                }
+                                                return banner;
+                                } else {
+                                                console.error('No id input found for banner');
+                                }
+                }).filter(banner => banner !== undefined);
+
+                await setBanners(localStorage.token, sortedBanners);
+                _banners.set(sortedBanners);
+	};
 
 	const updateInterfaceHandler = async () => {
 		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
@@ -49,15 +69,21 @@
 	};
 
 	onMount(async () => {
-		taskConfig = await getTaskConfig(localStorage.token);
+        taskConfig = await getTaskConfig(localStorage.token);
+        promptSuggestions = $config?.default_prompt_suggestions ?? [];
 
-		promptSuggestions = $config?.default_prompt_suggestions ?? [];
-		banners = await getBanners(localStorage.token);
-	});
+        while (!document.querySelector('.banners-sortable')) {
+                await new Promise(resolve => globalThis.setTimeout(resolve, 100));
+        }
 
-	const updateBanners = async () => {
-		_banners.set(await setBanners(localStorage.token, banners));
-	};
+        banners = await getBanners(localStorage.token);
+        _banners.set(banners);
+
+        bannersSortable = new Sortable(document.querySelector('.banners-sortable'), {
+                handle: ".flex-1",
+                animation: 300,
+        });
+});
 </script>
 
 {#if taskConfig}
@@ -321,12 +347,13 @@
 						</button>
 					</div>
 
-					<div class=" flex flex-col space-y-1">
+					<div class="banners-sortable">
 						{#each banners as banner, bannerIdx}
 							<div class=" flex justify-between">
 								<div
 									class="flex flex-row flex-1 border rounded-xl border-gray-100 dark:border-gray-850"
 								>
+									<input type="hidden" name="id" value={banner.id} />
 									<select
 										class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-hidden"
 										bind:value={banner.type}
