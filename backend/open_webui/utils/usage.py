@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict
 from tiktoken import Encoding
 
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.models.credits import AddCreditModel, Credits
+from open_webui.models.credits import AddCreditForm, Credits
 from open_webui.models.users import UserModel
 
 logger = logging.getLogger(__name__)
@@ -109,7 +109,7 @@ class CreditDeduct:
         completion_price = self.completion_unit_price * self.usage.completion_tokens / 1000 / 1000
         total_price = prompt_price + completion_price
         Credits.add_credit_by_user_id(
-            form_data=AddCreditModel(
+            form_data=AddCreditForm(
                 user_id=self.user.id,
                 amount=Decimal(-total_price),
                 detail={

@@ -59,10 +59,16 @@ class CreditLogModel(BaseModel):
     created_at: int = Field(default_factory=lambda: int(time.time()))
 
 
-class AddCreditModel(BaseModel):
+class AddCreditForm(BaseModel):
     user_id: str
-    amount: Decimal = Field(default_factory=lambda: Decimal("0"))
-    detail: dict = Field(default_factory=lambda: {})
+    amount: Decimal
+    detail: dict
+
+
+class SetCreditForm(BaseModel):
+    user_id: str
+    credit: Decimal
+    detail: dict
 
 
 ####################
@@ -73,22 +79,22 @@ class AddCreditModel(BaseModel):
 class CreditsTable:
     def insert_new_credit(self, user_id: str) -> Optional[CreditModel]:
         try:
-            credit = CreditModel(user_id=user_id)
+            credit_model = CreditModel(user_id=user_id)
             with get_db() as db:
-                result = Credit(**credit.model_dump())
+                result = Credit(**credit_model.model_dump())
                 db.add(result)
                 db.commit()
                 db.refresh(result)
-                if credit:
-                    return credit
+                if credit_model:
+                    return credit_model
                 return None
         except Exception:
             return None
 
-    def init_credit_by_user_id(self, user_id: str) -> Optional[CreditModel]:
-        credit = self.get_credit_by_user_id(user_id=user_id) or self.insert_new_credit(user_id=user_id)
-        if credit is not None:
-            return credit
+    def init_credit_by_user_id(self, user_id: str) -> CreditModel:
+        credit_model = self.get_credit_by_user_id(user_id=user_id) or self.insert_new_credit(user_id=user_id)
+        if credit_model is not None:
+            return credit_model
         raise HTTPException(status_code=500, detail="credit initialize failed")
 
     def get_credit_by_user_id(self, user_id: str) -> Optional[CreditModel]:
@@ -99,7 +105,7 @@ class CreditsTable:
         except Exception:
             return None
 
-    def get_credits(self, user_ids: List[str]) -> List[CreditModel]:
+    def list_credits_by_user_id(self, user_ids: List[str]) -> List[CreditModel]:
         try:
             with get_db() as db:
                 credits = db.query(Credit).filter(Credit.user_id.in_(user_ids)).all()
@@ -107,10 +113,21 @@ class CreditsTable:
         except Exception:
             return []
 
-    def add_credit_by_user_id(self, form_data: AddCreditModel) -> Optional[CreditModel]:
-        credit = self.init_credit_by_user_id(user_id=form_data.user_id)
+    def set_credit_by_user_id(self, form_data: SetCreditForm) -> CreditModel:
+        credit_model = self.init_credit_by_user_id(user_id=form_data.user_id)
+        log = CreditLogModel(user_id=form_data.user_id, credit=form_data.credit, detail=form_data.detail)
+        with get_db() as db:
+            db.add(CreditLog(**log.model_dump()))
+            db.query(Credit).filter(Credit.user_id == credit_model.user_id).update(
+                {"credit": form_data.credit, "updated_at": int(time.time())}, synchronize_session=False
+            )
+            db.commit()
+        return self.get_credit_by_user_id(user_id=form_data.user_id)
+
+    def add_credit_by_user_id(self, form_data: AddCreditForm) -> Optional[CreditModel]:
+        credit_model = self.init_credit_by_user_id(user_id=form_data.user_id)
         log = CreditLogModel(
-            user_id=form_data.user_id, credit=credit.credit + form_data.amount, detail=form_data.detail
+            user_id=form_data.user_id, credit=credit_model.credit + form_data.amount, detail=form_data.detail
         )
         with get_db() as db:
             db.add(CreditLog(**log.model_dump()))
