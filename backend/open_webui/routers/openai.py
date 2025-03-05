@@ -39,7 +39,7 @@ from open_webui.utils.payload import (
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
-
+from open_webui.utils.usage import CreditDeduct
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
@@ -725,6 +725,10 @@ async def generate_chat_completion(
                 response = await r.text()
 
             r.raise_for_status()
+
+            with CreditDeduct(user=user, model=model, body=form_data, is_stream=False) as credit_deduct:
+                credit_deduct.run(response=response)
+
             return response
     except Exception as e:
         log.exception(e)
