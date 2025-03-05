@@ -792,6 +792,12 @@ app.state.MODELS = {}
 
 class RedirectMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        # token = request.cookies.get("token")
+        # check if expiring
+        # if expiring, create new
+        # else return token
+        # response = await call_next(request)
+        # return response
         # Check if the request is a GET request
         if request.method == "GET":
             path = request.url.path
@@ -810,8 +816,10 @@ class RedirectMiddleware(BaseHTTPMiddleware):
 
 
 # Add the middleware to the app
+# app.add_middleware(VerifyTokenMiddleware)
 app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+
 
 
 @app.middleware("http")
