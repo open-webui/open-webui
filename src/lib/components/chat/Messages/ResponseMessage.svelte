@@ -6,6 +6,10 @@
 	import { onMount, tick, getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	import { marked } from 'marked';
+	import markedExtension from '$lib/utils/marked/extension';
+	import markedKatexExtension from '$lib/utils/marked/katex-extension';
+	import hljs from 'highlight.js';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -152,6 +156,97 @@
 		const res = await _copyToClipboard(text);
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
+		}
+	};
+
+	const copyFormattedToClipboard = async (text) => {
+		// Configure marked with the same extensions used in Markdown.svelte
+		const options = { 
+			throwOnError: false,
+			highlight: function(code, lang) {
+				const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+				return hljs.highlight(code, { language }).value;
+			}
+		};
+		marked.use(markedKatexExtension(options));
+		marked.use(markedExtension(options));
+		
+		// Convert markdown to HTML using marked
+		const htmlContent = marked.parse(text);
+		
+		// Add basic styling to make the content look better when pasted
+		const styledHtml = `
+			<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 16px;">
+				<style>
+					pre {
+						background-color: #f6f8fa;
+						border-radius: 6px;
+						padding: 16px;
+						overflow: auto;
+					}
+					code {
+						font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+						font-size: 14px;
+					}
+					.hljs-keyword { color: #d73a49; }
+					.hljs-string { color: #032f62; }
+					.hljs-comment { color: #6a737d; }
+					.hljs-function { color: #6f42c1; }
+					.hljs-number { color: #005cc5; }
+					.hljs-operator { color: #d73a49; }
+					.hljs-class { color: #6f42c1; }
+					.hljs-title { color: #6f42c1; }
+					.hljs-params { color: #24292e; }
+					.hljs-built_in { color: #005cc5; }
+					blockquote {
+						border-left: 4px solid #dfe2e5;
+						padding-left: 16px;
+						color: #6a737d;
+						margin-left: 0;
+						margin-right: 0;
+					}
+					table {
+						border-collapse: collapse;
+						width: 100%;
+						margin-bottom: 16px;
+					}
+					table, th, td {
+						border: 1px solid #dfe2e5;
+					}
+					th, td {
+						padding: 8px 12px;
+					}
+					th {
+						background-color: #f6f8fa;
+					}
+				</style>
+				${htmlContent}
+				<div style="font-size: 12px; margin-top: 20px; color: #888; border-top: 1px solid #eee; padding-top: 8px;">
+					
+				</div>
+			</div>
+		`;
+		
+		// Create a blob with HTML content
+		const blob = new Blob([styledHtml], { type: 'text/html' });
+		
+		try {
+			// Create a ClipboardItem with HTML content
+			const data = new ClipboardItem({
+				'text/html': blob,
+				'text/plain': new Blob([text], { type: 'text/plain' })
+			});
+			
+			// Write to clipboard
+			await navigator.clipboard.write([data]);
+			toast.success($i18n.t('Formatted content copied to clipboard!'));
+		} catch (err) {
+			console.error('Error copying formatted content:', err);
+			// Fallback to plain text
+			const res = await _copyToClipboard(text);
+			if (res) {
+				toast.success($i18n.t('Copied as plain text (formatted copy not supported in this browser)'));
+			}
 		}
 	};
 
@@ -931,6 +1026,32 @@
 									</button>
 								</Tooltip>
 
+								<Tooltip content={$i18n.t('Copy Formatted')} placement="bottom">
+									<button
+										class="{isLastMessage
+											? 'visible'
+											: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-formatted-button"
+										on:click={() => {
+											copyFormattedToClipboard(message.content);
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke-width="2.3"
+											stroke="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
+
 								<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
 									<button
 										id="speak-button-{message.id}"
@@ -987,7 +1108,7 @@
 												<path
 													stroke-linecap="round"
 													stroke-linejoin="round"
-													d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"
+													d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"
 												/>
 											</svg>
 										{:else}
