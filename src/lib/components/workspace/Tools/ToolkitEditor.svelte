@@ -198,7 +198,7 @@ class Tools:
 				}
 			}}
 		>
-			<div class="flex flex-col flex-1 overflow-auto h-0">
+			<div class="flex flex-col flex-1 overflow-auto h-0 rounded-lg">
 				<div class="w-full mb-2 flex flex-col gap-0.5">
 					<div class="flex w-full items-center">
 						<div class=" shrink-0 mr-2">
@@ -218,7 +218,7 @@ class Tools:
 						<div class="flex-1">
 							<Tooltip content={$i18n.t('e.g. My Tools')} placement="top-start">
 								<input
-									class="w-full text-2xl font-semibold bg-transparent outline-hidden"
+									class="w-full text-2xl font-medium bg-transparent outline-hidden font-primary"
 									type="text"
 									placeholder={$i18n.t('Tool Name')}
 									bind:value={name}
@@ -282,12 +282,12 @@ class Tools:
 					<CodeEditor
 						bind:this={codeEditor}
 						value={content}
-						{boilerplate}
 						lang="python"
+						{boilerplate}
 						onChange={(e) => {
 							_content = e;
 						}}
-						onSave={() => {
+						onSave={async () => {
 							if (formElement) {
 								formElement.requestSubmit();
 							}
