@@ -1,4 +1,4 @@
-name: Release
+name: Artifacts for GAIA Release
 
 on:
   push:
