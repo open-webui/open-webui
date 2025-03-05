@@ -489,8 +489,8 @@
 							<div class=" self-center text-sm font-semibold">{$i18n.t('Price')}</div>
 						</div>
 					</div>
-					<div class="text-xs text-gray-500">{$i18n.t('Unit: 1M tokens')}</div>
 					<div class="my-2">
+						<div class="text-xs text-gray-500">{$i18n.t('Unit: 1M tokens')}</div>
 						<div class="flex justify-between text-xs">
 							<span class="min-w-36">
 								{$i18n.t('Prompt Token Price')}
