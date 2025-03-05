@@ -117,7 +117,7 @@
 						</div>
 					</div>
 
-					<div class="flex gap-0.5 items-center text-xs text-gray-500">
+					<div class="flex gap-0.5 items-center text-xs text-gray-600 dark:text-gray-500">
 						<div class="">/</div>
 						<input
 							class=" w-full bg-transparent outline-hidden"
@@ -147,7 +147,7 @@
 					/>
 				</div>
 
-				<div class="text-xs text-gray-400 dark:text-gray-500">
+				<div class="text-xs text-gray-600 dark:text-gray-500">
 					ⓘ {$i18n.t('Format your variables using brackets like this:')}&nbsp;<span
 						class=" text-gray-600 dark:text-gray-300 font-medium"
 						>{'{{'}{$i18n.t('variable')}{'}}'}</span
@@ -158,7 +158,7 @@
 					<span class=" text-gray-600 dark:text-gray-300 font-medium">{'}}'}</span>.
 				</div>
 
-				<div class="text-xs text-gray-400 dark:text-gray-500">
+				<div class="text-xs text-gray-600 dark:text-gray-500">
 					{$i18n.t('Utilize')}<span class=" text-gray-600 dark:text-gray-300 font-medium">
 						{` {{CLIPBOARD}}`}</span
 					>

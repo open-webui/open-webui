@@ -344,7 +344,7 @@
 							</div>
 						</div>
 
-						<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+						<div class="mt-1 text-xs text-gray-600 dark:text-gray-500">
 							{$i18n.t('Trouble accessing Ollama?')}
 							<a
 								class=" text-gray-300 font-medium underline"
@@ -377,7 +377,7 @@
 				</div>
 
 				<div class="mt-1.5">
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-gray-600 dark:text-gray-500">
 						{$i18n.t(
 							'Direct Connections allow users to connect to their own OpenAI compatible API endpoints.'
 						)}

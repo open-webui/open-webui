@@ -146,7 +146,7 @@
 								</div>
 
 								<button
-									class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
+									class=" underline flex items-center space-x-1 text-xs text-gray-600 dark:text-gray-500 dark:text-gray-500"
 									type="button"
 									on:click={() => {
 										showChangelog.set(true);
@@ -174,7 +174,7 @@
 								<div class="">
 									{$i18n.t('Help')}
 								</div>
-								<div class=" text-xs text-gray-500">
+								<div class=" text-xs text-gray-600 dark:text-gray-500">
 									{$i18n.t('Discover how to use Open WebUI and seek support from the community.')}
 								</div>
 							</div>
@@ -221,7 +221,7 @@
 									{$i18n.t('License')}
 								</div>
 								<a
-									class=" text-xs text-gray-500 hover:underline"
+									class=" text-xs text-gray-600 dark:text-gray-500 hover:underline"
 									href="https://docs.openwebui.com/enterprise"
 									target="_blank"
 								>
@@ -302,7 +302,7 @@
 									bind:value={adminConfig.API_KEY_ALLOWED_ENDPOINTS}
 								/>
 
-								<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+								<div class="mt-2 text-xs text-gray-600 dark:text-gray-500">
 									<!-- https://docs.openwebui.com/getting-started/advanced-topics/api-endpoints -->
 									<a
 										href="https://docs.openwebui.com/getting-started/api-endpoints"
@@ -330,7 +330,7 @@
 							/>
 						</div>
 
-						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+						<div class="mt-2 text-xs text-gray-600 dark:text-gray-500">
 							{$i18n.t('Valid time units:')}
 							<span class=" text-gray-300 font-medium"
 								>{$i18n.t("'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.")}</span
@@ -498,7 +498,7 @@
 											/>
 										</div>
 									</div>
-									<div class="text-xs text-gray-400 dark:text-gray-500">
+									<div class="text-xs text-gray-600 dark:text-gray-500">
 										<a
 											class=" text-gray-300 font-medium underline"
 											href="https://ldap.com/ldap-filters/"
@@ -593,7 +593,7 @@
 							/>
 						</div>
 
-						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+						<div class="mt-2 text-xs text-gray-600 dark:text-gray-500">
 							{$i18n.t(
 								'Enter the public URL of your WebUI. This URL will be used to generate links in the notifications.'
 							)}

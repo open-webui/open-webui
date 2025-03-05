@@ -130,7 +130,7 @@
 				class="w-full group rounded-md relative flex items-center justify-between hover:bg-[#8900E1] dark:hover:bg-[#8951AE] text-gray-100 dark:text-gray-200 transition"
 			>
 				<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-medium">
-					<div class="text-gray-300 dark:text-gray-600">
+					<div class="text-gray-600 dark:text-gray-400">
 						{#if open}
 							<ChevronDown className=" size-3" strokeWidth="2.5" />
 						{:else}

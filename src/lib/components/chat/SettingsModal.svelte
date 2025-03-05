@@ -409,7 +409,7 @@
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'general'
 									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									: ' text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'general';
 								}}
@@ -435,7 +435,7 @@
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'interface'
 									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									: ' text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'interface';
 								}}
@@ -462,7 +462,7 @@
 									class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 									'connections'
 										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+										: ' text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
 									on:click={() => {
 										selectedTab = 'connections';
 									}}
@@ -487,7 +487,7 @@
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'personalization'
 									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									: ' text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'personalization';
 								}}
@@ -502,7 +502,7 @@
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'audio'
 									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									: ' text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'audio';
 								}}
@@ -529,7 +529,7 @@
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'chats'
 									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									: ' text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'chats';
 								}}
@@ -555,7 +555,7 @@
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'account'
 									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									: ' text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'account';
 								}}
@@ -581,7 +581,7 @@
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'about'
 									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									: ' text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'about';
 								}}
@@ -608,7 +608,7 @@
 									class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 									'admin'
 										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+										: ' text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
 									on:click={async () => {
 										await goto('/admin/settings');
 										show = false;

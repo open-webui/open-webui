@@ -660,7 +660,7 @@
 						</button>
 					</div>
 
-					<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+					<div class="mt-2 mb-1 text-xs text-gray-600 dark:text-gray-500">
 						{$i18n.t('To access the available model names for downloading,')}
 						<a
 							class=" text-gray-500 dark:text-gray-300 font-medium underline"
@@ -1004,7 +1004,7 @@
 								</div>
 							</div>
 						{/if}
-						<div class=" mt-1 text-xs text-gray-400 dark:text-gray-500">
+						<div class=" mt-1 text-xs text-gray-600 dark:text-gray-500">
 							{$i18n.t('To access the GGUF models available for downloading,')}
 							<a
 								class=" text-gray-500 dark:text-gray-300 font-medium underline"

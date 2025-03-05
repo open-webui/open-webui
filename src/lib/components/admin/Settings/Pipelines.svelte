@@ -409,7 +409,7 @@
 						</button>
 					</div>
 
-					<div class="mt-2 text-xs text-gray-500">
+					<div class="mt-2 text-xs text-gray-600 dark:text-gray-500">
 						<span class=" font-semibold dark:text-gray-200">Warning:</span> Pipelines are a plugin
 						system with arbitrary code execution —
 						<span class=" font-medium dark:text-gray-400"
@@ -513,7 +513,7 @@
 																</select>
 															{:else if (valves_spec.properties[property]?.type ?? null) === 'boolean'}
 																<div class="flex justify-between items-center">
-																	<div class="text-xs text-gray-500">
+																	<div class="text-xs text-gray-600 dark:text-gray-500">
 																		{valves[property] ? 'Enabled' : 'Disabled'}
 																	</div>
 
