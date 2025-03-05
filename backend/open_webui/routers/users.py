@@ -303,7 +303,7 @@ async def update_user_by_id(
                 SetCreditForm(
                     user_id=user_id,
                     credit=Decimal(form_data.credit),
-                    detail={"desc": f"updated by {session_user.id}"}
+                    detail={"desc": f"updated by {session_user.name}"}
                 )
             )
             setattr(updated_user, "credit", "%.4f" % credit.credit)
