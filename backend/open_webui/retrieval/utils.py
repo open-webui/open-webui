@@ -1,20 +1,24 @@
 import logging
 import os
-import uuid
-from typing import Optional, Union
+import operator
+from typing import Optional, Union, Sequence, Any
 
 import asyncio
 import requests
+import concurrent.futures
 
 from huggingface_hub import snapshot_download
-from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
-from langchain_community.retrievers import BM25Retriever
+from langchain.retrievers import ContextualCompressionRetriever
 from langchain_core.documents import Document
-
+from langchain_core.callbacks import CallbackManagerForRetrieverRun
+from langchain_core.retrievers import BaseRetriever
+from langchain_core.callbacks import Callbacks
+from langchain_core.documents import BaseDocumentCompressor, Document
 
 from open_webui.config import VECTOR_DB
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
-from open_webui.utils.misc import get_last_user_message, calculate_sha256_string
+from open_webui.retrieval.models.jina_remote import JinaRemoteReranker
+from open_webui.utils.misc import measure_time
 
 from open_webui.models.users import UserModel
 
@@ -30,16 +34,11 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-from typing import Any
-
-from langchain_core.callbacks import CallbackManagerForRetrieverRun
-from langchain_core.retrievers import BaseRetriever
-
-
 class VectorSearchRetriever(BaseRetriever):
     collection_name: Any
     embedding_function: Any
     top_k: int
+    enable_hybrid_search: bool = False
 
     def _get_relevant_documents(
         self,
@@ -50,7 +49,9 @@ class VectorSearchRetriever(BaseRetriever):
         result = VECTOR_DB_CLIENT.search(
             collection_name=self.collection_name,
             vectors=[self.embedding_function(query)],
+            queries=[query],
             limit=self.top_k,
+            enable_hybrid_search=self.enable_hybrid_search,
         )
 
         ids = result.ids[0]
@@ -100,6 +101,7 @@ def get_doc(collection_name: str, user: UserModel = None):
         raise e
 
 
+@measure_time
 def query_doc_with_hybrid_search(
     collection_name: str,
     query: str,
@@ -108,24 +110,17 @@ def query_doc_with_hybrid_search(
     reranking_function,
     r: float,
 ) -> dict:
-    try:
-        result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
-
-        bm25_retriever = BM25Retriever.from_texts(
-            texts=result.documents[0],
-            metadatas=result.metadatas[0],
-        )
-        bm25_retriever.k = k
-
+    try:    
+        # Vector search retriever will use hybrid search to retrieve the top k documents
         vector_search_retriever = VectorSearchRetriever(
             collection_name=collection_name,
             embedding_function=embedding_function,
             top_k=k,
+            enable_hybrid_search=True,
         )
 
-        ensemble_retriever = EnsembleRetriever(
-            retrievers=[bm25_retriever, vector_search_retriever], weights=[0.5, 0.5]
-        )
+        # Reranking compressor will rerank the documents based on the reranking function 
+        # and return the top n documents
         compressor = RerankCompressor(
             embedding_function=embedding_function,
             top_n=k,
@@ -133,8 +128,12 @@ def query_doc_with_hybrid_search(
             r_score=r,
         )
 
+        # Contextual compression retriever will:
+        ## 1. Use the vector search retriever to retrieve the top k documents
+        ## 2. Use the reranking compressor to rerank the documents
+        ## 3. Return the top n documents
         compression_retriever = ContextualCompressionRetriever(
-            base_compressor=compressor, base_retriever=ensemble_retriever
+            base_compressor=compressor, base_retriever=vector_search_retriever
         )
 
         result = compression_retriever.invoke(query)
@@ -241,22 +240,28 @@ def query_collection(
     k: int,
 ) -> dict:
     results = []
+    
+    # Create work items
+    work_items = []
     for query in queries:
+        # TODO: Improve this by running batch embedding instead. Not have time for now ^^
         query_embedding = embedding_function(query)
         for collection_name in collection_names:
             if collection_name:
-                try:
-                    result = query_doc(
-                        collection_name=collection_name,
-                        k=k,
-                        query_embedding=query_embedding,
-                    )
-                    if result is not None:
-                        results.append(result.model_dump())
-                except Exception as e:
-                    log.exception(f"Error when querying the collection: {e}")
-            else:
-                pass
+                work_items.append((collection_name, query_embedding))
+
+    # Use thread pool to execute queries in parallel
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(work_items), 10)) as executor:
+        futures = [
+            executor.submit(query_doc, name, emb, k)
+            for name, emb in work_items
+        ]
+        
+        # Gather results as they complete
+        for future in concurrent.futures.as_completed(futures):
+            result = future.result()
+            if result is not None:
+                results.append(result.model_dump())
 
     if VECTOR_DB == "chroma":
         # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
@@ -266,6 +271,7 @@ def query_collection(
         return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
+@measure_time
 def query_collection_with_hybrid_search(
     collection_names: list[str],
     queries: list[str],
@@ -276,23 +282,42 @@ def query_collection_with_hybrid_search(
 ) -> dict:
     results = []
     error = False
+    
+    log.info(f"query_collection_with_hybrid_search:collection_names {collection_names}")
+    log.info(f"query_collection_with_hybrid_search:queries {queries}") 
+    
+    # Create work items
+    work_items = []
     for collection_name in collection_names:
-        try:
-            for query in queries:
-                result = query_doc_with_hybrid_search(
-                    collection_name=collection_name,
-                    query=query,
-                    embedding_function=embedding_function,
-                    k=k,
-                    reranking_function=reranking_function,
-                    r=r,
-                )
-                results.append(result)
-        except Exception as e:
-            log.exception(
-                "Error when querying the collection with " f"hybrid_search: {e}"
+        for query in queries:
+            work_items.append((collection_name, query))
+    
+    # Use thread pool to execute queries in parallel
+    ## Note: Because most of our work is IO bound, we can use a thread pool to execute the queries in parallel
+    ## If you have a CPU bound work, you should use a process pool instead
+    num_workers = min(len(work_items), 10)
+    log.info(f"query_collection_with_hybrid_search:num_workers {num_workers}")
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+        futures = [
+            executor.submit(
+                query_doc_with_hybrid_search,
+                collection_name,
+                query,
+                embedding_function,
+                k,
+                reranking_function,
+                r
             )
-            error = True
+            for collection_name, query in work_items
+        ]
+        
+        # Gather results as they complete
+        for future in concurrent.futures.as_completed(futures):
+            result = future.result()
+            if result is not None:
+                results.append(result)
+                
+    log.info(f"query_collection_with_hybrid_search:total search result {len(results)}")
 
     if error:
         raise Exception(
@@ -342,7 +367,7 @@ def get_embedding_function(
     else:
         raise ValueError(f"Unknown embedding engine: {embedding_engine}")
 
-
+@measure_time
 def get_sources_from_files(
     files,
     queries,
@@ -639,15 +664,7 @@ def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **
             embeddings = generate_openai_batch_embeddings(model, [text], url, key, user)
 
         return embeddings[0] if isinstance(text, str) else embeddings
-
-
-import operator
-from typing import Optional, Sequence
-
-from langchain_core.callbacks import Callbacks
-from langchain_core.documents import BaseDocumentCompressor, Document
-
-
+    
 class RerankCompressor(BaseDocumentCompressor):
     embedding_function: Any
     top_n: int
@@ -665,34 +682,65 @@ class RerankCompressor(BaseDocumentCompressor):
         callbacks: Optional[Callbacks] = None,
     ) -> Sequence[Document]:
         reranking = self.reranking_function is not None
-
-        if reranking:
-            scores = self.reranking_function.predict(
-                [(query, doc.page_content) for doc in documents]
+        # We need to separate the jina remote reranker
+        # because Jina api call already sort the documents and get the top n results 
+        if isinstance(self.reranking_function, JinaRemoteReranker):
+            # Get the index and score of the documents
+            index_with_scores = self.reranking_function.predict(
+                query=query,
+                documents=[doc.page_content for doc in documents],
+                top_n=self.top_n,
             )
-        else:
-            from sentence_transformers import util
+            
+            # Filter the documents with the score greater than the r_score
+            if self.r_score:
+                index_with_scores = [
+                    (idx, s) for idx, s in index_with_scores if s >= self.r_score
+                ]
+                
+            # Create the final results
+            final_results = []
+            for doc_idx, doc_score in index_with_scores:
+                metadata = documents[doc_idx].metadata
+                metadata["score"] = doc_score
+                doc = Document(
+                    page_content=documents[doc_idx].page_content,
+                    metadata=metadata,
+                )
+                final_results.append(doc)
+                
+            return final_results
+            
+        else:    
+            if reranking:
+                scores = self.reranking_function.predict(
+                    [(query, doc.page_content) for doc in documents]
+                )
+            else:
+                from sentence_transformers import util
 
-            query_embedding = self.embedding_function(query)
-            document_embedding = self.embedding_function(
-                [doc.page_content for doc in documents]
-            )
-            scores = util.cos_sim(query_embedding, document_embedding)[0]
+                query_embedding = self.embedding_function(query)
+                document_embedding = self.embedding_function(
+                    [doc.page_content for doc in documents]
+                )
+                scores = util.cos_sim(query_embedding, document_embedding)[0]
 
-        docs_with_scores = list(zip(documents, scores.tolist()))
-        if self.r_score:
-            docs_with_scores = [
-                (d, s) for d, s in docs_with_scores if s >= self.r_score
-            ]
+            docs_with_scores = list(zip(documents, scores.tolist()))
+            if self.r_score:
+                docs_with_scores = [
+                    (d, s) for d, s in docs_with_scores if s >= self.r_score
+                ]
 
-        result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=True)
-        final_results = []
-        for doc, doc_score in result[: self.top_n]:
-            metadata = doc.metadata
-            metadata["score"] = doc_score
-            doc = Document(
-                page_content=doc.page_content,
-                metadata=metadata,
-            )
-            final_results.append(doc)
-        return final_results
+            result = sorted(docs_with_scores, key=operator.itemgetter(1), reverse=True)
+            
+            final_results = []
+            for doc, doc_score in result[: self.top_n]:
+                metadata = doc.metadata
+                metadata["score"] = doc_score
+                doc = Document(
+                    page_content=doc.page_content,
+                    metadata=metadata,
+                )
+                final_results.append(doc)
+                
+            return final_results

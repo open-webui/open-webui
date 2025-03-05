@@ -522,7 +522,7 @@ async def chat_completion_files_handler(
     request: Request, body: dict, user: UserModel
 ) -> tuple[dict, dict[str, list]]:
     sources = []
-
+    log.info(f"body: {body}")
     if files := body.get("metadata", {}).get("files", None):
         try:
             queries_response = await generate_queries(

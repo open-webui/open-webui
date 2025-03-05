@@ -2,12 +2,18 @@ import hashlib
 import re
 import time
 import uuid
+import logging
+
 from datetime import timedelta
 from pathlib import Path
 from typing import Callable, Optional
 
-
 import collections.abc
+
+from open_webui.env import SRC_LOG_LEVELS
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 def deep_update(d, u):
@@ -445,3 +451,14 @@ def parse_ollama_modelfile(model_text):
         data["params"]["messages"] = messages
 
     return data
+
+
+# Create a function decorator measure the time it takes to run a function
+def measure_time(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        log.info(f"Time taken to run {func.__name__}: {end_time - start_time} seconds")
+        return result
+    return wrapper

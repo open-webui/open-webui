@@ -6,6 +6,7 @@ class VectorItem(BaseModel):
     id: str
     text: str
     vector: List[float | int]
+    sparse_vector: Optional[Any] = None
     metadata: Any
 
 
