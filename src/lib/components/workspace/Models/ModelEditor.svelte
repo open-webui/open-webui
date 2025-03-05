@@ -68,6 +68,10 @@
 		},
 		params: {
 			system: ''
+		},
+		price: {
+			prompt_price: 0,
+			completion_price: 0,
 		}
 	};
 
@@ -479,6 +483,41 @@
 							</div>
 						</div>
 					{/if}
+
+					<div class="my-1">
+						<div class="mb-1 flex w-full justify-between items-center">
+							<div class=" self-center text-sm font-semibold">{$i18n.t('Price')}</div>
+						</div>
+					</div>
+					<div class="text-xs text-gray-500">{$i18n.t('Unit: 1M tokens')}</div>
+					<div class="my-2">
+						<div class="flex justify-between text-xs">
+							<span class="min-w-36">
+								{$i18n.t('Prompt Token Price')}
+							</span>
+							<input
+								class="w-full border-solid"
+								type="number"
+								step="0.0001"
+								bind:value={info.price.prompt_price}
+								autocomplete="off"
+								required
+							/>
+						</div>
+						<div class="flex justify-between text-xs">
+							<span class="min-w-36">
+								{$i18n.t('Completion Token Price')}
+							</span>
+							<input
+								class="w-full border-solid"
+								type="number"
+								step="0.0001"
+								bind:value={info.price.completion_price}
+								autocomplete="off"
+								required
+							/>
+						</div>
+					</div>
 
 					<div class="my-1">
 						<div class="mb-1 flex w-full justify-between items-center">
