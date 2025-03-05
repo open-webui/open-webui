@@ -6,6 +6,7 @@ import logging
 from datetime import timedelta
 from pathlib import Path
 from typing import Callable, Optional
+import json
 
 
 import collections.abc
@@ -450,3 +451,15 @@ def parse_ollama_modelfile(model_text):
         data["params"]["messages"] = messages
 
     return data
+
+
+def convert_logit_bias_input_to_json(user_input):
+    logit_bias_pairs = user_input.split(",")
+    logit_bias_json = {}
+    for pair in logit_bias_pairs:
+        token, bias = pair.split(":")
+        token = str(token.strip())
+        bias = int(bias.strip())
+        bias = 100 if bias > 100 else -100 if bias < -100 else bias
+        logit_bias_json[token] = bias
+    return json.dumps(logit_bias_json)
