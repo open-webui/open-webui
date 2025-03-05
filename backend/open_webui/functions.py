@@ -134,6 +134,51 @@ async def get_function_models(request):
     return pipe_models
 
 
+def format_citations_as_sources(citations):
+    """
+    Format citations to match the expected structure for sources.
+    Citations are always a list of URLs that need to be formatted properly
+    for display in the UI.
+    Expected format comes from Chat.svelte.
+    """
+    formatted_sources = []
+
+    if isinstance(citations, list):
+        for i, citation in enumerate(citations):
+            if isinstance(citation, str):
+                formatted_sources.append(
+                    {
+                        "source": {
+                            "name": f"[{i+1}]",
+                            "type": "web_search_results",
+                            "urls": [citation],
+                        },
+                        "document": ["Click the link to view the content."],
+                        "metadata": [{"source": citation}],
+                    }
+                )
+
+    return formatted_sources
+
+
+async def emit_sources(citations, extra_params, event_emitter):
+    if isinstance(citations, list):
+        # Check if we should suppress sources emission
+        if extra_params.get("__metadata__") and extra_params["__metadata__"].get(
+            "suppress_sources"
+        ):
+            log.debug(
+                "handle_sources: suppress_sources flag is True; skipping sources emission."
+            )
+        else:
+            sources = format_citations_as_sources(citations)
+            if sources and event_emitter:
+                log.debug(f"emitting sources {sources}")
+                await event_emitter(
+                    {"type": "chat:completion", "data": {"sources": sources}}
+                )
+
+
 async def generate_function_chat_completion(
     request, form_data, user, models: dict = {}
 ):
@@ -163,11 +208,17 @@ async def generate_function_chat_completion(
         except Exception:
             pass
 
+        citations = []
         if line.startswith("data:"):
-            return f"{line}\n\n"
+            # Extract citations from the data
+            json_start = line.find("{")
+            if json_start != -1:
+                line_copy = json.loads(line[json_start:])
+                citations = line_copy.get("citations", [])
+            return f"{line}\n\n", citations
         else:
             line = openai_chat_chunk_message_template(form_data["model"], line)
-            return f"data: {json.dumps(line)}\n\n"
+            return f"data: {json.dumps(line)}\n\n", citations
 
     def get_pipe_id(form_data: dict) -> str:
         pipe_id = form_data["model"]
@@ -187,6 +238,12 @@ async def generate_function_chat_completion(
             k: v for k, v in extra_params.items() if k in sig.parameters
         }
 
+        # Add suppress_sources if needed by the pipe signature
+        if "suppress_sources" in sig.parameters:
+            params["suppress_sources"] = extra_params.get("__metadata__", {}).get(
+                "suppress_sources", False
+            )
+
         if "__user__" in params and hasattr(function_module, "UserValves"):
             user_valves = Functions.get_user_valves_by_id_and_user_id(pipe_id, user.id)
             try:
@@ -203,6 +260,9 @@ async def generate_function_chat_completion(
     metadata = form_data.pop("metadata", {})
 
     files = metadata.get("files", [])
+    if files is None:
+        files = []
+
     tool_ids = metadata.get("tool_ids", [])
     # Check if tool_ids is None
     if tool_ids is None:
@@ -285,13 +345,25 @@ async def generate_function_chat_completion(
                 message = openai_chat_chunk_message_template(form_data["model"], res)
                 yield f"data: {json.dumps(message)}\n\n"
 
-            if isinstance(res, Iterator):
-                for line in res:
-                    yield process_line(form_data, line)
+            # Process both sync and async generators with citation handling
+            if isinstance(res, Iterator) or isinstance(res, AsyncGenerator):
 
-            if isinstance(res, AsyncGenerator):
-                async for line in res:
-                    yield process_line(form_data, line)
+                async def to_async_iter(gen):
+                    if hasattr(gen, "__aiter__"):
+                        async for item in gen:
+                            yield item
+                    else:
+                        for item in gen:
+                            yield item
+
+                citations = []
+                async for line in to_async_iter(res):
+                    line, returned_citations = process_line(form_data, line)
+                    yield line
+                    if not citations and returned_citations:
+                        citations = returned_citations
+                if citations:
+                    await emit_sources(citations, extra_params, __event_emitter__)
 
             if isinstance(res, str) or isinstance(res, Generator):
                 finish_message = openai_chat_chunk_message_template(
@@ -310,7 +382,10 @@ async def generate_function_chat_completion(
             log.error(f"Error: {e}")
             return {"error": {"detail": str(e)}}
 
-        if isinstance(res, StreamingResponse) or isinstance(res, dict):
+        if isinstance(res, dict):
+            await emit_sources(res, extra_params, __event_emitter__)
+            return res
+        if isinstance(res, StreamingResponse):
             return res
         if isinstance(res, BaseModel):
             return res.model_dump()

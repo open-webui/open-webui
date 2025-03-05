@@ -222,6 +222,7 @@ async def generate_title(
             "task": str(TASKS.TITLE_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
+            "suppress_sources": True,
         },
     }
 
@@ -297,6 +298,7 @@ async def generate_chat_tags(
             "task": str(TASKS.TAGS_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
+            "suppress_sources": True,
         },
     }
 
@@ -369,6 +371,7 @@ async def generate_image_prompt(
             "task": str(TASKS.IMAGE_PROMPT_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
+            "suppress_sources": True,
         },
     }
 
@@ -452,6 +455,7 @@ async def generate_queries(
             "task": str(TASKS.QUERY_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
+            "suppress_sources": True,
         },
     }
 
@@ -539,6 +543,7 @@ async def generate_autocompletion(
             "task": str(TASKS.AUTOCOMPLETE_GENERATION),
             "task_body": form_data,
             "chat_id": form_data.get("chat_id", None),
+            "suppress_sources": True,
         },
     }
 
@@ -615,6 +620,7 @@ async def generate_emoji(
             **(request.state.metadata if hasattr(request.state, "metadata") else {}),
             "task": str(TASKS.EMOJI_GENERATION),
             "task_body": form_data,
+            "suppress_sources": True,
         },
     }
 
@@ -681,6 +687,7 @@ async def generate_moa_response(
             "chat_id": form_data.get("chat_id", None),
             "task": str(TASKS.MOA_RESPONSE_GENERATION),
             "task_body": form_data,
+            "suppress_sources": True,
         },
     }
 
