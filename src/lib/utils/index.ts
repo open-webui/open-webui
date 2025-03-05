@@ -738,11 +738,12 @@ export const extractSentencesForAudio = (text: string) => {
 		if (lastIndex >= 0) {
 			const previousText = mergedTexts[lastIndex];
 			let wordCount = previousText.split(/\s+/).length;
-			const charCount = previousText.length;
+			let charCount = previousText.length;
 
 			const isCJK = /[\u4e00-\u9fa5\u3040-\u30ff\u31f0-\u31ff\u3400-\u4dbf\u4e00-\u9fff\uF900-\uFAFF]/.test(previousText);
 			if (isCJK) {
-				wordCount = charCount * 3;
+				wordCount = charCount;
+				charCount = charCount * 10;
 			}
 			if (wordCount < 4 || charCount < 50) {
 				mergedTexts[lastIndex] = previousText + ' ' + currentText;
