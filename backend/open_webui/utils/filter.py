@@ -49,6 +49,11 @@ async def process_filter_functions(
             function_module, _, _ = load_function_module_by_id(filter_id)
             request.app.state.FUNCTIONS[filter_id] = function_module
 
+        # Prepare handler function
+        handler = getattr(function_module, filter_type, None)
+        if not handler:
+            continue
+
         # Check if the function has a file_handler variable
         if filter_type == "inlet" and hasattr(function_module, "file_handler"):
             skip_files = function_module.file_handler
@@ -60,10 +65,6 @@ async def process_filter_functions(
                 **(valves if valves else {})
             )
 
-        # Prepare handler function
-        handler = getattr(function_module, filter_type, None)
-        if not handler:
-            continue
 
         try:
             # Prepare parameters
