@@ -7,16 +7,13 @@ from open_webui.env import SRC_LOG_LEVELS
 
 from open_webui.models.users import Users, UserResponse
 
-
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from sqlalchemy import or_, and_, func
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
 
-
 from open_webui.utils.access_control import has_access
-
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -136,6 +133,11 @@ class ModelResponse(ModelModel):
     pass
 
 
+class ModelPriceForm(BaseModel):
+    prompt_price: float = Field(default=0, description="prompt token price for 1m tokens")
+    completion_price: float = Field(default=0, description="completion token price for 1m tokens")
+
+
 class ModelForm(BaseModel):
     id: str
     base_model_id: Optional[str] = None
@@ -143,7 +145,7 @@ class ModelForm(BaseModel):
     meta: ModelMeta
     params: ModelParams
     access_control: Optional[dict] = None
-    price: Optional[dict] = None
+    price: Optional[ModelPriceForm] = None
     is_active: bool = True
 
 
