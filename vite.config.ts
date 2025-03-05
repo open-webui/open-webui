@@ -1,5 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
+import { resolve } from 'path'
 
 // /** @type {import('vite').Plugin} */
 // const viteServerConfig = {
