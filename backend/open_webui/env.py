@@ -387,6 +387,12 @@ WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
 WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", REDIS_URL)
 WEBSOCKET_REDIS_LOCK_TIMEOUT = os.environ.get("WEBSOCKET_REDIS_LOCK_TIMEOUT", 60)
 
+WEBSOCKET_REDIS_CERTS = os.environ.get("WEBSOCKET_REDIS_CERTS", "")
+
+WEBSOCKET_REDIS_USERNAME = os.environ.get("WEBSOCKET_REDIS_USERNAME", "")
+
+WEBSOCKET_REDIS_PASSWORD = os.environ.get("WEBSOCKET_REDIS_PASSWORD", "")
+
 AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
 
 if AIOHTTP_CLIENT_TIMEOUT == "":
@@ -442,3 +448,11 @@ AUDIT_EXCLUDED_PATHS = os.getenv("AUDIT_EXCLUDED_PATHS", "/chats,/chat,/folders"
 )
 AUDIT_EXCLUDED_PATHS = [path.strip() for path in AUDIT_EXCLUDED_PATHS]
 AUDIT_EXCLUDED_PATHS = [path.lstrip("/") for path in AUDIT_EXCLUDED_PATHS]
+
+####################################
+# WEBSOCKET_REDIS_AZURE_CREDENTIALS
+####################################
+
+WEBSOCKET_REDIS_AZURE_CREDENTIALS = (
+    os.environ.get("WEBSOCKET_REDIS_AZURE_CREDENTIALS", "false").lower() == "true"
+)

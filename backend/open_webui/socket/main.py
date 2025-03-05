@@ -13,9 +13,12 @@ from open_webui.env import (
     WEBSOCKET_MANAGER,
     WEBSOCKET_REDIS_URL,
     WEBSOCKET_REDIS_LOCK_TIMEOUT,
+    WEBSOCKET_REDIS_CERTS,
+    WEBSOCKET_REDIS_USERNAME,
+    WEBSOCKET_REDIS_PASSWORD,
 )
 from open_webui.utils.auth import decode_token
-from open_webui.socket.utils import RedisDict, RedisLock
+from open_webui.socket.utils import RedisDict, RedisLock, azure_credential_service
 
 from open_webui.env import (
     GLOBAL_LOG_LEVEL,
@@ -27,9 +30,36 @@ logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
+redis_options = {}
+
+# Retrieves and configures the Redis manager for Socket.IO with authentication and SSL if configured
+# If Azure token is used to auth with redis cache and socket lives longer than token expire time, the socket will fail.
+def get_redis_manager():
+    global redis_options
+    if azure_credential_service:
+        redis_options["password"] = azure_credential_service.get_token()
+        redis_options["username"] = azure_credential_service.get_username(redis_options["password"])
+    elif WEBSOCKET_REDIS_PASSWORD:
+        redis_options["password"] = WEBSOCKET_REDIS_PASSWORD
+        redis_options["username"] = WEBSOCKET_REDIS_USERNAME
+    if WEBSOCKET_REDIS_URL.startswith("rediss") and WEBSOCKET_REDIS_CERTS:
+        redis_options["ssl_ca_certs"] = WEBSOCKET_REDIS_CERTS
+
+    try:
+        mgr = socketio.AsyncRedisManager(
+            WEBSOCKET_REDIS_URL,
+            redis_options=redis_options
+        )
+        return mgr
+    except ConnectionError as e:
+        log.exception(f"Could not connect to Redis: {e}")
+        raise e
 
 if WEBSOCKET_MANAGER == "redis":
-    mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
+    mgr = get_redis_manager()
+    if not mgr:
+        log.error("Could not connect to Redis. Exiting.")
+        sys.exit(1)
     sio = socketio.AsyncServer(
         cors_allowed_origins=[],
         async_mode="asgi",
@@ -47,7 +77,6 @@ else:
         always_connect=True,
     )
 
-
 # Timeout duration in seconds
 TIMEOUT_DURATION = 3
 
@@ -55,14 +84,27 @@ TIMEOUT_DURATION = 3
 
 if WEBSOCKET_MANAGER == "redis":
     log.debug("Using Redis to manage websockets.")
-    SESSION_POOL = RedisDict("open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL)
-    USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
-    USAGE_POOL = RedisDict("open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL)
 
+    SESSION_POOL = RedisDict(
+        "open-webui:session_pool",
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_options=redis_options
+    )
+    USER_POOL = RedisDict(
+        "open-webui:user_pool",
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_options=redis_options
+    )
+    USAGE_POOL = RedisDict(
+        "open-webui:usage_pool",
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_options=redis_options
+    )
     clean_up_lock = RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,
         lock_name="usage_cleanup_lock",
         timeout_secs=WEBSOCKET_REDIS_LOCK_TIMEOUT,
+        redis_options=redis_options
     )
     aquire_func = clean_up_lock.aquire_lock
     renew_func = clean_up_lock.renew_lock
