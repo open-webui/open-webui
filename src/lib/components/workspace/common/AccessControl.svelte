@@ -38,10 +38,8 @@
 
 		// Always set as read-only access for now
 		accessControl = {
-			...accessControl,
 			read: {
-				...accessControl.read,
-				group_ids: [...new Set([...accessControl.read.group_ids, selectedGroupId])]
+				group_ids: [...new Set([...(accessControl?.read?.group_ids || []), selectedGroupId])]
 			},
 			write: {
 				group_ids: [],
