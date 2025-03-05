@@ -715,9 +715,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         raise e
 
     try:
+        filter_functions = [
+            Functions.get_function_by_id(filter_id)
+            for filter_id in get_sorted_filter_ids(model)
+        ]
+
         form_data, flags = await process_filter_functions(
             request=request,
-            filter_ids=get_sorted_filter_ids(model),
+            filter_functions=filter_functions,
             filter_type="inlet",
             form_data=form_data,
             extra_params=extra_params,
@@ -1071,9 +1076,12 @@ async def process_chat_response(
         "__request__": request,
         "__model__": model,
     }
-    filter_ids = get_sorted_filter_ids(model)
+    filter_functions = [
+        Functions.get_function_by_id(filter_id)
+        for filter_id in get_sorted_filter_ids(model)
+    ]
 
-    print(f"{filter_ids=}")
+    print(f"{filter_functions=}")
 
     # Streaming response
     if event_emitter and event_caller:
@@ -1480,7 +1488,7 @@ async def process_chat_response(
 
                             data, _ = await process_filter_functions(
                                 request=request,
-                                filter_ids=filter_ids,
+                                filter_functions=filter_functions,
                                 filter_type="stream",
                                 form_data=data,
                                 extra_params=extra_params,
@@ -2077,7 +2085,7 @@ async def process_chat_response(
             for event in events:
                 event, _ = await process_filter_functions(
                     request=request,
-                    filter_ids=filter_ids,
+                    filter_functions=filter_functions,
                     filter_type="stream",
                     form_data=event,
                     extra_params=extra_params,
@@ -2089,7 +2097,7 @@ async def process_chat_response(
             async for data in original_generator:
                 data, _ = await process_filter_functions(
                     request=request,
-                    filter_ids=filter_ids,
+                    filter_functions=filter_functions,
                     filter_type="stream",
                     form_data=data,
                     extra_params=extra_params,
