@@ -308,3 +308,5 @@ cypress/videos
 cypress/screenshots
 .vscode/settings.json
 build_output_example
+
+.secrets

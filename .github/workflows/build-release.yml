@@ -1,4 +1,4 @@
-name: Build and package frontend and backend
+name: Build and package solution
 
 on:
   push:

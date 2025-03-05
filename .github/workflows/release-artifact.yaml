@@ -1,9 +1,7 @@
 name: Generate wheel and release to GitHub Artifact
 on:
-  workflow_run:
-    workflows: ["Build and package frontend and backend"]
-    types:
-      - completed
+  release:
+    types: [created]
 
 jobs:
   release:
@@ -24,7 +22,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: 3.10
 
       - name: Build wheel
         run: |
@@ -33,7 +31,7 @@ jobs:
           python -m build .
 
       - name: Upload wheel
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: open-webui-whl
           path: dist/*.whl
