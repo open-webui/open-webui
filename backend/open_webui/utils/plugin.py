@@ -154,7 +154,6 @@ def load_function_module_by_id(function_id, content=None):
         elif hasattr(module, "Action"):
             return module.Action(), "action", frontmatter
         elif hasattr(module, "Parser"):
-            print("*** NEW MODULE TYPE FOUND : Parser ***")
             return module.Parser(), "parser", frontmatter
         else:
             raise Exception("No Function class found in the module")
