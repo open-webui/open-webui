@@ -3,13 +3,13 @@
   "short_name": "Cogniforce",
   "icons": [
     {
-      "src": "/static/favicon.ico/web-app-manifest-192x192.png",
+      "src": "/static/static/favicon.ico/web-app-manifest-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/static/favicon.ico/web-app-manifest-512x512.png",
+      "src": "/static/static/favicon.ico/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

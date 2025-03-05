@@ -7,6 +7,7 @@ Before starting, ensure you have the following installed:
 gcloud auth login
 gcloud config set project cogniforce  # Set your project
 gcloud auth configure-docker  # Allow Docker to push to GCR
+cd C:\Users\Zsombor\Development\open-webui # Navigate to directory
 ```
 
 ---
