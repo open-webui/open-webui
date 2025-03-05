@@ -425,6 +425,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         if (
             not request.app.state.config.ENABLE_SIGNUP
             or not request.app.state.config.ENABLE_LOGIN_FORM
+            or not request.app.state.config.ENABLE_PASSWORD_SIGNUPS
         ):
             raise HTTPException(
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
