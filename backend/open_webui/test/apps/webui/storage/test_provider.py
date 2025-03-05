@@ -187,6 +187,17 @@ class TestS3StorageProvider:
         assert not (upload_dir / self.filename).exists()
         assert not (upload_dir / self.filename_extra).exists()
 
+    def test_init_without_credentials(self, monkeypatch):
+        """Test that S3StorageProvider can initialize without explicit credentials."""
+        # Temporarily unset the environment variables
+        monkeypatch.setattr(provider, "S3_ACCESS_KEY_ID", None)
+        monkeypatch.setattr(provider, "S3_SECRET_ACCESS_KEY", None)
+
+        # Should not raise an exception
+        storage = provider.S3StorageProvider()
+        assert storage.s3_client is not None
+        assert storage.bucket_name == provider.S3_BUCKET_NAME
+
 
 class TestGCSStorageProvider:
     Storage = provider.GCSStorageProvider()

@@ -230,9 +230,12 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
         entry = connection_app.entries[0]
         username = str(entry[f"{LDAP_ATTRIBUTE_FOR_USERNAME}"]).lower()
-        mail = str(entry[f"{LDAP_ATTRIBUTE_FOR_MAIL}"])
-        if not mail or mail == "" or mail == "[]":
-            raise HTTPException(400, f"User {form_data.user} does not have mail.")
+        email = str(entry[f"{LDAP_ATTRIBUTE_FOR_MAIL}"])
+        if not email or email == "" or email == "[]":
+            raise HTTPException(400, f"User {form_data.user} does not have email.")
+        else:
+            email = email.lower()
+
         cn = str(entry["cn"])
         user_dn = entry.entry_dn
 
@@ -247,7 +250,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             if not connection_user.bind():
                 raise HTTPException(400, f"Authentication failed for {form_data.user}")
 
-            user = Users.get_user_by_email(mail)
+            user = Users.get_user_by_email(email)
             if not user:
                 try:
                     user_count = Users.get_num_users()
@@ -259,7 +262,10 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     )
 
                     user = Auths.insert_new_auth(
-                        email=mail, password=str(uuid.uuid4()), name=cn, role=role
+                        email=email,
+                        password=str(uuid.uuid4()),
+                        name=cn,
+                        role=role,
                     )
 
                     if not user:
@@ -272,7 +278,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 except Exception as err:
                     raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
 
-            user = Auths.authenticate_user_by_trusted_header(mail)
+            user = Auths.authenticate_user_by_trusted_header(email)
 
             if user:
                 token = create_token(

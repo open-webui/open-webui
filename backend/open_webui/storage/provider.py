@@ -101,19 +101,33 @@ class LocalStorageProvider(StorageProvider):
 
 class S3StorageProvider(StorageProvider):
     def __init__(self):
-        self.s3_client = boto3.client(
-            "s3",
-            region_name=S3_REGION_NAME,
-            endpoint_url=S3_ENDPOINT_URL,
-            aws_access_key_id=S3_ACCESS_KEY_ID,
-            aws_secret_access_key=S3_SECRET_ACCESS_KEY,
-            config=Config(
-                s3={
-                    "use_accelerate_endpoint": S3_USE_ACCELERATE_ENDPOINT,
-                    "addressing_style": S3_ADDRESSING_STYLE,
-                },
-            ),
+        config = Config(
+            s3={
+                "use_accelerate_endpoint": S3_USE_ACCELERATE_ENDPOINT,
+                "addressing_style": S3_ADDRESSING_STYLE,
+            },
         )
+
+        # If access key and secret are provided, use them for authentication
+        if S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY:
+            self.s3_client = boto3.client(
+                "s3",
+                region_name=S3_REGION_NAME,
+                endpoint_url=S3_ENDPOINT_URL,
+                aws_access_key_id=S3_ACCESS_KEY_ID,
+                aws_secret_access_key=S3_SECRET_ACCESS_KEY,
+                config=config,
+            )
+        else:
+            # If no explicit credentials are provided, fall back to default AWS credentials
+            # This supports workload identity (IAM roles for EC2, EKS, etc.)
+            self.s3_client = boto3.client(
+                "s3",
+                region_name=S3_REGION_NAME,
+                endpoint_url=S3_ENDPOINT_URL,
+                config=config,
+            )
+
         self.bucket_name = S3_BUCKET_NAME
         self.key_prefix = S3_KEY_PREFIX if S3_KEY_PREFIX else ""
 
