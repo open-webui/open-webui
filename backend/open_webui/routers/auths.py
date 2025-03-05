@@ -31,10 +31,7 @@ from open_webui.env import (
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response
-from open_webui.config import (
-    OPENID_PROVIDER_URL,
-    ENABLE_OAUTH_SIGNUP,
-)
+from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
 from pydantic import BaseModel
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.auth import (
@@ -51,8 +48,10 @@ from open_webui.utils.access_control import get_permissions
 from typing import Optional, List
 
 from ssl import CERT_REQUIRED, PROTOCOL_TLS
-from ldap3 import Server, Connection, NONE, Tls
-from ldap3.utils.conv import escape_filter_chars
+
+if ENABLE_LDAP.value:
+    from ldap3 import Server, Connection, NONE, Tls
+    from ldap3.utils.conv import escape_filter_chars
 
 router = APIRouter()
 
@@ -231,9 +230,12 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
         entry = connection_app.entries[0]
         username = str(entry[f"{LDAP_ATTRIBUTE_FOR_USERNAME}"]).lower()
-        mail = str(entry[f"{LDAP_ATTRIBUTE_FOR_MAIL}"])
-        if not mail or mail == "" or mail == "[]":
-            raise HTTPException(400, f"User {form_data.user} does not have mail.")
+        email = str(entry[f"{LDAP_ATTRIBUTE_FOR_MAIL}"])
+        if not email or email == "" or email == "[]":
+            raise HTTPException(400, f"User {form_data.user} does not have email.")
+        else:
+            email = email.lower()
+
         cn = str(entry["cn"])
         user_dn = entry.entry_dn
 
@@ -248,18 +250,10 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             if not connection_user.bind():
                 raise HTTPException(400, f"Authentication failed for {form_data.user}")
 
-            user = Users.get_user_by_email(mail)
+            user = Users.get_user_by_email(email)
             if not user:
                 try:
                     user_count = Users.get_num_users()
-                    if (
-                        request.app.state.USER_COUNT
-                        and user_count >= request.app.state.USER_COUNT
-                    ):
-                        raise HTTPException(
-                            status.HTTP_403_FORBIDDEN,
-                            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-                        )
 
                     role = (
                         "admin"
@@ -268,7 +262,10 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     )
 
                     user = Auths.insert_new_auth(
-                        email=mail, password=str(uuid.uuid4()), name=cn, role=role
+                        email=email,
+                        password=str(uuid.uuid4()),
+                        name=cn,
+                        role=role,
                     )
 
                     if not user:
@@ -281,7 +278,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 except Exception as err:
                     raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
 
-            user = Auths.authenticate_user_by_trusted_header(mail)
+            user = Auths.authenticate_user_by_trusted_header(email)
 
             if user:
                 token = create_token(
@@ -439,11 +436,6 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             )
 
     user_count = Users.get_num_users()
-    if request.app.state.USER_COUNT and user_count >= request.app.state.USER_COUNT:
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
-        )
-
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -613,7 +605,7 @@ async def get_admin_details(request: Request, user=Depends(get_current_user)):
         admin_email = request.app.state.config.ADMIN_EMAIL
         admin_name = None
 
-        print(admin_email, admin_name)
+        log.info(f"Admin details - Email: {admin_email}, Name: {admin_name}")
 
         if admin_email:
             admin = Users.get_user_by_email(admin_email)

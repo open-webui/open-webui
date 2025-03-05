@@ -62,6 +62,7 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
         "reasoning_effort": str,
         "seed": lambda x: x,
         "stop": lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
+        "logit_bias": lambda x: x,
     }
     return apply_model_params_to_body(params, form_data, mappings)
 
@@ -124,7 +125,7 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
         tool_call_id = message.get("tool_call_id", None)
 
         # Check if the content is a string (just a simple message)
-        if isinstance(content, str):
+        if isinstance(content, str) and not tool_calls:
             # If the content is a string, it's pure text
             new_message["content"] = content
 
@@ -229,6 +230,12 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
             del ollama_options[
                 "system"
             ]  # To prevent Ollama warning of invalid option provided
+
+    # If there is the "stop" parameter in the openai_payload, remap it to the ollama_payload.options
+    if "stop" in openai_payload:
+        ollama_options = ollama_payload.get("options", {})
+        ollama_options["stop"] = openai_payload.get("stop")
+        ollama_payload["options"] = ollama_options
 
     if "metadata" in openai_payload:
         ollama_payload["metadata"] = openai_payload["metadata"]

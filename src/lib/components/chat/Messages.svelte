@@ -32,6 +32,7 @@
 	export let prompt;
 	export let history = {};
 	export let selectedModels;
+	export let atSelectedModel;
 
 	let messages = [];
 
@@ -227,7 +228,8 @@
 					role: 'user',
 					content: userPrompt,
 					...(history.messages[messageId].files && { files: history.messages[messageId].files }),
-					models: selectedModels
+					models: selectedModels,
+					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 				};
 
 				let messageParentId = history.messages[messageId].parentId;
@@ -349,6 +351,7 @@
 	{#if Object.keys(history?.messages ?? {}).length == 0}
 		<ChatPlaceholder
 			modelIds={selectedModels}
+			{atSelectedModel}
 			submitPrompt={async (p) => {
 				let text = p;
 
