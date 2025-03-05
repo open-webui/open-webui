@@ -1,6 +1,12 @@
 import logging
 import uuid
 import jwt
+import base64
+import hmac
+import hashlib
+import requests
+import os
+
 
 from datetime import UTC, datetime, timedelta
 from typing import Optional, Union, List, Dict
@@ -8,14 +14,22 @@ from typing import Optional, Union, List, Dict
 from open_webui.models.users import Users
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import WEBUI_SECRET_KEY
+from open_webui.env import (
+    WEBUI_SECRET_KEY,
+    TRUSTED_SIGNATURE_KEY,
+    STATIC_DIR,
+    SRC_LOG_LEVELS,
+)
 
-from fastapi import Depends, HTTPException, Request, Response, status
+from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 
+
 logging.getLogger("passlib").setLevel(logging.ERROR)
 
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["OAUTH"])
 
 SESSION_SECRET = WEBUI_SECRET_KEY
 ALGORITHM = "HS256"
@@ -23,6 +37,67 @@ ALGORITHM = "HS256"
 ##############
 # Auth Utils
 ##############
+
+
+def verify_signature(payload: str, signature: str) -> bool:
+    """
+    Verifies the HMAC signature of the received payload.
+    """
+    try:
+        expected_signature = base64.b64encode(
+            hmac.new(TRUSTED_SIGNATURE_KEY, payload.encode(), hashlib.sha256).digest()
+        ).decode()
+
+        # Compare securely to prevent timing attacks
+        return hmac.compare_digest(expected_signature, signature)
+
+    except Exception:
+        return False
+
+
+def override_static(path: str, content: str):
+    # Ensure path is safe
+    if "/" in path or ".." in path:
+        log.error(f"Invalid path: {path}")
+        return
+
+    file_path = os.path.join(STATIC_DIR, path)
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+    with open(file_path, "wb") as f:
+        f.write(base64.b64decode(content))  # Convert Base64 back to raw binary
+
+
+def get_license_data(app, key):
+    if key:
+        try:
+            res = requests.post(
+                "https://api.openwebui.com/api/v1/license",
+                json={"key": key, "version": "1"},
+                timeout=5,
+            )
+
+            if getattr(res, "ok", False):
+                payload = getattr(res, "json", lambda: {})()
+                for k, v in payload.items():
+                    if k == "resources":
+                        for p, c in v.items():
+                            globals().get("override_static", lambda a, b: None)(p, c)
+                    elif k == "count":
+                        setattr(app.state, "USER_COUNT", v)
+                    elif k == "name":
+                        setattr(app.state, "WEBUI_NAME", v)
+                    elif k == "metadata":
+                        setattr(app.state, "LICENSE_METADATA", v)
+                return True
+            else:
+                log.error(
+                    f"License: retrieval issue: {getattr(res, 'text', 'unknown error')}"
+                )
+        except Exception as ex:
+            log.exception(f"License: Uncaught Exception: {ex}")
+    return False
+
 
 bearer_security = HTTPBearer(auto_error=False)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -76,6 +151,7 @@ def get_http_authorization_cred(auth_header: str):
 
 def get_current_user(
     request: Request,
+    background_tasks: BackgroundTasks,
     auth_token: HTTPAuthorizationCredentials = Depends(bearer_security),
 ):
     token = None
@@ -128,7 +204,10 @@ def get_current_user(
                 detail=ERROR_MESSAGES.INVALID_TOKEN,
             )
         else:
-            Users.update_user_last_active_by_id(user.id)
+            # Refresh the user's last active timestamp asynchronously
+            # to prevent blocking the request
+            if background_tasks:
+                background_tasks.add_task(Users.update_user_last_active_by_id, user.id)
         return user
     else:
         raise HTTPException(

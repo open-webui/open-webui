@@ -1,5 +1,5 @@
 <script>
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -10,6 +10,32 @@
 
 	export let show = true;
 	export let getStartedHandler = () => {};
+
+	function setLogoImage() {
+		const logo = document.getElementById('logo');
+
+		if (logo) {
+			const isDarkMode = document.documentElement.classList.contains('dark');
+
+			if (isDarkMode) {
+				const darkImage = new Image();
+				darkImage.src = '/static/favicon-dark.png';
+
+				darkImage.onload = () => {
+					logo.src = '/static/favicon-dark.png';
+					logo.style.filter = ''; // Ensure no inversion is applied if splash-dark.png exists
+				};
+
+				darkImage.onerror = () => {
+					logo.style.filter = 'invert(1)'; // Invert image if splash-dark.png is missing
+				};
+			}
+		}
+	}
+
+	$: if (show) {
+		setLogoImage();
+	}
 </script>
 
 {#if show}
@@ -18,6 +44,7 @@
 			<div class="flex space-x-2">
 				<div class=" self-center">
 					<img
+						id="logo"
 						crossorigin="anonymous"
 						src="{WEBUI_BASE_URL}/static/favicon.png"
 						class=" w-6 rounded-full"
@@ -30,10 +57,10 @@
 		<SlideShow duration={5000} />
 
 		<div
-			class="w-full h-full absolute top-0 left-0 bg-gradient-to-t from-20% from-black to-transparent"
+			class="w-full h-full absolute top-0 left-0 bg-linear-to-t from-20% from-black to-transparent"
 		></div>
 
-		<div class="w-full h-full absolute top-0 left-0 backdrop-blur-sm bg-black/50"></div>
+		<div class="w-full h-full absolute top-0 left-0 backdrop-blur-xs bg-black/50"></div>
 
 		<div class="relative bg-transparent w-full min-h-screen flex z-10">
 			<div class="flex flex-col justify-end w-full items-center pb-10 text-center">

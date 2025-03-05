@@ -17,6 +17,7 @@
 		stop: null,
 		temperature: null,
 		reasoning_effort: null,
+		logit_bias: null,
 		frequency_penalty: null,
 		repeat_last_n: null,
 		mirostat: null,
@@ -59,7 +60,7 @@
 					{$i18n.t('Stream Chat Response')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition"
+					class="p-1 px-3 text-xs flex rounded-sm transition"
 					on:click={() => {
 						params.stream_response =
 							(params?.stream_response ?? null) === null
@@ -95,7 +96,7 @@
 					{$i18n.t('Function Calling')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition"
+					class="p-1 px-3 text-xs flex rounded-sm transition"
 					on:click={() => {
 						params.function_calling = (params?.function_calling ?? null) === null ? 'native' : null;
 					}}
@@ -114,7 +115,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'Sets the random number seed to use for generation. Setting this to a specific number will make the model generate the same text for the same prompt. (Default: random)'
+				'Sets the random number seed to use for generation. Setting this to a specific number will make the model generate the same text for the same prompt.'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -125,7 +126,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.seed = (params?.seed ?? null) === null ? 0 : null;
@@ -144,7 +145,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 						type="number"
 						placeholder={$i18n.t('Enter Seed')}
 						bind:value={params.seed}
@@ -170,7 +171,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.stop = (params?.stop ?? null) === null ? '' : null;
@@ -189,7 +190,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 						type="text"
 						placeholder={$i18n.t('Enter stop sequence')}
 						bind:value={params.stop}
@@ -203,7 +204,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'The temperature of the model. Increasing the temperature will make the model answer more creatively. (Default: 0.8)'
+				'The temperature of the model. Increasing the temperature will make the model answer more creatively.'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -213,7 +214,7 @@
 					{$i18n.t('Temperature')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.temperature = (params?.temperature ?? null) === null ? 0.8 : null;
@@ -235,7 +236,7 @@
 						id="steps-range"
 						type="range"
 						min="0"
-						max="1"
+						max="2"
 						step="0.05"
 						bind:value={params.temperature}
 						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
@@ -247,7 +248,7 @@
 						type="number"
 						class=" bg-transparent text-center w-14"
 						min="0"
-						max="1"
+						max="2"
 						step="any"
 					/>
 				</div>
@@ -258,7 +259,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort. (Default: medium)'
+				'Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort.'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -268,7 +269,7 @@
 					{$i18n.t('Reasoning Effort')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.reasoning_effort = (params?.reasoning_effort ?? null) === null ? 'medium' : null;
@@ -287,7 +288,7 @@
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
 					<input
-						class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+						class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 						type="text"
 						placeholder={$i18n.t('Enter reasoning effort')}
 						bind:value={params.reasoning_effort}
@@ -301,8 +302,51 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'Enable Mirostat sampling for controlling perplexity. (Default: 0, 0 = Disabled, 1 = Mirostat, 2 = Mirostat 2.0)'
+				'Boosting or penalizing specific tokens for constrained responses. Bias values will be clamped between -100 and 100 (inclusive). (Default: none)'
 			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Logit Bias')}
+				</div>
+				<button
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
+					type="button"
+					on:click={() => {
+						params.logit_bias = (params?.logit_bias ?? null) === null ? '' : null;
+					}}
+				>
+					{#if (params?.logit_bias ?? null) === null}
+						<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
+					{:else}
+						<span class="ml-2 self-center"> {$i18n.t('Custom')} </span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.logit_bias ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						class="w-full rounded-lg pl-2 py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+						type="text"
+						placeholder={$i18n.t(
+							'Enter comma-seperated "token:bias_value" pairs (example: 5432:100, 413:-100)'
+						)}
+						bind:value={params.logit_bias}
+						autocomplete="off"
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t('Enable Mirostat sampling for controlling perplexity.')}
 			placement="top-start"
 			className="inline-tooltip"
 		>
@@ -311,7 +355,7 @@
 					{$i18n.t('Mirostat')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.mirostat = (params?.mirostat ?? null) === null ? 0 : null;
@@ -356,7 +400,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'Influences how quickly the algorithm responds to feedback from the generated text. A lower learning rate will result in slower adjustments, while a higher learning rate will make the algorithm more responsive. (Default: 0.1)'
+				'Influences how quickly the algorithm responds to feedback from the generated text. A lower learning rate will result in slower adjustments, while a higher learning rate will make the algorithm more responsive.'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -366,7 +410,7 @@
 					{$i18n.t('Mirostat Eta')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.mirostat_eta = (params?.mirostat_eta ?? null) === null ? 0.1 : null;
@@ -411,7 +455,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'Controls the balance between coherence and diversity of the output. A lower value will result in more focused and coherent text. (Default: 5.0)'
+				'Controls the balance between coherence and diversity of the output. A lower value will result in more focused and coherent text.'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -422,7 +466,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.mirostat_tau = (params?.mirostat_tau ?? null) === null ? 5.0 : null;
@@ -467,7 +511,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative. (Default: 40)'
+				'Reduces the probability of generating nonsense. A higher value (e.g. 100) will give more diverse answers, while a lower value (e.g. 10) will be more conservative.'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -477,7 +521,7 @@
 					{$i18n.t('Top K')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.top_k = (params?.top_k ?? null) === null ? 40 : null;
@@ -499,7 +543,7 @@
 						id="steps-range"
 						type="range"
 						min="0"
-						max="100"
+						max="1000"
 						step="0.5"
 						bind:value={params.top_k}
 						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
@@ -522,7 +566,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text. (Default: 0.9)'
+				'Works together with top-k. A higher value (e.g., 0.95) will lead to more diverse text, while a lower value (e.g., 0.5) will generate more focused and conservative text.'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -533,7 +577,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.top_p = (params?.top_p ?? null) === null ? 0.9 : null;
@@ -578,7 +622,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out. (Default: 0.0)'
+				'Alternative to the top_p, and aims to ensure a balance of quality and variety. The parameter p represents the minimum probability for a token to be considered, relative to the probability of the most likely token. For example, with p=0.05 and the most likely token having a probability of 0.9, logits with a value less than 0.045 are filtered out.'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -588,7 +632,7 @@
 					{$i18n.t('Min P')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.min_p = (params?.min_p ?? null) === null ? 0.0 : null;
@@ -633,7 +677,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'Sets how strongly to penalize repetitions. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. (Default: 1.1)'
+				'Sets a scaling bias against tokens to penalize repetitions, based on how many times they have appeared. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. At 0, it is disabled.'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -644,7 +688,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.frequency_penalty = (params?.frequency_penalty ?? null) === null ? 1.1 : null;
@@ -665,7 +709,7 @@
 					<input
 						id="steps-range"
 						type="range"
-						min="0"
+						min="-2"
 						max="2"
 						step="0.05"
 						bind:value={params.frequency_penalty}
@@ -677,7 +721,7 @@
 						bind:value={params.frequency_penalty}
 						type="number"
 						class=" bg-transparent text-center w-14"
-						min="0"
+						min="-2"
 						max="2"
 						step="any"
 					/>
@@ -689,8 +733,118 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'Sets how far back for the model to look back to prevent repetition. (Default: 64, 0 = disabled, -1 = num_ctx)'
+				'Sets a flat bias against tokens that have appeared at least once. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 0.9) will be more lenient. At 0, it is disabled.'
 			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Presence Penalty')}
+				</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					type="button"
+					on:click={() => {
+						params.presence_penalty = (params?.presence_penalty ?? null) === null ? 0.0 : null;
+					}}
+				>
+					{#if (params?.presence_penalty ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.presence_penalty ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						id="steps-range"
+						type="range"
+						min="-2"
+						max="2"
+						step="0.05"
+						bind:value={params.presence_penalty}
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+					/>
+				</div>
+				<div>
+					<input
+						bind:value={params.presence_penalty}
+						type="number"
+						class=" bg-transparent text-center w-14"
+						min="-2"
+						max="2"
+						step="any"
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t(
+				'Control the repetition of token sequences in the generated text. A higher value (e.g., 1.5) will penalize repetitions more strongly, while a lower value (e.g., 1.1) will be more lenient. At 1, it is disabled.'
+			)}
+			placement="top-start"
+			className="inline-tooltip"
+		>
+			<div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Repeat Penalty (Ollama)')}
+				</div>
+
+				<button
+					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					type="button"
+					on:click={() => {
+						params.repeat_penalty = (params?.repeat_penalty ?? null) === null ? 1.1 : null;
+					}}
+				>
+					{#if (params?.repeat_penalty ?? null) === null}
+						<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+					{:else}
+						<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+					{/if}
+				</button>
+			</div>
+		</Tooltip>
+
+		{#if (params?.repeat_penalty ?? null) !== null}
+			<div class="flex mt-0.5 space-x-2">
+				<div class=" flex-1">
+					<input
+						id="steps-range"
+						type="range"
+						min="-2"
+						max="2"
+						step="0.05"
+						bind:value={params.repeat_penalty}
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+					/>
+				</div>
+				<div>
+					<input
+						bind:value={params.repeat_penalty}
+						type="number"
+						class=" bg-transparent text-center w-14"
+						min="-2"
+						max="2"
+						step="any"
+					/>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<div class=" py-0.5 w-full justify-between">
+		<Tooltip
+			content={$i18n.t('Sets how far back for the model to look back to prevent repetition.')}
 			placement="top-start"
 			className="inline-tooltip"
 		>
@@ -700,7 +854,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.repeat_last_n = (params?.repeat_last_n ?? null) === null ? 64 : null;
@@ -745,7 +899,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting. (default: 1)'
+				'Tail free sampling is used to reduce the impact of less probable tokens from the output. A higher value (e.g., 2.0) will reduce the impact more, while a value of 1.0 disables this setting.'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -756,7 +910,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.tfs_z = (params?.tfs_z ?? null) === null ? 1 : null;
@@ -800,9 +954,7 @@
 
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
-			content={$i18n.t(
-				'Sets the size of the context window used to generate the next token. (Default: 2048)'
-			)}
+			content={$i18n.t('Sets the size of the context window used to generate the next token.')}
 			placement="top-start"
 			className="inline-tooltip"
 		>
@@ -812,7 +964,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.num_ctx = (params?.num_ctx ?? null) === null ? 2048 : null;
@@ -856,7 +1008,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'The batch size determines how many text requests are processed together at once. A higher batch size can increase the performance and speed of the model, but it also requires more memory.  (Default: 512)'
+				'The batch size determines how many text requests are processed together at once. A higher batch size can increase the performance and speed of the model, but it also requires more memory.'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -867,7 +1019,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.num_batch = (params?.num_batch ?? null) === null ? 512 : null;
@@ -911,7 +1063,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics. (Default: 24)'
+				'This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -922,7 +1074,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.num_keep = (params?.num_keep ?? null) === null ? 24 : null;
@@ -966,7 +1118,7 @@
 	<div class=" py-0.5 w-full justify-between">
 		<Tooltip
 			content={$i18n.t(
-				'This option sets the maximum number of tokens the model can generate in its response. Increasing this limit allows the model to provide longer answers, but it may also increase the likelihood of unhelpful or irrelevant content being generated.  (Default: 128)'
+				'This option sets the maximum number of tokens the model can generate in its response. Increasing this limit allows the model to provide longer answers, but it may also increase the likelihood of unhelpful or irrelevant content being generated.'
 			)}
 			placement="top-start"
 			className="inline-tooltip"
@@ -977,7 +1129,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.max_tokens = (params?.max_tokens ?? null) === null ? 128 : null;
@@ -1032,7 +1184,7 @@
 						{$i18n.t('use_mmap (Ollama)')}
 					</div>
 					<button
-						class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 						type="button"
 						on:click={() => {
 							params.use_mmap = (params?.use_mmap ?? null) === null ? true : null;
@@ -1073,7 +1225,7 @@
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 						type="button"
 						on:click={() => {
 							params.use_mlock = (params?.use_mlock ?? null) === null ? true : null;
@@ -1115,7 +1267,7 @@
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 						type="button"
 						on:click={() => {
 							params.num_thread = (params?.num_thread ?? null) === null ? 2 : null;
@@ -1171,7 +1323,7 @@
 					</div>
 
 					<button
-						class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+						class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 						type="button"
 						on:click={() => {
 							params.num_gpu = (params?.num_gpu ?? null) === null ? 0 : null;
@@ -1218,7 +1370,7 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Template')}</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 outline-hidden"
 					type="button"
 					on:click={() => {
 						params.template = (params?.template ?? null) === null ? '' : null;
@@ -1236,7 +1388,7 @@
 				<div class="flex mt-0.5 space-x-2">
 					<div class=" flex-1">
 						<textarea
-							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-none rounded-lg -mb-1"
+							class="px-3 py-1.5 text-sm w-full bg-transparent border dark:border-gray-600 outline-hidden rounded-lg -mb-1"
 							placeholder={$i18n.t('Write your model template content here')}
 							rows="4"
 							bind:value={params.template}

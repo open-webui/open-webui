@@ -140,6 +140,7 @@ type Settings = {
 	title?: TitleSettings;
 	splitLargeDeltas?: boolean;
 	chatDirection: 'LTR' | 'RTL';
+	ctrlEnterToSend?: boolean;
 
 	system?: string;
 	requestFormat?: string;
@@ -204,6 +205,7 @@ type Config = {
 		enable_login_form: boolean;
 		enable_web_search?: boolean;
 		enable_google_drive_integration: boolean;
+		enable_onedrive_integration: boolean;
 		enable_image_generation: boolean;
 		enable_admin_export: boolean;
 		enable_admin_chat_access: boolean;

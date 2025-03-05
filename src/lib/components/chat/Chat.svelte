@@ -187,15 +187,20 @@
 		setToolIds();
 	}
 
+	$: if (atSelectedModel || selectedModels) {
+		setToolIds();
+	}
+
 	const setToolIds = async () => {
 		if (!$tools) {
 			tools.set(await getTools(localStorage.token));
 		}
 
-		if (selectedModels.length !== 1) {
+		if (selectedModels.length !== 1 && !atSelectedModel) {
 			return;
 		}
-		const model = $models.find((m) => m.id === selectedModels[0]);
+
+		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
 		if (model) {
 			selectedToolIds = (model?.info?.meta?.toolIds ?? []).filter((id) =>
 				$tools.find((t) => t.id === id)
@@ -836,6 +841,7 @@
 				content: m.content,
 				info: m.info ? m.info : undefined,
 				timestamp: m.timestamp,
+				...(m.usage ? { usage: m.usage } : {}),
 				...(m.sources ? { sources: m.sources } : {})
 			})),
 			model_item: $models.find((m) => m.id === modelId),
@@ -1241,7 +1247,7 @@
 			// Response not done
 			return;
 		}
-		if (messages.length != 0 && messages.at(-1).error) {
+		if (messages.length != 0 && messages.at(-1).error && !messages.at(-1).content) {
 			// Error in response
 			toast.error($i18n.t(`Oops! There was an error in the previous response.`));
 			return;
@@ -1273,7 +1279,9 @@
 		const chatInputElement = document.getElementById('chat-input');
 
 		if (chatInputElement) {
+			await tick();
 			chatInputElement.style.height = '';
+			chatInputElement.style.height = Math.min(chatInputElement.scrollHeight, 320) + 'px';
 		}
 
 		const _files = JSON.parse(JSON.stringify(files));
@@ -1488,7 +1496,10 @@
 							params?.system ?? $settings?.system ?? '',
 							$user.name,
 							$settings?.userLocation
-								? await getAndUpdateUserLocation(localStorage.token)
+								? await getAndUpdateUserLocation(localStorage.token).catch((err) => {
+										console.error(err);
+										return undefined;
+									})
 								: undefined
 						)}${
 							(responseMessage?.userContext ?? null)
@@ -1573,7 +1584,12 @@
 				variables: {
 					...getPromptVariables(
 						$user.name,
-						$settings?.userLocation ? await getAndUpdateUserLocation(localStorage.token) : undefined
+						$settings?.userLocation
+							? await getAndUpdateUserLocation(localStorage.token).catch((err) => {
+									console.error(err);
+									return undefined;
+								})
+							: undefined
 					)
 				},
 				model_item: $models.find((m) => m.id === model.id),
@@ -1896,7 +1912,7 @@
 			/>
 
 			<div
-				class="absolute top-0 left-0 w-full h-full bg-gradient-to-t from-white to-white/85 dark:from-gray-900 dark:to-[#171717]/90 z-0"
+				class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
 			/>
 		{/if}
 
@@ -1924,6 +1940,30 @@
 				{#if $banners.length > 0 && !history.currentId && !$chatId && selectedModels.length <= 1}
 					<div class="absolute top-12 left-0 right-0 w-full z-30">
 						<div class=" flex flex-col gap-1 w-full">
+							{#if ($config?.license_metadata?.type ?? null) === 'trial'}
+								<Banner
+									banner={{
+										type: 'info',
+										title: 'Trial License',
+										content: $i18n.t(
+											'You are currently using a trial license. Please contact support to upgrade your license.'
+										)
+									}}
+								/>
+							{/if}
+
+							{#if ($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats}
+								<Banner
+									banner={{
+										type: 'error',
+										title: 'License Error',
+										content: $i18n.t(
+											'Exceeded the number of seats in your license. Please contact support to increase the number of seats.'
+										)
+									}}
+								/>
+							{/if}
+
 							{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
 								<Banner
 									{banner}
@@ -1965,6 +2005,7 @@
 									bind:autoScroll
 									bind:prompt
 									{selectedModels}
+									{atSelectedModel}
 									{sendPrompt}
 									{showMessage}
 									{submitMessage}

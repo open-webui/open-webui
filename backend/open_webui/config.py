@@ -2,12 +2,13 @@ import json
 import logging
 import os
 import shutil
+import base64
+
 from datetime import datetime
 from pathlib import Path
 from typing import Generic, Optional, TypeVar
 from urllib.parse import urlparse
 
-import chromadb
 import requests
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Integer, func
@@ -42,7 +43,7 @@ logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 # Function to run the alembic migrations
 def run_migrations():
-    print("Running migrations")
+    log.info("Running migrations")
     try:
         from alembic import command
         from alembic.config import Config
@@ -55,7 +56,7 @@ def run_migrations():
 
         command.upgrade(alembic_cfg, "head")
     except Exception as e:
-        print(f"Error: {e}")
+        log.exception(f"Error running migrations: {e}")
 
 
 run_migrations()
@@ -586,6 +587,14 @@ load_oauth_providers()
 
 STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static")).resolve()
 
+for file_path in (FRONTEND_BUILD_DIR / "static").glob("**/*"):
+    if file_path.is_file():
+        target_path = STATIC_DIR / file_path.relative_to(
+            (FRONTEND_BUILD_DIR / "static")
+        )
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(file_path, target_path)
+
 frontend_favicon = FRONTEND_BUILD_DIR / "static" / "favicon.png"
 
 if frontend_favicon.exists():
@@ -593,8 +602,6 @@ if frontend_favicon.exists():
         shutil.copyfile(frontend_favicon, STATIC_DIR / "favicon.png")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
-else:
-    logging.warning(f"Frontend favicon not found at {frontend_favicon}")
 
 frontend_splash = FRONTEND_BUILD_DIR / "static" / "splash.png"
 
@@ -603,12 +610,18 @@ if frontend_splash.exists():
         shutil.copyfile(frontend_splash, STATIC_DIR / "splash.png")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
-else:
-    logging.warning(f"Frontend splash not found at {frontend_splash}")
+
+frontend_loader = FRONTEND_BUILD_DIR / "static" / "loader.js"
+
+if frontend_loader.exists():
+    try:
+        shutil.copyfile(frontend_loader, STATIC_DIR / "loader.js")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
 
 
 ####################################
-# CUSTOM_NAME
+# CUSTOM_NAME (Legacy)
 ####################################
 
 CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
@@ -651,6 +664,12 @@ if CUSTOM_NAME:
 
 
 ####################################
+# LICENSE_KEY
+####################################
+
+LICENSE_KEY = os.environ.get("LICENSE_KEY", "")
+
+####################################
 # STORAGE PROVIDER
 ####################################
 
@@ -662,26 +681,34 @@ S3_REGION_NAME = os.environ.get("S3_REGION_NAME", None)
 S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME", None)
 S3_KEY_PREFIX = os.environ.get("S3_KEY_PREFIX", None)
 S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL", None)
+S3_USE_ACCELERATE_ENDPOINT = (
+    os.environ.get("S3_USE_ACCELERATE_ENDPOINT", "False").lower() == "true"
+)
+S3_ADDRESSING_STYLE = os.environ.get("S3_ADDRESSING_STYLE", None)
 
 GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", None)
 GOOGLE_APPLICATION_CREDENTIALS_JSON = os.environ.get(
     "GOOGLE_APPLICATION_CREDENTIALS_JSON", None
 )
 
+AZURE_STORAGE_ENDPOINT = os.environ.get("AZURE_STORAGE_ENDPOINT", None)
+AZURE_STORAGE_CONTAINER_NAME = os.environ.get("AZURE_STORAGE_CONTAINER_NAME", None)
+AZURE_STORAGE_KEY = os.environ.get("AZURE_STORAGE_KEY", None)
+
 ####################################
 # File Upload DIR
 ####################################
 
-UPLOAD_DIR = f"{DATA_DIR}/uploads"
-Path(UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+UPLOAD_DIR = DATA_DIR / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 ####################################
 # Cache DIR
 ####################################
 
-CACHE_DIR = f"{DATA_DIR}/cache"
-Path(CACHE_DIR).mkdir(parents=True, exist_ok=True)
+CACHE_DIR = DATA_DIR / "cache"
+CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 ####################################
@@ -766,6 +793,9 @@ ENABLE_OPENAI_API = PersistentConfig(
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
+
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_API_BASE_URL = os.environ.get("GEMINI_API_BASE_URL", "")
 
 
 if OPENAI_API_BASE_URL == "":
@@ -1071,7 +1101,7 @@ try:
     banners = json.loads(os.environ.get("WEBUI_BANNERS", "[]"))
     banners = [BannerModel(**banner) for banner in banners]
 except Exception as e:
-    print(f"Error loading WEBUI_BANNERS: {e}")
+    log.exception(f"Error loading WEBUI_BANNERS: {e}")
     banners = []
 
 WEBUI_BANNERS = PersistentConfig("WEBUI_BANNERS", "ui.banners", banners)
@@ -1347,6 +1377,44 @@ Responses from models: {{responses}}"""
 # Code Interpreter
 ####################################
 
+
+CODE_EXECUTION_ENGINE = PersistentConfig(
+    "CODE_EXECUTION_ENGINE",
+    "code_execution.engine",
+    os.environ.get("CODE_EXECUTION_ENGINE", "pyodide"),
+)
+
+CODE_EXECUTION_JUPYTER_URL = PersistentConfig(
+    "CODE_EXECUTION_JUPYTER_URL",
+    "code_execution.jupyter.url",
+    os.environ.get("CODE_EXECUTION_JUPYTER_URL", ""),
+)
+
+CODE_EXECUTION_JUPYTER_AUTH = PersistentConfig(
+    "CODE_EXECUTION_JUPYTER_AUTH",
+    "code_execution.jupyter.auth",
+    os.environ.get("CODE_EXECUTION_JUPYTER_AUTH", ""),
+)
+
+CODE_EXECUTION_JUPYTER_AUTH_TOKEN = PersistentConfig(
+    "CODE_EXECUTION_JUPYTER_AUTH_TOKEN",
+    "code_execution.jupyter.auth_token",
+    os.environ.get("CODE_EXECUTION_JUPYTER_AUTH_TOKEN", ""),
+)
+
+
+CODE_EXECUTION_JUPYTER_AUTH_PASSWORD = PersistentConfig(
+    "CODE_EXECUTION_JUPYTER_AUTH_PASSWORD",
+    "code_execution.jupyter.auth_password",
+    os.environ.get("CODE_EXECUTION_JUPYTER_AUTH_PASSWORD", ""),
+)
+
+CODE_EXECUTION_JUPYTER_TIMEOUT = PersistentConfig(
+    "CODE_EXECUTION_JUPYTER_TIMEOUT",
+    "code_execution.jupyter.timeout",
+    int(os.environ.get("CODE_EXECUTION_JUPYTER_TIMEOUT", "60")),
+)
+
 ENABLE_CODE_INTERPRETER = PersistentConfig(
     "ENABLE_CODE_INTERPRETER",
     "code_interpreter.enable",
@@ -1368,26 +1436,48 @@ CODE_INTERPRETER_PROMPT_TEMPLATE = PersistentConfig(
 CODE_INTERPRETER_JUPYTER_URL = PersistentConfig(
     "CODE_INTERPRETER_JUPYTER_URL",
     "code_interpreter.jupyter.url",
-    os.environ.get("CODE_INTERPRETER_JUPYTER_URL", ""),
+    os.environ.get(
+        "CODE_INTERPRETER_JUPYTER_URL", os.environ.get("CODE_EXECUTION_JUPYTER_URL", "")
+    ),
 )
 
 CODE_INTERPRETER_JUPYTER_AUTH = PersistentConfig(
     "CODE_INTERPRETER_JUPYTER_AUTH",
     "code_interpreter.jupyter.auth",
-    os.environ.get("CODE_INTERPRETER_JUPYTER_AUTH", ""),
+    os.environ.get(
+        "CODE_INTERPRETER_JUPYTER_AUTH",
+        os.environ.get("CODE_EXECUTION_JUPYTER_AUTH", ""),
+    ),
 )
 
 CODE_INTERPRETER_JUPYTER_AUTH_TOKEN = PersistentConfig(
     "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN",
     "code_interpreter.jupyter.auth_token",
-    os.environ.get("CODE_INTERPRETER_JUPYTER_AUTH_TOKEN", ""),
+    os.environ.get(
+        "CODE_INTERPRETER_JUPYTER_AUTH_TOKEN",
+        os.environ.get("CODE_EXECUTION_JUPYTER_AUTH_TOKEN", ""),
+    ),
 )
 
 
 CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD = PersistentConfig(
     "CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD",
     "code_interpreter.jupyter.auth_password",
-    os.environ.get("CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD", ""),
+    os.environ.get(
+        "CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD",
+        os.environ.get("CODE_EXECUTION_JUPYTER_AUTH_PASSWORD", ""),
+    ),
+)
+
+CODE_INTERPRETER_JUPYTER_TIMEOUT = PersistentConfig(
+    "CODE_INTERPRETER_JUPYTER_TIMEOUT",
+    "code_interpreter.jupyter.timeout",
+    int(
+        os.environ.get(
+            "CODE_INTERPRETER_JUPYTER_TIMEOUT",
+            os.environ.get("CODE_EXECUTION_JUPYTER_TIMEOUT", "60"),
+        )
+    ),
 )
 
 
@@ -1415,21 +1505,27 @@ VECTOR_DB = os.environ.get("VECTOR_DB", "chroma")
 
 # Chroma
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
-CHROMA_TENANT = os.environ.get("CHROMA_TENANT", chromadb.DEFAULT_TENANT)
-CHROMA_DATABASE = os.environ.get("CHROMA_DATABASE", chromadb.DEFAULT_DATABASE)
-CHROMA_HTTP_HOST = os.environ.get("CHROMA_HTTP_HOST", "")
-CHROMA_HTTP_PORT = int(os.environ.get("CHROMA_HTTP_PORT", "8000"))
-CHROMA_CLIENT_AUTH_PROVIDER = os.environ.get("CHROMA_CLIENT_AUTH_PROVIDER", "")
-CHROMA_CLIENT_AUTH_CREDENTIALS = os.environ.get("CHROMA_CLIENT_AUTH_CREDENTIALS", "")
-# Comma-separated list of header=value pairs
-CHROMA_HTTP_HEADERS = os.environ.get("CHROMA_HTTP_HEADERS", "")
-if CHROMA_HTTP_HEADERS:
-    CHROMA_HTTP_HEADERS = dict(
-        [pair.split("=") for pair in CHROMA_HTTP_HEADERS.split(",")]
+
+if VECTOR_DB == "chroma":
+    import chromadb
+
+    CHROMA_TENANT = os.environ.get("CHROMA_TENANT", chromadb.DEFAULT_TENANT)
+    CHROMA_DATABASE = os.environ.get("CHROMA_DATABASE", chromadb.DEFAULT_DATABASE)
+    CHROMA_HTTP_HOST = os.environ.get("CHROMA_HTTP_HOST", "")
+    CHROMA_HTTP_PORT = int(os.environ.get("CHROMA_HTTP_PORT", "8000"))
+    CHROMA_CLIENT_AUTH_PROVIDER = os.environ.get("CHROMA_CLIENT_AUTH_PROVIDER", "")
+    CHROMA_CLIENT_AUTH_CREDENTIALS = os.environ.get(
+        "CHROMA_CLIENT_AUTH_CREDENTIALS", ""
     )
-else:
-    CHROMA_HTTP_HEADERS = None
-CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
+    # Comma-separated list of header=value pairs
+    CHROMA_HTTP_HEADERS = os.environ.get("CHROMA_HTTP_HEADERS", "")
+    if CHROMA_HTTP_HEADERS:
+        CHROMA_HTTP_HEADERS = dict(
+            [pair.split("=") for pair in CHROMA_HTTP_HEADERS.split(",")]
+        )
+    else:
+        CHROMA_HTTP_HEADERS = None
+    CHROMA_HTTP_SSL = os.environ.get("CHROMA_HTTP_SSL", "false").lower() == "true"
 # this uses the model defined in the Dockerfile ENV variable. If you dont use docker or docker based deployments such as k8s, the default embedding model will be used (sentence-transformers/all-MiniLM-L6-v2)
 
 # Milvus
@@ -1448,6 +1544,15 @@ OPENSEARCH_SSL = os.environ.get("OPENSEARCH_SSL", True)
 OPENSEARCH_CERT_VERIFY = os.environ.get("OPENSEARCH_CERT_VERIFY", False)
 OPENSEARCH_USERNAME = os.environ.get("OPENSEARCH_USERNAME", None)
 OPENSEARCH_PASSWORD = os.environ.get("OPENSEARCH_PASSWORD", None)
+
+# ElasticSearch
+ELASTICSEARCH_URL = os.environ.get("ELASTICSEARCH_URL", "https://localhost:9200")
+ELASTICSEARCH_CA_CERTS = os.environ.get("ELASTICSEARCH_CA_CERTS", None)
+ELASTICSEARCH_API_KEY = os.environ.get("ELASTICSEARCH_API_KEY", None)
+ELASTICSEARCH_USERNAME = os.environ.get("ELASTICSEARCH_USERNAME", None)
+ELASTICSEARCH_PASSWORD = os.environ.get("ELASTICSEARCH_PASSWORD", None)
+ELASTICSEARCH_CLOUD_ID = os.environ.get("ELASTICSEARCH_CLOUD_ID", None)
+SSL_ASSERT_FINGERPRINT = os.environ.get("SSL_ASSERT_FINGERPRINT", None)
 
 # Pgvector
 PGVECTOR_DB_URL = os.environ.get("PGVECTOR_DB_URL", DATABASE_URL)
@@ -1483,6 +1588,18 @@ GOOGLE_DRIVE_API_KEY = PersistentConfig(
     os.environ.get("GOOGLE_DRIVE_API_KEY", ""),
 )
 
+ENABLE_ONEDRIVE_INTEGRATION = PersistentConfig(
+    "ENABLE_ONEDRIVE_INTEGRATION",
+    "onedrive.enable",
+    os.getenv("ENABLE_ONEDRIVE_INTEGRATION", "False").lower() == "true",
+)
+
+ONEDRIVE_CLIENT_ID = PersistentConfig(
+    "ONEDRIVE_CLIENT_ID",
+    "onedrive.client_id",
+    os.environ.get("ONEDRIVE_CLIENT_ID", ""),
+)
+
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(
     "CONTENT_EXTRACTION_ENGINE",
@@ -1495,6 +1612,26 @@ TIKA_SERVER_URL = PersistentConfig(
     "rag.tika_server_url",
     os.getenv("TIKA_SERVER_URL", "http://tika:9998"),  # Default for sidecar deployment
 )
+
+DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
+    "DOCUMENT_INTELLIGENCE_ENDPOINT",
+    "rag.document_intelligence_endpoint",
+    os.getenv("DOCUMENT_INTELLIGENCE_ENDPOINT", ""),
+)
+
+DOCUMENT_INTELLIGENCE_KEY = PersistentConfig(
+    "DOCUMENT_INTELLIGENCE_KEY",
+    "rag.document_intelligence_key",
+    os.getenv("DOCUMENT_INTELLIGENCE_KEY", ""),
+)
+
+
+BYPASS_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
+    "BYPASS_EMBEDDING_AND_RETRIEVAL",
+    "rag.bypass_embedding_and_retrieval",
+    os.environ.get("BYPASS_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
+)
+
 
 RAG_TOP_K = PersistentConfig(
     "RAG_TOP_K", "rag.top_k", int(os.environ.get("RAG_TOP_K", "3"))
@@ -1509,6 +1646,12 @@ ENABLE_RAG_HYBRID_SEARCH = PersistentConfig(
     "ENABLE_RAG_HYBRID_SEARCH",
     "rag.enable_hybrid_search",
     os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true",
+)
+
+RAG_FULL_CONTEXT = PersistentConfig(
+    "RAG_FULL_CONTEXT",
+    "rag.full_context",
+    os.getenv("RAG_FULL_CONTEXT", "False").lower() == "true",
 )
 
 RAG_FILE_MAX_COUNT = PersistentConfig(
@@ -1625,7 +1768,7 @@ Respond to the user query using the provided context, incorporating inline citat
 - Respond in the same language as the user's query.
 - If the context is unreadable or of poor quality, inform the user and provide the best possible answer.
 - If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
-- **Only include inline citations using [source_id] when a <source_id> tag is explicitly provided in the context.**  
+- **Only include inline citations using [source_id] (e.g., [1], [2]) when a `<source_id>` tag is explicitly provided in the context.**
 - Do not cite if the <source_id> tag is not provided in the context.  
 - Do not use XML tags in your response.
 - Ensure citations are concise and directly related to the information provided.
@@ -1704,6 +1847,12 @@ RAG_WEB_SEARCH_ENGINE = PersistentConfig(
     "RAG_WEB_SEARCH_ENGINE",
     "rag.web.search.engine",
     os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
+)
+
+BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
+    "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL",
+    "rag.web.search.bypass_embedding_and_retrieval",
+    os.getenv("BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
 )
 
 # You can provide a list of your own websites to filter after performing a web search.
@@ -1841,6 +1990,12 @@ EXA_API_KEY = PersistentConfig(
     os.getenv("EXA_API_KEY", ""),
 )
 
+PERPLEXITY_API_KEY = PersistentConfig(
+    "PERPLEXITY_API_KEY",
+    "rag.web.search.perplexity_api_key",
+    os.getenv("PERPLEXITY_API_KEY", ""),
+)
+
 RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     "RAG_WEB_SEARCH_RESULT_COUNT",
     "rag.web.search.result_count",
@@ -1853,6 +2008,35 @@ RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
     int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
 )
 
+RAG_WEB_LOADER_ENGINE = PersistentConfig(
+    "RAG_WEB_LOADER_ENGINE",
+    "rag.web.loader.engine",
+    os.environ.get("RAG_WEB_LOADER_ENGINE", "safe_web"),
+)
+
+RAG_WEB_SEARCH_TRUST_ENV = PersistentConfig(
+    "RAG_WEB_SEARCH_TRUST_ENV",
+    "rag.web.search.trust_env",
+    os.getenv("RAG_WEB_SEARCH_TRUST_ENV", "False").lower() == "true",
+)
+
+PLAYWRIGHT_WS_URI = PersistentConfig(
+    "PLAYWRIGHT_WS_URI",
+    "rag.web.loader.engine.playwright.ws.uri",
+    os.environ.get("PLAYWRIGHT_WS_URI", None),
+)
+
+FIRECRAWL_API_KEY = PersistentConfig(
+    "FIRECRAWL_API_KEY",
+    "firecrawl.api_key",
+    os.environ.get("FIRECRAWL_API_KEY", ""),
+)
+
+FIRECRAWL_API_BASE_URL = PersistentConfig(
+    "FIRECRAWL_API_BASE_URL",
+    "firecrawl.api_url",
+    os.environ.get("FIRECRAWL_API_BASE_URL", "https://api.firecrawl.dev"),
+)
 
 ####################################
 # Images
@@ -2064,6 +2248,17 @@ IMAGES_OPENAI_API_KEY = PersistentConfig(
     os.getenv("IMAGES_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
+IMAGES_GEMINI_API_BASE_URL = PersistentConfig(
+    "IMAGES_GEMINI_API_BASE_URL",
+    "image_generation.gemini.api_base_url",
+    os.getenv("IMAGES_GEMINI_API_BASE_URL", GEMINI_API_BASE_URL),
+)
+IMAGES_GEMINI_API_KEY = PersistentConfig(
+    "IMAGES_GEMINI_API_KEY",
+    "image_generation.gemini.api_key",
+    os.getenv("IMAGES_GEMINI_API_KEY", GEMINI_API_KEY),
+)
+
 IMAGE_SIZE = PersistentConfig(
     "IMAGE_SIZE", "image_generation.size", os.getenv("IMAGE_SIZE", "512x512")
 )
@@ -2240,7 +2435,7 @@ LDAP_SEARCH_BASE = PersistentConfig(
 LDAP_SEARCH_FILTERS = PersistentConfig(
     "LDAP_SEARCH_FILTER",
     "ldap.server.search_filter",
-    os.environ.get("LDAP_SEARCH_FILTER", ""),
+    os.environ.get("LDAP_SEARCH_FILTER", os.environ.get("LDAP_SEARCH_FILTERS", "")),
 )
 
 LDAP_USE_TLS = PersistentConfig(

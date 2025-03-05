@@ -45,7 +45,7 @@ def extract_frontmatter(content):
                     frontmatter[key.strip()] = value.strip()
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        log.exception(f"Failed to extract frontmatter: {e}")
         return {}
 
     return frontmatter
