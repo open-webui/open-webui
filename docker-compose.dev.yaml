@@ -7,6 +7,8 @@ services:
     volumes:
       - open-webui:/app/backend/data
       - ./backend:/app/backend
+    tty: true
+    command: /bin/bash
     ports:
       - ${OPEN_WEBUI_PORT-3000}:8080
     env_file:
