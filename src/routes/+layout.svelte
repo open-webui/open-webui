@@ -486,6 +486,8 @@
 				? backendConfig.default_locale
 				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
 			changeLanguage(lang);
+		} else {
+			document.documentElement.setAttribute('lang', localStorage.locale);
 		}
 
 		if (backendConfig) {

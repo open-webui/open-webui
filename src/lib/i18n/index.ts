@@ -66,9 +66,6 @@ export const initI18n = (defaultLocale?: string | undefined) => {
 				escapeValue: false // not needed for svelte as it escapes by default
 			}
 		});
-
-	const lang = i18next?.language || defaultLocale || 'en-US';
-	document.documentElement.setAttribute('lang', lang);
 };
 
 const i18n = createI18nStore(i18next);
