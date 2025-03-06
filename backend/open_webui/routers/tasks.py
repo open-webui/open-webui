@@ -205,7 +205,7 @@ async def generate_title(
             "name": user.name,
             "location": user.info.get("location") if user.info else None,
         },
-        user_language=extract_language(request)
+        user_language=extract_language(request),
     )
 
     payload = {
@@ -287,7 +287,10 @@ async def generate_chat_tags(
         template = DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE
 
     content = tags_generation_template(
-        template, form_data["messages"], {"name": user.name}, user_language=extract_language(request)
+        template,
+        form_data["messages"],
+        {"name": user.name},
+        user_language=extract_language(request),
     )
 
     payload = {
@@ -442,7 +445,10 @@ async def generate_queries(
         template = DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE
 
     content = query_generation_template(
-        template, form_data["messages"], {"name": user.name}, user_language = extract_language(request)
+        template,
+        form_data["messages"],
+        {"name": user.name},
+        user_language=extract_language(request),
     )
 
     payload = {
@@ -529,7 +535,12 @@ async def generate_autocompletion(
         template = DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE
 
     content = autocomplete_generation_template(
-        template, prompt, messages, type, {"name": user.name}, user_language = extract_language(request)
+        template,
+        prompt,
+        messages,
+        type,
+        {"name": user.name},
+        user_language=extract_language(request),
     )
 
     payload = {

@@ -39,7 +39,10 @@ def prompt_variables_template(template: str, variables: dict[str, str]) -> str:
 
 
 def prompt_template(
-    template: str, user_name: Optional[str] = None, user_location: Optional[str] = None, user_language: str = "",
+    template: str,
+    user_name: Optional[str] = None,
+    user_location: Optional[str] = None,
+    user_language: str = "",
 ) -> str:
     # Get the current date
     current_date = datetime.now()
@@ -194,7 +197,10 @@ def rag_template(template: str, context: str, query: str):
 
 
 def title_generation_template(
-    template: str, messages: list[dict], user: Optional[dict] = None, user_language: str = None
+    template: str,
+    messages: list[dict],
+    user: Optional[dict] = None,
+    user_language: str = None,
 ) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
@@ -214,7 +220,10 @@ def title_generation_template(
 
 
 def tags_generation_template(
-    template: str, messages: list[dict], user: Optional[dict] = None, user_language: str = None
+    template: str,
+    messages: list[dict],
+    user: Optional[dict] = None,
+    user_language: str = None,
 ) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
@@ -227,7 +236,7 @@ def tags_generation_template(
             if user
             else {}
         ),
-        user_language=user_language
+        user_language=user_language,
     )
     return template
 
@@ -272,7 +281,7 @@ def autocomplete_generation_template(
     messages: Optional[list[dict]] = None,
     type: Optional[str] = None,
     user: Optional[dict] = None,
-    user_language: str = None
+    user_language: str = None,
 ) -> str:
     template = template.replace("{{TYPE}}", type if type else "")
     template = replace_prompt_variable(template, prompt)
@@ -285,13 +294,16 @@ def autocomplete_generation_template(
             if user
             else {}
         ),
-        user_language=user_language
+        user_language=user_language,
     )
     return template
 
 
 def query_generation_template(
-    template: str, messages: list[dict], user: Optional[dict] = None, user_language: str = None
+    template: str,
+    messages: list[dict],
+    user: Optional[dict] = None,
+    user_language: str = None,
 ) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
@@ -304,7 +316,7 @@ def query_generation_template(
             if user
             else {}
         ),
-        user_language=user_language
+        user_language=user_language,
     )
     return template
 
