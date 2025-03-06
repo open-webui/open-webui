@@ -23,13 +23,15 @@
 	import Plus from '../icons/Plus.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-	import { capitalizeFirstLetter } from '$lib/utils';
+	import { capitalizeFirstLetter, sanitizeResponseContent } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 	let promptsImportInputElement: HTMLInputElement;
+	let promptsV1ImportInputElement: HTMLInputElement;
 	let loaded = false;
 
 	let importFiles = '';
+	let importV1Files = '';
 	let query = '';
 
 	let prompts = [];
@@ -40,6 +42,15 @@
 
 	let filteredItems = [];
 	$: filteredItems = prompts.filter((p) => query === '' || p.command.includes(query));
+
+	const generateRandomSuffix = () => {
+		const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
+		let result = '';
+		for (let i = 0; i < 5; i++) {
+			result += characters.charAt(Math.floor(Math.random() * characters.length));
+		}
+		return result;
+	};
 
 	const cloneHandler = async (prompt) => {
 		sessionStorage.prompt = JSON.stringify(prompt);
@@ -83,7 +94,7 @@
 		);
 	};
 
-	const getPromptDisplayText = (prompt) => {
+	$: getPromptDisplayText = (prompt) => {
 		if (prompt.access_control === null) {
 			return $i18n.t('Public');
 		}
@@ -261,9 +272,88 @@
 		{/each}
 	</div>
 
-	{#if $user?.role === 'admin'}
-		<div class=" flex justify-end w-full mb-3">
-			<div class="flex space-x-2">
+	<div class=" flex justify-end w-full mb-3">
+		<div class="flex space-x-2">
+			<input
+				id="prompts-v1-import-input"
+				bind:this={promptsV1ImportInputElement}
+				bind:files={importV1Files}
+				type="file"
+				accept=".json"
+				hidden
+				on:change={() => {
+					const reader = new FileReader();
+					reader.onload = async (event) => {
+						try {
+							const savedData = JSON.parse(event.target.result);
+							const savedPrompts = savedData.prompts;
+							if (!Array.isArray(savedPrompts)) {
+								throw new Error('Invalid V1 Prompts file');
+							}
+
+							for (const prompt of savedPrompts) {
+								if (prompt.name && prompt.content) {
+									const baseCommand = prompt.name.replace(/\s+/g, '-').toLowerCase();
+									const fullCommand = `${baseCommand}-${generateRandomSuffix()}`;
+									const command = sanitizeResponseContent(fullCommand);
+
+									const title = sanitizeResponseContent(prompt.name);
+									const content = sanitizeResponseContent(prompt.content);
+
+									await createNewPrompt(localStorage.token, {
+										command,
+										title,
+										content,
+										// default's to private
+										access_control: {
+											read: { group_ids: [], user_ids: [] },
+											write: { group_ids: [], user_ids: [] }
+										}
+									}).catch((error) => {
+										toast.error(`${error}`);
+										return null;
+									});
+
+									prompts = await getPromptList(localStorage.token);
+									await _prompts.set(await getPrompts(localStorage.token));
+								}
+							}
+						} catch (error) {
+							toast.error($i18n.t('Failed to import V1 Prompts'));
+						} finally {
+							importV1Files = [];
+							promptsV1ImportInputElement.value = '';
+						}
+					};
+
+					reader.readAsText(importV1Files[0]);
+				}}
+			/>
+
+			<button
+				class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+				on:click={() => {
+					promptsV1ImportInputElement.click();
+				}}
+			>
+				<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import V1 Prompts')}</div>
+
+				<div class=" self-center">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="w-4 h-4"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</div>
+			</button>
+			{#if $user?.role === 'admin'}
 				<input
 					id="prompts-import-input"
 					bind:this={promptsImportInputElement}
@@ -319,7 +409,7 @@
 						>
 							<path
 								fill-rule="evenodd"
-								d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
+								d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
 								clip-rule="evenodd"
 							/>
 						</svg>
@@ -353,9 +443,9 @@
 						</svg>
 					</div>
 				</button>
-			</div>
+			{/if}
 		</div>
-	{/if}
+	</div>
 {:else}
 	<div class="w-full h-full flex justify-center items-center">
 		<Spinner />
