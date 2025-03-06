@@ -57,3 +57,9 @@
 		{$i18n.t('By sending messages to IONOS GPT, you agree to our terms and conditions and confirm that you\'ve read our privacy policy.', { ns: 'ionos' })}
 	</p>
 </content>
+
+<style>
+	:global(body) {
+		background-color: #f9f9f9;
+	}
+</style>
