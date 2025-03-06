@@ -95,6 +95,11 @@ class UserUpdateForm(BaseModel):
     credit: Optional[float] = None
 
 
+class UserCreditUpdateForm(BaseModel):
+    amount: Optional[float] = None
+    credit: Optional[float] = None
+
+
 class UsersTable:
     def insert_new_user(
         self,

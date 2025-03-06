@@ -2,17 +2,19 @@ import logging
 from decimal import Decimal
 from typing import Optional, List
 
+from fastapi import Response
+
 from open_webui.models.auths import Auths
 from open_webui.models.chats import Chats
-from open_webui.models.credits import Credits, SetCreditForm
+from open_webui.models.credits import Credits, SetCreditForm, SetCreditFormDetail, AddCreditForm
 from open_webui.models.users import (
     UserModel,
     UserRoleUpdateForm,
     Users,
     UserSettings,
     UserUpdateForm,
+    UserCreditUpdateForm,
 )
-
 
 from open_webui.socket.main import get_active_status_by_user_id
 from open_webui.constants import ERROR_MESSAGES
@@ -320,6 +322,50 @@ async def update_user_by_id(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail=ERROR_MESSAGES.USER_NOT_FOUND,
     )
+
+
+############################
+# UpdateCreditByUserId
+############################
+
+
+@router.put("/{user_id}/credit", response_model=Optional[UserModel])
+async def update_credit_by_user_id(
+    request: Request,
+    user_id: str,
+    form_data: UserCreditUpdateForm,
+    session_user: UserModel = Depends(get_admin_user),
+) -> Response:
+    user = Users.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+    if form_data.amount is None and form_data.credit is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="amount or credit must be specified",
+        )
+
+    params = {
+        "user_id": user_id,
+        "detail": SetCreditFormDetail(
+            api_path=str(request.url),
+            api_params=form_data.model_dump(),
+            desc=f"updated by {session_user.name}"
+        )
+    }
+
+    if form_data.credit is not None:
+        params["credit"] = Decimal(form_data.credit)
+        Credits.set_credit_by_user_id(form_data=SetCreditForm(**params))
+    elif form_data.amount is not None:
+        params["amount"] = Decimal(form_data.amount)
+        Credits.add_credit_by_user_id(form_data=AddCreditForm(**params))
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 ############################
