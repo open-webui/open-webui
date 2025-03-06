@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import sentry_sdk
 from pathlib import Path
 from typing import Literal, Optional, overload
 
@@ -62,6 +63,8 @@ async def send_get_request(url, key=None):
     except Exception as e:
         # Handle connection error here
         log.error(f"Connection error: {e}")
+        # Capture the exception in Sentry
+        sentry_sdk.capture_exception(e)
         return None
 
 
@@ -692,6 +695,13 @@ async def generate_chat_completion(
             except Exception as e:
                 log.error(e)
                 response = await r.text()
+
+            # Sentry capture message if the response is not ok
+            if not r.ok:
+                sentry_sdk.capture_message(
+                    f"OpenAI API Error: {response}",
+                    level="error",
+                )
 
             r.raise_for_status()
             return response
