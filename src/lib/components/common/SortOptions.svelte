@@ -110,7 +110,7 @@
 			}
 		} else {
 			sortState.field = field;
-			sortState.direction = 'none';
+			sortState.direction = 'asc';
 		}
 		
 		tick().then(() => {
