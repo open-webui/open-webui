@@ -71,7 +71,7 @@
 					</div>
 
 					<button
-						class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
+						class=" underline flex items-center space-x-1 text-xs text-gray-600 dark:text-gray-500 dark:text-gray-500"
 						on:click={() => {
 							showChangelog.set(true);
 						}}
@@ -106,7 +106,7 @@
 
 		<hr class=" border-gray-100 dark:border-gray-850" />
 
-		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+		<div class="mt-2 text-xs text-gray-600 dark:text-gray-500">
 			Emoji graphics provided by
 			<a href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>, licensed under
 			<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC-BY 4.0</a>.
@@ -137,7 +137,7 @@
 
 		<div>
 			<pre
-				class="text-xs text-gray-400 dark:text-gray-500">Copyright (c) {new Date().getFullYear()} <a
+				class="text-xs text-gray-600 dark:text-gray-500">Copyright (c) {new Date().getFullYear()} <a
 					href="https://openwebui.com"
 					target="_blank"
 					class="underline">Open WebUI (Timothy Jaeryang Baek)</a
@@ -171,7 +171,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 </pre>
 		</div>
 
-		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+		<div class="mt-2 text-xs text-gray-600 dark:text-gray-500">
 			{#if !$WEBUI_NAME.includes('Open WebUI')}
 				<span class=" text-gray-500 dark:text-gray-300 font-medium">{$WEBUI_NAME}</span> -
 			{/if}

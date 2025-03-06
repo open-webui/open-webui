@@ -56,7 +56,9 @@
 	{#if show}
 		<div class=" py-2.5 space-y-1.5">
 			<div class="flex flex-col w-full">
-				<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Current Password')}</div>
+				<div class=" mb-1 text-xs text-gray-600 dark:text-gray-500">
+					{$i18n.t('Current Password')}
+				</div>
 
 				<div class="flex-1">
 					<input
@@ -71,7 +73,7 @@
 			</div>
 
 			<div class="flex flex-col w-full">
-				<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
+				<div class=" mb-1 text-xs text-gray-600 dark:text-gray-500">{$i18n.t('New Password')}</div>
 
 				<div class="flex-1">
 					<input
@@ -86,7 +88,9 @@
 			</div>
 
 			<div class="flex flex-col w-full">
-				<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Confirm Password')}</div>
+				<div class=" mb-1 text-xs text-gray-600 dark:text-gray-500">
+					{$i18n.t('Confirm Password')}
+				</div>
 
 				<div class="flex-1">
 					<input

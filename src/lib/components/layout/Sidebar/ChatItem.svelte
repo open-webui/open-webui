@@ -235,7 +235,7 @@
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
-					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					: 'group-hover:bg-[#8900E1] dark:group-hover:bg-[#8951AE]'}  whitespace-nowrap text-ellipsis"
 		>
 			<input
 				use:focusEdit
@@ -250,8 +250,8 @@
 			confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
-					? 'bg-gray-100 dark:bg-gray-950'
-					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					? 'bg-[#8900E1] dark:bg-[#8951AE]'
+					: ' group-hover:bg-[#8900E1] dark:group-hover:bg-[#8951AE]'}  whitespace-nowrap text-ellipsis"
 			href="/c/{id}"
 			on:click={() => {
 				dispatch('select');
@@ -287,8 +287,8 @@
         {id === $chatId || confirmEdit
 			? 'from-gray-200 dark:from-gray-900'
 			: selected
-				? 'from-gray-100 dark:from-gray-950'
-				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
+				? 'bg-[#8900E1] dark:bg-[#8951AE]'
+				: 'invisible group-hover:visible from-[#8900E1] dark:from-[#8951AE]'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
 			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%

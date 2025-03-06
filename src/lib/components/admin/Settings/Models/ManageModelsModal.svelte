@@ -87,7 +87,7 @@
 							<!-- <button
 								class="min-w-fit rounded-full p-1.5 {selected === 'llamacpp'
 									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+									: 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'} transition"
 								on:click={() => {
 									selected = 'llamacpp';
 								}}>{$i18n.t('Llama.cpp')}</button

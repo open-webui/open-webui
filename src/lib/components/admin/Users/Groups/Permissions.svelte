@@ -66,7 +66,7 @@
 				<div class=" space-y-1.5">
 					<div class="flex flex-col w-full">
 						<div class="mb-1 flex justify-between">
-							<div class="text-xs text-gray-500">{$i18n.t('Model IDs')}</div>
+							<div class="text-xs text-gray-600 dark:text-gray-500">{$i18n.t('Model IDs')}</div>
 						</div>
 
 						{#if model_ids.length > 0}

@@ -67,7 +67,7 @@
 							</select>
 						{:else if (valvesSpec.properties[property]?.type ?? null) === 'boolean'}
 							<div class="flex justify-between items-center">
-								<div class="text-xs text-gray-500">
+								<div class="text-xs text-gray-600 dark:text-gray-500">
 									{valves[property] ? 'Enabled' : 'Disabled'}
 								</div>
 
@@ -98,7 +98,7 @@
 			{/if}
 
 			{#if (valvesSpec.properties[property]?.description ?? null) !== null}
-				<div class="text-xs text-gray-500">
+				<div class="text-xs text-gray-600 dark:text-gray-500">
 					{valvesSpec.properties[property].description}
 				</div>
 			{/if}

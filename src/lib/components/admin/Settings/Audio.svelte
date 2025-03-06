@@ -238,7 +238,7 @@
 								/>
 							</div>
 						</div>
-						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+						<div class="mt-2 mb-1 text-xs text-gray-600 dark:text-gray-500">
 							{$i18n.t('Leave model field empty to use the default model.')}
 							<a
 								class=" hover:underline dark:text-gray-200 text-gray-800"
@@ -318,7 +318,7 @@
 							</button>
 						</div>
 
-						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+						<div class="mt-2 mb-1 text-xs text-gray-600 dark:text-gray-500">
 							{$i18n.t(`Open WebUI uses faster-whisper internally.`)}
 
 							<a
@@ -456,7 +456,7 @@
 								</datalist>
 							</div>
 						</div>
-						<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+						<div class="mt-2 mb-1 text-xs text-gray-600 dark:text-gray-500">
 							{$i18n.t(`Open WebUI uses SpeechT5 and CMU Arctic speaker embeddings.`)}
 
 							To learn more about SpeechT5,
@@ -628,7 +628,7 @@
 						</select>
 					</div>
 				</div>
-				<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+				<div class="mt-2 mb-1 text-xs text-gray-600 dark:text-gray-500">
 					{$i18n.t(
 						"Control how message text is split for TTS requests. 'Punctuation' splits into sentences, 'paragraphs' splits into paragraphs, and 'none' keeps the message as a single string."
 					)}

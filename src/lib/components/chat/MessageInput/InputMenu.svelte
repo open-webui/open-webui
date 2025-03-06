@@ -11,6 +11,9 @@
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import DocumentArrowUpSolid from '$lib/components/icons/DocumentArrowUpSolid.svelte';
+
+	import ChatBubbles from '$lib/components/icons/ChatBubbles.svelte';
+	import Bookmark from '$lib/components/icons/Bookmark.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import GlobeAltSolid from '$lib/components/icons/GlobeAltSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
@@ -33,6 +36,7 @@
 
 	let tools = {};
 	let show = false;
+	let showTools = false;
 
 	$: if (show) {
 		init();
@@ -171,6 +175,7 @@
 					<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
 				</DropdownMenu.Item>
 			</Tooltip>
+			<!-- Capture -->
 
 			<Tooltip
 				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files') : ''}
@@ -190,6 +195,7 @@
 					<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
 				</DropdownMenu.Item>
 			</Tooltip>
+			<!-- Upload Files -->
 
 			{#if $config?.features?.enable_google_drive_integration}
 				<DropdownMenu.Item
@@ -318,6 +324,138 @@
 					<div class="line-clamp-1">{$i18n.t('OneDrive')}</div>
 				</DropdownMenu.Item>
 			{/if}
+		</DropdownMenu.Content>
+	</div>
+</Dropdown>
+
+<Dropdown
+	bind:show={showTools}
+	on:change={(e) => {
+		if (e.detail === false) {
+			onClose();
+		}
+	}}
+>
+	<Tooltip content={$i18n.t('Tools')}>
+		<button
+		class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
+		type="button"
+		aria-label="Tools"
+	>
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			height="24px"
+			viewBox="0 -960 960 960"
+			width="24px"
+			fill="#5f6368"
+			><path
+				d="m270-120-10-88 114-314q15 14 32.5 23.5T444-484L334-182l-64 62Zm420 0-64-62-110-302q20-5 37.5-14.5T586-522l114 314-10 88ZM480-520q-50 0-85-35t-35-85q0-39 22.5-69.5T440-752v-88h80v88q35 12 57.5 42.5T600-640q0 50-35 85t-85 35Zm0-80q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Z"
+			/></svg
+		>
+	</button>
+	</Tooltip>
+
+	<div slot="content">
+		<DropdownMenu.Content
+			class="w-full max-w-[220px] rounded-xl px-1 py-1  border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
+			sideOffset={15}
+			alignOffset={-8}
+			side="top"
+			align="start"
+			transition={flyAndScale}
+		>
+			{#if Object.keys(tools).length > 0}
+				<div class="  max-h-28 overflow-y-auto scrollbar-hidden">
+					{#each Object.keys(tools) as toolId}
+						<button
+							class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
+							on:click={() => {
+								tools[toolId].enabled = !tools[toolId].enabled;
+							}}
+						>
+							<div class="flex-1 truncate">
+								<Tooltip
+									content={tools[toolId]?.description ?? ''}
+									placement="top-start"
+									className="flex flex-1 gap-2 items-center"
+								>
+									<div class="shrink-0">
+										<WrenchSolid />
+									</div>
+
+									<div class=" truncate">{tools[toolId].name}</div>
+								</Tooltip>
+							</div>
+
+							<div class=" shrink-0">
+								<Switch
+									state={tools[toolId].enabled}
+									on:change={async (e) => {
+										const state = e.detail;
+										await tick();
+										if (state) {
+											selectedToolIds = [...selectedToolIds, toolId];
+										} else {
+											selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
+										}
+									}}
+								/>
+							</div>
+						</button>
+					{/each}
+				</div>
+
+				<hr class="border-black/5 dark:border-white/5 my-1" />
+			{/if}
+
+			<Tooltip
+				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files') : ''}
+				className="w-full"
+			>
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl {!fileUploadEnabled
+						? 'opacity-50'
+						: ''}"
+					on:click={() => {
+						if (fileUploadEnabled) {
+							if (!detectMobile()) {
+								screenCaptureHandler();
+							} else {
+								const cameraInputElement = document.getElementById('camera-input');
+
+								if (cameraInputElement) {
+									cameraInputElement.click();
+								}
+							}
+						}
+					}}
+				>
+					<ChatBubbles />
+					<div class=" line-clamp-1">{$i18n.t('Tool A(Capture)')}</div>
+				</DropdownMenu.Item>
+			</Tooltip>
+			<!-- Tool A -->
+
+			<Tooltip
+				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files') : ''}
+				className="w-full"
+			>
+				<DropdownMenu.Item
+					class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {!fileUploadEnabled
+						? 'opacity-50'
+						: ''}"
+					on:click={() => {
+						if (fileUploadEnabled) {
+							uploadFilesHandler();
+						}
+					}}
+				>
+					<Bookmark />
+					<div class="line-clamp-1">{$i18n.t('Tool B(Upload Files)')}</div>
+				</DropdownMenu.Item>
+			</Tooltip>
+			<!-- Tool B -->
+
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>

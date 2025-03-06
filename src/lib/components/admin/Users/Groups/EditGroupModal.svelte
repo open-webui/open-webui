@@ -222,7 +222,7 @@
 								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
 								'display'
 									? ' dark:border-white'
-									: 'border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									: 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'display';
 								}}
@@ -237,7 +237,7 @@
 								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
 								'permissions'
 									? '  dark:border-white'
-									: 'border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									: 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'permissions';
 								}}
@@ -252,7 +252,7 @@
 								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
 								'users'
 									? ' dark:border-white'
-									: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									: ' border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'users';
 								}}

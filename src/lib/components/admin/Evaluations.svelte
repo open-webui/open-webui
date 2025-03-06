@@ -41,6 +41,7 @@
 				'leaderboard'
 					? 'text-[#57068c] dark:text-white'
 					: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'}"
+
 				on:click={() => {
 					selectedTab = 'leaderboard';
 				}}

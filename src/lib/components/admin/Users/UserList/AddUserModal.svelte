@@ -177,7 +177,7 @@
 					<div class="px-1">
 						{#if tab === ''}
 							<div class="flex flex-col w-full mb-3">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
+								<div class=" mb-1 text-xs text-gray-600 dark:text-gray-500">{$i18n.t('Role')}</div>
 
 								<div class="flex-1">
 									<select
@@ -194,7 +194,7 @@
 							</div>
 
 							<div class="flex flex-col w-full mt-1">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+								<div class=" mb-1 text-xs text-gray-600 dark:text-gray-500">{$i18n.t('Name')}</div>
 
 								<div class="flex-1">
 									<input
@@ -211,7 +211,7 @@
 							<hr class=" border-gray-100 dark:border-gray-850 my-2.5 w-full" />
 
 							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
+								<div class=" mb-1 text-xs text-gray-600 dark:text-gray-500">{$i18n.t('Email')}</div>
 
 								<div class="flex-1">
 									<input
@@ -225,7 +225,9 @@
 							</div>
 
 							<div class="flex flex-col w-full mt-1">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Password')}</div>
+								<div class=" mb-1 text-xs text-gray-600 dark:text-gray-500">
+									{$i18n.t('Password')}
+								</div>
 
 								<div class="flex-1">
 									<input
@@ -263,7 +265,7 @@
 									</button>
 								</div>
 
-								<div class=" text-xs text-gray-500">
+								<div class=" text-xs text-gray-600 dark:text-gray-500">
 									ⓘ {$i18n.t(
 										'Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.'
 									)}

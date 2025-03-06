@@ -176,7 +176,9 @@
 											});
 									}}
 								>
-									<div class="text-xs text-gray-500">{$i18n.t('Reorder Models')}</div>
+									<div class="text-xs text-gray-600 dark:text-gray-500">
+										{$i18n.t('Reorder Models')}
+									</div>
 
 									{#if sortKey === 'model'}
 										<span class="font-normal self-center">
@@ -202,7 +204,9 @@
 						<div>
 							<div class="flex flex-col w-full">
 								<div class="mb-1 flex justify-between">
-									<div class="text-xs text-gray-500">{$i18n.t('Default Models')}</div>
+									<div class="text-xs text-gray-600 dark:text-gray-500">
+										{$i18n.t('Default Models')}
+									</div>
 								</div>
 
 								<div class="flex items-center -mr-1">
