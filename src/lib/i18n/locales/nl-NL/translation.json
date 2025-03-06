@@ -359,6 +359,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "Embedding model ingesteld op \"{{embedding_model}}\"",
 	"Enable API Key": "",
 	"Enable autocomplete generation for chat messages": "",
+	"Enable Code Execution": "",
 	"Enable Code Interpreter": "",
 	"Enable Community Sharing": "Delen via de community inschakelen",
 	"Enable Memory Locking (mlock) to prevent model data from being swapped out of RAM. This option locks the model's working set of pages into RAM, ensuring that they will not be swapped out to disk. This can help maintain performance by avoiding page faults and ensuring fast data access.": "Schakel Memory Locking (mlock) in om te voorkomen dat modelgegevens uit het RAM worden verwisseld. Deze optie vergrendelt de werkset pagina's van het model in het RAM, zodat ze niet naar de schijf worden uitgewisseld. Dit kan helpen om de prestaties op peil te houden door paginafouten te voorkomen en snelle gegevenstoegang te garanderen.",

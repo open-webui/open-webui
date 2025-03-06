@@ -359,6 +359,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "语义向量模型设置为 \"{{embedding_model}}\"",
 	"Enable API Key": "启用 API 密钥",
 	"Enable autocomplete generation for chat messages": "启用聊天消息的输入框内容猜测补全",
+	"Enable Code Execution": "",
 	"Enable Code Interpreter": "启用代码解释器",
 	"Enable Community Sharing": "启用分享至社区",
 	"Enable Memory Locking (mlock) to prevent model data from being swapped out of RAM. This option locks the model's working set of pages into RAM, ensuring that they will not be swapped out to disk. This can help maintain performance by avoiding page faults and ensuring fast data access.": "启用内存锁定（mlock）以防止模型数据被交换出RAM。此选项将模型的工作集页面锁定在RAM中，确保它们不会被交换到磁盘。这可以通过避免页面错误和确保快速数据访问来帮助维持性能。",
