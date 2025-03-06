@@ -30,7 +30,7 @@ from open_webui.models.models import Models
 
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.tools import get_tools
-from open_webui.utils.parser import PARSING_TYPE, DefaultParser
+from open_webui.utils.parser import PARSER_TYPE, DefaultParser
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
@@ -327,19 +327,22 @@ def get_parsers_by_type(request, parser_type, active_only=True):
     relevant_parsers = []
     for parser in all_parsers:
         # verification of required settings
-        assert hasattr(parser, 'name')
-        assert hasattr(parser, 'parser_type')
-        assert hasattr(parser, 'save_docs_to_vector_db')
+        if not hasattr(parser, 'name'):
+            raise NotImplementedError("Parser instance requires self.name as a attribute")
+        if not hasattr(parser, 'parser_type'):
+            raise NotImplementedError(f"Parser {parser.name} requires parser_type as a attribute")
+        if not hasattr(parser, 'save_docs_to_vector_db'):
+            raise NotImplementedError(f"Parser {parser.name} requires save_docs_to_vector_db as a method")
 
         # 1. single item needs to be moved to list
-        if type(parser.parser_type) == PARSING_TYPE:
+        if type(parser.parser_type) == PARSER_TYPE:
             parser.parser_type = [parser.parser_type]
 
         # 2. all needs to be changed to list of all types. All overrides other settings
-        if PARSING_TYPE.ALL in parser.parser_type:
+        if PARSER_TYPE.ALL in parser.parser_type:
             # new parser types will automatically be accounted for
-            parser.parser_type = [t for t in PARSING_TYPE]
-            parser.parser_type.remove(PARSING_TYPE.ALL)
+            parser.parser_type = [t for t in PARSER_TYPE]
+            parser.parser_type.remove(PARSER_TYPE.ALL)
 
         # 3. list of viable items is now looked at
         if parser_type in parser.parser_type:

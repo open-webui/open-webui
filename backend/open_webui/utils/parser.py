@@ -2,7 +2,7 @@ import logging
 import uuid
 import json
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Tuple, List
 from enum import Enum
 
 from fastapi import Request
@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-class PARSING_TYPE(Enum):
+class PARSER_TYPE(Enum):  # noqa
     ALL = 0
     TEXT = 1
     FILE = 2
@@ -32,9 +32,9 @@ class PARSING_TYPE(Enum):
 
 class DefaultParser:
     # Update valves/ environment variables based on your selected database
-    def __init__(self, parsing_type=PARSING_TYPE.ALL):
+    def __init__(self, parser_type=PARSER_TYPE.ALL):
         self.name = "Default Parser"
-        self.parsing_type = parsing_type
+        self.parser_type = parser_type
 
     def save_docs_to_vector_db(self,
                                request: Request,
@@ -48,7 +48,8 @@ class DefaultParser:
 
         self.pre(request, docs=docs, collection_name=collection_name)
 
-        texts, docs = self.split(request, docs)
+        docs = self.split(request, docs)
+        texts = [doc.page_content for doc in docs]
         metadatas = self.metadata(request, collection_name, docs, metadata)
         embeddings = self.embed(request, texts, user)
 
@@ -95,6 +96,35 @@ class DefaultParser:
         '''
         pass
 
+    def split(self, request, docs) -> Tuple[List[Document]]:
+        if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=request.app.state.config.CHUNK_SIZE,
+                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                add_start_index=True,
+            )
+        elif request.app.state.config.TEXT_SPLITTER == "token":
+            log.info(
+                f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
+            )
+
+            tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
+            text_splitter = TokenTextSplitter(
+                encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
+                chunk_size=request.app.state.config.CHUNK_SIZE,
+                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                add_start_index=True,
+            )
+        else:
+            raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
+
+        docs = text_splitter.split_documents(docs)
+
+        if len(docs) == 0:
+            raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
+
+        return docs
+
     def metadata(self, request, collection_name, docs, metadata):
         # Check if entries with the same hash (metadata.hash) already exist
         if metadata and "hash" in metadata:
@@ -135,36 +165,6 @@ class DefaultParser:
                     metadata[key] = str(value)
 
         return metadatas
-
-    def split(self, request, docs):
-        if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                add_start_index=True,
-            )
-        elif request.app.state.config.TEXT_SPLITTER == "token":
-            log.info(
-                f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
-            )
-
-            tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
-            text_splitter = TokenTextSplitter(
-                encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
-                add_start_index=True,
-            )
-        else:
-            raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
-
-        docs = text_splitter.split_documents(docs)
-
-        if len(docs) == 0:
-            raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
-
-        texts = [doc.page_content for doc in docs]
-        return texts, docs
 
     def embed(self, request, texts, user=None):
         embedding_function = get_embedding_function(

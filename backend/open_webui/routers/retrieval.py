@@ -29,7 +29,7 @@ import tiktoken
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_core.documents import Document
 
-from open_webui.utils.parser import DefaultParser, PARSING_TYPE
+from open_webui.utils.parser import DefaultParser, PARSER_TYPE
 from open_webui.functions import get_parsers_by_type
 
 from open_webui.models.files import FileModel, Files
@@ -886,7 +886,7 @@ def process_file(
 
         hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)
-        parsers = get_parsers_by_type(request, PARSING_TYPE.FILE)
+        parsers = get_parsers_by_type(request, PARSER_TYPE.FILE)
 
         if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
             try:
@@ -967,7 +967,7 @@ def process_text(
     text_content = form_data.content
     log.debug(f"text_content: {text_content}")
 
-    parsers = get_parsers_by_type(request, PARSING_TYPE.TEXT)
+    parsers = get_parsers_by_type(request, PARSER_TYPE.TEXT)
     results = [p.save_docs_to_vector_db(request, docs, collection_name, user=user) for p in parsers]
 
     if all(results):
@@ -1002,7 +1002,7 @@ def process_youtube_video(
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")
 
-        parsers = get_parsers_by_type(request, PARSING_TYPE.YOUTUBE)
+        parsers = get_parsers_by_type(request, PARSER_TYPE.YOUTUBE)
 
         for parser in parsers:
             parser.save_docs_to_vector_db(
@@ -1052,7 +1052,7 @@ def process_web(
         log.debug(f"text_content: {content}")
 
         if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
-            parsers = get_parsers_by_type(request, PARSING_TYPE.WEB_CONTENT)
+            parsers = get_parsers_by_type(request, PARSER_TYPE.WEB_CONTENT)
             for parser in parsers:
                 parser.save_docs_to_vector_db(
                     request, docs, collection_name, overwrite=True, user=user)
@@ -1326,7 +1326,7 @@ async def process_web_search(
             }
         else:
             # TODO: ENABLE
-            parsers = get_parsers_by_type(request, PARSING_TYPE.WEB_SEARCH)
+            parsers = get_parsers_by_type(request, PARSER_TYPE.WEB_SEARCH)
             for parser in parsers:
                 await run_in_threadpool(
                     parser.save_docs_to_vector_db,
@@ -1578,7 +1578,7 @@ def process_files_batch(
     # Save all documents in one batch
     if all_docs:
         try:
-            parsers = get_parsers_by_type(request, PARSING_TYPE.FILE)
+            parsers = get_parsers_by_type(request, PARSER_TYPE.FILE)
             for parser in parsers:
                 parser.save_docs_to_vector_db(
                     request=request,
