@@ -593,7 +593,10 @@ for file_path in (FRONTEND_BUILD_DIR / "static").glob("**/*"):
             (FRONTEND_BUILD_DIR / "static")
         )
         target_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(file_path, target_path)
+        try:
+            shutil.copyfile(file_path, target_path)
+        except Exception as e:
+            logging.error(f"An error occurred: {e}")
 
 frontend_favicon = FRONTEND_BUILD_DIR / "static" / "favicon.png"
 
