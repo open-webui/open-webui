@@ -11,7 +11,6 @@
 	import { userSignOut } from '$lib/apis/auths';
   	import UpdatePlanModal from '$lib/components/UpdatePlanModal.svelte'; // Импортируем модальное окно
 
-	import { user } from '$lib/stores'; // Импортируем хранилище пользователя
   	import { get } from 'svelte/store'; // Функция для получения значения из хранилища
 
 	const i18n = getContext('i18n');
