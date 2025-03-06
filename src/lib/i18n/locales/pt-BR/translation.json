@@ -960,6 +960,7 @@
 	"Sign up to {{WEBUI_NAME}}": "Inscreva-se em {{WEBUI_NAME}}",
 	"Signing in to {{WEBUI_NAME}}": "Fazendo login em {{WEBUI_NAME}}",
 	"sk-1234": "",
+	"Sort by": "",
 	"Source": "Fonte",
 	"Speech Playback Speed": "Velocidade de reprodução de fala",
 	"Speech recognition error: {{error}}": "Erro de reconhecimento de fala: {{error}}",

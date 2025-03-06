@@ -960,6 +960,7 @@
 	"Sign up to {{WEBUI_NAME}}": "{{WEBUI_NAME}}로 가입",
 	"Signing in to {{WEBUI_NAME}}": "{{WEBUI_NAME}}로 가입중",
 	"sk-1234": "",
+	"Sort by": "",
 	"Source": "출처",
 	"Speech Playback Speed": "음성 재생 속도",
 	"Speech recognition error: {{error}}": "음성 인식 오류: {{error}}",

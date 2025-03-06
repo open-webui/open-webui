@@ -960,6 +960,7 @@
 	"Sign up to {{WEBUI_NAME}}": "",
 	"Signing in to {{WEBUI_NAME}}": "",
 	"sk-1234": "",
+	"Sort by": "",
 	"Source": "ソース",
 	"Speech Playback Speed": "音声の再生速度",
 	"Speech recognition error: {{error}}": "音声認識エラー: {{error}}",

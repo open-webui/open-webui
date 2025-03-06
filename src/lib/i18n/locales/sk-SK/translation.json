@@ -960,6 +960,7 @@
 	"Sign up to {{WEBUI_NAME}}": "Zaregistrujte sa na {{WEBUI_NAME}}",
 	"Signing in to {{WEBUI_NAME}}": "Prihlasovanie do {{WEBUI_NAME}}",
 	"sk-1234": "",
+	"Sort by": "",
 	"Source": "Zdroj",
 	"Speech Playback Speed": "Rýchlosť prehrávania reči",
 	"Speech recognition error: {{error}}": "Chyba rozpoznávania reči: {{error}}",

@@ -960,6 +960,7 @@
 	"Sign up to {{WEBUI_NAME}}": "Erregistratu {{WEBUI_NAME}}-n",
 	"Signing in to {{WEBUI_NAME}}": "{{WEBUI_NAME}}-n saioa hasten",
 	"sk-1234": "",
+	"Sort by": "",
 	"Source": "Iturria",
 	"Speech Playback Speed": "Ahots erreprodukzio abiadura",
 	"Speech recognition error: {{error}}": "Ahots ezagutze errorea: {{error}}",

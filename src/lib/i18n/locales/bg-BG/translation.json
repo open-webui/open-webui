@@ -960,6 +960,7 @@
 	"Sign up to {{WEBUI_NAME}}": "Регистрирайте се в {{WEBUI_NAME}}",
 	"Signing in to {{WEBUI_NAME}}": "Вписване в {{WEBUI_NAME}}",
 	"sk-1234": "sk-1234",
+	"Sort by": "",
 	"Source": "Източник",
 	"Speech Playback Speed": "Скорост на възпроизвеждане на речта",
 	"Speech recognition error: {{error}}": "Грешка при разпознаване на реч: {{error}}",

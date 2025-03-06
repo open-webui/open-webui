@@ -960,6 +960,7 @@
 	"Sign up to {{WEBUI_NAME}}": "Regisztráció ide: {{WEBUI_NAME}}",
 	"Signing in to {{WEBUI_NAME}}": "Bejelentkezés ide: {{WEBUI_NAME}}",
 	"sk-1234": "",
+	"Sort by": "",
 	"Source": "Forrás",
 	"Speech Playback Speed": "Beszéd lejátszási sebesség",
 	"Speech recognition error: {{error}}": "Beszédfelismerési hiba: {{error}}",

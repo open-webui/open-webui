@@ -960,6 +960,7 @@
 	"Sign up to {{WEBUI_NAME}}": "Zarejestruj się w {{WEBUI_NAME}}",
 	"Signing in to {{WEBUI_NAME}}": "Logowanie do {{WEBUI_NAME}}",
 	"sk-1234": "sk-1234",
+	"Sort by": "",
 	"Source": "Źródło",
 	"Speech Playback Speed": "Prędkość odtwarzania mowy",
 	"Speech recognition error: {{error}}": "Błąd rozpoznawania mowy: {{error}}",

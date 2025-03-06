@@ -960,6 +960,7 @@
 	"Sign up to {{WEBUI_NAME}}": "註冊 {{WEBUI_NAME}}",
 	"Signing in to {{WEBUI_NAME}}": "正在登入 {{WEBUI_NAME}}",
 	"sk-1234": "sk-1234",
+	"Sort by": "",
 	"Source": "來源",
 	"Speech Playback Speed": "語音播放速度",
 	"Speech recognition error: {{error}}": "語音辨識錯誤：{{error}}",

@@ -960,6 +960,7 @@
 	"Sign up to {{WEBUI_NAME}}": "Εγγραφή στο {{WEBUI_NAME}}",
 	"Signing in to {{WEBUI_NAME}}": "Σύνδεση στο {{WEBUI_NAME}}",
 	"sk-1234": "",
+	"Sort by": "",
 	"Source": "Πηγή",
 	"Speech Playback Speed": "Ταχύτητα Αναπαραγωγής Ομιλίας",
 	"Speech recognition error: {{error}}": "Σφάλμα αναγνώρισης ομιλίας: {{error}}",

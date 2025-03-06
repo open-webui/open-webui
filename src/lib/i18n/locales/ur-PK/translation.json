@@ -960,6 +960,7 @@
 	"Sign up to {{WEBUI_NAME}}": "{{WEBUI_NAME}} میں سائن اپ کریں",
 	"Signing in to {{WEBUI_NAME}}": "{{WEBUI_NAME}} میں سائن اِن کر رہے ہیں",
 	"sk-1234": "",
+	"Sort by": "",
 	"Source": "ماخذ",
 	"Speech Playback Speed": "تقریر پلے بیک کی رفتار",
 	"Speech recognition error: {{error}}": "تقریر کی پہچان کی خرابی: {{error}}",

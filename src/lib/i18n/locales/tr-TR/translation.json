@@ -960,6 +960,7 @@
 	"Sign up to {{WEBUI_NAME}}": "{{WEBUI_NAME}}'e kaydol",
 	"Signing in to {{WEBUI_NAME}}": "{{WEBUI_NAME}}'e giriş yapılıyor",
 	"sk-1234": "sk-1234",
+	"Sort by": "",
 	"Source": "Kaynak",
 	"Speech Playback Speed": "Konuşma Oynatma Hızı",
 	"Speech recognition error: {{error}}": "Konuşma tanıma hatası: {{error}}",

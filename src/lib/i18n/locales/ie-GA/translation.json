@@ -960,6 +960,7 @@
 	"Sign up to {{WEBUI_NAME}}": "Cláraigh le {{WEBUI_NAME}}",
 	"Signing in to {{WEBUI_NAME}}": "Ag síniú isteach ar {{WEBUI_NAME}}",
 	"sk-1234": "sk-1234",
+	"Sort by": "",
 	"Source": "Foinse",
 	"Speech Playback Speed": "Luas Athsheinm Urlabhra",
 	"Speech recognition error: {{error}}": "Earráid aitheantais cainte: {{error}}",

@@ -960,6 +960,7 @@
 	"Sign up to {{WEBUI_NAME}}": "Tilmeld dig {{WEBUI_NAME}}",
 	"Signing in to {{WEBUI_NAME}}": "Logger ind på {{WEBUI_NAME}}",
 	"sk-1234": "",
+	"Sort by": "",
 	"Source": "Kilde",
 	"Speech Playback Speed": "Talehastighed",
 	"Speech recognition error: {{error}}": "Talegenkendelsesfejl: {{error}}",

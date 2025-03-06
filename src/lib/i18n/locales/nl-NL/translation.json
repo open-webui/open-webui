@@ -960,6 +960,7 @@
 	"Sign up to {{WEBUI_NAME}}": "Meld je aan bij {{WEBUI_NAME}}",
 	"Signing in to {{WEBUI_NAME}}": "Aan het inloggen bij {{WEBUI_NAME}}",
 	"sk-1234": "",
+	"Sort by": "",
 	"Source": "Bron",
 	"Speech Playback Speed": "Afspeelsnelheid spraak",
 	"Speech recognition error: {{error}}": "Spraakherkenning fout: {{error}}",
