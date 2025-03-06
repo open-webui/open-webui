@@ -477,8 +477,7 @@
 	>
 		<div class="px-1.5 flex justify-between space-x-1 text-gray-50 dark:text-gray-400">
 			<button
-        aria-label="Toggle Sidebar"
-				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-[#8900E1] dark:hover:bg-[#8951AE] transition"
+				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-[#8900E1] dark:hover:bg-gray-700 transition"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
@@ -503,9 +502,7 @@
 
 			<a
 				id="sidebar-new-chat-button"
-        aria-label="New Chat"
-				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-[#8900E1] dark:hover:bg-[#8951AE] transition no-drag-region"
-
+				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-[#8900E1] dark:hover:bg-gray-700 transition no-drag-region"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -543,7 +540,7 @@
 		<!-- {#if $user?.role === 'admin'}
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-[#8900E1] dark:hover:bg-[#8951AE] transition"
+					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-[#8900E1] dark:hover:bg-gray-700 transition"
 					href="/home"
 					on:click={() => {
 						selectedChatId = null;
@@ -569,7 +566,7 @@
 		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
 			<div class="px-1.5 flex justify-center text-gray-50 dark:text-gray-200">
 				<a
-					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-[#8900E1] dark:hover:bg-[#8951AE] transition"
+					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-[#8900E1] dark:hover:bg-gray-700 transition"
 					href="/workspace"
 					on:click={() => {
 						selectedChatId = null;
@@ -808,7 +805,7 @@
 							{#each $chats as chat, idx}
 								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
 									<div
-										class="w-full pl-2.5 text-xs text-gray-600 dark:text-gray-500 dark:text-gray-500 font-medium {idx ===
+										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
 										0
 											? ''
 											: 'pt-5'} pb-1.5"
@@ -896,7 +893,7 @@
 						}}
 					>
 						<button
-							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-[#8900E1] dark:hover:bg-[#8951AE] transition"
+							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-[#8900E1] dark:hover:bg-gray-700 transition"
 							on:click={() => {
 								showDropdown = !showDropdown;
 							}}
@@ -907,6 +904,7 @@
 									class=" max-w-[30px] object-cover rounded-full"
 									alt="User profile"
 								/>
+								<!-- User Image color f29c14 will be changed here -->
 							</div>
 							<div class=" self-center font-medium">{$user.name}</div>
 						</button>

@@ -1142,8 +1142,9 @@
 										</InputMenu>
 
 										<div class="flex gap-0.5 items-center overflow-x-auto scrollbar-none flex-1">
+											<!-- WebSearch -->
 											{#if $_user}
-												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
+												<!-- {#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)} -->
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
 															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
@@ -1160,7 +1161,7 @@
 															>
 														</button>
 													</Tooltip>
-												{/if}
+												<!-- {/if} -->
 
 												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
 													<Tooltip content={$i18n.t('Generate an image')} placement="top">

@@ -209,7 +209,7 @@
 		deleteChatHandler(id);
 	}}
 >
-	<div class=" text-sm text-gray-500 flex-1 line-clamp-3">
+	<div class=" text-sm text-gray-100 flex-1 line-clamp-3">
 		{$i18n.t('This will delete')} <span class="  font-semibold">{title}</span>.
 	</div>
 </DeleteConfirmDialog>
@@ -232,10 +232,10 @@
 		<div
 			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-200 dark:bg-gray-900'
+				? 'bg-[#8900E1] dark:bg-gray-900'
 				: selected
-					? 'bg-gray-100 dark:bg-gray-950'
-					: 'group-hover:bg-[#8900E1] dark:group-hover:bg-[#8951AE]'}  whitespace-nowrap text-ellipsis"
+					? 'bg-[#8900E1] dark:bg-gray-950'
+					: 'group-hover:bg-[#8900E1] dark:group-hover:bg-gray-700'}  whitespace-nowrap text-ellipsis"
 		>
 			<input
 				use:focusEdit
@@ -250,8 +250,8 @@
 			confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
-					? 'bg-[#8900E1] dark:bg-[#8951AE]'
-					: ' group-hover:bg-[#8900E1] dark:group-hover:bg-[#8951AE]'}  whitespace-nowrap text-ellipsis"
+					? 'bg-[#8900E1] dark:bg-gray-700'
+					: ' group-hover:bg-[#8900E1] dark:group-hover:bg-gray-700'}  whitespace-nowrap text-ellipsis"
 			href="/c/{id}"
 			on:click={() => {
 				dispatch('select');
