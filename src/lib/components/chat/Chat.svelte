@@ -1686,7 +1686,7 @@
 	const stopResponse = async () => {
 		if (taskId) {
 			const res = await stopTask(localStorage.token, taskId).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			});
 
