@@ -990,7 +990,6 @@ async def process_chat_response(
 
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
-
         if event_emitter:
             if "selected_model_id" in response:
                 Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -1470,7 +1469,6 @@ async def process_chat_response(
                     response_tool_calls = []
 
                     async for line in response.body_iterator:
-
                         line = line.decode("utf-8") if isinstance(line, bytes) else line
                         data = line
 
@@ -2097,7 +2095,6 @@ async def process_chat_response(
                     yield wrap_item(json.dumps(event))
 
             async for data in original_generator:
-
                 data, _ = await process_filter_functions(
                     request=request,
                     filter_functions=filter_functions,
