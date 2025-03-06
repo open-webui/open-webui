@@ -359,6 +359,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "Το μοντέλο ενσωμάτωσης έχει οριστεί σε \"{{embedding_model}}\"",
 	"Enable API Key": "",
 	"Enable autocomplete generation for chat messages": "",
+	"Enable Code Execution": "",
 	"Enable Code Interpreter": "",
 	"Enable Community Sharing": "Ενεργοποίηση Κοινοτικής Κοινής Χρήσης",
 	"Enable Memory Locking (mlock) to prevent model data from being swapped out of RAM. This option locks the model's working set of pages into RAM, ensuring that they will not be swapped out to disk. This can help maintain performance by avoiding page faults and ensuring fast data access.": "Ενεργοποίηση Κλείδωσης Μνήμης (mlock) για την αποτροπή της ανταλλαγής δεδομένων του μοντέλου από τη μνήμη RAM. Αυτή η επιλογή κλειδώνει το σύνολο εργασίας των σελίδων του μοντέλου στη μνήμη RAM, διασφαλίζοντας ότι δεν θα ανταλλαχθούν στο δίσκο. Αυτό μπορεί να βοηθήσει στη διατήρηση της απόδοσης αποφεύγοντας σφάλματα σελίδων και διασφαλίζοντας γρήγορη πρόσβαση στα δεδομένα.",
