@@ -12,6 +12,7 @@ from tiktoken import Encoding
 
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.credits import AddCreditForm, Credits, SetCreditFormDetail
+from open_webui.models.models import Models
 from open_webui.models.users import UserModel
 
 logger = logging.getLogger(__name__)
@@ -110,7 +111,7 @@ class CreditDeduct:
         self.body = body
         self.is_stream = is_stream
         self.usage = CompletionUsage(prompt_tokens=0, completion_tokens=0, total_tokens=0)
-        self.prompt_unit_price, self.completion_unit_price = self.parse_model_price()
+        self.prompt_unit_price, self.completion_unit_price = self.get_model_price()
 
     def __enter__(self):
         return self
@@ -143,8 +144,11 @@ class CreditDeduct:
             total_price,
         )
 
-    def parse_model_price(self) -> (Decimal, Decimal):
-        model_price = self.model.get("info", {}).get("price", {})
+    def get_model_price(self) -> (Decimal, Decimal):
+        model = Models.get_model_by_id(self.model["id"])
+        if model is None:
+            return Decimal("0"), Decimal("0")
+        model_price = model.price or {}
         return Decimal(model_price.get("prompt_price", "0")), Decimal(model_price.get("completion_price", "0"))
 
     def run(self, response: Union[dict, bytes]) -> None:
