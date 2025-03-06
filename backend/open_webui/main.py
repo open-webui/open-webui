@@ -869,7 +869,7 @@ async def chat_completion(
         }
         form_data["metadata"] = metadata
 
-        form_data, events,tool_output = await process_chat_payload(
+        form_data, events = await process_chat_payload(
             request, form_data, metadata, user, model
         )
         print("form data for us",form_data)
@@ -884,16 +884,16 @@ async def chat_completion(
         )
 
     try:
-        # response = await chat_completion_handler(request, form_data, user)
-        response = {
-                    "choices": [
-                        {
-                            "message": {
-                                "content": tool_output
-                            }
-                        }
-                    ]
-                }
+        response = await chat_completion_handler(request, form_data, user)
+        # response = {
+        #             "choices": [
+        #                 {
+        #                     "message": {
+        #                         "content": tool_output
+        #                     }
+        #                 }
+        #             ]
+        #         }
         return await process_chat_response(
             request, response, form_data, user, events, metadata, tasks
         )

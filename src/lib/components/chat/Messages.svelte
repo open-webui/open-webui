@@ -389,6 +389,7 @@
 					{/if}
 
 					{#each messages as message, messageIdx (message.id)}
+					{#if message.role === 'user'}
 						<Message
 							{chatId}
 							bind:history
@@ -411,6 +412,7 @@
 							{triggerScroll}
 							{readOnly}
 						/>
+					{/if}	
 					{/each}
 				</div>
 				<div class="pb-12" />

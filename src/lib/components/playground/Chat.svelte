@@ -24,6 +24,7 @@
 	import Cog6 from '../icons/Cog6.svelte';
 	import Sidebar from '../common/Sidebar.svelte';
 	import ArrowRight from '../icons/ArrowRight.svelte';
+	import { stringify } from 'postcss';
 
 	const i18n = getContext('i18n');
 
@@ -37,6 +38,7 @@
 
 	let showSystem = false;
 	let showSettings = false;
+	let showRightPane = false;
 
 	let system = '';
 
@@ -44,6 +46,8 @@
 	let message = '';
 
 	let messages = [];
+	let assistantMessages = [];
+	let userMessages = [];
 
 	const scrollToBottom = () => {
 		const element = messagesContainerElement;
@@ -114,13 +118,11 @@
 
 					for (const line of lines) {
 						if (line !== '') {
-							console.log(line);
 							if (line === 'data: [DONE]') {
 								// responseMessage.done = true;
 								messages = messages;
 							} else {
 								let data = JSON.parse(line.replace(/^data: /, ''));
-								console.log(data);
 
 								if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
 									continue;
@@ -129,7 +131,8 @@
 
 									responseMessage.content += data.choices[0].delta.content ?? '';
 									messages = messages;
-
+									assistantMessages = messages.filter((m) => m.role === 'assistant');
+									
 									textareaElement.style.height = textareaElement.scrollHeight + 'px';
 
 									await tick();
@@ -164,6 +167,7 @@
 			await addHandler();
 
 			loading = true;
+			showRightPane = true;
 			await chatCompletionHandler();
 
 			loading = false;
@@ -185,6 +189,9 @@
 		}
 		loaded = true;
 	});
+
+
+
 </script>
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
@@ -285,10 +292,18 @@
 				id="messages-container"
 				bind:this={messagesContainerElement}
 			>
-				<div class=" h-full w-full flex flex-col">
-					<div class="flex-1 p-1">
-						<Messages bind:messages />
+				<div class=" h-full w-full flex">
+					<div class="p-1 w-full">
+						<Messages messages={messages} />
 					</div>
+					{#if showRightPane}
+						<div class="p-1 border-2 h-full w-full border-red-500">
+							 {#each assistantMessages as am}
+							 	<pre>{JSON.stringify(am , null ,4)}</pre>
+							 {/each}
+							 
+						</div>
+					{/if}
 				</div>
 			</div>
 

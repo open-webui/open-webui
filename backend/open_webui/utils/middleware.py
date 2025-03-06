@@ -281,14 +281,14 @@ async def chat_completion_tools_handler(
                 )
                 tool_function = tools[tool_function_name]["callable"]
 
-                # tool_function_params = {
-                #     k: v
-                #     for k, v in tool_function_params.items()
-                #     if k in required_params
-                # }
-                # tool_output = await tool_function(**tool_function_params)
-                # tool_output = "Exit from here please!!"
-                tool_output = f"Flag!{result}"
+                tool_function_params = {
+                    k: v
+                    for k, v in tool_function_params.items()
+                    if k in required_params
+                }
+                tool_output = await tool_function(**tool_function_params)
+                # # tool_output = "Exit from here please!!"
+                # tool_output = f"Flag!{result}"
 
             except Exception as e:
                 tool_output = str(e)
@@ -664,7 +664,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     form_data["metadata"] = metadata
 
     try:
-        form_data, flags,tool_output = await chat_completion_tools_handler(
+        form_data, flags = await chat_completion_tools_handler(
             request, form_data, user, models, extra_params
         )
         sources.extend(flags.get("sources", []))
@@ -746,7 +746,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             }
         )
 
-    return form_data, events,tool_output
+    return form_data, events
 
 
 async def process_chat_response(

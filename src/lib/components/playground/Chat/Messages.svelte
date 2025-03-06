@@ -3,7 +3,9 @@
 
 	const i18n = getContext('i18n');
 
-	export let messages = [];
+	export let messages;
+
+
 	let textAreaElement: HTMLTextAreaElement;
 	onMount(() => {
 		messages.forEach((message, idx) => {

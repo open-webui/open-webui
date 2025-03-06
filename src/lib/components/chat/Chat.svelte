@@ -13,6 +13,7 @@
 	import { get, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import RightPane from '../pane/RightPane.svelte';
 
 	import {
 		chatId,
@@ -122,6 +123,10 @@
 	};
 
 	let taskId = null;
+
+	let leftPaneSize = Object.keys(history.messages).length !== 0 ? 50 : 100;
+	$: leftPaneSize = Object.keys(history.messages).length !== 0 ? 50 : 100;
+	console.log("Left Pane Size ", !!history.messages)
 
 	// Chat Input
 	let prompt = '';
@@ -431,7 +436,7 @@
 	});
 
 	// File upload functions
-
+	// Can delete
 	const uploadGoogleDriveFile = async (fileData) => {
 		console.log('Starting uploadGoogleDriveFile with:', {
 			id: fileData.id,
@@ -546,6 +551,7 @@
 		}
 	};
 
+	// Can Delete
 	const uploadWeb = async (url) => {
 		console.log(url);
 
@@ -579,6 +585,7 @@
 		}
 	};
 
+	// Can Delete
 	const uploadYoutubeTranscription = async (url) => {
 		console.log(url);
 
@@ -1197,7 +1204,8 @@
 	//////////////////////////
 
 	const submitPrompt = async (userPrompt, { _raw = false } = {}) => {
-		console.log('submitPrompt', userPrompt, $chatId);
+		console.log('submitPrompt', userPrompt);
+		// console.log(' karan is here now')
 
 		const messages = createMessagesList(history.currentId);
 		const _selectedModels = selectedModels.map((modelId) =>
@@ -1866,150 +1874,162 @@
 		/>
 
 		<PaneGroup direction="horizontal" class="w-full h-full">
-			<Pane defaultSize={50} class="h-full flex w-full relative">
-				{#if $banners.length > 0 && !history.currentId && !$chatId && selectedModels.length <= 1}
-					<div class="absolute top-12 left-0 right-0 w-full z-30">
-						<div class=" flex flex-col gap-1 w-full">
-							{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
-								<Banner
-									{banner}
-									on:dismiss={(e) => {
-										const bannerId = e.detail;
-
-										localStorage.setItem(
-											'dismissedBannerIds',
-											JSON.stringify(
-												[
-													bannerId,
-													...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]')
-												].filter((id) => $banners.find((b) => b.id === id))
-											)
-										);
+			<Pane defaultSize={50} class="h-full flex w-full relative border-2 border-red-500">
+				<PaneGroup direction="horizontal" class="w-full h-full">
+					<Pane defaultSize={leftPaneSize} class="w-full h-full flex relative">
+						{#if $banners.length > 0 && !history.currentId && !$chatId && selectedModels.length <= 1}
+							<div class="absolute top-12 left-0 right-0 w-full z-30">
+								<div class=" flex flex-col gap-1 w-full">
+									{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
+										<Banner
+											{banner}
+											on:dismiss={(e) => {
+												const bannerId = e.detail;
+		
+												localStorage.setItem(
+													'dismissedBannerIds',
+													JSON.stringify(
+														[
+															bannerId,
+															...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]')
+														].filter((id) => $banners.find((b) => b.id === id))
+													)
+												);
+											}}
+										/>
+									{/each}
+								</div>
+							</div>
+						{/if}
+		
+						<div class="flex flex-col flex-auto z-10 w-full">
+							{#if $settings?.landingPageMode === 'chat' || createMessagesList(history.currentId).length > 0}
+								<div
+									class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
+									id="messages-container"
+									bind:this={messagesContainerElement}
+									on:scroll={(e) => {
+										autoScroll =
+											messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
+											messagesContainerElement.clientHeight + 5;
 									}}
-								/>
-							{/each}
+								>
+									<div class=" h-full w-full flex flex-col">
+										<Messages
+											chatId={$chatId}
+											bind:history
+											bind:autoScroll
+											bind:prompt
+											{selectedModels}
+											{sendPrompt}
+											{showMessage}
+											{submitMessage}
+											{continueResponse}
+											{regenerateResponse}
+											{mergeResponses}
+											{chatActionHandler}
+											{addMessages}
+											bottomPadding={files.length > 0}
+										/>
+									</div>
+		
+									
+									<!-- <RightPane bind:history /> -->
+								</div>
+		
+								<div class=" pb-[1rem] border-blue-500 border-2">
+									<MessageInput
+										{history}
+										{selectedModels}
+										bind:files
+										bind:prompt
+										bind:autoScroll
+										bind:selectedToolIds
+										bind:webSearchEnabled
+										bind:atSelectedModel
+										transparentBackground={$settings?.backgroundImageUrl ?? false}
+										{stopResponse}
+										{createMessagePair}
+										onChange={(input) => {
+											if (input.prompt) {
+												localStorage.setItem(`chat-input-${$chatId}`, JSON.stringify(input));
+											} else {
+												localStorage.removeItem(`chat-input-${$chatId}`);
+											}
+										}}
+										on:upload={async (e) => {
+											const { type, data } = e.detail;
+		
+											if (type === 'web') {
+												await uploadWeb(data);
+											} else if (type === 'youtube') {
+												await uploadYoutubeTranscription(data);
+											} else if (type === 'google-drive') {
+												await uploadGoogleDriveFile(data);
+											}
+										}}
+										on:submit={async (e) => {
+											if (e.detail) {
+												await tick();
+												submitPrompt(
+													($settings?.richTextInput ?? true)
+														? e.detail.replaceAll('\n\n', '\n')
+														: e.detail
+												);
+											}
+										}}
+									/>
+		
+									<div
+										class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
+									>
+										<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
+									</div>
+								</div>
+							{:else}
+								<div class="overflow-auto w-full h-full flex items-center">
+									<Placeholder
+										{history}
+										{selectedModels}
+										bind:files
+										bind:prompt
+										bind:autoScroll
+										bind:selectedToolIds
+										bind:webSearchEnabled
+										bind:atSelectedModel
+										transparentBackground={$settings?.backgroundImageUrl ?? false}
+										{stopResponse}
+										{createMessagePair}
+										on:upload={async (e) => {
+											const { type, data } = e.detail;
+		
+											if (type === 'web') {
+												await uploadWeb(data);
+											} else if (type === 'youtube') {
+												await uploadYoutubeTranscription(data);
+											}
+										}}
+										on:submit={async (e) => {
+											if (e.detail) {
+												await tick();
+												submitPrompt(
+													($settings?.richTextInput ?? true)
+														? e.detail.replaceAll('\n\n', '\n')
+														: e.detail
+												);
+											}
+										}}
+									/>
+								</div>
+							{/if}
 						</div>
-					</div>
-				{/if}
-
-				<div class="flex flex-col flex-auto z-10 w-full">
-					{#if $settings?.landingPageMode === 'chat' || createMessagesList(history.currentId).length > 0}
-						<div
-							class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
-							id="messages-container"
-							bind:this={messagesContainerElement}
-							on:scroll={(e) => {
-								autoScroll =
-									messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
-									messagesContainerElement.clientHeight + 5;
-							}}
-						>
-							<div class=" h-full w-full flex flex-col">
-								<Messages
-									chatId={$chatId}
-									bind:history
-									bind:autoScroll
-									bind:prompt
-									{selectedModels}
-									{sendPrompt}
-									{showMessage}
-									{submitMessage}
-									{continueResponse}
-									{regenerateResponse}
-									{mergeResponses}
-									{chatActionHandler}
-									{addMessages}
-									bottomPadding={files.length > 0}
-								/>
-							</div>
-						</div>
-
-						<div class=" pb-[1rem]">
-							<MessageInput
-								{history}
-								{selectedModels}
-								bind:files
-								bind:prompt
-								bind:autoScroll
-								bind:selectedToolIds
-								bind:webSearchEnabled
-								bind:atSelectedModel
-								transparentBackground={$settings?.backgroundImageUrl ?? false}
-								{stopResponse}
-								{createMessagePair}
-								onChange={(input) => {
-									if (input.prompt) {
-										localStorage.setItem(`chat-input-${$chatId}`, JSON.stringify(input));
-									} else {
-										localStorage.removeItem(`chat-input-${$chatId}`);
-									}
-								}}
-								on:upload={async (e) => {
-									const { type, data } = e.detail;
-
-									if (type === 'web') {
-										await uploadWeb(data);
-									} else if (type === 'youtube') {
-										await uploadYoutubeTranscription(data);
-									} else if (type === 'google-drive') {
-										await uploadGoogleDriveFile(data);
-									}
-								}}
-								on:submit={async (e) => {
-									if (e.detail) {
-										await tick();
-										submitPrompt(
-											($settings?.richTextInput ?? true)
-												? e.detail.replaceAll('\n\n', '\n')
-												: e.detail
-										);
-									}
-								}}
-							/>
-
-							<div
-								class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
-							>
-								<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
-							</div>
-						</div>
-					{:else}
-						<div class="overflow-auto w-full h-full flex items-center">
-							<Placeholder
-								{history}
-								{selectedModels}
-								bind:files
-								bind:prompt
-								bind:autoScroll
-								bind:selectedToolIds
-								bind:webSearchEnabled
-								bind:atSelectedModel
-								transparentBackground={$settings?.backgroundImageUrl ?? false}
-								{stopResponse}
-								{createMessagePair}
-								on:upload={async (e) => {
-									const { type, data } = e.detail;
-
-									if (type === 'web') {
-										await uploadWeb(data);
-									} else if (type === 'youtube') {
-										await uploadYoutubeTranscription(data);
-									}
-								}}
-								on:submit={async (e) => {
-									if (e.detail) {
-										await tick();
-										submitPrompt(
-											($settings?.richTextInput ?? true)
-												? e.detail.replaceAll('\n\n', '\n')
-												: e.detail
-										);
-									}
-								}}
-							/>
-						</div>
+					</Pane>
+					{#if Object.keys(history.messages).length !== 0}
+					<Pane defaultSize={50} class="w-full h-full flex relative">
+						<RightPane bind:history />
+					</Pane>
 					{/if}
-				</div>
+				</PaneGroup>
 			</Pane>
 
 			<ChatControls
