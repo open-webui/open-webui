@@ -593,7 +593,10 @@ for file_path in (FRONTEND_BUILD_DIR / "static").glob("**/*"):
             (FRONTEND_BUILD_DIR / "static")
         )
         target_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(file_path, target_path)
+        try:
+            shutil.copyfile(file_path, target_path)
+        except Exception as e:
+            logging.error(f"An error occurred: {e}")
 
 frontend_favicon = FRONTEND_BUILD_DIR / "static" / "favicon.png"
 
@@ -1377,6 +1380,11 @@ Responses from models: {{responses}}"""
 # Code Interpreter
 ####################################
 
+ENABLE_CODE_EXECUTION = PersistentConfig(
+    "ENABLE_CODE_EXECUTION",
+    "code_execution.enable",
+    os.environ.get("ENABLE_CODE_EXECUTION", "True").lower() == "true",
+)
 
 CODE_EXECUTION_ENGINE = PersistentConfig(
     "CODE_EXECUTION_ENGINE",
@@ -1553,7 +1561,9 @@ ELASTICSEARCH_USERNAME = os.environ.get("ELASTICSEARCH_USERNAME", None)
 ELASTICSEARCH_PASSWORD = os.environ.get("ELASTICSEARCH_PASSWORD", None)
 ELASTICSEARCH_CLOUD_ID = os.environ.get("ELASTICSEARCH_CLOUD_ID", None)
 SSL_ASSERT_FINGERPRINT = os.environ.get("SSL_ASSERT_FINGERPRINT", None)
-
+ELASTICSEARCH_INDEX_PREFIX = os.environ.get(
+    "ELASTICSEARCH_INDEX_PREFIX", "open_webui_collections"
+)
 # Pgvector
 PGVECTOR_DB_URL = os.environ.get("PGVECTOR_DB_URL", DATABASE_URL)
 if VECTOR_DB == "pgvector" and not PGVECTOR_DB_URL.startswith("postgres"):
