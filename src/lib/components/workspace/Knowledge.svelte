@@ -26,6 +26,7 @@
 	import Spinner from '../common/Spinner.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
 	import Tooltip from '../common/Tooltip.svelte';
+	import SortOptions, { type SortDirection, type SortState } from '../common/SortOptions.svelte';
 
 	let loaded = false;
 
@@ -36,8 +37,10 @@
 	let fuse = null;
 
 	let knowledgeBases = [];
+		
+	let originalItems = [];
 	let filteredItems = [];
-
+	
 	$: if (knowledgeBases) {
 		fuse = new Fuse(knowledgeBases, {
 			keys: ['name', 'description']
@@ -45,7 +48,7 @@
 	}
 
 	$: if (fuse) {
-		filteredItems = query
+		originalItems = query
 			? fuse.search(query).map((e) => {
 					return e.item;
 				})
@@ -104,6 +107,17 @@
 					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
 					placeholder={$i18n.t('Search Knowledge')}
+				/>
+			</div>
+
+			<div class="flex items-center space-x-2 mr-2">
+				<SortOptions 
+					items={originalItems}
+					bind:sortedItems={filteredItems}
+					options={[
+						{ value: 'name', label: $i18n.t('Name') },
+						{ value: 'updated_at', label: $i18n.t('Updated') }
+					]}
 				/>
 			</div>
 
