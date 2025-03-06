@@ -477,6 +477,7 @@
 	>
 		<div class="px-1.5 flex justify-between space-x-1 text-gray-50 dark:text-gray-400">
 			<button
+        aria-label="Toggle Sidebar"
 				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-[#8900E1] dark:hover:bg-[#8951AE] transition"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
@@ -502,7 +503,9 @@
 
 			<a
 				id="sidebar-new-chat-button"
+        aria-label="New Chat"
 				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-[#8900E1] dark:hover:bg-[#8951AE] transition no-drag-region"
+
 				href="/"
 				draggable="false"
 				on:click={async () => {

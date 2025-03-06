@@ -174,6 +174,7 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
 				<div class="flex items-center relative">
 					<select
+						aria-label="Select a theme"
 						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
 						bind:value={selectedTheme}
 						placeholder="Select a theme"
@@ -194,6 +195,7 @@
 				<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
 				<div class="flex items-center relative">
 					<select
+						aria-label="Select a language"
 						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
 						bind:value={lang}
 						placeholder="Select a language"
@@ -211,7 +213,7 @@
 				<div class="mb-2 text-xs text-gray-600 dark:text-gray-500">
 					Couldn't find your language?
 					<a
-						class=" text-gray-300 font-medium underline"
+						class=" text-blue-600 font-medium underline"
 						href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
 						target="_blank"
 					>
@@ -245,8 +247,10 @@
 			<hr class="border-gray-100 dark:border-gray-850 my-3" />
 
 			<div>
-				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
+				<div aria-label="System Prompt" class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
 				<textarea
+					aria-label="System Prompt"
+					id="systemPrompt"
 					bind:value={system}
 					class="w-full rounded-lg p-4 text-sm bg-white dark:text-gray-300 dark:bg-gray-850 outline-hidden resize-none"
 					rows="4"
@@ -257,7 +261,8 @@
 				<div class="flex justify-between items-center text-sm">
 					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
 					<button
-						class=" text-xs font-medium text-gray-500"
+						aria-label="Toggle Advanced Parameters"
+						class=" text-xs font-medium text-gray-600"
 						type="button"
 						on:click={() => {
 							showAdvanced = !showAdvanced;

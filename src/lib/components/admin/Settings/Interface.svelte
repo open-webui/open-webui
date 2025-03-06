@@ -102,6 +102,7 @@
 					<div class="flex-1">
 						<div class=" text-xs mb-1">{$i18n.t('Local Models')}</div>
 						<select
+							aria-label="Local Models"
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							bind:value={taskConfig.TASK_MODEL}
 							placeholder={$i18n.t('Select a model')}
@@ -118,6 +119,7 @@
 					<div class="flex-1">
 						<div class=" text-xs mb-1">{$i18n.t('External Models')}</div>
 						<select
+							aria-label = "External Models"
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							bind:value={taskConfig.TASK_MODEL_EXTERNAL}
 							placeholder={$i18n.t('Select a model')}
@@ -149,6 +151,7 @@
 							placement="top-start"
 						>
 							<Textarea
+								aria-label = "Title Generation Prompt"
 								bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
 								placeholder={$i18n.t(
 									'Leave empty to use the default prompt, or enter a custom prompt'
@@ -175,6 +178,7 @@
 							placement="top-start"
 						>
 							<Textarea
+								aria-label = "Tags Generation Prompt"
 								bind:value={taskConfig.TAGS_GENERATION_PROMPT_TEMPLATE}
 								placeholder={$i18n.t(
 									'Leave empty to use the default prompt, or enter a custom prompt'
@@ -208,6 +212,7 @@
 						placement="top-start"
 					>
 						<Textarea
+							aria-label = "Query Generation Prompt"
 							bind:value={taskConfig.QUERY_GENERATION_PROMPT_TEMPLATE}
 							placeholder={$i18n.t(
 								'Leave empty to use the default prompt, or enter a custom prompt'
@@ -290,6 +295,7 @@
 						</div>
 
 						<button
+							aria-label = "Add Banner"
 							class="p-1 px-3 text-xs flex rounded-sm transition"
 							type="button"
 							on:click={() => {
@@ -357,6 +363,7 @@
 								</div>
 
 								<button
+									aria-label="Close Button"
 									class="px-2"
 									type="button"
 									on:click={() => {
@@ -388,6 +395,7 @@
 							</div>
 
 							<button
+								aria-label="Add Prompt"
 								class="p-1 px-3 text-xs flex rounded-sm transition"
 								type="button"
 								on:click={() => {
@@ -439,6 +447,7 @@
 									</div>
 
 									<button
+										aria-label="Close Button"
 										class="px-3"
 										type="button"
 										on:click={() => {

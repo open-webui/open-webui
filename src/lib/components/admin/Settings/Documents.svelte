@@ -332,6 +332,7 @@
 
 						<div class="">
 							<select
+								aria-label = "Select Engine"
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={contentExtractionEngine}
 							>
@@ -400,6 +401,7 @@
 						<div class=" self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
 						<div class="flex items-center relative">
 							<select
+								aria-label = "Select Text Splitter"
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={textSplitter}
 							>
@@ -463,6 +465,7 @@
 								<select
 									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 									bind:value={embeddingEngine}
+									aria-label="Select an embedding model engine"
 									placeholder="Select an embedding model engine"
 									on:change={(e) => {
 										if (e.target.value === 'ollama') {
@@ -539,6 +542,7 @@
 
 									{#if embeddingEngine === ''}
 										<button
+											aria-label = "Set embedding model"
 											class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
 											on:click={() => {
 												embeddingModelUpdateHandler();

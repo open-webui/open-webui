@@ -251,6 +251,7 @@
 							<select
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={adminConfig.DEFAULT_USER_ROLE}
+								aria-label = "Select a role"
 								placeholder="Select a role"
 							>
 								<option value="pending">{$i18n.t('pending')}</option>
@@ -332,7 +333,7 @@
 
 						<div class="mt-2 text-xs text-gray-600 dark:text-gray-500">
 							{$i18n.t('Valid time units:')}
-							<span class=" text-gray-300 font-medium"
+							<span class=" text-gray-600 font-medium"
 								>{$i18n.t("'s', 'm', 'h', 'd', 'w' or '-1' for no expiration.")}</span
 							>
 						</div>
@@ -500,7 +501,7 @@
 									</div>
 									<div class="text-xs text-gray-600 dark:text-gray-500">
 										<a
-											class=" text-gray-300 font-medium underline"
+											class=" text-blue-700 font-medium underline"
 											href="https://ldap.com/ldap-filters/"
 											target="_blank"
 										>
