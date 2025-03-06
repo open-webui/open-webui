@@ -309,7 +309,7 @@ from open_webui.config import (
     reset_config,
     CREDIT_NO_CREDIT_MSG,
     USAGE_DEFAULT_ENCODING_MODEL,
-    USAGE_CALCULATE_MODEL_PREFIX_TO_REMOVE
+    USAGE_CALCULATE_MODEL_PREFIX_TO_REMOVE,
 )
 from open_webui.env import (
     AUDIT_EXCLUDED_PATHS,
@@ -524,7 +524,9 @@ app.state.config.LDAP_CIPHERS = LDAP_CIPHERS
 
 app.state.config.CREDIT_NO_CREDIT_MSG = CREDIT_NO_CREDIT_MSG
 app.state.config.USAGE_DEFAULT_ENCODING_MODEL = USAGE_DEFAULT_ENCODING_MODEL
-app.state.config.USAGE_CALCULATE_MODEL_PREFIX_TO_REMOVE = USAGE_CALCULATE_MODEL_PREFIX_TO_REMOVE
+app.state.config.USAGE_CALCULATE_MODEL_PREFIX_TO_REMOVE = (
+    USAGE_CALCULATE_MODEL_PREFIX_TO_REMOVE
+)
 
 app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 app.state.AUTH_TRUSTED_NAME_HEADER = WEBUI_AUTH_TRUSTED_NAME_HEADER
@@ -992,7 +994,9 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
-    Credits.check_credit_by_user_id(user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG)
+    Credits.check_credit_by_user_id(
+        user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG
+    )
 
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)

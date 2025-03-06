@@ -99,7 +99,9 @@ class CreditsTable:
             return None
 
     def init_credit_by_user_id(self, user_id: str) -> CreditModel:
-        credit_model = self.get_credit_by_user_id(user_id=user_id) or self.insert_new_credit(user_id=user_id)
+        credit_model = self.get_credit_by_user_id(
+            user_id=user_id
+        ) or self.insert_new_credit(user_id=user_id)
         if credit_model is not None:
             return credit_model
         raise HTTPException(status_code=500, detail="credit initialize failed")
@@ -122,11 +124,16 @@ class CreditsTable:
 
     def set_credit_by_user_id(self, form_data: SetCreditForm) -> CreditModel:
         credit_model = self.init_credit_by_user_id(user_id=form_data.user_id)
-        log = CreditLogModel(user_id=form_data.user_id, credit=form_data.credit, detail=form_data.detail.model_dump())
+        log = CreditLogModel(
+            user_id=form_data.user_id,
+            credit=form_data.credit,
+            detail=form_data.detail.model_dump(),
+        )
         with get_db() as db:
             db.add(CreditLog(**log.model_dump()))
             db.query(Credit).filter(Credit.user_id == credit_model.user_id).update(
-                {"credit": form_data.credit, "updated_at": int(time.time())}, synchronize_session=False
+                {"credit": form_data.credit, "updated_at": int(time.time())},
+                synchronize_session=False,
             )
             db.commit()
         return self.get_credit_by_user_id(user_id=form_data.user_id)
@@ -141,7 +148,11 @@ class CreditsTable:
         with get_db() as db:
             db.add(CreditLog(**log.model_dump()))
             db.query(Credit).filter(Credit.user_id == form_data.user_id).update(
-                {"credit": Credit.credit + form_data.amount, "updated_at": int(time.time())}, synchronize_session=False
+                {
+                    "credit": Credit.credit + form_data.amount,
+                    "updated_at": int(time.time()),
+                },
+                synchronize_session=False,
             )
             db.commit()
         return self.get_credit_by_user_id(form_data.user_id)

@@ -35,7 +35,10 @@ class Calculator:
         self._encoder = {}
 
     def get_encoder(
-        self, model_id: str, model_prefix_to_remove: str = "", default_model_for_encoding: str = "gpt-4o"
+        self,
+        model_id: str,
+        model_prefix_to_remove: str = "",
+        default_model_for_encoding: str = "gpt-4o",
     ) -> Encoding:
         # remove prefix
         model_id_ops = model_id
@@ -71,7 +74,9 @@ class Calculator:
                 model_prefix_to_remove=model_prefix_to_remove,
                 default_model_for_encoding=default_model_for_encoding,
             )
-            usage = CompletionUsage(prompt_tokens=0, completion_tokens=0, total_tokens=0)
+            usage = CompletionUsage(
+                prompt_tokens=0, completion_tokens=0, total_tokens=0
+            )
             # prompt tokens
             for message in messages:
                 usage.prompt_tokens += len(encoder.encode(message.content or ""))
@@ -80,9 +85,13 @@ class Calculator:
             if choices:
                 choice = choices[0]
                 if isinstance(response, ChatCompletion):
-                    usage.completion_tokens = len(encoder.encode(choice.message.content or ""))
+                    usage.completion_tokens = len(
+                        encoder.encode(choice.message.content or "")
+                    )
                 elif isinstance(response, ChatCompletionChunk):
-                    usage.completion_tokens = len(encoder.encode(choice.delta.content or ""))
+                    usage.completion_tokens = len(
+                        encoder.encode(choice.delta.content or "")
+                    )
             # total tokens
             usage.total_tokens = usage.prompt_tokens + usage.completion_tokens
             return False, usage
@@ -104,13 +113,22 @@ class CreditDeduct:
         credit_deduct.run(xxx)
     """
 
-    def __init__(self, request: Request, user: UserModel, model: dict, body: dict, is_stream: bool) -> None:
+    def __init__(
+        self,
+        request: Request,
+        user: UserModel,
+        model: dict,
+        body: dict,
+        is_stream: bool,
+    ) -> None:
         self.request = request
         self.user = user
         self.model = model
         self.body = body
         self.is_stream = is_stream
-        self.usage = CompletionUsage(prompt_tokens=0, completion_tokens=0, total_tokens=0)
+        self.usage = CompletionUsage(
+            prompt_tokens=0, completion_tokens=0, total_tokens=0
+        )
         self.prompt_unit_price, self.completion_unit_price = self.get_model_price()
 
     def __enter__(self):
@@ -118,7 +136,9 @@ class CreditDeduct:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         prompt_price = self.prompt_unit_price * self.usage.prompt_tokens / 1000 / 1000
-        completion_price = self.completion_unit_price * self.usage.completion_tokens / 1000 / 1000
+        completion_price = (
+            self.completion_unit_price * self.usage.completion_tokens / 1000 / 1000
+        )
         total_price = prompt_price + completion_price
         Credits.add_credit_by_user_id(
             form_data=AddCreditForm(
@@ -149,7 +169,9 @@ class CreditDeduct:
         if model is None:
             return Decimal("0"), Decimal("0")
         model_price = model.price or {}
-        return Decimal(model_price.get("prompt_price", "0")), Decimal(model_price.get("completion_price", "0"))
+        return Decimal(model_price.get("prompt_price", "0")), Decimal(
+            model_price.get("completion_price", "0")
+        )
 
     def run(self, response: Union[dict, bytes]) -> None:
         if not isinstance(response, (dict, bytes)):
@@ -187,6 +209,8 @@ class CreditDeduct:
         if self.is_stream:
             self.usage.prompt_tokens = usage.prompt_tokens
             self.usage.completion_tokens += usage.completion_tokens
-            self.usage.total_tokens = self.usage.prompt_tokens + self.usage.completion_tokens
+            self.usage.total_tokens = (
+                self.usage.prompt_tokens + self.usage.completion_tokens
+            )
             return
         self.usage = usage

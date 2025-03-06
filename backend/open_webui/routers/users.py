@@ -6,7 +6,12 @@ from fastapi import Response
 
 from open_webui.models.auths import Auths
 from open_webui.models.chats import Chats
-from open_webui.models.credits import Credits, SetCreditForm, SetCreditFormDetail, AddCreditForm
+from open_webui.models.credits import (
+    Credits,
+    SetCreditForm,
+    SetCreditFormDetail,
+    AddCreditForm,
+)
 from open_webui.models.users import (
     UserModel,
     UserRoleUpdateForm,
@@ -42,7 +47,9 @@ async def get_users(
     users: List[UserModel] = Users.get_users(skip, limit)
     credit_map = {
         credit.user_id: {"credit": "%.4f" % credit.credit}
-        for credit in Credits.list_credits_by_user_id(user_ids=(user.id for user in users))
+        for credit in Credits.list_credits_by_user_id(
+            user_ids=(user.id for user in users)
+        )
     }
     for user in users:
         setattr(user, "credit", credit_map.get(user.id, {}).get("credit", 0))
@@ -310,7 +317,7 @@ async def update_user_by_id(
                         api_path=str(request.url),
                         api_params={"credit": form_data.credit},
                         desc=f"updated by {session_user.name}",
-                    )
+                    ),
                 )
             )
             setattr(updated_user, "credit", "%.4f" % credit.credit)
@@ -359,8 +366,8 @@ async def update_credit_by_user_id(
         "detail": SetCreditFormDetail(
             api_path=str(request.url),
             api_params=form_data.model_dump(),
-            desc=f"updated by {session_user.name}"
-        )
+            desc=f"updated by {session_user.name}",
+        ),
     }
 
     if form_data.credit is not None:

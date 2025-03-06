@@ -43,7 +43,9 @@ def upgrade() -> None:
         sa.Column("created_at", sa.BigInteger(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_credit_log_user_id"), "credit_log", ["user_id"], unique=False)
+    op.create_index(
+        op.f("ix_credit_log_user_id"), "credit_log", ["user_id"], unique=False
+    )
     # ### end Alembic commands ###
 
 

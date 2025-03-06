@@ -148,7 +148,9 @@ async def update_task_config(
 async def generate_title(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
-    Credits.check_credit_by_user_id(user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG)
+    Credits.check_credit_by_user_id(
+        user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG
+    )
 
     if not request.app.state.config.ENABLE_TITLE_GENERATION:
         return JSONResponse(
@@ -247,7 +249,9 @@ async def generate_title(
 async def generate_chat_tags(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
-    Credits.check_credit_by_user_id(user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG)
+    Credits.check_credit_by_user_id(
+        user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG
+    )
 
     if not request.app.state.config.ENABLE_TAGS_GENERATION:
         return JSONResponse(
@@ -323,7 +327,9 @@ async def generate_chat_tags(
 async def generate_image_prompt(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
-    Credits.check_credit_by_user_id(user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG)
+    Credits.check_credit_by_user_id(
+        user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG
+    )
 
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
@@ -397,7 +403,9 @@ async def generate_image_prompt(
 async def generate_queries(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
-    Credits.check_credit_by_user_id(user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG)
+    Credits.check_credit_by_user_id(
+        user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG
+    )
 
     type = form_data.get("type")
     if type == "web_search":
@@ -480,7 +488,9 @@ async def generate_queries(
 async def generate_autocompletion(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
-    Credits.check_credit_by_user_id(user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG)
+    Credits.check_credit_by_user_id(
+        user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG
+    )
 
     if not request.app.state.config.ENABLE_AUTOCOMPLETE_GENERATION:
         raise HTTPException(
@@ -570,7 +580,9 @@ async def generate_autocompletion(
 async def generate_emoji(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
-    Credits.check_credit_by_user_id(user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG)
+    Credits.check_credit_by_user_id(
+        user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG
+    )
 
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
@@ -646,7 +658,9 @@ async def generate_emoji(
 async def generate_moa_response(
     request: Request, form_data: dict, user=Depends(get_verified_user)
 ):
-    Credits.check_credit_by_user_id(user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG)
+    Credits.check_credit_by_user_id(
+        user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG
+    )
 
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {

@@ -579,7 +579,9 @@ async def generate_chat_completion(
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
 ):
-    Credits.check_credit_by_user_id(user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG)
+    Credits.check_credit_by_user_id(
+        user_id=user.id, error_msg=request.app.state.config.CREDIT_NO_CREDIT_MSG
+    )
 
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
@@ -711,13 +713,19 @@ async def generate_chat_completion(
 
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
+
             async def consumer_content(content):
                 with CreditDeduct(
-                    request=request, user=user, model=model, body=form_data, is_stream=True
+                    request=request,
+                    user=user,
+                    model=model,
+                    body=form_data,
+                    is_stream=True,
                 ) as credit_deduct:
                     async for chunk in content:
                         credit_deduct.run(response=chunk)
                         yield chunk
+
             streaming = True
             return StreamingResponse(
                 consumer_content(r.content),
@@ -736,7 +744,9 @@ async def generate_chat_completion(
 
             r.raise_for_status()
 
-            with CreditDeduct(request=request, user=user, model=model, body=form_data, is_stream=False) as credit_deduct:
+            with CreditDeduct(
+                request=request, user=user, model=model, body=form_data, is_stream=False
+            ) as credit_deduct:
                 credit_deduct.run(response=response)
 
             return response
