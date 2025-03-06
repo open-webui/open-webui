@@ -70,6 +70,7 @@ async def set_direct_connections_config(
 # CodeInterpreterConfig
 ############################
 class CodeInterpreterConfigForm(BaseModel):
+    ENABLE_CODE_EXECUTION: bool
     CODE_EXECUTION_ENGINE: str
     CODE_EXECUTION_JUPYTER_URL: Optional[str]
     CODE_EXECUTION_JUPYTER_AUTH: Optional[str]
@@ -89,6 +90,7 @@ class CodeInterpreterConfigForm(BaseModel):
 @router.get("/code_execution", response_model=CodeInterpreterConfigForm)
 async def get_code_execution_config(request: Request, user=Depends(get_admin_user)):
     return {
+        "ENABLE_CODE_EXECUTION": request.app.state.config.ENABLE_CODE_EXECUTION,
         "CODE_EXECUTION_ENGINE": request.app.state.config.CODE_EXECUTION_ENGINE,
         "CODE_EXECUTION_JUPYTER_URL": request.app.state.config.CODE_EXECUTION_JUPYTER_URL,
         "CODE_EXECUTION_JUPYTER_AUTH": request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH,
@@ -110,6 +112,8 @@ async def get_code_execution_config(request: Request, user=Depends(get_admin_use
 async def set_code_execution_config(
     request: Request, form_data: CodeInterpreterConfigForm, user=Depends(get_admin_user)
 ):
+
+    request.app.state.config.ENABLE_CODE_EXECUTION = form_data.ENABLE_CODE_EXECUTION
 
     request.app.state.config.CODE_EXECUTION_ENGINE = form_data.CODE_EXECUTION_ENGINE
     request.app.state.config.CODE_EXECUTION_JUPYTER_URL = (
@@ -153,6 +157,7 @@ async def set_code_execution_config(
     )
 
     return {
+        "ENABLE_CODE_EXECUTION": request.app.state.config.ENABLE_CODE_EXECUTION,
         "CODE_EXECUTION_ENGINE": request.app.state.config.CODE_EXECUTION_ENGINE,
         "CODE_EXECUTION_JUPYTER_URL": request.app.state.config.CODE_EXECUTION_JUPYTER_URL,
         "CODE_EXECUTION_JUPYTER_AUTH": request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH,
