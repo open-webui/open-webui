@@ -85,6 +85,7 @@
 
 
 
+
 		<div class="flex space-x-1">
 			<a href="https://discord.gg/5rJgQTnV4s" target="_blank">
 				<img
@@ -100,6 +101,7 @@
 				/>
 			</a>
 		</div>
+
 
 		<div>
 			<pre
@@ -130,9 +132,6 @@
 		</div>
 
 		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-			{#if !$WEBUI_NAME.includes('Open WebUI')}
-				<span class=" text-gray-500 dark:text-gray-300 font-medium">{$WEBUI_NAME}</span> -
-			{/if}
 			{$i18n.t('Created by')}
 			<a
 				class=" text-gray-500 dark:text-gray-300 font-medium"

@@ -14,6 +14,9 @@
 	import { config } from '$lib/stores';
 	import { executeCode } from '$lib/apis/utils';
 	import { toast } from 'svelte-sonner';
+	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
+	import ChevronUpDown from '$lib/components/icons/ChevronUpDown.svelte';
+	import CommandLine from '$lib/components/icons/CommandLine.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -57,8 +60,13 @@
 	let result = null;
 	let files = null;
 
+	let collapsed = false;
 	let copied = false;
 	let saved = false;
+
+	const collapseCodeBlock = () => {
+		collapsed = !collapsed;
+	};
 
 	const saveCode = () => {
 		saved = true;
@@ -418,18 +426,39 @@
 				class="sticky {stickyButtonsClassName} mb-1 py-1 pr-2.5 flex items-center justify-end z-10 text-xs text-black dark:text-white"
 			>
 				<div class="flex items-center gap-0.5 translate-y-[1px]">
-					{#if lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code))}
+					<button
+						class="flex gap-1 items-center bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+						on:click={collapseCodeBlock}
+					>
+						<div>
+							<ChevronUpDown className="size-3" />
+						</div>
+
+						<div>
+							{collapsed ? $i18n.t('Expand') : $i18n.t('Collapse')}
+						</div>
+					</button>
+
+					{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
 						{#if executing}
 							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
 						{:else if run}
 							<button
-								class="run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+								class="flex gap-1 items-center run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
 								on:click={async () => {
 									code = _code;
 									await tick();
 									executePython(code);
-								}}>{$i18n.t('Run')}</button
+								}}
 							>
+								<div>
+									<CommandLine className="size-3" />
+								</div>
+
+								<div>
+									{$i18n.t('Run')}
+								</div>
+							</button>
 						{/if}
 					{/if}
 
@@ -457,65 +486,80 @@
 						: 'rounded-b-lg'} overflow-hidden"
 			>
 				<div class=" pt-7 bg-gray-50 dark:bg-gray-850"></div>
-				<CodeEditor
-					value={code}
-					{id}
-					{lang}
-					onSave={() => {
-						saveCode();
-					}}
-					onChange={(value) => {
-						_code = value;
-					}}
-				/>
+
+				{#if !collapsed}
+					<CodeEditor
+						value={code}
+						{id}
+						{lang}
+						onSave={() => {
+							saveCode();
+						}}
+						onChange={(value) => {
+							_code = value;
+						}}
+					/>
+				{:else}
+					<div
+						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-lg! pt-2 pb-2 px-4 flex flex-col gap-2 text-xs"
+					>
+						<span class="text-gray-500 italic">
+							{$i18n.t('{{COUNT}} hidden lines', {
+								COUNT: code.split('\n').length
+							})}
+						</span>
+					</div>
+				{/if}
 			</div>
 
-			<div
-				id="plt-canvas-{id}"
-				class="bg-gray-50 dark:bg-[#202123] dark:text-white max-w-full overflow-x-auto scrollbar-hidden"
-			/>
-
-			{#if executing || stdout || stderr || result || files}
+			{#if !collapsed}
 				<div
-					class="bg-gray-50 dark:bg-[#202123] dark:text-white rounded-b-lg! py-4 px-4 flex flex-col gap-2"
-				>
-					{#if executing}
-						<div class=" ">
-							<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-							<div class="text-sm">Running...</div>
-						</div>
-					{:else}
-						{#if stdout || stderr}
+					id="plt-canvas-{id}"
+					class="bg-gray-50 dark:bg-[#202123] dark:text-white max-w-full overflow-x-auto scrollbar-hidden"
+				/>
+
+				{#if executing || stdout || stderr || result || files}
+					<div
+						class="bg-gray-50 dark:bg-[#202123] dark:text-white rounded-b-lg! py-4 px-4 flex flex-col gap-2"
+					>
+						{#if executing}
 							<div class=" ">
 								<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
-								<div
-									class="text-sm {stdout?.split('\n')?.length > 100
-										? `max-h-96`
-										: ''}  overflow-y-auto"
-								>
-									{stdout || stderr}
-								</div>
+								<div class="text-sm">Running...</div>
 							</div>
-						{/if}
-						{#if result || files}
-							<div class=" ">
-								<div class=" text-gray-500 text-xs mb-1">RESULT</div>
-								{#if result}
-									<div class="text-sm">{`${JSON.stringify(result)}`}</div>
-								{/if}
-								{#if files}
-									<div class="flex flex-col gap-2">
-										{#each files as file}
-											{#if file.type.startsWith('image')}
-												<img src={file.data} alt="Output" class=" w-full max-w-[36rem]" />
-											{/if}
-										{/each}
+						{:else}
+							{#if stdout || stderr}
+								<div class=" ">
+									<div class=" text-gray-500 text-xs mb-1">STDOUT/STDERR</div>
+									<div
+										class="text-sm {stdout?.split('\n')?.length > 100
+											? `max-h-96`
+											: ''}  overflow-y-auto"
+									>
+										{stdout || stderr}
 									</div>
-								{/if}
-							</div>
+								</div>
+							{/if}
+							{#if result || files}
+								<div class=" ">
+									<div class=" text-gray-500 text-xs mb-1">RESULT</div>
+									{#if result}
+										<div class="text-sm">{`${JSON.stringify(result)}`}</div>
+									{/if}
+									{#if files}
+										<div class="flex flex-col gap-2">
+											{#each files as file}
+												{#if file.type.startsWith('image')}
+													<img src={file.data} alt="Output" class=" w-full max-w-[36rem]" />
+												{/if}
+											{/each}
+										</div>
+									{/if}
+								</div>
+							{/if}
 						{/if}
-					{/if}
-				</div>
+					</div>
+				{/if}
 			{/if}
 		{/if}
 	</div>
