@@ -17,6 +17,10 @@
 	});
 </script>
 
+<svelte:head>
+	<title>{$i18n.t('Welcome to IONOS GPT,', { ns: 'ionos' })} {$i18n.t('Where AI becomes your ultimate team of experts!', { ns: 'ionos' })}</title>
+</svelte:head>
+
 <AnimatedBackground />
 
 <content class="flex flex-col items-center pt-20 mx-3">
