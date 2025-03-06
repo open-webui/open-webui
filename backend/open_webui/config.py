@@ -2307,6 +2307,12 @@ DEEPGRAM_API_KEY = PersistentConfig(
     os.getenv("DEEPGRAM_API_KEY", ""),
 )
 
+AUDIO_STT_ENABLE = PersistentConfig(
+    "AUDIO_STT_ENABLE",
+    "audio.stt.enable",
+    os.environ.get("AUDIO_STT_ENABLE", "True").lower() == "true",
+)
+
 AUDIO_STT_OPENAI_API_BASE_URL = PersistentConfig(
     "AUDIO_STT_OPENAI_API_BASE_URL",
     "audio.stt.openai.api_base_url",
@@ -2387,6 +2393,11 @@ AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
     ),
 )
 
+AUDIO_CALL_ENABLE = PersistentConfig(
+    "AUDIO_CALL_ENABLE",
+    "audio.call.enable",
+    os.environ.get("AUDIO_CALL_ENABLE", "True").lower() == "true",
+)
 
 ####################################
 # LDAP

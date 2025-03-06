@@ -141,6 +141,7 @@ from open_webui.config import (
     IMAGES_GEMINI_API_BASE_URL,
     IMAGES_GEMINI_API_KEY,
     # Audio
+    AUDIO_STT_ENABLE,
     AUDIO_STT_ENGINE,
     AUDIO_STT_MODEL,
     AUDIO_STT_OPENAI_API_BASE_URL,
@@ -154,6 +155,7 @@ from open_webui.config import (
     AUDIO_TTS_VOICE,
     AUDIO_TTS_AZURE_SPEECH_REGION,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+    AUDIO_CALL_ENABLE,
     PLAYWRIGHT_WS_URI,
     FIRECRAWL_API_BASE_URL,
     FIRECRAWL_API_KEY,
@@ -723,6 +725,8 @@ app.state.config.IMAGE_STEPS = IMAGE_STEPS
 #
 ########################################
 
+
+app.state.config.STT_ENABLE= AUDIO_STT_ENABLE
 app.state.config.STT_OPENAI_API_BASE_URL = AUDIO_STT_OPENAI_API_BASE_URL
 app.state.config.STT_OPENAI_API_KEY = AUDIO_STT_OPENAI_API_KEY
 app.state.config.STT_ENGINE = AUDIO_STT_ENGINE
@@ -739,6 +743,7 @@ app.state.config.TTS_VOICE = AUDIO_TTS_VOICE
 app.state.config.TTS_API_KEY = AUDIO_TTS_API_KEY
 app.state.config.TTS_SPLIT_ON = AUDIO_TTS_SPLIT_ON
 
+app.state.config.CALL_ENABLE = AUDIO_CALL_ENABLE
 
 app.state.config.TTS_AZURE_SPEECH_REGION = AUDIO_TTS_AZURE_SPEECH_REGION
 app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT
@@ -1185,6 +1190,8 @@ async def get_app_config(request: Request):
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+                    "enable_audio_stt": app.state.config.STT_ENABLE,
+                    "enable_audio_call": app.state.config.CALL_ENABLE,
                 }
                 if user is not None
                 else {}

@@ -135,6 +135,7 @@ class TTSConfigForm(BaseModel):
 
 
 class STTConfigForm(BaseModel):
+    ENABLE: bool
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
     ENGINE: str
@@ -142,10 +143,13 @@ class STTConfigForm(BaseModel):
     WHISPER_MODEL: str
     DEEPGRAM_API_KEY: str
 
+class CallConfigForm(BaseModel):
+    ENABLE: bool
 
 class AudioConfigUpdateForm(BaseModel):
     tts: TTSConfigForm
     stt: STTConfigForm
+    call: CallConfigForm
 
 
 @router.get("/config")
@@ -163,12 +167,16 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "AZURE_SPEECH_OUTPUT_FORMAT": request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
         },
         "stt": {
+            "ENABLE": request.app.state.config.STT_ENABLE,
             "OPENAI_API_BASE_URL": request.app.state.config.STT_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.STT_OPENAI_API_KEY,
             "ENGINE": request.app.state.config.STT_ENGINE,
             "MODEL": request.app.state.config.STT_MODEL,
             "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
             "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
+        },
+        "call": {
+            "ENABLE": request.app.state.config.CALL_ENABLE,
         },
     }
 
@@ -189,12 +197,15 @@ async def update_audio_config(
         form_data.tts.AZURE_SPEECH_OUTPUT_FORMAT
     )
 
+    request.app.state.config.STT_ENABLE = form_data.stt.ENABLE
     request.app.state.config.STT_OPENAI_API_BASE_URL = form_data.stt.OPENAI_API_BASE_URL
     request.app.state.config.STT_OPENAI_API_KEY = form_data.stt.OPENAI_API_KEY
     request.app.state.config.STT_ENGINE = form_data.stt.ENGINE
     request.app.state.config.STT_MODEL = form_data.stt.MODEL
     request.app.state.config.WHISPER_MODEL = form_data.stt.WHISPER_MODEL
     request.app.state.config.DEEPGRAM_API_KEY = form_data.stt.DEEPGRAM_API_KEY
+
+    request.app.state.config.CALL_ENABLE = form_data.call.ENABLE
 
     if request.app.state.config.STT_ENGINE == "":
         request.app.state.faster_whisper_model = set_faster_whisper_model(
@@ -220,6 +231,9 @@ async def update_audio_config(
             "MODEL": request.app.state.config.STT_MODEL,
             "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
             "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
+        },
+        "call": {
+            "ENABLE": request.app.state.config.CALL_ENABLE,
         },
     }
 

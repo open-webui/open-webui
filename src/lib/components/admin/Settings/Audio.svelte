@@ -13,11 +13,13 @@
 	import { config, settings } from '$lib/stores';
 
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 
 	import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
+	
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -34,6 +36,7 @@
 	let TTS_AZURE_SPEECH_REGION = '';
 	let TTS_AZURE_SPEECH_OUTPUT_FORMAT = '';
 
+    let STT_ENABLE = true;
 	let STT_OPENAI_API_BASE_URL = '';
 	let STT_OPENAI_API_KEY = '';
 	let STT_ENGINE = '';
@@ -42,6 +45,8 @@
 	let STT_DEEPGRAM_API_KEY = '';
 
 	let STT_WHISPER_MODEL_LOADING = false;
+
+	let CALL_ENABLE = true;
 
 	// eslint-disable-next-line no-undef
 	let voices: SpeechSynthesisVoice[] = [];
@@ -103,12 +108,16 @@
 				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT
 			},
 			stt: {
+				ENABLE: STT_ENABLE,
 				OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: STT_OPENAI_API_KEY,
 				ENGINE: STT_ENGINE,
 				MODEL: STT_MODEL,
 				WHISPER_MODEL: STT_WHISPER_MODEL,
 				DEEPGRAM_API_KEY: STT_DEEPGRAM_API_KEY
+			},
+			call: {
+				ENABLE: CALL_ENABLE
 			}
 		});
 
@@ -142,6 +151,7 @@
 			TTS_AZURE_SPEECH_OUTPUT_FORMAT = res.tts.AZURE_SPEECH_OUTPUT_FORMAT;
 			TTS_AZURE_SPEECH_REGION = res.tts.AZURE_SPEECH_REGION;
 
+			STT_ENABLE = res.stt.ENABLE
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
 			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
 
@@ -149,6 +159,8 @@
 			STT_MODEL = res.stt.MODEL;
 			STT_WHISPER_MODEL = res.stt.WHISPER_MODEL;
 			STT_DEEPGRAM_API_KEY = res.stt.DEEPGRAM_API_KEY;
+
+			CALL_ENABLE = res.call.ENABLE
 		}
 
 		await getVoices();
@@ -167,6 +179,15 @@
 		<div class="flex flex-col gap-3">
 			<div>
 				<div class=" mb-1 text-sm font-medium">{$i18n.t('STT Settings')}</div>
+					<div class="mb-2.5">
+						<div class=" flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Enable STT')}
+							</div>
+
+							<Switch bind:state={STT_ENABLE} />
+						</div>
+					</div>
 
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Speech-to-Text Engine')}</div>
@@ -626,6 +647,20 @@
 						"Control how message text is split for TTS requests. 'Punctuation' splits into sentences, 'paragraphs' splits into paragraphs, and 'none' keeps the message as a single string."
 					)}
 				</div>
+
+				<hr class="border-gray-100 dark:border-gray-850 my-2" />
+
+				<div class=" mb-1 text-sm font-medium">{$i18n.t('Call Settings')}</div>
+					<div class="mb-2.5">
+						<div class=" flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Enable Calls')}
+							</div>
+
+							<Switch bind:state={CALL_ENABLE} />
+						</div>
+					</div>
+
 			</div>
 		</div>
 	</div>
