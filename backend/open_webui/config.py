@@ -1153,6 +1153,7 @@ Generate a concise, 3-5 word title with an emoji summarizing the chat history.
 - Use emojis that enhance understanding of the topic, but avoid quotation marks or special formatting.
 - Write the title in the chat's primary language; default to English if multilingual.
 - Prioritize accuracy over excessive creativity; keep it clear and simple.
+- Must use {{USER_LANGUAGE}} language for output
 ### Output:
 JSON format: { "title": "your concise title here" }
 ### Examples:
@@ -1182,6 +1183,7 @@ Generate 1-3 broad tags categorizing the main themes of the chat history, along 
 - If content is too short (less than 3 messages) or too diverse, use only ["General"]
 - Use the chat's primary language; default to English if multilingual
 - Prioritize accuracy over specificity
+- Must use {{USER_LANGUAGE}} language for output
 
 ### Output:
 JSON format: { "tags": ["tag1", "tag2", "tag3"] }
@@ -1260,6 +1262,7 @@ Analyze the chat history to determine the necessity of generating search queries
 - Be concise and focused on composing high-quality search queries, avoiding unnecessary elaboration, commentary, or assumptions.
 - Today's date is: {{CURRENT_DATE}}.
 - Always prioritize providing actionable and broad queries that maximize informational coverage.
+- Must use {{USER_LANGUAGE}} language for output
 
 ### Output:
 Strictly return in JSON format: 
@@ -1304,7 +1307,8 @@ You are an autocompletion system. Continue the text in `<text>` based on the **c
 4. Ensure the continuation:
    - Flows naturally from `<text>`.  
    - Avoids repetition, overexplaining, or unrelated ideas.  
-5. If unsure, return: `{ "text": "" }`.  
+5. Must use {{USER_LANGUAGE}} language for output  
+6. If unsure, return: `{ "text": "" }`.  
 
 ### **Output Rules**:
 - Respond only in JSON format: `{ "text": "<your_completion>" }`.
