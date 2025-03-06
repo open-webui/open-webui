@@ -315,6 +315,5 @@ build_output_example
 # Secrets
 .secrets
 
-# Act configuration file
-.actrc
-
+# nsis
+*.exe
