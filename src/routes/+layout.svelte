@@ -396,6 +396,16 @@
 	};
 
 	onMount(async () => {
+		console.log("root layout onMount");
+		const urlParams = new URLSearchParams(window.location.search);
+		const token = urlParams.get('token');
+		console.log('url', window.location.search);
+		console.log('token', token);
+		if (token) {
+			localStorage.setItem('token', token);
+			await goto('/');
+		}
+
 		if (typeof window !== 'undefined' && window.applyTheme) {
 			window.applyTheme();
 		}
