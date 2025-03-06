@@ -993,7 +993,7 @@ async def process_chat_response(
     if not isinstance(response, StreamingResponse):
 
         with CreditDeduct(
-            user=user, model=model, body=form_data, is_stream=isinstance(response, StreamingResponse)
+            request=request, user=user, model=model, body=form_data, is_stream=isinstance(response, StreamingResponse)
         ) as credit_deduct:
             credit_deduct.run(response=response)
 
@@ -1476,7 +1476,7 @@ async def process_chat_response(
                     response_tool_calls = []
 
                     with CreditDeduct(
-                        user=user, model=model, body=form_data, is_stream=isinstance(response, StreamingResponse)
+                        request=request, user=user, model=model, body=form_data, is_stream=isinstance(response, StreamingResponse)
                     ) as credit_deduct:
 
                         async for line in response.body_iterator:
@@ -2109,7 +2109,7 @@ async def process_chat_response(
                     yield wrap_item(json.dumps(event))
 
             with CreditDeduct(
-                user=user, model=model, body=form_data, is_stream=isinstance(response, StreamingResponse)
+                request=request, user=user, model=model, body=form_data, is_stream=isinstance(response, StreamingResponse)
             ) as credit_deduct:
 
                 async for data in original_generator:

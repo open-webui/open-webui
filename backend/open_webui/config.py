@@ -2453,3 +2453,26 @@ LDAP_CA_CERT_FILE = PersistentConfig(
 LDAP_CIPHERS = PersistentConfig(
     "LDAP_CIPHERS", "ldap.server.ciphers", os.environ.get("LDAP_CIPHERS", "ALL")
 )
+
+
+####################################
+# Credit and Usage
+####################################
+
+CREDIT_NO_CREDIT_MSG = PersistentConfig(
+    "CREDIT_NO_CREDIT_MSG",
+    "credit.no_credit_msg",
+    os.environ.get("CREDIT_NO_CREDIT_MSG", "no credit"),
+)
+
+USAGE_CALCULATE_MODEL_PREFIX_TO_REMOVE = PersistentConfig(
+    "USAGE_CALCULATE_MODEL_PREFIX_TO_REMOVE",
+    "usage.calculate.model_prefix_to_remove",
+    os.environ.get("USAGE_CALCULATE_MODEL_PREFIX_TO_REMOVE", ""),
+)
+
+USAGE_DEFAULT_ENCODING_MODEL = PersistentConfig(
+    "USAGE_DEFAULT_ENCODING_MODEL",
+    "usage.encoding.default_model",
+    os.environ.get("USAGE_DEFAULT_ENCODING_MODEL", "gpt-4o"),
+)

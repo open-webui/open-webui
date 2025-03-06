@@ -270,6 +270,7 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
 
 @router.post("/{user_id}/update", response_model=Optional[UserModel])
 async def update_user_by_id(
+    request: Request,
     user_id: str,
     form_data: UserUpdateForm,
     session_user=Depends(get_admin_user),
@@ -305,7 +306,11 @@ async def update_user_by_id(
                 SetCreditForm(
                     user_id=user_id,
                     credit=Decimal(form_data.credit),
-                    detail={"desc": f"updated by {session_user.name}"}
+                    detail=SetCreditFormDetail(
+                        api_path=str(request.url),
+                        api_params={"credit": form_data.credit},
+                        desc=f"updated by {session_user.name}",
+                    )
                 )
             )
             setattr(updated_user, "credit", "%.4f" % credit.credit)

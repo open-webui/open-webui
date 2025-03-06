@@ -59,16 +59,23 @@ class CreditLogModel(BaseModel):
     created_at: int = Field(default_factory=lambda: int(time.time()))
 
 
+class SetCreditFormDetail(BaseModel):
+    api_path: str = Field(default="")
+    api_params: dict = Field(default_factory=lambda: {})
+    desc: str = Field(default="")
+    usage: dict = Field(default_factory=lambda: {})
+
+
 class AddCreditForm(BaseModel):
     user_id: str
     amount: Decimal
-    detail: dict
+    detail: SetCreditFormDetail
 
 
 class SetCreditForm(BaseModel):
     user_id: str
     credit: Decimal
-    detail: dict
+    detail: SetCreditFormDetail
 
 
 ####################
@@ -115,7 +122,7 @@ class CreditsTable:
 
     def set_credit_by_user_id(self, form_data: SetCreditForm) -> CreditModel:
         credit_model = self.init_credit_by_user_id(user_id=form_data.user_id)
-        log = CreditLogModel(user_id=form_data.user_id, credit=form_data.credit, detail=form_data.detail)
+        log = CreditLogModel(user_id=form_data.user_id, credit=form_data.credit, detail=form_data.detail.model_dump())
         with get_db() as db:
             db.add(CreditLog(**log.model_dump()))
             db.query(Credit).filter(Credit.user_id == credit_model.user_id).update(
@@ -127,7 +134,9 @@ class CreditsTable:
     def add_credit_by_user_id(self, form_data: AddCreditForm) -> Optional[CreditModel]:
         credit_model = self.init_credit_by_user_id(user_id=form_data.user_id)
         log = CreditLogModel(
-            user_id=form_data.user_id, credit=credit_model.credit + form_data.amount, detail=form_data.detail
+            user_id=form_data.user_id,
+            credit=credit_model.credit + form_data.amount,
+            detail=form_data.detail.model_dump(),
         )
         with get_db() as db:
             db.add(CreditLog(**log.model_dump()))
@@ -136,6 +145,11 @@ class CreditsTable:
             )
             db.commit()
         return self.get_credit_by_user_id(form_data.user_id)
+
+    def check_credit_by_user_id(self, user_id: str, error_msg: str) -> None:
+        credit = self.init_credit_by_user_id(user_id=user_id)
+        if credit is None or credit.credit <= 0:
+            raise HTTPException(status_code=403, detail=error_msg)
 
 
 Credits = CreditsTable()

@@ -726,7 +726,7 @@ async def generate_chat_completion(
 
             r.raise_for_status()
 
-            with CreditDeduct(user=user, model=model, body=form_data, is_stream=False) as credit_deduct:
+            with CreditDeduct(request=request, user=user, model=model, body=form_data, is_stream=False) as credit_deduct:
                 credit_deduct.run(response=response)
 
             return response

@@ -1,18 +1,17 @@
 import json
 import logging
-import os
 from decimal import Decimal
 from typing import List, Union
 
 import tiktoken
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from openai.types import CompletionUsage
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from pydantic import BaseModel, ConfigDict
 from tiktoken import Encoding
 
 from open_webui.env import SRC_LOG_LEVELS
-from open_webui.models.credits import AddCreditForm, Credits
+from open_webui.models.credits import AddCreditForm, Credits, SetCreditFormDetail
 from open_webui.models.users import UserModel
 
 logger = logging.getLogger(__name__)
@@ -31,19 +30,16 @@ class Calculator:
     Usage Calculator
     """
 
-    _model_prefix_to_remove = ""
-    _default_model_for_encoding = ""
-
     def __init__(self) -> None:
         self._encoder = {}
-        self._model_prefix_to_remove = os.getenv("MODEL_PREFIX_TO_REMOVE", "")
-        self._default_model_for_encoding = os.getenv("DEFAULT_MODEL_FOR_ENCODING", "gpt-4o")
 
-    def get_encoder(self, model_id: str) -> Encoding:
+    def get_encoder(
+        self, model_id: str, model_prefix_to_remove: str = "", default_model_for_encoding: str = "gpt-4o"
+    ) -> Encoding:
         # remove prefix
         model_id_ops = model_id
-        if self._model_prefix_to_remove:
-            model_id_ops = model_id.lstrip(self._model_prefix_to_remove)
+        if model_prefix_to_remove:
+            model_id_ops = model_id.lstrip(model_prefix_to_remove)
         # load from cache
         if model_id_ops in self._encoder:
             return self._encoder[model_id_ops]
@@ -51,11 +47,16 @@ class Calculator:
         try:
             self._encoder[model_id_ops] = tiktoken.encoding_for_model(model_id_ops)
         except KeyError:
-            return self.get_encoder(self._default_model_for_encoding)
+            return self.get_encoder(default_model_for_encoding)
         return self.get_encoder(model_id)
 
     def calculate_usage(
-        self, model_id: str, messages: List[dict], response: Union[ChatCompletion, ChatCompletionChunk]
+        self,
+        model_id: str,
+        messages: List[dict],
+        response: Union[ChatCompletion, ChatCompletionChunk],
+        model_prefix_to_remove: str = "",
+        default_model_for_encoding: str = "gpt-4o",
     ) -> (bool, CompletionUsage):
         try:
             # usage
@@ -64,7 +65,11 @@ class Calculator:
             # init
             messages = [MessageItem.model_validate(message) for message in messages]
             # calculate
-            encoder = self.get_encoder(model_id)
+            encoder = self.get_encoder(
+                model_id=model_id,
+                model_prefix_to_remove=model_prefix_to_remove,
+                default_model_for_encoding=default_model_for_encoding,
+            )
             usage = CompletionUsage(prompt_tokens=0, completion_tokens=0, total_tokens=0)
             # prompt tokens
             for message in messages:
@@ -98,7 +103,8 @@ class CreditDeduct:
         credit_deduct.run(xxx)
     """
 
-    def __init__(self, user: UserModel, model: dict, body: dict, is_stream: bool) -> None:
+    def __init__(self, request: Request, user: UserModel, model: dict, body: dict, is_stream: bool) -> None:
+        self.request = request
         self.user = user
         self.model = model
         self.body = body
@@ -117,11 +123,16 @@ class CreditDeduct:
             form_data=AddCreditForm(
                 user_id=self.user.id,
                 amount=Decimal(-total_price),
-                detail={
-                    "prompt_unit_price": float(self.prompt_unit_price),
-                    "completion_unit_price": float(self.completion_unit_price),
-                    **self.usage.model_dump(),
-                },
+                detail=SetCreditFormDetail(
+                    usage={
+                        "prompt_unit_price": float(self.prompt_unit_price),
+                        "completion_unit_price": float(self.completion_unit_price),
+                        **self.usage.model_dump(),
+                    },
+                    api_path=str(self.request.url),
+                    api_params={"model": self.model, "is_stream": self.is_stream},
+                    desc=f"updated by {self.__class__.__name__}",
+                ),
             )
         )
         logger.info(
@@ -160,7 +171,11 @@ class CreditDeduct:
             response = ChatCompletion.model_validate(response)
         # usage
         is_official_usage, usage = calculator.calculate_usage(
-            model_id=self.model["id"], messages=messages, response=response
+            model_id=self.model["id"],
+            messages=messages,
+            response=response,
+            model_prefix_to_remove=self.request.app.state.config.USAGE_CALCULATE_MODEL_PREFIX_TO_REMOVE,
+            default_model_for_encoding=self.request.app.state.config.USAGE_DEFAULT_ENCODING_MODEL,
         )
         if is_official_usage:
             self.usage = usage
