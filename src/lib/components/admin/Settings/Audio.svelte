@@ -26,6 +26,7 @@
 	export let saveHandler: () => void;
 
 	// Audio
+	let TTS_ENABLE = true;
 	let TTS_OPENAI_API_BASE_URL = '';
 	let TTS_OPENAI_API_KEY = '';
 	let TTS_API_KEY = '';
@@ -97,6 +98,7 @@
 	const updateConfigHandler = async () => {
 		const res = await updateAudioConfig(localStorage.token, {
 			tts: {
+				ENABLE: TTS_ENABLE,
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
 				API_KEY: TTS_API_KEY,
@@ -138,6 +140,7 @@
 
 		if (res) {
 			console.log(res);
+			TTS_ENABLE = res.tts.ENABLE
 			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
 			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
 			TTS_API_KEY = res.tts.API_KEY;
@@ -358,6 +361,16 @@
 
 			<div>
 				<div class=" mb-1 text-sm font-medium">{$i18n.t('TTS Settings')}</div>
+
+				<div class="mb-2.5">
+					<div class=" flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Enable TTS')}
+						</div>
+
+						<Switch bind:state={TTS_ENABLE} />
+					</div>
+				</div>
 
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Text-to-Speech Engine')}</div>

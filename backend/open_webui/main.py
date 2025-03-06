@@ -146,6 +146,7 @@ from open_webui.config import (
     AUDIO_STT_MODEL,
     AUDIO_STT_OPENAI_API_BASE_URL,
     AUDIO_STT_OPENAI_API_KEY,
+    AUDIO_TTS_ENABLE,
     AUDIO_TTS_API_KEY,
     AUDIO_TTS_ENGINE,
     AUDIO_TTS_MODEL,
@@ -735,6 +736,7 @@ app.state.config.STT_MODEL = AUDIO_STT_MODEL
 app.state.config.WHISPER_MODEL = WHISPER_MODEL
 app.state.config.DEEPGRAM_API_KEY = DEEPGRAM_API_KEY
 
+app.state.config.TTS_ENABLE= AUDIO_TTS_ENABLE
 app.state.config.TTS_OPENAI_API_BASE_URL = AUDIO_TTS_OPENAI_API_BASE_URL
 app.state.config.TTS_OPENAI_API_KEY = AUDIO_TTS_OPENAI_API_KEY
 app.state.config.TTS_ENGINE = AUDIO_TTS_ENGINE
@@ -1190,6 +1192,7 @@ async def get_app_config(request: Request):
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+                    "enable_audio_tts": app.state.config.TTS_ENABLE,
                     "enable_audio_stt": app.state.config.STT_ENABLE,
                     "enable_audio_call": app.state.config.CALL_ENABLE,
                 }

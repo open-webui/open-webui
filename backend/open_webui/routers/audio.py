@@ -123,6 +123,7 @@ def set_faster_whisper_model(model: str, auto_update: bool = False):
 
 
 class TTSConfigForm(BaseModel):
+    ENABLE: bool
     OPENAI_API_BASE_URL: str
     OPENAI_API_KEY: str
     API_KEY: str
@@ -156,6 +157,7 @@ class AudioConfigUpdateForm(BaseModel):
 async def get_audio_config(request: Request, user=Depends(get_admin_user)):
     return {
         "tts": {
+            "ENABLE": request.app.state.config.TTS_ENABLE,
             "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY,
             "API_KEY": request.app.state.config.TTS_API_KEY,
@@ -185,6 +187,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
 async def update_audio_config(
     request: Request, form_data: AudioConfigUpdateForm, user=Depends(get_admin_user)
 ):
+    request.app.state.config.TTS_ENABLE = form_data.tts.ENABLE
     request.app.state.config.TTS_OPENAI_API_BASE_URL = form_data.tts.OPENAI_API_BASE_URL
     request.app.state.config.TTS_OPENAI_API_KEY = form_data.tts.OPENAI_API_KEY
     request.app.state.config.TTS_API_KEY = form_data.tts.API_KEY
@@ -214,6 +217,7 @@ async def update_audio_config(
 
     return {
         "tts": {
+            "ENABLE": request.app.state.config.TTS_ENABLE,
             "OPENAI_API_BASE_URL": request.app.state.config.TTS_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.TTS_OPENAI_API_KEY,
             "API_KEY": request.app.state.config.TTS_API_KEY,
@@ -225,6 +229,7 @@ async def update_audio_config(
             "AZURE_SPEECH_OUTPUT_FORMAT": request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
         },
         "stt": {
+            "ENABLE": request.app.state.config.STT_ENABLE,
             "OPENAI_API_BASE_URL": request.app.state.config.STT_OPENAI_API_BASE_URL,
             "OPENAI_API_KEY": request.app.state.config.STT_OPENAI_API_KEY,
             "ENGINE": request.app.state.config.STT_ENGINE,
