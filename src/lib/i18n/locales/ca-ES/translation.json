@@ -1046,6 +1046,7 @@
 	"Today": "Avui",
 	"Toggle settings": "Alterna preferències",
 	"Toggle sidebar": "Alterna la barra lateral",
+	"Toggle temporary chat": "Alternar xat temporal",
 	"Token": "Token",
 	"Tokens To Keep On Context Refresh (num_keep)": "Tokens a mantenir en l'actualització del context (num_keep)",
 	"Too verbose": "Massa explicit",

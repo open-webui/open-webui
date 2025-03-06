@@ -191,6 +191,24 @@
 					</div>
 
 					<div class="w-full flex justify-between items-center">
+						<div class=" text-sm">{$i18n.t('Toggle temporary chat')}</div>
+
+						<div class="flex space-x-1 text-xs">
+							<div
+								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
+							>
+								Ctrl/⌘
+							</div>
+
+							<div
+								class=" h-fit py-1 px-2 flex items-center justify-center rounded-sm border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
+							>
+								y
+							</div>
+						</div>
+					</div>
+
+					<div class="w-full flex justify-between items-center">
 						<div class=" text-sm">{$i18n.t('Delete chat')}</div>
 
 						<div class="flex space-x-1 text-xs">

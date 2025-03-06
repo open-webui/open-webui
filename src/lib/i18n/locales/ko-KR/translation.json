@@ -1046,6 +1046,7 @@
 	"Today": "오늘",
 	"Toggle settings": "설정 전환",
 	"Toggle sidebar": "사이드바 전환",
+	"Toggle temporary chat": "임시 채팅 전환",
 	"Token": "토큰",
 	"Tokens To Keep On Context Refresh (num_keep)": "컨텍스트 새로 고침 시 유지할 토큰 수(num_keep)",
 	"Too verbose": "말이 너무 많은",

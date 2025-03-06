@@ -1046,6 +1046,7 @@
 	"Today": "今天",
 	"Toggle settings": "切換設定",
 	"Toggle sidebar": "切換側邊欄",
+	"Toggle temporary chat": "切換臨時聊天",
 	"Token": "Token",
 	"Tokens To Keep On Context Refresh (num_keep)": "上下文重新整理時要保留的 token 數 (num_keep)",
 	"Too verbose": "太過冗長",

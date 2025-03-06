@@ -1046,6 +1046,7 @@
 	"Today": "Tänään",
 	"Toggle settings": "Kytke asetukset",
 	"Toggle sidebar": "Kytke sivupalkki",
+	"Toggle temporary chat": "Vaihda väliaikainen keskustelu",
 	"Token": "Token",
 	"Tokens To Keep On Context Refresh (num_keep)": "Säilytettävät tokenit kontekstin päivityksessä (num_keep)",
 	"Too verbose": "Liian puhelias",

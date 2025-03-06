@@ -1046,6 +1046,7 @@
 	"Today": "Aujourd'hui",
 	"Toggle settings": "Afficher/masquer les paramètres",
 	"Toggle sidebar": "Afficher/masquer la barre latérale",
+	"Toggle temporary chat": "Activer/désactiver le chat temporaire",
 	"Token": "Token",
 	"Tokens To Keep On Context Refresh (num_keep)": "Tokens à conserver lors du rafraîchissement du contexte (num_keep)",
 	"Too verbose": "Trop détaillé",

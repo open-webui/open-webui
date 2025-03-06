@@ -1046,6 +1046,7 @@
 	"Today": "Ma",
 	"Toggle settings": "Beállítások be/ki",
 	"Toggle sidebar": "Oldalsáv be/ki",
+	"Toggle temporary chat": "Ideiglenes csevegés be/ki kapcsolása",
 	"Token": "Token",
 	"Tokens To Keep On Context Refresh (num_keep)": "Megőrzendő tokenek kontextus frissítéskor (num_keep)",
 	"Too verbose": "Túl bőbeszédű",

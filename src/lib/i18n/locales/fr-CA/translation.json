@@ -1046,6 +1046,7 @@
 	"Today": "Aujourd'hui",
 	"Toggle settings": "Basculer les paramètres",
 	"Toggle sidebar": "Basculer la barre latérale",
+	"Toggle temporary chat": "Activer/désactiver le clavardage temporaire",
 	"Token": "",
 	"Tokens To Keep On Context Refresh (num_keep)": "Jeton à conserver pour l'actualisation du contexte (num_keep)",
 	"Too verbose": "",
