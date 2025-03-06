@@ -294,7 +294,7 @@
 
 						{#if sortKey === 'credit'}
 							<span class="font-normal"
-							>{#if sortOrder === 'asc'}
+								>{#if sortOrder === 'asc'}
 									<ChevronUp className="size-2" />
 								{:else}
 									<ChevronDown className="size-2" />

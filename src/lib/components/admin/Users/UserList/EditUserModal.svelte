@@ -22,7 +22,7 @@
 		name: '',
 		email: '',
 		password: '',
-		credit: 0,
+		credit: 0
 	};
 
 	const submitHandler = async () => {

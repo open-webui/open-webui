@@ -346,7 +346,7 @@ export const updateUserById = async (token: string, userId: string, user: UserUp
 			email: user.email,
 			name: user.name,
 			password: user.password !== '' ? user.password : undefined,
-			credit: user.credit,
+			credit: user.credit
 		})
 	})
 		.then(async (res) => {
