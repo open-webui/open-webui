@@ -1,18 +1,4 @@
-# Open WebUI 👋 (FORK FOR E4)
-
-# First time
-git remote add upstream https://github.com/open-webui/open-webui.git
-
-# Fetch changes from upstream
-git fetch upstream
-
-# Merge changes into your main branch
-git checkout main
-git merge upstream/main
-
-# Push changes to GitLab
-git push origin main
-
+# Open WebUI 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)

@@ -260,7 +260,7 @@
 		await setEmbeddingConfig();
 		await setRerankingConfig();
 
-		querySettings = await getQuerySettings(localStorage.token); 
+		querySettings = await getQuerySettings(localStorage.token);
 
 		const res = await getRAGConfig(localStorage.token);
 
@@ -275,8 +275,8 @@
 			BYPASS_EMBEDDING_AND_RETRIEVAL = res.BYPASS_EMBEDDING_AND_RETRIEVAL;
 
 			contentExtractionEngine = res.content_extraction.engine;
-			tikaServerUrl = res.content_extraction.tika_server_url ?? '';
-			doclingServerUrl = res.content_extraction.docling_server_url ?? ''; // Load doclingServerUrl
+			tikaServerUrl = res.content_extraction.tika_server_url;
+			doclingServerUrl = res.content_extraction.docling_server_url;
 
 			showTikaServerUrl = contentExtractionEngine === 'tika';
 			showDoclingServerUrl = contentExtractionEngine === 'docling';
