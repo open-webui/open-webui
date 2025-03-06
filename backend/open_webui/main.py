@@ -44,7 +44,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 
-
+from open_webui.models.credits import Credits
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.logger import start_logger
@@ -984,6 +984,11 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
+    # check user credit
+    credit = Credits.init_credit_by_user_id(user.id)
+    if credit.credit <= 0:
+        raise HTTPException(status_code=403, detail="no credit")
+
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 

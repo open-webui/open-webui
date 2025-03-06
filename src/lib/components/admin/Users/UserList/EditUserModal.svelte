@@ -21,7 +21,8 @@
 		profile_image_url: '',
 		name: '',
 		email: '',
-		password: ''
+		password: '',
+		credit: 0,
 	};
 
 	const submitHandler = async () => {
@@ -120,6 +121,20 @@
 									class="w-full rounded-sm py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-hidden"
 									type="text"
 									bind:value={_user.name}
+									autocomplete="off"
+									required
+								/>
+							</div>
+						</div>
+
+						<div class="flex flex-col w-full">
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Credit')}</div>
+							<div class="flex-1">
+								<input
+									class="w-full rounded-sm py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-hidden"
+									type="number"
+									step="0.0001"
+									bind:value={_user.credit}
 									autocomplete="off"
 									required
 								/>
