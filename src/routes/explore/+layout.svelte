@@ -44,9 +44,7 @@
 	</div>
 </nav>
 
-<content class="flex flex-col items-center pt-20 mx-3 bg-neutral-50">
-	<slot />
-</content>
+<slot />
 
 <style>
 	/* Override this style from app.html */
