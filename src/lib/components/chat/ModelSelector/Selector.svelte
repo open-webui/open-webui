@@ -7,6 +7,8 @@
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import SortAZ from '$lib/components/icons/SortAZ.svelte';
+	import SortZA from '$lib/components/icons/SortZA.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 
@@ -101,6 +103,30 @@
 				}
 				return item.model?.info?.meta?.tags?.map((tag) => tag.name).includes(selectedTag);
 			});
+
+	let sortAscending = null; // Track sorting direction
+	let activeSortButton = null; // Track the active sort button ("az" or "za")
+
+	$: sortedItems = 
+		sortAscending === null  // Only sort if sortAscending is not null
+		? filteredItems       // If null, use the original order
+		: [...filteredItems].sort((a, b) => { // Create a copy before sorting
+			const aLabel = a.label.toLowerCase();
+			const bLabel = b.label.toLowerCase();
+			return sortAscending 
+			? aLabel.localeCompare(bLabel)  // Ascending sort
+			: bLabel.localeCompare(aLabel); // Descending sort
+		});
+
+	const sortItems = (ascending: boolean, button: string) => {
+		if (activeSortButton === button) { 
+		sortAscending = null;    // Correctly reset to null for no sorting
+		activeSortButton = null;
+		} else {
+		sortAscending = ascending; 
+		activeSortButton = button;
+		}
+	};
 
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = searchValue.trim().replace(/^ollama\s+(run|pull)\s+/, '');
@@ -276,7 +302,11 @@
 			class="flex w-full text-left px-0.5 outline-hidden bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-hidden"
 		>
 			{#if selectedModel}
-				{selectedModel.label}
+	            <img
+					src={selectedModel.model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+					alt="Model"
+					class="rounded-full size-5 flex self-center mr-2"
+				/> {selectedModel.label}
 			{:else}
 				{placeholder}
 			{/if}
@@ -322,6 +352,20 @@
 						}}
 					/>
 				</div>
+				<div class="flex px-5 mb-2 gap-2">
+					<button
+						class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm flex items-center {activeSortButton === 'az' ? 'bg-gray-300 dark:bg-gray-800 font-bold' : ''}"
+						on:click={() => sortItems(true, 'az')}
+					>
+						<SortAZ className="size-4 mr-1" />
+					</button>
+					<button
+						class="px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm flex items-center {activeSortButton === 'za' ? 'bg-gray-300 dark:bg-gray-800 font-bold' : ''}"
+						on:click={() => sortItems(false, 'za')}
+					>
+						<SortZA className="size-4 mr-1" />
+					</button>
+                </div>
 			{/if}
 
 			<div class="px-3 mb-2 max-h-64 overflow-y-auto scrollbar-hidden group relative">
@@ -358,7 +402,7 @@
 					</div>
 				{/if}
 
-				{#each filteredItems as item, index}
+				{#each sortAscending === null ? filteredItems : sortedItems as item, index}
 					<button
 						aria-label="model-item"
 						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted {index ===
