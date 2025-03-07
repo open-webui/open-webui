@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onDestroy } from 'svelte';
 	import { onMount, tick, getContext } from 'svelte';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
@@ -489,6 +489,20 @@
 		await tick();
 	});
 
+	let dots = '';
+	let dotInterval: any;
+	onMount(() => {
+		const patterns = ['', '.', '..', '...'];
+		let index = 0;
+		dotInterval = setInterval(() => {
+			index = (index + 1) % patterns.length;
+			dots = patterns[index];
+		}, 500);
+	});
+	onDestroy(() => {
+		clearInterval(dotInterval);
+	});
+
 	$: if (message.done) {
 		isFinishGenRes.set(true);
 		setTimeout(() => {
@@ -500,9 +514,9 @@
 		showLeftArtifacts.set(false);
 		showArtifacts.set(false);
 		showControls.set(false);
-		setTimeout(() => {
-			document.getElementById('end-of-messages')?.scrollIntoView({ behavior: 'smooth' });
-		}, 300);
+		// setTimeout(() => {
+		// 	document.getElementById('end-of-messages')?.scrollIntoView({ behavior: 'smooth' });
+		// }, 1200);
 	}
 </script>
 
@@ -695,6 +709,66 @@
 							<div class="w-full flex flex-col relative" id="response-content-container">
 								{#if message.content === '' && !message.error}
 									<Skeleton />
+								{:else if message.content && message.content.includes('Thinking...')}
+									<details class="mt-2 border rounded-md overflow-hidden">
+										<summary
+											class="cursor-pointer bg-gray-100 dark:bg-gray-800 px-4 py-2 font-semibold"
+										>
+											{#if message.done}
+												Reasoning
+											{:else}
+												Reasoning{dots}
+											{/if}
+										</summary>
+										<div class="p-4 bg-white dark:bg-black">
+											<!-- Display the reasoning content. Adjust as needed. -->
+											{@html message.content}
+										</div>
+									</details>
+									{#if message.content.includes('Assistant_Response:')}
+										{@const messageContent = message.content.split('Assistant_Response:')[1]}
+										<ContentRenderer
+											id={message.id}
+											{history}
+											content={messageContent}
+											sources={message.sources}
+											floatingButtons={message?.done}
+											save={!readOnly}
+											{model}
+											onSourceClick={(e) => {
+												const sourceButton = document.getElementById(`source-${e}`);
+
+												if (sourceButton) {
+													sourceButton.click();
+												}
+											}}
+											onAddMessages={({ modelId, parentId, messages }) => {
+												addMessages({ modelId, parentId, messages });
+											}}
+											on:update={(e) => {
+												const { raw, oldContent, newContent } = e.detail;
+
+												history.messages[message.id].content = history.messages[
+													message.id
+												].content.replace(raw, raw.replace(oldContent, newContent));
+
+												updateChat();
+											}}
+											on:select={(e) => {
+												const { type, content } = e.detail;
+
+												if (type === 'explain') {
+													submitMessage(
+														message.id,
+														`Explain this section to me in more detail\n\n\`\`\`\n${content}\n\`\`\``
+													);
+												} else if (type === 'ask') {
+													const input = e.detail?.input ?? '';
+													submitMessage(message.id, `\`\`\`\n${content}\n\`\`\`\n${input}`);
+												}
+											}}
+										/>
+									{/if}
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->

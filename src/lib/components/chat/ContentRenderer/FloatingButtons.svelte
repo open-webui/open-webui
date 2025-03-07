@@ -32,8 +32,9 @@
 		// Scroll to bottom only if the scroll is at the bottom give 50px buffer
 		const responseContainer = document.getElementById('response-container');
 		if (
+			responseContainer &&
 			responseContainer.scrollHeight - responseContainer.clientHeight <=
-			responseContainer.scrollTop + 50
+				responseContainer.scrollTop + 50
 		) {
 			responseContainer.scrollTop = responseContainer.scrollHeight;
 		}
@@ -121,7 +122,7 @@
 			toast.error('Model not selected');
 			return;
 		}
-		prompt = `Explain this section to me in more detail\n\n\`\`\`\n${selectedText}\n\`\`\``;
+		prompt = `Show more details for: \n${selectedText}`;
 
 		responseContent = '';
 		const [res, controller] = await chatCompletion(localStorage.token, {
@@ -232,7 +233,9 @@
 				<button
 					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded flex items-center gap-1 min-w-fit"
 					on:click={async () => {
-						selectedText = window.getSelection().toString();
+						const selection = window.getSelection();
+						selectedText = selection ? selection.toString() : '';
+						console.log({ selectedText });
 						floatingInput = true;
 
 						await tick();

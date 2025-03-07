@@ -285,8 +285,8 @@
 	$: {
 		if (
 			$isFinishGenRes &&
-			(history.messages[history.currentId].content.includes('OpenBottomArtifacts') ||
-				history.messages[history.currentId].content.includes('OpenAllArtifacts'))
+			(history?.messages[history.currentId].content.includes('OpenBottomArtifacts') ||
+				history?.messages[history.currentId].content.includes('OpenAllArtifacts'))
 		) {
 			showBottomArtifacts.set(true);
 		}

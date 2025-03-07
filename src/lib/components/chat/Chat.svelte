@@ -225,9 +225,9 @@
 		await tick();
 
 		const messageElement = document.getElementById(`message-${message.id}`);
-		if (messageElement) {
-			messageElement.scrollIntoView({ behavior: 'smooth' });
-		}
+		// if (messageElement) {
+		// 	messageElement.scrollIntoView({ behavior: 'smooth' });
+		// }
 
 		await tick();
 		saveChatHandler(_chatId, history);
