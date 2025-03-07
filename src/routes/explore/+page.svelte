@@ -32,7 +32,7 @@
 		</h1>
 	</TextWithGradient>
 
-	<p class="max-w-3xl mb-4 text-sm">
+	<p class="max-w-3xl mb-4 text-sm text-center">
 		{$i18n.t('From ideas to execution, our virtual team is here to help — from writing and design to coding, they handle the details so you can focus on what matters. Get to know them and see how they can support your projects.', { ns: 'ionos' })}
 	</p>
 
