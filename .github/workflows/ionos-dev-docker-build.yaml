@@ -10,8 +10,6 @@ on:
       - ionos-*
 
 env:
-  REGISTRY: reg.1u1.it
-  NAMESPACES: moc-dev
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
@@ -71,7 +69,7 @@ jobs:
                   args: 
                   - clone
                   - --recursive
-                  - -b ${{ variables.BRANCH_NAME }}
+                  - -b ${{ env.BRANCH_NAME }}
                   - --depth=1
                   - 'https://oauth2:${TOKEN}@github.com/${{ github.repository }}.git'
                   - /workspace
