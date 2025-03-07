@@ -359,6 +359,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "Встановлена модель вбудовування \"{{embedding_model}}\"",
 	"Enable API Key": "Увімкнути ключ API",
 	"Enable autocomplete generation for chat messages": "Увімкнути генерацію автозаповнення для повідомлень чату",
+	"Enable Code Execution": "",
 	"Enable Code Interpreter": "Увімкнути інтерпретатор коду",
 	"Enable Community Sharing": "Увімкнути спільний доступ",
 	"Enable Memory Locking (mlock) to prevent model data from being swapped out of RAM. This option locks the model's working set of pages into RAM, ensuring that they will not be swapped out to disk. This can help maintain performance by avoiding page faults and ensuring fast data access.": "Увімкнути блокування пам'яті (mlock), щоб запобігти виведенню даних моделі з оперативної пам'яті. Цей параметр блокує робочий набір сторінок моделі в оперативній пам'яті, гарантуючи, що вони не будуть виведені на диск. Це може допомогти підтримувати продуктивність, уникати помилок сторінок та забезпечувати швидкий доступ до даних.",

@@ -359,6 +359,7 @@
 	"Embedding model set to \"{{embedding_model}}\"": "Beágyazási modell beállítva: \"{{embedding_model}}\"",
 	"Enable API Key": "",
 	"Enable autocomplete generation for chat messages": "",
+	"Enable Code Execution": "",
 	"Enable Code Interpreter": "",
 	"Enable Community Sharing": "Közösségi megosztás engedélyezése",
 	"Enable Memory Locking (mlock) to prevent model data from being swapped out of RAM. This option locks the model's working set of pages into RAM, ensuring that they will not be swapped out to disk. This can help maintain performance by avoiding page faults and ensuring fast data access.": "",

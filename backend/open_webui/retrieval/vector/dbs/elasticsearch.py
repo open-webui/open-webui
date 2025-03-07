@@ -10,6 +10,7 @@ from open_webui.config import (
     ELASTICSEARCH_USERNAME,
     ELASTICSEARCH_PASSWORD,
     ELASTICSEARCH_CLOUD_ID,
+    ELASTICSEARCH_INDEX_PREFIX,
     SSL_ASSERT_FINGERPRINT,
 )
 
@@ -23,7 +24,7 @@ class ElasticsearchClient:
     """
 
     def __init__(self):
-        self.index_prefix = "open_webui_collections"
+        self.index_prefix = ELASTICSEARCH_INDEX_PREFIX
         self.client = Elasticsearch(
             hosts=[ELASTICSEARCH_URL],
             ca_certs=ELASTICSEARCH_CA_CERTS,
@@ -95,6 +96,14 @@ class ElasticsearchClient:
     def _create_index(self, dimension: int):
         body = {
             "mappings": {
+                "dynamic_templates": [
+                    {
+                        "strings": {
+                            "match_mapping_type": "string",
+                            "mapping": {"type": "keyword"},
+                        }
+                    }
+                ],
                 "properties": {
                     "collection": {"type": "keyword"},
                     "id": {"type": "keyword"},
@@ -106,7 +115,7 @@ class ElasticsearchClient:
                     },
                     "text": {"type": "text"},
                     "metadata": {"type": "object"},
-                }
+                },
             }
         }
         self.client.indices.create(index=self._get_index_name(dimension), body=body)
@@ -131,12 +140,9 @@ class ElasticsearchClient:
         except Exception as e:
             return None
 
-    # @TODO: Make this delete a collection and not an index
-    def delete_colleciton(self, collection_name: str):
-        # TODO: fix this to include the dimension or a * prefix
-        # delete_collection here means delete a bunch of documents for an index.
-        # We are simply adapting to the norms of the other DBs.
-        self.client.indices.delete(index=self._get_collection_name(collection_name))
+    def delete_collection(self, collection_name: str):
+        query = {"query": {"term": {"collection": collection_name}}}
+        self.client.delete_by_query(index=f"{self.index_prefix}*", body=query)
 
     # Status: works
     def search(
@@ -239,34 +245,49 @@ class ElasticsearchClient:
             ]
             bulk(self.client, actions)
 
-    # Status: should work
+    # Upsert documents using the update API with doc_as_upsert=True.
     def upsert(self, collection_name: str, items: list[VectorItem]):
         if not self._has_index(dimension=len(items[0]["vector"])):
-            self._create_index(collection_name, dimension=len(items[0]["vector"]))
-
+            self._create_index(dimension=len(items[0]["vector"]))
         for batch in self._create_batches(items):
             actions = [
                 {
-                    "_index": self._get_index_name(dimension=len(items[0]["vector"])),
+                    "_op_type": "update",
+                    "_index": self._get_index_name(dimension=len(item["vector"])),
                     "_id": item["id"],
-                    "_source": {
+                    "doc": {
+                        "collection": collection_name,
                         "vector": item["vector"],
                         "text": item["text"],
                         "metadata": item["metadata"],
                     },
+                    "doc_as_upsert": True,
                 }
                 for item in batch
             ]
-            self.client.bulk(actions)
+            bulk(self.client, actions)
 
-    # TODO: This currently deletes by * which is not always supported in ElasticSearch.
-    # Need to read a bit before changing. Also, need to delete from a specific collection
-    def delete(self, collection_name: str, ids: list[str]):
-        # Assuming ID is unique across collections and indexes
-        actions = [
-            {"delete": {"_index": f"{self.index_prefix}*", "_id": id}} for id in ids
-        ]
-        self.client.bulk(body=actions)
+    # Delete specific documents from a collection by filtering on both collection and document IDs.
+    def delete(
+        self,
+        collection_name: str,
+        ids: Optional[list[str]] = None,
+        filter: Optional[dict] = None,
+    ):
+
+        query = {
+            "query": {"bool": {"filter": [{"term": {"collection": collection_name}}]}}
+        }
+        # logic based on chromaDB
+        if ids:
+            query["query"]["bool"]["filter"].append({"terms": {"_id": ids}})
+        elif filter:
+            for field, value in filter.items():
+                query["query"]["bool"]["filter"].append(
+                    {"term": {f"metadata.{field}": value}}
+                )
+
+        self.client.delete_by_query(index=f"{self.index_prefix}*", body=query)
 
     def reset(self):
         indices = self.client.indices.get(index=f"{self.index_prefix}*")
