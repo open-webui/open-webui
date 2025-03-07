@@ -635,6 +635,22 @@ if user_temp.exists():
     except Exception as e:
         logging.error(f"An error occurred: {e}")
 
+frontend_flower_violet = FRONTEND_BUILD_DIR / "static" / "flower-violet.png"
+
+if frontend_flower_violet.exists():
+    try:
+        shutil.copyfile(frontend_flower_violet, STATIC_DIR / "flower-violet.png")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+
+frontend_flower_white = FRONTEND_BUILD_DIR / "static" / "flower-white.png"
+
+if frontend_flower_white.exists():
+    try:
+        shutil.copyfile(frontend_flower_white, STATIC_DIR / "flower-white.png")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+
 
 
 ####################################
