@@ -213,7 +213,9 @@ def main():
 
     # Hard-coded parameters
     install_dir = os.path.normpath(args.install_dir)
-    python_path = os.path.normpath(os.path.join(install_dir, "gaia_env", "python.exe"))
+    # Use the environment name from the command line or default to "gaia_env"
+    env_name = os.environ.get("AMD_AI_UX_CONDA_ENV", "gaia_env")
+    python_path = os.path.normpath(os.path.join(install_dir, env_name, "python.exe"))
     log_file = os.path.normpath(os.path.join(install_dir, "gaia_install.log"))
 
     # Set the global log file path
