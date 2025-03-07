@@ -169,6 +169,7 @@
 				<div class="flex items-center gap-1.5">
 					<Tooltip content={$i18n.t('Manage Models')}>
 						<button
+							aria-label = "Manage Models"
 							class=" p-1 rounded-full flex gap-1 items-center"
 							type="button"
 							on:click={() => {
@@ -301,7 +302,7 @@
 				{/each}
 			{:else}
 				<div class="flex flex-col items-center justify-center w-full h-20">
-					<div class="text-gray-500 dark:text-gray-400 text-xs">
+					<div class="text-gray-600 dark:text-gray-400 text-xs">
 						{$i18n.t('No models found')}
 					</div>
 				</div>

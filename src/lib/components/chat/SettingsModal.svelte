@@ -368,6 +368,7 @@
 			<div class=" text-lg font-medium self-center">{$i18n.t('Settings')}</div>
 			<button
 				class="self-center"
+				aria-label = "close button"
 				on:click={() => {
 					show = false;
 				}}
@@ -408,8 +409,8 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'general'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? 'text-[#57068c] dark:text-white'
+									: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'general';
 								}}
@@ -434,8 +435,8 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'interface'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? 'text-[#57068c] dark:text-white'
+									: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'interface';
 								}}
@@ -461,8 +462,8 @@
 								<button
 									class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 									'connections'
-										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+										? 'text-[#57068c] dark:text-white'
+										: ' text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'}"
 									on:click={() => {
 										selectedTab = 'connections';
 									}}
@@ -486,8 +487,8 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'personalization'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? 'text-[#57068c] dark:text-white'
+									: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'personalization';
 								}}
@@ -501,8 +502,8 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'audio'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? 'text-[#57068c] dark:text-white'
+									: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'audio';
 								}}
@@ -528,8 +529,8 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'chats'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? 'text-[#57068c] dark:text-white'
+									: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'chats';
 								}}
@@ -554,8 +555,8 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'account'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? 'text-[#57068c] dark:text-white'
+									: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'account';
 								}}
@@ -580,8 +581,8 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'about'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? 'text-[#57068c] dark:text-white'
+									: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'about';
 								}}
@@ -607,8 +608,8 @@
 								<button
 									class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 									'admin'
-										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+										? 'text-[#57068c] dark:text-white'
+										: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'}"
 									on:click={async () => {
 										await goto('/admin/settings');
 										show = false;

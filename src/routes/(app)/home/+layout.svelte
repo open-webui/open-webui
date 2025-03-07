@@ -43,15 +43,15 @@
 				>
 					<a
 						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/home/notes')
-							? ''
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							? 'text-[#57068c] dark:text-white'
+							: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'} transition"
 						href="/playground/notes">{$i18n.t('Notes')}</a
 					>
 
 					<a
 						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/playground/calendar')
-							? ''
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							? 'text-[#57068c] dark:text-white'
+							: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'} transition"
 						href="/playground/completions">{$i18n.t('Calendar')}</a
 					>
 				</div>

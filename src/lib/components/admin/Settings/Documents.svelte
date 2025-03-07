@@ -332,6 +332,7 @@
 
 						<div class="">
 							<select
+								aria-label = "Select Engine"
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={contentExtractionEngine}
 							>
@@ -400,6 +401,7 @@
 						<div class=" self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
 						<div class="flex items-center relative">
 							<select
+								aria-label = "Select Text Splitter"
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={textSplitter}
 							>
@@ -463,6 +465,7 @@
 								<select
 									class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 									bind:value={embeddingEngine}
+									aria-label="Select an embedding model engine"
 									placeholder="Select an embedding model engine"
 									on:change={(e) => {
 										if (e.target.value === 'ollama') {
@@ -539,6 +542,7 @@
 
 									{#if embeddingEngine === ''}
 										<button
+											aria-label = "Set embedding model"
 											class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
 											on:click={() => {
 												embeddingModelUpdateHandler();
@@ -596,7 +600,7 @@
 							{/if}
 						</div>
 
-						<div class="mt-1 mb-1 text-xs text-gray-400 dark:text-gray-500">
+						<div class="mt-1 mb-1 text-xs text-gray-600 dark:text-gray-500">
 							{$i18n.t(
 								'Warning: If you update or change your embedding model, you will need to re-import all documents.'
 							)}
@@ -755,7 +759,7 @@
 									/>
 								</div>
 							</div>
-							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+							<div class="mt-1 text-xs text-gray-600 dark:text-gray-500">
 								{$i18n.t(
 									'Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.'
 								)}

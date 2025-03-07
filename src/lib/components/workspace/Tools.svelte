@@ -249,7 +249,7 @@
 									</div>
 								</div>
 
-								<div class="text-xs text-gray-500 shrink-0">
+								<div class="text-xs text-gray-600 dark:text-gray-500 shrink-0">
 									<Tooltip
 										content={tool?.user?.email ?? $i18n.t('Deleted User')}
 										className="flex shrink-0"

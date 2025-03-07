@@ -127,7 +127,8 @@
 							<div>
 								<Tooltip content={$i18n.t('Add Arena Model')}>
 									<button
-										class="p-1"
+									aria-label = "Add Arena Model"	
+									class="p-1"
 										type="button"
 										on:click={() => {
 											showAddModel = true;
@@ -155,7 +156,7 @@
 									/>
 								{/each}
 							{:else}
-								<div class=" text-center text-xs text-gray-500">
+								<div class=" text-center text-xs text-gray-600 dark:text-gray-500">
 									{$i18n.t(
 										`Using the default arena model with all models. Click the plus button to add custom models.`
 									)}

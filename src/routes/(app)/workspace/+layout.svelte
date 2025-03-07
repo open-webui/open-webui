@@ -81,8 +81,8 @@
 								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
 									'/workspace/models'
 								)
-									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+									? 'text-[#57068c] dark:text-white'
+									: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'} transition"
 								href="/workspace/models">{$i18n.t('Models')}</a
 							>
 						{/if}
@@ -92,8 +92,8 @@
 								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
 									'/workspace/knowledge'
 								)
-									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+									? 'text-[#57068c] dark:text-white'
+									: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'} transition"
 								href="/workspace/knowledge"
 							>
 								{$i18n.t('Knowledge')}
@@ -105,8 +105,8 @@
 								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
 									'/workspace/prompts'
 								)
-									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+									? 'text-[#57068c] dark:text-white'
+									: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'} transition"
 								href="/workspace/prompts">{$i18n.t('Prompts')}</a
 							>
 						{/if}
@@ -114,8 +114,8 @@
 						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.tools}
 							<a
 								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/workspace/tools')
-									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+									? 'text-[#57068c] dark:text-white'
+									: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'} transition"
 								href="/workspace/tools"
 							>
 								{$i18n.t('Tools')}

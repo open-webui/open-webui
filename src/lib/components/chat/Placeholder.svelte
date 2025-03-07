@@ -86,6 +86,14 @@
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
 
 	onMount(() => {});
+
+    // Add this function to detect dark mode
+    function isDarkMode() {
+        if (typeof window !== 'undefined') {
+            return document.documentElement.classList.contains('dark');
+        }
+        return false;
+    }
 </script>
 
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
@@ -125,8 +133,8 @@
 										src={model?.info?.meta?.profile_image_url ??
 											($i18n.language === 'dg-DG'
 												? `/doge.png`
-												: `${WEBUI_BASE_URL}/static/favicon.png`)}
-										class=" size-9 @sm:size-10 rounded-full border-[1px] border-gray-200 dark:border-none"
+												: `${WEBUI_BASE_URL}/static/${isDarkMode() ? 'favicon-white' : 'favicon-violet'}.png`)}
+										class=" size-13 @sm:size-14"
 										alt="logo"
 										draggable="false"
 									/>
@@ -136,7 +144,7 @@
 					</div>
 				</div>
 
-				<div class=" text-3xl @sm:text-4xl line-clamp-1" in:fade={{ duration: 100 }}>
+				<div class=" text-3xl @sm:text-4xl line-clamp-1 self-end" in:fade={{ duration: 100 }}>
 					{#if models[selectedModelIdx]?.name}
 						{models[selectedModelIdx]?.name}
 					{:else}
@@ -165,7 +173,7 @@
 						</Tooltip>
 
 						{#if models[selectedModelIdx]?.info?.meta?.user}
-							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
+							<div class="mt-0.5 text-sm font-normal text-gray-600 dark:text-gray-500">
 								By
 								{#if models[selectedModelIdx]?.info?.meta?.user.community}
 									<a

@@ -163,7 +163,7 @@
 						</div>
 
 						<div class="mt-3 flex justify-between">
-							<div class="text-xs text-gray-500">
+							<div class="text-xs text-gray-600 dark:text-gray-500">
 								<Tooltip
 									content={item?.user?.email ?? $i18n.t('Deleted User')}
 									className="flex shrink-0"
@@ -176,7 +176,7 @@
 									})}
 								</Tooltip>
 							</div>
-							<div class=" text-xs text-gray-500 line-clamp-1">
+							<div class=" text-xs text-gray-600 dark:text-gray-500 line-clamp-1">
 								{$i18n.t('Updated')}
 								{dayjs(item.updated_at * 1000).fromNow()}
 							</div>

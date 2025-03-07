@@ -139,8 +139,8 @@
 								<button
 									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
 									'general'
-										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+										? 'text-[#57068c] dark:text-white'
+										: ' text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'}"
 									on:click={() => {
 										selectedTab = 'general';
 									}}
@@ -168,8 +168,8 @@
 								<button
 									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
 									'permissions'
-										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+										? 'text-[#57068c] dark:text-white'
+										: ' text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'}"
 									on:click={() => {
 										selectedTab = 'permissions';
 									}}
@@ -186,8 +186,8 @@
 								<button
 									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
 									'users'
-										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+										? 'text-[#57068c] dark:text-white'
+										: ' text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'}"
 									on:click={() => {
 										selectedTab = 'users';
 									}}
@@ -222,7 +222,7 @@
 								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
 								'display'
 									? ' dark:border-white'
-									: 'border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									: 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'display';
 								}}
@@ -237,7 +237,7 @@
 								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
 								'permissions'
 									? '  dark:border-white'
-									: 'border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									: 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'permissions';
 								}}
@@ -252,7 +252,7 @@
 								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
 								'users'
 									? ' dark:border-white'
-									: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									: ' border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'users';
 								}}

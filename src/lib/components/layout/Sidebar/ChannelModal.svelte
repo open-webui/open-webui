@@ -108,7 +108,9 @@
 					}}
 				>
 					<div class="flex flex-col w-full mt-2">
-						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Channel Name')}</div>
+						<div class=" mb-1 text-xs text-gray-600 dark:text-gray-500">
+							{$i18n.t('Channel Name')}
+						</div>
 
 						<div class="flex-1">
 							<input
