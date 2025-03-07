@@ -63,7 +63,7 @@ run_migrations()
 
 
 class Config(Base):
-    __tablename__ = "config"
+    __tablename__ = "owui_config"
 
     id = Column(Integer, primary_key=True)
     data = Column(JSON, nullable=False)
@@ -2434,3 +2434,26 @@ LDAP_CA_CERT_FILE = PersistentConfig(
 LDAP_CIPHERS = PersistentConfig(
     "LDAP_CIPHERS", "ldap.server.ciphers", os.environ.get("LDAP_CIPHERS", "ALL")
 )
+
+# Supabase Configuration
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+SUPABASE_DB_PASSWORD = os.getenv("SUPABASE_DB_PASSWORD", "")
+
+# Add Supabase to the environment config
+if SUPABASE_URL and SUPABASE_KEY:
+    log.info("✅ Supabase configuration detected")
+else:
+    log.warning("⚠️ Supabase configuration not found, using local authentication only")
+
+# RabbitMQ Configuration for Pipeline
+RABBIT_MQ_URL = os.getenv(
+    "RABBIT_MQ_URL", 
+    f"amqp://guest:guest@rabbitmq/"
+)
+
+if os.getenv("RABBIT_MQ_HOST"):
+    RABBIT_MQ_URL = f"amqp://{os.getenv('RABBIT_MQ_USER', 'guest')}:{os.getenv('RABBIT_MQ_PASSWORD', 'guest')}@{os.getenv('RABBIT_MQ_HOST')}:{os.getenv('RABBIT_MQ_PORT', '5672')}/"
+
+# App API Configuration
+APP_API_URL = os.getenv("APP_API_URL", "http://localhost:8000")

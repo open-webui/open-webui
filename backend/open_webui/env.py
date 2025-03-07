@@ -270,33 +270,57 @@ if os.path.exists(f"{DATA_DIR}/ollama.db"):
 else:
     pass
 
-DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
+# Check if we should force PostgreSQL or disable SQLite fallback
+FORCE_POSTGRESQL = os.environ.get("FORCE_POSTGRESQL", "").lower() == "true"
+DISABLE_SQLITE_FALLBACK = os.environ.get("DISABLE_SQLITE_FALLBACK", "").lower() == "true"
+
+# Get the database URL from environment with SQLite as fallback unless disabled
+# First check if SUPABASE_POOLER_URL is available, as it's more optimized
+SUPABASE_POOLER_URL = os.environ.get("SUPABASE_POOLER_URL")
+
+if SUPABASE_POOLER_URL:
+    log.info("Using Supabase connection pooler for database connection")
+    DATABASE_URL = SUPABASE_POOLER_URL
+elif FORCE_POSTGRESQL:
+    # Force PostgreSQL connection with default settings if not provided
+    DATABASE_URL = os.environ.get("DATABASE_URL")
+    if not DATABASE_URL or not DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = "postgresql://postgres:postgres@localhost:5432/postgres"
+        log.warning(f"FORCE_POSTGRESQL is set but no valid PostgreSQL URL found. Using default: {DATABASE_URL}")
+elif DISABLE_SQLITE_FALLBACK:
+    # Use whatever is in DATABASE_URL but don't fall back to SQLite
+    DATABASE_URL = os.environ.get("DATABASE_URL")
+    if not DATABASE_URL:
+        log.error("DATABASE_URL not set and DISABLE_SQLITE_FALLBACK is true. Database connection will likely fail.")
+else:
+    # Normal behavior with SQLite fallback
+    DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 
 # Replace the postgres:// with postgresql://
-if "postgres://" in DATABASE_URL:
+if DATABASE_URL and "postgres://" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
 
 DATABASE_SCHEMA = os.environ.get("DATABASE_SCHEMA", None)
 
-DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", 0)
+DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", 5)  # Default to 5 connections
 
 if DATABASE_POOL_SIZE == "":
-    DATABASE_POOL_SIZE = 0
+    DATABASE_POOL_SIZE = 5
 else:
     try:
         DATABASE_POOL_SIZE = int(DATABASE_POOL_SIZE)
     except Exception:
-        DATABASE_POOL_SIZE = 0
+        DATABASE_POOL_SIZE = 5
 
-DATABASE_POOL_MAX_OVERFLOW = os.environ.get("DATABASE_POOL_MAX_OVERFLOW", 0)
+DATABASE_POOL_MAX_OVERFLOW = os.environ.get("DATABASE_POOL_MAX_OVERFLOW", 10)
 
 if DATABASE_POOL_MAX_OVERFLOW == "":
-    DATABASE_POOL_MAX_OVERFLOW = 0
+    DATABASE_POOL_MAX_OVERFLOW = 10
 else:
     try:
         DATABASE_POOL_MAX_OVERFLOW = int(DATABASE_POOL_MAX_OVERFLOW)
     except Exception:
-        DATABASE_POOL_MAX_OVERFLOW = 0
+        DATABASE_POOL_MAX_OVERFLOW = 10
 
 DATABASE_POOL_TIMEOUT = os.environ.get("DATABASE_POOL_TIMEOUT", 30)
 
@@ -308,15 +332,12 @@ else:
     except Exception:
         DATABASE_POOL_TIMEOUT = 30
 
-DATABASE_POOL_RECYCLE = os.environ.get("DATABASE_POOL_RECYCLE", 3600)
+DATABASE_POOL_RECYCLE = os.environ.get("DATABASE_POOL_RECYCLE", 300)  # 5 minutes
 
-if DATABASE_POOL_RECYCLE == "":
-    DATABASE_POOL_RECYCLE = 3600
-else:
-    try:
-        DATABASE_POOL_RECYCLE = int(DATABASE_POOL_RECYCLE)
-    except Exception:
-        DATABASE_POOL_RECYCLE = 3600
+try:
+    DATABASE_POOL_RECYCLE = int(DATABASE_POOL_RECYCLE)
+except Exception:
+    DATABASE_POOL_RECYCLE = 300
 
 RESET_CONFIG_ON_START = (
     os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"

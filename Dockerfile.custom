@@ -1,0 +1,111 @@
+### Builder stage for Python dependencies
+FROM python:3.11-slim as python-builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create and activate virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install Python dependencies
+COPY front/backend/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+### Final stage
+FROM python:3.11-slim
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    netcat-openbsd \
+    curl \
+    iputils-ping \
+    net-tools \
+    dnsutils \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Python virtual environment from builder
+COPY --from=python-builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Set up application
+WORKDIR /app
+COPY front/CHANGELOG.md /app/CHANGELOG.md
+COPY front/backend /app/backend/
+RUN mkdir -p /app/backend/open_webui
+COPY front/CHANGELOG.md /app/backend/open_webui/CHANGELOG.md
+
+# Set proper Python path
+ENV PYTHONPATH="/app:/app/backend"
+
+# Create data directory with proper permissions
+RUN mkdir -p /app/backend/data && \
+    chmod 777 /app/backend/data
+
+# Copy the database setup script
+COPY front/setup_db.sh /setup_db.sh
+RUN chmod +x /setup_db.sh
+
+# Create and set up the entrypoint script
+RUN echo '#!/bin/bash\n\
+\n\
+# Function to test database connectivity\n\
+test_db_connection() {\n\
+    echo "Testing Supabase pooler connectivity..."\n\
+    if nc -zv aws-0-eu-west-3.pooler.supabase.com 5432; then\n\
+        echo "Successfully connected to Supabase pooler"\n\
+        return 0\n\
+    else\n\
+        echo "Failed to connect to Supabase pooler, trying primary DB..."\n\
+        if nc -zv db.ddoimsqiehmrjoepwugw.supabase.co 5432; then\n\
+            echo "Successfully connected to primary Supabase DB"\n\
+            return 0\n\
+        else\n\
+            echo "Failed to connect to both pooler and primary DB"\n\
+            return 1\n\
+        fi\n\
+    fi\n\
+}\n\
+\n\
+# Print debugging information\n\
+echo "Python path: $PYTHONPATH"\n\
+echo "Current directory structure:"\n\
+find /app -type d -maxdepth 3 | sort\n\
+\n\
+# Run connectivity tests\n\
+test_db_connection\n\
+if [ $? -eq 0 ]; then\n\
+    # Setup database tables\n\
+    echo "Setting up database tables..."\n\
+    /setup_db.sh\n\
+    \n\
+    # Create an environment variable file to bypass migrations\n\
+    echo "SKIP_DB_MIGRATIONS=true" >> /app/backend/.env\n\
+    echo "Database setup completed"\n\
+fi\n\
+\n\
+# Start the application\n\
+echo "Starting Open WebUI..."\n\
+cd /app/backend\n\
+exec python -m uvicorn open_webui.main:app --host 0.0.0.0 --port 8080\n\
+' > /entrypoint.sh && chmod +x /entrypoint.sh
+
+# Install additional tools for database management
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables
+ENV HOST=0.0.0.0
+ENV PORT=8080
+
+# Expose port
+EXPOSE 8080
+
+# Set the entrypoint
+ENTRYPOINT ["/entrypoint.sh"] 

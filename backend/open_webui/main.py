@@ -84,7 +84,7 @@ from open_webui.routers.retrieval import (
     get_rf,
 )
 
-from open_webui.internal.db import Session
+from open_webui.internal.db import Session, initialize_database
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
@@ -351,6 +351,11 @@ from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
+
+# Import our new routers and services
+from open_webui.routers import cities
+from open_webui.routers import pipeline_chat
+from open_webui.services.pipeline_connector import pipeline_connector
 
 
 if SAFE_MODE:
@@ -897,6 +902,20 @@ app.include_router(
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 
+# Include the cities router
+app.include_router(
+    cities.router,
+    prefix="/api/v1",
+    tags=["cities"],
+)
+
+# Include the pipeline chat router
+app.include_router(
+    pipeline_chat.router,
+    prefix="/api/v1/pipeline",
+    tags=["pipeline_chat"],
+)
+
 
 try:
     audit_level = AuditLevel(AUDIT_LOG_LEVEL)
@@ -1126,96 +1145,117 @@ async def list_tasks_endpoint(user=Depends(get_verified_user)):
 
 @app.get("/api/config")
 async def get_app_config(request: Request):
-    user = None
-    if "token" in request.cookies:
-        token = request.cookies.get("token")
-        try:
-            data = decode_token(token)
-        except Exception as e:
-            log.debug(e)
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token",
-            )
-        if data is not None and "id" in data:
-            user = Users.get_user_by_id(data["id"])
+    try:
+        user = None
+        if "token" in request.cookies:
+            token = request.cookies.get("token")
+            try:
+                data = decode_token(token)
+            except Exception as e:
+                log.debug(f"Token decode error: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token",
+                )
+            if data is not None and "id" in data:
+                user = Users.get_user_by_id(data["id"])
 
-    onboarding = False
-    if user is None:
-        user_count = Users.get_num_users()
-        onboarding = user_count == 0
+        onboarding = False
+        if user is None:
+            try:
+                user_count = Users.get_num_users()
+                onboarding = user_count == 0
+            except Exception as e:
+                log.error(f"Error checking user count: {e}")
+                # Don't fail the entire request if just this part fails
+                user_count = 0
+                onboarding = True
 
-    return {
-        **({"onboarding": True} if onboarding else {}),
-        "status": True,
-        "name": app.state.WEBUI_NAME,
-        "version": VERSION,
-        "default_locale": str(DEFAULT_LOCALE),
-        "oauth": {
-            "providers": {
-                name: config.get("name", name)
-                for name, config in OAUTH_PROVIDERS.items()
-            }
-        },
-        "features": {
-            "auth": WEBUI_AUTH,
-            "auth_trusted_header": bool(app.state.AUTH_TRUSTED_EMAIL_HEADER),
-            "enable_ldap": app.state.config.ENABLE_LDAP,
-            "enable_api_key": app.state.config.ENABLE_API_KEY,
-            "enable_signup": app.state.config.ENABLE_SIGNUP,
-            "enable_login_form": app.state.config.ENABLE_LOGIN_FORM,
-            "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
+        # Add information about the city field replacing model selector
+        city_as_model_selector = True
+        
+        return {
+            **({"onboarding": True} if onboarding else {}),
+            "status": True,
+            "name": app.state.WEBUI_NAME,
+            "version": VERSION,
+            "default_locale": str(DEFAULT_LOCALE),
+            "oauth": {
+                "providers": {
+                    name: config.get("name", name)
+                    for name, config in OAUTH_PROVIDERS.items()
+                }
+            },
+            "features": {
+                "auth": WEBUI_AUTH,
+                "auth_trusted_header": bool(app.state.AUTH_TRUSTED_EMAIL_HEADER),
+                "enable_ldap": app.state.config.ENABLE_LDAP,
+                "enable_api_key": app.state.config.ENABLE_API_KEY,
+                "enable_signup": app.state.config.ENABLE_SIGNUP,
+                "enable_login_form": app.state.config.ENABLE_LOGIN_FORM,
+                "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
+                "city_as_model_selector": city_as_model_selector,  # Flag indicating that city replaces model selector
+                **(
+                    {
+                        "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
+                        "enable_channels": app.state.config.ENABLE_CHANNELS,
+                        "enable_web_search": app.state.config.ENABLE_RAG_WEB_SEARCH,
+                        "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,
+                        "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,
+                        "enable_autocomplete_generation": app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
+                        "enable_community_sharing": app.state.config.ENABLE_COMMUNITY_SHARING,
+                        "enable_message_rating": app.state.config.ENABLE_MESSAGE_RATING,
+                        "enable_admin_export": ENABLE_ADMIN_EXPORT,
+                        "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
+                        "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
+                        "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+                    }
+                    if user is not None
+                    else {}
+                ),
+            },
             **(
                 {
-                    "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
-                    "enable_channels": app.state.config.ENABLE_CHANNELS,
-                    "enable_web_search": app.state.config.ENABLE_RAG_WEB_SEARCH,
-                    "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,
-                    "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,
-                    "enable_autocomplete_generation": app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
-                    "enable_community_sharing": app.state.config.ENABLE_COMMUNITY_SHARING,
-                    "enable_message_rating": app.state.config.ENABLE_MESSAGE_RATING,
-                    "enable_admin_export": ENABLE_ADMIN_EXPORT,
-                    "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
-                    "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
-                    "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+                    "default_models": app.state.config.DEFAULT_MODELS,
+                    "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
+                    "code": {
+                        "engine": app.state.config.CODE_EXECUTION_ENGINE,
+                    },
+                    "audio": {
+                        "tts": {
+                            "engine": app.state.config.TTS_ENGINE,
+                            "voice": app.state.config.TTS_VOICE,
+                            "split_on": app.state.config.TTS_SPLIT_ON,
+                        },
+                        "stt": {
+                            "engine": app.state.config.STT_ENGINE,
+                        },
+                    },
+                    "file": {
+                        "max_size": app.state.config.FILE_MAX_SIZE,
+                        "max_count": app.state.config.FILE_MAX_COUNT,
+                    },
+                    "permissions": {**app.state.config.USER_PERMISSIONS},
+                    "google_drive": {
+                        "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
+                        "api_key": GOOGLE_DRIVE_API_KEY.value,
+                    },
+                    "onedrive": {"client_id": ONEDRIVE_CLIENT_ID.value},
                 }
                 if user is not None
                 else {}
             ),
-        },
-        **(
-            {
-                "default_models": app.state.config.DEFAULT_MODELS,
-                "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
-                "code": {
-                    "engine": app.state.config.CODE_EXECUTION_ENGINE,
-                },
-                "audio": {
-                    "tts": {
-                        "engine": app.state.config.TTS_ENGINE,
-                        "voice": app.state.config.TTS_VOICE,
-                        "split_on": app.state.config.TTS_SPLIT_ON,
-                    },
-                    "stt": {
-                        "engine": app.state.config.STT_ENGINE,
-                    },
-                },
-                "file": {
-                    "max_size": app.state.config.FILE_MAX_SIZE,
-                    "max_count": app.state.config.FILE_MAX_COUNT,
-                },
-                "permissions": {**app.state.config.USER_PERMISSIONS},
-                "google_drive": {
-                    "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
-                    "api_key": GOOGLE_DRIVE_API_KEY.value,
-                },
-                "onedrive": {"client_id": ONEDRIVE_CLIENT_ID.value},
+        }
+    except Exception as e:
+        log.exception(f"Error in /api/config endpoint: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "status": False, 
+                "error": str(e),
+                "detail": "Error loading configuration. Check server logs for details."
             }
-            if user is not None
-            else {}
-        ),
-    }
+        )
 
 
 class UrlForm(BaseModel):
@@ -1382,3 +1422,18 @@ else:
     log.warning(
         f"Frontend build directory not found at '{FRONTEND_BUILD_DIR}'. Serving API only."
     )
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on startup"""
+    # Initialize database
+    initialize_database()
+    
+    # Initialize pipeline connector
+    await pipeline_connector.initialize()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup services on shutdown"""
+    # Close pipeline connector
+    await pipeline_connector.close()

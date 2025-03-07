@@ -24,6 +24,9 @@ class User(Base):
     email = Column(String)
     role = Column(String)
     profile_image_url = Column(Text)
+    oauth_sub = Column(Text, unique=True)
+    # The city column replaces the model selector functionality in the chat interface
+    city = Column(String, nullable=True, default="paris")
 
     last_active_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -32,8 +35,6 @@ class User(Base):
     api_key = Column(String, nullable=True, unique=True)
     settings = Column(JSONField, nullable=True)
     info = Column(JSONField, nullable=True)
-
-    oauth_sub = Column(Text, unique=True)
 
 
 class UserSettings(BaseModel):
@@ -48,6 +49,8 @@ class UserModel(BaseModel):
     email: str
     role: str = "pending"
     profile_image_url: str
+    oauth_sub: Optional[str] = None
+    city: Optional[str] = "paris"
 
     last_active_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -56,8 +59,6 @@ class UserModel(BaseModel):
     api_key: Optional[str] = None
     settings: Optional[UserSettings] = None
     info: Optional[dict] = None
-
-    oauth_sub: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -97,34 +98,38 @@ class UserUpdateForm(BaseModel):
 class UsersTable:
     def insert_new_user(
         self,
-        id: str,
+        user_id: str,
         name: str,
         email: str,
-        profile_image_url: str = "/user.png",
+        profile_image_url: str,
         role: str = "pending",
         oauth_sub: Optional[str] = None,
+        city: Optional[str] = "paris",
     ) -> Optional[UserModel]:
         with get_db() as db:
-            user = UserModel(
-                **{
-                    "id": id,
-                    "name": name,
-                    "email": email,
-                    "role": role,
-                    "profile_image_url": profile_image_url,
-                    "last_active_at": int(time.time()),
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
-                    "oauth_sub": oauth_sub,
-                }
-            )
-            result = User(**user.model_dump())
-            db.add(result)
-            db.commit()
-            db.refresh(result)
-            if result:
-                return user
-            else:
+            try:
+                log.info("insert_new_user")
+                user = UserModel(
+                    **{
+                        "id": user_id,
+                        "name": name,
+                        "email": email,
+                        "role": role,
+                        "profile_image_url": profile_image_url,
+                        "last_active_at": int(time.time()),
+                        "created_at": int(time.time()),
+                        "updated_at": int(time.time()),
+                        "oauth_sub": oauth_sub,
+                        "city": city,
+                    }
+                )
+                result = User(**user.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                return UserModel.model_validate(result)
+            except Exception as e:
+                log.exception(f"Error inserting new user: {e}")
                 return None
 
     def get_user_by_id(self, id: str) -> Optional[UserModel]:
@@ -259,17 +264,29 @@ class UsersTable:
         except Exception:
             return None
 
-    def update_user_by_id(self, id: str, updated: dict) -> Optional[UserModel]:
-        try:
-            with get_db() as db:
-                db.query(User).filter_by(id=id).update(updated)
-                db.commit()
-
-                user = db.query(User).filter_by(id=id).first()
-                return UserModel.model_validate(user)
-                # return UserModel(**user.dict())
-        except Exception:
-            return None
+    def update_user_by_id(
+        self,
+        id: str,
+        name: str,
+        profile_image_url: str,
+        city: Optional[str] = None,
+    ) -> Optional[UserModel]:
+        with get_db() as db:
+            try:
+                user = db.query(User).filter(User.id == id).first()
+                if user:
+                    user.name = name
+                    user.profile_image_url = profile_image_url
+                    if city:
+                        user.city = city
+                    db.commit()
+                    db.refresh(user)
+                    return UserModel.model_validate(user)
+                else:
+                    return None
+            except Exception as e:
+                log.exception(f"Error updating user: {e}")
+                return None
 
     def update_user_settings_by_id(self, id: str, updated: dict) -> Optional[UserModel]:
         try:

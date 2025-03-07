@@ -6,10 +6,10 @@ import hmac
 import hashlib
 import requests
 import os
-
+import httpx
 
 from datetime import UTC, datetime, timedelta
-from typing import Optional, Union, List, Dict
+from typing import Optional, Union, List, Dict, Any
 
 from open_webui.models.users import Users
 
@@ -20,6 +20,8 @@ from open_webui.env import (
     STATIC_DIR,
     SRC_LOG_LEVELS,
 )
+# Import these only when needed to break circular dependency
+# from open_webui.config import SUPABASE_URL, SUPABASE_KEY
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -245,3 +247,81 @@ def get_admin_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+
+def get_supabase_config():
+    # Import here to break circular dependency
+    from open_webui.config import SUPABASE_URL, SUPABASE_KEY
+    return SUPABASE_URL, SUPABASE_KEY
+
+
+class SupabaseClient:
+    """Utility class for Supabase authentication operations"""
+    
+    @staticmethod
+    async def get_activities_by_city(city: str) -> list:
+        """
+        Get activities filtered by city from Supabase
+        """
+        SUPABASE_URL, SUPABASE_KEY = get_supabase_config()
+        if not SUPABASE_URL or not SUPABASE_KEY:
+            log.error("Supabase URL or key is not configured")
+            return []
+            
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{SUPABASE_URL}/rest/v1/activities",
+                    params={"city": f"eq.{city}", "select": "*"},
+                    headers={
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": f"Bearer {SUPABASE_KEY}",
+                        "Content-Type": "application/json"
+                    }
+                )
+                
+            if response.status_code != 200:
+                log.error(f"Failed to get activities from Supabase: {response.text}")
+                return []
+                
+            return response.json()
+                
+        except Exception as e:
+            log.error(f"Error getting activities from Supabase: {e}")
+            return []
+    
+    @staticmethod
+    async def get_cities() -> list:
+        """
+        Get all distinct cities from the activities table
+        """
+        SUPABASE_URL, SUPABASE_KEY = get_supabase_config()
+        if not SUPABASE_URL or not SUPABASE_KEY:
+            log.error("Supabase URL or key is not configured")
+            return ["paris", "lyon", "marseille", "bordeaux"]  # Default cities
+            
+        try:
+            async with httpx.AsyncClient() as client:
+                # Using a workaround to get distinct values since Supabase doesn't support DISTINCT directly in REST API
+                response = await client.get(
+                    f"{SUPABASE_URL}/rest/v1/rpc/get_distinct_cities",
+                    headers={
+                        "apikey": SUPABASE_KEY,
+                        "Authorization": f"Bearer {SUPABASE_KEY}",
+                        "Content-Type": "application/json"
+                    }
+                )
+                
+            if response.status_code != 200:
+                log.error(f"Failed to get cities from Supabase: {response.text}")
+                return ["paris", "lyon", "marseille", "bordeaux"]  # Default cities
+                
+            cities = response.json()
+            if not cities:
+                return ["paris", "lyon", "marseille", "bordeaux"]  # Default cities
+                
+            return cities
+                
+        except Exception as e:
+            log.error(f"Error getting cities from Supabase: {e}")
+            return ["paris", "lyon", "marseille", "bordeaux"]  # Default cities

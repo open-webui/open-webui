@@ -12,6 +12,7 @@ aiohttp==3.11.11
 async-timeout
 aiocache
 aiofiles
+aio_pika==9.3.0
 
 sqlalchemy==2.0.32
 alembic==1.14.0

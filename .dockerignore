@@ -18,3 +18,12 @@ uploads
 **/*.db
 _test
 backend/data/*
+
+# Explicitly exclude Git-related files
+.git
+.git/**
+**/.git
+**/.git/**
+**/.gitattributes
+**/.gitignore
+.gitmodules
