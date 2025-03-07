@@ -71,7 +71,7 @@ jobs:
                   args: 
                   - clone
                   - --recursive
-                  - b ${{ variables.BRANCH_NAME }}
+                  - -b ${{ variables.BRANCH_NAME }}
                   - --depth=1
                   - 'https://oauth2:${TOKEN}@github.com/${{ github.repository }}.git'
                   - /workspace
