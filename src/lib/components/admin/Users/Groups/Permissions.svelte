@@ -11,6 +11,7 @@
 			models: false,
 			knowledge: false,
 			prompts: false,
+			public_sharing: true,
 			tools: false
 		},
 		chat: {
@@ -189,6 +190,13 @@
 				</div>
 				<Switch bind:state={permissions.workspace.tools} />
 			</Tooltip>
+		</div>
+
+		<div class="flex w-full justify-between my-2 pr-2">
+			<div class="self-center text-xs font-medium">
+				{$i18n.t('Public Sharing')}
+			</div>
+			<Switch bind:state={permissions.workspace.public_sharing} />
 		</div>
 	</div>
 
