@@ -27,6 +27,34 @@
 			function resizeIframe(obj) {
 				obj.style.height = obj.contentWindow.document.documentElement.scrollHeight + 'px';
 			}
+
+			// Function to check if the URL contains the ?small_venster=1 parameter
+			function has_small_venster_param() {
+			  const urlParams = new URLSearchParams(window.location.search);
+			  return urlParams.has("small_venster") && urlParams.get("small_venster") === "1";
+			}
+			
+			// Function to modify the page if the parameter exists
+			function on_active_sidebar() {
+			  document.body.classList.add("small_venster"); // Add small_venster class to body
+			}
+			
+			function waitForSidebar() {
+			  const observer = new MutationObserver((mutationsList, observer) => {
+			   if (document.getElementById("sidebar")) {
+			    observer.disconnect(); // Stop observing
+			    on_active_sidebar(); // Run your function
+			   }
+			  });
+			
+			  // Observe the entire document for changes in child elements
+			  observer.observe(document.body, { childList: true, subtree: true });
+			}
+			
+			// Start watching for the sidebar when the page loads
+			if (has_small_venster_param()){
+			  document.addEventListener("DOMContentLoaded", waitForSidebar);
+			}
 		</script>
 
 		<script>
