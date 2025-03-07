@@ -372,3 +372,27 @@ input[type='number'] {
 .hljs-strong {
 	font-weight: 700;
 }
+
+body.small_venster nav{
+    display: none;
+}
+
+body.small_venster #sidebar{
+    display: none;
+}
+
+body.small_venster .md\:max-w-\[calc\(100\%-260px\)\] {
+    max-width: calc(100%) !important;
+}
+
+body.small_venster .mx-5{
+    display: none;
+}
+
+body.small_venster .absolute.bottom-8{
+    display: none;
+}
+
+body.small_venster .py-24{
+    padding-block:0;
+}
