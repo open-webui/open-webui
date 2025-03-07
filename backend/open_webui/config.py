@@ -627,7 +627,13 @@ if frontend_favicon_white.exists():
     except Exception as e:
         logging.error(f"An error occurred: {e}")
 
+user_temp = FRONTEND_BUILD_DIR / "static" / "user_temp.png"
 
+if user_temp.exists():
+    try:
+        shutil.copyfile(user_temp, STATIC_DIR / "user_temp.png")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
 
 
 
