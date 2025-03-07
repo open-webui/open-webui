@@ -70,7 +70,7 @@ jobs:
                   image: gcr.io/kaniko-project/executor:latest
                   args:
                   - --dockerfile=./Dockerfile
-                  - --context=git://github.com/${{ github.repository }}.git#${{ github.ref }}          
+                  - --context=git://${TOKEN}@github.com/${{ github.repository }}.git#${{ github.ref }}          
                   - --destination=reg.1u1.it:443/moc-dev/drive/open-webui:${{ github.run_id }}
                   - --destination=reg.1u1.it:443/moc-dev/drive/open-webui:latest
                   - --build-arg=BUILD_HASH=${{ github.sha }}
