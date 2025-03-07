@@ -12,7 +12,7 @@ on:
 env:
   REGISTRY: reg.1u1.it
   NAMESPACES: moc-dev
-
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
 
 jobs:
   build:
@@ -64,23 +64,40 @@ jobs:
             namespace: arc-runners
           spec:
             template:
-              spec:    
+              spec:  
+                initContainers:
+                - name: git-clone
+                  image: alpine/git
+                  args: 
+                  - clone
+                  - --recursive
+                  - b ${{ variables.BRANCH_NAME }}
+                  - --depth=1
+                  - 'https://oauth2:${TOKEN}@github.com/${{ github.repository }}.git'
+                  - /workspace
+                  volumeMounts:
+                  - name: build-context
+                    mountPath: /workspace
                 containers:
                 - name: kaniko
                   image: gcr.io/kaniko-project/executor:latest
                   args:
                   - --dockerfile=./Dockerfile
-                  - --context=git://${TOKEN}@github.com/${{ github.repository }}.git#${{ github.ref }}          
+                  - --context=dir:///workspace   
                   - --destination=reg.1u1.it:443/moc-dev/drive/open-webui:${{ github.run_id }}
                   - --destination=reg.1u1.it:443/moc-dev/drive/open-webui:latest
                   - --build-arg=BUILD_HASH=${{ github.sha }}
                   - --git=recurse-submodules=true
                   - --skip-tls-verify
                   volumeMounts:
+                  - name: build-context
+                    mountPath: /workspace  
                   - name: dock-sec
                     mountPath: /kaniko/.docker
                 restartPolicy: Never
                 volumes:
+                - name: build-context
+                  emptyDir: {}
                 - name: dock-sec
                   secret:
                     secretName: dock-sec
