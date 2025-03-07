@@ -33,9 +33,10 @@ router = APIRouter()
 async def get_users(
     skip: Optional[int] = None,
     limit: Optional[int] = None,
+    search: Optional[str] = None,
     user=Depends(get_admin_user),
 ):
-    return Users.get_users(skip, limit)
+    return Users.get_users(skip, limit, search)
 
 
 ############################

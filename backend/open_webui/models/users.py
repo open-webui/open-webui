@@ -9,7 +9,7 @@ from open_webui.models.groups import Groups
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, String, Text, or_
 
 ####################
 # User DB Schema
@@ -160,11 +160,16 @@ class UsersTable:
             return None
 
     def get_users(
-        self, skip: Optional[int] = None, limit: Optional[int] = None
+        self, skip: Optional[int] = None, limit: Optional[int] = None, search: Optional[str] = None
     ) -> list[UserModel]:
         with get_db() as db:
 
-            query = db.query(User).order_by(User.created_at.desc())
+            query = db.query(User)
+
+            if search:
+                search = '%'+search+'%'
+                query = query.filter(or_(User.name.ilike(search), User.email.ilike(search)))
+            query = query.order_by(User.created_at.desc())
 
             if skip:
                 query = query.offset(skip)
