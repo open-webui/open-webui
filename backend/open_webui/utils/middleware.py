@@ -1759,14 +1759,12 @@ async def process_chat_response(
                             spec = tool.get("spec", {})
 
                             try:
-                                required_params = spec.get("parameters", {}).get(
-                                    "required", []
-                                )
+                                allowed_params = spec.get("parameters", {}).get("properties", {}).keys()
                                 tool_function = tool["callable"]
                                 tool_function_params = {
                                     k: v
                                     for k, v in tool_function_params.items()
-                                    if k in required_params
+                                    if k in allowed_params
                                 }
                                 tool_result = await tool_function(
                                     **tool_function_params
