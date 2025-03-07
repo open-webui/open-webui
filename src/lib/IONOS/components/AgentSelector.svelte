@@ -2,7 +2,7 @@
 	import { getContext, onMount } from 'svelte';
 	import { selectAgent } from '$lib/IONOS/services/agent';
 	import { agents } from '$lib/IONOS/stores/agents';
-	import ChevronRight from '$lib/components/icons/ChevronRight.svelte'
+	import Sparkles from '$lib/IONOS/components/icons/Sparkles.svelte';
 
 	const i18n = getContext('i18n');
 </script>
@@ -36,13 +36,13 @@
 						</p>
 						<div class="text-center">
 							<button
-								class="flex flex-row items-center m-auto px-4 py-2 mt-4 bg-blue-900 hover:bg-blue-800 text-gray-100 transition rounded-3xl s-GWo4gqQzfpKs"
+								class="flex flex-row items-center m-auto px-4 py-2 mt-4 bg-ai-main-500 hover:bg-ai-main-700 text-white transition rounded-3xl"
 								on:click={() => selectAgent(id)}
 							>
 								<span class="pr-2">
 									{$i18n.t('Chat now', { ns: 'ionos' })}
 								</span>
-								<ChevronRight className="w-4 h-4" />
+								<Sparkles className="w-4 h-4" />
 							</button>
 						</div>
 					</div>
