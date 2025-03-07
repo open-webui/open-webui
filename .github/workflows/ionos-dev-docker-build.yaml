@@ -66,13 +66,11 @@ jobs:
                 initContainers:
                 - name: git-clone
                   image: alpine/git
-                  args: 
-                  - clone
-                  - --recursive
-                  - -b ${{ env.BRANCH_NAME }}
-                  - --depth=1
-                  - 'https://oauth2:${TOKEN}@github.com/${{ github.repository }}.git'
-                  - /workspace
+                  command: ["/bin/sh", "-c"]
+                  args:
+                    - |
+                      git config --global url."https://oauth:${TOKEN}@github.com/".insteadOf "https://github.com/" &&
+                      git clone --recursive -b ${{ env.BRANCH_NAME }} --depth=1 https://oauth:${TOKEN}@github.com/${{ github.repository }}.git /workspace
                   volumeMounts:
                   - name: build-context
                     mountPath: /workspace
