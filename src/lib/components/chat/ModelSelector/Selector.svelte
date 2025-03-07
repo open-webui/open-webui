@@ -62,6 +62,8 @@
 
 	let searchValue = '';
 	let selectedTag = '';
+	let selectedOwnership = '';
+	let selectedDirect = '';
 
 	let ollamaVersion = null;
 
@@ -85,21 +87,31 @@
 
 	$: filteredItems = searchValue
 		? fuse
-				.search(searchValue)
-				.map((e) => {
-					return e.item;
-				})
-				.filter((item) => {
-					if (selectedTag === '') {
-						return true;
-					}
-					return item.model?.info?.meta?.tags?.map((tag) => tag.name).includes(selectedTag);
-				})
+			.search(searchValue)
+			.map((e) => e.item)
+			.filter((item) => {
+			if (selectedTag === '') return true;
+			return item.model?.info?.meta?.tags?.map((tag) => tag.name).includes(selectedTag);
+			})
+			.filter((item) => {
+			if (selectedOwnership === '') return true;
+			return item.model?.owned_by === selectedOwnership;
+			})
+			.filter((item) => { // New: Direct connection filter
+			if (selectedDirect === '') return true;
+			return !!item.model?.direct === (selectedDirect === 'direct'); // Handle undefined
+			})
 		: items.filter((item) => {
-				if (selectedTag === '') {
-					return true;
-				}
-				return item.model?.info?.meta?.tags?.map((tag) => tag.name).includes(selectedTag);
+			if (selectedTag === '') return true;
+			return item.model?.info?.meta?.tags?.map((tag) => tag.name).includes(selectedTag);
+		})
+		.filter((item) => {
+			if (selectedOwnership === '') return true;
+			return item.model?.owned_by === selectedOwnership;
+		})
+		.filter((item) => { // New: Direct connection filter
+			if (selectedDirect === '') return true;
+			return !!item.model?.direct === (selectedDirect === 'direct'); // Handle undefined
 			});
 
 	const pullModelHandler = async () => {
@@ -328,32 +340,69 @@
 				{#if tags}
 					<div class=" flex w-full sticky">
 						<div
-							class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent px-1.5 pb-0.5"
-							bind:this={tagsContainerElement}
+						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent px-1.5 pb-0.5"
+						bind:this={tagsContainerElement}
 						>
-							<button
-								class="min-w-fit outline-none p-1.5 {selectedTag === ''
-									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-								on:click={() => {
-									selectedTag = '';
-								}}
-							>
-								{$i18n.t('All')}
-							</button>
+						<button
+							class="min-w-fit outline-none p-1.5 {(selectedTag === '' && selectedOwnership === '' && selectedDirect === '')
+							? ''
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+							on:click={() => {
+							selectedTag = '';
+							selectedOwnership = '';
+							selectedDirect = ''; // Reset direct filter
+							}}
+						>
+							{$i18n.t('All')}
+						</button>
 
-							{#each tags as tag}
-								<button
-									class="min-w-fit outline-none p-1.5 {selectedTag === tag
-										? ''
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-									on:click={() => {
-										selectedTag = tag;
-									}}
-								>
-									{tag}
-								</button>
-							{/each}
+						<button  class="min-w-fit outline-none p-1.5 {selectedOwnership === 'ollama'
+							? ''
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+							on:click={() => {
+							selectedOwnership = 'ollama';
+							selectedDirect = ''; // Reset direct filter
+							}}
+						>
+							{$i18n.t('Internal')}
+						</button>
+
+						<button  class="min-w-fit outline-none p-1.5 {selectedOwnership === 'openai'
+							? ''
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+							on:click={() => {
+							selectedOwnership = 'openai';
+							selectedDirect = ''; // Reset direct filter
+							}}
+						>
+							{$i18n.t('External')}
+						</button>
+
+						<button  class="min-w-fit outline-none p-1.5 {selectedDirect === 'direct'
+							? ''
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+							on:click={() => {
+							selectedDirect = 'direct';
+							selectedOwnership = ''; // Reset ownership filter
+							}}
+						>
+							{$i18n.t('Direct')}
+						</button>
+
+						{#each tags as tag}
+							<button
+							class="min-w-fit outline-none p-1.5 {selectedTag === tag
+								? ''
+								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+							on:click={() => {
+								selectedTag = tag;
+								selectedOwnership = ''; // Reset ownership when tag is clicked
+								selectedDirect = ''; // Reset direct when tag is clicked
+							}}
+							>
+							{tag}
+							</button>
+						{/each}
 						</div>
 					</div>
 				{/if}
