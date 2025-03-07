@@ -124,7 +124,7 @@
 			</div>
 		{:else}
 			<Collapsible
-				id="collapsible-sources"
+				id={`collapsible-${id}`}
 				bind:open={isCollapsibleOpen}
 				className="w-full max-w-full "
 				buttonClassName="w-fit max-w-full"
