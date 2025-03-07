@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - ionos-dev
+      - ts*
     tags:
       - ionos-*
 
@@ -73,6 +74,7 @@ jobs:
                   - --destination=reg.1u1.it:443/moc-dev/drive/open-webui:${{ github.run_id }}
                   - --destination=reg.1u1.it:443/moc-dev/drive/open-webui:latest
                   - --build-arg=BUILD_HASH=${{ github.sha }}
+                  - --git=recurse-submodules=true
                   - --skip-tls-verify
                   volumeMounts:
                   - name: dock-sec

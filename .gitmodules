@@ -1,0 +1,3 @@
+[submodule "backend/custom_resources"]
+	path = backend/custom_resources
+	url = https://github.com/IONOS-Productivity/gpt-open-webui-custom-resources
