@@ -30,18 +30,16 @@
 
 	const dispatch = createEventDispatcher();
 
-	let autoCollapsed = false;
+	let previousDone;
 
-	onMount(() => {
-		if (attributes?.done === 'true') {
-			if (open) {
-				open = false;
+	$: {
+		if (attributes?.done !== previousDone) {
+			if (attributes?.done === 'false') {
+				open = userSettings.unfoldBeforeCompletion;
 			}
-			autoCollapsed = true;
-		} else if (attributes?.done === 'false') {
-			open = userSettings.unfoldBeforeCompletion;
+			previousDone = attributes?.done;
 		}
-	});
+	}
 
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
