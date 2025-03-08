@@ -125,7 +125,9 @@ Section "Install Main Components" SEC01
 
     ; Pack into the installer
     ; Exclude hidden files (like .git, .gitignore) and the installation folder itself
-    ; TODO: necessary for OpenWebUI? => File /r /x installer /x .* /x ..\*.pyc ..\*.* amd_ai_ux_installer.py
+    ; Include the installer script and LICENSE file
+    File "amd_ai_ux_installer.py"
+    File "LICENSE"
 
     ; Check if conda is available
     ExecWait 'where conda' $2
@@ -224,12 +226,14 @@ Section "Install Main Components" SEC01
       ; Call the batch file with required parameters
       ; Execute the Python script
       DetailPrint "- Executing Python script to handle the installation..."
-      DetailPrint "- Command: $R1 run -n $AMD_AI_UX_CONDA_ENV python amd_ai_ux_installer.py --install-dir $INSTDIR"
+      DetailPrint "- Command: $R1 run -n $AMD_AI_UX_CONDA_ENV python $INSTDIR\amd_ai_ux_installer.py --install-dir $INSTDIR"
       
       ; Execute the Python script with the installation directory as a named parameter
       ; Pass the conda environment name as an environment variable
       System::Call 'Kernel32::SetEnvironmentVariable(t "AMD_AI_UX_CONDA_ENV", t "$AMD_AI_UX_CONDA_ENV")i.r0'
-      ExecWait '"$R1" run -n "$AMD_AI_UX_CONDA_ENV" python amd_ai_ux_installer.py --install-dir "$INSTDIR"' $0
+      
+      ; Execute the Python script with the full path
+      ExecWait '"$R1" run -n "$AMD_AI_UX_CONDA_ENV" python "$INSTDIR\amd_ai_ux_installer.py" --install-dir "$INSTDIR"' $0
       
       DetailPrint "- Python script return code: $0"
       
