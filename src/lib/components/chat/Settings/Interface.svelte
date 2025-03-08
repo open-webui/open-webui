@@ -38,6 +38,7 @@
 	let chatBubble = true;
 	let chatDirection: 'LTR' | 'RTL' = 'LTR';
 	let ctrlEnterToSend = false;
+	let unfoldBeforeCompletion = false;
 
 	let imageCompression = false;
 	let imageCompressionSize = {
@@ -48,7 +49,6 @@
 	// Admin - Show Update Available Toast
 	let showUpdateToast = true;
 	let showChangelog = true;
-	let unfoldBeforeCompletion = false;
 
 	let showEmojiInCall = false;
 	let voiceInterruption = false;
@@ -94,11 +94,6 @@
 	const toggleShowChangelog = async () => {
 		showChangelog = !showChangelog;
 		saveSettings({ showChangelog: showChangelog });
-	};
-
-	const toggleUnfoldBeforeCompletion = async () => {
-		unfoldBeforeCompletion = !unfoldBeforeCompletion;
-		saveSettings({ unfoldBeforeCompletion: unfoldBeforeCompletion });
 	};
 
 	const toggleShowUsername = async () => {
@@ -215,6 +210,11 @@
 	const toggleWebSearch = async () => {
 		webSearch = webSearch === null ? 'always' : null;
 		saveSettings({ webSearch: webSearch });
+	};
+
+	const toggleUnfoldBeforeCompletion = async () => {
+		unfoldBeforeCompletion = !unfoldBeforeCompletion;
+		saveSettings({ unfoldBeforeCompletion: unfoldBeforeCompletion });
 	};
 
 	onMount(async () => {
@@ -460,28 +460,6 @@
 							type="button"
 						>
 							{#if showChangelog === true}
-								<span class="ml-2 self-center">{$i18n.t('On')}</span>
-							{:else}
-								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-							{/if}
-						</button>
-					</div>
-				</div>
-
-				<div>
-					<div class=" py-0.5 flex w-full justify-between">
-						<div class=" self-center text-xs">
-							{$i18n.t(`Unfold the folding control before completion`)}
-						</div>
-
-						<button
-							class="p-1 px-3 text-xs flex rounded-sm transition"
-							on:click={() => {
-								toggleUnfoldBeforeCompletion();
-							}}
-							type="button"
-						>
-							{#if unfoldBeforeCompletion === true}
 								<span class="ml-2 self-center">{$i18n.t('On')}</span>
 							{:else}
 								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
@@ -747,6 +725,28 @@
 							<span class="ml-2 self-center">{$i18n.t('Always')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">
+						{$i18n.t(`Unfold the folding control before completion`)}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleUnfoldBeforeCompletion();
+						}}
+						type="button"
+					>
+						{#if unfoldBeforeCompletion === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>
