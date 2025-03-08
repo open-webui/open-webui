@@ -18,7 +18,7 @@ except ImportError:
     import requests
 
 # Global log file path
-LOG_FILE = None
+LOG_FILE_PATH = None
 
 
 def log(message, print_to_console=True):
@@ -31,19 +31,19 @@ def log(message, print_to_console=True):
     """
     # Get current timestamp
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    formatted_message = f"[{timestamp}] [GAIA-UX-Installer] {message}"
+    formatted_message = f"[{timestamp}] [AMD-AI-UX-Installer] {message}"
 
-    # Print to stdout
+    # Print to console if requested
     if print_to_console:
-        print(message)
+        print(formatted_message)
 
-    # Write to log file if specified
-    if LOG_FILE and os.path.dirname(LOG_FILE):
+    # Write to log file if it's set
+    if LOG_FILE_PATH:
         try:
-            with open(LOG_FILE, "a", encoding="utf-8") as f:
+            with open(LOG_FILE_PATH, "a", encoding="utf-8") as f:
                 f.write(formatted_message + "\n")
         except Exception as e:
-            print(f"Warning: Failed to write to log file: {str(e)}")
+            print(f"WARNING: Failed to write to log file: {str(e)}")
 
 
 def download_latest_wheel(output_folder, output_filename=None):
@@ -131,7 +131,7 @@ def download_latest_wheel(output_folder, output_filename=None):
     return None
 
 
-def install_wheel(wheel_path, python_path=None):
+def install_wheel(wheel_path):
     """
     Installs the wheel file using pip.
 
@@ -147,49 +147,41 @@ def install_wheel(wheel_path, python_path=None):
     log("******************************")
 
     # Use the provided Python path or the current Python executable
-    python_exe = python_path if python_path else sys.executable
-    
-    # Normalize the paths to handle Windows backslashes properly
-    python_exe = os.path.normpath(python_exe)
-    wheel_path = os.path.normpath(wheel_path)
-    
-    # Verify that both files exist before proceeding
-    if not os.path.isfile(python_exe):
-        log(f"ERROR: Python executable not found at: {python_exe}")
-        return False
-        
-    if not os.path.isfile(wheel_path):
-        log(f"ERROR: Wheel file not found at: {wheel_path}")
-        return False
+    python_exe = sys.executable
 
-    log("Installing Open WebUI wheel file using pip...")
-    log(f"Python executable: {python_exe}")
-    log(f"Wheel file path: {wheel_path}")
-    log(f"Command: {python_exe} -m pip install {wheel_path}")
+    wheel_path = os.path.normpath(wheel_path)
 
     try:
-        # Run pip install command with properly quoted paths
-        result = subprocess.run(
-            [python_exe, "-m", "pip", "install", wheel_path],
-            capture_output=True,
+        log(f"Installing wheel from: {wheel_path}")
+        log("This may take a few minutes. Please wait...")
+        
+        # Run pip install command with real-time output
+        process = subprocess.Popen(
+            [python_exe, "-m", "pip", "install", wheel_path, "--verbose"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
-            check=False,
+            bufsize=1,
+            universal_newlines=True
         )
-
-        # Log the output
-        if result.stdout:
-            log(f"Pip output: {result.stdout}")
-        if result.stderr:
-            log(f"Pip errors: {result.stderr}")
-
+        
+        # Display output in real-time
+        for line in process.stdout:
+            line = line.strip()
+            if line:
+                log(line)
+        
+        # Wait for process to complete and get return code
+        return_code = process.wait()
+        
         # Check if installation was successful
-        if result.returncode == 0:
+        if return_code == 0:
             log("Open WebUI wheel file successfully installed")
             log("Installation completed successfully")
             return True
         else:
             log("ERROR: Failed to install Open WebUI wheel file")
-            log(f"Pip installation returned error code: {result.returncode}")
+            log(f"Pip installation returned error code: {return_code}")
             return False
 
     except Exception as e:
@@ -199,13 +191,13 @@ def install_wheel(wheel_path, python_path=None):
 
 def main():
     # Set up argument parser - make install_dir optional with default value
-    parser = argparse.ArgumentParser(description="GAIA UX Installer")
+    parser = argparse.ArgumentParser(description="AMD AI UX Installer")
     parser.add_argument(
         "--install-dir",
         dest="install_dir",
         default=f"{os.getcwd()}\\installer",
         type=str,
-        help="Installation directory (default: current working directory)"
+        help="Installation directory (default: current working directory)",
     )
 
     # Parse the arguments
@@ -213,25 +205,14 @@ def main():
 
     # Hard-coded parameters
     install_dir = os.path.normpath(args.install_dir)
-    # Use the environment name from the command line or default to "gaia_env"
-    env_name = os.environ.get("AMD_AI_UX_CONDA_ENV", "gaia_env")
-    python_path = os.path.normpath(os.path.join(install_dir, env_name, "python.exe"))
-    log_file = os.path.normpath(os.path.join(install_dir, "gaia_install.log"))
 
-    # Set the global log file path
-    global LOG_FILE
-    LOG_FILE = log_file
+    log_file = os.path.normpath(os.path.join(install_dir, "amd_ai_ux_install.log"))
 
-    log(f"Log file path set to: {LOG_FILE}")
+    # Set the log file path
+    log_file_path = log_file
+
+    log(f"Log file path set to: {log_file_path}")
     log(f"Installation directory: {install_dir}")
-    log(f"Python executable path: {python_path}")
-
-    # Verify Python executable exists
-    if not os.path.isfile(python_path):
-        log(f"WARNING: Python executable not found at: {python_path}")
-        log("Falling back to system Python")
-        python_path = sys.executable
-        log(f"Using system Python: {python_path}")
 
     # Create wheels directory in the installation folder
     wheels_dir = os.path.normpath(os.path.join(install_dir, "wheels"))
@@ -253,7 +234,7 @@ def main():
         sys.exit(1)
 
     # Install the wheel file
-    install_success = install_wheel(wheel_path, python_path)
+    install_success = install_wheel(wheel_path)
 
     if not install_success:
         error_msg = "Failed to install Open WebUI wheel file. Please check the logs for details."

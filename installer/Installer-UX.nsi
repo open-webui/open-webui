@@ -188,10 +188,23 @@ Section "Install Main Components" SEC01
       nsExec::ExecToLog '"$R1" init'
 
       DetailPrint "- Creating a Python $PythonVersion environment named '$AMD_AI_UX_CONDA_ENV' in the installation directory: $INSTDIR..."
-      ExecWait '"$R1" create -p "$INSTDIR\$AMD_AI_UX_CONDA_ENV" python=$PythonVersion -y' $R0
+      ExecWait '"$R1" create -n "$AMD_AI_UX_CONDA_ENV" python=$PythonVersion -y' $R0
 
       ; Check if the environment creation was successful (exit code should be 0)
+      StrCmp $R0 0 set_conda_env env_creation_failed
+
+    set_conda_env:
+      DetailPrint "- Setting conda environment $AMD_AI_UX_CONDA_ENV..."
+      DetailPrint "- Changing to installation directory..."
+      SetOutPath "$INSTDIR"
+      
+      DetailPrint "- Verifying conda environment..."
+      ; Instead of trying to activate the environment (which doesn't work well in scripts),
+      ; we'll just verify that the environment exists and is ready to use
+      ExecWait '"$R1" list -n "$AMD_AI_UX_CONDA_ENV"' $R0
+
       StrCmp $R0 0 install_app env_creation_failed
+      
 
     env_creation_failed:
       DetailPrint "- ERROR: Environment creation failed"
@@ -211,12 +224,12 @@ Section "Install Main Components" SEC01
       ; Call the batch file with required parameters
       ; Execute the Python script
       DetailPrint "- Executing Python script to handle the installation..."
-      DetailPrint "- Command: $INSTDIR\$AMD_AI_UX_CONDA_ENV\python.exe amd_ai_ux_installer.py --install-dir $INSTDIR"
+      DetailPrint "- Command: $R1 run -n $AMD_AI_UX_CONDA_ENV python amd_ai_ux_installer.py --install-dir $INSTDIR"
       
       ; Execute the Python script with the installation directory as a named parameter
       ; Pass the conda environment name as an environment variable
       System::Call 'Kernel32::SetEnvironmentVariable(t "AMD_AI_UX_CONDA_ENV", t "$AMD_AI_UX_CONDA_ENV")i.r0'
-      ExecWait '"$INSTDIR\$AMD_AI_UX_CONDA_ENV\python.exe" amd_ai_ux_installer.py --install-dir "$INSTDIR"' $0
+      ExecWait '"$R1" run -n "$AMD_AI_UX_CONDA_ENV" python amd_ai_ux_installer.py --install-dir "$INSTDIR"' $0
       
       DetailPrint "- Python script return code: $0"
       
@@ -243,11 +256,6 @@ Section "Install Main Components" SEC01
       CreateShortcut "$DESKTOP\AMD-AI-UX.lnk" "$SYSDIR\cmd.exe" '/C start "" "http://localhost:8080"' "${ICON_FILE}"
 
       Return
-
-    install_failed:
-        DetailPrint "- ERROR: Open WebUI installation failed with return code: $0"
-        DetailPrint "- Please check the log file for details: $LogFilePath"
-        Return
 
 SectionEnd
 
