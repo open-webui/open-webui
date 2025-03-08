@@ -27,6 +27,8 @@ body:
       options:
         - label: I have searched the existing issues and discussions.
           required: true
+        - label: I am using the latest version of Open WebUI.
+          required: true
 
   - type: dropdown
     id: installation-method
