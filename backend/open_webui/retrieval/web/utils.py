@@ -33,6 +33,7 @@ from open_webui.config import (
     FIRECRAWL_API_BASE_URL,
     FIRECRAWL_API_KEY,
     TAVILY_API_KEY,
+    TAVILY_EXTRACT_DEPTH,
 )
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -613,6 +614,7 @@ def get_web_loader(
 
     if RAG_WEB_LOADER_ENGINE.value == "tavily":
         web_loader_args["api_key"] = TAVILY_API_KEY.value
+        web_loader_args["extract_depth"] = TAVILY_EXTRACT_DEPTH.value
 
     # Create the appropriate WebLoader based on the configuration
     WebLoaderClass = RAG_WEB_LOADER_ENGINES[RAG_WEB_LOADER_ENGINE.value]
