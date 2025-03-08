@@ -35,12 +35,12 @@
 	$: {
 		if (attributes?.done !== previousDone && userSettings.unfoldBeforeCompletion) {
 			if (attributes?.done === 'false') {
+				open = userSettings.unfoldBeforeCompletion;
+			}
+			if (attributes?.done === 'true') {
 				open = true;
 			}
 			previousDone = attributes?.done;
-			if (attributes?.done === 'true') {
-				open = false;
-			}
 		}
 	}
 
