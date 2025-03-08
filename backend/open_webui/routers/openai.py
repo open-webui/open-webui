@@ -673,7 +673,11 @@ async def generate_chat_completion(
         del payload["max_tokens"]
 
     # Convert the modified body back to JSON
-    payload['logit_bias'] = json.loads(convert_logit_bias_input_to_json(payload['logit_bias']))
+    if "logit_bias" in payload:
+        payload["logit_bias"] = json.loads(
+            convert_logit_bias_input_to_json(payload["logit_bias"])
+        )
+
     payload = json.dumps(payload)
 
     r = None
