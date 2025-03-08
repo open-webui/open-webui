@@ -4,7 +4,7 @@
 
 	export let state = 'unchecked';
 	export let indeterminate = false;
-	export let enabled = true;
+	export let disabled = false;
 
 	let _state = 'unchecked';
 
@@ -15,9 +15,9 @@
 	class=" outline -outline-offset-1 outline-[1.5px] outline-gray-200 dark:outline-gray-600 {state !==
 	'unchecked'
 		? 'bg-black outline-black '
-		: 'hover:outline-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'} text-white transition-all rounded-sm inline-block w-3.5 h-3.5 relative {!enabled ? 'opacity-50 cursor-not-allowed' : ''}"
+		: 'hover:outline-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'} text-white transition-all rounded-sm inline-block w-3.5 h-3.5 relative {disabled ? 'opacity-50 cursor-not-allowed' : ''}"
 	on:click={() => {
-		if (!enabled) return;
+		if (disabled) return;
 		
 		if (_state === 'unchecked') {
 			_state = 'checked';
@@ -33,7 +33,7 @@
 		}
 	}}
 	type="button"
-	disabled={!enabled}
+	{disabled}
 >
 	<div class="top-0 left-0 absolute w-full flex justify-center">
 		{#if _state === 'checked'}
