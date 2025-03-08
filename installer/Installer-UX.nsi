@@ -20,6 +20,7 @@ RequestExecutionLevel user
 !define GITHUB_REPO "https://github.com/aigdat/open-webui.git"
 !define EMPTY_FILE_NAME "empty_file.txt"
 !define ICON_FILE "..\static\gaia.ico"
+!define ICON_DEST "gaia.ico"
 
 ; This is a compile-time fix to make sure that our selfhost CI runner can successfully install,
 ; since LOCALAPPDATA points to C:\Windows for "system users"
@@ -128,6 +129,7 @@ Section "Install Main Components" SEC01
     ; Include the installer script and LICENSE file
     File "amd_ai_ux_installer.py"
     File "LICENSE"
+    File ${ICON_FILE}
 
     ; Check if conda is available
     ExecWait 'where conda' $2
@@ -246,7 +248,7 @@ Section "Install Main Components" SEC01
       DetailPrint "*** INSTALLATION COMPLETED ***"
 
       # Create shortcuts directly
-      CreateShortcut "$DESKTOP\AMD-AI-UX.lnk" "$SYSDIR\cmd.exe" '/C conda activate $AMD_AI_UX_CONDA_ENV > NUL 2>&1 && start "" "http://localhost:8080"' "${ICON_FILE}"
+      CreateShortcut "$DESKTOP\AMD-AI-UX.lnk" "$SYSDIR\cmd.exe" '/C conda activate $AMD_AI_UX_CONDA_ENV > NUL 2>&1 && start "" "http://localhost:8080"' "$INSTDIR\${ICON_DEST}"
 
       Return
 
