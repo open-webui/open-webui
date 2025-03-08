@@ -154,7 +154,7 @@ def install_wheel(wheel_path):
     try:
         log(f"Installing wheel from: {wheel_path}")
         log("This may take a few minutes. Please wait...")
-        
+
         # Run pip install command with real-time output
         process = subprocess.Popen(
             [python_exe, "-m", "pip", "install", wheel_path, "--verbose"],
@@ -162,18 +162,18 @@ def install_wheel(wheel_path):
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
-            universal_newlines=True
+            universal_newlines=True,
         )
-        
+
         # Display output in real-time
         for line in process.stdout:
             line = line.strip()
             if line:
                 log(line)
-        
+
         # Wait for process to complete and get return code
         return_code = process.wait()
-        
+
         # Check if installation was successful
         if return_code == 0:
             log("Open WebUI wheel file successfully installed")

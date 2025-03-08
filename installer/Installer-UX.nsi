@@ -238,28 +238,25 @@ Section "Install Main Components" SEC01
       DetailPrint "- Python script return code: $0"
       
       ; Check if the installation was successful
-      ${If} $0 == "0"
-        DetailPrint "- ${PRODUCT_NAME} installation completed successfully"
-        
-        ; Create desktop shortcut
-        DetailPrint "- Creating desktop shortcut..."
-        GoTo update_settings
-      ${Else}
-        DetailPrint "- ERROR: Open WebUI installation failed with return code: $0"
-        DetailPrint "- Please check the log file for details: $LogFilePath"
-      ${EndIf}
-      
-      DetailPrint "- Open WebUI installation process completed"
+      StrCmp $0 0 install_success install_failed
 
     Return
 
-    update_settings:
+    install_success:
       DetailPrint "*** INSTALLATION COMPLETED ***"
 
       # Create shortcuts directly
-      CreateShortcut "$DESKTOP\AMD-AI-UX.lnk" "$SYSDIR\cmd.exe" '/C start "" "http://localhost:8080"' "${ICON_FILE}"
+      CreateShortcut "$DESKTOP\AMD-AI-UX.lnk" "$SYSDIR\cmd.exe" '/C conda activate $AMD_AI_UX_CONDA_ENV > NUL 2>&1 && start "" "http://localhost:8080"' "${ICON_FILE}"
 
       Return
+
+    install_failed:
+      DetailPrint "- ERROR: Installation failed"
+      DetailPrint "- Please check the log file for details: $LogFilePath"
+      ${IfNot} ${Silent}
+        MessageBox MB_OK "ERROR: Installation failed. Please check the log file for details: $LogFilePath"
+      ${EndIf}
+      Quit
 
 SectionEnd
 
