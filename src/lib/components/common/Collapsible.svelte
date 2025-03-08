@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher, onMount } from 'svelte';
+	import { getContext, createEventDispatcher} from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { settings } from '$lib/stores';
