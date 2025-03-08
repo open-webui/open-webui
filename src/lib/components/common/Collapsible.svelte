@@ -18,7 +18,7 @@
 		for (const locale of locales) {
 			try {
 				dayjs.locale(locale);
-				break; // Stop after successfully loading the first available locale
+				break; // 成功加载第一个可用语言后停止
 			} catch (error) {
 				console.error(`Could not load locale '${locale}':`, error);
 			}
@@ -33,15 +33,15 @@
 	let autoCollapsed = false;
 
 	onMount(() => {
-		if (attributes?.done === 'false') {
+		if (attributes?.done === 'true') {
+			if (open) {
+				open = false;
+			}
+			autoCollapsed = true;
+		} else if (attributes?.done === 'false') {
 			open = userSettings.unfoldBeforeCompletion;
 		}
 	});
-
-	$: if (attributes?.done === 'true' && open && !autoCollapsed && userSettings.unfoldBeforeCompletion) {
-		open = false;
-		autoCollapsed = true;
-	}
 
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
