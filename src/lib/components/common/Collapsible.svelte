@@ -33,9 +33,9 @@
 	let previousDone = false;
 
 	$: {
-		if (attributes?.done !== previousDone) {
+		if (attributes?.done !== previousDone && userSettings.unfoldBeforeCompletion) {
 			if (attributes?.done === 'false') {
-				open = userSettings.unfoldBeforeCompletion;
+				open = true;
 			}
 			if (attributes?.done === 'true') {
 				open = false;
