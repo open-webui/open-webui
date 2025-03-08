@@ -189,17 +189,15 @@ async def chat_completion_tools_handler(
                 tool_function_params = tool_call.get("parameters", {})
 
                 try:
-                    required_params = (
-                        tools[tool_function_name]
-                        .get("spec", {})
-                        .get("parameters", {})
-                        .get("required", [])
+                    spec = tools[tool_function_name].get("spec", {})
+                    allowed_params = (
+                        spec.get("parameters", {}).get("properties", {}).keys()
                     )
                     tool_function = tools[tool_function_name]["callable"]
                     tool_function_params = {
                         k: v
                         for k, v in tool_function_params.items()
-                        if k in required_params
+                        if k in allowed_params
                     }
                     tool_output = await tool_function(**tool_function_params)
 
@@ -1765,14 +1763,16 @@ async def process_chat_response(
                             spec = tool.get("spec", {})
 
                             try:
-                                required_params = spec.get("parameters", {}).get(
-                                    "required", []
+                                allowed_params = (
+                                    spec.get("parameters", {})
+                                    .get("properties", {})
+                                    .keys()
                                 )
                                 tool_function = tool["callable"]
                                 tool_function_params = {
                                     k: v
                                     for k, v in tool_function_params.items()
-                                    if k in required_params
+                                    if k in allowed_params
                                 }
                                 tool_result = await tool_function(
                                     **tool_function_params

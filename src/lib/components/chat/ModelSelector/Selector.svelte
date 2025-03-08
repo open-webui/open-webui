@@ -342,6 +342,28 @@
 								{$i18n.t('All')}
 							</button>
 
+							<button
+								class="min-w-fit outline-none p-1.5 {selectedTag === ''
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+								on:click={() => {
+									selectedTag = '';
+								}}
+							>
+								{$i18n.t('Ollama')}
+							</button>
+
+							<button
+								class="min-w-fit outline-none p-1.5 {selectedTag === ''
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+								on:click={() => {
+									selectedTag = '';
+								}}
+							>
+								{$i18n.t('OpenAI')}
+							</button>
+
 							{#each tags as tag}
 								<button
 									class="min-w-fit outline-none p-1.5 {selectedTag === tag

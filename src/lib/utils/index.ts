@@ -752,7 +752,7 @@ export const extractSentencesForAudio = (text: string) => {
 };
 
 export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {
-	content = removeDetails(content, ['reasoning', 'code_interpreter']);
+	content = removeDetails(content, ['reasoning', 'code_interpreter', 'tool_calls']);
 	const messageContentParts: string[] = [];
 
 	switch (split_on) {

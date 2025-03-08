@@ -748,7 +748,9 @@
 										onSourceClick={async (id, idx) => {
 											console.log(id, idx);
 											let sourceButton = document.getElementById(`source-${message.id}-${idx}`);
-											const sourcesCollapsible = document.getElementById(`collapsible-sources`);
+											const sourcesCollapsible = document.getElementById(
+												`collapsible-${message.id}`
+											);
 
 											if (sourceButton) {
 												sourceButton.click();

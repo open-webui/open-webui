@@ -213,6 +213,7 @@ from open_webui.config import (
     SERPSTACK_API_KEY,
     SERPSTACK_HTTPS,
     TAVILY_API_KEY,
+    TAVILY_EXTRACT_DEPTH,
     BING_SEARCH_V7_ENDPOINT,
     BING_SEARCH_V7_SUBSCRIPTION_KEY,
     BRAVE_SEARCH_API_KEY,
@@ -313,6 +314,7 @@ from open_webui.env import (
     AUDIT_EXCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
     CHANGELOG,
+    REDIS_URL,
     GLOBAL_LOG_LEVEL,
     MAX_BODY_LOG_SIZE,
     SAFE_MODE,
@@ -419,7 +421,7 @@ app = FastAPI(
 
 oauth_manager = OAuthManager(app)
 
-app.state.config = AppConfig()
+app.state.config = AppConfig(redis_url=REDIS_URL)
 
 app.state.WEBUI_NAME = WEBUI_NAME
 app.state.LICENSE_METADATA = None
@@ -616,6 +618,7 @@ app.state.config.RAG_WEB_SEARCH_TRUST_ENV = RAG_WEB_SEARCH_TRUST_ENV
 app.state.config.PLAYWRIGHT_WS_URI = PLAYWRIGHT_WS_URI
 app.state.config.FIRECRAWL_API_BASE_URL = FIRECRAWL_API_BASE_URL
 app.state.config.FIRECRAWL_API_KEY = FIRECRAWL_API_KEY
+app.state.config.TAVILY_EXTRACT_DEPTH = TAVILY_EXTRACT_DEPTH
 
 app.state.EMBEDDING_FUNCTION = None
 app.state.ef = None
