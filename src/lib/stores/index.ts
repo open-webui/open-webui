@@ -66,6 +66,7 @@ export const showSidebar = writable(false);
 export const showSettings = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
+export const unfoldBeforeCompletion = writable(false);
 
 export const showControls = writable(false);
 export const showOverview = writable(false);
@@ -141,6 +142,7 @@ type Settings = {
 	splitLargeDeltas?: boolean;
 	chatDirection: 'LTR' | 'RTL';
 	ctrlEnterToSend?: boolean;
+	unfoldBeforeCompletion?: boolean;
 
 	system?: string;
 	requestFormat?: string;

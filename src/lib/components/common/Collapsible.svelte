@@ -1,6 +1,11 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { getContext, createEventDispatcher, onMount } from 'svelte';
 	const i18n = getContext('i18n');
+
+	import { settings } from '$lib/stores';
+	import { get } from 'svelte/store';
+
+	let userSettings = get(settings);
 
 	import dayjs from '$lib/dayjs';
 	import duration from 'dayjs/plugin/duration';
@@ -25,13 +30,17 @@
 
 	const dispatch = createEventDispatcher();
 
-	// Automatically open if operation is not done, and close when done
-	$: {
+	let autoCollapsed = false;
+
+	onMount(() => {
 		if (attributes?.done === 'false') {
-			open = true;   // Keep open when operation is still ongoing
-		} else if (attributes?.done === 'true') {
-			open = false;  // Close when the operation is done
+			open = userSettings.unfoldBeforeCompletion;
 		}
+	});
+
+	$: if (attributes?.done === 'true' && open && !autoCollapsed && userSettings.unfoldBeforeCompletion) {
+		open = false;
+		autoCollapsed = true;
 	}
 
 	import { slide } from 'svelte/transition';
@@ -79,7 +88,7 @@
 					</div>
 				{/if}
 
-				<div class="">
+				<div>
 					{#if attributes?.type === 'reasoning'}
 						{#if attributes?.done === 'true' && attributes?.duration}
 							{#if attributes.duration < 60}
