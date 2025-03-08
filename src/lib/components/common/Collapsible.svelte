@@ -30,15 +30,15 @@
 
 	const dispatch = createEventDispatcher();
 
-	let previousDone;
+	let previousDone = false;
 
 	$: {
-		if (attributes?.done !== previousDone && userSettings.unfoldBeforeCompletion) {
+		if (attributes?.done !== previousDone) {
 			if (attributes?.done === 'false') {
 				open = userSettings.unfoldBeforeCompletion;
 			}
 			if (attributes?.done === 'true') {
-				open = true;
+				open = false;
 			}
 			previousDone = attributes?.done;
 		}
