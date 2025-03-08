@@ -6,8 +6,14 @@
 	export let alt = '';
 
 	let mounted = false;
-
 	let previewElement = null;
+	let imageElement = null;
+	let scale = 1;
+	let isDragging = false;
+	let startX = 0;
+	let startY = 0;
+	let translateX = 0;
+	let translateY = 0;
 
 	const downloadImage = (url, filename, prefixName = '') => {
 		fetch(url)
@@ -32,6 +38,48 @@
 		}
 	};
 
+	const handleWheel = (event: WheelEvent) => {
+		event.preventDefault();
+
+		const rect = imageElement.getBoundingClientRect();
+
+		const mouseX = event.clientX - rect.left;
+		const mouseY = event.clientY - rect.top;
+
+		const centerX = mouseX - rect.width / 2;
+		const centerY = mouseY - rect.height / 2;
+
+		const oldScale = scale;
+		const delta = event.deltaY > 0 ? 0.9 : 1.1;
+		scale = Math.min(Math.max(0.5, scale * delta), 10);
+
+		const scaleDiff = scale - oldScale;
+		translateX -= centerX * (scaleDiff / oldScale);
+		translateY -= centerY * (scaleDiff / oldScale);
+	};
+
+	const handleMouseDown = (event: MouseEvent) => {
+		isDragging = true;
+		startX = event.clientX - translateX;
+		startY = event.clientY - translateY;
+	};
+
+	const handleMouseMove = (event: MouseEvent) => {
+		if (!isDragging) return;
+		translateX = event.clientX - startX;
+		translateY = event.clientY - startY;
+	};
+
+	const handleMouseUp = () => {
+		isDragging = false;
+	};
+
+	const resetZoom = () => {
+		scale = 1;
+		translateX = 0;
+		translateY = 0;
+	};
+
 	onMount(() => {
 		mounted = true;
 	});
@@ -39,19 +87,22 @@
 	$: if (show && previewElement) {
 		document.body.appendChild(previewElement);
 		window.addEventListener('keydown', handleKeyDown);
+		window.addEventListener('wheel', handleWheel, { passive: false });
 		document.body.style.overflow = 'hidden';
 	} else if (previewElement) {
 		window.removeEventListener('keydown', handleKeyDown);
+		window.removeEventListener('wheel', handleWheel);
 		document.body.removeChild(previewElement);
 		document.body.style.overflow = 'unset';
+		resetZoom();
 	}
 
 	onDestroy(() => {
 		show = false;
-
 		if (previewElement) {
 			document.body.removeChild(previewElement);
 		}
+		window.removeEventListener('wheel', handleWheel);
 	});
 </script>
 
@@ -62,10 +113,10 @@
 		bind:this={previewElement}
 		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black text-white w-full min-h-screen h-screen flex justify-center z-9999 overflow-hidden overscroll-contain"
 	>
-		<div class=" absolute left-0 w-full flex justify-between select-none">
-			<div>
+		<div class="absolute left-0 w-full flex justify-between select-none z-9999">
+			<div class="flex">
 				<button
-					class=" p-5"
+					class="p-5"
 					on:click={() => {
 						show = false;
 					}}
@@ -79,6 +130,22 @@
 						class="w-6 h-6"
 					>
 						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+					</svg>
+				</button>
+				<button class="p-5" on:click={resetZoom}>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="1.5"
+						stroke="currentColor"
+						class="w-6 h-6"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25"
+						/>
 					</svg>
 				</button>
 			</div>
@@ -106,6 +173,17 @@
 				</button>
 			</div>
 		</div>
-		<img {src} {alt} class=" mx-auto h-full object-scale-down select-none" draggable="false" />
+		<img
+			{src}
+			{alt}
+			bind:this={imageElement}
+			class="mx-auto h-full object-scale-down select-none cursor-grab active:cursor-grabbing"
+			style="transform: translate({translateX}px, {translateY}px) scale({scale}); transition: scale 0.1s"
+			draggable="false"
+			on:mousedown={handleMouseDown}
+			on:mousemove={handleMouseMove}
+			on:mouseup={handleMouseUp}
+			on:mouseleave={handleMouseUp}
+		/>
 	</div>
 {/if}
