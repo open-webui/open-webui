@@ -38,6 +38,9 @@
 				open = userSettings.unfoldBeforeCompletion;
 			}
 			previousDone = attributes?.done;
+			if (attributes?.done === 'true') {
+				open = false;
+			}
 		}
 	}
 
