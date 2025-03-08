@@ -36,6 +36,9 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
 )
+from open_webui.utils.misc import (
+    convert_logit_bias_input_to_json,
+)
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
@@ -666,6 +669,7 @@ async def generate_chat_completion(
         del payload["max_tokens"]
 
     # Convert the modified body back to JSON
+    payload['logit_bias'] = json.loads(convert_logit_bias_input_to_json(payload['logit_bias']))
     payload = json.dumps(payload)
 
     r = None
