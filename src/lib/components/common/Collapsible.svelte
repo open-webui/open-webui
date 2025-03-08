@@ -18,7 +18,7 @@
 		for (const locale of locales) {
 			try {
 				dayjs.locale(locale);
-				break; // 成功加载第一个可用语言后停止
+				break; // Stop after successfully loading the first available
 			} catch (error) {
 				console.error(`Could not load locale '${locale}':`, error);
 			}
