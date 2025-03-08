@@ -1953,7 +1953,7 @@ TAVILY_API_KEY = PersistentConfig(
 TAVILY_EXTRACT_DEPTH = PersistentConfig(
     "TAVILY_EXTRACT_DEPTH",
     "rag.web.search.tavily_extract_depth",
-    int(os.getenv("TAVILY_EXTRACT_DEPTH", "basic")),
+    os.getenv("TAVILY_EXTRACT_DEPTH", "basic"),
 )
 
 JINA_API_KEY = PersistentConfig(
