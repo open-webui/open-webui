@@ -399,6 +399,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
 
         for idx, models in enumerate(model_lists):
             if models is not None and "error" not in models:
+
                 merged_list.extend(
                     [
                         {
@@ -409,18 +410,21 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                             "urlIdx": idx,
                         }
                         for model in models
-                        if "api.openai.com"
-                        not in request.app.state.config.OPENAI_API_BASE_URLS[idx]
-                        or not any(
-                            name in model["id"]
-                            for name in [
-                                "babbage",
-                                "dall-e",
-                                "davinci",
-                                "embedding",
-                                "tts",
-                                "whisper",
-                            ]
+                        if (model.get("id") or model.get("name"))
+                        and (
+                            "api.openai.com"
+                            not in request.app.state.config.OPENAI_API_BASE_URLS[idx]
+                            or not any(
+                                name in model["id"]
+                                for name in [
+                                    "babbage",
+                                    "dall-e",
+                                    "davinci",
+                                    "embedding",
+                                    "tts",
+                                    "whisper",
+                                ]
+                            )
                         )
                     ]
                 )
