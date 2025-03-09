@@ -167,7 +167,11 @@ def load_function_module_by_id(function_id, content=None):
 
 def install_frontmatter_requirements(requirements: str):
     if requirements:
+        forbidden = ["&", "|", "\\", '"', "'"]
         try:
+            for symbol in forbidden:
+                if symbol in requirements:
+                    raise Exception(f"Found forbidden symbol in requirements: '{requirements}'")
             req_list = [req.strip() for req in requirements.split(",")]
             log.info(f"Installing requirements: {' '.join(req_list)}")
             subprocess.check_call([sys.executable, "-m", "pip", "install"] + req_list)
