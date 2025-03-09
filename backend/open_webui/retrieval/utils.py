@@ -560,7 +560,7 @@ def generate_openai_batch_embeddings(
             f"{url}/embeddings",
             headers={
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {key}",
+                "Authorization": f"Bearer {user.api_key}",
                 **(
                     {
                         "X-OpenWebUI-User-Name": user.name,

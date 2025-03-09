@@ -943,7 +943,7 @@ async def embeddings(
             )
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-    key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
+    key = user.api_key
 
     try:
         r = requests.request(

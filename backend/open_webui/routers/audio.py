@@ -275,7 +275,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     json=payload,
                     headers={
                         "Content-Type": "application/json",
-                        "Authorization": f"Bearer {request.app.state.config.TTS_OPENAI_API_KEY}",
+                        "Authorization": f"Bearer {user.api_key}",
                         **(
                             {
                                 "X-OpenWebUI-User-Name": user.name,
@@ -466,7 +466,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         return FileResponse(file_path)
 
 
-def transcribe(request: Request, file_path):
+def transcribe(request: Request, file_path, user):
     log.info(f"transcribe: {file_path}")
     filename = os.path.basename(file_path)
     file_dir = os.path.dirname(file_path)
@@ -505,9 +505,7 @@ def transcribe(request: Request, file_path):
         try:
             r = requests.post(
                 url=f"{request.app.state.config.STT_OPENAI_API_BASE_URL}/audio/transcriptions",
-                headers={
-                    "Authorization": f"Bearer {request.app.state.config.STT_OPENAI_API_KEY}"
-                },
+                headers={"Authorization": f"Bearer {user.api_key}"},
                 files={"file": (filename, open(file_path, "rb"))},
                 data={"model": request.app.state.config.STT_MODEL},
             )
@@ -656,7 +654,7 @@ def transcription(
                     detail=ERROR_MESSAGES.DEFAULT(e),
                 )
 
-            data = transcribe(request, file_path)
+            data = transcribe(request, file_path, user)
             file_path = file_path.split("/")[-1]
             return {**data, "filename": file_path}
         except Exception as e:
