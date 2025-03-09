@@ -352,7 +352,7 @@
 			<div class="px-3 mb-2 max-h-64 overflow-y-auto scrollbar-hidden group relative">
 				{#if tags}
 					<div
-						class=" flex w-full sticky top-0 z-10 bg-white dark:bg-gray-850 overflow-x-auto scrollbar-hidden"
+						class=" flex w-full sticky top-0 z-10 bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none"
 						on:wheel={(e) => {
 							if (e.deltaY !== 0) {
 								e.preventDefault();
