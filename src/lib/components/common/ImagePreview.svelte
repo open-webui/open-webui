@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
+	import panzoom, { type PanZoom } from 'panzoom';
 
 	export let show = false;
 	export let src = '';
@@ -8,6 +9,25 @@
 	let mounted = false;
 
 	let previewElement = null;
+
+	let instance: PanZoom;
+
+	let sceneParentElement: HTMLElement;
+	let sceneElement: HTMLElement;
+
+	$: if (sceneElement) {
+		instance = panzoom(sceneElement, {
+			bounds: true,
+			boundsPadding: 0.1,
+
+			zoomSpeed: 0.065
+		});
+	}
+	const resetPanZoomViewport = () => {
+		instance.moveTo(0, 0);
+		instance.zoomAbs(0, 0, 1);
+		console.log(instance.getTransform());
+	};
 
 	const downloadImage = (url, filename, prefixName = '') => {
 		fetch(url)
@@ -106,6 +126,8 @@
 				</button>
 			</div>
 		</div>
-		<img {src} {alt} class=" mx-auto h-full object-scale-down select-none" draggable="false" />
+		<div bind:this={sceneElement} class="flex h-full max-h-full justify-center items-center">
+			<img {src} {alt} class=" mx-auto h-full object-scale-down select-none" draggable="false" />
+		</div>
 	</div>
 {/if}

@@ -284,6 +284,8 @@
 							>
 								{$i18n.t('Delete')}
 							</button>
+						{:else}
+							<div></div>
 						{/if}
 
 						<button
