@@ -1654,6 +1654,12 @@ TIKA_SERVER_URL = PersistentConfig(
     os.getenv("TIKA_SERVER_URL", "http://tika:9998"),  # Default for sidecar deployment
 )
 
+DOCLING_SERVER_URL = PersistentConfig(
+    "DOCLING_SERVER_URL",
+    "rag.docling_server_url",
+    os.getenv("DOCLING_SERVER_URL", "http://docling:5001"),
+)
+
 DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_ENDPOINT",
     "rag.document_intelligence_endpoint",
