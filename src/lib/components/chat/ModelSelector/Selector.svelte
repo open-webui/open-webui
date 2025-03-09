@@ -350,7 +350,7 @@
 									selectedTag = '';
 								}}
 							>
-								{$i18n.t('Ollama')}
+								{$i18n.t('Local')}
 							</button>
 
 							<button
@@ -361,7 +361,18 @@
 									selectedTag = '';
 								}}
 							>
-								{$i18n.t('OpenAI')}
+								{$i18n.t('External')}
+							</button>
+
+							<button
+								class="min-w-fit outline-none p-1.5 {selectedTag === ''
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+								on:click={() => {
+									selectedTag = '';
+								}}
+							>
+								{$i18n.t('Direct')}
 							</button>
 
 							{#each tags as tag}
