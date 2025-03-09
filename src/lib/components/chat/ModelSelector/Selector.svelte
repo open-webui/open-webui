@@ -61,7 +61,9 @@
 	$: selectedModel = items.find((item) => item.value === value) ?? '';
 
 	let searchValue = '';
+
 	let selectedTag = '';
+	let selectedConnectionType = '';
 
 	let ollamaVersion = null;
 
@@ -95,12 +97,35 @@
 					}
 					return item.model?.info?.meta?.tags?.map((tag) => tag.name).includes(selectedTag);
 				})
-		: items.filter((item) => {
-				if (selectedTag === '') {
-					return true;
-				}
-				return item.model?.info?.meta?.tags?.map((tag) => tag.name).includes(selectedTag);
-			});
+				.filter((item) => {
+					if (selectedConnectionType === '') {
+						return true;
+					} else if (selectedConnectionType === 'ollama') {
+						return item.model?.owned_by === 'ollama';
+					} else if (selectedConnectionType === 'openai') {
+						return item.model?.owned_by === 'openai';
+					} else if (selectedConnectionType === 'direct') {
+						return item.model?.direct;
+					}
+				})
+		: items
+				.filter((item) => {
+					if (selectedTag === '') {
+						return true;
+					}
+					return item.model?.info?.meta?.tags?.map((tag) => tag.name).includes(selectedTag);
+				})
+				.filter((item) => {
+					if (selectedConnectionType === '') {
+						return true;
+					} else if (selectedConnectionType === 'ollama') {
+						return item.model?.owned_by === 'ollama';
+					} else if (selectedConnectionType === 'openai') {
+						return item.model?.owned_by === 'openai';
+					} else if (selectedConnectionType === 'direct') {
+						return item.model?.direct;
+					}
+				});
 
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = searchValue.trim().replace(/^ollama\s+(run|pull)\s+/, '');
@@ -332,48 +357,59 @@
 							bind:this={tagsContainerElement}
 						>
 							<button
-								class="min-w-fit outline-none p-1.5 {selectedTag === ''
+								class="min-w-fit outline-none p-1.5 {selectedTag === '' &&
+								selectedConnectionType === ''
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
 								on:click={() => {
+									selectedConnectionType = '';
 									selectedTag = '';
 								}}
 							>
 								{$i18n.t('All')}
 							</button>
 
-							<button
-								class="min-w-fit outline-none p-1.5 {selectedTag === ''
-									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-								on:click={() => {
-									selectedTag = '';
-								}}
-							>
-								{$i18n.t('Local')}
-							</button>
+							{#if items.find((item) => item.model?.owned_by === 'ollama')}
+								<button
+									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'ollama'
+										? ''
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									on:click={() => {
+										selectedTag = '';
+										selectedConnectionType = 'ollama';
+									}}
+								>
+									{$i18n.t('Local')}
+								</button>
+							{/if}
 
-							<button
-								class="min-w-fit outline-none p-1.5 {selectedTag === ''
-									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-								on:click={() => {
-									selectedTag = '';
-								}}
-							>
-								{$i18n.t('External')}
-							</button>
+							{#if items.find((item) => item.model?.owned_by === 'openai')}
+								<button
+									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'openai'
+										? ''
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									on:click={() => {
+										selectedTag = '';
+										selectedConnectionType = 'openai';
+									}}
+								>
+									{$i18n.t('External')}
+								</button>
+							{/if}
 
-							<button
-								class="min-w-fit outline-none p-1.5 {selectedTag === ''
-									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-								on:click={() => {
-									selectedTag = '';
-								}}
-							>
-								{$i18n.t('Direct')}
-							</button>
+							{#if items.find((item) => item.model?.direct)}
+								<button
+									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'direct'
+										? ''
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									on:click={() => {
+										selectedTag = '';
+										selectedConnectionType = 'direct';
+									}}
+								>
+									{$i18n.t('Direct')}
+								</button>
+							{/if}
 
 							{#each tags as tag}
 								<button
@@ -381,6 +417,7 @@
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
 									on:click={() => {
+										selectedConnectionType = '';
 										selectedTag = tag;
 									}}
 								>
