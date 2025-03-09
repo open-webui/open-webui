@@ -41,7 +41,6 @@
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
 			}
-
 			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
@@ -389,6 +388,7 @@
 											window.location.href = `${WEBUI_BASE_URL}/oauth/google/login`;
 										}}
 									>
+										
 										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="size-6 mr-3">
 											<path
 												fill="#EA4335"
