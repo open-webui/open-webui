@@ -134,33 +134,8 @@ class DoclingLoader:
             }
 
             params = {
-                "from_formats": [
-                    "docx",
-                    "pptx",
-                    "html",
-                    "image",
-                    "pdf",
-                    "asciidoc",
-                    "md",
-                    "csv",
-                    "xlsx",
-                    "xml_uspto",
-                    "xml_jats",
-                    "json_docling",
-                ],
-                "to_formats": ["md"],
                 "image_export_mode": "placeholder",
-                "do_ocr": True,
-                "force_ocr": False,
-                "ocr_engine": "easyocr",
-                "ocr_lang": None,
-                "pdf_backend": "dlparse_v2",
                 "table_mode": "accurate",
-                "abort_on_error": False,
-                "return_as_file": False,
-                "do_table_structure": True,
-                "include_images": True,
-                "images_scale": 2.0,
             }
 
             endpoint = f"{self.url}/v1alpha/convert/file"
