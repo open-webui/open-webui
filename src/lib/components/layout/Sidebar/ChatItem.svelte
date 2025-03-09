@@ -227,7 +227,11 @@
 	</DragGhost>
 {/if}
 
-<div bind:this={itemElement} class=" w-full {className} relative group" {draggable}>
+<div
+	bind:this={itemElement}
+	class=" w-full {className} relative group"
+	draggable={draggable && !confirmEdit}
+>
 	{#if confirmEdit}
 		<div
 			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||

@@ -69,10 +69,8 @@ BACKEND_URL = os.environ.get("BACKEND_URL", "http://localhost:8080")
 # LOGGING
 ####################################
 
-log_levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
-
 GLOBAL_LOG_LEVEL = os.environ.get("GLOBAL_LOG_LEVEL", "").upper()
-if GLOBAL_LOG_LEVEL in log_levels:
+if GLOBAL_LOG_LEVEL in logging.getLevelNamesMapping():
     logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL, force=True)
 else:
     GLOBAL_LOG_LEVEL = "INFO"
@@ -82,6 +80,7 @@ log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
 
 if "cuda_error" in locals():
     log.exception(cuda_error)
+    del cuda_error
 
 log_sources = [
     "AUDIO",
@@ -104,7 +103,7 @@ SRC_LOG_LEVELS = {}
 for source in log_sources:
     log_env_var = source + "_LOG_LEVEL"
     SRC_LOG_LEVELS[source] = os.environ.get(log_env_var, "").upper()
-    if SRC_LOG_LEVELS[source] not in log_levels:
+    if SRC_LOG_LEVELS[source] not in logging.getLevelNamesMapping():
         SRC_LOG_LEVELS[source] = GLOBAL_LOG_LEVEL
     log.info(f"{log_env_var}: {SRC_LOG_LEVELS[source]}")
 
@@ -406,6 +405,7 @@ ENABLE_WEBSOCKET_SUPPORT = (
 WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
 
 WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", REDIS_URL)
+WEBSOCKET_REDIS_LOCK_TIMEOUT = os.environ.get("WEBSOCKET_REDIS_LOCK_TIMEOUT", 60)
 
 AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
 
@@ -417,19 +417,20 @@ else:
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT = 300
 
-AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = os.environ.get(
-    "AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST", ""
+AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = os.environ.get(
+    "AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST",
+    os.environ.get("AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST", ""),
 )
 
-if AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST == "":
-    AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = None
+
+if AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST == "":
+    AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = None
 else:
     try:
-        AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = int(
-            AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST
-        )
+        AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = int(AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     except Exception:
-        AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST = 5
+        AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = 5
+
 
 ####################################
 # OFFLINE_MODE

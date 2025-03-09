@@ -72,7 +72,7 @@ def get_license_data(app, key):
     if key:
         try:
             res = requests.post(
-                "https://api.openwebui.com/api/v1/license",
+                "https://api.openwebui.com/api/v1/license/",
                 json={"key": key, "version": "1"},
                 timeout=5,
             )
@@ -83,11 +83,12 @@ def get_license_data(app, key):
                     if k == "resources":
                         for p, c in v.items():
                             globals().get("override_static", lambda a, b: None)(p, c)
-                    elif k == "user_count":
+                    elif k == "count":
                         setattr(app.state, "USER_COUNT", v)
-                    elif k == "webui_name":
+                    elif k == "name":
                         setattr(app.state, "WEBUI_NAME", v)
-
+                    elif k == "metadata":
+                        setattr(app.state, "LICENSE_METADATA", v)
                 return True
             else:
                 log.error(
