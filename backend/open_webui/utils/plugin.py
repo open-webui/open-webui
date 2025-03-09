@@ -165,7 +165,7 @@ def load_function_module_by_id(function_id, content=None):
         os.unlink(temp_file.name)
 
 
-def install_frontmatter_requirements(requirements):
+def install_frontmatter_requirements(requirements: str):
     if requirements:
         try:
             req_list = [req.strip() for req in requirements.split(",")]
