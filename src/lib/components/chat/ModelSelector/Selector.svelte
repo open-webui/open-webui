@@ -369,7 +369,7 @@
 								{$i18n.t('All')}
 							</button>
 
-							{#if items.find((item) => item.model?.owned_by === 'ollama')}
+							{#if items.find((item) => item.model?.owned_by === 'ollama') && items.find((item) => item.model?.owned_by === 'openai')}
 								<button
 									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'ollama'
 										? ''
@@ -381,9 +381,6 @@
 								>
 									{$i18n.t('Local')}
 								</button>
-							{/if}
-
-							{#if items.find((item) => item.model?.owned_by === 'openai')}
 								<button
 									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'openai'
 										? ''
