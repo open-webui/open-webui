@@ -118,8 +118,8 @@
 			content={tool?.content ?? ''}
 			accessControl={null}
 			{clone}
-			on:save={(e) => {
-				saveHandler(e.detail);
+			onSave={(value) => {
+				saveHandler(value);
 			}}
 		/>
 	{/key}

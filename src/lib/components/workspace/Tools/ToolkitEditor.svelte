@@ -26,6 +26,8 @@
 	export let edit = false;
 	export let clone = false;
 
+	export let onSave = () => {};
+
 	export let id = '';
 	export let name = '';
 	export let meta = {
@@ -153,7 +155,7 @@ class Tools:
 
 	const saveHandler = async () => {
 		loading = true;
-		dispatch('save', {
+		onSave({
 			id,
 			name,
 			meta,
@@ -295,10 +297,10 @@ class Tools:
 						value={content}
 						{boilerplate}
 						lang="python"
-						on:change={(e) => {
-							_content = e.detail.value;
+						onChange={(e) => {
+							_content = e;
 						}}
-						on:save={() => {
+						onSave={() => {
 							if (formElement) {
 								formElement.requestSubmit();
 							}

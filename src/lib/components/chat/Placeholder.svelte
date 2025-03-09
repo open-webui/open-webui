@@ -216,8 +216,10 @@
 	<div class="mx-auto max-w-2xl font-primary" in:fade={{ duration: 200, delay: 200 }}>
 		<div class="mx-5">
 			<Suggestions
-				suggestionPrompts={models[selectedModelIdx]?.info?.meta?.suggestion_prompts ||
-					$config?.default_prompt_suggestions || [
+				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
+					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+					$config?.default_prompt_suggestions ??
+					[
 						{
 							title: ['Assistant administratif'],
 							content: "Aidez-moi à rédiger une lettre pour informer d'un changement d'horaires."

@@ -20,6 +20,10 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.constants import TASKS
 
 from open_webui.routers.pipelines import process_pipeline_inlet_filter
+from open_webui.utils.filter import (
+    get_sorted_filter_ids,
+    process_filter_functions,
+)
 from open_webui.utils.task import get_task_model_id
 
 from open_webui.config import (
@@ -221,6 +225,12 @@ async def generate_title(
         },
     }
 
+    # Process the payload through the pipeline
+    try:
+        payload = await process_pipeline_inlet_filter(request, payload, user, models)
+    except Exception as e:
+        raise e
+
     try:
         return await generate_chat_completion(request, form_data=payload, user=user)
     except Exception as e:
@@ -290,6 +300,12 @@ async def generate_chat_tags(
         },
     }
 
+    # Process the payload through the pipeline
+    try:
+        payload = await process_pipeline_inlet_filter(request, payload, user, models)
+    except Exception as e:
+        raise e
+
     try:
         return await generate_chat_completion(request, form_data=payload, user=user)
     except Exception as e:
@@ -355,6 +371,12 @@ async def generate_image_prompt(
             "chat_id": form_data.get("chat_id", None),
         },
     }
+
+    # Process the payload through the pipeline
+    try:
+        payload = await process_pipeline_inlet_filter(request, payload, user, models)
+    except Exception as e:
+        raise e
 
     try:
         return await generate_chat_completion(request, form_data=payload, user=user)
@@ -432,6 +454,12 @@ async def generate_queries(
             "chat_id": form_data.get("chat_id", None),
         },
     }
+
+    # Process the payload through the pipeline
+    try:
+        payload = await process_pipeline_inlet_filter(request, payload, user, models)
+    except Exception as e:
+        raise e
 
     try:
         return await generate_chat_completion(request, form_data=payload, user=user)
@@ -514,6 +542,12 @@ async def generate_autocompletion(
         },
     }
 
+    # Process the payload through the pipeline
+    try:
+        payload = await process_pipeline_inlet_filter(request, payload, user, models)
+    except Exception as e:
+        raise e
+
     try:
         return await generate_chat_completion(request, form_data=payload, user=user)
     except Exception as e:
@@ -584,6 +618,12 @@ async def generate_emoji(
         },
     }
 
+    # Process the payload through the pipeline
+    try:
+        payload = await process_pipeline_inlet_filter(request, payload, user, models)
+    except Exception as e:
+        raise e
+
     try:
         return await generate_chat_completion(request, form_data=payload, user=user)
     except Exception as e:
@@ -643,6 +683,12 @@ async def generate_moa_response(
             "task_body": form_data,
         },
     }
+
+    # Process the payload through the pipeline
+    try:
+        payload = await process_pipeline_inlet_filter(request, payload, user, models)
+    except Exception as e:
+        raise e
 
     try:
         return await generate_chat_completion(request, form_data=payload, user=user)

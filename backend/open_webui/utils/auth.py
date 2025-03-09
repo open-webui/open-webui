@@ -13,10 +13,15 @@ from typing import Optional, Union, List, Dict
 
 from open_webui.models.users import Users
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import WEBUI_SECRET_KEY, TRUSTED_SIGNATURE_KEY, STATIC_DIR
+from open_webui.env import (
+    WEBUI_SECRET_KEY,
+    TRUSTED_SIGNATURE_KEY,
+    STATIC_DIR,
+    SRC_LOG_LEVELS,
+)
 from open_webui.storage.redis_client import redis_client
 
-from fastapi import Depends, HTTPException, Request, Response, status
+from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 from authlib.oidc.core import UserInfo
@@ -24,6 +29,7 @@ import requests
 logging.getLogger("passlib").setLevel(logging.ERROR)
 
 log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["OAUTH"])
 
 SESSION_SECRET = WEBUI_SECRET_KEY
 ALGORITHM = "HS256"
@@ -52,7 +58,7 @@ def verify_signature(payload: str, signature: str) -> bool:
 def override_static(path: str, content: str):
     # Ensure path is safe
     if "/" in path or ".." in path:
-        print(f"Invalid path: {path}")
+        log.error(f"Invalid path: {path}")
         return
 
     file_path = os.path.join(STATIC_DIR, path)
@@ -84,11 +90,11 @@ def get_license_data(app, key):
 
                 return True
             else:
-                print(
+                log.error(
                     f"License: retrieval issue: {getattr(res, 'text', 'unknown error')}"
                 )
         except Exception as ex:
-            print(f"License: Uncaught Exception: {ex}")
+            log.exception(f"License: Uncaught Exception: {ex}")
     return False
 
 
@@ -145,7 +151,7 @@ def get_http_authorization_cred(auth_header: str):
         raise ValueError(ERROR_MESSAGES.INVALID_TOKEN)
 
 
-async def get_current_user(request: Request):
+async def get_current_user(request: Request, background_tasks: BackgroundTasks,):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -169,7 +175,11 @@ async def get_current_user(request: Request):
     user = Users.get_user_by_id(user_id)
     if user is None:
         raise credentials_exception
-
+    else:
+        # Refresh the user's last active timestamp asynchronously
+        # to prevent blocking the request
+        if background_tasks:
+            background_tasks.add_task(Users.update_user_last_active_by_id, user.id)
     return user
 
 
