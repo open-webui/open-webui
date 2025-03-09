@@ -16,7 +16,7 @@ const packages = [
 ];
 
 import { loadPyodide } from 'pyodide';
-import { setGlobalDispatcher, ProxyAgent } from 'undici';
+import { setGlobalDispatcher, ProxyAgent } from 'undici';////////////
 import { writeFile, readFile, copyFile, readdir, rmdir } from 'fs/promises';
 
 /**
