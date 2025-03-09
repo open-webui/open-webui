@@ -326,7 +326,7 @@
 
 			<div class="px-3 mb-2 max-h-64 overflow-y-auto scrollbar-hidden group relative">
 				{#if tags}
-					<div class=" flex w-full sticky">
+					<div class=" flex w-full sticky top-0 z-10 bg-white dark:bg-gray-850">
 						<div
 							class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent px-1.5 pb-0.5"
 							bind:this={tagsContainerElement}
