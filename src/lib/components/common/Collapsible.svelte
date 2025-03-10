@@ -1,6 +1,11 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { getContext, createEventDispatcher} from 'svelte';
 	const i18n = getContext('i18n');
+
+	import { settings } from '$lib/stores';
+	import { get } from 'svelte/store';
+
+	let userSettings = get(settings);
 
 	import dayjs from '$lib/dayjs';
 	import duration from 'dayjs/plugin/duration';
@@ -24,7 +29,20 @@
 	$: loadLocale($i18n.languages);
 
 	const dispatch = createEventDispatcher();
-	$: dispatch('change', open);
+
+	let previousDone = false;
+
+	$: {
+		if (attributes?.done !== previousDone && userSettings.unfoldBeforeCompletion) {
+			if (attributes?.done === 'false') {
+				open = true;
+			}
+			if (attributes?.done === 'true') {
+				open = false;
+			}
+			previousDone = attributes?.done;
+		}
+	}
 
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
