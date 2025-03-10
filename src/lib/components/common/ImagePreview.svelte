@@ -86,7 +86,12 @@
 			<div>
 				<button
 					class=" p-5"
-					on:click={() => {
+					on:pointerdown={(e) => {
+						e.stopImmediatePropagation();
+						e.preventDefault();
+						show = false;
+					}}
+					on:click={(e) => {
 						show = false;
 					}}
 				>
@@ -106,7 +111,12 @@
 			<div>
 				<button
 					class=" p-5"
-					on:click={() => {
+					on:pointerdown={(e) => {
+						e.stopImmediatePropagation();
+						e.preventDefault();
+						downloadImage(src, src.substring(src.lastIndexOf('/') + 1), alt);
+					}}
+					on:click={(e) => {
 						downloadImage(src, src.substring(src.lastIndexOf('/') + 1), alt);
 					}}
 				>
