@@ -83,7 +83,6 @@
 		};
 
 		window.addEventListener('message', messageHandler, false);
-		console.log(item);
 	};
 
 	const cloneHandler = async (tool) => {
@@ -369,7 +368,6 @@
 					accept=".json"
 					hidden
 					on:change={() => {
-						console.log(importFiles);
 						showConfirm = true;
 					}}
 				/>
@@ -483,8 +481,6 @@
 			const reader = new FileReader();
 			reader.onload = async (event) => {
 				const _tools = JSON.parse(event.target.result);
-				console.log(_tools);
-
 				for (const tool of _tools) {
 					const res = await createNewTool(localStorage.token, tool).catch((error) => {
 						toast.error(`${error}`);

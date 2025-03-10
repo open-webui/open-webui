@@ -67,8 +67,6 @@
 		}
 
 		if (folderElement.contains(e.target)) {
-			console.log('Dropped on the Button');
-
 			if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
 				// Iterate over all items in the DataTransferItemList use functional programming
 				for (const item of Array.from(e.dataTransfer.items)) {
@@ -76,8 +74,6 @@
 					if (item.kind === 'file') {
 						const file = item.getAsFile();
 						if (file && file.type === 'application/json') {
-							console.log('Dropped file is a JSON file!');
-
 							// Read the JSON file with FileReader
 							const reader = new FileReader();
 							reader.onload = async function (event) {
@@ -98,14 +94,10 @@
 						} else {
 							console.error('Only JSON file types are supported.');
 						}
-
-						console.log(file);
 					} else {
 						// Handle the drag-and-drop data for folders or chats (same as before)
 						const dataTransfer = e.dataTransfer.getData('text/plain');
 						const data = JSON.parse(dataTransfer);
-						console.log(data);
-
 						const { type, id, item } = data;
 
 						if (type === 'folder') {
@@ -294,7 +286,6 @@
 	$: isExpandedUpdateDebounceHandler(open);
 
 	const editHandler = async () => {
-		console.log('Edit');
 		await tick();
 		name = folders[folderId].name;
 		edit = true;

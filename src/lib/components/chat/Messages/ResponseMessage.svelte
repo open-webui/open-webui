@@ -201,7 +201,6 @@
 			);
 
 			if (!messageContentParts.length) {
-				console.log('No content to speak');
 				toast.info($i18n.t('No content to speak'));
 
 				speaking = false;
@@ -261,12 +260,8 @@
 							)
 							?.at(0) ?? undefined;
 
-					console.log(voice);
-
 					const speak = new SpeechSynthesisUtterance(message.content);
 					speak.rate = $settings.audio?.tts?.playbackRate ?? 1;
-
-					console.log(speak);
 
 					speak.onend = () => {
 						speaking = false;
@@ -324,7 +319,6 @@
 		const res = await imageGenerations(localStorage.token, message.content).catch((error) => {
 			toast.error(`${error}`);
 		});
-		console.log(res);
 
 		if (res) {
 			const files = res.map((image) => ({
@@ -345,8 +339,6 @@
 
 	const feedbackHandler = async (rating: number | null = null, details: object | null = null) => {
 		feedbackLoading = true;
-		console.log('Feedback', rating, details);
-
 		const updatedMessage = {
 			...message,
 			annotation: {
@@ -424,7 +416,6 @@
 			}
 		}
 
-		console.log(updatedMessage);
 		saveMessage(message.id, updatedMessage);
 
 		await tick();
@@ -440,7 +431,6 @@
 						return [];
 					}
 				);
-				console.log(tags);
 
 				if (tags) {
 					updatedMessage.annotation.tags = tags;
@@ -468,8 +458,6 @@
 	}
 
 	onMount(async () => {
-		// console.log('ResponseMessage mounted');
-
 		await tick();
 	});
 </script>
@@ -671,7 +659,6 @@
 										save={!readOnly}
 										{model}
 										onSourceClick={(e) => {
-											console.log(e);
 											const sourceButton = document.getElementById(`source-${e}`);
 
 											if (sourceButton) {
@@ -999,9 +986,6 @@
 											class=" {isLastMessage
 												? 'visible'
 												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition whitespace-pre-wrap"
-											on:click={() => {
-												console.log(message);
-											}}
 											id="info-{message.id}"
 										>
 											<svg

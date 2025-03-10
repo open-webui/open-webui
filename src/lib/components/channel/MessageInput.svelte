@@ -80,13 +80,6 @@
 
 	const inputFilesHandler = async (inputFiles) => {
 		inputFiles.forEach((file) => {
-			console.log('Processing file:', {
-				name: file.name,
-				type: file.type,
-				size: file.size,
-				extension: file.name.split('.').at(-1)
-			});
-
 			if (
 				($config?.file?.max_size ?? null) !== null &&
 				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
@@ -163,7 +156,6 @@
 			});
 
 			if (res) {
-				console.log(res);
 				const blob = new Blob([res.text], { type: 'text/plain' });
 				file = blobToFile(blob, `${file.name}.txt`);
 
@@ -177,12 +169,6 @@
 			const uploadedFile = await uploadFile(localStorage.token, file);
 
 			if (uploadedFile) {
-				console.log('File upload completed:', {
-					id: uploadedFile.id,
-					name: fileItem.name,
-					collection: uploadedFile?.meta?.collection_name
-				});
-
 				if (uploadedFile.error) {
 					console.warn('File upload warning:', uploadedFile.error);
 					toast.warning(uploadedFile.error);
@@ -207,7 +193,6 @@
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
-			console.log('Escape');
 			draggedOver = false;
 		}
 	};
@@ -229,12 +214,9 @@
 
 	const onDrop = async (e) => {
 		e.preventDefault();
-		console.log(e);
-
 		if (e.dataTransfer?.files) {
 			const inputFiles = Array.from(e.dataTransfer?.files);
 			if (inputFiles && inputFiles.length > 0) {
-				console.log(inputFiles);
 				inputFilesHandler(inputFiles);
 			}
 		}
@@ -284,7 +266,6 @@
 	});
 
 	onDestroy(() => {
-		console.log('destroy');
 		window.removeEventListener('keydown', handleKeyDown);
 
 		const dropzoneElement = document.getElementById('channel-container');
@@ -443,9 +424,6 @@
 												files.splice(fileIdx, 1);
 												files = files;
 											}}
-											on:click={() => {
-												console.log(file);
-											}}
 										/>
 									{/if}
 								{/each}
@@ -515,10 +493,6 @@
 											if (content !== '' && e.keyCode === 13 && !e.shiftKey) {
 												submitHandler();
 											}
-										}
-
-										if (e.key === 'Escape') {
-											console.log('Escape');
 										}
 									}}
 									on:paste={async (e) => {

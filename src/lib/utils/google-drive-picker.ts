@@ -107,16 +107,12 @@ const initialize = async () => {
 export const createPicker = () => {
 	return new Promise(async (resolve, reject) => {
 		try {
-			console.log('Initializing Google Drive Picker...');
 			await initialize();
-			console.log('Getting auth token...');
 			const token = await getAuthToken();
 			if (!token) {
 				console.error('Failed to get OAuth token');
 				throw new Error('Unable to get OAuth token');
 			}
-			console.log('Auth token obtained successfully');
-
 			const picker = new google.picker.PickerBuilder()
 				.enableFeature(google.picker.Feature.NAV_HIDDEN)
 				.enableFeature(google.picker.Feature.MULTISELECT_ENABLED)

@@ -27,9 +27,6 @@
 	nodesConnectable={false}
 	nodesDraggable={false}
 	on:nodeclick={(e) => dispatch('nodeclick', e.detail)}
-	oninit={() => {
-		console.log('Flow initialized');
-	}}
 >
 	<Controls showLock={false} />
 	<Background variant={BackgroundVariant.Dots} />

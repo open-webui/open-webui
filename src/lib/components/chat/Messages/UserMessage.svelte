@@ -77,10 +77,6 @@
 	const deleteMessageHandler = async () => {
 		deleteMessage(message.id);
 	};
-
-	onMount(() => {
-		// console.log('UserMessage mounted');
-	});
 </script>
 
 <div class=" flex w-full user-message" id="message-{message.id}">

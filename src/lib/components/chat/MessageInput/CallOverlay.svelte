@@ -59,7 +59,6 @@
 			];
 		}
 
-		console.log(videoInputDevices);
 		if (selectedVideoInputDeviceId === null && videoInputDevices.length > 0) {
 			selectedVideoInputDeviceId = videoInputDevices[0].deviceId;
 		}
@@ -133,8 +132,6 @@
 
 		// Convert the canvas to a data base64 URL and console log it
 		const dataURL = canvas.toDataURL('image/png');
-		console.log(dataURL);
-
 		return dataURL;
 	};
 
@@ -158,19 +155,14 @@
 		});
 
 		if (res) {
-			console.log(res.text);
-
 			if (res.text !== '') {
 				const _responses = await submitPrompt(res.text, { _raw: true });
-				console.log(_responses);
 			}
 		}
 	};
 
 	const stopRecordingCallback = async (_continue = true) => {
 		if ($showCallOverlay) {
-			console.log('%c%s', 'color: red; font-size: 20px;', '🚨 stopRecordingCallback 🚨');
-
 			// deep copy the audioChunks array
 			const _audioChunks = audioChunks.slice(0);
 
@@ -228,7 +220,6 @@
 			mediaRecorder = new MediaRecorder(audioStream);
 
 			mediaRecorder.onstart = () => {
-				console.log('Recording started');
 				audioChunks = [];
 				analyseAudio(audioStream);
 			};
@@ -240,7 +231,6 @@
 			};
 
 			mediaRecorder.onstop = (e) => {
-				console.log('Recording stopped', audioStream, e);
 				stopRecordingCallback();
 			};
 
@@ -292,8 +282,6 @@
 		let lastSoundTime = Date.now();
 		hasStartedSpeaking = false;
 
-		console.log('🔊 Sound detection started', lastSoundTime, hasStartedSpeaking);
-
 		const detectSound = () => {
 			const processFrame = () => {
 				if (!mediaRecorder || !$showCallOverlay) {
@@ -318,9 +306,6 @@
 				// Check if initial speech/noise has started
 				const hasSound = domainData.some((value) => value > 0);
 				if (hasSound) {
-					// BIG RED TEXT
-					console.log('%c%s', 'color: red; font-size: 20px;', '🔊 Sound detected');
-
 					if (!hasStartedSpeaking) {
 						hasStartedSpeaking = true;
 						stopAllAudio();
@@ -335,7 +320,6 @@
 						confirmed = true;
 
 						if (mediaRecorder) {
-							console.log('%c%s', 'color: red; font-size: 20px;', '🔇 Silence detected');
 							mediaRecorder.stop();
 							return;
 						}
@@ -507,15 +491,8 @@
 
 					if ($config.audio.tts.engine !== '') {
 						try {
-							console.log(
-								'%c%s',
-								'color: red; font-size: 20px;',
-								`Playing audio for content: ${content}`
-							);
-
 							const audio = audioCache.get(content);
 							await playAudio(audio); // Here ensure that playAudio is indeed correct method to execute
-							console.log(`Played audio for content: ${content}`);
 							await new Promise((resolve) => setTimeout(resolve, 200)); // Wait before retrying to reduce tight loop
 						} catch (error) {
 							console.error('Error playing audio:', error);
@@ -526,7 +503,6 @@
 				} else {
 					// If not available in the cache, push it back to the queue and delay
 					messages[id].unshift(content); // Re-queue the content at the start
-					console.log(`Audio for "${content}" not yet available in the cache, re-queued...`);
 					await new Promise((resolve) => setTimeout(resolve, 200)); // Wait before retrying to reduce tight loop
 				}
 			} else if (finishedMessages[id] && messages[id] && messages[id].length === 0) {
@@ -538,7 +514,6 @@
 				await new Promise((resolve) => setTimeout(resolve, 200));
 			}
 		}
-		console.log(`Audio monitoring and playing stopped for message ID ${id}`);
 	};
 
 	const chatStartHandler = async (e) => {
@@ -547,8 +522,6 @@
 		chatStreaming = true;
 
 		if (currentMessageId !== id) {
-			console.log(`Received chat start event for message ID ${id}`);
-
 			currentMessageId = id;
 			if (audioAbortController) {
 				audioAbortController.abort();
@@ -569,16 +542,12 @@
 		// there will be many sentences for the same "id"
 
 		if (currentMessageId === id) {
-			console.log(`Received chat event for message ID ${id}: ${content}`);
-
 			try {
 				if (messages[id] === undefined) {
 					messages[id] = [content];
 				} else {
 					messages[id].push(content);
 				}
-
-				console.log(content);
 
 				fetchAudio(content);
 			} catch (error) {
@@ -872,7 +841,6 @@
 					<VideoInputMenu
 						devices={videoInputDevices}
 						on:change={async (e) => {
-							console.log(e.detail);
 							selectedVideoInputDeviceId = e.detail;
 							await stopVideoStream();
 							await startVideoStream();
@@ -954,10 +922,6 @@
 					on:click={async () => {
 						await stopAudioStream();
 						await stopVideoStream();
-
-						console.log(audioStream);
-						console.log(cameraStream);
-
 						showCallOverlay.set(false);
 						dispatch('close');
 					}}

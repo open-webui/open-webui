@@ -43,7 +43,6 @@
 			});
 
 			if (res) {
-				console.log(res);
 				voices = res.voices;
 			}
 		}

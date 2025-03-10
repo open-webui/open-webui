@@ -123,8 +123,6 @@
 			let pyodide = await loadPyodide({
 				indexURL: '/pyodide/',
 				stdout: (text) => {
-					console.log('Python output:', text);
-
 					if (stdout) {
 						stdout += `${text}\n`;
 					} else {
@@ -132,7 +130,6 @@
 					}
 				},
 				stderr: (text) => {
-					console.log('An error occurred:', text);
 					if (stderr) {
 						stderr += `${text}\n`;
 					} else {
@@ -159,7 +156,6 @@
 					code.includes('seaborn') ? 'seaborn' : null
 				].filter(Boolean);
 
-				console.log(packages);
 				await micropip.install(packages);
 
 				result = await pyodide.runPythonAsync(`from js import prompt
@@ -172,10 +168,6 @@ __builtins__.input = input`);
 				if (!result) {
 					result = '[NO OUTPUT]';
 				}
-
-				console.log(result);
-				console.log(stdout);
-				console.log(stderr);
 
 				const pltCanvasElement = document.getElementById(`plt-canvas-${id}`);
 
@@ -209,8 +201,6 @@ __builtins__.input = input`);
 			code.includes('seaborn') ? 'seaborn' : null
 		].filter(Boolean);
 
-		console.log(packages);
-
 		const pyodideWorker = new PyodideWorker();
 
 		pyodideWorker.postMessage({
@@ -228,11 +218,7 @@ __builtins__.input = input`);
 		}, 60000);
 
 		pyodideWorker.onmessage = (event) => {
-			console.log('pyodideWorker.onmessage', event);
 			const { id, ...data } = event.data;
-
-			console.log(id, data);
-
 			data['stdout'] && (stdout = data['stdout']);
 			data['stderr'] && (stderr = data['stderr']);
 			data['result'] && (result = data['result']);
@@ -241,7 +227,6 @@ __builtins__.input = input`);
 		};
 
 		pyodideWorker.onerror = (event) => {
-			console.log('pyodideWorker.onerror', event);
 			executing = false;
 		};
 	};
@@ -280,8 +265,6 @@ __builtins__.input = input`);
 	$: dispatch('code', { lang, code });
 
 	onMount(async () => {
-		console.log('codeblock', lang, code);
-
 		if (lang) {
 			dispatch('code', { lang, code });
 		}

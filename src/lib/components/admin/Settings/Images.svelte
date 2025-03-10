@@ -201,8 +201,6 @@
 			requiredWorkflowNodes = requiredWorkflowNodes.map((node) => {
 				const n = config.comfyui.COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
 
-				console.log(n);
-
 				return {
 					type: n.type,
 					key: n.key,

@@ -63,21 +63,18 @@
 				bind:prompt
 				command={command.includes('\\#') ? command.slice(2) : command}
 				on:youtube={(e) => {
-					console.log(e);
 					dispatch('upload', {
 						type: 'youtube',
 						data: e.detail
 					});
 				}}
 				on:url={(e) => {
-					console.log(e);
 					dispatch('upload', {
 						type: 'web',
 						data: e.detail
 					});
 				}}
 				on:select={(e) => {
-					console.log(e);
 					if (files.find((f) => f.id === e.detail.id)) {
 						return;
 					}

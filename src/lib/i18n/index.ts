@@ -26,7 +26,6 @@ const createIsLoadingStore = (i18n: i18nType) => {
 
 	// if loaded resources are empty || {}, set loading to true
 	i18n.on('loaded', (resources) => {
-		// console.log('loaded:', resources);
 		Object.keys(resources).length !== 0 && isLoading.set(false);
 	});
 

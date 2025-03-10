@@ -319,9 +319,7 @@ export const copyToClipboard = async (text) => {
 		textArea.select();
 
 		try {
-			const successful = document.execCommand('copy');
-			const msg = successful ? 'successful' : 'unsuccessful';
-			console.log('Fallback: Copying text command was ' + msg);
+			document.execCommand('copy');
 			result = true;
 		} catch (err) {
 			console.error('Fallback: Oops, unable to copy', err);
@@ -334,7 +332,6 @@ export const copyToClipboard = async (text) => {
 	result = await navigator.clipboard
 		.writeText(text)
 		.then(() => {
-			console.log('Async: Copying to clipboard was successful!');
 			return true;
 		})
 		.catch((error) => {
@@ -372,7 +369,6 @@ export const findWordIndices = (text) => {
 };
 
 export const removeLastWordFromString = (inputString, wordString) => {
-	console.log('inputString', inputString);
 	// Split the string by newline characters to handle lines separately
 	const lines = inputString.split('\n');
 
@@ -397,9 +393,6 @@ export const removeLastWordFromString = (inputString, wordString) => {
 
 	// Combine the lines together again, placing the updated last line back in
 	const resultString = [...lines, updatedLastLine].join('\n');
-
-	// Return the final string
-	console.log('resultString', resultString);
 
 	return resultString;
 };
@@ -1035,6 +1028,5 @@ export const formatFileSize = (size) => {
 };
 
 export const getLineCount = (text) => {
-	console.log(typeof text);
 	return text ? text.split('\n').length : 0;
 };

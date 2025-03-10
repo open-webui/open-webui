@@ -24,10 +24,7 @@
 			};
 		});
 
-		console.log(version);
-
 		updateAvailable = compareVersion(version.latest, version.current);
-		console.log(updateAvailable);
 	};
 
 	onMount(async () => {

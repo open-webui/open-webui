@@ -66,8 +66,6 @@
 
 	const updateModelsHandler = async () => {
 		for (const model of ollamaModels) {
-			console.log(model);
-
 			updateModelId = model.id;
 			const [res, controller] = await pullModel(localStorage.token, model.id, urlIdx).catch(
 				(error) => {
@@ -92,8 +90,6 @@
 						for (const line of lines) {
 							if (line !== '') {
 								let data = JSON.parse(line);
-
-								console.log(data);
 								if (data.error) {
 									throw data.error;
 								}
@@ -127,7 +123,6 @@
 
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = modelTag.trim().replace(/^ollama\s+(run|pull)\s+/, '');
-		console.log($MODEL_DOWNLOAD_POOL);
 		if ($MODEL_DOWNLOAD_POOL[sanitizedModelTag]) {
 			toast.error(
 				$i18n.t(`Model '{{modelTag}}' is already in queue for downloading.`, {
@@ -176,7 +171,6 @@
 					for (const line of lines) {
 						if (line !== '') {
 							let data = JSON.parse(line);
-							console.log(data);
 							if (data.error) {
 								throw data.error;
 							}
@@ -225,8 +219,6 @@
 					// opts.callback({ success: false, error, modelName: opts.modelName });
 				}
 			}
-
-			console.log($MODEL_DOWNLOAD_POOL[sanitizedModelTag]);
 
 			if ($MODEL_DOWNLOAD_POOL[sanitizedModelTag].done) {
 				toast.success(
@@ -345,9 +337,7 @@
 
 						for (const line of lines) {
 							if (line !== '') {
-								console.log(line);
 								let data = JSON.parse(line);
-								console.log(data);
 
 								if (data.error) {
 									throw data.error;
@@ -466,10 +456,7 @@
 
 					for (const line of lines) {
 						if (line !== '') {
-							console.log(line);
 							let data = JSON.parse(line);
-							console.log(data);
-
 							if (data.error) {
 								throw data.error;
 							}
@@ -877,9 +864,7 @@
 											bind:this={modelUploadInputElement}
 											type="file"
 											bind:files={modelInputFile}
-											on:change={() => {
-												console.log(modelInputFile);
-											}}
+											on:change={() => {}}
 											accept=".gguf,.safetensors"
 											required
 											hidden
