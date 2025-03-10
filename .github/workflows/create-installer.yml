@@ -50,12 +50,13 @@ jobs:
           exit 1
         }
 
-    - name: Download NSIS 3.11
+    - name: Install NSIS
       run: |
-        Invoke-WebRequest -Uri "https://sourceforge.net/projects/nsis/files/NSIS%203/3.11/nsis-3.11-setup.exe/download" -OutFile "nsis-setup.exe"
-        Start-Process -FilePath "nsis-setup.exe" -ArgumentList "/S" -Wait
-        echo "Adding NSIS to PATH"
-        echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
+        # Download NSIS installer
+        Invoke-WebRequest -UserAgent "Wget" -Uri "https://sourceforge.net/projects/nsis/files/NSIS%203/3.10/nsis-3.10-setup.exe" -OutFile "nsis.exe"
+        
+        # Install NSIS
+        Start-Process nsis.exe -ArgumentList '/S' -Wait
 
     - name: Build installer
       run: |
