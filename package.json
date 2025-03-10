@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.5.18",
+	"version": "0.5.20",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -51,6 +51,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@azure/msal-browser": "^4.5.0",
 		"@codemirror/lang-javascript": "^6.2.2",
 		"@codemirror/lang-python": "^6.1.6",
 		"@codemirror/language-data": "^6.5.1",
