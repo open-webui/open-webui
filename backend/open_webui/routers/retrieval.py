@@ -719,6 +719,7 @@ async def get_query_settings(request: Request, user=Depends(get_admin_user)):
         "status": True,
         "template": request.app.state.config.RAG_TEMPLATE,
         "k": request.app.state.config.TOP_K,
+        "k_reranker": request.app.state.config.TOP_K_RERANKER,
         "r": request.app.state.config.RELEVANCE_THRESHOLD,
         "hybrid": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
     }
@@ -726,6 +727,7 @@ async def get_query_settings(request: Request, user=Depends(get_admin_user)):
 
 class QuerySettingsForm(BaseModel):
     k: Optional[int] = None
+    k_reranker: Optional[int] = None
     r: Optional[float] = None
     template: Optional[str] = None
     hybrid: Optional[bool] = None
@@ -737,6 +739,7 @@ async def update_query_settings(
 ):
     request.app.state.config.RAG_TEMPLATE = form_data.template
     request.app.state.config.TOP_K = form_data.k if form_data.k else 4
+    request.app.state.config.TOP_K_RERANKER = form_data.k_reranker or 4
     request.app.state.config.RELEVANCE_THRESHOLD = form_data.r if form_data.r else 0.0
 
     request.app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
@@ -747,6 +750,7 @@ async def update_query_settings(
         "status": True,
         "template": request.app.state.config.RAG_TEMPLATE,
         "k": request.app.state.config.TOP_K,
+        "k_reranker": request.app.state.config.TOP_K_RERANKER,
         "r": request.app.state.config.RELEVANCE_THRESHOLD,
         "hybrid": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
     }
@@ -1495,6 +1499,7 @@ class QueryDocForm(BaseModel):
     collection_name: str
     query: str
     k: Optional[int] = None
+    k_reranker: Optional[int] = None
     r: Optional[float] = None
     hybrid: Optional[bool] = None
 
@@ -1515,6 +1520,7 @@ def query_doc_handler(
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=request.app.state.rf,
+                k_reranker=form_data.k_reranker or request.app.state.config.TOP_K_RERANKER,
                 r=(
                     form_data.r
                     if form_data.r
@@ -1543,6 +1549,7 @@ class QueryCollectionsForm(BaseModel):
     collection_names: list[str]
     query: str
     k: Optional[int] = None
+    k_reranker: Optional[int] = None
     r: Optional[float] = None
     hybrid: Optional[bool] = None
 
@@ -1563,6 +1570,7 @@ def query_collection_handler(
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=request.app.state.rf,
+                k_reranker=form_data.k_reranker or request.app.state.config.TOP_K_RERANKER,
                 r=(
                     form_data.r
                     if form_data.r
