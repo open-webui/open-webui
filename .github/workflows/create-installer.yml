@@ -15,19 +15,40 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Download wheel artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: python-wheel
-        path: dist
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        run-id: ${{ github.event.workflow_run.id }}
-
     - name: Get version number from package.json
       id: get_version
       run: |
         $VERSION = (Get-Content package.json | ConvertFrom-Json).version
         echo "VERSION=$VERSION" >> $env:GITHUB_ENV
+        echo "TAG_NAME=v$VERSION" >> $env:GITHUB_ENV
+
+    - name: Create dist directory
+      run: mkdir -p dist
+
+    - name: Download wheel from GitHub release
+      run: |
+        $TAG_NAME = $env:TAG_NAME
+        $REPO = "${{ github.repository }}"
+        
+        # Get the release assets
+        $RELEASE_INFO = Invoke-RestMethod -Uri "https://api.github.com/repos/$REPO/releases/tags/$TAG_NAME" -Headers @{
+          "Authorization" = "token ${{ secrets.GITHUB_TOKEN }}"
+          "Accept" = "application/vnd.github.v3+json"
+        }
+        
+        # Find the first wheel asset
+        $WHEEL_ASSET = $RELEASE_INFO.assets | Where-Object { $_.name -like "*.whl" } | Select-Object -First 1
+        
+        if ($WHEEL_ASSET) {
+          Write-Host "Found wheel asset: $($WHEEL_ASSET.name)"
+          Invoke-WebRequest -Uri $WHEEL_ASSET.browser_download_url -OutFile "dist/$($WHEEL_ASSET.name)"
+          echo "WHEEL_FILENAME=$($WHEEL_ASSET.name)" >> $env:GITHUB_ENV
+        } else {
+          Write-Host "Error: Could not find any wheel file in the release"
+          Write-Host "Available assets:"
+          $RELEASE_INFO.assets | ForEach-Object { Write-Host "- $($_.name)" }
+          exit 1
+        }
 
     - name: Download NSIS 3.11
       run: |
@@ -48,29 +69,10 @@ jobs:
         Move-Item -Path $INSTALLER_PATH -Destination "installer/$NEW_NAME"
         echo "INSTALLER_NAME=$NEW_NAME" >> $env:GITHUB_ENV
 
-    - name: Get latest release
-      id: get_release
-      uses: actions/github-script@v7
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const releases = await github.rest.repos.listReleases({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            per_page: 1
-          });
-          if (releases.data.length === 0) {
-            throw new Error('No releases found');
-          }
-          const releaseId = releases.data[0].id;
-          const releaseTag = releases.data[0].tag_name;
-          core.setOutput('release_id', releaseId);
-          core.setOutput('release_tag', releaseTag);
-
     - name: Upload installer to GitHub release
       uses: softprops/action-gh-release@v1
       with:
         files: installer/${{ env.INSTALLER_NAME }}
-        tag_name: ${{ steps.get_release.outputs.release_tag }}
+        tag_name: ${{ env.TAG_NAME }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
