@@ -216,6 +216,15 @@ jobs:
             exit 1
           }
 
+      - name: Create checksums
+        if: success()
+        run: |
+          # Create SHA256 checksum file
+          $INSTALLER_PATH = "installer/$env:INSTALLER_NAME"
+          $CHECKSUM = (Get-FileHash -Path $INSTALLER_PATH -Algorithm SHA256).Hash.ToLower()
+          $CHECKSUM | Out-File -FilePath "installer/$env:INSTALLER_NAME.sha256" -Encoding ascii
+          Write-Host "Created checksum file with value: $CHECKSUM"
+
       - name: Zip installer executable
         if: success()
         run: |
@@ -228,7 +237,10 @@ jobs:
         if: success()
         uses: softprops/action-gh-release@v1
         with:
-          files: installer/${{ env.ZIP_NAME }}
+          files: |
+            installer/${{ env.ZIP_NAME }}
+            installer/${{ env.INSTALLER_NAME }}
+            installer/${{ env.INSTALLER_NAME }}.sha256
           tag_name: ${{ env.RELEASE_TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
