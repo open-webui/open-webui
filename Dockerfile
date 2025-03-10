@@ -28,13 +28,19 @@ WORKDIR /app
 
 # Un-comment 2 next lines on Macos
 # ENV GENERATE_SOURCEMAP=false
-# ENV NODE_OPTIONS=--max-old-space-size=16384
+ENV NODE_OPTIONS=--max-old-space-size=16384
 
+# Copy dependencies and install
 COPY package.json package-lock.json ./
 RUN npm ci
 
+# Copy remaining source code
 COPY . .
+
+# Optional build hash
 ENV APP_BUILD_HASH=${BUILD_HASH}
+
+# Run the build
 RUN npm run build
 
 ######## WebUI backend ########
