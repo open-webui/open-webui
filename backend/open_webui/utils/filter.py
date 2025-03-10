@@ -1,9 +1,15 @@
 import inspect
+import logging
+
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.models.functions import Functions
+from open_webui.env import SRC_LOG_LEVELS
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-def get_sorted_filter_ids(model):
+def get_sorted_filter_ids(model: dict):
     def get_priority(function_id):
         function = Functions.get_function_by_id(function_id)
         if function is not None and hasattr(function, "valves"):
@@ -27,12 +33,13 @@ def get_sorted_filter_ids(model):
 
 
 async def process_filter_functions(
-    request, filter_ids, filter_type, form_data, extra_params
+    request, filter_functions, filter_type, form_data, extra_params
 ):
     skip_files = None
 
-    for filter_id in filter_ids:
-        filter = Functions.get_function_by_id(filter_id)
+    for function in filter_functions:
+        filter = function
+        filter_id = function.id
         if not filter:
             continue
 
@@ -41,6 +48,11 @@ async def process_filter_functions(
         else:
             function_module, _, _ = load_function_module_by_id(filter_id)
             request.app.state.FUNCTIONS[filter_id] = function_module
+
+        # Prepare handler function
+        handler = getattr(function_module, filter_type, None)
+        if not handler:
+            continue
 
         # Check if the function has a file_handler variable
         if filter_type == "inlet" and hasattr(function_module, "file_handler"):
@@ -53,15 +65,15 @@ async def process_filter_functions(
                 **(valves if valves else {})
             )
 
-        # Prepare handler function
-        handler = getattr(function_module, filter_type, None)
-        if not handler:
-            continue
-
         try:
             # Prepare parameters
             sig = inspect.signature(handler)
-            params = {"body": form_data} | {
+
+            params = {"body": form_data}
+            if filter_type == "stream":
+                params = {"event": form_data}
+
+            params = params | {
                 k: v
                 for k, v in {
                     **extra_params,
@@ -80,7 +92,7 @@ async def process_filter_functions(
                             )
                         )
                     except Exception as e:
-                        print(e)
+                        log.exception(f"Failed to get user values: {e}")
 
             # Execute handler
             if inspect.iscoroutinefunction(handler):
@@ -89,7 +101,7 @@ async def process_filter_functions(
                 form_data = handler(**params)
 
         except Exception as e:
-            print(f"Error in {filter_type} handler {filter_id}: {e}")
+            log.exception(f"Error in {filter_type} handler {filter_id}: {e}")
             raise e
 
     # Handle file cleanup for inlet
