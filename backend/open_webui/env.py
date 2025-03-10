@@ -442,3 +442,12 @@ AUDIT_EXCLUDED_PATHS = os.getenv("AUDIT_EXCLUDED_PATHS", "/chats,/chat,/folders"
 )
 AUDIT_EXCLUDED_PATHS = [path.strip() for path in AUDIT_EXCLUDED_PATHS]
 AUDIT_EXCLUDED_PATHS = [path.lstrip("/") for path in AUDIT_EXCLUDED_PATHS]
+
+####################################
+# OPENTELEMETRY
+####################################
+
+OT_ENABLED = os.environ.get("OT_ENABLED", "false").lower() == "true"
+OT_SERVICE_NAME = os.environ.get("OT_SERVICE_NAME", "open-webui")
+OT_HOST = os.environ.get("OT_HOST", "http://localhost:4317")
+OT_TOKEN = os.environ.get("OT_TOKEN", "")

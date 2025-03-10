@@ -330,6 +330,7 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     RESET_CONFIG_ON_START,
     OFFLINE_MODE,
+    OT_ENABLED,
 )
 
 
@@ -356,7 +357,7 @@ from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
-
+from open_webui.utils.trace.setup import setup
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -425,6 +426,17 @@ app.state.config = AppConfig(redis_url=REDIS_URL)
 
 app.state.WEBUI_NAME = WEBUI_NAME
 app.state.LICENSE_METADATA = None
+
+
+########################################
+#
+# OPENTELEMETRY
+#
+########################################
+
+if OT_ENABLED:
+    setup(app)
+
 
 ########################################
 #
