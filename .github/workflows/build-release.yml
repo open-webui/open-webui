@@ -216,11 +216,19 @@ jobs:
             exit 1
           }
 
+      - name: Zip installer executable
+        if: success()
+        run: |
+          $ZIP_NAME = "open-webui-$env:VERSION-setup.zip"
+          Compress-Archive -Path "installer/$env:INSTALLER_NAME" -DestinationPath "installer/$ZIP_NAME"
+          echo "ZIP_NAME=$ZIP_NAME" >> $env:GITHUB_ENV
+          Write-Host "Created zip file: $ZIP_NAME"
+
       - name: Upload installer to GitHub release
         if: success()
         uses: softprops/action-gh-release@v1
         with:
-          files: installer/${{ env.INSTALLER_NAME }}
+          files: installer/${{ env.ZIP_NAME }}
           tag_name: ${{ env.RELEASE_TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

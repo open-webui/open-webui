@@ -310,10 +310,6 @@ dist
 cypress/videos
 cypress/screenshots
 .vscode/settings.json
-build_output_example
 
-# Secrets
-.secrets
-
-# nsis
-*.exe
+# Installer files
+installer/**.exe
