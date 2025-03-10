@@ -21,6 +21,10 @@ services:
         condition: service_started
       qdrant:
         condition: service_started
+    ulimits:
+      nofile:
+        soft: 16384
+        hard: 16384
     networks:
       - talley
 
@@ -45,6 +49,10 @@ services:
       - QDRANT__LOG_LEVEL=INFO
     volumes:
       - qdrant_data:/qdrant/storage
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     networks:
       - talley
 
