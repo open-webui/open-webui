@@ -32,24 +32,6 @@ InstallDir "$LOCALAPPDATA\${PRODUCT_NAME_CONCAT}"
 !define /file AMD_AI_UX_VERSION "${TMPFILE}"
 !delfile "${TMPFILE}"
 
-; Create a properly formatted version for VIProductVersion (must be X.X.X.X)
-; Parse the version string - convert something like "1.2.3-abcdef" to "1.2.3.0"
-!tempfile VERSION_PARSE_SCRIPT
-!system 'python -c "import re; version=\"${AMD_AI_UX_VERSION}\"; version_parts = re.search(r\"^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:\.(\d+))?(?:[-+].*)?$\", version); print(f\"{version_parts.group(1) or 0}.{version_parts.group(2) or 0}.{version_parts.group(3) or 0}.{version_parts.group(4) or 0}\")" > "${VERSION_PARSE_SCRIPT}"'
-!define /file VERSION_FOR_VI "${VERSION_PARSE_SCRIPT}"
-!delfile "${VERSION_PARSE_SCRIPT}"
-
-; Add detailed version information (helps reduce false positives in security scanners)
-VIProductVersion "${VERSION_FOR_VI}"
-VIAddVersionKey "ProductName" "${PRODUCT_NAME}"
-VIAddVersionKey "CompanyName" "Advanced Micro Devices, Inc."
-VIAddVersionKey "LegalCopyright" "Copyright (C) 2024-2025 Advanced Micro Devices, Inc."
-VIAddVersionKey "FileDescription" "${PRODUCT_NAME} Installer"
-VIAddVersionKey "FileVersion" "${AMD_AI_UX_VERSION}"
-VIAddVersionKey "ProductVersion" "${AMD_AI_UX_VERSION}"
-VIAddVersionKey "Comments" "Built with NSIS"
-VIAddVersionKey "LegalTrademarks" "AMD is a trademark of Advanced Micro Devices, Inc."
-
 ; Define variables
 Var AMD_AI_UX_CONDA_ENV
 Var PythonVersion
@@ -76,8 +58,17 @@ Var LogFilePath
 Icon ${ICON_FILE}
 
 ; Language settings
-; NOTE: Remove these LangString definitions since they're already defined in MUI2.nsh
-; This will eliminate the warnings about duplicate definitions
+LangString MUI_TEXT_WELCOME_INFO_TITLE "${LANG_ENGLISH}" "Welcome to the ${PRODUCT_NAME} Installer"
+LangString MUI_TEXT_WELCOME_INFO_TEXT "${LANG_ENGLISH}" "This wizard will install ${PRODUCT_NAME} on your computer."
+LangString MUI_TEXT_DIRECTORY_TITLE "${LANG_ENGLISH}" "Select Installation Directory"
+LangString MUI_TEXT_INSTALLING_TITLE "${LANG_ENGLISH}" "Installing ${PRODUCT_NAME}"
+LangString MUI_TEXT_FINISH_TITLE "${LANG_ENGLISH}" "Installation Complete"
+LangString MUI_TEXT_FINISH_SUBTITLE "${LANG_ENGLISH}" "Thank you for installing ${PRODUCT_NAME}!"
+LangString MUI_TEXT_ABORT_TITLE "${LANG_ENGLISH}" "Installation Aborted"
+LangString MUI_TEXT_ABORT_SUBTITLE "${LANG_ENGLISH}" "Installation has been aborted."
+LangString MUI_BUTTONTEXT_FINISH "${LANG_ENGLISH}" "Finish"
+LangString MUI_TEXT_LICENSE_TITLE ${LANG_ENGLISH} "License Agreement"
+LangString MUI_TEXT_LICENSE_SUBTITLE ${LANG_ENGLISH} "Please review the license terms before installing ${PRODUCT_NAME}."
 
 Function .onInit
   ; Initialize variables
