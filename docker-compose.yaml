@@ -6,7 +6,7 @@ services:
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
-      - ./backend:/app/backend
+    command: uvicorn open_webui.main:app --port 8080 --host 0.0.0.0 --forwarded-allow-ips '*'
     ports:
       - ${OPEN_WEBUI_PORT-3000}:8080
     env_file:
@@ -19,6 +19,10 @@ services:
         condition: service_started
       qdrant:
         condition: service_started
+    ulimits:
+      nofile:
+        soft: 16384
+        hard: 16384
     networks:
       - talley
 
@@ -43,6 +47,10 @@ services:
       - QDRANT__LOG_LEVEL=INFO
     volumes:
       - qdrant_data:/qdrant/storage
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     networks:
       - talley
 
