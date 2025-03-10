@@ -60,6 +60,7 @@ jobs:
           python -m build .
 
       - name: Create GitHub release
+        id: create_release
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -73,6 +74,7 @@ jobs:
               body: changelog,
             })
             console.log(`Created release ${release.data.html_url}`)
+            return release.data.id;
 
       - name: Upload package to GitHub release
         uses: actions/upload-artifact@v4
@@ -89,5 +91,144 @@ jobs:
         with:
           files: dist/*.whl
           tag_name: v${{ steps.get_version.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      # Save the wheel file as an artifact for the create-installer job
+      - name: Save wheel as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-file
+          path: dist/*.whl
+          retention-days: 1
+
+  create-installer:
+    needs: release
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history to ensure we have all files
+
+      - name: List repository contents
+        run: |
+          Write-Host "Listing repository root contents:"
+          Get-ChildItem -Path .
+          
+          Write-Host "Checking if installer directory exists:"
+          if (Test-Path -Path "installer") {
+            Write-Host "Installer directory exists. Listing contents:"
+            Get-ChildItem -Path "installer"
+          } else {
+            Write-Host "Installer directory does not exist!"
+          }
+
+      - name: Create dist directory
+        run: mkdir -p dist
+
+      - name: Get version from package.json
+        id: get_version
+        run: |
+          $VERSION = (Get-Content package.json | ConvertFrom-Json).version
+          echo "VERSION=$VERSION" >> $env:GITHUB_ENV
+          echo "RELEASE_TAG=v$VERSION" >> $env:GITHUB_ENV
+
+      # Download the wheel file directly from the artifact
+      - name: Download wheel artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: wheel-file
+          path: dist
+
+      - name: List downloaded wheel files
+        run: |
+          Write-Host "Listing downloaded wheel files:"
+          Get-ChildItem -Path dist -Filter "*.whl"
+          $WHEEL_FILE = Get-ChildItem -Path dist -Filter "*.whl" | Select-Object -First 1
+          if ($WHEEL_FILE) {
+            echo "WHEEL_FILENAME=$($WHEEL_FILE.Name)" >> $env:GITHUB_ENV
+            Write-Host "Using wheel file: $($WHEEL_FILE.Name)"
+          } else {
+            Write-Host "ERROR: No wheel file found in dist directory!"
+            exit 1
+          }
+
+      - name: Install NSIS
+        run: |
+          # Download NSIS installer
+          Invoke-WebRequest -UserAgent "Wget" -Uri "https://sourceforge.net/projects/nsis/files/NSIS%203/3.10/nsis-3.10-setup.exe" -OutFile "nsis.exe"
+          
+          # Install NSIS
+          Start-Process nsis.exe -ArgumentList '/S' -Wait
+          
+          # Add NSIS to PATH
+          echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
+
+      - name: Check for NSIS script
+        run: |
+          $SCRIPT_PATH = "installer/Installer-UX.nsi"
+          if (Test-Path -Path $SCRIPT_PATH) {
+            Write-Host "NSIS script found at $SCRIPT_PATH"
+            Get-Content -Path $SCRIPT_PATH -TotalCount 10  # Show first 10 lines
+          } else {
+            Write-Host "ERROR: NSIS script not found at $SCRIPT_PATH"
+            Write-Host "Current directory: $(Get-Location)"
+            Write-Host "Listing all files in the repository:"
+            Get-ChildItem -Path . -Recurse | Select-Object -ExpandProperty FullName
+          }
+
+      - name: Build installer
+        run: |
+          echo "Building installer with NSIS..."
+          # Use the full path to the script
+          $SCRIPT_PATH = "$(Get-Location)\installer\Installer-UX.nsi"
+          Write-Host "Using NSIS script at: $SCRIPT_PATH"
+          
+          if (Test-Path -Path $SCRIPT_PATH) {
+            makensis $SCRIPT_PATH
+          } else {
+            Write-Host "ERROR: NSIS script not found at $SCRIPT_PATH"
+            exit 1
+          }
+
+      - name: Rename installer
+        if: success()
+        run: |
+          if (Test-Path -Path "installer") {
+            $INSTALLER_FILES = Get-ChildItem -Path "installer" -Filter "*.exe" | Where-Object { $_.Name -ne "nsis.exe" }
+            if ($INSTALLER_FILES) {
+              $INSTALLER_PATH = $INSTALLER_FILES[0].FullName
+              Write-Host "Found installer at: $INSTALLER_PATH"
+              $NEW_NAME = "open-webui-$env:VERSION-setup.exe"
+              $DESTINATION = "installer/$NEW_NAME"
+              Move-Item -Path $INSTALLER_PATH -Destination $DESTINATION -Force
+              echo "INSTALLER_NAME=$NEW_NAME" >> $env:GITHUB_ENV
+            } else {
+              Write-Host "ERROR: No installer .exe files found in installer directory!"
+              exit 1
+            }
+          } else {
+            Write-Host "ERROR: Installer directory not found!"
+            exit 1
+          }
+
+      - name: Zip installer executable
+        if: success()
+        run: |
+          $ZIP_NAME = "open-webui-$env:VERSION-setup.zip"
+          Compress-Archive -Path "installer/$env:INSTALLER_NAME" -DestinationPath "installer/$ZIP_NAME"
+          echo "ZIP_NAME=$ZIP_NAME" >> $env:GITHUB_ENV
+          Write-Host "Created zip file: $ZIP_NAME"
+
+      - name: Upload installer to GitHub release
+        if: success()
+        uses: softprops/action-gh-release@v1
+        with:
+          files: installer/${{ env.ZIP_NAME }}
+          tag_name: ${{ env.RELEASE_TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
