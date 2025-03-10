@@ -429,6 +429,7 @@
 	"Enter timeout in seconds": "",
 	"Enter to Send": "",
 	"Enter Top K": "Geben Sie Top K ein",
+	"Enter Top K Reranker": "Geben Sie Top K für Reranker ein",
 	"Enter URL (e.g. http://127.0.0.1:7860/)": "Geben Sie die URL ein (z. B. http://127.0.0.1:7860/)",
 	"Enter URL (e.g. http://localhost:11434)": "Geben Sie die URL ein (z. B. http://localhost:11434)",
 	"Enter your current password": "Geben Sie Ihr aktuelles Passwort ein",
