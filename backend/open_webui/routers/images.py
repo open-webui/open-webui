@@ -517,9 +517,9 @@ async def image_generations(
             images = []
 
             for image in res["data"]:
-                if "url" in image:
+                if image_url := image.get("url",None):
                     image_data, content_type = load_url_image_data(
-                        image["url"], headers
+                        image_url, headers
                     )
                 else:
                     image_data, content_type = load_b64_image_data(image["b64_json"])
