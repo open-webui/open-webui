@@ -26,7 +26,7 @@ services:
         soft: 16384
         hard: 16384
     networks:
-      - talley
+      - redstone
 
   redis:
     image: redis:latest
@@ -35,7 +35,7 @@ services:
       - "6379:6379"
     command: ["redis-server", "--requirepass", "password"]
     networks:
-      - talley
+      - redstone
 
   qdrant:
     image: qdrant/qdrant:v1.13.4
@@ -54,46 +54,46 @@ services:
         soft: 65535
         hard: 65535
     networks:
-      - talley
+      - redstone
 
-  # postgres:
-  #   image: postgres:17.2-bookworm
-  #   container_name: postgres
-  #   environment:
-  #     POSTGRES_USER: ${POSTGRES_USER:-postgres}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-  #     POSTGRES_DB: ${POSTGRES_DB:-talley}  # This ensures the database is created on startup
-  #     PGDATA: /data/postgres
-  #   volumes:
-  #      - postgres:/data/postgres
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-talley}"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #   networks:
-  #     - talley
-  #   restart: unless-stopped
+  postgres:
+    image: postgres:17.2-bookworm
+    container_name: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_DB: ${POSTGRES_DB:-redstone}  # This ensures the database is created on startup
+      PGDATA: /data/postgres
+    volumes:
+       - postgres:/data/postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-redstone}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - redstone
+    restart: unless-stopped
 
-  # pgadmin:
-  #   container_name: pgadmin
-  #   image: dpage/pgadmin4
-  #   environment:
-  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-dev@yitec.group}
-  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-talley}
-  #     PGADMIN_CONFIG_SERVER_MODE: 'False'
-  #   volumes:
-  #      - pgadmin:/var/lib/pgadmin
-  #   ports:
-  #     - "${PGADMIN_PORT:-5050}:80"
-  #   networks:
-  #     - talley
-  #   restart: unless-stopped
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-dev@yitec.group}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-redstone}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+       - pgadmin:/var/lib/pgadmin
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    networks:
+      - redstone
+    restart: unless-stopped
 
 volumes:
   open-webui: {}
   qdrant_data: {}
-  # postgres: {}
-  # pgadmin: {}
+  postgres: {}
+  pgadmin: {}
 networks:
-  talley:
+  redstone:
