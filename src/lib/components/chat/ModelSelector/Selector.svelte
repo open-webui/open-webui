@@ -276,7 +276,11 @@
 			class="flex w-full text-left px-0.5 outline-hidden bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-hidden"
 		>
 			{#if selectedModel}
-				{selectedModel.label}
+				<img
+ 					src={selectedModel.model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+ 					alt="Model"
+ 					class="rounded-full size-5 flex self-center mr-2"
+ 				/> {selectedModel.label}
 			{:else}
 				{placeholder}
 			{/if}
