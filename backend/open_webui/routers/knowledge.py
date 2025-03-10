@@ -10,28 +10,26 @@ from open_webui.models.knowledge import (
     KnowledgeUserResponse,
 )
 from open_webui.models.files import Files, FileModel
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
     process_file,
     ProcessFileForm,
     process_files_batch,
     BatchProcessFilesForm,
 )
-from open_webui.storage.provider import Storage
+from open_webui.functions import get_parsers_by_type, get_all_parsers
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 
-
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.models import Models, ModelForm
-
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
+
 
 ############################
 # getKnowledgeBases
@@ -140,10 +138,10 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
 
 @router.post("/create", response_model=Optional[KnowledgeResponse])
 async def create_new_knowledge(
-    request: Request, form_data: KnowledgeForm, user=Depends(get_verified_user)
+        request: Request, form_data: KnowledgeForm, user=Depends(get_verified_user)
 ):
     if user.role != "admin" and not has_permission(
-        user.id, "workspace.knowledge", request.app.state.config.USER_PERMISSIONS
+            user.id, "workspace.knowledge", request.app.state.config.USER_PERMISSIONS
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -177,11 +175,10 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     if knowledge:
 
         if (
-            user.role == "admin"
-            or knowledge.user_id == user.id
-            or has_access(user.id, "read", knowledge.access_control)
+                user.role == "admin"
+                or knowledge.user_id == user.id
+                or has_access(user.id, "read", knowledge.access_control)
         ):
-
             file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
             files = Files.get_files_by_ids(file_ids)
 
@@ -203,9 +200,9 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/{id}/update", response_model=Optional[KnowledgeFilesResponse])
 async def update_knowledge_by_id(
-    id: str,
-    form_data: KnowledgeForm,
-    user=Depends(get_verified_user),
+        id: str,
+        form_data: KnowledgeForm,
+        user=Depends(get_verified_user),
 ):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
@@ -215,9 +212,9 @@ async def update_knowledge_by_id(
         )
     # Is the user the original creator, in a group with write access, or an admin
     if (
-        knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control)
-        and user.role != "admin"
+            knowledge.user_id != user.id
+            and not has_access(user.id, "write", knowledge.access_control)
+            and user.role != "admin"
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -251,11 +248,12 @@ class KnowledgeFileIdForm(BaseModel):
 
 @router.post("/{id}/file/add", response_model=Optional[KnowledgeFilesResponse])
 def add_file_to_knowledge_by_id(
-    request: Request,
-    id: str,
-    form_data: KnowledgeFileIdForm,
-    user=Depends(get_verified_user),
+        request: Request,
+        id: str,
+        form_data: KnowledgeFileIdForm,
+        user=Depends(get_verified_user),
 ):
+    print(">>>>> ADDING NEW KNOWLEDGE")
     knowledge = Knowledges.get_knowledge_by_id(id=id)
 
     if not knowledge:
@@ -265,9 +263,9 @@ def add_file_to_knowledge_by_id(
         )
 
     if (
-        knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control)
-        and user.role != "admin"
+            knowledge.user_id != user.id
+            and not has_access(user.id, "write", knowledge.access_control)
+            and user.role != "admin"
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -336,10 +334,10 @@ def add_file_to_knowledge_by_id(
 
 @router.post("/{id}/file/update", response_model=Optional[KnowledgeFilesResponse])
 def update_file_from_knowledge_by_id(
-    request: Request,
-    id: str,
-    form_data: KnowledgeFileIdForm,
-    user=Depends(get_verified_user),
+        request: Request,
+        id: str,
+        form_data: KnowledgeFileIdForm,
+        user=Depends(get_verified_user),
 ):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
@@ -349,11 +347,10 @@ def update_file_from_knowledge_by_id(
         )
 
     if (
-        knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control)
-        and user.role != "admin"
+            knowledge.user_id != user.id
+            and not has_access(user.id, "write", knowledge.access_control)
+            and user.role != "admin"
     ):
-
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -366,12 +363,10 @@ def update_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    # Remove content from the vector database
-    VECTOR_DB_CLIENT.delete(
-        collection_name=knowledge.id, filter={"file_id": form_data.file_id}
-    )
+    parsers = get_all_parsers(request)
+    for parser in parsers:
+        parser.delete_docs(knowledge.id, form_data.file_id)
 
-    # Add content to the vector database
     try:
         process_file(
             request,
@@ -408,10 +403,13 @@ def update_file_from_knowledge_by_id(
 
 @router.post("/{id}/file/remove", response_model=Optional[KnowledgeFilesResponse])
 def remove_file_from_knowledge_by_id(
-    id: str,
-    form_data: KnowledgeFileIdForm,
-    user=Depends(get_verified_user),
+        request: Request,
+        id: str,
+        form_data: KnowledgeFileIdForm,
+        user=Depends(get_verified_user),
 ):
+    print("FILE DELETE")
+    print(request)
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
@@ -420,9 +418,9 @@ def remove_file_from_knowledge_by_id(
         )
 
     if (
-        knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control)
-        and user.role != "admin"
+            knowledge.user_id != user.id
+            and not has_access(user.id, "write", knowledge.access_control)
+            and user.role != "admin"
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -436,15 +434,11 @@ def remove_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    # Remove content from the vector database
-    VECTOR_DB_CLIENT.delete(
-        collection_name=knowledge.id, filter={"file_id": form_data.file_id}
-    )
-
-    # Remove the file's collection from vector database
     file_collection = f"file-{form_data.file_id}"
-    if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-        VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+    parsers = get_all_parsers(request)
+    for parser in parsers:
+        parser.delete_docs(knowledge.id, form_data.file_id)
+        parser.delete_collection(file_collection)
 
     # Delete file from database
     Files.delete_file_by_id(form_data.file_id)
@@ -489,7 +483,11 @@ def remove_file_from_knowledge_by_id(
 
 
 @router.delete("/{id}/delete", response_model=bool)
-async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
+async def delete_knowledge_by_id(request: Request,
+                                 id: str,
+                                 user=Depends(get_verified_user)):
+    print("REQUEST")
+    print(request)
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
@@ -498,9 +496,9 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         )
 
     if (
-        knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control)
-        and user.role != "admin"
+            knowledge.user_id != user.id
+            and not has_access(user.id, "write", knowledge.access_control)
+            and user.role != "admin"
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -538,7 +536,9 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
     # Clean up vector DB
     try:
-        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+        parsers = get_all_parsers(request)
+        for parser in parsers:
+            parser.delete_collection(id)
     except Exception as e:
         log.debug(e)
         pass
@@ -552,7 +552,9 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
 
 @router.post("/{id}/reset", response_model=Optional[KnowledgeResponse])
-async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
+async def reset_knowledge_by_id(request: Request,
+                                id: str,
+                                user=Depends(get_verified_user)):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
@@ -561,9 +563,9 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         )
 
     if (
-        knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control)
-        and user.role != "admin"
+            knowledge.user_id != user.id
+            and not has_access(user.id, "write", knowledge.access_control)
+            and user.role != "admin"
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -571,7 +573,9 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         )
 
     try:
-        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+        parsers = get_all_parsers(request)
+        for parser in parsers:
+            parser.delete_collection(id)
     except Exception as e:
         log.debug(e)
         pass
@@ -588,10 +592,10 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/{id}/files/batch/add", response_model=Optional[KnowledgeFilesResponse])
 def add_files_to_knowledge_batch(
-    request: Request,
-    id: str,
-    form_data: list[KnowledgeFileIdForm],
-    user=Depends(get_verified_user),
+        request: Request,
+        id: str,
+        form_data: list[KnowledgeFileIdForm],
+        user=Depends(get_verified_user),
 ):
     """
     Add multiple files to a knowledge base
@@ -604,9 +608,9 @@ def add_files_to_knowledge_batch(
         )
 
     if (
-        knowledge.user_id != user.id
-        and not has_access(user.id, "write", knowledge.access_control)
-        and user.role != "admin"
+            knowledge.user_id != user.id
+            and not has_access(user.id, "write", knowledge.access_control)
+            and user.role != "admin"
     ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

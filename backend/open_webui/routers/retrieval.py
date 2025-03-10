@@ -23,20 +23,15 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
-import tiktoken
 
-
-from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_core.documents import Document
 
 from open_webui.utils.parser import DefaultParser, PARSER_TYPE
-from open_webui.functions import get_parsers_by_type
+from open_webui.functions import get_parsers_by_type, get_all_parsers
 
 from open_webui.models.files import FileModel, Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
-from open_webui.models.functions import Functions
-
 
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 

@@ -36,6 +36,15 @@ class DefaultParser:
         self.name = "Default Parser"
         self.parser_type = parser_type
 
+    def delete_docs(self, collection_name, file_id):
+        VECTOR_DB_CLIENT.delete(
+            collection_name=collection_name, filter={"file_id": file_id}
+        )
+
+    def delete_collection(self, file_collection):
+        if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+            VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+
     def save_docs_to_vector_db(self,
                                request: Request,
                                docs,

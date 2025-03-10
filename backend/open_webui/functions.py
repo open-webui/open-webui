@@ -18,12 +18,10 @@ from fastapi import (
 )
 from starlette.responses import Response, StreamingResponse
 
-
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
 )
-
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
@@ -45,7 +43,6 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
 )
-
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -135,7 +132,7 @@ async def get_function_models(request):
 
 
 async def generate_function_chat_completion(
-    request, form_data, user, models: dict = {}
+        request, form_data, user, models: dict = {}
 ):
     async def execute_pipe(pipe, params):
         if inspect.iscoroutinefunction(pipe):
@@ -278,7 +275,7 @@ async def generate_function_chat_completion(
 
             except Exception as e:
                 log.error(f"Error: {e}")
-                yield f"data: {json.dumps({'error': {'detail':str(e)}})}\n\n"
+                yield f"data: {json.dumps({'error': {'detail': str(e)}})}\n\n"
                 return
 
             if isinstance(res, str):
@@ -319,6 +316,32 @@ async def generate_function_chat_completion(
         return openai_chat_completion_message_template(form_data["model"], message)
 
 
+def verify_parser(parser):
+    # verification of required settings
+    if not hasattr(parser, 'name'):
+        raise NotImplementedError("Parser instance requires self.name as a attribute")
+    if not hasattr(parser, 'parser_type'):
+        raise NotImplementedError(f"Parser {parser.name} requires parser_type as a attribute")
+    if not hasattr(parser, 'save_docs_to_vector_db'):
+        raise NotImplementedError(f"Parser {parser.name} requires save_docs_to_vector_db as a method")
+
+    return True
+
+
+def get_all_parsers(request, active_only=True):
+    parser_files = Functions.get_functions_by_type("parser", active_only)
+    all_parsers = [get_function_module_by_id(request, pf.id) for pf in parser_files]
+
+    for parser in all_parsers:
+        verify_parser(parser)
+
+    # need to have at least one parsing option every time
+    if len(all_parsers) == 0:
+        all_parsers.append(DefaultParser())
+
+    return all_parsers
+
+
 def get_parsers_by_type(request, parser_type, active_only=True):
     parser_files = Functions.get_functions_by_type("parser", active_only)
     all_parsers = [get_function_module_by_id(request, pf.id) for pf in parser_files]
@@ -327,12 +350,7 @@ def get_parsers_by_type(request, parser_type, active_only=True):
     relevant_parsers = []
     for parser in all_parsers:
         # verification of required settings
-        if not hasattr(parser, 'name'):
-            raise NotImplementedError("Parser instance requires self.name as a attribute")
-        if not hasattr(parser, 'parser_type'):
-            raise NotImplementedError(f"Parser {parser.name} requires parser_type as a attribute")
-        if not hasattr(parser, 'save_docs_to_vector_db'):
-            raise NotImplementedError(f"Parser {parser.name} requires save_docs_to_vector_db as a method")
+        verify_parser(parser)
 
         # 1. single item needs to be moved to list
         if type(parser.parser_type) == PARSER_TYPE:
