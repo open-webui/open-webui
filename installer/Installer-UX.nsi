@@ -32,6 +32,17 @@ InstallDir "$LOCALAPPDATA\${PRODUCT_NAME_CONCAT}"
 !define /file AMD_AI_UX_VERSION "${TMPFILE}"
 !delfile "${TMPFILE}"
 
+; Add detailed version information (helps reduce false positives in security scanners)
+VIProductVersion "${AMD_AI_UX_VERSION}.0"
+VIAddVersionKey "ProductName" "${PRODUCT_NAME}"
+VIAddVersionKey "CompanyName" "Advanced Micro Devices, Inc."
+VIAddVersionKey "LegalCopyright" "Copyright (C) 2024-2025 Advanced Micro Devices, Inc."
+VIAddVersionKey "FileDescription" "${PRODUCT_NAME} Installer"
+VIAddVersionKey "FileVersion" "${AMD_AI_UX_VERSION}"
+VIAddVersionKey "ProductVersion" "${AMD_AI_UX_VERSION}"
+VIAddVersionKey "Comments" "Built with NSIS"
+VIAddVersionKey "LegalTrademarks" "AMD is a trademark of Advanced Micro Devices, Inc."
+
 ; Define variables
 Var AMD_AI_UX_CONDA_ENV
 Var PythonVersion
