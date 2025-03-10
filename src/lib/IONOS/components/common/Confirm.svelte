@@ -30,14 +30,14 @@
 
 		<div class="flex flex-row justify-end pt-8 pb-2">
 			<button
-				class="shrink px-4 transition rounded-3xl"
+				class="shrink px-4 0 hover:bg-sky-100 active:bg-sky-50 rounded-3xl"
 				on:click={cancelHandler}
 			>
 				{cancelText}
 			</button>
 
 			<button
-				class="shrink px-4 text-red-700 hover:text-red-500 transition rounded-3xl"
+				class="shrink px-4 py-1 text-red-700 hover:text-white hover:bg-red-300/90 active:bg-red-300 rounded-3xl"
 				disabled={confirmed}
 				on:click={() => { confirmed = true; confirmHandler() }}
 			>
