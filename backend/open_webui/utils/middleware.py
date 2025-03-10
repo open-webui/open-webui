@@ -253,8 +253,8 @@ async def chat_completion_tools_handler(
 
     log.debug(f"tool_contexts: {sources}")
 
-    if skip_files and "files" in body.get("metadata", {}):
-        del body["metadata"]["files"]
+    if skip_files and "files" in body:
+        del body["files"]
 
     return body, {"sources": sources}
 
