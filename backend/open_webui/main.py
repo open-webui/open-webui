@@ -45,6 +45,9 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 
 
+from open_webui.utils import logger
+from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
+from open_webui.utils.logger import start_logger
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
@@ -95,12 +98,14 @@ from open_webui.config import (
     OLLAMA_API_CONFIGS,
     # OpenAI
     ENABLE_OPENAI_API,
+    ONEDRIVE_CLIENT_ID,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
     # Code Execution
+    ENABLE_CODE_EXECUTION,
     CODE_EXECUTION_ENGINE,
     CODE_EXECUTION_JUPYTER_URL,
     CODE_EXECUTION_JUPYTER_AUTH,
@@ -161,6 +166,7 @@ from open_webui.config import (
     RAG_TEMPLATE,
     DEFAULT_RAG_TEMPLATE,
     RAG_FULL_CONTEXT,
+    BYPASS_EMBEDDING_AND_RETRIEVAL,
     RAG_EMBEDDING_MODEL,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
@@ -180,6 +186,8 @@ from open_webui.config import (
     CHUNK_SIZE,
     CONTENT_EXTRACTION_ENGINE,
     TIKA_SERVER_URL,
+    DOCUMENT_INTELLIGENCE_ENDPOINT,
+    DOCUMENT_INTELLIGENCE_KEY,
     RAG_TOP_K,
     RAG_TEXT_SPLITTER,
     TIKTOKEN_ENCODING_NAME,
@@ -188,7 +196,7 @@ from open_webui.config import (
     YOUTUBE_LOADER_PROXY_URL,
     # Retrieval (Web Search)
     RAG_WEB_SEARCH_ENGINE,
-    RAG_WEB_SEARCH_FULL_CONTEXT,
+    BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
     RAG_WEB_SEARCH_RESULT_COUNT,
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
     RAG_WEB_SEARCH_TRUST_ENV,
@@ -208,6 +216,7 @@ from open_webui.config import (
     BING_SEARCH_V7_SUBSCRIPTION_KEY,
     BRAVE_SEARCH_API_KEY,
     EXA_API_KEY,
+    PERPLEXITY_API_KEY,
     KAGI_SEARCH_API_KEY,
     MOJEEK_SEARCH_API_KEY,
     BOCHA_SEARCH_API_KEY,
@@ -215,6 +224,7 @@ from open_webui.config import (
     GOOGLE_PSE_ENGINE_ID,
     GOOGLE_DRIVE_CLIENT_ID,
     GOOGLE_DRIVE_API_KEY,
+    ONEDRIVE_CLIENT_ID,
     ENABLE_RAG_HYBRID_SEARCH,
     PARENT_CHUNK_SIZE,
     PARENT_CHUNK_OVERLAP,
@@ -223,6 +233,7 @@ from open_webui.config import (
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_RAG_WEB_SEARCH,
     ENABLE_GOOGLE_DRIVE_INTEGRATION,
+    ENABLE_ONEDRIVE_INTEGRATION,
     UPLOAD_DIR,
     # WebUI
     WEBUI_AUTH,
@@ -301,8 +312,11 @@ from open_webui.config import (
     reset_config,
 )
 from open_webui.env import (
+    AUDIT_EXCLUDED_PATHS,
+    AUDIT_LOG_LEVEL,
     CHANGELOG,
     GLOBAL_LOG_LEVEL,
+    MAX_BODY_LOG_SIZE,
     SAFE_MODE,
     SRC_LOG_LEVELS,
     VERSION,
@@ -389,11 +403,12 @@ https://github.com/open-webui/open-webui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    start_logger()
     if RESET_CONFIG_ON_START:
         reset_config()
 
-    if app.state.config.LICENSE_KEY:
-        get_license_data(app, app.state.config.LICENSE_KEY)
+    if LICENSE_KEY:
+        get_license_data(app, LICENSE_KEY)
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     yield
@@ -411,7 +426,7 @@ oauth_manager = OAuthManager(app)
 app.state.config = AppConfig()
 
 app.state.WEBUI_NAME = WEBUI_NAME
-app.state.config.LICENSE_KEY = LICENSE_KEY
+app.state.LICENSE_METADATA = None
 
 ########################################
 #
@@ -531,6 +546,7 @@ app.state.config.FILE_MAX_COUNT = RAG_FILE_MAX_COUNT
 
 
 app.state.config.RAG_FULL_CONTEXT = RAG_FULL_CONTEXT
+app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL = BYPASS_EMBEDDING_AND_RETRIEVAL
 app.state.config.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
 app.state.config.ENABLE_RAG_PARENT_RETRIEVER = ENABLE_RAG_PARENT_RETRIEVER
 app.state.config.PARENT_CHUNK_SIZE = PARENT_CHUNK_SIZE
@@ -542,6 +558,8 @@ app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
 
 app.state.config.CONTENT_EXTRACTION_ENGINE = CONTENT_EXTRACTION_ENGINE
 app.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL
+app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT
+app.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY
 
 app.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER
 app.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME
@@ -569,10 +587,13 @@ app.state.config.YOUTUBE_LOADER_PROXY_URL = YOUTUBE_LOADER_PROXY_URL
 
 app.state.config.ENABLE_RAG_WEB_SEARCH = ENABLE_RAG_WEB_SEARCH
 app.state.config.RAG_WEB_SEARCH_ENGINE = RAG_WEB_SEARCH_ENGINE
-app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT = RAG_WEB_SEARCH_FULL_CONTEXT
+app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
+    BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
+)
 app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = RAG_WEB_SEARCH_DOMAIN_FILTER_LIST
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
+app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
 app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
 app.state.config.GOOGLE_PSE_API_KEY = GOOGLE_PSE_API_KEY
 app.state.config.GOOGLE_PSE_ENGINE_ID = GOOGLE_PSE_ENGINE_ID
@@ -593,6 +614,7 @@ app.state.config.JINA_API_KEY = JINA_API_KEY
 app.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT
 app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY
 app.state.config.EXA_API_KEY = EXA_API_KEY
+app.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY
 
 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
@@ -648,6 +670,7 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
 #
 ########################################
 
+app.state.config.ENABLE_CODE_EXECUTION = ENABLE_CODE_EXECUTION
 app.state.config.CODE_EXECUTION_ENGINE = CODE_EXECUTION_ENGINE
 app.state.config.CODE_EXECUTION_JUPYTER_URL = CODE_EXECUTION_JUPYTER_URL
 app.state.config.CODE_EXECUTION_JUPYTER_AUTH = CODE_EXECUTION_JUPYTER_AUTH
@@ -888,6 +911,19 @@ app.include_router(
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 
 
+try:
+    audit_level = AuditLevel(AUDIT_LOG_LEVEL)
+except ValueError as e:
+    logger.error(f"Invalid audit level: {AUDIT_LOG_LEVEL}. Error: {e}")
+    audit_level = AuditLevel.NONE
+
+if audit_level != AuditLevel.NONE:
+    app.add_middleware(
+        AuditLoggingMiddleware,
+        audit_level=audit_level,
+        excluded_paths=AUDIT_EXCLUDED_PATHS,
+        max_body_size=MAX_BODY_LOG_SIZE,
+    )
 ##################################
 #
 # Chat Endpoints
@@ -920,7 +956,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
 
         return filtered_models
 
-    models = await get_all_models(request)
+    models = await get_all_models(request, user=user)
 
     # Filter out filter pipelines
     models = [
@@ -949,7 +985,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
 
 @app.get("/api/models/base")
 async def get_base_models(request: Request, user=Depends(get_admin_user)):
-    models = await get_all_base_models(request)
+    models = await get_all_base_models(request, user=user)
     return {"data": models}
 
 
@@ -961,7 +997,7 @@ async def chat_completion(
     user=Depends(get_verified_user),
 ):
     if not request.app.state.MODELS:
-        await get_all_models(request)
+        await get_all_models(request, user=user)
 
     model_item = form_data.pop("model_item", {})
     tasks = form_data.pop("background_tasks", None)
@@ -997,7 +1033,7 @@ async def chat_completion(
             "files": form_data.get("files", None),
             "features": form_data.get("features", None),
             "variables": form_data.get("variables", None),
-            "model": model_info.model_dump() if model_info else model,
+            "model": model,
             "direct": model_item.get("direct", False),
             **(
                 {"function_calling": "native"}
@@ -1015,7 +1051,7 @@ async def chat_completion(
         form_data["metadata"] = metadata
 
         form_data, metadata, events = await process_chat_payload(
-            request, form_data, metadata, user, model
+            request, form_data, user, metadata, model
         )
 
     except Exception as e:
@@ -1029,7 +1065,7 @@ async def chat_completion(
         response = await chat_completion_handler(request, form_data, user)
 
         return await process_chat_response(
-            request, response, form_data, user, events, metadata, tasks, model["owned_by"]
+            request, response, form_data, user, metadata, model, events, tasks, model["owned_by"]
         )
     except Exception as e:
         raise HTTPException(
@@ -1118,9 +1154,10 @@ async def get_app_config(request: Request):
         if data is not None and "id" in data:
             user = Users.get_user_by_id(data["id"])
 
+    user_count = Users.get_num_users()
     onboarding = False
+
     if user is None:
-        user_count = Users.get_num_users()
         onboarding = user_count == 0
 
     return {
@@ -1148,6 +1185,7 @@ async def get_app_config(request: Request):
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
                     "enable_channels": app.state.config.ENABLE_CHANNELS,
                     "enable_web_search": app.state.config.ENABLE_RAG_WEB_SEARCH,
+                    "enable_code_execution": app.state.config.ENABLE_CODE_EXECUTION,
                     "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,
                     "enable_autocomplete_generation": app.state.config.ENABLE_AUTOCOMPLETE_GENERATION,
@@ -1156,6 +1194,7 @@ async def get_app_config(request: Request):
                     "enable_admin_export": ENABLE_ADMIN_EXPORT,
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
+                    "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
                 }
                 if user is not None
                 else {}
@@ -1165,6 +1204,7 @@ async def get_app_config(request: Request):
             {
                 "default_models": app.state.config.DEFAULT_MODELS,
                 "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
+                "user_count": user_count,
                 "code": {
                     "engine": app.state.config.CODE_EXECUTION_ENGINE,
                 },
@@ -1187,6 +1227,15 @@ async def get_app_config(request: Request):
                     "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
                     "api_key": GOOGLE_DRIVE_API_KEY.value,
                 },
+                "onedrive": {"client_id": ONEDRIVE_CLIENT_ID.value},
+                "license_metadata": app.state.LICENSE_METADATA,
+                **(
+                    {
+                        "active_entries": app.state.USER_COUNT,
+                    }
+                    if user.role == "admin"
+                    else {}
+                ),
             }
             if user is not None
             else {}
