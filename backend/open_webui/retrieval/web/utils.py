@@ -136,18 +136,18 @@ class RateLimitMixin:
         self.last_request_time = datetime.now()
 
 
-class URLProcessingMixin:  
+class URLProcessingMixin:
     def _verify_ssl_cert(self, url: str) -> bool:
         """Verify SSL certificate for a URL."""
         return verify_ssl_cert(url)
-        
+
     async def _safe_process_url(self, url: str) -> bool:
         """Perform safety checks before processing a URL."""
         if self.verify_ssl and not self._verify_ssl_cert(url):
             raise ValueError(f"SSL certificate verification failed for {url}")
         await self._wait_for_rate_limit()
         return True
-    
+
     def _safe_process_url_sync(self, url: str) -> bool:
         """Synchronous version of safety checks."""
         if self.verify_ssl and not self._verify_ssl_cert(url):
@@ -286,7 +286,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                     proxy["server"] = env_proxy_server
                 else:
                     proxy = {"server": env_proxy_server}
-                    
+
         # Store parameters for creating TavilyLoader instances
         self.web_paths = web_paths if isinstance(web_paths, list) else [web_paths]
         self.api_key = api_key
@@ -295,7 +295,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         self.verify_ssl = verify_ssl
         self.trust_env = trust_env
         self.proxy = proxy
-        
+
         # Add rate limiting
         self.requests_per_second = requests_per_second
         self.last_request_time = None
@@ -329,7 +329,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 log.exception(e, "Error extracting content from URLs")
             else:
                 raise e
-    
+
     async def alazy_load(self) -> AsyncIterator[Document]:
         """Async version with rate limiting and SSL verification."""
         valid_urls = []
@@ -341,13 +341,13 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 log.warning(f"SSL verification failed for {url}: {str(e)}")
                 if not self.continue_on_failure:
                     raise e
-        
+
         if not valid_urls:
             if self.continue_on_failure:
                 log.warning("No valid URLs to process after SSL verification")
                 return
             raise ValueError("No valid URLs to process after SSL verification")
-        
+
         try:
             loader = TavilyLoader(
                 urls=valid_urls,
@@ -475,7 +475,6 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                         continue
                     raise e
             await browser.close()
-
 
 
 class SafeWebBaseLoader(WebBaseLoader):
