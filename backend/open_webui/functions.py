@@ -324,6 +324,10 @@ def verify_parser(parser):
         raise NotImplementedError(f"Parser {parser.name} requires parser_type as a attribute")
     if not hasattr(parser, 'save_docs_to_vector_db'):
         raise NotImplementedError(f"Parser {parser.name} requires save_docs_to_vector_db as a method")
+    if not hasattr(parser, 'delete_docs'):
+        raise NotImplementedError(f"Parser {parser.name} requires delete_docs as a method")
+    if not hasattr(parser, 'delete_collection'):
+        raise NotImplementedError(f"Parser {parser.name} requires delete_collection as a method")
 
     return True
 
