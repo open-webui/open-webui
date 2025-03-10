@@ -5,6 +5,7 @@ on:
     workflows: ["Build and package solution"]
     types:
       - completed
+  workflow_dispatch:
 
 jobs:
   run:
