@@ -90,14 +90,20 @@ from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     BYPASS_MODEL_ACCESS_CONTROL,
     ENABLE_REALTIME_CHAT_SAVE,
+    ENABLE_RATE_LIMIT
 )
 from open_webui.constants import TASKS
-
+from open_webui.utils.token_limit import calculate_messages_token_usage, calculate_content_token_usage
+from open_webui.internal.redis import inc_rate_usage
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
+def should_record_token_usage(user):
+    if ENABLE_RATE_LIMIT and user.rate_limit and user.rate_limit.token_limit_per_minute:
+        return True
+    return False
 
 async def chat_completion_tools_handler(
     request: Request, body: dict, user: UserModel, models, tools
@@ -518,7 +524,7 @@ async def chat_completion_files_handler(
     request: Request, body: dict, user: UserModel
 ) -> tuple[dict, dict[str, list]]:
     sources = []
-
+    log.info(f"body: {body}")
     if files := body.get("metadata", {}).get("files", None):
         queries = []
         try:
@@ -569,6 +575,7 @@ async def chat_completion_files_handler(
                         reranking_function=request.app.state.rf,
                         r=request.app.state.config.RELEVANCE_THRESHOLD,
                         hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                        enable_parent_retriever = request.app.state.config.ENABLE_RAG_PARENT_RETRIEVER,
                         full_context=request.app.state.config.RAG_FULL_CONTEXT,
                     ),
                 )
@@ -819,6 +826,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])
 
+        print('context_string', context_string)
         if prompt is None:
             raise Exception("No user message found")
         if (
@@ -869,7 +877,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
 
 async def process_chat_response(
-    request, response, form_data, user, metadata, model, events, tasks
+    request, response, form_data, user, metadata, model, events, tasks, model_owned_by
 ):
     async def background_tasks_handler():
         message_map = Chats.get_messages_by_chat_id(metadata["chat_id"])
@@ -1461,13 +1469,16 @@ async def process_chat_response(
                             **event,
                         },
                     )
-
+                
                 async def stream_body_handler(response):
                     nonlocal content
                     nonlocal content_blocks
 
                     response_tool_calls = []
 
+                    prompt_eval_count = 0
+                    eval_count = 0
+                
                     async for line in response.body_iterator:
                         line = line.decode("utf-8") if isinstance(line, bytes) else line
                         data = line
@@ -1684,6 +1695,11 @@ async def process_chat_response(
                                         "data": data,
                                     }
                                 )
+                            
+                            if model_owned_by == "ollama" and data.get("usage"):
+                                prompt_eval_count = data.get("usage")["prompt_eval_count"]
+                                eval_count = data.get("usage")["eval_count"]
+                            
                         except Exception as e:
                             done = "data: [DONE]" in line
                             if done:
@@ -1691,7 +1707,21 @@ async def process_chat_response(
                             else:
                                 log.debug("Error: ", e)
                                 continue
+                    
+                    if should_record_token_usage(user):
+                        total_token_usage = prompt_eval_count + eval_count
+                    
+                        # Manually calculate the total token usage
+                        if total_token_usage == 0: 
+                            body = await request.json()
+    
+                            # Access the 'messages' key
+                            messages = body.get("messages", [])
 
+                            total_token_usage = calculate_content_token_usage(content) + calculate_messages_token_usage(messages)
+
+                        await inc_rate_usage(user, 'token', total_token_usage)
+                    
                     if content_blocks:
                         # Clean up the last text block
                         if content_blocks[-1]["type"] == "text":
@@ -2020,7 +2050,7 @@ async def process_chat_response(
                     "content": serialize_content_blocks(content_blocks),
                     "title": title,
                 }
-
+                                
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
                     Chats.upsert_message_to_chat_by_id_and_message_id(

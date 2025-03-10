@@ -31,10 +31,12 @@ from langchain_core.documents import Document
 
 from open_webui.models.files import FileModel, Files
 from open_webui.models.knowledge import Knowledges
+from open_webui.models.documents import DocumentModel, DocumentDBs
+
 from open_webui.storage.provider import Storage
 
 
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT, VECTOR_DB
 
 # Document loaders
 from open_webui.retrieval.loaders.main import Loader
@@ -70,7 +72,7 @@ from open_webui.retrieval.utils import (
     query_doc_with_hybrid_search,
 )
 from open_webui.utils.misc import (
-    calculate_sha256_string,
+    calculate_sha256_string, measure_time
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
@@ -81,6 +83,7 @@ from open_webui.config import (
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+    RERANKING_MODEL_API_KEY,
     UPLOAD_DIR,
     DEFAULT_LOCALE,
 )
@@ -128,30 +131,46 @@ def get_rf(
 ):
     rf = None
     if reranking_model:
+        model_path = get_model_path(reranking_model, auto_update)
         if any(model in reranking_model for model in ["jinaai/jina-colbert-v2"]):
             try:
                 from open_webui.retrieval.models.colbert import ColBERT
 
+                log.info(f"Using ColBERT: {reranking_model}")
                 rf = ColBERT(
-                    get_model_path(reranking_model, auto_update),
+                    model_path,
                     env="docker" if DOCKER else None,
                 )
 
             except Exception as e:
                 log.error(f"ColBERT: {e}")
                 raise Exception(ERROR_MESSAGES.DEFAULT(e))
-        else:
+            
+        # Have this condition because get_model_path will return the reranking_model if having error
+        elif reranking_model == model_path:
             import sentence_transformers
 
             try:
+                log.info(f"Using CrossEncoder: {reranking_model}")
                 rf = sentence_transformers.CrossEncoder(
-                    get_model_path(reranking_model, auto_update),
+                    model_path,
                     device=DEVICE_TYPE,
                     trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
                 )
-            except:
-                log.error("CrossEncoder error")
-                raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
+            except Exception as e:
+                log.error(f"CrossEncoder error: {e}")
+                raise Exception(ERROR_MESSAGES.DEFAULT(e))
+            
+        elif reranking_model.startswith("jina-reranker"):
+            try:
+                from open_webui.retrieval.models.jina_remote import JinaRemoteReranker
+
+                log.info(f"Using JinaRemoteReranker: {reranking_model}")
+                rf = JinaRemoteReranker(reranking_model, RERANKING_MODEL_API_KEY)
+            except Exception as e:
+                log.error(f"JinaReranker error: {e}")
+                raise Exception(ERROR_MESSAGES.DEFAULT(e))
+
     return rf
 
 
@@ -752,7 +771,7 @@ async def update_query_settings(
 #
 ####################################
 
-
+@measure_time
 def save_docs_to_vector_db(
     request: Request,
     docs,
@@ -796,6 +815,34 @@ def save_docs_to_vector_db(
                 log.info(f"Document with hash {metadata['hash']} already exists")
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
+    # Add file to a knowledge base collection
+    if add:
+        if VECTOR_DB in ["chroma", "qdrant"]:
+            file_collection_name = f"file-{metadata['file_id']}"
+        else:
+            raise ValueError(
+                ERROR_MESSAGES.DEFAULT(
+                    "Vector database not supported for file migration"
+                )
+            )
+
+        all_documents = VECTOR_DB_CLIENT.get_raw_data(
+            collection_name=file_collection_name
+        )
+        VECTOR_DB_CLIENT.insert_raw_data(
+            collection_name=collection_name,
+            documents=all_documents,
+            enable_hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+        )
+        log.info(
+            f"Migrate vectors from {file_collection_name} to {collection_name} successfully"
+        )
+        return True
+
+    enable_rag_parent_retriever = (
+        split and request.app.state.config.ENABLE_RAG_PARENT_RETRIEVER
+    )
+
     if split:
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(
@@ -803,6 +850,12 @@ def save_docs_to_vector_db(
                 chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
                 add_start_index=True,
             )
+            if enable_rag_parent_retriever:
+                parent_text_splitter = RecursiveCharacterTextSplitter(
+                    chunk_size=request.app.state.config.PARENT_CHUNK_SIZE,
+                    chunk_overlap=request.app.state.config.PARENT_CHUNK_OVERLAP,
+                    add_start_index=True,
+                )
         elif request.app.state.config.TEXT_SPLITTER == "token":
             log.info(
                 f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
@@ -815,10 +868,50 @@ def save_docs_to_vector_db(
                 chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
                 add_start_index=True,
             )
+            if enable_rag_parent_retriever:
+                parent_text_splitter = TokenTextSplitter(
+                    encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
+                    chunk_size=request.app.state.config.PARENT_CHUNK_SIZE,
+                    chunk_overlap=request.app.state.config.PARENT_CHUNK_OVERLAP,
+                    add_start_index=True,
+                )
         else:
             raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
 
-        docs = text_splitter.split_documents(docs)
+        if enable_rag_parent_retriever:
+            import time
+
+            parent_docs = parent_text_splitter.split_documents(docs)
+            parent_doc_ids = [str(uuid.uuid4()) for _ in parent_docs]
+            child_docs = []
+            parent_docs_to_save = []
+
+            for i, doc in enumerate(parent_docs):
+                sub_docs = text_splitter.split_documents([doc])
+                _id = parent_doc_ids[i]
+                for _doc in sub_docs:
+                    _doc.metadata["parent_id"] = _id
+                child_docs.extend(sub_docs)
+
+                current_time = int(time.time())
+                parent_doc_to_save = DocumentModel(
+                    **{
+                        "id": _id,
+                        "file_name": doc.metadata["name"],
+                        "file_id": doc.metadata["file_id"],
+                        "collection_name": collection_name,
+                        "page_content": doc.page_content,
+                        "meta": metadata,
+                        "created_at": current_time,
+                        "updated_at": current_time,
+                    }
+                )
+                parent_docs_to_save.append(parent_doc_to_save)
+
+            DocumentDBs.insert_new_docs(parent_docs_to_save)
+            docs = child_docs
+        else:
+            docs = text_splitter.split_documents(docs)
 
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
@@ -855,6 +948,7 @@ def save_docs_to_vector_db(
 
             if overwrite:
                 VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                DocumentDBs.delete_by_collection_name(collection_name)
                 log.info(f"deleting existing collection {collection_name}")
             elif add is False:
                 log.info(
@@ -880,9 +974,12 @@ def save_docs_to_vector_db(
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
+        start_time = time.time()
         embeddings = embedding_function(
             list(map(lambda x: x.replace("\n", " "), texts)), user=user
         )
+        end_time = time.time()
+        log.info(f"Time taken to run embedding_function in save_docs_to_vector_db: {end_time - start_time} seconds")
 
         items = [
             {
@@ -897,6 +994,7 @@ def save_docs_to_vector_db(
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
             items=items,
+            enable_hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
         )
 
         return True
@@ -936,6 +1034,8 @@ def process_file(
                 # Audio file upload pipeline
                 pass
 
+            DocumentDBs.delete_by_collection_name(collection_name)
+
             docs = [
                 Document(
                     page_content=form_data.content.replace("<br/>", "\n"),
@@ -952,13 +1052,18 @@ def process_file(
             text_content = form_data.content
         elif form_data.collection_name:
             # Check if the file has already been processed and save the content
+            # If parent retriever is enabled, we should not get the docs from vector store since it's splitted with small chunk
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
             result = VECTOR_DB_CLIENT.query(
                 collection_name=f"file-{file.id}", filter={"file_id": file.id}
             )
 
-            if result is not None and len(result.ids[0]) > 0:
+            if (
+                result is not None
+                and len(result.ids[0]) > 0
+                and not request.app.state.config.ENABLE_RAG_PARENT_RETRIEVER
+            ):
                 docs = [
                     Document(
                         page_content=result.documents[0][idx],

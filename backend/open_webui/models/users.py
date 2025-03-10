@@ -35,10 +35,17 @@ class User(Base):
 
     oauth_sub = Column(Text, unique=True)
 
+    rate_limit = Column(JSONField, nullable=True)
 
 class UserSettings(BaseModel):
     ui: Optional[dict] = {}
     model_config = ConfigDict(extra="allow")
+    pass
+
+
+class UserRateLimit(BaseModel):
+    token_limit_per_minute: Optional[int] = 0
+    request_limit_per_minute: Optional[int] = 0
     pass
 
 
@@ -61,6 +68,7 @@ class UserModel(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    rate_limit: Optional[UserRateLimit] = None
 
 ####################
 # Forms

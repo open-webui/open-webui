@@ -1,34 +1,97 @@
 services:
-  ollama:
-    volumes:
-      - ollama:/root/.ollama
-    container_name: ollama
-    pull_policy: always
-    tty: true
-    restart: unless-stopped
-    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
-
   open-webui:
     build:
       context: .
-      args:
-        OLLAMA_BASE_URL: '/ollama'
       dockerfile: Dockerfile
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
-    depends_on:
-      - ollama
+    command: uvicorn open_webui.main:app --port 8080 --host 0.0.0.0 --forwarded-allow-ips '*'
     ports:
       - ${OPEN_WEBUI_PORT-3000}:8080
-    environment:
-      - 'OLLAMA_BASE_URL=http://ollama:11434'
-      - 'WEBUI_SECRET_KEY='
+    env_file:
+      - .env
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_started
+      qdrant:
+        condition: service_started
+    ulimits:
+      nofile:
+        soft: 16384
+        hard: 16384
+    networks:
+      - talley
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--requirepass", "password"]
+    networks:
+      - talley
+
+  qdrant:
+    image: qdrant/qdrant:v1.13.4
+    restart: unless-stopped
+    container_name: vector-db
+    ports:
+      - 3001:6333
+      - 3002:6334
+    environment:
+      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY}
+      - QDRANT__LOG_LEVEL=INFO
+    volumes:
+      - qdrant_data:/qdrant/storage
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    networks:
+      - talley
+
+  # postgres:
+  #   image: postgres:17.2-bookworm
+  #   container_name: postgres
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+  #     POSTGRES_DB: ${POSTGRES_DB:-talley}  # This ensures the database is created on startup
+  #     PGDATA: /data/postgres
+  #   volumes:
+  #      - postgres:/data/postgres
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-talley}"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - talley
+  #   restart: unless-stopped
+
+  # pgadmin:
+  #   container_name: pgadmin
+  #   image: dpage/pgadmin4
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-dev@yitec.group}
+  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-talley}
+  #     PGADMIN_CONFIG_SERVER_MODE: 'False'
+  #   volumes:
+  #      - pgadmin:/var/lib/pgadmin
+  #   ports:
+  #     - "${PGADMIN_PORT:-5050}:80"
+  #   networks:
+  #     - talley
+  #   restart: unless-stopped
 
 volumes:
-  ollama: {}
   open-webui: {}
+  qdrant_data: {}
+  # postgres: {}
+  # pgadmin: {}
+networks:
+  talley:

@@ -226,6 +226,9 @@ from open_webui.config import (
     GOOGLE_DRIVE_API_KEY,
     ONEDRIVE_CLIENT_ID,
     ENABLE_RAG_HYBRID_SEARCH,
+    PARENT_CHUNK_SIZE,
+    PARENT_CHUNK_OVERLAP,
+    ENABLE_RAG_PARENT_RETRIEVER,
     ENABLE_RAG_LOCAL_WEB_FETCH,
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_RAG_WEB_SEARCH,
@@ -353,6 +356,8 @@ from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
+
+from open_webui.decorators.rate_limit import rate_limit
 
 
 if SAFE_MODE:
@@ -543,6 +548,10 @@ app.state.config.FILE_MAX_COUNT = RAG_FILE_MAX_COUNT
 app.state.config.RAG_FULL_CONTEXT = RAG_FULL_CONTEXT
 app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL = BYPASS_EMBEDDING_AND_RETRIEVAL
 app.state.config.ENABLE_RAG_HYBRID_SEARCH = ENABLE_RAG_HYBRID_SEARCH
+app.state.config.ENABLE_RAG_PARENT_RETRIEVER = ENABLE_RAG_PARENT_RETRIEVER
+app.state.config.PARENT_CHUNK_SIZE = PARENT_CHUNK_SIZE
+app.state.config.PARENT_CHUNK_OVERLAP = PARENT_CHUNK_OVERLAP
+
 app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
 )
@@ -981,6 +990,7 @@ async def get_base_models(request: Request, user=Depends(get_admin_user)):
 
 
 @app.post("/api/chat/completions")
+@rate_limit
 async def chat_completion(
     request: Request,
     form_data: dict,
@@ -1055,7 +1065,7 @@ async def chat_completion(
         response = await chat_completion_handler(request, form_data, user)
 
         return await process_chat_response(
-            request, response, form_data, user, metadata, model, events, tasks
+            request, response, form_data, user, metadata, model, events, tasks, model["owned_by"]
         )
     except Exception as e:
         raise HTTPException(

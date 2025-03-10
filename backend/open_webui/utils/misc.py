@@ -463,3 +463,14 @@ def convert_logit_bias_input_to_json(user_input):
         bias = 100 if bias > 100 else -100 if bias < -100 else bias
         logit_bias_json[token] = bias
     return json.dumps(logit_bias_json)
+
+
+# Create a function decorator measure the time it takes to run a function
+def measure_time(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        log.info(f"Time taken to run {func.__name__}: {end_time - start_time} seconds")
+        return result
+    return wrapper
