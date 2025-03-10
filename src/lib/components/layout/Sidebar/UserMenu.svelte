@@ -2,8 +2,11 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
 	import { showSettings, mobile, showSidebar } from '$lib/stores';
+	import { page } from '$app/state'
 	import { fade } from 'svelte/transition';
+	import { showKnowlegeManager } from '$lib/IONOS/stores/dialogs';
 	import { userSignOut } from '$lib/apis/auths';
+	import StacksIcon from '$lib/IONOS/components/icons/Stacks.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -66,6 +69,20 @@
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
 			</button>
+
+			{#if page.url.pathname !== '/explore'}
+				<button
+					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					on:click={() => {
+						showKnowlegeManager(true);
+					}}
+				>
+					<div class=" self-center mr-3">
+						<StacksIcon />
+					</div>
+					<div class=" self-center truncate">{$i18n.t('Knowledge')}</div>
+				</button>
+			{/if}
 
 			{#if role === 'admin'}
 				<a
