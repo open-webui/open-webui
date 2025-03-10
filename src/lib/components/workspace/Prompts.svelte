@@ -23,6 +23,7 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
+	import SortOptions from '../common/SortOptions.svelte';
 
 	const i18n = getContext('i18n');
 	let promptsImportInputElement: HTMLInputElement;
@@ -36,8 +37,12 @@
 	let showDeleteConfirm = false;
 	let deletePrompt = null;
 
+	let originalItems  = [];
 	let filteredItems = [];
-	$: filteredItems = prompts.filter((p) => query === '' || p.command.includes(query));
+	
+	$: {
+		originalItems  = prompts.filter((p) => query === '' || p.command.includes(query));
+	}
 
 	const shareHandler = async (prompt) => {
 		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
@@ -125,6 +130,17 @@
 					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
 					placeholder={$i18n.t('Search Prompts')}
+				/>
+			</div>
+
+			<div class="flex items-center space-x-2 mr-2">
+				<SortOptions 
+					items={originalItems }
+					bind:sortedItems={filteredItems}
+					options={[
+						{ value: 'title', label: $i18n.t('Title') },
+						{ value: 'command', label: $i18n.t('Command') }
+					]}
 				/>
 			</div>
 
