@@ -72,7 +72,7 @@ from open_webui.retrieval.utils import (
     query_doc_with_hybrid_search,
 )
 from open_webui.utils.misc import (
-    calculate_sha256_string,
+    calculate_sha256_string, measure_time
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
@@ -771,7 +771,7 @@ async def update_query_settings(
 #
 ####################################
 
-
+@measure_time
 def save_docs_to_vector_db(
     request: Request,
     docs,
@@ -974,9 +974,12 @@ def save_docs_to_vector_db(
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
+        start_time = time.time()
         embeddings = embedding_function(
             list(map(lambda x: x.replace("\n", " "), texts)), user=user
         )
+        end_time = time.time()
+        log.info(f"Time taken to run embedding_function in save_docs_to_vector_db: {end_time - start_time} seconds")
 
         items = [
             {

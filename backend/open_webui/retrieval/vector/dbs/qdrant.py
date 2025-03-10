@@ -88,7 +88,7 @@ class QdrantClient:
                 ),
             )
 
-        log.info(f"collection {collection_name_with_prefix} successfully created!")
+        log.info(f"collection {collection_name} successfully created!")
 
     def _create_collection_if_not_exists(
         self, collection_name, dimension, enable_hybrid_search: bool = False
@@ -316,7 +316,6 @@ class QdrantClient:
 
     def get_raw_data(self, collection_name: str):
         # Get all the items in the collection.
-        # check if the collection exists, it already add the prefix in the has_collection method
         is_collection_exists = self.has_collection(collection_name=collection_name)
         print(f"collection {collection_name} exists: {is_collection_exists}")
         if is_collection_exists:
@@ -364,6 +363,9 @@ class QdrantClient:
             points.append(point)
 
         print("Insert raw data: ", len(points))
+        if len(points) == 0:
+            raise ValueError("No points to migrate from collection to file")
+        
         # Create the collection if it doesn't exist
         self._create_collection_if_not_exists(
             collection_name=collection_name,
