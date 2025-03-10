@@ -1,0 +1,19 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build UX Installer",
+			"type": "shell",
+			"command": "makensis",
+			"args": [
+				"${workspaceFolder}/installer/Installer-UX.nsi"
+			],
+			"group": "build",
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			},
+			"problemMatcher": []
+		}
+	]
+}
