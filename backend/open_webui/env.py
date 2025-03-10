@@ -453,6 +453,4 @@ AUDIT_EXCLUDED_PATHS = [path.lstrip("/") for path in AUDIT_EXCLUDED_PATHS]
 # WEBSOCKET_REDIS_AZURE_CREDENTIALS
 ####################################
 
-WEBSOCKET_REDIS_AZURE_CREDENTIALS = (
-    os.environ.get("WEBSOCKET_REDIS_AZURE_CREDENTIALS", "false").lower() == "true"
-)
+WEBSOCKET_REDIS_CREDENTIALS = os.environ.get("WEBSOCKET_REDIS_CREDENTIALS", "").lower()

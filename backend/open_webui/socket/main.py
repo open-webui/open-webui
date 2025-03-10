@@ -16,9 +16,11 @@ from open_webui.env import (
     WEBSOCKET_REDIS_CERTS,
     WEBSOCKET_REDIS_USERNAME,
     WEBSOCKET_REDIS_PASSWORD,
+    WEBSOCKET_REDIS_CREDENTIALS,
 )
 from open_webui.utils.auth import decode_token
-from open_webui.socket.utils import RedisDict, RedisLock, azure_credential_service
+from open_webui.socket.utils import RedisDict, RedisLock
+from open_webui.utils.azure_services import AzureCredentialService
 
 from open_webui.env import (
     GLOBAL_LOG_LEVEL,
@@ -32,19 +34,18 @@ log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
 redis_options = {}
 
-# Retrieves and configures the Redis manager for Socket.IO with authentication and SSL if configured
-# If Azure token is used to auth with redis cache and socket lives longer than token expire time, the socket will fail.
-def get_redis_manager():
-    global redis_options
-    if azure_credential_service:
-        redis_options["password"] = azure_credential_service.get_token()
-        redis_options["username"] = azure_credential_service.get_username(redis_options["password"])
-    elif WEBSOCKET_REDIS_PASSWORD:
-        redis_options["password"] = WEBSOCKET_REDIS_PASSWORD
-        redis_options["username"] = WEBSOCKET_REDIS_USERNAME
-    if WEBSOCKET_REDIS_URL.startswith("rediss") and WEBSOCKET_REDIS_CERTS:
-        redis_options["ssl_ca_certs"] = WEBSOCKET_REDIS_CERTS
+if WEBSOCKET_REDIS_CREDENTIALS == 'azure':
+    azure_credential_service = AzureCredentialService()
+    redis_options["password"] = azure_credential_service.get_token()
+    redis_options["username"] = azure_credential_service.get_username(redis_options["password"])
+elif not WEBSOCKET_REDIS_PASSWORD:
+    redis_options["password"] = WEBSOCKET_REDIS_PASSWORD
+    redis_options["username"] = WEBSOCKET_REDIS_USERNAME
+if WEBSOCKET_REDIS_URL.startswith("rediss") and WEBSOCKET_REDIS_CERTS:
+    redis_options["ssl_ca_certs"] = WEBSOCKET_REDIS_CERTS
 
+# Retrieves and configures the Redis manager for Socket.IO with authentication and SSL if configured
+def get_redis_manager():
     try:
         mgr = socketio.AsyncRedisManager(
             WEBSOCKET_REDIS_URL,
@@ -54,6 +55,11 @@ def get_redis_manager():
     except ConnectionError as e:
         log.exception(f"Could not connect to Redis: {e}")
         raise e
+
+def refresh_azure_credentials():
+    if WEBSOCKET_REDIS_CREDENTIALS == 'azure':
+        if azure_credential_service.is_expired():
+            redis_options["password"] = azure_credential_service.get_token()
 
 if WEBSOCKET_MANAGER == "redis":
     mgr = get_redis_manager()
@@ -126,6 +132,10 @@ async def periodic_usage_pool_cleanup():
             if not renew_func():
                 log.error(f"Unable to renew cleanup lock. Exiting usage pool cleanup.")
                 raise Exception("Unable to renew usage pool cleanup lock.")
+
+            if WEBSOCKET_MANAGER == "redis":
+                # update redis options to refresh auth token
+                refresh_azure_credentials()
 
             now = int(time.time())
             send_usage = False
