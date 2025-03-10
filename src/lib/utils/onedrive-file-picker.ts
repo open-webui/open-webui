@@ -1,9 +1,12 @@
+import { PublicClientApplication } from '@azure/msal-browser';
+import type { PopupRequest } from '@azure/msal-browser';
 import { v4 as uuidv4 } from 'uuid';
 
 let CLIENT_ID = '';
 
 async function getCredentials() {
 	if (CLIENT_ID) return;
+
 	const response = await fetch('/api/config');
 	if (!response.ok) {
 		throw new Error('Failed to fetch OneDrive credentials');
@@ -15,63 +18,73 @@ async function getCredentials() {
 	}
 }
 
-function loadMsalScript(): Promise<void> {
-	return new Promise((resolve, reject) => {
-		const win = window;
-		if (win.msal) {
-			resolve();
-			return;
-		}
-		const script = document.createElement('script');
-		script.src = 'https://alcdn.msauth.net/browser/2.19.0/js/msal-browser.min.js';
-		script.async = true;
-		script.onload = () => resolve();
-		script.onerror = () => reject(new Error('Failed to load MSAL script'));
-		document.head.appendChild(script);
-	});
-}
-
-let msalInstance: any;
+let msalInstance: PublicClientApplication | null = null;
 
 // Initialize MSAL authentication
 async function initializeMsal() {
-	if (!CLIENT_ID) {
-		await getCredentials();
-	}
-	const msalParams = {
-		auth: {
-			authority: 'https://login.microsoftonline.com/consumers',
-			clientId: CLIENT_ID
-		}
-	};
 	try {
-		await loadMsalScript();
-		const win = window;
-		msalInstance = new win.msal.PublicClientApplication(msalParams);
-		if (msalInstance.initialize) {
-			await msalInstance.initialize();
+		if (!CLIENT_ID) {
+			await getCredentials();
 		}
+
+		const msalParams = {
+			auth: {
+				authority: 'https://login.microsoftonline.com/consumers',
+				clientId: CLIENT_ID
+			}
+		};
+
+		if (!msalInstance) {
+			msalInstance = new PublicClientApplication(msalParams);
+			if (msalInstance.initialize) {
+				await msalInstance.initialize();
+			}
+		}
+
+		return msalInstance;
 	} catch (error) {
-		console.error('MSAL initialization error:', error);
+		throw new Error(
+			'MSAL initialization failed: ' + (error instanceof Error ? error.message : String(error))
+		);
 	}
 }
 
 // Retrieve OneDrive access token
 async function getToken(): Promise<string> {
-	const authParams = { scopes: ['OneDrive.ReadWrite'] };
+	const authParams: PopupRequest = { scopes: ['OneDrive.ReadWrite'] };
 	let accessToken = '';
 	try {
-		await initializeMsal();
+		msalInstance = await initializeMsal();
+		if (!msalInstance) {
+			throw new Error('MSAL not initialized');
+		}
+
 		const resp = await msalInstance.acquireTokenSilent(authParams);
 		accessToken = resp.accessToken;
 	} catch (err) {
-		const resp = await msalInstance.loginPopup(authParams);
-		msalInstance.setActiveAccount(resp.account);
-		if (resp.idToken) {
-			const resp2 = await msalInstance.acquireTokenSilent(authParams);
-			accessToken = resp2.accessToken;
+		if (!msalInstance) {
+			throw new Error('MSAL not initialized');
+		}
+
+		try {
+			const resp = await msalInstance.loginPopup(authParams);
+			msalInstance.setActiveAccount(resp.account);
+			if (resp.idToken) {
+				const resp2 = await msalInstance.acquireTokenSilent(authParams);
+				accessToken = resp2.accessToken;
+			}
+		} catch (popupError) {
+			throw new Error(
+				'Failed to login: ' +
+					(popupError instanceof Error ? popupError.message : String(popupError))
+			);
 		}
 	}
+
+	if (!accessToken) {
+		throw new Error('Failed to acquire access token');
+	}
+
 	return accessToken;
 }
 
@@ -164,7 +177,6 @@ export async function openOneDrivePicker(): Promise<any | null> {
 									throw new Error('Could not retrieve auth token');
 								}
 							} catch (err) {
-								console.error(err);
 								channelPort?.postMessage({
 									result: 'error',
 									error: { code: 'tokenError', message: 'Failed to get token' },
@@ -189,7 +201,6 @@ export async function openOneDrivePicker(): Promise<any | null> {
 							break;
 						}
 						default: {
-							console.warn('Unsupported command:', command);
 							channelPort?.postMessage({
 								result: 'error',
 								error: { code: 'unsupportedCommand', message: command.command },
@@ -220,14 +231,17 @@ export async function openOneDrivePicker(): Promise<any | null> {
 				if (!authToken) {
 					return reject(new Error('Failed to acquire access token'));
 				}
+
 				pickerWindow = window.open('', 'OneDrivePicker', 'width=800,height=600');
 				if (!pickerWindow) {
 					return reject(new Error('Failed to open OneDrive picker window'));
 				}
+
 				const queryString = new URLSearchParams({
 					filePicker: JSON.stringify(params)
 				});
 				const url = `${baseUrl}?${queryString.toString()}`;
+
 				const form = pickerWindow.document.createElement('form');
 				form.setAttribute('action', url);
 				form.setAttribute('method', 'POST');
@@ -236,11 +250,15 @@ export async function openOneDrivePicker(): Promise<any | null> {
 				input.setAttribute('name', 'access_token');
 				input.setAttribute('value', authToken);
 				form.appendChild(input);
+
 				pickerWindow.document.body.appendChild(form);
 				form.submit();
+
 				window.addEventListener('message', handleWindowMessage);
 			} catch (err) {
-				if (pickerWindow) pickerWindow.close();
+				if (pickerWindow) {
+					pickerWindow.close();
+				}
 				reject(err);
 			}
 		};
@@ -251,18 +269,16 @@ export async function openOneDrivePicker(): Promise<any | null> {
 
 // Pick and download file from OneDrive
 export async function pickAndDownloadFile(): Promise<{ blob: Blob; name: string } | null> {
-	try {
-		const pickerResult = await openOneDrivePicker();
-		if (!pickerResult || !pickerResult.items || pickerResult.items.length === 0) {
-			return null;
-		}
-		const selectedFile = pickerResult.items[0];
-		const blob = await downloadOneDriveFile(selectedFile);
-		return { blob, name: selectedFile.name };
-	} catch (error) {
-		console.error('Error occurred during OneDrive file pick/download:', error);
-		throw error;
+	const pickerResult = await openOneDrivePicker();
+
+	if (!pickerResult || !pickerResult.items || pickerResult.items.length === 0) {
+		return null;
 	}
+
+	const selectedFile = pickerResult.items[0];
+	const blob = await downloadOneDriveFile(selectedFile);
+
+	return { blob, name: selectedFile.name };
 }
 
 export { downloadOneDriveFile };

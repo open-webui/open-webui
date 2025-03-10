@@ -1,0 +1,22 @@
+name: Create installer
+
+on:
+  workflow_run:
+    workflows: ["Build and package solution"]
+    types:
+      - completed
+
+jobs:
+  run:
+    runs-on: windows-latest
+
+    steps:
+    - name: Download wheel artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: python-wheel
+
+    - name: Process wheel file
+      run: |
+        echo "Processing Python wheel file..."
+        # Your steps to process the wheel file here
