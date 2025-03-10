@@ -2,6 +2,8 @@
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import GoogleAnalytics from '$lib/analytics.svelte';
+
 
 	let loadingProgress = spring(0, {
 		stiffness: 0.05
@@ -564,10 +566,11 @@
 		};
 	});
 </script>
+<GoogleAnalytics />
 
 <svelte:head>
 	<title>{$WEBUI_NAME}</title>
-	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
+	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png"/>
 
 	<!-- rosepine themes have been disabled as it's not up to date with our latest version. -->
 	<!-- feel free to make a PR to fix if anyone wants to see it return -->
