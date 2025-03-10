@@ -3,6 +3,7 @@
 	const i18n = getContext('i18n');
 
 	import dayjs from '$lib/dayjs';
+	import { settings } from '$lib/stores';
 	import duration from 'dayjs/plugin/duration';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -33,7 +34,7 @@
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
 
-	export let open = false;
+	export let open = $settings?.reasoningDisplay ?? false;
 	export let id = '';
 	export let className = '';
 	export let buttonClassName =
