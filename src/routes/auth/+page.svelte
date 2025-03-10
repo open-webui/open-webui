@@ -194,9 +194,9 @@
 		<div class="bg-[#5612CC] w-full md:flex flex-col items-center justify-center min-h-screen hidden md:visible">
 			<img
 				crossorigin="anonymous"
-				src="{WEBUI_BASE_URL}/static/splash.png"
-				class="w-60 rounded-full dark:invert"
-				alt="logo"
+				src="{WEBUI_BASE_URL}/static/ai_models_visualization.png"
+				class="w-150 rounded-full dark:invert"
+				alt="logos"
 			/>
 
 			<!-- Links at the bottom -->
