@@ -120,7 +120,12 @@
 			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
 		}
 
-		prompt = text;
+		const promptWords = prompt.split(' ');
+
+		promptWords.pop();
+		promptWords.push(`${text}`);
+
+		prompt = promptWords.join(' ');
 
 		const chatInputContainerElement = document.getElementById('chat-input-container');
 		const chatInputElement = document.getElementById('chat-input');

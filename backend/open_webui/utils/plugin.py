@@ -165,15 +165,14 @@ def load_function_module_by_id(function_id, content=None):
         os.unlink(temp_file.name)
 
 
-def install_frontmatter_requirements(requirements):
+def install_frontmatter_requirements(requirements: str):
     if requirements:
         try:
             req_list = [req.strip() for req in requirements.split(",")]
-            for req in req_list:
-                log.info(f"Installing requirement: {req}")
-                subprocess.check_call([sys.executable, "-m", "pip", "install", req])
+            log.info(f"Installing requirements: {' '.join(req_list)}")
+            subprocess.check_call([sys.executable, "-m", "pip", "install"] + req_list)
         except Exception as e:
-            log.error(f"Error installing package: {req}")
+            log.error(f"Error installing packages: {' '.join(req_list)}")
             raise e
 
     else:

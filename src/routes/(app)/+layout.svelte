@@ -171,7 +171,11 @@
 				}
 
 				// Check if Ctrl + Shift + ' is pressed
-				if (isCtrlPressed && isShiftPressed && event.key.toLowerCase() === `'`) {
+				if (
+					isCtrlPressed &&
+					isShiftPressed &&
+					(event.key.toLowerCase() === `'` || event.key.toLowerCase() === `"`)
+				) {
 					event.preventDefault();
 					console.log('temporaryChat');
 					temporaryChatEnabled.set(!$temporaryChatEnabled);
