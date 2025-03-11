@@ -38,13 +38,35 @@
 		try {
 			console.log('Starting sign-in process...');
 
-			// Log the request details
-			console.log('Request payload:', { email, password: '***' });
+			// Log the API URL being used
+			console.log('API URL:', WEBUI_API_BASE_URL);
 
-			// Make a direct fetch call instead of using the userSignIn function
-			console.log('Making direct API call to:', `${WEBUI_API_BASE_URL}/auths/signin`);
+			// Make a direct fetch call with detailed logging
+			const url = `${WEBUI_API_BASE_URL}/auths/signin`;
+			console.log('Making request to:', url);
 
-			const response = await fetch(`${WEBUI_API_BASE_URL}/auths/signin`, {
+			// First, try to check if the endpoint exists and what methods it accepts
+			try {
+				const optionsResponse = await fetch(url, {
+					method: 'OPTIONS',
+					headers: {
+						'Content-Type': 'application/json'
+					}
+				});
+
+				console.log('OPTIONS response status:', optionsResponse.status);
+				console.log('OPTIONS response headers:', Object.fromEntries([...optionsResponse.headers]));
+
+				const allowedMethods =
+					optionsResponse.headers.get('Allow') ||
+					optionsResponse.headers.get('Access-Control-Allow-Methods');
+				console.log('Allowed methods:', allowedMethods);
+			} catch (optionsError) {
+				console.error('OPTIONS request failed:', optionsError);
+			}
+
+			// Now make the actual sign-in request
+			const response = await fetch(url, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -58,38 +80,34 @@
 			console.log('Response status:', response.status);
 			console.log('Response headers:', Object.fromEntries([...response.headers]));
 
-			// Get the raw text first
+			// Get the raw text first before trying to parse as JSON
 			const rawText = await response.text();
 			console.log('Raw response text:', rawText);
 
-			// Try to parse as JSON if it looks like JSON
+			// Only try to parse as JSON if it looks like JSON
 			let data;
-			if (rawText && rawText.trim().startsWith('{')) {
+			if (rawText && (rawText.trim().startsWith('{') || rawText.trim().startsWith('['))) {
 				try {
 					data = JSON.parse(rawText);
 					console.log('Parsed JSON data:', data);
 				} catch (parseError) {
 					console.error('JSON parse error:', parseError);
 					toast.error('Failed to parse server response');
-					return null;
+					return;
 				}
 			} else {
 				console.error('Response is not JSON:', rawText);
 				toast.error('Server returned an invalid response');
-				return null;
+				return;
 			}
 
-			if (!response.ok) {
-				toast.error(data.detail || `Error: ${response.status}`);
-				return null;
-			}
-
-			// Continue with the normal flow
+			// Continue with normal flow if we got valid JSON
 			if (data.token) {
 				localStorage.setItem('token', data.token);
+				await setSessionUser(data);
+			} else {
+				toast.error(data.detail || 'Authentication failed');
 			}
-
-			await setSessionUser(data);
 		} catch (error) {
 			console.error('Sign-in error:', error);
 			toast.error(`${error}`);
