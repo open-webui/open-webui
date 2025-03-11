@@ -261,7 +261,7 @@ export const updateLdapServer = async (token: string = "", body: object) => {
 };
 
 export const userSignIn = async (email: string, password: string) => {
-	let error: string | null = null;
+	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signin`, {
 		method: "POST",
@@ -274,30 +274,13 @@ export const userSignIn = async (email: string, password: string) => {
 		}),
 	})
 		.then(async (res) => {
-			// Clone the response before parsing it for error handling
-			const clonedRes = res.clone();
-
-			if (!res.ok) {
-				try {
-					const errorData = await clonedRes.json();
-					throw errorData;
-				} catch (parseError) {
-					// If JSON parsing fails, throw a more descriptive error
-					throw { detail: `Server error: ${res.status} ${res.statusText}` };
-				}
+			if (!res.ok) throw await res.json();
+			const data = await res.json();
+			if (data.token) {
+				localStorage.setItem("token", data.token);
+				localStorage.setItem("auth_type", data.auth_type || "regular");
 			}
-
-			try {
-				const data = await res.json();
-				if (data.token) {
-					localStorage.setItem("token", data.token);
-					localStorage.setItem("auth_type", data.auth_type || "regular");
-				}
-				return data;
-			} catch (parseError) {
-				console.error("Failed to parse response:", parseError);
-				throw { detail: "Failed to parse server response" };
-			}
+			return data;
 		})
 		.catch((err) => {
 			console.log(err);
