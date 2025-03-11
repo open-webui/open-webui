@@ -193,18 +193,19 @@
 		>
 			{#if $WEBUI_NAME === 'AiBrary'}
 				<div
-					class="bg-gradient-to-b from-[#5612CC] via-[#5612CC] to-[#0b021a] w-full min-h-screen flex-col items-center justify-center relative hidden md:flex"
+					class=" bg-gradient-to-b from-[#5612CC] via-[#5612CC] to-[#0b021a] w-full min-h-screen flex-col items-center justify-center relative hidden md:flex"
 				>
 					<!-- Image at the top -->
 					<img
 						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/ai_models.jpg"
-						class="w-full absolute top-2 left-2 p-2"
+						src="{WEBUI_BASE_URL}/static/aiModels.jpg"
+						class="w-full absolute top-0 p-1"
 						alt="logos"
 					/>
-
 					<!-- Links at the bottom -->
-					<div class="absolute bottom-10 w-full text-center">
+					<div class="absolute bottom-18 w-full text-center">
+						<h1 class="text-4xl text-white pb-2 font-bold" >AiBrary Chat, Endless AI Possibilities!</h1>
+					
 						<a
 							href="https://www.aibrary.dev/privacy-policy"
 							class="text-lg text-white hover:underline">Privacy Policy</a
@@ -216,7 +217,6 @@
 					</div>
 				</div>
 			{/if}
-
 			<div class="w-full sm:max-w-md px-10 min-h-screen flex flex-col text-center">
 				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
 					<div class=" my-auto pb-10 w-full">
