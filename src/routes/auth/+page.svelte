@@ -193,7 +193,7 @@
 		>
 			{#if $WEBUI_NAME === 'AiBrary'}
 				<div
-					class=" bg-gradient-to-b from-[#5612CC] via-[#5612CC] to-[#0b021a] w-full min-h-screen flex-col items-center justify-center relative hidden md:flex"
+					class=" bg-gradient-to-b from-[#5612CC] via-[#24045d] to-[#010003] w-full min-h-screen flex-col items-center justify-center relative hidden md:flex"
 				>
 					<!-- Image at the top -->
 					<img
