@@ -16,6 +16,7 @@
 		dismissable: true,
 		timestamp: Math.floor(Date.now() / 1000)
 	};
+	export let className = 'mx-4';
 
 	export let dismissed = false;
 
@@ -41,14 +42,14 @@
 {#if !dismissed}
 	{#if mounted}
 		<div
-			class=" top-0 left-0 right-0 p-2 mx-4 px-3 flex justify-center items-center relative rounded-xl border border-gray-50 dark:border-gray-850 text-gray-800 dark:text-gary-100 bg-white dark:bg-gray-900 backdrop-blur-xl z-30"
+			class="{className} top-0 left-0 right-0 p-2 px-3 flex justify-center items-center relative rounded-xl border border-gray-100 dark:border-gray-850 text-gray-800 dark:text-gary-100 bg-white dark:bg-gray-900 backdrop-blur-xl z-30"
 			transition:fade={{ delay: 100, duration: 300 }}
 		>
 			<div class=" flex flex-col md:flex-row md:items-center flex-1 text-sm w-fit gap-1.5">
 				<div class="flex justify-between self-start">
 					<div
 						class=" text-xs font-bold {classNames[banner.type] ??
-							classNames['info']}  w-fit px-2 rounded uppercase line-clamp-1 mr-0.5"
+							classNames['info']}  w-fit px-2 rounded-sm uppercase line-clamp-1 mr-0.5"
 					>
 						{banner.type}
 					</div>

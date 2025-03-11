@@ -1,13 +1,10 @@
 fastapi==0.115.7
-uvicorn[standard]==0.30.6
-pydantic==2.9.2
+uvicorn[standard]==0.34.0
+pydantic==2.10.6
 python-multipart==0.0.18
 
-Flask==3.1.0
-Flask-Cors==5.0.0
-
 python-socketio==5.11.3
-python-jose==3.3.0
+python-jose==3.4.0
 passlib[bcrypt]==1.7.4
 
 requests==2.32.3
@@ -16,14 +13,14 @@ async-timeout
 aiocache
 aiofiles
 
-sqlalchemy==2.0.32
+sqlalchemy==2.0.38
 alembic==1.14.0
-peewee==3.17.8
+peewee==3.17.9
 peewee-migrate==1.12.2
 psycopg2-binary==2.9.9
 pgvector==0.3.5
 PyMySQL==1.1.1
-bcrypt==4.2.0
+bcrypt==4.3.0
 
 pymongo
 redis
@@ -32,20 +29,27 @@ boto3==1.35.53
 argon2-cffi==23.1.0
 APScheduler==3.10.4
 
+RestrictedPython==8.0
+
+loguru==0.7.2
+asgiref==3.8.1
+
 # AI libraries
 openai
 anthropic
 google-generativeai==0.7.2
 tiktoken
 
-langchain==0.3.7
-langchain-community==0.3.7
+langchain==0.3.19
+langchain-community==0.3.18
 
 fake-useragent==1.5.1
 chromadb==0.6.2
 pymilvus==2.5.0
 qdrant-client~=1.12.0
-opensearch-py==2.7.1
+opensearch-py==2.8.0
+playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
+elasticsearch==8.17.1
 
 
 transformers
@@ -60,7 +64,7 @@ fpdf2==2.8.2
 pymdown-extensions==10.14.2
 docx2txt==0.8
 python-pptx==1.0.0
-unstructured==0.16.11
+unstructured==0.16.17
 nltk==3.9.1
 Markdown==3.7
 pypandoc==1.13
@@ -72,24 +76,25 @@ validators==0.34.0
 psutil
 sentencepiece
 soundfile==0.13.1
+azure-ai-documentintelligence==1.0.0
 
 opencv-python-headless==4.11.0.86
 rapidocr-onnxruntime==1.3.24
 rank-bm25==0.2.2
 
-faster-whisper==1.0.3
+faster-whisper==1.1.1
 
 PyJWT[crypto]==2.10.1
 authlib==1.4.1
 
-black==24.8.0
+black==25.1.0
 langfuse==2.44.0
 youtube-transcript-api==0.6.3
 pytube==15.0.0
 
 extract_msg
 pydub
-duckduckgo-search~=7.3.0
+duckduckgo-search~=7.3.2
 
 ## Google Drive
 google-api-python-client
@@ -104,5 +109,12 @@ pytest-docker~=3.1.1
 googleapis-common-protos==1.63.2
 google-cloud-storage==2.19.0
 
+azure-identity==1.20.0
+azure-storage-blob==12.24.1
+
+
 ## LDAP
 ldap3==2.9.1
+
+## Firecrawl
+firecrawl-py==1.12.0

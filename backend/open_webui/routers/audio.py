@@ -11,6 +11,7 @@ from pydub.silence import split_on_silence
 import aiohttp
 import aiofiles
 import requests
+import mimetypes
 
 from fastapi import (
     Depends,
@@ -36,6 +37,7 @@ from open_webui.config import (
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
+    AIOHTTP_CLIENT_TIMEOUT,
     ENV,
     SRC_LOG_LEVELS,
     DEVICE_TYPE,
@@ -52,7 +54,7 @@ MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["AUDIO"])
 
-SPEECH_CACHE_DIR = Path(CACHE_DIR).joinpath("./audio/speech/")
+SPEECH_CACHE_DIR = CACHE_DIR / "audio" / "speech"
 SPEECH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -69,7 +71,7 @@ from pydub.utils import mediainfo
 def is_mp4_audio(file_path):
     """Check if the given file is an MP4 audio file."""
     if not os.path.isfile(file_path):
-        print(f"File not found: {file_path}")
+        log.error(f"File not found: {file_path}")
         return False
 
     info = mediainfo(file_path)
@@ -86,7 +88,7 @@ def convert_mp4_to_wav(file_path, output_path):
     """Convert MP4 audio file to WAV format."""
     audio = AudioSegment.from_file(file_path, format="mp4")
     audio.export(output_path, format="wav")
-    print(f"Converted {file_path} to {output_path}")
+    log.info(f"Converted {file_path} to {output_path}")
 
 
 def set_faster_whisper_model(model: str, auto_update: bool = False):
@@ -138,6 +140,7 @@ class STTConfigForm(BaseModel):
     ENGINE: str
     MODEL: str
     WHISPER_MODEL: str
+    DEEPGRAM_API_KEY: str
 
 
 class AudioConfigUpdateForm(BaseModel):
@@ -165,6 +168,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "ENGINE": request.app.state.config.STT_ENGINE,
             "MODEL": request.app.state.config.STT_MODEL,
             "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
+            "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
         },
     }
 
@@ -190,6 +194,7 @@ async def update_audio_config(
     request.app.state.config.STT_ENGINE = form_data.stt.ENGINE
     request.app.state.config.STT_MODEL = form_data.stt.MODEL
     request.app.state.config.WHISPER_MODEL = form_data.stt.WHISPER_MODEL
+    request.app.state.config.DEEPGRAM_API_KEY = form_data.stt.DEEPGRAM_API_KEY
 
     if request.app.state.config.STT_ENGINE == "":
         request.app.state.faster_whisper_model = set_faster_whisper_model(
@@ -214,6 +219,7 @@ async def update_audio_config(
             "ENGINE": request.app.state.config.STT_ENGINE,
             "MODEL": request.app.state.config.STT_MODEL,
             "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
+            "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
         },
     }
 
@@ -260,8 +266,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         payload["model"] = request.app.state.config.TTS_MODEL
 
         try:
-            # print(payload)
-            async with aiohttp.ClientSession() as session:
+            timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            async with aiohttp.ClientSession(
+                timeout=timeout, trust_env=True
+            ) as session:
                 async with session.post(
                     url=f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/speech",
                     json=payload,
@@ -318,7 +326,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             )
 
         try:
-            async with aiohttp.ClientSession() as session:
+            timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            async with aiohttp.ClientSession(
+                timeout=timeout, trust_env=True
+            ) as session:
                 async with session.post(
                     f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
                     json={
@@ -375,7 +386,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             data = f"""<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="{locale}">
                 <voice name="{language}">{payload["input"]}</voice>
             </speak>"""
-            async with aiohttp.ClientSession() as session:
+            timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            async with aiohttp.ClientSession(
+                timeout=timeout, trust_env=True
+            ) as session:
                 async with session.post(
                     f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1",
                     headers={
@@ -453,7 +467,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
 
 def transcribe(request: Request, file_path):
-    print("transcribe", file_path)
+    log.info(f"transcribe: {file_path}")
     filename = os.path.basename(file_path)
     file_dir = os.path.dirname(file_path)
     id = filename.split(".")[0]
@@ -519,6 +533,69 @@ def transcribe(request: Request, file_path):
                 except Exception:
                     detail = f"External: {e}"
 
+            raise Exception(detail if detail else "Open WebUI: Server Connection Error")
+
+    elif request.app.state.config.STT_ENGINE == "deepgram":
+        try:
+            # Determine the MIME type of the file
+            mime, _ = mimetypes.guess_type(file_path)
+            if not mime:
+                mime = "audio/wav"  # fallback to wav if undetectable
+
+            # Read the audio file
+            with open(file_path, "rb") as f:
+                file_data = f.read()
+
+            # Build headers and parameters
+            headers = {
+                "Authorization": f"Token {request.app.state.config.DEEPGRAM_API_KEY}",
+                "Content-Type": mime,
+            }
+
+            # Add model if specified
+            params = {}
+            if request.app.state.config.STT_MODEL:
+                params["model"] = request.app.state.config.STT_MODEL
+
+            # Make request to Deepgram API
+            r = requests.post(
+                "https://api.deepgram.com/v1/listen",
+                headers=headers,
+                params=params,
+                data=file_data,
+            )
+            r.raise_for_status()
+            response_data = r.json()
+
+            # Extract transcript from Deepgram response
+            try:
+                transcript = response_data["results"]["channels"][0]["alternatives"][
+                    0
+                ].get("transcript", "")
+            except (KeyError, IndexError) as e:
+                log.error(f"Malformed response from Deepgram: {str(e)}")
+                raise Exception(
+                    "Failed to parse Deepgram response - unexpected response format"
+                )
+            data = {"text": transcript.strip()}
+
+            # Save transcript
+            transcript_file = f"{file_dir}/{id}.json"
+            with open(transcript_file, "w") as f:
+                json.dump(data, f)
+
+            return data
+
+        except Exception as e:
+            log.exception(e)
+            detail = None
+            if r is not None:
+                try:
+                    res = r.json()
+                    if "error" in res:
+                        detail = f"External: {res['error'].get('message', '')}"
+                except Exception:
+                    detail = f"External: {e}"
             raise Exception(detail if detail else "Open WebUI: Server Connection Error")
 
 
@@ -602,7 +679,22 @@ def transcription(
 def get_available_models(request: Request) -> list[dict]:
     available_models = []
     if request.app.state.config.TTS_ENGINE == "openai":
-        available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
+        # Use custom endpoint if not using the official OpenAI API URL
+        if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith(
+            "https://api.openai.com"
+        ):
+            try:
+                response = requests.get(
+                    f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/models"
+                )
+                response.raise_for_status()
+                data = response.json()
+                available_models = data.get("models", [])
+            except Exception as e:
+                log.error(f"Error fetching models from custom endpoint: {str(e)}")
+                available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
+        else:
+            available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         try:
             response = requests.get(
@@ -633,14 +725,37 @@ def get_available_voices(request) -> dict:
     """Returns {voice_id: voice_name} dict"""
     available_voices = {}
     if request.app.state.config.TTS_ENGINE == "openai":
-        available_voices = {
-            "alloy": "alloy",
-            "echo": "echo",
-            "fable": "fable",
-            "onyx": "onyx",
-            "nova": "nova",
-            "shimmer": "shimmer",
-        }
+        # Use custom endpoint if not using the official OpenAI API URL
+        if not request.app.state.config.TTS_OPENAI_API_BASE_URL.startswith(
+            "https://api.openai.com"
+        ):
+            try:
+                response = requests.get(
+                    f"{request.app.state.config.TTS_OPENAI_API_BASE_URL}/audio/voices"
+                )
+                response.raise_for_status()
+                data = response.json()
+                voices_list = data.get("voices", [])
+                available_voices = {voice["id"]: voice["name"] for voice in voices_list}
+            except Exception as e:
+                log.error(f"Error fetching voices from custom endpoint: {str(e)}")
+                available_voices = {
+                    "alloy": "alloy",
+                    "echo": "echo",
+                    "fable": "fable",
+                    "onyx": "onyx",
+                    "nova": "nova",
+                    "shimmer": "shimmer",
+                }
+        else:
+            available_voices = {
+                "alloy": "alloy",
+                "echo": "echo",
+                "fable": "fable",
+                "onyx": "onyx",
+                "nova": "nova",
+                "shimmer": "shimmer",
+            }
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         try:
             available_voices = get_elevenlabs_voices(

@@ -1,3 +1,4 @@
+import logging
 import json
 import time
 import uuid
@@ -5,7 +6,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
-
+from open_webui.env import SRC_LOG_LEVELS
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
@@ -15,6 +16,9 @@ from sqlalchemy.sql import exists
 ####################
 # Chat DB Schema
 ####################
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 class Chat(Base):
@@ -470,7 +474,7 @@ class ChatTable:
         try:
             with get_db() as db:
                 # it is possible that the shared link was deleted. hence,
-                # we check if the chat is still shared by checkng if a chat with the share_id exists
+                # we check if the chat is still shared by checking if a chat with the share_id exists
                 chat = db.query(Chat).filter_by(share_id=id).first()
 
                 if chat:
@@ -670,7 +674,7 @@ class ChatTable:
             # Perform pagination at the SQL level
             all_chats = query.offset(skip).limit(limit).all()
 
-            print(len(all_chats))
+            log.info(f"The number of chats: {len(all_chats)}")
 
             # Validate and return chats
             return [ChatModel.model_validate(chat) for chat in all_chats]
@@ -731,7 +735,7 @@ class ChatTable:
             query = db.query(Chat).filter_by(user_id=user_id)
             tag_id = tag_name.replace(" ", "_").lower()
 
-            print(db.bind.dialect.name)
+            log.info(f"DB dialect name: {db.bind.dialect.name}")
             if db.bind.dialect.name == "sqlite":
                 # SQLite JSON1 querying for tags within the meta JSON field
                 query = query.filter(
@@ -752,7 +756,7 @@ class ChatTable:
                 )
 
             all_chats = query.all()
-            print("all_chats", all_chats)
+            log.debug(f"all_chats: {all_chats}")
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def add_chat_tag_by_id_and_user_id_and_tag_name(
@@ -810,7 +814,7 @@ class ChatTable:
             count = query.count()
 
             # Debugging output for inspection
-            print(f"Count of chats for tag '{tag_name}':", count)
+            log.info(f"Count of chats for tag '{tag_name}': {count}")
 
             return count
 

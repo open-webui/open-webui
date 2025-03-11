@@ -121,7 +121,8 @@
 			toast.error('Model not selected');
 			return;
 		}
-		prompt = `Explain this section to me in more detail\n\n\`\`\`\n${selectedText}\n\`\`\``;
+		const explainText = $i18n.t('Explain this section to me in more detail');
+		prompt = `${explainText}\n\n\`\`\`\n${selectedText}\n\`\`\``;
 
 		responseContent = '';
 		const [res, controller] = await chatCompletion(localStorage.token, {
@@ -221,7 +222,7 @@
 
 <div
 	id={`floating-buttons-${id}`}
-	class="absolute rounded-lg mt-1 text-xs z-[9999]"
+	class="absolute rounded-lg mt-1 text-xs z-9999"
 	style="display: none"
 >
 	{#if responseContent === null}
@@ -230,7 +231,7 @@
 				class="flex flex-row gap-0.5 shrink-0 p-1 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-lg shadow-xl"
 			>
 				<button
-					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded flex items-center gap-1 min-w-fit"
+					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm flex items-center gap-1 min-w-fit"
 					on:click={async () => {
 						selectedText = window.getSelection().toString();
 						floatingInput = true;
@@ -246,10 +247,10 @@
 				>
 					<ChatBubble className="size-3 shrink-0" />
 
-					<div class="shrink-0">Ask</div>
+					<div class="shrink-0">{$i18n.t('Ask')}</div>
 				</button>
 				<button
-					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded flex items-center gap-1 min-w-fit"
+					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm flex items-center gap-1 min-w-fit"
 					on:click={() => {
 						selectedText = window.getSelection().toString();
 						explainHandler();
@@ -257,17 +258,17 @@
 				>
 					<LightBlub className="size-3 shrink-0" />
 
-					<div class="shrink-0">Explain</div>
+					<div class="shrink-0">{$i18n.t('Explain')}</div>
 				</button>
 			</div>
 		{:else}
 			<div
-				class="py-1 flex dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border dark:border-gray-800 w-72 rounded-full shadow-xl"
+				class="py-1 flex dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border dark:border-gray-850 w-72 rounded-full shadow-xl"
 			>
 				<input
 					type="text"
 					id="floating-message-input"
-					class="ml-5 bg-transparent outline-none w-full flex-1 text-sm"
+					class="ml-5 bg-transparent outline-hidden w-full flex-1 text-sm"
 					placeholder={$i18n.t('Ask a question')}
 					bind:value={floatingInputValue}
 					on:keydown={(e) => {
