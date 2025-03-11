@@ -131,4 +131,3 @@ opentelemetry-instrumentation-requests==0.51b0
 opentelemetry-instrumentation-logging==0.51b0
 opentelemetry-instrumentation-httpx==0.51b0
 opentelemetry-instrumentation-aiohttp-client==0.51b0
-opentelemetry-instrumentation-loguru==0.51b0

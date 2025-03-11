@@ -330,7 +330,7 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     RESET_CONFIG_ON_START,
     OFFLINE_MODE,
-    OTEL_SDK_DISABLED,
+    ENABLE_OTEL,
 )
 
 
@@ -357,7 +357,7 @@ from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
-from open_webui.utils.trace.setup import setup
+from open_webui.utils.telemetry.setup import setup as setup_opentelemetry
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -434,8 +434,8 @@ app.state.LICENSE_METADATA = None
 #
 ########################################
 
-if not OTEL_SDK_DISABLED:
-    setup(app=app, db_engine=engine)
+if not ENABLE_OTEL:
+    setup_opentelemetry(app=app, db_engine=engine)
 
 
 ########################################

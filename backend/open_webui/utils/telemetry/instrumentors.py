@@ -26,7 +26,7 @@ from requests import PreparedRequest, Response
 from sqlalchemy import Engine
 from fastapi import status
 
-from open_webui.utils.trace.constants import SPAN_REDIS_TYPE, SpanAttributes
+from open_webui.utils.telemetry.constants import SPAN_REDIS_TYPE, SpanAttributes
 
 from open_webui.env import SRC_LOG_LEVELS
 

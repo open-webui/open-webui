@@ -437,7 +437,7 @@ AUDIT_EXCLUDED_PATHS = [path.lstrip("/") for path in AUDIT_EXCLUDED_PATHS]
 # OPENTELEMETRY
 ####################################
 
-OTEL_SDK_DISABLED = os.environ.get("OTEL_SDK_DISABLED", "true").lower() == "true"
+ENABLE_OTEL = os.environ.get("ENABLE_OTEL", "False").lower() == "true"
 OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get(
     "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"
 )
