@@ -84,7 +84,7 @@ from open_webui.routers.retrieval import (
     get_rf,
 )
 
-from open_webui.internal.db import Session
+from open_webui.internal.db import Session, engine
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
@@ -330,7 +330,7 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     RESET_CONFIG_ON_START,
     OFFLINE_MODE,
-    OT_ENABLED,
+    OTEL_SDK_DISABLED,
 )
 
 
@@ -434,8 +434,8 @@ app.state.LICENSE_METADATA = None
 #
 ########################################
 
-if OT_ENABLED:
-    setup(app)
+if not OTEL_SDK_DISABLED:
+    setup(app=app, db_engine=engine)
 
 
 ########################################

@@ -1,24 +1,23 @@
+from fastapi import FastAPI
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.sampling import ALWAYS_ON
+from sqlalchemy import Engine
 
 from open_webui.utils.trace.exporters import LazyBatchSpanProcessor
 from open_webui.utils.trace.instrumentors import Instrumentor
-from open_webui.env import OT_SERVICE_NAME, OT_HOST, OT_TOKEN
+from open_webui.env import OTEL_SERVICE_NAME, OTEL_EXPORTER_OTLP_ENDPOINT
 
 
-def setup(app):
+def setup(app: FastAPI, db_engine: Engine):
+    # set up trace
     trace.set_tracer_provider(
         TracerProvider(
-            resource=Resource.create(
-                {SERVICE_NAME: OT_SERVICE_NAME, "token": OT_TOKEN}
-            ),
-            sampler=ALWAYS_ON,
+            resource=Resource.create(attributes={SERVICE_NAME: OTEL_SERVICE_NAME})
         )
     )
-    # otlp
-    exporter = OTLPSpanExporter(endpoint=OT_HOST)
+    # otlp export
+    exporter = OTLPSpanExporter(endpoint=OTEL_EXPORTER_OTLP_ENDPOINT)
     trace.get_tracer_provider().add_span_processor(LazyBatchSpanProcessor(exporter))
-    Instrumentor(app=app).instrument()
+    Instrumentor(app=app, db_engine=db_engine).instrument()
