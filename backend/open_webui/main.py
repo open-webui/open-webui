@@ -433,7 +433,6 @@ app.state.LICENSE_METADATA = None
 #
 ########################################
 
-if not ENABLE_OTEL:
 if ENABLE_OTEL:
     from open_webui.utils.telemetry.setup import setup as setup_opentelemetry
 
