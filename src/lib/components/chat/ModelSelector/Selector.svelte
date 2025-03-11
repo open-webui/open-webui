@@ -66,11 +66,7 @@
 	let selectedConnectionType = '';
 
 	let ollamaVersion = null;
-
-	let selectedModelIdx = Math.max(
-		0,
-		items.findIndex((item) => item.value === value)
-	);
+	let selectedModelIdx = 0;
 
 	const fuse = new Fuse(
 		items.map((item) => {
@@ -129,6 +125,30 @@
 						return item.model?.direct;
 					}
 				});
+
+	$: if (selectedTag || selectedConnectionType) {
+		resetView();
+	} else {
+		resetView();
+	}
+
+	const resetView = async () => {
+		await tick();
+
+		const selectedInFiltered = filteredItems.findIndex((item) => item.value === value);
+
+		if (selectedInFiltered >= 0) {
+			// The selected model is visible in the current filter
+			selectedModelIdx = selectedInFiltered;
+		} else {
+			// The selected model is not visible, default to first item in filtered list
+			selectedModelIdx = 0;
+		}
+
+		await tick();
+		const item = document.querySelector(`[data-arrow-selected="true"]`);
+		item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+	};
 
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = searchValue.trim().replace(/^ollama\s+(run|pull)\s+/, '');
@@ -290,39 +310,9 @@
 	bind:open={show}
 	onOpenChange={async () => {
 		searchValue = '';
-		// Do NOT reset filters - keep the previously selected tag/connection type
+		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
 
-		await tick();
-
-		// First check if the currently selected model is visible in the filtered list
-		const selectedInFiltered = filteredItems.findIndex((item) => item.value === value);
-
-		if (selectedInFiltered >= 0) {
-			// The selected model is visible in the current filter
-			selectedModelIdx = selectedInFiltered;
-		} else {
-			// The selected model is not visible, default to first item in filtered list
-			selectedModelIdx = 0;
-		}
-
-		await tick();
-
-		// Scroll to the selected item if it exists in the current filtered view
-		const itemToScrollTo =
-			selectedInFiltered >= 0
-				? document.querySelector(`[data-value="${value}"]`)
-				: document.querySelector('[data-arrow-selected="true"]');
-
-		if (itemToScrollTo) {
-			const container = itemToScrollTo.closest('.overflow-y-auto');
-			if (container) {
-				const itemTop = itemToScrollTo.offsetTop;
-				const containerHeight = container.clientHeight;
-				const itemHeight = itemToScrollTo.clientHeight;
-
-				container.scrollTop = itemTop - containerHeight / 2 + itemHeight / 2;
-			}
-		}
+		resetView();
 	}}
 	closeFocus={false}
 >
