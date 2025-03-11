@@ -965,14 +965,24 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
 
         return filtered_models
 
-    models = await get_all_models(request, user=user)
+    all_models = await get_all_models(request, user=user)
 
-    # Filter out filter pipelines
-    models = [
-        model
-        for model in models
-        if "pipeline" not in model or model["pipeline"].get("type", None) != "filter"
-    ]
+    models = []
+    for model in all_models:
+        # Filter out filter pipelines
+        if "pipeline" in model and model["pipeline"].get("type", None) == "filter":
+            continue
+
+        model_tags = [
+            tag.get("name")
+            for tag in model.get("info", {}).get("meta", {}).get("tags", [])
+        ]
+        tags = [tag.get("name") for tag in model.get("tags", [])]
+
+        tags = list(set(model_tags + tags))
+        model["tags"] = [{"name": tag} for tag in tags]
+
+        models.append(model)
 
     model_order_list = request.app.state.config.MODEL_ORDER_LIST
     if model_order_list:

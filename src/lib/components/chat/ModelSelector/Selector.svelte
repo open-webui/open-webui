@@ -77,7 +77,7 @@
 			const _item = {
 				...item,
 				modelName: item.model?.name,
-				tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' '),
+				tags: (item.model?.tags ?? []).map((tag) => tag.name).join(' '),
 				desc: item.model?.info?.meta?.description
 			};
 			return _item;
@@ -98,7 +98,7 @@
 					if (selectedTag === '') {
 						return true;
 					}
-					return item.model?.info?.meta?.tags?.map((tag) => tag.name).includes(selectedTag);
+					return (item.model?.tags ?? []).map((tag) => tag.name).includes(selectedTag);
 				})
 				.filter((item) => {
 					if (selectedConnectionType === '') {
@@ -116,7 +116,7 @@
 					if (selectedTag === '') {
 						return true;
 					}
-					return item.model?.info?.meta?.tags?.map((tag) => tag.name).includes(selectedTag);
+					return (item.model?.tags ?? []).map((tag) => tag.name).includes(selectedTag);
 				})
 				.filter((item) => {
 					if (selectedConnectionType === '') {
@@ -262,7 +262,7 @@
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
 
 		if (items) {
-			tags = items.flatMap((item) => item.model?.info?.meta?.tags ?? []).map((tag) => tag.name);
+			tags = items.flatMap((item) => item.model?.tags ?? []).map((tag) => tag.name);
 
 			// Remove duplicates and sort
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
@@ -291,12 +291,12 @@
 	onOpenChange={async () => {
 		searchValue = '';
 		// Do NOT reset filters - keep the previously selected tag/connection type
-		
+
 		await tick();
-		
+
 		// First check if the currently selected model is visible in the filtered list
-		const selectedInFiltered = filteredItems.findIndex(item => item.value === value);
-		
+		const selectedInFiltered = filteredItems.findIndex((item) => item.value === value);
+
 		if (selectedInFiltered >= 0) {
 			// The selected model is visible in the current filter
 			selectedModelIdx = selectedInFiltered;
@@ -304,22 +304,23 @@
 			// The selected model is not visible, default to first item in filtered list
 			selectedModelIdx = 0;
 		}
-		
+
 		await tick();
-		
+
 		// Scroll to the selected item if it exists in the current filtered view
-		const itemToScrollTo = selectedInFiltered >= 0
-			? document.querySelector(`[data-value="${value}"]`)
-			: document.querySelector('[data-arrow-selected="true"]');
-			
+		const itemToScrollTo =
+			selectedInFiltered >= 0
+				? document.querySelector(`[data-value="${value}"]`)
+				: document.querySelector('[data-arrow-selected="true"]');
+
 		if (itemToScrollTo) {
 			const container = itemToScrollTo.closest('.overflow-y-auto');
 			if (container) {
 				const itemTop = itemToScrollTo.offsetTop;
 				const containerHeight = container.clientHeight;
 				const itemHeight = itemToScrollTo.clientHeight;
-				
-				container.scrollTop = itemTop - (containerHeight / 2) + (itemHeight / 2);
+
+				container.scrollTop = itemTop - containerHeight / 2 + itemHeight / 2;
 			}
 		}
 	}}
@@ -483,9 +484,9 @@
 						}}
 					>
 						<div class="flex flex-col">
-							{#if $mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
+							{#if $mobile && (item?.model?.tags ?? []).length > 0}
 								<div class="flex gap-0.5 self-start h-full mb-1.5 -translate-x-1">
-									{#each item.model?.info?.meta.tags as tag}
+									{#each item.model?.tags as tag}
 										<div
 											class=" text-xs font-bold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 										>
@@ -605,11 +606,11 @@
 									</Tooltip>
 								{/if}
 
-								{#if !$mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
+								{#if !$mobile && (item?.model?.tags ?? []).length > 0}
 									<div
 										class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px] overflow-x-auto scrollbar-none"
 									>
-										{#each item.model?.info?.meta.tags as tag}
+										{#each item.model?.tags as tag}
 											<Tooltip content={tag.name} className="flex-shrink-0">
 												<div
 													class=" text-xs font-bold px-1 rounded-sm uppercase bg-gray-500/20 text-gray-700 dark:text-gray-200"
