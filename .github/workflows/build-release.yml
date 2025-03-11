@@ -228,10 +228,25 @@ jobs:
       - name: Zip installer executable
         if: success()
         run: |
+          # First, create a directory to hold all files we want to include in the zip
+          mkdir -p installer/package
+          
+          # Copy the installer executable
+          Copy-Item "installer/$env:INSTALLER_NAME" -Destination "installer/package/"
+          
+          # Copy the ux_installer directory with install.py
+          if (Test-Path -Path "installer/ux_installer") {
+            Write-Host "Copying ux_installer directory to package"
+            Copy-Item -Path "installer/ux_installer" -Destination "installer/package/" -Recurse
+          } else {
+            Write-Host "WARNING: ux_installer directory not found in installer directory"
+          }
+          
+          # Create the zip file with all contents
           $ZIP_NAME = "open-webui-$env:VERSION-setup.zip"
-          Compress-Archive -Path "installer/$env:INSTALLER_NAME" -DestinationPath "installer/$ZIP_NAME"
+          Compress-Archive -Path "installer/package/*" -DestinationPath "installer/$ZIP_NAME"
           echo "ZIP_NAME=$ZIP_NAME" >> $env:GITHUB_ENV
-          Write-Host "Created zip file: $ZIP_NAME"
+          Write-Host "Created zip file: $ZIP_NAME with installer and ux_installer directory"
 
       - name: Upload installer to GitHub release
         if: success()
