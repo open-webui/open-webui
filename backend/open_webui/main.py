@@ -357,7 +357,6 @@ from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
-from open_webui.utils.telemetry.setup import setup as setup_opentelemetry
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -435,6 +434,8 @@ app.state.LICENSE_METADATA = None
 ########################################
 
 if not ENABLE_OTEL:
+    from open_webui.utils.telemetry.setup import setup as setup_opentelemetry
+
     setup_opentelemetry(app=app, db_engine=engine)
 
 
