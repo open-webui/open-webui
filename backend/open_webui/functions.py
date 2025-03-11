@@ -271,6 +271,8 @@ async def generate_function_chat_completion(
                 if isinstance(res, StreamingResponse):
                     async for data in res.body_iterator:
                         yield data
+                    if res.background:
+                        await res.background()
                     return
                 if isinstance(res, dict):
                     yield f"data: {json.dumps(res)}\n\n"
