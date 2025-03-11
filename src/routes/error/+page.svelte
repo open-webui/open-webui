@@ -16,6 +16,10 @@
 	});
 </script>
 
+<svelte:head>
+	<title>UOH-AI</title>
+</svelte:head>
+
 {#if loaded}
 	<div class="absolute w-full h-full flex z-50">
 		<div class="absolute rounded-xl w-full h-full backdrop-blur-sm flex justify-center">

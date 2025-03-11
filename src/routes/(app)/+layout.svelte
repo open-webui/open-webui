@@ -303,6 +303,10 @@
 	</div>
 </div>
 
+<svelte:head>
+	<title>UOH-AI</title>
+</svelte:head>
+
 <style>
 	.loading {
 		display: inline-block;

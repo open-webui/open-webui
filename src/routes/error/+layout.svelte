@@ -1,3 +1,3 @@
 <svelte:head>
-	<title>UOH-AI</title>
+  <title>UOH-AI</title>
 </svelte:head>

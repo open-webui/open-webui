@@ -157,7 +157,7 @@
 
 <svelte:head>
 	<title>
-		{`${$WEBUI_NAME}`}
+		{`UOH-AI`}
 	</title>
 </svelte:head>
 
