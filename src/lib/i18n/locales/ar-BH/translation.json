@@ -1133,7 +1133,6 @@
 	"Warning": "تحذير",
 	"Warning:": "",
 	"Warning: Enabling this will allow users to upload arbitrary code on the server.": "",
-	"Public Sharing": "المشاركة العامة",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "تحذير: إذا قمت بتحديث أو تغيير نموذج التضمين الخاص بك، فستحتاج إلى إعادة استيراد كافة المستندات.",
 	"Warning: Jupyter execution enables arbitrary code execution, posing severe security risks—proceed with extreme caution.": "",
 	"Web": "Web",
