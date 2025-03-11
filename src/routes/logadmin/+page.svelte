@@ -1,23 +1,26 @@
-<script>
+<script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
+	import type { Writable } from 'svelte/store';
+	import type { i18n as i18nType } from 'i18next';
 
 	import { getBackendConfig } from '$lib/apis';
 	import { userSignIn } from '$lib/apis/auths';
+	import type { SessionUser } from '$lib/types/auth';
 
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
 
 	import Header from '$lib/components/layout/Header.svelte';
 	import Footer from '$lib/components/chat/Footer.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	let loaded = false;
 	let email = '';
 	let password = '';
 
-	const setSessionUser = async (sessionUser) => {
+	const setSessionUser = async (sessionUser: SessionUser | null) => {
 		if (sessionUser) {
 			console.log(sessionUser);
 			toast.success($i18n.t(`You're now logged in.`));
@@ -25,10 +28,22 @@
 				localStorage.setItem('token', sessionUser.token);
 			}
 
-			$socket?.emit('user-join', { auth: { token: sessionUser.token } });
-			await user.set(sessionUser);
-			await config.set(await getBackendConfig());
-			goto('/');
+			try {
+				$socket?.emit('user-join', { auth: { token: sessionUser.token } });
+				await user.set(sessionUser);
+				const backendConfig = await getBackendConfig().catch((error) => {
+					console.error('Failed to get backend config:', error);
+					return null;
+				});
+
+				if (backendConfig) {
+					await config.set(backendConfig);
+				}
+				goto('/');
+			} catch (error) {
+				console.error('Error during session setup:', error);
+				toast.error($i18n.t('Error setting up session. Please try again.'));
+			}
 		}
 	};
 
