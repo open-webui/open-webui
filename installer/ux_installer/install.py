@@ -18,6 +18,7 @@ import subprocess
 import platform
 import shutil
 import tempfile
+import time
 
 try:
     import requests
@@ -76,28 +77,58 @@ def check_conda():
         tuple: (bool, str) - (is_installed, conda_executable_path)
     """
     log("Checking if conda is installed...")
-    
+
     try:
         # Try to find conda in the PATH
-        if platform.system() == "Windows":
-            result = subprocess.run(["where", "conda"], 
-                                   capture_output=True, 
-                                   text=True, 
-                                   check=False)
-        else:
-            result = subprocess.run(["which", "conda"], 
-                                   capture_output=True, 
-                                   text=True, 
-                                   check=False)
-        
+        result = subprocess.run(
+            ["where", "conda"], capture_output=True, text=True, check=False
+        )
+
         if result.returncode == 0:
             conda_path = result.stdout.strip().split("\n")[0]
             log(f"Conda found at: {conda_path}")
             return True, conda_path
         else:
-            log("Conda not found in PATH")
+            # Try to find conda in common locations
+            common_locations = [
+                os.path.join(
+                    os.environ.get("USERPROFILE", ""),
+                    "miniconda3",
+                    "Scripts",
+                    "conda.exe",
+                ),
+                os.path.join(
+                    os.environ.get("USERPROFILE", ""),
+                    "Anaconda3",
+                    "Scripts",
+                    "conda.exe",
+                ),
+                os.path.join("C:", "ProgramData", "miniconda3", "Scripts", "conda.exe"),
+                os.path.join("C:", "ProgramData", "Anaconda3", "Scripts", "conda.exe"),
+                os.path.join(
+                    os.environ.get("LOCALAPPDATA", ""),
+                    "Continuum",
+                    "miniconda3",
+                    "Scripts",
+                    "conda.exe",
+                ),
+                os.path.join(
+                    os.environ.get("LOCALAPPDATA", ""),
+                    "Continuum",
+                    "anaconda3",
+                    "Scripts",
+                    "conda.exe",
+                ),
+            ]
+
+            for location in common_locations:
+                if os.path.exists(location):
+                    log(f"Conda found at: {location}")
+                    return True, location
+
+            log("Conda not found in PATH or common locations")
             return False, None
-            
+
     except Exception as e:
         log(f"Error checking for conda: {str(e)}")
         return False, None
@@ -117,93 +148,67 @@ def install_miniconda(install_dir):
     log("- Miniconda -")
     log("-------------")
     log("Downloading Miniconda installer...")
-    
+
     try:
-        # Determine the appropriate Miniconda installer based on the OS
-        if platform.system() == "Windows":
-            installer_url = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe"
-            installer_path = os.path.join(tempfile.gettempdir(), "Miniconda3-latest-Windows-x86_64.exe")
-        elif platform.system() == "Darwin":  # macOS
-            if platform.machine() == "arm64":  # Apple Silicon
-                installer_url = "https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh"
-            else:  # Intel Mac
-                installer_url = "https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh"
-            installer_path = os.path.join(tempfile.gettempdir(), "Miniconda3-latest-MacOSX.sh")
-        else:  # Linux
-            installer_url = "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
-            installer_path = os.path.join(tempfile.gettempdir(), "Miniconda3-latest-Linux-x86_64.sh")
-        
+        # Determine the appropriate Miniconda installer
+        installer_url = (
+            "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe"
+        )
+        installer_path = os.path.join(
+            tempfile.gettempdir(), "Miniconda3-latest-Windows-x86_64.exe"
+        )
+
         # Download the installer
         log(f"Downloading from: {installer_url}")
         response = requests.get(installer_url, stream=True)
         response.raise_for_status()
-        
-        with open(installer_path, 'wb') as f:
+
+        with open(installer_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
-        
+
         log(f"Downloaded installer to: {installer_path}")
-        
+
         # Install Miniconda
-        if platform.system() == "Windows":
-            miniconda_path = os.path.join(os.path.expanduser("~"), "miniconda3")
-            log(f"Installing Miniconda to: {miniconda_path}")
-            
-            # Run the installer silently
-            result = subprocess.run([
-                installer_path, 
-                "/InstallationType=JustMe", 
-                "/AddToPath=1", 
-                "/RegisterPython=0", 
-                "/S", 
-                f"/D={miniconda_path}"
-            ], check=False)
-            
-            if result.returncode != 0:
-                log(f"Miniconda installation failed with code: {result.returncode}")
-                return False, None
-                
-            conda_path = os.path.join(miniconda_path, "Scripts", "conda.exe")
-        else:
-            # Unix-like systems (Linux, macOS)
-            miniconda_path = os.path.join(os.path.expanduser("~"), "miniconda3")
-            log(f"Installing Miniconda to: {miniconda_path}")
-            
-            # Make the installer executable
-            os.chmod(installer_path, 0o755)
-            
-            # Run the installer in batch mode
-            result = subprocess.run([
-                installer_path, 
-                "-b", 
-                "-p", 
-                miniconda_path
-            ], check=False)
-            
-            if result.returncode != 0:
-                log(f"Miniconda installation failed with code: {result.returncode}")
-                return False, None
-                
-            conda_path = os.path.join(miniconda_path, "bin", "conda")
-        
+        miniconda_path = os.path.join(os.path.expanduser("~"), "miniconda3")
+        log(f"Installing Miniconda to: {miniconda_path}")
+
+        # Run the installer silently
+        result = subprocess.run(
+            [
+                installer_path,
+                "/InstallationType=JustMe",
+                "/AddToPath=1",
+                "/RegisterPython=0",
+                "/S",
+                f"/D={miniconda_path}",
+            ],
+            check=False,
+        )
+
+        if result.returncode != 0:
+            log(f"Miniconda installation failed with code: {result.returncode}")
+            return False, None
+
+        # Determine the path to conda executable
+        conda_path = os.path.join(miniconda_path, "Scripts", "conda.exe")
+
         log("Miniconda installation completed successfully")
-        
+
         # Initialize conda
         log("Initializing conda...")
-        if platform.system() == "Windows":
-            subprocess.run([conda_path, "init"], check=False)
-        else:
-            subprocess.run([conda_path, "init", "bash"], check=False)
-            subprocess.run([conda_path, "init", "zsh"], check=False)
-        
+        subprocess.run([conda_path, "init"], check=False)
+
         return True, conda_path
-        
+
     except Exception as e:
         log(f"Error installing Miniconda: {str(e)}")
         return False, None
 
 
-def create_conda_env(conda_path, env_name, python_version=PYTHON_VERSION):
+def create_conda_env(
+    conda_path, env_name=CONDA_ENV_NAME, python_version=PYTHON_VERSION, install_dir=None
+):
     """
     Creates a new conda environment with the specified Python version.
 
@@ -211,37 +216,73 @@ def create_conda_env(conda_path, env_name, python_version=PYTHON_VERSION):
         conda_path: Path to the conda executable
         env_name: Name of the conda environment
         python_version: Python version to install
+        install_dir: Optional installation directory for the environment
 
     Returns:
-        bool: True if successful, False otherwise
+        tuple: (bool, str) - (success, env_path)
     """
     log("---------------------")
     log("- Conda Environment -")
     log("---------------------")
-    
+
     try:
         log(f"Creating a Python {python_version} environment named: {env_name}")
-        
+
         # Create the conda environment
-        result = subprocess.run([
-            conda_path, 
-            "create", 
-            "-n", 
-            env_name,
-            f"python={python_version}", 
-            "-y"
-        ], capture_output=True, text=True, check=False)
-        
+        cmd = [conda_path, "create", "-n", env_name, f"python={python_version}", "-y"]
+
+        # If install_dir is provided, create the environment in that directory
+        if install_dir:
+            env_path = os.path.join(install_dir, env_name)
+            cmd = [
+                conda_path,
+                "create",
+                "-p",
+                env_path,
+                f"python={python_version}",
+                "-y",
+            ]
+        else:
+            # Get the conda environments directory
+            conda_info = subprocess.run(
+                [conda_path, "info", "--json"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if conda_info.returncode == 0:
+                conda_info_json = json.loads(conda_info.stdout)
+                env_path = os.path.join(conda_info_json["envs_dirs"][0], env_name)
+            else:
+                # Fallback to default location
+                env_path = os.path.join(
+                    os.path.dirname(os.path.dirname(conda_path)), "envs", env_name
+                )
+
+        log(f"Creating conda environment at: {env_path}")
+        log(f"Running command: {' '.join(cmd)}")
+
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+
         if result.returncode != 0:
             log(f"Failed to create conda environment: {result.stderr}")
-            return False
-            
+            return False, None
+
         log(f"Successfully created conda environment: {env_name}")
-        return True
-        
+
+        # Determine the Python executable path in the conda environment
+        if install_dir:
+            python_path = os.path.join(env_path, "python.exe")
+        else:
+            python_path = os.path.join(env_path, "python.exe")
+
+        log(f"Python executable in conda environment: {python_path}")
+
+        return True, python_path
+
     except Exception as e:
         log(f"Error creating conda environment: {str(e)}")
-        return False
+        return False, None
 
 
 def download_latest_wheel(output_folder, output_filename=None):
@@ -351,6 +392,7 @@ def install_wheel(wheel_path, python_path):
 
     try:
         log(f"Installing wheel from: {wheel_path}")
+        log(f"Using Python executable: {python_path}")
         log("This may take a few minutes. Please wait...")
 
         # Run pip install command with real-time output
@@ -392,58 +434,176 @@ def create_shortcuts(env_path):
     Creates desktop shortcuts for AMD AI UX.
 
     Args:
-        install_dir: Installation directory
         env_path: Path to the conda environment
 
     Returns:
         bool: True if successful, False otherwise
     """
     log("Creating shortcuts...")
-    
+
     try:
-        if platform.system() == "Windows":
-            # Create desktop shortcut
-            desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
-            shortcut_path = os.path.join(desktop_path, "AMD-AI-UX.lnk")
-            
-            # Use PowerShell to create the shortcut
-            ps_command = f"""
-            $WshShell = New-Object -comObject WScript.Shell
-            $Shortcut = $WshShell.CreateShortcut("{shortcut_path}")
-            $Shortcut.TargetPath = "cmd.exe"
-            $Shortcut.Arguments = "/C conda activate {env_path} > NUL 2>&1 && start \"\" http://localhost:8080"
-            $Shortcut.Save()
-            """
-            
-            # Write the PowerShell script to a temporary file
-            ps_script_path = os.path.join(tempfile.gettempdir(), "create_shortcut.ps1")
-            with open(ps_script_path, "w", encoding="utf-8") as f:
-                f.write(ps_command)
-            
-            # Execute the PowerShell script
-            result = subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", ps_script_path], capture_output=True, text=True, check=False)
-            
-            # Log the result of the PowerShell script execution
-            if result.returncode != 0:
-                log(f"PowerShell script failed with return code: {result.returncode}")
-                log(f"PowerShell script stdout: {result.stdout}")
-                log(f"PowerShell script stderr: {result.stderr}")
-            else:
-                log("PowerShell script executed successfully")
-            
-            # Clean up
-            os.remove(ps_script_path)
-            
-            log(f"Created desktop shortcut at: {shortcut_path}")
-            return True
+        # Create desktop shortcut
+        desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+        shortcut_path = os.path.join(desktop_path, "AMD-AI-UX.lnk")
+
+        # Use PowerShell to create the shortcut
+        ps_command = f"""
+        $WshShell = New-Object -comObject WScript.Shell
+        $Shortcut = $WshShell.CreateShortcut("{shortcut_path}")
+        $Shortcut.TargetPath = "cmd.exe"
+        $Shortcut.Arguments = "/C conda activate {CONDA_ENV_NAME} > NUL 2>&1 && start \"\" http://localhost:8080"
+        $Shortcut.Save()
+        """
+
+        # Write the PowerShell script to a temporary file
+        ps_script_path = os.path.join(tempfile.gettempdir(), "create_shortcut.ps1")
+        with open(ps_script_path, "w", encoding="utf-8") as f:
+            f.write(ps_command)
+
+        # Execute the PowerShell script
+        result = subprocess.run(
+            ["powershell", "-ExecutionPolicy", "Bypass", "-File", ps_script_path],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        # Log the result of the PowerShell script execution
+        if result.returncode != 0:
+            log(f"PowerShell script failed with return code: {result.returncode}")
+            log(f"PowerShell script stdout: {result.stdout}")
+            log(f"PowerShell script stderr: {result.stderr}")
         else:
-            # For Linux/macOS, create a desktop entry
-            log("Shortcut creation not implemented for this platform")
-            return True
-            
+            log("PowerShell script executed successfully")
+
+        # Clean up
+        os.remove(ps_script_path)
+
+        log(f"Created desktop shortcut at: {shortcut_path}")
+        return True
+
     except Exception as e:
         log(f"Error creating shortcuts: {str(e)}")
         return False
+
+
+def safely_remove_directory(directory_path, max_retries=5, retry_delay=3):
+    """
+    Safely removes a directory with retries and better error handling.
+
+    Args:
+        directory_path: Path to the directory to remove
+        max_retries: Maximum number of retries
+        retry_delay: Delay between retries in seconds
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    log(f"Attempting to remove directory: {directory_path}")
+
+    for attempt in range(max_retries):
+        try:
+            if os.path.exists(directory_path):
+                # Try to close any open file handles
+                if attempt > 0:
+                    log(
+                        f"Retry attempt {attempt+1}/{max_retries}. Trying to release file handles..."
+                    )
+                    # Run garbage collection to release file handles
+                    import gc
+
+                    gc.collect()
+                    # On Windows, try to run a process to unlock files
+                    try:
+                        # List all Python processes
+                        log("Listing Python processes that might be locking files:")
+                        result = subprocess.run(
+                            ["tasklist", "/fi", "imagename eq python.exe"],
+                            capture_output=True,
+                            text=True,
+                            check=False,
+                        )
+                        log(result.stdout)
+
+                        # Try to kill Python processes
+                        log("Attempting to terminate Python processes...")
+                        subprocess.run(
+                            ["taskkill", "/F", "/IM", "python.exe", "/T"],
+                            capture_output=True,
+                            check=False,
+                        )
+                    except Exception as e:
+                        log(f"Error while trying to terminate processes: {str(e)}")
+
+                # Try to remove the directory
+                log(
+                    f"Attempting to remove directory (attempt {attempt+1}/{max_retries}): {directory_path}"
+                )
+
+                # Try a different approach on Windows
+                if platform.system() == "Windows":
+                    try:
+                        # First try with shutil
+                        shutil.rmtree(directory_path)
+                    except Exception as e1:
+                        log(f"shutil.rmtree failed: {str(e1)}")
+                        try:
+                            # Try with system command as fallback
+                            log("Trying system command to remove directory...")
+                            subprocess.run(
+                                ["rd", "/s", "/q", directory_path], check=False
+                            )
+                        except Exception as e2:
+                            log(f"System command failed: {str(e2)}")
+                            raise e1
+                else:
+                    shutil.rmtree(directory_path)
+
+                # Verify it was removed
+                if not os.path.exists(directory_path):
+                    log(f"Successfully removed directory: {directory_path}")
+                    return True
+                else:
+                    log(
+                        f"Directory still exists after removal attempt: {directory_path}"
+                    )
+            else:
+                log(f"Directory does not exist, nothing to remove: {directory_path}")
+                return True
+
+        except Exception as e:
+            log(
+                f"Error removing directory (attempt {attempt+1}/{max_retries}): {str(e)}"
+            )
+
+            # Check if it's a file access error
+            if "being used by another process" in str(e):
+                log(
+                    "Files are locked by another process. Trying to identify processes..."
+                )
+                try:
+                    # Try to list processes that might be using the files
+                    subprocess.run(
+                        ["handle", directory_path], capture_output=True, check=False
+                    )
+                except Exception:
+                    # handle.exe might not be available, so we'll just continue
+                    pass
+
+                log(
+                    "Please close any applications that might be using files in the directory."
+                )
+                log(
+                    "Common applications to check: Command Prompt, PowerShell, Explorer, Python, etc."
+                )
+
+            # Wait before retrying
+            if attempt < max_retries - 1:
+                log(f"Waiting {retry_delay} seconds before retrying...")
+                time.sleep(retry_delay)
+
+    log(f"Failed to remove directory after {max_retries} attempts: {directory_path}")
+    return False
 
 
 def main():
@@ -453,10 +613,11 @@ def main():
     parser.add_argument(
         "--install-dir",
         dest="install_dir",
-        default=os.path.join(os.path.expanduser("~"), "AppData", "Local", PRODUCT_NAME_CONCAT) if platform.system() == "Windows" 
-                else os.path.join(os.path.expanduser("~"), PRODUCT_NAME_CONCAT),
+        default=os.path.join(
+            os.path.expanduser("~"), "AppData", "Local", PRODUCT_NAME_CONCAT
+        ),
         type=str,
-        help=f"Installation directory (default: %LOCALAPPDATA%\\{PRODUCT_NAME_CONCAT} on Windows, ~/AMD_AI_UX on Unix)",
+        help=f"Installation directory (default: %LOCALAPPDATA%\\{PRODUCT_NAME_CONCAT})",
     )
     parser.add_argument(
         "--no-shortcuts",
@@ -465,10 +626,29 @@ def main():
         help="Do not create desktop shortcuts",
     )
     parser.add_argument(
-        "-y", "--yes",
+        "-y",
+        "--yes",
         dest="yes",
         action="store_true",
         help="Answer 'yes' to all questions",
+    )
+    parser.add_argument(
+        "--force",
+        dest="force",
+        action="store_true",
+        help="Force installation even if files are in use",
+    )
+    parser.add_argument(
+        "--debug",
+        dest="debug",
+        action="store_true",
+        help="Enable detailed debug logging",
+    )
+    parser.add_argument(
+        "--skip-cleanup",
+        dest="skip_cleanup",
+        action="store_true",
+        help="Skip cleanup operations to avoid file access issues",
     )
 
     # Parse the arguments
@@ -476,111 +656,183 @@ def main():
 
     # Normalize the installation directory path
     install_dir = os.path.normpath(args.install_dir)
-    
+
     # Set up the log file
     global LOG_FILE_PATH
     LOG_FILE_PATH = os.path.join(install_dir, f"{PRODUCT_NAME_CONCAT}_install.log")
-    
-    # Debugging: Print log file path
-    print(f"Log file path set to: {LOG_FILE_PATH}")
 
     # Create the installation directory if it doesn't exist
     os.makedirs(install_dir, exist_ok=True)
-    
+
     # Start the installation process
     log("*** INSTALLATION STARTED ***")
     log(f"Installing {PRODUCT_NAME} to: {install_dir}")
+    log(f"Using conda environment: {CONDA_ENV_NAME}")
+    log(f"Python version: {sys.version}")
+    log(f"Platform: {platform.platform()}")
+    log(f"Arguments: {vars(args)}")
 
-    # Debugging: Print Python executable path
-    print(f"Python executable: {sys.executable}")
-    
     try:
         # Check if directory already exists and has content
-        if os.path.exists(install_dir) and os.listdir(install_dir):
+        if (
+            os.path.exists(install_dir)
+            and os.listdir(install_dir)
+            and not args.skip_cleanup
+        ):
             log(f"An existing installation was found at: {install_dir}")
-            
-            if not args.yes:
-                user_input = input("Would you like to remove it and continue with the installation? (y/n): ")
-                if user_input.lower() != 'y':
+
+            if not args.yes and not args.force:
+                user_input = input(
+                    "Would you like to remove it and continue with the installation? (y/n): "
+                )
+                if user_input.lower() != "y":
                     log("Installation cancelled by user")
                     return 1
             else:
-                log("Automatically removing existing installation due to '--yes' flag")
-            
+                log(
+                    "Automatically removing existing installation due to '--yes' or '--force' flag"
+                )
+
             # Remove existing installation
             log("Removing existing installation...")
-            
+
             # Try to remove the conda environment first
             conda_installed, conda_path = check_conda()
             if conda_installed:
-                subprocess.run([conda_path, "env", "remove", "-n", CONDA_ENV_NAME, "-y"], check=False)
-            
+                log(f"Removing conda environment: {CONDA_ENV_NAME}")
+                subprocess.run(
+                    [conda_path, "env", "remove", "-n", CONDA_ENV_NAME, "-y"],
+                    check=False,
+                )
+
+            # List directory contents before removal
+            if args.debug:
+                log("Directory contents before removal:")
+                try:
+                    for root, dirs, files in os.walk(install_dir):
+                        log(f"Directory: {root}")
+                        for d in dirs:
+                            log(f"  Dir: {d}")
+                        for f in files:
+                            log(f"  File: {f}")
+                except Exception as e:
+                    log(f"Error listing directory contents: {str(e)}")
+
             # Remove the installation directory
-            try:
-                shutil.rmtree(install_dir)
+            if not safely_remove_directory(install_dir):
+                if args.force:
+                    log(
+                        "WARNING: Could not remove existing installation directory, but continuing due to --force flag"
+                    )
+                    # Try to create the directory again
+                    try:
+                        # Try to remove any problematic files individually
+                        log("Attempting to remove individual files...")
+                        for root, dirs, files in os.walk(install_dir, topdown=False):
+                            for name in files:
+                                try:
+                                    file_path = os.path.join(root, name)
+                                    log(f"Removing file: {file_path}")
+                                    os.remove(file_path)
+                                except Exception as e:
+                                    log(f"Failed to remove file {name}: {str(e)}")
+
+                            for name in dirs:
+                                try:
+                                    dir_path = os.path.join(root, name)
+                                    log(f"Removing directory: {dir_path}")
+                                    os.rmdir(dir_path)
+                                except Exception as e:
+                                    log(f"Failed to remove directory {name}: {str(e)}")
+
+                        # Try to recreate the directory
+                        os.makedirs(install_dir, exist_ok=True)
+                    except Exception as e:
+                        log(f"Error during forced cleanup: {str(e)}")
+                else:
+                    log("ERROR: Failed to remove existing installation directory")
+                    log("Please close any applications using AMD AI UX and try again")
+                    log(
+                        "You can also use the --force flag to attempt to continue anyway"
+                    )
+                    log("Or use --skip-cleanup to skip removal of existing files")
+                    return 1
+            else:
+                # Recreate the directory
                 os.makedirs(install_dir, exist_ok=True)
                 log("Deleted all contents of install directory")
-            except Exception as e:
-                log(f"Failed to remove existing installation: {str(e)}")
-                log("Please close any applications using AMD AI UX and try again")
-                return 1
-        
+        elif (
+            os.path.exists(install_dir)
+            and os.listdir(install_dir)
+            and args.skip_cleanup
+        ):
+            log(f"An existing installation was found at: {install_dir}")
+            log("Skipping cleanup as requested with --skip-cleanup flag")
+            log("WARNING: This may cause conflicts with existing files")
+
         # Check if conda is installed
         conda_installed, conda_path = check_conda()
-        
+
         if not conda_installed:
             log("Conda not installed")
-            
+
             if not args.yes:
-                user_input = input("Conda is not installed. Would you like to install Miniconda? (y/n): ")
-                if user_input.lower() != 'y':
+                user_input = input(
+                    "Conda is not installed. Would you like to install Miniconda? (y/n): "
+                )
+                if user_input.lower() != "y":
                     log("Installation cancelled by user")
                     return 1
-            
+
             # Install Miniconda
             miniconda_success, conda_path = install_miniconda(install_dir)
-            
+
             if not miniconda_success:
                 log("Failed to install Miniconda. Installation will be aborted.")
                 return 1
-        
+
         # Create conda environment
-        env_success = create_conda_env(conda_path, CONDA_ENV_NAME, PYTHON_VERSION)
-        
+        env_success, python_path = create_conda_env(
+            conda_path, CONDA_ENV_NAME, PYTHON_VERSION, install_dir
+        )
+
         if not env_success:
-            log("Failed to create the Python environment. Installation will be aborted.")
+            log(
+                "Failed to create the Python environment. Installation will be aborted."
+            )
             return 1
-        
-        # Determine the Python executable path in the conda environment
-        if platform.system() == "Windows":
-            python_path = os.path.join(install_dir, "envs", CONDA_ENV_NAME, "python.exe")
-        else:
-            python_path = os.path.join(install_dir, "envs", CONDA_ENV_NAME, "bin", "python")
-        
+
+        log(f"Conda found at: {conda_path}")
+        log(f"Python executable: {python_path}")
+
         # Create wheels directory
         wheels_dir = os.path.join(install_dir, "wheels")
         os.makedirs(wheels_dir, exist_ok=True)
-        
+
         # Download the wheel file
         wheel_path = download_latest_wheel(output_folder=wheels_dir)
-        
+
         if not wheel_path or not os.path.isfile(wheel_path):
-            log("Failed to download Open WebUI wheel file. Please check your internet connection and try again.")
+            log(
+                "Failed to download Open WebUI wheel file. Please check your internet connection and try again."
+            )
             return 1
-        
+
         # Install the wheel file
         install_success = install_wheel(wheel_path, python_path)
-        
+
         if not install_success:
-            log("Failed to install Open WebUI wheel file. Please check the logs for details.")
+            log(
+                "Failed to install Open WebUI wheel file. Please check the logs for details."
+            )
             return 1
-        
+
         # Create shortcuts if not disabled
         if not args.no_shortcuts:
-            shortcut_success = create_shortcuts(CONDA_ENV_NAME)
+            shortcut_success = create_shortcuts(python_path)
             if not shortcut_success:
                 log("Warning: Failed to create shortcuts")
-        
+
         # Installation completed successfully
         log("*** INSTALLATION COMPLETED ***")
         log(f"{PRODUCT_NAME} installation completed successfully!")
@@ -588,12 +840,20 @@ def main():
         log(f"  conda activate {CONDA_ENV_NAME}")
         log("  open-webui")
         log("Or by using the desktop shortcut if created")
-        
+
+        if args.skip_cleanup:
+            log(
+                "NOTE: Cleanup was skipped as requested. Some temporary files may remain."
+            )
+
         return 0
     except Exception as e:
         log(f"ERROR: An exception occurred: {str(e)}")
+        import traceback
+
+        log(f"Traceback: {traceback.format_exc()}")
         return 1
 
 
 if __name__ == "__main__":
-    sys.exit(main()) 
+    sys.exit(main())
