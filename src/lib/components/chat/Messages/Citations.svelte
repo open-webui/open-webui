@@ -117,7 +117,7 @@
 						<div
 							class="flex-1 mx-1 truncate text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white transition"
 						>
-							{citation.source.name}
+							{decodeURIComponent(citation.source.name)}
 						</div>
 					</button>
 				{/each}
@@ -157,7 +157,7 @@
 											</div>
 										{/if}
 										<div class="flex-1 mx-1 truncate">
-											{citation.source.name}
+											{decodeURIComponent(citation.source.name)}
 										</div>
 									</button>
 								{/each}
@@ -194,7 +194,7 @@
 									</div>
 								{/if}
 								<div class="flex-1 mx-1 truncate">
-									{citation.source.name}
+									{decodeURIComponent(citation.source.name)}
 								</div>
 							</button>
 						{/each}
