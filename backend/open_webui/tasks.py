@@ -3,6 +3,8 @@ import asyncio
 from typing import Dict
 from uuid import uuid4
 
+from open_webui.models.externalResources import ExternalResources
+
 # A dictionary to keep track of active tasks
 tasks: Dict[str, asyncio.Task] = {}
 
@@ -59,3 +61,4 @@ async def stop_task(task_id: str):
         return {"status": True, "message": f"Task {task_id} successfully stopped."}
 
     return {"status": False, "message": f"Failed to stop task {task_id}."}
+

@@ -1,5 +1,6 @@
 import json
 import logging
+import os  # Added to check environment variable
 from contextlib import contextmanager
 from typing import Any, Optional
 
@@ -51,7 +52,7 @@ class JSONField(types.TypeDecorator):
 # Workaround to handle the peewee migration
 # This is required to ensure the peewee migration is handled before the alembic migration
 def handle_peewee_migration(DATABASE_URL):
-    # db = None
+    db = None  # Initialize db variable
     try:
         # Replace the postgresql:// with postgres:// to handle the peewee migration
         db = register_connection(DATABASE_URL.replace("postgresql://", "postgres://"))
@@ -67,12 +68,15 @@ def handle_peewee_migration(DATABASE_URL):
         # Properly closing the database connection
         if db and not db.is_closed():
             db.close()
+        if db:
+            assert db.is_closed(), "Database connection is still open."
 
-        # Assert if db connection has been closed
-        assert db.is_closed(), "Database connection is still open."
 
-
-handle_peewee_migration(DATABASE_URL)
+# Check if migrations are disabled via the environment variable.
+if os.getenv("DISABLE_DB_MIGRATION", "false").lower() != "true":
+    handle_peewee_migration(DATABASE_URL)
+else:
+    log.info("Database migration has been disabled via DISABLE_DB_MIGRATION.")
 
 
 SQLALCHEMY_DATABASE_URL = DATABASE_URL

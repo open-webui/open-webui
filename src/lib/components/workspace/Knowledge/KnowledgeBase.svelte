@@ -192,12 +192,12 @@
 	};
 
 	// Extract the file or folder ID from a given Google Drive or Google Docs link
-	const extractDriveId = (link: string): string | null => {
-		const match = link.match(
-			/https:\/\/(?:drive\.google\.com\/(?:file\/d\/|drive\/folders\/|open\?id=)|docs\.google\.com\/(?:document|spreadsheets|presentation)\/d\/)([\w-]+)/
-		);
-		return match ? match[1] : null; // Return the captured fileId (or null if no match)
-	};
+	// const extractDriveId = (link: string): string | null => {
+	// 	const match = link.match(
+	// 		/https:\/\/(?:drive\.google\.com\/(?:file\/d\/|drive\/folders\/|open\?id=)|docs\.google\.com\/(?:document|spreadsheets|presentation)\/d\/)([\w-]+)/
+	// 	);
+	// 	return match ? match[1] : null; // Return the captured fileId (or null if no match)
+	// };
 
 	const handleDriveLink = async (link: string) => {
 		if (!validateDriveLink(link)) {
@@ -205,11 +205,11 @@
 			return;
 		}
 
-		const driveId = extractDriveId(link);
-		if (!driveId) {
-			toast.error('Could not extract Drive ID');
-			return;
-		}
+		// const driveId = extractDriveId(link);
+		// if (!driveId) {
+		// 	toast.error('Could not extract Drive ID');
+		// 	return;
+		// }
 
 		try {
 			toast.info('Processing Google Drive link...');
@@ -217,7 +217,7 @@
 			// Step 1: Fetch file metadata after uploading to DB
 			const files_metadata: FileMetadata[] = await processGoogleDriveLink(
 				localStorage.token,
-				driveId
+				link
 				
 			);
 			toast.success('Files uploaded successfully!');

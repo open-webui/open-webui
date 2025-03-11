@@ -1,4 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+
 export interface FileMetadata {
   id: string;
   name: string;
@@ -10,7 +11,7 @@ export interface FileMetadata {
   };
 }
 
-export const processGoogleDriveLink = async (token: string, driveId: string): Promise<FileMetadata[]> => {
+export const processGoogleDriveLink = async (token: string, link: string): Promise<FileMetadata[]> => {
   if (!WEBUI_API_BASE_URL) {
     throw new Error("WEBUI_API_BASE_URL is not defined.");
   }
@@ -21,7 +22,7 @@ export const processGoogleDriveLink = async (token: string, driveId: string): Pr
       "Content-Type": "application/json",
       "Authorization": `Bearer ${token}`,
     },
-    body: JSON.stringify({ driveId }), // Send the driveId in the request body
+    body: JSON.stringify({ link }),
   });
 
   // Handle errors from backend
@@ -33,11 +34,13 @@ export const processGoogleDriveLink = async (token: string, driveId: string): Pr
   // Parse the response JSON
   const result: { files_metadata: FileMetadata[] } = await response.json();
 
+  console.log(result);
   // Validate the response structure
   if (!Array.isArray(result.files_metadata)) {
     throw new Error("Invalid response format: Expected 'files_metadata' to be an array.");
   }
 
   // Return file metadata
+  console.log(result.files_metadata, "result.files_metadata");
   return result.files_metadata;
 };
