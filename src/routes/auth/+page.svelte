@@ -191,20 +191,32 @@
 		<div
 			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-50 text-black dark:text-white"
 		>
-		<div class="bg-[#5612CC] w-full md:flex flex-col items-center justify-center min-h-screen hidden md:visible">
-			<img
-				crossorigin="anonymous"
-				src="{WEBUI_BASE_URL}/static/ai_models_visualization.png"
-				class="w-150 rounded-full dark:invert"
-				alt="logos"
-			/>
+			{#if $WEBUI_NAME === 'AiBrary'}
+				<div
+					class="bg-gradient-to-b from-[#5612CC] via-[#5612CC] to-[#0b021a] w-full min-h-screen flex-col items-center justify-center relative hidden md:flex"
+				>
+					<!-- Image at the top -->
+					<img
+						crossorigin="anonymous"
+						src="{WEBUI_BASE_URL}/static/ai_models.jpg"
+						class="w-full absolute top-2 left-2 p-2"
+						alt="logos"
+					/>
 
-			<!-- Links at the bottom -->
-			<div class="absolute bottom-10 w-full text-center">
-				<a href="https://www.aibrary.dev/privacy-policy" class="text-lg text-white hover:underline">Privacy Policy</a>
-				<a href="https://www.aibrary.dev/terms-of-service" class="ml-4 text-lg text-white hover:underline">Terms Of Service</a>
-			</div>
-		</div>
+					<!-- Links at the bottom -->
+					<div class="absolute bottom-10 w-full text-center">
+						<a
+							href="https://www.aibrary.dev/privacy-policy"
+							class="text-lg text-white hover:underline">Privacy Policy</a
+						>
+						<a
+							href="https://www.aibrary.dev/terms-of-service"
+							class="ml-4 text-lg text-white hover:underline">Terms Of Service</a
+						>
+					</div>
+				</div>
+			{/if}
+
 			<div class="w-full sm:max-w-md px-10 min-h-screen flex flex-col text-center">
 				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
 					<div class=" my-auto pb-10 w-full">
@@ -311,7 +323,7 @@
 									</div>
 								</div>
 							{/if}
-							{#if $WEBUI_NAME === "AiBrary"}
+							{#if $WEBUI_NAME === 'AiBrary'}
 								<div class="flex flex-col mt-4">
 									<a
 										href="https://www.aibrary.dev/auth/signin/chat"
@@ -388,7 +400,6 @@
 											window.location.href = `${WEBUI_BASE_URL}/oauth/google/login`;
 										}}
 									>
-										
 										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="size-6 mr-3">
 											<path
 												fill="#EA4335"
