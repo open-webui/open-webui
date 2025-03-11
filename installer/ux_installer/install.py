@@ -55,9 +55,13 @@ def log(message, print_to_console=True):
     if print_to_console:
         print(formatted_message)
 
+    # Debugging: Print log file path
+    print(f"Log file path: {LOG_FILE_PATH}")
+
     # Write to log file if it's set
     if LOG_FILE_PATH:
         try:
+            # Open the log file in append mode
             with open(LOG_FILE_PATH, "a", encoding="utf-8") as f:
                 f.write(formatted_message + "\n")
         except Exception as e:
@@ -199,13 +203,13 @@ def install_miniconda(install_dir):
         return False, None
 
 
-def create_conda_env(conda_path, env_path, python_version=PYTHON_VERSION):
+def create_conda_env(conda_path, env_name, python_version=PYTHON_VERSION):
     """
     Creates a new conda environment with the specified Python version.
 
     Args:
         conda_path: Path to the conda executable
-        env_path: Path where to create the environment
+        env_name: Name of the conda environment
         python_version: Python version to install
 
     Returns:
@@ -216,14 +220,14 @@ def create_conda_env(conda_path, env_path, python_version=PYTHON_VERSION):
     log("---------------------")
     
     try:
-        log(f"Creating a Python {python_version} environment at: {env_path}")
+        log(f"Creating a Python {python_version} environment named: {env_name}")
         
         # Create the conda environment
         result = subprocess.run([
             conda_path, 
             "create", 
-            "-p", 
-            env_path,
+            "-n", 
+            env_name,
             f"python={python_version}", 
             "-y"
         ], capture_output=True, text=True, check=False)
@@ -232,7 +236,7 @@ def create_conda_env(conda_path, env_path, python_version=PYTHON_VERSION):
             log(f"Failed to create conda environment: {result.stderr}")
             return False
             
-        log(f"Successfully created conda environment at: {env_path}")
+        log(f"Successfully created conda environment: {env_name}")
         return True
         
     except Exception as e:
@@ -383,7 +387,7 @@ def install_wheel(wheel_path, python_path):
         return False
 
 
-def create_shortcuts(install_dir, env_path):
+def create_shortcuts(env_path):
     """
     Creates desktop shortcuts for AMD AI UX.
 
@@ -477,111 +481,118 @@ def main():
     global LOG_FILE_PATH
     LOG_FILE_PATH = os.path.join(install_dir, f"{PRODUCT_NAME_CONCAT}_install.log")
     
+    # Debugging: Print log file path
+    print(f"Log file path set to: {LOG_FILE_PATH}")
+
     # Create the installation directory if it doesn't exist
     os.makedirs(install_dir, exist_ok=True)
     
     # Start the installation process
     log("*** INSTALLATION STARTED ***")
     log(f"Installing {PRODUCT_NAME} to: {install_dir}")
+
+    # Debugging: Print Python executable path
+    print(f"Python executable: {sys.executable}")
     
-    # Check if directory already exists and has content
-    if os.path.exists(install_dir) and os.listdir(install_dir):
-        log(f"An existing installation was found at: {install_dir}")
-        
-        if not args.yes:
-            user_input = input("Would you like to remove it and continue with the installation? (y/n): ")
-            if user_input.lower() != 'y':
-                log("Installation cancelled by user")
-                return 1
-        else:
-            log("Automatically removing existing installation due to '--yes' flag")
-        
-        # Remove existing installation
-        log("Removing existing installation...")
-        
-        # Try to remove the conda environment first
-        env_path = os.path.join(install_dir, CONDA_ENV_NAME)
-        if os.path.exists(env_path):
+    try:
+        # Check if directory already exists and has content
+        if os.path.exists(install_dir) and os.listdir(install_dir):
+            log(f"An existing installation was found at: {install_dir}")
+            
+            if not args.yes:
+                user_input = input("Would you like to remove it and continue with the installation? (y/n): ")
+                if user_input.lower() != 'y':
+                    log("Installation cancelled by user")
+                    return 1
+            else:
+                log("Automatically removing existing installation due to '--yes' flag")
+            
+            # Remove existing installation
+            log("Removing existing installation...")
+            
+            # Try to remove the conda environment first
             conda_installed, conda_path = check_conda()
             if conda_installed:
-                subprocess.run([conda_path, "env", "remove", "-p", env_path, "-y"], check=False)
-        
-        # Remove the installation directory
-        try:
-            shutil.rmtree(install_dir)
-            os.makedirs(install_dir, exist_ok=True)
-            log("Deleted all contents of install directory")
-        except Exception as e:
-            log(f"Failed to remove existing installation: {str(e)}")
-            log("Please close any applications using AMD AI UX and try again")
-            return 1
-    
-    # Check if conda is installed
-    conda_installed, conda_path = check_conda()
-    
-    if not conda_installed:
-        log("Conda not installed")
-        
-        if not args.yes:
-            user_input = input("Conda is not installed. Would you like to install Miniconda? (y/n): ")
-            if user_input.lower() != 'y':
-                log("Installation cancelled by user")
+                subprocess.run([conda_path, "env", "remove", "-n", CONDA_ENV_NAME, "-y"], check=False)
+            
+            # Remove the installation directory
+            try:
+                shutil.rmtree(install_dir)
+                os.makedirs(install_dir, exist_ok=True)
+                log("Deleted all contents of install directory")
+            except Exception as e:
+                log(f"Failed to remove existing installation: {str(e)}")
+                log("Please close any applications using AMD AI UX and try again")
                 return 1
         
-        # Install Miniconda
-        miniconda_success, conda_path = install_miniconda(install_dir)
+        # Check if conda is installed
+        conda_installed, conda_path = check_conda()
         
-        if not miniconda_success:
-            log("Failed to install Miniconda. Installation will be aborted.")
+        if not conda_installed:
+            log("Conda not installed")
+            
+            if not args.yes:
+                user_input = input("Conda is not installed. Would you like to install Miniconda? (y/n): ")
+                if user_input.lower() != 'y':
+                    log("Installation cancelled by user")
+                    return 1
+            
+            # Install Miniconda
+            miniconda_success, conda_path = install_miniconda(install_dir)
+            
+            if not miniconda_success:
+                log("Failed to install Miniconda. Installation will be aborted.")
+                return 1
+        
+        # Create conda environment
+        env_success = create_conda_env(conda_path, CONDA_ENV_NAME, PYTHON_VERSION)
+        
+        if not env_success:
+            log("Failed to create the Python environment. Installation will be aborted.")
             return 1
-    
-    # Create conda environment
-    env_path = os.path.join(install_dir, CONDA_ENV_NAME)
-    env_success = create_conda_env(conda_path, env_path, PYTHON_VERSION)
-    
-    if not env_success:
-        log("Failed to create the Python environment. Installation will be aborted.")
+        
+        # Determine the Python executable path in the conda environment
+        if platform.system() == "Windows":
+            python_path = os.path.join(install_dir, "envs", CONDA_ENV_NAME, "python.exe")
+        else:
+            python_path = os.path.join(install_dir, "envs", CONDA_ENV_NAME, "bin", "python")
+        
+        # Create wheels directory
+        wheels_dir = os.path.join(install_dir, "wheels")
+        os.makedirs(wheels_dir, exist_ok=True)
+        
+        # Download the wheel file
+        wheel_path = download_latest_wheel(output_folder=wheels_dir)
+        
+        if not wheel_path or not os.path.isfile(wheel_path):
+            log("Failed to download Open WebUI wheel file. Please check your internet connection and try again.")
+            return 1
+        
+        # Install the wheel file
+        install_success = install_wheel(wheel_path, python_path)
+        
+        if not install_success:
+            log("Failed to install Open WebUI wheel file. Please check the logs for details.")
+            return 1
+        
+        # Create shortcuts if not disabled
+        if not args.no_shortcuts:
+            shortcut_success = create_shortcuts(CONDA_ENV_NAME)
+            if not shortcut_success:
+                log("Warning: Failed to create shortcuts")
+        
+        # Installation completed successfully
+        log("*** INSTALLATION COMPLETED ***")
+        log(f"{PRODUCT_NAME} installation completed successfully!")
+        log(f"You can start {PRODUCT_NAME} by running:")
+        log(f"  conda activate {CONDA_ENV_NAME}")
+        log("  open-webui")
+        log("Or by using the desktop shortcut if created")
+        
+        return 0
+    except Exception as e:
+        log(f"ERROR: An exception occurred: {str(e)}")
         return 1
-    
-    # Determine the Python executable path in the conda environment
-    if platform.system() == "Windows":
-        python_path = os.path.join(env_path, "python.exe")
-    else:
-        python_path = os.path.join(env_path, "bin", "python")
-    
-    # Create wheels directory
-    wheels_dir = os.path.join(install_dir, "wheels")
-    os.makedirs(wheels_dir, exist_ok=True)
-    
-    # Download the wheel file
-    wheel_path = download_latest_wheel(output_folder=wheels_dir)
-    
-    if not wheel_path or not os.path.isfile(wheel_path):
-        log("Failed to download Open WebUI wheel file. Please check your internet connection and try again.")
-        return 1
-    
-    # Install the wheel file
-    install_success = install_wheel(wheel_path, python_path)
-    
-    if not install_success:
-        log("Failed to install Open WebUI wheel file. Please check the logs for details.")
-        return 1
-    
-    # Create shortcuts if not disabled
-    if not args.no_shortcuts:
-        shortcut_success = create_shortcuts(install_dir, env_path)
-        if not shortcut_success:
-            log("Warning: Failed to create shortcuts")
-    
-    # Installation completed successfully
-    log("*** INSTALLATION COMPLETED ***")
-    log(f"{PRODUCT_NAME} installation completed successfully!")
-    log(f"You can start {PRODUCT_NAME} by running:")
-    log(f"  conda activate {env_path}")
-    log("  open-webui")
-    log("Or by using the desktop shortcut if created")
-    
-    return 0
 
 
 if __name__ == "__main__":
