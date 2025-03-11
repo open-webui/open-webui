@@ -93,16 +93,10 @@ li p {
 
 ::-webkit-scrollbar-thumb {
 	--tw-border-opacity: 1;
-	background-color: rgba(236, 236, 236, 0.8);
+	background-color: rgba(var(--color-gray-950, #0d0d0d), 0.9);
 	border-color: rgba(255, 255, 255, var(--tw-border-opacity));
 	border-radius: 9999px;
 	border-width: 1px;
-}
-
-/* Dark theme scrollbar styles */
-.dark ::-webkit-scrollbar-thumb {
-	background-color: rgba(42, 42, 42, 0.8); /* Darker color for dark theme */
-	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
 }
 
 ::-webkit-scrollbar {
@@ -371,4 +365,12 @@ input[type='number'] {
 
 .hljs-strong {
 	font-weight: 700;
+}
+
+.bg-navy {
+	background-color: navy;
+}
+
+.text-white {
+	color: white;
 }

@@ -1899,22 +1899,22 @@
 <div
 	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 		? '  md:max-w-[calc(100%-260px)]'
-		: ' '} w-full max-w-full flex flex-col"
+		: ' '} w-full max-w-full flex flex-col bg-white text-black"
 	id="chat-container"
 >
 	{#if chatIdProp === '' || (!loading && chatIdProp)}
 		{#if $settings?.backgroundImageUrl ?? null}
-			<div
-				class="absolute {$showSidebar
-					? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
-					: ''} top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
-				style="background-image: url({$settings.backgroundImageUrl})  "
-			/>
+				<div
+					class="absolute {$showSidebar
+						? 'md:max-w-[calc(100%-260px)] md:translate-x-[260px]'
+						: ''} top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
+					style="background-image: url({$settings.backgroundImageUrl})  "
+				/>
 
-			<div
-				class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
-			/>
-		{/if}
+				<div
+					class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 z-0"
+				/>
+			{/if}
 
 		<Navbar
 			bind:this={navbarElement}
@@ -1937,33 +1937,9 @@
 
 		<PaneGroup direction="horizontal" class="w-full h-full">
 			<Pane defaultSize={50} class="h-full flex w-full relative">
-				{#if !history.currentId && !$chatId && selectedModels.length <= 1 && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
+				{#if $banners.length > 0 && !history.currentId && !$chatId && selectedModels.length <= 1}
 					<div class="absolute top-12 left-0 right-0 w-full z-30">
 						<div class=" flex flex-col gap-1 w-full">
-							{#if ($config?.license_metadata?.type ?? null) === 'trial'}
-								<Banner
-									banner={{
-										type: 'info',
-										title: 'Trial License',
-										content: $i18n.t(
-											'You are currently using a trial license. Please contact support to upgrade your license.'
-										)
-									}}
-								/>
-							{/if}
-
-							{#if ($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats}
-								<Banner
-									banner={{
-										type: 'error',
-										title: 'License Error',
-										content: $i18n.t(
-											'Exceeded the number of seats in your license. Please contact support to increase the number of seats.'
-										)
-									}}
-								/>
-							{/if}
-
 							{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
 								<Banner
 									{banner}
