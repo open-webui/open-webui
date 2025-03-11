@@ -18,6 +18,8 @@
 	export let floatingButtons = true;
 
 	export let onSourceClick = () => {};
+	export let onTaskClick = () => {};
+
 	export let onAddMessages = () => {};
 
 	let contentContainerElement;
@@ -118,6 +120,11 @@
 		sourceIds={(sources ?? []).reduce((acc, s) => {
 			let ids = [];
 			s.document.forEach((document, index) => {
+				if (model?.info?.meta?.capabilities?.citations == false) {
+					ids.push('N/A');
+					return ids;
+				}
+
 				const metadata = s.metadata?.[index];
 				const id = metadata?.source ?? 'N/A';
 
@@ -141,6 +148,7 @@
 			return acc.filter((item, index) => acc.indexOf(item) === index);
 		}, [])}
 		{onSourceClick}
+		{onTaskClick}
 		on:update={(e) => {
 			dispatch('update', e.detail);
 		}}

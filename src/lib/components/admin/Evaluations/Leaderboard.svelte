@@ -1,6 +1,8 @@
 <script lang="ts">
 	import * as ort from 'onnxruntime-web';
-	import { AutoModel, AutoTokenizer } from '@huggingface/transformers';
+	import { env, AutoModel, AutoTokenizer } from '@huggingface/transformers';
+
+	env.backends.onnx.wasm.wasmPaths = '/wasm/';
 
 	import { onMount, getContext } from 'svelte';
 	import { models } from '$lib/stores';
@@ -286,7 +288,7 @@
 					<MagnifyingGlass className="size-3" />
 				</div>
 				<input
-					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
 					placeholder={$i18n.t('Search')}
 					on:focus={() => {
@@ -298,7 +300,9 @@
 	</div>
 </div>
 
-<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded pt-0.5">
+<div
+	class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full rounded-sm pt-0.5"
+>
 	{#if loadingLeaderboard}
 		<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
 			<div class="m-auto">
@@ -347,7 +351,7 @@
 						</td>
 						<td class="px-3 py-1.5 flex flex-col justify-center">
 							<div class="flex items-center gap-2">
-								<div class="flex-shrink-0">
+								<div class="shrink-0">
 									<img
 										src={model?.info?.meta?.profile_image_url ?? '/favicon.png'}
 										alt={model.name}

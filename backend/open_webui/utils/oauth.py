@@ -1,6 +1,7 @@
 import base64
 import logging
 import mimetypes
+import sys
 import uuid
 
 import aiohttp
@@ -35,12 +36,20 @@ from open_webui.config import (
     AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
-from open_webui.env import WEBUI_AUTH_COOKIE_SAME_SITE, WEBUI_AUTH_COOKIE_SECURE
+from open_webui.env import (
+    WEBUI_NAME,
+    WEBUI_AUTH_COOKIE_SAME_SITE,
+    WEBUI_AUTH_COOKIE_SECURE,
+)
 from open_webui.utils.misc import parse_duration
 from open_webui.utils.auth import get_password_hash, create_token
 from open_webui.utils.webhook import post_webhook
 
+from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+
+logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["OAUTH"])
 
 auth_manager_config = AppConfig()
 auth_manager_config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
@@ -61,8 +70,9 @@ auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
 
 
 class OAuthManager:
-    def __init__(self):
+    def __init__(self, app):
         self.oauth = OAuth()
+        self.app = app
         for _, provider_config in OAUTH_PROVIDERS.items():
             provider_config["register"](self.oauth)
 
@@ -72,12 +82,15 @@ class OAuthManager:
     def get_user_role(self, user, user_data):
         if user and Users.get_num_users() == 1:
             # If the user is the only user, assign the role "admin" - actually repairs role for single user on login
+            log.debug("Assigning the only user the admin role")
             return "admin"
         if not user and Users.get_num_users() == 0:
             # If there are no users, assign the role "admin", as the first user will be an admin
+            log.debug("Assigning the first user the admin role")
             return "admin"
 
         if auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT:
+            log.debug("Running OAUTH Role management")
             oauth_claim = auth_manager_config.OAUTH_ROLES_CLAIM
             oauth_allowed_roles = auth_manager_config.OAUTH_ALLOWED_ROLES
             oauth_admin_roles = auth_manager_config.OAUTH_ADMIN_ROLES
@@ -93,17 +106,24 @@ class OAuthManager:
                     claim_data = claim_data.get(nested_claim, {})
                 oauth_roles = claim_data if isinstance(claim_data, list) else None
 
+            log.debug(f"Oauth Roles claim: {oauth_claim}")
+            log.debug(f"User roles from oauth: {oauth_roles}")
+            log.debug(f"Accepted user roles: {oauth_allowed_roles}")
+            log.debug(f"Accepted admin roles: {oauth_admin_roles}")
+
             # If any roles are found, check if they match the allowed or admin roles
             if oauth_roles:
                 # If role management is enabled, and matching roles are provided, use the roles
                 for allowed_role in oauth_allowed_roles:
                     # If the user has any of the allowed roles, assign the role "user"
                     if allowed_role in oauth_roles:
+                        log.debug("Assigned user the user role")
                         role = "user"
                         break
                 for admin_role in oauth_admin_roles:
                     # If the user has any of the admin roles, assign the role "admin"
                     if admin_role in oauth_roles:
+                        log.debug("Assigned user the admin role")
                         role = "admin"
                         break
         else:
@@ -117,16 +137,34 @@ class OAuthManager:
         return role
 
     def update_user_groups(self, user, user_data, default_permissions):
+        log.debug("Running OAUTH Group management")
         oauth_claim = auth_manager_config.OAUTH_GROUPS_CLAIM
 
-        user_oauth_groups: list[str] = user_data.get(oauth_claim, list())
+        # Nested claim search for groups claim
+        if oauth_claim:
+            claim_data = user_data
+            nested_claims = oauth_claim.split(".")
+            for nested_claim in nested_claims:
+                claim_data = claim_data.get(nested_claim, {})
+            user_oauth_groups = claim_data if isinstance(claim_data, list) else []
+
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
         all_available_groups: list[GroupModel] = Groups.get_groups()
+
+        log.debug(f"Oauth Groups claim: {oauth_claim}")
+        log.debug(f"User oauth groups: {user_oauth_groups}")
+        log.debug(f"User's current groups: {[g.name for g in user_current_groups]}")
+        log.debug(
+            f"All groups available in OpenWebUI: {[g.name for g in all_available_groups]}"
+        )
 
         # Remove groups that user is no longer a part of
         for group_model in user_current_groups:
             if group_model.name not in user_oauth_groups:
                 # Remove group from user
+                log.debug(
+                    f"Removing user from group {group_model.name} as it is no longer in their oauth groups"
+                )
 
                 user_ids = group_model.user_ids
                 user_ids = [i for i in user_ids if i != user.id]
@@ -152,6 +190,9 @@ class OAuthManager:
                 gm.name == group_model.name for gm in user_current_groups
             ):
                 # Add user to group
+                log.debug(
+                    f"Adding user to group {group_model.name} as it was found in their oauth groups"
+                )
 
                 user_ids = group_model.user_ids
                 user_ids.append(user.id)
@@ -171,7 +212,7 @@ class OAuthManager:
                     id=group_model.id, form_data=update_form, overwrite=False
                 )
 
-    async def handle_login(self, provider, request):
+    async def handle_login(self, request, provider):
         if provider not in OAUTH_PROVIDERS:
             raise HTTPException(404)
         # If the provider has a custom redirect URL, use that, otherwise automatically generate one
@@ -183,7 +224,7 @@ class OAuthManager:
             raise HTTPException(404)
         return await client.authorize_redirect(request, redirect_uri)
 
-    async def handle_callback(self, provider, request, response):
+    async def handle_callback(self, request, provider, response):
         if provider not in OAUTH_PROVIDERS:
             raise HTTPException(404)
         client = self.get_client(provider)
@@ -193,7 +234,7 @@ class OAuthManager:
             log.warning(f"OAuth callback error: {e}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         user_data: UserInfo = token.get("userinfo")
-        if not user_data:
+        if not user_data or auth_manager_config.OAUTH_EMAIL_CLAIM not in user_data:
             user_data: UserInfo = await client.userinfo(token=token)
         if not user_data:
             log.warning(f"OAuth callback failed, user data is missing: {token}")
@@ -205,11 +246,46 @@ class OAuthManager:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         provider_sub = f"{provider}@{sub}"
         email_claim = auth_manager_config.OAUTH_EMAIL_CLAIM
-        email = user_data.get(email_claim, "").lower()
+        email = user_data.get(email_claim, "")
         # We currently mandate that email addresses are provided
         if not email:
-            log.warning(f"OAuth callback failed, email is missing: {user_data}")
-            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+            # If the provider is GitHub,and public email is not provided, we can use the access token to fetch the user's email
+            if provider == "github":
+                try:
+                    access_token = token.get("access_token")
+                    headers = {"Authorization": f"Bearer {access_token}"}
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(
+                            "https://api.github.com/user/emails", headers=headers
+                        ) as resp:
+                            if resp.ok:
+                                emails = await resp.json()
+                                # use the primary email as the user's email
+                                primary_email = next(
+                                    (e["email"] for e in emails if e.get("primary")),
+                                    None,
+                                )
+                                if primary_email:
+                                    email = primary_email
+                                else:
+                                    log.warning(
+                                        "No primary email found in GitHub response"
+                                    )
+                                    raise HTTPException(
+                                        400, detail=ERROR_MESSAGES.INVALID_CRED
+                                    )
+                            else:
+                                log.warning("Failed to fetch GitHub email")
+                                raise HTTPException(
+                                    400, detail=ERROR_MESSAGES.INVALID_CRED
+                                )
+                except Exception as e:
+                    log.warning(f"Error fetching GitHub email: {e}")
+                    raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+            else:
+                log.warning(f"OAuth callback failed, email is missing: {user_data}")
+                raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+        email = email.lower()
         if (
             "*" not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
             and email.split("@")[-1] not in auth_manager_config.OAUTH_ALLOWED_DOMAINS
@@ -237,12 +313,12 @@ class OAuthManager:
                 Users.update_user_role_by_id(user.id, determined_role)
 
         if not user:
+            user_count = Users.get_num_users()
+
             # If the user does not exist, check if signups are enabled
             if auth_manager_config.ENABLE_OAUTH_SIGNUP:
                 # Check if an existing user with the same email already exists
-                existing_user = Users.get_user_by_email(
-                    user_data.get("email", "").lower()
-                )
+                existing_user = Users.get_user_by_email(email)
                 if existing_user:
                     raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
@@ -261,15 +337,20 @@ class OAuthManager:
                             }
                         async with aiohttp.ClientSession() as session:
                             async with session.get(picture_url, **get_kwargs) as resp:
-                                picture = await resp.read()
-                                base64_encoded_picture = base64.b64encode(
-                                    picture
-                                ).decode("utf-8")
-                                guessed_mime_type = mimetypes.guess_type(picture_url)[0]
-                                if guessed_mime_type is None:
-                                    # assume JPG, browsers are tolerant enough of image formats
-                                    guessed_mime_type = "image/jpeg"
-                                picture_url = f"data:{guessed_mime_type};base64,{base64_encoded_picture}"
+                                if resp.ok:
+                                    picture = await resp.read()
+                                    base64_encoded_picture = base64.b64encode(
+                                        picture
+                                    ).decode("utf-8")
+                                    guessed_mime_type = mimetypes.guess_type(
+                                        picture_url
+                                    )[0]
+                                    if guessed_mime_type is None:
+                                        # assume JPG, browsers are tolerant enough of image formats
+                                        guessed_mime_type = "image/jpeg"
+                                    picture_url = f"data:{guessed_mime_type};base64,{base64_encoded_picture}"
+                                else:
+                                    picture_url = "/user.png"
                     except Exception as e:
                         log.error(
                             f"Error downloading profile image '{picture_url}': {e}"
@@ -281,7 +362,8 @@ class OAuthManager:
                 username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
 
                 name = user_data.get(username_claim)
-                if not isinstance(user, str):
+                if not name:
+                    log.warning("Username claim is missing, using email as name")
                     name = email
 
                 role = self.get_user_role(None, user_data)
@@ -299,6 +381,7 @@ class OAuthManager:
 
                 if auth_manager_config.WEBHOOK_URL:
                     post_webhook(
+                        WEBUI_NAME,
                         auth_manager_config.WEBHOOK_URL,
                         WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
                         {
@@ -345,6 +428,3 @@ class OAuthManager:
         # Redirect back to the frontend with the JWT token
         redirect_url = f"{request.base_url}auth#token={jwt_token}"
         return RedirectResponse(url=redirect_url, headers=response.headers)
-
-
-oauth_manager = OAuthManager()

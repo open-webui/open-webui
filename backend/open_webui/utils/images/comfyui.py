@@ -161,7 +161,7 @@ async def comfyui_generate_image(
                 seed = (
                     payload.seed
                     if payload.seed
-                    else random.randint(0, 18446744073709551614)
+                    else random.randint(0, 1125899906842624)
                 )
                 for node_id in node.node_ids:
                     workflow[node_id]["inputs"][node.key] = seed
