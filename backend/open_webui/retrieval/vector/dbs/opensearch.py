@@ -21,14 +21,14 @@ class OpenSearchClient:
             verify_certs=OPENSEARCH_CERT_VERIFY,
             http_auth=(OPENSEARCH_USERNAME, OPENSEARCH_PASSWORD),
         )
-    
+
     def _get_index_name(self, collection_name: str) -> str:
         return f"{self.index_prefix}_{collection_name}"
 
     def _result_to_get_result(self, result) -> GetResult:
         if not result["hits"]["hits"]:
             return None
-        
+
         ids = []
         documents = []
         metadatas = []
@@ -43,7 +43,7 @@ class OpenSearchClient:
     def _result_to_search_result(self, result) -> SearchResult:
         if not result["hits"]["hits"]:
             return None
-        
+
         ids = []
         distances = []
         documents = []
@@ -56,16 +56,15 @@ class OpenSearchClient:
             metadatas.append(hit["_source"].get("metadata"))
 
         return SearchResult(
-            ids=[ids], distances=[distances], documents=[documents], metadatas=[metadatas]
+            ids=[ids],
+            distances=[distances],
+            documents=[documents],
+            metadatas=[metadatas],
         )
 
     def _create_index(self, collection_name: str, dimension: int):
         body = {
-            "settings": {
-                "index": {
-                "knn": True
-                }
-            },
+            "settings": {"index": {"knn": True}},
             "mappings": {
                 "properties": {
                     "id": {"type": "keyword"},
@@ -81,13 +80,13 @@ class OpenSearchClient:
                             "parameters": {
                                 "ef_construction": 128,
                                 "m": 16,
-                            }
+                            },
                         },
                     },
                     "text": {"type": "text"},
                     "metadata": {"type": "object"},
                 }
-            }
+            },
         }
         self.client.indices.create(
             index=self._get_index_name(collection_name), body=body
@@ -100,9 +99,7 @@ class OpenSearchClient:
     def has_collection(self, collection_name: str) -> bool:
         # has_collection here means has index.
         # We are simply adapting to the norms of the other DBs.
-        return self.client.indices.exists(
-            index=self._get_index_name(collection_name)
-        )
+        return self.client.indices.exists(index=self._get_index_name(collection_name))
 
     def delete_collection(self, collection_name: str):
         # delete_collection here means delete index.
@@ -115,33 +112,30 @@ class OpenSearchClient:
         try:
             if not self.has_collection(collection_name):
                 return None
-            
+
             query = {
                 "size": limit,
                 "_source": ["text", "metadata"],
                 "query": {
                     "script_score": {
-                        "query": {
-                            "match_all": {}
-                        },
+                        "query": {"match_all": {}},
                         "script": {
                             "source": "cosineSimilarity(params.query_value, doc[params.field]) + 1.0",
                             "params": {
-                            "field": "vector",
-                            "query_value": vectors[0]
+                                "field": "vector",
+                                "query_value": vectors[0],
                             },  # Assuming single query vector
                         },
                     }
                 },
             }
-            
+
             result = self.client.search(
-                index=self._get_index_name(collection_name),
-                body=query
+                index=self._get_index_name(collection_name), body=query
             )
 
             return self._result_to_search_result(result)
-        
+
         except Exception as e:
             return None
 
@@ -152,20 +146,14 @@ class OpenSearchClient:
             return None
 
         query_body = {
-            "query": {
-                "bool": {
-                    "filter": []
-                }
-            },
+            "query": {"bool": {"filter": []}},
             "_source": ["text", "metadata"],
         }
 
         for field, value in filter.items():
-            query_body["query"]["bool"]["filter"].append({
-                "match": {
-                    "metadata." + str(field): value
-                }
-            })
+            query_body["query"]["bool"]["filter"].append(
+                {"match": {"metadata." + str(field): value}}
+            )
 
         size = limit if limit else 10
 
@@ -201,9 +189,9 @@ class OpenSearchClient:
         for batch in self._create_batches(items):
             actions = [
                 {
-                    "_op_type": "index", 
+                    "_op_type": "index",
                     "_index": self._get_index_name(collection_name),
-                    "_id": item["id"], 
+                    "_id": item["id"],
                     "_source": {
                         "vector": item["vector"],
                         "text": item["text"],
@@ -222,9 +210,9 @@ class OpenSearchClient:
         for batch in self._create_batches(items):
             actions = [
                 {
-                    "_op_type": "update", 
+                    "_op_type": "update",
                     "_index": self._get_index_name(collection_name),
-                    "_id": item["id"], 
+                    "_id": item["id"],
                     "doc": {
                         "vector": item["vector"],
                         "text": item["text"],
@@ -236,7 +224,12 @@ class OpenSearchClient:
             ]
             bulk(self.client, actions)
 
-    def delete(self, collection_name: str, ids: Optional[list[str]] = None, filter: Optional[dict] = None):
+    def delete(
+        self,
+        collection_name: str,
+        ids: Optional[list[str]] = None,
+        filter: Optional[dict] = None,
+    ):
         if ids:
             actions = [
                 {
@@ -249,20 +242,16 @@ class OpenSearchClient:
             bulk(self.client, actions)
         elif filter:
             query_body = {
-                "query": {
-                    "bool": {
-                        "filter": []
-                    }
-                },
+                "query": {"bool": {"filter": []}},
             }
             for field, value in filter.items():
-                query_body["query"]["bool"]["filter"].append({
-                    "match": {
-                        "metadata." + str(field): value
-                    }
-                })
-            self.client.delete_by_query(index=self._get_index_name(collection_name), body=query_body)
-                
+                query_body["query"]["bool"]["filter"].append(
+                    {"match": {"metadata." + str(field): value}}
+                )
+            self.client.delete_by_query(
+                index=self._get_index_name(collection_name), body=query_body
+            )
+
     def reset(self):
         indices = self.client.indices.get(index=f"{self.index_prefix}_*")
         for index in indices:

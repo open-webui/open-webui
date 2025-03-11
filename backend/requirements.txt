@@ -37,7 +37,7 @@ asgiref==3.8.1
 # AI libraries
 openai
 anthropic
-google-generativeai==0.7.2
+google-generativeai==0.8.4
 tiktoken
 
 langchain==0.3.19
@@ -118,3 +118,16 @@ ldap3==2.9.1
 
 ## Firecrawl
 firecrawl-py==1.12.0
+
+## Trace
+opentelemetry-api==1.30.0
+opentelemetry-sdk==1.30.0
+opentelemetry-exporter-otlp==1.30.0
+opentelemetry-instrumentation==0.51b0
+opentelemetry-instrumentation-fastapi==0.51b0
+opentelemetry-instrumentation-sqlalchemy==0.51b0
+opentelemetry-instrumentation-redis==0.51b0
+opentelemetry-instrumentation-requests==0.51b0
+opentelemetry-instrumentation-logging==0.51b0
+opentelemetry-instrumentation-httpx==0.51b0
+opentelemetry-instrumentation-aiohttp-client==0.51b0
