@@ -59,7 +59,7 @@ from open_webui.retrieval.web.serpstack import search_serpstack
 from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.bing import search_bing
 from open_webui.retrieval.web.exa import search_exa
-
+from open_webui.retrieval.web.perplexity import search_perplexity
 
 from open_webui.retrieval.utils import (
     get_embedding_function,
@@ -352,11 +352,13 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "status": True,
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
+        "BYPASS_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         "enable_google_drive_integration": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "enable_onedrive_integration": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
+            "docling_server_url": request.app.state.config.DOCLING_SERVER_URL,
             "document_intelligence_config": {
                 "endpoint": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                 "key": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
@@ -378,7 +380,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         },
         "web": {
             "ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
-            "RAG_WEB_SEARCH_FULL_CONTEXT": request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT,
+            "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
             "search": {
                 "enabled": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "drive": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
@@ -404,6 +406,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "bing_search_v7_endpoint": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
                 "bing_search_v7_subscription_key": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
                 "exa_api_key": request.app.state.config.EXA_API_KEY,
+                "perplexity_api_key": request.app.state.config.PERPLEXITY_API_KEY,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
@@ -426,6 +429,7 @@ class DocumentIntelligenceConfigForm(BaseModel):
 class ContentExtractionConfig(BaseModel):
     engine: str = ""
     tika_server_url: Optional[str] = None
+    docling_server_url: Optional[str] = None
     document_intelligence_config: Optional[DocumentIntelligenceConfigForm] = None
 
 
@@ -464,6 +468,7 @@ class WebSearchConfig(BaseModel):
     bing_search_v7_endpoint: Optional[str] = None
     bing_search_v7_subscription_key: Optional[str] = None
     exa_api_key: Optional[str] = None
+    perplexity_api_key: Optional[str] = None
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
     trust_env: Optional[bool] = None
@@ -473,11 +478,12 @@ class WebSearchConfig(BaseModel):
 class WebConfig(BaseModel):
     search: WebSearchConfig
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION: Optional[bool] = None
-    RAG_WEB_SEARCH_FULL_CONTEXT: Optional[bool] = None
+    BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
 
 
 class ConfigUpdateForm(BaseModel):
     RAG_FULL_CONTEXT: Optional[bool] = None
+    BYPASS_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
     pdf_extract_images: Optional[bool] = None
     enable_google_drive_integration: Optional[bool] = None
     enable_onedrive_integration: Optional[bool] = None
@@ -502,6 +508,12 @@ async def update_rag_config(
         form_data.RAG_FULL_CONTEXT
         if form_data.RAG_FULL_CONTEXT is not None
         else request.app.state.config.RAG_FULL_CONTEXT
+    )
+
+    request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL = (
+        form_data.BYPASS_EMBEDDING_AND_RETRIEVAL
+        if form_data.BYPASS_EMBEDDING_AND_RETRIEVAL is not None
+        else request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
     )
 
     request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = (
@@ -530,6 +542,9 @@ async def update_rag_config(
         request.app.state.config.TIKA_SERVER_URL = (
             form_data.content_extraction.tika_server_url
         )
+        request.app.state.config.DOCLING_SERVER_URL = (
+            form_data.content_extraction.docling_server_url
+        )
         if form_data.content_extraction.document_intelligence_config is not None:
             request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = (
                 form_data.content_extraction.document_intelligence_config.endpoint
@@ -557,8 +572,8 @@ async def update_rag_config(
         request.app.state.config.ENABLE_RAG_WEB_SEARCH = form_data.web.search.enabled
         request.app.state.config.RAG_WEB_SEARCH_ENGINE = form_data.web.search.engine
 
-        request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT = (
-            form_data.web.RAG_WEB_SEARCH_FULL_CONTEXT
+        request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
+            form_data.web.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
         )
 
         request.app.state.config.SEARXNG_QUERY_URL = (
@@ -609,6 +624,10 @@ async def update_rag_config(
 
         request.app.state.config.EXA_API_KEY = form_data.web.search.exa_api_key
 
+        request.app.state.config.PERPLEXITY_API_KEY = (
+            form_data.web.search.perplexity_api_key
+        )
+
         request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = (
             form_data.web.search.result_count
         )
@@ -626,6 +645,7 @@ async def update_rag_config(
         "status": True,
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
+        "BYPASS_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         "file": {
             "max_size": request.app.state.config.FILE_MAX_SIZE,
             "max_count": request.app.state.config.FILE_MAX_COUNT,
@@ -633,6 +653,7 @@ async def update_rag_config(
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
+            "docling_server_url": request.app.state.config.DOCLING_SERVER_URL,
             "document_intelligence_config": {
                 "endpoint": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                 "key": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
@@ -650,7 +671,7 @@ async def update_rag_config(
         },
         "web": {
             "ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
-            "RAG_WEB_SEARCH_FULL_CONTEXT": request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT,
+            "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
             "search": {
                 "enabled": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "engine": request.app.state.config.RAG_WEB_SEARCH_ENGINE,
@@ -674,6 +695,7 @@ async def update_rag_config(
                 "bing_search_v7_endpoint": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
                 "bing_search_v7_subscription_key": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
                 "exa_api_key": request.app.state.config.EXA_API_KEY,
+                "perplexity_api_key": request.app.state.config.PERPLEXITY_API_KEY,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
                 "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
@@ -913,7 +935,12 @@ def process_file(
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
 
-            VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
+            try:
+                # /files/{file_id}/data/content/update
+                VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
+            except:
+                # Audio file upload pipeline
+                pass
 
             docs = [
                 Document(
@@ -969,6 +996,7 @@ def process_file(
                 loader = Loader(
                     engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                     TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
+                    DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
                     PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                     DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                     DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
@@ -1014,36 +1042,45 @@ def process_file(
         hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)
 
-        try:
-            result = save_docs_to_vector_db(
-                request,
-                docs=docs,
-                collection_name=collection_name,
-                metadata={
-                    "file_id": file.id,
-                    "name": file.filename,
-                    "hash": hash,
-                },
-                add=(True if form_data.collection_name else False),
-                user=user,
-            )
-
-            if result:
-                Files.update_file_metadata_by_id(
-                    file.id,
-                    {
-                        "collection_name": collection_name,
+        if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
+            try:
+                result = save_docs_to_vector_db(
+                    request,
+                    docs=docs,
+                    collection_name=collection_name,
+                    metadata={
+                        "file_id": file.id,
+                        "name": file.filename,
+                        "hash": hash,
                     },
+                    add=(True if form_data.collection_name else False),
+                    user=user,
                 )
 
-                return {
-                    "status": True,
-                    "collection_name": collection_name,
-                    "filename": file.filename,
-                    "content": text_content,
-                }
-        except Exception as e:
-            raise e
+                if result:
+                    Files.update_file_metadata_by_id(
+                        file.id,
+                        {
+                            "collection_name": collection_name,
+                        },
+                    )
+
+                    return {
+                        "status": True,
+                        "collection_name": collection_name,
+                        "filename": file.filename,
+                        "content": text_content,
+                    }
+            except Exception as e:
+                raise e
+        else:
+            return {
+                "status": True,
+                "collection_name": None,
+                "filename": file.filename,
+                "content": text_content,
+            }
+
     except Exception as e:
         log.exception(e)
         if "No pandoc was found" in str(e):
@@ -1159,9 +1196,13 @@ def process_web(
         content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {content}")
-        save_docs_to_vector_db(
-            request, docs, collection_name, overwrite=True, user=user
-        )
+
+        if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
+            save_docs_to_vector_db(
+                request, docs, collection_name, overwrite=True, user=user
+            )
+        else:
+            collection_name = None
 
         return {
             "status": True,
@@ -1173,6 +1214,7 @@ def process_web(
                 },
                 "meta": {
                     "name": form_data.url,
+                    "source": form_data.url,
                 },
             },
         }
@@ -1198,6 +1240,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
     - SERPLY_API_KEY
     - TAVILY_API_KEY
     - EXA_API_KEY
+    - PERPLEXITY_API_KEY
     - SEARCHAPI_API_KEY + SEARCHAPI_ENGINE (by default `google`)
     - SERPAPI_API_KEY + SERPAPI_ENGINE (by default `google`)
     Args:
@@ -1362,6 +1405,13 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
+    elif engine == "perplexity":
+        return search_perplexity(
+            request.app.state.config.PERPLEXITY_API_KEY,
+            query,
+            request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
     else:
         raise Exception("No search engine API key found in environment variables")
 
@@ -1403,9 +1453,11 @@ async def process_web_search(
         )
         docs = await loader.aload()
 
-        if request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT:
+        if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
                 "status": True,
+                "collection_name": None,
+                "filenames": urls,
                 "docs": [
                     {
                         "content": doc.page_content,
@@ -1413,7 +1465,6 @@ async def process_web_search(
                     }
                     for doc in docs
                 ],
-                "filenames": urls,
                 "loaded_count": len(docs),
             }
         else:

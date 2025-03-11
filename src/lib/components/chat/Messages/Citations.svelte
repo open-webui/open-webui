@@ -43,6 +43,7 @@
 	}
 
 	$: {
+		console.log('sources', sources);
 		citations = sources.reduce((acc, source) => {
 			if (Object.keys(source).length === 0) {
 				return acc;
@@ -53,7 +54,7 @@
 				const distance = source.distances?.[index];
 
 				// Within the same citation there could be multiple documents
-				const id = metadata?.source ?? 'N/A';
+				const id = metadata?.source ?? source?.source?.id ?? 'N/A';
 				let _source = source?.source;
 
 				if (metadata?.name) {
@@ -116,14 +117,14 @@
 						<div
 							class="flex-1 mx-1 truncate text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white transition"
 						>
-							{citation.source.name}
+							{decodeURIComponent(citation.source.name)}
 						</div>
 					</button>
 				{/each}
 			</div>
 		{:else}
 			<Collapsible
-				id="collapsible-sources"
+				id={`collapsible-${id}`}
 				bind:open={isCollapsibleOpen}
 				className="w-full max-w-full "
 				buttonClassName="w-fit max-w-full"
@@ -156,7 +157,7 @@
 											</div>
 										{/if}
 										<div class="flex-1 mx-1 truncate">
-											{citation.source.name}
+											{decodeURIComponent(citation.source.name)}
 										</div>
 									</button>
 								{/each}
@@ -193,7 +194,7 @@
 									</div>
 								{/if}
 								<div class="flex-1 mx-1 truncate">
-									{citation.source.name}
+									{decodeURIComponent(citation.source.name)}
 								</div>
 							</button>
 						{/each}

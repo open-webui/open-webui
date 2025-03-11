@@ -14,7 +14,12 @@ from typing import Optional, Union, List, Dict
 from open_webui.models.users import Users
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import WEBUI_SECRET_KEY, TRUSTED_SIGNATURE_KEY, STATIC_DIR, SRC_LOG_LEVELS
+from open_webui.env import (
+    WEBUI_SECRET_KEY,
+    TRUSTED_SIGNATURE_KEY,
+    STATIC_DIR,
+    SRC_LOG_LEVELS,
+)
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -67,7 +72,7 @@ def get_license_data(app, key):
     if key:
         try:
             res = requests.post(
-                "https://api.openwebui.com/api/v1/license",
+                "https://api.openwebui.com/api/v1/license/",
                 json={"key": key, "version": "1"},
                 timeout=5,
             )
@@ -78,11 +83,12 @@ def get_license_data(app, key):
                     if k == "resources":
                         for p, c in v.items():
                             globals().get("override_static", lambda a, b: None)(p, c)
-                    elif k == "user_count":
+                    elif k == "count":
                         setattr(app.state, "USER_COUNT", v)
-                    elif k == "webui_name":
+                    elif k == "name":
                         setattr(app.state, "WEBUI_NAME", v)
-
+                    elif k == "metadata":
+                        setattr(app.state, "LICENSE_METADATA", v)
                 return True
             else:
                 log.error(
@@ -200,7 +206,8 @@ def get_current_user(
         else:
             # Refresh the user's last active timestamp asynchronously
             # to prevent blocking the request
-            background_tasks.add_task(Users.update_user_last_active_by_id, user.id)
+            if background_tasks:
+                background_tasks.add_task(Users.update_user_last_active_by_id, user.id)
         return user
     else:
         raise HTTPException(

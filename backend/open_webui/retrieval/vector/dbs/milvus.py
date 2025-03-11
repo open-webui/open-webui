@@ -20,9 +20,9 @@ class MilvusClient:
     def __init__(self):
         self.collection_prefix = "open_webui"
         if MILVUS_TOKEN is None:
-            self.client = Client(uri=MILVUS_URI, database=MILVUS_DB)
+            self.client = Client(uri=MILVUS_URI, db_name=MILVUS_DB)
         else:
-            self.client = Client(uri=MILVUS_URI, database=MILVUS_DB, token=MILVUS_TOKEN)
+            self.client = Client(uri=MILVUS_URI, db_name=MILVUS_DB, token=MILVUS_TOKEN)
 
     def _result_to_get_result(self, result) -> GetResult:
         ids = []
@@ -202,7 +202,9 @@ class MilvusClient:
             log.debug(all_results)
             return self._result_to_get_result([all_results])
         except Exception as e:
-            log.exception(f"Error querying collection {collection_name} with limit {limit}: {e}")
+            log.exception(
+                f"Error querying collection {collection_name} with limit {limit}: {e}"
+            )
             return None
 
     def get(self, collection_name: str) -> Optional[GetResult]:

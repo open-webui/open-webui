@@ -22,6 +22,7 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 router = APIRouter()
 
+
 @router.get("/gravatar")
 async def get_gravatar(email: str, user=Depends(get_verified_user)):
     return get_gravatar_url(email)

@@ -154,9 +154,9 @@
 						}
 					}}
 				>
-					<option class=" text-gray-700" value="private" selected>Private</option>
+					<option class=" text-gray-700" value="private" selected>{$i18n.t('Private')}</option>
 					{#if publicSharingAllowed}
-						<option class=" text-gray-700" value="public" selected>Public</option>
+					<option class=" text-gray-700" value="public" selected>{$i18n.t('Public')}</option>
 					{/if}
 				</select>
 

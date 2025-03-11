@@ -202,7 +202,9 @@ class FunctionsTable:
 
             return user_settings["functions"]["valves"].get(id, {})
         except Exception as e:
-            log.exception(f"Error getting user values by id {id} and user id {user_id}: {e}")
+            log.exception(
+                f"Error getting user values by id {id} and user id {user_id}: {e}"
+            )
             return None
 
     def update_user_valves_by_id_and_user_id(
@@ -225,7 +227,9 @@ class FunctionsTable:
 
             return user_settings["functions"]["valves"][id]
         except Exception as e:
-            log.exception(f"Error updating user valves by id {id} and user_id {user_id}: {e}")
+            log.exception(
+                f"Error updating user valves by id {id} and user_id {user_id}: {e}"
+            )
             return None
 
     def update_function_by_id(self, id: str, updated: dict) -> Optional[FunctionModel]:
