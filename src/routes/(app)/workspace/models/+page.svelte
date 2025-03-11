@@ -18,6 +18,10 @@
 	});
 </script>
 
+<svelte:head>
+	<title>UOH-AI</title>
+</svelte:head>
+
 {#if $models !== null}
 	<Models />
 {/if}
