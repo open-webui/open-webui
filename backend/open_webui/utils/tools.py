@@ -53,6 +53,8 @@ def get_tools(
         extra_params["__id__"] = tool_id
         if hasattr(module, "valves") and hasattr(module, "Valves"):
             valves = Tools.get_tool_valves_by_id(tool_id) or {}
+            # overwrite global valves with model valves
+            valves = { **valves, **(extra_params.get("__model__", {}).get("info", {}).get("meta", {}).get("valves", {}).get("tools", {}).get(tool_id, {}))}
             module.valves = module.Valves(**valves)
 
         if hasattr(module, "UserValves"):
