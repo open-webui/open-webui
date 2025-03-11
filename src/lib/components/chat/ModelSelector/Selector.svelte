@@ -67,7 +67,10 @@
 
 	let ollamaVersion = null;
 
-	let selectedModelIdx = 0;
+	let selectedModelIdx = Math.max(
+		0,
+		items.findIndex((item) => item.value === value)
+	);
 
 	const fuse = new Fuse(
 		items.map((item) => {
@@ -287,8 +290,38 @@
 	bind:open={show}
 	onOpenChange={async () => {
 		searchValue = '';
-		selectedModelIdx = 0;
-		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
+		// Do NOT reset filters - keep the previously selected tag/connection type
+		
+		await tick();
+		
+		// First check if the currently selected model is visible in the filtered list
+		const selectedInFiltered = filteredItems.findIndex(item => item.value === value);
+		
+		if (selectedInFiltered >= 0) {
+			// The selected model is visible in the current filter
+			selectedModelIdx = selectedInFiltered;
+		} else {
+			// The selected model is not visible, default to first item in filtered list
+			selectedModelIdx = 0;
+		}
+		
+		await tick();
+		
+		// Scroll to the selected item if it exists in the current filtered view
+		const itemToScrollTo = selectedInFiltered >= 0
+			? document.querySelector(`[data-value="${value}"]`)
+			: document.querySelector('[data-arrow-selected="true"]');
+			
+		if (itemToScrollTo) {
+			const container = itemToScrollTo.closest('.overflow-y-auto');
+			if (container) {
+				const itemTop = itemToScrollTo.offsetTop;
+				const containerHeight = container.clientHeight;
+				const itemHeight = itemToScrollTo.clientHeight;
+				
+				container.scrollTop = itemTop - (containerHeight / 2) + (itemHeight / 2);
+			}
+		}
 	}}
 	closeFocus={false}
 >
@@ -433,6 +466,7 @@
 							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
 							: ''}"
 						data-arrow-selected={index === selectedModelIdx}
+						data-value={item.value}
 						on:click={() => {
 							value = item.value;
 							selectedModelIdx = index;
