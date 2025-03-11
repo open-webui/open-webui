@@ -1,4 +1,3 @@
-
 import logging
 import requests
 import httpx
@@ -11,12 +10,14 @@ import aiohttp
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
-class PdftotextLoader():
+
+class PdftotextLoader:
     def __init__(self, pdf_path: str, url: str, max_pages: int):
         self.pdf_path = pdf_path
-        url+="/api-ds-ocr/text_extract"
+        url += "/api-ds-ocr/text_extract"
         self.url = url
         self.max_pages = max_pages
+
     def load(self):
         with open(self.pdf_path, "rb") as f:
             pdf = f.read()
@@ -26,27 +27,22 @@ class PdftotextLoader():
         headers = {
             "accept": "application/json",
         }
-        files = {
-            "pdf_upload": pdf
-        }
-        data = {
-            'max_pages' : self.max_pages,
-            'header_footer': False
-        }
+        files = {"pdf_upload": pdf}
+        data = {"max_pages": self.max_pages, "header_footer": False}
 
-        r = requests.post(url=self.url, headers=headers, files=files, data=data, timeout=240)
+        r = requests.post(
+            url=self.url, headers=headers, files=files, data=data, timeout=240
+        )
         log.info(r)
         response = r.json()
         txt = response.get("text", "")
 
-        log.info(
-            "REQ_ID: %s Extracted text from pdf using OCR, len(txt) -> %s "
-        )
+        log.info(f"REQ_ID: %s Extracted text from pdf using OCR, {txt} -> %s ")
 
         return txt
 
 
-class PdftotextLoaderAsync():
+class PdftotextLoaderAsync:
     def __init__(self, pdf_path: str, url: str, max_pages: int):
         self.pdf_path = pdf_path
         self.base_url = url + "/api-ds-ocr"
@@ -55,34 +51,28 @@ class PdftotextLoaderAsync():
 
     def load(self):
         log.info(self.max_pages)
-        
+
         with open(self.pdf_path, "rb") as f:
             pdf = f.read()
-        
+
         headers = {
             "accept": "application/json",
         }
-        
-        files = {
-            "pdf_upload": pdf
-        }
-        
-        data = {
-            'max_pages': self.max_pages,
-            'header_footer': False
-        }
-        
-        r = requests.post(url=self.url, headers=headers, files=files, data=data, timeout=30)
+
+        files = {"pdf_upload": pdf}
+
+        data = {"max_pages": self.max_pages, "header_footer": False}
+
+        r = requests.post(
+            url=self.url, headers=headers, files=files, data=data, timeout=30
+        )
         log.info(r)
         response = r.json()
         task_id = response.get("task_id", "")
 
-        log.info(
-            f"Extracted text from pdf using OCR, task_id -> {task_id} "
-        )
+        log.info(f"Extracted text from pdf using OCR, task_id -> {task_id} ")
 
         return task_id
-                
 
     def check_status(self, task_id):
         """
@@ -94,10 +84,9 @@ class PdftotextLoaderAsync():
 
         response = r.json()
 
-        #self.task_cache[task_id] = response.get("status", "unknown")
+        # self.task_cache[task_id] = response.get("status", "unknown")
 
         return response
-        
 
     def get_text(self, task_id):
         """
@@ -108,4 +97,3 @@ class PdftotextLoaderAsync():
             if status_response and status_response.get("status") == "completed":
                 return status_response.get("result").get("text")
             time.sleep(20)  # Avoids CPU overload by waiting before rechecking
-

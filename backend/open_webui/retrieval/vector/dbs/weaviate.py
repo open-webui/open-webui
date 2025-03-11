@@ -1,0 +1,298 @@
+import logging
+
+import weaviate
+from weaviate.classes.query import Filter
+from weaviate.classes.init import Auth
+from weaviate.classes.config import Configure, Property, DataType
+from weaviate.classes.query import MetadataQuery
+
+from weaviate.util import generate_uuid5
+import re
+
+from typing import Optional, List, Union
+
+from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
+from open_webui.config import (
+    WEAVIATE_HTTP_HOST,
+    WEAVIATE_HTTP_PORT,
+    WEAVIATE_GRPC_HOST,
+    WEAVIATE_GRPC_PORT,
+    WEAVIATE_API_KEY,
+    RAG_OPENAI_API_KEY,
+)
+
+from open_webui.env import SRC_LOG_LEVELS
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["RAG"])
+
+
+class WeaviateClient:
+    def __init__(self):
+        self.client = weaviate.connect_to_custom(
+            http_host=WEAVIATE_HTTP_HOST,  # Hostname for the HTTP API connection
+            http_port=WEAVIATE_HTTP_PORT,  # Default is 80, WCD uses 443
+            http_secure=False,  # Whether to use https (secure) for the HTTP API connection
+            grpc_host=WEAVIATE_GRPC_HOST,  # Hostname for the gRPC API connection
+            grpc_port=WEAVIATE_GRPC_PORT,  # Default is 50051, WCD uses 443
+            grpc_secure=False,  # Whether to use a secure channel for the gRPC API connection
+            auth_credentials=Auth.api_key(
+                WEAVIATE_API_KEY
+            ),  # API key for authentication
+        )
+
+    def transform_collection_name(self, collection_name):
+        if not (collection_name.startswith('file') or collection_name.startswith('knowledge')):
+            collection_name = f"file-{collection_name}"
+        return re.sub(r"[^a-zA-Z0-9]", "", collection_name)
+
+    def has_collection(self, collection_name: str) -> bool:
+        """
+        Verifica se a collection (classe) já existe.
+        """
+        # try:
+        collection_names = self.client.collections.list_all()
+        return collection_name in collection_names
+        # except Exception:
+        #    return False
+
+    def _ensure_collection(self, collection_name: str):
+        """
+        Garante que a collection exista; se não, cria-a.
+        """
+        log.info(f"Collection para buscar: {collection_name}")
+        if not self.has_collection(collection_name):
+            log.info("Creating collection %s", collection_name)
+            self.create_collection(collection_name)
+
+    def create_collection(self, collection_name: str):
+        """
+        Cria a collection com uma configuração padrão:
+          - Utiliza o vectorizer 'text2vec-openai' baseado na propriedade 'text'
+          - Define as propriedades 'text' e 'metadata'
+        """
+        collection_name = self.transform_collection_name(collection_name)
+        self.client.collections.create(
+            collection_name,
+            vectorizer_config=[
+                Configure.NamedVectors.text2vec_openai(
+                    name="text",
+                    source_properties=["text"],
+                    vector_index_config=Configure.VectorIndex.hnsw(),
+                ),
+            ],
+            properties=[
+                Property(name="file_id", data_type=DataType.TEXT),
+                Property(name="text", data_type=DataType.TEXT),
+                Property(
+                    name="metadata",
+                    data_type=DataType.OBJECT,
+                    nested_properties=[
+                        Property(name="name", data_type=DataType.TEXT),
+                        Property(name="content_type", data_type=DataType.TEXT),
+                        Property(name="size", data_type=DataType.INT),  # Objeto vazio
+                        Property(name="collection_name", data_type=DataType.TEXT),
+                        Property(name="created_by", data_type=DataType.TEXT),
+                        Property(name="file_id", data_type=DataType.TEXT),
+                        Property(name="source", data_type=DataType.TEXT),
+                        Property(name="start_index", data_type=DataType.INT),
+                        Property(name="hash", data_type=DataType.TEXT),
+                        Property(name="embedding_config", data_type=DataType.TEXT),
+                        # Será armazenado como JSON string
+                    ],
+                ),
+            ],
+        )
+
+    def delete_collection(self, collection_name: str):
+        """
+        Exclui a collection (classe) do Weaviate.
+        """
+        collection_name = self.transform_collection_name(collection_name)
+        self.client.collections.delete(collection_name)
+
+    def insert(self, collection_name: str, items: List[VectorItem]):
+        """
+        Insere os itens na collection. Caso a collection não exista, ela será criada.
+        Cada item insere as propriedades 'file_id', 'text' e 'metadata'.
+        """
+        collection_name = self.transform_collection_name(collection_name)
+        self._ensure_collection(collection_name)
+        collection = self.client.collections.get(collection_name)
+
+        data_object = [
+            {
+                "file_id": item["id"],  # Identificador único
+                "text": item["text"],  # Conteúdo textual
+                "metadata": item["metadata"],  # Metadados (JSON)
+            }
+            for item in items
+        ]
+
+        with collection.batch.dynamic() as batch:
+            for data_row in data_object:
+                obj_uuid = generate_uuid5(data_row)
+                batch.add_object(properties=data_row, uuid=obj_uuid)
+                if batch.number_errors > 10:
+                    print("Batch import stopped due to excessive errors.")
+                    break
+
+        print(f"Inserted {len(items)} items into collection '{collection_name}'.")
+
+    def upsert(self, collection_name: str, items: List[VectorItem]):
+        """
+        Atualiza (ou insere, se não existir) os itens na collection.
+        Para cada item, tenta buscá-lo; se existir, realiza a atualização; caso contrário, insere-o.
+        """
+        collection_name = self.transform_collection_name(collection_name)
+        self._ensure_collection(collection_name)
+        coll = self.client.collections.get(collection_name)
+        for item in items:
+            data = {
+                "id": item["id"],
+                "text": item["text"],
+                "metadata": [item["metadata"]],
+            }
+            try:
+                # Tenta buscar o objeto pelo id
+                obj = coll.query.fetch_object_by_id(item["id"], include_vector=True)
+                if obj:
+                    coll.data.update(data)
+                else:
+                    coll.data.insert(data)
+            except Exception:
+                coll.data.insert(data)
+
+    def query(
+        self, collection_name: str, filter: dict, limit: Optional[int] = None
+    ) -> Optional[GetResult]:
+        """
+        Consulta os objetos da collection utilizando um filtro (no formato Weaviate)
+        e retorna os resultados encapsulados em GetResult.
+        """
+        collection_name = self.transform_collection_name(collection_name)
+        collection = self.client.collections.get(collection_name)
+
+        try:
+            if collection:
+                response = []
+                for key, value in filter.items():
+                    response.append(collection.query.fetch_object_by_id(value))
+
+                items = [
+                    r.objects for r in response
+                ]  # Supõe que a resposta contenha a lista de objetos em 'objects'
+                log.info(items)
+                if items:
+                    ids = [obj.properties.get("id", "") for obj in items]
+                    docs = [obj.properties.get("text", "") for obj in items]
+                    meta = [obj.properties.get("metadata", {}) for obj in items]
+                    return GetResult(ids=[ids], documents=[docs], metadatas=[meta])
+        except:
+            pass
+        return None
+
+    def get(
+        self, collection_name: str, limit: Optional[int] = None
+    ) -> Optional[GetResult]:
+        """
+        Retorna todos os objetos da collection (limitado a 1000 itens).
+        """
+        collection_name = self.transform_collection_name(collection_name)
+        collection = self.client.collections.get(collection_name)
+        response = collection.query.fetch_objects(limit=limit)
+        items = response.objects
+        if items:
+            ids = [obj.properties.get("file_id", "") for obj in items]
+            docs = [obj.properties.get("text", "") for obj in items]
+            meta = [obj.properties.get("metadata", {}) for obj in items]
+            return GetResult(ids=[ids], documents=[docs], metadatas=[meta])
+        return None
+
+    def search(
+        self, collection_name: str, query: str, limit: int
+    ) -> Optional[SearchResult]:
+        """
+        Realiza busca por similaridade para cada vetor fornecido, utilizando o recurso near_vector.
+        Retorna os resultados encapsulados em SearchResult, contendo ids, documentos,
+        metadados e as distâncias (se disponíveis).
+        """
+        collection_name = self.transform_collection_name(collection_name)
+        collection = self.client.collections.get(collection_name)
+        all_ids = []
+        all_docs = []
+        all_meta = []
+        all_dists = []
+
+        # Realiza consulta por similaridade usando o vetor
+        response = collection.query.hybrid(
+            query=query,
+            alpha=0.50,
+            return_metadata=MetadataQuery(score=True, explain_score=True),
+            limit=limit,
+        )
+
+        ids = []
+        distances = []
+        documents = []
+        metadatas = []
+
+
+        if not response:
+            return SearchResult(
+                ids=ids,
+                distances=distances,
+                documents=documents,
+                metadatas=metadatas,
+            )
+
+        items = response.objects
+        ids = [obj.properties.get("file_id", "") for obj in items]
+        docs = [obj.properties.get("text", "") for obj in items]
+        meta = [obj.properties.get("metadata", {}) for obj in items]
+        # Supõe que a distância esteja disponível em _additional.distance
+        dists = [
+            obj.metadata.score for obj in items
+        ]
+        all_ids.append(ids)
+        all_docs.append(docs)
+        all_meta.append(meta)
+        all_dists.append(dists)
+        if all_ids:
+            return SearchResult(
+                ids=all_ids, documents=all_docs, metadatas=all_meta, distances=all_dists
+            )
+        return None
+
+    def delete(
+        self,
+        collection_name: str,
+        ids: Optional[List[str]] = None,
+        filter: Optional[dict] = None,
+    ):
+        """
+        Remove objetos da collection com base em uma lista de ids ou utilizando um filtro.
+        Se um filtro for informado, realiza a consulta para obter os ids correspondentes e os deleta.
+        """
+        collection_name = self.transform_collection_name(collection_name)
+        collection = self.client.collections.get(collection_name)
+
+        if ids:
+            for obj_id in ids:
+                collection.data.delete(uuid=obj_id)
+        elif filter:
+            for idx, f_ in filter.items():
+                log.info(f"Filer: {f_}")
+            collection.data.delete_many(
+                where=Filter.by_property(idx).contains_any([f_])
+            )
+
+    def reset(self):
+        """
+        Remove todas as collections do Weaviate.
+        CUIDADO: Essa operação apaga TODOS os dados.
+        """
+
+        collections = self.client.collections.list_all()
+        for coll in collections:
+            self.client.collections.delete(coll)

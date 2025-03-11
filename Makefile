@@ -38,7 +38,7 @@ update:
 
 build:
 	@echo "--> Docker build"
-	@docker build -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.16-async .
+	@docker build -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.16-weaviate .
 
 create-buildx:
 	@docker buildx create --use

@@ -5,7 +5,16 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status, BackgroundTasks
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+    BackgroundTasks,
+)
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
@@ -15,7 +24,11 @@ from open_webui.models.files import (
     FileModelResponse,
     Files,
 )
-from open_webui.routers.retrieval import ProcessFileForm, process_file, process_file_async
+from open_webui.routers.retrieval import (
+    ProcessFileForm,
+    process_file,
+    process_file_async,
+)
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
@@ -34,13 +47,9 @@ from threading import Lock
 import asyncio
 
 
-
 @router.post("/", response_model=FileModelResponse)
 def upload_file(
-    request: Request,
-    file: UploadFile = File(...),
-    user=Depends(get_verified_user),
-    file_metadata: dict = {},
+    request: Request, file: UploadFile = File(...), user=Depends(get_verified_user)
 ):
     log.info(f"file.content_type: {file.content_type}")
     try:
@@ -64,7 +73,6 @@ def upload_file(
                         "name": name,
                         "content_type": file.content_type,
                         "size": len(contents),
-                        "data": file_metadata,
                     },
                 }
             ),
@@ -98,6 +106,7 @@ def upload_file(
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
 
+
 ############################
 # Async Files routes
 ############################
@@ -116,11 +125,10 @@ async def process_tasks(request, background_tasks, form_data, user, task_id):
     with cache_lock:
         task = tasks_cache.get(task_id, {})
 
-    task['status'] = "Processing PDF..."
+    task["status"] = "Processing PDF..."
     text = await process_file_async(request, background_tasks, form_data, task_id, user)
-    task['text'] = text
-    task['status'] = "Processing Completed"
-
+    task["text"] = text
+    task["status"] = "Processing Completed"
 
 
 @router.post("/async")
@@ -128,7 +136,7 @@ async def upload_file_async(
     request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    user=Depends(get_verified_user)
+    user=Depends(get_verified_user),
 ):
     global tasks_cache
     log.info(f"file.content_type: {file.content_type}")
@@ -139,11 +147,7 @@ async def upload_file_async(
     # replace filename with uuid
     task_id = str(uuid.uuid4())
     with cache_lock:
-        tasks_cache[task_id] = {
-            "status": "queued",
-            "result": None,
-            "error": None
-        }
+        tasks_cache[task_id] = {"status": "queued", "result": None, "error": None}
     name = filename
     filename = f"{id}_{filename}"
     contents, file_path = Storage.upload_file(file.file, filename)
@@ -164,7 +168,6 @@ async def upload_file_async(
         ),
     )
 
-
     background_tasks.add_task(
         process_tasks,
         request,
@@ -173,7 +176,7 @@ async def upload_file_async(
         user,
         task_id,
     )
-    #file_item = Files.get_file_by_id(id=id)
+    # file_item = Files.get_file_by_id(id=id)
 
     return {"task_id": task_id}
 
@@ -181,6 +184,7 @@ async def upload_file_async(
 ############################
 # Get task_status
 ############################
+
 
 # Rota opcional para verificar status da task
 @router.get("/task_status/{task_id}")
@@ -196,11 +200,13 @@ async def get_task_status(task_id: str):
         "task": task,
     }
 
+
 @router.get("/get_tasks")
 async def get_task_status():
     if tasks_cache:
         return {"task_ids": list(tasks_cache.keys())}  # Retorna apenas os task_ids
     return {"message": "No tasks found"}
+
 
 ############################
 # List Files

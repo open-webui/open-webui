@@ -16,6 +16,10 @@ elif VECTOR_DB == "pgvector":
     from open_webui.retrieval.vector.dbs.pgvector import PgvectorClient
 
     VECTOR_DB_CLIENT = PgvectorClient()
+elif VECTOR_DB == "weaviate":
+    from open_webui.retrieval.vector.dbs.weaviate import WeaviateClient
+
+    VECTOR_DB_CLIENT = WeaviateClient()
 else:
     from open_webui.retrieval.vector.dbs.chroma import ChromaClient
 

@@ -1494,7 +1494,7 @@ Ensure that the tools are effectively utilized to achieve the highest-quality an
 # Vector Database
 ####################################
 
-VECTOR_DB = os.environ.get("VECTOR_DB", "chroma")
+VECTOR_DB = os.environ.get("VECTOR_DB", "weaviate")
 
 # Chroma
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
@@ -1542,6 +1542,15 @@ PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
     os.environ.get("PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
 )
 
+
+# Weaviate
+WEAVIATE_HTTP_HOST = os.environ.get("WEAVIATE_HTTP_HOST", "54.226.0.173")
+WEAVIATE_HTTP_PORT = 8080
+WEAVIATE_GRPC_HOST = WEAVIATE_HTTP_HOST
+WEAVIATE_GRPC_PORT = 50051
+WEAVIATE_API_KEY = os.environ.get("WEAVIATE_API_KEY", "")
+
+
 ####################################
 # Information Retrieval (RAG)
 ####################################
@@ -1582,7 +1591,9 @@ TIKA_SERVER_URL = PersistentConfig(
 PDFTOTEXT_SERVER_URL = PersistentConfig(
     "PDFTOTEXT_SERVER_URL",
     "rag.pdftotext_server_url",
-    os.getenv("PDFTOTEXT_SERVER_URL", "http://api-ocr"),  # Default for sidecar deployment
+    os.getenv(
+        "PDFTOTEXT_SERVER_URL", "http://api-ocr"
+    ),  # Default for sidecar deployment
 )
 
 MAXPAGES_PDFTOTEXT = PersistentConfig(

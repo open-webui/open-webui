@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Union
 import asyncio
+import re
 
 from fastapi import (
     Depends,
@@ -35,8 +36,6 @@ from langchain_core.documents import Document
 from open_webui.models.files import FileModel, Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
-
-
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 
 # Document loaders
@@ -103,7 +102,6 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 #
 ##########################################
 
-
 def get_ef(
     engine: str,
     embedding_model: str,
@@ -157,6 +155,10 @@ def get_rf(
                 raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
     return rf
 
+def transform_collection_name(collection_name):
+    if not (collection_name.startswith('File') or collection_name.startswith('Knowledge')):
+        collection_name = f"File-{collection_name}"
+    return re.sub(r"[^a-zA-Z0-9]", "", collection_name)
 
 ##########################################
 #
@@ -891,13 +893,16 @@ def process_file(
         engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE
 
         if collection_name is None:
-            collection_name = f"file-{file.id}"
+            collection_name = transform_collection_name(file.id)
+        else:
+            collection_name = transform_collection_name(collection_name)
+        log.info(f"Collection: {collection_name}")
 
         if form_data.content:
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
 
-            VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
+            VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
 
             docs = [
                 Document(
@@ -918,7 +923,7 @@ def process_file(
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
             result = VECTOR_DB_CLIENT.query(
-                collection_name=f"file-{file.id}", filter={"file_id": file.id}
+                collection_name=collection_name, filter={"file_id": file.id}
             )
 
             if result is not None and len(result.ids[0]) > 0:
@@ -947,7 +952,10 @@ def process_file(
         else:
             # Process the file and save the content
             # Usage: /files/
-            is_pdf2text = engine == "pdftotext" and file.meta.get("content_type") == "application/pdf"
+            is_pdf2text = (
+                engine == "pdftotext"
+                and file.meta.get("content_type") == "application/pdf"
+            )
             file_path = file.path
             if file_path:
                 file_path = Storage.get_file(file_path)
@@ -1042,12 +1050,13 @@ def process_file(
                 detail=str(e),
             )
 
+
 @router.post("/process/file_async")
 async def process_file_async(
     request: Request,
     background_tasks: BackgroundTasks,
     form_data: ProcessFileForm,
-    task_id : str,
+    task_id: str,
     user=Depends(get_verified_user),
 ):
     try:
@@ -1055,10 +1064,12 @@ async def process_file_async(
 
         collection_name = form_data.collection_name
         engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE
-        is_pdf2text = engine == "pdftotext" and file.meta.get("content_type") == "application/pdf"
+        is_pdf2text = (
+            engine == "pdftotext" and file.meta.get("content_type") == "application/pdf"
+        )
 
         if collection_name is None:
-            collection_name = f"file-{file.id}"
+            collection_name = f"File-{file.id}"
 
         # Process the file and save the content
         # Usage: /files/
@@ -1073,19 +1084,26 @@ async def process_file_async(
                 MAXPAGES_PDFTOTEXT=request.app.state.config.MAXPAGES_PDFTOTEXT,
             )
             if is_pdf2text:
-                task_id = loader.load(file.filename, file.meta.get("content_type"), file_path, isasync=True)
+                task_id = loader.load(
+                    file.filename,
+                    file.meta.get("content_type"),
+                    file_path,
+                    isasync=True,
+                )
 
                 text_content = loader.loader.get_text(task_id)
 
-                docs = [Document(
-                    page_content=text_content,
-                    metadata={
-                        "name": file.filename,
-                        "created_by": file.user_id,
-                        "file_id": file.id,
-                        "source": file.filename,
-                    },
-                )]
+                docs = [
+                    Document(
+                        page_content=text_content,
+                        metadata={
+                            "name": file.filename,
+                            "created_by": file.user_id,
+                            "file_id": file.id,
+                            "source": file.filename,
+                        },
+                    )
+                ]
 
                 log.info(f"OCR Task {task_id} created successfully.")
 
@@ -1122,7 +1140,6 @@ async def process_file_async(
 
         if not is_pdf2text:
             text_content = " ".join([doc.page_content for doc in docs])
-
 
         Files.update_file_data_by_id(
             file.id,
@@ -1163,7 +1180,6 @@ async def process_file_async(
         except Exception as e:
             raise e
 
-
     except Exception as e:
         log.exception(e)
         if "No pandoc was found" in str(e):
@@ -1176,6 +1192,7 @@ async def process_file_async(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e),
             )
+
 
 class ProcessTextForm(BaseModel):
     name: str

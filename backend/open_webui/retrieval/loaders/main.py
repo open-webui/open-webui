@@ -126,7 +126,11 @@ class Loader:
         self.loader = None
 
     def load(
-        self, filename: str, file_content_type: str, file_path: str, isasync: bool = False
+        self,
+        filename: str,
+        file_content_type: str,
+        file_path: str,
+        isasync: bool = False,
     ) -> list[Document]:
         self.loader = self._get_loader(filename, file_content_type, file_path, isasync)
 
@@ -134,11 +138,7 @@ class Loader:
             docs = self.loader.load()
 
             if type(docs) == str:
-                return [
-                Document(
-                        page_content=docs
-                    )
-                ]
+                return [Document(page_content=docs)]
 
             return [
                 Document(
@@ -149,7 +149,13 @@ class Loader:
         else:
             return self.loader.load()
 
-    def _get_loader(self, filename: str, file_content_type: str, file_path: str, isasync: bool = False):
+    def _get_loader(
+        self,
+        filename: str,
+        file_content_type: str,
+        file_path: str,
+        isasync: bool = False,
+    ):
         file_ext = filename.split(".")[-1].lower()
 
         if self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
@@ -172,7 +178,11 @@ class Loader:
                         max_pages=self.kwargs.get("MAXPAGES_PDFTOTEXT"),
                     )
                 else:
-                    loader = PdftotextLoader(file_path, url=self.kwargs.get("PDFTOTEXT_SERVER_URL"), max_pages = self.kwargs.get("MAXPAGES_PDFTOTEXT"))
+                    loader = PdftotextLoader(
+                        file_path,
+                        url=self.kwargs.get("PDFTOTEXT_SERVER_URL"),
+                        max_pages=self.kwargs.get("MAXPAGES_PDFTOTEXT"),
+                    )
             else:
                 loader = PyPDFLoader(
                     file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
