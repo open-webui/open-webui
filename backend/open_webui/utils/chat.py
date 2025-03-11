@@ -397,8 +397,12 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
         valves = Functions.get_function_valves_by_id(action_id)
-        model_valves = model.get("info", {}).get("meta", {}).get("valves", {}).get(action_id, {})
-        function_module.valves = function_module.Valves(**(valves if valves else {}), **model_valves)
+        model_valves = (
+            model.get("info", {}).get("meta", {}).get("valves", {}).get(action_id, {})
+        )
+        function_module.valves = function_module.Valves(
+            **(valves if valves else {}), **model_valves
+        )
 
     if hasattr(function_module, "action"):
         try:
