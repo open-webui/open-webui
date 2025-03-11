@@ -15,8 +15,6 @@ import sys
 import json
 import datetime
 import subprocess
-import platform
-import shutil
 import tempfile
 import time
 
@@ -25,7 +23,7 @@ try:
 except ImportError:
     print("ERROR: Required package 'requests' is not installed")
     print("Installing requests package...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
+    subprocess.check_call(["python", "-m", "pip", "install", "requests"])
     import requests
 
 # Global constants
@@ -216,7 +214,7 @@ def create_conda_env(
         conda_path: Path to the conda executable
         env_name: Name of the conda environment
         python_version: Python version to install
-        install_dir: Optional installation directory for the environment
+        install_dir: Optional installation directory for the environment (not used for environment location)
 
     Returns:
         tuple: (bool, str) - (success, env_path)
@@ -228,38 +226,9 @@ def create_conda_env(
     try:
         log(f"Creating a Python {python_version} environment named: {env_name}")
 
-        # Create the conda environment
+        # Always create a named environment
         cmd = [conda_path, "create", "-n", env_name, f"python={python_version}", "-y"]
-
-        # If install_dir is provided, create the environment in that directory
-        if install_dir:
-            env_path = os.path.join(install_dir, env_name)
-            cmd = [
-                conda_path,
-                "create",
-                "-p",
-                env_path,
-                f"python={python_version}",
-                "-y",
-            ]
-        else:
-            # Get the conda environments directory
-            conda_info = subprocess.run(
-                [conda_path, "info", "--json"],
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if conda_info.returncode == 0:
-                conda_info_json = json.loads(conda_info.stdout)
-                env_path = os.path.join(conda_info_json["envs_dirs"][0], env_name)
-            else:
-                # Fallback to default location
-                env_path = os.path.join(
-                    os.path.dirname(os.path.dirname(conda_path)), "envs", env_name
-                )
-
-        log(f"Creating conda environment at: {env_path}")
+        
         log(f"Running command: {' '.join(cmd)}")
 
         result = subprocess.run(cmd, capture_output=True, text=True, check=False)
@@ -270,12 +239,27 @@ def create_conda_env(
 
         log(f"Successfully created conda environment: {env_name}")
 
-        # Determine the Python executable path in the conda environment
-        if install_dir:
-            python_path = os.path.join(env_path, "python.exe")
+        # Get the conda environments directory
+        conda_info = subprocess.run(
+            [conda_path, "info", "--json"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        
+        if conda_info.returncode == 0:
+            conda_info_json = json.loads(conda_info.stdout)
+            env_path = os.path.join(conda_info_json["envs_dirs"][0], env_name)
         else:
-            python_path = os.path.join(env_path, "python.exe")
+            # Fallback to default location
+            env_path = os.path.join(
+                os.path.dirname(os.path.dirname(conda_path)), "envs", env_name
+            )
 
+        log(f"Conda environment created at: {env_path}")
+
+        # Determine the Python executable path in the conda environment
+        python_path = os.path.join(env_path, "python.exe")
         log(f"Python executable in conda environment: {python_path}")
 
         return True, python_path
@@ -304,71 +288,113 @@ def download_latest_wheel(output_folder, output_filename=None):
     # Create output folder if it doesn't exist
     os.makedirs(output_folder, exist_ok=True)
 
-    # First try to get the latest release info from GitHub API
+    # Get the latest release info from GitHub API
     api_url = "https://api.github.com/repos/aigdat/open-webui/releases/latest"
     log(f"Fetching latest release information from: {api_url}")
 
     try:
         response = requests.get(api_url, timeout=30)
+        response.raise_for_status()  # Raise exception for HTTP errors
 
-        if response.status_code == 200:
-            release_info = response.json()
+        release_info = response.json()
+        log(f"Latest release: {release_info.get('tag_name', 'unknown')}")
+        log(f"Release date: {release_info.get('published_at', 'unknown')}")
 
-            # Find the first .whl file in the assets
-            wheel_asset = None
-            for asset in release_info.get("assets", []):
-                if asset["name"].endswith(".whl"):
-                    wheel_asset = asset
-                    break
-
-            if wheel_asset:
-                wheel_url = wheel_asset["browser_download_url"]
-                wheel_name = wheel_asset["name"]
-                log(f"Found wheel file: {wheel_name}")
-                log(f"Download URL: {wheel_url}")
-
-                # Use provided output filename or the original filename
-                final_filename = output_filename if output_filename else wheel_name
-                output_path = os.path.join(output_folder, final_filename)
-
-                # Download the wheel file
-                log(f"Downloading wheel file to: {output_path}")
-                wheel_response = requests.get(wheel_url, timeout=60)
-
-                if wheel_response.status_code == 200:
-                    with open(output_path, "wb") as f:
-                        f.write(wheel_response.content)
-
-                    # Verify file size
-                    file_size = os.path.getsize(output_path)
-                    log(f"Downloaded file size: {file_size} bytes")
-
-                    if file_size < 10000:
-                        log(
-                            "ERROR: Downloaded file is too small, likely not a valid wheel file"
-                        )
-                        return None
-
-                    log(f"Successfully downloaded wheel file to: {output_path}")
-                    return output_path
-                else:
-                    log(
-                        f"Failed to download wheel file. Status code: {wheel_response.status_code}"
-                    )
+        # Check if there are assets in the release
+        assets = release_info.get("assets", [])
+        if not assets:
+            log("No assets found in the latest release")
+            # If no assets, try to get the tarball or zipball URL
+            tarball_url = release_info.get("tarball_url")
+            zipball_url = release_info.get("zipball_url")
+            
+            if zipball_url:
+                log(f"Using zipball URL: {zipball_url}")
+                output_path = os.path.join(output_folder, "open-webui-latest.zip")
+                
+                # Download the zipball
+                zip_response = requests.get(zipball_url, timeout=60)
+                zip_response.raise_for_status()
+                
+                with open(output_path, "wb") as f:
+                    f.write(zip_response.content)
+                
+                log(f"Successfully downloaded zipball to: {output_path}")
+                return output_path
+            
+            elif tarball_url:
+                log(f"Using tarball URL: {tarball_url}")
+                output_path = os.path.join(output_folder, "open-webui-latest.tar.gz")
+                
+                # Download the tarball
+                tar_response = requests.get(tarball_url, timeout=60)
+                tar_response.raise_for_status()
+                
+                with open(output_path, "wb") as f:
+                    f.write(tar_response.content)
+                
+                log(f"Successfully downloaded tarball to: {output_path}")
+                return output_path
             else:
-                log("No wheel file found in the latest release assets")
-        else:
-            log(
-                f"Failed to fetch release information. Status code: {response.status_code}"
-            )
-            try:
-                error_info = response.json()
-                log(f"Error details: {json.dumps(error_info, indent=2)}")
-            except Exception as e:
-                log(f"Response content: {response.text} with error: {str(e)}")
+                log("No download URLs found in the release")
+                return None
 
+        # Find wheel files or any installable assets
+        wheel_assets = [asset for asset in assets if asset["name"].endswith(".whl")]
+        zip_assets = [asset for asset in assets if asset["name"].endswith(".zip")]
+        
+        # Prioritize wheel files, then zip files
+        download_asset = None
+        if wheel_assets:
+            download_asset = wheel_assets[0]
+            log(f"Found wheel file: {download_asset['name']}")
+        elif zip_assets:
+            download_asset = zip_assets[0]
+            log(f"Found zip file: {download_asset['name']}")
+        else:
+            # If no wheel or zip, use the first asset
+            if assets:
+                download_asset = assets[0]
+                log(f"No wheel or zip files found. Using first available asset: {download_asset['name']}")
+            else:
+                log("No assets found in the release")
+                return None
+
+        if download_asset:
+            download_url = download_asset["browser_download_url"]
+            asset_name = download_asset["name"]
+            log(f"Download URL: {download_url}")
+
+            # Use provided output filename or the original filename
+            final_filename = output_filename if output_filename else asset_name
+            output_path = os.path.join(output_folder, final_filename)
+
+            # Download the file
+            log(f"Downloading file to: {output_path}")
+            file_response = requests.get(download_url, timeout=60)
+            file_response.raise_for_status()
+
+            with open(output_path, "wb") as f:
+                f.write(file_response.content)
+
+            # Verify file size
+            file_size = os.path.getsize(output_path)
+            log(f"Downloaded file size: {file_size} bytes")
+
+            if file_size < 10000:
+                log("WARNING: Downloaded file is too small, might not be a valid file")
+                log("Continuing anyway as the file might be legitimate")
+
+            log(f"Successfully downloaded file to: {output_path}")
+            return output_path
+        else:
+            log("No suitable assets found in the latest release")
+            return None
+
+    except requests.exceptions.RequestException as e:
+        log(f"Error during API request: {str(e)}")
     except Exception as e:
-        log(f"Error during API request or download: {str(e)}")
+        log(f"Unexpected error during download: {str(e)}")
 
     return None
 
@@ -397,7 +423,7 @@ def install_wheel(wheel_path, python_path):
 
         # Run pip install command with real-time output
         process = subprocess.Popen(
-            [python_path, "-m", "pip", "install", wheel_path, "--verbose"],
+            ["python", "-m", "pip", "install", wheel_path, "--verbose"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -487,125 +513,6 @@ def create_shortcuts(env_path):
         return False
 
 
-def safely_remove_directory(directory_path, max_retries=5, retry_delay=3):
-    """
-    Safely removes a directory with retries and better error handling.
-
-    Args:
-        directory_path: Path to the directory to remove
-        max_retries: Maximum number of retries
-        retry_delay: Delay between retries in seconds
-
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    log(f"Attempting to remove directory: {directory_path}")
-
-    for attempt in range(max_retries):
-        try:
-            if os.path.exists(directory_path):
-                # Try to close any open file handles
-                if attempt > 0:
-                    log(
-                        f"Retry attempt {attempt+1}/{max_retries}. Trying to release file handles..."
-                    )
-                    # Run garbage collection to release file handles
-                    import gc
-
-                    gc.collect()
-                    # On Windows, try to run a process to unlock files
-                    try:
-                        # List all Python processes
-                        log("Listing Python processes that might be locking files:")
-                        result = subprocess.run(
-                            ["tasklist", "/fi", "imagename eq python.exe"],
-                            capture_output=True,
-                            text=True,
-                            check=False,
-                        )
-                        log(result.stdout)
-
-                        # Try to kill Python processes
-                        log("Attempting to terminate Python processes...")
-                        subprocess.run(
-                            ["taskkill", "/F", "/IM", "python.exe", "/T"],
-                            capture_output=True,
-                            check=False,
-                        )
-                    except Exception as e:
-                        log(f"Error while trying to terminate processes: {str(e)}")
-
-                # Try to remove the directory
-                log(
-                    f"Attempting to remove directory (attempt {attempt+1}/{max_retries}): {directory_path}"
-                )
-
-                # Try a different approach on Windows
-                if platform.system() == "Windows":
-                    try:
-                        # First try with shutil
-                        shutil.rmtree(directory_path)
-                    except Exception as e1:
-                        log(f"shutil.rmtree failed: {str(e1)}")
-                        try:
-                            # Try with system command as fallback
-                            log("Trying system command to remove directory...")
-                            subprocess.run(
-                                ["rd", "/s", "/q", directory_path], check=False
-                            )
-                        except Exception as e2:
-                            log(f"System command failed: {str(e2)}")
-                            raise e1
-                else:
-                    shutil.rmtree(directory_path)
-
-                # Verify it was removed
-                if not os.path.exists(directory_path):
-                    log(f"Successfully removed directory: {directory_path}")
-                    return True
-                else:
-                    log(
-                        f"Directory still exists after removal attempt: {directory_path}"
-                    )
-            else:
-                log(f"Directory does not exist, nothing to remove: {directory_path}")
-                return True
-
-        except Exception as e:
-            log(
-                f"Error removing directory (attempt {attempt+1}/{max_retries}): {str(e)}"
-            )
-
-            # Check if it's a file access error
-            if "being used by another process" in str(e):
-                log(
-                    "Files are locked by another process. Trying to identify processes..."
-                )
-                try:
-                    # Try to list processes that might be using the files
-                    subprocess.run(
-                        ["handle", directory_path], capture_output=True, check=False
-                    )
-                except Exception:
-                    # handle.exe might not be available, so we'll just continue
-                    pass
-
-                log(
-                    "Please close any applications that might be using files in the directory."
-                )
-                log(
-                    "Common applications to check: Command Prompt, PowerShell, Explorer, Python, etc."
-                )
-
-            # Wait before retrying
-            if attempt < max_retries - 1:
-                log(f"Waiting {retry_delay} seconds before retrying...")
-                time.sleep(retry_delay)
-
-    log(f"Failed to remove directory after {max_retries} attempts: {directory_path}")
-    return False
-
-
 def main():
     """Main installation function."""
     # Set up argument parser
@@ -618,12 +525,6 @@ def main():
         ),
         type=str,
         help=f"Installation directory (default: %LOCALAPPDATA%\\{PRODUCT_NAME_CONCAT})",
-    )
-    parser.add_argument(
-        "--no-shortcuts",
-        dest="no_shortcuts",
-        action="store_true",
-        help="Do not create desktop shortcuts",
     )
     parser.add_argument(
         "-y",
@@ -644,12 +545,6 @@ def main():
         action="store_true",
         help="Enable detailed debug logging",
     )
-    parser.add_argument(
-        "--skip-cleanup",
-        dest="skip_cleanup",
-        action="store_true",
-        help="Skip cleanup operations to avoid file access issues",
-    )
 
     # Parse the arguments
     args = parser.parse_args()
@@ -669,7 +564,7 @@ def main():
     log(f"Installing {PRODUCT_NAME} to: {install_dir}")
     log(f"Using conda environment: {CONDA_ENV_NAME}")
     log(f"Python version: {sys.version}")
-    log(f"Platform: {platform.platform()}")
+    log(f"Windows version: {os.environ.get('OS', 'Unknown')}")
     log(f"Arguments: {vars(args)}")
 
     try:
@@ -677,98 +572,10 @@ def main():
         if (
             os.path.exists(install_dir)
             and os.listdir(install_dir)
-            and not args.skip_cleanup
         ):
             log(f"An existing installation was found at: {install_dir}")
-
-            if not args.yes and not args.force:
-                user_input = input(
-                    "Would you like to remove it and continue with the installation? (y/n): "
-                )
-                if user_input.lower() != "y":
-                    log("Installation cancelled by user")
-                    return 1
-            else:
-                log(
-                    "Automatically removing existing installation due to '--yes' or '--force' flag"
-                )
-
-            # Remove existing installation
-            log("Removing existing installation...")
-
-            # Try to remove the conda environment first
-            conda_installed, conda_path = check_conda()
-            if conda_installed:
-                log(f"Removing conda environment: {CONDA_ENV_NAME}")
-                subprocess.run(
-                    [conda_path, "env", "remove", "-n", CONDA_ENV_NAME, "-y"],
-                    check=False,
-                )
-
-            # List directory contents before removal
-            if args.debug:
-                log("Directory contents before removal:")
-                try:
-                    for root, dirs, files in os.walk(install_dir):
-                        log(f"Directory: {root}")
-                        for d in dirs:
-                            log(f"  Dir: {d}")
-                        for f in files:
-                            log(f"  File: {f}")
-                except Exception as e:
-                    log(f"Error listing directory contents: {str(e)}")
-
-            # Remove the installation directory
-            if not safely_remove_directory(install_dir):
-                if args.force:
-                    log(
-                        "WARNING: Could not remove existing installation directory, but continuing due to --force flag"
-                    )
-                    # Try to create the directory again
-                    try:
-                        # Try to remove any problematic files individually
-                        log("Attempting to remove individual files...")
-                        for root, dirs, files in os.walk(install_dir, topdown=False):
-                            for name in files:
-                                try:
-                                    file_path = os.path.join(root, name)
-                                    log(f"Removing file: {file_path}")
-                                    os.remove(file_path)
-                                except Exception as e:
-                                    log(f"Failed to remove file {name}: {str(e)}")
-
-                            for name in dirs:
-                                try:
-                                    dir_path = os.path.join(root, name)
-                                    log(f"Removing directory: {dir_path}")
-                                    os.rmdir(dir_path)
-                                except Exception as e:
-                                    log(f"Failed to remove directory {name}: {str(e)}")
-
-                        # Try to recreate the directory
-                        os.makedirs(install_dir, exist_ok=True)
-                    except Exception as e:
-                        log(f"Error during forced cleanup: {str(e)}")
-                else:
-                    log("ERROR: Failed to remove existing installation directory")
-                    log("Please close any applications using AMD AI UX and try again")
-                    log(
-                        "You can also use the --force flag to attempt to continue anyway"
-                    )
-                    log("Or use --skip-cleanup to skip removal of existing files")
-                    return 1
-            else:
-                # Recreate the directory
-                os.makedirs(install_dir, exist_ok=True)
-                log("Deleted all contents of install directory")
-        elif (
-            os.path.exists(install_dir)
-            and os.listdir(install_dir)
-            and args.skip_cleanup
-        ):
-            log(f"An existing installation was found at: {install_dir}")
-            log("Skipping cleanup as requested with --skip-cleanup flag")
-            log("WARNING: This may cause conflicts with existing files")
+            log("Continuing with installation without removing existing files")
+            log("This will add new files alongside existing ones")
 
         # Check if conda is installed
         conda_installed, conda_path = check_conda()
@@ -793,7 +600,7 @@ def main():
 
         # Create conda environment
         env_success, python_path = create_conda_env(
-            conda_path, CONDA_ENV_NAME, PYTHON_VERSION, install_dir
+            conda_path, CONDA_ENV_NAME, PYTHON_VERSION
         )
 
         if not env_success:
@@ -827,12 +634,6 @@ def main():
             )
             return 1
 
-        # Create shortcuts if not disabled
-        if not args.no_shortcuts:
-            shortcut_success = create_shortcuts(python_path)
-            if not shortcut_success:
-                log("Warning: Failed to create shortcuts")
-
         # Installation completed successfully
         log("*** INSTALLATION COMPLETED ***")
         log(f"{PRODUCT_NAME} installation completed successfully!")
@@ -841,10 +642,6 @@ def main():
         log("  open-webui")
         log("Or by using the desktop shortcut if created")
 
-        if args.skip_cleanup:
-            log(
-                "NOTE: Cleanup was skipped as requested. Some temporary files may remain."
-            )
 
         return 0
     except Exception as e:
