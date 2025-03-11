@@ -1133,7 +1133,7 @@
 	"Warning": "",
 	"Warning:": "",
 	"Warning: Enabling this will allow users to upload arbitrary code on the server.": "",
-	"Public Sharing": "",
+	"Public Sharing": "Public Sharing",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "",
 	"Warning: Jupyter execution enables arbitrary code execution, posing severe security risks—proceed with extreme caution.": "",
 	"Web": "",
