@@ -32,7 +32,7 @@ PRODUCT_NAME_CONCAT = "raux"
 GITHUB_REPO = "https://github.com/aigdat/open-webui.git"
 CONDA_ENV_NAME = "raux_env"
 PYTHON_VERSION = "3.11"
-ICON_FILE = "gaia.ico"
+ICON_FILE = "raux.ico"
 
 # Global log file path
 LOG_FILE_PATH = None
@@ -53,9 +53,6 @@ def log(message, print_to_console=True):
     # Print to console if requested
     if print_to_console:
         print(formatted_message)
-
-    # Debugging: Print log file path
-    print(f"Log file path: {LOG_FILE_PATH}")
 
     # Write to log file if it's set
     if LOG_FILE_PATH:
