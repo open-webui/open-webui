@@ -162,6 +162,10 @@
 							{item.description}
 						</div>
 
+						<div class="text-xs text-gray-500 mt-1">
+							{item.files ? item.files.length : 0} Documents
+						</div>
+
 						<div class="mt-3 flex justify-between">
 							<div class="text-xs text-gray-500">
 								<Tooltip
