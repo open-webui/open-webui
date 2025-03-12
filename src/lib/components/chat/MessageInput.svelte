@@ -104,6 +104,24 @@
 		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
 	);
 
+    $: areSelectedModelsWebSearchCapable = selectedModelIds.every(
+      (id) =>
+        $models.find((m) => m.id === id)?.info?.meta?.capabilities?.websearch ?? false
+    );
+    $: console.log('areSelectedModelsWebSearchCapable: ', areSelectedModelsWebSearchCapable);
+
+    $: areSelectedModelsCodeExecutionCapable = selectedModelIds.every(
+      (id) =>
+        $models.find((m) => m.id === id)?.info?.meta?.capabilities?.codeexecution ?? false
+    );
+    $: console.log('areSelectedModelsCodeExecutionCapable: ', areSelectedModelsCodeExecutionCapable);
+
+    $: areSelectedModelsImageGenerationCapable = selectedModelIds.every(
+      (id) =>
+        $models.find((m) => m.id === id)?.info?.meta?.capabilities?.imagegeneration ?? false
+    );
+    $: console.log('areSelectedModelsImageGenerationCapable: ', areSelectedModelsImageGenerationCapable);
+
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
 		element.scrollTo({
@@ -1170,7 +1188,7 @@
 
 										<div class="flex gap-0.5 items-center overflow-x-auto scrollbar-none flex-1">
 											{#if $_user}
-												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
+												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search) && areSelectedModelsWebSearchCapable}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
 															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
@@ -1189,7 +1207,7 @@
 													</Tooltip>
 												{/if}
 
-												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
+												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation) && areSelectedModelsImageGenerationCapable}
 													<Tooltip content={$i18n.t('Generate an image')} placement="top">
 														<button
 															on:click|preventDefault={() =>
@@ -1208,7 +1226,7 @@
 													</Tooltip>
 												{/if}
 
-												{#if $config?.features?.enable_code_interpreter && ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter)}
+												{#if $config?.features?.enable_code_interpreter && ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter) && areSelectedModelsCodeExecutionCapable}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
 															on:click|preventDefault={() =>
