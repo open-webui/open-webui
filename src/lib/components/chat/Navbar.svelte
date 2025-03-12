@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
-
+	import { PUBLIC_REGION } from '$env/static/public';
 	import {
 		WEBUI_NAME,
 		chatId,
@@ -26,6 +26,7 @@
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
+	import { regionsOptions } from '$lib/utils/regions';
 
 	const i18n = getContext('i18n');
 
@@ -36,6 +37,18 @@
 	export let chat;
 	export let selectedModels;
 	export let showModelSelector = true;
+	let country: string = PUBLIC_REGION;
+	const countries = regionsOptions
+
+	const handleCountryChange = (event) => {
+		const selectedCountry = countries.find((c) => c.value === event.target.value);
+		if (selectedCountry && selectedCountry.redirect_url) {
+			toast.info(`Redirecting to ${selectedCountry.label} site...`);
+			setTimeout(() => {
+				window.location.href = selectedCountry.redirect_url;
+			}, 1500); // 1.5 second delay
+		}
+	};
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
@@ -129,6 +142,20 @@
 						</button>
 					</Tooltip>
 				{/if}
+
+				<div class="flex items-center space-x-2 mr-2">
+					<span class="text-sm whitespace-nowrap">{$i18n.t('Select Country')}</span>
+					<select
+						bind:value={country}
+						on:change={handleCountryChange}
+						class="text-sm outline-none bg-transparent rounded p-1 border border-gray-200 dark:border-gray-700"
+						required
+					>
+						{#each countries as country}
+							<option value={country.value}>{$i18n.t(country.label)}</option>
+						{/each}
+					</select>
+				</div>
 
 				<Tooltip content={$i18n.t('Controls')}>
 					<button

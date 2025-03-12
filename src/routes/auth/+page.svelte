@@ -15,16 +15,29 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
+	import { regionsOptions } from '$lib/utils/regions';
 
 	const i18n = getContext('i18n');
 
 	let loaded = false;
 
-	let mode = $config?.features.enable_ldap ? 'ldap' : 'signin';
+	let mode = $config?.features?.enable_ldap ? 'ldap' : 'signin';
 
 	let name = '';
 	let email = '';
 	let password = '';
+	let country = 'india';
+	const countries = regionsOptions;
+
+	const handleCountryChange = (event) => {
+		const selectedCountry = countries.find((c) => c.value === event.target.value);
+		if (selectedCountry && selectedCountry.redirect_url) {
+			toast.info(`Redirecting to ${selectedCountry.label} site...`);
+			setTimeout(() => {
+				window.location.href = selectedCountry.redirect_url;
+			}, 1500); // 1.5 second delay
+		}
+	};
 
 	let ldapUsername = '';
 
@@ -296,6 +309,20 @@
 											required
 										/>
 									</div>
+								</div>
+
+								<div>
+									<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Country')}</div>
+									<select
+										bind:value={country}
+										on:change={handleCountryChange}
+										class="my-0.5 w-full text-sm outline-hidden bg-transparent rounded p-1"
+										required
+									>
+										{#each countries as country}
+											<option value={country.value}>{$i18n.t(country.label)}</option>
+										{/each}
+									</select>
 								</div>
 							{/if}
 							<div class="mt-5">
