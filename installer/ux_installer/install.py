@@ -214,7 +214,7 @@ def create_conda_env(
         conda_path: Path to the conda executable
         env_name: Name of the conda environment
         python_version: Python version to install
-        install_dir: Optional installation directory for the environment (not used for environment location)
+        install_dir: Optional installation directory for the environment (used for environment location)
 
     Returns:
         tuple: (bool, str) - (success, env_path)
@@ -224,10 +224,21 @@ def create_conda_env(
     log("---------------------")
 
     try:
-        log(f"Creating a Python {python_version} environment named: {env_name}")
-
-        # Always create a named environment
-        cmd = [conda_path, "create", "-n", env_name, f"python={python_version}", "-y"]
+        # If install_dir is provided, create the environment at that location
+        if install_dir:
+            # Create the full path for the environment
+            env_path = os.path.join(install_dir, env_name)
+            log(f"Creating a Python {python_version} environment at: {env_path}")
+            
+            # Create the installation directory if it doesn't exist
+            os.makedirs(install_dir, exist_ok=True)
+            
+            # Create the environment at the specified path using -p flag
+            cmd = [conda_path, "create", "-p", env_path, f"python={python_version}", "-y"]
+        else:
+            # Fall back to named environment if no install_dir is provided
+            log(f"Creating a Python {python_version} environment named: {env_name}")
+            cmd = [conda_path, "create", "-n", env_name, f"python={python_version}", "-y"]
         
         log(f"Running command: {' '.join(cmd)}")
 
@@ -237,32 +248,41 @@ def create_conda_env(
             log(f"Failed to create conda environment: {result.stderr}")
             return False, None
 
-        log(f"Successfully created conda environment: {env_name}")
-
-        # Get the conda environments directory
-        conda_info = subprocess.run(
-            [conda_path, "info", "--json"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        
-        if conda_info.returncode == 0:
-            conda_info_json = json.loads(conda_info.stdout)
-            env_path = os.path.join(conda_info_json["envs_dirs"][0], env_name)
+        if install_dir:
+            log(f"Successfully created conda environment at: {env_path}")
+            
+            # Determine the Python executable path in the conda environment
+            python_path = os.path.join(env_path, "python.exe")
+            log(f"Python executable in conda environment: {python_path}")
+            
+            return True, python_path
         else:
-            # Fallback to default location
-            env_path = os.path.join(
-                os.path.dirname(os.path.dirname(conda_path)), "envs", env_name
+            log(f"Successfully created conda environment: {env_name}")
+            
+            # Get the conda environments directory
+            conda_info = subprocess.run(
+                [conda_path, "info", "--json"],
+                capture_output=True,
+                text=True,
+                check=False,
             )
+            
+            if conda_info.returncode == 0:
+                conda_info_json = json.loads(conda_info.stdout)
+                env_path = os.path.join(conda_info_json["envs_dirs"][0], env_name)
+            else:
+                # Fallback to default location
+                env_path = os.path.join(
+                    os.path.dirname(os.path.dirname(conda_path)), "envs", env_name
+                )
 
-        log(f"Conda environment created at: {env_path}")
+            log(f"Conda environment created at: {env_path}")
 
-        # Determine the Python executable path in the conda environment
-        python_path = os.path.join(env_path, "python.exe")
-        log(f"Python executable in conda environment: {python_path}")
+            # Determine the Python executable path in the conda environment
+            python_path = os.path.join(env_path, "python.exe")
+            log(f"Python executable in conda environment: {python_path}")
 
-        return True, python_path
+            return True, python_path
 
     except Exception as e:
         log(f"Error creating conda environment: {str(e)}")
@@ -423,7 +443,7 @@ def install_wheel(wheel_path, python_path):
 
         # Run pip install command with real-time output
         process = subprocess.Popen(
-            ["python", "-m", "pip", "install", wheel_path, "--verbose"],
+            [python_path, "-m", "pip", "install", wheel_path, "--verbose"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -600,7 +620,7 @@ def main():
 
         # Create conda environment
         env_success, python_path = create_conda_env(
-            conda_path, CONDA_ENV_NAME, PYTHON_VERSION
+            conda_path, CONDA_ENV_NAME, PYTHON_VERSION, install_dir
         )
 
         if not env_success:
