@@ -30,33 +30,41 @@
 				obj.style.height = obj.contentWindow.document.documentElement.scrollHeight + 'px';
 			}
 
+			// START: CHANGES BY DLR EURLICON
+			
 			// Function to check if the URL contains the ?small_venster=1 parameter
 			function has_small_venster_param() {
-			  const urlParams = new URLSearchParams(window.location.search);
-			  return urlParams.has("small_venster") && urlParams.get("small_venster") === "1";
+			    const urlParams = new URLSearchParams(window.location.search);
+			    return urlParams.has("small_venster") && urlParams.get("small_venster") === "1";
 			}
 			
 			// Function to modify the page if the parameter exists
 			function on_active_sidebar() {
-			  document.body.classList.add("small_venster"); // Add small_venster class to body
+			    document.body.classList.add("small_venster"); // Add small_venster class to body
 			}
 			
 			function waitForSidebar() {
-			  const observer = new MutationObserver((mutationsList, observer) => {
-			   if (document.getElementById("sidebar")) {
-			    observer.disconnect(); // Stop observing
-			    on_active_sidebar(); // Run your function
-			   }
-			  });
+			    const observer = new MutationObserver((mutationsList, observer) => {
+			       const el_sidebar = document.getElementById("sidebar")
+			       if (el_sidebar) {
+			          observer.disconnect(); // Stop observing
+			          const pageWidth = document.documentElement.clientWidth || window.innerWidth;
+			          if (has_small_venster_param()) {
+			             on_active_sidebar(); // Run your function
+			          }else if(el_sidebar.getAttribute("data-state") === "false" && pageWidth > 1000){
+			             document.getElementById("button-sidebar").click()
+			          }
+			       }
+			    });
 			
-			  // Observe the entire document for changes in child elements
-			  observer.observe(document.body, { childList: true, subtree: true });
+			    // Observe the entire document for changes in child elements
+			    observer.observe(document.body, { childList: true, subtree: true });
 			}
 			
 			// Start watching for the sidebar when the page loads
-			if (has_small_venster_param()){
-			  document.addEventListener("DOMContentLoaded", waitForSidebar);
-			}
+			document.addEventListener("DOMContentLoaded", waitForSidebar);
+
+			// END CHANGES BY DLR EURLICON
 		</script>
 
 		<script>
