@@ -503,6 +503,17 @@
 		clearInterval(dotInterval);
 	});
 
+	let status_ai_msg = '';
+	$: if (message.content && message.content.includes('Thinking...')) {
+		status_ai_msg = 'Thinking';
+		if (message.content && message.content.includes('Building...')) {
+			status_ai_msg = 'Generating the article. It might take several minutes, please wait';
+			if (message.done) {
+				status_ai_msg = 'Building Process Completed';
+			}
+		}
+	}
+
 	$: if (message.done) {
 		isFinishGenRes.set(true);
 		setTimeout(() => {
@@ -709,15 +720,15 @@
 							<div class="w-full flex flex-col relative" id="response-content-container">
 								{#if message.content === '' && !message.error}
 									<Skeleton />
-								{:else if message.content && message.content.includes('Thinking...')}
-									<details class="mt-2 border rounded-md overflow-hidden">
+								{:else if message.content && (message.content.includes('Thinking...') || message.content.includes('Building...'))}
+									<details class="mt-2 rounded-md overflow-hidden">
 										<summary
-											class="cursor-pointer bg-gray-100 dark:bg-gray-800 px-4 py-2 font-semibold"
+											class="cursor-pointer px-4 py-2 font-semibold border border-[#77F2A1] text-[#fff] rounded-md"
 										>
 											{#if message.done}
-												Reasoning
+												{status_ai_msg}
 											{:else}
-												Reasoning{dots}
+												{status_ai_msg}{dots}
 											{/if}
 										</summary>
 										<div class="p-4 bg-white dark:bg-black">
@@ -725,6 +736,7 @@
 											{@html message.content}
 										</div>
 									</details>
+
 									{#if message.content.includes('Assistant_Response:')}
 										{@const messageContent = message.content.split('Assistant_Response:')[1]}
 										<ContentRenderer
@@ -769,6 +781,49 @@
 											}}
 										/>
 									{/if}
+								{:else if message.content.includes('Assistant_Response:')}
+									{@const messageContent = message.content.split('Assistant_Response:')[1]}
+									<ContentRenderer
+										id={message.id}
+										{history}
+										content={messageContent}
+										sources={message.sources}
+										floatingButtons={message?.done}
+										save={!readOnly}
+										{model}
+										onSourceClick={(e) => {
+											const sourceButton = document.getElementById(`source-${e}`);
+
+											if (sourceButton) {
+												sourceButton.click();
+											}
+										}}
+										onAddMessages={({ modelId, parentId, messages }) => {
+											addMessages({ modelId, parentId, messages });
+										}}
+										on:update={(e) => {
+											const { raw, oldContent, newContent } = e.detail;
+
+											history.messages[message.id].content = history.messages[
+												message.id
+											].content.replace(raw, raw.replace(oldContent, newContent));
+
+											updateChat();
+										}}
+										on:select={(e) => {
+											const { type, content } = e.detail;
+
+											if (type === 'explain') {
+												submitMessage(
+													message.id,
+													`Explain this section to me in more detail\n\n\`\`\`\n${content}\n\`\`\``
+												);
+											} else if (type === 'ask') {
+												const input = e.detail?.input ?? '';
+												submitMessage(message.id, `\`\`\`\n${content}\n\`\`\`\n${input}`);
+											}
+										}}
+									/>
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
