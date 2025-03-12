@@ -5,10 +5,13 @@
 
 	export let selectedModels = [''];
 
-	const withoutStockModels = ({ id }) => !id.includes('/') && id !== 'arena-model';
+	// Custom models obey have the convention of using only characters
+	// This excludes stock models.
+	// This can later be changed to testing for a marker tag in info.meta.tags
+	const onlyCustomModels = ({ id }) => /^[a-z]+$/.test(id);
 
 	$: modelsUi = $models
-		.filter(withoutStockModels)
+		.filter(onlyCustomModels)
 		.map((model) => ({
 			id: model.id,
 			modelDisplayName: model.name,
