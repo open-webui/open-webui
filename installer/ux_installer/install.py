@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: MIT
 
 """
-AMD AI UX Installer
+RAUX Installer
 
-This module provides functionality to install AMD AI UX (Open WebUI).
+This module provides functionality to install RAUX (Open WebUI).
 Similar to lemonade-install, it can be invoked from the command line.
 """
 
@@ -27,10 +27,10 @@ except ImportError:
     import requests
 
 # Global constants
-PRODUCT_NAME = "AMD AI UX"
-PRODUCT_NAME_CONCAT = "AMD_AI_UX"
+PRODUCT_NAME = "RAUX"
+PRODUCT_NAME_CONCAT = "raux"
 GITHUB_REPO = "https://github.com/aigdat/open-webui.git"
-CONDA_ENV_NAME = "amd_ai_ux_env"
+CONDA_ENV_NAME = "raux_env"
 PYTHON_VERSION = "3.11"
 ICON_FILE = "gaia.ico"
 
@@ -457,7 +457,7 @@ def install_wheel(wheel_path, python_path):
 
 def create_shortcuts(env_path):
     """
-    Creates desktop shortcuts for AMD AI UX.
+    Creates desktop shortcuts for RAUX.
 
     Args:
         env_path: Path to the conda environment

@@ -191,7 +191,7 @@ def install_wheel(wheel_path):
 
 def main():
     # Set up argument parser - make install_dir optional with default value
-    parser = argparse.ArgumentParser(description="AMD AI UX Installer")
+    parser = argparse.ArgumentParser(description="RAUX Installer")
     parser.add_argument(
         "--install-dir",
         dest="install_dir",
@@ -206,7 +206,7 @@ def main():
     # Hard-coded parameters
     install_dir = os.path.normpath(args.install_dir)
 
-    log_file = os.path.normpath(os.path.join(install_dir, "amd_ai_ux_install.log"))
+    log_file = os.path.normpath(os.path.join(install_dir, "raux_install.log"))
 
     # Set the log file path
     log_file_path = log_file

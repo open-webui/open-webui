@@ -8,7 +8,7 @@
             "name": "Install (exe) Helper",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/installer/amd_ai_ux_installer.py",
+            "program": "${workspaceFolder}/installer/raux_installer.py",
             "console": "integratedTerminal",
             "args": [
                 "--install-dir",

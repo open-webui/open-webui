@@ -1,7 +1,7 @@
 """
-AMD AI UX Installer Package
+RAUX Installer Package
 
-This package provides functionality to install AMD AI UX (Open WebUI).
+This package provides functionality to install RAUX (Open WebUI).
 """
 
 from .install import main

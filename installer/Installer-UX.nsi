@@ -1,6 +1,6 @@
 ; Copyright(C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 ; SPDX-License-Identifier: MIT
-; AMD_AI_UX Installer UX Script - Additional tasks for the main installer
+; raux Installer UX Script - Additional tasks for the main installer
 
 ; This file contains additional UX-related functions that can be included
 ; by the main Installer.nsi script.
@@ -15,8 +15,8 @@ RequestExecutionLevel user
 !include "MUI2.nsh"
 
 ; Define constants - moved to the top so they're available throughout the script
-!define PRODUCT_NAME "AMD AI UX"
-!define PRODUCT_NAME_CONCAT "AMD_AI_UX"
+!define PRODUCT_NAME "RAUX"
+!define PRODUCT_NAME_CONCAT "raux"
 !define GITHUB_REPO "https://github.com/aigdat/open-webui.git"
 !define EMPTY_FILE_NAME "empty_file.txt"
 !define ICON_FILE "..\static\gaia.ico"
@@ -29,11 +29,11 @@ InstallDir "$LOCALAPPDATA\${PRODUCT_NAME_CONCAT}"
 ; Read version from version.py
 !tempfile TMPFILE
 !system 'python -c "with open(\"../version.py\") as f: exec(f.read()); print(version_with_hash)" > "${TMPFILE}"'
-!define /file AMD_AI_UX_VERSION "${TMPFILE}"
+!define /file raux_VERSION "${TMPFILE}"
 !delfile "${TMPFILE}"
 
 ; Define variables
-Var AMD_AI_UX_CONDA_ENV
+Var raux_CONDA_ENV
 Var PythonVersion
 Var LogFilePath
 
@@ -72,7 +72,7 @@ LangString MUI_TEXT_LICENSE_SUBTITLE ${LANG_ENGLISH} "Please review the license 
 
 Function .onInit
   ; Initialize variables
-  StrCpy $AMD_AI_UX_CONDA_ENV "amd_ai_ux_env"
+  StrCpy $raux_CONDA_ENV "raux_env"
   StrCpy $PythonVersion "3.11"
   ; Fix the log file path to avoid variable substitution issues
   StrCpy $LogFilePath "$INSTDIR\${PRODUCT_NAME_CONCAT}_install.log"
@@ -100,7 +100,7 @@ Section "Install Main Components" SEC01
 
   remove_dir:
     ; Attempt conda remove of the env, to help speed things up
-    ExecWait 'conda env remove -yp "$INSTDIR\$AMD_AI_UX_CONDA_ENV"'
+    ExecWait 'conda env remove -yp "$INSTDIR\$raux_CONDA_ENV"'
     ; Try to remove directory and verify it was successful
     RMDir /r "$INSTDIR"
     DetailPrint "- Deleted all contents of install dir"
@@ -127,7 +127,7 @@ Section "Install Main Components" SEC01
     ; Pack into the installer
     ; Exclude hidden files (like .git, .gitignore) and the installation folder itself
     ; Include the installer script and LICENSE file
-    File "amd_ai_ux_installer.py"
+    File "raux_installer.py"
     File "LICENSE"
     File ${ICON_FILE}
 
@@ -191,21 +191,21 @@ Section "Install Main Components" SEC01
       ; Initialize conda (needed for systems where conda was previously installed but not initialized)
       nsExec::ExecToLog '"$R1" init'
 
-      DetailPrint "- Creating a Python $PythonVersion environment named '$AMD_AI_UX_CONDA_ENV' in the installation directory: $INSTDIR..."
-      ExecWait '"$R1" create -n "$AMD_AI_UX_CONDA_ENV" python=$PythonVersion -y' $R0
+      DetailPrint "- Creating a Python $PythonVersion environment named '$raux_CONDA_ENV' in the installation directory: $INSTDIR..."
+      ExecWait '"$R1" create -n "$raux_CONDA_ENV" python=$PythonVersion -y' $R0
 
       ; Check if the environment creation was successful (exit code should be 0)
       StrCmp $R0 0 set_conda_env env_creation_failed
 
     set_conda_env:
-      DetailPrint "- Setting conda environment $AMD_AI_UX_CONDA_ENV..."
+      DetailPrint "- Setting conda environment $raux_CONDA_ENV..."
       DetailPrint "- Changing to installation directory..."
       SetOutPath "$INSTDIR"
       
       DetailPrint "- Verifying conda environment..."
       ; Instead of trying to activate the environment (which doesn't work well in scripts),
       ; we'll just verify that the environment exists and is ready to use
-      ExecWait '"$R1" list -n "$AMD_AI_UX_CONDA_ENV"' $R0
+      ExecWait '"$R1" list -n "$raux_CONDA_ENV"' $R0
 
       StrCmp $R0 0 install_app env_creation_failed
       
@@ -223,19 +223,19 @@ Section "Install Main Components" SEC01
       DetailPrint "- ${PRODUCT_NAME} Installation -"
       DetailPrint "--------------------------"
 
-      DetailPrint "- Starting AMD AI UX installation (this can take 5-10 minutes)..."
+      DetailPrint "- Starting RAUX installation (this can take 5-10 minutes)..."
       DetailPrint "- See $LogFilePath for detailed progress..."
       ; Call the batch file with required parameters
       ; Execute the Python script
       DetailPrint "- Executing Python script to handle the installation..."
-      DetailPrint "- Command: $R1 run -n $AMD_AI_UX_CONDA_ENV python $INSTDIR\amd_ai_ux_installer.py --install-dir $INSTDIR"
+      DetailPrint "- Command: $R1 run -n $raux_CONDA_ENV python $INSTDIR\raux_installer.py --install-dir $INSTDIR"
       
       ; Execute the Python script with the installation directory as a named parameter
       ; Pass the conda environment name as an environment variable
-      System::Call 'Kernel32::SetEnvironmentVariable(t "AMD_AI_UX_CONDA_ENV", t "$AMD_AI_UX_CONDA_ENV")i.r0'
+      System::Call 'Kernel32::SetEnvironmentVariable(t "raux_CONDA_ENV", t "$raux_CONDA_ENV")i.r0'
       
       ; Execute the Python script with the full path
-      ExecWait '"$R1" run -n "$AMD_AI_UX_CONDA_ENV" python "$INSTDIR\amd_ai_ux_installer.py" --install-dir "$INSTDIR"' $0
+      ExecWait '"$R1" run -n "$raux_CONDA_ENV" python "$INSTDIR\raux_installer.py" --install-dir "$INSTDIR"' $0
       
       DetailPrint "- Python script return code: $0"
       
@@ -248,7 +248,7 @@ Section "Install Main Components" SEC01
       DetailPrint "*** INSTALLATION COMPLETED ***"
 
       # Create shortcuts directly
-      CreateShortcut "$DESKTOP\AMD-AI-UX.lnk" "$SYSDIR\cmd.exe" '/C conda activate $AMD_AI_UX_CONDA_ENV > NUL 2>&1 && start "" "http://localhost:8080"' "$INSTDIR\${ICON_DEST}"
+      CreateShortcut "$DESKTOP\AMD-AI-UX.lnk" "$SYSDIR\cmd.exe" '/C conda activate $raux_CONDA_ENV > NUL 2>&1 && start "" "http://localhost:8080"' "$INSTDIR\${ICON_DEST}"
 
       Return
 
