@@ -2,7 +2,7 @@
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
   
-    const GA_ID = 'G-N4VGKS6795';
+    const GA_ID = 'G-ZXCJJXH0EF';
   
     onMount(() => {
       if (!window.gtag) {
@@ -33,7 +33,7 @@
   </script>
   
   <svelte:head>
-    <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}></script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-ZXCJJXH0EF"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
   
@@ -42,7 +42,7 @@
       }
   
       gtag('js', new Date());
-      gtag('config', GA_ID);
+      gtag('config', 'G-ZXCJJXH0EF');
     </script>
   </svelte:head>
   
