@@ -48,7 +48,7 @@ def log(message, print_to_console=True):
     """
     # Get current timestamp
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    formatted_message = f"[{timestamp}] [{PRODUCT_NAME_CONCAT}-Installer] {message}"
+    formatted_message = f"[{timestamp}] [{PRODUCT_NAME}-Installer] {message}"
 
     # Print to console if requested
     if print_to_console:
@@ -541,10 +541,10 @@ def main():
         "--install-dir",
         dest="install_dir",
         default=os.path.join(
-            os.path.expanduser("~"), "AppData", "Local", PRODUCT_NAME_CONCAT
+            os.path.expanduser("~"), "AppData", "Local", PRODUCT_NAME
         ),
         type=str,
-        help=f"Installation directory (default: %LOCALAPPDATA%\\{PRODUCT_NAME_CONCAT})",
+        help=f"Installation directory (default: %LOCALAPPDATA%\\{PRODUCT_NAME})",
     )
     parser.add_argument(
         "-y",

@@ -14,6 +14,20 @@
 				"panel": "new"
 			},
 			"problemMatcher": []
+		},
+		{
+			"label": "Clean Local Environment",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"conda deactivate & rmdir /s /q \"%LOCALAPPDATA%\\RAUX\" & conda env remove -n raux_env -y"
+			],
+			"presentation": {
+				"reveal": "silent",
+				"panel": "new",
+			},
+			"problemMatcher": []
 		}
 	]
 }
