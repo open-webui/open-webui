@@ -18,7 +18,7 @@
 			>
 				<div class="overflow-hidden transition-[width,height] duration-[500ms] h-36 rounded-t-3xl">
 					<img
-						class="rounded-3xl rounded-b-none"
+						class="h-full object-cover rounded-3xl rounded-b-none"
 						src={avatarUrl}
 						alt="Model Avatar"
 					/>
