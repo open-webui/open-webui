@@ -19,8 +19,8 @@ RequestExecutionLevel user
 !define PRODUCT_NAME_CONCAT "raux"
 !define GITHUB_REPO "https://github.com/aigdat/open-webui.git"
 !define EMPTY_FILE_NAME "empty_file.txt"
-!define ICON_FILE "..\static\gaia.ico"
-!define ICON_DEST "gaia.ico"
+!define ICON_FILE "..\static\raux.ico"
+!define ICON_DEST "raux.ico"
 
 ; This is a compile-time fix to make sure that our selfhost CI runner can successfully install,
 ; since LOCALAPPDATA points to C:\Windows for "system users"
