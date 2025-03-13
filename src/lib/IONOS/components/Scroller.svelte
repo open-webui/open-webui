@@ -18,6 +18,7 @@
 
 <div
 	class="full-width overflow-hidden position-relative my-5"
+	role="marquee"
 	on:mouseenter={() => { el.style.animationPlayState = 'paused'; }}
 	on:mouseleave={() => { el.style.animationPlayState = 'running'; }}
 	>
@@ -28,22 +29,22 @@
 		style:width={`${fullWidth * 2}px`}
 	>
 		{#each items as { id, text }}
-			<span
+			<button
 				on:click={() => { dispatcher('click', id); }}
 				data-id={id}
 				class="flex justify-items-center items-center bg-white rounded-md h-20 mx-2 last:m-0 px-6 py-4 cursor-pointer"
 			>
 				<span class="w-full text-sm text-wrap">{ text } →</span>
-			</span>
+			</button>
 		{/each}
 		{#each items as { id, text }}
-			<span
+			<button
 				on:click={() => { dispatcher('click', id); }}
 				data-id={id}
 				class="flex justify-items-center items-center bg-white rounded-md h-20 mx-2 last:m-0 px-6 py-4 cursor-pointer"
 			>
 				<span class="w-full text-sm text-wrap">{ text } →</span>
-			</span>
+			</button>
 		{/each}
 	</div>
 </div>
