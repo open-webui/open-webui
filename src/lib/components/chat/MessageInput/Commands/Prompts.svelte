@@ -74,13 +74,7 @@
 		}
 
 		if (command.content.includes('{{USER_LOCATION}}')) {
-			let location;
-			try {
-				location = await getUserPosition();
-			} catch (error) {
-				toast.error($i18n.t('Location access not allowed'));
-				location = 'LOCATION_UNKNOWN';
-			}
+			const location = await getUserPosition();
 			text = text.replaceAll('{{USER_LOCATION}}', String(location));
 		}
 

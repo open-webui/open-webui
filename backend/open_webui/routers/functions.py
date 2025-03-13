@@ -1,5 +1,4 @@
 import os
-import logging
 from pathlib import Path
 from typing import Optional
 
@@ -14,11 +13,6 @@ from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.env import SRC_LOG_LEVELS
-
-log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
-
 
 router = APIRouter()
 
@@ -85,7 +79,7 @@ async def create_new_function(
                     detail=ERROR_MESSAGES.DEFAULT("Error creating function"),
                 )
         except Exception as e:
-            log.exception(f"Failed to create a new function: {e}")
+            print(e)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT(e),
@@ -189,7 +183,7 @@ async def update_function_by_id(
         FUNCTIONS[id] = function_module
 
         updated = {**form_data.model_dump(exclude={"id"}), "type": function_type}
-        log.debug(updated)
+        print(updated)
 
         function = Functions.update_function_by_id(id, updated)
 
@@ -305,7 +299,7 @@ async def update_function_valves_by_id(
                 Functions.update_function_valves_by_id(id, valves.model_dump())
                 return valves.model_dump()
             except Exception as e:
-                log.exception(f"Error updating function values by id {id}: {e}")
+                print(e)
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT(e),
@@ -394,7 +388,7 @@ async def update_function_user_valves_by_id(
                 )
                 return user_valves.model_dump()
             except Exception as e:
-                log.exception(f"Error updating function user valves by id {id}: {e}")
+                print(e)
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT(e),

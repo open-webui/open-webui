@@ -43,7 +43,6 @@
 	}
 
 	$: {
-		console.log('sources', sources);
 		citations = sources.reduce((acc, source) => {
 			if (Object.keys(source).length === 0) {
 				return acc;
@@ -54,7 +53,7 @@
 				const distance = source.distances?.[index];
 
 				// Within the same citation there could be multiple documents
-				const id = metadata?.source ?? source?.source?.id ?? 'N/A';
+				const id = metadata?.source ?? 'N/A';
 				let _source = source?.source;
 
 				if (metadata?.name) {

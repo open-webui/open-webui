@@ -95,8 +95,8 @@
 			meta={func?.meta ?? { description: '' }}
 			content={func?.content ?? ''}
 			{clone}
-			onSave={(value) => {
-				saveHandler(value);
+			on:save={(e) => {
+				saveHandler(e.detail);
 			}}
 		/>
 	{/key}

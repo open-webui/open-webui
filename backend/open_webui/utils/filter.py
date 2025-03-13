@@ -1,12 +1,6 @@
 import inspect
-import logging
-
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.models.functions import Functions
-from open_webui.env import SRC_LOG_LEVELS
-
-log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 def get_sorted_filter_ids(model):
@@ -67,12 +61,7 @@ async def process_filter_functions(
         try:
             # Prepare parameters
             sig = inspect.signature(handler)
-
-            params = {"body": form_data}
-            if filter_type == "stream":
-                params = {"event": form_data}
-
-            params = params | {
+            params = {"body": form_data} | {
                 k: v
                 for k, v in {
                     **extra_params,
@@ -91,7 +80,7 @@ async def process_filter_functions(
                             )
                         )
                     except Exception as e:
-                        log.exception(f"Failed to get user values: {e}")
+                        print(e)
 
             # Execute handler
             if inspect.iscoroutinefunction(handler):
@@ -100,7 +89,7 @@ async def process_filter_functions(
                 form_data = handler(**params)
 
         except Exception as e:
-            log.exception(f"Error in {filter_type} handler {filter_id}: {e}")
+            print(f"Error in {filter_type} handler {filter_id}: {e}")
             raise e
 
     # Handle file cleanup for inlet

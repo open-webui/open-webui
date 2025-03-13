@@ -21,24 +21,14 @@
 		modelIds = modelList;
 	};
 
-	$: if (modelIds) {
-		init();
-	}
-
-	const init = () => {
-		if (sortable) {
-			sortable.destroy();
-		}
-
-		if (modelListElement) {
-			sortable = Sortable.create(modelListElement, {
-				animation: 150,
-				onUpdate: async (event) => {
-					positionChangeHandler();
-				}
-			});
-		}
-	};
+	onMount(() => {
+		sortable = Sortable.create(modelListElement, {
+			animation: 150,
+			onUpdate: async (event) => {
+				positionChangeHandler();
+			}
+		});
+	});
 </script>
 
 {#if modelIds.length > 0}

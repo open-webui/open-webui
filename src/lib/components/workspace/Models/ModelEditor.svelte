@@ -180,6 +180,7 @@
 		}
 
 		if (model) {
+			console.log(model);
 			name = model.name;
 			await tick();
 

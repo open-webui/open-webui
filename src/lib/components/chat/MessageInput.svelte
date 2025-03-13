@@ -2,7 +2,6 @@
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
-	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
 
 	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
 	const dispatch = createEventDispatcher();
@@ -174,6 +173,22 @@
 		}
 
 		files = [...files, fileItem];
+		// Check if the file is an audio file and transcribe/convert it to text file
+		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
+			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (res) {
+				console.log(res);
+				const blob = new Blob([res.text], { type: 'text/plain' });
+				file = blobToFile(blob, `${file.name}.txt`);
+
+				fileItem.name = file.name;
+				fileItem.size = file.size;
+			}
+		}
 
 		try {
 			// During the file upload, file content is automatically extracted.
@@ -812,11 +827,7 @@
 															}
 
 															// Submit the prompt when Enter key is pressed
-															if (
-																(prompt !== '' || files.length > 0) &&
-																e.keyCode === 13 &&
-																!e.shiftKey
-															) {
+															if (prompt !== '' && e.keyCode === 13 && !e.shiftKey) {
 																dispatch('submit', prompt);
 															}
 														}
@@ -895,11 +906,7 @@
 													}
 
 													// Submit the prompt when Enter key is pressed
-													if (
-														(prompt !== '' || files.length > 0) &&
-														e.key === 'Enter' &&
-														!e.shiftKey
-													) {
+													if (prompt !== '' && e.key === 'Enter' && !e.shiftKey) {
 														dispatch('submit', prompt);
 													}
 												}
@@ -1101,21 +1108,6 @@
 													);
 												}
 											}}
-											uploadOneDriveHandler={async () => {
-												try {
-													const fileData = await pickAndDownloadFile();
-													if (fileData) {
-														const file = new File([fileData.blob], fileData.name, {
-															type: fileData.blob.type || 'application/octet-stream'
-														});
-														await uploadFileHandler(file);
-													} else {
-														console.log('No file was selected from OneDrive');
-													}
-												} catch (error) {
-													console.error('OneDrive Error:', error);
-												}
-											}}
 											onClose={async () => {
 												await tick();
 
@@ -1293,17 +1285,14 @@
 
 																	stream = null;
 
-																	if ($settings.audio?.tts?.engine === 'browser-kokoro') {
-																		// If the user has not initialized the TTS worker, initialize it
-																		if (!$TTSWorker) {
-																			await TTSWorker.set(
-																				new KokoroWorker({
-																					dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
-																				})
-																			);
+																	if (!$TTSWorker) {
+																		await TTSWorker.set(
+																			new KokoroWorker({
+																				dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+																			})
+																		);
 
-																			await $TTSWorker.init();
-																		}
+																		await $TTSWorker.init();
 																	}
 
 																	showCallOverlay.set(true);

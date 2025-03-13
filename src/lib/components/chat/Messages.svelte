@@ -32,7 +32,6 @@
 	export let prompt;
 	export let history = {};
 	export let selectedModels;
-	export let atSelectedModel;
 
 	let messages = [];
 
@@ -350,7 +349,6 @@
 	{#if Object.keys(history?.messages ?? {}).length == 0}
 		<ChatPlaceholder
 			modelIds={selectedModels}
-			{atSelectedModel}
 			submitPrompt={async (p) => {
 				let text = p;
 

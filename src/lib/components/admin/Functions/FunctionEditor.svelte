@@ -1,7 +1,8 @@
 <script>
-	import { getContext, onMount, tick } from 'svelte';
+	import { getContext, createEventDispatcher, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
+	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
 	import CodeEditor from '$lib/components/common/CodeEditor.svelte';
@@ -13,8 +14,6 @@
 	let formElement = null;
 	let loading = false;
 	let showConfirm = false;
-
-	export let onSave = () => {};
 
 	export let edit = false;
 	export let clone = false;
@@ -257,7 +256,7 @@ class Pipe:
 
 	const saveHandler = async () => {
 		loading = true;
-		onSave({
+		dispatch('save', {
 			id,
 			name,
 			meta,
@@ -372,10 +371,10 @@ class Pipe:
 						value={content}
 						lang="python"
 						{boilerplate}
-						onChange={(e) => {
-							_content = e;
+						on:change={(e) => {
+							_content = e.detail.value;
 						}}
-						onSave={async () => {
+						on:save={async () => {
 							if (formElement) {
 								formElement.requestSubmit();
 							}

@@ -2,7 +2,6 @@ import logging
 import sys
 import inspect
 import json
-import asyncio
 
 from pydantic import BaseModel
 from typing import AsyncGenerator, Generator, Iterator
@@ -77,13 +76,11 @@ async def get_function_models(request):
         if hasattr(function_module, "pipes"):
             sub_pipes = []
 
-            # Handle pipes being a list, sync function, or async function
+            # Check if pipes is a function or a list
+
             try:
                 if callable(function_module.pipes):
-                    if asyncio.iscoroutinefunction(function_module.pipes):
-                        sub_pipes = await function_module.pipes()
-                    else:
-                        sub_pipes = function_module.pipes()
+                    sub_pipes = function_module.pipes()
                 else:
                     sub_pipes = function_module.pipes
             except Exception as e:

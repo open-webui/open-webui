@@ -1,5 +1,4 @@
 from typing import Optional
-import logging
 
 from qdrant_client import QdrantClient as Qclient
 from qdrant_client.http.models import PointStruct
@@ -7,12 +6,8 @@ from qdrant_client.models import models
 
 from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
 from open_webui.config import QDRANT_URI, QDRANT_API_KEY
-from open_webui.env import SRC_LOG_LEVELS
 
 NO_LIMIT = 999999999
-
-log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 class QdrantClient:
@@ -54,7 +49,7 @@ class QdrantClient:
             ),
         )
 
-        log.info(f"collection {collection_name_with_prefix} successfully created!")
+        print(f"collection {collection_name_with_prefix} successfully created!")
 
     def _create_collection_if_not_exists(self, collection_name, dimension):
         if not self.has_collection(collection_name=collection_name):
@@ -125,7 +120,7 @@ class QdrantClient:
             )
             return self._result_to_get_result(points.points)
         except Exception as e:
-            log.exception(f"Error querying a collection '{collection_name}': {e}")
+            print(e)
             return None
 
     def get(self, collection_name: str) -> Optional[GetResult]:

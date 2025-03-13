@@ -1,9 +1,18 @@
 <script lang="ts">
+	import hljs from 'highlight.js';
+	import { loadPyodide } from 'pyodide';
 	import mermaid from 'mermaid';
 
 	import { v4 as uuidv4 } from 'uuid';
 
-	import { getContext, onMount, tick, onDestroy } from 'svelte';
+	import {
+		getContext,
+		getAllContexts,
+		onMount,
+		tick,
+		createEventDispatcher,
+		onDestroy
+	} from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
 
 	import 'highlight.js/styles/github-dark.min.css';
@@ -16,11 +25,9 @@
 	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
 	export let id = '';
-
-	export let onSave = (e) => {};
-	export let onCode = (e) => {};
 
 	export let save = false;
 	export let run = true;
@@ -64,7 +71,7 @@
 		saved = true;
 
 		code = _code;
-		onSave(code);
+		dispatch('save', code);
 
 		setTimeout(() => {
 			saved = false;
@@ -337,7 +344,7 @@
 		render();
 	}
 
-	$: onCode({ lang, code });
+	$: dispatch('code', { lang, code });
 
 	$: if (attributes) {
 		onAttributesUpdate();
@@ -373,7 +380,7 @@
 		console.log('codeblock', lang, code);
 
 		if (lang) {
-			onCode({ lang, code });
+			dispatch('code', { lang, code });
 		}
 		if (document.documentElement.classList.contains('dark')) {
 			mermaid.initialize({
@@ -461,11 +468,11 @@
 					value={code}
 					{id}
 					{lang}
-					onSave={() => {
+					on:save={() => {
 						saveCode();
 					}}
-					onChange={(value) => {
-						_code = value;
+					on:change={(e) => {
+						_code = e.detail.value;
 					}}
 				/>
 			</div>
@@ -507,7 +514,7 @@
 									<div class="flex flex-col gap-2">
 										{#each files as file}
 											{#if file.type.startsWith('image')}
-												<img src={file.data} alt="Output" class=" w-full max-w-[36rem]" />
+												<img src={file.data} alt="Output" />
 											{/if}
 										{/each}
 									</div>

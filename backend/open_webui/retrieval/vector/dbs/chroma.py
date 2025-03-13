@@ -1,5 +1,4 @@
 import chromadb
-import logging
 from chromadb import Settings
 from chromadb.utils.batch_utils import create_batches
 
@@ -17,10 +16,6 @@ from open_webui.config import (
     CHROMA_CLIENT_AUTH_PROVIDER,
     CHROMA_CLIENT_AUTH_CREDENTIALS,
 )
-from open_webui.env import SRC_LOG_LEVELS
-
-log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 class ChromaClient:
@@ -107,7 +102,8 @@ class ChromaClient:
                     }
                 )
             return None
-        except:
+        except Exception as e:
+            print(e)
             return None
 
     def get(self, collection_name: str) -> Optional[GetResult]:

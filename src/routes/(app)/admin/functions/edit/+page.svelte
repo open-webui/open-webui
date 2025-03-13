@@ -80,8 +80,8 @@
 		name={func.name}
 		meta={func.meta}
 		content={func.content}
-		onSave={(value) => {
-			saveHandler(value);
+		on:save={(e) => {
+			saveHandler(e.detail);
 		}}
 	/>
 {:else}

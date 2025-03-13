@@ -35,11 +35,6 @@
 	button {
 		@apply cursor-pointer;
 	}
-
-	input::placeholder,
-	textarea::placeholder {
-		color: theme(--color-gray-400);
-	}
 }
 
 @custom-variant hover (&:hover);
