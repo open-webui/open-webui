@@ -43,6 +43,7 @@ jobs:
             type=sha,format=long
             type=ref,event=branch
             type=ref,event=tag
+            type=raw,value=${{ github.event.inputs.environment }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
