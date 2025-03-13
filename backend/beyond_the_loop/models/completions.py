@@ -81,6 +81,8 @@ def calculate_saved_time_in_seconds(last_message, response_message):
     reading_time = num_words_output * reading_speed_per_word
 
     total_time = writing_time - (prompt_time + reading_time)
+    total_time = 0 if total_time < 0 else total_time
+
     return total_time
 
 Completions = CompletionTable()
