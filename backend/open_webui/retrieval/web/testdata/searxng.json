@@ -1,0 +1,476 @@
+{
+	"query": "python",
+	"number_of_results": 116000000,
+	"results": [
+		{
+			"url": "https://www.python.org/",
+			"title": "Welcome to Python.org",
+			"content": "Python is a versatile and powerful language that lets you work quickly and integrate systems more effectively. Learn how to get started, download the latest version, access documentation, find jobs, and join the Python community.",
+			"engine": "bing",
+			"parsed_url": ["https", "www.python.org", "/", "", "", ""],
+			"template": "default.html",
+			"engines": ["bing", "qwant", "duckduckgo"],
+			"positions": [1, 1, 1],
+			"score": 9.0,
+			"category": "general"
+		},
+		{
+			"url": "https://wiki.nerdvpn.de/wiki/Python_(programming_language)",
+			"title": "Python (programming language) - Wikipedia",
+			"content": "Python is a high-level, general-purpose programming language. Its design philosophy emphasizes code readability with the use of significant indentation. Python is dynamically typed and garbage-collected. It supports multiple programming paradigms, including structured (particularly procedural), object-oriented and functional programming.",
+			"engine": "bing",
+			"parsed_url": ["https", "wiki.nerdvpn.de", "/wiki/Python_(programming_language)", "", "", ""],
+			"template": "default.html",
+			"engines": ["bing", "qwant", "duckduckgo"],
+			"positions": [4, 3, 2],
+			"score": 3.25,
+			"category": "general"
+		},
+		{
+			"url": "https://docs.python.org/3/tutorial/index.html",
+			"title": "The Python Tutorial \u2014 Python 3.12.3 documentation",
+			"content": "3 days ago \u00b7 Python is an easy to learn, powerful programming language. It has efficient high-level data structures and a simple but effective approach to object-oriented programming. Python\u2019s elegant syntax and dynamic typing, together with its interpreted nature, make it an ideal language for scripting and rapid application development in many \u2026",
+			"engine": "bing",
+			"parsed_url": ["https", "docs.python.org", "/3/tutorial/index.html", "", "", ""],
+			"template": "default.html",
+			"engines": ["bing", "qwant", "duckduckgo"],
+			"positions": [5, 5, 3],
+			"score": 2.2,
+			"category": "general"
+		},
+		{
+			"url": "https://www.python.org/downloads/",
+			"title": "Download Python | Python.org",
+			"content": "Python is a popular programming language for various purposes. Find the latest version of Python for different operating systems, download release notes, and learn about the development process.",
+			"engine": "bing",
+			"parsed_url": ["https", "www.python.org", "/downloads/", "", "", ""],
+			"template": "default.html",
+			"engines": ["bing", "duckduckgo"],
+			"positions": [2, 2],
+			"score": 2.0,
+			"category": "general"
+		},
+		{
+			"url": "https://www.python.org/about/gettingstarted/",
+			"title": "Python For Beginners | Python.org",
+			"content": "Learn the basics of Python, a popular and easy-to-use programming language, from installing it to using it for various purposes. Find out how to access online documentation, tutorials, books, code samples, and more resources to help you get started with Python.",
+			"engine": "bing",
+			"parsed_url": ["https", "www.python.org", "/about/gettingstarted/", "", "", ""],
+			"template": "default.html",
+			"engines": ["bing", "qwant", "duckduckgo"],
+			"positions": [9, 4, 4],
+			"score": 1.8333333333333333,
+			"category": "general"
+		},
+		{
+			"url": "https://www.python.org/shell/",
+			"title": "Welcome to Python.org",
+			"content": "Python is a versatile and easy-to-use programming language that lets you work quickly. Learn more about Python, download the latest version, access documentation, find jobs, and join the community.",
+			"engine": "bing",
+			"parsed_url": ["https", "www.python.org", "/shell/", "", "", ""],
+			"template": "default.html",
+			"engines": ["bing", "qwant", "duckduckgo"],
+			"positions": [3, 10, 8],
+			"score": 1.675,
+			"category": "general"
+		},
+		{
+			"url": "https://realpython.com/",
+			"title": "Python Tutorials \u2013 Real Python",
+			"content": "Real Python offers comprehensive and up-to-date tutorials, books, and courses for Python developers of all skill levels. Whether you want to learn Python basics, web development, data science, machine learning, or more, you can find clear and practical guides and code examples here.",
+			"engine": "bing",
+			"parsed_url": ["https", "realpython.com", "/", "", "", ""],
+			"template": "default.html",
+			"engines": ["bing", "qwant", "duckduckgo"],
+			"positions": [6, 6, 5],
+			"score": 1.6,
+			"category": "general"
+		},
+		{
+			"url": "https://wiki.nerdvpn.de/wiki/Python",
+			"title": "Python",
+			"content": "Topics referred to by the same term",
+			"engine": "wikipedia",
+			"parsed_url": ["https", "wiki.nerdvpn.de", "/wiki/Python", "", "", ""],
+			"template": "default.html",
+			"engines": ["wikipedia"],
+			"positions": [1],
+			"score": 1.0,
+			"category": "general"
+		},
+		{
+			"title": "Online Python - IDE, Editor, Compiler, Interpreter",
+			"content": "Online Python IDE is a free online tool that lets you write, execute, and share Python code in the web browser. Learn about Python, its features, and its popularity as a general-purpose programming language for web development, data science, and more.",
+			"url": "https://www.online-python.com/",
+			"engine": "duckduckgo",
+			"parsed_url": ["https", "www.online-python.com", "/", "", "", ""],
+			"template": "default.html",
+			"engines": ["qwant", "duckduckgo"],
+			"positions": [8, 6],
+			"score": 0.5833333333333333,
+			"category": "general"
+		},
+		{
+			"url": "https://micropython.org/",
+			"title": "MicroPython - Python for microcontrollers",
+			"content": "MicroPython is a full Python compiler and runtime that runs on the bare-metal. You get an interactive prompt (the REPL) to execute commands immediately, along ...",
+			"img_src": null,
+			"engine": "google",
+			"parsed_url": ["https", "micropython.org", "/", "", "", ""],
+			"template": "default.html",
+			"engines": ["google"],
+			"positions": [1],
+			"score": 1.0,
+			"category": "general"
+		},
+		{
+			"url": "https://dictionary.cambridge.org/uk/dictionary/english/python",
+			"title": "PYTHON | \u0417\u043d\u0430\u0447\u0435\u043d\u043d\u044f \u0432 \u0430\u043d\u0433\u043b\u0456\u0439\u0441\u044c\u043a\u0456\u0439 \u043c\u043e\u0432\u0456 - Cambridge Dictionary",
+			"content": "Apr 17, 2024 \u2014 \u0412\u0438\u0437\u043d\u0430\u0447\u0435\u043d\u043d\u044f PYTHON: 1. a very large snake that kills animals for food by wrapping itself around them and crushing them\u2026. \u0414\u0456\u0437\u043d\u0430\u0439\u0442\u0435\u0441\u044f \u0431\u0456\u043b\u044c\u0448\u0435.",
+			"img_src": null,
+			"engine": "google",
+			"parsed_url": [
+				"https",
+				"dictionary.cambridge.org",
+				"/uk/dictionary/english/python",
+				"",
+				"",
+				""
+			],
+			"template": "default.html",
+			"engines": ["google"],
+			"positions": [2],
+			"score": 0.5,
+			"category": "general"
+		},
+		{
+			"url": "https://www.codetoday.co.uk/code",
+			"title": "Web-based Python Editor (with Turtle graphics)",
+			"content": "Quick way of starting to write Python code, including drawing with Turtle, provided by CodeToday using Trinket.io Ideal for young children to start ...",
+			"img_src": null,
+			"engine": "google",
+			"parsed_url": ["https", "www.codetoday.co.uk", "/code", "", "", ""],
+			"template": "default.html",
+			"engines": ["google"],
+			"positions": [3],
+			"score": 0.3333333333333333,
+			"category": "general"
+		},
+		{
+			"url": "https://snapcraft.io/docs/python-plugin",
+			"title": "The python plugin | Snapcraft documentation",
+			"content": "The python plugin can be used by either Python 2 or Python 3 based parts using a setup.py script for building the project, or using a package published to ...",
+			"img_src": null,
+			"engine": "google",
+			"parsed_url": ["https", "snapcraft.io", "/docs/python-plugin", "", "", ""],
+			"template": "default.html",
+			"engines": ["google"],
+			"positions": [4],
+			"score": 0.25,
+			"category": "general"
+		},
+		{
+			"url": "https://www.developer-tech.com/categories/developer-languages/developer-languages-python/",
+			"title": "Latest Python Developer News",
+			"content": "Python's status as the primary language for AI and machine learning projects, from its extensive data-handling capabilities to its flexibility and ...",
+			"img_src": null,
+			"engine": "google",
+			"parsed_url": [
+				"https",
+				"www.developer-tech.com",
+				"/categories/developer-languages/developer-languages-python/",
+				"",
+				"",
+				""
+			],
+			"template": "default.html",
+			"engines": ["google"],
+			"positions": [5],
+			"score": 0.2,
+			"category": "general"
+		},
+		{
+			"url": "https://subjectguides.york.ac.uk/coding/python",
+			"title": "Coding: a Practical Guide - Python - Subject Guides",
+			"content": "Python is a coding language used for a wide range of things, including working with data, building systems and software, and even creating games.",
+			"img_src": null,
+			"engine": "google",
+			"parsed_url": ["https", "subjectguides.york.ac.uk", "/coding/python", "", "", ""],
+			"template": "default.html",
+			"engines": ["google"],
+			"positions": [6],
+			"score": 0.16666666666666666,
+			"category": "general"
+		},
+		{
+			"url": "https://hub.salford.ac.uk/psytech/python/getting-started-python/",
+			"title": "Getting Started - Python - Salford PsyTech Home - The Hub",
+			"content": "Python in itself is a very friendly programming language, when we get to grips with writing code, once you grasp the logic, it will become very intuitive.",
+			"img_src": null,
+			"engine": "google",
+			"parsed_url": [
+				"https",
+				"hub.salford.ac.uk",
+				"/psytech/python/getting-started-python/",
+				"",
+				"",
+				""
+			],
+			"template": "default.html",
+			"engines": ["google"],
+			"positions": [7],
+			"score": 0.14285714285714285,
+			"category": "general"
+		},
+		{
+			"url": "https://snapcraft.io/docs/python-apps",
+			"title": "Python apps | Snapcraft documentation",
+			"content": "Snapcraft can be used to package and distribute Python applications in a way that enables convenient installation by users. The process of creating a snap ...",
+			"img_src": null,
+			"engine": "google",
+			"parsed_url": ["https", "snapcraft.io", "/docs/python-apps", "", "", ""],
+			"template": "default.html",
+			"engines": ["google"],
+			"positions": [8],
+			"score": 0.125,
+			"category": "general"
+		},
+		{
+			"url": "https://anvil.works/",
+			"title": "Anvil | Build Web Apps with Nothing but Python",
+			"content": "Anvil is a free Python-based drag-and-drop web app builder.\u200eSign Up \u00b7 \u200eSign in \u00b7 \u200ePricing \u00b7 \u200eForum",
+			"img_src": null,
+			"engine": "google",
+			"parsed_url": ["https", "anvil.works", "/", "", "", ""],
+			"template": "default.html",
+			"engines": ["google"],
+			"positions": [9],
+			"score": 0.1111111111111111,
+			"category": "general"
+		},
+		{
+			"url": "https://docs.python.org/",
+			"title": "Python 3.12.3 documentation",
+			"content": "3 days ago \u00b7 This is the official documentation for Python 3.12.3. Documentation sections: What's new in Python 3.12? Or all \"What's new\" documents since Python 2.0. Tutorial. Start here: a tour of Python's syntax and features. Library reference. Standard library and builtins. Language reference.",
+			"engine": "bing",
+			"parsed_url": ["https", "docs.python.org", "/", "", "", ""],
+			"template": "default.html",
+			"engines": ["bing", "duckduckgo"],
+			"positions": [7, 13],
+			"score": 0.43956043956043955,
+			"category": "general"
+		},
+		{
+			"title": "How to Use Python: Your First Steps - Real Python",
+			"content": "Learn the basics of Python syntax, installation, error handling, and more in this tutorial. You'll also code your first Python program and test your knowledge with a quiz.",
+			"url": "https://realpython.com/python-first-steps/",
+			"engine": "duckduckgo",
+			"parsed_url": ["https", "realpython.com", "/python-first-steps/", "", "", ""],
+			"template": "default.html",
+			"engines": ["qwant", "duckduckgo"],
+			"positions": [14, 7],
+			"score": 0.42857142857142855,
+			"category": "general"
+		},
+		{
+			"title": "The Python Tutorial \u2014 Python 3.11.8 documentation",
+			"content": "This tutorial introduces the reader informally to the basic concepts and features of the Python language and system. It helps to have a Python interpreter handy for hands-on experience, but all examples are self-contained, so the tutorial can be read off-line as well. For a description of standard objects and modules, see The Python Standard ...",
+			"url": "https://docs.python.org/3.11/tutorial/",
+			"engine": "duckduckgo",
+			"parsed_url": ["https", "docs.python.org", "/3.11/tutorial/", "", "", ""],
+			"template": "default.html",
+			"engines": ["duckduckgo"],
+			"positions": [7],
+			"score": 0.14285714285714285,
+			"category": "general"
+		},
+		{
+			"url": "https://realpython.com/python-introduction/",
+			"title": "Introduction to Python 3 \u2013 Real Python",
+			"content": "Python programming language, including a brief history of the development of Python and reasons why you might select Python as your language of choice.",
+			"engine": "bing",
+			"parsed_url": ["https", "realpython.com", "/python-introduction/", "", "", ""],
+			"template": "default.html",
+			"engines": ["bing"],
+			"positions": [8],
+			"score": 0.125,
+			"category": "general"
+		},
+		{
+			"title": "Our Documentation | Python.org",
+			"content": "Find online or download Python's documentation, tutorials, and guides for beginners and advanced users. Learn how to port from Python 2 to Python 3, contribute to Python, and access Python videos and books.",
+			"url": "https://www.python.org/doc/",
+			"engine": "duckduckgo",
+			"parsed_url": ["https", "www.python.org", "/doc/", "", "", ""],
+			"template": "default.html",
+			"engines": ["duckduckgo"],
+			"positions": [9],
+			"score": 0.1111111111111111,
+			"category": "general"
+		},
+		{
+			"title": "Welcome to Python.org",
+			"url": "http://www.get-python.org/shell/",
+			"content": "The mission of the Python Software Foundation is to promote, protect, and advance the Python programming language, and to support and facilitate the growth of a diverse and international community of Python programmers. Learn more. Become a Member Donate to the PSF.",
+			"engine": "qwant",
+			"parsed_url": ["http", "www.get-python.org", "/shell/", "", "", ""],
+			"template": "default.html",
+			"engines": ["qwant"],
+			"positions": [9],
+			"score": 0.1111111111111111,
+			"category": "general"
+		},
+		{
+			"title": "About Python\u2122 | Python.org",
+			"content": "Python is a powerful, fast, and versatile programming language that runs on various platforms and is easy to learn. Learn how to get started, explore the applications, and join the community of Python programmers and users.",
+			"url": "https://www.python.org/about/",
+			"engine": "duckduckgo",
+			"parsed_url": ["https", "www.python.org", "/about/", "", "", ""],
+			"template": "default.html",
+			"engines": ["duckduckgo"],
+			"positions": [11],
+			"score": 0.09090909090909091,
+			"category": "general"
+		},
+		{
+			"title": "Online Python Compiler (Interpreter) - Programiz",
+			"content": "Write and run Python code using this online tool. You can use Python Shell like IDLE, and take inputs from the user in our Python compiler.",
+			"url": "https://www.programiz.com/python-programming/online-compiler/",
+			"engine": "duckduckgo",
+			"parsed_url": [
+				"https",
+				"www.programiz.com",
+				"/python-programming/online-compiler/",
+				"",
+				"",
+				""
+			],
+			"template": "default.html",
+			"engines": ["duckduckgo"],
+			"positions": [12],
+			"score": 0.08333333333333333,
+			"category": "general"
+		},
+		{
+			"title": "Welcome to Python.org",
+			"content": "Python is a versatile and powerful language that lets you work quickly and integrate systems more effectively. Download the latest version, read the documentation, find jobs, events, success stories, and more on Python.org.",
+			"url": "https://www.python.org/?downloads",
+			"engine": "duckduckgo",
+			"parsed_url": ["https", "www.python.org", "/", "", "downloads", ""],
+			"template": "default.html",
+			"engines": ["duckduckgo"],
+			"positions": [15],
+			"score": 0.06666666666666667,
+			"category": "general"
+		},
+		{
+			"url": "https://www.matillion.com/blog/the-importance-of-python-and-its-growing-influence-on-data-productivty-a-matillion-perspective",
+			"title": "The Importance of Python and its Growing Influence on ...",
+			"content": "Jan 30, 2024 \u2014 The synergy of low-code functionality with Python's versatility empowers data professionals to orchestrate complex transformations seamlessly.",
+			"img_src": null,
+			"engine": "google",
+			"parsed_url": [
+				"https",
+				"www.matillion.com",
+				"/blog/the-importance-of-python-and-its-growing-influence-on-data-productivty-a-matillion-perspective",
+				"",
+				"",
+				""
+			],
+			"template": "default.html",
+			"engines": ["google"],
+			"positions": [10],
+			"score": 0.1,
+			"category": "general"
+		},
+		{
+			"title": "BeginnersGuide - Python Wiki",
+			"content": "This is the program that reads Python programs and carries out their instructions; you need it before you can do any Python programming. Mac and Linux distributions may include an outdated version of Python (Python 2), but you should install an updated one (Python 3). See BeginnersGuide/Download for instructions to download the correct version ...",
+			"url": "https://wiki.python.org/moin/BeginnersGuide",
+			"engine": "duckduckgo",
+			"parsed_url": ["https", "wiki.python.org", "/moin/BeginnersGuide", "", "", ""],
+			"template": "default.html",
+			"engines": ["duckduckgo"],
+			"positions": [16],
+			"score": 0.0625,
+			"category": "general"
+		},
+		{
+			"title": "Learn Python - Free Interactive Python Tutorial",
+			"content": "Learn Python from scratch or improve your skills with this website that offers tutorials, exercises, tests and certification. Explore topics such as basics, data science, advanced features and more with DataCamp.",
+			"url": "https://www.learnpython.org/",
+			"engine": "duckduckgo",
+			"parsed_url": ["https", "www.learnpython.org", "/", "", "", ""],
+			"template": "default.html",
+			"engines": ["duckduckgo"],
+			"positions": [17],
+			"score": 0.058823529411764705,
+			"category": "general"
+		}
+	],
+	"answers": [],
+	"corrections": [],
+	"infoboxes": [
+		{
+			"infobox": "Python",
+			"id": "https://en.wikipedia.org/wiki/Python_(programming_language)",
+			"content": "general-purpose programming language",
+			"img_src": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/.PY_file_recreation.png/500px-.PY_file_recreation.png",
+			"urls": [
+				{
+					"title": "Official website",
+					"url": "https://www.python.org/",
+					"official": true
+				},
+				{
+					"title": "Wikipedia (en)",
+					"url": "https://en.wikipedia.org/wiki/Python_(programming_language)"
+				},
+				{
+					"title": "Wikidata",
+					"url": "http://www.wikidata.org/entity/Q28865"
+				}
+			],
+			"attributes": [
+				{
+					"label": "Inception",
+					"value": "Wednesday, February 20, 1991",
+					"entity": "P571"
+				},
+				{
+					"label": "Developer",
+					"value": "Python Software Foundation, Guido van Rossum",
+					"entity": "P178"
+				},
+				{
+					"label": "Copyright license",
+					"value": "Python Software Foundation License",
+					"entity": "P275"
+				},
+				{
+					"label": "Programmed in",
+					"value": "C, Python",
+					"entity": "P277"
+				},
+				{
+					"label": "Software version identifier",
+					"value": "3.12.3, 3.13.0a6",
+					"entity": "P348"
+				}
+			],
+			"engine": "wikidata",
+			"engines": ["wikidata"]
+		}
+	],
+	"suggestions": [
+		"python turtle",
+		"micro python tutorial",
+		"python docs",
+		"python compiler",
+		"snapcraft python",
+		"micropython vs python",
+		"python online",
+		"python download"
+	],
+	"unresponsive_engines": []
+}
