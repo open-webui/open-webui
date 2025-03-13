@@ -47,12 +47,14 @@
 		<div class=" overflow-y-scroll max-h-96 scrollbar-hidden">
 			<div class="pr-4">
 				<div class="font-semibold text-xl mb-1 dark:text-white">
-					1. 아래 링크를 눌러서 HKUST API Developer Portal에 접속합니다.
+					1. 아래 이미지를 눌러서 HKUST API Developer Portal에 접속합니다.
 				</div>
+				<a href="https://hkust.developer.azure-api.net/" target="_blank" rel="noopener noreferrer">
 				<Image
 					src={'assets/images/hkust_api_guide_1.png'}
 					imageClassName="rounded-xl object-cover mb-10"
 				/>
+				</a>
 				<div class="font-semibold text-xl mb-1 dark:text-white">
 					2. HKUST 계정으로 로그인합니다.
 				</div>
