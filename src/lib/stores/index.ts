@@ -45,6 +45,7 @@ export const TTSWorker = writable(null);
 
 export const chatId = writable('');
 export const chatTitle = writable('');
+export const chatSysPrompt = writable('');
 
 export const channels = writable([]);
 export const chats = writable([]);
@@ -57,6 +58,7 @@ export const prompts: Writable<null | Prompt[]> = writable(null);
 export const knowledge: Writable<null | Document[]> = writable(null);
 export const tools = writable(null);
 export const functions = writable(null);
+export const characters: Writable<CharacterPrompt[]> = writable([]);
 
 export const banners: Writable<Banner[]> = writable([]);
 
@@ -182,6 +184,12 @@ type Prompt = {
 	content: string;
 	timestamp: number;
 };
+
+type CharacterPrompt = {
+	character_name: string;
+	system_prompt: string;
+	timestamp: number;
+}
 
 type Document = {
 	collection_name: string;

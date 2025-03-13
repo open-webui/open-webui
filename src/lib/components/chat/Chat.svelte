@@ -35,7 +35,8 @@
 		showOverview,
 		chatTitle,
 		showArtifacts,
-		tools
+		tools,
+		chatSysPrompt
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -134,6 +135,10 @@
 	let chatFiles = [];
 	let files = [];
 	let params = {};
+
+	if (chatSysPrompt) {
+		params.system = $chatSysPrompt
+	}
 
 	$: if (chatIdProp) {
 		(async () => {
@@ -773,6 +778,8 @@
 	};
 
 	const loadChat = async () => {
+
+		console.log('LOAD CHAT')
 		chatId.set(chatIdProp);
 		chat = await getChatById(localStorage.token, $chatId).catch(async (error) => {
 			await goto('/');
@@ -798,6 +805,7 @@
 						? chatContent.history
 						: convertMessagesToHistory(chatContent.messages);
 
+				console.log('setting chat title', chatContent.title)
 				chatTitle.set(chatContent.title);
 
 				const userSettings = await getUserSettings(localStorage.token);

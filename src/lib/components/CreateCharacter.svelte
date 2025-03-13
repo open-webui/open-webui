@@ -1,12 +1,11 @@
 <script lang="ts">
-import { generateChatCompletion } from '$lib/apis/ollama';
 import { chatCompletion } from '$lib/apis/openai';
 import {
 	WEBUI_BASE_URL
 } from '$lib/constants';
 import { splitStream } from '$lib/utils';
-import ResponseMessage from './chat/Messages/ResponseMessage.svelte';
-
+import { characters } from '$lib/stores';
+	import { goto } from '$app/navigation';
 
 let messageEditTextAreaElement: HTMLTextAreaElement;
 let editedContent = '';
@@ -24,7 +23,16 @@ const stopResponse = () => {
 };
 
 const saveCharacter = () => {
-    
+    //TODO: save to DB like in knowledge.py, and use the timestamp of the db
+    const character_prompt = {
+        character_name: 'Daisie (hardcoded)',
+        system_prompt: messages.content,
+        timestamp: Date.now()
+    }
+
+    characters.update(char => [...char, character_prompt])
+
+    goto('/character/browse');
 }
 
 const submitMessage = async () => {
@@ -74,20 +82,6 @@ const submitMessage = async () => {
 
                             // TODO: Langfuse
                             messages.content += data.choices[0].delta.content ?? '';
-                            // console.log(data);
-
-                            // if (responseMessage.content == '' && data.choices[0].delta.content == '\n') {
-                            //     continue;
-                            // } else {
-                            //     textareaElement.style.height = textareaElement.scrollHeight + 'px';
-
-                            //     responseMessage.content += data.choices[0].delta.content ?? '';
-                            //     messages = messages;
-
-                            //     textareaElement.style.height = textareaElement.scrollHeight + 'px';
-
-                            //     await tick();
-                            // }
                         }
                     }
                 }
@@ -176,12 +170,7 @@ const submitMessage = async () => {
 
 
     {#if messages.content.length > 0}
-        <!-- <ResponseMessage
-            {chatId}
-            {messages}
-        /> -->
         <div>{messages.content}</div>
-
         <button
             id="confirm-edit-message-button"
             class="px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"

@@ -863,6 +863,7 @@
 							{$i18n.t('October')}
 							{$i18n.t('November')}
 							{$i18n.t('December')}
+							The chat title is passed here
 							-->
 									</div>
 								{/if}
