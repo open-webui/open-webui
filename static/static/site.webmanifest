@@ -565,7 +565,11 @@
 	],
 	"theme_color": "#5612cc",
 	"background_color": "#ffffff",
-	"display": "fullscreen",
+	"display": "standalone",
+	"display_override": [
+		"window-controls-overlay",
+		"standalone"
+	],
 	"id": "aibrary123",
 	"description": "Aibrary Chat service",
 	"start_url": "/",
@@ -592,6 +596,38 @@
 					"type": "image/png"
 				}
 			]
+		}
+	],
+	"related_applications": [
+		{
+			"platform": "play",
+			"url": "https://play.google.com/store/apps/details?id=com.google.android.apps.bard",
+			"id": "com.google.android.apps.bard"
+		},
+		{
+			"platform": "itunes",
+			"url": "https://apps.apple.com/us/app/google-gemini/id6477489729",
+			"id": "6477489729"
+		},
+		{
+			"platform": "play",
+			"url": "https://play.google.com/store/apps/details?id=com.deepseek.chat",
+			"id": "com.deepseek.chat"
+		},
+		{
+			"platform": "itunes",
+			"url": "https://apps.apple.com/us/app/deepseek-ai-assistant/id6737597349",
+			"id": "6737597349"
+		},
+		{
+			"platform": "play",
+			"url": "https://play.google.com/store/apps/details?id=com.openai.chatgpt",
+			"id": "com.openai.chatgpt"
+		},
+		{
+			"platform": "itunes",
+			"url": "https://apps.apple.com/app/id6448311069",
+			"id": "6448311069"
 		}
 	],
 	"categories": [
