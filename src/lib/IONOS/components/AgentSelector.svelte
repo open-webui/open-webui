@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getContext } from 'svelte';
 	import { selectAgent } from '$lib/IONOS/services/agent';
 	import { agents } from '$lib/IONOS/stores/agents';
 	import Sparkles from '$lib/IONOS/components/icons/Sparkles.svelte';

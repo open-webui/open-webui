@@ -17,16 +17,16 @@ The gradient colors, rotation and dimension change with an animation.
 
 	const CYCLE_DURATION = 5000;
 
-	let el;
+	let el: HTMLElement|null = null;
 
 	onMount(() => {
 
-		const rotate = (elements, offset = 0) => {
+		const rotate = (elements: string[], offset: number = 0) => {
 			const count = elements.length;
 			return [...elements.slice(offset % (count - 1)), ...elements.slice(0, offset % (count - 1))];
 		};
 
-		const colorMapper = (value, index) => [`--color-${index + 1}`, value];
+		const colorMapper = (value: string, index: number) => [`--color-${index + 1}`, value];
 
 		const animation = Array(COLOR_STOPS.length).fill(0)
 			.map((_, i) => rotate(COLOR_STOPS, i))

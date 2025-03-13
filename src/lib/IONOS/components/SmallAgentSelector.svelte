@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
 	import { models, settings } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 
@@ -8,7 +7,7 @@
 	// Custom models obey have the convention of using only characters
 	// This excludes stock models.
 	// This can later be changed to testing for a marker tag in info.meta.tags
-	const onlyCustomModels = ({ id }) => /^[a-z]+$/.test(id);
+	const onlyCustomModels = ({ id }: { id: string }) => /^[a-z]+$/.test(id);
 
 	$: modelsUi = $models
 		.filter(onlyCustomModels)
@@ -22,7 +21,7 @@
 		await updateUserSettings(localStorage.token, { ui: $settings });
 	}
 
-	const select = (id) => {
+	const select = (id: string) => {
 		selectedModels = [id];
 		save();
 	}

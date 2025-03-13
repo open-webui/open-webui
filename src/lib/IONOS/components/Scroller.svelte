@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import type { ScrollerItem } from './scrollerItem.d.ts';
 
 	const dispatcher = createEventDispatcher();
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { onMount } from 'svelte';
 	import type { ScrollerItem } from './scrollerItem.d.ts';
 	import { prompts, init } from '$lib/IONOS/stores/prompts';
 	import { selectPrompt } from '$lib/IONOS/services/prompt';
