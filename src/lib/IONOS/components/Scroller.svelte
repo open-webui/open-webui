@@ -31,7 +31,7 @@
 			<span
 				on:click={() => { dispatcher('click', id); }}
 				data-id={id}
-				class="flex justify-items-center items-center bg-white rounded-md h-20 mx-2 p-4 last:p-0 cursor-pointer"
+				class="flex justify-items-center items-center bg-white rounded-md h-20 mx-2 last:m-0 px-6 py-4 cursor-pointer"
 			>
 				<span class="w-full text-sm text-wrap">{ text } →</span>
 			</span>
