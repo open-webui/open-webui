@@ -61,8 +61,6 @@ async function loadPyodideAndPackages(packages: string[] = []) {
 
 	// await micropip.set_index_urls('https://pypi.org/pypi/{package_name}/json');
 
-	console.log("WAS GEEEEEHT", packages);
-
 	await micropip.install(packages);
 }
 
