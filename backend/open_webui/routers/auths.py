@@ -5,6 +5,7 @@ import datetime
 import logging
 from aiohttp import ClientSession
 import httpx
+import sentry_sdk
 
 from open_webui.models.auths import (
     AddUserForm,

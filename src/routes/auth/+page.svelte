@@ -9,10 +9,11 @@
 	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp, checkUstApiKey } from '$lib/apis/auths';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
+	import { WEBUI_NAME, config, user, socket, showHkustApiHelp } from '$lib/stores';
 
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
 
+	import HkustApiKeyHelpModal from '$lib/components/HkustApiKeyHelpModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 
@@ -156,6 +157,8 @@
 	}}
 />
 
+<HkustApiKeyHelpModal bind:show={$showHkustApiHelp} />
+
 <div class="w-full h-screen max-h-[100dvh] text-white relative">
 	<div class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"></div>
 
@@ -284,8 +287,7 @@
 									</div>
 									{#if mode === 'signup'}
 										<div>
-											<div class=" text-sm font-medium text-left mb-1">HKUST Open API Key</div>
-
+											<div class="text-sm font-medium text-left mb-1 cursor-pointer hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full py-1.5 px-1.5" on:click={() => {showHkustApiHelp.set(!$showHkustApiHelp)}}>HKUST Open API Key(<span style="color: blue">?</span>)</div>
 											<input
 												bind:value={apikey}
 												type="password"
