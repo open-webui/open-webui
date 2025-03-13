@@ -211,7 +211,6 @@
 			code.includes('geopandas') ? 'geopandas' : null,
 			code.includes('gmpy2') ? 'gmpy2' : null,
 			code.includes('gsw') ? 'gsw' : null,
-			code.includes('h3') ? 'h3' : null,
 			code.includes('h5py') ? 'h5py' : null,
 			code.includes('html5lib') ? 'html5lib' : null,
 			code.includes('httpx') ? 'httpx' : null,
