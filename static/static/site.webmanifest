@@ -594,5 +594,10 @@
 			]
 		}
 	],
-	"categories": ["education", "entertainment", "personalization", "social"]
+	"categories": [
+		"education",
+		"entertainment",
+		"personalization",
+		"social"
+	]
 }

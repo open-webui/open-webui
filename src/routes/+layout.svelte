@@ -2,7 +2,6 @@
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
-	import GoogleAnalytics from '$lib/analytics.svelte';
 
 
 	let loadingProgress = spring(0, {
@@ -566,7 +565,6 @@
 		};
 	});
 </script>
-<GoogleAnalytics />
 
 <svelte:head>
 	<title>{$WEBUI_NAME}</title>
