@@ -36,7 +36,6 @@
 			);
 		}
 	})();
-	console.log({ content });
 </script>
 
 {#key id}

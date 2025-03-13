@@ -7,7 +7,7 @@
 
 	import { getContext, getAllContexts, onMount, tick, createEventDispatcher } from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
-	import { isFinishGenRes, showBottomArtifacts } from '$lib/stores';
+	import { isFinishGenRes, showArtifacts, showBottomArtifacts, showControls } from '$lib/stores';
 
 	import 'highlight.js/styles/github-dark.min.css';
 
@@ -285,10 +285,15 @@
 	$: {
 		if (
 			$isFinishGenRes &&
-			(history?.messages[history.currentId].content.includes('OpenBottomArtifacts') ||
-				history?.messages[history.currentId].content.includes('OpenAllArtifacts'))
+			history?.messages[history.currentId].content.includes('OpenBottomArtifacts')
 		) {
 			showBottomArtifacts.set(true);
+		} else if (
+			$isFinishGenRes &&
+			history?.messages[history.currentId].content.includes('OpenArtifacts')
+		) {
+			showControls.set(true);
+			showArtifacts.set(true);
 		}
 	}
 </script>
@@ -407,7 +412,8 @@
 					{/if}
 				</div>
 			{/if}
-		{:else if $isFinishGenRes}
+			<!-- HAUL -->
+			<!-- {:else if $isFinishGenRes}
 			<span>Please choose an option from the popup window</span>
 		{:else if !$isFinishGenRes && id?.includes(history?.currentId)}
 			<img
@@ -416,7 +422,7 @@
 				alt="thinking"
 			/>
 		{:else}
-			<span> Please wait for the code to finish executing </span>
+			<span> Please wait for the code to finish executing </span> -->
 		{/if}
 	</div>
 </div>

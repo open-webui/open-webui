@@ -215,8 +215,6 @@
 			bind:pane
 			defaultSize={0}
 			onResize={(size) => {
-				console.log('size', size, minSize);
-
 				if ($showControls && pane.isExpanded()) {
 					if (size < minSize) {
 						pane.resize(minSize);

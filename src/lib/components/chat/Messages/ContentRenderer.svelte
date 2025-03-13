@@ -4,10 +4,18 @@
 	const dispatch = createEventDispatcher();
 
 	import Markdown from './Markdown.svelte';
-	import { chatId, mobile, showArtifacts, showControls, showOverview, showBottomArtifacts,
+	import {
+		chatId,
+		mobile,
+		showArtifacts,
+		showControls,
+		showOverview,
+		showBottomArtifacts,
 		showLeftArtifacts,
 		leftHistory,
-		bottomHistory } from '$lib/stores';
+		bottomHistory,
+		isFinishGenRes
+	} from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList } from '$lib/utils';
 	import LightBlub from '$lib/components/icons/LightBlub.svelte';
@@ -116,6 +124,26 @@
 			document.removeEventListener('keydown', keydownHandler);
 		}
 	});
+
+	$: {
+		let last_message = history.messages[history.currentId];
+		if (last_message && $isFinishGenRes) {
+			if (last_message && last_message.content.includes('OpenAllArtifacts')) {
+				showLeftArtifacts.set(true);
+				showBottomArtifacts.set(true);
+				showArtifacts.set(true);
+			} else if (last_message && last_message.content.includes('OpenBottomArtifacts')) {
+				showBottomArtifacts.set(true);
+			} else if (last_message && last_message.content.includes('OpenLeftArtifacts')) {
+				showLeftArtifacts.set(true);
+			} else if (last_message && last_message.content.includes('OpenArtifacts')) {
+				showControls.set(true);
+				showArtifacts.set(true);
+			}
+		}
+	}
+
+	console.log(8888, $showArtifacts, $showControls);
 	// TODO if we want to clear previous history!
 	// $: {
 	// 	if (!$isFinishGenRes) {
@@ -172,45 +200,8 @@
 			const { currentId, messages } = history;
 			const currentMessage = messages[currentId];
 
-			// Case 1: Check if the message includes 'OpenLeftArtifacts' & 'OpenBottomArtifacts'
-			if (currentId && currentMessage.content.includes('OpenAllArtifacts')) {
-				console.log('OpenAllArtifacts');
-				leftHistory.set({
-					currentId,
-					messages: {
-						...$leftHistory?.messages,
-						...Object.fromEntries(
-							Object.entries(history.messages).filter(([id, message]) =>
-								message.content.includes('OpenAllArtifacts')
-							)
-						)
-					}
-				});
-				bottomHistory.set({
-					currentId,
-					messages: {
-						...$bottomHistory?.messages,
-						...Object.fromEntries(
-							Object.entries(history.messages).filter(([id, message]) =>
-								message.content.includes('OpenAllArtifacts')
-							)
-						)
-					}
-				});
-				showLeftArtifacts.set(false);
-				showBottomArtifacts.set(false);
-				showControls.set(false);
-				showArtifacts.set(false);
-				setTimeout(() => {
-					showLeftArtifacts.set(true);
-					showBottomArtifacts.set(true);
-					showControls.set(true);
-					showArtifacts.set(true);
-				}, 200);
-			}
-
-			// Case 2: Check if the message includes 'OpenBottomArtifacts'
-			else if (currentId && currentMessage.content.includes('OpenBottomArtifacts')) {
+			// Case 1: Check if the message includes 'OpenBottomArtifacts'
+			if (currentId && currentMessage.content.includes('OpenBottomArtifacts')) {
 				console.log('OpenBottomArtifacts only');
 				bottomHistory.set({
 					currentId,
@@ -229,7 +220,7 @@
 				}, 200);
 			}
 
-			// Case 3: Check if the message includes 'OpenLeftArtifacts'
+			// Case 2: Check if the message includes 'OpenLeftArtifacts'
 			else if (currentId && currentMessage.content.includes('OpenLeftArtifacts')) {
 				console.log('OpenLeftArtifacts only');
 				leftHistory.set({
@@ -249,7 +240,29 @@
 				}, 200);
 			}
 
-			// Case 4: Handle html, svg, and xml content for artifacts
+			// Case 3: Check if the message includes 'OpenArtifacts'
+			else if (currentId && currentMessage.content.includes('OpenArtifacts')) {
+				console.log('OpenArtifacts only');
+				bottomHistory.set({
+					currentId,
+					messages: {
+						...$bottomHistory?.messages,
+						...Object.fromEntries(
+							Object.entries(history.messages).filter(([id, message]) =>
+								message.content.includes('OpenArtifacts')
+							)
+						)
+					}
+				});
+				showControls.set(false);
+				showArtifacts.set(false);
+				setTimeout(() => {
+					showControls.set(true);
+					showArtifacts.set(true);
+				}, 200);
+			}
+
+			// Case 5: Handle html, svg, and xml content for artifacts
 			else if (
 				currentId &&
 				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
@@ -261,8 +274,8 @@
 				console.log('HTML, SVG, XML content');
 				showBottomArtifacts.set(false);
 				showLeftArtifacts.set(false);
-				showArtifacts.set(true);
 				showControls.set(true);
+				showArtifacts.set(true);
 			}
 		}}
 	/>

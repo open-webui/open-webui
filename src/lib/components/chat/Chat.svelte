@@ -143,7 +143,6 @@
 	$: if (chatIdProp) {
 		(async () => {
 			loading = true;
-			console.log(chatIdProp);
 
 			prompt = '';
 			files = [];
@@ -234,8 +233,6 @@
 	};
 
 	const chatEventHandler = async (event, cb) => {
-		console.log(event);
-
 		if (event.chat_id === $chatId) {
 			await tick();
 			let message = history.messages[event.message_id];
@@ -1210,7 +1207,6 @@
 			);
 		}
 
-		console.log(data);
 		if (autoScroll) {
 			scrollToBottom();
 		}
@@ -1388,7 +1384,6 @@
 
 		await Promise.all(
 			selectedModelIds.map(async (modelId, _modelIdx) => {
-				console.log('modelId', modelId);
 				const model = $models.filter((m) => m.id === modelId).at(0);
 
 				if (model) {
@@ -1616,8 +1611,6 @@
 			history.currentId = responseMessageId;
 			return null;
 		});
-
-		console.log(res);
 
 		if (res) {
 			taskId = res.task_id;

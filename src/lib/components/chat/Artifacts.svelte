@@ -4,7 +4,7 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	import { chatId, showArtifacts, showControls } from '$lib/stores';
+	import { chatId, showArtifacts, showControls, isFinishGenRes } from '$lib/stores';
 	import XMark from '../icons/XMark.svelte';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
@@ -73,8 +73,11 @@
 				}
 				if (inlineCss) {
 					inlineCss.forEach((block) => {
+						const newBodyRule =
+							'\nbody {\nbackground-color:transparent;\nmargin: 0;\npadding: 0;\n}';
 						const content = block.replace(/<\/?style>/gi, ''); // Remove <style> tags
-						cssContent += content + '\n';
+						cssContent += content.replace(/body\s*{[^}]*}/, newBodyRule);
+						+'\n';
 					});
 				}
 				if (inlineJs) {
@@ -92,9 +95,7 @@
                             <meta charset="UTF-8">
                             <meta name="viewport" content="width=device-width, initial-scale=1.0">
 							<${''}style>
-								body {
-									background-color: white; /* Ensure the iframe has a white background */
-								}
+								
 
 								${cssContent}
 							</${''}style>
@@ -120,7 +121,7 @@
 			}
 		});
 
-		if (contents.length === 0) {
+		if ($isFinishGenRes && contents.length === 0) {
 			showControls.set(false);
 			showArtifacts.set(false);
 		}
