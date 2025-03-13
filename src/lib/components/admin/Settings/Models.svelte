@@ -68,7 +68,7 @@
 
 	const init = async () => {
 		workspaceModels = await getBaseModels(localStorage.token);
-		baseModels = await getModels(localStorage.token, null, true);
+		baseModels = await getModels(localStorage.token, true);
 
 		models = baseModels.map((m) => {
 			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
@@ -111,12 +111,7 @@
 			}
 		}
 
-		_models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
+		_models.set(await getModels(localStorage.token));
 		await init();
 	};
 
@@ -138,12 +133,7 @@
 		}
 
 		// await init();
-		_models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
+		_models.set(await getModels(localStorage.token));
 	};
 
 	onMount(async () => {
@@ -199,7 +189,7 @@
 						<Search className="size-3.5" />
 					</div>
 					<input
-						class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
+						class=" w-full text-sm py-1 rounded-r-xl outline-none bg-transparent"
 						bind:value={searchValue}
 						placeholder={$i18n.t('Search Models')}
 					/>
@@ -340,13 +330,7 @@
 									}
 								}
 
-								await _models.set(
-									await getModels(
-										localStorage.token,
-										$config?.features?.enable_direct_connections &&
-											($settings?.directConnections ?? null)
-									)
-								);
+								await _models.set(await getModels(localStorage.token));
 								init();
 							};
 

@@ -284,16 +284,14 @@ export const updateUserInfo = async (token: string, info: object) => {
 
 export const getAndUpdateUserLocation = async (token: string) => {
 	const location = await getUserPosition().catch((err) => {
-		console.log(err);
-		return null;
+		throw err;
 	});
 
 	if (location) {
 		await updateUserInfo(token, { location: location });
 		return location;
 	} else {
-		console.log('Failed to get user location');
-		return null;
+		throw new Error('Failed to get user location');
 	}
 };
 

@@ -217,20 +217,12 @@ def openai_chat_chunk_message_template(
 
 
 def openai_chat_completion_message_template(
-    model: str,
-    message: Optional[str] = None,
-    tool_calls: Optional[list[dict]] = None,
-    usage: Optional[dict] = None,
+    model: str, message: Optional[str] = None, usage: Optional[dict] = None
 ) -> dict:
     template = openai_chat_message_template(model)
     template["object"] = "chat.completion"
     if message is not None:
-        template["choices"][0]["message"] = {
-            "content": message,
-            "role": "assistant",
-            **({"tool_calls": tool_calls} if tool_calls else {}),
-        }
-
+        template["choices"][0]["message"] = {"content": message, "role": "assistant"}
     template["choices"][0]["finish_reason"] = "stop"
 
     if usage:
@@ -252,12 +244,11 @@ def get_gravatar_url(email):
     return f"https://www.gravatar.com/avatar/{hash_hex}?d=mp"
 
 
-def calculate_sha256(file_path, chunk_size):
-    # Compute SHA-256 hash of a file efficiently in chunks
+def calculate_sha256(file):
     sha256 = hashlib.sha256()
-    with open(file_path, "rb") as f:
-        while chunk := f.read(chunk_size):
-            sha256.update(chunk)
+    # Read the file in chunks to efficiently handle large files
+    for chunk in iter(lambda: file.read(8192), b""):
+        sha256.update(chunk)
     return sha256.hexdigest()
 
 

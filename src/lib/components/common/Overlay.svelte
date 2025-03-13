@@ -11,7 +11,7 @@
 	{#if show}
 		<div class="absolute w-full h-full flex">
 			<div
-				class="absolute rounded-sm"
+				class="absolute rounded"
 				style="inset: -10px; opacity: {opacity}; backdrop-filter: blur(5px);"
 			/>
 

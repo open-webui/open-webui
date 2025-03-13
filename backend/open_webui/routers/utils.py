@@ -4,67 +4,36 @@ import markdown
 from open_webui.models.chats import ChatTitleMessagesForm
 from open_webui.config import DATA_DIR, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 from starlette.responses import FileResponse
-
-
 from open_webui.utils.misc import get_gravatar_url
 from open_webui.utils.pdf_generator import PDFGenerator
-from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.code_interpreter import execute_code_jupyter
-
+from open_webui.utils.auth import get_admin_user
 
 router = APIRouter()
 
 
 @router.get("/gravatar")
-async def get_gravatar(email: str, user=Depends(get_verified_user)):
+async def get_gravatar(
+    email: str,
+):
     return get_gravatar_url(email)
 
 
-class CodeForm(BaseModel):
+class CodeFormatRequest(BaseModel):
     code: str
 
 
 @router.post("/code/format")
-async def format_code(form_data: CodeForm, user=Depends(get_verified_user)):
+async def format_code(request: CodeFormatRequest):
     try:
-        formatted_code = black.format_str(form_data.code, mode=black.Mode())
+        formatted_code = black.format_str(request.code, mode=black.Mode())
         return {"code": formatted_code}
     except black.NothingChanged:
-        return {"code": form_data.code}
+        return {"code": request.code}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.post("/code/execute")
-async def execute_code(
-    request: Request, form_data: CodeForm, user=Depends(get_verified_user)
-):
-    if request.app.state.config.CODE_EXECUTION_ENGINE == "jupyter":
-        output = await execute_code_jupyter(
-            request.app.state.config.CODE_EXECUTION_JUPYTER_URL,
-            form_data.code,
-            (
-                request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_TOKEN
-                if request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH == "token"
-                else None
-            ),
-            (
-                request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH_PASSWORD
-                if request.app.state.config.CODE_EXECUTION_JUPYTER_AUTH == "password"
-                else None
-            ),
-            request.app.state.config.CODE_EXECUTION_JUPYTER_TIMEOUT,
-        )
-
-        return output
-    else:
-        raise HTTPException(
-            status_code=400,
-            detail="Code execution engine not supported",
-        )
 
 
 class MarkdownForm(BaseModel):
@@ -73,7 +42,7 @@ class MarkdownForm(BaseModel):
 
 @router.post("/markdown")
 async def get_html_from_markdown(
-    form_data: MarkdownForm, user=Depends(get_verified_user)
+    form_data: MarkdownForm,
 ):
     return {"html": markdown.markdown(form_data.md)}
 
@@ -85,7 +54,7 @@ class ChatForm(BaseModel):
 
 @router.post("/pdf")
 async def download_chat_as_pdf(
-    form_data: ChatTitleMessagesForm, user=Depends(get_verified_user)
+    form_data: ChatTitleMessagesForm,
 ):
     try:
         pdf_bytes = PDFGenerator(form_data).generate_chat_pdf()

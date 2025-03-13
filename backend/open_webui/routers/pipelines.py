@@ -9,7 +9,6 @@ from fastapi import (
     status,
     APIRouter,
 )
-import aiohttp
 import os
 import logging
 import shutil
@@ -57,103 +56,96 @@ def get_sorted_filters(model_id, models):
     return sorted_filters
 
 
-async def process_pipeline_inlet_filter(request, payload, user, models):
+def process_pipeline_inlet_filter(request, payload, user, models):
     user = {"id": user.id, "email": user.email, "name": user.name, "role": user.role}
     model_id = payload["model"]
+
     sorted_filters = get_sorted_filters(model_id, models)
     model = models[model_id]
 
     if "pipeline" in model:
         sorted_filters.append(model)
 
-    async with aiohttp.ClientSession() as session:
-        for filter in sorted_filters:
-            urlIdx = filter.get("urlIdx")
-            if urlIdx is None:
-                continue
+    for filter in sorted_filters:
+        r = None
+        try:
+            urlIdx = filter["urlIdx"]
 
             url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
             key = request.app.state.config.OPENAI_API_KEYS[urlIdx]
 
-            if not key:
+            if key == "":
                 continue
 
             headers = {"Authorization": f"Bearer {key}"}
-            request_data = {
-                "user": user,
-                "body": payload,
-            }
+            r = requests.post(
+                f"{url}/{filter['id']}/filter/inlet",
+                headers=headers,
+                json={
+                    "user": user,
+                    "body": payload,
+                },
+            )
 
-            try:
-                async with session.post(
-                    f"{url}/{filter['id']}/filter/inlet",
-                    headers=headers,
-                    json=request_data,
-                ) as response:
-                    response.raise_for_status()
-                    payload = await response.json()
-            except aiohttp.ClientResponseError as e:
-                res = (
-                    await response.json()
-                    if response.content_type == "application/json"
-                    else {}
-                )
+            r.raise_for_status()
+            payload = r.json()
+        except Exception as e:
+            # Handle connection error here
+            print(f"Connection error: {e}")
+
+            if r is not None:
+                res = r.json()
                 if "detail" in res:
-                    raise Exception(response.status, res["detail"])
-            except Exception as e:
-                print(f"Connection error: {e}")
+                    raise Exception(r.status_code, res["detail"])
 
     return payload
 
 
-async def process_pipeline_outlet_filter(request, payload, user, models):
+def process_pipeline_outlet_filter(request, payload, user, models):
     user = {"id": user.id, "email": user.email, "name": user.name, "role": user.role}
     model_id = payload["model"]
+
     sorted_filters = get_sorted_filters(model_id, models)
     model = models[model_id]
 
     if "pipeline" in model:
         sorted_filters = [model] + sorted_filters
 
-    async with aiohttp.ClientSession() as session:
-        for filter in sorted_filters:
-            urlIdx = filter.get("urlIdx")
-            if urlIdx is None:
-                continue
+    for filter in sorted_filters:
+        r = None
+        try:
+            urlIdx = filter["urlIdx"]
 
             url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
             key = request.app.state.config.OPENAI_API_KEYS[urlIdx]
 
-            if not key:
-                continue
-
-            headers = {"Authorization": f"Bearer {key}"}
-            request_data = {
-                "user": user,
-                "body": payload,
-            }
-
-            try:
-                async with session.post(
+            if key != "":
+                r = requests.post(
                     f"{url}/{filter['id']}/filter/outlet",
-                    headers=headers,
-                    json=request_data,
-                ) as response:
-                    response.raise_for_status()
-                    payload = await response.json()
-            except aiohttp.ClientResponseError as e:
+                    headers={"Authorization": f"Bearer {key}"},
+                    json={
+                        "user": user,
+                        "body": payload,
+                    },
+                )
+
+                r.raise_for_status()
+                data = r.json()
+                payload = data
+        except Exception as e:
+            # Handle connection error here
+            print(f"Connection error: {e}")
+
+            if r is not None:
                 try:
-                    res = (
-                        await response.json()
-                        if "application/json" in response.content_type
-                        else {}
-                    )
+                    res = r.json()
                     if "detail" in res:
-                        raise Exception(response.status, res)
+                        return Exception(r.status_code, res)
                 except Exception:
                     pass
-            except Exception as e:
-                print(f"Connection error: {e}")
+
+            else:
+                pass
 
     return payload
 

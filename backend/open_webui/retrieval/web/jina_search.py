@@ -20,23 +20,14 @@ def search_jina(api_key: str, query: str, count: int) -> list[SearchResult]:
         list[SearchResult]: A list of search results
     """
     jina_search_endpoint = "https://s.jina.ai/"
-
-    headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "Authorization": api_key,
-        "X-Retain-Images": "none",
-    }
-
-    payload = {"q": query, "count": count if count <= 10 else 10}
-
-    url = str(URL(jina_search_endpoint))
-    response = requests.post(url, headers=headers, json=payload)
+    headers = {"Accept": "application/json", "Authorization": f"Bearer {api_key}"}
+    url = str(URL(jina_search_endpoint + query))
+    response = requests.get(url, headers=headers)
     response.raise_for_status()
     data = response.json()
 
     results = []
-    for result in data["data"]:
+    for result in data["data"][:count]:
         results.append(
             SearchResult(
                 link=result["url"],

@@ -459,7 +459,7 @@ export const getChatById = async (token: string, id: string) => {
 			return json;
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = err;
 
 			console.log(err);
 			return null;

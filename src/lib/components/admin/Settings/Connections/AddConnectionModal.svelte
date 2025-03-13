@@ -20,9 +20,7 @@
 
 	export let show = false;
 	export let edit = false;
-
 	export let ollama = false;
-	export let direct = false;
 
 	export let connection = null;
 
@@ -48,11 +46,9 @@
 	};
 
 	const verifyOpenAIHandler = async () => {
-		const res = await verifyOpenAIConnection(localStorage.token, url, key, direct).catch(
-			(error) => {
-				toast.error(`${error}`);
-			}
-		);
+		const res = await verifyOpenAIConnection(localStorage.token, url, key).catch((error) => {
+			toast.error(`${error}`);
+		});
 
 		if (res) {
 			toast.success($i18n.t('Server connection verified'));
@@ -169,7 +165,7 @@
 
 								<div class="flex-1">
 									<input
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
 										type="text"
 										bind:value={url}
 										placeholder={$i18n.t('API Base URL')}
@@ -202,7 +198,7 @@
 								</button>
 							</Tooltip>
 
-							<div class="flex flex-col shrink-0 self-end">
+							<div class="flex flex-col flex-shrink-0 self-end">
 								<Tooltip content={enable ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
 									<Switch bind:state={enable} />
 								</Tooltip>
@@ -215,7 +211,7 @@
 
 								<div class="flex-1">
 									<SensitiveInput
-										className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
 										bind:value={key}
 										placeholder={$i18n.t('API Key')}
 										required={!ollama}
@@ -233,7 +229,7 @@
 										)}
 									>
 										<input
-											class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+											class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
 											type="text"
 											bind:value={prefixId}
 											placeholder={$i18n.t('Prefix ID')}
@@ -258,7 +254,7 @@
 											<div class=" text-sm flex-1 py-1 rounded-lg">
 												{modelId}
 											</div>
-											<div class="shrink-0">
+											<div class="flex-shrink-0">
 												<button
 													type="button"
 													on:click={() => {
@@ -292,7 +288,7 @@
 							<input
 								class="w-full py-1 text-sm rounded-lg bg-transparent {modelId
 									? ''
-									: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+									: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
 								bind:value={modelId}
 								placeholder={$i18n.t('Add a model ID')}
 							/>

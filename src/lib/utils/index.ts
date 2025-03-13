@@ -55,12 +55,15 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 
 	// Remove sourceIds from the content and replace them with <source_id>...</source_id>
 	if (Array.isArray(sourceIds)) {
-		sourceIds.forEach((sourceId, idx) => {
+		sourceIds.forEach((sourceId) => {
+			// Escape special characters in the sourceId
+			const escapedSourceId = escapeRegExp(sourceId);
+
 			// Create a token based on the exact `[sourceId]` string
-			const sourceToken = `\\[${idx}\\]`; // Escape special characters for RegExp
+			const sourceToken = `\\[${escapedSourceId}\\]`; // Escape special characters for RegExp
 			const sourceRegex = new RegExp(sourceToken, 'g'); // Match all occurrences of [sourceId]
 
-			content = content.replace(sourceRegex, `<source_id data="${idx}" title="${sourceId}" />`);
+			content = content.replace(sourceRegex, `<source_id data="${sourceId}" />`);
 		});
 	}
 
@@ -1000,10 +1003,7 @@ export const bestMatchingLanguage = (supportedLanguages, preferredLanguages, def
 // Get the date in the format YYYY-MM-DD
 export const getFormattedDate = () => {
 	const date = new Date();
-	const year = date.getFullYear();
-	const month = String(date.getMonth() + 1).padStart(2, '0');
-	const day = String(date.getDate()).padStart(2, '0');
-	return `${year}-${month}-${day}`;
+	return date.toISOString().split('T')[0];
 };
 
 // Get the time in the format HH:MM:SS

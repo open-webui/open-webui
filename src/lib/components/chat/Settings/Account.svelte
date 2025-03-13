@@ -3,7 +3,7 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { user, config, settings } from '$lib/stores';
-	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser } from '$lib/apis/auths';
+	import { updateUserProfile, createAPIKey, getAPIKey } from '$lib/apis/auths';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
 	import { getGravatarUrl } from '$lib/apis/utils';
@@ -53,13 +53,7 @@
 		);
 
 		if (updatedUser) {
-			// Get Session User Info
-			const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
-				toast.error(`${error}`);
-				return null;
-			});
-
-			await user.set(sessionUser);
+			await user.set(updatedUser);
 			return true;
 		}
 		return false;
@@ -214,7 +208,7 @@
 						<button
 							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850"
 							on:click={async () => {
-								const url = await getGravatarUrl(localStorage.token, $user.email);
+								const url = await getGravatarUrl($user.email);
 
 								profileImageUrl = url;
 							}}>{$i18n.t('Use Gravatar')}</button
@@ -236,7 +230,7 @@
 
 					<div class="flex-1">
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							type="text"
 							bind:value={name}
 							required
@@ -251,7 +245,7 @@
 
 					<div class="flex-1">
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
 							type="url"
 							placeholder={$i18n.t('Enter your webhook URL')}
 							bind:value={webhookUrl}
@@ -266,7 +260,7 @@
 			<UpdatePassword />
 		</div>
 
-		<hr class="border-gray-100 dark:border-gray-850 my-4" />
+		<hr class=" dark:border-gray-850 my-4" />
 
 		<div class="flex justify-between items-center text-sm">
 			<div class="  font-medium">{$i18n.t('API keys')}</div>

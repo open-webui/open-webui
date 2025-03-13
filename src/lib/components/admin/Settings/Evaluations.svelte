@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { models, settings, user, config } from '$lib/stores';
+	import { models, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 
 	const dispatch = createEventDispatcher();
@@ -16,69 +16,49 @@
 
 	const i18n = getContext('i18n');
 
-	let evaluationConfig = null;
+	let config = null;
 	let showAddModel = false;
 
 	const submitHandler = async () => {
-		evaluationConfig = await updateConfig(localStorage.token, evaluationConfig).catch((err) => {
+		config = await updateConfig(localStorage.token, config).catch((err) => {
 			toast.error(err);
 			return null;
 		});
 
-		if (evaluationConfig) {
+		if (config) {
 			toast.success('Settings saved successfully');
-			models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-				)
-			);
+			models.set(await getModels(localStorage.token));
 		}
 	};
 
 	const addModelHandler = async (model) => {
-		evaluationConfig.EVALUATION_ARENA_MODELS.push(model);
-		evaluationConfig.EVALUATION_ARENA_MODELS = [...evaluationConfig.EVALUATION_ARENA_MODELS];
+		config.EVALUATION_ARENA_MODELS.push(model);
+		config.EVALUATION_ARENA_MODELS = [...config.EVALUATION_ARENA_MODELS];
 
 		await submitHandler();
-		models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
+		models.set(await getModels(localStorage.token));
 	};
 
 	const editModelHandler = async (model, modelIdx) => {
-		evaluationConfig.EVALUATION_ARENA_MODELS[modelIdx] = model;
-		evaluationConfig.EVALUATION_ARENA_MODELS = [...evaluationConfig.EVALUATION_ARENA_MODELS];
+		config.EVALUATION_ARENA_MODELS[modelIdx] = model;
+		config.EVALUATION_ARENA_MODELS = [...config.EVALUATION_ARENA_MODELS];
 
 		await submitHandler();
-		models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
+		models.set(await getModels(localStorage.token));
 	};
 
 	const deleteModelHandler = async (modelIdx) => {
-		evaluationConfig.EVALUATION_ARENA_MODELS = evaluationConfig.EVALUATION_ARENA_MODELS.filter(
+		config.EVALUATION_ARENA_MODELS = config.EVALUATION_ARENA_MODELS.filter(
 			(m, mIdx) => mIdx !== modelIdx
 		);
 
 		await submitHandler();
-		models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
+		models.set(await getModels(localStorage.token));
 	};
 
 	onMount(async () => {
 		if ($user.role === 'admin') {
-			evaluationConfig = await getConfig(localStorage.token).catch((err) => {
+			config = await getConfig(localStorage.token).catch((err) => {
 				toast.error(err);
 				return null;
 			});
@@ -101,7 +81,7 @@
 	}}
 >
 	<div class="overflow-y-scroll scrollbar-hidden h-full">
-		{#if evaluationConfig !== null}
+		{#if config !== null}
 			<div class="">
 				<div class="text-sm font-medium mb-2">{$i18n.t('General Settings')}</div>
 
@@ -110,12 +90,12 @@
 						<div class=" text-xs font-medium">{$i18n.t('Arena Models')}</div>
 
 						<Tooltip content={$i18n.t(`Message rating should be enabled to use this feature`)}>
-							<Switch bind:state={evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS} />
+							<Switch bind:state={config.ENABLE_EVALUATION_ARENA_MODELS} />
 						</Tooltip>
 					</div>
 				</div>
 
-				{#if evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS}
+				{#if config.ENABLE_EVALUATION_ARENA_MODELS}
 					<hr class=" border-gray-50 dark:border-gray-700/10 my-2" />
 
 					<div class="flex justify-between items-center mb-2">
@@ -137,8 +117,8 @@
 					</div>
 
 					<div class="flex flex-col gap-2">
-						{#if (evaluationConfig?.EVALUATION_ARENA_MODELS ?? []).length > 0}
-							{#each evaluationConfig.EVALUATION_ARENA_MODELS as model, index}
+						{#if (config?.EVALUATION_ARENA_MODELS ?? []).length > 0}
+							{#each config.EVALUATION_ARENA_MODELS as model, index}
 								<Model
 									{model}
 									on:edit={(e) => {

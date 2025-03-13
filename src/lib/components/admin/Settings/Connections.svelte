@@ -7,9 +7,8 @@
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
 	import { getModels as _getModels } from '$lib/apis';
-	import { getDirectConnectionsConfig, setDirectConnectionsConfig } from '$lib/apis/configs';
 
-	import { config, models, settings, user } from '$lib/stores';
+	import { models, user } from '$lib/stores';
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -17,16 +16,13 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 
 	import OpenAIConnection from './Connections/OpenAIConnection.svelte';
-	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
+	import AddConnectionModal from './Connections/AddConnectionModal.svelte';
 	import OllamaConnection from './Connections/OllamaConnection.svelte';
 
 	const i18n = getContext('i18n');
 
 	const getModels = async () => {
-		const models = await _getModels(
-			localStorage.token,
-			$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-		);
+		const models = await _getModels(localStorage.token);
 		return models;
 	};
 
@@ -40,8 +36,6 @@
 
 	let ENABLE_OPENAI_API: null | boolean = null;
 	let ENABLE_OLLAMA_API: null | boolean = null;
-
-	let directConnectionsConfig = null;
 
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
@@ -104,33 +98,17 @@
 		}
 	};
 
-	const updateDirectConnectionsHandler = async () => {
-		const res = await setDirectConnectionsConfig(localStorage.token, directConnectionsConfig).catch(
-			(error) => {
-				toast.error(`${error}`);
-			}
-		);
-
-		if (res) {
-			toast.success($i18n.t('Direct Connections settings updated'));
-			await models.set(await getModels());
-		}
-	};
-
 	const addOpenAIConnectionHandler = async (connection) => {
 		OPENAI_API_BASE_URLS = [...OPENAI_API_BASE_URLS, connection.url];
 		OPENAI_API_KEYS = [...OPENAI_API_KEYS, connection.key];
-		OPENAI_API_CONFIGS[OPENAI_API_BASE_URLS.length - 1] = connection.config;
+		OPENAI_API_CONFIGS[OPENAI_API_BASE_URLS.length] = connection.config;
 
 		await updateOpenAIHandler();
 	};
 
 	const addOllamaConnectionHandler = async (connection) => {
 		OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, connection.url];
-		OLLAMA_API_CONFIGS[OLLAMA_BASE_URLS.length - 1] = {
-			...connection.config,
-			key: connection.key
-		};
+		OLLAMA_API_CONFIGS[OLLAMA_BASE_URLS.length] = connection.config;
 
 		await updateOllamaHandler();
 	};
@@ -146,9 +124,6 @@
 				})(),
 				(async () => {
 					openaiConfig = await getOpenAIConfig(localStorage.token);
-				})(),
-				(async () => {
-					directConnectionsConfig = await getDirectConnectionsConfig(localStorage.token);
 				})()
 			]);
 
@@ -192,14 +167,6 @@
 			}
 		}
 	});
-
-	const submitHandler = async () => {
-		updateOpenAIHandler();
-		updateOllamaHandler();
-		updateDirectConnectionsHandler();
-
-		dispatch('save');
-	};
 </script>
 
 <AddConnectionModal
@@ -213,9 +180,17 @@
 	onSubmit={addOllamaConnectionHandler}
 />
 
-<form class="flex flex-col h-full justify-between text-sm" on:submit|preventDefault={submitHandler}>
+<form
+	class="flex flex-col h-full justify-between text-sm"
+	on:submit|preventDefault={() => {
+		updateOpenAIHandler();
+		updateOllamaHandler();
+
+		dispatch('save');
+	}}
+>
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
-		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && directConnectionsConfig !== null}
+		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null}
 			<div class="my-2">
 				<div class="mt-2 space-y-2 pr-1.5">
 					<div class="flex justify-between items-center text-sm">
@@ -234,7 +209,7 @@
 					</div>
 
 					{#if ENABLE_OPENAI_API}
-						<hr class=" border-gray-100 dark:border-gray-850" />
+						<hr class=" border-gray-50 dark:border-gray-850" />
 
 						<div class="">
 							<div class="flex justify-between items-center">
@@ -269,11 +244,7 @@
 											);
 											OPENAI_API_KEYS = OPENAI_API_KEYS.filter((key, keyIdx) => idx !== keyIdx);
 
-											let newConfig = {};
-											OPENAI_API_BASE_URLS.forEach((url, newIdx) => {
-												newConfig[newIdx] = OPENAI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
-											});
-											OPENAI_API_CONFIGS = newConfig;
+											delete OPENAI_API_CONFIGS[idx];
 										}}
 									/>
 								{/each}
@@ -283,7 +254,7 @@
 				</div>
 			</div>
 
-			<hr class=" border-gray-100 dark:border-gray-850" />
+			<hr class=" border-gray-50 dark:border-gray-850" />
 
 			<div class="pr-1.5 my-2">
 				<div class="flex justify-between items-center text-sm mb-2">
@@ -300,7 +271,7 @@
 				</div>
 
 				{#if ENABLE_OLLAMA_API}
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-50 dark:border-gray-850 my-2" />
 
 					<div class="">
 						<div class="flex justify-between items-center">
@@ -331,12 +302,7 @@
 										}}
 										onDelete={() => {
 											OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url, urlIdx) => idx !== urlIdx);
-
-											let newConfig = {};
-											OLLAMA_BASE_URLS.forEach((url, newIdx) => {
-												newConfig[newIdx] = OLLAMA_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
-											});
-											OLLAMA_API_CONFIGS = newConfig;
+											delete OLLAMA_API_CONFIGS[idx];
 										}}
 									/>
 								{/each}
@@ -355,33 +321,6 @@
 						</div>
 					</div>
 				{/if}
-			</div>
-
-			<hr class=" border-gray-100 dark:border-gray-850" />
-
-			<div class="pr-1.5 my-2">
-				<div class="flex justify-between items-center text-sm">
-					<div class="  font-medium">{$i18n.t('Direct Connections')}</div>
-
-					<div class="flex items-center">
-						<div class="">
-							<Switch
-								bind:state={directConnectionsConfig.ENABLE_DIRECT_CONNECTIONS}
-								on:change={async () => {
-									updateDirectConnectionsHandler();
-								}}
-							/>
-						</div>
-					</div>
-				</div>
-
-				<div class="mt-1.5">
-					<div class="text-xs text-gray-500">
-						{$i18n.t(
-							'Direct Connections allow users to connect to their own OpenAI compatible API endpoints.'
-						)}
-					</div>
-				</div>
 			</div>
 		{:else}
 			<div class="flex h-full justify-center">
