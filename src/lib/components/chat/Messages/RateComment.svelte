@@ -52,12 +52,21 @@
 	}
 
 	const init = () => {
-		selectedReason = message?.annotation?.reason ?? '';
-		comment = message?.annotation?.comment ?? '';
+		if (!selectedReason) {
+			selectedReason = message?.annotation?.reason ?? '';
+		}
+
+		if (!comment) {
+			comment = message?.annotation?.comment ?? '';
+		}
+
 		tags = (message?.annotation?.tags ?? []).map((tag) => ({
 			name: tag
 		}));
-		detailedRating = message?.annotation?.details?.rating ?? null;
+
+		if (!detailedRating) {
+			detailedRating = message?.annotation?.details?.rating ?? null;
+		}
 	};
 
 	onMount(() => {
@@ -101,7 +110,7 @@
 {/if}
 
 <div
-	class=" my-2.5 rounded-xl px-4 py-3 border border-gray-50 dark:border-gray-850"
+	class=" my-2.5 rounded-xl px-4 py-3 border border-gray-100 dark:border-gray-850"
 	id="message-feedback-{message.id}"
 >
 	<div class="flex justify-between items-center">
@@ -133,10 +142,10 @@
 				<!-- 1-10 scale -->
 				{#each Array.from({ length: 10 }).map((_, i) => i + 1) as rating}
 					<button
-						class="size-7 text-sm border border-gray-50 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 {detailedRating ===
+						class="size-7 text-sm border border-gray-100 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 {detailedRating ===
 						rating
 							? 'bg-gray-100 dark:bg-gray-800'
-							: ''} transition rounded-full disabled:cursor-not-allowed disabled:text-gray-500 disabled:bg-white disabled:dark:bg-gray-900"
+							: ''} transition rounded-full disabled:cursor-not-allowed disabled:text-gray-500 disabled:bg-white dark:disabled:bg-gray-900"
 						on:click={() => {
 							detailedRating = rating;
 						}}
@@ -166,7 +175,7 @@
 			<div class="flex flex-wrap gap-1.5 text-sm mt-1.5">
 				{#each reasons as reason}
 					<button
-						class="px-3 py-0.5 border border-gray-50 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedReason ===
+						class="px-3 py-0.5 border border-gray-100 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedReason ===
 						reason
 							? 'bg-gray-100 dark:bg-gray-800'
 							: ''} transition rounded-xl"
@@ -214,7 +223,7 @@
 	<div class="mt-2">
 		<textarea
 			bind:value={comment}
-			class="w-full text-sm px-1 py-2 bg-transparent outline-none resize-none rounded-xl"
+			class="w-full text-sm px-1 py-2 bg-transparent outline-hidden resize-none rounded-xl"
 			placeholder={$i18n.t('Feel free to add specific details')}
 			rows="3"
 		/>

@@ -116,7 +116,7 @@
 							// Move the folder
 							const res = await updateFolderParentIdById(localStorage.token, id, folderId).catch(
 								(error) => {
-									toast.error(error);
+									toast.error(`${error}`);
 									return null;
 								}
 							);
@@ -137,7 +137,7 @@
 							// Move the chat
 							const res = await updateChatFolderIdById(localStorage.token, chat.id, folderId).catch(
 								(error) => {
-									toast.error(error);
+									toast.error(`${error}`);
 									return null;
 								}
 							);
@@ -233,7 +233,7 @@
 
 	const deleteHandler = async () => {
 		const res = await deleteFolderById(localStorage.token, folderId).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 
@@ -260,7 +260,7 @@
 		folders[folderId].name = name;
 
 		const res = await updateFolderNameById(localStorage.token, folderId, name).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 
 			folders[folderId].name = currentName;
 			return null;
@@ -276,7 +276,7 @@
 	const isExpandedUpdateHandler = async () => {
 		const res = await updateFolderIsExpandedById(localStorage.token, folderId, open).catch(
 			(error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			}
 		);
@@ -310,7 +310,7 @@
 
 	const exportHandler = async () => {
 		const chats = await getChatsByFolderId(localStorage.token, folderId).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 			return null;
 		});
 		if (!chats) {
@@ -357,7 +357,7 @@
 <div bind:this={folderElement} class="relative {className}" draggable="true">
 	{#if draggedOver}
 		<div
-			class="absolute top-0 left-0 w-full h-full rounded-sm bg-[hsla(260,85%,65%,0.1)] bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
+			class="absolute top-0 left-0 w-full h-full rounded-xs bg-gray-100/50 dark:bg-gray-700/20 bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
 		></div>
 	{/if}
 
@@ -412,7 +412,7 @@
 									edit = false;
 								}
 							}}
-							class="w-full h-full bg-transparent text-gray-500 dark:text-gray-500 outline-none"
+							class="w-full h-full bg-transparent text-gray-500 dark:text-gray-500 outline-hidden"
 						/>
 					{:else}
 						{folders[folderId].name}

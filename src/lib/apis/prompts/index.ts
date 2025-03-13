@@ -4,7 +4,7 @@ type PromptItem = {
 	command: string;
 	title: string;
 	content: string;
-	access_control: null | object;
+	access_control?: null | object;
 };
 
 export const createNewPrompt = async (token: string, prompt: PromptItem) => {

@@ -5,7 +5,7 @@
 	export let src = '';
 	export let alt = '';
 
-	export let className = ' w-full';
+	export let className = ' w-full outline-hidden focus:outline-hidden';
 	export let imageClassName = 'rounded-lg';
 
 	let _src = '';
@@ -19,6 +19,7 @@
 	on:click={() => {
 		showImagePreview = true;
 	}}
+	type="button"
 >
 	<img src={_src} {alt} class={imageClassName} draggable="false" data-cy="image" />
 </button>

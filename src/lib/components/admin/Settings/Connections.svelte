@@ -7,8 +7,9 @@
 	import { getOllamaConfig, updateOllamaConfig } from '$lib/apis/ollama';
 	import { getOpenAIConfig, updateOpenAIConfig, getOpenAIModels } from '$lib/apis/openai';
 	import { getModels as _getModels } from '$lib/apis';
+	import { getDirectConnectionsConfig, setDirectConnectionsConfig } from '$lib/apis/configs';
 
-	import { models, user } from '$lib/stores';
+	import { config, models, settings, user } from '$lib/stores';
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -16,13 +17,16 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 
 	import OpenAIConnection from './Connections/OpenAIConnection.svelte';
-	import AddConnectionModal from './Connections/AddConnectionModal.svelte';
+	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 	import OllamaConnection from './Connections/OllamaConnection.svelte';
 
 	const i18n = getContext('i18n');
 
 	const getModels = async () => {
-		const models = await _getModels(localStorage.token);
+		const models = await _getModels(
+			localStorage.token,
+			$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+		);
 		return models;
 	};
 
@@ -37,15 +41,16 @@
 	let ENABLE_OPENAI_API: null | boolean = null;
 	let ENABLE_OLLAMA_API: null | boolean = null;
 
+	let directConnectionsConfig = null;
+
 	let pipelineUrls = {};
 	let showAddOpenAIConnectionModal = false;
 	let showAddOllamaConnectionModal = false;
 
 	const updateOpenAIHandler = async () => {
 		if (ENABLE_OPENAI_API !== null) {
-			OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.filter(
-				(url, urlIdx) => OPENAI_API_BASE_URLS.indexOf(url) === urlIdx && url !== ''
-			).map((url) => url.replace(/\/$/, ''));
+			// Remove trailing slashes
+			OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS.map((url) => url.replace(/\/$/, ''));
 
 			// Check if API KEYS length is same than API URLS length
 			if (OPENAI_API_KEYS.length !== OPENAI_API_BASE_URLS.length) {
@@ -69,7 +74,7 @@
 				OPENAI_API_KEYS: OPENAI_API_KEYS,
 				OPENAI_API_CONFIGS: OPENAI_API_CONFIGS
 			}).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 			});
 
 			if (res) {
@@ -81,24 +86,15 @@
 
 	const updateOllamaHandler = async () => {
 		if (ENABLE_OLLAMA_API !== null) {
-			// Remove duplicate URLs
-			OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter(
-				(url, urlIdx) => OLLAMA_BASE_URLS.indexOf(url) === urlIdx && url !== ''
-			).map((url) => url.replace(/\/$/, ''));
-
-			console.log(OLLAMA_BASE_URLS);
-
-			if (OLLAMA_BASE_URLS.length === 0) {
-				ENABLE_OLLAMA_API = false;
-				toast.info($i18n.t('Ollama API disabled'));
-			}
+			// Remove trailing slashes
+			OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.map((url) => url.replace(/\/$/, ''));
 
 			const res = await updateOllamaConfig(localStorage.token, {
 				ENABLE_OLLAMA_API: ENABLE_OLLAMA_API,
 				OLLAMA_BASE_URLS: OLLAMA_BASE_URLS,
 				OLLAMA_API_CONFIGS: OLLAMA_API_CONFIGS
 			}).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 			});
 
 			if (res) {
@@ -108,17 +104,33 @@
 		}
 	};
 
+	const updateDirectConnectionsHandler = async () => {
+		const res = await setDirectConnectionsConfig(localStorage.token, directConnectionsConfig).catch(
+			(error) => {
+				toast.error(`${error}`);
+			}
+		);
+
+		if (res) {
+			toast.success($i18n.t('Direct Connections settings updated'));
+			await models.set(await getModels());
+		}
+	};
+
 	const addOpenAIConnectionHandler = async (connection) => {
 		OPENAI_API_BASE_URLS = [...OPENAI_API_BASE_URLS, connection.url];
 		OPENAI_API_KEYS = [...OPENAI_API_KEYS, connection.key];
-		OPENAI_API_CONFIGS[connection.url] = connection.config;
+		OPENAI_API_CONFIGS[OPENAI_API_BASE_URLS.length - 1] = connection.config;
 
 		await updateOpenAIHandler();
 	};
 
 	const addOllamaConnectionHandler = async (connection) => {
 		OLLAMA_BASE_URLS = [...OLLAMA_BASE_URLS, connection.url];
-		OLLAMA_API_CONFIGS[connection.url] = connection.config;
+		OLLAMA_API_CONFIGS[OLLAMA_BASE_URLS.length - 1] = {
+			...connection.config,
+			key: connection.key
+		};
 
 		await updateOllamaHandler();
 	};
@@ -134,6 +146,9 @@
 				})(),
 				(async () => {
 					openaiConfig = await getOpenAIConfig(localStorage.token);
+				})(),
+				(async () => {
+					directConnectionsConfig = await getDirectConnectionsConfig(localStorage.token);
 				})()
 			]);
 
@@ -148,15 +163,17 @@
 			OLLAMA_API_CONFIGS = ollamaConfig.OLLAMA_API_CONFIGS;
 
 			if (ENABLE_OPENAI_API) {
-				for (const url of OPENAI_API_BASE_URLS) {
-					if (!OPENAI_API_CONFIGS[url]) {
-						OPENAI_API_CONFIGS[url] = {};
+				// get url and idx
+				for (const [idx, url] of OPENAI_API_BASE_URLS.entries()) {
+					if (!OPENAI_API_CONFIGS[idx]) {
+						// Legacy support, url as key
+						OPENAI_API_CONFIGS[idx] = OPENAI_API_CONFIGS[url] || {};
 					}
 				}
 
 				OPENAI_API_BASE_URLS.forEach(async (url, idx) => {
-					OPENAI_API_CONFIGS[url] = OPENAI_API_CONFIGS[url] || {};
-					if (!(OPENAI_API_CONFIGS[url]?.enable ?? true)) {
+					OPENAI_API_CONFIGS[idx] = OPENAI_API_CONFIGS[idx] || {};
+					if (!(OPENAI_API_CONFIGS[idx]?.enable ?? true)) {
 						return;
 					}
 					const res = await getOpenAIModels(localStorage.token, idx);
@@ -167,14 +184,22 @@
 			}
 
 			if (ENABLE_OLLAMA_API) {
-				for (const url of OLLAMA_BASE_URLS) {
-					if (!OLLAMA_API_CONFIGS[url]) {
-						OLLAMA_API_CONFIGS[url] = {};
+				for (const [idx, url] of OLLAMA_BASE_URLS.entries()) {
+					if (!OLLAMA_API_CONFIGS[idx]) {
+						OLLAMA_API_CONFIGS[idx] = OLLAMA_API_CONFIGS[url] || {};
 					}
 				}
 			}
 		}
 	});
+
+	const submitHandler = async () => {
+		updateOpenAIHandler();
+		updateOllamaHandler();
+		updateDirectConnectionsHandler();
+
+		dispatch('save');
+	};
 </script>
 
 <AddConnectionModal
@@ -188,17 +213,9 @@
 	onSubmit={addOllamaConnectionHandler}
 />
 
-<form
-	class="flex flex-col h-full justify-between text-sm"
-	on:submit|preventDefault={() => {
-		updateOpenAIHandler();
-		updateOllamaHandler();
-
-		dispatch('save');
-	}}
->
+<form class="flex flex-col h-full justify-between text-sm" on:submit|preventDefault={submitHandler}>
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
-		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null}
+		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && directConnectionsConfig !== null}
 			<div class="my-2">
 				<div class="mt-2 space-y-2 pr-1.5">
 					<div class="flex justify-between items-center text-sm">
@@ -217,7 +234,7 @@
 					</div>
 
 					{#if ENABLE_OPENAI_API}
-						<hr class=" border-gray-50 dark:border-gray-850" />
+						<hr class=" border-gray-100 dark:border-gray-850" />
 
 						<div class="">
 							<div class="flex justify-between items-center">
@@ -242,7 +259,7 @@
 										pipeline={pipelineUrls[url] ? true : false}
 										bind:url
 										bind:key={OPENAI_API_KEYS[idx]}
-										bind:config={OPENAI_API_CONFIGS[url]}
+										bind:config={OPENAI_API_CONFIGS[idx]}
 										onSubmit={() => {
 											updateOpenAIHandler();
 										}}
@@ -251,6 +268,13 @@
 												(url, urlIdx) => idx !== urlIdx
 											);
 											OPENAI_API_KEYS = OPENAI_API_KEYS.filter((key, keyIdx) => idx !== keyIdx);
+
+											let newConfig = {};
+											OPENAI_API_BASE_URLS.forEach((url, newIdx) => {
+												newConfig[newIdx] = OPENAI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
+											});
+											OPENAI_API_CONFIGS = newConfig;
+											updateOpenAIHandler();
 										}}
 									/>
 								{/each}
@@ -260,7 +284,7 @@
 				</div>
 			</div>
 
-			<hr class=" border-gray-50 dark:border-gray-850" />
+			<hr class=" border-gray-100 dark:border-gray-850" />
 
 			<div class="pr-1.5 my-2">
 				<div class="flex justify-between items-center text-sm mb-2">
@@ -277,7 +301,7 @@
 				</div>
 
 				{#if ENABLE_OLLAMA_API}
-					<hr class=" border-gray-50 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="">
 						<div class="flex justify-between items-center">
@@ -301,13 +325,19 @@
 								{#each OLLAMA_BASE_URLS as url, idx}
 									<OllamaConnection
 										bind:url
-										bind:config={OLLAMA_API_CONFIGS[url]}
+										bind:config={OLLAMA_API_CONFIGS[idx]}
 										{idx}
 										onSubmit={() => {
 											updateOllamaHandler();
 										}}
 										onDelete={() => {
 											OLLAMA_BASE_URLS = OLLAMA_BASE_URLS.filter((url, urlIdx) => idx !== urlIdx);
+
+											let newConfig = {};
+											OLLAMA_BASE_URLS.forEach((url, newIdx) => {
+												newConfig[newIdx] = OLLAMA_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
+											});
+											OLLAMA_API_CONFIGS = newConfig;
 										}}
 									/>
 								{/each}
@@ -326,6 +356,33 @@
 						</div>
 					</div>
 				{/if}
+			</div>
+
+			<hr class=" border-gray-100 dark:border-gray-850" />
+
+			<div class="pr-1.5 my-2">
+				<div class="flex justify-between items-center text-sm">
+					<div class="  font-medium">{$i18n.t('Direct Connections')}</div>
+
+					<div class="flex items-center">
+						<div class="">
+							<Switch
+								bind:state={directConnectionsConfig.ENABLE_DIRECT_CONNECTIONS}
+								on:change={async () => {
+									updateDirectConnectionsHandler();
+								}}
+							/>
+						</div>
+					</div>
+				</div>
+
+				<div class="mt-1.5">
+					<div class="text-xs text-gray-500">
+						{$i18n.t(
+							'Direct Connections allow users to connect to their own OpenAI compatible API endpoints.'
+						)}
+					</div>
+				</div>
 			</div>
 		{:else}
 			<div class="flex h-full justify-center">

@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
-	export let permissions = {
+	// Default values for permissions
+	const defaultPermissions = {
 		workspace: {
 			models: false,
 			knowledge: false,
@@ -13,12 +14,39 @@
 			tools: false
 		},
 		chat: {
+			controls: true,
 			delete: true,
 			edit: true,
 			temporary: true,
 			file_upload: true
+		},
+		features: {
+			web_search: true,
+			image_generation: true,
+			code_interpreter: true
 		}
 	};
+
+	export let permissions = {};
+
+	// Reactive statement to ensure all fields are present in `permissions`
+	$: {
+		permissions = fillMissingProperties(permissions, defaultPermissions);
+	}
+
+	function fillMissingProperties(obj: any, defaults: any) {
+		return {
+			...defaults,
+			...obj,
+			workspace: { ...defaults.workspace, ...obj.workspace },
+			chat: { ...defaults.chat, ...obj.chat },
+			features: { ...defaults.features, ...obj.features }
+		};
+	}
+
+	onMount(() => {
+		permissions = fillMissingProperties(permissions, defaultPermissions);
+	});
 </script>
 
 <div>
@@ -48,7 +76,7 @@
 										<div class=" text-sm flex-1 rounded-lg">
 											{modelId}
 										</div>
-										<div class="flex-shrink-0">
+										<div class="shrink-0">
 											<button
 												type="button"
 												on:click={() => {
@@ -74,7 +102,7 @@
 					<select
 						class="w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
 							? ''
-							: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-none"
+							: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 						bind:value={selectedModelId}
 					>
 						<option value="">{$i18n.t('Select a model')}</option>
@@ -109,7 +137,7 @@
 
 			<div class="flex-1 mr-2">
 				<select
-					class="w-full bg-transparent outline-none py-0.5 text-sm"
+					class="w-full bg-transparent outline-hidden py-0.5 text-sm"
 					bind:value={permissions.model.default_id}
 					placeholder="Select a model"
 				>
@@ -122,7 +150,7 @@
 		</div>
 	</div>
 
-	<hr class=" border-gray-50 dark:border-gray-850 my-2" /> -->
+	<hr class=" border-gray-100 dark:border-gray-850 my-2" /> -->
 
 	<div>
 		<div class=" mb-2 text-sm font-medium">{$i18n.t('Workspace Permissions')}</div>
@@ -164,10 +192,18 @@
 		</div>
 	</div>
 
-	<hr class=" border-gray-50 dark:border-gray-850 my-2" />
+	<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 	<div>
 		<div class=" mb-2 text-sm font-medium">{$i18n.t('Chat Permissions')}</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Chat Controls')}
+			</div>
+
+			<Switch bind:state={permissions.chat.controls} />
+		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
 			<div class=" self-center text-xs font-medium">
@@ -199,6 +235,36 @@
 			</div>
 
 			<Switch bind:state={permissions.chat.temporary} />
+		</div>
+	</div>
+
+	<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+	<div>
+		<div class=" mb-2 text-sm font-medium">{$i18n.t('Features Permissions')}</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Web Search')}
+			</div>
+
+			<Switch bind:state={permissions.features.web_search} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Image Generation')}
+			</div>
+
+			<Switch bind:state={permissions.features.image_generation} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Code Interpreter')}
+			</div>
+
+			<Switch bind:state={permissions.features.code_interpreter} />
 		</div>
 	</div>
 </div>

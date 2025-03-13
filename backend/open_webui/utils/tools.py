@@ -4,11 +4,15 @@ import re
 from typing import Any, Awaitable, Callable, get_type_hints
 from functools import update_wrapper, partial
 
-from langchain_core.utils.function_calling import convert_to_openai_function
-from open_webui.apps.webui.models.tools import Tools
-from open_webui.apps.webui.models.users import UserModel
-from open_webui.apps.webui.utils import load_tools_module_by_id
+
+from fastapi import Request
 from pydantic import BaseModel, Field, create_model
+from langchain_core.utils.function_calling import convert_to_openai_function
+
+
+from open_webui.models.tools import Tools
+from open_webui.models.users import UserModel
+from open_webui.utils.plugin import load_tools_module_by_id
 
 log = logging.getLogger(__name__)
 
@@ -32,7 +36,7 @@ def apply_extra_params_to_tool_function(
 
 # Mutation on extra_params
 def get_tools(
-    webui_app, tool_ids: list[str], user: UserModel, extra_params: dict
+    request: Request, tool_ids: list[str], user: UserModel, extra_params: dict
 ) -> dict[str, dict]:
     tools_dict = {}
 
@@ -41,10 +45,10 @@ def get_tools(
         if tools is None:
             continue
 
-        module = webui_app.state.TOOLS.get(tool_id, None)
+        module = request.app.state.TOOLS.get(tool_id, None)
         if module is None:
             module, _ = load_tools_module_by_id(tool_id)
-            webui_app.state.TOOLS[tool_id] = module
+            request.app.state.TOOLS[tool_id] = module
 
         extra_params["__id__"] = tool_id
         if hasattr(module, "valves") and hasattr(module, "Valves"):
@@ -57,6 +61,12 @@ def get_tools(
             )
 
         for spec in tools.specs:
+            # TODO: Fix hack for OpenAI API
+            # Some times breaks OpenAI but others don't. Leaving the comment
+            for val in spec.get("parameters", {}).get("properties", {}).values():
+                if val["type"] == "str":
+                    val["type"] = "string"
+
             # Remove internal parameters
             spec["parameters"]["properties"] = {
                 key: val
@@ -69,6 +79,13 @@ def get_tools(
             # convert to function that takes only model params and inserts custom params
             original_func = getattr(module, function_name)
             callable = apply_extra_params_to_tool_function(original_func, extra_params)
+
+            if callable.__doc__ and callable.__doc__.strip() != "":
+                s = re.split(":(param|return)", callable.__doc__, 1)
+                spec["description"] = s[0]
+            else:
+                spec["description"] = function_name
+
             # TODO: This needs to be a pydantic model
             tool_dict = {
                 "toolkit_id": tool_id,

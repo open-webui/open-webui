@@ -47,7 +47,7 @@
 					reader.onload = async (e) => {
 						const res = await importConfig(localStorage.token, JSON.parse(e.target.result)).catch(
 							(error) => {
-								toast.error(error);
+								toast.error(`${error}`);
 							}
 						);
 
@@ -119,7 +119,7 @@
 				</div>
 			</button>
 
-			<hr class=" dark:border-gray-850 my-1" />
+			<hr class="border-gray-100 dark:border-gray-850 my-1" />
 
 			{#if $config?.features.enable_admin_export ?? true}
 				<div class="  flex w-full justify-between">
@@ -132,7 +132,7 @@
 							// exportAllUserChats();
 
 							downloadDatabase(localStorage.token).catch((error) => {
-								toast.error(error);
+								toast.error(`${error}`);
 							});
 						}}
 					>

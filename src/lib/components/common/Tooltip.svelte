@@ -12,6 +12,7 @@
 	export let touch = true;
 	export let className = 'flex';
 	export let theme = '';
+	export let offset = [0, 4];
 	export let allowHTML = true;
 	export let tippyOptions = {};
 
@@ -29,7 +30,7 @@
 				touch: touch,
 				...(theme !== '' ? { theme } : { theme: 'dark' }),
 				arrow: false,
-				offset: [0, 4],
+				offset: offset,
 				...tippyOptions
 			});
 		}

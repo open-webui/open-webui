@@ -12,7 +12,7 @@ class TestChats(AbstractPostgresTest):
 
     def setup_method(self):
         super().setup_method()
-        from open_webui.apps.webui.models.chats import ChatForm, Chats
+        from open_webui.models.chats import ChatForm, Chats
 
         self.chats = Chats
         self.chats.insert_new_chat(
@@ -88,7 +88,7 @@ class TestChats(AbstractPostgresTest):
 
     def test_get_user_archived_chats(self):
         self.chats.archive_all_chats_by_user_id("2")
-        from open_webui.apps.webui.internal.db import Session
+        from open_webui.internal.db import Session
 
         Session.commit()
         with mock_webui_user(id="2"):

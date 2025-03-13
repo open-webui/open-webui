@@ -77,7 +77,7 @@
 	const archiveAllChatsHandler = async () => {
 		await goto('/');
 		await archiveAllChats(localStorage.token).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 		});
 
 		currentChatPage.set(1);
@@ -88,7 +88,7 @@
 	const deleteAllChatsHandler = async () => {
 		await goto('/');
 		await deleteAllChats(localStorage.token).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 		});
 
 		currentChatPage.set(1);
@@ -154,7 +154,7 @@
 			</button>
 		</div>
 
-		<hr class=" dark:border-gray-850" />
+		<hr class=" border-gray-100 dark:border-gray-850" />
 
 		<div class="flex flex-col">
 			{#if showArchiveConfirm}

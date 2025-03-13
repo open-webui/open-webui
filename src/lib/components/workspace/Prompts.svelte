@@ -40,7 +40,7 @@
 	$: filteredItems = prompts.filter((p) => query === '' || p.command.includes(query));
 
 	const shareHandler = async (prompt) => {
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
+		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
 
 		const url = 'https://openwebui.com';
 
@@ -122,7 +122,7 @@
 					<Search className="size-3.5" />
 				</div>
 				<input
-					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
 					placeholder={$i18n.t('Search Prompts')}
 				/>
@@ -239,19 +239,22 @@
 							console.log(savedPrompts);
 
 							for (const prompt of savedPrompts) {
-								await createNewPrompt(
-									localStorage.token,
-									prompt.command.charAt(0) === '/' ? prompt.command.slice(1) : prompt.command,
-									prompt.title,
-									prompt.content
-								).catch((error) => {
-									toast.error(error);
+								await createNewPrompt(localStorage.token, {
+									command:
+										prompt.command.charAt(0) === '/' ? prompt.command.slice(1) : prompt.command,
+									title: prompt.title,
+									content: prompt.content
+								}).catch((error) => {
+									toast.error(`${error}`);
 									return null;
 								});
 							}
 
 							prompts = await getPromptList(localStorage.token);
 							await _prompts.set(await getPrompts(localStorage.token));
+
+							importFiles = [];
+							promptsImportInputElement.value = '';
 						};
 
 						reader.readAsText(importFiles[0]);
@@ -316,7 +319,7 @@
 	{#if $config?.features.enable_community_sharing}
 		<div class=" my-16">
 			<div class=" text-xl font-medium mb-1 line-clamp-1">
-				{$i18n.t('Made by OpenWebUI Community')}
+				{$i18n.t('Made by Open WebUI Community')}
 			</div>
 
 			<a

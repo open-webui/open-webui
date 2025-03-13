@@ -2,8 +2,8 @@
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 
-	import { user, config } from '$lib/stores';
-	import { updateUserProfile, createAPIKey, getAPIKey } from '$lib/apis/auths';
+	import { user, config, settings } from '$lib/stores';
+	import { updateUserProfile, createAPIKey, getAPIKey, getSessionUser } from '$lib/apis/auths';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
 	import { getGravatarUrl } from '$lib/apis/utils';
@@ -16,10 +16,12 @@
 	const i18n = getContext('i18n');
 
 	export let saveHandler: Function;
+	export let saveSettings: Function;
 
 	let profileImageUrl = '';
 	let name = '';
 
+	let webhookUrl = '';
 	let showAPIKeys = false;
 
 	let JWTTokenCopied = false;
@@ -35,14 +37,29 @@
 			}
 		}
 
+		if (webhookUrl !== $settings?.notifications?.webhook_url) {
+			saveSettings({
+				notifications: {
+					...$settings.notifications,
+					webhook_url: webhookUrl
+				}
+			});
+		}
+
 		const updatedUser = await updateUserProfile(localStorage.token, name, profileImageUrl).catch(
 			(error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 			}
 		);
 
 		if (updatedUser) {
-			await user.set(updatedUser);
+			// Get Session User Info
+			const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			await user.set(sessionUser);
 			return true;
 		}
 		return false;
@@ -60,6 +77,7 @@
 	onMount(async () => {
 		name = $user.name;
 		profileImageUrl = $user.profile_image_url;
+		webhookUrl = $settings?.notifications?.webhook_url ?? '';
 
 		APIKey = await getAPIKey(localStorage.token).catch((error) => {
 			console.log(error);
@@ -196,7 +214,7 @@
 						<button
 							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850"
 							on:click={async () => {
-								const url = await getGravatarUrl($user.email);
+								const url = await getGravatarUrl(localStorage.token, $user.email);
 
 								profileImageUrl = url;
 							}}>{$i18n.t('Use Gravatar')}</button
@@ -218,9 +236,25 @@
 
 					<div class="flex-1">
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							type="text"
 							bind:value={name}
+							required
+						/>
+					</div>
+				</div>
+			</div>
+
+			<div class="pt-2">
+				<div class="flex flex-col w-full">
+					<div class=" mb-1 text-xs font-medium">{$i18n.t('Notification Webhook')}</div>
+
+					<div class="flex-1">
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							type="url"
+							placeholder={$i18n.t('Enter your webhook URL')}
+							bind:value={webhookUrl}
 							required
 						/>
 					</div>
@@ -232,7 +266,7 @@
 			<UpdatePassword />
 		</div>
 
-		<hr class=" dark:border-gray-850 my-4" />
+		<hr class="border-gray-100 dark:border-gray-850 my-4" />
 
 		<div class="flex justify-between items-center text-sm">
 			<div class="  font-medium">{$i18n.t('API keys')}</div>

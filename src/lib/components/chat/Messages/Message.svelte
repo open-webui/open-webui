@@ -35,6 +35,7 @@
 	export let continueResponse;
 	export let mergeResponses;
 
+	export let addMessages;
 	export let triggerScroll;
 	export let readOnly = false;
 </script>
@@ -77,8 +78,10 @@
 				{rateMessage}
 				{actionMessage}
 				{submitMessage}
+				{deleteMessage}
 				{continueResponse}
 				{regenerateResponse}
+				{addMessages}
 				{readOnly}
 			/>
 		{:else}
@@ -93,10 +96,12 @@
 				{rateMessage}
 				{actionMessage}
 				{submitMessage}
+				{deleteMessage}
 				{continueResponse}
 				{regenerateResponse}
 				{mergeResponses}
 				{triggerScroll}
+				{addMessages}
 				{readOnly}
 			/>
 		{/if}

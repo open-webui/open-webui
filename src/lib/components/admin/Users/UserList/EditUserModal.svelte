@@ -7,9 +7,11 @@
 	import { updateUserById } from '$lib/apis/users';
 
 	import Modal from '$lib/components/common/Modal.svelte';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
+	dayjs.extend(localizedFormat);
 
 	export let show = false;
 	export let selectedUser;
@@ -24,7 +26,7 @@
 
 	const submitHandler = async () => {
 		const res = await updateUserById(localStorage.token, selectedUser.id, _user).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 		});
 
 		if (res) {
@@ -63,7 +65,7 @@
 				</svg>
 			</button>
 		</div>
-		<hr class=" dark:border-gray-800" />
+		<hr class="border-gray-100 dark:border-gray-850" />
 
 		<div class="flex flex-col md:flex-row w-full p-5 md:space-x-4 dark:text-gray-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
@@ -87,12 +89,12 @@
 
 							<div class="text-xs text-gray-500">
 								{$i18n.t('Created at')}
-								{dayjs(selectedUser.created_at * 1000).format($i18n.t('MMMM DD, YYYY'))}
+								{dayjs(selectedUser.created_at * 1000).format('LL')}
 							</div>
 						</div>
 					</div>
 
-					<hr class=" dark:border-gray-800 my-3 w-full" />
+					<hr class="border-gray-100 dark:border-gray-850 my-3 w-full" />
 
 					<div class=" flex flex-col space-y-1.5">
 						<div class="flex flex-col w-full">
@@ -100,7 +102,7 @@
 
 							<div class="flex-1">
 								<input
-									class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+									class="w-full rounded-sm py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
 									type="email"
 									bind:value={_user.email}
 									autocomplete="off"
@@ -115,7 +117,7 @@
 
 							<div class="flex-1">
 								<input
-									class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+									class="w-full rounded-sm py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-hidden"
 									type="text"
 									bind:value={_user.name}
 									autocomplete="off"
@@ -129,7 +131,7 @@
 
 							<div class="flex-1">
 								<input
-									class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+									class="w-full rounded-sm py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-hidden"
 									type="password"
 									bind:value={_user.password}
 									autocomplete="new-password"

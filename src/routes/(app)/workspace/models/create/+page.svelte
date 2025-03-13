@@ -2,7 +2,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { models } from '$lib/stores';
+	import { config, models, settings } from '$lib/stores';
 
 	import { onMount, tick, getContext } from 'svelte';
 	import { createNewModel, getModelById } from '$lib/apis/models';
@@ -37,12 +37,17 @@
 				},
 				params: { ...modelInfo.params }
 			}).catch((error) => {
-				toast.error(error);
+				toast.error(`${error}`);
 				return null;
 			});
 
 			if (res) {
-				await models.set(await getModels(localStorage.token));
+				await models.set(
+					await getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					)
+				);
 				toast.success($i18n.t('Model created successfully!'));
 				await goto('/workspace/models');
 			}
@@ -57,9 +62,17 @@
 				!['https://openwebui.com', 'https://www.openwebui.com', 'http://localhost:5173'].includes(
 					event.origin
 				)
-			)
+			) {
 				return;
-			model = JSON.parse(event.data);
+			}
+
+			let data = JSON.parse(event.data);
+
+			if (data?.info) {
+				data = data.info;
+			}
+
+			model = data;
 		});
 
 		if (window.opener ?? false) {

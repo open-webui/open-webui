@@ -82,7 +82,7 @@
 			if (tab === 'tools') {
 				const res = await updateToolUserValvesById(localStorage.token, selectedId, valves).catch(
 					(error) => {
-						toast.error(error);
+						toast.error(`${error}`);
 						return null;
 					}
 				);
@@ -97,7 +97,7 @@
 					selectedId,
 					valves
 				).catch((error) => {
-					toast.error(error);
+					toast.error(`${error}`);
 					return null;
 				});
 
@@ -148,7 +148,7 @@
 				<div class="flex gap-2">
 					<div class="flex-1">
 						<select
-							class="  w-full rounded text-xs py-2 px-1 bg-transparent outline-none"
+							class="  w-full rounded-sm text-xs py-2 px-1 bg-transparent outline-hidden"
 							bind:value={tab}
 							placeholder="Select"
 						>
@@ -161,7 +161,7 @@
 
 					<div class="flex-1">
 						<select
-							class="w-full rounded py-2 px-1 text-xs bg-transparent outline-none"
+							class="w-full rounded-sm py-2 px-1 text-xs bg-transparent outline-hidden"
 							bind:value={selectedId}
 							on:change={async () => {
 								await tick();
