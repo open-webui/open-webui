@@ -16,7 +16,7 @@ import json
 import datetime
 import subprocess
 import tempfile
-import time
+import traceback
 
 try:
     import requests
@@ -29,7 +29,7 @@ except ImportError:
 # Global constants
 PRODUCT_NAME = "RAUX"
 PRODUCT_NAME_CONCAT = "raux"
-GITHUB_REPO = "https://github.com/aigdat/open-webui.git"
+GITHUB_REPO = "https://github.com/aigdat/raux.git"
 CONDA_ENV_NAME = "raux_env"
 PYTHON_VERSION = "3.11"
 ICON_FILE = "raux.ico"
@@ -306,7 +306,7 @@ def download_latest_wheel(output_folder, output_filename=None):
     os.makedirs(output_folder, exist_ok=True)
 
     # Get the latest release info from GitHub API
-    api_url = "https://api.github.com/repos/aigdat/open-webui/releases/latest"
+    api_url = "https://api.github.com/repos/aigdat/raux/releases/latest"
     log(f"Fetching latest release information from: {api_url}")
 
     try:
@@ -327,7 +327,7 @@ def download_latest_wheel(output_folder, output_filename=None):
             
             if zipball_url:
                 log(f"Using zipball URL: {zipball_url}")
-                output_path = os.path.join(output_folder, "open-webui-latest.zip")
+                output_path = os.path.join(output_folder, "raux-latest.zip")
                 
                 # Download the zipball
                 zip_response = requests.get(zipball_url, timeout=60)
@@ -341,7 +341,7 @@ def download_latest_wheel(output_folder, output_filename=None):
             
             elif tarball_url:
                 log(f"Using tarball URL: {tarball_url}")
-                output_path = os.path.join(output_folder, "open-webui-latest.tar.gz")
+                output_path = os.path.join(output_folder, "raux-latest.tar.gz")
                 
                 # Download the tarball
                 tar_response = requests.get(tarball_url, timeout=60)
@@ -656,14 +656,13 @@ def main():
         log(f"{PRODUCT_NAME} installation completed successfully!")
         log(f"You can start {PRODUCT_NAME} by running:")
         log(f"  conda activate {CONDA_ENV_NAME}")
-        log("  open-webui")
+        log("  raux")
         log("Or by using the desktop shortcut if created")
 
 
         return 0
     except Exception as e:
         log(f"ERROR: An exception occurred: {str(e)}")
-        import traceback
 
         log(f"Traceback: {traceback.format_exc()}")
         return 1
