@@ -226,17 +226,31 @@ def create_conda_env(
             # Create the full path for the environment
             env_path = os.path.join(install_dir, env_name)
             log(f"Creating a Python {python_version} environment at: {env_path}")
-            
+
             # Create the installation directory if it doesn't exist
             os.makedirs(install_dir, exist_ok=True)
-            
+
             # Create the environment at the specified path using -p flag
-            cmd = [conda_path, "create", "-p", env_path, f"python={python_version}", "-y"]
+            cmd = [
+                conda_path,
+                "create",
+                "-p",
+                env_path,
+                f"python={python_version}",
+                "-y",
+            ]
         else:
             # Fall back to named environment if no install_dir is provided
             log(f"Creating a Python {python_version} environment named: {env_name}")
-            cmd = [conda_path, "create", "-n", env_name, f"python={python_version}", "-y"]
-        
+            cmd = [
+                conda_path,
+                "create",
+                "-n",
+                env_name,
+                f"python={python_version}",
+                "-y",
+            ]
+
         log(f"Running command: {' '.join(cmd)}")
 
         result = subprocess.run(cmd, capture_output=True, text=True, check=False)
@@ -247,15 +261,15 @@ def create_conda_env(
 
         if install_dir:
             log(f"Successfully created conda environment at: {env_path}")
-            
+
             # Determine the Python executable path in the conda environment
             python_path = os.path.join(env_path, "python.exe")
             log(f"Python executable in conda environment: {python_path}")
-            
+
             return True, python_path
         else:
             log(f"Successfully created conda environment: {env_name}")
-            
+
             # Get the conda environments directory
             conda_info = subprocess.run(
                 [conda_path, "info", "--json"],
@@ -263,7 +277,7 @@ def create_conda_env(
                 text=True,
                 check=False,
             )
-            
+
             if conda_info.returncode == 0:
                 conda_info_json = json.loads(conda_info.stdout)
                 env_path = os.path.join(conda_info_json["envs_dirs"][0], env_name)
@@ -324,32 +338,32 @@ def download_latest_wheel(output_folder, output_filename=None):
             # If no assets, try to get the tarball or zipball URL
             tarball_url = release_info.get("tarball_url")
             zipball_url = release_info.get("zipball_url")
-            
+
             if zipball_url:
                 log(f"Using zipball URL: {zipball_url}")
                 output_path = os.path.join(output_folder, "raux-latest.zip")
-                
+
                 # Download the zipball
                 zip_response = requests.get(zipball_url, timeout=60)
                 zip_response.raise_for_status()
-                
+
                 with open(output_path, "wb") as f:
                     f.write(zip_response.content)
-                
+
                 log(f"Successfully downloaded zipball to: {output_path}")
                 return output_path
-            
+
             elif tarball_url:
                 log(f"Using tarball URL: {tarball_url}")
                 output_path = os.path.join(output_folder, "raux-latest.tar.gz")
-                
+
                 # Download the tarball
                 tar_response = requests.get(tarball_url, timeout=60)
                 tar_response.raise_for_status()
-                
+
                 with open(output_path, "wb") as f:
                     f.write(tar_response.content)
-                
+
                 log(f"Successfully downloaded tarball to: {output_path}")
                 return output_path
             else:
@@ -359,7 +373,7 @@ def download_latest_wheel(output_folder, output_filename=None):
         # Find wheel files or any installable assets
         wheel_assets = [asset for asset in assets if asset["name"].endswith(".whl")]
         zip_assets = [asset for asset in assets if asset["name"].endswith(".zip")]
-        
+
         # Prioritize wheel files, then zip files
         download_asset = None
         if wheel_assets:
@@ -372,7 +386,9 @@ def download_latest_wheel(output_folder, output_filename=None):
             # If no wheel or zip, use the first asset
             if assets:
                 download_asset = assets[0]
-                log(f"No wheel or zip files found. Using first available asset: {download_asset['name']}")
+                log(
+                    f"No wheel or zip files found. Using first available asset: {download_asset['name']}"
+                )
             else:
                 log("No assets found in the release")
                 return None
@@ -537,9 +553,7 @@ def main():
     parser.add_argument(
         "--install-dir",
         dest="install_dir",
-        default=os.path.join(
-            os.path.expanduser("~"), "AppData", "Local", PRODUCT_NAME
-        ),
+        default=os.path.join(os.path.expanduser("~"), "AppData", "Local", PRODUCT_NAME),
         type=str,
         help=f"Installation directory (default: %LOCALAPPDATA%\\{PRODUCT_NAME})",
     )
@@ -586,10 +600,7 @@ def main():
 
     try:
         # Check if directory already exists and has content
-        if (
-            os.path.exists(install_dir)
-            and os.listdir(install_dir)
-        ):
+        if os.path.exists(install_dir) and os.listdir(install_dir):
             log(f"An existing installation was found at: {install_dir}")
             log("Continuing with installation without removing existing files")
             log("This will add new files alongside existing ones")
@@ -658,7 +669,6 @@ def main():
         log(f"  conda activate {CONDA_ENV_NAME}")
         log("  raux")
         log("Or by using the desktop shortcut if created")
-
 
         return 0
     except Exception as e:
