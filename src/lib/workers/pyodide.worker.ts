@@ -71,6 +71,8 @@ self.onmessage = async (event) => {
 
 	console.log(event.data);
 
+	console.log('CODEEE', code);
+
 	// The worker copies the context in its own "memory" (an object mapping name to values)
 	for (const key of Object.keys(context)) {
 		self[key] = context[key];

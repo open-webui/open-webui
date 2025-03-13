@@ -62,8 +62,6 @@ const executeCode = async (id: string, code: string) => {
 
 	try {
 
-		console.log('CODEEE', code);
-
 		// Dynamically load required packages based on imports in the Python code
 		await self.pyodide.loadPackagesFromImports(code, {
 			messageCallback: (msg: string) => {
