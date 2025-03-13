@@ -1,34 +1,4 @@
-const packages = [
-    'affine', 'aiohttp', 'aiosignal', 'altair', 'annotated-types', 'apsw', 'argon2-cffi', 'argon2-cffi-bindings',
-    'arro3-compute', 'arro3-core', 'arro3-io', 'asciitree', 'astropy', 'astropy_iers_data', 'asttokens', 'async-timeout',
-    'atomicwrites', 'attrs', 'autograd', 'awkward-cpp', 'b2d', 'bcrypt', 'beautifulsoup4', 'biopython', 'bitarray',
-    'bitstring', 'bleach', 'bokeh', 'boost-histogram', 'brotli', 'cachetools', 'Cartopy', 'casadi', 'cbor-diag',
-    'certifi', 'cffi', 'cffi_example', 'cftime', 'charset-normalizer', 'clarabel', 'click', 'cligj', 'clingo',
-    'cloudpickle', 'cmyt', 'colorspacious', 'contourpy', 'coolprop', 'coverage', 'cramjam', 'crc32c', 'cryptography',
-    'css-inline', 'cssselect', 'cvxpy-base', 'cycler', 'cysignals', 'cytoolz', 'decorator', 'demes', 'deprecation',
-    'distlib', 'docutils', 'duckdb', 'ewah_bool_utils', 'exceptiongroup', 'executing', 'fastparquet', 'fiona',
-    'fonttools', 'freesasa', 'frozenlist', 'fsspec', 'future', 'galpy', 'gensim', 'geopandas', 'gmpy2', 'gsw', 'h3',
-    'h5py', 'html5lib', 'httpx', 'idna', 'igraph', 'imageio', 'iminuit', 'iniconfig', 'ipython', 'jedi', 'Jinja2',
-    'joblib', 'jsonschema', 'jsonschema_specifications', 'kiwisolver', 'lakers-python', 'lazy-object-proxy',
-    'lazy_loader', 'libcst', 'lightgbm', 'logbook', 'lxml', 'MarkupSafe', 'matplotlib', 'matplotlib-inline',
-    'matplotlib-pyodide', 'memory-allocator', 'micropip', 'mmh3', 'mne', 'more-itertools', 'mpmath', 'msgpack',
-    'msgspec', 'msprime', 'multidict', 'munch', 'mypy', 'narwhals', 'netcdf4', 'networkx', 'newick', 'nh3', 'nlopt',
-    'nltk', 'numcodecs', 'numpy', 'opencv-python', 'optlang', 'orjson', 'packaging', 'pandas', 'parso', 'patsy',
-    'pcodec', 'peewee', 'pi-heif', 'Pillow', 'pillow-heif', 'pkgconfig', 'pluggy', 'polars', 'pplpy', 'primecountpy',
-    'prompt_toolkit', 'protobuf', 'pure-eval', 'py', 'pyarrow', 'pyclipper', 'pycparser', 'pycryptodome', 'pydantic',
-    'pydantic_core', 'pyerfa', 'pygame-ce', 'Pygments', 'pyheif', 'pyiceberg', 'pyinstrument', 'pynacl',
-    'pyodide-http', 'pyodide-unix-timezones', 'pyparsing', 'pyproj', 'pyrsistent', 'pysam', 'pyshp', 'pytest',
-    'pytest-asyncio', 'pytest-benchmark', 'python-dateutil', 'python-flint', 'python-magic', 'python-sat',
-    'python-solvespace', 'pytz', 'pywavelets', 'pyxel', 'pyxirr', 'pyyaml', 'rasterio', 'rateslib', 'rebound',
-    'reboundx', 'referencing', 'regex', 'requests', 'retrying', 'rich', 'river', 'RobotRaconteur', 'rpds-py',
-    'ruamel.yaml', 'rust-abi-test', 'rust-panic-test', 'scikit-image', 'scikit-learn', 'scipy', 'screed', 'setuptools',
-    'shapely', 'simplejson', 'sisl', 'six', 'smart-open', 'sortedcontainers', 'soupsieve', 'sourmash', 'soxr',
-    'sparseqr', 'sqlalchemy', 'stack-data', 'statsmodels', 'strictyaml', 'svgwrite', 'swiglpk', 'sympy', 'tblib',
-    'termcolor', 'texttable', 'threadpoolctl', 'tiktoken', 'tomli', 'tomli-w', 'toolz', 'tqdm', 'traitlets', 'traits',
-    'tree-sitter', 'tree-sitter-go', 'tree-sitter-java', 'tree-sitter-python', 'tskit', 'typing-extensions', 'tzdata',
-    'uncertainties', 'unyt', 'urllib3', 'vega-datasets', 'wcwidth', 'webencodings', 'wordcloud', 'wrapt', 'xarray',
-    'xgboost', 'xlrd', 'xxhash', 'xyzservices', 'yarl', 'yt', 'zarr', 'zengl', 'zfpy', 'zstandard'
-];
+const packages = ['simplejson'];
 
 import { loadPyodide } from 'pyodide';
 import { writeFile, readFile, copyFile, readdir, rmdir } from 'fs/promises';
