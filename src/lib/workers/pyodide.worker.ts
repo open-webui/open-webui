@@ -61,8 +61,6 @@ async function loadPyodideAndPackages(packages: string[] = []) {
 
 	// await micropip.set_index_urls('https://pypi.org/pypi/{package_name}/json');
 
-	console.log("WAS GEEEEEHT", packages);
-
 	await micropip.install(packages);
 }
 
@@ -70,8 +68,6 @@ self.onmessage = async (event) => {
 	const { id, code, ...context } = event.data;
 
 	console.log(event.data);
-
-	console.log('CODEEE', code);
 
 	// The worker copies the context in its own "memory" (an object mapping name to values)
 	for (const key of Object.keys(context)) {
