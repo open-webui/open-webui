@@ -59,7 +59,7 @@
 						</Tooltip>
 
 						<a
-							href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
+							href="https://github.com/aderbalbotelho/open-webui/tree/etx"
 							target="_blank"
 						>
 							{updateAvailable === null
@@ -120,14 +120,14 @@
 				/>
 			</a>
 
-			<a href="https://twitter.com/OpenWebUI" target="_blank">
+			<a href="https://twitter.com/aderbalbotelho" target="_blank">
 				<img
 					alt="X (formerly Twitter) Follow"
 					src="https://img.shields.io/twitter/follow/OpenWebUI"
 				/>
 			</a>
 
-			<a href="https://github.com/open-webui/open-webui" target="_blank">
+			<a href="https://github.com/aderbalbotelho/open-webui" target="_blank">
 				<img
 					alt="Github Repo"
 					src="https://img.shields.io/github/stars/open-webui/open-webui?style=social&label=Star us on Github"
@@ -138,9 +138,9 @@
 		<div>
 			<pre
 				class="text-xs text-gray-400 dark:text-gray-500">Copyright (c) {new Date().getFullYear()} <a
-					href="https://openwebui.com"
+					href="https://etx.tec.br"
 					target="_blank"
-					class="underline">Open WebUI (Timothy Jaeryang Baek)</a
+					class="underline">ETX WebUI (ABLN)</a
 				>
 All rights reserved.
 
@@ -172,14 +172,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 		</div>
 
 		<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
-			{#if !$WEBUI_NAME.includes('Open WebUI')}
+			{#if !$WEBUI_NAME.includes('ETX WebUI')}
 				<span class=" text-gray-500 dark:text-gray-300 font-medium">{$WEBUI_NAME}</span> -
 			{/if}
 			{$i18n.t('Created by')}
 			<a
 				class=" text-gray-500 dark:text-gray-300 font-medium"
-				href="https://github.com/tjbck"
-				target="_blank">Timothy J. Baek</a
+				href="https://github.com/aderbalbotelho"
+				target="_blank">ABLN</a
 			>
 		</div>
 	</div>

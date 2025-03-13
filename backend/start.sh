@@ -5,7 +5,7 @@ cd "$SCRIPT_DIR" || exit
 
 KEY_FILE=.webui_secret_key
 
-PORT="${PORT:-8080}"
+PORT="${PORT:-8181}"
 HOST="${HOST:-0.0.0.0}"
 if test "$WEBUI_SECRET_KEY $WEBUI_JWT_SECRET_KEY" = " "; then
   echo "Loading WEBUI_SECRET_KEY from file, not provided as an environment variable."
@@ -38,12 +38,12 @@ if [ -n "$SPACE_ID" ]; then
     WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' &
     webui_pid=$!
     echo "Waiting for webui to start..."
-    while ! curl -s http://localhost:8080/health > /dev/null; do
+    while ! curl -s http://localhost:8181/health > /dev/null; do
       sleep 1
     done
     echo "Creating admin user..."
     curl \
-      -X POST "http://localhost:8080/api/v1/auths/signup" \
+      -X POST "http://localhost:8181/api/v1/auths/signup" \
       -H "accept: application/json" \
       -H "Content-Type: application/json" \
       -d "{ \"email\": \"${ADMIN_USER_EMAIL}\", \"password\": \"${ADMIN_USER_PASSWORD}\", \"name\": \"Admin\" }"
