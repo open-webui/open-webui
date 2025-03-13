@@ -74,7 +74,6 @@ Don't forget to explore our sibling project, [Open WebUI Community](https://open
 
 This version of OpenWebUI is installed in conjunction with [GAIA](https://github.com/aigdat/gaia)🌲. Check out the [installation guide](docs/install.md) for more information.
 
-
 ### Installation via Python pip 🐍
 
 ### Troubleshooting
@@ -83,7 +82,7 @@ Encountering connection issues? Our [Open WebUI Documentation](https://docs.open
 
 #### Open WebUI: Server Connection Error
 
-If you're experiencing connection issues, it’s often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
+If you're experiencing connection issues, it's often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
 
 **Example Docker Command**:
 

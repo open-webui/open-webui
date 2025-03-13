@@ -5,6 +5,7 @@ This document describes how RAUX (Open WebUI) integrates with [GAIA](https://git
 ## Architecture Overview
 
 RAUX (Open WebUI) can be installed in three different ways:
+
 1. Using the standalone RAUX installer (Installer-UX.nsi)
 2. Using the standalone Python installation script (install.py)
 3. As part of the [GAIA](https://github.com/amd/gaia) installation process (Installer.nsi)
@@ -18,20 +19,20 @@ graph TD
         B --> C[Create Windows Installer]
         B --> D[Upload Artifacts to GitHub Release]
     end
-    
+
     subgraph "Installation Options"
         D --> E[Standalone RAUX Installer]
         D --> F[Python install.py Script]
         D --> G[GAIA Installer]
     end
-    
+
     subgraph "GAIA Integration"
         G --> H[GAIA Installation Process]
         H --> I[run_raux_installer Section]
         I --> J[raux_installer.py]
         J --> K[Download & Install RAUX Wheel]
     end
-    
+
     K --> L[End User Installation]
 ```
 
@@ -42,10 +43,12 @@ The build process for RAUX is managed by the GitHub Actions workflow defined in 
 ### Key Steps in the Build Process:
 
 1. **Wheel Package Creation**:
+
    - The workflow builds a Python wheel package (.whl) containing the RAUX application
    - This wheel file is the primary artifact used for all installation methods
 
 2. **Windows Installer Creation**:
+
    - The workflow uses NSIS (Nullsoft Scriptable Install System) to create a Windows installer
    - The installer is built using the `Installer-UX.nsi` script
    - The installer bundles the wheel file and necessary installation scripts
@@ -102,6 +105,7 @@ python install.py --install-dir C:\path\to\install\directory --yes --force --deb
 ```
 
 Available command-line options:
+
 - `--install-dir`: Specify the installation directory (default: %LOCALAPPDATA%\raux)
 - `--yes` or `-y`: Automatically answer 'yes' to all prompts
 - `--force`: Force installation even if files are in use
@@ -118,6 +122,7 @@ RAUX is also integrated into the [GAIA](https://github.com/amd/gaia) installatio
 5. Executes the script to download and install the RAUX wheel
 
 The `raux_installer.py` script is a simplified version that:
+
 - Downloads the latest RAUX wheel from GitHub releases
 - Installs the wheel using pip
 - Logs the installation process
@@ -132,20 +137,20 @@ graph TD
         A[User Desktop] --> B[RAUX Shortcut]
         B --> C[Web Browser]
     end
-    
+
     subgraph "Installation Directory"
         D[Python Environment] --> E[RAUX Wheel Package]
         E --> F[RAUX Application]
         F --> G[Web Server]
         G --> C
     end
-    
-    subgraph "GAIA Integration" 
+
+    subgraph "GAIA Integration"
         H[GAIA Installation] --> I[GAIA Environment]
         I --> J[RAUX Component]
         J --> G
     end
-    
+
     subgraph "File System"
         K[Configuration Files]
         L[Log Files]
@@ -157,6 +162,7 @@ graph TD
 ### Wheel Package (.whl)
 
 The wheel package is the central artifact that contains the RAUX application code. It is:
+
 - Built by the GitHub Actions workflow
 - Used by all installation methods
 - Downloaded during installation (either pre-bundled or from GitHub)
@@ -164,6 +170,7 @@ The wheel package is the central artifact that contains the RAUX application cod
 ### raux_installer.py
 
 This Python script is the core component that handles the actual installation of RAUX. It:
+
 - Is used by both the standalone installer and the [GAIA](https://github.com/amd/gaia) installer
 - Handles downloading the wheel package (if not already available)
 - Manages the installation process using pip
@@ -172,6 +179,7 @@ This Python script is the core component that handles the actual installation of
 ### GAIA Integration
 
 The integration with [GAIA](https://github.com/amd/gaia) happens in the `run_raux_installer` section of `Installer.nsi`. This section:
+
 - Creates a temporary directory for RAUX installation
 - Copies the `raux_installer.py` script
 - Executes the script to perform the installation
