@@ -155,6 +155,13 @@
 		}
 	};
 
+	function isDarkMode() {
+        if (typeof window !== 'undefined') {
+            return document.documentElement.classList.contains('dark');
+        }
+        return false;
+    }
+
 	const playAudio = (idx: number) => {
 		return new Promise<void>((res) => {
 			speakingIdx = idx;
@@ -551,7 +558,9 @@
 		<div class={`shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
 			<ProfileImage
 				src={model?.info?.meta?.profile_image_url ??
-					($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
+					($i18n.language === 'dg-DG'
+						? `/doge.png`
+						: `${WEBUI_BASE_URL}/static/${isDarkMode() ? 'flower-white' : 'flower-violet'}.png`)}
 				className={'size-8'}
 			/>
 		</div>

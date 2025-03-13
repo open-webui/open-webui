@@ -898,15 +898,24 @@
 								showDropdown = !showDropdown;
 							}}
 						>
-							<div class=" self-center mr-3">
+							<!-- <div class=" self-center mr-3">
 								<img
 									src={$user.profile_image_url}
 									class=" max-w-[30px] object-cover rounded-full"
 									alt="User profile"
 								/>
-								<!-- User Image color f29c14 will be changed here -->
+							</div> -->
+
+							<div class="self-center mx-1.5">
+								<img
+									crossorigin="anonymous"
+									src="{WEBUI_BASE_URL}/static/user_temp.png"
+									class=" size-7 -translate-x-1.5 rounded-full"
+									alt="logo"
+								/>
 							</div>
 							<div class=" self-center font-medium">{$user.name}</div>
+								<!-- User Image color f29c14 will be changed here -->
 						</button>
 					</UserMenu>
 				{/if}

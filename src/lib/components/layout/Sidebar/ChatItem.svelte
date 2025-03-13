@@ -248,7 +248,7 @@
 		<a
 			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-200 dark:bg-gray-900'
+				? 'bg-[#8900E1] dark:bg-gray-900'
 				: selected
 					? 'bg-[#8900E1] dark:bg-gray-700'
 					: ' group-hover:bg-[#8900E1] dark:group-hover:bg-gray-700'}  whitespace-nowrap text-ellipsis"
@@ -282,13 +282,14 @@
 	{/if}
 
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<!-- invisible group-hover:visible -->
 	<div
 		class="
         {id === $chatId || confirmEdit
-			? 'from-gray-200 dark:from-gray-900'
+			? 'bg-[#8900E1] dark:bg-gray-900'
 			: selected
-				? 'bg-[#8900E1] dark:bg-[#8951AE]'
-				: 'invisible group-hover:visible from-[#8900E1] dark:from-[#8951AE]'}
+				? 'bg-[#8900E1] dark:bg-gray-950'
+				: 'invisible group-hover:visible bg-[#8900E1] dark:bg-gray-700'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
 			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
