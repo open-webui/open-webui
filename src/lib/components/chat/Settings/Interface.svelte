@@ -37,7 +37,6 @@
 	let landingPageMode = '';
 	let chatBubble = true;
 	let chatDirection: 'LTR' | 'RTL' = 'LTR';
-	let ctrlEnterToSend = false;
 
 	let imageCompression = false;
 	let imageCompressionSize = {
@@ -194,11 +193,6 @@
 		saveSettings({ chatDirection });
 	};
 
-	const togglectrlEnterToSend = async () => {
-		ctrlEnterToSend = !ctrlEnterToSend;
-		saveSettings({ ctrlEnterToSend });
-	};
-
 	const updateInterfaceHandler = async () => {
 		saveSettings({
 			models: [defaultModelId],
@@ -238,7 +232,6 @@
 		notificationSound = $settings.notificationSound ?? true;
 
 		hapticFeedback = $settings.hapticFeedback ?? false;
-		ctrlEnterToSend = $settings.ctrlEnterToSend ?? false;
 
 		imageCompression = $settings.imageCompression ?? false;
 		imageCompressionSize = $settings.imageCompressionSize ?? { width: '', height: '' };
@@ -658,28 +651,6 @@
 					</button>
 				</div>
 			</div> -->
-
-			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">
-						{$i18n.t('Enter Key Behavior')}
-					</div>
-
-					<button
-						class="p-1 px-3 text-xs flex rounded transition"
-						on:click={() => {
-							togglectrlEnterToSend();
-						}}
-						type="button"
-					>
-						{#if ctrlEnterToSend === true}
-							<span class="ml-2 self-center">{$i18n.t('Ctrl+Enter to Send')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Enter to Send')}</span>
-						{/if}
-					</button>
-				</div>
-			</div>
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">

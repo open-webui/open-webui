@@ -274,7 +274,6 @@
 												newConfig[newIdx] = OPENAI_API_CONFIGS[newIdx < idx ? newIdx : newIdx + 1];
 											});
 											OPENAI_API_CONFIGS = newConfig;
-											updateOpenAIHandler();
 										}}
 									/>
 								{/each}

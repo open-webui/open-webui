@@ -83,12 +83,11 @@ def get_license_data(app, key):
                     if k == "resources":
                         for p, c in v.items():
                             globals().get("override_static", lambda a, b: None)(p, c)
-                    elif k == "count":
+                    elif k == "user_count":
                         setattr(app.state, "USER_COUNT", v)
-                    elif k == "name":
+                    elif k == "webui_name":
                         setattr(app.state, "WEBUI_NAME", v)
-                    elif k == "metadata":
-                        setattr(app.state, "LICENSE_METADATA", v)
+
                 return True
             else:
                 log.error(

@@ -40,7 +40,7 @@
 	import 'tippy.js/dist/tippy.css';
 
 	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
-	import i18n, { initI18n, getLanguages, changeLanguage } from '$lib/i18n';
+	import i18n, { initI18n, getLanguages } from '$lib/i18n';
 	import { bestMatchingLanguage } from '$lib/utils';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
@@ -443,7 +443,6 @@
 		theme.set(localStorage.theme);
 
 		mobile.set(window.innerWidth < BREAKPOINT);
-
 		const onResize = () => {
 			if (window.innerWidth < BREAKPOINT) {
 				mobile.set(true);
@@ -451,20 +450,8 @@
 				mobile.set(false);
 			}
 		};
+
 		window.addEventListener('resize', onResize);
-
-		user.subscribe((value) => {
-			if (value) {
-				$socket?.off('chat-events', chatEventHandler);
-				$socket?.off('channel-events', channelEventHandler);
-
-				$socket?.on('chat-events', chatEventHandler);
-				$socket?.on('channel-events', channelEventHandler);
-			} else {
-				$socket?.off('chat-events', chatEventHandler);
-				$socket?.off('channel-events', channelEventHandler);
-			}
-		});
 
 		let backendConfig = null;
 		try {
@@ -485,7 +472,7 @@
 			const lang = backendConfig.default_locale
 				? backendConfig.default_locale
 				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
-			changeLanguage(lang);
+			$i18n.changeLanguage(lang);
 		}
 
 		if (backendConfig) {
@@ -506,6 +493,9 @@
 					if (sessionUser) {
 						// Save Session User to Store
 						$socket.emit('user-join', { auth: { token: sessionUser.token } });
+
+						$socket?.on('chat-events', chatEventHandler);
+						$socket?.on('channel-events', channelEventHandler);
 
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());

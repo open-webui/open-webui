@@ -215,7 +215,6 @@ from open_webui.config import (
     BING_SEARCH_V7_SUBSCRIPTION_KEY,
     BRAVE_SEARCH_API_KEY,
     EXA_API_KEY,
-    PERPLEXITY_API_KEY,
     KAGI_SEARCH_API_KEY,
     MOJEEK_SEARCH_API_KEY,
     BOCHA_SEARCH_API_KEY,
@@ -401,8 +400,8 @@ async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
         reset_config()
 
-    if LICENSE_KEY:
-        get_license_data(app, LICENSE_KEY)
+    if app.state.config.LICENSE_KEY:
+        get_license_data(app, app.state.config.LICENSE_KEY)
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     yield
@@ -420,7 +419,7 @@ oauth_manager = OAuthManager(app)
 app.state.config = AppConfig()
 
 app.state.WEBUI_NAME = WEBUI_NAME
-app.state.LICENSE_METADATA = None
+app.state.config.LICENSE_KEY = LICENSE_KEY
 
 ########################################
 #
@@ -604,7 +603,6 @@ app.state.config.JINA_API_KEY = JINA_API_KEY
 app.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT
 app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY
 app.state.config.EXA_API_KEY = EXA_API_KEY
-app.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY
 
 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
@@ -974,7 +972,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
 
 @app.get("/api/models/base")
 async def get_base_models(request: Request, user=Depends(get_admin_user)):
-    models = await get_all_base_models(request, user=user)
+    models = await get_all_base_models(request)
     return {"data": models}
 
 
@@ -1021,7 +1019,7 @@ async def chat_completion(
             "files": form_data.get("files", None),
             "features": form_data.get("features", None),
             "variables": form_data.get("variables", None),
-            "model": model,
+            "model": model_info.model_dump() if model_info else model,
             "direct": model_item.get("direct", False),
             **(
                 {"function_calling": "native"}
@@ -1039,7 +1037,7 @@ async def chat_completion(
         form_data["metadata"] = metadata
 
         form_data, metadata, events = await process_chat_payload(
-            request, form_data, user, metadata, model
+            request, form_data, metadata, user, model
         )
 
     except Exception as e:
@@ -1053,7 +1051,7 @@ async def chat_completion(
         response = await chat_completion_handler(request, form_data, user)
 
         return await process_chat_response(
-            request, response, form_data, user, metadata, model, events, tasks
+            request, response, form_data, user, events, metadata, tasks
         )
     except Exception as e:
         raise HTTPException(
@@ -1142,10 +1140,9 @@ async def get_app_config(request: Request):
         if data is not None and "id" in data:
             user = Users.get_user_by_id(data["id"])
 
-    user_count = Users.get_num_users()
     onboarding = False
-
     if user is None:
+        user_count = Users.get_num_users()
         onboarding = user_count == 0
 
     return {
@@ -1191,7 +1188,6 @@ async def get_app_config(request: Request):
             {
                 "default_models": app.state.config.DEFAULT_MODELS,
                 "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
-                "user_count": user_count,
                 "code": {
                     "engine": app.state.config.CODE_EXECUTION_ENGINE,
                 },
@@ -1215,14 +1211,6 @@ async def get_app_config(request: Request):
                     "api_key": GOOGLE_DRIVE_API_KEY.value,
                 },
                 "onedrive": {"client_id": ONEDRIVE_CLIENT_ID.value},
-                "license_metadata": app.state.LICENSE_METADATA,
-                **(
-                    {
-                        "active_entries": app.state.USER_COUNT,
-                    }
-                    if user.role == "admin"
-                    else {}
-                ),
             }
             if user is not None
             else {}

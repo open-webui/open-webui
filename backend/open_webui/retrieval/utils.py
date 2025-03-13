@@ -414,13 +414,6 @@ def get_sources_from_files(
                             ]
                         ],
                     }
-            elif file.get("file").get("data"):
-                context = {
-                    "documents": [[file.get("file").get("data", {}).get("content")]],
-                    "metadatas": [
-                        [file.get("file").get("data", {}).get("metadata", {})]
-                    ],
-                }
         else:
             collection_names = []
             if file.get("type") == "collection":

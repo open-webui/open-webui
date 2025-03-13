@@ -52,17 +52,12 @@
 	export let className = 'w-[32rem]';
 	export let triggerClassName = 'text-lg';
 
-	let tagsContainerElement;
-
 	let show = false;
-	let tags = [];
 
 	let selectedModel = '';
 	$: selectedModel = items.find((item) => item.value === value) ?? '';
 
 	let searchValue = '';
-	let selectedTag = '';
-
 	let ollamaVersion = null;
 
 	let selectedModelIdx = 0;
@@ -84,23 +79,10 @@
 	);
 
 	$: filteredItems = searchValue
-		? fuse
-				.search(searchValue)
-				.map((e) => {
-					return e.item;
-				})
-				.filter((item) => {
-					if (selectedTag === '') {
-						return true;
-					}
-					return item.model?.info?.meta?.tags?.map((tag) => tag.name).includes(selectedTag);
-				})
-		: items.filter((item) => {
-				if (selectedTag === '') {
-					return true;
-				}
-				return item.model?.info?.meta?.tags?.map((tag) => tag.name).includes(selectedTag);
-			});
+		? fuse.search(searchValue).map((e) => {
+				return e.item;
+			})
+		: items;
 
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = searchValue.trim().replace(/^ollama\s+(run|pull)\s+/, '');
@@ -232,13 +214,6 @@
 
 	onMount(async () => {
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
-
-		if (items) {
-			tags = items.flatMap((item) => item.model?.info?.meta?.tags ?? []).map((tag) => tag.name);
-
-			// Remove duplicates and sort
-			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
-		}
 	});
 
 	const cancelModelPullHandler = async (model: string) => {
@@ -294,7 +269,7 @@
 	>
 		<slot>
 			{#if searchEnabled}
-				<div class="flex items-center gap-2.5 px-5 mt-3.5 mb-1.5">
+				<div class="flex items-center gap-2.5 px-5 mt-3.5 mb-3">
 					<Search className="size-4" strokeWidth="2.5" />
 
 					<input
@@ -322,42 +297,11 @@
 						}}
 					/>
 				</div>
+
+				<hr class="border-gray-100 dark:border-gray-850" />
 			{/if}
 
-			<div class="px-3 mb-2 max-h-64 overflow-y-auto scrollbar-hidden group relative">
-				{#if tags}
-					<div class=" flex w-full sticky">
-						<div
-							class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent px-1.5 pb-0.5"
-							bind:this={tagsContainerElement}
-						>
-							<button
-								class="min-w-fit outline-none p-1.5 {selectedTag === ''
-									? ''
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-								on:click={() => {
-									selectedTag = '';
-								}}
-							>
-								{$i18n.t('All')}
-							</button>
-
-							{#each tags as tag}
-								<button
-									class="min-w-fit outline-none p-1.5 {selectedTag === tag
-										? ''
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
-									on:click={() => {
-										selectedTag = tag;
-									}}
-								>
-									{tag}
-								</button>
-							{/each}
-						</div>
-					</div>
-				{/if}
-
+			<div class="px-3 my-2 max-h-64 overflow-y-auto scrollbar-hidden group">
 				{#each filteredItems as item, index}
 					<button
 						aria-label="model-item"
@@ -497,13 +441,11 @@
 								{/if}
 
 								{#if !$mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
-									<div
-										class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px] overflow-x-auto scrollbar-none"
-									>
+									<div class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px]">
 										{#each item.model?.info?.meta.tags as tag}
-											<Tooltip content={tag.name} className="flex-shrink-0">
+											<Tooltip content={tag.name}>
 												<div
-													class=" text-xs font-bold px-1 rounded-sm uppercase bg-gray-500/20 text-gray-700 dark:text-gray-200"
+													class=" text-xs font-bold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 												>
 													{tag.name}
 												</div>
@@ -633,7 +575,7 @@
 			</div>
 
 			{#if showTemporaryChatControl}
-				<hr class="border-gray-100 dark:border-gray-800" />
+				<hr class="border-gray-100 dark:border-gray-850" />
 
 				<div class="flex items-center mx-2 my-2">
 					<button

@@ -231,6 +231,7 @@
 			mediaRecorder.onstart = () => {
 				console.log('Recording started');
 				audioChunks = [];
+				analyseAudio(audioStream);
 			};
 
 			mediaRecorder.ondataavailable = (event) => {
@@ -244,7 +245,7 @@
 				stopRecordingCallback();
 			};
 
-			analyseAudio(audioStream);
+			mediaRecorder.start();
 		}
 	};
 
@@ -320,9 +321,6 @@
 				if (hasSound) {
 					// BIG RED TEXT
 					console.log('%c%s', 'color: red; font-size: 20px;', '🔊 Sound detected');
-					if (mediaRecorder && mediaRecorder.state !== 'recording') {
-						mediaRecorder.start();
-					}
 
 					if (!hasStartedSpeaking) {
 						hasStartedSpeaking = true;

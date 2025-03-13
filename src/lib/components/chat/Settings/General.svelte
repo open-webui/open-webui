@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
-	import { getLanguages, changeLanguage } from '$lib/i18n';
+	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
 	import { models, settings, theme, user } from '$lib/stores';
@@ -50,7 +50,6 @@
 		seed: null,
 		temperature: null,
 		reasoning_effort: null,
-		logit_bias: null,
 		frequency_penalty: null,
 		presence_penalty: null,
 		repeat_penalty: null,
@@ -199,7 +198,7 @@
 						bind:value={lang}
 						placeholder="Select a language"
 						on:change={(e) => {
-							changeLanguage(lang);
+							$i18n.changeLanguage(lang);
 						}}
 					>
 						{#each languages as language}
@@ -349,7 +348,6 @@
 						temperature: params.temperature !== null ? params.temperature : undefined,
 						reasoning_effort:
 							params.reasoning_effort !== null ? params.reasoning_effort : undefined,
-						logit_bias: params.logit_bias !== null ? params.logit_bias : undefined,
 						frequency_penalty:
 							params.frequency_penalty !== null ? params.frequency_penalty : undefined,
 						presence_penalty:
