@@ -67,10 +67,19 @@ export const showSettings = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
 
-export const showControls = writable(false);
+// Create a modified writable store that ignores any attempts to set it to true
+export const showControls = {
+	subscribe: writable(false).subscribe,
+	set: () => false,
+	update: () => false
+};
 export const showOverview = writable(false);
 export const showArtifacts = writable(false);
-export const showCallOverlay = writable(false);
+export const showCallOverlay = {
+	subscribe: writable(false).subscribe,
+	set: () => false,
+	update: () => false
+};
 
 export const temporaryChatEnabled = writable(false);
 export const scrollPaginationEnabled = writable(false);
