@@ -257,6 +257,7 @@ def add_file_to_knowledge_by_id(
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
 ):
+    log.info(f"Adding file {form_data.file_id} to knowledge {id}")
     knowledge = Knowledges.get_knowledge_by_id(id=id)
 
     if not knowledge:

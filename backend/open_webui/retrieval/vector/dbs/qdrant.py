@@ -60,7 +60,7 @@ class QdrantClient:
         self, collection_name: str, dimension: int, enable_hybrid_search: bool = False
     ):
         if enable_hybrid_search:
-            print(f"create collection {collection_name} with hybrid search")
+            log.info(f"create collection {collection_name} with hybrid search")
             self.client.create_collection(
                 collection_name=collection_name,
                 vectors_config={
@@ -80,7 +80,7 @@ class QdrantClient:
                 },
             )
         else:
-            print(f"create collection {collection_name} without hybrid search")
+            log.info(f"create collection {collection_name} without hybrid search")
             self.client.create_collection(
                 collection_name=collection_name,
                 vectors_config=models.VectorParams(
@@ -92,13 +92,15 @@ class QdrantClient:
 
     def _create_collection_if_not_exists(
         self, collection_name, dimension, enable_hybrid_search: bool = False
-    ):
-        if not self.has_collection(collection_name=collection_name):
+    ):  
+        is_collection_exists = self.has_collection(collection_name=collection_name)
+        if not is_collection_exists:
             self._create_collection(
                 collection_name=collection_name,
                 dimension=dimension,
                 enable_hybrid_search=enable_hybrid_search,
             )
+        return is_collection_exists
 
     def _create_points(self, items: list[VectorItem]):
         points = []
@@ -237,6 +239,7 @@ class QdrantClient:
         collection_name: str,
         items: list[VectorItem],
         enable_hybrid_search: bool = False,
+        batch_size: int = 100,
     ):
         # Insert the items into the collection, if the collection does not exist, it will be created.
         self._create_collection_if_not_exists(
@@ -247,10 +250,24 @@ class QdrantClient:
                 item["sparse_vector"] = next(
                     self.sparse_text_embedding.embed(item["text"])
                 )
+                
+        # Disable the indexing when doing upload to avoid unnecessary indexing time
+        # REF: https://qdrant.tech/documentation/database-tutorials/bulk-upload/
+        self.client.update_collection(
+            collection_name=collection_name,
+            optimizer_config=models.OptimizersConfigDiff(indexing_threshold=0),
+        )
 
-        print(f"Inserting items: {len(items)}")
-        points = self._create_points(items)
-        self.client.upsert(collection_name, points)
+        log.info(f"Inserting items: {len(items)}")
+        for i in range(0, len(items), batch_size):
+            points = self._create_points(items[i:i+batch_size])
+            self.client.upsert(collection_name, points)
+            
+        # Re-enable the indexing after the upload for the collection to be searchable
+        self.client.update_collection(
+            collection_name=collection_name,
+            optimizer_config=models.OptimizersConfigDiff(indexing_threshold=20000),
+        )
 
     def upsert(
         self,
@@ -315,9 +332,12 @@ class QdrantClient:
             self.client.delete_collection(collection_name=collection_name.name)
 
     def get_raw_data(self, collection_name: str):
+        """This method is for getting the raw data from the collection
+        In this case, we get the raw data from the file collection
+        """
         # Get all the items in the collection.
         is_collection_exists = self.has_collection(collection_name=collection_name)
-        print(f"collection {collection_name} exists: {is_collection_exists}")
+        log.info(f"collection {collection_name} exists: {is_collection_exists}")
         if is_collection_exists:
             # Get all the items in the collection.
             points = self.client.query_points(
@@ -335,7 +355,11 @@ class QdrantClient:
         collection_name: str,
         documents: list[ScoredPoint],
         enable_hybrid_search: bool = False,
+        batch_size: int = 100,
     ):
+        """This method is for migrating data from a collection to another collection
+        In this case, we migrate from file collection to knowledge base collection
+        """
         # Create points from the documents
         points = []
         dimension = None
@@ -362,16 +386,35 @@ class QdrantClient:
                     
             points.append(point)
 
-        print("Insert raw data: ", len(points))
+        log.info(f"Insert raw data: {len(points)}")
         if len(points) == 0:
             raise ValueError("No points to migrate from collection to file")
         
         # Create the collection if it doesn't exist
-        self._create_collection_if_not_exists(
+        is_collection_exists = self._create_collection_if_not_exists(
             collection_name=collection_name,
             dimension=dimension,
             enable_hybrid_search=enable_hybrid_search,
         )
 
+        if not is_collection_exists:
+            # Disable the indexing when doing upload to avoid unnecessary indexing time
+            # We only do this for the first time migration
+            # REF: https://qdrant.tech/documentation/database-tutorials/bulk-upload/
+            self.client.update_collection(
+                collection_name=collection_name,
+                optimizer_config=models.OptimizersConfigDiff(indexing_threshold=0),
+            )
+
+        log.info(f"Migrating {len(points)} points to {collection_name} knowledge base collection")
         # upload the points to the collection
-        self.client.upsert(collection_name, points)
+        for i in range(0, len(points), batch_size):
+            log.info(f"Upserting points {i} to {i+batch_size} of {len(points)}")
+            self.client.upsert(collection_name, points[i:i+batch_size])
+
+        if not is_collection_exists:
+            # Re-enable the indexing after the upload for the collection to be searchable
+            self.client.update_collection(
+                collection_name=collection_name,
+                optimizer_config=models.OptimizersConfigDiff(indexing_threshold=20000),
+            )

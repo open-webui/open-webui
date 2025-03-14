@@ -2,6 +2,7 @@ import requests
 import logging
 import ftfy
 import sys
+import pandas as pd
 
 from langchain_community.document_loaders import (
     AzureAIDocumentIntelligenceLoader,
@@ -116,7 +117,6 @@ class TikaLoader:
         else:
             raise Exception(f"Error calling Tika: {r.reason}")
 
-
 class Loader:
     def __init__(self, engine: str = "", **kwargs):
         self.engine = engine
@@ -176,7 +176,12 @@ class Loader:
                     file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
                 )
             elif file_ext == "csv":
-                loader = CSVLoader(file_path)
+                loader = CSVLoader(file_path, 
+                                   csv_args={
+                                        "delimiter": ",",
+                                        "fieldnames": ["metadata", "embedding_content", "context_content"],
+                                    },
+                                   metadata_columns=["metadata", "context_content"])                
             elif file_ext == "rst":
                 loader = UnstructuredRSTLoader(file_path, mode="elements")
             elif file_ext == "xml":
