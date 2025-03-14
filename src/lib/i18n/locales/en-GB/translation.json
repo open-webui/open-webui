@@ -866,7 +866,7 @@
 	"Save & Create": "",
 	"Save & Update": "",
 	"Save As Copy": "",
-	"Save Prompt": "",
+	"Save Prompt": "Save Prompt",
 	"Save Tag": "",
 	"Saved": "",
 	"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through": "",
@@ -1175,5 +1175,7 @@
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "",
 	"Youtube Language": "",
-	"Youtube Proxy URL": ""
+	"Youtube Proxy URL": "",
+	"Prompt Saved Successfully":""
+
 }
