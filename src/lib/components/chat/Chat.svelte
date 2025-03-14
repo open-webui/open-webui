@@ -894,8 +894,8 @@
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
 		}
-		
-		taskId = null
+
+		taskId = null;
 	};
 
 	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId, event = null) => {
@@ -1285,12 +1285,13 @@
 		prompt = '';
 
 		// Reset chat input textarea
-		const chatInputElement = document.getElementById('chat-input');
+		if (!($settings?.richTextInput ?? true)) {
+			const chatInputElement = document.getElementById('chat-input');
 
-		if (chatInputElement) {
-			await tick();
-			chatInputElement.style.height = '';
-			chatInputElement.style.height = Math.min(chatInputElement.scrollHeight, 320) + 'px';
+			if (chatInputElement) {
+				await tick();
+				chatInputElement.style.height = '';
+			}
 		}
 
 		const _files = JSON.parse(JSON.stringify(files));
