@@ -2,6 +2,9 @@
 @echo off
 SETLOCAL ENABLEDELAYEDEXPANSION
 
+:: Set the environment variables 김정민 임시
+SET CORS_ALLOW_ORIGIN=http://localhost:5173
+
 :: Get the directory of the current script
 SET "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%" || exit /b

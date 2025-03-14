@@ -1,35 +1,38 @@
 {
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Start Open WebUI",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "/Users/passion1014/anaconda3/envs/openwebui/bin/uvicorn",
-      "args": [
-        "open_webui.main:app",
-        "--host", "0.0.0.0",
-        "--port", "8080",
-        "--forwarded-allow-ips", "*",
-        "--reload"
-      ],
-      "python": "/Users/passion1014/anaconda3/envs/openwebui/bin/python",
-      "cwd": "${workspaceFolder}/backend",
-      "env": {
-        "WEBUI_SECRET_KEY": "your_secret_key",
-        "PORT": "8080",
-        "HOST": "0.0.0.0",
-        "USE_OLLAMA_DOCKER": "true",
-        "USE_CUDA_DOCKER": "true",
-        "LD_LIBRARY_PATH": "/usr/local/lib/python3.11/site-packages/torch/lib:/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib",
-        "PYTHONPATH": "${workspaceFolder}/backend"
-      },
-      "console": "integratedTerminal",
-      "justMyCode": false
-    }
-  ],
-  "tasks": {
-    "version": "2.0.0",
-    "tasks": []
-  }
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Start Open WebUI",
+			"type": "debugpy",
+			"request": "launch",
+			"program": "uvicorn",
+			"args": [
+				"open_webui.main:app",
+				"--host",
+				"0.0.0.0",
+				"--port",
+				"8080",
+				"--forwarded-allow-ips",
+				"*",
+				"--reload"
+			],
+			"python": "python",
+			"cwd": "${workspaceFolder}/backend",
+			"env": {
+				"WEBUI_SECRET_KEY": "your_secret_key",
+				"PORT": "8080",
+				"HOST": "0.0.0.0",
+				"USE_OLLAMA_DOCKER": "true",
+				"USE_CUDA_DOCKER": "true",
+				// "LD_LIBRARY_PATH": "/usr/local/lib/python3.11/site-packages/torch/lib:/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib",
+				"PYTHONPATH": "${workspaceFolder}/backend"
+			},
+			"console": "integratedTerminal",
+			"justMyCode": false
+		}
+	],
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": []
+	}
 }
