@@ -42,8 +42,8 @@ services:
     restart: unless-stopped
     container_name: vector-db
     ports:
-      - 3001:6333
-      - 3002:6334
+      - 6333:6333
+      - 6334:6334
     environment:
       - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY}
       - QDRANT__LOG_LEVEL=INFO

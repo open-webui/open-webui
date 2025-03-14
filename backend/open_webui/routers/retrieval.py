@@ -3,6 +3,7 @@ import logging
 import mimetypes
 import os
 import shutil
+import time
 
 import uuid
 from datetime import datetime
@@ -826,9 +827,12 @@ def save_docs_to_vector_db(
                 )
             )
 
+        log.info(f"Migrating {len(docs)} documents from {file_collection_name} to {collection_name} knowledge base collection")
+        log.info(f"Get raw data from {file_collection_name}")
         all_documents = VECTOR_DB_CLIENT.get_raw_data(
             collection_name=file_collection_name
         )
+        log.info(f"Insert raw data from {file_collection_name} to {collection_name}")
         VECTOR_DB_CLIENT.insert_raw_data(
             collection_name=collection_name,
             documents=all_documents,
@@ -879,8 +883,6 @@ def save_docs_to_vector_db(
             raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
 
         if enable_rag_parent_retriever:
-            import time
-
             parent_docs = parent_text_splitter.split_documents(docs)
             parent_doc_ids = [str(uuid.uuid4()) for _ in parent_docs]
             child_docs = []
@@ -916,9 +918,18 @@ def save_docs_to_vector_db(
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
+    # This one is the content for embedding
     texts = [doc.page_content for doc in docs]
-    metadatas = [
-        {
+    
+    metadatas = []
+    # This one is the content for context for the LLM to use
+    context_contents = []
+    for doc in docs:
+        if "context_content" in doc.metadata:
+            context_contents.append(doc.metadata["context_content"])
+            del doc.metadata["context_content"]
+            
+        metadatas.append({
             **doc.metadata,
             **(metadata if metadata else {}),
             "embedding_config": json.dumps(
@@ -927,9 +938,8 @@ def save_docs_to_vector_db(
                     "model": request.app.state.config.RAG_EMBEDDING_MODEL,
                 }
             ),
-        }
-        for doc in docs
-    ]
+        })
+        
 
     # ChromaDB does not like datetime formats
     # for meta-data so convert them to string.
@@ -978,9 +988,15 @@ def save_docs_to_vector_db(
         embeddings = embedding_function(
             list(map(lambda x: x.replace("\n", " "), texts)), user=user
         )
+        # embeddings = [[0.1] * 1024] * len(texts)
         end_time = time.time()
         log.info(f"Time taken to run embedding_function in save_docs_to_vector_db: {end_time - start_time} seconds")
 
+        if context_contents:
+            assert len(context_contents) == len(texts), "context_contents and texts must have the same length" 
+            # Override the texts in here because we want to store content field in the vector db using context contents
+            texts = context_contents
+        
         items = [
             {
                 "id": str(uuid.uuid4()),
@@ -990,7 +1006,7 @@ def save_docs_to_vector_db(
             }
             for idx, text in enumerate(texts)
         ]
-
+            
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
             items=items,
@@ -1131,7 +1147,6 @@ def process_file(
                 ]
             text_content = " ".join([doc.page_content for doc in docs])
 
-        log.debug(f"text_content: {text_content}")
         Files.update_file_data_by_id(
             file.id,
             {"content": text_content},
