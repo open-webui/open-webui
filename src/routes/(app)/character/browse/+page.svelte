@@ -28,10 +28,7 @@ function startInterview(character_name, system_prompt) {
     })
 
     chatId.set(newChatId)
-
     goto('/')
-    // goto('/', {state: newChat})
-
 }
 </script>
 

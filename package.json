@@ -88,6 +88,7 @@
 		"jspdf": "^3.0.0",
 		"katex": "^0.16.21",
 		"kokoro-js": "^1.1.1",
+		"langfuse": "^3.36.0",
 		"marked": "^9.1.0",
 		"mermaid": "^10.9.3",
 		"paneforge": "^0.0.6",
