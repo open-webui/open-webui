@@ -45,8 +45,10 @@
 	import CodeExecutions from './CodeExecutions.svelte';
 	import ContentRenderer from './ContentRenderer.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+	import { createNewPrompt } from '$lib/apis/prompts';
 
 	interface MessageType {
+		parentId: any;
 		id: string;
 		model: string;
 		content: string;
@@ -94,7 +96,7 @@
 			load_duration?: number;
 			usage?: unknown;
 		};
-		annotation?: { type: string; rating: number };
+		annotation?: { type: string; rating: number; saved: boolean };
 	}
 
 	export let chatId = '';
@@ -1221,6 +1223,54 @@
 														d="M15.91 11.672a.375.375 0 0 1 0 .656l-5.603 3.113a.375.375 0 0 1-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112Z"
 													/>
 												</svg>
+											</button>
+										</Tooltip>
+
+										<Tooltip content={$i18n.t('Save Prompt')} placement="bottom">
+											<button
+												type="button"
+												id="save-prompt-button"
+												class="{isLastMessage
+												? 'visible'
+												: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg {(
+												message?.annotation?.saved ?? ''
+											).toString() === 'true'
+												? 'bg-gray-100 dark:bg-gray-800'
+												: ''} dark:hover:text-white hover:text-black transition disabled:cursor-not-allowed disabled:hover:bg-transparent"
+														disabled={message?.annotation?.saved}
+												on:click={ async () => {
+													const chatDetails = await getChatById(localStorage.token, chatId)
+													const title = chatDetails.title;
+													const command = `/${chatDetails.chat.history.messages[message?.parentId].content}`
+													const content = message.content;
+													await createNewPrompt(localStorage.token, {
+														command: command.charAt(0) === '/' ? command.slice(1) : command,
+													title: title,
+													content:content
+													}
+													).catch((error) => {
+														toast.error(error)
+														return null
+
+											}).finally( async () => {
+												await feedbackHandler(null, {saved: true})
+												toast.success('Prompt Saved Successfully')
+											})}}
+											>
+											<svg 
+											xmlns="http://www.w3.org/2000/svg" 
+											width="24" 
+											height="24" 
+											viewBox="0 0 24 24">
+											<g 
+											fill="none" 
+											stroke="currentColor" 
+											stroke-linecap="round" 
+											stroke-linejoin="round" 
+											stroke-width="1.5" 
+											color="currentColor">
+											<path d="M7 2.5c-1.407.165-2.376.515-3.109 1.254C2.5 5.156 2.5 7.412 2.5 11.926c0 4.513 0 6.77 1.391 8.172S7.521 21.5 12 21.5c4.478 0 6.718 0 8.109-1.402s1.391-3.659 1.391-8.172s0-6.77-1.391-8.172C19.376 3.014 18.407 2.665 17 2.5"/>
+											<path d="M9.5 8c.492.506 1.8 2.5 2.5 2.5M14.5 8c-.492.506-1.8 2.5-2.5 2.5m0 0v-8m9.5 11h-4.926c-.842 0-1.503.704-1.875 1.447c-.403.808-1.21 1.553-2.699 1.553s-2.296-.745-2.7-1.553c-.37-.743-1.032-1.447-1.874-1.447H2.5"/></g></svg>
 											</button>
 										</Tooltip>
 									{/if}

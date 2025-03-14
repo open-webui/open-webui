@@ -866,6 +866,7 @@
 	"Save & Create": "Desar i crear",
 	"Save & Update": "Desar i actualitzar",
 	"Save As Copy": "Desar com a còpia",
+	"Save Prompt": "",
 	"Save Tag": "Desar l'etiqueta",
 	"Saved": "Desat",
 	"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through": "Desar els registres de xat directament a l'emmagatzematge del teu navegador ja no està suportat. Si us plau, descarregr i elimina els registres de xat fent clic al botó de sota. No et preocupis, pots tornar a importar fàcilment els teus registres de xat al backend a través de",

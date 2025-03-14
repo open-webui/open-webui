@@ -866,6 +866,7 @@
 	"Save & Create": "Zapisz i stwórz",
 	"Save & Update": "Zapisz i odśwież",
 	"Save As Copy": "Zapisz jako kopia",
+	"Save Prompt": "",
 	"Save Tag": "Zapisz tag",
 	"Saved": "Zapisano",
 	"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through": "Zapisywanie dzienników czatu bezpośrednio w pamięci przeglądarki nie jest już obsługiwane. Prosimy o pobranie i usunięcie dzienników czatu, klikając przycisk poniżej. Nie przejmuj się, możesz łatwo ponownie zaimportować dzienniki czatu do backendu przez",

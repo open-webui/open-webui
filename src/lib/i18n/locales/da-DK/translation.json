@@ -866,6 +866,7 @@
 	"Save & Create": "Gem og opret",
 	"Save & Update": "Gem og opdater",
 	"Save As Copy": "Gem som kopi",
+	"Save Prompt": "",
 	"Save Tag": "Gem tag",
 	"Saved": "Gemt",
 	"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through": "Lagring af chatlogs direkte i din browsers lager understøttes ikke længere. Download og slet dine chatlogs ved at klikke på knappen nedenfor. Du kan nemt importere dine chatlogs til backend igennem",
