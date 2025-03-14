@@ -1865,6 +1865,12 @@ BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
     os.getenv("BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
 )
 
+BYPASS_WEB_SEARCH_RESULT_LINK_SCRAPE = PersistentConfig(
+    "BYPASS_WEB_SEARCH_RESULT_LINK_SCRAPE",
+    "rag.web.search.bypass_result_link_scrape",
+    os.getenv("BYPASS_WEB_SEARCH_RESULT_LINK_SCRAPE", "False").lower() == "true",
+)
+
 # You can provide a list of your own websites to filter after performing a web search.
 # This ensures the highest level of safety and reliability of the information sources.
 RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(

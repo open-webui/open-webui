@@ -472,6 +472,23 @@
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">
+							<Tooltip content={$i18n.t('Search Web Without Scraping Links')} placement="top-start">
+								{$i18n.t('Bypass Scrape Links of Web Search Result')}
+							</Tooltip>
+						</div>
+						<div class="flex items-center relative">
+							<Tooltip
+								content={webConfig.BYPASS_WEB_SEARCH_RESULT_LINK_SCRAPE
+									? 'Skip scraping of links in search results, useful when search engines already provide detailed content.'
+									: 'By default, perform a web search and scrape each link in the search results.'}
+							>
+								<Switch bind:state={webConfig.BYPASS_WEB_SEARCH_RESULT_LINK_SCRAPE} />
+							</Tooltip>
+						</div>
+					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Trust Proxy Environment')}
 						</div>
 						<div class="flex items-center relative">

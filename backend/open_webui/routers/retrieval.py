@@ -380,6 +380,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "web": {
             "ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
             "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
+            "BYPASS_WEB_SEARCH_RESULT_LINK_SCRAPE": request.app.state.config.BYPASS_WEB_SEARCH_RESULT_LINK_SCRAPE,
             "search": {
                 "enabled": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "drive": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
@@ -477,6 +478,7 @@ class WebConfig(BaseModel):
     search: WebSearchConfig
     ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION: Optional[bool] = None
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
+    BYPASS_WEB_SEARCH_RESULT_LINK_SCRAPE: Optional[bool] = None
 
 
 class ConfigUpdateForm(BaseModel):
@@ -569,6 +571,10 @@ async def update_rag_config(
 
         request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
             form_data.web.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
+        )
+
+        request.app.state.config.BYPASS_WEB_SEARCH_RESULT_LINK_SCRAPE = (
+            form_data.web.BYPASS_WEB_SEARCH_RESULT_LINK_SCRAPE
         )
 
         request.app.state.config.SEARXNG_QUERY_URL = (
@@ -1438,13 +1444,28 @@ async def process_web_search(
             ]
 
         urls = [result.link for result in web_results]
-        loader = get_web_loader(
-            urls,
-            verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
-            requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
-            trust_env=request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
-        )
-        docs = await loader.aload()
+        if request.app.state.config.BYPASS_WEB_SEARCH_RESULT_LINK_SCRAPE:
+            docs: List[Document] = [
+                Document(
+                    page_content=result.snippet,
+                    metadata={
+                        "source": result.link,
+                        "title": (
+                            result.title if result.title is not None else result.link
+                        ),
+                    },
+                )
+                for result in web_results
+                if result.snippet is not None and result.snippet != ""
+            ]
+        else:
+            loader = get_web_loader(
+                urls,
+                verify_ssl=request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+                requests_per_second=request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
+                trust_env=request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
+            )
+            docs = await loader.aload()
 
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
