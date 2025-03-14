@@ -4,11 +4,10 @@
 	import { Pane, PaneResizer } from 'paneforge';
 
 	import { onDestroy, onMount, tick } from 'svelte';
-	import { mobile, showControls, showCallOverlay, showOverview, showArtifacts } from '$lib/stores';
+	import { mobile, showControls, showOverview, showArtifacts } from '$lib/stores';
 
 	import Modal from '../common/Modal.svelte';
 	import Controls from './Controls/Controls.svelte';
-	import CallOverlay from './MessageInput/CallOverlay.svelte';
 	import Drawer from '../common/Drawer.svelte';
 	import Overview from './Overview.svelte';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
@@ -145,27 +144,11 @@
 				}}
 			>
 				<div
-					class=" {$showCallOverlay || $showOverview || $showArtifacts
+					class=" {$showOverview || $showArtifacts
 						? ' h-screen  w-full'
 						: 'px-6 py-4'} h-full"
 				>
-					{#if $showCallOverlay}
-						<div
-							class=" h-full max-h-[100dvh] bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
-						>
-							<CallOverlay
-								bind:files
-								{submitPrompt}
-								{stopResponse}
-								{modelId}
-								{chatId}
-								{eventTarget}
-								on:close={() => {
-									showControls.set(false);
-								}}
-							/>
-						</div>
-					{:else if $showArtifacts}
+					{#if $showArtifacts}
 						<Artifacts {history} />
 					{:else if $showOverview}
 						<Overview
@@ -280,3 +263,4 @@
 		</Pane>
 	{/if}
 </SvelteFlowProvider>
+
