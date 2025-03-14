@@ -823,6 +823,11 @@
 										on:sync={(e) => {
 											showSyncConfirmModal = true;
 										}}
+										on:scan={(e) => {
+											if (e.detail.type === 'documents') {
+												console.log('Scan directory button clicked!');
+											}
+										}}
 									/>
 								</div>
 							</div>
