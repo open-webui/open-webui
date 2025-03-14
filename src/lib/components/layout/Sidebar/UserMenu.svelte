@@ -1,12 +1,8 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
-
-	import { flyAndScale } from '$lib/utils/transitions';
-	import { goto } from '$app/navigation';
 	import { showSettings, mobile, showSidebar } from '$lib/stores';
-	import { fade, slide } from 'svelte/transition';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { fade } from 'svelte/transition';
 	import { userSignOut } from '$lib/apis/auths';
 
 	const i18n = getContext('i18n');
