@@ -28,7 +28,6 @@
 		user,
 		socket,
 		showControls,
-		showCallOverlay,
 		currentChatPage,
 		temporaryChatEnabled,
 		mobile,
@@ -439,7 +438,6 @@
 			}
 
 			if (!value) {
-				showCallOverlay.set(false);
 				showOverview.set(false);
 				showArtifacts.set(false);
 			}
@@ -694,7 +692,6 @@
 		}
 
 		await showControls.set(false);
-		await showCallOverlay.set(false);
 		await showOverview.set(false);
 		await showArtifacts.set(false);
 
@@ -743,7 +740,7 @@
 		}
 
 		if ($page.url.searchParams.get('call') === 'true') {
-			showCallOverlay.set(true);
+			showOverview.set(true);
 			showControls.set(true);
 		}
 
@@ -1178,7 +1175,7 @@
 				copyToClipboard(message.content);
 			}
 
-			if ($settings.responseAutoPlayback && !$showCallOverlay) {
+			if ($settings.responseAutoPlayback && !$showOverview) {
 				await tick();
 				document.getElementById(`speak-button-${message.id}`)?.click();
 			}
@@ -2110,28 +2107,6 @@
 					{/if}
 				</div>
 			</Pane>
-
-			<ChatControls
-				bind:this={controlPaneComponent}
-				bind:history
-				bind:chatFiles
-				bind:params
-				bind:files
-				bind:pane={controlPane}
-				chatId={$chatId}
-				modelId={selectedModelIds?.at(0) ?? null}
-				models={selectedModelIds.reduce((a, e, i, arr) => {
-					const model = $models.find((m) => m.id === e);
-					if (model) {
-						return [...a, model];
-					}
-					return a;
-				}, [])}
-				{submitPrompt}
-				{stopResponse}
-				{showMessage}
-				{eventTarget}
-			/>
 		</PaneGroup>
 	{:else if loading}
 		<div class=" flex items-center justify-center h-full w-full">
@@ -2141,3 +2116,4 @@
 		</div>
 	{/if}
 </div>
+
