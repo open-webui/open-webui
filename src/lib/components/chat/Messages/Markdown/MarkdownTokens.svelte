@@ -14,9 +14,11 @@
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/Markdown/MarkdownInlineTokens.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
+	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
+
 	import Source from './Source.svelte';
 
 	const dispatch = createEventDispatcher();
@@ -170,9 +172,14 @@
 			</div>
 		</div>
 	{:else if token.type === 'blockquote'}
-		<blockquote dir="auto">
-			<svelte:self id={`${id}-${tokenIdx}`} tokens={token.tokens} {onTaskClick} {onSourceClick} />
-		</blockquote>
+		{@const alert = alertComponent(token)}
+		{#if alert}
+			<AlertRenderer token={token} alert={alert} />
+		{:else}
+			<blockquote dir="auto">
+				<svelte:self id={`${id}-${tokenIdx}`} tokens={token.tokens} {onTaskClick} {onSourceClick} />
+			</blockquote>
+		{/if}
 	{:else if token.type === 'list'}
 		{#if token.ordered}
 			<ol start={token.start || 1}>
