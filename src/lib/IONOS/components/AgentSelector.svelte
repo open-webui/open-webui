@@ -4,6 +4,7 @@
 	import { getContext } from 'svelte';
 	import { selectAgent } from '$lib/IONOS/services/agent';
 	import { agents } from '$lib/IONOS/stores/agents';
+	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte';
 	import Sparkles from '$lib/IONOS/components/icons/Sparkles.svelte';
 
 	const i18n = getContext<Readable<I18Next>>('i18n');
@@ -36,16 +37,18 @@
 						<p class="text-xs">
 							{description}
 						</p>
-						<div class="text-center">
-							<button
-								class="flex flex-row items-center m-auto px-4 py-2 mt-4 bg-ai-main-500 hover:bg-ai-main-700 text-white transition rounded-3xl"
+						<div class="mt-4 text-center">
+							<Button
+								name={id}
 								on:click={() => selectAgent(id)}
+								className="px-4 py-1"
+								type={ButtonType.special}
 							>
-								<span class="pr-2">
+								<span class="pr-1">
 									{$i18n.t('Chat now', { ns: 'ionos' })}
 								</span>
-								<Sparkles className="w-4 h-4" />
-							</button>
+								<Sparkles className="w-4 h-4 inline" />
+							</Button>
 						</div>
 					</div>
 				</div>
