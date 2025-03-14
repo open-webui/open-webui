@@ -360,11 +360,26 @@
 			'zstandard'
 		];
 
+		// Special case mappings for package name differences
+		const packageMappings = {
+			'bs4': 'beautifulsoup4'
+		};
+
 		// Detect packages from the code
 		let packages = [];
-
+		
+		// First check for special mappings
+		for (const [importName, packageName] of Object.entries(packageMappings)) {
+			if (code.includes(importName)) {
+				packages.push(packageName);
+			}
+		}
+		
 		// Then check for direct package names
 		for (const pkg of availablePackages) {
+			// Skip packages already added through mappings
+			if (packages.includes(pkg)) continue;
+			
 			// Check if the package name appears in the code
 			if (code.includes(pkg)) {
 				packages.push(pkg);
