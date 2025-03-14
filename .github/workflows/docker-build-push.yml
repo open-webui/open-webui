@@ -18,7 +18,7 @@ env:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write

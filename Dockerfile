@@ -30,7 +30,7 @@ WORKDIR /app
 ENV NODE_OPTIONS="--max-old-space-size=32768"
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --omit=dev
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
