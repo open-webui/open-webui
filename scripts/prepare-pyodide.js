@@ -14,7 +14,7 @@ const packages = [
     'matplotlib-pyodide', 'memory-allocator', 'micropip', 'mmh3', 'mne', 'more-itertools', 'mpmath', 'msgpack',
     'msgspec', 'msprime', 'multidict', 'munch', 'mypy', 'narwhals', 'netcdf4', 'networkx', 'newick', 'nh3', 'nlopt',
     'nltk', 'numcodecs', 'numpy', 'opencv-python', 'optlang', 'orjson', 'packaging', 'pandas', 'parso', 'patsy',
-    'pcodec', 'peewee', 'pi-heif', 'Pillow', 'pillow-heif', 'pkgconfig', 'pluggy', 'polars', 'pplpy', 'primecountpy',
+	  'peewee', 'pi-heif', 'Pillow', 'pillow-heif', 'pkgconfig', 'pluggy', 'polars', 'pplpy', 'primecountpy',
     'prompt_toolkit', 'protobuf', 'pure-eval', 'py', 'pyarrow', 'pyclipper', 'pycparser', 'pycryptodome', 'pydantic',
     'pydantic_core', 'pyerfa', 'pygame-ce', 'Pygments', 'pyheif', 'pyiceberg', 'pyinstrument', 'pynacl',
     'pyodide-http', 'pyodide-unix-timezones', 'pyparsing', 'pyproj', 'pyrsistent', 'pysam', 'pyshp', 'pytest',
