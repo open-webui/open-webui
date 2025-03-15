@@ -295,7 +295,7 @@ async def update_config(
     }
 
 
-@cached(ttl=3)
+@cached(ttl=1)
 async def get_all_models(request: Request, user: UserModel = None):
     log.info("get_all_models()")
     if request.app.state.config.ENABLE_OLLAMA_API:
@@ -336,6 +336,7 @@ async def get_all_models(request: Request, user: UserModel = None):
                 )
 
                 prefix_id = api_config.get("prefix_id", None)
+                tags = api_config.get("tags", [])
                 model_ids = api_config.get("model_ids", [])
 
                 if len(model_ids) != 0 and "models" in response:
@@ -349,6 +350,10 @@ async def get_all_models(request: Request, user: UserModel = None):
                 if prefix_id:
                     for model in response.get("models", []):
                         model["model"] = f"{prefix_id}.{model['model']}"
+
+                if tags:
+                    for model in response.get("models", []):
+                        model["tags"] = tags
 
         def merge_models_lists(model_lists):
             merged_models = {}
@@ -1164,7 +1169,7 @@ async def generate_chat_completion(
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
         payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
-
+    # payload["keep_alive"] = -1 # keep alive forever
     return await send_post_request(
         url=f"{url}/api/chat",
         payload=json.dumps(payload),

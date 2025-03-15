@@ -12,6 +12,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -19,6 +20,8 @@
 	export let user;
 
 	let chats = null;
+	let showDeleteConfirmDialog = false;
+	let chatToDelete = null;
 
 	const deleteChatHandler = async (chatId) => {
 		const res = await deleteChatById(localStorage.token, chatId).catch((error) => {
@@ -49,6 +52,16 @@
 		}
 	}
 </script>
+
+<ConfirmDialog
+	bind:show={showDeleteConfirmDialog}
+	on:confirm={() => {
+		if (chatToDelete) {
+			deleteChatHandler(chatToDelete);
+			chatToDelete = null;
+		}
+	}}
+/>
 
 <Modal size="lg" bind:show>
 	<div class=" flex justify-between dark:text-gray-300 px-5 pt-4">
@@ -142,7 +155,8 @@
 														<button
 															class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 															on:click={async () => {
-																deleteChatHandler(chat.id);
+																chatToDelete = chat.id;
+																showDeleteConfirmDialog = true;
 															}}
 														>
 															<svg

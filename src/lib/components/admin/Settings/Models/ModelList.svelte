@@ -33,6 +33,7 @@
 		if (modelListElement) {
 			sortable = Sortable.create(modelListElement, {
 				animation: 150,
+				handle: '.item-handle',
 				onUpdate: async (event) => {
 					positionChangeHandler();
 				}
@@ -47,7 +48,7 @@
 			<div class=" flex gap-2 w-full justify-between items-center" id="model-item-{modelId}">
 				<Tooltip content={modelId} placement="top-start">
 					<div class="flex items-center gap-1">
-						<EllipsisVertical className="size-4 cursor-move" />
+						<EllipsisVertical className="size-4 cursor-move item-handle" />
 
 						<div class=" text-sm flex-1 py-1 rounded-lg">
 							{#if $models.find((model) => model.id === modelId)}

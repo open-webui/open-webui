@@ -210,7 +210,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             LDAP_APP_DN,
             LDAP_APP_PASSWORD,
             auto_bind="NONE",
-            authentication="SIMPLE",
+            authentication="SIMPLE" if LDAP_APP_DN else "ANONYMOUS",
         )
         if not connection_app.bind():
             raise HTTPException(400, detail="Application account bind failed")

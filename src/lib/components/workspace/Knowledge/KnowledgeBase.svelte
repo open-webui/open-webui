@@ -681,7 +681,7 @@
 										href={selectedFile.id ? `/api/v1/files/${selectedFile.id}/content` : '#'}
 										target="_blank"
 									>
-										{selectedFile?.meta?.name}
+										{decodeURIComponent(selectedFile?.meta?.name)}
 									</a>
 								</div>
 

@@ -33,14 +33,48 @@
 
 	const updateValue = () => {
 		if (_value !== value) {
+			const changes = findChanges(_value, value);
 			_value = value;
-			if (codeEditor) {
-				codeEditor.dispatch({
-					changes: [{ from: 0, to: codeEditor.state.doc.length, insert: _value }]
-				});
+
+			if (codeEditor && changes.length > 0) {
+				codeEditor.dispatch({ changes });
 			}
 		}
 	};
+
+	/**
+	 * Finds multiple diffs in two strings and generates minimal change edits.
+	 */
+	function findChanges(oldStr, newStr) {
+		let changes = [];
+		let oldIndex = 0,
+			newIndex = 0;
+
+		while (oldIndex < oldStr.length || newIndex < newStr.length) {
+			if (oldStr[oldIndex] !== newStr[newIndex]) {
+				let start = oldIndex;
+
+				// Identify the changed portion
+				while (oldIndex < oldStr.length && oldStr[oldIndex] !== newStr[newIndex]) {
+					oldIndex++;
+				}
+				while (newIndex < newStr.length && newStr[newIndex] !== oldStr[start]) {
+					newIndex++;
+				}
+
+				changes.push({
+					from: start,
+					to: oldIndex, // Replace the differing part
+					insert: newStr.substring(start, newIndex)
+				});
+			} else {
+				oldIndex++;
+				newIndex++;
+			}
+		}
+
+		return changes;
+	}
 
 	export let id = '';
 	export let lang = '';

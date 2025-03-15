@@ -61,10 +61,11 @@
 	$: selectedModel = items.find((item) => item.value === value) ?? '';
 
 	let searchValue = '';
+
 	let selectedTag = '';
+	let selectedConnectionType = '';
 
 	let ollamaVersion = null;
-
 	let selectedModelIdx = 0;
 
 	const fuse = new Fuse(
@@ -72,7 +73,7 @@
 			const _item = {
 				...item,
 				modelName: item.model?.name,
-				tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' '),
+				tags: (item.model?.tags ?? []).map((tag) => tag.name).join(' '),
 				desc: item.model?.info?.meta?.description
 			};
 			return _item;
@@ -93,14 +94,61 @@
 					if (selectedTag === '') {
 						return true;
 					}
-					return item.model?.info?.meta?.tags?.map((tag) => tag.name).includes(selectedTag);
+					return (item.model?.tags ?? []).map((tag) => tag.name).includes(selectedTag);
 				})
-		: items.filter((item) => {
-				if (selectedTag === '') {
-					return true;
-				}
-				return item.model?.info?.meta?.tags?.map((tag) => tag.name).includes(selectedTag);
-			});
+				.filter((item) => {
+					if (selectedConnectionType === '') {
+						return true;
+					} else if (selectedConnectionType === 'ollama') {
+						return item.model?.owned_by === 'ollama';
+					} else if (selectedConnectionType === 'openai') {
+						return item.model?.owned_by === 'openai';
+					} else if (selectedConnectionType === 'direct') {
+						return item.model?.direct;
+					}
+				})
+		: items
+				.filter((item) => {
+					if (selectedTag === '') {
+						return true;
+					}
+					return (item.model?.tags ?? []).map((tag) => tag.name).includes(selectedTag);
+				})
+				.filter((item) => {
+					if (selectedConnectionType === '') {
+						return true;
+					} else if (selectedConnectionType === 'ollama') {
+						return item.model?.owned_by === 'ollama';
+					} else if (selectedConnectionType === 'openai') {
+						return item.model?.owned_by === 'openai';
+					} else if (selectedConnectionType === 'direct') {
+						return item.model?.direct;
+					}
+				});
+
+	$: if (selectedTag || selectedConnectionType) {
+		resetView();
+	} else {
+		resetView();
+	}
+
+	const resetView = async () => {
+		await tick();
+
+		const selectedInFiltered = filteredItems.findIndex((item) => item.value === value);
+
+		if (selectedInFiltered >= 0) {
+			// The selected model is visible in the current filter
+			selectedModelIdx = selectedInFiltered;
+		} else {
+			// The selected model is not visible, default to first item in filtered list
+			selectedModelIdx = 0;
+		}
+
+		await tick();
+		const item = document.querySelector(`[data-arrow-selected="true"]`);
+		item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+	};
 
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = searchValue.trim().replace(/^ollama\s+(run|pull)\s+/, '');
@@ -234,7 +282,7 @@
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
 
 		if (items) {
-			tags = items.flatMap((item) => item.model?.info?.meta?.tags ?? []).map((tag) => tag.name);
+			tags = items.flatMap((item) => item.model?.tags ?? []).map((tag) => tag.name);
 
 			// Remove duplicates and sort
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
@@ -262,8 +310,9 @@
 	bind:open={show}
 	onOpenChange={async () => {
 		searchValue = '';
-		selectedModelIdx = 0;
 		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
+
+		resetView();
 	}}
 	closeFocus={false}
 >
@@ -326,21 +375,70 @@
 
 			<div class="px-3 mb-2 max-h-64 overflow-y-auto scrollbar-hidden group relative">
 				{#if tags}
-					<div class=" flex w-full sticky">
+					<div
+						class=" flex w-full sticky top-0 z-10 bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none"
+						on:wheel={(e) => {
+							if (e.deltaY !== 0) {
+								e.preventDefault();
+								e.currentTarget.scrollLeft += e.deltaY;
+							}
+						}}
+					>
 						<div
-							class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent px-1.5 pb-0.5"
+							class="flex gap-1 w-fit text-center text-sm font-medium rounded-full bg-transparent px-1.5 pb-0.5"
 							bind:this={tagsContainerElement}
 						>
 							<button
-								class="min-w-fit outline-none p-1.5 {selectedTag === ''
+								class="min-w-fit outline-none p-1.5 {selectedTag === '' &&
+								selectedConnectionType === ''
 									? ''
 									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
 								on:click={() => {
+									selectedConnectionType = '';
 									selectedTag = '';
 								}}
 							>
 								{$i18n.t('All')}
 							</button>
+
+							{#if items.find((item) => item.model?.owned_by === 'ollama') && items.find((item) => item.model?.owned_by === 'openai')}
+								<button
+									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'ollama'
+										? ''
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									on:click={() => {
+										selectedTag = '';
+										selectedConnectionType = 'ollama';
+									}}
+								>
+									{$i18n.t('Local')}
+								</button>
+								<button
+									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'openai'
+										? ''
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									on:click={() => {
+										selectedTag = '';
+										selectedConnectionType = 'openai';
+									}}
+								>
+									{$i18n.t('External')}
+								</button>
+							{/if}
+
+							{#if items.find((item) => item.model?.direct)}
+								<button
+									class="min-w-fit outline-none p-1.5 {selectedConnectionType === 'direct'
+										? ''
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+									on:click={() => {
+										selectedTag = '';
+										selectedConnectionType = 'direct';
+									}}
+								>
+									{$i18n.t('Direct')}
+								</button>
+							{/if}
 
 							{#each tags as tag}
 								<button
@@ -348,6 +446,7 @@
 										? ''
 										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
 									on:click={() => {
+										selectedConnectionType = '';
 										selectedTag = tag;
 									}}
 								>
@@ -366,6 +465,7 @@
 							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
 							: ''}"
 						data-arrow-selected={index === selectedModelIdx}
+						data-value={item.value}
 						on:click={() => {
 							value = item.value;
 							selectedModelIdx = index;
@@ -374,9 +474,9 @@
 						}}
 					>
 						<div class="flex flex-col">
-							{#if $mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
+							{#if $mobile && (item?.model?.tags ?? []).length > 0}
 								<div class="flex gap-0.5 self-start h-full mb-1.5 -translate-x-1">
-									{#each item.model?.info?.meta.tags as tag}
+									{#each item.model?.tags as tag}
 										<div
 											class=" text-xs font-bold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 										>
@@ -496,11 +596,11 @@
 									</Tooltip>
 								{/if}
 
-								{#if !$mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
+								{#if !$mobile && (item?.model?.tags ?? []).length > 0}
 									<div
 										class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px] overflow-x-auto scrollbar-none"
 									>
-										{#each item.model?.info?.meta.tags as tag}
+										{#each item.model?.tags as tag}
 											<Tooltip content={tag.name} className="flex-shrink-0">
 												<div
 													class=" text-xs font-bold px-1 rounded-sm uppercase bg-gray-500/20 text-gray-700 dark:text-gray-200"

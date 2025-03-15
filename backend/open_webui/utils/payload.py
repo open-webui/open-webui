@@ -110,6 +110,11 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         "num_thread": int,
     }
 
+    # Extract keep_alive from options if it exists
+    if "options" in form_data and "keep_alive" in form_data["options"]:
+        form_data["keep_alive"] = form_data["options"]["keep_alive"]
+        del form_data["options"]["keep_alive"]
+
     return apply_model_params_to_body(params, form_data, mappings)
 
 
@@ -230,6 +235,11 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
             del ollama_options[
                 "system"
             ]  # To prevent Ollama warning of invalid option provided
+
+        # Extract keep_alive from options if it exists
+        if "keep_alive" in ollama_options:
+            ollama_payload["keep_alive"] = ollama_options["keep_alive"]
+            del ollama_options["keep_alive"]
 
     # If there is the "stop" parameter in the openai_payload, remap it to the ollama_payload.options
     if "stop" in openai_payload:

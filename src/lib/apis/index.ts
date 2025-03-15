@@ -114,6 +114,13 @@ export const getModels = async (
 					}
 				}
 
+				const tags = apiConfig.tags;
+				if (tags) {
+					for (const model of models) {
+						model.tags = tags;
+					}
+				}
+
 				localModels = localModels.concat(models);
 			}
 		}

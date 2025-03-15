@@ -358,6 +358,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
+            "docling_server_url": request.app.state.config.DOCLING_SERVER_URL,
             "document_intelligence_config": {
                 "endpoint": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                 "key": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
@@ -428,6 +429,7 @@ class DocumentIntelligenceConfigForm(BaseModel):
 class ContentExtractionConfig(BaseModel):
     engine: str = ""
     tika_server_url: Optional[str] = None
+    docling_server_url: Optional[str] = None
     document_intelligence_config: Optional[DocumentIntelligenceConfigForm] = None
 
 
@@ -540,6 +542,9 @@ async def update_rag_config(
         request.app.state.config.TIKA_SERVER_URL = (
             form_data.content_extraction.tika_server_url
         )
+        request.app.state.config.DOCLING_SERVER_URL = (
+            form_data.content_extraction.docling_server_url
+        )
         if form_data.content_extraction.document_intelligence_config is not None:
             request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = (
                 form_data.content_extraction.document_intelligence_config.endpoint
@@ -648,6 +653,7 @@ async def update_rag_config(
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
+            "docling_server_url": request.app.state.config.DOCLING_SERVER_URL,
             "document_intelligence_config": {
                 "endpoint": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                 "key": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
@@ -990,6 +996,7 @@ def process_file(
                 loader = Loader(
                     engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                     TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
+                    DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
                     PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                     DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                     DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
