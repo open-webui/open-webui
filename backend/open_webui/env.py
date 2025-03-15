@@ -448,3 +448,10 @@ OTEL_RESOURCE_ATTRIBUTES = os.environ.get(
 OTEL_TRACES_SAMPLER = os.environ.get(
     "OTEL_TRACES_SAMPLER", "parentbased_always_on"
 ).lower()
+
+####################################
+# TOOLS/FUNCTIONS PIP OPTIONS
+####################################
+
+PIP_OPTIONS = os.getenv("PIP_OPTIONS", "").split()
+PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
