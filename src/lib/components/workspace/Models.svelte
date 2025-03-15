@@ -34,6 +34,7 @@
 	import Switch from '../common/Switch.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
+	import SortOptions from '../common/SortOptions.svelte';
 
 	let shiftKey = false;
 
@@ -50,13 +51,14 @@
 
 	let group_ids = [];
 
-	$: if (models) {
-		filteredModels = models.filter(
+	$: filteredItems = models.filter(
 			(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
 		);
-	}
+	
 
 	let searchValue = '';
+
+	let isSorting = false;
 
 	const deleteModelHandler = async (model) => {
 		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
@@ -222,21 +224,34 @@
 			</div>
 		</div>
 
-		<div class=" flex flex-1 items-center w-full space-x-2">
+		<div class="flex flex-1 items-center w-full space-x-2">
 			<div class="flex flex-1 items-center">
-				<div class=" self-center ml-1 mr-3">
+				<div class="self-center ml-1 mr-3">
 					<Search className="size-3.5" />
 				</div>
 				<input
-					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
+					class="w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={searchValue}
 					placeholder={$i18n.t('Search Models')}
 				/>
 			</div>
 
+			<div class="flex items-center space-x-2 mr-2">
+				<SortOptions 
+					items={filteredItems}
+					bind:sortedItems={filteredModels}
+					bind:isSorting={isSorting}
+					options={[
+						{ value: 'id', label: 'ID' },
+						{ value: 'name', label: $i18n.t('Name') },
+						{ value: 'updated_at', label: $i18n.t('Updated') }
+					]}
+				/>
+			</div>
+
 			<div>
 				<a
-					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
+					class="px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
 					href="/workspace/models/create"
 				>
 					<Plus className="size-3.5" />
@@ -380,6 +395,8 @@
 									<Switch
 										bind:state={model.is_active}
 										on:change={async (e) => {
+											if (isSorting) return;
+											
 											toggleModelById(localStorage.token, model.id);
 											_models.set(
 												await getModels(
