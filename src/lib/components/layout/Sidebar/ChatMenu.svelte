@@ -84,32 +84,46 @@
 
 		if (containerElement) {
 			try {
+				const isDarkMode = $theme.includes('dark'); // Check theme mode
+
 				const canvas = await html2canvas(containerElement, {
-					backgroundColor: $theme.includes('dark') ? '#1a202c' : '#fff',
-					scale: 2, // Increases resolution for better quality
+					backgroundColor: isDarkMode ? '#000' : '#fff', // Ensure proper background
+					scale: 2, // Enhance resolution
 					height: containerElement.scrollHeight,
 					windowHeight: containerElement.scrollHeight
 				});
 
 				const imgData = canvas.toDataURL('image/png');
 
-				// A4 size in mm
+				// A4 dimensions
 				const pdf = new jsPDF('p', 'mm', 'a4');
-				const imgWidth = 210; // A4 width in mm
-				const pageHeight = 297; // A4 height in mm
+				const imgWidth = 210;
+				const pageHeight = 297;
 
 				const imgHeight = (canvas.height * imgWidth) / canvas.width; // Maintain aspect ratio
 				let heightLeft = imgHeight;
 				let position = 0;
 
-				// First page
+				// Set page background color for dark mode
+				if (isDarkMode) {
+					pdf.setFillColor(0, 0, 0); // Black background for each page
+					pdf.rect(0, 0, imgWidth, pageHeight, 'F'); // Fill entire page
+				}
+
+				// Add first page
 				pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
 				heightLeft -= pageHeight;
 
-				// If content overflows, add new pages
+				// Handle multiple pages
 				while (heightLeft > 0) {
 					position -= pageHeight;
 					pdf.addPage();
+
+					if (isDarkMode) {
+						pdf.setFillColor(0, 0, 0); // Ensure dark background for new pages
+						pdf.rect(0, 0, imgWidth, pageHeight, 'F');
+					}
+
 					pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
 					heightLeft -= pageHeight;
 				}
