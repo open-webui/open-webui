@@ -67,7 +67,11 @@
 			profile_image_url: '/static/favicon.png',
 			description: '',
 			suggestion_prompts: null,
-			tags: []
+			tags: [],
+			valves: {
+				functions: {},
+				tools: {}
+			}
 		},
 		params: {
 			system: ''
@@ -173,6 +177,16 @@
 			if (info.params[key] === '' || info.params[key] === null) {
 				delete info.params[key];
 			}
+		});
+		// iterate through all valve settings for both functions and tools, and remove empty settings (aka things that got set back to default)
+		Object.keys(info.meta.valves).forEach((valveType) => {
+			Object.keys(info.meta.valves[valveType]).forEach((functionId) => {
+				Object.keys(info.meta.valves[valveType][functionId]).forEach((key) => {
+					if (info.meta.valves[valveType][functionId][key] === null) {
+						delete info.meta.valves.functions[functionId][key];
+					}
+				});
+			});
 		});
 
 		await onSubmit(info);

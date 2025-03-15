@@ -9,7 +9,7 @@
 
 	export let filters = [];
 	export let selectedFilterIds = [];
-	
+
 	export let valvesSpecs = {};
 	export let valves = {};
 
@@ -69,7 +69,6 @@
 						>
 							<div slot="content">
 								<Valves valvesSpec={valvesSpecs[filter]} bind:valves={valves[filter]} />
-
 							</div>
 						</Collapsible>
 					{/if}
