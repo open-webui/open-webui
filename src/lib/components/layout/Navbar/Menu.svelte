@@ -74,6 +74,8 @@
 				const virtualWidth = 800; // Fixed width (adjust as needed)
 				// Clone the container to avoid layout shifts
 				const clonedElement = containerElement.cloneNode(true);
+				clonedElement.classList.add('text-black');
+				clonedElement.classList.add('dark:text-white');
 				clonedElement.style.width = `${virtualWidth}px`; // Apply fixed width
 				clonedElement.style.height = 'auto'; // Allow content to expand
 
