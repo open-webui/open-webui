@@ -39,6 +39,7 @@
 	let chatDirection: 'LTR' | 'RTL' = 'LTR';
 	let ctrlEnterToSend = false;
 
+	let collapseCodeBlocks = false;
 	let expandDetails = false;
 
 	let imageCompression = false;
@@ -57,9 +58,14 @@
 
 	let webSearch = null;
 
-	const togglExpandDetails = () => {
+	const toggleExpandDetails = () => {
 		expandDetails = !expandDetails;
 		saveSettings({ expandDetails });
+	};
+
+	const toggleCollapseCodeBlocks = () => {
+		collapseCodeBlocks = !collapseCodeBlocks;
+		saveSettings({ collapseCodeBlocks });
 	};
 
 	const toggleSplitLargeChunks = async () => {
@@ -233,6 +239,9 @@
 
 		richTextInput = $settings.richTextInput ?? true;
 		largeTextAsFile = $settings.largeTextAsFile ?? false;
+
+		collapseCodeBlocks = $settings.collapseCodeBlocks ?? false;
+		expandDetails = $settings.expandDetails ?? false;
 
 		landingPageMode = $settings.landingPageMode ?? '';
 		chatBubble = $settings.chatBubble ?? true;
@@ -579,12 +588,32 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('Always Collapse Code Blocks')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleCollapseCodeBlocks();
+						}}
+						type="button"
+					>
+						{#if collapseCodeBlocks === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">{$i18n.t('Always Expand Details')}</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
 						on:click={() => {
-							togglExpandDetails();
+							toggleExpandDetails();
 						}}
 						type="button"
 					>

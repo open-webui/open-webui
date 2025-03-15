@@ -27,6 +27,7 @@
 
 	export let save = false;
 	export let run = true;
+	export let collapsed = false;
 
 	export let token;
 	export let lang = '';
@@ -60,7 +61,6 @@
 	let result = null;
 	let files = null;
 
-	let collapsed = false;
 	let copied = false;
 	let saved = false;
 
