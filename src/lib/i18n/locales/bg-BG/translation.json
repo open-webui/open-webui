@@ -1180,5 +1180,7 @@
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Цялата ви вноска ще отиде директно при разработчика на плъгина; Open WebUI не взима никакъв процент. Въпреки това, избраната платформа за финансиране може да има свои собствени такси.",
 	"Youtube": "Youtube",
 	"Youtube Language": "",
-	"Youtube Proxy URL": ""
+	"Youtube Proxy URL": "",
+	"Prompt Saved Successfully":"Prompt Saved Successfully",
+	"Enable Save Prompt":""
 }

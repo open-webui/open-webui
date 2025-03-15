@@ -870,6 +870,7 @@
 	"Save & Create": "Tallenna ja luo",
 	"Save & Update": "Tallenna ja päivitä",
 	"Save As Copy": "Tallenna kopiona",
+	"Save Prompt": "",
 	"Save Tag": "Tallenna tagi",
 	"Saved": "Tallennettu",
 	"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through": "Keskustelulokien tallentaminen suoraan selaimen tallennustilaan ei ole enää tuettu. Lataa ja poista keskustelulokit napsauttamalla alla olevaa painiketta. Älä huoli, voit helposti tuoda keskustelulokit takaisin backendiin",
@@ -1179,6 +1180,9 @@
 	"Your account status is currently pending activation.": "Tilisi tila on tällä hetkellä odottaa aktivointia.",
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Koko panoksesi menee suoraan lisäosan kehittäjälle; Open WebUI ei pidätä prosenttiosuutta. Valittu rahoitusalusta voi kuitenkin periä omia maksujaan.",
 	"Youtube": "YouTube",
-	"Youtube Language": "Youtube kieli",
-	"Youtube Proxy URL": "Youtube-välityspalvelimen verkko-osoite"
+	"Prompt Saved Successfully":"",
+	"Youtube Language": "Youtube kieliYoutube kieli",
+	"Youtube Proxy URL": "Youtube-välityspalvelimen verkko-osoiteYoutube-välityspalvelimen verkko-osoite",
+	"Enable Save Prompt":""
+
 }

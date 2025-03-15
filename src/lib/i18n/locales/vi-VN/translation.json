@@ -870,6 +870,7 @@
 	"Save & Create": "Lưu & Tạo",
 	"Save & Update": "Lưu & Cập nhật",
 	"Save As Copy": "",
+	"Save Prompt": "",
 	"Save Tag": "Lưu Thẻ",
 	"Saved": "",
 	"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through": "Không còn hỗ trợ lưu trữ lịch sử chat trực tiếp vào bộ nhớ trình duyệt của bạn. Vui lòng dành thời gian để tải xuống và xóa lịch sử chat của bạn bằng cách nhấp vào nút bên dưới. Đừng lo lắng, bạn có thể dễ dàng nhập lại lịch sử chat của mình vào backend thông qua",
@@ -1180,5 +1181,7 @@
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Toàn bộ đóng góp của bạn sẽ được chuyển trực tiếp đến nhà phát triển plugin; Open WebUI không lấy bất kỳ tỷ lệ phần trăm nào. Tuy nhiên, nền tảng được chọn tài trợ có thể có phí riêng.",
 	"Youtube": "Youtube",
 	"Youtube Language": "",
-	"Youtube Proxy URL": ""
+	"Youtube Proxy URL": "",
+	"Prompt Saved Successfully":"",
+	"Enable Save Prompt":""
 }

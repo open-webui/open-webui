@@ -870,6 +870,7 @@
 	"Save & Create": "Зберегти та створити",
 	"Save & Update": "Зберегти та оновити",
 	"Save As Copy": "Зберегти як копію",
+	"Save Prompt": "",
 	"Save Tag": "Зберегти тег",
 	"Saved": "Збережено",
 	"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through": "Збереження журналів чату безпосередньо в сховище вашого браузера більше не підтримується. Будь ласка, завантажте та видаліть журнали чату, натиснувши кнопку нижче. Не хвилюйтеся, ви можете легко повторно імпортувати журнали чату до бекенду через",
@@ -1179,6 +1180,8 @@
 	"Your account status is currently pending activation.": "Статус вашого облікового запису наразі очікує на активацію.",
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Весь ваш внесок піде безпосередньо розробнику плагіна; Open WebUI не бере жодних відсотків. Однак, обрана платформа фінансування може мати свої власні збори.",
 	"Youtube": "Youtube",
-	"Youtube Language": "Мова YouTube",
-	"Youtube Proxy URL": "URL проксі-сервера YouTube"
+	"Prompt Saved Successfully":"",
+	"Youtube Language": "Мова YouTubeМова YouTube",
+	"Youtube Proxy URL": "URL проксі-сервера YouTubeURL проксі-сервера YouTube",
+	"Enable Save Prompt":""
 }

@@ -870,6 +870,7 @@
 	"Save & Create": "Guardar e Criar",
 	"Save & Update": "Guardar e Atualizar",
 	"Save As Copy": "",
+	"Save Prompt": "",
 	"Save Tag": "",
 	"Saved": "",
 	"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through": "Guardar o registo das conversas diretamente no armazenamento do seu navegador já não é suportado. Reserve um momento para descarregar e eliminar os seus registos de conversas clicando no botão abaixo. Não se preocupe, você pode facilmente reimportar os seus registos de conversas para o backend através de",
@@ -1180,5 +1181,7 @@
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "",
 	"Youtube": "Youtube",
 	"Youtube Language": "",
-	"Youtube Proxy URL": ""
+	"Youtube Proxy URL": "",
+	"Prompt Saved Successfully":"",
+	"Enable Save Prompt":""
 }

@@ -870,6 +870,7 @@
 	"Save & Create": "Uložit a Vytvořit",
 	"Save & Update": "Uložit a aktualizovat",
 	"Save As Copy": "Uložit jako kopii",
+	"Save Prompt": "",
 	"Save Tag": "Uložit štítek",
 	"Saved": "Uloženo",
 	"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through": "Ukládání záznamů chatu přímo do úložiště vašeho prohlížeče již není podporováno. Věnujte prosím chvíli stažení a smazání svých záznamů chatu kliknutím na tlačítko níže. Nemějte obavy, můžete snadno znovu importovat své záznamy chatu na backend prostřednictvím",
@@ -1180,5 +1181,7 @@
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Váš celý příspěvek půjde přímo vývojáři pluginu; Open WebUI si nebere žádné procento. Vybraná platforma pro financování však může mít vlastní poplatky.",
 	"Youtube": "YouTube",
 	"Youtube Language": "",
-	"Youtube Proxy URL": ""
+	"Youtube Proxy URL": "",
+	"Prompt Saved Successfully":"",
+	"Enable Save Prompt":""
 }

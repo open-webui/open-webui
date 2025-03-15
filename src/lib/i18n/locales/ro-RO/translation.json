@@ -870,6 +870,7 @@
 	"Save & Create": "Salvează & Creează",
 	"Save & Update": "Salvează & Actualizează",
 	"Save As Copy": "Salvează ca Copie",
+	"Save Prompt": "",
 	"Save Tag": "Salvează Eticheta",
 	"Saved": "Salvat",
 	"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through": "Salvarea jurnalelor de conversație direct în stocarea browserului dvs. nu mai este suportată. Vă rugăm să luați un moment pentru a descărca și a șterge jurnalele de conversație făcând clic pe butonul de mai jos. Nu vă faceți griji, puteți reimporta ușor jurnalele de conversație în backend prin",
@@ -1180,5 +1181,7 @@
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Întreaga dvs. contribuție va merge direct la dezvoltatorul plugin-ului; Open WebUI nu ia niciun procent. Cu toate acestea, platforma de finanțare aleasă ar putea avea propriile taxe.",
 	"Youtube": "Youtube",
 	"Youtube Language": "",
-	"Youtube Proxy URL": ""
+	"Youtube Proxy URL": "",
+	"Prompt Saved Successfully":"",
+	"Enable Save Prompt":""
 }

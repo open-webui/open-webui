@@ -870,6 +870,7 @@
 	"Save & Create": "儲存並建立",
 	"Save & Update": "儲存並更新",
 	"Save As Copy": "另存為副本",
+	"Save Prompt": "",
 	"Save Tag": "儲存標籤",
 	"Saved": "已儲存",
 	"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through": "不再支援直接將對話紀錄儲存到您的瀏覽器儲存空間。請點選下方按鈕來下載並刪除您的對話紀錄。別擔心，您可以透過以下方式輕鬆地將對話紀錄重新匯入後端",
@@ -1180,5 +1181,7 @@
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "您的所有貢獻將會直接交給外掛開發者；Open WebUI 不會收取任何百分比。然而，所選擇的贊助平臺可能有其自身的費用。",
 	"Youtube": "YouTube",
 	"Youtube Language": "YouTube 語言",
-	"Youtube Proxy URL": "YouTube 代理網址"
+	"Youtube Proxy URL": "YouTube 代理網址",
+	"Prompt Saved Successfully":"",
+	"Enable Save Prompt":""
 }
