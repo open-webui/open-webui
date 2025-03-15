@@ -1257,7 +1257,7 @@
 
 											}).finally( async () => {
 												await feedbackHandler(null, {saved: true})
-												toast.success('Prompt Saved Successfully')
+												toast.success($i18n.t('Prompt Saved Successfully'));
 											})}}
 											>
 											<svg 
