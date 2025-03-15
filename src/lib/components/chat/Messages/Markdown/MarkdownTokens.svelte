@@ -18,6 +18,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
 	import Source from './Source.svelte';
+	import { settings } from '$lib/stores';
 
 	const dispatch = createEventDispatcher();
 
@@ -242,6 +243,7 @@
 	{:else if token.type === 'details'}
 		<Collapsible
 			title={token.summary}
+			open={$settings?.expandDetails ?? false}
 			attributes={token?.attributes}
 			className="w-full space-y-1"
 			dir="auto"
