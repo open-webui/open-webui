@@ -892,6 +892,16 @@ ENABLE_SIGNUP = PersistentConfig(
     ),
 )
 
+ENABLE_PASSWORD_SIGNUPS = PersistentConfig(
+    "ENABLE_PASSWORD_SIGNUPS",
+    "ui.enable_password_signups",
+    (
+        False
+        if not WEBUI_AUTH
+        else os.environ.get("ENABLE_PASSWORD_SIGNUPS", "True").lower() == "true"
+    ),
+)
+
 ENABLE_LOGIN_FORM = PersistentConfig(
     "ENABLE_LOGIN_FORM",
     "ui.ENABLE_LOGIN_FORM",
