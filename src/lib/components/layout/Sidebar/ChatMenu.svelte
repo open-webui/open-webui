@@ -6,6 +6,9 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
+	import jsPDF from 'jspdf';
+	import html2canvas from 'html2canvas-pro';
+
 	const dispatch = createEventDispatcher();
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -23,7 +26,7 @@
 		getChatPinnedStatusById,
 		toggleChatPinnedStatusById
 	} from '$lib/apis/chats';
-	import { chats } from '$lib/stores';
+	import { chats, theme } from '$lib/stores';
 	import { createMessagesList } from '$lib/utils';
 	import { downloadChatAsPDF } from '$lib/apis/utils';
 	import Download from '$lib/components/icons/Download.svelte';
@@ -76,32 +79,45 @@
 	};
 
 	const downloadPdf = async () => {
-		const chat = await getChatById(localStorage.token, chatId);
-		if (!chat) {
-			return;
+		const containerElement = document.getElementById('messages-container');
+
+		if (containerElement) {
+			try {
+				const canvas = await html2canvas(containerElement, {
+					backgroundColor: $theme.includes('dark') ? '#1a202c' : '#fff',
+					scale: 2, // Increases resolution for better quality
+					height: containerElement.scrollHeight,
+					windowHeight: containerElement.scrollHeight
+				});
+
+				const imgData = canvas.toDataURL('image/png');
+
+				// A4 size in mm
+				const pdf = new jsPDF('p', 'mm', 'a4');
+				const imgWidth = 210; // A4 width in mm
+				const pageHeight = 297; // A4 height in mm
+
+				const imgHeight = (canvas.height * imgWidth) / canvas.width; // Maintain aspect ratio
+				let heightLeft = imgHeight;
+				let position = 0;
+
+				// First page
+				pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+				heightLeft -= pageHeight;
+
+				// If content overflows, add new pages
+				while (heightLeft > 0) {
+					position -= pageHeight;
+					pdf.addPage();
+					pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+					heightLeft -= pageHeight;
+				}
+
+				pdf.save('document.pdf');
+			} catch (error) {
+				console.error('Error generating PDF', error);
+			}
 		}
-
-		const history = chat.chat.history;
-		const messages = createMessagesList(history, history.currentId);
-		const blob = await downloadChatAsPDF(localStorage.token, chat.chat.title, messages);
-
-		// Create a URL for the blob
-		const url = window.URL.createObjectURL(blob);
-
-		// Create a link element to trigger the download
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = `chat-${chat.chat.title}.pdf`;
-
-		// Append the link to the body and click it programmatically
-		document.body.appendChild(a);
-		a.click();
-
-		// Remove the link from the body
-		document.body.removeChild(a);
-
-		// Revoke the URL to release memory
-		window.URL.revokeObjectURL(url);
 	};
 
 	const downloadJSONExport = async () => {
