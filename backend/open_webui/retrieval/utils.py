@@ -358,6 +358,8 @@ def query_collection_with_hybrid_search(
         raise Exception("Hybrid search failed for all collections. Using Non-hybrid search as fallback.")
 
     if VECTOR_DB == "chroma":
+        # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
+        # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
         return merge_and_sort_query_results(results, k=k, reverse=False)
     else:
         return merge_and_sort_query_results(results, k=k, reverse=True)
