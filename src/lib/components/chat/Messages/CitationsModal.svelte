@@ -98,7 +98,7 @@
 												: `#`}
 										target="_blank"
 									>
-										{decodeURIComponent(document?.metadata?.name) ?? decodeURIComponent(document.source.name)}
+										{decodeURIComponent(document?.metadata?.name ?? document.source.name)}
 									</a>
 									{#if document?.metadata?.page}
 										<span class="text-xs text-gray-500 dark:text-gray-400">
