@@ -69,6 +69,7 @@
 				const isDarkMode = $theme.includes('dark'); // Check theme mode
 
 				const canvas = await html2canvas(containerElement, {
+					useCORS: true,
 					backgroundColor: isDarkMode ? '#000' : '#fff', // Ensure proper background
 					scale: 2, // Enhance resolution
 					height: containerElement.scrollHeight,
