@@ -66,12 +66,12 @@
 
 		if (containerElement) {
 			try {
-				const isDarkMode = $theme.includes('dark'); // Check theme mode
+				const isDarkMode = document.documentElement.classList.contains('dark');
+
+				console.log('isDarkMode', isDarkMode);
 
 				// Define a fixed virtual screen size
-				const virtualWidth = 1024; // Fixed width (adjust as needed)
-				const virtualHeight = 1400; // Fixed height (adjust as needed)
-
+				const virtualWidth = 800; // Fixed width (adjust as needed)
 				// Clone the container to avoid layout shifts
 				const clonedElement = containerElement.cloneNode(true);
 				clonedElement.style.width = `${virtualWidth}px`; // Apply fixed width
@@ -85,8 +85,7 @@
 					useCORS: true,
 					scale: 2, // Keep at 1x to avoid unexpected enlargements
 					width: virtualWidth, // Set fixed virtual screen width
-					windowWidth: virtualWidth, // Ensure consistent rendering
-					windowHeight: virtualHeight
+					windowWidth: virtualWidth // Ensure consistent rendering
 				});
 
 				document.body.removeChild(clonedElement); // Clean up temp element
