@@ -79,6 +79,7 @@
 	};
 
 	const downloadPdf = async () => {
+		const chat = await getChatById(localStorage.token, chatId);
 		const containerElement = document.getElementById('messages-container');
 
 		if (containerElement) {
@@ -113,7 +114,7 @@
 					heightLeft -= pageHeight;
 				}
 
-				pdf.save('document.pdf');
+				pdf.save(`chat-${chat.chat.title}.pdf`);
 			} catch (error) {
 				console.error('Error generating PDF', error);
 			}
