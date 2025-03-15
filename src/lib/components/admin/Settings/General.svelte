@@ -603,6 +603,12 @@
 					</div>
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Enable Save Prompt')}</div>
+
+						<Switch bind:state={adminConfig.ENABLE_SAVE_PROMPT} />
+					</div>
+
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Channels')} ({$i18n.t('Beta')})
 						</div>

@@ -250,6 +250,7 @@ from open_webui.config import (
     ENABLE_CHANNELS,
     ENABLE_COMMUNITY_SHARING,
     ENABLE_MESSAGE_RATING,
+    ENABLE_SAVE_PROMPT,
     ENABLE_EVALUATION_ARENA_MODELS,
     USER_PERMISSIONS,
     DEFAULT_USER_ROLE,
@@ -508,6 +509,7 @@ app.state.config.MODEL_ORDER_LIST = MODEL_ORDER_LIST
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
+app.state.config.ENABLE_SAVE_PROMPT = ENABLE_SAVE_PROMPT
 
 app.state.config.ENABLE_EVALUATION_ARENA_MODELS = ENABLE_EVALUATION_ARENA_MODELS
 app.state.config.EVALUATION_ARENA_MODELS = EVALUATION_ARENA_MODELS
@@ -1213,6 +1215,7 @@ async def get_app_config(request: Request):
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+                    "enable_save_prompt": app.state.config.ENABLE_SAVE_PROMPT,
                 }
                 if user is not None
                 else {}

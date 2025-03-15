@@ -1228,6 +1228,7 @@
 											</button>
 										</Tooltip>
 
+										{#if $config?.features.enable_save_prompt ?? true}
 										<Tooltip content={$i18n.t('Save Prompt')} placement="bottom">
 											<button
 												type="button"
@@ -1275,6 +1276,7 @@
 											<path d="M9.5 8c.492.506 1.8 2.5 2.5 2.5M14.5 8c-.492.506-1.8 2.5-2.5 2.5m0 0v-8m9.5 11h-4.926c-.842 0-1.503.704-1.875 1.447c-.403.808-1.21 1.553-2.699 1.553s-2.296-.745-2.7-1.553c-.37-.743-1.032-1.447-1.874-1.447H2.5"/></g></svg>
 											</button>
 										</Tooltip>
+										{/if}
 									{/if}
 
 									<Tooltip content={$i18n.t('Regenerate')} placement="bottom">

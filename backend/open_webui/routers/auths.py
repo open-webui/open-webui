@@ -644,6 +644,8 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
+        "ENABLE_SAVE_PROMPT": request.app.state.config.ENABLE_SAVE_PROMPT,
+        
     }
 
 
@@ -659,6 +661,7 @@ class AdminConfig(BaseModel):
     JWT_EXPIRES_IN: str
     ENABLE_COMMUNITY_SHARING: bool
     ENABLE_MESSAGE_RATING: bool
+    ENABLE_SAVE_PROMPT: bool
 
 
 @router.post("/admin/config")
@@ -692,6 +695,7 @@ async def update_admin_config(
         form_data.ENABLE_COMMUNITY_SHARING
     )
     request.app.state.config.ENABLE_MESSAGE_RATING = form_data.ENABLE_MESSAGE_RATING
+    request.app.state.config.ENABLE_SAVE_PROMPT = form_data.ENABLE_SAVE_PROMPT
 
     return {
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
@@ -705,6 +709,7 @@ async def update_admin_config(
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
+        "ENABLE_SAVE_PROMPT": request.app.state.config.ENABLE_SAVE_PROMPT,
     }
 
 

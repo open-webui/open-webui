@@ -52,6 +52,7 @@
 	let showEmojiInCall = false;
 	let voiceInterruption = false;
 	let hapticFeedback = false;
+	let savePrompt = false;
 
 	let webSearch = null;
 
@@ -118,6 +119,11 @@
 	const toggleHapticFeedback = async () => {
 		hapticFeedback = !hapticFeedback;
 		saveSettings({ hapticFeedback: hapticFeedback });
+	};
+
+	const toggleSavePrompt = async () => {
+		savePrompt = !savePrompt;
+		saveSettings({ savePrompt: savePrompt });
 	};
 
 	const toggleUserLocation = async () => {
@@ -238,6 +244,8 @@
 		notificationSound = $settings.notificationSound ?? true;
 
 		hapticFeedback = $settings.hapticFeedback ?? false;
+		savePrompt = $settings.savePrompt ?? false;
+
 		ctrlEnterToSend = $settings.ctrlEnterToSend ?? false;
 
 		imageCompression = $settings.imageCompression ?? false;
@@ -636,7 +644,7 @@
 					</button>
 				</div>
 			</div>
-
+			
 			<!-- <div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">

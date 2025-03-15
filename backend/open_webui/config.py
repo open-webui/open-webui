@@ -1086,6 +1086,12 @@ ENABLE_MESSAGE_RATING = PersistentConfig(
     os.environ.get("ENABLE_MESSAGE_RATING", "True").lower() == "true",
 )
 
+ENABLE_SAVE_PROMPT = PersistentConfig(
+    "ENABLE_SAVE_PROMPT",
+    "ui.enable_save_prompt",
+    os.environ.get("ENABLE_SAVE_PROMPT", "True").lower() == "true",
+)
+
 
 def validate_cors_origins(origins):
     for origin in origins:
