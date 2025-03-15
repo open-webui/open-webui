@@ -1263,7 +1263,10 @@ async def process_chat_response(
                 if content_blocks[-1]["type"] == "text":
                     for start_tag, end_tag in tags:
                         # Match start tag e.g., <tag> or <tag attr="value">
-                        start_tag_pattern = rf"<{re.escape(start_tag)}(\s.*?)?>"
+                        if content_type != "reasoning":
+                            start_tag_pattern = rf"<{re.escape(start_tag)}(\s.*?)?>"
+                        else:
+                            start_tag_pattern = rf"^\s*<{re.escape(start_tag)}(\s.*?)?>"
                         match = re.search(start_tag_pattern, content)
                         if match:
                             attr_content = (
