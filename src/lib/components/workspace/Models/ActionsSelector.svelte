@@ -2,11 +2,16 @@
 	import { getContext, onMount } from 'svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Collapsible from '$lib/components/common/Collapsible.svelte';
+	import Valves from '$lib/components/common/Valves.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let actions = [];
 	export let selectedActionIds = [];
+
+	export let valvesSpecs = {};
+	export let valves = {};
 
 	let _actions = {};
 
@@ -33,7 +38,7 @@
 
 	<div class="flex flex-col">
 		{#if actions.length > 0}
-			<div class=" flex items-center mt-2 flex-wrap">
+			<div class=" flex flex-col items-left mt-2 flex-wrap">
 				{#each Object.keys(_actions) as action, actionIdx}
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
@@ -52,6 +57,18 @@
 							</Tooltip>
 						</div>
 					</div>
+					{#if _actions[action].selected}
+						<Collapsible
+							title={$i18n.t('Valves')}
+							open={false}
+							buttonClassName="w-full"
+							className="mt-2"
+						>
+							<div slot="content">
+								<Valves valvesSpec={valvesSpecs[action]} bind:valves={valves[action]} />
+							</div>
+						</Collapsible>
+					{/if}
 				{/each}
 			</div>
 		{/if}
