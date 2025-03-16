@@ -264,7 +264,21 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
     if request.app.state.config.TTS_ENGINE == "openai":
         payload["model"] = request.app.state.config.TTS_MODEL
-
+        
+        # Handle voice parameter - support both string and JSON object formats
+        voice_setting = request.app.state.config.TTS_VOICE
+        if voice_setting:
+            try:
+                # Try to parse as JSON dict
+                voice_dict = json.loads(voice_setting)
+                if isinstance(voice_dict, dict):
+                    payload["voice"] = voice_dict
+                else:
+                    payload["voice"] = voice_setting
+            except (json.JSONDecodeError, TypeError):
+                # Not valid JSON, use as string
+                payload["voice"] = voice_setting
+        
         try:
             timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
             async with aiohttp.ClientSession(
