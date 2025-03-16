@@ -854,380 +854,380 @@
 												}
 											}}
 										/>
-									{:else}
-										<textarea
-											id="chat-input"
-											bind:this={chatInputElement}
-											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none"
-											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
-											bind:value={prompt}
-											on:compositionstart={() => (isComposing = true)}
-											on:compositionend={() => (isComposing = false)}
-											on:keydown={async (e) => {
-												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+									</div>
+								{:else}
+									<textarea
+										id="chat-input"
+										bind:this={chatInputElement}
+										class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none"
+										placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
+										bind:value={prompt}
+										on:compositionstart={() => (isComposing = true)}
+										on:compositionend={() => (isComposing = false)}
+										on:keydown={async (e) => {
+											const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
-												console.log('keydown', e);
-												const commandsContainerElement =
-													document.getElementById('commands-container');
+											console.log('keydown', e);
+											const commandsContainerElement =
+												document.getElementById('commands-container');
 
-												if (e.key === 'Escape') {
-													stopResponse();
+											if (e.key === 'Escape') {
+												stopResponse();
+											}
+
+											// Command/Ctrl + Shift + Enter to submit a message pair
+											if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
+												e.preventDefault();
+												createMessagePair(prompt);
+											}
+
+											// Check if Ctrl + R is pressed
+											if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
+												e.preventDefault();
+												console.log('regenerate');
+
+												const regenerateButton = [
+													...document.getElementsByClassName('regenerate-response-button')
+												]?.at(-1);
+
+												regenerateButton?.click();
+											}
+
+											if (prompt === '' && e.key == 'ArrowUp') {
+												e.preventDefault();
+
+												const userMessageElement = [
+													...document.getElementsByClassName('user-message')
+												]?.at(-1);
+
+												const editButton = [
+													...document.getElementsByClassName('edit-user-message-button')
+												]?.at(-1);
+
+												console.log(userMessageElement);
+
+												userMessageElement.scrollIntoView({ block: 'center' });
+												editButton?.click();
+											}
+
+											if (commandsContainerElement) {
+												if (commandsContainerElement && e.key === 'ArrowUp') {
+													e.preventDefault();
+													commandsElement.selectUp();
+
+													const commandOptionButton = [
+														...document.getElementsByClassName('selected-command-option-button')
+													]?.at(-1);
+													commandOptionButton.scrollIntoView({ block: 'center' });
 												}
 
-												// Command/Ctrl + Shift + Enter to submit a message pair
-												if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
+												if (commandsContainerElement && e.key === 'ArrowDown') {
 													e.preventDefault();
-													createMessagePair(prompt);
+													commandsElement.selectDown();
+
+													const commandOptionButton = [
+														...document.getElementsByClassName('selected-command-option-button')
+													]?.at(-1);
+													commandOptionButton.scrollIntoView({ block: 'center' });
 												}
 
-												// Check if Ctrl + R is pressed
-												if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
+												if (commandsContainerElement && e.key === 'Enter') {
 													e.preventDefault();
-													console.log('regenerate');
 
-													const regenerateButton = [
-														...document.getElementsByClassName('regenerate-response-button')
+													const commandOptionButton = [
+														...document.getElementsByClassName('selected-command-option-button')
 													]?.at(-1);
 
-													regenerateButton?.click();
+													if (e.shiftKey) {
+														prompt = `${prompt}\n`;
+													} else if (commandOptionButton) {
+														commandOptionButton?.click();
+													} else {
+														document.getElementById('send-message-button')?.click();
+													}
 												}
+											} else {
+												if (
+													!$mobile ||
+													!(
+														'ontouchstart' in window ||
+														navigator.maxTouchPoints > 0 ||
+														navigator.msMaxTouchPoints > 0
+													)
+												) {
+													if (isComposing) {
+														return;
+													}
 
-												if (prompt === '' && e.key == 'ArrowUp') {
+													console.log('keypress', e);
+													// Prevent Enter key from creating a new line
+													const isCtrlPressed = e.ctrlKey || e.metaKey;
+													const enterPressed =
+														($settings?.ctrlEnterToSend ?? false)
+															? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
+															: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
+
+													console.log('Enter pressed:', enterPressed);
+
+													if (enterPressed) {
+														e.preventDefault();
+													}
+
+													// Submit the prompt when Enter key is pressed
+													if ((prompt !== '' || files.length > 0) && enterPressed) {
+														dispatch('submit', prompt);
+													}
+												}
+											}
+
+											if (e.key === 'Tab') {
+												const words = findWordIndices(prompt);
+
+												if (words.length > 0) {
+													const word = words.at(0);
+													const fullPrompt = prompt;
+
+													prompt = prompt.substring(0, word?.endIndex + 1);
+													await tick();
+
+													e.target.scrollTop = e.target.scrollHeight;
+													prompt = fullPrompt;
+													await tick();
+
 													e.preventDefault();
-
-													const userMessageElement = [
-														...document.getElementsByClassName('user-message')
-													]?.at(-1);
-
-													const editButton = [
-														...document.getElementsByClassName('edit-user-message-button')
-													]?.at(-1);
-
-													console.log(userMessageElement);
-
-													userMessageElement.scrollIntoView({ block: 'center' });
-													editButton?.click();
+													e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
 												}
 
-												if (commandsContainerElement) {
-													if (commandsContainerElement && e.key === 'ArrowUp') {
-														e.preventDefault();
-														commandsElement.selectUp();
-
-														const commandOptionButton = [
-															...document.getElementsByClassName('selected-command-option-button')
-														]?.at(-1);
-														commandOptionButton.scrollIntoView({ block: 'center' });
-													}
-
-													if (commandsContainerElement && e.key === 'ArrowDown') {
-														e.preventDefault();
-														commandsElement.selectDown();
-
-														const commandOptionButton = [
-															...document.getElementsByClassName('selected-command-option-button')
-														]?.at(-1);
-														commandOptionButton.scrollIntoView({ block: 'center' });
-													}
-
-													if (commandsContainerElement && e.key === 'Enter') {
-														e.preventDefault();
-
-														const commandOptionButton = [
-															...document.getElementsByClassName('selected-command-option-button')
-														]?.at(-1);
-
-														if (e.shiftKey) {
-															prompt = `${prompt}\n`;
-														} else if (commandOptionButton) {
-															commandOptionButton?.click();
-														} else {
-															document.getElementById('send-message-button')?.click();
-														}
-													}
-												} else {
-													if (
-														!$mobile ||
-														!(
-															'ontouchstart' in window ||
-															navigator.maxTouchPoints > 0 ||
-															navigator.msMaxTouchPoints > 0
-														)
-													) {
-														if (isComposing) {
-															return;
-														}
-
-														console.log('keypress', e);
-														// Prevent Enter key from creating a new line
-														const isCtrlPressed = e.ctrlKey || e.metaKey;
-														const enterPressed =
-															($settings?.ctrlEnterToSend ?? false)
-																? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
-																: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
-
-														console.log('Enter pressed:', enterPressed);
-
-														if (enterPressed) {
-															e.preventDefault();
-														}
-
-														// Submit the prompt when Enter key is pressed
-														if ((prompt !== '' || files.length > 0) && enterPressed) {
-															dispatch('submit', prompt);
-														}
-													}
-												}
-
-												if (e.key === 'Tab') {
-													const words = findWordIndices(prompt);
-
-													if (words.length > 0) {
-														const word = words.at(0);
-														const fullPrompt = prompt;
-
-														prompt = prompt.substring(0, word?.endIndex + 1);
-														await tick();
-
-														e.target.scrollTop = e.target.scrollHeight;
-														prompt = fullPrompt;
-														await tick();
-
-														e.preventDefault();
-														e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
-													}
-
-													e.target.style.height = '';
-													e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
-												}
-
-												if (e.key === 'Escape') {
-													console.log('Escape');
-													atSelectedModel = undefined;
-													selectedToolIds = [];
-													webSearchEnabled = false;
-													imageGenerationEnabled = false;
-												}
-											}}
-											rows="1"
-											on:input={async (e) => {
 												e.target.style.height = '';
 												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
-											}}
-											on:focus={async (e) => {
-												e.target.style.height = '';
-												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
-											}}
-											on:paste={async (e) => {
-												const clipboardData = e.clipboardData || window.clipboardData;
+											}
 
-												if (clipboardData && clipboardData.items) {
-													for (const item of clipboardData.items) {
-														if (item.type.indexOf('image') !== -1) {
-															const blob = item.getAsFile();
-															const reader = new FileReader();
+											if (e.key === 'Escape') {
+												console.log('Escape');
+												atSelectedModel = undefined;
+												selectedToolIds = [];
+												webSearchEnabled = false;
+												imageGenerationEnabled = false;
+											}
+										}}
+										rows="1"
+										on:input={async (e) => {
+											e.target.style.height = '';
+											e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
+										}}
+										on:focus={async (e) => {
+											e.target.style.height = '';
+											e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
+										}}
+										on:paste={async (e) => {
+											const clipboardData = e.clipboardData || window.clipboardData;
 
-															reader.onload = function (e) {
-																files = [
-																	...files,
-																	{
-																		type: 'image',
-																		url: `${e.target.result}`
-																	}
-																];
-															};
+											if (clipboardData && clipboardData.items) {
+												for (const item of clipboardData.items) {
+													if (item.type.indexOf('image') !== -1) {
+														const blob = item.getAsFile();
+														const reader = new FileReader();
 
-															reader.readAsDataURL(blob);
-														} else if (item.type === 'text/plain') {
-															if ($settings?.largeTextAsFile ?? false) {
-																const text = clipboardData.getData('text/plain');
-
-																if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
-																	e.preventDefault();
-																	const blob = new Blob([text], { type: 'text/plain' });
-																	const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
-																		type: 'text/plain'
-																	});
-
-																	await uploadFileHandler(file, true);
+														reader.onload = function (e) {
+															files = [
+																...files,
+																{
+																	type: 'image',
+																	url: `${e.target.result}`
 																}
+															];
+														};
+
+														reader.readAsDataURL(blob);
+													} else if (item.type === 'text/plain') {
+														if ($settings?.largeTextAsFile ?? false) {
+															const text = clipboardData.getData('text/plain');
+
+															if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
+																e.preventDefault();
+																const blob = new Blob([text], { type: 'text/plain' });
+																const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
+																	type: 'text/plain'
+																});
+
+																await uploadFileHandler(file, true);
 															}
 														}
 													}
 												}
-											}}
-										/>
-									{/if}
-								</div>
+											}
+										}}
+									/>
+								{/if}
+							</div>
 
-								<div class=" flex justify-between mt-1.5 mb-2.5 mx-0.5 max-w-full">
-									<div class="ml-1 self-end gap-0.5 flex items-center flex-1 max-w-[80%]">
-										<InputMenu
-											bind:selectedToolIds
-											{screenCaptureHandler}
-											{inputFilesHandler}
-											uploadFilesHandler={() => {
-												filesInputElement.click();
-											}}
-											uploadGoogleDriveHandler={async () => {
-												try {
-													const fileData = await createPicker();
-													if (fileData) {
-														const file = new File([fileData.blob], fileData.name, {
-															type: fileData.blob.type
-														});
-														await uploadFileHandler(file);
-													} else {
-														console.log('No file was selected from Google Drive');
-													}
-												} catch (error) {
-													console.error('Google Drive Error:', error);
-													toast.error(
-														$i18n.t('Error accessing Google Drive: {{error}}', {
-															error: error.message
-														})
-													);
+							<div class=" flex justify-between mt-1.5 mb-2.5 mx-0.5 max-w-full">
+								<div class="ml-1 self-end gap-0.5 flex items-center flex-1 max-w-[80%]">
+									<InputMenu
+										bind:selectedToolIds
+										{screenCaptureHandler}
+										{inputFilesHandler}
+										uploadFilesHandler={() => {
+											filesInputElement.click();
+										}}
+										uploadGoogleDriveHandler={async () => {
+											try {
+												const fileData = await createPicker();
+												if (fileData) {
+													const file = new File([fileData.blob], fileData.name, {
+														type: fileData.blob.type
+													});
+													await uploadFileHandler(file);
+												} else {
+													console.log('No file was selected from Google Drive');
 												}
-											}}
-											uploadOneDriveHandler={async () => {
-												try {
-													const fileData = await pickAndDownloadFile();
-													if (fileData) {
-														const file = new File([fileData.blob], fileData.name, {
-															type: fileData.blob.type || 'application/octet-stream'
-														});
-														await uploadFileHandler(file);
-													} else {
-														console.log('No file was selected from OneDrive');
-													}
-												} catch (error) {
-													console.error('OneDrive Error:', error);
+											} catch (error) {
+												console.error('Google Drive Error:', error);
+												toast.error(
+													$i18n.t('Error accessing Google Drive: {{error}}', {
+														error: error.message
+													})
+												);
+											}
+										}}
+										uploadOneDriveHandler={async () => {
+											try {
+												const fileData = await pickAndDownloadFile();
+												if (fileData) {
+													const file = new File([fileData.blob], fileData.name, {
+														type: fileData.blob.type || 'application/octet-stream'
+													});
+													await uploadFileHandler(file);
+												} else {
+													console.log('No file was selected from OneDrive');
 												}
-											}}
-											onClose={async () => {
-												await tick();
+											} catch (error) {
+												console.error('OneDrive Error:', error);
+											}
+										}}
+										onClose={async () => {
+											await tick();
 
-												const chatInput = document.getElementById('chat-input');
-												chatInput?.focus();
-											}}
+											const chatInput = document.getElementById('chat-input');
+											chatInput?.focus();
+										}}
+									>
+										<button
+											class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
+											type="button"
+											aria-label="More"
 										>
-											<button
-												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
-												type="button"
-												aria-label="More"
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												class="size-5"
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="size-5"
-												>
-													<path
-														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
-													/>
-												</svg>
-											</button>
-										</InputMenu>
+												<path
+													d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
+												/>
+											</svg>
+										</button>
+									</InputMenu>
 
-										<div class="flex gap-0.5 items-center overflow-x-auto scrollbar-none flex-1">
-											{#if $_user}
-												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
-													<Tooltip content={$i18n.t('Search the internet')} placement="top">
-														<button
-															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
-															type="button"
-															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
+									<div class="flex gap-0.5 items-center overflow-x-auto scrollbar-none flex-1">
+										{#if $_user}
+											{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
+												<Tooltip content={$i18n.t('Search the internet')} placement="top">
+													<button
+														on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+														type="button"
+														class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
 																? 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+													>
+														<GlobeAlt className="size-5" strokeWidth="1.75" />
+														<span
+															class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+															>{$i18n.t('Web Search')}</span
 														>
-															<GlobeAlt className="size-5" strokeWidth="1.75" />
-															<span
-																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-																>{$i18n.t('Web Search')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
-
-												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
-													<Tooltip content={$i18n.t('Generate an image')} placement="top">
-														<button
-															on:click|preventDefault={() =>
-																(imageGenerationEnabled = !imageGenerationEnabled)}
-															type="button"
-															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {imageGenerationEnabled
-																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
-														>
-															<Photo className="size-5" strokeWidth="1.75" />
-															<span
-																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-																>{$i18n.t('Image')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
-
-												{#if $config?.features?.enable_code_interpreter && ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter)}
-													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
-														<button
-															on:click|preventDefault={() =>
-																(codeInterpreterEnabled = !codeInterpreterEnabled)}
-															type="button"
-															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {codeInterpreterEnabled
-																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
-														>
-															<CommandLine className="size-5" strokeWidth="1.75" />
-															<span
-																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-																>{$i18n.t('Code Interpreter')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
+													</button>
+												</Tooltip>
 											{/if}
-										</div>
-									</div>
 
-									<div class="self-end flex space-x-1 mr-1 shrink-0">
-										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
-											{#if prompt === '' && files.length === 0}
-												<div class=" flex items-center">
-													<!-- Call button removed -->
-												</div>
-											{:else}
-												<div class=" flex items-center">
-													<Tooltip content={$i18n.t('Send message')}>
-														<button
-															id="send-message-button"
-															class="{!(prompt === '' && files.length === 0)
-																? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
-																	? 'bg-blue-500 text-white hover:bg-blue-400 '
-																	: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
-															type="submit"
-															disabled={prompt === '' && files.length === 0}
+											{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
+												<Tooltip content={$i18n.t('Generate an image')} placement="top">
+													<button
+														on:click|preventDefault={() =>
+															(imageGenerationEnabled = !imageGenerationEnabled)}
+														type="button"
+														class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {imageGenerationEnabled
+															? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
+															: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+													>
+														<Photo className="size-5" strokeWidth="1.75" />
+														<span
+															class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+															>{$i18n.t('Image')}</span
 														>
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																viewBox="0 0 16 16"
-																fill="currentColor"
-																class="size-5"
-															>
-																<path
-																	fill-rule="evenodd"
-																	d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-																	clip-rule="evenodd"
-																/>
-															</svg>
-														</button>
-													</Tooltip>
-												</div>
+													</button>
+												</Tooltip>
+											{/if}
+
+											{#if $config?.features?.enable_code_interpreter && ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter)}
+												<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
+													<button
+														on:click|preventDefault={() =>
+															(codeInterpreterEnabled = !codeInterpreterEnabled)}
+														type="button"
+														class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {codeInterpreterEnabled
+															? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
+															: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+													>
+														<CommandLine className="size-5" strokeWidth="1.75" />
+														<span
+															class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+															>{$i18n.t('Code Interpreter')}</span
+														>
+													</button>
+												</Tooltip>
 											{/if}
 										{/if}
 									</div>
+								</div>
+
+								<div class="self-end flex space-x-1 mr-1 shrink-0">
+									{#if !history?.currentId || history.messages[history.currentId]?.done == true}
+										{#if prompt === '' && files.length === 0}
+											<div class=" flex items-center">
+												<!-- Call button removed -->
+											</div>
+										{:else}
+											<div class=" flex items-center">
+												<Tooltip content={$i18n.t('Send message')}>
+													<button
+														id="send-message-button"
+														class="{!(prompt === '' && files.length === 0)
+															? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
+																? 'bg-blue-500 text-white hover:bg-blue-400 '
+																: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+														type="submit"
+														disabled={prompt === '' && files.length === 0}
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 16 16"
+															fill="currentColor"
+															class="size-5"
+														>
+															<path
+																fill-rule="evenodd"
+																d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
+																clip-rule="evenodd"
+															/>
+														</svg>
+													</button>
+												</Tooltip>
+											</div>
+										{/if}
+									{/if}
 								</div>
 							</div>
 						</form>
