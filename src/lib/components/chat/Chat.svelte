@@ -1544,6 +1544,7 @@
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
 			{
+				user: $user?.id,
 				stream: stream,
 				model: model.id,
 				messages: messages,
