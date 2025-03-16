@@ -23,7 +23,7 @@
 		}
 		loaded = true;
 
-		const containerElement = document.getElementById('users-tabs-container');
+		const containerElement = document.getElementById('aifred-tabs-container');
 
 		if (containerElement) {
 			containerElement.addEventListener('wheel', function (event) {
@@ -38,7 +38,7 @@
 
 <div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4">
 	<div
-		id="users-tabs-container"
+		id="aifred-tabs-container"
 		class=" flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
 	>
 		<!-- 왼쪽 서브 메뉴 버튼 -->
@@ -63,16 +63,17 @@
 					/>
 				</svg>
 			</div>
-			<div class=" self-center">{$i18n.t('Overview')}</div>
+			<!-- <div class=" self-center">{$i18n.t('Overview')}</div> -->
+			<div class=" self-center">원본 리소스 관리</div>
 		</button>
 
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
-			'groups'
+			'ragDataCreateMgmt'
 				? ''
 				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 			on:click={() => {
-				selectedTab = 'groups';
+				selectedTab = 'ragDataCreateMgmt';
 			}}
 		>
 			<div class=" self-center mr-2">
@@ -87,7 +88,8 @@
 					/>
 				</svg>
 			</div>
-			<div class=" self-center">{$i18n.t('Groups')}</div>
+			<!-- <div class=" self-center">{$i18n.t('ragDataCreateMgmt')}</div> -->
+			<div class=" self-center">RAG 데이터 생성 관리</div>
 		</button>
 	</div>
 

@@ -1,5 +1,5 @@
 <script>
-	import Users from '$lib/components/admin/Aifred.svelte';
+	import Aifred from '$lib/components/admin/aifred/Aifred.svelte';
 </script>
 
-<Users />
+<Aifred />
