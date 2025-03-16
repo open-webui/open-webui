@@ -5,9 +5,10 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
-	import { showSettings, activeUserCount, USAGE_POOL, mobile, showSidebar } from '$lib/stores';
+	import { showSettings, activeUserIds, USAGE_POOL, mobile, showSidebar, user } from '$lib/stores';
 	import { fade, slide } from 'svelte/transition';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { userSignOut } from '$lib/apis/auths';
 
 	const i18n = getContext('i18n');
 
@@ -30,7 +31,7 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="w-full {className} text-sm rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow font-primary"
+			class="w-full {className} text-sm rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary"
 			sideOffset={8}
 			side="bottom"
 			align="start"
@@ -68,7 +69,7 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center font-medium">{$i18n.t('Settings')}</div>
+				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
 			</button>
 
 			<button
@@ -85,14 +86,14 @@
 				<div class=" self-center mr-3">
 					<ArchiveBox className="size-5" strokeWidth="1.5" />
 				</div>
-				<div class=" self-center font-medium">{$i18n.t('Archived Chats')}</div>
+				<div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
 			</button>
 
 			{#if role === 'admin'}
-				<button
+				<a
 					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					href="/playground"
 					on:click={() => {
-						goto('/playground');
 						show = false;
 
 						if ($mobile) {
@@ -116,13 +117,13 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center font-medium">{$i18n.t('Playground')}</div>
-				</button>
+					<div class=" self-center truncate">{$i18n.t('Playground')}</div>
+				</a>
 
-				<button
+				<a
 					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					href="/admin"
 					on:click={() => {
-						goto('/admin');
 						show = false;
 
 						if ($mobile) {
@@ -146,17 +147,21 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center font-medium">{$i18n.t('Admin Panel')}</div>
-				</button>
+					<div class=" self-center truncate">{$i18n.t('Admin Panel')}</div>
+				</a>
 			{/if}
 
-			<hr class=" dark:border-gray-800 my-1.5 p-0" />
+			<hr class=" border-gray-100 dark:border-gray-850 my-1 p-0" />
 
 			<button
 				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-				on:click={() => {
+				on:click={async () => {
+					await userSignOut();
+					user.set(null);
+
 					localStorage.removeItem('token');
 					location.href = '/auth';
+
 					show = false;
 				}}
 			>
@@ -179,11 +184,11 @@
 						/>
 					</svg>
 				</div>
-				<div class=" self-center font-medium">{$i18n.t('Sign Out')}</div>
+				<div class=" self-center truncate">{$i18n.t('Sign Out')}</div>
 			</button>
 
-			{#if $activeUserCount}
-				<hr class=" dark:border-gray-800 my-1.5 p-0" />
+			{#if $activeUserIds?.length > 0}
+				<hr class=" border-gray-100 dark:border-gray-850 my-1 p-0" />
 
 				<Tooltip
 					content={$USAGE_POOL && $USAGE_POOL.length > 0
@@ -201,18 +206,18 @@
 						</div>
 
 						<div class=" ">
-							<span class=" font-medium">
+							<span class="">
 								{$i18n.t('Active Users')}:
 							</span>
 							<span class=" font-semibold">
-								{$activeUserCount}
+								{$activeUserIds?.length}
 							</span>
 						</div>
 					</div>
 				</Tooltip>
 			{/if}
 
-			<!-- <DropdownMenu.Item class="flex items-center px-3 py-2 text-sm  font-medium">
+			<!-- <DropdownMenu.Item class="flex items-center px-3 py-2 text-sm ">
 				<div class="flex items-center">Profile</div>
 			</DropdownMenu.Item> -->
 		</DropdownMenu.Content>

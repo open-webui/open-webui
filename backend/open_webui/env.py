@@ -53,15 +53,20 @@ if USE_CUDA.lower() == "true":
 else:
     DEVICE_TYPE = "cpu"
 
+try:
+    import torch
+
+    if torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        DEVICE_TYPE = "mps"
+except Exception:
+    pass
 
 ####################################
 # LOGGING
 ####################################
 
-log_levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"]
-
 GLOBAL_LOG_LEVEL = os.environ.get("GLOBAL_LOG_LEVEL", "").upper()
-if GLOBAL_LOG_LEVEL in log_levels:
+if GLOBAL_LOG_LEVEL in logging.getLevelNamesMapping():
     logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL, force=True)
 else:
     GLOBAL_LOG_LEVEL = "INFO"
@@ -71,6 +76,7 @@ log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
 
 if "cuda_error" in locals():
     log.exception(cuda_error)
+    del cuda_error
 
 log_sources = [
     "AUDIO",
@@ -85,6 +91,7 @@ log_sources = [
     "RAG",
     "WEBHOOK",
     "SOCKET",
+    "OAUTH",
 ]
 
 SRC_LOG_LEVELS = {}
@@ -92,7 +99,7 @@ SRC_LOG_LEVELS = {}
 for source in log_sources:
     log_env_var = source + "_LOG_LEVEL"
     SRC_LOG_LEVELS[source] = os.environ.get(log_env_var, "").upper()
-    if SRC_LOG_LEVELS[source] not in log_levels:
+    if SRC_LOG_LEVELS[source] not in logging.getLevelNamesMapping():
         SRC_LOG_LEVELS[source] = GLOBAL_LOG_LEVEL
     log.info(f"{log_env_var}: {SRC_LOG_LEVELS[source]}")
 
@@ -103,10 +110,9 @@ WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 if WEBUI_NAME != "Open WebUI":
     WEBUI_NAME += " (Open WebUI)"
 
-WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
-
 WEBUI_FAVICON_URL = "https://openwebui.com/favicon.png"
 
+TRUSTED_SIGNATURE_KEY = os.environ.get("TRUSTED_SIGNATURE_KEY", "")
 
 ####################################
 # ENV (dev,test,prod)
@@ -196,6 +202,15 @@ CHANGELOG = changelog_json
 SAFE_MODE = os.environ.get("SAFE_MODE", "false").lower() == "true"
 
 ####################################
+# ENABLE_FORWARD_USER_INFO_HEADERS
+####################################
+
+ENABLE_FORWARD_USER_INFO_HEADERS = (
+    os.environ.get("ENABLE_FORWARD_USER_INFO_HEADERS", "False").lower() == "true"
+)
+
+
+####################################
 # WEBUI_BUILD_HASH
 ####################################
 
@@ -230,6 +245,8 @@ if FROM_INIT_PY:
     DATA_DIR = Path(os.getenv("DATA_DIR", OPEN_WEBUI_DIR / "data"))
 
 
+STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static"))
+
 FONTS_DIR = Path(os.getenv("FONTS_DIR", OPEN_WEBUI_DIR / "static" / "fonts"))
 
 FRONTEND_BUILD_DIR = Path(os.getenv("FRONTEND_BUILD_DIR", BASE_DIR / "build")).resolve()
@@ -257,6 +274,8 @@ DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://")
+
+DATABASE_SCHEMA = os.environ.get("DATABASE_SCHEMA", None)
 
 DATABASE_POOL_SIZE = os.environ.get("DATABASE_POOL_SIZE", 0)
 
@@ -302,6 +321,17 @@ RESET_CONFIG_ON_START = (
     os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
 )
 
+
+ENABLE_REALTIME_CHAT_SAVE = (
+    os.environ.get("ENABLE_REALTIME_CHAT_SAVE", "False").lower() == "true"
+)
+
+####################################
+# REDIS
+####################################
+
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+
 ####################################
 # WEBUI_AUTH (Required for security)
 ####################################
@@ -312,6 +342,9 @@ WEBUI_AUTH_TRUSTED_EMAIL_HEADER = os.environ.get(
 )
 WEBUI_AUTH_TRUSTED_NAME_HEADER = os.environ.get("WEBUI_AUTH_TRUSTED_NAME_HEADER", None)
 
+BYPASS_MODEL_ACCESS_CONTROL = (
+    os.environ.get("BYPASS_MODEL_ACCESS_CONTROL", "False").lower() == "true"
+)
 
 ####################################
 # WEBUI_SECRET_KEY
@@ -324,14 +357,22 @@ WEBUI_SECRET_KEY = os.environ.get(
     ),  # DEPRECATED: remove at next major version
 )
 
-WEBUI_SESSION_COOKIE_SAME_SITE = os.environ.get(
-    "WEBUI_SESSION_COOKIE_SAME_SITE",
-    os.environ.get("WEBUI_SESSION_COOKIE_SAME_SITE", "lax"),
+WEBUI_SESSION_COOKIE_SAME_SITE = os.environ.get("WEBUI_SESSION_COOKIE_SAME_SITE", "lax")
+
+WEBUI_SESSION_COOKIE_SECURE = (
+    os.environ.get("WEBUI_SESSION_COOKIE_SECURE", "false").lower() == "true"
 )
 
-WEBUI_SESSION_COOKIE_SECURE = os.environ.get(
-    "WEBUI_SESSION_COOKIE_SECURE",
-    os.environ.get("WEBUI_SESSION_COOKIE_SECURE", "false").lower() == "true",
+WEBUI_AUTH_COOKIE_SAME_SITE = os.environ.get(
+    "WEBUI_AUTH_COOKIE_SAME_SITE", WEBUI_SESSION_COOKIE_SAME_SITE
+)
+
+WEBUI_AUTH_COOKIE_SECURE = (
+    os.environ.get(
+        "WEBUI_AUTH_COOKIE_SECURE",
+        os.environ.get("WEBUI_SESSION_COOKIE_SECURE", "false"),
+    ).lower()
+    == "true"
 )
 
 if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
@@ -343,8 +384,8 @@ ENABLE_WEBSOCKET_SUPPORT = (
 
 WEBSOCKET_MANAGER = os.environ.get("WEBSOCKET_MANAGER", "")
 
-WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", "redis://localhost:6379/0")
-
+WEBSOCKET_REDIS_URL = os.environ.get("WEBSOCKET_REDIS_URL", REDIS_URL)
+WEBSOCKET_REDIS_LOCK_TIMEOUT = os.environ.get("WEBSOCKET_REDIS_LOCK_TIMEOUT", 60)
 
 AIOHTTP_CLIENT_TIMEOUT = os.environ.get("AIOHTTP_CLIENT_TIMEOUT", "")
 
@@ -355,3 +396,49 @@ else:
         AIOHTTP_CLIENT_TIMEOUT = int(AIOHTTP_CLIENT_TIMEOUT)
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT = 300
+
+AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = os.environ.get(
+    "AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST",
+    os.environ.get("AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST", ""),
+)
+
+
+if AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST == "":
+    AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = None
+else:
+    try:
+        AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = int(AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+    except Exception:
+        AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = 5
+
+
+####################################
+# OFFLINE_MODE
+####################################
+
+OFFLINE_MODE = os.environ.get("OFFLINE_MODE", "false").lower() == "true"
+
+if OFFLINE_MODE:
+    os.environ["HF_HUB_OFFLINE"] = "1"
+
+####################################
+# AUDIT LOGGING
+####################################
+ENABLE_AUDIT_LOGS = os.getenv("ENABLE_AUDIT_LOGS", "false").lower() == "true"
+# Where to store log file
+AUDIT_LOGS_FILE_PATH = f"{DATA_DIR}/audit.log"
+# Maximum size of a file before rotating into a new log file
+AUDIT_LOG_FILE_ROTATION_SIZE = os.getenv("AUDIT_LOG_FILE_ROTATION_SIZE", "10MB")
+# METADATA | REQUEST | REQUEST_RESPONSE
+AUDIT_LOG_LEVEL = os.getenv("AUDIT_LOG_LEVEL", "REQUEST_RESPONSE").upper()
+try:
+    MAX_BODY_LOG_SIZE = int(os.environ.get("MAX_BODY_LOG_SIZE") or 2048)
+except ValueError:
+    MAX_BODY_LOG_SIZE = 2048
+
+# Comma separated list for urls to exclude from audit
+AUDIT_EXCLUDED_PATHS = os.getenv("AUDIT_EXCLUDED_PATHS", "/chats,/chat,/folders").split(
+    ","
+)
+AUDIT_EXCLUDED_PATHS = [path.strip() for path in AUDIT_EXCLUDED_PATHS]
+AUDIT_EXCLUDED_PATHS = [path.lstrip("/") for path in AUDIT_EXCLUDED_PATHS]

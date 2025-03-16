@@ -30,7 +30,7 @@ describe('Settings', () => {
 			// Select the first model
 			cy.get('button[aria-label="model-item"]').first().click();
 			// Type a message
-			cy.get('#chat-textarea').type('Hi, what can you do? A single sentence only please.', {
+			cy.get('#chat-input').type('Hi, what can you do? A single sentence only please.', {
 				force: true
 			});
 			// Send the message
@@ -50,7 +50,7 @@ describe('Settings', () => {
 			// Select the first model
 			cy.get('button[aria-label="model-item"]').first().click();
 			// Type a message
-			cy.get('#chat-textarea').type('Hi, what can you do? A single sentence only please.', {
+			cy.get('#chat-input').type('Hi, what can you do? A single sentence only please.', {
 				force: true
 			});
 			// Send the message
@@ -85,7 +85,7 @@ describe('Settings', () => {
 			// Select the first model
 			cy.get('button[aria-label="model-item"]').first().click();
 			// Type a message
-			cy.get('#chat-textarea').type('Hi, what can you do? A single sentence only please.', {
+			cy.get('#chat-input').type('Hi, what can you do? A single sentence only please.', {
 				force: true
 			});
 			// Send the message

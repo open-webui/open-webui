@@ -20,7 +20,9 @@ class ERROR_MESSAGES(str, Enum):
     def __str__(self) -> str:
         return super().__str__()
 
-    DEFAULT = lambda err="": f"Something went wrong :/\n{err if err else ''}"
+    DEFAULT = (
+        lambda err="": f'{"Something went wrong :/" if err == "" else "[ERROR: " + str(err) + "]"}'
+    )
     ENV_VAR_NOT_FOUND = "Required environment variable not found. Terminating now."
     CREATE_USER_ERROR = "Oops! Something went wrong while creating your account. Please try again later. If the issue persists, contact support for assistance."
     DELETE_USER_ERROR = "Oops! Something went wrong. We encountered an issue while trying to delete the user. Please give it another shot."
@@ -55,11 +57,12 @@ class ERROR_MESSAGES(str, Enum):
     )
 
     FILE_NOT_SENT = "FILE_NOT_SENT"
-    FILE_NOT_SUPPORTED = "Oops! It seems like the file format you're trying to upload is not supported. Please upload a file with a supported format (e.g., JPG, PNG, PDF, TXT) and try again."
+    FILE_NOT_SUPPORTED = "Oops! It seems like the file format you're trying to upload is not supported. Please upload a file with a supported format and try again."
 
     NOT_FOUND = "We could not find what you're looking for :/"
     USER_NOT_FOUND = "We could not find what you're looking for :/"
     API_KEY_NOT_FOUND = "Oops! It looks like there's a hiccup. The API key is missing. Please make sure to provide a valid API key to access this feature."
+    API_KEY_NOT_ALLOWED = "Use of API key is not enabled in the environment."
 
     MALICIOUS = "Unusual activities detected, please try again in a few minutes."
 
@@ -73,6 +76,7 @@ class ERROR_MESSAGES(str, Enum):
     OPENAI_NOT_FOUND = lambda name="": "OpenAI API was not found"
     OLLAMA_NOT_FOUND = "WebUI could not connect to Ollama"
     CREATE_API_KEY_ERROR = "Oops! Something went wrong while creating your API key. Please try again later. If the issue persists, contact support for assistance."
+    API_KEY_CREATION_NOT_ALLOWED = "API key creation is not allowed in the environment."
 
     EMPTY_CONTENT = "The content provided is empty. Please ensure that there is text or data present before proceeding."
 
@@ -106,7 +110,10 @@ class TASKS(str, Enum):
 
     DEFAULT = lambda task="": f"{task if task else 'generation'}"
     TITLE_GENERATION = "title_generation"
+    TAGS_GENERATION = "tags_generation"
     EMOJI_GENERATION = "emoji_generation"
     QUERY_GENERATION = "query_generation"
+    IMAGE_PROMPT_GENERATION = "image_prompt_generation"
+    AUTOCOMPLETE_GENERATION = "autocomplete_generation"
     FUNCTION_CALLING = "function_calling"
     MOA_RESPONSE_GENERATION = "moa_response_generation"

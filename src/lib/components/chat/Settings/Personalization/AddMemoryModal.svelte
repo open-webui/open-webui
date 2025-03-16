@@ -17,7 +17,7 @@
 		loading = true;
 
 		const res = await addNewMemory(localStorage.token, content).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 
 			return null;
 		});

@@ -28,6 +28,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - name: Remove git history
         run: rm -rf .git
@@ -52,7 +54,9 @@ jobs:
       - name: Set up Git and push to Space
         run: |
           git init --initial-branch=main
+          git lfs install
           git lfs track "*.ttf"
+          git lfs track "*.jpg"
           rm demo.gif
           git add .
           git commit -m "GitHub deploy: ${{ github.sha }}"

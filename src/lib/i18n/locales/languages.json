@@ -28,12 +28,24 @@
 		"title": "Cebuano (Filipino)"
 	},
 	{
+		"code": "cs-CZ",
+		"title": "Czech (čeština)"
+	},
+	{
+		"code": "da-DK",
+		"title": "Danish (Denmark)"
+	},
+	{
 		"code": "de-DE",
 		"title": "German (Deutsch)"
 	},
 	{
 		"code": "es-ES",
 		"title": "Spanish (Español)"
+	},
+	{
+		"code": "eu-ES",
+		"title": "Basque (Euskara)"
 	},
 	{
 		"code": "fa-IR",
@@ -52,6 +64,10 @@
 		"title": "French (France)"
 	},
 	{
+		"code": "el-GR",
+		"title": "Greek (Ἑλλάδα)"
+	},
+	{
 		"code": "he-IL",
 		"title": "Hebrew (עברית)"
 	},
@@ -62,6 +78,10 @@
 	{
 		"code": "hr-HR",
 		"title": "Croatian (Hrvatski)"
+	},
+	{
+		"code": "hu-HU",
+		"title": "Hungarian (Magyar)"
 	},
 	{
 		"code": "id-ID",
@@ -128,6 +148,10 @@
 		"title": "Russian (Russia)"
 	},
 	{
+		"code": "sk-SK",
+		"title": "Slovak (Slovenčina)"
+	},
+	{
 		"code": "sv-SE",
 		"title": "Swedish (Svenska)"
 	},
@@ -150,6 +174,10 @@
 	{
 		"code": "uk-UA",
 		"title": "Ukrainian (Українська)"
+	},
+	{
+		"code": "ur-PK",
+		"title": "Urdu (اردو)"
 	},
 	{
 		"code": "vi-VN",

@@ -20,12 +20,14 @@ def set_security_headers() -> Dict[str, str]:
     This function reads specific environment variables and uses their values
     to set corresponding security headers. The headers that can be set are:
     - cache-control
+    - permissions-policy
     - strict-transport-security
     - referrer-policy
     - x-content-type-options
     - x-download-options
     - x-frame-options
     - x-permitted-cross-domain-policies
+    - content-security-policy
 
     Each environment variable is associated with a specific setter function
     that constructs the header. If the environment variable is set, the
@@ -38,11 +40,13 @@ def set_security_headers() -> Dict[str, str]:
     header_setters = {
         "CACHE_CONTROL": set_cache_control,
         "HSTS": set_hsts,
+        "PERMISSIONS_POLICY": set_permissions_policy,
         "REFERRER_POLICY": set_referrer,
         "XCONTENT_TYPE": set_xcontent_type,
         "XDOWNLOAD_OPTIONS": set_xdownload_options,
         "XFRAME_OPTIONS": set_xframe,
         "XPERMITTED_CROSS_DOMAIN_POLICIES": set_xpermitted_cross_domain_policies,
+        "CONTENT_SECURITY_POLICY": set_content_security_policy,
     }
 
     for env_var, setter in header_setters.items():
@@ -60,7 +64,7 @@ def set_hsts(value: str):
     pattern = r"^max-age=(\d+)(;includeSubDomains)?(;preload)?$"
     match = re.match(pattern, value, re.IGNORECASE)
     if not match:
-        return "max-age=31536000;includeSubDomains"
+        value = "max-age=31536000;includeSubDomains"
     return {"Strict-Transport-Security": value}
 
 
@@ -71,6 +75,15 @@ def set_xframe(value: str):
     if not match:
         value = "DENY"
     return {"X-Frame-Options": value}
+
+
+# Set Permissions-Policy response header
+def set_permissions_policy(value: str):
+    pattern = r"^(?:(accelerometer|autoplay|camera|clipboard-read|clipboard-write|fullscreen|geolocation|gyroscope|magnetometer|microphone|midi|payment|picture-in-picture|sync-xhr|usb|xr-spatial-tracking)=\((self)?\),?)*$"
+    match = re.match(pattern, value, re.IGNORECASE)
+    if not match:
+        value = "none"
+    return {"Permissions-Policy": value}
 
 
 # Set Referrer-Policy response header
@@ -113,3 +126,8 @@ def set_xpermitted_cross_domain_policies(value: str):
     if not match:
         value = "none"
     return {"X-Permitted-Cross-Domain-Policies": value}
+
+
+# Set Content-Security-Policy response header
+def set_content_security_policy(value: str):
+    return {"Content-Security-Policy": value}

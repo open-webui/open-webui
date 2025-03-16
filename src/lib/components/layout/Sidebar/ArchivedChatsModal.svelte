@@ -4,39 +4,43 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { getContext, createEventDispatcher } from 'svelte';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
+
+	dayjs.extend(localizedFormat);
 
 	const dispatch = createEventDispatcher();
 
-	import Modal from '$lib/components/common/Modal.svelte';
 	import {
 		archiveChatById,
 		deleteChatById,
 		getAllArchivedChats,
 		getArchivedChatList
 	} from '$lib/apis/chats';
-	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
+	import Modal from '$lib/components/common/Modal.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import UnarchiveAllConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	const i18n = getContext('i18n');
 
 	export let show = false;
 
-	let searchValue = '';
-
 	let chats = [];
+
+	let searchValue = '';
+	let showUnarchiveAllConfirmDialog = false;
 
 	const unarchiveChatHandler = async (chatId) => {
 		const res = await archiveChatById(localStorage.token, chatId).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 		});
 
 		chats = await getArchivedChatList(localStorage.token);
-
 		dispatch('change');
 	};
 
 	const deleteChatHandler = async (chatId) => {
 		const res = await deleteChatById(localStorage.token, chatId).catch((error) => {
-			toast.error(error);
+			toast.error(`${error}`);
 		});
 
 		chats = await getArchivedChatList(localStorage.token);
@@ -47,7 +51,14 @@
 		let blob = new Blob([JSON.stringify(chats)], {
 			type: 'application/json'
 		});
-		saveAs(blob, `archived-chat-export-${Date.now()}.json`);
+		saveAs(blob, `${$i18n.t('archived-chat-export')}-${Date.now()}.json`);
+	};
+
+	const unarchiveAllHandler = async () => {
+		for (const chat of chats) {
+			await archiveChatById(localStorage.token, chat.id);
+		}
+		chats = await getArchivedChatList(localStorage.token);
 	};
 
 	$: if (show) {
@@ -56,6 +67,15 @@
 		})();
 	}
 </script>
+
+<UnarchiveAllConfirmDialog
+	bind:show={showUnarchiveAllConfirmDialog}
+	message={$i18n.t('Are you sure you want to unarchive all archived chats?')}
+	confirmLabel={$i18n.t('Unarchive All')}
+	on:confirm={() => {
+		unarchiveAllHandler();
+	}}
+/>
 
 <Modal size="lg" bind:show>
 	<div>
@@ -74,7 +94,9 @@
 					class="w-5 h-5"
 				>
 					<path
+						fill-rule="evenodd"
 						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+						clip-rule="evenodd"
 					/>
 				</svg>
 			</button>
@@ -98,13 +120,13 @@
 						</svg>
 					</div>
 					<input
-						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={searchValue}
 						placeholder={$i18n.t('Search Chats')}
 					/>
 				</div>
 			</div>
-			<hr class=" dark:border-gray-850 my-2" />
+			<hr class="border-gray-100 dark:border-gray-850 my-2" />
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				{#if chats.length > 0}
 					<div class="w-full">
@@ -112,7 +134,7 @@
 							<div class="relative overflow-x-auto">
 								<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
 									<thead
-										class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-800"
+										class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-850"
 									>
 										<tr>
 											<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
@@ -140,13 +162,13 @@
 
 												<td class=" px-3 py-1 hidden md:flex h-[2.5rem]">
 													<div class="my-auto">
-														{dayjs(chat.created_at * 1000).format($i18n.t('MMMM DD, YYYY HH:mm'))}
+														{dayjs(chat.created_at * 1000).format('LLL')}
 													</div>
 												</td>
 
 												<td class="px-3 py-1 text-right">
 													<div class="flex justify-end w-full">
-														<Tooltip content="Unarchive Chat">
+														<Tooltip content={$i18n.t('Unarchive Chat')}>
 															<button
 																class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																on:click={async () => {
@@ -170,7 +192,7 @@
 															</button>
 														</Tooltip>
 
-														<Tooltip content="Delete Chat">
+														<Tooltip content={$i18n.t('Delete Chat')}>
 															<button
 																class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 																on:click={async () => {
@@ -202,13 +224,24 @@
 							</div>
 						</div>
 
-						<div class="flex flex-wrap text-sm font-medium gap-1.5 mt-2 m-1">
+						<div class="flex flex-wrap text-sm font-medium gap-1.5 mt-2 m-1 justify-end w-full">
 							<button
 								class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
 								on:click={() => {
-									exportChatsHandler();
-								}}>Export All Archived Chats</button
+									showUnarchiveAllConfirmDialog = true;
+								}}
 							>
+								{$i18n.t('Unarchive All Archived Chats')}
+							</button>
+
+							<button
+								class="px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
+								on:click={() => {
+									exportChatsHandler();
+								}}
+							>
+								{$i18n.t('Export All Archived Chats')}
+							</button>
 						</div>
 					</div>
 				{:else}

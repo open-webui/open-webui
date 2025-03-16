@@ -16,6 +16,7 @@
 
 	export let modelIds = [];
 	export let models = [];
+	export let atSelectedModel;
 
 	export let submitPrompt;
 
@@ -82,8 +83,8 @@
 		>
 			<div>
 				<div class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
-					{#if models[selectedModelIdx]?.info}
-						{models[selectedModelIdx]?.info?.name}
+					{#if models[selectedModelIdx]?.name}
+						{models[selectedModelIdx]?.name}
 					{:else}
 						{$i18n.t('Hello, {{name}}', { name: $user.name })}
 					{/if}
@@ -126,7 +127,8 @@
 		<div class=" w-full font-primary" in:fade={{ duration: 200, delay: 300 }}>
 			<Suggestions
 				className="grid grid-cols-2"
-				suggestionPrompts={models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
+					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 					$config?.default_prompt_suggestions ??
 					[]}
 				on:select={(e) => {
