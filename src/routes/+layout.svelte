@@ -4,6 +4,7 @@
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 
 
+
 	let loadingProgress = spring(0, {
 		stiffness: 0.05
 	});

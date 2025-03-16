@@ -198,7 +198,7 @@
 					<!-- Image at the top -->
 					<img
 						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/aiModels.jpg"
+						src="{WEBUI_BASE_URL}/static/aiModels.png"
 						class="w-full absolute top-0 p-1"
 						alt="logos"
 					/>
