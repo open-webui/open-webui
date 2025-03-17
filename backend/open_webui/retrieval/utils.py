@@ -109,29 +109,17 @@ def query_doc_with_hybrid_search(
     r: float,
 ) -> dict:
     try:
-        def create_bm25_retriever():
-            retriever = BM25Retriever.from_texts(
-                texts=collection_data.documents[0],
-                metadatas=collection_data.metadatas[0],
-            )
-            retriever.k = k
-            return retriever
+        bm25_retriever = BM25Retriever.from_texts(
+            texts=collection_data.documents[0],
+            metadatas=collection_data.metadatas[0],
+        )
+        bm25_retriever.k = k
 
-        def create_vector_retriever():
-            return VectorSearchRetriever(
-                collection_name=collection_name,
-                embedding_function=embedding_function,
-                top_k=k,
-            )
-
-        # Execute retriever creation in parallel
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            bm25_future = executor.submit(create_bm25_retriever)
-            vector_future = executor.submit(create_vector_retriever)
-
-            # Get results from futures
-            bm25_retriever = bm25_future.result()
-            vector_search_retriever = vector_future.result()
+        vector_search_retriever = VectorSearchRetriever(
+            collection_name=collection_name,
+            embedding_function=embedding_function,
+            top_k=k,
+        )
 
         ensemble_retriever = EnsembleRetriever(
             retrievers=[bm25_retriever, vector_search_retriever], weights=[0.5, 0.5]
