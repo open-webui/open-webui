@@ -2,5 +2,8 @@
 	"extends": "./tsconfig.json",
 	"include": [
 		"src/lib/IONOS/**/*"
+	],
+	"exclude": [
+		"src/lib/IONOS/components/chat/Placeholder.svelte"
 	]
 }
