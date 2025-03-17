@@ -2,7 +2,7 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Build UX Installer",
+			"label": "Build RAUX Installer",
 			"type": "shell",
 			"command": "makensis",
 			"args": [
@@ -16,7 +16,7 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "Clean Local Environment",
+			"label": "Clean RAUX Environment: Local",
 			"type": "shell",
 			"command": "cmd",
 			"args": [
