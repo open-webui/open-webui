@@ -9,7 +9,7 @@
 		models as modelsStore,
 	} from '$lib/stores';
 
-	import MessageInput from '$lib/components/chat/MessageInput.svelte';
+	import MessageInput from '$lib/IONOS/components/chat/MessageInput.svelte';
 	import SmallAgentSelector from '$lib/IONOS/components/SmallAgentSelector.svelte';
 	import TextWithGradient from '$lib/IONOS/components/TextWithGradient.svelte';
 
