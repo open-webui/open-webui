@@ -77,7 +77,6 @@
 	let loaded = false;
 	let recording = false;
 
-	let chatInputContainerElement;
 	let chatInputElement;
 
 	let filesInputElement;
