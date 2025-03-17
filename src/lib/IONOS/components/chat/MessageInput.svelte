@@ -25,13 +25,11 @@
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import InputMenu from '$lib/components/chat/MessageInput/InputMenu.svelte';
-	import FileItem from '$lib/components/common/FileItem.svelte';
 	import FilesOverlay from '$lib/components/chat/MessageInput/FilesOverlay.svelte';
 	import Commands from '$lib/components/chat/MessageInput/Commands.svelte';
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	import { generateAutoCompletion } from '$lib/apis';
-	import Image from '$lib/components/common/Image.svelte';
-	import { deleteFileById } from '$lib/apis/files';
+	import SelectedFileBadges from '$lib/IONOS/components/chat/SelectedFileBadges.svelte';
 
 	const i18n = getContext<Readable<I18Next>>('i18n');
 
@@ -437,92 +435,9 @@
 							dir={$settings?.chatDirection ?? 'LTR'}
 						>
 							{#if files.length > 0}
-								<div class="mx-1 mt-2.5 mb-1 flex items-center flex-wrap gap-2">
-									{#each files as file, fileIdx}
-										{#if file.type === 'image'}
-											<div class=" relative group">
-												<div class="relative flex items-center">
-													<Image
-														src={file.url}
-														alt="input"
-														imageClassName=" size-14 rounded-xl object-cover"
-													/>
-													{#if atSelectedModel ? visionCapableModels.length === 0 : selectedModels.length !== visionCapableModels.length}
-														<Tooltip
-															className=" absolute top-1 left-1"
-															content={$i18n.t('{{ models }}', {
-																models: [
-																	...(atSelectedModel ? [atSelectedModel] : selectedModels)
-																]
-																	.filter((id) => !visionCapableModels.includes(id))
-																	.join(', ')
-															})}
-														>
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																viewBox="0 0 24 24"
-																fill="currentColor"
-																class="size-4 fill-yellow-300"
-															>
-																<path
-																	fill-rule="evenodd"
-																	d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
-																	clip-rule="evenodd"
-																/>
-															</svg>
-														</Tooltip>
-													{/if}
-												</div>
-												<div class=" absolute -top-1 -right-1">
-													<button
-														class=" bg-gray-400 text-white border border-white rounded-full group-hover:visible invisible transition"
-														type="button"
-														on:click={() => {
-															files.splice(fileIdx, 1);
-															files = files;
-														}}
-													>
-														<svg
-															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 20 20"
-															fill="currentColor"
-															class="w-4 h-4"
-														>
-															<path
-																d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-															/>
-														</svg>
-													</button>
-												</div>
-											</div>
-										{:else}
-											<FileItem
-												item={file}
-												name={file.name}
-												type={file.type}
-												size={file?.size}
-												loading={file.status === 'uploading'}
-												dismissible={true}
-												edit={true}
-												on:dismiss={async () => {
-													if (file.type !== 'collection' && !file?.collection) {
-														if (file.id) {
-															// This will handle both file deletion and Chroma cleanup
-															await deleteFileById(localStorage.token, file.id);
-														}
-													}
-
-													// Remove from UI state
-													files.splice(fileIdx, 1);
-													files = files;
-												}}
-												on:click={() => {
-													console.log(file);
-												}}
-											/>
-										{/if}
-									{/each}
-								</div>
+								<SelectedFileBadges
+									{files}
+								/>
 							{/if}
 
 							<div class=" flex">

@@ -5,6 +5,7 @@
 	],
 	"exclude": [
 		"src/lib/IONOS/components/chat/Placeholder.svelte",
-		"src/lib/IONOS/components/chat/MessageInput.svelte"
+		"src/lib/IONOS/components/chat/MessageInput.svelte",
+		"src/lib/IONOS/components/chat/SelectedFileBadges.svelte"
 	]
 }
