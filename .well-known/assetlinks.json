@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "dev.aibrary.chat.twa",
+        "sha256_cert_fingerprints": ["1A:BF:3C:36:DD:98:F3:20:6B:2D:7F:CF:1C:41:0A:63:0B:C0:B0:1D:E5:39:1D:F5:78:4C:60:49:5E:63:AD:34"]
+      }
+    }]
