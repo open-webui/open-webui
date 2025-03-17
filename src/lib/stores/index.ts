@@ -186,9 +186,9 @@ type Prompt = {
 };
 
 type CharacterPrompt = {
-	character_name: string;
+	title: string;
 	system_prompt: string;
-	timestamp: number;
+	created_at: number;
 }
 
 type Document = {

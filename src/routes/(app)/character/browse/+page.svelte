@@ -4,24 +4,36 @@ import { formatDate } from '$lib/utils';
 import { chats, chatId, user, chatSysPrompt } from '$lib/stores';
 import { v4 as uuidv4} from 'uuid';
 import { goto } from '$app/navigation';
+import { getCharacters } from '$lib/apis/character';
+import { onMount } from 'svelte';
 
 console.log('characters', $characters)
 
-function startInterview(character_name, system_prompt) {
+onMount(async () => {
+    try {
+        const charactersFromDB = await getCharacters(localStorage.token)
+        console.log('charactersFromDB', charactersFromDB)
+        characters.set(charactersFromDB) 
+    } catch (error) {
+        console.error('Error fetching prompt:', error);
+    }
+});
+
+function startInterview(characterName, systemPrompt) {
     const newChatId = uuidv4()
     
     console.log('$chats', $chats)
     const newChat = {
         id: newChatId,
-        title: `Chat with ${character_name}`, // setting title here is an issue because title will be overriden by when user sends new message in chat
+        title: `Chat with ${characterName}`, // setting title here is an issue because title will be overriden by when user sends new message in chat
         timestamp: new Date().toISOString(),
         messages: [],
-        systemPrompt: system_prompt,
+        systemPrompt: systemPrompt,
         model: localStorage.getItem('selectedModel') || 'llama3.2:latest',
         temporary: $temporaryChatEnabled
     }
 
-    chatSysPrompt.set(system_prompt)
+    chatSysPrompt.set(systemPrompt)
 
     chats.update(existingChats => {
         return [...existingChats, newChat]
@@ -60,10 +72,10 @@ function startInterview(character_name, system_prompt) {
             {#each $characters as character}
                 <tr>
                     <td class='px-3 py-1'>
-                        <div>{character.character_name}</div>
+                        <div>{character.title}</div>
                     </td>
                     <td class='px-3 py-1'>
-                        <div>{formatDate(character.timestamp)}</div>
+                        <div>{formatDate(character.created_at * 1000)}</div> <!--convert from s to ms-->
                     </td>
                     <td class='px-3 py-1'>
                         <div>

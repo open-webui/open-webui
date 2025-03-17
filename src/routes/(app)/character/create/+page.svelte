@@ -10,7 +10,10 @@ import { createNewCharacter } from '$lib/apis/character';
 import { toast } from 'svelte-sonner';
 
 let messageEditTextAreaElement: HTMLTextAreaElement;
+let nameEditTextAreaElement: HTMLTextAreaElement;
+
 let editedContent = '';
+let nameEditedContent = '';
 let stopResponseFlag = false;
 let messages = {
     content: ''
@@ -144,7 +147,7 @@ const stopResponse = () => {
 
 const saveCharacter = async () => {
     const character_prompt = {
-        character_name: 'Daisie (hardcoded)',
+        character_name: nameEditedContent,
         system_prompt: messages.content,
         timestamp: Date.now()
     };
@@ -229,54 +232,49 @@ const submitMessage = async () => {
 };
 </script>
 
-<div class="gap-1 my-1.5 pb-1 px-[18px] flex-1 max-h-full overflow-y-auto">
-	<div class="text-xl font-medium px-0.5">
-		<h1>Create a Character</h1>
-		<div class="flex self-center w-[1px] h-6 m-x2.5 bg-gray-50 dark:bg-gray-850" />
-		<div class="text-lg font-medium text-gray-500 dark:text-gray-300">
-			{'Paste your character sheet'}
-		</div>
-	</div>
+<div class="gap-1 my-1.5 pb-1 px-[18px] flex flex-col h-screen overflow-y-auto">
+    <div class="text-xl font-medium">
+        {'Create a character'}
+    </div>
 
-	<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
-		<div class="max-h-96 overflow-auto">
+    <div class="text-lg font-medium text-gray-500 dark:text-gray-300 pt-5">
+        {'Character Name'}
+    </div>
+    <div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
+        <div class="max-h-96 overflow-auto">
+            <textarea
+                    id="name-edit"
+                    bind:this={nameEditTextAreaElement}
+                    class=" bg-transparent outline-hidden w-full resize-none"
+                    bind:value={nameEditedContent}
+                    on:keydown={(event) => {
+                        if (event.key === 'Enter') {
+                            event?.preventDefault()
+                        }
+                    }}
+                />
+        </div>
+    </div>
+    <div class="text-lg font-medium text-gray-500 dark:text-gray-300">
+        {'Paste your character sheet'}
+    </div>
+
+	<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
+		<div class="h-96 flex flex-col">
 			<textarea
 				id="message-edit"
 				bind:this={messageEditTextAreaElement}
 				class=" bg-transparent outline-hidden w-full resize-none"
 				bind:value={editedContent}
 				on:input={(e) => {
-					// e.target.style.height = '';
-					// e.target.style.height = `${e.target.scrollHeight}px`;
-				}}
-				on:keydown={(e) => {
-					if (e.key === 'Escape') {
-						document.getElementById('close-edit-message-button')?.click();
-					}
-
-					const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
-					const isEnterPressed = e.key === 'Enter';
-
-					if (isCmdOrCtrlPressed && isEnterPressed) {
-						document.getElementById('confirm-edit-message-button')?.click();
-					}
+					e.target.style.height = '';
+					e.target.style.height = `${e.target.scrollHeight}px`;
 				}}
 			/>
 		</div>
 
 		<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
-			<div>
-				<!-- <button
-                        id="save-edit-message-button"
-                        class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
-                        on:click={() => {
-                            // editMessageConfirmHandler(false);
-                        }}
-                    >
-                        {'Save'}
-                    </button> -->
-			</div>
-
+			<div/>
 			<div class="flex space-x-1.5">
 				<button
 					id="close-edit-message-button"

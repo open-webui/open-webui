@@ -31,7 +31,7 @@ router = APIRouter()
 
 @router.get("/list", response_model=list[CharacterUserResponse])
 async def get_characters():
-    characters = Character.get_characters()
+    characters = Characters.get_characters()
     
     # if user.role == 'admin':
     #     characters = Character.get_characters()
