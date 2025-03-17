@@ -41,8 +41,11 @@
 
 	export let transparentBackground = false;
 
+	// eslint-disable-next-line @typescript-eslint/ban-types
 	export let onChange: Function = () => {};
+	// eslint-disable-next-line @typescript-eslint/ban-types
 	export let createMessagePair: Function;
+	// eslint-disable-next-line @typescript-eslint/ban-types
 	export let stopResponse: Function;
 
 	export let autoScroll = false;
