@@ -47,6 +47,8 @@
 	}
 
 	$: models = selectedModels.map((id) => $modelsStore.find((m) => m.id === id));
+	$: agentName = models[selectedModelIdx]?.name ?? '';
+	$: placeholder = $i18n.t('Message {{agentName}}', { agentName: agentName, ns: 'ionos' });
 </script>
 
 <div class="m-auto w-full max-w-6xl px-2 xl:px-20 translate-y-6 py-24 text-center">
@@ -54,9 +56,9 @@
 		<div class="w-full flex flex-col justify-center items-center">
 			<div class="flex flex-row justify-center gap-3 sm:gap-3.5 w-fit px-5">
 				<div class="mb-32 text-3xl sm:text-4xl">
-					{#if models[selectedModelIdx]?.name}
+					{#if agentName}
 						<TextWithGradient>
-							{$i18n.t("I'm {{agentName}},", { agentName: models[selectedModelIdx]?.name, ns: 'ionos' })}
+							{$i18n.t("I'm {{agentName}},", { agentName, ns: 'ionos' })}
 							<br>
 							{$i18n.t("What can I help with?", { ns: 'ionos' })}
 						</TextWithGradient>
@@ -82,7 +84,7 @@
 					{transparentBackground}
 					{stopResponse}
 					{createMessagePair}
-					placeholder={$i18n.t('How can I help you today?')}
+					placeholder={placeholder}
 					on:upload={(e) => {
 						dispatch('upload', e.detail);
 					}}
