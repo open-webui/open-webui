@@ -95,7 +95,7 @@
 	</div>
 
 	<div class="mx-auto max-w-3xl font-primary">
-		<div class="mx-9">
+		<div class="mx-9 mt-4">
 			<SmallAgentSelector
 				bind:selectedModels={selectedModels}
 			/>
