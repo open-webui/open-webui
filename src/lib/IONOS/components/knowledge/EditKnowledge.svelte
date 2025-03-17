@@ -18,6 +18,7 @@
 	import Filepicker from '$lib/IONOS/components/common/Filepicker.svelte';
 	import DropUploadZone from './DropUploadZone.svelte';
 	import KnowledgeFileList from './KnowledgeFileList.svelte';
+	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte';
 
 	const i18n = getContext<Readable<I18Next>>('i18n');
 	const dispatch = createEventDispatcher();
@@ -102,12 +103,13 @@
 >
 	<div class="flex flex-col min-w-[500px] min-h-[200px] relative">
 		<div class="flex justify-end items-end py-4 border-b cursor-default" class:grow={$files.length === 0}>
-			<button
-				class="shrink px-4 py-1 text-red-700 hover:text-white hover:bg-red-300/90 active:bg-red-300 transition rounded-3xl"
+			<Button
 				on:click={() => { confirmKnowledgeDeletion = true; }}
+				className="px-4 py-1"
+				type={ButtonType.caution}
 			>
 				{$i18n.t('Delete knowledge base', { ns: 'ionos' })}
-			</button>
+			</Button>
 		</div>
 
 		<DropUploadZone

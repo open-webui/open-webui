@@ -5,6 +5,7 @@
 	import { toast } from 'svelte-sonner';
 	import { WEBUI_NAME } from '$lib/stores';
 	import Dialog from '$lib/IONOS/components/common/Dialog.svelte';
+	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte'
 	import { create as createKnowledge } from '$lib/IONOS/services/knowledge';
 
 	const i18n = getContext<Readable<I18Next>>('i18n');
@@ -62,7 +63,7 @@
 			/>
 		</div>
 
-		<div class="flex flex-col justify-center cursor-default">
+		<div class="flex flex-col justify-center cursor-default gap-2">
 			<h2 class="my-4">
 				{$i18n.t('What are you trying to achieve?', { ns: 'ionos' })}
 			</h2>
@@ -77,11 +78,12 @@
 		</div>
 
 		<div class="flex justify-end items-end py-4 cursor-default">
-			<button
-				class="px-4 py-1 border-2 border-sky-900 bg-white-500 hover:bg-sky-800 text-black hover:text-white transition rounded-3xl"
+			<Button
+				className="px-4 py-1"
+				type={ButtonType.secondary}
 			>
 				{$i18n.t('Create knowledge base', { ns: 'ionos' })}
-			</button>
+			</Button>
 		</div>
 	</form>
 </Dialog>

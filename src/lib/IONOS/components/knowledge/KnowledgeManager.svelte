@@ -14,6 +14,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import Dialog from '$lib/IONOS/components/common/Dialog.svelte';
+	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte';
 	import KnowledgeList from './KnowledgeList.svelte';
 	import EditKnowledge from './EditKnowledge.svelte';
 	import CreateKnowledge from './CreateKnowledge.svelte';
@@ -105,12 +106,13 @@
 				/>
 			</div>
 			<div>
-				<button
-					class="px-4 py-1 border-2 border-sky-900 bg-white-500 hover:bg-sky-800 text-black hover:text-white transition rounded-3xl"
+				<Button
 					on:click={() => create = true}
+					className="px-4 py-1"
+					type={ButtonType.secondary}
 				>
 					{$i18n.t('Create knowledge base', { ns: 'ionos' })}
-				</button>
+				</Button>
 			</div>
 		</div>
 
