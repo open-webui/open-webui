@@ -106,7 +106,6 @@ def query_doc_with_hybrid_search(
     embedding_function,
     k: int,
     reranking_function,
-    k_reranker: int,
     r: float,
 ) -> dict:
     try:
@@ -140,7 +139,7 @@ def query_doc_with_hybrid_search(
 
         compressor = RerankCompressor(
             embedding_function=embedding_function,
-            top_n=k_reranker,
+            top_n=k,
             reranking_function=reranking_function,
             r_score=r,
         )
@@ -299,7 +298,6 @@ def query_collection_with_hybrid_search(
     embedding_function,
     k: int,
     reranking_function,
-    k_reranker: int,
     r: float,
 ) -> dict:
     results = []
@@ -334,7 +332,6 @@ def query_collection_with_hybrid_search(
                 embedding_function=embedding_function,
                 k=k,
                 reranking_function=reranking_function,
-                k_reranker=k_reranker,
                 r=r,
             )
             return result, None
@@ -408,7 +405,6 @@ def get_sources_from_files(
     embedding_function,
     k,
     reranking_function,
-    k_reranker,
     r,
     hybrid_search,
     full_context=False,
