@@ -85,7 +85,6 @@
 	let inputFiles;
 	let dragged = false;
 
-	let user = null;
 	export let placeholder = '';
 
 	let visionCapableModels = [];
