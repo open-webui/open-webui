@@ -31,7 +31,7 @@ def log(message, print_to_console=True):
     """
     # Get current timestamp
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    formatted_message = f"[{timestamp}] [AMD-AI-UX-Installer] {message}"
+    formatted_message = f"[{timestamp}] [RAUX-Installer] {message}"
 
     # Print to console if requested
     if print_to_console:

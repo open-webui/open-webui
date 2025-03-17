@@ -247,8 +247,60 @@ Section "Install Main Components" SEC01
     install_success:
       DetailPrint "*** INSTALLATION COMPLETED ***"
 
-      # Create shortcuts directly
-      CreateShortcut "$DESKTOP\AMD-AI-UX.lnk" "$SYSDIR\cmd.exe" '/C conda activate $raux_CONDA_ENV > NUL 2>&1 && start "" "http://localhost:8080"' "$INSTDIR\${ICON_DEST}"
+      ; Create RAUX installation directory
+      DetailPrint "- Creating RAUX installation directory..."
+      CreateDirectory "$LOCALAPPDATA\RAUX"
+      
+      DetailPrint "- Creating temporary directory for RAUX installation..."
+      CreateDirectory "$LOCALAPPDATA\RAUX\raux_temp"
+      SetOutPath "$LOCALAPPDATA\RAUX\raux_temp"
+      
+      DetailPrint "- Preparing for RAUX installation..."
+      
+      ; Copy the Python installer script to the temp directory
+      File "${__FILE__}\..\raux_installer.py"
+
+      DetailPrint "- Using Python script: $LOCALAPPDATA\RAUX\raux_temp\raux_installer.py"
+      DetailPrint "- Installation directory: $LOCALAPPDATA\RAUX"
+      DetailPrint "- Using system Python for the entire installation process"
+      
+      ; Execute the Python script with the required parameters using system Python
+      ExecWait 'python "$LOCALAPPDATA\RAUX\raux_temp\raux_installer.py" --install-dir "$LOCALAPPDATA\RAUX" --debug' $R0
+
+      DetailPrint "RAUX installation exit code: $R0"
+      
+      ; Check if installation was successful
+      ${If} $R0 == 0
+        DetailPrint "*** RAUX INSTALLATION COMPLETED ***"
+        DetailPrint "- RAUX installation completed successfully"
+        
+        ; Create RAUX shortcut - using the RAUX icon
+        DetailPrint "- Creating RAUX desktop shortcut"
+        
+        ; Copy the launcher scripts to the RAUX installation directory if they exist
+        DetailPrint "- Copying RAUX launcher scripts"
+        
+        ; Use /nonfatal flag to prevent build failure if files don't exist
+        File /nonfatal "/oname=$LOCALAPPDATA\RAUX\launch_raux.ps1" "${__FILE__}\..\launch_raux.ps1"
+        File /nonfatal "/oname=$LOCALAPPDATA\RAUX\launch_raux.cmd" "${__FILE__}\..\launch_raux.cmd"
+        
+        ; Create shortcut to the batch wrapper script (will appear as a standalone app)
+        CreateShortcut "$DESKTOP\AMD-AI-UX.lnk" "$LOCALAPPDATA\RAUX\launch_raux.cmd" "" "$INSTDIR\${ICON_DEST}"
+      ${Else}
+        DetailPrint "*** RAUX INSTALLATION FAILED ***"
+        DetailPrint "- For additional support, please contact support@amd.com and"
+        DetailPrint "include the error details, or create an issue at"
+        DetailPrint "https://github.com/aigdat/open-webui"
+        ${IfNot} ${Silent}
+          MessageBox MB_OK "RAUX installation failed.$\n$\nPlease check the log file at $LOCALAPPDATA\RAUX\raux_Installer.log for detailed error information."
+        ${EndIf}
+      ${EndIf}
+
+      ; IMPORTANT: Do NOT attempt to clean up the temporary directory
+      ; This is intentional to prevent file-in-use errors
+      ; The directory will be left for the system to clean up later
+      DetailPrint "- Intentionally NOT cleaning up temporary directory to prevent file-in-use errors"
+      SetOutPath "$INSTDIR"
 
       Return
 

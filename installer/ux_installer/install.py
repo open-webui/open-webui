@@ -503,7 +503,7 @@ def create_shortcuts(env_path):
     try:
         # Create desktop shortcut
         desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
-        shortcut_path = os.path.join(desktop_path, "AMD-AI-UX.lnk")
+        shortcut_path = os.path.join(desktop_path, "{PRODUCT_NAME}.lnk")
 
         # Use PowerShell to create the shortcut
         ps_command = f"""
