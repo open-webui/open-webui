@@ -167,6 +167,7 @@ const packages = [
 'pyxel',
 'pyxirr',
 'pyyaml',
+'qrcode',
 'rasterio',
 'rateslib',
 'rebound',
