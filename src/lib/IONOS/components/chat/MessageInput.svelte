@@ -30,6 +30,9 @@
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	import { generateAutoCompletion } from '$lib/apis';
 	import SelectedFileBadges from '$lib/IONOS/components/chat/SelectedFileBadges.svelte';
+	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte';
+	import Sparkles from '$lib/IONOS/components/icons/Sparkles.svelte';
+	import Stop from '$lib/IONOS/components/icons/Stop.svelte';
 
 	const i18n = getContext<Readable<I18Next>>('i18n');
 
@@ -896,51 +899,30 @@
 									{#if !history.currentId || history.messages[history.currentId]?.done == true}
 										<div class=" flex items-center">
 											<Tooltip content={$i18n.t('Send message')}>
-												<button
+												<Button
 													id="send-message-button"
-													class="{prompt !== ''
-														? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-														: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
-													type="submit"
+													name="send"
+													className="p-1.5"
+													type={ButtonType.special}
 													disabled={prompt === ''}
+													label={$i18n.t('Send message')}
 												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 16 16"
-														fill="currentColor"
-														class="size-6"
-													>
-														<path
-															fill-rule="evenodd"
-															d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-															clip-rule="evenodd"
-														/>
-													</svg>
-												</button>
+													<Sparkles />
+												</Button>
 											</Tooltip>
 										</div>
 									{:else}
 										<div class=" flex items-center">
 											<Tooltip content={$i18n.t('Stop')}>
-												<button
-													class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
-													on:click={() => {
-														stopResponse();
-													}}
+												<Button
+													name="stop-responding"
+													on:click={stopResponse}
+													className="p-1.5"
+													type={ButtonType.special}
+													label={$i18n.t('Stop')}
 												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 24 24"
-														fill="currentColor"
-														class="size-6"
-													>
-														<path
-															fill-rule="evenodd"
-															d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
-															clip-rule="evenodd"
-														/>
-													</svg>
-												</button>
+													<Stop />
+												</Button>
 											</Tooltip>
 										</div>
 									{/if}
