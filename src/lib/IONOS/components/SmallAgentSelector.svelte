@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { models, settings } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
+	import AgentIcon from './AgentIcon.svelte';
 	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte'
+
+	type Tag = { name: string };
 
 	export let selectedModels = [''];
 
@@ -10,11 +13,22 @@
 	// This can later be changed to testing for a marker tag in info.meta.tags
 	const onlyCustomModels = ({ id }: { id: string }) => /^[a-z]+$/.test(id);
 
+	/**
+	 * Reduce tags to a string where the tag icon:<name> becomes <name>
+	 */
+	const tagsToIconName = (iconNameSoFar: string, tagObject: Tag): string => {
+		if (iconNameSoFar) {
+			return iconNameSoFar;
+		}
+		return tagObject?.name?.split('icon:')?.[1] ?? '';
+	};
+
 	$: modelsUi = $models
 		.filter(onlyCustomModels)
 		.map((model) => ({
 			id: model.id,
-			modelDisplayName: model.name,
+			iconName: model?.info?.meta?.tags?.reduce(tagsToIconName, ''),
+			modelDisplayName: model.name.split(' ')?.[1] ?? model.name,
 		}));
 
 	const save = async () => {
@@ -29,16 +43,17 @@
 </script>
 
 <div class="flex flex-row items-start gap-3">
-	{#each modelsUi as { id, modelDisplayName }}
+	{#each modelsUi as { id, modelDisplayName, iconName }}
 		<Button
 			name={id}
 			on:click={() => select(id)}
-			className="px-4 py-1 font-semibold text-sm font-sans"
+			className="px-4 py-1 font-semibold text-sm font-sans flex flex-row items-center"
 			type={ButtonType.secondary}
 			pressable={true}
 			pressed={id === selectedModels[0]}
 		>
-			{modelDisplayName}
+			<AgentIcon {iconName} />
+			<span class="ml-1">{modelDisplayName}</span>
 		</Button>
 	{/each}
 </div>
