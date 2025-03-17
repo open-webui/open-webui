@@ -13,8 +13,6 @@
 	export let confirmHandler = () => { };
 	export let cancelText = $i18n.t('Cancel');
 	export let cancelHandler = () => { };
-
-	let confirmed = false;
 </script>
 
 <Dialog
@@ -39,7 +37,7 @@
 			<button
 				class="shrink px-4 py-1 text-red-700 hover:text-white hover:bg-red-300/90 active:bg-red-300 rounded-3xl"
 				disabled={confirmed}
-				on:click={() => { confirmed = true; confirmHandler() }}
+				on:click={() => { confirmHandler() }}
 			>
 				{confirmText}
 			</button>
