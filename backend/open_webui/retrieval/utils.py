@@ -194,31 +194,21 @@ def merge_and_sort_query_results(
     combined = []
     combined.reserve(estimated_capacity) if hasattr(list, 'reserve') else None  
     
-    seen_hashes = {} 
+    seen_hashes = set()
     
     # Process all results in a single pass
     for data in query_results:
         distances = data["distances"][0]
         documents = data["documents"][0]
         metadatas = data["metadatas"][0]
-
         # Pre-compute document hashes in batch if all are strings
         if all(isinstance(doc, str) for doc in documents):
             for distance, document, metadata in zip(distances, documents, metadatas):
                 doc_hash = hashlib.md5(document.encode()).hexdigest()
                 
                 if doc_hash not in seen_hashes:
-                    seen_hashes[doc_hash] = True
+                    seen_hashes.add(doc_hash)
                     combined.append((distance, document, metadata))
-        else:
-            # Fallback for non-string documents
-            for distance, document, metadata in zip(distances, documents, metadatas):
-                if isinstance(document, str):
-                    doc_hash = hashlib.md5(document.encode()).hexdigest()
-                    
-                    if doc_hash not in seen_hashes:
-                        seen_hashes[doc_hash] = True
-                        combined.append((distance, document, metadata))
     
     # Early return for empty results
     if not combined:
