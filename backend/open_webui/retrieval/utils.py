@@ -187,8 +187,15 @@ def merge_get_results(get_results: list[dict]) -> dict:
 
 
 def merge_and_sort_query_results(
-    query_results: list[dict], k: int, reverse: bool = False
+    query_results: list[dict], k: int
 ) -> dict:
+    if VECTOR_DB == "chroma":
+        # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
+        # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
+        reverse = False
+    else:
+        reverse = True
+
     # Pre-allocate combined data structure with estimated capacity
     estimated_capacity = sum(len(data["documents"][0]) for data in query_results)
     combined = []
@@ -274,12 +281,7 @@ def query_collection(
             else:
                 pass
 
-    if VECTOR_DB == "chroma":
-        # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
-        # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
-        return merge_and_sort_query_results(results, k=k, reverse=False)
-    else:
-        return merge_and_sort_query_results(results, k=k, reverse=True)
+    return merge_and_sort_query_results(results, k=k)
 
 
 def query_collection_with_hybrid_search(
@@ -344,12 +346,7 @@ def query_collection_with_hybrid_search(
     if error and not results:
         raise Exception("Hybrid search failed for all collections. Using Non-hybrid search as fallback.")
 
-    if VECTOR_DB == "chroma":
-        # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
-        # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
-        return merge_and_sort_query_results(results, k=k, reverse=False)
-    else:
-        return merge_and_sort_query_results(results, k=k, reverse=True)
+    return merge_and_sort_query_results(results, k=k)
 
 
 def get_embedding_function(
