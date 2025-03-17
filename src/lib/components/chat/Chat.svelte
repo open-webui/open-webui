@@ -80,7 +80,7 @@
 	import Navbar from '$lib/components/chat/Navbar.svelte';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
-	import Placeholder from './Placeholder.svelte';
+	import Placeholder from '$lib/IONOS/components/chat/Placeholder.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import { startup as ionosGptStartup } from '$lib/IONOS/services/startup';
 
