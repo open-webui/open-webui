@@ -15,7 +15,6 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
-	import SmallAgentSelector from '$lib/IONOS/components/SmallAgentSelector.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -213,10 +212,15 @@
 			</div>
 		</div>
 	</div>
-	<div class="mx-auto max-w-3xl font-primary" in:fade={{ duration: 200, delay: 200 }}>
-		<div class="mx-9">
-			<SmallAgentSelector
-				bind:selectedModels={selectedModels}
+	<div class="mx-auto max-w-2xl font-primary" in:fade={{ duration: 200, delay: 200 }}>
+		<div class="mx-5">
+			<Suggestions
+				suggestionPrompts={models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+					$config?.default_prompt_suggestions ??
+					[]}
+				on:select={(e) => {
+					selectSuggestionPrompt(e.detail);
+				}}
 			/>
 		</div>
 	</div>
