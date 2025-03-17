@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { models, settings } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
+	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte'
 
 	export let selectedModels = [''];
 
@@ -29,12 +30,15 @@
 
 <div class="flex flex-row items-start gap-3">
 	{#each modelsUi as { id, modelDisplayName }}
-		<button
-			data-model-id={id}
+		<Button
+			name={id}
 			on:click={() => select(id)}
-			class="px-4 py-1 border-2 border-sky-900 bg-white-500 hover:bg-sky-800 text-black hover:text-white transition rounded-3xl"
+			className="px-4 py-1"
+			type={ButtonType.secondary}
+			pressable={true}
+			pressed={id === selectedModels[0]}
 		>
 			{modelDisplayName}
-		</button>
+		</Button>
 	{/each}
 </div>
