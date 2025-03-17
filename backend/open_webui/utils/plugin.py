@@ -7,7 +7,7 @@ import types
 import tempfile
 import logging
 
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, PIP_OPTIONS, PIP_PACKAGE_INDEX_OPTIONS
 from open_webui.models.functions import Functions
 from open_webui.models.tools import Tools
 
@@ -170,7 +170,7 @@ def install_frontmatter_requirements(requirements: str):
         try:
             req_list = [req.strip() for req in requirements.split(",")]
             log.info(f"Installing requirements: {' '.join(req_list)}")
-            subprocess.check_call([sys.executable, "-m", "pip", "install"] + req_list)
+            subprocess.check_call([sys.executable, "-m", "pip", "install"] + PIP_OPTIONS + req_list + PIP_PACKAGE_INDEX_OPTIONS)
         except Exception as e:
             log.error(f"Error installing packages: {' '.join(req_list)}")
             raise e

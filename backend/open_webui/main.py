@@ -84,7 +84,7 @@ from open_webui.routers.retrieval import (
     get_rf,
 )
 
-from open_webui.internal.db import Session
+from open_webui.internal.db import Session, engine
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
@@ -330,6 +330,7 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     RESET_CONFIG_ON_START,
     OFFLINE_MODE,
+    ENABLE_OTEL,
 )
 
 
@@ -356,7 +357,6 @@ from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
-
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -425,6 +425,19 @@ app.state.config = AppConfig(redis_url=REDIS_URL)
 
 app.state.WEBUI_NAME = WEBUI_NAME
 app.state.LICENSE_METADATA = None
+
+
+########################################
+#
+# OPENTELEMETRY
+#
+########################################
+
+if ENABLE_OTEL:
+    from open_webui.utils.telemetry.setup import setup as setup_opentelemetry
+
+    setup_opentelemetry(app=app, db_engine=engine)
+
 
 ########################################
 #
@@ -952,14 +965,24 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
 
         return filtered_models
 
-    models = await get_all_models(request, user=user)
+    all_models = await get_all_models(request, user=user)
 
-    # Filter out filter pipelines
-    models = [
-        model
-        for model in models
-        if "pipeline" not in model or model["pipeline"].get("type", None) != "filter"
-    ]
+    models = []
+    for model in all_models:
+        # Filter out filter pipelines
+        if "pipeline" in model and model["pipeline"].get("type", None) == "filter":
+            continue
+
+        model_tags = [
+            tag.get("name")
+            for tag in model.get("info", {}).get("meta", {}).get("tags", [])
+        ]
+        tags = [tag.get("name") for tag in model.get("tags", [])]
+
+        tags = list(set(model_tags + tags))
+        model["tags"] = [{"name": tag} for tag in tags]
+
+        models.append(model)
 
     model_order_list = request.app.state.config.MODEL_ORDER_LIST
     if model_order_list:
