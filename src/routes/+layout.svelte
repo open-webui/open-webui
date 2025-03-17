@@ -3,8 +3,6 @@
 	import { spring } from 'svelte/motion';
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
 
-
-
 	let loadingProgress = spring(0, {
 		stiffness: 0.05
 	});
@@ -569,7 +567,13 @@
 
 <svelte:head>
 	<title>{$WEBUI_NAME}</title>
-	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png"/>
+	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
+	<meta property="og:title" content="AiBrary" />
+	<meta property="og:description" content="AiBrary Chat is an AI-powered chatbot providing numerous models" />
+	<meta property="og:image:alt" content="aibrary image" />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:image" content={`/static/og-image.jpg`} />
 
 	<!-- rosepine themes have been disabled as it's not up to date with our latest version. -->
 	<!-- feel free to make a PR to fix if anyone wants to see it return -->
