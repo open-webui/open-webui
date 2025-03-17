@@ -24,6 +24,7 @@ services:
       - ./vite.config.ts:/app/vite.config.ts
       - ./svelte.config.js:/app/svelte.config.js
       - ./tsconfig.json:/app/tsconfig.json
+      - ./tsconfig.ionos.json:/app/tsconfig.ionos.json
       - ./tailwind.config.js:/app/tailwind.config.js
 
   backend:
