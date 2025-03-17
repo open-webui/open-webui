@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { Readable } from 'svelte/store';
+	import type { I18Next } from '$lib/IONOS/i18next.d.ts';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 	import { createPicker } from '$lib/utils/google-drive-picker';
@@ -37,7 +39,7 @@
 	import Image from '$lib/components/common/Image.svelte';
 	import { deleteFileById } from '$lib/apis/files';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Readable<I18Next>>('i18n');
 
 	export let transparentBackground = false;
 
