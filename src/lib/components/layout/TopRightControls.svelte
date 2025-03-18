@@ -14,8 +14,11 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
+	import QuestionMarkCircle from '../icons/QuestionMarkCircle.svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import HelpMenu from './Help/HelpMenu.svelte';
+	import ShortcutsModal from '../chat/ShortcutsModal.svelte';
 
 	export let shareEnabled = false;
 	export let chat = null;
@@ -36,6 +39,22 @@
 	const handleNewChat = () => {
 		suggestionCycle.update((n) => n + 1);
 		goto('/');
+	};
+
+	// Help functionality
+	let showShortcuts = false;
+
+	const getSurveyUrl = () => {
+		const locale = localStorage.getItem('locale') || 'en-GB';
+		const langPrefix = locale.startsWith('fr') ? 'fr' : 'en';
+		return `https://forms-formulaires.alpha.canada.ca/${langPrefix}/id/cm6tm7j9h005cyr69fq8g86xd`;
+	};
+
+	const getDocsUrl = () => {
+		const locale = localStorage.getItem('locale') || 'en-GB';
+		return locale.startsWith('fr')
+			? 'https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat_FR.aspx'
+			: 'https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat.aspx';
 	};
 </script>
 
@@ -72,6 +91,38 @@
 			</Tooltip>
 		{/if}
 
+		<!-- Help Button -->
+		<div class="flex">
+			<button
+				id="show-shortcuts-button"
+				class="hidden"
+				on:click={() => {
+					showShortcuts = !showShortcuts;
+				}}
+			/>
+			<HelpMenu
+				showDocsHandler={() => {
+					window.open(getDocsUrl(), '_blank');
+				}}
+				showShortcutsHandler={() => {
+					showShortcuts = !showShortcuts;
+				}}
+				showSurveyHandler={() => {
+					window.open(getSurveyUrl(), '_blank');
+				}}
+			>
+				<Tooltip content={$i18n.t('Help')} placement="bottom">
+					<div
+						class="group flex cursor-pointer p-2 rounded-xl bg-white dark:bg-gray-900 transition hover:bg-gray-100 dark:hover:bg-gray-800"
+					>
+						<div class="flex items-center justify-center text-gray-900 dark:text-white">
+							<QuestionMarkCircle className="size-5" strokeWidth="2" />
+						</div>
+					</div>
+				</Tooltip>
+			</HelpMenu>
+		</div>
+
 		<!-- Keep GlobalLanguageSelector and UserMenu together -->
 		<div class="flex items-center gap-1">
 			<GlobalLanguageSelector />
@@ -99,3 +150,5 @@
 		</div>
 	</div>
 </div>
+
+<ShortcutsModal bind:show={showShortcuts} />
