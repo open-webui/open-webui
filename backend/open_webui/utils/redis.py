@@ -33,7 +33,12 @@ def get_redis_connection(redis_url, sentinels, decode_responses=True):
     else:
         # Standard Redis connection
         return redis.Redis.from_url(redis_url, decode_responses=decode_responses)
-    
+
+def get_sentinels_from_env(SENTINEL_HOSTS, SENTINEL_PORT):
+    sentinel_hosts=SENTINEL_HOSTS.split(',')
+    sentinel_port=int(SENTINEL_PORT)
+    return [(host, sentinel_port) for host in sentinel_hosts]
+
 class AsyncRedisSentinelManager(socketio.AsyncRedisManager):
     def __init__(self, sentinel_hosts, sentinel_port=26379, redis_port=6379, service="mymaster", db=0,
                  username=None, password=None, channel='socketio', write_only=False, logger=None, redis_options=None):

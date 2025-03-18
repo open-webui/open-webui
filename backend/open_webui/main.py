@@ -315,6 +315,8 @@ from open_webui.env import (
     AUDIT_LOG_LEVEL,
     CHANGELOG,
     REDIS_URL,
+    SENTINEL_HOSTS,
+    SENTINEL_PORT,
     GLOBAL_LOG_LEVEL,
     MAX_BODY_LOG_SIZE,
     SAFE_MODE,
@@ -357,6 +359,9 @@ from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
 from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
+
+from open_webui.utils.redis import get_sentinels_from_env
+
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
@@ -421,7 +426,7 @@ app = FastAPI(
 
 oauth_manager = OAuthManager(app)
 
-app.state.config = AppConfig(redis_url=REDIS_URL)
+app.state.config = AppConfig(redis_url=REDIS_URL, sentinels=get_sentinels_from_env(SENTINEL_HOSTS, SENTINEL_PORT))
 
 app.state.WEBUI_NAME = WEBUI_NAME
 app.state.LICENSE_METADATA = None

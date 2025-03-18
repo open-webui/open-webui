@@ -8,7 +8,7 @@ from redis import asyncio as aioredis
 from open_webui.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
-from open_webui.utils.redis import parse_redis_sentinel_url, AsyncRedisSentinelManager
+from open_webui.utils.redis import parse_redis_sentinel_url, get_sentinels_from_env, AsyncRedisSentinelManager
 
 from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
@@ -64,9 +64,7 @@ TIMEOUT_DURATION = 3
 
 if WEBSOCKET_MANAGER == "redis":
     log.debug("Using Redis to manage websockets.")
-    sentinel_hosts=WEBSOCKET_SENTINEL_HOSTS.split(',')
-    sentinel_port=int(WEBSOCKET_SENTINEL_PORT)
-    sentinels=[(host, sentinel_port) for host in sentinel_hosts]
+    sentinels=get_sentinels_from_env(WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT)
     SESSION_POOL = RedisDict("open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL, sentinels=sentinels)
     USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL, sentinels=sentinels)
     USAGE_POOL = RedisDict("open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL, sentinels=sentinels)
