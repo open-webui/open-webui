@@ -146,7 +146,10 @@ def query_doc_with_hybrid_search(
 
         # retrieve only min(k, k_reranker) items, sort and cut by distance if k < k_reranker
         if k < k_reranker:
-            sorted_items = sorted(zip(distances, metadatas, documents), key=lambda x: x[0], reverse=True)
+            if VECTOR_DB == "chroma":
+                sorted_items = sorted(zip(distances, metadatas, documents), key=lambda x: x[0], reverse=False)
+            else:
+                sorted_items = sorted(zip(distances, metadatas, documents), key=lambda x: x[0], reverse=True)
             sorted_items = sorted_items[:k]
             distances, documents, metadatas = map(list, zip(*sorted_items))
         result = {
@@ -310,9 +313,9 @@ def query_collection_with_hybrid_search(
     if VECTOR_DB == "chroma":
         # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
         # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
-        return merge_and_sort_query_results(results, k=k, reverse=False)
+        return merge_and_sort_query_results(results, k=k_reranker, reverse=False)
     else:
-        return merge_and_sort_query_results(results, k=k, reverse=True)
+        return merge_and_sort_query_results(results, k=k_reranker, reverse=True)
 
 
 def get_embedding_function(
