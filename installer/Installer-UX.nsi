@@ -19,8 +19,8 @@ RequestExecutionLevel user
 !define PRODUCT_NAME_CONCAT "raux"
 !define GITHUB_REPO "https://github.com/aigdat/open-webui.git"
 !define EMPTY_FILE_NAME "empty_file.txt"
-!define ICON_FILE "..\static\raux.ico"
-!define ICON_DEST "raux.ico"
+!define ICON_FILE "${__FILE__}\..\..\static\raux.ico"
+!define ICON_DEST "$LOCALAPPDATA\${PRODUCT_NAME}\raux.ico"
 
 ; This is a compile-time fix to make sure that our selfhost CI runner can successfully install,
 ; since LOCALAPPDATA points to C:\Windows for "system users"
@@ -277,12 +277,16 @@ Section "Install Main Components" SEC01
       File /nonfatal "/oname=$LOCALAPPDATA\RAUX\launch_raux.ps1" "${__FILE__}\..\launch_raux.ps1"
       File /nonfatal "/oname=$LOCALAPPDATA\RAUX\launch_raux.cmd" "${__FILE__}\..\launch_raux.cmd"
       
+      ; Copy the icon file to the RAUX installation directory
+      DetailPrint "- Copying RAUX icon file"
+      File "/oname=${ICON_DEST}" "${ICON_FILE}"
+      
       ; Create shortcut to the batch wrapper script (will appear as a standalone app)
-      CreateShortcut "$DESKTOP\RAUX.lnk" "$LOCALAPPDATA\RAUX\launch_raux.cmd" "" "$INSTDIR\src\gaia\interface\img\raux.ico"
+      CreateShortcut "$DESKTOP\RAUX.lnk" "$LOCALAPPDATA\RAUX\launch_raux.cmd" "" "${ICON_DEST}"
 
 SectionEnd
 
 
 Function RunAmdOpenWebUI
-  ExecShell "open" "http://localhost:8080"
+  ExecShell "open" "http://localhost:8080/"
 FunctionEnd
