@@ -199,7 +199,7 @@
 
 	let showDeleteConfirm = false;
 
-	const keyDownEvent = (e) => {
+	const chatTitleInputKeydownHandler = (e) => {
 		if (e.key === 'Enter') {
 			e.preventDefault();
 			editChatTitle(id, chatTitle);
@@ -259,7 +259,7 @@
 				bind:value={chatTitle}
 				id="chat-title-input-{id}"
 				class=" bg-transparent w-full outline-hidden mr-10"
-				on:keydown={keyDownEvent}
+				on:keydown={chatTitleInputKeydownHandler}
 			/>
 		</div>
 	{:else}
