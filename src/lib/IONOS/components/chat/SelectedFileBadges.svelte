@@ -7,13 +7,15 @@
 	export let files = [];
 </script>
 
-<div class="mx-1 mt-2.5 mb-1 flex items-center flex-wrap gap-2">
+<div class="mx-1 h-full flex items-center flex-wrap gap-2">
 	{#each files as file, fileIdx}
 		<FileItem
 			item={file}
 			name={file.name}
 			type={file.type}
 			size={file?.size}
+			small={true}
+			className="px-1 py-1"
 			loading={file.status === 'uploading'}
 			dismissible={true}
 			edit={true}
