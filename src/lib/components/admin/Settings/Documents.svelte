@@ -831,7 +831,7 @@
 				</div>
 			</div>
 
-			<div class="mb-3">
+			<!-- <div class="mb-3">
 				<div class=" mb-2.5 text-base font-medium">{$i18n.t('Integration')}</div>
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
@@ -849,7 +849,7 @@
 						<Switch bind:state={enableOneDriveIntegration} />
 					</div>
 				</div>
-			</div>
+			</div> -->
 
 			<div class="mb-3">
 				<div class=" mb-2.5 text-base font-medium">{$i18n.t('Danger Zone')}</div>
