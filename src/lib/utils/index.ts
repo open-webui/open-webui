@@ -608,7 +608,7 @@ export const convertOpenAIChats = (_chats) => {
 				user_id: '',
 				title: convo['title'],
 				chat: chat,
-				timestamp: convo['timestamp']
+				timestamp: convo['create_time']
 			});
 		} else {
 			failed++;

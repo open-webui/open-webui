@@ -101,7 +101,11 @@
 			</div>
 		</div>
 	{:else}
-		<Tooltip content={decodeURIComponent(name)} className="flex flex-col w-full" placement="top-start">
+		<Tooltip
+			content={decodeURIComponent(name)}
+			className="flex flex-col w-full"
+			placement="top-start"
+		>
 			<div class="flex flex-col justify-center -space-y-0.5 px-2.5 w-full">
 				<div class=" dark:text-gray-100 text-sm flex justify-between items-center">
 					{#if loading}

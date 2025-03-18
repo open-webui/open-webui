@@ -170,7 +170,12 @@ def install_frontmatter_requirements(requirements: str):
         try:
             req_list = [req.strip() for req in requirements.split(",")]
             log.info(f"Installing requirements: {' '.join(req_list)}")
-            subprocess.check_call([sys.executable, "-m", "pip", "install"] + PIP_OPTIONS + req_list + PIP_PACKAGE_INDEX_OPTIONS)
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install"]
+                + PIP_OPTIONS
+                + req_list
+                + PIP_PACKAGE_INDEX_OPTIONS
+            )
         except Exception as e:
             log.error(f"Error installing packages: {' '.join(req_list)}")
             raise e
