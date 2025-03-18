@@ -24,7 +24,7 @@ RequestExecutionLevel user
 
 ; This is a compile-time fix to make sure that our selfhost CI runner can successfully install,
 ; since LOCALAPPDATA points to C:\Windows for "system users"
-InstallDir "$LOCALAPPDATA\${PRODUCT_NAME_CONCAT}"
+InstallDir "$LOCALAPPDATA\${PRODUCT_NAME}"
 
 ; Read version from version.py
 !tempfile TMPFILE
@@ -75,21 +75,24 @@ Function .onInit
   StrCpy $raux_CONDA_ENV "raux_env"
   StrCpy $PythonVersion "3.11"
   ; Fix the log file path to avoid variable substitution issues
-  StrCpy $LogFilePath "$INSTDIR\${PRODUCT_NAME_CONCAT}_install.log"
+  StrCpy $LogFilePath "$LOCALAPPDATA\${PRODUCT_NAME}\${PRODUCT_NAME_CONCAT}_install.log"
+  
+  ; Create the log directory if it doesn't exist
+  CreateDirectory "$LOCALAPPDATA\${PRODUCT_NAME}"
 FunctionEnd
 
 ; Define a section for the installation
 Section "Install Main Components" SEC01
-  ; Remove FileOpen/FileWrite for log file, replace with DetailPrint
+  ; Log installation start
   DetailPrint "*** INSTALLATION STARTED ***"
   DetailPrint "------------------------"
   DetailPrint "- Installation Section -"
   DetailPrint "------------------------"
 
   ; Check if directory exists before proceeding
-  IfFileExists "$INSTDIR\*.*" 0 continue_install
+  IfFileExists "$LOCALAPPDATA\${PRODUCT_NAME}\*.*" 0 continue_install
     ${IfNot} ${Silent}
-      MessageBox MB_YESNO "An existing ${PRODUCT_NAME} installation was found at $INSTDIR.$\n$\nWould you like to remove it and continue with the installation?" IDYES remove_dir
+      MessageBox MB_YESNO "An existing ${PRODUCT_NAME} installation was found at $LOCALAPPDATA\${PRODUCT_NAME}.$\n$\nWould you like to remove it and continue with the installation?" IDYES remove_dir
       ; If user selects No, show exit message and quit the installer
       MessageBox MB_OK "Installation cancelled. Exiting installer..."
       DetailPrint "Installation cancelled by user"
@@ -100,12 +103,12 @@ Section "Install Main Components" SEC01
 
   remove_dir:
     ; Attempt conda remove of the env, to help speed things up
-    ExecWait 'conda env remove -yp "$INSTDIR\$raux_CONDA_ENV"'
+    ExecWait 'conda env remove -yp "$LOCALAPPDATA\${PRODUCT_NAME}\$raux_CONDA_ENV"'
     ; Try to remove directory and verify it was successful
-    RMDir /r "$INSTDIR"
+    RMDir /r "$LOCALAPPDATA\${PRODUCT_NAME}"
     DetailPrint "- Deleted all contents of install dir"
 
-    IfFileExists "$INSTDIR\*.*" 0 continue_install
+    IfFileExists "$LOCALAPPDATA\${PRODUCT_NAME}\*.*" 0 continue_install
       ${IfNot} ${Silent}
         MessageBox MB_OK "Unable to remove existing installation. Please close any applications using ${PRODUCT_NAME} and try again."
       ${EndIf}
@@ -114,15 +117,15 @@ Section "Install Main Components" SEC01
 
   continue_install:
     ; Create fresh directory
-    CreateDirectory "$INSTDIR"
+    CreateDirectory "$LOCALAPPDATA\${PRODUCT_NAME}"
 
     ; Set the output path for future operations
-    SetOutPath "$INSTDIR"
+    SetOutPath "$LOCALAPPDATA\${PRODUCT_NAME}"
 
     DetailPrint "Starting '${PRODUCT_NAME}' Installation..."
-    DetailPrint 'Configuration:'
-    DetailPrint '  Install Dir: $INSTDIR'
-    DetailPrint '-------------------------------------------'
+    DetailPrint "Configuration:"
+    DetailPrint "  Install Dir: $LOCALAPPDATA\${PRODUCT_NAME}"
+    DetailPrint "-------------------------------------------"
 
     ; Pack into the installer
     ; Exclude hidden files (like .git, .gitignore) and the installation folder itself
@@ -191,7 +194,7 @@ Section "Install Main Components" SEC01
       ; Initialize conda (needed for systems where conda was previously installed but not initialized)
       nsExec::ExecToLog '"$R1" init'
 
-      DetailPrint "- Creating a Python $PythonVersion environment named '$raux_CONDA_ENV' in the installation directory: $INSTDIR..."
+      DetailPrint "- Creating a Python $PythonVersion environment named '$raux_CONDA_ENV' in the installation directory: $LOCALAPPDATA\${PRODUCT_NAME}..."
       ExecWait '"$R1" create -n "$raux_CONDA_ENV" python=$PythonVersion -y' $R0
 
       ; Check if the environment creation was successful (exit code should be 0)
@@ -200,7 +203,7 @@ Section "Install Main Components" SEC01
     set_conda_env:
       DetailPrint "- Setting conda environment $raux_CONDA_ENV..."
       DetailPrint "- Changing to installation directory..."
-      SetOutPath "$INSTDIR"
+      SetOutPath "$LOCALAPPDATA\${PRODUCT_NAME}"
       
       DetailPrint "- Verifying conda environment..."
       ; Instead of trying to activate the environment (which doesn't work well in scripts),
@@ -208,7 +211,6 @@ Section "Install Main Components" SEC01
       ExecWait '"$R1" list -n "$raux_CONDA_ENV"' $R0
 
       StrCmp $R0 0 install_app env_creation_failed
-      
 
     env_creation_failed:
       DetailPrint "- ERROR: Environment creation failed"
@@ -223,31 +225,6 @@ Section "Install Main Components" SEC01
       DetailPrint "- ${PRODUCT_NAME} Installation -"
       DetailPrint "--------------------------"
 
-      DetailPrint "- Starting RAUX installation (this can take 5-10 minutes)..."
-      DetailPrint "- See $LogFilePath for detailed progress..."
-      ; Call the batch file with required parameters
-      ; Execute the Python script
-      DetailPrint "- Executing Python script to handle the installation..."
-      DetailPrint "- Command: $R1 run -n $raux_CONDA_ENV python $INSTDIR\raux_installer.py --install-dir $INSTDIR"
-      
-      ; Execute the Python script with the installation directory as a named parameter
-      ; Pass the conda environment name as an environment variable
-      System::Call 'Kernel32::SetEnvironmentVariable(t "raux_CONDA_ENV", t "$raux_CONDA_ENV")i.r0'
-      
-      ; Execute the Python script with the full path
-      ExecWait '"$R1" run -n "$raux_CONDA_ENV" python "$INSTDIR\raux_installer.py" --install-dir "$INSTDIR"' $0
-      
-      DetailPrint "- Python script return code: $0"
-      
-      ; Check if the installation was successful
-      StrCmp $0 0 install_success install_failed
-
-    Return
-
-    install_success:
-      DetailPrint "*** INSTALLATION COMPLETED ***"
-
-      ; Create RAUX installation directory
       DetailPrint "- Creating RAUX installation directory..."
       CreateDirectory "$LOCALAPPDATA\RAUX"
       
@@ -265,6 +242,7 @@ Section "Install Main Components" SEC01
       DetailPrint "- Using system Python for the entire installation process"
       
       ; Execute the Python script with the required parameters using system Python
+      ; Note: We're not passing the python-exe parameter, so it will use the system Python
       ExecWait 'python "$LOCALAPPDATA\RAUX\raux_temp\raux_installer.py" --install-dir "$LOCALAPPDATA\RAUX" --debug' $R0
 
       DetailPrint "RAUX installation exit code: $R0"
@@ -273,19 +251,6 @@ Section "Install Main Components" SEC01
       ${If} $R0 == 0
         DetailPrint "*** RAUX INSTALLATION COMPLETED ***"
         DetailPrint "- RAUX installation completed successfully"
-        
-        ; Create RAUX shortcut - using the RAUX icon
-        DetailPrint "- Creating RAUX desktop shortcut"
-        
-        ; Copy the launcher scripts to the RAUX installation directory if they exist
-        DetailPrint "- Copying RAUX launcher scripts"
-        
-        ; Use /nonfatal flag to prevent build failure if files don't exist
-        File /nonfatal "/oname=$LOCALAPPDATA\RAUX\launch_raux.ps1" "${__FILE__}\..\launch_raux.ps1"
-        File /nonfatal "/oname=$LOCALAPPDATA\RAUX\launch_raux.cmd" "${__FILE__}\..\launch_raux.cmd"
-        
-        ; Create shortcut to the batch wrapper script (will appear as a standalone app)
-        CreateShortcut "$DESKTOP\AMD-AI-UX.lnk" "$LOCALAPPDATA\RAUX\launch_raux.cmd" "" "$INSTDIR\${ICON_DEST}"
       ${Else}
         DetailPrint "*** RAUX INSTALLATION FAILED ***"
         DetailPrint "- For additional support, please contact support@amd.com and"
@@ -295,22 +260,25 @@ Section "Install Main Components" SEC01
           MessageBox MB_OK "RAUX installation failed.$\n$\nPlease check the log file at $LOCALAPPDATA\RAUX\raux_Installer.log for detailed error information."
         ${EndIf}
       ${EndIf}
-
+      
       ; IMPORTANT: Do NOT attempt to clean up the temporary directory
       ; This is intentional to prevent file-in-use errors
       ; The directory will be left for the system to clean up later
       DetailPrint "- Intentionally NOT cleaning up temporary directory to prevent file-in-use errors"
       SetOutPath "$INSTDIR"
-
-      Return
-
-    install_failed:
-      DetailPrint "- ERROR: Installation failed"
-      DetailPrint "- Please check the log file for details: $LogFilePath"
-      ${IfNot} ${Silent}
-        MessageBox MB_OK "ERROR: Installation failed. Please check the log file for details: $LogFilePath"
-      ${EndIf}
-      Quit
+      
+      ; Create RAUX shortcut - using the GAIA icon but pointing to RAUX installation
+      DetailPrint "- Creating RAUX desktop shortcut"
+      
+      ; Copy the launcher scripts to the RAUX installation directory if they exist
+      DetailPrint "- Copying RAUX launcher scripts"
+      
+      ; Use /nonfatal flag to prevent build failure if files don't exist
+      File /nonfatal "/oname=$LOCALAPPDATA\RAUX\launch_raux.ps1" "${__FILE__}\..\launch_raux.ps1"
+      File /nonfatal "/oname=$LOCALAPPDATA\RAUX\launch_raux.cmd" "${__FILE__}\..\launch_raux.cmd"
+      
+      ; Create shortcut to the batch wrapper script (will appear as a standalone app)
+      CreateShortcut "$DESKTOP\RAUX.lnk" "$LOCALAPPDATA\RAUX\launch_raux.cmd" "" "$INSTDIR\src\gaia\interface\img\raux.ico"
 
 SectionEnd
 
