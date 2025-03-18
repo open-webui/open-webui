@@ -184,11 +184,7 @@ def merge_and_sort_query_results(
     else:
         reverse = True
 
-    # Pre-allocate combined data structure with estimated capacity
-    estimated_capacity = sum(len(data["documents"][0]) for data in query_results)
-    combined = []
-    combined.reserve(estimated_capacity) if hasattr(list, 'reserve') else None  
-    
+    combined = []    
     seen_hashes = set()
     
     # Process all results in a single pass
@@ -215,11 +211,10 @@ def merge_and_sort_query_results(
     
     combined.sort(key=lambda x: x[0], reverse=reverse)
     
-    # Truncate to top k
-    del combined[k:]
+    # Truncate to top k results
+    combined = combined[:k]
     
-    # Unzip the results using zip with * operator (more efficient than multiple list comprehensions)
-    sorted_distances, sorted_documents, sorted_metadatas = zip(*combined) if combined else ([], [], [])
+    sorted_distances, sorted_documents, sorted_metadatas = map(list, zip(*combined))
     
     return {
         "distances": [list(sorted_distances)],
