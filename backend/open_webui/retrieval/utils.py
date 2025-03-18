@@ -151,7 +151,7 @@ def query_doc_with_hybrid_search(
             distances, documents, metadatas = map(list, zip(*sorted_items))
         result = {
             "distances": [distances],
-            "documents": [documents]
+            "documents": [documents],
             "metadatas": [metadatas],
         }
 
