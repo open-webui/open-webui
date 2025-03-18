@@ -1,6 +1,6 @@
 {
 	"extends": "./tsconfig.json",
 	"include": [
-		"src/lib/IONOS/",
+		"src/lib/IONOS/**/*"
 	]
 }
