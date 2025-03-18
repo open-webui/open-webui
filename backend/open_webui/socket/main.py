@@ -8,6 +8,7 @@ from redis import asyncio as aioredis
 from open_webui.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
+from open_webui.utils.redis import parse_redis_sentinel_url, AsyncRedisSentinelManager
 
 from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
@@ -18,61 +19,12 @@ from open_webui.env import (
     WEBSOCKET_SENTINEL_HOSTS,
 )
 from open_webui.utils.auth import decode_token
-from open_webui.socket.utils import RedisDict, RedisLock, parse_redis_sentinel_url
+from open_webui.socket.utils import RedisDict, RedisLock
 
 from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     SRC_LOG_LEVELS,
 )
-
-class AsyncRedisSentinelManager(socketio.AsyncRedisManager):
-    def __init__(self, sentinel_hosts, sentinel_port=26379, redis_port=6379, service="mymaster", db=0,
-                 username=None, password=None, channel='socketio', write_only=False, logger=None, redis_options=None):
-        """
-        Initialize the Redis Sentinel Manager.
-        This implementation mostly replicates the __init__ of AsyncRedisManager and
-        overrides _redis_connect() with a version that uses Redis Sentinel
-
-        :param sentinel_hosts: List of Sentinel hosts
-        :param sentinel_port: Sentinel Port
-        :param redis_port: Redis Port (currently unsupported by aioredis!)
-        :param service: Master service name in Sentinel
-        :param db: Redis database to use
-        :param username: Redis username (if any) (currently unsupported by aioredis!)
-        :param password: Redis password (if any)
-        :param channel: The channel name on which the server sends and receives
-                        notifications. Must be the same in all the servers.
-        :param write_only: If set to ``True``, only initialize to emit events. The
-                           default of ``False`` initializes the class for emitting
-                           and receiving.
-        :param redis_options: additional keyword arguments to be passed to
-                              ``aioredis.from_url()``.
-        """
-        self._sentinels = [(host, sentinel_port) for host in sentinel_hosts]
-        self._redis_port=redis_port
-        self._service = service
-        self._db = db
-        self._username = username
-        self._password = password
-        self._channel = channel
-        self.redis_options = redis_options or {}
-
-        # connect and call grandparent constructor
-        self._redis_connect()
-        super(socketio.AsyncRedisManager, self).__init__(channel=channel, write_only=write_only, logger=logger)
-
-    def _redis_connect(self):
-        """Establish connections to Redis through Sentinel."""
-        sentinel = aioredis.sentinel.Sentinel(
-            self._sentinels,
-            port=self._redis_port,
-            db=self._db,
-            password=self._password,
-            **self.redis_options
-        )
-
-        self.redis = sentinel.master_for(self._service)
-        self.pubsub = self.redis.pubsub(ignore_subscribe_messages=True)
 
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)

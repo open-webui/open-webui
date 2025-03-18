@@ -1,42 +1,6 @@
 import json
-import redis
 import uuid
-from urllib.parse import urlparse
-
-def parse_redis_sentinel_url(redis_url):
-    parsed_url = urlparse(redis_url)
-    if parsed_url.scheme != "redis":
-        raise ValueError("Invalid Redis URL scheme. Must be 'redis'.")
-
-    return {
-        "username": parsed_url.username or None,
-        "password": parsed_url.password or None,
-        "service": parsed_url.hostname or 'mymaster',
-        "port": parsed_url.port or 6379,
-        "db": int(parsed_url.path.lstrip("/") or 0),
-    }
-
-def get_redis_connection(redis_url, sentinels, decode_responses=True):
-    """
-    Creates a Redis connection from either a standard Redis URL or uses special
-    parsing to setup a Sentinel connection, if given an array of host/port tuples.
-    """
-    if sentinels:
-        redis_config = parse_redis_sentinel_url(redis_url)
-        sentinel = redis.sentinel.Sentinel(
-            sentinels,
-            port=redis_config['port'],
-            db=redis_config['db'],
-            username=redis_config['username'],
-            password=redis_config['password'],
-            decode_responses=decode_responses
-        )
-
-        # Get a master connection from Sentinel
-        return sentinel.master_for(redis_config['service'])
-    else:
-        # Standard Redis connection
-        return redis.Redis.from_url(redis_url, decode_responses=decode_responses)
+from open_webui.utils.redis import get_redis_connection
 
 class RedisLock:
     def __init__(self, redis_url, lock_name, timeout_secs, sentinels=[]):
