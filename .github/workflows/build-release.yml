@@ -242,7 +242,15 @@ jobs:
             Write-Host "WARNING: ux_installer directory not found in installer directory"
           }
           
-          # Copy the launcher scripts
+          # Copy the launcher raux scripts
+          if (Test-Path -Path "installer/launch_lemonade.ps1") {
+            Write-Host "Copying launch_lemonade.ps1 to package"
+            Copy-Item -Path "installer/launch_lemonade.ps1" -Destination "installer/package/"
+          } else {
+            Write-Host "WARNING: launch_lemonade.ps1 not found in installer directory"
+          }
+
+            # Copy the launcher lemonade scripts
           if (Test-Path -Path "installer/launch_raux.ps1") {
             Write-Host "Copying launch_raux.ps1 to package"
             Copy-Item -Path "installer/launch_raux.ps1" -Destination "installer/package/"
