@@ -176,7 +176,7 @@
 	{:else if token.type === 'blockquote'}
 		{@const alert = alertComponent(token)}
 		{#if alert}
-			<AlertRenderer token={token} alert={alert} />
+			<AlertRenderer {token} {alert} />
 		{:else}
 			<blockquote dir="auto">
 				<svelte:self id={`${id}-${tokenIdx}`} tokens={token.tokens} {onTaskClick} {onSourceClick} />

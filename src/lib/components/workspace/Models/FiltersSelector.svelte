@@ -39,7 +39,11 @@
 					<div class=" flex items-center gap-2 mr-3">
 						<div class="self-center flex items-center">
 							<Checkbox
-								state={_filters[filter].is_global ? 'checked' : (_filters[filter].selected ? 'checked' : 'unchecked')}
+								state={_filters[filter].is_global
+									? 'checked'
+									: _filters[filter].selected
+										? 'checked'
+										: 'unchecked'}
 								disabled={_filters[filter].is_global}
 								on:change={(e) => {
 									if (!_filters[filter].is_global) {
