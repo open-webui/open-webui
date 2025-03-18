@@ -9,9 +9,15 @@
 	export let direction = 'left';
 	export let items;
 
-	let el;
+	let el: HTMLElement|null = null;
 
-	$: scrollWidth = el?.scrollWidth;
+	function setAnimationPlayState(newState: string): void {
+		if (el) {
+			el.style.animationPlayState = newState;
+		}
+	}
+
+	$: scrollWidth = el?.scrollWidth ?? 0;
 	$: fullWidth = scrollWidth / 2;
 	$: duration = fullWidth / speed;
 </script>
@@ -19,8 +25,8 @@
 <div
 	class="full-width overflow-hidden position-relative my-5"
 	role="marquee"
-	on:mouseenter={() => { el.style.animationPlayState = 'paused'; }}
-	on:mouseleave={() => { el.style.animationPlayState = 'running'; }}
+	on:mouseenter={() => { setAnimationPlayState('paused'); }}
+	on:mouseleave={() => { setAnimationPlayState('running'); }}
 	>
 	<div
 		bind:this={el}

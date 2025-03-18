@@ -1,10 +1,12 @@
 <script lang="ts">
+	import type { Readable } from 'svelte/store';
+	import type { I18Next } from '$lib/IONOS/i18next.d.ts';
 	import { getContext } from 'svelte';
 	import { selectAgent } from '$lib/IONOS/services/agent';
 	import { agents } from '$lib/IONOS/stores/agents';
 	import Sparkles from '$lib/IONOS/components/icons/Sparkles.svelte';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<Readable<I18Next>>('i18n');
 </script>
 
 <div class="flex flex-row gap-4 items-center justify-center flex-wrap">

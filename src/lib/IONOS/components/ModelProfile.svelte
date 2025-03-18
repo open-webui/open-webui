@@ -1,9 +1,10 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
+	import type { Model } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 
-	export let model = null;
+	export let model: Model|null = null;
 
 	const tippyOptions = {
 		interactive: true, // to enable keeping it open when hovered

@@ -12,7 +12,7 @@ export const getAgent = (): string => {
 	return agent;
 }
 
-export const selectAgent = async (id: string): void => {
+export const selectAgent = async (id: string): Promise<void> => {
 	console.log('Store agent', id);
 	localStorage.setItem(LOCALSTORAGE_START_MODEL_KEY, id);
 
