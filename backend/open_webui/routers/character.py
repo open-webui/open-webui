@@ -61,3 +61,16 @@ async def create_new_character(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.FILE_EXISTS,
         )
+
+
+@router.delete('/{id}/delete', response_model=bool)
+async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
+    character = Characters.get_character_by_id(id=id)
+    if not character:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+    
+    result = Characters.delete_character_by_id(id=id)
+    return result

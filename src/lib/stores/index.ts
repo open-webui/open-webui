@@ -186,6 +186,7 @@ type Prompt = {
 };
 
 type CharacterPrompt = {
+	id: string;
 	title: string;
 	system_prompt: string;
 	created_at: number;

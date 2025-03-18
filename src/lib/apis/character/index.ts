@@ -109,7 +109,7 @@ export const updateCharacterById = async (token: string, id: string, form: Chara
 	return res;
 };
 
-export const deleteKnowledgeById = async (token: string, id: string) => {
+export const deleteCharacterById = async (token: string, id: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/character/${id}/delete`, {
