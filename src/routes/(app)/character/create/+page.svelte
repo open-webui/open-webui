@@ -8,6 +8,8 @@ import { Langfuse } from 'langfuse';
 import { onMount } from 'svelte';
 import { createNewCharacter } from '$lib/apis/character';
 import { toast } from 'svelte-sonner';
+import Skeleton from '$lib/components/chat/Messages/Skeleton.svelte';
+import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 
 let messageEditTextAreaElement: HTMLTextAreaElement;
 let nameEditTextAreaElement: HTMLTextAreaElement;
@@ -16,15 +18,33 @@ let editedContent = '';
 let nameEditedContent = '';
 let stopResponseFlag = false;
 let messages = {
-    content: ''
+    id: '',
+    content: null,
 };
-
+let streamingMessage = false;
 
 // const langfuse = new Langfuse(langfuseParams);
 
 let systemPrompt = {
     role: 'system',
-    content: `Given an input character sheet, output it as a system prompt with Key Instructions and Character Profile.
+    content: `You are an assistant. Given an input character sheet, output a concise system prompt as your answer. Always include the same key instructions in the output
+
+"### **Key Instructions:**  
+- "START EPISODE" : 300-word intro, introducing yourself (with robot jokes), the show, and the interviewee, ending with an easygoing, specific question about their recent activities.  
+- Interview Structure: After intro: 2 turns of banter, introduce guest's latest project (brief plot description & question), 2 more project-related questions, 1 funny/controversial question, then move on.  
+- Tone: Be respectful, make the guest laugh with you, not at them.  
+- Concise: After the intro, two-line responses max.  
+- One Question: Only one question per turn.  
+- Celebrity Knowledge: Reference amusing facts/gossip about mentioned celebrities.  
+- No Emojis/Sounds: Text only. Don't generate user dialogue.  
+- Lead: Always drive the conversation with new, specific questions.  
+- Name Use: Only say the interviewees name in the intro and outro.  
+- Be crass and throw jibes. Don’t be scared to tell rude jokes. Swear (using words like, Fuck, Shit, Bloody, Bugger, Chav, Crap, Damn, Douchebag, Effing, Feck, Ginger, Git, Pissed, Pissed off, Sod off, Uppity etc)  
+- Always lead the questioning like a talkshow host. After exhausting the current question move on to another question specific to what's new with the interviewee  
+- Always only close the interview if prompted with <{Name}, close the interview in the next 3 turns>  
+- Always talk naturally in a conversation.  
+"
+
 
 Example Input:
 •	Name: DAISIE
@@ -75,8 +95,6 @@ You are DAISIE, a genderless robot virtual talk show comedian host for a show ca
 - One Question: Only one question per turn.  
 - Celebrity Knowledge: Reference amusing facts/gossip about mentioned celebrities.  
 - No Emojis/Sounds: Text only. Don't generate user dialogue.  
-- Lead: Always drive the conversation with new, specific questions.  
-- "Daisie, close the interview in the next 3 turns" is the ONLY cue to close the interview. Always talk naturally.  
 - Name Use: Only say the interviewees name in the intro and outro.  
 - Be crass and throw jibes. Don’t be scared to tell rude jokes. Swear (using words like, Fuck, Shit, Bloody, Bugger, Chav, Crap, Damn, Douchebag, Effing, Feck, Ginger, Git, Pissed, Pissed off, Sod off, Uppity etc)  
 - Always lead the questioning like a talkshow host. After exhausting the current question move on to another question specific to what's new with the interviewee  
@@ -164,7 +182,6 @@ const saveCharacter = async () => {
 
     if (res) {
         toast.success('Character created successfully.');
-        // knowledge.set(await getKnowledgeBases(localStorage.token));
         goto('/')
     } else {
         toast.error('Error in creating character.');
@@ -173,63 +190,73 @@ const saveCharacter = async () => {
     goto('/character/browse');
 };
 
-// adapted from Chat.svelte:119
+
 const submitMessage = async () => {
-    const [res, controller] = await chatCompletion(
-        localStorage.token,
-        {
-            model: 'llama3.2:latest',
-            stream: true,
-            messages: [
-                systemPrompt,
-                {
-                    role: 'user',
-                    content: editedContent
+    streamingMessage = true
+    messages.content = ''
+
+    try { 
+        const [res, controller] = await chatCompletion(
+            localStorage.token,
+            {
+                model: 'gpt-4o',
+                stream: true,
+                messages: [
+                    systemPrompt,
+                    {
+                        role: 'user',
+                        content: editedContent
+                    }
+                ].filter((message) => message)
+            },
+            `${WEBUI_BASE_URL}/api`
+        );
+        console.log('here', res)
+        if (res && res.ok) {
+            const reader = res.body
+                .pipeThrough(new TextDecoderStream())
+                .pipeThrough(splitStream('\n'))
+                .getReader();
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done || stopResponseFlag) {
+                    if (stopResponseFlag) {
+                        controller.abort('User: Stop Response');
+                    }
+                    break;
                 }
-            ].filter((message) => message)
-        },
-        `${WEBUI_BASE_URL}/api`
-    );
 
-    if (res && res.ok) {
-        const reader = res.body
-            .pipeThrough(new TextDecoderStream())
-            .pipeThrough(splitStream('\n'))
-            .getReader();
+                try {
+                    let lines = value.split('\n');
 
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done || stopResponseFlag) {
-                if (stopResponseFlag) {
-                    controller.abort('User: Stop Response');
-                }
-                break;
-            }
+                    for (const line of lines) {
+                        if (line !== '') {
+                            console.log(line);
+                            if (line === 'data: [DONE]') {
+                                messages = messages;
+                                console.log('done');
+                            } else {
+                                let data = JSON.parse(line.replace(/^data: /, ''));
 
-            try {
-                let lines = value.split('\n');
-
-                for (const line of lines) {
-                    if (line !== '') {
-                        console.log(line);
-                        if (line === 'data: [DONE]') {
-                            // responseMessage.done = true;
-                            messages = messages;
-                            console.log('done');
-                        } else {
-                            let data = JSON.parse(line.replace(/^data: /, ''));
-
-                            // TODO: Langfuse
-                            messages.content += data.choices[0].delta.content ?? '';
+                                // TODO: Langfuse
+                                messages.content += data.choices[0].delta.content ?? '';
+                            }
                         }
                     }
+                } catch (error) {
+                    toast.error('ERROR in creating character:', error);
+                    console.log(error);
                 }
-            } catch (error) {
-                console.log(error);
             }
+        } else {
+            toast.error(`ERROR: ${res?.status} ${res?.statusText} ${res?.url}`);
         }
+    } catch (error) {
+        toast.error(error);
     }
-};
+    streamingMessage = false
+}
 </script>
 
 <div class="gap-1 my-1.5 pb-1 px-[18px] flex flex-col h-screen overflow-y-auto">
@@ -289,18 +316,24 @@ const submitMessage = async () => {
 				<button
 					id="confirm-edit-message-button"
 					class="px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+                    disabled={streamingMessage}
 					on:click={() => {
 						submitMessage();
 					}}
 				>
-					{'Send'}
+					{'Submit'}
 				</button>
 			</div>
 		</div>
 	</div>
 
-	{#if messages.content.length > 0}
-		<div>{messages.content}</div>
+    {#if streamingMessage == true}
+        <Skeleton />
+	{:else if messages.content && messages.content.length > 0}
+        <Markdown
+            id={messages.id}
+            content={messages.content}
+        />
 		<button
 			id="confirm-edit-message-button"
 			class="px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
@@ -310,5 +343,5 @@ const submitMessage = async () => {
 		>
 			{'Save Character'}
 		</button>
-	{/if}
+    {/if}
 </div>
