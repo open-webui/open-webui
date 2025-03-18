@@ -291,7 +291,6 @@ def query_collection_with_hybrid_search(
             for collection_name in collection_names
         }
 
-        # Retrieve collection data
         for collection_name, future in future_results.items():
             try:
                 collection_data[collection_name] = future.result()
