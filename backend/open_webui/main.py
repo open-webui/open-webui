@@ -39,7 +39,6 @@ from open_webui.socket.main import (
     periodic_usage_pool_cleanup,
 )
 from open_webui.routers import (
-    audio,
     images,
     ollama,
     retrieval,
@@ -61,7 +60,7 @@ from open_webui.routers import (
     users,
     utils,
 )
-from beyond_the_loop.routers import openai
+from beyond_the_loop.routers import openai, audio
 
 from open_webui.routers.retrieval import (
     get_embedding_function,

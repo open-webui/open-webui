@@ -495,7 +495,7 @@ def transcribe(request: Request, file_path):
                     "Authorization": f"Bearer {request.app.state.config.STT_OPENAI_API_KEY}"
                 },
                 files={"file": (filename, open(file_path, "rb"))},
-                data={"model": request.app.state.config.STT_MODEL},
+                data={"model": request.app.state.config.STT_MODEL, "language": "de"},
             )
 
             r.raise_for_status()
