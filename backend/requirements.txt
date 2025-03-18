@@ -118,3 +118,11 @@ ldap3==2.9.1
 
 ## Firecrawl
 firecrawl-py==1.12.0
+
+# Added for OCR and document processing
+pytesseract==0.3.10
+pdf2image==1.17.0
+pdfplumber==0.10.3
+python-docx==1.1.0
+Pillow==10.3.0
+PyPDF2==3.0.1
