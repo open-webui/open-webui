@@ -1,4 +1,5 @@
 import { OPENAI_API_BASE_URL, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+import i18next from 'i18next';
 
 export const getOpenAIConfig = async (token: string = '') => {
 	let error = null;
@@ -362,32 +363,30 @@ export const generateOpenAIChatCompletion = async (
 	token: string = '',
 	body: object,
 	url: string = `${WEBUI_BASE_URL}/api`
-) => {
+  ) => {
 	let error = null;
-
-	const res = await fetch(`${url}/chat/completions`, {
+  
+	try {
+	  const res = await fetch(`${url}/chat/completions`, {
 		method: 'POST',
 		headers: {
-			Authorization: `Bearer ${token}`,
-			'Content-Type': 'application/json'
+		  Authorization: `Bearer ${token}`,
+		  'Content-Type': 'application/json'
 		},
 		body: JSON.stringify(body)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = `${err?.detail ?? err}`;
-			return null;
-		});
-
-	if (error) {
-		throw error;
+	  });
+  
+	  if (!res.ok) {
+		const errorData = await res.json();
+		throw new Error(i18next.t(`HKUST GenAI API returned an error`));
+	  }
+  
+	  return await res.json();
+	} catch (err) {
+	  error = `${err?.message ?? err}`;
+	  throw error;
 	}
-
-	return res;
-};
+  };
 
 export const synthesizeOpenAISpeech = async (
 	token: string = '',
