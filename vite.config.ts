@@ -37,6 +37,9 @@ export default defineConfig({
 	build: {
 		sourcemap: true
 	},
+	preview: {
+		allowedHosts: ['ai.jrgochan.io']
+	},
 	worker: {
 		format: 'es'
 	}
