@@ -203,7 +203,7 @@ jobs:
             if ($INSTALLER_FILES) {
               $INSTALLER_PATH = $INSTALLER_FILES[0].FullName
               Write-Host "Found installer at: $INSTALLER_PATH"
-              $NEW_NAME = "open-webui-$env:VERSION-setup.exe"
+              $NEW_NAME = "raux-$env:VERSION-setup.exe"
               $DESTINATION = "installer/$NEW_NAME"
               Move-Item -Path $INSTALLER_PATH -Destination $DESTINATION -Force
               echo "INSTALLER_NAME=$NEW_NAME" >> $env:GITHUB_ENV
@@ -242,11 +242,34 @@ jobs:
             Write-Host "WARNING: ux_installer directory not found in installer directory"
           }
           
+          # Copy the launcher raux scripts
+          if (Test-Path -Path "installer/launch_lemonade.ps1") {
+            Write-Host "Copying launch_lemonade.ps1 to package"
+            Copy-Item -Path "installer/launch_lemonade.ps1" -Destination "installer/package/"
+          } else {
+            Write-Host "WARNING: launch_lemonade.ps1 not found in installer directory"
+          }
+
+            # Copy the launcher lemonade scripts
+          if (Test-Path -Path "installer/launch_raux.ps1") {
+            Write-Host "Copying launch_raux.ps1 to package"
+            Copy-Item -Path "installer/launch_raux.ps1" -Destination "installer/package/"
+          } else {
+            Write-Host "WARNING: launch_raux.ps1 not found in installer directory"
+          }
+          
+          if (Test-Path -Path "installer/launch_raux.cmd") {
+            Write-Host "Copying launch_raux.cmd to package"
+            Copy-Item -Path "installer/launch_raux.cmd" -Destination "installer/package/"
+          } else {
+            Write-Host "WARNING: launch_raux.cmd not found in installer directory"
+          }
+          
           # Create the zip file with all contents
-          $ZIP_NAME = "open-webui-$env:VERSION-setup.zip"
+          $ZIP_NAME = "raux-$env:VERSION-setup.zip"
           Compress-Archive -Path "installer/package/*" -DestinationPath "installer/$ZIP_NAME"
           echo "ZIP_NAME=$ZIP_NAME" >> $env:GITHUB_ENV
-          Write-Host "Created zip file: $ZIP_NAME with installer and ux_installer directory"
+          Write-Host "Created zip file: $ZIP_NAME with installer, ux_installer directory, and launcher scripts"
 
       - name: Upload installer to GitHub release
         if: success()

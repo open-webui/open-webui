@@ -5,14 +5,24 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "AMD AI UX Installer",
+            "name": "Install (exe) Helper",
             "type": "debugpy",
             "request": "launch",
-            "program": "${file}",
+            "program": "${workspaceFolder}/installer/raux_installer.py",
             "console": "integratedTerminal",
             "args": [
                 "--install-dir",
-                "${workspaceFolder}\\installer"
+                "${workspaceFolder}\\installer\\test_install"
+            ]
+        },
+        {
+            "name": "Installer (python)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/installer/ux_installer/install.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--yes"
             ]
         }
     ]

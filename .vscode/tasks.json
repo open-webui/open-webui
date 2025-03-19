@@ -2,7 +2,7 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Build UX Installer",
+			"label": "Build RAUX Installer",
 			"type": "shell",
 			"command": "makensis",
 			"args": [
@@ -12,6 +12,20 @@
 			"presentation": {
 				"reveal": "always",
 				"panel": "new"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "Clean RAUX Environment: Local",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"conda deactivate & rmdir /s /q \"%LOCALAPPDATA%\\RAUX\" & conda env remove -n raux_env -y"
+			],
+			"presentation": {
+				"reveal": "silent",
+				"panel": "new",
 			},
 			"problemMatcher": []
 		}

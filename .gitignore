@@ -294,6 +294,9 @@ dist
 .tern-port
 
 # Stores VSCode versions used for testing VSCode extensions
+# VSCode folder
+.vscode/
+
 .vscode-test
 
 # yarn v2
@@ -310,3 +313,4 @@ cypress/screenshots
 
 # Installer files
 installer/**.exe
+release_info.json
