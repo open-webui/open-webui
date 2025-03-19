@@ -1,4 +1,4 @@
-from datetime import datetime
+pefrom datetime import datetime
 from io import BytesIO
 from pathlib import Path
 from typing import Dict, Any, List
@@ -42,8 +42,8 @@ class PDFGenerator:
 
     def _build_html_message(self, message: Dict[str, Any]) -> str:
         """Build HTML for a single message."""
-        role = markdown(message.get("role", "user"))
-        content = escape(message.get("content", ""))
+        role = escape(message.get("role", "user"))
+        content = markdown(message.get("content", ""))
         timestamp = message.get("timestamp")
 
         model = escape(message.get("model") if role == "assistant" else "")
