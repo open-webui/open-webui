@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict, Any, List
 from html import escape
 
-from markdown import markdown
+from mistletoe import markdown
 
 import site
 from fpdf import FPDF
@@ -42,7 +42,7 @@ class PDFGenerator:
 
     def _build_html_message(self, message: Dict[str, Any]) -> str:
         """Build HTML for a single message."""
-        role = escape(message.get("role", "user"))
+        role = markdown(message.get("role", "user"))
         content = escape(message.get("content", ""))
         timestamp = message.get("timestamp")
 
