@@ -178,8 +178,7 @@ def merge_and_sort_query_results(
     query_results: list[dict], k: int, reverse: bool = False
 ) -> dict:
     # Initialize lists to store combined data
-    combined = []
-    seen_hashes = set()  # To store unique document hashes
+    combined = dict()  # To store documents with unique document hashes
 
     for data in query_results:
         distances = data["distances"][0]
@@ -192,10 +191,19 @@ def merge_and_sort_query_results(
                     document.encode()
                 ).hexdigest()  # Compute a hash for uniqueness
 
-                if doc_hash not in seen_hashes:
-                    seen_hashes.add(doc_hash)
-                    combined.append((distance, document, metadata))
+                if doc_hash not in combined.keys():
+                    combined[doc_hash] = (distance, document, metadata)
+                    continue  # if doc is new, no further comparison is needed
 
+                # if doc is alredy in, but new distance is better, update
+                if not reverse and distance < combined[doc_hash][0]:
+                    # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
+                    # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
+                    combined[doc_hash] = (distance, document, metadata)
+                if reverse and distance > combined[doc_hash][0]:
+                    combined[doc_hash] = (distance, document, metadata)
+
+    combined = list(combined.values())
     # Sort the list based on distances
     combined.sort(key=lambda x: x[0], reverse=reverse)
 
@@ -203,6 +211,12 @@ def merge_and_sort_query_results(
     sorted_distances, sorted_documents, sorted_metadatas = (
         zip(*combined[:k]) if combined else ([], [], [])
     )
+
+    # if chromaDB, the distance is 0 (best) to 2 (worse)
+    # re-order to -1 (worst) to 1 (best) for relevance score
+    if not reverse:
+        sorted_distances = tuple(-dist for dist in sorted_distances)
+        sorted_distances = tuple(dist + 1 for dist in sorted_distances)
 
     # Create and return the output dictionary
     return {
@@ -294,12 +308,7 @@ def query_collection_with_hybrid_search(
             "Hybrid search failed for all collections. Using Non hybrid search as fallback."
         )
 
-    if VECTOR_DB == "chroma":
-        # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
-        # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
-        return merge_and_sort_query_results(results, k=k, reverse=False)
-    else:
-        return merge_and_sort_query_results(results, k=k, reverse=True)
+    return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
 def get_embedding_function(
