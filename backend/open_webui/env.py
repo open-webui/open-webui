@@ -338,6 +338,10 @@ BYPASS_MODEL_ACCESS_CONTROL = (
     os.environ.get("BYPASS_MODEL_ACCESS_CONTROL", "False").lower() == "true"
 )
 
+BYPASS_TASK_MODEL_ACCESS_CONTROL = (
+    os.environ.get("BYPASS_TASK_MODEL_ACCESS_CONTROL", "False").lower() == "true"
+)
+
 ####################################
 # WEBUI_SECRET_KEY
 ####################################

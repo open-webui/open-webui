@@ -35,7 +35,7 @@ from open_webui.config import (
     DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_MOA_GENERATION_PROMPT_TEMPLATE,
 )
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import BYPASS_TASK_MODEL_ACCESS_CONTROL, SRC_LOG_LEVELS
 
 
 log = logging.getLogger(__name__)
@@ -232,7 +232,7 @@ async def generate_title(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        return await generate_chat_completion(request, form_data=payload, user=user, bypass_filter=BYPASS_TASK_MODEL_ACCESS_CONTROL)
     except Exception as e:
         log.error("Exception occurred", exc_info=True)
         return JSONResponse(
@@ -307,7 +307,7 @@ async def generate_chat_tags(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        return await generate_chat_completion(request, form_data=payload, user=user, bypass_filter=BYPASS_TASK_MODEL_ACCESS_CONTROL)
     except Exception as e:
         log.error(f"Error generating chat completion: {e}")
         return JSONResponse(
@@ -379,7 +379,7 @@ async def generate_image_prompt(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        return await generate_chat_completion(request, form_data=payload, user=user, bypass_filter=BYPASS_TASK_MODEL_ACCESS_CONTROL)
     except Exception as e:
         log.error("Exception occurred", exc_info=True)
         return JSONResponse(
@@ -462,7 +462,7 @@ async def generate_queries(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        return await generate_chat_completion(request, form_data=payload, user=user, bypass_filter=BYPASS_TASK_MODEL_ACCESS_CONTROL)
     except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -549,7 +549,7 @@ async def generate_autocompletion(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        return await generate_chat_completion(request, form_data=payload, user=user, bypass_filter=BYPASS_TASK_MODEL_ACCESS_CONTROL)
     except Exception as e:
         log.error(f"Error generating chat completion: {e}")
         return JSONResponse(
@@ -625,7 +625,7 @@ async def generate_emoji(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        return await generate_chat_completion(request, form_data=payload, user=user, bypass_filter=BYPASS_TASK_MODEL_ACCESS_CONTROL)
     except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -691,7 +691,7 @@ async def generate_moa_response(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        return await generate_chat_completion(request, form_data=payload, user=user, bypass_filter=BYPASS_TASK_MODEL_ACCESS_CONTROL)
     except Exception as e:
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
