@@ -187,8 +187,24 @@
 				showChangelog.set($settings?.version !== $config.version);
 			}
 
-			if ($page.url.searchParams.get('temporary-chat') === 'true') {
+			// DEFAULT_USER_CHAT_MODE is globally defined in vite.config.ts, so we use it directly
+			const defaultChatMode = DEFAULT_USER_CHAT_MODE || 'normal';
+			// Get the "temporary-chat" search parameter from the URL
+			const searchParam = $page.url.searchParams.get('temporary-chat');
+
+			if (searchParam === 'true') {
+				// If "temporary-chat=true" is set in the URL, always enable temporary chat
 				temporaryChatEnabled.set(true);
+			} else if (searchParam === 'false') {
+				// If "temporary-chat=false" is set in the URL, always disable temporary chat
+				temporaryChatEnabled.set(false);
+			} else if (defaultChatMode === 'temporary') {
+				// If no URL parameter is provided, fallback to the environment setting
+				// Enable temporary chat if DEFAULT_USER_CHAT_MODE is set to "temporary"
+				temporaryChatEnabled.set(true);
+			} else {
+				// Otherwise, default to normal chat mode
+				temporaryChatEnabled.set(false);
 			}
 
 			// Check for version updates
