@@ -227,7 +227,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 yield from loader.lazy_load()
             except Exception as e:
                 if self.continue_on_failure:
-                    log.exception(e, "Error loading %s", url)
+                    log.exception(f"Error loading {url}: {e}")
                     continue
                 raise e
 
@@ -247,7 +247,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                     yield document
             except Exception as e:
                 if self.continue_on_failure:
-                    log.exception(e, "Error loading %s", url)
+                    log.exception(f"Error loading {url}: {e}")
                     continue
                 raise e
 
@@ -326,7 +326,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
             yield from loader.lazy_load()
         except Exception as e:
             if self.continue_on_failure:
-                log.exception(e, "Error extracting content from URLs")
+                log.exception(f"Error extracting content from URLs: {e}")
             else:
                 raise e
 
@@ -359,7 +359,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 yield document
         except Exception as e:
             if self.continue_on_failure:
-                log.exception(e, "Error loading URLs")
+                log.exception(f"Error loading URLs: {e}")
             else:
                 raise e
 
@@ -440,7 +440,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                     yield Document(page_content=text, metadata=metadata)
                 except Exception as e:
                     if self.continue_on_failure:
-                        log.exception(e, "Error loading %s", url)
+                        log.exception(f"Error loading {url}: {e}")
                         continue
                     raise e
             browser.close()
@@ -471,7 +471,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                     yield Document(page_content=text, metadata=metadata)
                 except Exception as e:
                     if self.continue_on_failure:
-                        log.exception(e, "Error loading %s", url)
+                        log.exception(f"Error loading {url}: {e}")
                         continue
                     raise e
             await browser.close()
@@ -557,7 +557,7 @@ class SafeWebBaseLoader(WebBaseLoader):
                 yield Document(page_content=text, metadata=metadata)
             except Exception as e:
                 # Log the error and continue with the next URL
-                log.exception(e, "Error loading %s", path)
+                log.exception(f"Error loading {path}: {e}")
 
     async def alazy_load(self) -> AsyncIterator[Document]:
         """Async lazy load text from the url(s) in web_path."""
