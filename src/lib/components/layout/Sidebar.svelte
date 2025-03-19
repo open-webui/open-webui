@@ -452,7 +452,7 @@
 	<div
 		class=" {$isApp
 			? ' ml-[4.5rem] md:ml-0'
-			: ''} fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain"
+			: ''} fixed md:hidden z-40 top-0 right-0 left-0 bottom-40 bg-black/60 w-full min-h-[calc(100vh-56px)] h-[calc(100vh-56px)] flex justify-center overflow-hidden overscroll-contain"
 		on:mousedown={() => {
 			showSidebar.set(!$showSidebar);
 		}}
@@ -471,7 +471,7 @@
 	data-state={$showSidebar}
 >
 	<div
-		class="py-2 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
+		class="py-2 my-auto flex flex-col justify-between h-screen max-h-[calc(100vh-56px)] w-[260px] overflow-x-hidden z-50 {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
@@ -521,8 +521,8 @@
 					<div class="self-center mx-1.5">
 						<img
 							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class=" size-5 -translate-x-1.5 rounded-full"
+							src="{WEBUI_BASE_URL}/Robot_04.png"
+							class=" size-5 -translate-x-1.5 rounded-lg"
 							alt="logo"
 						/>
 					</div>

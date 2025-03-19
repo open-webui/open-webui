@@ -565,9 +565,15 @@
 	<link rel="stylesheet" type="text/css" href="/themes/rosepine-dawn.css" /> -->
 </svelte:head>
 
+<div style="width:100%;height:56px;background-color:#E61F23;padding-top:16px">
+	<img src={`${WEBUI_BASE_URL}/AccelBrain.png`} style="width:160px;height:24px; margin-left:45px;cursor:pointer" alt="logo" on:click={() => {
+		window.location.href = `${WEBUI_BASE_URL}/`;
+	}}/>
+</div>
+
 {#if loaded}
 	{#if $isApp}
-		<div class="flex flex-row h-screen">
+		<div class="flex flex-row h-[calc(100vh-56px)]">
 			<AppSidebar />
 
 			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">

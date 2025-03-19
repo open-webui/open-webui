@@ -227,7 +227,13 @@
 				attributes: { id },
 				handleDOMEvents: {
 					focus: (view, event) => {
+						//console.log('editor focus');
 						eventDispatch('focus', { event });
+						return false;
+					},
+					blur: (view, event) => {
+						//console.log('editor blur');
+						eventDispatch('blur', { event });
 						return false;
 					},
 					keyup: (view, event) => {

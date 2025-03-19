@@ -15,7 +15,7 @@
 			  src.startsWith('/')
 			? src
 			: `/user.png`}
-	class=" {className} object-cover rounded-full -translate-y-[1px]"
+	class=" {className} object-cover rounded-lg -translate-y-[1px]"
 	alt="profile"
 	draggable="false"
 />

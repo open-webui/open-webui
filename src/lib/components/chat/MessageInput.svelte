@@ -5,6 +5,7 @@
 	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
 
 	import { onMount, tick, getContext, createEventDispatcher, onDestroy } from 'svelte';
+
 	const dispatch = createEventDispatcher();
 
 	import {
@@ -540,6 +541,8 @@
 
 							filesInputElement.value = '';
 						}}
+						on:focusin={() => console.log('focus in')}
+						on:focusout={() => console.log('focus out')}
 					/>
 
 					{#if recording}
@@ -871,6 +874,16 @@
 														}
 													}
 												}}
+												on:focus={(view,event) => {
+													//console.log('focus in richtext');
+													dispatch('focus', { event });
+													return false;
+												}}
+												on:blur={(view,event) => {
+													//console.log('focus out richtext');
+													dispatch('blur', { event });
+													return false;
+												}}
 											/>
 										</div>
 									{:else}
@@ -1027,6 +1040,7 @@
 												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
 											}}
 											on:focus={async (e) => {
+												console.log('focus in textarea');
 												e.target.style.height = '';
 												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
 											}}
@@ -1068,6 +1082,8 @@
 													}
 												}
 											}}
+											on:focusin={() => console.log('focus in textarea')}
+											on:blur={() => console.log('focus out textarea')}
 										/>
 									{/if}
 								</div>

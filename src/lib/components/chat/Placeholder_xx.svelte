@@ -43,12 +43,12 @@
 	let focused = false;
 
 	const handleFocusIn=()=> {
-		//console.log('focus in parent component');
+		console.log('focus in parent component');
 		focused=true;
 	}
 
 	const handleFocusOut=()=> {
-		//console.log('focus out parent component');
+		console.log('focus out parent component');
 		focused=false;
 	}
 
@@ -218,8 +218,8 @@
 					on:submit={(e) => {
 						dispatch('submit', e.detail);
 					}}
-					on:focus={handleFocusIn}
-					on:blur={handleFocusOut} 
+					on:focusin={handleFocusIn}
+					on:focusout={handleFocusOut} 
 				/>
 			</div>
 		</div>

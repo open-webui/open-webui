@@ -548,13 +548,13 @@
 		id="message-{message.id}"
 		dir={$settings.chatDirection}
 	>
-		<div class={`shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
-			<ProfileImage
-				src={model?.info?.meta?.profile_image_url ??
-					($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
-				className={'size-8'}
-			/>
-		</div>
+		{#if message.error}
+			<ProfileImage src={`${WEBUI_BASE_URL}/Robot_03.png`} />
+		{:else if message.done}
+			<ProfileImage src={`${WEBUI_BASE_URL}/Robot_01.png`} />
+		{:else}
+			<ProfileImage src={`${WEBUI_BASE_URL}/Robot_02.png`} />
+		{/if}
 
 		<div class="flex-auto w-0 pl-1">
 			<Name>
