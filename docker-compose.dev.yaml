@@ -20,6 +20,7 @@ services:
       - ./package.json:/app/package.json
       - ./package-lock.json:/app/package-lock.json
       - ./static/assets:/app/static/assets
+      - ./static/avatars:/app/static/avatars
       - ./static/data:/app/static/data
       - ./vite.config.ts:/app/vite.config.ts
       - ./svelte.config.js:/app/svelte.config.js
