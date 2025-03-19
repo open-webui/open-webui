@@ -70,7 +70,7 @@ export const getCharacters = async (token: string = '') => {
 
 type CharacterUpdateForm = {
 	title?: string;
-	systemPrompt?: string;
+	system_prompt?: string;
 };
 
 export const updateCharacterById = async (token: string, id: string, form: CharacterUpdateForm) => {
@@ -85,7 +85,7 @@ export const updateCharacterById = async (token: string, id: string, form: Chara
 		},
 		body: JSON.stringify({
 			title: form.title,
-			description: form.systemPrompt,
+			system_prompt: form.system_prompt,
 		})
 	})
 		.then(async (res) => {

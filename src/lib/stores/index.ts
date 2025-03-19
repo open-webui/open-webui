@@ -190,6 +190,7 @@ type CharacterPrompt = {
 	title: string;
 	system_prompt: string;
 	created_at: number;
+	updated_at: number;
 }
 
 type Document = {

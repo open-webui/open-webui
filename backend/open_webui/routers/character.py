@@ -74,3 +74,20 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     
     result = Characters.delete_character_by_id(id=id)
     return result
+
+
+@router.post("/{id}/update", response_model=Optional[CharacterUserModel])
+async def update_knowledge_by_id(
+    id: str,
+    form_data: CharacterForm,
+    user=Depends(get_verified_user),
+):
+    character = Characters.get_character_by_id(id=id)
+    if not character:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    result = Characters.update_character_by_id(id=id, form_data=form_data)
+    return result

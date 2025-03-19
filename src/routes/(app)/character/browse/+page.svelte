@@ -4,12 +4,15 @@ import { formatDate } from '$lib/utils';
 import { chats, chatId, user, chatSysPrompt } from '$lib/stores';
 import { v4 as uuidv4} from 'uuid';
 import { goto } from '$app/navigation';
-import { getCharacters, deleteCharacterById } from '$lib/apis/character';
+import { getCharacters, deleteCharacterById, updateCharacterById } from '$lib/apis/character';
 import { onMount } from 'svelte';
 import Tooltip from '$lib/components/common/Tooltip.svelte';
 import { toast } from 'svelte-sonner';
+import Pencil from '$lib/components/icons/Pencil.svelte';
+import Modal from '$lib/components/common/Modal.svelte';
 
-console.log('characters', $characters)
+let show = false;
+let selectedCharacter = {}
 
 onMount(async () => {
     try {
@@ -23,6 +26,7 @@ onMount(async () => {
 
 const deleteChatHandler = async (characterId) => {
     await deleteCharacterById(localStorage.token, characterId).catch((error) => {
+        console.error(error)
         toast.error(`${error}`);
     });
 
@@ -53,7 +57,42 @@ function startInterview(characterName, systemPrompt) {
     chatId.set(newChatId)
     goto('/')
 }
+
+const saveCharacter = async (character) => {
+    await updateCharacterById(localStorage.token, character.id, character)
+    .catch((error) => {
+        console.error(error)
+        toast.error(`${error}`);
+    });
+
+    const charactersFromDB = await getCharacters(localStorage.token)
+    characters.set(charactersFromDB)
+
+    show = false
+}
+
 </script>
+
+<Modal size="lg" bind:show>
+    <div class="text-gray-700 dark:text-gray-100">
+		<div class="dark:text-gray-300 px-5 pt-4 pb-4">
+			<div>
+                <div class="my-2.5 mb-3 text-sm font-medium">Editing System Prompt for {selectedCharacter.title} </div> 
+                <textarea class="mt-3 w-full rounded-lg p-4 text-sm bg-white dark:text-gray-300 dark:bg-gray-850 outline-hidden resize-none"
+                rows="16"
+                bind:value={selectedCharacter.system_prompt}
+                ></textarea>
+            </div>
+            <div class='flex justify-end pt-3 text-sm font-medium'>
+                <button 
+                    class="px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+                    on:click={() => saveCharacter(selectedCharacter)}
+                >
+                Save
+                </button>
+            </div>
+	</div>
+</Modal>
 
 <div class="gap-1 my-1.5 pb-1 px-[18px] flex-1 max-h-full overflow-y-auto">
     <div class="text-xl font-medium px-0.5 mb-5">
@@ -63,16 +102,16 @@ function startInterview(characterName, systemPrompt) {
     <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full rounded-sm">
         <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 -translate-y-0.5">
             <tr class="">
-                <th scope="col" class="px-3 py-1.5 cursor-pointer select-none">
+                <th scope="col" class="px-3 py-1.5 select-none">
                     <div class="flex gap-1.5 items-center">Character Name</div>
                 </th>
-                <th scope="col" class="px-3 py-1.5 cursor-pointer select-none">
-                    <div class="flex gap-1.5 items-center">Created At</div>
+                <th scope="col" class="px-3 py-1.5 select-none">
+                    <div class="flex gap-1.5 items-center">Last Updated</div>
                 </th>
-                <th scope="col" class="px-3 py-1.5 cursor-pointer select-none">
+                <th scope="col" class="px-3 py-1.5 select-none">
                     <div class="flex gap-1.5 items-center">System Prompt</div>
                 </th>
-                <th scope="col" class="px-3 py-1.5 cursor-pointer select-none">
+                <th scope="col" class="px-5 py-1.5 select-none">
                     <div class="flex gap-1.5 items-center">Interview</div>
                 </th>
         </thead>
@@ -83,17 +122,18 @@ function startInterview(characterName, systemPrompt) {
                         <div>{character.title}</div>
                     </td>
                     <td class='px-3 py-1'>
-                        <div>{formatDate(character.created_at * 1000)}</div> <!--convert from s to ms-->
+                        <div>{formatDate(character.updated_at * 1000)}</div> <!--convert from s to ms-->
                     </td>
                     <td class='px-3 py-1'>
-                        <div>
-                            <!-- TODO: edit and save option for text area-->
-                            <textarea class="w-full" 
-                            readonly={$user?.role != 'admin'} 
-                            value={character.system_prompt}></textarea>
+                        <div class='py-1 flex justify-left w-full'>
+                            <textarea 
+                                class="w-full" 
+                                readonly={true}
+                                value={character.system_prompt}></textarea>
+                            
                         </div>
                     </td>
-                    <td class='px-3 py-1 flex justify-left w-full'>
+                    <td class='p-2 px-5 flex justify-left w-full'>
                         <div class="flex">
                             <button 
                                 class="px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
@@ -102,9 +142,20 @@ function startInterview(characterName, systemPrompt) {
                                 Start Interview
                             </button>
                         </div>
+                        <Tooltip content={'Edit'}>
+                            <button
+                                class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-3 ml-3"
+                                on:click={() => {
+                                    show = true;
+                                    selectedCharacter = character
+                                }}
+                            >
+                                <Pencil />
+                            </button>
+                        </Tooltip>
                         <Tooltip content={'Delete Character'}>
                             <button
-                                class="ml-1 flex self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+                                class="ml-3 p-3 flex self-center w-fit text-sm hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
                                 on:click={async () => {
                                     deleteChatHandler(character.id);
                                 }}
