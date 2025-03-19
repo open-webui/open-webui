@@ -611,6 +611,7 @@
 				bind:value={search}
 				on:input={searchDebounceHandler}
 				placeholder={$i18n.t('Search')}
+				showClearButton={true}
 			/>
 		</div>
 
