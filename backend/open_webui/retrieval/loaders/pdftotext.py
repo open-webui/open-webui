@@ -31,7 +31,7 @@ class PdftotextLoader():
         }
         data = {
             'max_pages' : self.max_pages,
-            'header_footer': False
+            'header_footer': True
         }
 
         r = requests.post(url=self.url, headers=headers, files=files, data=data, timeout=240)
@@ -69,7 +69,7 @@ class PdftotextLoaderAsync():
         
         data = {
             'max_pages': self.max_pages,
-            'header_footer': False
+            'header_footer': True
         }
         
         r = requests.post(url=self.url, headers=headers, files=files, data=data, timeout=30)
