@@ -215,6 +215,14 @@
 			// Event listener for when dragging ends
 			folderElement.addEventListener('dragend', onDragEnd);
 		}
+
+		if (folders[folderId].isNew) {
+			folders[folderId].isNew = false;
+			
+			setTimeout(() => {
+				editHandler();
+			}, 100);
+		}
 	});
 
 	onDestroy(() => {
