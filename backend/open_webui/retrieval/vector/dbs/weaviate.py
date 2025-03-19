@@ -18,13 +18,50 @@ from open_webui.config import (
     WEAVIATE_GRPC_HOST,
     WEAVIATE_GRPC_PORT,
     WEAVIATE_API_KEY,
-    RAG_OPENAI_API_KEY,
 )
 
 from open_webui.env import SRC_LOG_LEVELS
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
+
+
+def build_filter(filter_dict, operator="Equal"):
+    """
+    Converte um dicionário de filtros em um objeto Filter do Weaviate.
+
+    Parâmetros:
+        - filter_dict (dict): Dicionário onde as chaves são os caminhos dos campos e os valores são os valores a serem filtrados.
+        - operator (str): Operador a ser usado (exemplo: "Equal", "GreaterThan", "LessThan", "Like").
+
+    Retorna:
+        - Filter: Objeto de filtro do Weaviate ou None se `filter_dict` for vazio.
+    """
+    if not filter_dict:
+        return None  # Retorna None se não houver filtros
+
+    filters = None
+
+    for key, value in filter_dict.items():
+        # Criando o filtro corretamente usando os métodos do Weaviate
+        if operator == "Equal":
+            condition = Filter.by_property(key).equal(value)
+        elif operator == "GreaterThan":
+            condition = Filter.by_property(key).greater_than(value)
+        elif operator == "LessThan":
+            condition = Filter.by_property(key).less_than(value)
+        elif operator == "Like":
+            condition = Filter.by_property(key).like(value)
+        else:
+            raise ValueError(f"Operador '{operator}' não suportado.")
+
+        if filters is None:
+            filters = condition
+        else:
+            filters = filters & condition  # Usa AND para combinar filtros
+
+    return filters
+
 
 
 class WeaviateClient:
@@ -42,9 +79,11 @@ class WeaviateClient:
         )
 
     def transform_collection_name(self, collection_name):
-        if not (collection_name.startswith('file') or collection_name.startswith('knowledge')):
-            collection_name = f"file-{collection_name}"
-        return re.sub(r"[^a-zA-Z0-9]", "", collection_name)
+        collection_name = re.sub(r"[^a-zA-Z0-9]", "", collection_name)
+        if not (collection_name.startswith('c') or collection_name.startswith('C')):
+            collection_name = f'c{collection_name}'
+        
+        return collection_name.capitalize()
 
     def has_collection(self, collection_name: str) -> bool:
         """
@@ -69,21 +108,22 @@ class WeaviateClient:
         """
         Cria a collection com uma configuração padrão:
           - Utiliza o vectorizer 'text2vec-openai' baseado na propriedade 'text'
-          - Define as propriedades 'text' e 'metadata'
+          - Define as propriedades 'documents' e 'metadata'
         """
         collection_name = self.transform_collection_name(collection_name)
         self.client.collections.create(
             collection_name,
             vectorizer_config=[
                 Configure.NamedVectors.text2vec_openai(
-                    name="text",
-                    source_properties=["text"],
+                    name="documents",
+                    source_properties=["documents"],
                     vector_index_config=Configure.VectorIndex.hnsw(),
                 ),
             ],
             properties=[
                 Property(name="file_id", data_type=DataType.TEXT),
-                Property(name="text", data_type=DataType.TEXT),
+                Property(name="documents", data_type=DataType.TEXT),
+                Property(name="hash", data_type=DataType.TEXT),
                 Property(
                     name="metadata",
                     data_type=DataType.OBJECT,
@@ -96,7 +136,6 @@ class WeaviateClient:
                         Property(name="file_id", data_type=DataType.TEXT),
                         Property(name="source", data_type=DataType.TEXT),
                         Property(name="start_index", data_type=DataType.INT),
-                        Property(name="hash", data_type=DataType.TEXT),
                         Property(name="embedding_config", data_type=DataType.TEXT),
                         # Será armazenado como JSON string
                     ],
@@ -123,7 +162,8 @@ class WeaviateClient:
         data_object = [
             {
                 "file_id": item["id"],  # Identificador único
-                "text": item["text"],  # Conteúdo textual
+                "documents": item["text"],  # Conteúdo textual
+                "hash" : item["metadata"]["hash"],
                 "metadata": item["metadata"],  # Metadados (JSON)
             }
             for item in items
@@ -149,8 +189,9 @@ class WeaviateClient:
         coll = self.client.collections.get(collection_name)
         for item in items:
             data = {
-                "id": item["id"],
-                "text": item["text"],
+                "file_id": item["id"],
+                "documents": item["text"],
+                "hash": item["metadata"]["hash"],
                 "metadata": [item["metadata"]],
             }
             try:
@@ -172,20 +213,23 @@ class WeaviateClient:
         """
         collection_name = self.transform_collection_name(collection_name)
         collection = self.client.collections.get(collection_name)
+        
+        filter_condition = build_filter(filter)
 
         try:
             if collection:
-                response = []
-                for key, value in filter.items():
-                    response.append(collection.query.fetch_object_by_id(value))
-
+                
+                results = collection.query.fetch_objects(
+                    filters=filter_condition,
+                    limit=limit  # Número máximo de resultados
+                )
                 items = [
-                    r.objects for r in response
+                    r for r in results.objects
                 ]  # Supõe que a resposta contenha a lista de objetos em 'objects'
                 log.info(items)
                 if items:
-                    ids = [obj.properties.get("id", "") for obj in items]
-                    docs = [obj.properties.get("text", "") for obj in items]
+                    ids = [obj.properties.get("file_id", "") for obj in items]
+                    docs = [obj.properties.get("documents", "") for obj in items]
                     meta = [obj.properties.get("metadata", {}) for obj in items]
                     return GetResult(ids=[ids], documents=[docs], metadatas=[meta])
         except:
@@ -204,7 +248,7 @@ class WeaviateClient:
         items = response.objects
         if items:
             ids = [obj.properties.get("file_id", "") for obj in items]
-            docs = [obj.properties.get("text", "") for obj in items]
+            docs = [obj.properties.get("documents", "") for obj in items]
             meta = [obj.properties.get("metadata", {}) for obj in items]
             return GetResult(ids=[ids], documents=[docs], metadatas=[meta])
         return None
@@ -248,7 +292,7 @@ class WeaviateClient:
 
         items = response.objects
         ids = [obj.properties.get("file_id", "") for obj in items]
-        docs = [obj.properties.get("text", "") for obj in items]
+        docs = [obj.properties.get("documents", "") for obj in items]
         meta = [obj.properties.get("metadata", {}) for obj in items]
         # Supõe que a distância esteja disponível em _additional.distance
         dists = [

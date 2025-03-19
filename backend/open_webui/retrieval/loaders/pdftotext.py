@@ -28,16 +28,16 @@ class PdftotextLoader:
             "accept": "application/json",
         }
         files = {"pdf_upload": pdf}
-        data = {"max_pages": self.max_pages, "header_footer": False}
+        data = {"max_pages": self.max_pages, "header_footer": True}
 
         r = requests.post(
             url=self.url, headers=headers, files=files, data=data, timeout=240
         )
-        log.info(r)
+        #log.info(r)
         response = r.json()
         txt = response.get("text", "")
 
-        log.info(f"REQ_ID: %s Extracted text from pdf using OCR, {txt} -> %s ")
+        #log.info(f"REQ_ID: %s Extracted text from pdf using OCR, {txt} -> %s ")
 
         return txt
 
@@ -50,8 +50,6 @@ class PdftotextLoaderAsync:
         self.max_pages = max_pages
 
     def load(self):
-        log.info(self.max_pages)
-
         with open(self.pdf_path, "rb") as f:
             pdf = f.read()
 
@@ -61,10 +59,10 @@ class PdftotextLoaderAsync:
 
         files = {"pdf_upload": pdf}
 
-        data = {"max_pages": self.max_pages, "header_footer": False}
+        data = {"header_footer": True}
 
         r = requests.post(
-            url=self.url, headers=headers, files=files, data=data, timeout=30
+            url=self.url, headers=headers, files=files, data=data
         )
         log.info(r)
         response = r.json()

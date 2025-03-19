@@ -49,7 +49,9 @@ import asyncio
 
 @router.post("/", response_model=FileModelResponse)
 def upload_file(
-    request: Request, file: UploadFile = File(...), user=Depends(get_verified_user)
+    request: Request, file: UploadFile = File(...), 
+    user=Depends(get_verified_user),
+    file_metadata: dict = {},
 ):
     log.info(f"file.content_type: {file.content_type}")
     try:
@@ -73,6 +75,7 @@ def upload_file(
                         "name": name,
                         "content_type": file.content_type,
                         "size": len(contents),
+                        "data": file_metadata,
                     },
                 }
             ),

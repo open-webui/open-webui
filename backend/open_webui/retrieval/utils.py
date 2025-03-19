@@ -102,7 +102,7 @@ def query_doc_weaviate(
         )
 
         if result:
-            log.info(f"query_doc:result {result.ids} {result.metadatas}")
+            log.info(f"query_doc_weaviate:result {result.ids} {result.metadatas} {result.distances}")
 
         return result
     except Exception as e:
@@ -267,8 +267,10 @@ def query_collection(
             query_embedding = query
         else:
             query_embedding = embedding_function(query)
+            
         for collection_name in collection_names:
             if collection_name:
+                result = None
                 try:
                     if VECTOR_DB == 'weaviate':
                         query_doc_weaviate(

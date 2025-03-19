@@ -130,11 +130,11 @@ class Loader:
         filename: str,
         file_content_type: str,
         file_path: str,
-        isasync: bool = False,
+        is_async: bool = False,
     ) -> list[Document]:
-        self.loader = self._get_loader(filename, file_content_type, file_path, isasync)
+        self.loader = self._get_loader(filename, file_content_type, file_path, is_async)
 
-        if not isasync:
+        if not is_async:
             docs = self.loader.load()
 
             if type(docs) == str:

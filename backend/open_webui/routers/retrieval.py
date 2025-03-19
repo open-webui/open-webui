@@ -37,6 +37,7 @@ from open_webui.models.files import FileModel, Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.config import VECTOR_DB
 
 # Document loaders
 from open_webui.retrieval.loaders.main import Loader
@@ -154,11 +155,6 @@ def get_rf(
                 log.error("CrossEncoder error")
                 raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
     return rf
-
-def transform_collection_name(collection_name):
-    if not (collection_name.startswith('File') or collection_name.startswith('Knowledge')):
-        collection_name = f"File-{collection_name}"
-    return re.sub(r"[^a-zA-Z0-9]", "", collection_name)
 
 ##########################################
 #
@@ -832,36 +828,47 @@ def save_docs_to_vector_db(
                 return True
 
         log.info(f"adding to collection {collection_name}")
-        embedding_function = get_embedding_function(
-            request.app.state.config.RAG_EMBEDDING_ENGINE,
-            request.app.state.config.RAG_EMBEDDING_MODEL,
-            request.app.state.ef,
-            (
-                request.app.state.config.RAG_OPENAI_API_BASE_URL
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                else request.app.state.config.RAG_OLLAMA_BASE_URL
-            ),
-            (
-                request.app.state.config.RAG_OPENAI_API_KEY
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                else request.app.state.config.RAG_OLLAMA_API_KEY
-            ),
-            request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-        )
+        
+        if VECTOR_DB != 'weaviate':
+            embedding_function = get_embedding_function(
+                request.app.state.config.RAG_EMBEDDING_ENGINE,
+                request.app.state.config.RAG_EMBEDDING_MODEL,
+                request.app.state.ef,
+                (
+                    request.app.state.config.RAG_OPENAI_API_BASE_URL
+                    if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                    else request.app.state.config.RAG_OLLAMA_BASE_URL
+                ),
+                (
+                    request.app.state.config.RAG_OPENAI_API_KEY
+                    if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                    else request.app.state.config.RAG_OLLAMA_API_KEY
+                ),
+                request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+            )
 
-        embeddings = embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts)), user=user
-        )
+            embeddings = embedding_function(
+                list(map(lambda x: x.replace("\n", " "), texts)), user=user
+            )
 
-        items = [
-            {
-                "id": str(uuid.uuid4()),
-                "text": text,
-                "vector": embeddings[idx],
-                "metadata": metadatas[idx],
-            }
-            for idx, text in enumerate(texts)
-        ]
+            items = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "text": text,
+                    "vector": embeddings[idx],
+                    "metadata": metadatas[idx],
+                }
+                for idx, text in enumerate(texts)
+            ]
+        else:
+            items = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "text": text,
+                    "metadata": metadatas[idx],
+                }
+                for idx, text in enumerate(texts)
+            ]
 
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
@@ -893,16 +900,13 @@ def process_file(
         engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE
 
         if collection_name is None:
-            collection_name = transform_collection_name(file.id)
-        else:
-            collection_name = transform_collection_name(collection_name)
-        log.info(f"Collection: {collection_name}")
+            collection_name = f"file-{file.id}"
 
         if form_data.content:
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
 
-            VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+            VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
 
             docs = [
                 Document(
@@ -922,9 +926,14 @@ def process_file(
             # Check if the file has already been processed and save the content
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
-            result = VECTOR_DB_CLIENT.query(
-                collection_name=collection_name, filter={"file_id": file.id}
-            )
+            if VECTOR_DB_CLIENT == 'weaviate':
+                result = VECTOR_DB_CLIENT.query(
+                    collection_name=f"file-{file.id}", filter={"file_id": file.id}
+                )
+            else:
+                result = VECTOR_DB_CLIENT.query(
+                    collection_name=f"file-{file.id}", filter={"file_id": file.id}
+                )
 
             if result is not None and len(result.ids[0]) > 0:
                 docs = [
@@ -952,10 +961,6 @@ def process_file(
         else:
             # Process the file and save the content
             # Usage: /files/
-            is_pdf2text = (
-                engine == "pdftotext"
-                and file.meta.get("content_type") == "application/pdf"
-            )
             file_path = file.path
             if file_path:
                 file_path = Storage.get_file(file_path)
@@ -1069,11 +1074,12 @@ async def process_file_async(
         )
 
         if collection_name is None:
-            collection_name = f"File-{file.id}"
+            collection_name = f"file-{file.id}"
 
         # Process the file and save the content
         # Usage: /files/
         file_path = file.path
+        text_content = ""
         if file_path:
             file_path = Storage.get_file(file_path)
             loader = Loader(
