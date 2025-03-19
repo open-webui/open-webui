@@ -123,7 +123,7 @@
 									class="px-3! py-1.5! cursor-pointer border border-gray-100 dark:border-gray-850"
 									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
 								>
-									<div class="flex flex-col gap-1.5 text-left">
+									<div class="gap-1.5 text-left">
 										<div class="shrink-0 break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
@@ -144,7 +144,7 @@
 										class="px-3! py-1.5! text-gray-900 dark:text-white w-max border border-gray-100 dark:border-gray-850"
 										style={token.align[cellIdx] ? '' : `text-align: ${token.align[cellIdx]}`}
 									>
-										<div class="flex flex-col break-normal">
+										<div class="break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
 												tokens={cell.tokens}
