@@ -309,10 +309,13 @@
 
 		await tick();
 
-		// focus on the input
+		// focus on the input and select all text
 		setTimeout(() => {
 			const input = document.getElementById(`folder-${folderId}-input`);
-			input.focus();
+			if (input) {
+				input.focus();
+				input.select();
+			}
 		}, 100);
 	};
 
