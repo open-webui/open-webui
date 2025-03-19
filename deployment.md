@@ -39,7 +39,7 @@ gcloud container images list
 ## **🚀 Step 4: Deploy the Container on Google Cloud Run**
 Deploy your image to **Google Cloud Run** with:
 ```sh
-gcloud run deploy openwebui-service --image gcr.io/cogniforce/openwebui-service --platform managed --region europe-west4 --allow-unauthenticated  --memory 1Gi --cpu 2 --timeout 300s
+ 
 ```
 
 ---
@@ -51,11 +51,23 @@ gcloud run services list
 ```
 Retrieve the **service URL**:
 ```sh
-gcloud run services describe openwebui-service --region europe-west4 --format 'value(status.url)'
+gcloud run services describe openwebui-service --region europe-west4 --format="value(status.url)"
 ```
 Visit this URL in your browser to see if your service is running!
 
 ---
+
+## **🚀 Step 5.1: Verify Custom Domain**
+Run this command to check your domain mapping:
+```sh
+gcloud beta run domain-mappings describe --domain chat.cogniforce.io
+```
+
+## **🚀 Step 5.2: List Custom Domains**
+Run this command to check your domains mapping:
+```sh
+gcloud beta run domain-mappings list --region=europe-west4
+```
 
 ## **♻️ Step 6: Updating the Service**
 Anytime you update your project:  
