@@ -11,7 +11,7 @@
 </script>
 
 <div class="flex flex-row gap-4 items-center justify-center flex-wrap">
-	{#each $agents as { id, name, subtitle, description, avatarUrl }}
+	{#each $agents as { id, name, subtitle, description }}
 		<div class="min-h-96 flex items-center">
 			<div
 				class="flex-0 group w-52 pb-4 mx-6 bg-white text-left rounded-3xl shadow-xl cursor-pointer transition group"
@@ -21,8 +21,8 @@
 			>
 				<div class="overflow-hidden transition-[width,height] duration-[500ms] h-36 rounded-t-3xl">
 					<img
-						class="h-full object-cover rounded-3xl rounded-b-none"
-						src={avatarUrl}
+						class="h-full w-full object-cover rounded-3xl rounded-b-none"
+						src={`/avatars/${id}.jpg`}
 						alt="Model Avatar"
 					/>
 				</div>

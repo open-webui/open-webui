@@ -5,7 +5,6 @@ export type Agent = {
 	name: string,
 	subtitle: string,
 	description: string,
-	avatarUrl: string,
 }
 
 const LOCATION = '/data/agents.json';
