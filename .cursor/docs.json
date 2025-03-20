@@ -1,0 +1,34 @@
+{
+  "docs": [
+    {
+      "name": "RAUX",
+      "url": "https://github.com/aigdat/raux/blob/main/docs",
+      "indexed": "3/20/25, 10:54 AM"
+    },
+    {
+      "name": "Open-WebUI",
+      "url": "https://github.com/open-webui/open-webui",
+      "indexed": "3/20/25, 10:57 AM"
+    },
+    {
+      "name": "GAIA",
+      "url": "https://github.com/amd/gaia",
+      "indexed": "3/20/25, 11:10 AM"
+    },
+    {
+      "name": "RyzenAI",
+      "url": "https://ryzenai.docs.amd.com",
+      "indexed": "3/20/25, 11:12 AM"
+    },
+    {
+      "name": "Lemonade",
+      "url": "https://ryzenai.docs.amd.com/en/latest/llm/overview.html",
+      "indexed": "3/20/25, 11:13 AM"
+    },
+    {
+      "name": "NSIS",
+      "url": "https://nsis.sourceforge.io/Docs",
+      "indexed": "3/20/25, 11:42 AM"
+    }
+  ]
+} 
