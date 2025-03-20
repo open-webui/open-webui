@@ -312,7 +312,7 @@ def get_embedding_function(
 ):
     if embedding_engine == "":
         return lambda query, user=None: embedding_function.encode(query).tolist()
-    elif embedding_engine in ["ollama", "openai"]:
+    elif embedding_engine in ["ollama", "openai", "portkey"]:
         func = lambda query, user=None: generate_embeddings(
             engine=embedding_engine,
             model=embedding_model,
@@ -576,8 +576,46 @@ def generate_openai_batch_embeddings(
     except Exception as e:
         log.exception(f"Error generating openai batch embeddings: {e}")
         return None
-
-
+    
+def generate_portkey_batch_embeddings(
+    model: str,
+    texts: list[str],
+    url: str = "https://ai-gateway.apps.cloud.rt.nyu.edu/v1",
+    key: str = "",
+    user: UserModel = None,
+    virtual_key: str = "text-embedding-d47871",
+) -> Optional[list[list[float]]]:
+    try:
+        headers = {
+            "Content-Type": "application/json",
+            "x-portkey-api-key": key, 
+            "x-portkey-virtual-key": virtual_key,
+        }
+        
+        # Process each text individually and collect results
+        all_embeddings = []
+        for text in texts:
+            r = requests.post(
+                f"{url}/embeddings",
+                headers=headers,
+                json={
+                    "input": text,
+                    "model": model,
+                    "encoding_format": "float"
+                },
+            )
+            r.raise_for_status()
+            data = r.json()
+            if "data" in data and len(data["data"]) > 0:
+                all_embeddings.append(data["data"][0]["embedding"])
+            else:
+                raise ValueError("Response missing expected embedding data")
+        
+        return all_embeddings if all_embeddings else None
+    except Exception as e:
+        log.exception(f"Error generating portkey batch embeddings: {e}")
+        return None
+    
 def generate_ollama_batch_embeddings(
     model: str, texts: list[str], url: str, key: str = "", user: UserModel = None
 ) -> Optional[list[list[float]]]:
@@ -640,7 +678,13 @@ def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **
             embeddings = generate_openai_batch_embeddings(model, [text], url, key, user)
 
         return embeddings[0] if isinstance(text, str) else embeddings
+    elif engine == "portkey":
+        if isinstance(text, list):
+            embeddings = generate_portkey_batch_embeddings(model, text, url, key, user)
+        else:
+            embeddings = generate_portkey_batch_embeddings(model, [text], url, key, user)
 
+        return embeddings[0] if isinstance(text, str) else embeddings
 
 import operator
 from typing import Optional, Sequence

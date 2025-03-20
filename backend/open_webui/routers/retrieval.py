@@ -246,7 +246,7 @@ async def update_embedding_config(
         request.app.state.config.RAG_EMBEDDING_ENGINE = form_data.embedding_engine
         request.app.state.config.RAG_EMBEDDING_MODEL = form_data.embedding_model
 
-        if request.app.state.config.RAG_EMBEDDING_ENGINE in ["ollama", "openai"]:
+        if request.app.state.config.RAG_EMBEDDING_ENGINE in ["ollama", "openai", "portkey"]:
             if form_data.openai_config is not None:
                 request.app.state.config.RAG_OPENAI_API_BASE_URL = (
                     form_data.openai_config.url
@@ -278,12 +278,12 @@ async def update_embedding_config(
             request.app.state.ef,
             (
                 request.app.state.config.RAG_OPENAI_API_BASE_URL
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai" or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
                 else request.app.state.config.RAG_OLLAMA_BASE_URL
             ),
             (
                 request.app.state.config.RAG_OPENAI_API_KEY
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai" or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
                 else request.app.state.config.RAG_OLLAMA_API_KEY
             ),
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
@@ -862,12 +862,12 @@ def save_docs_to_vector_db(
             request.app.state.ef,
             (
                 request.app.state.config.RAG_OPENAI_API_BASE_URL
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai" or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
                 else request.app.state.config.RAG_OLLAMA_BASE_URL
             ),
             (
                 request.app.state.config.RAG_OPENAI_API_KEY
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai" or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
                 else request.app.state.config.RAG_OLLAMA_API_KEY
             ),
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
