@@ -209,6 +209,10 @@ ENABLE_FORWARD_USER_INFO_HEADERS = (
     os.environ.get("ENABLE_FORWARD_USER_INFO_HEADERS", "False").lower() == "true"
 )
 
+PRESERVE_METADATA_IN_OPENAI_API_CALLS = (
+    os.environ.get("PRESERVE_METADATA_IN_OPENAI_API_CALLS", "False").lower() == "true"
+)
+
 
 ####################################
 # WEBUI_BUILD_HASH

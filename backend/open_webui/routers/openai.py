@@ -19,6 +19,7 @@ from starlette.background import BackgroundTask
 from open_webui.models.models import Models
 from open_webui.config import (
     CACHE_DIR,
+    PRESERVE_METADATA_IN_OPENAI_API_CALLS,
 )
 from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT,
@@ -584,7 +585,12 @@ async def generate_chat_completion(
     idx = 0
 
     payload = {**form_data}
-    metadata = payload.pop("metadata", None)
+
+    # Only remove metadata from payload if PRESERVE_METADATA_IN_OPENAI_API_CALLS.value is False
+    if not PRESERVE_METADATA_IN_OPENAI_API_CALLS.value:
+        metadata = payload.pop("metadata", None)
+    else:
+        metadata = payload.get("metadata", None)
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)

@@ -793,6 +793,12 @@ ENABLE_OPENAI_API = PersistentConfig(
     os.environ.get("ENABLE_OPENAI_API", "True").lower() == "true",
 )
 
+PRESERVE_METADATA_IN_OPENAI_API_CALLS = PersistentConfig(
+    "PRESERVE_METADATA_IN_OPENAI_API_CALLS",
+    "openai.preserve_metadata",
+    os.environ.get("PRESERVE_METADATA_IN_OPENAI_API_CALLS", "False").lower() == "true",
+)
+
 
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
