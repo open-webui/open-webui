@@ -2,6 +2,7 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext, createEventDispatcher } from 'svelte';
+
 	const dispatch = createEventDispatcher();
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -13,19 +14,20 @@
 
 	const i18n = getContext('i18n');
 
-	export let onClose: Function = () => {};
+	export let onClose: Function = () => {
+	};
 
 	let show = false;
 </script>
 
 <Dropdown
+	align="end"
 	bind:show
 	on:change={(e) => {
 		if (e.detail === false) {
 			onClose();
 		}
 	}}
-	align="end"
 >
 	<Tooltip content={$i18n.t('Add Content')}>
 		<button
@@ -36,10 +38,10 @@
 			}}
 		>
 			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 16 16"
-				fill="currentColor"
 				class="w-4 h-4"
+				fill="currentColor"
+				viewBox="0 0 16 16"
+				xmlns="http://www.w3.org/2000/svg"
 			>
 				<path
 					d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"
@@ -50,10 +52,10 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-44 rounded-xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
-			sideOffset={4}
-			side="bottom"
 			align="end"
+			class="w-full max-w-44 rounded-xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-sm"
+			side="bottom"
+			sideOffset={4}
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
@@ -77,10 +79,10 @@
 			</DropdownMenu.Item>
 
 			<Tooltip
+				className="w-full"
 				content={$i18n.t(
 					'This option will delete all existing files in the collection and replace them with newly uploaded files.'
 				)}
-				className="w-full"
 			>
 				<DropdownMenu.Item
 					class="flex  gap-2  items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"

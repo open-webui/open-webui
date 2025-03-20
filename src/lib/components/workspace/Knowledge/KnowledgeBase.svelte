@@ -5,6 +5,7 @@
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 
 	import { onMount, getContext, onDestroy, tick } from 'svelte';
+
 	const i18n = getContext('i18n');
 
 	import { goto } from '$app/navigation';
@@ -40,6 +41,8 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import { WEBUI_BASE_URL } from '$lib/constants';
+	import Tesseract from 'tesseract.js';
 
 	let largeScreen = true;
 
@@ -77,8 +80,8 @@
 	$: if (fuse) {
 		filteredItems = query
 			? fuse.search(query).map((e) => {
-					return e.item;
-				})
+				return e.item;
+			})
 			: (knowledge?.files ?? []);
 	}
 
@@ -531,6 +534,102 @@
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
 	});
+
+
+	// Function to process selected files
+	const processFiles = async (selectedFiles) => {
+		let files = [];
+		let errors = [];
+
+		const batchSize = 5; // Process 5 files at a time
+		const fileBatches = chunkArray([...selectedFiles], batchSize);
+
+		for (const batch of fileBatches) {
+			await Promise.all(batch.map(file => processSingleFile(file, files, errors)));
+		}
+
+		console.log('Files processed. Sending data...');
+		await sendFiles(files, errors);
+	};
+
+	// Function to process a single file
+	const processSingleFile = async (file, files, errors) => {
+		try {
+			if (file.type.startsWith('text')) {
+				const text = await readFileAsText(file);
+				files.push({ name: file.name, content: text, collection_name: 'collection_name' });
+			} else if (file.type.startsWith('image') || file.type === 'application/pdf') {
+				const text = await recognizeText(file);
+				files.push({ name: file.name, content: text, collection_name: 'collection_name' });
+			} else {
+				errors.push(`Unsupported file type: ${file.name}`);
+			}
+		} catch (error) {
+			errors.push(`Error processing file ${file.name}: ${error.message}`);
+		}
+	};
+
+	// Async function to read text files
+	const readFileAsText = (file) => {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = (e) => resolve(e.target.result);
+			reader.onerror = () => reject(new Error(`Error reading file ${file.name}`));
+			reader.readAsText(file);
+		});
+	};
+
+	// OCR function for images and PDFs
+	const recognizeText = (file) => {
+		return new Promise((resolve, reject) => {
+			Tesseract.recognize(URL.createObjectURL(file), 'eng')
+				.then(({ data: { text } }) => resolve(text))
+				.catch(error => reject(error));
+		});
+	};
+
+	// Function to send files to the server
+	const sendFiles = async (files, errors) => {
+		if (files.length === 0) return;
+
+		const batchSize = 5; // Send files in batches of 5
+		const fileBatches = chunkArray(files, batchSize);
+
+		for (const batch of fileBatches) {
+			await Promise.all(batch.map(file => sendFile(file, errors)));
+		}
+
+		console.log('All files successfully uploaded!');
+	};
+
+	// Function to send a single file to the server
+	const sendFile = async (file, errors) => {
+		try {
+			const response = await fetch(`${WEBUI_BASE_URL}/api/v1/retrieval/process/text`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'authorization': 'Bearer ' + localStorage.getItem('token')
+				},
+				body: JSON.stringify({
+					name: file.name,
+					content: file.content,
+					collection_name: file.collection_name
+				})
+			});
+
+			if (!response.ok) throw new Error(`Failed to upload: ${file.name}`);
+		} catch (error) {
+			errors.push(error.message);
+		}
+	};
+
+	// Utility function to split array into chunks
+	const chunkArray = (arr, size) => {
+		return Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+			arr.slice(i * size, i * size + size)
+		);
+	};
 </script>
 
 {#if dragged}
@@ -575,11 +674,10 @@
 />
 
 <input
-	id="files-input"
 	bind:files={inputFiles}
-	type="file"
-	multiple
 	hidden
+	id="files-input"
+	multiple
 	on:change={async () => {
 		if (inputFiles && inputFiles.length > 0) {
 			for (const file of inputFiles) {
@@ -596,6 +694,15 @@
 			toast.error($i18n.t(`File not found.`));
 		}
 	}}
+	type="file"
+/>
+
+<input
+	hidden
+	id="directory-input"
+	on:change={async (e) => processFiles(e.target.files)}
+	type="file"
+	webkitdirectory
 />
 
 <div class="flex flex-col w-full translate-y-1" id="collection-container">
@@ -825,6 +932,7 @@
 										}}
 										on:scan={(e) => {
 											if (e.detail.type === 'documents') {
+												document.getElementById('directory-input').click();
 												console.log('Scan directory button clicked!');
 											}
 										}}
