@@ -56,7 +56,7 @@ Additionally, any behavior outside of these defined spaces that negatively impac
 
 ## Reporting Violations
 
-Instances of unacceptable behavior can be reported to the leadership team at **hello@openwebui.com**. Reports will be handled promptly, confidentially, and with consideration for the safety and well-being of the reporter.
+Instances of unacceptable behavior can be reported to the leadership team at **hello@answerai.com**. Reports will be handled promptly, confidentially, and with consideration for the safety and well-being of the reporter.
 
 All community leaders are required to uphold confidentiality and impartiality when addressing reports of violations.
 

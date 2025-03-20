@@ -65,7 +65,7 @@
 	};
 
 	const shareHandler = async () => {
-		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
+		toast.success($i18n.t('Redirecting you to AnswerAI Community'));
 
 		// remove snapshot from feedbacks
 		const feedbacksToShare = feedbacks.map((f) => {
@@ -74,7 +74,7 @@
 		});
 		console.log(feedbacksToShare);
 
-		const url = 'https://openwebui.com';
+		const url = 'https://answerai.com';
 		const tab = await window.open(`${url}/leaderboard`, '_blank');
 
 		// Define the event handler function
@@ -268,7 +268,7 @@
 					}}
 				>
 					<div class=" self-center mr-2 font-medium line-clamp-1">
-						{$i18n.t('Share to Open WebUI Community')}
+						{$i18n.t('Share to AnswerAI Community')}
 					</div>
 
 					<div class=" self-center">
