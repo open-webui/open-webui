@@ -560,8 +560,7 @@ async def generate_chat_completion(
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
 
-    model_id = form_data.get("model")
-    model_info = Models.get_model_by_id(model_id)
+    model_info = Models.get_model_by_id(form_data.get("model"))
 
     has_chat_id = "chat_id" in metadata and metadata["chat_id"] is not None
 
@@ -569,6 +568,14 @@ async def generate_chat_completion(
     model_message_credit_cost = 0
 
     if has_chat_id:
+        if model_info is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Model not found. Please check the model ID is correct.",
+            )
+
+        # Check for base_model_id first in case of user defined custom model
+        model_id = model_info.base_model_id if model_info.base_model_id else model_info.id
         model_message_credit_cost = ModelMessageCreditCosts.get_cost_by_model(model_id)
 
         # Get current credit balance
