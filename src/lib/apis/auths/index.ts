@@ -140,6 +140,27 @@ export const getSessionUser = async () => {
 			throw new Error("Empty response received from server");
 		}
 
+		// Check if response is HTML (common in production with proxies/gateways)
+		if (
+			rawText.trim().toLowerCase().startsWith("<!doctype") ||
+			rawText.trim().toLowerCase().startsWith("<html")
+		) {
+			console.error(
+				"[DEBUG] getSessionUser: HTML response received instead of JSON",
+			);
+			console.error(
+				"[DEBUG] getSessionUser: HTML content:",
+				rawText.substring(0, 500),
+			);
+
+			// Clear token as it may be invalid
+			localStorage.removeItem("token");
+
+			throw new Error(
+				"Authentication error: Server returned HTML instead of JSON. This typically happens when there is a proxy or authentication portal in the way.",
+			);
+		}
+
 		let userData;
 		try {
 			// Check if it's a valid JSON format

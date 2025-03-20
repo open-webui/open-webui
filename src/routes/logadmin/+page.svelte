@@ -18,6 +18,8 @@
 	let loaded = false;
 	let email = '';
 	let password = '';
+	let htmlDetected = false;
+	let htmlContent = '';
 
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
@@ -92,6 +94,30 @@
 			if (!rawText || rawText.trim() === '') {
 				console.error('[DEBUG] Empty response received');
 				toast.error('Empty response received from server');
+				return null;
+			}
+
+			// Check if response is HTML (common in production with proxies/gateways)
+			if (
+				rawText.trim().startsWith('<!DOCTYPE') ||
+				rawText.trim().startsWith('<!doctype') ||
+				rawText.trim().startsWith('<html')
+			) {
+				console.error('[DEBUG] HTML response received instead of JSON');
+				console.error('[DEBUG] HTML content:', rawText.substring(0, 500));
+
+				// Set flags to show guidance message
+				htmlDetected = true;
+				htmlContent = rawText.substring(0, 1000);
+
+				// Provide a more helpful error message
+				toast.error(
+					'Authentication error: Server returned HTML instead of JSON. This typically happens when there is a proxy or authentication portal in the way.'
+				);
+
+				// Store email/password in session storage for easier retry
+				sessionStorage.setItem('admin_email', email);
+
 				return null;
 			}
 
@@ -201,8 +227,20 @@
 			console.log('Not logged in:', error);
 			const errorMessage = error instanceof Error ? error.message : String(error);
 			console.log('Login error details:', errorMessage);
+
+			// Check if HTML was detected in the error
+			if (errorMessage.includes('HTML instead of JSON')) {
+				htmlDetected = true;
+			}
+
 			// Clear any invalid tokens
 			localStorage.removeItem('token');
+		}
+
+		// Restore email from session storage if available
+		const savedEmail = sessionStorage.getItem('admin_email');
+		if (savedEmail) {
+			email = savedEmail;
 		}
 
 		loaded = true;
@@ -226,6 +264,26 @@
 				Login with your administrator credentials
 			</p>
 		</div>
+
+		{#if htmlDetected}
+			<div
+				class="mb-6 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 dark:bg-yellow-900 dark:border-yellow-600 dark:text-yellow-200"
+			>
+				<h3 class="font-bold mb-2">HTML Response Detected</h3>
+				<p class="text-sm mb-3">
+					The server is returning HTML instead of JSON. This usually happens when:
+				</p>
+				<ul class="list-disc ml-5 text-sm mb-3">
+					<li>There is a proxy, load balancer, or gateway in your production environment</li>
+					<li>An authentication portal is intercepting the request</li>
+					<li>The API endpoint URL is incorrect in production</li>
+				</ul>
+				<p class="text-sm">
+					<strong>Solution:</strong> Make direct API requests bypassing any proxies, or update your backend
+					configuration to handle proxied requests.
+				</p>
+			</div>
+		{/if}
 
 		<form on:submit|preventDefault={signInHandler} class="flex flex-col space-y-4">
 			<div class="flex flex-col space-y-2">
