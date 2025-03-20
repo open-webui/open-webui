@@ -59,13 +59,14 @@
 
 	const signInHandler = async () => {
 		try {
-			console.log('Starting sign-in process...');
+			console.log('[DEBUG] Starting sign-in process...');
 
 			// Log the request details
-			console.log('Request payload:', { email, password: '***' });
+			console.log('[DEBUG] Request payload:', { email, password: '***' });
 
 			// Make a direct fetch call instead of using the userSignIn function
-			console.log('Making direct API call to:', `${WEBUI_API_BASE_URL}/auths/signin`);
+			console.log('[DEBUG] API Base URL:', WEBUI_API_BASE_URL);
+			console.log('[DEBUG] Making API call to:', `${WEBUI_API_BASE_URL}/auths/signin`);
 
 			const response = await fetch(`${WEBUI_API_BASE_URL}/auths/signin`, {
 				method: 'POST',
@@ -78,46 +79,107 @@
 				})
 			});
 
-			console.log('Response status:', response.status);
-			console.log('Response headers:', Object.fromEntries([...response.headers]));
+			console.log('[DEBUG] Response status:', response.status);
+			console.log('[DEBUG] Response status text:', response.statusText);
+			console.log('[DEBUG] Response headers:', Object.fromEntries([...response.headers]));
 
 			// Get the raw text first
 			const rawText = await response.text();
-			console.log('Raw response text:', rawText);
+			console.log('[DEBUG] Raw response content length:', rawText?.length || 0);
+			console.log('[DEBUG] Raw response first 200 chars:', rawText?.substring(0, 200));
+
+			// Check if the response is empty
+			if (!rawText || rawText.trim() === '') {
+				console.error('[DEBUG] Empty response received');
+				toast.error('Empty response received from server');
+				return null;
+			}
 
 			// Try to parse as JSON if it looks like JSON
 			let data;
-			if (rawText && typeof rawText.trim === 'function' && rawText.trim().startsWith('{')) {
-				try {
+			try {
+				// First check if it's a valid JSON format before parsing
+				if (rawText.trim().startsWith('{') || rawText.trim().startsWith('[')) {
+					console.log('[DEBUG] Response appears to be JSON, attempting to parse');
 					data = JSON.parse(rawText);
-					console.log('Parsed JSON data:', data);
-				} catch (parseError) {
-					console.error('JSON parse error:', parseError);
-					toast.error('Failed to parse server response');
+					console.log('[DEBUG] Parsed JSON data:', data);
+				} else {
+					console.error(
+						'[DEBUG] Response is not JSON format. First char:',
+						rawText.trim().charAt(0)
+					);
+					console.error('[DEBUG] Raw text content type check:', {
+						isString: typeof rawText === 'string',
+						startsWithOpenBrace: rawText.trim().startsWith('{'),
+						startsWithOpenBracket: rawText.trim().startsWith('['),
+						firstFewChars: rawText
+							.substring(0, 20)
+							.split('')
+							.map((c) => c.charCodeAt(0))
+					});
+					toast.error('Server returned an invalid response format');
 					return null;
 				}
-			} else {
-				console.error('Response is not JSON:', rawText);
-				toast.error('Server returned an invalid response');
+			} catch (parseError) {
+				console.error('[DEBUG] JSON parse error:', parseError);
+				// Type guard for error object
+				const errorMsg = parseError instanceof Error ? parseError.message : String(parseError);
+				const errorStack = parseError instanceof Error ? parseError.stack : undefined;
+				const errorName = parseError instanceof Error ? parseError.name : undefined;
+
+				console.error('[DEBUG] JSON parse error details:', {
+					name: errorName,
+					message: errorMsg,
+					stack: errorStack
+				});
+
+				// If there's a position in the error, show the problematic part of the text
+				let position = null;
+				if (errorMsg && typeof errorMsg === 'string') {
+					const match = errorMsg.match(/position (\d+)/);
+					position = match?.[1];
+				}
+
+				if (position) {
+					const pos = Number.parseInt(position, 10);
+					console.error('[DEBUG] Text around error position:', {
+						before: rawText.substring(Math.max(0, pos - 20), pos),
+						errorChar: rawText.substring(pos, pos + 1),
+						after: rawText.substring(pos + 1, pos + 21)
+					});
+				}
+
+				toast.error(`Failed to parse server response: ${errorMsg}`);
 				return null;
 			}
 
 			if (!response.ok) {
+				console.error('[DEBUG] Response not OK:', data);
 				toast.error(data.detail || `Error: ${response.status}`);
 				return null;
 			}
 
 			// Explicitly check for token before proceeding
 			if (!data.token) {
-				console.error('No token in response data');
+				console.error('[DEBUG] No token in response data');
 				toast.error($i18n.t('Authentication error: No token in response'));
 				return null;
 			}
 
 			await setSessionUser(data);
 		} catch (error) {
-			console.error('Sign-in error:', error);
-			toast.error(`${error}`);
+			console.error('[DEBUG] Sign-in error:', error);
+			// Type guard for error object
+			const errorMsg = error instanceof Error ? error.message : String(error);
+			const errorStack = error instanceof Error ? error.stack : undefined;
+			const errorName = error instanceof Error ? error.name : undefined;
+
+			console.error('[DEBUG] Sign-in error details:', {
+				name: errorName,
+				message: errorMsg,
+				stack: errorStack
+			});
+			toast.error(`Sign-in error: ${errorMsg}`);
 		}
 	};
 
