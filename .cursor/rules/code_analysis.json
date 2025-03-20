@@ -1,0 +1,59 @@
+{
+  "code_analysis": {
+    "focus_areas": {
+      "web_interface": {
+        "patterns": ["ui/**/*"],
+        "key_aspects": [
+          "Chat interface implementation",
+          "UI/UX design",
+          "State management",
+          "Responsive design"
+        ]
+      },
+      "backend_api": {
+        "patterns": ["api/**/*.py"],
+        "key_aspects": [
+          "API endpoints",
+          "Request handling",
+          "Error handling",
+          "Data validation"
+        ]
+      },
+      "model_integration": {
+        "patterns": ["src/models/**/*.py"],
+        "key_aspects": [
+          "Model loading",
+          "Inference handling",
+          "Response processing"
+        ]
+      }
+    },
+    "critical_paths": {
+      "chat_interface": {
+        "description": "Core chat UI implementation",
+        "key_files": [
+          "ui/chat/*.js",
+          "ui/components/Chat/*.jsx"
+        ]
+      },
+      "api_endpoints": {
+        "description": "Backend API implementation",
+        "key_files": [
+          "api/routes/*.py",
+          "api/handlers/*.py"
+        ]
+      }
+    },
+    "dependencies": {
+      "external": [
+        "Open-WebUI",
+        "React",
+        "FastAPI",
+        "WebSocket"
+      ],
+      "internal": {
+        "gaia": "Optional integration with GAIA"
+      }
+    }
+  }
+} 

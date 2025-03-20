@@ -1,0 +1,42 @@
+{
+  "project_understanding": {
+    "raux": {
+      "description": "RAUX is AMD's UI for interacting with AI models, forked from Open-WebUI",
+      "status": "beta",
+      "key_features": {
+        "interface": "Modern chat interface similar to ChatGPT",
+        "integration": "Can be installed alongside GAIA but operates independently",
+        "purpose": "Provides intuitive conversational AI interactions"
+      },
+      "installation": {
+        "optional": true,
+        "location": "Installed separately from main GAIA application",
+        "launcher": "Creates its own desktop shortcut",
+        "methods": {
+          "gaia_installer": {
+            "description": "Can be installed as optional component during GAIA installation",
+            "default": "Enabled by default in GAIA installer",
+            "location": "$LOCALAPPDATA\\RAUX"
+          },
+          "standalone_exe": {
+            "description": "Can be installed via Installer-UX.exe",
+            "location": "installer/Installer-UX.exe"
+          },
+          "python_script": {
+            "description": "Can be installed via raux_installer.py script",
+            "location": "installer/raux_installer.py",
+            "features": ["Debug mode available", "Detailed logging"]
+          }
+        }
+      },
+      "dependencies": {
+        "python": "Uses system Python for installation",
+        "launcher_scripts": ["launch_raux.ps1", "launch_raux.cmd"]
+      },
+      "support": {
+        "contact": "support@amd.com",
+        "type": "Technical support for RAUX-specific issues"
+      }
+    }
+  }
+} 
