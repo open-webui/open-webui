@@ -105,7 +105,6 @@ for source in log_sources:
 
 log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 
-
 WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
 if WEBUI_NAME != "Open WebUI":
     WEBUI_NAME += " (Open WebUI)"
@@ -129,7 +128,6 @@ else:
         PACKAGE_DATA = json.loads((BASE_DIR / "package.json").read_text())
     except Exception:
         PACKAGE_DATA = {"version": "0.0.0"}
-
 
 VERSION = PACKAGE_DATA["version"]
 
@@ -161,7 +159,6 @@ try:
 except Exception:
     changelog_content = (pkgutil.get_data("open_webui", "CHANGELOG.md") or b"").decode()
 
-
 # Convert markdown content to HTML
 html_content = markdown.markdown(changelog_content)
 
@@ -192,7 +189,6 @@ for version in soup.find_all("h2"):
 
     changelog_json[version_number] = version_data
 
-
 CHANGELOG = changelog_json
 
 ####################################
@@ -212,7 +208,6 @@ ENABLE_FORWARD_USER_INFO_HEADERS = (
 PRESERVE_METADATA_IN_OPENAI_API_CALLS = (
     os.environ.get("PRESERVE_METADATA_IN_OPENAI_API_CALLS", "False").lower() == "true"
 )
-
 
 ####################################
 # WEBUI_BUILD_HASH
@@ -248,7 +243,6 @@ if FROM_INIT_PY:
 
     DATA_DIR = Path(os.getenv("DATA_DIR", OPEN_WEBUI_DIR / "data"))
 
-
 STATIC_DIR = Path(os.getenv("STATIC_DIR", OPEN_WEBUI_DIR / "static"))
 
 FONTS_DIR = Path(os.getenv("FONTS_DIR", OPEN_WEBUI_DIR / "static" / "fonts"))
@@ -259,7 +253,6 @@ if FROM_INIT_PY:
     FRONTEND_BUILD_DIR = Path(
         os.getenv("FRONTEND_BUILD_DIR", OPEN_WEBUI_DIR / "frontend")
     ).resolve()
-
 
 ####################################
 # Database
@@ -325,7 +318,6 @@ RESET_CONFIG_ON_START = (
     os.environ.get("RESET_CONFIG_ON_START", "False").lower() == "true"
 )
 
-
 ENABLE_REALTIME_CHAT_SAVE = (
     os.environ.get("ENABLE_REALTIME_CHAT_SAVE", "False").lower() == "true"
 )
@@ -334,7 +326,7 @@ ENABLE_REALTIME_CHAT_SAVE = (
 # REDIS
 ####################################
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+REDIS_URL = os.environ.get("REDIS_URL", "")
 
 ####################################
 # WEBUI_AUTH (Required for security)
@@ -403,9 +395,8 @@ else:
 
 AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = os.environ.get(
     "AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST",
-    os.environ.get("AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST", ""),
+    os.environ.get("AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST", "10"),
 )
-
 
 if AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST == "":
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = None
@@ -413,8 +404,7 @@ else:
     try:
         AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = int(AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     except Exception:
-        AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = 5
-
+        AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = 10
 
 ####################################
 # OFFLINE_MODE
@@ -446,3 +436,26 @@ AUDIT_EXCLUDED_PATHS = os.getenv("AUDIT_EXCLUDED_PATHS", "/chats,/chat,/folders"
 )
 AUDIT_EXCLUDED_PATHS = [path.strip() for path in AUDIT_EXCLUDED_PATHS]
 AUDIT_EXCLUDED_PATHS = [path.lstrip("/") for path in AUDIT_EXCLUDED_PATHS]
+
+####################################
+# OPENTELEMETRY
+####################################
+
+ENABLE_OTEL = os.environ.get("ENABLE_OTEL", "False").lower() == "true"
+OTEL_EXPORTER_OTLP_ENDPOINT = os.environ.get(
+    "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317"
+)
+OTEL_SERVICE_NAME = os.environ.get("OTEL_SERVICE_NAME", "open-webui")
+OTEL_RESOURCE_ATTRIBUTES = os.environ.get(
+    "OTEL_RESOURCE_ATTRIBUTES", ""
+)  # e.g. key1=val1,key2=val2
+OTEL_TRACES_SAMPLER = os.environ.get(
+    "OTEL_TRACES_SAMPLER", "parentbased_always_on"
+).lower()
+
+####################################
+# TOOLS/FUNCTIONS PIP OPTIONS
+####################################
+
+PIP_OPTIONS = os.getenv("PIP_OPTIONS", "").split()
+PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()

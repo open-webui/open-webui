@@ -114,37 +114,21 @@
 							</div>
 						</button>
 					</Menu>
-				{:else if $mobile && ($user.role === 'admin' || $user?.permissions?.chat?.controls)}
-					<Tooltip content={$i18n.t('Controls')}>
-						<button
-							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							on:click={async () => {
-								await showControls.set(!$showControls);
-							}}
-							aria-label="Controls"
-						>
-							<div class=" m-auto self-center">
-								<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
-							</div>
-						</button>
-					</Tooltip>
 				{/if}
 
-				{#if !$mobile && ($user.role === 'admin' || $user?.permissions?.chat?.controls)}
-					<Tooltip content={$i18n.t('Controls')}>
-						<button
-							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							on:click={async () => {
-								await showControls.set(!$showControls);
-							}}
-							aria-label="Controls"
-						>
-							<div class=" m-auto self-center">
-								<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
-							</div>
-						</button>
-					</Tooltip>
-				{/if}
+				<Tooltip content={$i18n.t('Controls')}>
+					<button
+						class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+						on:click={async () => {
+							await showControls.set(!$showControls);
+						}}
+						aria-label="Controls"
+					>
+						<div class=" m-auto self-center">
+							<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
+						</div>
+					</button>
+				</Tooltip>
 
 				<Tooltip content={$i18n.t('New Chat')}>
 					<button
