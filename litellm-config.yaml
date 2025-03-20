@@ -10,155 +10,91 @@ model_list:
       api_base: os.environ/AZURE_OPENAI_API_BASE_URL
       api_key: os.environ/AZURE_OPENAI_API_KEY
       max_tokens: 800
-    model_info:
-      description: "OpenAI's most advanced model, ideal for complex tasks."
-      arena_elo: 1287
-      context_window: 128000
   - model_name: "GPT 4o-mini"
     litellm_params:
       model: "azure/gpt-4o-mini"
       api_base: os.environ/AZURE_OPENAI_API_BASE_URL
       api_key: os.environ/AZURE_OPENAI_API_KEY
       max_tokens: 800
-    model_info:
-      description: "OpenAI's most advanced model, ideal for complex tasks."
-      arena_elo: 1287
-      context_window: 128000
   - model_name: "GPT o3-mini"
     litellm_params:
       model: "azure/o3-mini"
       api_base: os.environ/AZURE_OPENAI_API_BASE_URL
       api_key: os.environ/AZURE_OPENAI_API_KEY
       api_version: "2024-12-01-preview"
-      max_tokens: 800
-    model_info:
-      description: "OpenAI's most advanced model, ideal for complex tasks."
-      arena_elo: 1287
-      context_window: 128000
+      max_tokens: 1000
   - model_name: "GPT o1"
     litellm_params:
       model: "azure/o1"
       api_base: os.environ/AZURE_OPENAI_API_BASE_URL
       api_key: os.environ/AZURE_OPENAI_API_KEY
       api_version: "2024-12-01-preview"
-      max_tokens: 800
-    model_info:
-      description: "OpenAI's most advanced model, ideal for complex tasks."
-      arena_elo: 1287
-      context_window: 128000
+      max_tokens: 1000
   - model_name: 'Mistral Large 2'
     litellm_params:
       model: 'vertex_ai/mistral-large-2411@001'
       vertex_project: 'beyond-chat-1111'
       vertex_location: 'europe-west4'
       max_tokens: 800
-    model_info:
-      description: "Mistral Large (24.11) is the latest version of the Mistral Large model now with improved reasoning and function calling capabilities."
-      arena_elo: 1265
-      context_window: 2000000
   - model_name: 'Gemini 2.0 Flash'
     litellm_params:
       model: 'gemini-2.0-flash-001'
       vertex_project: 'beyond-chat-1111'
       vertex_location: 'europe-west4'
       max_tokens: 800
-    model_info:
-      description: "Workhorse model for all daily tasks. Strong overall performance and low latency supports real-time Live API."
-      arena_elo: 1265
-      context_window: 2000000
   - model_name: 'Llama 3.1'
     litellm_params:
-      model: 'vertex_ai/llama-3.1-405b-instruct-maas'
+      model: 'vertex_ai/meta/llama-3.1-405b-instruct-maas'
       vertex_project: 'beyond-chat-1111'
-      vertex_location: 'europe-west3'
+      vertex_location: 'us-central1'
       max_tokens: 800
-    model_info:
-      description: "Workhorse model for all daily tasks. Strong overall performance and low latency supports real-time Live API."
-      arena_elo: 1265
-      context_window: 2000000
   - model_name: 'Gemini 2.0 Flash Thinking'
     litellm_params:
-      max_tokens: 800
+      max_tokens: 1000
       model: 'gemini-2.0-flash-thinking-exp-01-21'
       vertex_project: 'beyond-chat-1111'
       vertex_location: 'us-central1'
-    model_info:
-      description: 'An experimental model that exposes its thoughts so you can see its reasoning and how it reached its conclusions.'
-      arena_elo: 1231
-      context_window: 1000000
   - model_name: 'Claude 3.5 Haiku'
     litellm_params:
       model: 'vertex_ai/claude-3-5-haiku@20241022'
       vertex_project: 'beyond-chat-1111'
       vertex_location: 'us-east5'
-    model_info:
-      description: 'Claude 3.5 Haiku, Anthropic’s fastest and most cost-effective model, excels at use cases like code and test case generation, sub-agents, and user-facing chatbots.'
-      arena_elo: 1178
-      context_window: 200000
-      max_tokens: 800
+      max_tokens: 808
   - model_name: 'Claude 3.5 Sonnet'
     litellm_params:
       model: 'vertex_ai/claude-3-5-sonnet-v2@20241022'
       vertex_project: 'beyond-chat-1111'
       vertex_location: 'europe-west1'
-    model_info:
-      description: 'The upgraded Claude 3.5 Sonnet is now state-of-the-art for a variety of tasks including real-world software engineering, enhanced agentic capabilities, and computer use.'
-      arena_elo: 1178
-      context_window: 200000
       max_tokens: 800
   - model_name: 'Claude 3.7 Sonnet'
     litellm_params:
       model: 'anthropic/claude-3-7-sonnet-20250219'
       api_key: os.environ/ANTHROPIC_API_KEY
-    model_info:
-      description: ''
-      arena_elo: 1178
-      context_window: 200000
       max_tokens: 800
   - model_name: 'Pixtral Large'
     litellm_params:
       model: 'mistral/pixtral-large-2411'
       api_key: os.environ/MISTRAL_API_KEY
-    model_info:
-      description: ''
-      arena_elo: 1178
-      context_window: 200000
       max_tokens: 800
   - model_name: 'Perplexity Sonar'
     litellm_params:
       model: 'perplexity/sonar'
       api_key: os.environ/PERPLEXITYAI_API_KEY
-    model_info:
-      description: ''
-      arena_elo: 1178
-      context_window: 200000
       max_tokens: 800
   - model_name: 'Perplexity Sonar Pro'
     litellm_params:
       model: 'perplexity/sonar-pro'
       api_key: os.environ/PERPLEXITYAI_API_KEY
-    model_info:
-      description: ''
-      arena_elo: 1178
-      context_window: 200000
       max_tokens: 800
   - model_name: 'Perplexity Sonar Reasoning Pro'
     litellm_params:
       model: 'perplexity/sonar-reasoning-pro'
       api_key: os.environ/PERPLEXITYAI_API_KEY
-    model_info:
-      description: ''
-      arena_elo: 1178
-      context_window: 200000
-      max_tokens: 800
+      max_tokens: 1000
   - model_name: 'Perplexity Sonar Deep Research'
     litellm_params:
       model: 'perplexity/sonar-deep-research'
       api_key: os.environ/PERPLEXITYAI_API_KEY
-    model_info:
-      description: ''
-      arena_elo: 1178
-      context_window: 200000
-      max_tokens: 800
+      max_tokens: 2000
 
 general_settings: {}
