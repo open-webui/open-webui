@@ -15,7 +15,7 @@ services:
     ports:
       - ${OPEN_WEBUI_PORT-3000}:8080
     environment:
-      - 'WEBUI_SECRET_KEY='
+      - 'WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}'
       - 'OPENAI_API_BASE_URL=${OPENAI_API_BASE_URL}'
       - 'OPENAI_API_KEY=${OPENAI_API_KEY}'
       - 'OPENAI_API_BASE_URLS=${OPENAI_API_BASE_URLS}'
