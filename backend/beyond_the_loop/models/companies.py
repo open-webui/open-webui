@@ -56,7 +56,7 @@ class CompanyForm(BaseModel):
 class CompanyResponse(BaseModel):
     id: str
     name: str
-    profile_image_url: str
+    profile_image_url: Optional[str] = None
     default_model: Optional[str] = "GPT 4o"
     allowed_models: Optional[str]
     auto_recharge: bool
