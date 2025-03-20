@@ -105,7 +105,7 @@
 		</div>
 
 		<input
-			class="w-full rounded-r-xl py-1.5 pl-2.5 {showClearButton && value ? 'pr-8' : 'pr-4'} text-sm bg-transparent dark:text-gray-300 outline-hidden"
+			class="w-full rounded-r-xl py-1.5 pl-2.5 text-sm bg-transparent dark:text-gray-300 outline-hidden"
 			placeholder={placeholder ? placeholder : $i18n.t('Search')}
 			bind:value
 			on:input={() => {
@@ -147,14 +147,14 @@
 				}
 			}}
 		/>
-		
+
 		{#if showClearButton && value}
-			<div class="absolute right-2 top-1/2 -translate-y-1/2">
-				<button 
-					class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+			<div class="self-center pr-2 pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+				<button
+					class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					on:click={clearSearchInput}
 				>
-					<XMark className="size-4" strokeWidth="2" />
+					<XMark className="size-3" strokeWidth="2" />
 				</button>
 			</div>
 		{/if}
