@@ -158,7 +158,7 @@
 					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
 				)
 			);
-		}
+		} 
 	};
 
 	onMount(() => {
