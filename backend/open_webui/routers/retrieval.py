@@ -3,6 +3,8 @@ import logging
 import mimetypes
 import os
 import shutil
+import threading
+import time
 
 import uuid
 from datetime import datetime
@@ -753,6 +755,16 @@ async def update_query_settings(
 ####################################
 
 
+# Global cache for content hashes being uploaded
+# Key - content hash, value - time of insertion
+content_hash_cache = {}
+
+# Lock to synchronize access to the cache
+cache_lock = threading.Lock()
+
+# Cache entry time-to-live (10 seconds)
+CACHE_EXPIRY = 10
+
 def save_docs_to_vector_db(
     request: Request,
     docs,
@@ -1094,36 +1106,169 @@ class ProcessTextForm(BaseModel):
     collection_name: Optional[str] = None
 
 
+@router.post("/check/duplicate")
+def check_duplicate(
+    request: Request,
+    form_data: ProcessTextForm,
+    user=Depends(get_verified_user),
+):
+    try:
+        # Calculate content hash
+        content_hash = calculate_sha256_string(form_data.content)
+
+        # Determine collection name for return
+        collection_name = form_data.collection_name
+        if collection_name is None:
+            collection_name = calculate_sha256_string(form_data.content)
+
+        # First check the current collection
+        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+            try:
+                result = VECTOR_DB_CLIENT.query(
+                    collection_name=collection_name,
+                    filter={"hash": content_hash},
+                )
+
+                if result is not None and len(result.ids[0]) > 0:
+                    return {
+                        "status": True,
+                        "is_duplicate": True,
+                        "hash": content_hash,
+                        "collection_name": collection_name,
+                        "message": f"Content already exists in collection {collection_name}"
+                    }
+            except Exception as query_error:
+                log.warning(f"Error querying current collection: {query_error}")
+
+        # Now check other collections for duplicates
+        try:
+            # Check collections with pattern file-*
+            all_files = Files.get_files()
+            for file in all_files:
+                if file.hash == content_hash:
+                    # Found file with the same hash
+                    file_collection = f"file-{file.id}"
+                    if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+                        return {
+                            "status": True,
+                            "is_duplicate": True,
+                            "hash": content_hash,
+                            "collection_name": file_collection,
+                            "message": f"Content already exists in file: {file.filename}"
+                        }
+
+                # Check collection specified in file metadata
+                if file.meta and "collection_name" in file.meta:
+                    file_collection = file.meta["collection_name"]
+                    if file_collection and VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+                        try:
+                            result = VECTOR_DB_CLIENT.query(
+                                collection_name=file_collection,
+                                filter={"hash": content_hash},
+                            )
+
+                            if result is not None and len(result.ids[0]) > 0:
+                                return {
+                                    "status": True,
+                                    "is_duplicate": True,
+                                    "hash": content_hash,
+                                    "collection_name": file_collection,
+                                    "message": f"Content already exists in collection {file_collection}"
+                                }
+                        except Exception:
+                            pass
+        except Exception as e:
+            log.warning(f"Error checking other collections: {e}")
+
+        # If no duplicates found
+        return {
+            "status": True,
+            "is_duplicate": False,
+            "hash": content_hash,
+            "collection_name": collection_name,
+            "message": "Content is unique"
+        }
+
+    except Exception as e:
+        log.exception(e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT(str(e)),
+        )
+
+
 @router.post("/process/text")
 def process_text(
     request: Request,
     form_data: ProcessTextForm,
     user=Depends(get_verified_user),
 ):
-    collection_name = form_data.collection_name
-    if collection_name is None:
-        collection_name = calculate_sha256_string(form_data.content)
+    # Calculate content hash
+    content_hash = calculate_sha256_string(form_data.content)
 
-    docs = [
-        Document(
-            page_content=form_data.content,
-            metadata={"name": form_data.name, "created_by": user.id},
-        )
-    ]
-    text_content = form_data.content
-    log.debug(f"text_content: {text_content}")
+    # Check and update hash cache
+    with cache_lock:
+        # Clean expired entries
+        current_time = time.time()
+        expired_hashes = [h for h, t in content_hash_cache.items() if current_time - t > CACHE_EXPIRY]
+        for h in expired_hashes:
+            del content_hash_cache[h]
 
-    result = save_docs_to_vector_db(request, docs, collection_name, user=user)
-    if result:
-        return {
-            "status": True,
-            "collection_name": collection_name,
-            "content": text_content,
-        }
-    else:
+        # Check if hash exists in cache
+        if content_hash in content_hash_cache:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DUPLICATE_CONTENT
+            )
+
+        # Add hash to cache before main verification
+        content_hash_cache[content_hash] = current_time
+
+    try:
+        # Check for duplication in database
+        duplicate_check = check_duplicate(request, form_data, user)
+
+        if duplicate_check["is_duplicate"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.DUPLICATE_CONTENT
+            )
+
+        collection_name = duplicate_check["collection_name"]
+
+        docs = [
+            Document(
+                page_content=form_data.content,
+                metadata={
+                    "name": form_data.name,
+                    "created_by": user.id,
+                    "hash": content_hash
+                },
+            )
+        ]
+
+        result = save_docs_to_vector_db(request, docs, collection_name, user=user, add=True)
+        if result:
+            return {
+                "status": True,
+                "collection_name": collection_name,
+                "content": form_data.content,
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ERROR_MESSAGES.DEFAULT(),
+            )
+    except Exception as e:
+        # If error occurs, remove hash from cache
+        with cache_lock:
+            if content_hash in content_hash_cache:
+                del content_hash_cache[content_hash]
+
+        log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ERROR_MESSAGES.DEFAULT(),
+            detail=ERROR_MESSAGES.DEFAULT(str(e)),
         )
 
 
@@ -1737,3 +1882,226 @@ def process_files_batch(
                 )
 
     return BatchProcessFilesResponse(results=results, errors=errors)
+
+
+@router.get("/collection/{collection_name}")
+def get_collection_data(
+    collection_name: str,
+    user=Depends(get_verified_user),
+):
+    """
+    Retrieves all documents from the specified vector collection.
+
+    Args:
+        collection_name (str): Unique identifier of the collection.
+        user (UserModel): Authenticated user (ensured through Depends).
+
+    Returns:
+        dict: Dictionary with the following structure:
+            {
+                "status": bool,  # Operation execution status
+                "data": {
+                    "ids": List[str],  # List of unique document identifiers
+                    "documents": List[str],  # List of document text contents
+                    "metadatas": List[dict]  # List of document metadata
+                }
+            }
+
+    Raises:
+        HTTPException: Occurs in the following cases:
+            - 400: Invalid collection name
+            - 404: Collection not found
+            - 500: Internal server error
+            - 503: Database access error
+    """
+    try:
+        # Input validation
+        # Check if collection name is not empty and doesn't contain only whitespace
+        if not collection_name or not collection_name.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Collection name cannot be empty"
+            )
+
+        # Collection existence check
+        # Use has_collection method to verify collection existence in the database
+        if not VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+            log.warning(f"Attempt to access non-existent collection: {collection_name}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Collection '{collection_name}' not found"
+            )
+
+        # Retrieve data from collection
+        # Wrap operation in try-except to catch database access errors
+        try:
+            result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+        except Exception as db_error:
+            log.error(f"Database access error for collection {collection_name}: {db_error}")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database access error. Please try again later."
+            )
+
+        # Data presence check
+        # If collection is empty, return empty arrays
+        if not result:
+            log.warning(f"Collection {collection_name} is empty")
+            return {
+                "status": True,
+                "data": {
+                    "ids": [],
+                    "documents": [],
+                    "metadatas": []
+                }
+            }
+
+        # Data integrity validation
+        # Check if all required fields are present in the result
+        if not all([result.ids, result.documents, result.metadatas]):
+            log.error(f"Incomplete data in collection {collection_name}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Collection data integrity error"
+            )
+
+        # Data consistency check
+        # Verify that all arrays have the same length
+        if not (len(result.ids[0]) == len(result.documents[0]) == len(result.metadatas[0])):
+            log.error(f"Array length mismatch in collection {collection_name}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Collection data structure error"
+            )
+
+        # Add document content to metadata
+        # This ensures frontend can access document content directly from metadata
+        metadatas = []
+        for i, metadata in enumerate(result.metadatas[0]):
+            metadata_with_content = metadata.copy()
+            metadata_with_content["document_content"] = result.documents[0][i]
+            metadatas.append(metadata_with_content)
+
+        # Form successful response
+        # Return data in standardized format
+        return {
+            "status": True,
+            "data": {
+                "ids": result.ids[0],
+                "documents": result.documents[0],
+                "metadatas": metadatas
+            }
+        }
+
+    except HTTPException:
+        # Propagate HTTP exceptions without additional processing
+        # This preserves the original error code and message
+        raise
+
+    except Exception as e:
+        # Handle unexpected errors
+        # Log detailed error information for further analysis
+        log.exception(f"Unexpected error while retrieving data from collection {collection_name}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error. Please try again later."
+        )
+
+
+class DeleteDocumentForm(BaseModel):
+    document_id: str
+
+
+@router.post("/collection/{collection_name}/delete_document")
+def delete_document_from_collection(
+    collection_name: str,
+    form_data: DeleteDocumentForm,
+    user=Depends(get_verified_user),
+):
+    """
+    Deletes a specific document from a vector collection by its ID.
+
+    This endpoint allows removing a single document from the specified vector database collection.
+    It performs basic validation, checks collection existence, and handles the deletion process.
+
+    Args:
+        collection_name (str): Unique identifier of the collection from which to delete the document.
+        form_data (DeleteDocumentForm): Form containing document_id to delete.
+        user (UserModel): Authenticated user (ensured through Depends).
+
+    Returns:
+        dict: Dictionary with operation status information:
+            {
+                "status": bool,  # Operation execution status (true if successful)
+                "message": str,  # Success message
+                "deleted_id": str  # ID of the deleted document
+            }
+
+    Raises:
+        HTTPException: Occurs in the following cases:
+            - 400: Invalid collection name or document ID (empty validation)
+            - 404: Collection not found
+            - 500: Internal server error or deletion failure
+    
+    Note:
+        This function performs a direct deletion without checking for document existence
+        first. If the document doesn't exist, the operation will still return success.
+        The vector database client handles the deletion gracefully.
+    """
+    try:
+        # Basic parameter validation
+        # Check if collection name is not empty
+        if not collection_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Collection name cannot be empty"
+            )
+
+        # Check if document ID is not empty
+        if not form_data.document_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Document ID cannot be empty"
+            )
+
+        # Collection existence check
+        # Verify the collection exists before attempting to delete from it
+        if not VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Collection '{collection_name}' not found"
+            )
+
+        # Direct document deletion by ID
+        # No prior existence check is performed to optimize the operation
+        try:
+            VECTOR_DB_CLIENT.delete(
+                collection_name=collection_name,
+                ids=[form_data.document_id]
+            )
+
+            # Return success response with details
+            return {
+                "status": True,
+                "message": "Document successfully deleted",
+                "deleted_id": form_data.document_id
+            }
+        except Exception as e:
+            # Log and handle specific deletion errors
+            log.error(f"Error deleting document: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to delete document: {str(e)}"
+            )
+
+    except HTTPException:
+        # Re-raise HTTP exceptions without additional processing
+        raise
+
+    except Exception as e:
+        # Handle unexpected errors with generic message
+        log.exception(f"Unexpected error while deleting document: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error. Please try again later."
+        )

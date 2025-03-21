@@ -27,89 +27,6 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
 
-############################
-# Scan Document without Uploading
-############################
-from pdf2image import convert_from_bytes
-import pytesseract
-from PyPDF2 import PdfReader
-from docx import Document
-from io import BytesIO
-from PIL import Image
-
-
-def extract_text(file_bytes: bytes, filename: str) -> str:
-    """Uses OCR to extract text from files"""
-    if filename.endswith(".txt"):
-        return file_bytes.decode("utf-8")
-
-    elif filename.endswith(".pdf"):
-        try:
-            reader = PdfReader(BytesIO(file_bytes))
-            text = "\n".join([page.extract_text() or "" for page in reader.pages])
-            if text.strip():
-                return text
-        except Exception:
-            pass
-
-        images = convert_from_bytes(file_bytes)
-        return "\n".join(pytesseract.image_to_string(img) for img in images)
-
-    elif filename.endswith((".png", ".jpg", ".jpeg")):
-        image = Image.open(BytesIO(file_bytes))
-        return pytesseract.image_to_string(image)
-
-    elif filename.endswith(".docx"):
-        doc = Document(BytesIO(file_bytes))
-        return "\n".join([p.text for p in doc.paragraphs])
-
-    else:
-        raise HTTPException(status_code=400, detail="Unsupported file format")
-
-
-@router.post("/scan-document/")
-async def scan_document(
-        request: Request, file: UploadFile = File(...), user=Depends(get_verified_user)
-):
-    """Accepts a document, extracts text through OCR and saves it to a vector database"""
-    file_bytes = await file.read()
-    try:
-        extracted_text = extract_text(file_bytes, file.filename)
-        if not extracted_text.strip():
-            raise HTTPException(status_code=400, detail="No text found in the document")
-        file_item = Files.get_file_by_id(file.filename)
-        if file_item is None:
-            import uuid
-            dummy_id = str(uuid.uuid4())
-            file_item = Files.insert_new_file(
-                user.id,
-                FileForm(
-                    **{
-                        "id": dummy_id,
-                        "filename": file.filename,
-                        "path": "",
-                        "meta": {
-                            "name": file.filename,
-                            "content_type": file.content_type,
-                            "size": len(file_bytes),
-                            "data": {},
-                        },
-                    }
-                ),
-            )
-        process_file(
-            request,
-            ProcessFileForm(file_id=file_item.id, content=extracted_text),
-            user=user,
-        )
-        return {
-            "message": "Text extracted and stored successfully",
-            "filename": file.filename,
-            "file_id": file_item.id,
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 
 ############################
 # Upload File
@@ -421,7 +338,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
                     detail=ERROR_MESSAGES.NOT_FOUND,
                 )
         else:
-            # File path doesn’t exist, return the content as .txt if possible
+            # File path doesn't exist, return the content as .txt if possible
             file_content = file.content.get("content", "")
             file_name = file.filename
 

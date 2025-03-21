@@ -557,10 +557,18 @@
 		try {
 			if (file.type.startsWith('text')) {
 				const text = await readFileAsText(file);
-				files.push({ name: file.name, content: text, collection_name: 'collection_name' });
+				files.push({ 
+					name: file.name, 
+					content: text, 
+					collection_name: id 
+				});
 			} else if (file.type.startsWith('image') || file.type === 'application/pdf') {
 				const text = await recognizeText(file);
-				files.push({ name: file.name, content: text, collection_name: 'collection_name' });
+				files.push({ 
+					name: file.name, 
+					content: text, 
+					collection_name: id
+				});
 			} else {
 				errors.push(`Unsupported file type: ${file.name}`);
 			}
