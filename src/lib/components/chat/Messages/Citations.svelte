@@ -103,6 +103,15 @@
 						id={`source-${citation.source.name}`}
 						class="no-toggle outline-none flex dark:text-gray-300 p-1 bg-white dark:bg-gray-900 rounded-xl max-w-96"
 						on:click={() => {
+							// In this case the citation comes from the LLM response
+							if (
+								citation.document &&
+								citation.document[0] &&
+								citation.source &&
+								citation.document[0] === citation.source.name
+							) {
+								return;
+							}
 							showCitationModal = true;
 							selectedCitation = citation;
 						}}
@@ -133,6 +142,16 @@
 									<button
 										class="no-toggle outline-none flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
 										on:click={() => {
+											// In this case the citation comes from the LLM response
+											if (
+												citation.document &&
+												citation.document[0] &&
+												citation.source &&
+												citation.document[0] === citation.source.name
+											) {
+												return;
+											}
+
 											showCitationModal = true;
 											selectedCitation = citation;
 										}}
@@ -172,6 +191,16 @@
 							<button
 								class="no-toggle outline-none flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
 								on:click={() => {
+									// In this case the citation comes from the LLM response
+									if (
+										citation.document &&
+										citation.document[0] &&
+										citation.source &&
+										citation.document[0] === citation.source.name
+									) {
+										return;
+									}
+
 									showCitationModal = true;
 									selectedCitation = citation;
 								}}
