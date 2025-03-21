@@ -1,5 +1,6 @@
 <script>
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
+	import { base } from '$app/paths';
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
@@ -34,7 +35,7 @@
 		}
 	};
 
-	let profileImageUrl = '/favicon.png';
+	let profileImageUrl = `${base}/favicon.png`;
 	let description = '';
 
 	let selectedModelId = '';
@@ -90,7 +91,7 @@
 
 		name = '';
 		id = '';
-		profileImageUrl = '/favicon.png';
+		profileImageUrl = `${base}/favicon.png`;
 		description = '';
 		modelIds = [];
 		selectedModelId = '';

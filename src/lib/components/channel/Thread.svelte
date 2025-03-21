@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-
+	import { base } from '$app/paths';
 	import { socket, user } from '$lib/stores';
 
 	import { getChannelThreadMessages, sendMessage } from '$lib/apis/channels';
@@ -49,7 +49,7 @@
 			await tick();
 			scrollToBottom();
 		} else {
-			goto('/');
+			goto(`${base}/`);
 		}
 	};
 

@@ -6,7 +6,7 @@ from open_webui.internal.db import Base, JSONField, get_db
 
 from open_webui.models.chats import Chats
 from open_webui.models.groups import Groups
-
+from open_webui.env import PUBLIC_BASE_PATH
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text
@@ -100,7 +100,7 @@ class UsersTable:
         id: str,
         name: str,
         email: str,
-        profile_image_url: str = "/user.png",
+        profile_image_url: str = f"{PUBLIC_BASE_PATH}/user.png",
         role: str = "pending",
         oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:

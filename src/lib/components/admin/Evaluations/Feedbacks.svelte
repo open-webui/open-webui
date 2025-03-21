@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
+	import { base } from '$app/paths';
 	const { saveAs } = fileSaver;
 
 	import dayjs from 'dayjs';
@@ -173,7 +174,7 @@
 								<Tooltip content={feedback?.user?.name}>
 									<div class="shrink-0">
 										<img
-											src={feedback?.user?.profile_image_url ?? '/user.png'}
+											src={feedback?.user?.profile_image_url ?? `${base}/user.png`}
 											alt={feedback?.user?.name}
 											class="size-5 rounded-full object-cover shrink-0"
 										/>

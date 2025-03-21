@@ -14,6 +14,8 @@ dayjs.extend(localizedFormat);
 
 import { WEBUI_BASE_URL } from '$lib/constants';
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
+import { base } from '$app/paths';
+`${base}/user.png`
 
 //////////////////////////
 // Helper functions
@@ -271,7 +273,7 @@ export const generateInitialsImage = (name) => {
 		console.log(
 			'generateInitialsImage: failed pixel test, fingerprint evasion is likely. Using default image.'
 		);
-		return '/user.png';
+		return `${base}/user.png`;
 	}
 
 	ctx.fillStyle = '#F39C12';

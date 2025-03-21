@@ -3,7 +3,7 @@ import time
 from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_db
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, PUBLIC_BASE_PATH
 
 from open_webui.models.users import Users, UserResponse
 
@@ -35,7 +35,7 @@ class ModelParams(BaseModel):
 
 # ModelMeta is a model for the data stored in the meta field of the Model table
 class ModelMeta(BaseModel):
-    profile_image_url: Optional[str] = "/static/favicon.png"
+    profile_image_url: Optional[str] = f"{PUBLIC_BASE_PATH}/static/favicon.png"
 
     description: Optional[str] = None
     """

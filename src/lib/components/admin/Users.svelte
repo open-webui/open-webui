@@ -1,6 +1,7 @@
 <script>
 	import { getContext, tick, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { base } from '$app/paths';
 
 	import { goto } from '$app/navigation';
 	import { user } from '$lib/stores';
@@ -27,7 +28,7 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			await goto(`${base}/`);
 		} else {
 			users = await getUsers(localStorage.token);
 		}

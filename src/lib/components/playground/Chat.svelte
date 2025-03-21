@@ -3,6 +3,7 @@
 
 	import { goto } from '$app/navigation';
 	import { onMount, tick, getContext } from 'svelte';
+	import { base } from '$app/paths';
 
 	import {
 		OLLAMA_API_BASE_URL,
@@ -195,7 +196,7 @@
 
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
-			await goto('/');
+			await goto(`${base}/`);
 		}
 
 		if ($settings?.models) {

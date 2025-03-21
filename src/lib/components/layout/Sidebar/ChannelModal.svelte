@@ -9,6 +9,7 @@
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	const i18n = getContext('i18n');
 
 	export let show = false;
@@ -59,8 +60,8 @@
 			toast.success('Channel deleted successfully');
 			onUpdate();
 
-			if ($page.url.pathname === `/channels/${channel.id}`) {
-				goto('/');
+			if ($page.url.pathname === `${base}/channels/${channel.id}`) {
+				goto(`${base}/`);
 			}
 		}
 

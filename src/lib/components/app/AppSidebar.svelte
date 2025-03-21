@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
+	import { base } from '$app/paths';
 
 	let selected = '';
 </script>
@@ -25,7 +26,7 @@
 				}}
 			>
 				<img
-					src="/static/splash.png"
+					src="{base}/static/splash.png"
 					class="size-11 dark:invert p-0.5"
 					alt="logo"
 					draggable="false"
@@ -49,7 +50,7 @@
 			}}
 		>
 			<img
-				src="/static/favicon.png"
+				src="{base}/static/favicon.png"
 				class="size-10 {selected === '' ? 'rounded-2xl' : 'rounded-full'}"
 				alt="logo"
 				draggable="false"

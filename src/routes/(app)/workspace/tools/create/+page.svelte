@@ -7,6 +7,7 @@
 	import { compareVersion, extractFrontmatter } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { base } from '$app/paths';
 
 	const i18n = getContext('i18n');
 
@@ -47,7 +48,7 @@
 			toast.success($i18n.t('Tool created successfully'));
 			tools.set(await getTools(localStorage.token));
 
-			await goto('/workspace/tools');
+			await goto(`${base}/workspace/tools`);
 		}
 	};
 

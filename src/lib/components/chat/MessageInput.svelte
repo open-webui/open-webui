@@ -20,6 +20,7 @@
 		showControls,
 		TTSWorker
 	} from '$lib/stores';
+	import { base } from '$app/paths';
 
 	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
@@ -475,8 +476,8 @@
 											src={$models.find((model) => model.id === atSelectedModel.id)?.info?.meta
 												?.profile_image_url ??
 												($i18n.language === 'dg-DG'
-													? `/doge.png`
-													: `${WEBUI_BASE_URL}/static/favicon.png`)}
+													? `${base}/doge.png`
+													: `${base}/static/favicon.png`)}
 										/>
 										<div class="translate-y-[0.5px]">
 											Talking to <span class=" font-medium">{atSelectedModel.name}</span>

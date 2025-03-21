@@ -20,11 +20,16 @@ ARG BUILD_HASH=dev-build
 ARG UID=0
 ARG GID=0
 
+ARG PUBLIC_BASE_PATH=""
+
 ######## WebUI frontend ########
 FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
 ARG BUILD_HASH
 
 WORKDIR /app
+
+ENV PUBLIC_BASE_PATH=${PUBLIC_BASE_PATH}
+ENV VITE_PYODIDE_PREFIX=${PUBLIC_BASE_PATH}
 
 COPY package.json package-lock.json ./
 RUN npm ci

@@ -5,6 +5,7 @@
 	import ProfileImage from '../Messages/ProfileImage.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Heart from '$lib/components/icons/Heart.svelte';
+	import { base } from '$app/paths';
 
 	type $$Props = NodeProps;
 	export let data: $$Props['data'];
@@ -21,7 +22,7 @@
 		{#if data.message.role === 'user'}
 			<div class="flex w-full">
 				<ProfileImage
-					src={data.user?.profile_image_url ?? '/user.png'}
+					src={data.user?.profile_image_url ?? `${base}/user.png`}
 					className={'size-5 -translate-y-[1px]'}
 				/>
 				<div class="ml-2">

@@ -7,6 +7,7 @@
 	import { onMount, tick, getContext } from 'svelte';
 	import { createNewModel, getModelById } from '$lib/apis/models';
 	import { getModels } from '$lib/apis';
+	import { base } from '$app/paths';
 
 	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
 
@@ -49,7 +50,7 @@
 					)
 				);
 				toast.success($i18n.t('Model created successfully!'));
-				await goto('/workspace/models');
+				await goto(`${base}/workspace/models`);
 			}
 		}
 	};

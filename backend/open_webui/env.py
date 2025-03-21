@@ -455,3 +455,6 @@ OTEL_TRACES_SAMPLER = os.environ.get(
 
 PIP_OPTIONS = os.getenv("PIP_OPTIONS", "").split()
 PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
+
+OAUTH_PUBLIC_URL = os.environ.get("OAUTH_PUBLIC_URL", "")
+PUBLIC_BASE_PATH = os.environ.get("PUBLIC_BASE_PATH", "")

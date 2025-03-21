@@ -8,6 +8,7 @@
 
 	import { getPromptByCommand, getPrompts, updatePromptByCommand } from '$lib/apis/prompts';
 	import { page } from '$app/stores';
+	import { base } from '$app/paths';
 
 	import PromptEditor from '$lib/components/workspace/Prompts/PromptEditor.svelte';
 
@@ -22,7 +23,7 @@
 		if (prompt) {
 			toast.success($i18n.t('Prompt updated successfully'));
 			await prompts.set(await getPrompts(localStorage.token));
-			await goto('/workspace/prompts');
+			await goto(`${base}/workspace/prompts`);
 		}
 	};
 
@@ -45,10 +46,10 @@
 					access_control: _prompt?.access_control ?? null
 				};
 			} else {
-				goto('/workspace/prompts');
+				goto(`${base}/workspace/prompts`);
 			}
 		} else {
-			goto('/workspace/prompts');
+			goto(`${base}/workspace/prompts`);
 		}
 	});
 </script>

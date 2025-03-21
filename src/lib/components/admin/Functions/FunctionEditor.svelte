@@ -9,6 +9,7 @@
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import { base } from '$app/paths';
 
 	let formElement = null;
 	let loading = false;
@@ -306,7 +307,7 @@ class Pipe:
 								<button
 									class="w-full text-left text-sm py-1.5 px-1 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
 									on:click={() => {
-										goto('/admin/functions');
+										goto(`${base}/admin/functions`);
 									}}
 									type="button"
 								>

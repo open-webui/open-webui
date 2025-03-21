@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { base } from '$app/paths';
 
 	export let imageUrls = [
-		'/assets/images/adam.jpg',
-		'/assets/images/galaxy.jpg',
-		'/assets/images/earth.jpg',
-		'/assets/images/space.jpg'
+		`${base}/assets/images/adam.jpg`,
+		`${base}/assets/images/galaxy.jpg`,
+		`${base}/assets/images/earth.jpg`,
+		`${base}/assets/images/space.jpg`
 	];
 	export let duration = 5000;
 	let selectedImageIdx = 0;

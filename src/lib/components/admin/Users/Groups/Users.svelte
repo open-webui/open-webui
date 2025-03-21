@@ -7,6 +7,7 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
+	import { base } from '$app/paths';
 
 	export let users = [];
 	export let userIds = [];
@@ -98,7 +99,7 @@
 										user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
 										user.profile_image_url.startsWith('data:')
 											? user.profile_image_url
-											: `/user.png`}
+											: `${base}/user.png`}
 										alt="user"
 									/>
 

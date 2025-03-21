@@ -13,6 +13,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import VideoInputMenu from './CallOverlay/VideoInputMenu.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+	import { base } from '$app/paths';
 
 	const i18n = getContext('i18n');
 
@@ -756,11 +757,11 @@
 								: rmsLevel * 100 > 1
 									? 'size-14'
 									: 'size-12'}  transition-all rounded-full {(model?.info?.meta
-							?.profile_image_url ?? '/static/favicon.png') !== '/static/favicon.png'
+							?.profile_image_url ?? `${base}/static/favicon.png`) !== `${base}/static/favicon.png`
 							? ' bg-cover bg-center bg-no-repeat'
 							: 'bg-black dark:bg-white'}  bg-black dark:bg-white"
-						style={(model?.info?.meta?.profile_image_url ?? '/static/favicon.png') !==
-						'/static/favicon.png'
+						style={(model?.info?.meta?.profile_image_url ?? `${base}/static/favicon.png`) !==
+						`${base}/static/favicon.png`
 							? `background-image: url('${model?.info?.meta?.profile_image_url}');`
 							: ''}
 					/>
@@ -838,11 +839,11 @@
 									: rmsLevel * 100 > 1
 										? 'size-44'
 										: 'size-40'}  transition-all rounded-full {(model?.info?.meta
-								?.profile_image_url ?? '/static/favicon.png') !== '/static/favicon.png'
+								?.profile_image_url ?? `${base}/static/favicon.png`) !== `${base}/static/favicon.png`
 								? ' bg-cover bg-center bg-no-repeat'
 								: 'bg-black dark:bg-white'} "
-							style={(model?.info?.meta?.profile_image_url ?? '/static/favicon.png') !==
-							'/static/favicon.png'
+							style={(model?.info?.meta?.profile_image_url ?? `${base}/static/favicon.png`) !==
+							`${base}/static/favicon.png`
 								? `background-image: url('${model?.info?.meta?.profile_image_url}');`
 								: ''}
 						/>

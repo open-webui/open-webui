@@ -5,6 +5,7 @@
 	import dayjs from 'dayjs';
 	import { getContext, createEventDispatcher } from 'svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import { base } from '$app/paths';
 
 	dayjs.extend(localizedFormat);
 
@@ -153,7 +154,7 @@
 													'border-b'} dark:bg-gray-900 dark:border-gray-850 text-xs"
 											>
 												<td class="px-3 py-1 w-2/3">
-													<a href="/c/{chat.id}" target="_blank">
+													<a href="{base}/c/{chat.id}" target="_blank">
 														<div class=" underline line-clamp-1">
 															{chat.title}
 														</div>

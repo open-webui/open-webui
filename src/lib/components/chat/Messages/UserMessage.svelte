@@ -14,6 +14,7 @@
 	import Markdown from './Markdown.svelte';
 	import Image from '$lib/components/common/Image.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import { base } from '$app/paths';
 
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
@@ -103,8 +104,8 @@
 			<ProfileImage
 				src={message.user
 					? ($models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ??
-						'/user.png')
-					: (user?.profile_image_url ?? '/user.png')}
+						`${base}/user.png`)
+					: (user?.profile_image_url ?? `${base}/user.png`)}
 				className={'size-8'}
 			/>
 		</div>

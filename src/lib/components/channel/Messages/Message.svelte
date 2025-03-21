@@ -4,6 +4,7 @@
 	import isToday from 'dayjs/plugin/isToday';
 	import isYesterday from 'dayjs/plugin/isYesterday';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import { base } from '$app/paths';
 
 	dayjs.extend(relativeTime);
 	dayjs.extend(isToday);
@@ -144,7 +145,7 @@
 					<ProfilePreview user={message.user}>
 						<ProfileImage
 							src={message.user?.profile_image_url ??
-								($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
+								($i18n.language === 'dg-DG' ? `${base}/doge.png` : `${base}/static/favicon.png`)}
 							className={'size-8 translate-y-1 ml-0.5'}
 						/>
 					</ProfilePreview>
@@ -275,7 +276,7 @@
 										>
 											{#if $shortCodesToEmojis[reaction.name]}
 												<img
-													src="/assets/emojis/{$shortCodesToEmojis[
+													src="{base}/assets/emojis/{$shortCodesToEmojis[
 														reaction.name
 													].toLowerCase()}.svg"
 													alt={reaction.name}

@@ -2,14 +2,14 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<link rel="icon" type="image/png" href="/static/favicon.png" />
-		<link rel="icon" type="image/png" href="/static/favicon-96x96.png" sizes="96x96" />
-		<link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
-		<link rel="shortcut icon" href="/static/favicon.ico" />
-		<link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+		<link rel="icon" type="image/png" href="%sveltekit.assets%/static/favicon.png" />
+		<link rel="icon" type="image/png" href="%sveltekit.assets%/static/favicon-96x96.png" sizes="96x96" />
+		<link rel="icon" type="image/svg+xml" href="%sveltekit.assets%/static/favicon.svg" />
+		<link rel="shortcut icon" href="%sveltekit.assets%/static/favicon.ico" />
+		<link rel="apple-touch-icon" sizes="180x180" href="%sveltekit.assets%/static/apple-touch-icon.png" />
 		<meta name="apple-mobile-web-app-title" content="Open WebUI" />
 
-		<link rel="manifest" href="/manifest.json" />
+		<link rel="manifest" href="%sveltekit.assets%/manifest.json" />
 		<meta
 			name="viewport"
 			content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
@@ -21,9 +21,9 @@
 			rel="search"
 			type="application/opensearchdescription+xml"
 			title="Open WebUI"
-			href="/opensearch.xml"
+			href="%sveltekit.assets%/opensearch.xml"
 		/>
-		<script src="/static/loader.js" defer></script>
+		<script src="%sveltekit.assets%/static/loader.js" defer></script>
 
 		<script>
 			function resizeIframe(obj) {
@@ -129,7 +129,7 @@
 					left: 50%;
 					transform: translateX(-50%);
 				"
-				src="/static/splash.png"
+				src="%sveltekit.assets%/static/splash.png"
 			/>
 
 			<div
@@ -149,7 +149,7 @@
 				<img
 					id="logo-her"
 					style="width: auto; height: 13rem"
-					src="/static/splash.png"
+					src="%sveltekit.assets%/static/splash.png"
 					class="animate-pulse-fast"
 				/>
 
@@ -193,7 +193,7 @@
 	}
 
 	#splash-screen {
-		background: #fff;
+		background: linear-gradient(to bottom right, #232d4b, #2f3a5e) !important;
 	}
 
 	html.dark #splash-screen {

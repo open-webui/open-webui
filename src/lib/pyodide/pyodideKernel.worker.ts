@@ -21,7 +21,7 @@ type CellState = {
 const initializePyodide = async () => {
 	// Ensure Pyodide is loaded once and cached in the worker's global scope
 	if (!self.pyodide) {
-		self.indexURL = '/pyodide/';
+		self.indexURL = `${import.meta.env.VITE_PYODIDE_PREFIX}/pyodide/`;
 		self.stdout = '';
 		self.stderr = '';
 		self.cells = {};

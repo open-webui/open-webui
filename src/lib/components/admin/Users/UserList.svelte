@@ -3,6 +3,7 @@
 	import { WEBUI_NAME, config, user, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
+	import { base } from '$app/paths';
 
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -387,7 +388,7 @@
 								user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
 								user.profile_image_url.startsWith('data:')
 									? user.profile_image_url
-									: `/user.png`}
+									: `${base}/user.png`}
 								alt="user"
 							/>
 

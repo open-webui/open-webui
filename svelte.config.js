@@ -1,5 +1,6 @@
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+import 'dotenv/config';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -14,7 +15,12 @@ const config = {
 			pages: 'build',
 			assets: 'build',
 			fallback: 'index.html'
-		})
+		}),
+		appDir: '_app',
+		paths: {
+			base: process.env.PUBLIC_BASE_PATH || ''
+		}
+
 	},
 	vitePlugin: {
 		// inspector: {

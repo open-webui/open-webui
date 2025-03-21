@@ -4,7 +4,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.users import UserModel, Users
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, PUBLIC_BASE_PATH
 from pydantic import BaseModel
 from sqlalchemy import Boolean, Column, String, Text
 from open_webui.utils.auth import verify_password
@@ -87,7 +87,7 @@ class SignupForm(BaseModel):
     name: str
     email: str
     password: str
-    profile_image_url: Optional[str] = "/user.png"
+    profile_image_url: Optional[str] = f"{PUBLIC_BASE_PATH}/user.png"
 
 
 class AddUserForm(SignupForm):
@@ -100,7 +100,7 @@ class AuthsTable:
         email: str,
         password: str,
         name: str,
-        profile_image_url: str = "/user.png",
+        profile_image_url: str = f"{PUBLIC_BASE_PATH}/user.png",
         role: str = "pending",
         oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
