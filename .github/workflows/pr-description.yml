@@ -1,0 +1,15 @@
+name: Autofill PR description
+
+on: pull_request
+
+jobs:
+  openai-pr-description:
+    permissions: write-all
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: platisd/openai-pr-description@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          openai_api_key: "d98a813b821d4b2a9743129a8ce774c7"
+          azure_endpoint: "https://hkust.azure-api.net"
+          azure_openai_api_version: "2024-10-21"

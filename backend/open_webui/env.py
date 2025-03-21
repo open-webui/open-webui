@@ -6,10 +6,12 @@ import pkgutil
 import sys
 import shutil
 from pathlib import Path
+from datetime import datetime
 
 import markdown
 from bs4 import BeautifulSoup
 from open_webui.constants import ERROR_MESSAGES
+from logging.handlers import RotatingFileHandler
 
 ####################################
 # Load .env file
@@ -75,6 +77,33 @@ else:
 
 log = logging.getLogger(__name__)
 log.info(f"GLOBAL_LOG_LEVEL: {GLOBAL_LOG_LEVEL}")
+
+if GLOBAL_LOG_LEVEL == "DEBUG":
+    # RotatingFileHandler 생성
+    rotating_handler = RotatingFileHandler(
+        filename=f"logs/{datetime.today().strftime('%Y-%m-%d')}_log.log",
+        mode="a",
+        maxBytes=10 * 1024 * 1024,  # 10MB
+        backupCount=5,
+        encoding="utf-8",
+    )
+    
+    # 로그 포맷 설정
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    rotating_handler.setFormatter(formatter)
+
+    # 로거에 핸들러 추가
+    log.addHandler(rotating_handler)
+    
+    # GLOBAL_LOG_LEVEL이 DEBUG일 떄 root logger가 이 핸들러를 사용하도록 설정
+    # 이렇게 하면 모든 로그가 파일에 기록됨
+    root_logger = logging.getLogger()
+    root_logger.addHandler(rotating_handler)
+    
+    logging.getLogger("uvicorn.access").addHandler(rotating_handler)
+    logging.getLogger("uvicorn.error").addHandler(rotating_handler)
+    logging.getLogger("open_webui").addHandler(rotating_handler)
+    logging.getLogger("open_webui").setLevel(logging.DEBUG)  # DEBUG 레벨 적용
 
 if "cuda_error" in locals():
     log.exception(cuda_error)
