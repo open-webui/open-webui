@@ -201,7 +201,7 @@
 		dragged = false;
 	};
 
-	onMount(() => {
+	onMount(async () => {
 		open = folders[folderId].is_expanded;
 		if (folderElement) {
 			folderElement.addEventListener('dragover', onDragOver);
@@ -214,6 +214,13 @@
 			folderElement.addEventListener('drag', onDrag);
 			// Event listener for when dragging ends
 			folderElement.addEventListener('dragend', onDragEnd);
+		}
+
+		if (folders[folderId]?.new) {
+			delete folders[folderId].new;
+
+			await tick();
+			editHandler();
 		}
 	});
 
@@ -301,10 +308,13 @@
 
 		await tick();
 
-		// focus on the input
+		// focus on the input and select all text
 		setTimeout(() => {
 			const input = document.getElementById(`folder-${folderId}-input`);
-			input.focus();
+			if (input) {
+				input.focus();
+				input.select();
+			}
 		}, 100);
 	};
 
