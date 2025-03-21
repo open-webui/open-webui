@@ -1364,6 +1364,7 @@ async def process_chat_response(
                     "content": content,
                 }
             ]
+            sources = None  # Store sources from the LLMs ("citations") at this scope
 
             # We might want to disable this by default
             DETECT_REASONING = True
@@ -1423,6 +1424,18 @@ async def process_chat_response(
                         try:
                             data = json.loads(data)
 
+                            if "citations" in data:
+                                nonlocal sources
+                                sources = list(map(
+                                    lambda citationUrl: {
+                                        "source": {"name": citationUrl},
+                                        "document": [citationUrl],
+                                        "metadata": [{"source": citationUrl}],
+                                        "distances": [0],
+                                    },
+                                    data["citations"]
+                                ))
+                            
                             if "selected_model_id" in data:
                                 model_id = data["selected_model_id"]
                                 Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -1807,12 +1820,23 @@ async def process_chat_response(
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
+                    message = {
+                        "content": serialize_content_blocks(content_blocks),
+                    }
+                    if sources:  # Use the stored sources
+                        message["sources"] = sources
+
+                        await event_emitter({
+                            "type": "chat:completion",
+                            "data": {
+                                "sources": sources,
+                            },
+                        })
+
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
-                        {
-                            "content": serialize_content_blocks(content_blocks),
-                        },
+                        message
                     )
 
                 # Send a webhook notification if the user is not active
@@ -1844,12 +1868,23 @@ async def process_chat_response(
 
                 if not ENABLE_REALTIME_CHAT_SAVE:
                     # Save message in the database
+                    message = {
+                        "content": serialize_content_blocks(content_blocks),
+                    }
+                    if sources:  # Use the stored sources‚
+                        message["sources"] = sources
+
+                        await event_emitter({
+                            "type": "chat:completion",
+                            "data": {
+                                "sources": sources,
+                            },
+                        })
+
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
-                        {
-                            "content": serialize_content_blocks(content_blocks),
-                        },
+                        message
                     )
 
             if response.background is not None:
