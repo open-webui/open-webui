@@ -304,18 +304,15 @@
 		console.log('Edit');
 		await tick();
 		name = folders[folderId].name;
-		edit = true;
 
+		edit = true;
 		await tick();
 
-		// focus on the input and select all text
-		setTimeout(() => {
-			const input = document.getElementById(`folder-${folderId}-input`);
-			if (input) {
-				input.focus();
-				input.select();
-			}
-		}, 100);
+		const input = document.getElementById(`folder-${folderId}-input`);
+
+		if (input) {
+			input.focus();
+		}
 	};
 
 	const exportHandler = async () => {
@@ -404,6 +401,9 @@
 							id="folder-{folderId}-input"
 							type="text"
 							bind:value={name}
+							on:focus={(e) => {
+								e.target.select();
+							}}
 							on:blur={() => {
 								nameUpdateHandler();
 								edit = false;
@@ -437,7 +437,10 @@
 				>
 					<FolderMenu
 						on:rename={() => {
-							editHandler();
+							// Requires a timeout to prevent the click event from closing the dropdown
+							setTimeout(() => {
+								editHandler();
+							}, 200);
 						}}
 						on:delete={() => {
 							showDeleteConfirm = true;
