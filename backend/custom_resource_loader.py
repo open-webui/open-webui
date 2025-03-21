@@ -228,12 +228,10 @@ def main():
     if not check_required_env_vars():
         print("Required environment variables not set. Skip syncing resources.")
         return
-    try:
-        admin_id = sync_admin_user()
-        sync_models(admin_id)
-    except Exception as e:
-        print(f"Fatal error: {e}")
-        sys.exit(1)
+
+    admin_id = sync_admin_user()
+    sync_models(admin_id)
+
 
 if __name__ == "__main__":
     main()
