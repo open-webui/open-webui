@@ -22,11 +22,14 @@ services:
     ports:
       - ${OPEN_WEBUI_PORT-3006}:8080
     environment:
-      - 'OLLAMA_BASE_URL=http://18.157.79.230:11434'
+      - 'OLLAMA_BASE_URL=http://16.171.185.182:11434'
       - 'WEBUI_SECRET_KEY='
       - VIRTUAL_HOST=llm.cereinsight.com
       - CERT_NAME=cereinsight.com
+      - WEBUI_NAME=Cere LLM WebUI
     restart: unless-stopped
+    extra_hosts:
+      - host.docker.internal:host-gateway
 
 volumes:
   # ollama: {}
