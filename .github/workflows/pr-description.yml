@@ -1,0 +1,25 @@
+name: Generate PR Description
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  generate-description:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Generate PR Description
+        uses: octue/generate-pull-request-description@1.0.0.beta-2
+        id: pr-description
+        with:
+          pull_request_url: ${{ github.event.pull_request.url }}
+          api_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update PR Body
+        uses: riskledger/update-pr-description@v2
+        with:
+          body: ${{ steps.pr-description.outputs.pull_request_description }}
+          token: ${{ secrets.GITHUB_TOKEN }}
