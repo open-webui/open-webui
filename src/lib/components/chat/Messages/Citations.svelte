@@ -110,6 +110,7 @@
 								citation.source &&
 								citation.document[0] === citation.source.name
 							) {
+								window.open(citation.source.name, '_blank', 'noopener,noreferrer');
 								return;
 							}
 							showCitationModal = true;
@@ -149,9 +150,9 @@
 												citation.source &&
 												citation.document[0] === citation.source.name
 											) {
+												window.open(citation.source.name, '_blank', 'noopener,noreferrer');
 												return;
 											}
-
 											showCitationModal = true;
 											selectedCitation = citation;
 										}}
@@ -198,6 +199,7 @@
 										citation.source &&
 										citation.document[0] === citation.source.name
 									) {
+										window.open(citation.source.name, '_blank', 'noopener,noreferrer');
 										return;
 									}
 
