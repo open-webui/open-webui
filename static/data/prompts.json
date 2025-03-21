@@ -1,62 +1,44 @@
 [
-	{
-		"id": 1,
-		"promptDisplayName": "(C) Write a funny poem about an elephant in a dish store",
-		"prompt": "Write a funny poem about an elephant in a dish store",
-		"agentId": "improved-meta-llama-31-70b-instruct"
-	},
-	{
-		"id": 2,
-		"promptDisplayName": "(C) Explain the concept of blockchain in simple terms",
-		"prompt": "Explain the concept of blockchain in simple terms",
-		"agentId": "improved-meta-llama-31-70b-instruct"
-	},
-	{
-		"id": 3,
-		"promptDisplayName": "(G) Give me five creative ideas for a social media post",
-		"prompt": "Give me five creative ideas for a social media post",
-		"agentId": "meta-lama"
-	},
-	{
-		"id": 4,
-		"promptDisplayName": "4 (G) Give me five creative ideas for a social media post",
-		"prompt": "Give me five creative ideas for a social media post",
-		"agentId": "meta-lama"
-	},
-	{
-		"id": 5,
-		"promptDisplayName": "5 (G) Give me five creative ideas for a social media post",
-		"prompt": "Give me five creative ideas for a social media post",
-		"agentId": "meta-lama"
-	},
-	{
-		"id": 6,
-		"promptDisplayName": "6 (G) Give me five creative ideas for a social media post",
-		"prompt": "Give me five creative ideas for a social media post",
-		"agentId": "meta-lama"
-	},
-	{
-		"id": 7,
-		"promptDisplayName": "7 (G) Give me five creative ideas for a social media post",
-		"prompt": "Give me five creative ideas for a social media post",
-		"agentId": "meta-lama"
-	},
-	{
-		"id": 8,
-		"promptDisplayName": "8 (G) Give me five creative ideas for a social media post",
-		"prompt": "Give me five creative ideas for a social media post",
-		"agentId": "meta-lama"
-	},
-	{
-		"id": 9,
-		"promptDisplayName": "9 (G) Give me five creative ideas for a social media post",
-		"prompt": "Give me five creative ideas for a social media post",
-		"agentId": "meta-lama"
-	},
-	{
-		"id": 10,
-		"promptDisplayName": "A (C) Explain options trading",
-		"prompt": "Explain options trading",
-		"agentId": "improved-meta-llama-31-70b-instruct"
-	}
+    {
+        "id": 0,
+        "promptDisplayName": "Erkläre mir ein Thema besser zu verstehen.",
+        "prompt": "Erkläre mir ein Thema besser zu verstehen.",
+        "agentId": "greta"
+    },
+    {
+        "id": 1,
+        "promptDisplayName": "Hilf mir Ideen zu sammeln.",
+        "prompt": "Hilf mir Ideen zu sammeln.",
+        "agentId": "greta"
+    },
+    {
+        "id": 2,
+        "promptDisplayName": "Schreibe eine Python-Funktion für mich.",
+        "prompt": "Schreibe eine Python-Funktion für mich.",
+        "agentId": "dora"
+    },
+    {
+        "id": 3,
+        "promptDisplayName": "Hilf mir meinen Code effizienter zu machen.",
+        "prompt": "Hilf mir meinen Code effizienter zu machen.",
+        "agentId": "dora"
+    },
+    {
+        "id": 4,
+        "promptDisplayName": "Generiere visuelle Inhalte für meine Webseite.",
+        "prompt": "Generiere visuelle Inhalte für meine Webseite.",
+        "agentId": "derek"
+    },
+    {
+        "id": 5,
+        "promptDisplayName": "Fasse mir einen Text zusammen.",
+        "prompt": "Fasse mir einen Text zusammen.",
+        "agentId": "cedric"
+    },
+    {
+        "id": 6,
+        "promptDisplayName": "Verbessere meinen Text.",
+        "prompt": "Verbessere meinen Text.",
+        "agentId": "cedric"
+    }
 ]

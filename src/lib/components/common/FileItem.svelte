@@ -110,7 +110,9 @@
 						</div>
 					{/if}
 					<div class="font-medium line-clamp-1 flex-1">{name}</div>
-					<div class="text-gray-500 text-xs capitalize shrink-0">{formatFileSize(size)}</div>
+					{#if size}
+						<div class="text-gray-500 text-xs capitalize shrink-0">{formatFileSize(size)}</div>
+					{/if}
 				</div>
 			</div>
 		</Tooltip>

@@ -75,12 +75,12 @@
 	import { getTools } from '$lib/apis/tools';
 
 	import Banner from '../common/Banner.svelte';
-	import MessageInput from '$lib/components/chat/MessageInput.svelte';
+	import MessageInput from '$lib/IONOS/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/chat/Navbar.svelte';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
-	import Placeholder from './Placeholder.svelte';
+	import Placeholder from '$lib/IONOS/components/chat/Placeholder.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import { startup as ionosGptStartup } from '$lib/IONOS/services/startup';
 

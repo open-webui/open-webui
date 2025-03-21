@@ -20,6 +20,11 @@ export default {
 					850: 'var(--color-gray-850, #262626)',
 					900: 'var(--color-gray-900, #171717)',
 					950: 'var(--color-gray-950, #0d0d0d)'
+				},
+				'ai-main': {
+					500: '#560e8a',
+					700: '#9117e8',
+					900: '#e480f8'
 				}
 			},
 			typography: {
@@ -35,6 +40,9 @@ export default {
 			},
 			padding: {
 				'safe-bottom': 'env(safe-area-inset-bottom)'
+			},
+			screens: {
+				xs: "560px",
 			}
 		}
 	},

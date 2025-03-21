@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import type { ScrollerItem } from './scrollerItem.d.ts';
 
 	const dispatcher = createEventDispatcher();
 
@@ -10,17 +9,24 @@
 	export let direction = 'left';
 	export let items;
 
-	let el;
+	let el: HTMLElement|null = null;
 
-	$: scrollWidth = el?.scrollWidth;
+	function setAnimationPlayState(newState: string): void {
+		if (el) {
+			el.style.animationPlayState = newState;
+		}
+	}
+
+	$: scrollWidth = el?.scrollWidth ?? 0;
 	$: fullWidth = scrollWidth / 2;
 	$: duration = fullWidth / speed;
 </script>
 
 <div
 	class="full-width overflow-hidden position-relative my-5"
-	on:mouseenter={() => { el.style.animationPlayState = 'paused'; }}
-	on:mouseleave={() => { el.style.animationPlayState = 'running'; }}
+	role="marquee"
+	on:mouseenter={() => { setAnimationPlayState('paused'); }}
+	on:mouseleave={() => { setAnimationPlayState('running'); }}
 	>
 	<div
 		bind:this={el}
@@ -29,22 +35,22 @@
 		style:width={`${fullWidth * 2}px`}
 	>
 		{#each items as { id, text }}
-			<span
-				on:click={() => { dispatcher('click', id); }}
-				data-id={id}
-				class="flex justify-items-center items-center bg-white rounded-md h-20 mx-2 p-4 last:p-0 cursor-pointer"
-			>
-				<span class="w-full text-sm text-wrap">{ text } →</span>
-			</span>
-		{/each}
-		{#each items as { id, text }}
-			<span
+			<button
 				on:click={() => { dispatcher('click', id); }}
 				data-id={id}
 				class="flex justify-items-center items-center bg-white rounded-md h-20 mx-2 last:m-0 px-6 py-4 cursor-pointer"
 			>
 				<span class="w-full text-sm text-wrap">{ text } →</span>
-			</span>
+			</button>
+		{/each}
+		{#each items as { id, text }}
+			<button
+				on:click={() => { dispatcher('click', id); }}
+				data-id={id}
+				class="flex justify-items-center items-center bg-white rounded-md h-20 mx-2 last:m-0 px-6 py-4 cursor-pointer"
+			>
+				<span class="w-full text-sm text-wrap">{ text } →</span>
+			</button>
 		{/each}
 	</div>
 </div>

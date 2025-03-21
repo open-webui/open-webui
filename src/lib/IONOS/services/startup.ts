@@ -4,7 +4,7 @@ import { updateUserSettings } from '$lib/apis/users';
 import { getAgent } from './agent';
 import { getPrompt } from './prompt';
 
-export const storeAgent = async (id: string): void => {
+export const storeAgent = async (id: string): Promise<void> => {
 	if (!id) {
 		throw new Error('Agent ID must not be falsy');
 	}
@@ -23,7 +23,7 @@ export type StartupInfo = {
 	prompt: string,
 }
 
-export const startup = async (): StartupInfo => {
+export const startup = async (): Promise<StartupInfo> => {
 	console.log('*** IONOS GPT startup ***');
 
 	const agent = getAgent();

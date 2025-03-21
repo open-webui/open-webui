@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
+	import AnimatedBackground from '$lib/IONOS/components/AnimatedBackground.svelte'
+	import TextWithGradient from '$lib/IONOS/components/TextWithGradient.svelte'
 	import AgentSelector from '$lib/IONOS/components/AgentSelector.svelte'
 	import PromptSelector from '$lib/IONOS/components/PromptSelector.svelte'
 	import Robot from '$lib/components/icons/Robot.svelte'
@@ -15,43 +17,59 @@
 	});
 </script>
 
-<h1 class="my-5 text-3xl text-center text-pink-300">
-	{$i18n.t('Welcome to IONOS GPT,', { ns: 'ionos' })}
-	<br>
-	{$i18n.t('Where AI becomes your ultimate team of experts!', { ns: 'ionos' })}
-</h1>
+<svelte:head>
+	<title>{$i18n.t('Welcome to IONOS GPT,', { ns: 'ionos' })} {$i18n.t('Where AI becomes your ultimate team of experts!', { ns: 'ionos' })}</title>
+</svelte:head>
 
-<p class="max-w-3xl mb-4 text-sm">
-	{$i18n.t('From ideas to execution, our virtual team is here to help — from writing and design to coding, they handle the details so you can focus on what matters. Get to know them and see how they can support your projects.', { ns: 'ionos' })}
-</p>
+<AnimatedBackground />
 
-<div class="flex flex-col items-center">
-	<span>{$i18n.t('Select a specialist', { ns: 'ionos' })}</span>
-	<span>
-		<ChevronDown />
-	</span>
-</div>
+<content class="flex flex-col items-center pt-20 mx-3">
+	<TextWithGradient>
+		<h1 class="my-5 text-3xl text-center">
+			{$i18n.t('Welcome to IONOS GPT,', { ns: 'ionos' })}
+			<br>
+			{$i18n.t('Where AI becomes your ultimate team of experts!', { ns: 'ionos' })}
+		</h1>
+	</TextWithGradient>
 
-<div class="block py-5 my-2">
-	<AgentSelector />
-</div>
+	<p class="max-w-3xl mb-4 text-sm text-center">
+		{$i18n.t('From ideas to execution, our virtual team is here to help — from writing and design to coding, they handle the details so you can focus on what matters. Get to know them and see how they can support your projects.', { ns: 'ionos' })}
+	</p>
 
-<h1 class="my-4 text-xl text-center">
-	{$i18n.t('Bringing your ideas to life is easy with our AI specialists', { ns: 'ionos' })}
-</h1>
+	<div class="flex flex-col items-center">
+		<span>{$i18n.t('Select a specialist', { ns: 'ionos' })}</span>
+		<span>
+			<ChevronDown />
+		</span>
+	</div>
 
-<p class="max-w-2xl text-sm text-center">
-	{$i18n.t('Whether you need great content, eye-catching designs, or clean code, your virtual team is here to help every step of the way.', { ns: 'ionos' })}
-</p>
+	<div class="block py-5 my-2">
+		<AgentSelector />
+	</div>
 
-<div class="block w-full py-5 my-8">
-	<PromptSelector />
-</div>
+	<h1 class="my-4 text-xl text-center">
+		{$i18n.t('Bringing your ideas to life is easy with our AI specialists', { ns: 'ionos' })}
+	</h1>
 
-<div class="my-20">
-	<Robot />
-</div>
+	<p class="max-w-2xl text-sm text-center">
+		{$i18n.t('Whether you need great content, eye-catching designs, or clean code, your virtual team is here to help every step of the way.', { ns: 'ionos' })}
+	</p>
 
-<p class="max-w-2xl my-5 text-sm text-center">
-	{$i18n.t('By sending messages to IONOS GPT, you agree to our terms and conditions and confirm that you\'ve read our privacy policy.', { ns: 'ionos' })}
-</p>
+	<div class="block w-full py-5 my-8">
+		<PromptSelector />
+	</div>
+
+	<div class="my-20">
+		<Robot />
+	</div>
+
+	<p class="max-w-2xl my-5 text-sm text-center">
+		{$i18n.t('By sending messages to IONOS GPT, you agree to our terms and conditions and confirm that you\'ve read our privacy policy.', { ns: 'ionos' })}
+	</p>
+</content>
+
+<style>
+	:global(body) {
+		background-color: #f9f9f9;
+	}
+</style>

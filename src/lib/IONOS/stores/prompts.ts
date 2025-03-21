@@ -1,8 +1,9 @@
 import { type Writable, get, writable } from 'svelte/store';
+import type { Agent } from './agents';
 import { agents as agentsStore, init as initAgents } from './agents';
 
 export type Prompt = {
-	id: string,
+	id: number,
 	promptDisplayName: string,
 	prompt: string,
 	agentId: string,
@@ -14,7 +15,7 @@ export const prompts: Writable<Prompt[]> = writable([]);
 
 let initialized = false;
 
-export const init = async (): void => {
+export const init = async (): Promise<void> => {
 	if (initialized) {
 		return;
 	}
@@ -22,12 +23,12 @@ export const init = async (): void => {
 	await initAgents();
 
 	const response = await fetch(LOCATION);
-	const allPrompts = await response.json();
+	const allPrompts: Prompt[] = (await response.json()) as Prompt[];
 
-	const agents = get(agentsStore);
-	const agentIds = agents.map(({ id }) => id);
+	const agents: Agent[] = get(agentsStore);
+	const agentIds: string[] = agents.map(({ id }) => id);
 
-	const includeOnlyKnownAgents = ({ agentId }) => agentIds.includes(agentId);
+	const includeOnlyKnownAgents = ({ agentId }: { agentId: string }) => agentIds.includes(agentId);
 	const sanitizedPrompts = allPrompts.filter(includeOnlyKnownAgents);
 
 	if (sanitizedPrompts.length !== allPrompts.length) {

@@ -1,4 +1,4 @@
 export type ScrollerItem = {
-	id: string,
+	id: number,
 	text: string,
 };

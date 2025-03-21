@@ -29,5 +29,22 @@
 For Typescript and Svelte use a file tree under `src/lib/IONOS` that mirrors `src/lib`.
 
 
+## Build tooling
 
+### Linting and Typechecking
 
+The out-of-box Open WebUI has too many linter any type errors.
+
+Note: this will hide type and linter errors in code we modified.
+
+Type check with custom config:
+
+```
+node_modules/.bin/svelte-check --tsconfig ./tsconfig.ionos.json
+```
+
+Lint out customized sub-tree:
+
+```
+node_modules/.bin/eslint src/lib/IONOS/
+```
