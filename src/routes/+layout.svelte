@@ -265,16 +265,7 @@
 		// so `/error` can show something that's not `undefined`.
 
 		initI18n();
-		if (!localStorage.locale) {
-			const languages = await getLanguages();
-			const browserLanguages = navigator.languages
-				? navigator.languages
-				: [navigator.language || navigator.userLanguage];
-			const lang = backendConfig.default_locale
-				? backendConfig.default_locale
-				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
-			$i18n.changeLanguage(lang);
-		}
+		$i18n.changeLanguage('de-DE');
 
 		if (backendConfig) {
 			// Save Backend Status to Store
