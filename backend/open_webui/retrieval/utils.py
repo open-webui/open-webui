@@ -1,5 +1,6 @@
 import logging
 import os
+import heapq
 from typing import Optional, Union
 from concurrent.futures import ThreadPoolExecutor
 
@@ -14,7 +15,6 @@ from langchain_core.documents import Document
 
 from open_webui.config import VECTOR_DB
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
-from open_webui.utils.misc import get_last_user_message, calculate_sha256_string
 
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
@@ -124,7 +124,6 @@ def query_doc_with_hybrid_search(
         ensemble_retriever = EnsembleRetriever(
             retrievers=[bm25_retriever, vector_search_retriever], weights=[0.5, 0.5]
         )
-
         compressor = RerankCompressor(
             embedding_function=embedding_function,
             top_n=k,
@@ -135,7 +134,6 @@ def query_doc_with_hybrid_search(
         compression_retriever = ContextualCompressionRetriever(
             base_compressor=compressor, base_retriever=ensemble_retriever
         )
-
         collection_data = compression_retriever.invoke(query)
         collection_data = {
             "distances": [[d.metadata.get("score") for d in collection_data]],
@@ -143,11 +141,10 @@ def query_doc_with_hybrid_search(
             "metadatas": [[d.metadata for d in collection_data]],
         }
 
-        log.info(
+        log.debug(
             "query_doc_with_hybrid_search:result "
             + f'{collection_data["metadatas"]} {collection_data["distances"]}'
         )
-
         return collection_data
     except Exception as e:
         raise e
@@ -177,26 +174,26 @@ def merge_get_results(get_results: list[dict]) -> dict:
 def merge_and_sort_query_results(
     query_results: list[dict], k: int
 ) -> dict:
+    
     if VECTOR_DB == "chroma":
         # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
         # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
         reverse = False
     else:
         reverse = True
-
-    combined = []    
-    seen_hashes = set()
+        
+    combined = dict()  # To store documents with unique document hashes as keys
     
-    # Process all results in a single pass
     for data in query_results:
         distances = data["distances"][0]
         documents = data["documents"][0]
         metadatas = data["metadatas"][0]
+
         for distance, document, metadata in zip(distances, documents, metadatas):
             if isinstance(document, str):
                 doc_hash = hashlib.md5(
                     document.encode()
-                ).hexdigest()  # Compute a hash for uniqueness
+                ).hexdigest()  # Compute a hash for uniqueness of the document fragment
 
                 if doc_hash not in combined.keys():
                     combined[doc_hash] = (distance, document, metadata)
@@ -209,22 +206,23 @@ def merge_and_sort_query_results(
                     combined[doc_hash] = (distance, document, metadata)
                 if reverse and distance > combined[doc_hash][0]:
                     combined[doc_hash] = (distance, document, metadata)
-
+    
     combined = list(combined.values())
-    # Sort the list based on distances
-    combined.sort(key=lambda x: x[0], reverse=reverse)
+    if reverse:
+        top_k = heapq.nlargest(k, combined, key=lambda x: x[0])
+    else:
+        top_k = heapq.nsmallest(k, combined, key=lambda x: x[0])
 
-    # Slice to keep only the top k elements
-    sorted_distances, sorted_documents, sorted_metadatas = (
-        zip(*combined[:k]) if combined else ([], [], [])
-    )
+    # Unpack results
+    sorted_distances, sorted_documents, sorted_metadatas = zip(*top_k) if top_k else ([], [], [])
 
-    # if chromaDB, the distance is 0 (best) to 2 (worse)
-    # re-order to -1 (worst) to 1 (best) for relevance score
+    # Transform distances
     if not reverse:
-        sorted_distances = tuple(-dist for dist in sorted_distances)
+        # Combine operations into single comprehension
+        sorted_distances = tuple(-dist + 1 for dist in sorted_distances)
+    else:
         sorted_distances = tuple(dist + 1 for dist in sorted_distances)
-
+    
     # Create and return the output dictionary
     return {
         "distances": [list(sorted_distances)],
@@ -273,7 +271,7 @@ def query_collection(
                     log.exception(f"Error when querying the collection: {e}")
             else:
                 pass
-
+            
     return merge_and_sort_query_results(results, k=k)
 
 
@@ -303,6 +301,7 @@ def query_collection_with_hybrid_search(
                 log.exception(f"Failed to fetch collection {collection_name}: {e}")
                 collection_data[collection_name] = None
 
+    log.info("Starting the processing of queries in parallel...")
     def process_query(collection_name, query):
         try:
             # Fetch pre-loaded collection data
@@ -339,7 +338,7 @@ def query_collection_with_hybrid_search(
         raise Exception("Hybrid search failed for all collections. Using Non-hybrid search as fallback.")
 
     return merge_and_sort_query_results(results, k=k)
-  
+
 
 def get_embedding_function(
     embedding_engine,
