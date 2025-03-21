@@ -93,7 +93,7 @@
 			folders[folder.id] = { ...(folders[folder.id] || {}), ...folder };
 
 			if (newFolderId && folder.id === newFolderId) {
-				folders[folder.id].isNew = true;
+				folders[folder.id].new = true;
 				newFolderId = null;
 			}
 		}

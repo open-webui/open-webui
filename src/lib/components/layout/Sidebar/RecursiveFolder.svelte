@@ -201,7 +201,7 @@
 		dragged = false;
 	};
 
-	onMount(() => {
+	onMount(async () => {
 		open = folders[folderId].is_expanded;
 		if (folderElement) {
 			folderElement.addEventListener('dragover', onDragOver);
@@ -216,12 +216,11 @@
 			folderElement.addEventListener('dragend', onDragEnd);
 		}
 
-		if (folders[folderId].isNew) {
-			folders[folderId].isNew = false;
-			
-			setTimeout(() => {
-				editHandler();
-			}, 100);
+		if (folders[folderId]?.new) {
+			delete folders[folderId].new;
+
+			await tick();
+			editHandler();
 		}
 	});
 
