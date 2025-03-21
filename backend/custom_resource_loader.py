@@ -23,14 +23,10 @@ from open_webui.utils.auth import (
     get_password_hash,
 )
 
-# The default path to resources
-default_resources_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'custom_resources')
+DEFAULT_RESOURCES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'custom_resources')
 
-# Get the custom path from the environment variable
-custom_resources_path = os.getenv('CUSTOM_RESOURCE_PATH')
-
-# Use the custom path if it exists, otherwise fall back to the default path
-resources_path = custom_resources_path if custom_resources_path else default_resources_path
+# Will be set in check_required_env_vars()
+resources_path = None
 
 def load_json_file(file_path: str):
     try:
@@ -76,6 +72,9 @@ def update_model_by_id(id: str, form_data: ModelForm):
 
 
 def handle_model_update(admin_user_id, db_models, json_models):
+    if not resources_path:
+        raise Exception("Assertion error: resources_path not defined")
+
     db_model_id_set = set([model.id for model in db_models])
     json_model_id_set = set([model['id'] for model in json_models])
 
@@ -162,6 +161,9 @@ def getModelForm(model_data: dict[str, any]):
     return model_form
 
 def sync_models(admin_user_id: str):
+    if not resources_path:
+        raise Exception("Assertion error: resources_path not defined")
+
     file_path = resources_path + '/models.json'
     db_models = load_db_models()
     print(f"Found {len(db_models)} models in database.")
@@ -206,21 +208,36 @@ def sync_admin_user() -> str:
         return user_id
 
 def check_required_env_vars() -> bool:
+    global resources_path
+
     """Check if required environment variables are set."""
     admin_email = os.getenv('ADMIN_EMAIL')
     admin_password = os.getenv('ADMIN_PASSWORD')
-    custom_resource_path = resources_path
+
+    if not admin_email:
+        print("Admin email (ADMIN_EMAIL) environment variable not set.")
+        return False
+
+    if not admin_password:
+        print("Admin password (ADMIN_PASSWORD) environment variable not set.")
+        return False
+
+    # Use this if defined, otherwise fall back to default
+    custom_resources_path_from_env = os.getenv('CUSTOM_RESOURCE_PATH')
+
+    if custom_resources_path_from_env and os.path.exists(custom_resources_path_from_env):
+        print("Custom resource path set per environment variable.")
+        resources_path = custom_resources_path_from_env
+    elif os.path.exists(DEFAULT_RESOURCES_PATH):
+        print("Using default custom resources path %s" % (DEFAULT_RESOURCES_PATH))
+        resources_path = DEFAULT_RESOURCES_PATH
+    else:
+        print("Nor per-environment not default custom resource path '%s' exist." % (DEFAULT_RESOURCES_PATH))
+        return False
+
     print(f"Admin email: {admin_email}")
     print(f"Admin password: {'*' * len(admin_password)}")
-    print(f"Custom resource path: {custom_resource_path}")
-
-    if not admin_email or not admin_password:
-        print("Admin email or password environment variables are not set.")
-        return False
-
-    if not custom_resource_path or not os.path.exists(custom_resource_path):
-        print("Custom resource path environment variable is not set or path does not exist.")
-        return False
+    print(f"Custom resource path: {resources_path}")
     return True
 
 def main():
