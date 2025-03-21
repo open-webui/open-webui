@@ -2,6 +2,7 @@
   "project_understanding": {
     "raux": {
       "description": "RAUX is AMD's UI for interacting with AI models, forked from Open-WebUI",
+      "documentation_source": "../docs.json",
       "status": "beta",
       "key_features": {
         "interface": "Modern chat interface similar to ChatGPT",
