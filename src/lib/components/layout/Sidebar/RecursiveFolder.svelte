@@ -215,6 +215,14 @@
 			// Event listener for when dragging ends
 			folderElement.addEventListener('dragend', onDragEnd);
 		}
+
+		if (folders[folderId].isNew) {
+			folders[folderId].isNew = false;
+			
+			setTimeout(() => {
+				editHandler();
+			}, 100);
+		}
 	});
 
 	onDestroy(() => {
@@ -301,10 +309,13 @@
 
 		await tick();
 
-		// focus on the input
+		// focus on the input and select all text
 		setTimeout(() => {
 			const input = document.getElementById(`folder-${folderId}-input`);
-			input.focus();
+			if (input) {
+				input.focus();
+				input.select();
+			}
 		}, 100);
 	};
 
