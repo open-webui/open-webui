@@ -192,30 +192,40 @@ def merge_and_sort_query_results(
         distances = data["distances"][0]
         documents = data["documents"][0]
         metadatas = data["metadatas"][0]
-        # Pre-compute document hashes in batch if all are strings
-        if all(isinstance(doc, str) for doc in documents):
-            for distance, document, metadata in zip(distances, documents, metadatas):
-                doc_hash = hashlib.md5(document.encode()).hexdigest()
-                
-                if doc_hash not in seen_hashes:
-                    seen_hashes.add(doc_hash)
-                    combined.append((distance, document, metadata))
-    
-    # Early return for empty results
-    if not combined:
-        return {
-            "distances": [[]],
-            "documents": [[]],
-            "metadatas": [[]],
-        }
-    
+        for distance, document, metadata in zip(distances, documents, metadatas):
+            if isinstance(document, str):
+                doc_hash = hashlib.md5(
+                    document.encode()
+                ).hexdigest()  # Compute a hash for uniqueness
+
+                if doc_hash not in combined.keys():
+                    combined[doc_hash] = (distance, document, metadata)
+                    continue  # if doc is new, no further comparison is needed
+
+                # if doc is alredy in, but new distance is better, update
+                if not reverse and distance < combined[doc_hash][0]:
+                    # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
+                    # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
+                    combined[doc_hash] = (distance, document, metadata)
+                if reverse and distance > combined[doc_hash][0]:
+                    combined[doc_hash] = (distance, document, metadata)
+
+    combined = list(combined.values())
+    # Sort the list based on distances
     combined.sort(key=lambda x: x[0], reverse=reverse)
-    
-    # Truncate to top k results
-    combined = combined[:k]
-    
-    sorted_distances, sorted_documents, sorted_metadatas = map(list, zip(*combined))
-    
+
+    # Slice to keep only the top k elements
+    sorted_distances, sorted_documents, sorted_metadatas = (
+        zip(*combined[:k]) if combined else ([], [], [])
+    )
+
+    # if chromaDB, the distance is 0 (best) to 2 (worse)
+    # re-order to -1 (worst) to 1 (best) for relevance score
+    if not reverse:
+        sorted_distances = tuple(-dist for dist in sorted_distances)
+        sorted_distances = tuple(dist + 1 for dist in sorted_distances)
+
+    # Create and return the output dictionary
     return {
         "distances": [list(sorted_distances)],
         "documents": [list(sorted_documents)],
@@ -329,7 +339,7 @@ def query_collection_with_hybrid_search(
         raise Exception("Hybrid search failed for all collections. Using Non-hybrid search as fallback.")
 
     return merge_and_sort_query_results(results, k=k)
-
+  
 
 def get_embedding_function(
     embedding_engine,

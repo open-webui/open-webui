@@ -2081,6 +2081,12 @@ PLAYWRIGHT_WS_URI = PersistentConfig(
     os.environ.get("PLAYWRIGHT_WS_URI", None),
 )
 
+PLAYWRIGHT_TIMEOUT = PersistentConfig(
+    "PLAYWRIGHT_TIMEOUT",
+    "rag.web.loader.engine.playwright.timeout",
+    int(os.environ.get("PLAYWRIGHT_TIMEOUT", "10")),
+)
+
 FIRECRAWL_API_KEY = PersistentConfig(
     "FIRECRAWL_API_KEY",
     "firecrawl.api_key",

@@ -29,6 +29,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
     PLAYWRIGHT_WS_URI,
+    PLAYWRIGHT_TIMEOUT,
     RAG_WEB_LOADER_ENGINE,
     FIRECRAWL_API_BASE_URL,
     FIRECRAWL_API_KEY,
@@ -227,7 +228,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 yield from loader.lazy_load()
             except Exception as e:
                 if self.continue_on_failure:
-                    log.exception(e, "Error loading %s", url)
+                    log.exception(f"Error loading {url}: {e}")
                     continue
                 raise e
 
@@ -247,7 +248,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                     yield document
             except Exception as e:
                 if self.continue_on_failure:
-                    log.exception(e, "Error loading %s", url)
+                    log.exception(f"Error loading {url}: {e}")
                     continue
                 raise e
 
@@ -326,7 +327,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
             yield from loader.lazy_load()
         except Exception as e:
             if self.continue_on_failure:
-                log.exception(e, "Error extracting content from URLs")
+                log.exception(f"Error extracting content from URLs: {e}")
             else:
                 raise e
 
@@ -359,7 +360,7 @@ class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                 yield document
         except Exception as e:
             if self.continue_on_failure:
-                log.exception(e, "Error loading URLs")
+                log.exception(f"Error loading URLs: {e}")
             else:
                 raise e
 
@@ -376,6 +377,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
         headless (bool): If True, the browser will run in headless mode.
         proxy (dict): Proxy override settings for the Playwright session.
         playwright_ws_url (Optional[str]): WebSocket endpoint URI for remote browser connection.
+        playwright_timeout (Optional[int]): Maximum operation time in milliseconds.
     """
 
     def __init__(
@@ -389,6 +391,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
         remove_selectors: Optional[List[str]] = None,
         proxy: Optional[Dict[str, str]] = None,
         playwright_ws_url: Optional[str] = None,
+        playwright_timeout: Optional[int] = 10000,
     ):
         """Initialize with additional safety parameters and remote browser support."""
 
@@ -415,6 +418,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
         self.last_request_time = None
         self.playwright_ws_url = playwright_ws_url
         self.trust_env = trust_env
+        self.playwright_timeout = playwright_timeout
 
     def lazy_load(self) -> Iterator[Document]:
         """Safely load URLs synchronously with support for remote browser."""
@@ -431,7 +435,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                 try:
                     self._safe_process_url_sync(url)
                     page = browser.new_page()
-                    response = page.goto(url)
+                    response = page.goto(url, timeout=self.playwright_timeout)
                     if response is None:
                         raise ValueError(f"page.goto() returned None for url {url}")
 
@@ -440,7 +444,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                     yield Document(page_content=text, metadata=metadata)
                 except Exception as e:
                     if self.continue_on_failure:
-                        log.exception(e, "Error loading %s", url)
+                        log.exception(f"Error loading {url}: {e}")
                         continue
                     raise e
             browser.close()
@@ -462,7 +466,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                 try:
                     await self._safe_process_url(url)
                     page = await browser.new_page()
-                    response = await page.goto(url)
+                    response = await page.goto(url, timeout=self.playwright_timeout)
                     if response is None:
                         raise ValueError(f"page.goto() returned None for url {url}")
 
@@ -471,7 +475,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessing
                     yield Document(page_content=text, metadata=metadata)
                 except Exception as e:
                     if self.continue_on_failure:
-                        log.exception(e, "Error loading %s", url)
+                        log.exception(f"Error loading {url}: {e}")
                         continue
                     raise e
             await browser.close()
@@ -557,7 +561,7 @@ class SafeWebBaseLoader(WebBaseLoader):
                 yield Document(page_content=text, metadata=metadata)
             except Exception as e:
                 # Log the error and continue with the next URL
-                log.exception(e, "Error loading %s", path)
+                log.exception(f"Error loading {path}: {e}")
 
     async def alazy_load(self) -> AsyncIterator[Document]:
         """Async lazy load text from the url(s) in web_path."""
@@ -604,8 +608,10 @@ def get_web_loader(
         "trust_env": trust_env,
     }
 
-    if PLAYWRIGHT_WS_URI.value:
-        web_loader_args["playwright_ws_url"] = PLAYWRIGHT_WS_URI.value
+    if RAG_WEB_LOADER_ENGINE.value == "playwright":
+        web_loader_args["playwright_timeout"] = PLAYWRIGHT_TIMEOUT.value * 1000
+        if PLAYWRIGHT_WS_URI.value:
+            web_loader_args["playwright_ws_url"] = PLAYWRIGHT_WS_URI.value
 
     if RAG_WEB_LOADER_ENGINE.value == "firecrawl":
         web_loader_args["api_key"] = FIRECRAWL_API_KEY.value
