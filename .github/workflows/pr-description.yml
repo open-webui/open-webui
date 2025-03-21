@@ -4,6 +4,7 @@ on: pull_request
 
 jobs:
   openai-pr-description:
+    permissions: write-all
     runs-on: ubuntu-22.04
     steps:
       - uses: platisd/openai-pr-description@master
