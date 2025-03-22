@@ -56,7 +56,7 @@ if ENABLE_LDAP.value:
 router = APIRouter()
 
 log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["AUTHS"] if "AUTHS" in SRC_LOG_LEVELS else SRC_LOG_LEVELS["MAIN"])
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 ############################
@@ -303,7 +303,6 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     ),
                 )
 
-                # Set the cookie token
                 response.set_cookie(
                     key="token",
                     value=token,
@@ -348,25 +347,8 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
     log.debug(f"[AUTH DEBUG] Signin request with content-type: {content_type}")
     log.debug(f"[AUTH DEBUG] Headers: {dict(request.headers)}")
     
-    # Normalize the email and sanitize inputs immediately
+    # Normalize the email and sanitize inputs immediately, this should be in the basemodel instead
     email = form_data.email.lower().strip() if form_data.email else ""
-    password = form_data.password if form_data.password else ""
-    
-    # Debug logging for parsed data
-    log.debug(f"[AUTH DEBUG] Parsed form_data.email: {email}")
-    log.debug(f"[AUTH DEBUG] Password length: {len(password) if password else 0}")
-    
-    # Validate required fields - Pydantic should handle this but we double-check
-    if not email or not password:
-        log.error(f"[AUTH ERROR] Missing required fields for signin: email={bool(email)}, password={bool(password)}")
-        # Log additional debug information about the request
-        log.debug(f"[AUTH DEBUG] Request body: {form_data}")
-        log.debug(f"[AUTH DEBUG] Request method: {request.method}")
-        log.debug(f"[AUTH DEBUG] Client host: {request.client.host}")
-        # Use 400 instead of 422 to standardize error responses for security
-        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
-    
-    # Log authentication attempt (without the password)
     log.info(f"Signin attempt for email: {email}")
     
     # Get the client's IP address for logging
