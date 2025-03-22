@@ -9,7 +9,7 @@ from open_webui.models.groups import Groups
 
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, String, Text
 
 ####################
 # User DB Schema
@@ -32,6 +32,8 @@ class User(Base):
     api_key = Column(String, nullable=True, unique=True)
     settings = Column(JSONField, nullable=True)
     info = Column(JSONField, nullable=True)
+    
+    mfa_enabled = Column(Boolean, default=False, nullable=True)
 
     oauth_sub = Column(Text, unique=True)
 
@@ -56,6 +58,8 @@ class UserModel(BaseModel):
     api_key: Optional[str] = None
     settings: Optional[UserSettings] = None
     info: Optional[dict] = None
+    
+    mfa_enabled: Optional[bool] = False
 
     oauth_sub: Optional[str] = None
 
@@ -73,6 +77,7 @@ class UserResponse(BaseModel):
     email: str
     role: str
     profile_image_url: str
+    mfa_enabled: Optional[bool] = False
 
 
 class UserNameResponse(BaseModel):
@@ -129,51 +134,103 @@ class UsersTable:
 
     def get_user_by_id(self, id: str) -> Optional[UserModel]:
         try:
+            from open_webui.models.auths import Auth
+            
             with get_db() as db:
-                user = db.query(User).filter_by(id=id).first()
-                return UserModel.model_validate(user)
-        except Exception:
+                result = db.query(User, Auth.mfa_enabled).join(
+                    Auth, User.id == Auth.id
+                ).filter(User.id == id).first()
+                
+                if result:
+                    user, mfa_enabled = result
+                    user_model = UserModel.model_validate(user)
+                    user_model.mfa_enabled = mfa_enabled
+                    return user_model
+                return None
+        except Exception as e:
             return None
 
     def get_user_by_api_key(self, api_key: str) -> Optional[UserModel]:
         try:
+            from open_webui.models.auths import Auth
+            
             with get_db() as db:
-                user = db.query(User).filter_by(api_key=api_key).first()
-                return UserModel.model_validate(user)
+                result = db.query(User, Auth.mfa_enabled).join(
+                    Auth, User.id == Auth.id
+                ).filter(User.api_key == api_key).first()
+                
+                if result:
+                    user, mfa_enabled = result
+                    user_model = UserModel.model_validate(user)
+                    user_model.mfa_enabled = mfa_enabled
+                    return user_model
+                return None
         except Exception:
             return None
 
     def get_user_by_email(self, email: str) -> Optional[UserModel]:
         try:
+            from open_webui.models.auths import Auth
+            
             with get_db() as db:
-                user = db.query(User).filter_by(email=email).first()
-                return UserModel.model_validate(user)
+                result = db.query(User, Auth.mfa_enabled).join(
+                    Auth, User.id == Auth.id
+                ).filter(User.email == email).first()
+                
+                if result:
+                    user, mfa_enabled = result
+                    user_model = UserModel.model_validate(user)
+                    user_model.mfa_enabled = mfa_enabled
+                    return user_model
+                return None
         except Exception:
             return None
 
     def get_user_by_oauth_sub(self, sub: str) -> Optional[UserModel]:
         try:
+            from open_webui.models.auths import Auth
+            
             with get_db() as db:
-                user = db.query(User).filter_by(oauth_sub=sub).first()
-                return UserModel.model_validate(user)
+                result = db.query(User, Auth.mfa_enabled).join(
+                    Auth, User.id == Auth.id
+                ).filter(User.oauth_sub == sub).first()
+                
+                if result:
+                    user, mfa_enabled = result
+                    user_model = UserModel.model_validate(user)
+                    user_model.mfa_enabled = mfa_enabled
+                    return user_model
+                return None
         except Exception:
             return None
 
     def get_users(
         self, skip: Optional[int] = None, limit: Optional[int] = None
     ) -> list[UserModel]:
+        from sqlalchemy.orm import aliased
+        from open_webui.models.auths import Auth
+        
         with get_db() as db:
-
-            query = db.query(User).order_by(User.created_at.desc())
+            auth_alias = aliased(Auth)
+            
+            query = db.query(User, auth_alias.mfa_enabled).join(
+                auth_alias, User.id == auth_alias.id
+            ).order_by(User.created_at.desc())
 
             if skip:
                 query = query.offset(skip)
             if limit:
                 query = query.limit(limit)
 
-            users = query.all()
-
-            return [UserModel.model_validate(user) for user in users]
+            results = query.all()
+            
+            users = []
+            for user, mfa_enabled in results:
+                user_model = UserModel.model_validate(user)
+                user_model.mfa_enabled = mfa_enabled
+                users.append(user_model)
+                
+            return users
 
     def get_users_by_user_ids(self, user_ids: list[str]) -> list[UserModel]:
         with get_db() as db:

@@ -125,10 +125,25 @@ def create_token(data: dict, expires_delta: Union[timedelta, None] = None) -> st
 
 
 def decode_token(token: str) -> Optional[dict]:
+    """Decode a JWT token and return the payload.
+    
+    Args:
+        token: The JWT token string
+        
+    Returns:
+        The decoded token payload as a dict or None if decoding fails
+    """
     try:
         decoded = jwt.decode(token, SESSION_SECRET, algorithms=[ALGORITHM])
         return decoded
-    except Exception:
+    except jwt.ExpiredSignatureError:
+        log.warning(f"Token expired")
+        return None
+    except jwt.InvalidTokenError as e:
+        log.warning(f"Invalid token: {str(e)}")
+        return None
+    except Exception as e:
+        log.error(f"Unexpected error decoding token: {str(e)}")
         return None
 
 
@@ -190,15 +205,31 @@ def get_current_user(
     # auth by jwt token
     try:
         data = decode_token(token)
+        if data is None:
+            log.warning(f"Failed to decode token: Token could not be decoded")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token format",
+            )
     except Exception as e:
+        log.error(f"Token decode exception: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
         )
 
-    if data is not None and "id" in data:
-        user = Users.get_user_by_id(data["id"])
+    # Support both application-specific "id" and JWT standard "sub" formats for backward compatibility
+    user_id = None
+    if "id" in data:
+        user_id = data["id"]
+    elif "sub" in data:
+        # Support for JWT standard subject claim
+        user_id = data["sub"]
+    
+    if user_id:
+        user = Users.get_user_by_id(user_id)
         if user is None:
+            log.warning(f"User not found for ID: {user_id}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=ERROR_MESSAGES.INVALID_TOKEN,
@@ -208,8 +239,11 @@ def get_current_user(
             # to prevent blocking the request
             if background_tasks:
                 background_tasks.add_task(Users.update_user_last_active_by_id, user.id)
-        return user
+            
+            log.debug(f"Authenticated user: {user.email}")
+            return user
     else:
+        log.warning(f"Token missing required claims. Token data: {data}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.UNAUTHORIZED,

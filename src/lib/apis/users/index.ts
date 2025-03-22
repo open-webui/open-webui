@@ -1,4 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { call_with_auth } from '$lib/apis';
 import { getUserPosition } from '$lib/utils';
 
 export const getUserGroups = async (token: string) => {
@@ -124,7 +125,8 @@ export const getUsers = async (token: string) => {
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
-		}
+		},
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -144,59 +146,18 @@ export const getUsers = async (token: string) => {
 };
 
 export const getUserSettings = async (token: string) => {
-	let error = null;
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/settings`, {
+	return await call_with_auth('/users/user/settings', {
 		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+		token
+	});
 };
 
 export const updateUserSettings = async (token: string, settings: object) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/settings/update`, {
+	return await call_with_auth('/users/user/settings/update', {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...settings
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+		token,
+		body: settings
+	});
 };
 
 export const getUserById = async (token: string, userId: string) => {
@@ -227,59 +188,18 @@ export const getUserById = async (token: string, userId: string) => {
 };
 
 export const getUserInfo = async (token: string) => {
-	let error = null;
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/info`, {
+	return await call_with_auth('/users/user/info', {
 		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+		token
+	});
 };
 
 export const updateUserInfo = async (token: string, info: object) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/info/update`, {
+	return await call_with_auth('/users/user/info/update', {
 		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...info
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
+		token,
+		body: info
+	});
 };
 
 export const getAndUpdateUserLocation = async (token: string) => {
