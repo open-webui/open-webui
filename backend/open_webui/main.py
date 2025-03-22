@@ -315,6 +315,7 @@ from open_webui.env import (
     AUDIT_EXCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
     CHANGELOG,
+    ENABLE_AUDIT_LOGS,
     REDIS_URL,
     GLOBAL_LOG_LEVEL,
     MAX_BODY_LOG_SIZE,
@@ -923,7 +924,10 @@ app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 
 
 try:
-    audit_level = AuditLevel(AUDIT_LOG_LEVEL)
+    if ENABLE_AUDIT_LOGS:
+        audit_level = AuditLevel(AUDIT_LOG_LEVEL)
+    else:
+        audit_level = AuditLevel.NONE
 except ValueError as e:
     logger.error(f"Invalid audit level: {AUDIT_LOG_LEVEL}. Error: {e}")
     audit_level = AuditLevel.NONE
