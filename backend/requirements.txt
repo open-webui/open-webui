@@ -86,6 +86,8 @@ faster-whisper==1.1.1
 
 PyJWT[crypto]==2.10.1
 authlib==1.4.1
+pyotp==2.8.0,
+qrcode==7.3.1,
 
 black==25.1.0
 langfuse==2.44.0
