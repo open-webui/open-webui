@@ -166,12 +166,17 @@ class ChromaClient:
         filter: Optional[dict] = None,
     ):
         # Delete the items from the collection based on the ids.
-        collection = self.client.get_collection(name=collection_name)
-        if collection:
-            if ids:
-                collection.delete(ids=ids)
-            elif filter:
-                collection.delete(where=filter)
+        try:
+            collection = self.client.get_collection(name=collection_name)
+            if collection:
+                if ids:
+                    collection.delete(ids=ids)
+                elif filter:
+                    collection.delete(where=filter)
+        except Exception as e:
+            # If collection doesn't exist, that's fine - nothing to delete
+            log.debug(f"Attempted to delete from non-existent collection {collection_name}. Ignoring.")
+            pass
 
     def reset(self):
         # Resets the database. This will delete all collections and item entries.
