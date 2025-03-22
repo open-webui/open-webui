@@ -60,6 +60,7 @@
 	"Allow Chat Deletion": "Дозволи брисање ћаскања",
 	"Allow Chat Edit": "Дозволи измену ћаскања",
 	"Allow File Upload": "Дозволи отпремање датотека",
+	"Enforce Temporary Chat Mode": "",
 	"Allow non-local voices": "Дозволи нелокалне гласове",
 	"Allow Temporary Chat": "Дозволи привремена ћаскања",
 	"Allow User Location": "Дозволи корисничку локацију",

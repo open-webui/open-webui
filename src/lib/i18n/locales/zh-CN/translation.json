@@ -60,6 +60,7 @@
 	"Allow Chat Deletion": "允许删除对话记录",
 	"Allow Chat Edit": "允许编辑对话记录",
 	"Allow File Upload": "允许上传文件",
+	"Enforce Temporary Chat Mode": "",
 	"Allow non-local voices": "允许调用非本地音色",
 	"Allow Temporary Chat": "允许临时对话",
 	"Allow User Location": "允许获取您的位置",

@@ -60,6 +60,7 @@
 	"Allow Chat Deletion": "채팅 삭제 허용",
 	"Allow Chat Edit": "채팅 수정 허용",
 	"Allow File Upload": "파일 업로드 허용",
+	"Enforce Temporary Chat Mode": "",
 	"Allow non-local voices": "외부 음성 허용",
 	"Allow Temporary Chat": "임시 채팅 허용",
 	"Allow User Location": "사용자 위치 활용 허용",

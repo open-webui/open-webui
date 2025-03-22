@@ -74,6 +74,8 @@ class ChatPermissions(BaseModel):
     delete: bool = True
     edit: bool = True
     temporary: bool = True
+    enforce_temporary_chat_mode: bool = False
+
 
 
 class FeaturesPermissions(BaseModel):

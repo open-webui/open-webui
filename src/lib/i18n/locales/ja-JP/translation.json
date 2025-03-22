@@ -60,6 +60,7 @@
 	"Allow Chat Deletion": "チャットの削除を許可",
 	"Allow Chat Edit": "",
 	"Allow File Upload": "",
+	"Enforce Temporary Chat Mode": "",
 	"Allow non-local voices": "ローカル以外のボイスを許可",
 	"Allow Temporary Chat": "一時的なチャットを許可",
 	"Allow User Location": "ユーザーロケーションの許可",

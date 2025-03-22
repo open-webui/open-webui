@@ -60,6 +60,7 @@
 	"Allow Chat Deletion": "Salli keskustelujen poisto",
 	"Allow Chat Edit": "Salli keskustelujen muokkaus",
 	"Allow File Upload": "Salli tiedostojen lataus",
+	"Enforce Temporary Chat Mode": "",
 	"Allow non-local voices": "Salli ei-paikalliset äänet",
 	"Allow Temporary Chat": "Salli väliaikaiset keskustelut",
 	"Allow User Location": "Salli käyttäjän sijainti",

@@ -31,7 +31,6 @@ export default defineConfig({
 		})
 	],
 	define: {
-		DEFAULT_USER_CHAT_MODE: JSON.stringify(process.env.DEFAULT_USER_CHAT_MODE || 'normal'),
 		APP_VERSION: JSON.stringify(process.env.npm_package_version),
 		APP_BUILD_HASH: JSON.stringify(process.env.APP_BUILD_HASH || 'dev-build')
 	},

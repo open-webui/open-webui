@@ -18,7 +18,8 @@
 			delete: true,
 			edit: true,
 			temporary: true,
-			file_upload: true
+			file_upload: true,
+			enforce_temporary_chat_mode: false
 		},
 		features: {
 			web_search: true,
@@ -211,6 +212,13 @@
 			</div>
 
 			<Switch bind:state={permissions.chat.file_upload} />
+		</div>
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Enforce Temporary Chat Mode')}
+			</div>
+
+			<Switch bind:state={permissions.chat.enforce_temporary_chat_mode} />
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">

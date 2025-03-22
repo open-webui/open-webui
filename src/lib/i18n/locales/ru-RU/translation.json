@@ -60,6 +60,7 @@
 	"Allow Chat Deletion": "Разрешить удаление чата",
 	"Allow Chat Edit": "Разрешить редактирование чата",
 	"Allow File Upload": "Разрешить загрузку файлов",
+	"Enforce Temporary Chat Mode": "",
 	"Allow non-local voices": "Разрешить не локальные голоса",
 	"Allow Temporary Chat": "Разрешить временные чаты",
 	"Allow User Location": "Разрешить доступ к местоположению пользователя",

@@ -41,7 +41,8 @@
 			file_upload: true,
 			delete: true,
 			edit: true,
-			temporary: true
+			temporary: true,
+			enforce_temporary_chat_mode: false
 		},
 		features: {
 			web_search: true,

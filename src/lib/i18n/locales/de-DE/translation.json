@@ -60,6 +60,7 @@
 	"Allow Chat Deletion": "Löschen von Unterhaltungen erlauben",
 	"Allow Chat Edit": "Bearbeiten von Unterhaltungen erlauben",
 	"Allow File Upload": "Hochladen von Dateien erlauben",
+	"Enforce Temporary Chat Mode": "Temporären Chat erzwingen",
 	"Allow non-local voices": "Nicht-lokale Stimmen erlauben",
 	"Allow Temporary Chat": "Temporäre Unterhaltungen erlauben",
 	"Allow User Location": "Standort freigeben",

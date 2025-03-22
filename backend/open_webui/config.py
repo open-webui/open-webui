@@ -963,6 +963,10 @@ USER_PERMISSIONS_CHAT_TEMPORARY = (
     os.environ.get("USER_PERMISSIONS_CHAT_TEMPORARY", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_ENFORCE_TEMPORARY_CHAT_MODE = (
+    os.environ.get("USER_PERMISSIONS_ENFORCE_TEMPORARY_CHAT_MODE", "False").lower() == "true"
+)
+
 USER_PERMISSIONS_FEATURES_WEB_SEARCH = (
     os.environ.get("USER_PERMISSIONS_FEATURES_WEB_SEARCH", "True").lower() == "true"
 )
@@ -991,6 +995,7 @@ DEFAULT_USER_PERMISSIONS = {
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "edit": USER_PERMISSIONS_CHAT_EDIT,
         "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
+        "enforce_temporary_chat_mode": USER_PERMISSIONS_ENFORCE_TEMPORARY_CHAT_MODE
     },
     "features": {
         "web_search": USER_PERMISSIONS_FEATURES_WEB_SEARCH,

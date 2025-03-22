@@ -60,6 +60,7 @@
 	"Allow Chat Deletion": "ჩატის წაშლის დაშვება",
 	"Allow Chat Edit": "ჩატის ჩასწორების დაშვება",
 	"Allow File Upload": "ფაილის ატვირთვის დაშვება",
+	"Enforce Temporary Chat Mode": "",
 	"Allow non-local voices": "არალოკალური ხმების დაშვება",
 	"Allow Temporary Chat": "დროებითი ჩატის დაშვება",
 	"Allow User Location": "მომხმარებლის მდებარეობის დაშვება",
