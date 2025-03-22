@@ -189,9 +189,8 @@
 
 			// Get the "temporary-chat" search parameter from the URL
 			// enforce_temporary_chat_mode is fetched from the user's permissions
-			const enforce_temporary_chat_mode = $user?.permissions?.enforce_temporary_chat_mode;
+			const enforce_temporary_chat_mode = $user?.permissions?.chat?.enforce_temporary_chat_mode;
 			const searchParam = $page.url.searchParams.get('temporary-chat');
-			alert(enforce_temporary_chat_mode);
 
 			// Get the current state to prevent unnecessary overwrites
 			const currentState = temporaryChatEnabled.value;
@@ -202,7 +201,7 @@
 			} else if (searchParam === 'false') {
 				// If "temporary-chat=false" is set in the URL, always disable temporary chat
 				temporaryChatEnabled.set(false);
-			} else if (enforce_temporary_chat_mode && currentState === false) {
+			} else if (enforce_temporary_chat_mode && (currentState === false || currentState === undefined)) {
 				// If no URL parameter is provided, fallback to the enforced environment setting
 				// Enable temporary chat only if it hasn't been manually changed
 				temporaryChatEnabled.set(true);
