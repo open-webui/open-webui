@@ -961,6 +961,7 @@
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">
 					{$i18n.t('Context Length')}
+					{$i18n.t('(Ollama)')}
 				</div>
 
 				<button
