@@ -1558,7 +1558,7 @@ async def process_chat_response(
 
                                     value = delta.get("content")
 
-                                    reasoning_content = delta.get("reasoning_content")
+                                    reasoning_content = delta.get("reasoning_content") or delta.get("reasoning")
                                     if reasoning_content:
                                         if (
                                             not content_blocks
