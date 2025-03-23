@@ -170,8 +170,8 @@ async def generate_chat_completion(
             form_data["metadata"] = request.state.metadata
         else:
             form_data["metadata"] = {
-                **form_data["metadata"],
                 **request.state.metadata,
+                **form_data["metadata"],
             }
 
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
@@ -397,7 +397,12 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
 
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
         valves = Functions.get_function_valves_by_id(action_id)
-        function_module.valves = function_module.Valves(**(valves if valves else {}))
+        model_valves = (
+            model.get("info", {}).get("meta", {}).get("valves", {}).get(action_id, {})
+        )
+        function_module.valves = function_module.Valves(
+            **(valves if valves else {}), **model_valves
+        )
 
     if hasattr(function_module, "action"):
         try:
