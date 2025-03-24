@@ -1079,8 +1079,6 @@ async def process_chat_response(
         for filter_id in get_sorted_filter_ids(model)
     ]
 
-    print(f"{filter_functions=}")
-
     # Streaming response
     if event_emitter and event_caller:
         task_id = str(uuid4())  # Create a unique task ID.
@@ -1560,7 +1558,7 @@ async def process_chat_response(
 
                                     value = delta.get("content")
 
-                                    reasoning_content = delta.get("reasoning_content")
+                                    reasoning_content = delta.get("reasoning_content") or delta.get("reasoning")
                                     if reasoning_content:
                                         if (
                                             not content_blocks

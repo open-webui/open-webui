@@ -414,13 +414,12 @@ if OFFLINE_MODE:
 ####################################
 # AUDIT LOGGING
 ####################################
-ENABLE_AUDIT_LOGS = os.getenv("ENABLE_AUDIT_LOGS", "false").lower() == "true"
 # Where to store log file
 AUDIT_LOGS_FILE_PATH = f"{DATA_DIR}/audit.log"
 # Maximum size of a file before rotating into a new log file
 AUDIT_LOG_FILE_ROTATION_SIZE = os.getenv("AUDIT_LOG_FILE_ROTATION_SIZE", "10MB")
 # METADATA | REQUEST | REQUEST_RESPONSE
-AUDIT_LOG_LEVEL = os.getenv("AUDIT_LOG_LEVEL", "REQUEST_RESPONSE").upper()
+AUDIT_LOG_LEVEL = os.getenv("AUDIT_LOG_LEVEL", "NONE").upper()
 try:
     MAX_BODY_LOG_SIZE = int(os.environ.get("MAX_BODY_LOG_SIZE") or 2048)
 except ValueError:
