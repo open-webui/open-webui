@@ -81,7 +81,7 @@ def main():
     git_hash = get_git_hash()
 
     # Always use RAUX as the prefix
-    version_with_hash = f"v{__version__}+{git_hash}"
+    version_with_hash = f"RAUX/v{__version__}+{git_hash}"
 
     # Write version to version.txt file
     try:

@@ -213,10 +213,15 @@ jobs:
               $INSTALLER_PATH = $INSTALLER_FILES[0].FullName
               Write-Host "Found installer at: $INSTALLER_PATH"
               
-              # Sanitize version string for use in filename
-              $SANITIZED_VERSION = $env:VERSION -replace '/', '-'
-              $NEW_NAME = "raux-$SANITIZED_VERSION-setup.exe"
-              $DESTINATION = "installer/$NEW_NAME"
+              # Extract just the version and hash part (after RAUX/v)
+              $VERSION_PART = $env:VERSION -replace '^RAUX/v', ''
+              $NEW_NAME = "raux-v$VERSION_PART-setup.exe"
+              
+              Write-Host "Original version: $env:VERSION"
+              Write-Host "Extracted version part: $VERSION_PART"
+              Write-Host "New name: $NEW_NAME"
+              
+              $DESTINATION = Join-Path -Path "installer" -ChildPath $NEW_NAME
               Write-Host "Moving installer to: $DESTINATION"
               Move-Item -Path $INSTALLER_PATH -Destination $DESTINATION -Force
               echo "INSTALLER_NAME=$NEW_NAME" >> $env:GITHUB_ENV
