@@ -4,6 +4,7 @@
 	"(e.g. `sh webui.sh --api --api-auth username_password`)": "(pvz. `sh webui.sh --api --api-auth username_password`)",
 	"(e.g. `sh webui.sh --api`)": "(pvz. `sh webui.sh --api`)",
 	"(latest)": "(naujausias)",
+	"(Ollama)": "",
 	"{{ models }}": "{{ models }}",
 	"{{COUNT}} hidden lines": "",
 	"{{COUNT}} Replies": "",
