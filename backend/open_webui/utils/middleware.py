@@ -1186,12 +1186,12 @@ async def process_chat_response(
                             content = content_stripped + original_whitespace
 
                         if output:
-                            output = html.escape(json.dumps(output))
+                            output = json.dumps(output)
 
                             if raw:
                                 content = f'{content}\n<code_interpreter type="code" lang="{lang}">\n{block["content"]}\n</code_interpreter>\n```output\n{output}\n```\n'
                             else:
-                                content = f'{content}\n<details type="code_interpreter" done="true" output="{output}">\n<summary>Analyzed</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
+                                content = f'{content}\n<details type="code_interpreter" done="true" output="{html.escape(output)}">\n<summary>Analyzed</summary>\n```{lang}\n{block["content"]}\n```\n</details>\n'
                         else:
                             if raw:
                                 content = f'{content}\n<code_interpreter type="code" lang="{lang}">\n{block["content"]}\n</code_interpreter>\n'
