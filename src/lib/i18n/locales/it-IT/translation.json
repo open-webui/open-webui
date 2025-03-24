@@ -4,6 +4,7 @@
 	"(e.g. `sh webui.sh --api --api-auth username_password`)": "",
 	"(e.g. `sh webui.sh --api`)": "(p.e. `sh webui.sh --api`)",
 	"(latest)": "(ultima)",
+	"(Ollama)": "",
 	"{{ models }}": "{{ modelli }}",
 	"{{COUNT}} hidden lines": "",
 	"{{COUNT}} Replies": "",
