@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for version.py
 
       - name: Check for changes in package.json
         run: |
@@ -30,11 +32,19 @@ jobs:
             exit 1
           }
 
-      - name: Get version number from package.json
-        id: get_version
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Generate version.txt
         run: |
-          VERSION=$(jq -r '.version' package.json)
-          echo "::set-output name=version::$VERSION"
+          python version.py
+          echo "VERSION=$(cat version.txt)" >> $GITHUB_ENV
+          echo "Generated version: $(cat version.txt)"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Extract latest CHANGELOG entry
         id: changelog
@@ -44,14 +54,6 @@ jobs:
           echo "Extracted latest release notes from CHANGELOG.md:" 
           echo -e "$CHANGELOG_CONTENT" 
           echo "::set-output name=content::$CHANGELOG_ESCAPED"
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.10.16
 
       - name: Build wheel
         run: |
@@ -69,8 +71,8 @@ jobs:
             const release = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: `v${{ steps.get_version.outputs.version }}`,
-              name: `v${{ steps.get_version.outputs.version }}`,
+              tag_name: `${{ env.VERSION }}`,
+              name: `${{ env.VERSION }}`,
               body: changelog,
             })
             console.log(`Created release ${release.data.html_url}`)
@@ -90,7 +92,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: dist/*.whl
-          tag_name: v${{ steps.get_version.outputs.version }}
+          tag_name: v${{ env.VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
@@ -112,7 +114,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history to ensure we have all files
+          fetch-depth: 0  # Fetch all history for version.py
 
       - name: List repository contents
         run: |
@@ -130,12 +132,16 @@ jobs:
       - name: Create dist directory
         run: mkdir -p dist
 
-      - name: Get version from package.json
-        id: get_version
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Generate version.txt
         run: |
-          $VERSION = (Get-Content package.json | ConvertFrom-Json).version
+          python version.py
+          $VERSION = Get-Content version.txt
           echo "VERSION=$VERSION" >> $env:GITHUB_ENV
-          echo "RELEASE_TAG=v$VERSION" >> $env:GITHUB_ENV
+          echo "Generated version: $VERSION"
 
       # Download the wheel file directly from the artifact
       - name: Download wheel artifact
