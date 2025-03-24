@@ -496,6 +496,9 @@
 			if ($config) {
 				await setupSocket($config.features?.enable_websocket ?? true);
 
+				const currentUrl = `${window.location.pathname}${window.location.search}`;
+				const encodedUrl = encodeURIComponent(currentUrl);
+
 				if (localStorage.token) {
 					// Get Session User Info
 					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
@@ -512,13 +515,13 @@
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
-						await goto('/auth');
+						await goto(`/auth?redirect=${encodedUrl}`);
 					}
 				} else {
 					// Don't redirect if we're already on the auth page
 					// Needed because we pass in tokens from OAuth logins via URL fragments
 					if ($page.url.pathname !== '/auth') {
-						await goto('/auth');
+						await goto(`/auth?redirect=${encodedUrl}`);
 					}
 				}
 			}

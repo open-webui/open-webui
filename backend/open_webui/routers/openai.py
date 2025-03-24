@@ -36,6 +36,9 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
 )
+from open_webui.utils.misc import (
+    convert_logit_bias_input_to_json,
+)
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
@@ -350,12 +353,19 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
             )
 
             prefix_id = api_config.get("prefix_id", None)
+            tags = api_config.get("tags", [])
 
             if prefix_id:
                 for model in (
                     response if isinstance(response, list) else response.get("data", [])
                 ):
                     model["id"] = f"{prefix_id}.{model['id']}"
+
+            if tags:
+                for model in (
+                    response if isinstance(response, list) else response.get("data", [])
+                ):
+                    model["tags"] = tags
 
     log.debug(f"get_all_models:responses() {responses}")
     return responses
@@ -374,7 +384,7 @@ async def get_filtered_models(models, user):
     return filtered_models
 
 
-@cached(ttl=3)
+@cached(ttl=1)
 async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
     log.info("get_all_models()")
 
@@ -396,6 +406,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
 
         for idx, models in enumerate(model_lists):
             if models is not None and "error" not in models:
+
                 merged_list.extend(
                     [
                         {
@@ -406,18 +417,21 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                             "urlIdx": idx,
                         }
                         for model in models
-                        if "api.openai.com"
-                        not in request.app.state.config.OPENAI_API_BASE_URLS[idx]
-                        or not any(
-                            name in model["id"]
-                            for name in [
-                                "babbage",
-                                "dall-e",
-                                "davinci",
-                                "embedding",
-                                "tts",
-                                "whisper",
-                            ]
+                        if (model.get("id") or model.get("name"))
+                        and (
+                            "api.openai.com"
+                            not in request.app.state.config.OPENAI_API_BASE_URLS[idx]
+                            or not any(
+                                name in model["id"]
+                                for name in [
+                                    "babbage",
+                                    "dall-e",
+                                    "davinci",
+                                    "embedding",
+                                    "tts",
+                                    "whisper",
+                                ]
+                            )
                         )
                     ]
                 )
@@ -666,6 +680,11 @@ async def generate_chat_completion(
         del payload["max_tokens"]
 
     # Convert the modified body back to JSON
+    if "logit_bias" in payload:
+        payload["logit_bias"] = json.loads(
+            convert_logit_bias_input_to_json(payload["logit_bias"])
+        )
+
     payload = json.dumps(payload)
 
     r = None
