@@ -204,13 +204,20 @@ jobs:
       - name: Rename installer
         if: success()
         run: |
+          # Create the installer directory if it doesn't exist
+          New-Item -ItemType Directory -Force -Path "installer"
+          
           if (Test-Path -Path "installer") {
             $INSTALLER_FILES = Get-ChildItem -Path "installer" -Filter "*.exe" | Where-Object { $_.Name -ne "nsis.exe" }
             if ($INSTALLER_FILES) {
               $INSTALLER_PATH = $INSTALLER_FILES[0].FullName
               Write-Host "Found installer at: $INSTALLER_PATH"
-              $NEW_NAME = "raux-$env:VERSION-setup.exe"
+              
+              # Sanitize version string for use in filename
+              $SANITIZED_VERSION = $env:VERSION -replace '/', '-'
+              $NEW_NAME = "raux-$SANITIZED_VERSION-setup.exe"
               $DESTINATION = "installer/$NEW_NAME"
+              Write-Host "Moving installer to: $DESTINATION"
               Move-Item -Path $INSTALLER_PATH -Destination $DESTINATION -Force
               echo "INSTALLER_NAME=$NEW_NAME" >> $env:GITHUB_ENV
             } else {

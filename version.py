@@ -78,14 +78,10 @@ def get_github_root() -> Optional[str]:
 
 def main():
     __version__ = get_package_version()
-    github_root = get_github_root()
     git_hash = get_git_hash()
 
-    version_with_hash = (
-        f"{github_root}/v{__version__}+{git_hash}"
-        if github_root
-        else f"v{__version__}+{git_hash}"
-    )
+    # Always use RAUX as the prefix
+    version_with_hash = f"v{__version__}+{git_hash}"
 
     # Write version to version.txt file
     try:
