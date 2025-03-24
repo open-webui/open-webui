@@ -27,6 +27,8 @@ body:
       options:
         - label: I have searched the existing issues and discussions.
           required: true
+        - label: I am using the latest version of Open WebUI.
+          required: true
 
   - type: dropdown
     id: installation-method
@@ -83,9 +85,9 @@ body:
           required: true
         - label: I am using the latest version of **both** Open WebUI and Ollama.
           required: true
-        - label: I have checked the browser console logs.
+        - label: I have included the browser console logs.
           required: true
-        - label: I have checked the Docker container logs.
+        - label: I have included the Docker container logs.
           required: true
         - label: I have listed steps to reproduce the bug in detail.
           required: true
@@ -110,7 +112,7 @@ body:
     id: reproduction-steps
     attributes:
       label: Steps to Reproduce
-      description: Provide step-by-step instructions to reproduce the issue.
+      description: Providing clear, step-by-step instructions helps us reproduce and fix the issue faster. If we can't reproduce it, we can't fix it.
       placeholder: |
         1. Go to '...'
         2. Click on '...'
