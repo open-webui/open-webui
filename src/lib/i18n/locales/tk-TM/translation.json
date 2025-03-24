@@ -3,6 +3,7 @@
 	"(Beta)": "(Beta)",
 	"(e.g. `sh webui.sh --api`)": "(meselem, `sh webui.sh --api`)",
 	"(latest)": "(iň soňky)",
+	"(Ollama)": "",
 	"{{ models }}": "{{ modeller }}",
 	"{{ owner }}: You cannot delete a base model": "{{ owner }}: Esasy modeli öçürip bilmersiňiz",
 	"{{modelName}} is thinking...": "{{modelName}} pikirlenýär...",
