@@ -268,7 +268,6 @@ jobs:
             Write-Host "WARNING: launch_lemonade.ps1 not found in installer directory"
           }
 
-            # Copy the launcher lemonade scripts
           if (Test-Path -Path "installer/launch_raux.ps1") {
             Write-Host "Copying launch_raux.ps1 to package"
             Copy-Item -Path "installer/launch_raux.ps1" -Destination "installer/package/"
@@ -284,8 +283,11 @@ jobs:
           }
           
           # Create the zip file with all contents
-          $ZIP_NAME = "raux-$env:VERSION-setup.zip"
-          Compress-Archive -Path "installer/package/*" -DestinationPath "installer/$ZIP_NAME"
+          # Use the same version format as the installer name, just change the extension
+          $ZIP_NAME = $env:INSTALLER_NAME -replace '\.exe$', '.zip'
+          Write-Host "Creating zip file: $ZIP_NAME"
+          $ZIP_PATH = Join-Path -Path "installer" -ChildPath $ZIP_NAME
+          Compress-Archive -Path "installer/package/*" -DestinationPath $ZIP_PATH -Force
           echo "ZIP_NAME=$ZIP_NAME" >> $env:GITHUB_ENV
           Write-Host "Created zip file: $ZIP_NAME with installer, ux_installer directory, and launcher scripts"
 
