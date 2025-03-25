@@ -43,6 +43,17 @@ jobs:
           echo "RELEASE_TAG=$(cat version.txt)" >> $GITHUB_ENV
           echo "Generated version: $(cat version.txt)"
 
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Create and push tag
+        run: |
+          git tag ${{ env.VERSION }}
+          git push origin ${{ env.VERSION }}
+          echo "Created and pushed tag: ${{ env.VERSION }}"
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -72,8 +83,8 @@ jobs:
             const release = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: `${{ env.RELEASE_TAG }}`,
-              name: `${{ env.RELEASE_TAG }}`,
+              tag_name: `${{ env.VERSION }}`,
+              name: `${{ env.VERSION }}`,
               body: changelog,
             })
             console.log(`Created release ${release.data.html_url}`)
@@ -93,7 +104,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: dist/*.whl
-          tag_name: ${{ env.RELEASE_TAG }}
+          tag_name: ${{ env.VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
@@ -300,6 +311,6 @@ jobs:
             installer/${{ env.ZIP_NAME }}
             installer/${{ env.INSTALLER_NAME }}
             installer/${{ env.INSTALLER_NAME }}.sha256
-          tag_name: ${{ env.RELEASE_TAG }}
+          tag_name: ${{ env.VERSION }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
