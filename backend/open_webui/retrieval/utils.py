@@ -347,7 +347,7 @@ def get_single_batch_embedding_function(
     url,
     key,
     embedding_batch_size,
-    backoff,
+    backoff=True,
 ):
     if embedding_engine == "":
         return lambda query, user=None: embedding_function.encode(query).tolist()
@@ -625,9 +625,9 @@ def generate_portkey_batch_embeddings(
     url: str = "",
     key: str = "",
     user: UserModel = None,
-    backoff: bool = False,
+    backoff: bool = True,
     virtual_key: str = "text-embedding-d47871",
-    max_retries: int = 1,
+    max_retries: int = 10,
     initial_backoff: float = 62.0, #  Using single backoff of 62s once rate limit reached
 ) -> EmbeddingResult:
     try:
@@ -674,7 +674,7 @@ def generate_portkey_batch_embeddings(
                     # Rate limit hit, apply backoff
                     log.warning(f"Rate limit hit, retrying in {backoff_time} seconds...")
                     time.sleep(backoff_time)
-                    backoff_time *= 2  # Exponential backoff (Not using)
+                    # backoff_time *= 2  # Exponential backoff (Not using)
                     retry_count += 1
                 elif e.response.status_code == 413:
                     # Payload too large - cannot handle in a single batch
