@@ -115,6 +115,7 @@
 		{content}
 		{model}
 		{save}
+		{sources}
 		sourceIds={(sources ?? []).reduce((acc, s) => {
 			let ids = [];
 			s.document.forEach((document, index) => {

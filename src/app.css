@@ -64,6 +64,11 @@ math {
 	@apply underline;
 }
 
+/* Remove underline for citation links */
+.markdown-prose a[title="citation"] {
+	@apply no-underline;
+}
+
 .font-primary {
 	font-family: 'Archivo', sans-serif;
 }
