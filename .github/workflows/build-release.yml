@@ -22,8 +22,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history for version.py
 
       - name: Check for changes in package.json
         run: |
@@ -32,31 +30,11 @@ jobs:
             exit 1
           }
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Generate version.txt
+      - name: Get version number from package.json
+        id: get_version
         run: |
-          python version.py
-          echo "VERSION=$(cat version.txt)" >> $GITHUB_ENV
-          echo "RELEASE_TAG=$(cat version.txt)" >> $GITHUB_ENV
-          echo "Generated version: $(cat version.txt)"
-
-      - name: Configure Git
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-
-      - name: Create and push tag
-        run: |
-          git tag ${{ env.VERSION }}
-          git push origin ${{ env.VERSION }}
-          echo "Created and pushed tag: ${{ env.VERSION }}"
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
+          VERSION=$(jq -r '.version' package.json)
+          echo "::set-output name=version::$VERSION"
 
       - name: Extract latest CHANGELOG entry
         id: changelog
@@ -66,6 +44,14 @@ jobs:
           echo "Extracted latest release notes from CHANGELOG.md:" 
           echo -e "$CHANGELOG_CONTENT" 
           echo "::set-output name=content::$CHANGELOG_ESCAPED"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.10.16
 
       - name: Build wheel
         run: |
@@ -83,8 +69,8 @@ jobs:
             const release = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: `${{ env.VERSION }}`,
-              name: `${{ env.VERSION }}`,
+              tag_name: `v${{ steps.get_version.outputs.version }}`,
+              name: `v${{ steps.get_version.outputs.version }}`,
               body: changelog,
             })
             console.log(`Created release ${release.data.html_url}`)
@@ -104,7 +90,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: dist/*.whl
-          tag_name: ${{ env.VERSION }}
+          tag_name: v${{ steps.get_version.outputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
@@ -126,7 +112,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for version.py
+          fetch-depth: 0  # Fetch all history to ensure we have all files
 
       - name: List repository contents
         run: |
@@ -144,16 +130,12 @@ jobs:
       - name: Create dist directory
         run: mkdir -p dist
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Generate version.txt
+      - name: Get version from package.json
+        id: get_version
         run: |
-          python version.py
-          $VERSION = Get-Content version.txt
+          $VERSION = (Get-Content package.json | ConvertFrom-Json).version
           echo "VERSION=$VERSION" >> $env:GITHUB_ENV
-          echo "Generated version: $VERSION"
+          echo "RELEASE_TAG=v$VERSION" >> $env:GITHUB_ENV
 
       # Download the wheel file directly from the artifact
       - name: Download wheel artifact
@@ -172,6 +154,22 @@ jobs:
             Write-Host "Using wheel file: $($WHEEL_FILE.Name)"
           } else {
             Write-Host "ERROR: No wheel file found in dist directory!"
+            exit 1
+          }
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Generate version.txt
+        run: |
+          python installer/version.py
+          if (Test-Path -Path "version.txt") {
+            Write-Host "version.txt generated successfully"
+            Get-Content -Path "version.txt"
+          } else {
+            Write-Host "ERROR: version.txt was not generated!"
             exit 1
           }
 
@@ -216,25 +214,13 @@ jobs:
       - name: Rename installer
         if: success()
         run: |
-          # Create the installer directory if it doesn't exist
-          New-Item -ItemType Directory -Force -Path "installer"
-          
           if (Test-Path -Path "installer") {
             $INSTALLER_FILES = Get-ChildItem -Path "installer" -Filter "*.exe" | Where-Object { $_.Name -ne "nsis.exe" }
             if ($INSTALLER_FILES) {
               $INSTALLER_PATH = $INSTALLER_FILES[0].FullName
               Write-Host "Found installer at: $INSTALLER_PATH"
-              
-              # Extract just the version and hash part (after RAUX/v)
-              $VERSION_PART = $env:VERSION -replace '^RAUX/v', ''
-              $NEW_NAME = "raux-v$VERSION_PART-setup.exe"
-              
-              Write-Host "Original version: $env:VERSION"
-              Write-Host "Extracted version part: $VERSION_PART"
-              Write-Host "New name: $NEW_NAME"
-              
-              $DESTINATION = Join-Path -Path "installer" -ChildPath $NEW_NAME
-              Write-Host "Moving installer to: $DESTINATION"
+              $NEW_NAME = "raux-$env:VERSION-setup.exe"
+              $DESTINATION = "installer/$NEW_NAME"
               Move-Item -Path $INSTALLER_PATH -Destination $DESTINATION -Force
               echo "INSTALLER_NAME=$NEW_NAME" >> $env:GITHUB_ENV
             } else {
@@ -280,11 +266,20 @@ jobs:
             Write-Host "WARNING: launch_lemonade.ps1 not found in installer directory"
           }
 
+            # Copy the launcher lemonade scripts
           if (Test-Path -Path "installer/launch_raux.ps1") {
             Write-Host "Copying launch_raux.ps1 to package"
             Copy-Item -Path "installer/launch_raux.ps1" -Destination "installer/package/"
           } else {
             Write-Host "WARNING: launch_raux.ps1 not found in installer directory"
+          }
+          
+          # Copy version.txt to package
+          if (Test-Path -Path "version.txt") {
+            Write-Host "Copying version.txt to package"
+            Copy-Item -Path "version.txt" -Destination "installer/package/"
+          } else {
+            Write-Host "WARNING: version.txt not found"
           }
           
           if (Test-Path -Path "installer/launch_raux.cmd") {
@@ -295,11 +290,8 @@ jobs:
           }
           
           # Create the zip file with all contents
-          # Use the same version format as the installer name, just change the extension
-          $ZIP_NAME = $env:INSTALLER_NAME -replace '\.exe$', '.zip'
-          Write-Host "Creating zip file: $ZIP_NAME"
-          $ZIP_PATH = Join-Path -Path "installer" -ChildPath $ZIP_NAME
-          Compress-Archive -Path "installer/package/*" -DestinationPath $ZIP_PATH -Force
+          $ZIP_NAME = "raux-$env:VERSION-setup.zip"
+          Compress-Archive -Path "installer/package/*" -DestinationPath "installer/$ZIP_NAME"
           echo "ZIP_NAME=$ZIP_NAME" >> $env:GITHUB_ENV
           Write-Host "Created zip file: $ZIP_NAME with installer, ux_installer directory, and launcher scripts"
 
@@ -311,6 +303,6 @@ jobs:
             installer/${{ env.ZIP_NAME }}
             installer/${{ env.INSTALLER_NAME }}
             installer/${{ env.INSTALLER_NAME }}.sha256
-          tag_name: ${{ env.VERSION }}
+          tag_name: ${{ env.RELEASE_TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
