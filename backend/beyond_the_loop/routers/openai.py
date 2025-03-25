@@ -690,6 +690,10 @@ async def generate_chat_completion(
     if "max_tokens" in payload and "max_completion_tokens" in payload:
         del payload["max_tokens"]
 
+    # Add stream_options to include usage information in streaming responses
+    if "stream" in payload and payload["stream"]:
+        payload["stream_options"] = {"include_usage": True}
+
     # Convert the modified body back to JSON
     payload = json.dumps(payload)
 
