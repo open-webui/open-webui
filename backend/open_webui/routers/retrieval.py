@@ -62,6 +62,7 @@ from open_webui.retrieval.web.exa import search_exa
 
 
 from open_webui.retrieval.utils import (
+    get_single_batch_embedding_function,
     get_embedding_function,
     get_model_path,
     query_collection,
@@ -856,7 +857,9 @@ def save_docs_to_vector_db(
                 return True
 
         log.info(f"adding to collection {collection_name}")
-        embedding_function = get_embedding_function(
+        # Embedding function that sends all texts at once
+        # embedding_function = get_embedding_function(
+        embedding_function = get_single_batch_embedding_function(
             request.app.state.config.RAG_EMBEDDING_ENGINE,
             request.app.state.config.RAG_EMBEDDING_MODEL,
             request.app.state.ef,
@@ -873,6 +876,8 @@ def save_docs_to_vector_db(
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
+        # Process all text chunks in a single API call
+        log.info(f"Generating embeddings for {len(texts)} chunks in a single batch")
         embeddings = embedding_function(
             list(map(lambda x: x.replace("\n", " "), texts)), user=user
         )
@@ -897,6 +902,220 @@ def save_docs_to_vector_db(
         log.exception(e)
         raise e
 
+import logging
+import uuid
+import json
+from datetime import datetime
+from typing import Optional, Callable, Any
+
+def get_embeddings_with_fallback(
+    embedding_engine: str,
+    embedding_model: str,
+    embedding_function: Callable,
+    url: str,
+    key: str,
+    embedding_batch_size: int,
+    texts: list[str],
+    get_single_batch_embedding_function: Callable,
+    get_embedding_function: Callable,
+    user: Optional[Any] = None,
+    backoff: bool = True
+) -> list[list[float]]:
+    """
+    Generate embeddings with a fallback mechanism to the default method of OpenWebUI with multiple API calls for each chunk
+
+    Returns:
+        list[list[float]]: List of embeddings for the input texts.
+    """
+    # First, try single batch embedding function
+    try:
+        logging.info(f"Generating embeddings for {len(texts)} chunks in a single batch")
+        single_batch_func = get_single_batch_embedding_function(
+            embedding_engine,
+            embedding_model,
+            embedding_function,
+            url,
+            key,
+            embedding_batch_size,
+            backoff=False,
+        )
+        
+        # Explicitly try to generate embeddings with the single batch function
+        return single_batch_func(texts, user)
+    
+    except Exception as e:
+        # Log the specific error from single batch attempt
+        logging.warning(f"Single batch embedding failed. Error: {str(e)}")
+        logging.warning(f"Falling back to batched embedding function")
+        
+        # Fallback to the original get_embedding_function
+        fallback_func = get_embedding_function(
+            embedding_engine,
+            embedding_model,
+            embedding_function,
+            url,
+            key,
+            embedding_batch_size,
+            backoff=True,
+        )
+        
+        # Return the result from the fallback function
+        return fallback_func(texts, user)
+
+def save_docs_to_multiple_collections(
+    request: Request,
+    docs,
+    collections: list[str],
+    metadata: Optional[dict] = None,
+    overwrite: bool = False,
+    split: bool = True,
+    user=None,
+) -> bool:
+    """
+    Save documents to multiple collections using a single embedding operation
+    """
+    def _get_docs_info(docs: list[Document]) -> str:
+        docs_info = set()
+
+        # Trying to select relevant metadata identifying the document.
+        for doc in docs:
+            metadata = getattr(doc, "metadata", {})
+            doc_name = metadata.get("name", "")
+            if not doc_name:
+                doc_name = metadata.get("title", "")
+            if not doc_name:
+                doc_name = metadata.get("source", "")
+            if doc_name:
+                docs_info.add(doc_name)
+
+        return ", ".join(docs_info)
+
+    log.info(
+        f"save_docs_to_multiple_collections: document {_get_docs_info(docs)} to collections {collections}"
+    )
+
+    # Check if entries with the same hash (metadata.hash) already exist in the knowledge collection
+    if metadata and "hash" in metadata:
+        result = VECTOR_DB_CLIENT.query(
+            collection_name=collections[1],
+            filter={"hash": metadata["hash"]},
+        )
+
+        if result is not None:
+            existing_doc_ids = result.ids[0]
+            if existing_doc_ids:
+                log.info(f"Document with hash {metadata['hash']} already exists in collection {collection_name}")
+                raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
+
+    if split:
+        if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=request.app.state.config.CHUNK_SIZE,
+                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                add_start_index=True,
+            )
+        elif request.app.state.config.TEXT_SPLITTER == "token":
+            log.info(
+                f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
+            )
+
+            tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
+            text_splitter = TokenTextSplitter(
+                encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
+                chunk_size=request.app.state.config.CHUNK_SIZE,
+                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                add_start_index=True,
+            )
+        else:
+            raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
+
+        docs = text_splitter.split_documents(docs)
+
+    if len(docs) == 0:
+        raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
+
+    texts = [doc.page_content for doc in docs]
+    metadatas = [
+        {
+            **doc.metadata,
+            **(metadata if metadata else {}),
+            "embedding_config": json.dumps(
+                {
+                    "engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
+                    "model": request.app.state.config.RAG_EMBEDDING_MODEL,
+                }
+            ),
+        }
+        for doc in docs
+    ]
+
+    # ChromaDB does not like datetime formats
+    # for meta-data so convert them to string.
+    for metadata in metadatas:
+        for key, value in metadata.items():
+            if (
+                isinstance(value, datetime)
+                or isinstance(value, list)
+                or isinstance(value, dict)
+            ):
+                metadata[key] = str(value)
+
+    try:
+        # Check and prepare collections
+        for collection_name in collections:
+            if not VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+                log.info(f"Creating new collection {collection_name}")
+            else:
+                log.info(f"Collection {collection_name} already exists")
+                if overwrite:
+                    VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                    log.info(f"Deleting existing collection {collection_name}")
+
+        # Usage of get_embeddings_with_fallback
+        embeddings = get_embeddings_with_fallback(
+            request.app.state.config.RAG_EMBEDDING_ENGINE,
+            request.app.state.config.RAG_EMBEDDING_MODEL,
+            request.app.state.ef,
+            (
+                request.app.state.config.RAG_OPENAI_API_BASE_URL
+                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai" or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
+                else request.app.state.config.RAG_OLLAMA_BASE_URL
+            ),
+            (
+                request.app.state.config.RAG_OPENAI_API_KEY
+                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai" or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
+                else request.app.state.config.RAG_OLLAMA_API_KEY
+            ),
+            request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+            list(map(lambda x: x.replace("\n", " "), texts)),
+            get_single_batch_embedding_function,  # Pass this function
+            get_embedding_function,  # Pass this function
+            user=user
+        )
+
+        # Create items once
+        items = [
+            {
+                "id": str(uuid.uuid4()),
+                "text": text,
+                "vector": embeddings[idx],
+                "metadata": metadatas[idx],
+            }
+            for idx, text in enumerate(texts)
+        ]
+
+        # Insert embeddings into all collections
+        for collection_name in collections:
+            log.info(f"Adding embeddings to collection {collection_name}")
+            VECTOR_DB_CLIENT.insert(
+                collection_name=collection_name,
+                items=items,
+            )
+
+        return True
+    except Exception as e:
+        log.exception(e)
+        raise e
 
 class ProcessFileForm(BaseModel):
     file_id: str
@@ -909,6 +1128,7 @@ def process_file(
     request: Request,
     form_data: ProcessFileForm,
     user=Depends(get_verified_user),
+    knowledge_id: Optional[str] = None,  # Add knowledge_id parameter to signify generating embeddings for both file and knowledge base at once
 ):
     try:
         file = Files.get_file_by_id(form_data.file_id)
@@ -1030,30 +1250,59 @@ def process_file(
 
         if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
             try:
-                result = save_docs_to_vector_db(
-                    request,
-                    docs=docs,
-                    collection_name=collection_name,
-                    metadata={
-                        "file_id": file.id,
-                        "name": file.filename,
-                        "hash": hash,
-                    },
-                    add=(True if form_data.collection_name else False),
-                    user=user,
-                )
+                # If knowledge_id is provided, we're adding to both collections at once
+                if knowledge_id:
+                    file_collection = f"file-{file.id}"
+                    collections = [file_collection, knowledge_id]
+                    
+                    log.info(f"Processing file for both file collection and knowledge base: {collections}")
+                    
+                    result = save_docs_to_multiple_collections(
+                        request,
+                        docs=docs,
+                        collections=collections,
+                        metadata={
+                            "file_id": file.id,
+                            "name": file.filename,
+                            "hash": hash,
+                        },
+                        user=user,
+                    )
+                    
+                    # Use file collection name for file metadata
+                    if result:
+                        Files.update_file_metadata_by_id(
+                            file.id,
+                            {
+                                "collection_name": file_collection,
+                            },
+                        )
+                else:
+                    result = save_docs_to_vector_db(
+                        request,
+                        docs=docs,
+                        collection_name=collection_name,
+                        metadata={
+                            "file_id": file.id,
+                            "name": file.filename,
+                            "hash": hash,
+                        },
+                        add=(True if form_data.collection_name else False),
+                        user=user,
+                    )
+                    
+                    if result:
+                        Files.update_file_metadata_by_id(
+                            file.id,
+                            {
+                                "collection_name": collection_name,
+                            },
+                        )
 
                 if result:
-                    Files.update_file_metadata_by_id(
-                        file.id,
-                        {
-                            "collection_name": collection_name,
-                        },
-                    )
-
                     return {
                         "status": True,
-                        "collection_name": collection_name,
+                        "collection_name": knowledge_id if knowledge_id else collection_name,
                         "filename": file.filename,
                         "content": text_content,
                     }

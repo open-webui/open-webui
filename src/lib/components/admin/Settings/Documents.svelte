@@ -627,7 +627,7 @@
 						</div>
 					</div>
 
-					{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai'}
+					{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai' ||  embeddingEngine == 'portkey'}
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Batch Size')}</div>
 
