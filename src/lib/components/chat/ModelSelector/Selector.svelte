@@ -476,7 +476,7 @@
 						<div class="flex flex-col">
 							{#if $mobile && (item?.model?.tags ?? []).length > 0}
 								<div class="flex gap-0.5 self-start h-full mb-1.5 -translate-x-1">
-									{#each item.model?.tags as tag}
+									{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
 										<div
 											class=" text-xs font-bold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 										>
@@ -498,7 +498,10 @@
 													alt="Model"
 													class="rounded-full size-5 flex items-center mr-2"
 												/>
-												{item.label}
+
+												<div class="line-clamp-1">
+													{item.label}
+												</div>
 											</Tooltip>
 										</div>
 									</div>
