@@ -61,11 +61,28 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 			}
 		});
 
-		if (Array.isArray(sourceIds)) {
-			sourceIds.forEach((sourceId, idx) => {
-				const regex = new RegExp(`\\[${idx}\\]`, 'g');
-				segment = segment.replace(regex, `<source_id data="${idx}" title="${sourceId}" />`);
-			});
+
+		// First, determine if we're using zero-based or one-based citations
+		// by checking for the presence of [0] in the content
+		const hasZeroBasedCitation = new RegExp('\\[0\\]').test(content);
+
+		if (Array.isArray(sourceIds) && sourceIds.length > 0) {
+			// Process citations based on the detected indexing style
+			for (let i = 0; i < sourceIds.length; i++) {
+				const sourceId = sourceIds[i];
+				let pattern;
+
+				if (hasZeroBasedCitation) {
+					// Using zero-based citations [0], [1], [2], etc.
+					pattern = `\\[${i}\\]`;
+				} else {
+					// Using one-based citations [1], [2], [3], etc.
+					pattern = `\\[${i + 1}\\]`;
+				}
+
+				const regex = new RegExp(pattern, 'g');
+				segment = segment.replace(regex, `<source_id data="${i}" title="${sourceId}" />`);
+			}
 		}
 
 		return segment;
