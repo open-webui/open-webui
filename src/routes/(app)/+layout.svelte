@@ -228,7 +228,6 @@
 </script>
 
 <div class="app relative h-screen overflow-hidden">
-	<Header />
 
 	<SettingsModal bind:show={$showSettings} />
 	<ChangelogModal bind:show={$showChangelog} />
@@ -246,8 +245,14 @@
 	{/if}
 
 	<main
-		class="text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-full pt-[5vh] overflow-auto w-full relative z-0"
+		class="text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-full  overflow-auto w-full relative z-0"
 	>
+		
+			
+				<Header />
+	
+	
+
 		{#if !loaded}
 			<div class="flex items-center justify-center h-full">
 				<div class="loading">Loading...</div>
@@ -255,7 +260,7 @@
 		{:else if !['user', 'admin'].includes($user?.role)}
 			<AccountPending />
 		{:else if localDBChats.length > 0}
-			<div class="fixed w-full h-full flex z-50">
+			<div class="fixed w-full  flex z-50">
 				<div
 					class="absolute w-full h-full backdrop-blur-md bg-white/20 dark:bg-gray-900/50 flex justify-center"
 				>

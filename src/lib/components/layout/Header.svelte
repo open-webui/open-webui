@@ -29,7 +29,7 @@
 </script>
 
 <div
-	class="fixed top-0 left-0 right-0 h-[5vh] bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 z-50"
+	class="h-[5vh] sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 z-100"
 >
 	<div class=" h-full mx-auto flex items-center px-4 w-full">
 		<div class="flex items-center flex-1">
