@@ -40,6 +40,7 @@ jobs:
         run: |
           python version.py
           echo "VERSION=$(cat version.txt)" >> $GITHUB_ENV
+          echo "RELEASE_TAG=$(cat version.txt)" >> $GITHUB_ENV
           echo "Generated version: $(cat version.txt)"
 
       - uses: actions/setup-node@v4
@@ -71,8 +72,8 @@ jobs:
             const release = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: `${{ env.VERSION }}`,
-              name: `${{ env.VERSION }}`,
+              tag_name: `${{ env.RELEASE_TAG }}`,
+              name: `${{ env.RELEASE_TAG }}`,
               body: changelog,
             })
             console.log(`Created release ${release.data.html_url}`)
@@ -92,7 +93,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: dist/*.whl
-          tag_name: v${{ env.VERSION }}
+          tag_name: ${{ env.RELEASE_TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
