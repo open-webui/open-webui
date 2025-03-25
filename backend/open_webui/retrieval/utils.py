@@ -174,9 +174,7 @@ def merge_get_results(get_results: list[dict]) -> dict:
     return result
 
 
-def merge_and_sort_query_results(
-    query_results: list[dict], k: int
-) -> dict:
+def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
     # Initialize lists to store combined data
     combined = dict()  # To store documents with unique document hashes
 

@@ -100,7 +100,7 @@ class QdrantClient:
             documents=get_result.documents,
             metadatas=get_result.metadatas,
             # qdrant distance is [-1, 1], normalize to [0, 1]
-            distances=[[(point.score + 1.0)/2.0 for point in query_response.points]],
+            distances=[[(point.score + 1.0) / 2.0 for point in query_response.points]],
         )
 
     def query(self, collection_name: str, filter: dict, limit: Optional[int] = None):

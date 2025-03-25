@@ -79,7 +79,7 @@ class ChromaClient:
                 # https://docs.trychroma.com/docs/collections/configure cosine equation
                 distances: list = result["distances"][0]
                 distances = [2 - dist for dist in distances]
-                distances = [[dist/2 for dist in distances]]
+                distances = [[dist / 2 for dist in distances]]
 
                 return SearchResult(
                     **{
