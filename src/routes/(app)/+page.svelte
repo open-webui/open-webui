@@ -3,7 +3,7 @@
 	import Help from '$lib/components/layout/Help.svelte';
 </script>
 
-<div class="flex flex-col flex-1 h-full">
+<div class="flex flex-col flex-1 h[95vh]">
 	<Help />
 	<Chat />
 </div>

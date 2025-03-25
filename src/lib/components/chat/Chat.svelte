@@ -1911,7 +1911,7 @@
 />
 
 <div
-	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out{$showSidebar
+	class="h-[95vh] max-h-[100dvh] transition-width duration-200 ease-in-out{$showSidebar
 		? ' '
 		: ' '} w-full max-w-full flex flex-col fr-background-default--grey"
 	id="chat-container"

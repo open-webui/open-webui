@@ -463,14 +463,14 @@
 <div
 	bind:this={navElement}
 	id="sidebar"
-	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
+	class="h-[95vh] select-none {$showSidebar
 		? 'md:relative w-[285px] max-w-[285px]'
 		: '-translate-x-[285px] w-[0px]'} bg-[#f6f6f6] text-gray-900 dark:bg-[#1e1e1e] dark:text-gray-200 text-sm transition fixed z-50 top-0 left-0 overflow-x-hidden
         "
 	data-state={$showSidebar}
 >
 	<div
-		class="py-2 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[285px] overflow-x-hidden z-50 {$showSidebar
+		class="py-2 my-auto flex flex-col justify-between h-[95vh] w-[285px] overflow-x-hidden z-50 {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
