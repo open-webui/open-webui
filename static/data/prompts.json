@@ -67,8 +67,8 @@
     },
     {
         "id": 11,
-        "promptDisplayName": "Debugge diesen Code und erklär mir, was ich tun muss",
-        "prompt": "Debugge diesen Code und erklär mir, was ich tun muss",
+        "promptDisplayName": "Debugge diesen Code und erkläre mir, was ich tun muss",
+        "prompt": "Debugge diesen Code und erkläre mir, was ich tun muss",
         "agentId": "dora"
     },
     {

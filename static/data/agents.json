@@ -2,25 +2,25 @@
     {
         "id": "greta",
         "name": "Greta Generalist",
-        "subtitle": "The Insightful Guide",
-        "description": "Greta is the team’s versatile thinker, always ready with insights, solutions, and fresh ideas. Whether you need quick answers, advice, or a new perspective, she’s here to help."
+        "subtitle": "Die Denkerin mit Durchblick",
+        "description": "Greta hat den Durchblick – und immer eine gute Idee parat. Ob du schnelle Antworten brauchst oder einen neuen Blickwinkel: Sie ist da, wenn’s drauf ankommt."
     },
     {
         "id": "dora",
         "name": "Dora Developer",
-        "subtitle": "The Code Whisperer",
-        "description": "Dora is the team’s coding expert, creating clean, efficient code. Whether building web apps, writing scripts, or exploring data science, she makes it feel effortless."
+        "subtitle": "Die Code-Meisterin",
+        "description": "Dora ist die Programmierexpertin im Team. Ob Web-App, Skript oder Data Science – sie schreibt sauberen, effizienten Code, der funktioniert. Punkt."
     },
     {
         "id": "derek",
         "name": "Derek Designer",
-        "subtitle": "The Visual Alchemist",
-        "description": "Derek is the team’s visual storyteller, turning ideas into bold and unique designs. Whether crafting a brand, campaign, or standout visual, his creativity brings it to life."
+        "subtitle": "Der Kreativstratege",
+        "description": "Derek ist der visuelle Geschichtenerzähler im Team. Er verwandelt Ideen in mutige, einzigartige Designs. Ob Markenauftritt, Kampagne oder ein Visual mit Wow-Effekt – Dereks Kreativität macht sie lebendig."
     },
     {
         "id": "cedric",
         "name": "Cedric Copywriter",
-        "subtitle": "The Story Weaver",
-        "description": "Cedric is the creative soul of the team, blending words into stories and captivating messages, whether you’re crafting blog posts, marketing copy, or social media content."
+        "subtitle": "Das Textgenie",
+        "description": "Cedric ist der Wortkünstler im Team. Ob Blog, Kampagne oder Instagram-Post: Seine Texte fesseln, begeistern und bleiben im Kopf."
     }
 ]
