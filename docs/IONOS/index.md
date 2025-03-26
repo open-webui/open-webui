@@ -3,5 +3,6 @@
 * [Configurations](./configurations.md)
 * [Customizations](./customizations.md)
 * [Git](./git.md)
+* [Keycloak](./keycloak.md)
 * [Model details](./model-details.md)
 * [Translations](./translations.md)
