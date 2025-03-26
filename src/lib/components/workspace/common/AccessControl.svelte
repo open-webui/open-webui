@@ -113,8 +113,8 @@
 						}
 					}}
 				>
-					<option class=" text-gray-700" value="private" selected>Private</option>
-					<option class=" text-gray-700" value="public" selected>Public</option>
+					<option class=" text-gray-700" value="private" selected>{$i18n.t('Private')}</option>
+					<option class=" text-gray-700" value="public" selected>{$i18n.t('Public')}</option>
 				</select>
 
 				<div class=" text-xs text-gray-400 font-medium">

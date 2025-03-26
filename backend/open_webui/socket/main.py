@@ -269,11 +269,19 @@ async def disconnect(sid):
         # print(f"Unknown session ID {sid} disconnected")
 
 
-def get_event_emitter(request_info):
+def get_event_emitter(request_info, update_db=True):
     async def __event_emitter__(event_data):
         user_id = request_info["user_id"]
+
         session_ids = list(
-            set(USER_POOL.get(user_id, []) + [request_info["session_id"]])
+            set(
+                USER_POOL.get(user_id, [])
+                + (
+                    [request_info.get("session_id")]
+                    if request_info.get("session_id")
+                    else []
+                )
+            )
         )
 
         for session_id in session_ids:
@@ -287,40 +295,41 @@ def get_event_emitter(request_info):
                 to=session_id,
             )
 
-        if "type" in event_data and event_data["type"] == "status":
-            Chats.add_message_status_to_chat_by_id_and_message_id(
-                request_info["chat_id"],
-                request_info["message_id"],
-                event_data.get("data", {}),
-            )
+        if update_db:
+            if "type" in event_data and event_data["type"] == "status":
+                Chats.add_message_status_to_chat_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                    event_data.get("data", {}),
+                )
 
-        if "type" in event_data and event_data["type"] == "message":
-            message = Chats.get_message_by_id_and_message_id(
-                request_info["chat_id"],
-                request_info["message_id"],
-            )
+            if "type" in event_data and event_data["type"] == "message":
+                message = Chats.get_message_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                )
 
-            content = message.get("content", "")
-            content += event_data.get("data", {}).get("content", "")
+                content = message.get("content", "")
+                content += event_data.get("data", {}).get("content", "")
 
-            Chats.upsert_message_to_chat_by_id_and_message_id(
-                request_info["chat_id"],
-                request_info["message_id"],
-                {
-                    "content": content,
-                },
-            )
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                    {
+                        "content": content,
+                    },
+                )
 
-        if "type" in event_data and event_data["type"] == "replace":
-            content = event_data.get("data", {}).get("content", "")
+            if "type" in event_data and event_data["type"] == "replace":
+                content = event_data.get("data", {}).get("content", "")
 
-            Chats.upsert_message_to_chat_by_id_and_message_id(
-                request_info["chat_id"],
-                request_info["message_id"],
-                {
-                    "content": content,
-                },
-            )
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                    {
+                        "content": content,
+                    },
+                )
 
     return __event_emitter__
 

@@ -49,6 +49,8 @@
 	let contentExtractionEngine = 'default';
 	let tikaServerUrl = '';
 	let showTikaServerUrl = false;
+	let doclingServerUrl = '';
+	let showDoclingServerUrl = false;
 	let documentIntelligenceEndpoint = '';
 	let documentIntelligenceKey = '';
 	let showDocumentIntelligenceConfig = false;
@@ -175,6 +177,10 @@
 			toast.error($i18n.t('Tika Server URL required.'));
 			return;
 		}
+		if (contentExtractionEngine === 'docling' && doclingServerUrl === '') {
+			toast.error($i18n.t('Docling Server URL required.'));
+			return;
+		}
 		if (
 			contentExtractionEngine === 'document_intelligence' &&
 			(documentIntelligenceEndpoint === '' || documentIntelligenceKey === '')
@@ -209,6 +215,7 @@
 			content_extraction: {
 				engine: contentExtractionEngine,
 				tika_server_url: tikaServerUrl,
+				docling_server_url: doclingServerUrl,
 				document_intelligence_config: {
 					key: documentIntelligenceKey,
 					endpoint: documentIntelligenceEndpoint
@@ -269,7 +276,10 @@
 
 			contentExtractionEngine = res.content_extraction.engine;
 			tikaServerUrl = res.content_extraction.tika_server_url;
+			doclingServerUrl = res.content_extraction.docling_server_url;
+
 			showTikaServerUrl = contentExtractionEngine === 'tika';
+			showDoclingServerUrl = contentExtractionEngine === 'docling';
 			documentIntelligenceEndpoint = res.content_extraction.document_intelligence_config.endpoint;
 			documentIntelligenceKey = res.content_extraction.document_intelligence_config.key;
 			showDocumentIntelligenceConfig = contentExtractionEngine === 'document_intelligence';
@@ -337,6 +347,7 @@
 							>
 								<option value="">{$i18n.t('Default')} </option>
 								<option value="tika">{$i18n.t('Tika')}</option>
+								<option value="docling">{$i18n.t('Docling')}</option>
 								<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
 							</select>
 						</div>
@@ -350,6 +361,14 @@
 									bind:value={tikaServerUrl}
 								/>
 							</div>
+						</div>
+					{:else if contentExtractionEngine === 'docling'}
+						<div class="flex w-full mt-1">
+							<input
+								class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+								placeholder={$i18n.t('Enter Docling Server URL')}
+								bind:value={doclingServerUrl}
+							/>
 						</div>
 					{:else if contentExtractionEngine === 'document_intelligence'}
 						<div class="my-0.5 flex gap-2 pr-2">
@@ -387,8 +406,12 @@
 					<div class="flex items-center relative">
 						<Tooltip
 							content={BYPASS_EMBEDDING_AND_RETRIEVAL
-								? 'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
-								: 'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'}
+								? $i18n.t(
+										'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
+									)
+								: $i18n.t(
+										'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
+									)}
 						>
 							<Switch bind:state={BYPASS_EMBEDDING_AND_RETRIEVAL} />
 						</Tooltip>
@@ -625,8 +648,12 @@
 						<div class="flex items-center relative">
 							<Tooltip
 								content={RAG_FULL_CONTEXT
-									? 'Inject entire contents as context for comprehensive processing, this is recommended for complex queries.'
-									: 'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'}
+									? $i18n.t(
+											'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
+										)
+									: $i18n.t(
+											'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
+										)}
 							>
 								<Switch bind:state={RAG_FULL_CONTEXT} />
 							</Tooltip>

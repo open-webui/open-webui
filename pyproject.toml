@@ -51,7 +51,7 @@ dependencies = [
     "langchain==0.3.19",
     "langchain-community==0.3.18",
 
-    "fake-useragent==1.5.1",
+    "fake-useragent==2.1.0",
     "chromadb==0.6.2",
     "pymilvus==2.5.0",
     "qdrant-client~=1.12.0",
@@ -84,6 +84,7 @@ dependencies = [
     "soundfile==0.13.1",
     "azure-ai-documentintelligence==1.0.0",
 
+    "pillow==11.1.0",
     "opencv-python-headless==4.11.0.86",
     "rapidocr-onnxruntime==1.3.24",
     "rank-bm25==0.2.2",

@@ -2,6 +2,8 @@ import json
 import logging
 from typing import Optional
 
+
+from open_webui.socket.main import get_event_emitter
 from open_webui.models.chats import (
     ChatForm,
     ChatImportForm,
@@ -370,6 +372,62 @@ async def update_chat_by_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+
+############################
+# UpdateChatMessageById
+############################
+class MessageForm(BaseModel):
+    content: str
+
+
+@router.post("/{id}/messages/{message_id}", response_model=Optional[ChatResponse])
+async def update_chat_message_by_id(
+    id: str, message_id: str, form_data: MessageForm, user=Depends(get_verified_user)
+):
+    chat = Chats.get_chat_by_id(id)
+
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if chat.user_id != user.id and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    chat = Chats.upsert_message_to_chat_by_id_and_message_id(
+        id,
+        message_id,
+        {
+            "content": form_data.content,
+        },
+    )
+
+    event_emitter = get_event_emitter(
+        {
+            "user_id": user.id,
+            "chat_id": id,
+            "message_id": message_id,
+        }
+    )
+
+    if event_emitter:
+        await event_emitter(
+            {
+                "type": "chat:message",
+                "data": {
+                    "chat_id": id,
+                    "message_id": message_id,
+                    "content": form_data.content,
+                },
+            }
+        )
+
+    return ChatResponse(**chat.model_dump())
 
 
 ############################
