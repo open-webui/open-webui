@@ -38,7 +38,7 @@ update:
 
 build:
 	@echo "--> Docker build"
-	@docker build -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.16-async .
+	@docker build -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.16 .
 
 create-buildx:
 	@docker buildx create --use
@@ -46,10 +46,10 @@ create-buildx:
 buildx:
 	@docker buildx build  --platform linux/arm64,linux/amd64 -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.16 --push .
 
-arm-buildx:
+buildx-arm:
 	@docker buildx build  --platform linux/arm64 -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.16 --push .
 
-amd-buildx:
+buildx-amd:
 	@docker buildx build  --platform linux/amd64 -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.16 --push .
 
 run:

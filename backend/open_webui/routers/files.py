@@ -109,7 +109,7 @@ tasks_cache = {}  # Dictionary to store task results
 cache_lock = Lock()
 
 
-async def process_tasks(request, background_tasks, form_data, user, task_id):
+def process_tasks(request, background_tasks, form_data, user, task_id):
     """Executa OCR e processamento do PDF de forma assíncrona."""
 
     global tasks_cache
@@ -117,7 +117,7 @@ async def process_tasks(request, background_tasks, form_data, user, task_id):
         task = tasks_cache.get(task_id, {})
 
     task['status'] = "Processing PDF..."
-    text = await process_file_async(request, background_tasks, form_data, task_id, user)
+    text = process_file_async(request, background_tasks, form_data, task_id, user)
     task['text'] = text
     task['status'] = "Processing Completed"
 

@@ -1043,7 +1043,7 @@ def process_file(
             )
 
 @router.post("/process/file_async")
-async def process_file_async(
+def process_file_async(
     request: Request,
     background_tasks: BackgroundTasks,
     form_data: ProcessFileForm,
