@@ -323,7 +323,7 @@ function Get-ProcessesStartedAfter {
 $lemonadeProcessId = $null
 $rauxProcessId = $null
 
-if ($env:LAUNCH_LEMONADE -eq "true") {
+if ($env:LAUNCH_LEMONADE -eq "true" -or $env:LAUNCH_LEMONADE -eq "TRUE") {
     $lemonadeProcessId = Start-LemonadeServer
 }
 
