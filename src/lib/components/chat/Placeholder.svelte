@@ -87,11 +87,11 @@
 
 	// Add debug logging
 	$: {
-		console.log('Selected model idx:', selectedModelIdx);
-		console.log('Models array:', models);
-		console.log('Selected model:', models[selectedModelIdx]);
-		console.log('Model meta:', models[selectedModelIdx]?.info?.meta);
-		console.log('Config default prompts:', $config?.default_prompt_suggestions);
+		// console.log('Selected model idx:', selectedModelIdx);
+		// console.log('Models array:', models);
+		// console.log('Selected model:', models[selectedModelIdx]);
+		// console.log('Model meta:', models[selectedModelIdx]?.info?.meta);
+		// console.log('Config default prompts:', $config?.default_prompt_suggestions);
 	}
 
 	onMount(() => {});

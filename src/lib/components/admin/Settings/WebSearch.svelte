@@ -78,7 +78,7 @@
 </script>
 
 <form
-	class="flex flex-col h-full justify-between space-y-3 text-sm"
+	class="flex flex-col  space-y-3 text-sm"
 	on:submit|preventDefault={async () => {
 		await submitHandler();
 		saveHandler();

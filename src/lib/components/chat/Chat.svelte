@@ -1554,8 +1554,10 @@
 						})
 			}))
 			.filter((message) => message?.role === 'user' || message?.content?.trim());
+							console.log("CONFIG, ", $config?.features?.enable_web_search)
 
 		const res = await generateOpenAIChatCompletion(
+			
 			localStorage.token,
 			{
 				stream: stream,
@@ -1577,7 +1579,6 @@
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
 				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
-
 				features: {
 					image_generation:
 						$config?.features?.enable_image_generation &&

@@ -57,7 +57,6 @@
 
 	// Add validation and transformation of input prompts
 	$: {
-		console.log('Raw suggestion prompts:', suggestionPrompts);
 
 		// Ensure prompts are in the correct format
 		const formattedPrompts = suggestionPrompts.map((prompt) => {
@@ -70,7 +69,6 @@
 		// Filter out any invalid prompts
 		sortedPrompts = formattedPrompts.filter((prompt) => prompt && (prompt.content || prompt.title));
 
-		console.log('Formatted prompts:', sortedPrompts);
 	}
 </script>
 

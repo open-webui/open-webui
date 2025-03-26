@@ -83,18 +83,10 @@ export const updateAdminConfig = async (token: string, body: object) => {
 };
 
 export const getSessionUser = async () => {
-	console.log("[DEBUG] getSessionUser: Starting session user retrieval");
 	const token = localStorage.getItem("token");
 	if (!token) {
-		console.error("[DEBUG] getSessionUser: No token found in localStorage");
 		throw new Error("No token found");
 	}
-
-	console.log("[DEBUG] getSessionUser: Token exists, length:", token.length);
-	console.log(
-		"[DEBUG] getSessionUser: Making request to:",
-		`${WEBUI_API_BASE_URL}/auths/userinfo`,
-	);
 
 	try {
 		const response = await fetch(`${WEBUI_API_BASE_URL}/auths/userinfo`, {
@@ -105,15 +97,7 @@ export const getSessionUser = async () => {
 			},
 		});
 
-		console.log("[DEBUG] getSessionUser: Response status:", response.status);
-		console.log(
-			"[DEBUG] getSessionUser: Response status text:",
-			response.statusText,
-		);
-		console.log(
-			"[DEBUG] getSessionUser: Response headers:",
-			Object.fromEntries([...response.headers]),
-		);
+
 
 		if (response.status === 401 || !response.ok) {
 			console.error(
@@ -126,14 +110,7 @@ export const getSessionUser = async () => {
 
 		// Get the raw text first to debug JSON parsing issues
 		const rawText = await response.text();
-		console.log(
-			"[DEBUG] getSessionUser: Raw response length:",
-			rawText?.length || 0,
-		);
-		console.log(
-			"[DEBUG] getSessionUser: Raw response first 200 chars:",
-			rawText?.substring(0, 200),
-		);
+
 
 		if (!rawText || rawText.trim() === "") {
 			console.error("[DEBUG] getSessionUser: Empty response received");
@@ -165,11 +142,8 @@ export const getSessionUser = async () => {
 		try {
 			// Check if it's a valid JSON format
 			if (rawText.trim().startsWith("{") || rawText.trim().startsWith("[")) {
-				console.log(
-					"[DEBUG] getSessionUser: Response appears to be JSON, parsing...",
-				);
+
 				userData = JSON.parse(rawText);
-				console.log("[DEBUG] getSessionUser: Parsed user data successfully");
 			} else {
 				console.error(
 					"[DEBUG] getSessionUser: Response is not JSON format. First char:",
