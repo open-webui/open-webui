@@ -14,7 +14,7 @@
 	{#each $agents as { id, name, subtitle, description }}
 		<div class="min-h-96 flex items-center">
 			<div
-				class="flex-0 group w-52 pb-4 mx-6 bg-white text-left rounded-3xl shadow-xl cursor-pointer transition group"
+				class="flex-0 group w-56 pb-4 mx-6 bg-white text-left rounded-3xl shadow-xl cursor-pointer transition group"
 				data-id={id}
 				tabindex="0"
 				role="button"
