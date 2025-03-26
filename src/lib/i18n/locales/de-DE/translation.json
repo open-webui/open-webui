@@ -688,7 +688,7 @@
 	"Model {{modelId}} not found": "Modell {{modelId}} nicht gefunden",
 	"Model {{modelName}} is not vision capable": "Das Modell {{modelName}} ist nicht für die Bildverarbeitung geeignet",
 	"Model {{name}} is now {{status}}": "Modell {{name}} ist jetzt {{status}}",
-	"Model accepts image inputs": "Modell akzeptiert Bileingaben",
+	"Model accepts image inputs": "Modell akzeptiert Bildeingaben",
 	"Model created successfully!": "Modell erfolgreich erstellt!",
 	"Model filesystem path detected. Model shortname is required for update, cannot continue.": "Modell-Dateisystempfad erkannt. Modellkurzname ist für das Update erforderlich, Fortsetzung nicht möglich.",
 	"Model Filtering": "Modellfilterung",
