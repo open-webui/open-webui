@@ -19,7 +19,7 @@ class TestModels(AbstractPostgresTest):
 
         with mock_webui_user(id="2"):
             response = self.fast_api_client.post(
-                self.create_url("/add"),
+                self.create_url("/create"),
                 json={
                     "id": "my-model",
                     "base_model_id": "base-model-id",
@@ -51,7 +51,7 @@ class TestModels(AbstractPostgresTest):
 
         with mock_webui_user(id="2"):
             response = self.fast_api_client.delete(
-                self.create_url("/delete?id=my-model")
+                self.create_url("/model/delete?id=my-model")
             )
         assert response.status_code == 200
 

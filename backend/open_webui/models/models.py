@@ -5,7 +5,7 @@ from typing import Optional
 from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
-from open_webui.models.users import Users, UserResponse
+from open_webui.models.users import Users, UserResponse, User
 
 
 from pydantic import BaseModel, ConfigDict
@@ -176,8 +176,7 @@ class ModelsTable:
     def get_models(self) -> list[ModelUserResponse]:
         with get_db() as db:
             models = []
-            for model in db.query(Model).filter(Model.base_model_id != None).all():
-                user = Users.get_user_by_id(model.user_id)
+            for model, user in db.query(Model, User).outerjoin(User, Model.user_id == User.id).filter(Model.base_model_id != None).all():
                 models.append(
                     ModelUserResponse.model_validate(
                         {
