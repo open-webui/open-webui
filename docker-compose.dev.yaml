@@ -44,5 +44,19 @@ services:
       - ./backend:/app/backend
       - data:/app/backend/data
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.7-0
+    command: ["start-dev", "--http-enabled=true", "--http-port=8079", "--log-level=info", "--import-realm"]
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+    environment:
+      # Needed to create a config from scratch. Causing errors when using --import-realm
+      # - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      # - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+      - KC_FEATURES=persistent-user-sessions
+    network_mode: host
+    ports:
+      - "8079:8079"
+ 
 volumes:
   data: {}
