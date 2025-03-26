@@ -203,6 +203,22 @@
 		};
 	};
 
+	const executeTool = async (data, cb) => {
+		console.log(data);
+		// TODO: MCP (SSE) support
+		// TODO: API Server support
+
+		if (cb) {
+			cb(
+				JSON.parse(
+					JSON.stringify({
+						result: null
+					})
+				)
+			);
+		}
+	};
+
 	const chatEventHandler = async (event, cb) => {
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
 
@@ -256,6 +272,9 @@
 			if (type === 'execute:python') {
 				console.log('execute:python', data);
 				executePythonAsWorker(data.id, data.code, cb);
+			} else if (type === 'execute:tool') {
+				console.log('execute:tool', data);
+				executeTool(data, cb);
 			} else if (type === 'request:chat:completion') {
 				console.log(data, $socket.id);
 				const { session_id, channel, form_data, model } = data;
