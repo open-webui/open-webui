@@ -123,7 +123,7 @@ function Stop-ProcessTree {
 Write-Host "Starting Lemonade server..." -ForegroundColor Cyan
 $lemonadePinfo = New-Object System.Diagnostics.ProcessStartInfo
 $lemonadePinfo.FileName = "cmd.exe"
-$lemonadePinfo.Arguments = "/C call conda activate $lemonadeEnvPath ; lemonade serve"
+$lemonadePinfo.Arguments = "/C call conda activate $lemonadeEnvPath && lemonade serve"
 $lemonadePinfo.RedirectStandardError = $false
 $lemonadePinfo.RedirectStandardOutput = $false
 $lemonadePinfo.UseShellExecute = $true
@@ -187,7 +187,7 @@ if (-not $lemonadeReady) {
 Write-Host "Starting RAUX$version server..." -ForegroundColor Cyan
 $rauxPinfo = New-Object System.Diagnostics.ProcessStartInfo
 $rauxPinfo.FileName = "cmd.exe"
-$rauxPinfo.Arguments = "/C call conda activate $condaEnvPath ; open-webui serve"
+$rauxPinfo.Arguments = "/C call conda activate $condaEnvPath && open-webui serve"
 $rauxPinfo.RedirectStandardError = $false
 $rauxPinfo.RedirectStandardOutput = $false
 $rauxPinfo.UseShellExecute = $true
