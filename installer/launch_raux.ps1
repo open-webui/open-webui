@@ -11,6 +11,9 @@ Write-Host " RAUX & Lemonade Servers - AI Web Interface" -ForegroundColor Blue
 Write-Host " This window will minimize when the servers are ready" -ForegroundColor Blue
 Write-Host "=================================================" -ForegroundColor Blue
 
+# Set version with default empty string
+$version = " $($env:RAUX_VERSION)"
+
 # Parameters
 $condaEnvName = "raux_env"
 $condaEnvPath = "$env:LOCALAPPDATA\RAUX\raux_env"
@@ -181,7 +184,7 @@ if (-not $lemonadeReady) {
 }
 
 # Create a process to run the RAUX server
-Write-Host "Starting RAUX server..." -ForegroundColor Cyan
+Write-Host "Starting RAUX ($version) -ForegroundColor Cyan
 $rauxPinfo = New-Object System.Diagnostics.ProcessStartInfo
 $rauxPinfo.FileName = "cmd.exe"
 $rauxPinfo.Arguments = "/C call conda activate $condaEnvPath && open-webui serve"
