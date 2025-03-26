@@ -32,7 +32,7 @@ $originalTreatControlCAsInput = [Console]::TreatControlCAsInput
 # Change the setting to capture Ctrl+C
 [Console]::TreatControlCAsInput = $true
 
-Write-Host "Starting Lemonade and RAUX servers..." -ForegroundColor Cyan
+Write-Host "Starting Lemonade and RAUX$version servers..." -ForegroundColor Cyan
 
 # Function to check if a server is running
 function Test-ServerReady {
@@ -123,7 +123,7 @@ function Stop-ProcessTree {
 Write-Host "Starting Lemonade server..." -ForegroundColor Cyan
 $lemonadePinfo = New-Object System.Diagnostics.ProcessStartInfo
 $lemonadePinfo.FileName = "cmd.exe"
-$lemonadePinfo.Arguments = "/C call conda activate $lemonadeEnvPath && lemonade serve"
+$lemonadePinfo.Arguments = "/C call conda activate $lemonadeEnvPath ; lemonade serve"
 $lemonadePinfo.RedirectStandardError = $false
 $lemonadePinfo.RedirectStandardOutput = $false
 $lemonadePinfo.UseShellExecute = $true
@@ -184,10 +184,10 @@ if (-not $lemonadeReady) {
 }
 
 # Create a process to run the RAUX server
-Write-Host "Starting RAUX ($version) -ForegroundColor Cyan
+Write-Host "Starting RAUX$version server..." -ForegroundColor Cyan
 $rauxPinfo = New-Object System.Diagnostics.ProcessStartInfo
 $rauxPinfo.FileName = "cmd.exe"
-$rauxPinfo.Arguments = "/C call conda activate $condaEnvPath && open-webui serve"
+$rauxPinfo.Arguments = "/C call conda activate $condaEnvPath ; open-webui serve"
 $rauxPinfo.RedirectStandardError = $false
 $rauxPinfo.RedirectStandardOutput = $false
 $rauxPinfo.UseShellExecute = $true
@@ -366,5 +366,5 @@ finally {
     
     Write-Host "Server shutdown complete." -ForegroundColor Green
     Write-Host "Press any key to exit..." -ForegroundColor Cyan
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
 } 
