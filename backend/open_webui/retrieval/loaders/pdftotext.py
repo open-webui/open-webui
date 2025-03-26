@@ -103,9 +103,12 @@ class PdftotextLoaderAsync():
         """
         Synchronously retrieves the extracted text once the task is completed.
         """
+        time_to_sleep = 20
+        linear_theshold = 240
         while True:
             status_response = self.check_status(task_id)
             if status_response and status_response.get("status") == "completed":
                 return status_response.get("result").get("text")
-            time.sleep(20)  # Avoids CPU overload by waiting before rechecking
-
+            time.sleep(time_to_sleep)  # Avoids CPU overload by waiting before rechecking
+            if time_to_sleep < linear_theshold:
+                time_to_sleep*=2
