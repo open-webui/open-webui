@@ -20,18 +20,22 @@ if "%1"=="--mode" (
     goto parse
 )
 
-REM Check if Lemonade is installed
-if exist "%LOCALAPPDATA%\lemonade_server\lemon_env" (
-    echo Starting both RAUX and Lemonade servers...
-    REM Start Lemonade in background
-    start "Lemonade Server" powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0launch_lemonade.ps1"
-    REM Start RAUX in current window with version and mode parameters
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$env:RAUX_VERSION='%version%'; $env:RAUX_MODE='%mode%'; & '%~dp0launch_raux.ps1'"
-    echo RAUX Server has stopped.
+REM Set conda environment paths
+set "RAUX_CONDA_ENV=%LOCALAPPDATA%\RAUX\raux_env"
+set "LEMONADE_CONDA_ENV=%LOCALAPPDATA%\lemonade_server\lemon_env"
+
+REM Check if mode is not GENERIC to determine if Lemonade should be launched
+if /I NOT "%mode%"=="GENERIC" (
+    set "LAUNCH_LEMONADE=true"
 ) else (
-    echo Starting RAUX Server...
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$env:RAUX_VERSION='%version%'; $env:RAUX_MODE='%mode%'; & '%~dp0launch_raux.ps1'"
-    echo RAUX Server has stopped.
+    set "LAUNCH_LEMONADE=false"
 )
+
+REM Set environment variables for PowerShell script
+set "RAUX_VERSION=%version%"
+
+REM Launch RAUX with appropriate environment variables
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '%LOCALAPPDATA%\RAUX\launch_raux.ps1'"
+echo RAUX Server has stopped.
 
 pause
