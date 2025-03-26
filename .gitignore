@@ -1,5 +1,7 @@
 deploy_to_ubuntu.md
 deployment.md
+update.md
+
 .DS_Store
 node_modules
 /build
