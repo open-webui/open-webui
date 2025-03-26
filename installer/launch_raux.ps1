@@ -11,8 +11,11 @@ Write-Host " RAUX & Lemonade Servers - AI Web Interface" -ForegroundColor Blue
 Write-Host " This window will minimize when the servers are ready" -ForegroundColor Blue
 Write-Host "=================================================" -ForegroundColor Blue
 
-# Set version with default empty string
+# Set version and mode with default values
 $version = " $($env:RAUX_VERSION)"
+$mode = " $($env:RAUX_MODE)"
+
+Write-Host "Running in$mode mode" -ForegroundColor Cyan
 
 # Parameters
 $condaEnvName = "raux_env"
@@ -318,7 +321,7 @@ try {
         }
         
         # Monitor both servers
-        if (-not (Test-ServerReady -Url $lemonadeUrl -ServerName "Lemonade")) {
+        if ($mode -eq " GENERIC" -and -not (Test-ServerReady -Url $lemonadeUrl -ServerName "Lemonade")) {
             Write-Host "WARNING - Lemonade server appears to be down!" -ForegroundColor Red
         }
         if (-not (Test-ServerReady -Url $rauxUrl -ServerName "RAUX")) {
