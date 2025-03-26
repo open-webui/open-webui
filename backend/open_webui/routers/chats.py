@@ -416,7 +416,7 @@ async def update_chat_message_by_id(
     )
 
     if event_emitter:
-        event_emitter(
+        await event_emitter(
             {
                 "type": "chat:message",
                 "data": {
