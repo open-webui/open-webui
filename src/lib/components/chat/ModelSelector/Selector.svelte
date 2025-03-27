@@ -476,7 +476,7 @@
 						<div class="flex flex-col">
 							{#if $mobile && (item?.model?.tags ?? []).length > 0}
 								<div class="flex gap-0.5 self-start h-full mb-1.5 -translate-x-1">
-									{#each item.model?.tags as tag}
+									{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
 										<div
 											class=" text-xs font-bold px-1 rounded-sm uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 										>
@@ -498,31 +498,37 @@
 													alt="Model"
 													class="rounded-full size-5 flex items-center mr-2"
 												/>
-												{item.label}
+
+												<div class="flex items-center line-clamp-1">
+													<div class="line-clamp-1">
+														{item.label}
+													</div>
+
+													{#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
+														<div class="flex ml-1 items-center translate-y-[0.5px]">
+															<Tooltip
+																content={`${
+																	item.model.ollama?.details?.quantization_level
+																		? item.model.ollama?.details?.quantization_level + ' '
+																		: ''
+																}${
+																	item.model.ollama?.size
+																		? `(${(item.model.ollama?.size / 1024 ** 3).toFixed(1)}GB)`
+																		: ''
+																}`}
+																className="self-end"
+															>
+																<span
+																	class=" text-xs font-medium text-gray-600 dark:text-gray-400 line-clamp-1"
+																	>{item.model.ollama?.details?.parameter_size ?? ''}</span
+																>
+															</Tooltip>
+														</div>
+													{/if}
+												</div>
 											</Tooltip>
 										</div>
 									</div>
-									{#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
-										<div class="flex ml-1 items-center translate-y-[0.5px]">
-											<Tooltip
-												content={`${
-													item.model.ollama?.details?.quantization_level
-														? item.model.ollama?.details?.quantization_level + ' '
-														: ''
-												}${
-													item.model.ollama?.size
-														? `(${(item.model.ollama?.size / 1024 ** 3).toFixed(1)}GB)`
-														: ''
-												}`}
-												className="self-end"
-											>
-												<span
-													class=" text-xs font-medium text-gray-600 dark:text-gray-400 line-clamp-1"
-													>{item.model.ollama?.details?.parameter_size ?? ''}</span
-												>
-											</Tooltip>
-										</div>
-									{/if}
 								</div>
 
 								<!-- {JSON.stringify(item.info)} -->
@@ -600,7 +606,7 @@
 									<div
 										class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px] overflow-x-auto scrollbar-none"
 									>
-										{#each item.model?.tags as tag}
+										{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
 											<Tooltip content={tag.name} className="flex-shrink-0">
 												<div
 													class=" text-xs font-bold px-1 rounded-sm uppercase bg-gray-500/20 text-gray-700 dark:text-gray-200"

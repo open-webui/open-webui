@@ -191,6 +191,7 @@ from open_webui.config import (
     DOCUMENT_INTELLIGENCE_ENDPOINT,
     DOCUMENT_INTELLIGENCE_KEY,
     RAG_TOP_K,
+    RAG_TOP_K_RERANKER,
     RAG_TEXT_SPLITTER,
     TIKTOKEN_ENCODING_NAME,
     PDF_EXTRACT_IMAGES,
@@ -552,6 +553,7 @@ app.state.FUNCTIONS = {}
 
 
 app.state.config.TOP_K = RAG_TOP_K
+app.state.config.TOP_K_RERANKER = RAG_TOP_K_RERANKER
 app.state.config.RELEVANCE_THRESHOLD = RAG_RELEVANCE_THRESHOLD
 app.state.config.FILE_MAX_SIZE = RAG_FILE_MAX_SIZE
 app.state.config.FILE_MAX_COUNT = RAG_FILE_MAX_COUNT
@@ -1050,6 +1052,7 @@ async def chat_completion(
             "message_id": form_data.pop("id", None),
             "session_id": form_data.pop("session_id", None),
             "tool_ids": form_data.get("tool_ids", None),
+            "tool_servers": form_data.pop("tool_servers", None),
             "files": form_data.get("files", None),
             "features": form_data.get("features", None),
             "variables": form_data.get("variables", None),
