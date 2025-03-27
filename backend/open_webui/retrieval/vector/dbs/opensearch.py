@@ -120,7 +120,7 @@ class OpenSearchClient:
                     "script_score": {
                         "query": {"match_all": {}},
                         "script": {
-                            "source": "cosineSimilarity(params.query_value, doc[params.field]) + 1.0",
+                            "source": "(cosineSimilarity(params.query_value, doc[params.field]) + 1.0) / 2.0",
                             "params": {
                                 "field": "vector",
                                 "query_value": vectors[0],

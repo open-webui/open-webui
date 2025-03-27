@@ -105,7 +105,7 @@ class TikaLoader:
 
         if r.ok:
             raw_metadata = r.json()
-            text = raw_metadata.get("X-TIKA:content", "<No text content found>")
+            text = raw_metadata.get("X-TIKA:content", "<No text content found>").strip()
 
             if "Content-Type" in raw_metadata:
                 headers["Content-Type"] = raw_metadata["Content-Type"]
