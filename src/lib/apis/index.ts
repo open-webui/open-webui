@@ -1,4 +1,5 @@
 import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+import { convertOpenApiToToolPayload } from '$lib/utils';
 import { getOpenAIModelsDirect } from './openai';
 
 export const getModels = async (
@@ -254,6 +255,138 @@ export const stopTask = async (token: string, id: string) => {
 	}
 
 	return res;
+};
+
+export const getToolServerData = async (token: string, url: string) => {
+	let error = null;
+
+	const res = await fetch(`${url}/openapi.json`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	const data = {
+		openapi: res,
+		info: res.info,
+		specs: convertOpenApiToToolPayload(res)
+	};
+
+	console.log(data);
+	return data;
+};
+
+export const getToolServersData = async (servers: object[]) => {
+	return await Promise.all(
+		servers
+			.filter(async (server) => server?.config?.enable)
+			.map(async (server) => {
+				const data = await getToolServerData(server?.key, server?.url).catch((err) => {
+					console.error(err);
+					return null;
+				});
+
+				if (data) {
+					const { openapi, info, specs } = data;
+					return {
+						url: server?.url,
+						openapi: openapi,
+						info: info,
+						specs: specs
+					};
+				}
+			})
+	);
+};
+
+export const executeToolServer = async (
+	token: string,
+	url: string,
+	name: string,
+	params: object,
+	serverData: { openapi: any; info: any; specs: any }
+) => {
+	let error = null;
+
+	try {
+		// Find the matching operationId in the OpenAPI specification
+		const matchingRoute = Object.entries(serverData.openapi.paths).find(([path, methods]) => {
+			return Object.entries(methods).some(
+				([method, operation]: any) => operation.operationId === name
+			);
+		});
+
+		if (!matchingRoute) {
+			throw new Error(`No matching route found for operationId: ${name}`);
+		}
+
+		const [route, methods] = matchingRoute;
+		const methodEntry = Object.entries(methods).find(
+			([method, operation]: any) => operation.operationId === name
+		);
+
+		if (!methodEntry) {
+			throw new Error(`No matching method found for operationId: ${name}`);
+		}
+
+		const [httpMethod, operation]: [string, any] = methodEntry;
+
+		// Replace path parameters in the URL
+		let finalUrl = `${url}${route}`;
+		if (operation.parameters) {
+			Object.entries(params).forEach(([key, value]) => {
+				finalUrl = finalUrl.replace(`{${key}}`, encodeURIComponent(value as string));
+			});
+		}
+
+		// Headers and request options
+		const headers = {
+			...(token && { authorization: `Bearer ${token}` }),
+			'Content-Type': 'application/json'
+		};
+
+		let requestOptions: RequestInit = {
+			method: httpMethod.toUpperCase(),
+			headers
+		};
+
+		// Handle request body for POST, PUT, PATCH
+		if (['post', 'put', 'patch'].includes(httpMethod.toLowerCase()) && operation.requestBody) {
+			requestOptions.body = JSON.stringify(params);
+		}
+
+		// Execute the request
+		const res = await fetch(finalUrl, requestOptions);
+		if (!res.ok) {
+			throw new Error(`HTTP error! Status: ${res.status}`);
+		}
+
+		return await res.json();
+	} catch (err: any) {
+		error = err.message;
+		console.error('API Request Error:', error);
+		return { error };
+	}
 };
 
 export const getTaskConfig = async (token: string = '') => {

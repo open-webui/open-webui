@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
-	import { getModels as _getModels } from '$lib/apis';
+	import { getModels as _getModels, getToolServersData } from '$lib/apis';
 
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
-	import { models, settings, user } from '$lib/stores';
+	import { models, settings, toolServers, user } from '$lib/stores';
 
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -30,6 +30,8 @@
 		await saveSettings({
 			toolServers: servers
 		});
+
+		toolServers.set(await getToolServersData($settings?.toolServers ?? []));
 	};
 
 	onMount(async () => {

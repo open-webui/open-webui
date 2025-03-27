@@ -1070,3 +1070,59 @@ export const getLineCount = (text) => {
 	console.log(typeof text);
 	return text ? text.split('\n').length : 0;
 };
+
+export const convertOpenApiToToolPayload = (openApiSpec) => {
+	const toolPayload = [];
+
+	for (const [path, methods] of Object.entries(openApiSpec.paths)) {
+		for (const [method, operation] of Object.entries(methods)) {
+			const tool = {
+				type: 'function',
+				name: operation.operationId,
+				description: operation.summary || 'No description available.',
+				parameters: {
+					type: 'object',
+					properties: {},
+					required: []
+				}
+			};
+
+			// Extract path or query parameters
+			if (operation.parameters) {
+				operation.parameters.forEach((param) => {
+					tool.parameters.properties[param.name] = {
+						type: param.schema.type,
+						description: param.schema.description || ''
+					};
+
+					if (param.required) {
+						tool.parameters.required.push(param.name);
+					}
+				});
+			}
+
+			// Extract parameters from requestBody if applicable
+			if (operation.requestBody) {
+				const ref = operation.requestBody.content['application/json'].schema['$ref'];
+				if (ref) {
+					const schemaName = ref.split('/').pop();
+					const schemaDef = openApiSpec.components.schemas[schemaName];
+
+					if (schemaDef && schemaDef.properties) {
+						for (const [prop, details] of Object.entries(schemaDef.properties)) {
+							tool.parameters.properties[prop] = {
+								type: details.type,
+								description: details.description || ''
+							};
+						}
+						tool.parameters.required = schemaDef.required || [];
+					}
+				}
+			}
+
+			toolPayload.push(tool);
+		}
+	}
+
+	return toolPayload;
+};

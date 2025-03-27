@@ -31,7 +31,7 @@
 	import { page } from '$app/stores';
 	import { Toaster, toast } from 'svelte-sonner';
 
-	import { getBackendConfig } from '$lib/apis';
+	import { executeToolServer, getBackendConfig } from '$lib/apis';
 	import { getSessionUser } from '$lib/apis/auths';
 
 	import '../tailwind.css';
@@ -205,17 +205,36 @@
 
 	const executeTool = async (data, cb) => {
 		console.log(data);
-		// TODO: MCP (SSE) support
-		// TODO: API Server support
 
-		if (cb) {
-			cb(
-				JSON.parse(
-					JSON.stringify({
-						result: null
-					})
-				)
-			);
+		const toolServer = $settings?.toolServers?.find((server) => server.url === data.server?.url);
+
+		if (toolServer) {
+			const res = await executeToolServer(
+				toolServer.key,
+				toolServer.url,
+				data?.name,
+				data?.params,
+				toolServer
+			).catch((error) => {
+				console.error('executeToolServer', error);
+				return {
+					error: error
+				};
+			});
+
+			if (cb) {
+				cb(JSON.parse(JSON.stringify(res)));
+			}
+		} else {
+			if (cb) {
+				cb(
+					JSON.parse(
+						JSON.stringify({
+							error: 'Tool Server Not Found'
+						})
+					)
+				);
+			}
 		}
 	};
 

@@ -213,8 +213,9 @@ async def chat_completion_tools_handler(
                                 "type": "execute:tool",
                                 "data": {
                                     "id": str(uuid4()),
-                                    "tool": tool,
+                                    "name": tool_function_name,
                                     "params": tool_function_params,
+                                    "tool": tool,
                                     "server": tool.get("server", {}),
                                     "session_id": metadata.get("session_id", None),
                                 },
@@ -224,17 +225,30 @@ async def chat_completion_tools_handler(
                 except Exception as e:
                     tool_output = str(e)
 
+                if isinstance(tool_output, dict):
+                    tool_output = json.dumps(tool_output, indent=4)
+
                 if isinstance(tool_output, str):
-                    if tools[tool_function_name]["citation"]:
+                    tool_id = tools[tool_function_name].get("toolkit_id", "")
+                    if tools[tool_function_name].get("citation", False):
+
                         sources.append(
                             {
                                 "source": {
-                                    "name": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
+                                    "name": (
+                                        f"TOOL:" + f"{tool_id}/{tool_function_name}"
+                                        if tool_id
+                                        else f"{tool_function_name}"
+                                    ),
                                 },
                                 "document": [tool_output],
                                 "metadata": [
                                     {
-                                        "source": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
+                                        "source": (
+                                            f"TOOL:" + f"{tool_id}/{tool_function_name}"
+                                            if tool_id
+                                            else f"{tool_function_name}"
+                                        )
                                     }
                                 ],
                             }
@@ -246,13 +260,17 @@ async def chat_completion_tools_handler(
                                 "document": [tool_output],
                                 "metadata": [
                                     {
-                                        "source": f"TOOL:{tools[tool_function_name]['toolkit_id']}/{tool_function_name}"
+                                        "source": (
+                                            f"TOOL:" + f"{tool_id}/{tool_function_name}"
+                                            if tool_id
+                                            else f"{tool_function_name}"
+                                        )
                                     }
                                 ],
                             }
                         )
 
-                    if tools[tool_function_name]["file_handler"]:
+                    if tools[tool_function_name].get("file_handler", False):
                         skip_files = True
 
             # check if "tool_calls" in result
@@ -788,7 +806,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Server side tools
     tool_ids = metadata.get("tool_ids", None)
     # Client side tools
-    tool_servers = form_data.get("tool_servers", None)
+    tool_servers = metadata.get("tool_servers", None)
 
     log.debug(f"{tool_ids=}")
     log.debug(f"{tool_servers=}")
@@ -1824,8 +1842,9 @@ async def process_chat_response(
                                             "type": "execute:tool",
                                             "data": {
                                                 "id": str(uuid4()),
-                                                "tool": tool,
+                                                "name": tool_name,
                                                 "params": tool_function_params,
+                                                "tool": tool,
                                                 "server": tool.get("server", {}),
                                                 "session_id": metadata.get(
                                                     "session_id", None
