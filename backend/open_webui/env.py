@@ -323,8 +323,8 @@ ENABLE_REALTIME_CHAT_SAVE = (
 ####################################
 
 REDIS_URL = os.environ.get("REDIS_URL", "")
-SENTINEL_HOSTS = os.environ.get("SENTINEL_HOSTS", "")
-SENTINEL_PORT = os.environ.get("SENTINEL_PORT", "26379")
+REDIS_SENTINEL_HOSTS = os.environ.get("REDIS_SENTINEL_HOSTS", "")
+REDIS_SENTINEL_PORT = os.environ.get("REDIS_SENTINEL_PORT", "26379")
 
 ####################################
 # WEBUI_AUTH (Required for security)

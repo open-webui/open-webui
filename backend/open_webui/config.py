@@ -19,8 +19,8 @@ from open_webui.env import (
     DATABASE_URL,
     ENV,
     REDIS_URL,
-    SENTINEL_PORT,
-    SENTINEL_HOSTS,
+    REDIS_SENTINEL_HOSTS,
+    REDIS_SENTINEL_PORT,
     FRONTEND_BUILD_DIR,
     OFFLINE_MODE,
     OPEN_WEBUI_DIR,
@@ -254,11 +254,11 @@ class AppConfig:
     _state: dict[str, PersistentConfig]
     _redis: Optional[redis.Redis] = None
 
-    def __init__(self, redis_url: Optional[str] = None, sentinels: Optional[list] = []):
+    def __init__(self, redis_url: Optional[str] = None, redis_sentinels: Optional[list] = []):
         super().__setattr__("_state", {})
         if redis_url:
             super().__setattr__(
-                "_redis", get_redis_connection(redis_url, sentinels, decode_responses=True)
+                "_redis", get_redis_connection(redis_url, redis_sentinels, decode_responses=True)
             )
 
     def __setattr__(self, key, value):

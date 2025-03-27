@@ -315,8 +315,8 @@ from open_webui.env import (
     AUDIT_LOG_LEVEL,
     CHANGELOG,
     REDIS_URL,
-    SENTINEL_HOSTS,
-    SENTINEL_PORT,
+    REDIS_SENTINEL_HOSTS,
+    REDIS_SENTINEL_PORT,
     GLOBAL_LOG_LEVEL,
     MAX_BODY_LOG_SIZE,
     SAFE_MODE,
@@ -426,7 +426,7 @@ app = FastAPI(
 
 oauth_manager = OAuthManager(app)
 
-app.state.config = AppConfig(redis_url=REDIS_URL, sentinels=get_sentinels_from_env(SENTINEL_HOSTS, SENTINEL_PORT))
+app.state.config = AppConfig(redis_url=REDIS_URL, redis_sentinels=get_sentinels_from_env(REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT))
 
 app.state.WEBUI_NAME = WEBUI_NAME
 app.state.LICENSE_METADATA = None

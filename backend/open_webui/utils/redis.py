@@ -16,11 +16,11 @@ def parse_redis_sentinel_url(redis_url):
         "db": int(parsed_url.path.lstrip("/") or 0),
     }
 
-def get_redis_connection(redis_url, sentinels, decode_responses=True):
-    if sentinels:
+def get_redis_connection(redis_url, redis_sentinels, decode_responses=True):
+    if redis_sentinels:
         redis_config = parse_redis_sentinel_url(redis_url)
         sentinel = redis.sentinel.Sentinel(
-            sentinels,
+            redis_sentinels,
             port=redis_config['port'],
             db=redis_config['db'],
             username=redis_config['username'],
@@ -34,9 +34,9 @@ def get_redis_connection(redis_url, sentinels, decode_responses=True):
         # Standard Redis connection
         return redis.Redis.from_url(redis_url, decode_responses=decode_responses)
 
-def get_sentinels_from_env(SENTINEL_HOSTS, SENTINEL_PORT):
-    sentinel_hosts=SENTINEL_HOSTS.split(',')
-    sentinel_port=int(SENTINEL_PORT)
+def get_sentinels_from_env(sentinel_hosts_env, sentinel_port_env):
+    sentinel_hosts=sentinel_hosts_env.split(',')
+    sentinel_port=int(sentinel_port_env)
     return [(host, sentinel_port) for host in sentinel_hosts]
 
 class AsyncRedisSentinelManager(socketio.AsyncRedisManager):
