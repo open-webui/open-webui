@@ -82,7 +82,6 @@ known_source_ext = [
     "lhs",
 ]
 
-
 class TikaLoader:
     def __init__(self, url, file_path, mime_type=None):
         self.url = url
@@ -133,7 +132,7 @@ class Loader:
         if not isasync:
             docs = self.loader.load()
 
-            if type(docs) == str:
+            if self.engine == "pdftotext":
                 return [
                 Document(
                         page_content=docs
