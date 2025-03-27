@@ -94,7 +94,7 @@ class OAuthManager:
             oauth_claim = auth_manager_config.OAUTH_ROLES_CLAIM
             oauth_allowed_roles = auth_manager_config.OAUTH_ALLOWED_ROLES
             oauth_admin_roles = auth_manager_config.OAUTH_ADMIN_ROLES
-            oauth_roles = None
+            oauth_roles = []
             # Default/fallback role if no matching roles are found
             role = auth_manager_config.DEFAULT_USER_ROLE
 
@@ -104,7 +104,7 @@ class OAuthManager:
                 nested_claims = oauth_claim.split(".")
                 for nested_claim in nested_claims:
                     claim_data = claim_data.get(nested_claim, {})
-                oauth_roles = claim_data if isinstance(claim_data, list) else None
+                oauth_roles = claim_data if isinstance(claim_data, list) else []
 
             log.debug(f"Oauth Roles claim: {oauth_claim}")
             log.debug(f"User roles from oauth: {oauth_roles}")
@@ -140,6 +140,7 @@ class OAuthManager:
         log.debug("Running OAUTH Group management")
         oauth_claim = auth_manager_config.OAUTH_GROUPS_CLAIM
 
+        user_oauth_groups = []
         # Nested claim search for groups claim
         if oauth_claim:
             claim_data = user_data
@@ -160,7 +161,7 @@ class OAuthManager:
 
         # Remove groups that user is no longer a part of
         for group_model in user_current_groups:
-            if group_model.name not in user_oauth_groups:
+            if user_oauth_groups and group_model.name not in user_oauth_groups:
                 # Remove group from user
                 log.debug(
                     f"Removing user from group {group_model.name} as it is no longer in their oauth groups"
@@ -186,8 +187,10 @@ class OAuthManager:
 
         # Add user to new groups
         for group_model in all_available_groups:
-            if group_model.name in user_oauth_groups and not any(
-                gm.name == group_model.name for gm in user_current_groups
+            if (
+                user_oauth_groups
+                and group_model.name in user_oauth_groups
+                and not any(gm.name == group_model.name for gm in user_current_groups)
             ):
                 # Add user to group
                 log.debug(

@@ -63,8 +63,8 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 
 		if (Array.isArray(sourceIds)) {
 			sourceIds.forEach((sourceId, idx) => {
-				const regex = new RegExp(`\\[${idx}\\]`, 'g');
-				segment = segment.replace(regex, `<source_id data="${idx}" title="${sourceId}" />`);
+				const regex = new RegExp(`\\[${idx + 1}\\]`, 'g');
+				segment = segment.replace(regex, `<source_id data="${idx + 1}" title="${sourceId}" />`);
 			});
 		}
 
@@ -608,7 +608,7 @@ export const convertOpenAIChats = (_chats) => {
 				user_id: '',
 				title: convo['title'],
 				chat: chat,
-				timestamp: convo['timestamp']
+				timestamp: convo['create_time']
 			});
 		} else {
 			failed++;
@@ -752,7 +752,7 @@ export const extractSentencesForAudio = (text: string) => {
 };
 
 export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {
-	content = removeDetails(content, ['reasoning', 'code_interpreter']);
+	content = removeDetails(content, ['reasoning', 'code_interpreter', 'tool_calls']);
 	const messageContentParts: string[] = [];
 
 	switch (split_on) {
