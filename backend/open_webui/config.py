@@ -1688,7 +1688,7 @@ RAG_TOP_K = PersistentConfig(
 RAG_TOP_K_RERANKER = PersistentConfig(
     "RAG_TOP_K_RERANKER",
     "rag.top_k_reranker",
-    int(os.environ.get("RAG_TOP_K_RERANKER", "3"))
+    int(os.environ.get("RAG_TOP_K_RERANKER", "3")),
 )
 RAG_RELEVANCE_THRESHOLD = PersistentConfig(
     "RAG_RELEVANCE_THRESHOLD",

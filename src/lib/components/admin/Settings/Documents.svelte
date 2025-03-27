@@ -782,7 +782,6 @@
 						</div>
 					{/if}
 
-
 					{#if querySettings.hybrid === true}
 						<div class="  mb-2.5 flex flex-col w-full justify-between">
 							<div class=" flex w-full justify-between">

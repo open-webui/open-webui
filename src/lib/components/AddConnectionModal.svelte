@@ -302,12 +302,12 @@
 							{:else}
 								<div class="text-gray-500 text-xs text-center py-2 px-10">
 									{#if ollama}
-										{$i18n.t('Leave empty to include all models from "{{URL}}/api/tags" endpoint', {
-											URL: url
+										{$i18n.t('Leave empty to include all models from "{{url}}/api/tags" endpoint', {
+											url: url
 										})}
 									{:else}
-										{$i18n.t('Leave empty to include all models from "{{URL}}/models" endpoint', {
-											URL: url
+										{$i18n.t('Leave empty to include all models from "{{url}}/models" endpoint', {
+											url: url
 										})}
 									{/if}
 								</div>

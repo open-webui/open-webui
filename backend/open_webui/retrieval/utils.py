@@ -146,7 +146,9 @@ def query_doc_with_hybrid_search(
 
         # retrieve only min(k, k_reranker) items, sort and cut by distance if k < k_reranker
         if k < k_reranker:
-            sorted_items = sorted(zip(distances, metadatas, documents), key=lambda x: x[0], reverse=True)
+            sorted_items = sorted(
+                zip(distances, metadatas, documents), key=lambda x: x[0], reverse=True
+            )
             sorted_items = sorted_items[:k]
             distances, documents, metadatas = map(list, zip(*sorted_items))
         result = {
@@ -304,6 +306,7 @@ def query_collection_with_hybrid_search(
             "Hybrid search failed for all collections. Using Non hybrid search as fallback."
         )
     return merge_and_sort_query_results(results, k=k)
+
 
 def get_embedding_function(
     embedding_engine,

@@ -1520,7 +1520,8 @@ def query_doc_handler(
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=request.app.state.rf,
-                k_reranker=form_data.k_reranker or request.app.state.config.TOP_K_RERANKER,
+                k_reranker=form_data.k_reranker
+                or request.app.state.config.TOP_K_RERANKER,
                 r=(
                     form_data.r
                     if form_data.r
@@ -1570,7 +1571,8 @@ def query_collection_handler(
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=request.app.state.rf,
-                k_reranker=form_data.k_reranker or request.app.state.config.TOP_K_RERANKER,
+                k_reranker=form_data.k_reranker
+                or request.app.state.config.TOP_K_RERANKER,
                 r=(
                     form_data.r
                     if form_data.r

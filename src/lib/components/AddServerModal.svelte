@@ -132,8 +132,8 @@
 						</div>
 
 						<div class="text-xs text-gray-500 mt-1">
-							{$i18n.t(`WebUI will make requests to "{{URL}}/openapi.json"`, {
-								URL: url
+							{$i18n.t(`WebUI will make requests to "{{url}}/openapi.json"`, {
+								url: url
 							})}
 						</div>
 
