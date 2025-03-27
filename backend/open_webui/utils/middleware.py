@@ -215,6 +215,7 @@ async def chat_completion_tools_handler(
                                     "id": str(uuid4()),
                                     "tool": tool,
                                     "params": tool_function_params,
+                                    "server": tool.get("server", {}),
                                     "session_id": metadata.get("session_id", None),
                                 },
                             }
@@ -787,10 +788,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Server side tools
     tool_ids = metadata.get("tool_ids", None)
     # Client side tools
-    tool_specs = form_data.get("tool_specs", None)
+    tool_servers = form_data.get("tool_servers", None)
 
     log.debug(f"{tool_ids=}")
-    log.debug(f"{tool_specs=}")
+    log.debug(f"{tool_servers=}")
 
     tools_dict = {}
 
@@ -808,14 +809,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         )
         log.info(f"{tools_dict=}")
 
-    if tool_specs:
-        for tool in tool_specs:
-            callable = tool.pop("callable", None)
-            tools_dict[tool["name"]] = {
-                "direct": True,
-                "callable": callable,
-                "spec": tool,
-            }
+    if tool_servers:
+        for tool_server in tool_servers:
+            tool_specs = tool_server.pop("specs", [])
+
+            for tool in tool_specs:
+                tools_dict[tool["name"]] = {
+                    "spec": tool,
+                    "direct": True,
+                    "server": tool_server,
+                }
 
     if tools_dict:
         if metadata.get("function_calling") == "native":
@@ -1823,6 +1826,7 @@ async def process_chat_response(
                                                 "id": str(uuid4()),
                                                 "tool": tool,
                                                 "params": tool_function_params,
+                                                "server": tool.get("server", {}),
                                                 "session_id": metadata.get(
                                                     "session_id", None
                                                 ),

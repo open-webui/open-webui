@@ -38,6 +38,8 @@
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
 
+	export let toolServers = [];
+
 	let models = [];
 
 	const selectSuggestionPrompt = async (p) => {
@@ -196,6 +198,7 @@
 					bind:codeInterpreterEnabled
 					bind:webSearchEnabled
 					bind:atSelectedModel
+					{toolServers}
 					{transparentBackground}
 					{stopResponse}
 					{createMessagePair}

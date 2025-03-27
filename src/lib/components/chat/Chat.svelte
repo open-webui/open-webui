@@ -119,6 +119,9 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
+
+	let toolServers = [];
+
 	let chat = null;
 	let tags = [];
 
@@ -190,6 +193,8 @@
 	$: if (atSelectedModel || selectedModels) {
 		setToolIds();
 	}
+
+	$: toolServers = ($settings?.toolServers ?? []).filter((server) => server?.config?.enable);
 
 	const setToolIds = async () => {
 		if (!$tools) {
@@ -2033,6 +2038,7 @@
 								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
 								bind:atSelectedModel
+								{toolServers}
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}
@@ -2086,6 +2092,7 @@
 								bind:webSearchEnabled
 								bind:atSelectedModel
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
+								{toolServers}
 								{stopResponse}
 								{createMessagePair}
 								on:upload={async (e) => {

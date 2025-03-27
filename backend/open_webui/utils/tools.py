@@ -91,10 +91,11 @@ def get_tools(
 
             # TODO: This needs to be a pydantic model
             tool_dict = {
-                "toolkit_id": tool_id,
-                "callable": callable,
                 "spec": spec,
+                "callable": callable,
+                "toolkit_id": tool_id,
                 "pydantic_model": function_to_pydantic_model(callable),
+                # Misc info
                 "file_handler": hasattr(module, "file_handler") and module.file_handler,
                 "citation": hasattr(module, "citation") and module.citation,
             }
