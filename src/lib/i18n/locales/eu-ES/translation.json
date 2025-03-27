@@ -4,6 +4,7 @@
 	"(e.g. `sh webui.sh --api --api-auth username_password`)": "(adib. `sh webui.sh --api --api-auth erabiltzaile_pasahitza`)",
 	"(e.g. `sh webui.sh --api`)": "(adib. `sh webui.sh --api`)",
 	"(latest)": "(azkena)",
+	"(Ollama)": "",
 	"{{ models }}": "{{ models }}",
 	"{{COUNT}} hidden lines": "",
 	"{{COUNT}} Replies": "",

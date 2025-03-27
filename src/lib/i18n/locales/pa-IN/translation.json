@@ -4,6 +4,7 @@
 	"(e.g. `sh webui.sh --api --api-auth username_password`)": "",
 	"(e.g. `sh webui.sh --api`)": "(ਉਦਾਹਰਣ ਦੇ ਤੌਰ ਤੇ `sh webui.sh --api`)",
 	"(latest)": "(ਤਾਜ਼ਾ)",
+	"(Ollama)": "",
 	"{{ models }}": "{{ ਮਾਡਲ }}",
 	"{{COUNT}} hidden lines": "",
 	"{{COUNT}} Replies": "",

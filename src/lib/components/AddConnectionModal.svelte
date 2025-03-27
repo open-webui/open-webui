@@ -79,9 +79,9 @@
 	const submitHandler = async () => {
 		loading = true;
 
-		if (!ollama && (!url || !key)) {
+		if (!ollama && !url) {
 			loading = false;
-			toast.error('URL and Key are required');
+			toast.error('URL is required');
 			return;
 		}
 
@@ -223,7 +223,7 @@
 										className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										bind:value={key}
 										placeholder={$i18n.t('API Key')}
-										required={!ollama}
+										required={false}
 									/>
 								</div>
 							</div>

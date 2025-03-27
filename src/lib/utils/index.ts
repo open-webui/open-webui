@@ -63,8 +63,8 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 
 		if (Array.isArray(sourceIds)) {
 			sourceIds.forEach((sourceId, idx) => {
-				const regex = new RegExp(`\\[${idx}\\]`, 'g');
-				segment = segment.replace(regex, `<source_id data="${idx}" title="${sourceId}" />`);
+				const regex = new RegExp(`\\[${idx + 1}\\]`, 'g');
+				segment = segment.replace(regex, `<source_id data="${idx + 1}" title="${sourceId}" />`);
 			});
 		}
 
