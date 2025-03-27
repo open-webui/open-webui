@@ -35,9 +35,11 @@ def get_redis_connection(redis_url, redis_sentinels, decode_responses=True):
         return redis.Redis.from_url(redis_url, decode_responses=decode_responses)
 
 def get_sentinels_from_env(sentinel_hosts_env, sentinel_port_env):
-    sentinel_hosts=sentinel_hosts_env.split(',')
-    sentinel_port=int(sentinel_port_env)
-    return [(host, sentinel_port) for host in sentinel_hosts]
+    if sentinel_hosts_env:
+        sentinel_hosts=sentinel_hosts_env.split(',')
+        sentinel_port=int(sentinel_port_env)
+        return [(host, sentinel_port) for host in sentinel_hosts]
+    return []
 
 class AsyncRedisSentinelManager(socketio.AsyncRedisManager):
     def __init__(self, sentinel_hosts, sentinel_port=26379, redis_port=6379, service="mymaster", db=0,
