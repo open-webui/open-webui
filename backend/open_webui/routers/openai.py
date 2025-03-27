@@ -652,7 +652,7 @@ async def generate_chat_completion(
         log.info(f"Requesting to {url}/chat/completions with {user.ust_api_key}")
         r = await session.request(
             method="POST",
-            url=f"{url}/chat/completions?api-version=2024-10-21",
+            url=f"{url}/chat/completions?api-version=2025-02-01-preview",
             data=payload,
             headers={
                 "Content-Type": "application/json",
