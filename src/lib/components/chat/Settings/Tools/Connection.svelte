@@ -76,6 +76,7 @@
 				inputClassName=" outline-hidden bg-transparent w-full"
 				placeholder={$i18n.t('API Key')}
 				bind:value={key}
+				required={false}
 			/>
 		</div>
 	</Tooltip>

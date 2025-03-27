@@ -299,7 +299,7 @@ export const getToolServerData = async (token: string, url: string) => {
 export const getToolServersData = async (servers: object[]) => {
 	return await Promise.all(
 		servers
-			.filter(async (server) => server?.config?.enable)
+			.filter((server) => server?.config?.enable)
 			.map(async (server) => {
 				const data = await getToolServerData(server?.key, server?.url).catch((err) => {
 					console.error(err);
