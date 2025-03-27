@@ -198,7 +198,6 @@ async def chat_completion_tools_handler(
                     allowed_params = (
                         spec.get("parameters", {}).get("properties", {}).keys()
                     )
-                    tool_function = tool["callable"]
                     tool_function_params = {
                         k: v
                         for k, v in tool_function_params.items()
@@ -206,8 +205,6 @@ async def chat_completion_tools_handler(
                     }
 
                     if tool.get("direct", False):
-                        tool_output = await tool_function(**tool_function_params)
-                    else:
                         tool_output = await event_caller(
                             {
                                 "type": "execute:tool",
@@ -215,12 +212,14 @@ async def chat_completion_tools_handler(
                                     "id": str(uuid4()),
                                     "name": tool_function_name,
                                     "params": tool_function_params,
-                                    "tool": tool,
                                     "server": tool.get("server", {}),
                                     "session_id": metadata.get("session_id", None),
                                 },
                             }
                         )
+                    else:
+                        tool_function = tool["callable"]
+                        tool_output = await tool_function(**tool_function_params)
 
                 except Exception as e:
                     tool_output = str(e)
@@ -229,8 +228,9 @@ async def chat_completion_tools_handler(
                     tool_output = json.dumps(tool_output, indent=4)
 
                 if isinstance(tool_output, str):
-                    tool_id = tools[tool_function_name].get("toolkit_id", "")
-                    if tools[tool_function_name].get("citation", False):
+                    tool = tools[tool_function_name]
+                    tool_id = tool.get("toolkit_id", "")
+                    if tool.get("citation", False) or tool.get("direct", False):
 
                         sources.append(
                             {
@@ -1825,7 +1825,7 @@ async def process_chat_response(
                                     .get("properties", {})
                                     .keys()
                                 )
-                                tool_function = tool["callable"]
+
                                 tool_function_params = {
                                     k: v
                                     for k, v in tool_function_params.items()
@@ -1833,10 +1833,6 @@ async def process_chat_response(
                                 }
 
                                 if tool.get("direct", False):
-                                    tool_result = await tool_function(
-                                        **tool_function_params
-                                    )
-                                else:
                                     tool_result = await event_caller(
                                         {
                                             "type": "execute:tool",
@@ -1844,7 +1840,6 @@ async def process_chat_response(
                                                 "id": str(uuid4()),
                                                 "name": tool_name,
                                                 "params": tool_function_params,
-                                                "tool": tool,
                                                 "server": tool.get("server", {}),
                                                 "session_id": metadata.get(
                                                     "session_id", None
@@ -1852,6 +1847,13 @@ async def process_chat_response(
                                             },
                                         }
                                     )
+
+                                else:
+                                    tool_function = tool["callable"]
+                                    tool_result = await tool_function(
+                                        **tool_function_params
+                                    )
+
                             except Exception as e:
                                 tool_result = str(e)
 

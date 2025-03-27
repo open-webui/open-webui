@@ -323,26 +323,25 @@ export const executeToolServer = async (
 	token: string,
 	url: string,
 	name: string,
-	params: object,
+	params: Record<string, any>,
 	serverData: { openapi: any; info: any; specs: any }
 ) => {
 	let error = null;
 
 	try {
-		// Find the matching operationId in the OpenAPI specification
-		const matchingRoute = Object.entries(serverData.openapi.paths).find(([path, methods]) => {
-			return Object.entries(methods).some(
-				([method, operation]: any) => operation.operationId === name
-			);
-		});
+		// Find the matching operationId in the OpenAPI spec
+		const matchingRoute = Object.entries(serverData.openapi.paths).find(([_, methods]) =>
+			Object.entries(methods as any).some(([__, operation]: any) => operation.operationId === name)
+		);
 
 		if (!matchingRoute) {
 			throw new Error(`No matching route found for operationId: ${name}`);
 		}
 
-		const [route, methods] = matchingRoute;
-		const methodEntry = Object.entries(methods).find(
-			([method, operation]: any) => operation.operationId === name
+		const [routePath, methods] = matchingRoute;
+
+		const methodEntry = Object.entries(methods as any).find(
+			([_, operation]: any) => operation.operationId === name
 		);
 
 		if (!methodEntry) {
@@ -351,18 +350,55 @@ export const executeToolServer = async (
 
 		const [httpMethod, operation]: [string, any] = methodEntry;
 
-		// Replace path parameters in the URL
-		let finalUrl = `${url}${route}`;
+		// Split parameters by type
+		const pathParams: Record<string, any> = {};
+		const queryParams: Record<string, any> = {};
+		let bodyParams: any = {};
+
 		if (operation.parameters) {
-			Object.entries(params).forEach(([key, value]) => {
-				finalUrl = finalUrl.replace(`{${key}}`, encodeURIComponent(value as string));
+			operation.parameters.forEach((param: any) => {
+				const paramName = param.name;
+				const paramIn = param.in;
+				if (params.hasOwnProperty(paramName)) {
+					if (paramIn === 'path') {
+						pathParams[paramName] = params[paramName];
+					} else if (paramIn === 'query') {
+						queryParams[paramName] = params[paramName];
+					}
+				}
 			});
 		}
 
-		// Headers and request options
-		const headers = {
-			...(token && { authorization: `Bearer ${token}` }),
-			'Content-Type': 'application/json'
+		let finalUrl = `${url}${routePath}`;
+
+		// Replace path parameters (`{param}`)
+		Object.entries(pathParams).forEach(([key, value]) => {
+			finalUrl = finalUrl.replace(new RegExp(`{${key}}`, 'g'), encodeURIComponent(value));
+		});
+
+		// Append query parameters to URL if any
+		if (Object.keys(queryParams).length > 0) {
+			const queryString = new URLSearchParams(
+				Object.entries(queryParams).map(([k, v]) => [k, String(v)])
+			).toString();
+			finalUrl += `?${queryString}`;
+		}
+
+		// Handle requestBody composite
+		if (operation.requestBody && operation.requestBody.content) {
+			const contentType = Object.keys(operation.requestBody.content)[0]; // typically "application/json"
+			if (params.body !== undefined) {
+				bodyParams = params.body; // Assume the provided params has a "body" property containing the payload
+			} else {
+				// Optional: Fallback or explicit error if body is expected but not provided
+				throw new Error(`Request body expected for operation '${name}' but none found.`);
+			}
+		}
+
+		// Prepare headers and request options
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
 		};
 
 		let requestOptions: RequestInit = {
@@ -370,15 +406,14 @@ export const executeToolServer = async (
 			headers
 		};
 
-		// Handle request body for POST, PUT, PATCH
 		if (['post', 'put', 'patch'].includes(httpMethod.toLowerCase()) && operation.requestBody) {
-			requestOptions.body = JSON.stringify(params);
+			requestOptions.body = JSON.stringify(bodyParams);
 		}
 
-		// Execute the request
 		const res = await fetch(finalUrl, requestOptions);
 		if (!res.ok) {
-			throw new Error(`HTTP error! Status: ${res.status}`);
+			const resText = await res.text();
+			throw new Error(`HTTP error! Status: ${res.status}. Message: ${resText}`);
 		}
 
 		return await res.json();

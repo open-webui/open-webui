@@ -25,7 +25,8 @@
 		temporaryChatEnabled,
 		isLastActiveTab,
 		isApp,
-		appInfo
+		appInfo,
+		toolServers
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -204,9 +205,9 @@
 	};
 
 	const executeTool = async (data, cb) => {
-		console.log(data);
+		const toolServer = $toolServers?.find((server) => server.url === data.server?.url);
 
-		const toolServer = $settings?.toolServers?.find((server) => server.url === data.server?.url);
+		console.log('executeTool', data, toolServer);
 
 		if (toolServer) {
 			const res = await executeToolServer(
@@ -215,13 +216,9 @@
 				data?.name,
 				data?.params,
 				toolServer
-			).catch((error) => {
-				console.error('executeToolServer', error);
-				return {
-					error: error
-				};
-			});
+			);
 
+			console.log('executeToolServer', res);
 			if (cb) {
 				cb(JSON.parse(JSON.stringify(res)));
 			}
