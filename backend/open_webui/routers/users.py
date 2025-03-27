@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from open_webui.models.auths import Auths
+from open_webui.models.auths import ApiKey, Auths
 from open_webui.models.chats import Chats
 from open_webui.models.users import (
     UserModel,
@@ -17,7 +17,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
-from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user
+from open_webui.utils.auth import create_api_key, get_admin_user, get_password_hash, get_verified_user
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -325,3 +325,73 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
         status_code=status.HTTP_403_FORBIDDEN,
         detail=ERROR_MESSAGES.ACTION_PROHIBITED,
     )
+
+
+############################
+# API Key
+############################
+
+
+# create api key
+@router.post("/{user_id}/api_key", response_model=ApiKey)
+async def generate_api_key(request: Request, user_id: str, admin_user=Depends(get_admin_user)):
+    if not request.app.state.config.ENABLE_API_KEY:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.API_KEY_CREATION_NOT_ALLOWED,
+        )
+
+    api_key = create_api_key()
+    
+    user = Users.get_user_by_id(user_id)
+    if user:
+        success = Users.update_user_api_key_by_id(user_id, api_key)
+        if success:
+            log.info(f"Admin {admin_user.email} created API key for user {user.email}")
+            return {
+                "api_key": api_key,
+            }
+        else:
+            raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_API_KEY_ERROR)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+
+
+# delete api key
+@router.delete("/{user_id}/api_key", response_model=bool)
+async def delete_api_key(user_id: str,admin_user=Depends(get_admin_user)):
+    user = Users.get_user_by_id(user_id)
+    if user:
+        success = Users.update_user_api_key_by_id(user_id, None)
+        if success:
+            log.info(f"Admin {admin_user.email} deleted API key for user {user.email}")
+        return success
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+
+# get api key
+@router.get("/{user_id}/api_key", response_model=ApiKey)
+async def get_api_key(user_id: str,admin_user=Depends(get_admin_user)):
+    user = Users.get_user_by_id(user_id)
+    Users.get_user_api_key_by_id(user_id)
+    if user:
+        if(user.api_key != None):
+            log.info(f"Admin {admin_user.email} retrieved API key for user {user.email}")
+            return {
+                "api_key": user.api_key,
+            }
+        else:
+            raise HTTPException(404, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
