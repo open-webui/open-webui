@@ -223,6 +223,9 @@ async def generate_function_chat_completion(
     extra_params = {
         "__event_emitter__": __event_emitter__,
         "__event_call__": __event_call__,
+        "__chat_id__": metadata.get("chat_id", None),
+        "__session_id__": metadata.get("session_id", None),
+        "__message_id__": metadata.get("message_id", None),
         "__task__": __task__,
         "__task_body__": __task_body__,
         "__files__": files,

@@ -25,13 +25,14 @@
 		temporaryChatEnabled,
 		isLastActiveTab,
 		isApp,
-		appInfo
+		appInfo,
+		toolServers
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Toaster, toast } from 'svelte-sonner';
 
-	import { getBackendConfig } from '$lib/apis';
+	import { executeToolServer, getBackendConfig } from '$lib/apis';
 	import { getSessionUser } from '$lib/apis/auths';
 
 	import '../tailwind.css';
@@ -203,6 +204,37 @@
 		};
 	};
 
+	const executeTool = async (data, cb) => {
+		const toolServer = $toolServers?.find((server) => server.url === data.server?.url);
+
+		console.log('executeTool', data, toolServer);
+
+		if (toolServer) {
+			const res = await executeToolServer(
+				toolServer.key,
+				toolServer.url,
+				data?.name,
+				data?.params,
+				toolServer
+			);
+
+			console.log('executeToolServer', res);
+			if (cb) {
+				cb(JSON.parse(JSON.stringify(res)));
+			}
+		} else {
+			if (cb) {
+				cb(
+					JSON.parse(
+						JSON.stringify({
+							error: 'Tool Server Not Found'
+						})
+					)
+				);
+			}
+		}
+	};
+
 	const chatEventHandler = async (event, cb) => {
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
 
@@ -256,6 +288,9 @@
 			if (type === 'execute:python') {
 				console.log('execute:python', data);
 				executePythonAsWorker(data.id, data.code, cb);
+			} else if (type === 'execute:tool') {
+				console.log('execute:tool', data);
+				executeTool(data, cb);
 			} else if (type === 'request:chat:completion') {
 				console.log(data, $socket.id);
 				const { session_id, channel, form_data, model } = data;
