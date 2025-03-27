@@ -85,6 +85,9 @@
 			return;
 		}
 
+		// remove trailing slash from url
+		url = url.replace(/\/$/, '');
+
 		const connection = {
 			url,
 			key,
