@@ -185,9 +185,7 @@ def merge_get_results(get_results: list[dict]) -> dict:
     return result
 
 
-def merge_and_sort_query_results(
-    query_results: list[dict], k: int, reverse: bool = False
-) -> dict:
+def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
     # Initialize lists to store combined data
     combined = dict()  # To store documents with unique document hashes
 
@@ -207,27 +205,17 @@ def merge_and_sort_query_results(
                     continue  # if doc is new, no further comparison is needed
 
                 # if doc is alredy in, but new distance is better, update
-                if not reverse and distance < combined[doc_hash][0]:
-                    # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
-                    # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
-                    combined[doc_hash] = (distance, document, metadata)
-                if reverse and distance > combined[doc_hash][0]:
+                if distance > combined[doc_hash][0]:
                     combined[doc_hash] = (distance, document, metadata)
 
     combined = list(combined.values())
     # Sort the list based on distances
-    combined.sort(key=lambda x: x[0], reverse=reverse)
+    combined.sort(key=lambda x: x[0], reverse=True)
 
     # Slice to keep only the top k elements
     sorted_distances, sorted_documents, sorted_metadatas = (
         zip(*combined[:k]) if combined else ([], [], [])
     )
-
-    # if chromaDB, the distance is 0 (best) to 2 (worse)
-    # re-order to -1 (worst) to 1 (best) for relevance score
-    if not reverse:
-        sorted_distances = tuple(-dist for dist in sorted_distances)
-        sorted_distances = tuple(dist + 1 for dist in sorted_distances)
 
     # Create and return the output dictionary
     return {
@@ -278,12 +266,7 @@ def query_collection(
             else:
                 pass
 
-    if VECTOR_DB == "chroma":
-        # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
-        # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
-        return merge_and_sort_query_results(results, k=k, reverse=False)
-    else:
-        return merge_and_sort_query_results(results, k=k, reverse=True)
+    return merge_and_sort_query_results(results, k=k)
 
 
 def query_collection_with_hybrid_search(
@@ -320,9 +303,7 @@ def query_collection_with_hybrid_search(
         raise Exception(
             "Hybrid search failed for all collections. Using Non hybrid search as fallback."
         )
-        
-    return merge_and_sort_query_results(results, k=k, reverse=True)
-
+    return merge_and_sort_query_results(results, k=k)
 
 def get_embedding_function(
     embedding_engine,

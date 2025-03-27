@@ -75,10 +75,16 @@ class ChromaClient:
                     n_results=limit,
                 )
 
+                # chromadb has cosine distance, 2 (worst) -> 0 (best). Re-odering to 0 -> 1
+                # https://docs.trychroma.com/docs/collections/configure cosine equation
+                distances: list = result["distances"][0]
+                distances = [2 - dist for dist in distances]
+                distances = [[dist / 2 for dist in distances]]
+
                 return SearchResult(
                     **{
                         "ids": result["ids"],
-                        "distances": result["distances"],
+                        "distances": distances,
                         "documents": result["documents"],
                         "metadatas": result["metadatas"],
                     }
