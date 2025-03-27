@@ -76,6 +76,7 @@
 		template: '',
 		r: 0.0,
 		k: 4,
+		k_reranker: 4,
 		hybrid: false
 	};
 
@@ -764,6 +765,23 @@
 							/>
 						</div>
 					</div>
+
+					{#if querySettings.hybrid === true}
+						<div class="mb-2.5 flex w-full justify-between">
+							<div class="self-center text-xs font-medium">{$i18n.t('Top K Reranker')}</div>
+							<div class="flex items-center relative">
+								<input
+									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+									type="number"
+									placeholder={$i18n.t('Enter Top K Reranker')}
+									bind:value={querySettings.k_reranker}
+									autocomplete="off"
+									min="0"
+								/>
+							</div>
+						</div>
+					{/if}
+
 
 					{#if querySettings.hybrid === true}
 						<div class="  mb-2.5 flex flex-col w-full justify-between">

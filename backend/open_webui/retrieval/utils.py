@@ -106,6 +106,7 @@ def query_doc_with_hybrid_search(
     embedding_function,
     k: int,
     reranking_function,
+    k_reranker: int,
     r: float,
 ) -> dict:
     try:
@@ -128,7 +129,7 @@ def query_doc_with_hybrid_search(
         )
         compressor = RerankCompressor(
             embedding_function=embedding_function,
-            top_n=k,
+            top_n=k_reranker,
             reranking_function=reranking_function,
             r_score=r,
         )
@@ -138,10 +139,20 @@ def query_doc_with_hybrid_search(
         )
 
         result = compression_retriever.invoke(query)
+
+        distances = [d.metadata.get("score") for d in result]
+        documents = [d.page_content for d in result]
+        metadatas = [d.metadata for d in result]
+
+        # retrieve only min(k, k_reranker) items, sort and cut by distance if k < k_reranker
+        if k < k_reranker:
+            sorted_items = sorted(zip(distances, metadatas, documents), key=lambda x: x[0], reverse=True)
+            sorted_items = sorted_items[:k]
+            distances, documents, metadatas = map(list, zip(*sorted_items))
         result = {
-            "distances": [[d.metadata.get("score") for d in result]],
-            "documents": [[d.page_content for d in result]],
-            "metadatas": [[d.metadata for d in result]],
+            "distances": [distances],
+            "documents": [documents],
+            "metadatas": [metadatas],
         }
 
         log.info(
@@ -281,6 +292,7 @@ def query_collection_with_hybrid_search(
     embedding_function,
     k: int,
     reranking_function,
+    k_reranker: int,
     r: float,
 ) -> dict:
     results = []
@@ -294,6 +306,7 @@ def query_collection_with_hybrid_search(
                     embedding_function=embedding_function,
                     k=k,
                     reranking_function=reranking_function,
+                    k_reranker=k_reranker,
                     r=r,
                 )
                 results.append(result)
@@ -307,7 +320,7 @@ def query_collection_with_hybrid_search(
         raise Exception(
             "Hybrid search failed for all collections. Using Non hybrid search as fallback."
         )
-
+        
     return merge_and_sort_query_results(results, k=k, reverse=True)
 
 
@@ -354,6 +367,7 @@ def get_sources_from_files(
     embedding_function,
     k,
     reranking_function,
+    k_reranker,
     r,
     hybrid_search,
     full_context=False,
@@ -470,6 +484,7 @@ def get_sources_from_files(
                                     embedding_function=embedding_function,
                                     k=k,
                                     reranking_function=reranking_function,
+                                    k_reranker=k_reranker,
                                     r=r,
                                 )
                             except Exception as e:
