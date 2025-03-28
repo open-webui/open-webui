@@ -5,4 +5,5 @@
 * [Git](./git.md)
 * [Keycloak](./keycloak.md)
 * [Model details](./model-details.md)
+* [Signup](./signup.md)
 * [Translations](./translations.md)

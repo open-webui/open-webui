@@ -4,14 +4,49 @@
 	import TextWithGradient from '$lib/IONOS/components/TextWithGradient.svelte'
 	import AgentSelector from '$lib/IONOS/components/explore/AgentSelector.svelte'
 	import PromptSelector from '$lib/IONOS/components/explore/PromptSelector.svelte'
+	import LoginRegisterOverlay from '$lib/IONOS/components/explore/LoginRegisterOverlay.svelte';
 	import Robot from '$lib/components/icons/Robot.svelte'
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte'
+	import { user } from '$lib/stores';
+	import { goto } from '$app/navigation';
 	import { init as initAgentsStore } from '$lib/IONOS/stores/agents';
 	import { init as initPromptsStore } from '$lib/IONOS/stores/prompts';
 	import { selectAgent } from '$lib/IONOS/services/agent';
 	import { selectPrompt } from '$lib/IONOS/services/prompt';
+	import { signup } from '$lib/IONOS/services/signup';
 
 	const i18n = getContext('i18n');
+
+	let selectedAgent: string|null = null;
+	let selectedPrompt: number|null = null;
+
+	function selectAgentInternal(agentId: string) {
+		if (!$user) {
+			selectedAgent = agentId;
+			return;
+		}
+
+		selectAgent(agentId);
+	}
+
+	function selectPromptInternal(promptId: number) {
+		if (!$user) {
+			selectedPrompt = promptId;
+			return;
+		}
+
+		selectPrompt(promptId);
+	}
+
+	function login() {
+		if (selectedAgent !== null) {
+			console.log('Continue with selected agent', selectedAgent);
+			selectAgent(selectedAgent);
+		} else if (selectedPrompt !== null) {
+			console.log('Continue with selected prompt', selectedPrompt);
+			selectPrompt(selectedPrompt);
+		}
+	}
 
 	onMount(async () => {
 		await initAgentsStore();
@@ -46,7 +81,7 @@
 	</div>
 
 	<div class="block py-5 my-2">
-		<AgentSelector on:select={({ detail: id }) => selectAgent(id)} />
+		<AgentSelector on:select={({ detail: id }) => selectAgentInternal(id)} />
 	</div>
 
 	<h1 class="my-4 text-xl text-center">
@@ -58,7 +93,7 @@
 	</p>
 
 	<div class="block w-full py-5 my-8">
-		<PromptSelector on:select={({ detail: id }) => selectPrompt(id)} />
+		<PromptSelector on:select={({ detail: id }) => selectPromptInternal(id)} />
 	</div>
 
 	<div class="my-20">
@@ -69,6 +104,12 @@
 		{$i18n.t('By sending messages to IONOS GPT, you agree to our terms and conditions and confirm that you\'ve read our privacy policy.', { ns: 'ionos' })}
 	</p>
 </content>
+
+<LoginRegisterOverlay
+	on:login={login}
+	on:signup={signup}
+	show={selectedAgent !== null || selectedPrompt !== null}
+/>
 
 <style>
 	:global(body) {

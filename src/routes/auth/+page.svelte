@@ -13,6 +13,8 @@
 
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
 
+	import { handleSignupDone } from '$lib/IONOS/services/signup';
+
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 
@@ -110,8 +112,11 @@
 	onMount(async () => {
 		if ($user !== undefined) {
 			await goto('/');
+			return;
 		}
+
 		await checkOauthCallback();
+		await handleSignupDone();
 
 		loaded = true;
 		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
