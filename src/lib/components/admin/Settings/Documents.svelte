@@ -749,84 +749,90 @@
 					{/if}
 				</div>
 
-				<div class="mb-3">
-					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Retrieval')}</div>
+				{#if !RAG_FULL_CONTEXT}
+					<div class="mb-3">
+						<div class=" mb-2.5 text-base font-medium">{$i18n.t('Retrieval')}</div>
 
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+						<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
-					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">{$i18n.t('Top K')}</div>
-						<div class="flex items-center relative">
-							<input
-								class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-								type="number"
-								placeholder={$i18n.t('Enter Top K')}
-								bind:value={querySettings.k}
-								autocomplete="off"
-								min="0"
-							/>
-						</div>
-					</div>
-
-					{#if querySettings.hybrid === true}
-						<div class="mb-2.5 flex w-full justify-between">
-							<div class="self-center text-xs font-medium">{$i18n.t('Top K Reranker')}</div>
+						<div class="  mb-2.5 flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">{$i18n.t('Top K')}</div>
 							<div class="flex items-center relative">
 								<input
 									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
 									type="number"
-									placeholder={$i18n.t('Enter Top K Reranker')}
-									bind:value={querySettings.k_reranker}
+									placeholder={$i18n.t('Enter Top K')}
+									bind:value={querySettings.k}
 									autocomplete="off"
 									min="0"
 								/>
 							</div>
 						</div>
-					{/if}
 
-					{#if querySettings.hybrid === true}
-						<div class="  mb-2.5 flex flex-col w-full justify-between">
-							<div class=" flex w-full justify-between">
-								<div class=" self-center text-xs font-medium">{$i18n.t('Minimum Score')}</div>
+						{#if querySettings.hybrid === true}
+							<div class="mb-2.5 flex w-full justify-between">
+								<div class="self-center text-xs font-medium">{$i18n.t('Top K Reranker')}</div>
 								<div class="flex items-center relative">
 									<input
 										class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
 										type="number"
-										step="0.01"
-										placeholder={$i18n.t('Enter Score')}
-										bind:value={querySettings.r}
+										placeholder={$i18n.t('Enter Top K Reranker')}
+										bind:value={querySettings.k_reranker}
 										autocomplete="off"
-										min="0.0"
-										title={$i18n.t('The score should be a value between 0.0 (0%) and 1.0 (100%).')}
+										min="0"
 									/>
 								</div>
 							</div>
-							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-								{$i18n.t(
-									'Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.'
-								)}
-							</div>
-						</div>
-					{/if}
+						{/if}
 
-					<div class="  mb-2.5 flex flex-col w-full justify-between">
-						<div class=" mb-1 text-xs font-medium">{$i18n.t('RAG Template')}</div>
-						<div class="flex w-full items-center relative">
-							<Tooltip
-								content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
-								placement="top-start"
-								className="w-full"
-							>
-								<Textarea
-									bind:value={querySettings.template}
-									placeholder={$i18n.t(
+						{#if querySettings.hybrid === true}
+							<div class="  mb-2.5 flex flex-col w-full justify-between">
+								<div class=" flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">{$i18n.t('Minimum Score')}</div>
+									<div class="flex items-center relative">
+										<input
+											class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+											type="number"
+											step="0.01"
+											placeholder={$i18n.t('Enter Score')}
+											bind:value={querySettings.r}
+											autocomplete="off"
+											min="0.0"
+											title={$i18n.t(
+												'The score should be a value between 0.0 (0%) and 1.0 (100%).'
+											)}
+										/>
+									</div>
+								</div>
+								<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+									{$i18n.t(
+										'Note: If you set a minimum score, the search will only return documents with a score greater than or equal to the minimum score.'
+									)}
+								</div>
+							</div>
+						{/if}
+
+						<div class="  mb-2.5 flex flex-col w-full justify-between">
+							<div class=" mb-1 text-xs font-medium">{$i18n.t('RAG Template')}</div>
+							<div class="flex w-full items-center relative">
+								<Tooltip
+									content={$i18n.t(
 										'Leave empty to use the default prompt, or enter a custom prompt'
 									)}
-								/>
-							</Tooltip>
+									placement="top-start"
+									className="w-full"
+								>
+									<Textarea
+										bind:value={querySettings.template}
+										placeholder={$i18n.t(
+											'Leave empty to use the default prompt, or enter a custom prompt'
+										)}
+									/>
+								</Tooltip>
+							</div>
 						</div>
 					</div>
-				</div>
+				{/if}
 			{/if}
 
 			<div class="mb-3">
