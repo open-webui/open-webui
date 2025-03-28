@@ -273,7 +273,7 @@ def query_collection(
                 result = None
                 try:
                     if VECTOR_DB == 'weaviate':
-                        query_doc_weaviate(
+                        result = query_doc_weaviate(
                         collection_name=collection_name,
                         k=k,
                         query=query,
