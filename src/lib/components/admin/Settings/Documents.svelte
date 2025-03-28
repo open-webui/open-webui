@@ -643,6 +643,12 @@
 							</div>
 						</div>
 					{/if}
+				</div>
+
+				<div class="mb-3">
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Retrieval')}</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Full Context Mode')}</div>
@@ -746,14 +752,6 @@
 								</div>
 							</div>
 						{/if}
-					{/if}
-				</div>
-
-				{#if !RAG_FULL_CONTEXT}
-					<div class="mb-3">
-						<div class=" mb-2.5 text-base font-medium">{$i18n.t('Retrieval')}</div>
-
-						<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('Top K')}</div>
@@ -811,28 +809,26 @@
 								</div>
 							</div>
 						{/if}
+					{/if}
 
-						<div class="  mb-2.5 flex flex-col w-full justify-between">
-							<div class=" mb-1 text-xs font-medium">{$i18n.t('RAG Template')}</div>
-							<div class="flex w-full items-center relative">
-								<Tooltip
-									content={$i18n.t(
+					<div class="  mb-2.5 flex flex-col w-full justify-between">
+						<div class=" mb-1 text-xs font-medium">{$i18n.t('RAG Template')}</div>
+						<div class="flex w-full items-center relative">
+							<Tooltip
+								content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
+								placement="top-start"
+								className="w-full"
+							>
+								<Textarea
+									bind:value={querySettings.template}
+									placeholder={$i18n.t(
 										'Leave empty to use the default prompt, or enter a custom prompt'
 									)}
-									placement="top-start"
-									className="w-full"
-								>
-									<Textarea
-										bind:value={querySettings.template}
-										placeholder={$i18n.t(
-											'Leave empty to use the default prompt, or enter a custom prompt'
-										)}
-									/>
-								</Tooltip>
-							</div>
+								/>
+							</Tooltip>
 						</div>
 					</div>
-				{/if}
+				</div>
 			{/if}
 
 			<div class="mb-3">
