@@ -1857,6 +1857,9 @@ async def process_chat_response(
                             except Exception as e:
                                 tool_result = str(e)
 
+                        if isinstance(tool_result, dict):
+                            tool_result = json.dumps(tool_result)
+
                         results.append(
                             {
                                 "tool_call_id": tool_call_id,
