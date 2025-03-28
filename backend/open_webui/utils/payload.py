@@ -116,6 +116,10 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         form_data["keep_alive"] = form_data["options"]["keep_alive"]
         del form_data["options"]["keep_alive"]
 
+    if "options" in form_data and "format" in form_data["options"]:
+        form_data["format"] = form_data["options"]["format"]
+        del form_data["options"]["format"]
+
     return apply_model_params_to_body(params, form_data, mappings)
 
 
