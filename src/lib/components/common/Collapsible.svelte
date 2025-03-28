@@ -167,15 +167,15 @@
 						<Markdown
 							id={`tool-calls-${attributes?.id}-result`}
 							content={`> \`\`\`json
-> ${JSON.parse(decode(attributes?.arguments))}
-> ${JSON.parse(decode(attributes?.result))}
+> ${JSON.stringify(JSON.parse(JSON.parse(decode(attributes?.arguments))), null, 2)}
+> ${JSON.stringify(JSON.parse(JSON.parse(decode(attributes?.result))), null, 2)}
 > \`\`\``}
 						/>
 					{:else}
 						<Markdown
 							id={`tool-calls-${attributes?.id}-result`}
 							content={`> \`\`\`json
-> ${JSON.parse(decode(attributes?.arguments))}
+> ${JSON.stringify(JSON.parse(JSON.parse(decode(attributes?.arguments))), null, 2)}
 > \`\`\``}
 						/>
 					{/if}
