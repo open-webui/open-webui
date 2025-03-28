@@ -18,9 +18,7 @@ from uuid import uuid4
 from concurrent.futures import ThreadPoolExecutor
 
 
-from fastapi import Request
-from fastapi import BackgroundTasks
-
+from fastapi import Request, HTTPException
 from starlette.responses import Response, StreamingResponse
 
 
@@ -281,10 +279,10 @@ async def chat_completion_tools_handler(
                 await tool_call_handler(result)
 
         except Exception as e:
-            log.exception(f"Error: {e}")
+            log.debug(f"Error: {e}")
             content = None
     except Exception as e:
-        log.exception(f"Error: {e}")
+        log.debug(f"Error: {e}")
         content = None
 
     log.debug(f"tool_contexts: {sources}")
@@ -1046,6 +1044,16 @@ async def process_chat_response(
     # Non-streaming response
     if not isinstance(response, StreamingResponse):
         if event_emitter:
+            if "error" in response:
+                error = response["error"].get("detail", response["error"])
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    metadata["chat_id"],
+                    metadata["message_id"],
+                    {
+                        "error": {"content": error},
+                    },
+                )
+
             if "selected_model_id" in response:
                 Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
@@ -1055,7 +1063,8 @@ async def process_chat_response(
                     },
                 )
 
-            if response.get("choices", [])[0].get("message", {}).get("content"):
+            choices = response.get("choices", [])
+            if choices and choices[0].get("message", {}).get("content"):
                 content = response["choices"][0]["message"]["content"]
 
                 if content:
@@ -1560,6 +1569,16 @@ async def process_chat_response(
                                 else:
                                     choices = data.get("choices", [])
                                     if not choices:
+                                        error = data.get("error", {})
+                                        if error:
+                                            await event_emitter(
+                                                {
+                                                    "type": "chat:completion",
+                                                    "data": {
+                                                        "error": error,
+                                                    },
+                                                }
+                                            )
                                         usage = data.get("usage", {})
                                         if usage:
                                             await event_emitter(
@@ -1856,6 +1875,9 @@ async def process_chat_response(
 
                             except Exception as e:
                                 tool_result = str(e)
+
+                        if isinstance(tool_result, dict):
+                            tool_result = json.dumps(tool_result)
 
                         results.append(
                             {

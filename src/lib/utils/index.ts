@@ -1071,6 +1071,55 @@ export const getLineCount = (text) => {
 	return text ? text.split('\n').length : 0;
 };
 
+// Helper function to recursively resolve OpenAPI schema into JSON schema format
+function resolveSchema(schemaRef, components, resolvedSchemas = new Set()) {
+	if (!schemaRef) return {};
+
+	if (schemaRef['$ref']) {
+		const refPath = schemaRef['$ref'];
+		const schemaName = refPath.split('/').pop();
+
+		if (resolvedSchemas.has(schemaName)) {
+			// Avoid infinite recursion on circular references
+			return {};
+		}
+		resolvedSchemas.add(schemaName);
+		const referencedSchema = components.schemas[schemaName];
+		return resolveSchema(referencedSchema, components, resolvedSchemas);
+	}
+
+	if (schemaRef.type) {
+		const schemaObj = { type: schemaRef.type };
+
+		if (schemaRef.description) {
+			schemaObj.description = schemaRef.description;
+		}
+
+		switch (schemaRef.type) {
+			case 'object':
+				schemaObj.properties = {};
+				schemaObj.required = schemaRef.required || [];
+				for (const [propName, propSchema] of Object.entries(schemaRef.properties || {})) {
+					schemaObj.properties[propName] = resolveSchema(propSchema, components);
+				}
+				break;
+
+			case 'array':
+				schemaObj.items = resolveSchema(schemaRef.items, components);
+				break;
+
+			default:
+				// for primitive types (string, integer, etc.), just use as is
+				break;
+		}
+		return schemaObj;
+	}
+
+	// fallback for schemas without explicit type
+	return {};
+}
+
+// Main conversion function
 export const convertOpenApiToToolPayload = (openApiSpec) => {
 	const toolPayload = [];
 
@@ -1087,7 +1136,7 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 				}
 			};
 
-			// Extract path or query parameters
+			// Extract path and query parameters
 			if (operation.parameters) {
 				operation.parameters.forEach((param) => {
 					tool.parameters.properties[param.name] = {
@@ -1101,21 +1150,26 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 				});
 			}
 
-			// Extract parameters from requestBody if applicable
+			// Extract and recursively resolve requestBody if available
 			if (operation.requestBody) {
-				const ref = operation.requestBody.content['application/json'].schema['$ref'];
-				if (ref) {
-					const schemaName = ref.split('/').pop();
-					const schemaDef = openApiSpec.components.schemas[schemaName];
+				const content = operation.requestBody.content;
+				if (content && content['application/json']) {
+					const requestSchema = content['application/json'].schema;
+					const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);
 
-					if (schemaDef && schemaDef.properties) {
-						for (const [prop, details] of Object.entries(schemaDef.properties)) {
-							tool.parameters.properties[prop] = {
-								type: details.type,
-								description: details.description || ''
-							};
+					if (resolvedRequestSchema.properties) {
+						tool.parameters.properties = {
+							...tool.parameters.properties,
+							...resolvedRequestSchema.properties
+						};
+
+						if (resolvedRequestSchema.required) {
+							tool.parameters.required = [
+								...new Set([...tool.parameters.required, ...resolvedRequestSchema.required])
+							];
 						}
-						tool.parameters.required = schemaDef.required || [];
+					} else if (resolvedRequestSchema.type === 'array') {
+						tool.parameters = resolvedRequestSchema; // special case when root schema is an array
 					}
 				}
 			}

@@ -554,7 +554,6 @@
 													</div>
 													<input
 														class="w-full bg-transparent outline-hidden py-0.5"
-														required
 														placeholder={$i18n.t('Enter certificate path')}
 														bind:value={LDAP_SERVER.certificate_path}
 													/>
