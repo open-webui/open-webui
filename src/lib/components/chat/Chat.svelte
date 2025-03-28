@@ -1639,10 +1639,12 @@
 			return null;
 		});
 
-		console.log(res);
-
 		if (res) {
-			taskId = res.task_id;
+			if (res.error) {
+				await handleOpenAIError(res.error, responseMessage);
+			} else {
+				taskId = res.task_id;
+			}
 		}
 
 		await tick();
