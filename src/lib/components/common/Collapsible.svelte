@@ -47,6 +47,7 @@
 	export let title = null;
 	export let attributes = null;
 
+	export let chevron = false;
 	export let grow = false;
 
 	export let disabled = false;
@@ -141,7 +142,19 @@
 			}}
 		>
 			<div>
-				<slot />
+				<div class="flex items-start justify-between">
+					<slot />
+
+					{#if chevron}
+						<div class="flex self-start translate-y-1">
+							{#if open}
+								<ChevronUp strokeWidth="3.5" className="size-3.5" />
+							{:else}
+								<ChevronDown strokeWidth="3.5" className="size-3.5" />
+							{/if}
+						</div>
+					{/if}
+				</div>
 
 				{#if grow}
 					{#if open && !hide}
