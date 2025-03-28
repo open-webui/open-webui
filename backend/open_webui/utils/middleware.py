@@ -1548,8 +1548,6 @@ async def process_chat_response(
                         try:
                             data = json.loads(data)
 
-                            print(data)
-
                             data, _ = await process_filter_functions(
                                 request=request,
                                 filter_functions=filter_functions,
