@@ -129,7 +129,7 @@ async def upload_file_async(
     request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    file_metadata: str = Form(...), 
+    file_metadata: Optional[str] = Form(""),
     user=Depends(get_verified_user)
 ):
     global tasks_cache
@@ -139,7 +139,8 @@ async def upload_file_async(
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)
         
-        file_metadata = json.loads(file_metadata) 
+        if file_metadata:
+            file_metadata = json.loads(file_metadata) 
 
         # replace filename with uuid
         task_id = str(uuid.uuid4())
