@@ -1,6 +1,6 @@
-# Findlay Park AI
 
-Findlay Park AI is a fork of OpenWebUI (unmodified ReadME below). It has been customised to use internal private AI models
+
+fork of OpenWebUI (unmodified ReadME below). It has been customised to use internal private AI models
 
 Thank you to the original contributors!!
 
