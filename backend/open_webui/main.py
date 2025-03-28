@@ -72,6 +72,7 @@ from open_webui.routers import (
     evaluations,
     tools,
     users,
+    jira,
     utils,
 )
 
@@ -263,6 +264,11 @@ from open_webui.config import (
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
     AppConfig,
     reset_config,
+    # Jira
+    JIRA_API_URL,
+    JIRA_USERNAME,
+    JIRA_API_TOKEN,
+    JIRA_PROJECT_KEY,
 )
 from open_webui.env import (
     CHANGELOG,
@@ -665,6 +671,18 @@ app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = (
 
 ########################################
 #
+# Jira Integration
+#
+########################################
+
+app.state.config.JIRA_API_URL = JIRA_API_URL
+app.state.config.JIRA_USERNAME = JIRA_USERNAME
+app.state.config.JIRA_API_TOKEN = JIRA_API_TOKEN
+app.state.config.JIRA_PROJECT_KEY = JIRA_PROJECT_KEY
+
+
+########################################
+#
 # WEBUI
 #
 ########################################
@@ -777,6 +795,7 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+app.include_router(jira.router, prefix="/api/v1/jira", tags=["jira"])
 
 
 ##################################

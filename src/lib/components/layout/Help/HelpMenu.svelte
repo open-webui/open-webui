@@ -9,11 +9,15 @@
 	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
 	import Lifebuoy from '$lib/components/icons/Lifebuoy.svelte';
 	import Keyboard from '$lib/components/icons/Keyboard.svelte';
+	import ExclamationCircle from '$lib/components/icons/ExclamationCircle.svelte';
+	import LightBlub from '$lib/components/icons/LightBlub.svelte';
 	const i18n = getContext('i18n');
 
 	export let showShortcutsHandler: Function;
 	export let showSurveyHandler: Function;
 	export let showDocsHandler: Function;
+	export let showIncidentHandler: Function;
+	export let showSuggestionHandler: Function;
 
 	export let onClose: Function = () => {};
 
@@ -51,13 +55,24 @@
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				id="chat-share-button"
+				id="incident-button"
 				on:click={() => {
-					showShortcutsHandler();
+					showIncidentHandler();
 				}}
 			>
-				<Keyboard className="size-5" />
-				<div class="flex items-center">{$i18n.t('Keyboard shortcuts')}</div>
+				<ExclamationCircle className="size-5" />
+				<div class="flex items-center">{$i18n.t('Report an Incident')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				id="incident-button"
+				on:click={() => {
+					showSuggestionHandler();
+				}}
+			>
+				<LightBlub className="size-5" />
+				<div class="flex items-center">{$i18n.t('Suggestion Box')}</div>
 			</DropdownMenu.Item>
 
 			{#if $showSurvey}
@@ -72,6 +87,17 @@
 					<div class="flex items-center">{$i18n.t('Survey')}</div>
 				</DropdownMenu.Item>
 			{/if}
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				id="chat-share-button"
+				on:click={() => {
+					showShortcutsHandler();
+				}}
+			>
+				<Keyboard className="size-5" />
+				<div class="flex items-center">{$i18n.t('Keyboard shortcuts')}</div>
+			</DropdownMenu.Item>
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>
