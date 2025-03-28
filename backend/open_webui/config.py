@@ -32,6 +32,7 @@ from open_webui.env import (
 from open_webui.internal.db import Base, get_db
 from open_webui.utils.redis import get_redis_connection
 
+
 class EndpointFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         return record.getMessage().find("/health") == -1
@@ -254,11 +255,14 @@ class AppConfig:
     _state: dict[str, PersistentConfig]
     _redis: Optional[redis.Redis] = None
 
-    def __init__(self, redis_url: Optional[str] = None, redis_sentinels: Optional[list] = []):
+    def __init__(
+        self, redis_url: Optional[str] = None, redis_sentinels: Optional[list] = []
+    ):
         super().__setattr__("_state", {})
         if redis_url:
             super().__setattr__(
-                "_redis", get_redis_connection(redis_url, redis_sentinels, decode_responses=True)
+                "_redis",
+                get_redis_connection(redis_url, redis_sentinels, decode_responses=True),
             )
 
     def __setattr__(self, key, value):
