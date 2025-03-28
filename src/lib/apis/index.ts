@@ -386,9 +386,9 @@ export const executeToolServer = async (
 
 		// Handle requestBody composite
 		if (operation.requestBody && operation.requestBody.content) {
-			const contentType = Object.keys(operation.requestBody.content)[0]; // typically "application/json"
-			if (params.body !== undefined) {
-				bodyParams = params.body; // Assume the provided params has a "body" property containing the payload
+			const contentType = Object.keys(operation.requestBody.content)[0];
+			if (params !== undefined) {
+				bodyParams = params;
 			} else {
 				// Optional: Fallback or explicit error if body is expected but not provided
 				throw new Error(`Request body expected for operation '${name}' but none found.`);
