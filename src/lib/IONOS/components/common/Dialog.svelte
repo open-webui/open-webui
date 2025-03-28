@@ -5,6 +5,7 @@
 	const dispatch = createEventDispatcher();
 
 	export let title = '';
+	export let hasHeader = true;
 	export let show = false;
 	export let closable = true;
 	export let dialogId = 'dialog';
@@ -26,26 +27,29 @@
 	<div
 		data-id={`dialog-${dialogId}`}
 		class="flex flex-col bg-white rounded-xl"
+		class:pt-4={!hasHeader}
 	>
-		<div class="flex items-center border-gray-100" class:border-b={closable}>
-			<div
-				data-id={`dialog-title-${dialogId}`}
-				class="grow py-7 px-7 cursor-default font-semibold text-nowrap overflow-hidden text-ellipsis"
-			>
-				{title}
-			</div>
-			{#if closable}
-				<div class="px-6 py-5">
-					<button
-						data-id={`dialog-close-${dialogId}`}
-						class="w-4 h-4"
-						on:click={() => dispatch('close')}
-					>
-						<XMark className="w-5 h-5" />
-					</button>
+		{#if hasHeader}
+			<div class="flex items-center border-gray-100" class:border-b={closable}>
+				<div
+					data-id={`dialog-title-${dialogId}`}
+					class="grow py-7 px-7 cursor-default font-semibold text-nowrap overflow-hidden text-ellipsis"
+				>
+					{title}
 				</div>
-			{/if}
-		</div>
+				{#if closable}
+					<div class="px-6 py-5">
+						<button
+							data-id={`dialog-close-${dialogId}`}
+							class="w-4 h-4"
+							on:click={() => dispatch('close')}
+						>
+							<XMark className="w-5 h-5" />
+						</button>
+					</div>
+				{/if}
+			</div>
+		{/if}
 
 		<div
 			data-id={`dialog-content-${dialogId}`}
