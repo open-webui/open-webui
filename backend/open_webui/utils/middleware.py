@@ -1204,9 +1204,9 @@ async def process_chat_response(
                                         break
 
                                 if tool_result:
-                                    tool_calls_display_content = f"{tool_calls_display_content}\nExecuted {tool_name}\n```\n{tool_call.get('function', {}).get('arguments', '')}\n```\n> {tool_result.get('content', '')}"
+                                    tool_calls_display_content = f"{tool_calls_display_content}\nExecuted `{tool_name}` with the following arguments:\n```\n{tool_call.get('function', {}).get('arguments', '')}\n```\n> {tool_result.get('content', '')}"
                                 else:
-                                    tool_calls_display_content = f"{tool_calls_display_content}\nExecuted {tool_call.get('function', {}).get('name', '')}\n```\n{tool_call.get('function', {}).get('arguments', '')}\n```"
+                                    tool_calls_display_content = f"{tool_calls_display_content}\nExecuted `{tool_call.get('function', {}).get('name', '')}` with the following arguments:\n```\n{tool_call.get('function', {}).get('arguments', '')}\n```"
 
                             if not raw:
                                 content = f'{content}\n<details type="tool_calls" done="true" content="{html.escape(json.dumps(tool_calls))}" results="{html.escape(json.dumps(results))}">\n<summary>Tool Executed</summary>\n{tool_calls_display_content}\n</details>\n'
@@ -1214,7 +1214,7 @@ async def process_chat_response(
                             tool_calls_display_content = ""
 
                             for tool_call in tool_calls:
-                                tool_calls_display_content = f"{tool_calls_display_content}\nExecuting {tool_call.get('function', {}).get('name', '')}\n```\n{tool_call.get('function', {}).get('arguments', '')}\n```"
+                                tool_calls_display_content = f"{tool_calls_display_content}\nExecuting `{tool_call.get('function', {}).get('name', '')}` with the following arguments:\n```\n{tool_call.get('function', {}).get('arguments', '')}\n```"
 
                             if not raw:
                                 content = f'{content}\n<details type="tool_calls" done="false" content="{html.escape(json.dumps(tool_calls))}">\n<summary>Tool Executing...</summary>\n{tool_calls_display_content}\n</details>\n'
