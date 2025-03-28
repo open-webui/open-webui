@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import AnimatedBackground from '$lib/IONOS/components/AnimatedBackground.svelte'
+	import AnimatedBackground from '$lib/IONOS/components/explore/AnimatedBackground.svelte'
 	import TextWithGradient from '$lib/IONOS/components/TextWithGradient.svelte'
-	import AgentSelector from '$lib/IONOS/components/AgentSelector.svelte'
-	import PromptSelector from '$lib/IONOS/components/PromptSelector.svelte'
+	import AgentSelector from '$lib/IONOS/components/explore/AgentSelector.svelte'
+	import PromptSelector from '$lib/IONOS/components/explore/PromptSelector.svelte'
 	import Robot from '$lib/components/icons/Robot.svelte'
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte'
 	import { init as initAgentsStore } from '$lib/IONOS/stores/agents';
