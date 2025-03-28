@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { decode } from 'html-entities';
+
 	import { getContext, createEventDispatcher } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -32,12 +34,16 @@
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
+	import CodeBlock from '../chat/Messages/CodeBlock.svelte';
+	import Markdown from '../chat/Messages/Markdown.svelte';
 
 	export let open = false;
-	export let id = '';
+
 	export let className = '';
 	export let buttonClassName =
 		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
+
+	export let id = '';
 	export let title = null;
 	export let attributes = null;
 
@@ -93,6 +99,20 @@
 						{:else}
 							{$i18n.t('Analyzing...')}
 						{/if}
+					{:else if attributes?.type === 'tool_calls'}
+						{#if attributes?.done === 'true'}
+							<Markdown
+								content={$i18n.t('View Result from `{{NAME}}`', {
+									NAME: attributes.name
+								})}
+							/>
+						{:else}
+							<Markdown
+								content={$i18n.t('Executing `{{NAME}}`...', {
+									NAME: attributes.name
+								})}
+							/>
+						{/if}
 					{:else}
 						{title}
 					{/if}
@@ -140,7 +160,24 @@
 	{#if !grow}
 		{#if open && !hide}
 			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-				<slot name="content" />
+				{#if attributes?.type === 'tool_calls'}
+					{#if attributes?.done === 'true'}
+						<Markdown
+							content={`> \`\`\`json
+> ${JSON.parse(decode(attributes?.arguments))}
+> ${JSON.parse(decode(attributes?.result))}
+> \`\`\``}
+						/>
+					{:else}
+						<Markdown
+							content={`> \`\`\`json
+> ${JSON.parse(decode(attributes?.arguments))}
+> \`\`\``}
+						/>
+					{/if}
+				{:else}
+					<slot name="content" />
+				{/if}
 			</div>
 		{/if}
 	{/if}
