@@ -102,12 +102,14 @@
 					{:else if attributes?.type === 'tool_calls'}
 						{#if attributes?.done === 'true'}
 							<Markdown
+								id={`tool-calls-${attributes?.id}`}
 								content={$i18n.t('View Result from `{{NAME}}`', {
 									NAME: attributes.name
 								})}
 							/>
 						{:else}
 							<Markdown
+								id={`tool-calls-${attributes?.id}`}
 								content={$i18n.t('Executing `{{NAME}}`...', {
 									NAME: attributes.name
 								})}
@@ -163,6 +165,7 @@
 				{#if attributes?.type === 'tool_calls'}
 					{#if attributes?.done === 'true'}
 						<Markdown
+							id={`tool-calls-${attributes?.id}-result`}
 							content={`> \`\`\`json
 > ${JSON.parse(decode(attributes?.arguments))}
 > ${JSON.parse(decode(attributes?.result))}
@@ -170,6 +173,7 @@
 						/>
 					{:else}
 						<Markdown
+							id={`tool-calls-${attributes?.id}-result`}
 							content={`> \`\`\`json
 > ${JSON.parse(decode(attributes?.arguments))}
 > \`\`\``}
