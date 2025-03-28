@@ -281,10 +281,10 @@ async def chat_completion_tools_handler(
                 await tool_call_handler(result)
 
         except Exception as e:
-            log.exception(f"Error: {e}")
+            log.debug(f"Error: {e}")
             content = None
     except Exception as e:
-        log.exception(f"Error: {e}")
+        log.debug(f"Error: {e}")
         content = None
 
     log.debug(f"tool_contexts: {sources}")
@@ -1539,6 +1539,8 @@ async def process_chat_response(
                         try:
                             data = json.loads(data)
 
+                            print(data)
+
                             data, _ = await process_filter_functions(
                                 request=request,
                                 filter_functions=filter_functions,
@@ -1560,6 +1562,16 @@ async def process_chat_response(
                                 else:
                                     choices = data.get("choices", [])
                                     if not choices:
+                                        error = data.get("error", {})
+                                        if error:
+                                            await event_emitter(
+                                                {
+                                                    "type": "chat:completion",
+                                                    "data": {
+                                                        "error": error,
+                                                    },
+                                                }
+                                            )
                                         usage = data.get("usage", {})
                                         if usage:
                                             await event_emitter(

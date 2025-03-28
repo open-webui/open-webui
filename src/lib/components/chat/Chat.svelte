@@ -1626,7 +1626,7 @@
 					: {})
 			},
 			`${WEBUI_BASE_URL}/api`
-		).catch((error) => {
+		).catch(async (error) => {
 			toast.error(`${error}`);
 
 			responseMessage.error = {
@@ -1659,9 +1659,11 @@
 
 		console.error(innerError);
 		if ('detail' in innerError) {
+			// FastAPI error
 			toast.error(innerError.detail);
 			errorMessage = innerError.detail;
 		} else if ('error' in innerError) {
+			// OpenAI error
 			if ('message' in innerError.error) {
 				toast.error(innerError.error.message);
 				errorMessage = innerError.error.message;
@@ -1670,6 +1672,7 @@
 				errorMessage = innerError.error;
 			}
 		} else if ('message' in innerError) {
+			// OpenAI error
 			toast.error(innerError.message);
 			errorMessage = innerError.message;
 		}
