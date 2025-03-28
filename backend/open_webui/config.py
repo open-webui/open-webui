@@ -19,6 +19,8 @@ from open_webui.env import (
     DATABASE_URL,
     ENV,
     REDIS_URL,
+    REDIS_SENTINEL_HOSTS,
+    REDIS_SENTINEL_PORT,
     FRONTEND_BUILD_DIR,
     OFFLINE_MODE,
     OPEN_WEBUI_DIR,
@@ -28,7 +30,7 @@ from open_webui.env import (
     log,
 )
 from open_webui.internal.db import Base, get_db
-
+from open_webui.utils.redis import get_redis_connection
 
 class EndpointFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
@@ -252,11 +254,11 @@ class AppConfig:
     _state: dict[str, PersistentConfig]
     _redis: Optional[redis.Redis] = None
 
-    def __init__(self, redis_url: Optional[str] = None):
+    def __init__(self, redis_url: Optional[str] = None, redis_sentinels: Optional[list] = []):
         super().__setattr__("_state", {})
         if redis_url:
             super().__setattr__(
-                "_redis", redis.Redis.from_url(redis_url, decode_responses=True)
+                "_redis", get_redis_connection(redis_url, redis_sentinels, decode_responses=True)
             )
 
     def __setattr__(self, key, value):
