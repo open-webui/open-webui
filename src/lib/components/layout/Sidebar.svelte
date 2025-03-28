@@ -728,6 +728,8 @@
 							}}
 							on:drop={async (e) => {
 								const { type, id, item } = e.detail;
+								
+								
 
 								if (type === 'chat') {
 									let chat = await getChatById(localStorage.token, id).catch((error) => {
@@ -906,7 +908,7 @@
 							window.open(googleFormUrl, "_blank"); // Opens in a new tab
 						}}
 						>
-						<div class="self-center font-semibold">Rate Your Experience</div>
+						<div class="self-center font-semibold">{i18n.t('Rate Your Experience')}</div>
 					</button>	
 					</CreditMenu>
 					<UserMenu
