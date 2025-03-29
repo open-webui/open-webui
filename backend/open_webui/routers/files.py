@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
@@ -38,6 +38,7 @@ def upload_file(
     file: UploadFile = File(...),
     user=Depends(get_verified_user),
     file_metadata: dict = {},
+    ingest_file: bool = Query(True)
 ):
     log.info(f"file.content_type: {file.content_type}")
     try:
@@ -66,34 +67,33 @@ def upload_file(
                 }
             ),
         )
-
-        try:
-            if file.content_type in [
-                "audio/mpeg",
-                "audio/wav",
-                "audio/ogg",
-                "audio/x-m4a",
-            ]:
-                file_path = Storage.get_file(file_path)
-                result = transcribe(request, file_path)
-                process_file(
-                    request,
-                    ProcessFileForm(file_id=id, content=result.get("text", "")),
-                    user=user,
+        if ingest_file:
+            try:
+                if file.content_type in [
+                    "audio/mpeg",
+                    "audio/wav",
+                    "audio/ogg",
+                    "audio/x-m4a",
+                ]:
+                    file_path = Storage.get_file(file_path)
+                    result = transcribe(request, file_path)
+                    process_file(
+                        request,
+                        ProcessFileForm(file_id=id, content=result.get("text", "")),
+                        user=user,
+                    )
+                elif file.content_type not in ["image/png", "image/jpeg", "image/gif"]:
+                    process_file(request, ProcessFileForm(file_id=id), user=user)
+                    file_item = Files.get_file_by_id(id=id)
+            except Exception as e:
+                log.exception(e)
+                log.error(f"Error processing file: {file_item.id}")
+                file_item = FileModelResponse(
+                    **{
+                        **file_item.model_dump(),
+                        "error": str(e.detail) if hasattr(e, "detail") else str(e),
+                    }
                 )
-            elif file.content_type not in ["image/png", "image/jpeg", "image/gif"]:
-                process_file(request, ProcessFileForm(file_id=id), user=user)
-
-            file_item = Files.get_file_by_id(id=id)
-        except Exception as e:
-            log.exception(e)
-            log.error(f"Error processing file: {file_item.id}")
-            file_item = FileModelResponse(
-                **{
-                    **file_item.model_dump(),
-                    "error": str(e.detail) if hasattr(e, "detail") else str(e),
-                }
-            )
 
         if file_item:
             return file_item
@@ -228,7 +228,7 @@ async def update_file_data_content_by_id(
 
 
 @router.get("/{id}/content")
-async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
+async def get_file_content_by_id(id: str, user=Depends(get_verified_user), as_attachment: bool = Query(False)):
     file = Files.get_file_by_id(id)
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
@@ -246,17 +246,20 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
                 encoded_filename = quote(filename)
                 headers = {}
 
-                if content_type == "application/pdf" or filename.lower().endswith(
-                    ".pdf"
-                ):
-                    headers["Content-Disposition"] = (
-                        f"inline; filename*=UTF-8''{encoded_filename}"
-                    )
-                    content_type = "application/pdf"
-                elif content_type != "text/plain":
+                if as_attachment:
                     headers["Content-Disposition"] = (
                         f"attachment; filename*=UTF-8''{encoded_filename}"
                     )
+                else:
+                    if content_type == "application/pdf" or filename.lower().endswith(".pdf"):
+                        headers["Content-Disposition"] = (
+                            f"inline; filename*=UTF-8''{encoded_filename}"
+                        )
+                        content_type = "application/pdf"
+                    elif content_type != "text/plain":
+                        headers["Content-Disposition"] = (
+                            f"attachment; filename*=UTF-8''{encoded_filename}"
+                        )
 
                 return FileResponse(file_path, headers=headers, media_type=content_type)
 
