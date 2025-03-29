@@ -52,6 +52,22 @@
 
 	export let disabled = false;
 	export let hide = false;
+
+	function formatJSONString(obj) {
+		try {
+			const parsed = JSON.parse(JSON.parse(obj));
+			// If parsed is an object/array, then it's valid JSON
+			if (typeof parsed === 'object') {
+				return JSON.stringify(parsed, null, 2);
+			} else {
+				// It's a primitive value like a number, boolean, etc.
+				return String(parsed);
+			}
+		} catch (e) {
+			// Not valid JSON, return as-is
+			return obj;
+		}
+	}
 </script>
 
 <div {id} class={className}>
@@ -176,19 +192,22 @@
 		{#if open && !hide}
 			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
 				{#if attributes?.type === 'tool_calls'}
+					{@const args = decode(attributes?.arguments)}
+					{@const result = decode(attributes?.result ?? '')}
+
 					{#if attributes?.done === 'true'}
 						<Markdown
 							id={`tool-calls-${attributes?.id}-result`}
 							content={`> \`\`\`json
-> ${JSON.stringify(JSON.parse(JSON.parse(decode(attributes?.arguments))), null, 2)}
-> ${JSON.stringify(JSON.parse(JSON.parse(decode(attributes?.result))), null, 2)}
+> ${formatJSONString(args)}
+> ${formatJSONString(result)}
 > \`\`\``}
 						/>
 					{:else}
 						<Markdown
 							id={`tool-calls-${attributes?.id}-result`}
 							content={`> \`\`\`json
-> ${JSON.stringify(JSON.parse(JSON.parse(decode(attributes?.arguments))), null, 2)}
+> ${formatJSONString(args)}
 > \`\`\``}
 						/>
 					{/if}
