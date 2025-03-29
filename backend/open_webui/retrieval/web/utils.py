@@ -28,7 +28,7 @@ from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
-    ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
+    ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
     PLAYWRIGHT_WS_URI,
     PLAYWRIGHT_TIMEOUT,
     RAG_WEB_LOADER_ENGINE,
