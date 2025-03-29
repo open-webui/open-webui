@@ -1173,22 +1173,45 @@ TAGS_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
 )
 
 DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE = """### Task:
-Generate 1-3 broad tags categorizing the main themes of the chat history, along with 1-3 more specific subtopic tags.
+Generate 1-3 broad thematic tags and 1-3 specific subtags from the chat history, optimized for HKUST's academic/administrative context.
 
-### Guidelines:
-- Start with high-level domains (e.g. Science, Technology, Philosophy, Arts, Politics, Business, Health, Sports, Entertainment, Education)
-- Consider including relevant subfields/subdomains if they are strongly represented throughout the conversation
-- If content is too short (less than 3 messages) or too diverse, use only ["General"]
-- Use the chat's primary language; default to English if multilingual
-- Prioritize accuracy over specificity
+### HKUST-Specific Guidelines:
+1. **Primary Tags**: Choose from HKUST's core domains:
+   - "Academics" (Teaching/Learning)
+   - "Research" (Grants/Publications)
+   - "Admissions" (UG/PG/Non-local)
+   - "Campus Life" (Housing/Clubs)
+   - "Administration" (Registry/HR/Finance)
+   - "Global Engagement" (Exchange/Partnerships)
 
-### Output:
-JSON format: { "tags": ["tag1", "tag2", "tag3"] }
+2. **Subtags**: Include specific HKUST terminology:
+   - Degree types: "UG" (Undergraduate), "TPg" (Taught Postgraduate), "RPg" (Research Postgraduate)
+   - Services: "SHRLO" (Student Housing), "IPO" (International Programs Office)
+   - Policies: "Academic Integrity", "Visa Sponsorship"
+
+3. **Language**: Use British English spellings ("Programme", "Centre").
+
+### Rules:
+- Default to ["General"] if:
+  - Fewer than 3 messages OR
+  - Unrelated to HKUST operations
+- Output ONLY JSON: { "tags": ["broad_tag", "specific_subtag"] }
+- Prioritize institutional relevance over generic terms.
+
+### Examples:
+Input: "How to apply for PhD scholarships?"
+Output: { "tags": ["Admissions", "RPg", "Financial Aid"] }
+
+Input: "Shuttle bus schedule?"
+Output: { "tags": ["Campus Life", "Transportation"] }
 
 ### Chat History:
 <chat_history>
 {{MESSAGES:END:6}}
-</chat_history>"""
+</chat_history>
+
+### Output (JSON ONLY):
+"""
 
 IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     "IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE",
@@ -1249,28 +1272,37 @@ QUERY_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
 )
 
 DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE = """### Task:
-Analyze the chat history to determine the necessity of generating search queries, in the given language. By default, **prioritize generating 1-3 broad and relevant search queries** unless it is absolutely certain that no additional information is required. The aim is to retrieve comprehensive, updated, and valuable information even with minimal uncertainty. If no search is unequivocally needed, return an empty list.
+Generate 1-3 search queries to retrieve HKUST official documents (policies, research, announcements) based on the chat history. Prioritize queries that:
+1. Use **HKUST-specific terminology** (e.g., "programme", "Non-local Student Visa").
+2. Align with **British English** spellings and formal academic style.
+3. Include contextual cues from chat history when relevant.
 
-### Guidelines:
-- Respond **EXCLUSIVELY** with a JSON object. Any form of extra commentary, explanation, or additional text is strictly prohibited.
-- When generating search queries, respond in the format: { "queries": ["query1", "query2"] }, ensuring each query is distinct, concise, and relevant to the topic.
-- If and only if it is entirely certain that no useful results can be retrieved by a search, return: { "queries": [] }.
-- Err on the side of suggesting search queries if there is **any chance** they might provide useful or updated information.
-- Be concise and focused on composing high-quality search queries, avoiding unnecessary elaboration, commentary, or assumptions.
-- Today's date is: {{CURRENT_DATE}}.
-- Always prioritize providing actionable and broad queries that maximize informational coverage.
+### Strict Rules:
+- Output **ONLY** JSON. Example: { "queries": ["query1"] }.
+- Generate queries unless absolutely certain no search is needed (99% confidence).
+- Today's date: {{CURRENT_DATE}}. Prioritize recent data (e.g., "2024-25").
+- For ambiguous requests, create **broad but targeted** queries.
 
-### Output:
-Strictly return in JSON format: 
+### HKUST-Specific Optimization:
+- Map colloquial terms → formal equivalents (e.g., "dorm" → "student hall").
+- Expand abbreviations (e.g., "UG" → "undergraduate").
+- Include document types when possible (e.g., "handbook", "policy PDF").
+
+### Output Format:
 {
-  "queries": ["query1", "query2"]
+  "queries": [
+    "HKUST postgraduate admissions 2024-25 entry requirements",
+    "Non-local Student Visa application process site:ust.hk"
+  ]
 }
 
-### Chat History:
+### Chat History (Last 6 Messages):
 <chat_history>
 {{MESSAGES:END:6}}
 </chat_history>
-"""
+
+### Final Output (JSON ONLY):
+""" 
 
 ENABLE_AUTOCOMPLETE_GENERATION = PersistentConfig(
     "ENABLE_AUTOCOMPLETE_GENERATION",
