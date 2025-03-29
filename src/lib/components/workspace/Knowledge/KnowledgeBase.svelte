@@ -111,52 +111,69 @@
 	};
 
 	const uploadFileHandler = async (file) => {
-		console.log(file);
+    console.log(file);
 
-		const tempItemId = uuidv4();
-		const fileItem = {
-			type: 'file',
-			file: '',
-			id: null,
-			url: '',
-			name: file.name,
-			size: file.size,
-			status: 'uploading',
-			error: '',
-			itemId: tempItemId
-		};
+    const tempItemId = uuidv4();
+    const fileItem = {
+        type: 'file',
+        file: '',
+        id: null,
+        url: '',
+        name: file.name,
+        size: file.size,
+        status: 'uploading',
+        error: '',
+        itemId: tempItemId
+    };
 
-		if (fileItem.size == 0) {
-			toast.error($i18n.t('You cannot upload an empty file.'));
-			return null;
-		}
+    if (fileItem.size == 0) {
+        toast.error($i18n.t('You cannot upload an empty file.'));
+        return null;
+    }
 
-		knowledge.files = [...(knowledge.files ?? []), fileItem];
+    knowledge.files = [...(knowledge.files ?? []), fileItem];
 
-		try {
-			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
-				toast.error(`${e}`);
-				return null;
-			});
+    try {
+        // Single API call to upload and add to knowledge base
+        const uploadedFile = await addFileToKnowledgeById(
+            localStorage.token, 
+            id,  // knowledge base ID 
+            file
+        ).catch((e) => {
+            toast.error(`${e}`);
+            return null;
+        });
 
-			if (uploadedFile) {
-				console.log(uploadedFile);
-				knowledge.files = knowledge.files.map((item) => {
-					if (item.itemId === tempItemId) {
-						item.id = uploadedFile.id;
-					}
+        if (uploadedFile) {
+            console.log(uploadedFile);
+            knowledge.files = knowledge.files.map((item) => {
+                if (item.itemId === tempItemId) {
+                    item.id = uploadedFile.files[0].id;
+                    item.status = 'complete';
+                }
 
-					// Remove temporary item id
-					delete item.itemId;
-					return item;
-				});
-				await addFileHandler(uploadedFile.id);
-			} else {
-				toast.error($i18n.t('Failed to upload file.'));
-			}
-		} catch (e) {
-			toast.error(`${e}`);
-		}
+                // Remove temporary item id
+                delete item.itemId;
+                return item;
+            });
+
+            toast.success($i18n.t('File added successfully.'));
+        } else {
+            toast.error($i18n.t('Failed to upload file.'));
+            // Remove the file from the list if upload failed
+            knowledge.files = knowledge.files.filter(item => item.itemId !== tempItemId);
+        }
+    } catch (e) {
+        toast.error(`${e}`);
+        // Update status to error
+        knowledge.files = knowledge.files.map((item) => {
+            if (item.itemId === tempItemId) {
+                item.status = 'error';
+                item.error = `${e}`;
+            }
+            return item;
+        });
+    }
 	};
 
 	const uploadDirectoryHandler = async () => {
