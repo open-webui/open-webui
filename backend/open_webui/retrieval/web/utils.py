@@ -28,6 +28,7 @@ from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
+    ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
     PLAYWRIGHT_WS_URI,
     PLAYWRIGHT_TIMEOUT,
     RAG_WEB_LOADER_ENGINE,
@@ -101,7 +102,7 @@ def extract_metadata(soup, url):
 
 def verify_ssl_cert(url: str) -> bool:
     """Verify SSL certificate for the given URL."""
-    if not url.startswith("https://"):
+    if not url.startswith("https://") or not ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION:
         return True
 
     try:
