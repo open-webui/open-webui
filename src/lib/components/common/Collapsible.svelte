@@ -55,7 +55,7 @@
 
 	function formatJSONString(obj) {
 		try {
-			const parsed = JSON.parse(obj);
+			const parsed = JSON.parse(JSON.parse(obj));
 			// If parsed is an object/array, then it's valid JSON
 			if (typeof parsed === 'object') {
 				return JSON.stringify(parsed, null, 2);
@@ -192,8 +192,8 @@
 		{#if open && !hide}
 			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
 				{#if attributes?.type === 'tool_calls'}
-					{@const args = JSON.parse(decode(attributes?.arguments))}
-					{@const result = JSON.parse(decode(attributes?.result ?? ''))}
+					{@const args = decode(attributes?.arguments)}
+					{@const result = decode(attributes?.result ?? '')}
 
 					{#if attributes?.done === 'true'}
 						<Markdown
