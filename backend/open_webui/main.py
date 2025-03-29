@@ -61,6 +61,7 @@ from open_webui.routers import (
     pipelines,
     tasks,
     auths,
+    auths_mfa,
     channels,
     chats,
     folders,
@@ -911,6 +912,7 @@ app.include_router(retrieval.router, prefix="/api/v1/retrieval", tags=["retrieva
 app.include_router(configs.router, prefix="/api/v1/configs", tags=["configs"])
 
 app.include_router(auths.router, prefix="/api/v1/auths", tags=["auths"])
+app.include_router(auths_mfa.router, prefix="/api/v1/auths", tags=["mfa"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 
 

@@ -12,6 +12,8 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import MFASetupModal from '$lib/components/MFASetupModal.svelte';
+	import MFAVerifyModal from '$lib/components/MFAVerifyModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -29,6 +31,10 @@
 	let APIKey = '';
 	let APIKeyCopied = false;
 	let profileImageInputElement: HTMLInputElement;
+	
+	// MFA setup state
+	let showMFASetupModal = false;
+	let mfaEnabled = false;
 
 	const submitHandler = async () => {
 		if (name !== $user.name) {
@@ -74,6 +80,25 @@
 		}
 	};
 
+	// MFA setup related functions
+	const handleMFAUpdate = async () => {
+		// Refresh user data
+		const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (sessionUser) {
+			user.set(sessionUser);
+			// Update MFA status from the user object if it has this information
+			mfaEnabled = sessionUser.mfa_enabled || false;
+		}
+	};
+	
+	const toggleMFASetupModal = () => {
+		showMFASetupModal = !showMFASetupModal;
+	};
+	
 	onMount(async () => {
 		name = $user.name;
 		profileImageUrl = $user.profile_image_url;
@@ -83,6 +108,21 @@
 			console.log(error);
 			return '';
 		});
+		
+		// Check if MFA is enabled for this user by explicitly fetching session user
+		try {
+			const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
+				console.error("Error fetching session user:", error);
+				return null;
+			});
+			
+			if (sessionUser) {
+				mfaEnabled = sessionUser.mfa_enabled || false;
+				console.log("MFA status:", mfaEnabled);
+			}
+		} catch (error) {
+			console.error("Error checking MFA status:", error);
+		}
 	});
 </script>
 
@@ -265,6 +305,41 @@
 		<div class="py-0.5">
 			<UpdatePassword />
 		</div>
+		
+		<!-- Two-Factor Authentication Section -->
+		<div class="py-3">
+			<div class="flex justify-between items-center">
+				<div class="text-sm font-medium">{$i18n.t('Two-Factor Authentication')}</div>
+				<div class="flex items-center">
+					{#if mfaEnabled}
+						<span class="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full px-2 py-0.5 mr-2">
+							{$i18n.t('Enabled')}
+						</span>
+					{:else}
+						<span class="text-xs bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 rounded-full px-2 py-0.5 mr-2">
+							{$i18n.t('Disabled')}
+						</span>
+					{/if}
+					<button
+						class="text-xs font-medium px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 transition-colors"
+						on:click={toggleMFASetupModal}
+					>
+						{mfaEnabled ? $i18n.t('Manage') : $i18n.t('Setup')}
+					</button>
+				</div>
+			</div>
+			<div class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+				{$i18n.t('Add an extra layer of security to your account with time-based one-time passwords (TOTP).')}
+			</div>
+		</div>
+		
+		<!-- MFA Setup Modal -->
+		<MFASetupModal 
+			bind:visible={showMFASetupModal} 
+			token={localStorage.token} 
+			bind:mfaEnabled 
+			onUpdate={handleMFAUpdate} 
+		/>
 
 		<hr class="border-gray-100 dark:border-gray-850 my-4" />
 

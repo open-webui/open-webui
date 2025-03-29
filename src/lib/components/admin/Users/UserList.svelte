@@ -13,6 +13,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { updateUserRole, getUsers, deleteUserById } from '$lib/apis/users';
+	import { adminMfaDisable } from '$lib/apis/auths';
 
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import ChatBubbles from '$lib/components/icons/ChatBubbles.svelte';
@@ -41,6 +42,7 @@
 
 	let showDeleteConfirmDialog = false;
 	let showAddUserModal = false;
+	let showDisableMfaConfirmDialog = false;
 
 	let showUserChatsModal = false;
 	let showEditUserModal = false;
@@ -62,6 +64,17 @@
 			return null;
 		});
 		if (res) {
+			users = await getUsers(localStorage.token);
+		}
+	};
+	
+	const disableMfaHandler = async (id) => {
+		const res = await adminMfaDisable(localStorage.token, id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (res && res.disabled) {
+			toast.success('MFA disabled successfully');
 			users = await getUsers(localStorage.token);
 		}
 	};
@@ -103,6 +116,16 @@
 	bind:show={showDeleteConfirmDialog}
 	on:confirm={() => {
 		deleteUserHandler(selectedUser.id);
+	}}
+/>
+
+<ConfirmDialog
+	bind:show={showDisableMfaConfirmDialog}
+	title={$i18n.t('Disable 2FA')}
+	message={$i18n.t('Are you sure you want to disable two-factor authentication for this user? This cannot be undone, and the user will need to set up 2FA again if they want to use it.')}
+	confirmText={$i18n.t('Disable 2FA')}
+	on:confirm={() => {
+		disableMfaHandler(selectedUser.id);
 	}}
 />
 
@@ -353,6 +376,12 @@
 						{/if}
 					</div>
 				</th>
+				
+				<th scope="col" class="px-3 py-1.5">
+					<div class="flex gap-1.5 items-center">
+						{$i18n.t('2FA')}
+					</div>
+				</th>
 
 				<th scope="col" class="px-3 py-2 text-right" />
 			</tr>
@@ -405,6 +434,14 @@
 					</td>
 
 					<td class=" px-3 py-1"> {user.oauth_sub ?? ''} </td>
+					
+					<td class=" px-3 py-1">
+						{#if user.mfa_enabled}
+							<Badge type="success" content="Enabled" />
+						{:else}
+							<Badge type="muted" content="Disabled" />
+						{/if}
+					</td>
 
 					<td class="px-3 py-1 text-right">
 						<div class="flex justify-end w-full">
@@ -446,6 +483,29 @@
 									</svg>
 								</button>
 							</Tooltip>
+							
+							{#if user.mfa_enabled}
+								<Tooltip content={$i18n.t('Disable 2FA')}>
+									<button
+										class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										on:click={async () => {
+											showDisableMfaConfirmDialog = true;
+											selectedUser = user;
+										}}
+									>
+										<svg 
+											xmlns="http://www.w3.org/2000/svg" 
+											fill="none" 
+											viewBox="0 0 24 24" 
+											stroke-width="1.5" 
+											stroke="currentColor" 
+											class="w-4 h-4"
+										>
+											<path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+										</svg>
+									</button>
+								</Tooltip>
+							{/if}
 
 							{#if user.role !== 'admin'}
 								<Tooltip content={$i18n.t('Delete User')}>

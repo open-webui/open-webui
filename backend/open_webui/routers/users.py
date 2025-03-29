@@ -39,7 +39,8 @@ async def get_users(
     limit: Optional[int] = None,
     user=Depends(get_admin_user),
 ):
-    return Users.get_users(skip, limit)
+    users = Users.get_users(skip, limit)
+    return users
 
 
 ############################

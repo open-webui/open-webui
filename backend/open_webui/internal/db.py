@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from contextlib import contextmanager
 from typing import Any, Optional
 
@@ -51,7 +52,11 @@ class JSONField(types.TypeDecorator):
 # Workaround to handle the peewee migration
 # This is required to ensure the peewee migration is handled before the alembic migration
 def handle_peewee_migration(DATABASE_URL):
-    # db = None
+    skip_env_set = os.environ.get("SKIP_PEEWEE_MIGRATIONS", "false").lower()
+    if skip_env_set == "true":
+        log.info(f"Skipping peewee migrations (SKIP_PEEWEE_MIGRATIONS={skip_env_set})")
+        return
+        
     try:
         # Replace the postgresql:// with postgres:// to handle the peewee migration
         db = register_connection(DATABASE_URL.replace("postgresql://", "postgres://"))
@@ -65,11 +70,11 @@ def handle_peewee_migration(DATABASE_URL):
         raise
     finally:
         # Properly closing the database connection
-        if db and not db.is_closed():
+        if 'db' in locals() and db and not db.is_closed():
             db.close()
-
-        # Assert if db connection has been closed
-        assert db.is_closed(), "Database connection is still open."
+            
+            # Assert if db connection has been closed
+            assert db.is_closed(), "Database connection is still open."
 
 
 handle_peewee_migration(DATABASE_URL)

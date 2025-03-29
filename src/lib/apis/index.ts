@@ -2,6 +2,87 @@ import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload } from '$lib/utils';
 import { getOpenAIModelsDirect } from './openai';
 
+/**
+ * Make an authenticated API call with standardized error handling
+ * @param endpoint - The API endpoint to call (will be appended to WEBUI_API_BASE_URL)
+ * @param options - Request options including method, token, and body
+ * @returns The JSON response from the API
+ */
+export const call_with_auth = async (endpoint: string, options: {
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  token?: string,
+  body?: any,
+  base_url?: string,
+  raw_response?: boolean
+}) => {
+  const { 
+    method = 'GET', 
+    token, 
+    body,
+    base_url = WEBUI_API_BASE_URL,
+    raw_response = false
+  } = options;
+  
+  let error = null;
+  
+  // Ensure endpoint always starts with a slash for consistent URL construction
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${base_url}${normalizedEndpoint}`;
+  
+  try {
+    // Define fetch request configuration
+    const fetchConfig: RequestInit = {
+      method,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // Always include credentials for cookie authentication
+    };
+    
+    // Only add Authorization header if token is provided
+    if (token) {
+      fetchConfig.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // Add body if provided
+    if (body) {
+      fetchConfig.body = JSON.stringify(body);
+    }
+    
+    const response = await fetch(url, fetchConfig);
+    
+    if (!response.ok) {
+      // Clone response because API errors vary between JSON and plain text formats
+      const responseClone = response.clone();
+      
+      try {
+        const errorJson = await response.json();
+        throw errorJson;
+      } catch (parseError) {
+        const errorText = await responseClone.text();
+        throw new Error(errorText || `HTTP error ${response.status}`);
+      }
+    }
+    
+    // Return raw response if requested
+    if (raw_response) {
+      return response;
+    }
+    
+    // Try to parse as JSON, but some endpoints (like signout) may not return JSON
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return await response.json();
+    } else {
+      return { success: true };
+    }
+  } catch (err) {
+    console.log('API error:', err);
+    throw err.detail || err;
+  }
+};
+
 export const getModels = async (
 	token: string = '',
 	connections: object | null = null,
@@ -14,7 +95,8 @@ export const getModels = async (
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		}
+		},
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -163,6 +245,7 @@ export const chatCompleted = async (token: string, body: ChatCompletedForm) => {
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
 		},
+		credentials: 'include',
 		body: JSON.stringify(body)
 	})
 		.then(async (res) => {
@@ -202,6 +285,7 @@ export const chatAction = async (token: string, action_id: string, body: ChatAct
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
 		},
+		credentials: 'include',
 		body: JSON.stringify(body)
 	})
 		.then(async (res) => {
@@ -234,7 +318,8 @@ export const stopTask = async (token: string, id: string) => {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		}
+		},
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -433,7 +518,8 @@ export const getTaskConfig = async (token: string = '') => {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		}
+		},
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -462,6 +548,7 @@ export const updateTaskConfig = async (token: string, config: object) => {
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
 		},
+		credentials: 'include',
 		body: JSON.stringify(config)
 	})
 		.then(async (res) => {
@@ -500,6 +587,7 @@ export const generateTitle = async (
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
+		credentials: 'include',
 		body: JSON.stringify({
 			model: model,
 			messages: messages,
@@ -540,6 +628,7 @@ export const generateTags = async (
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
+		credentials: 'include',
 		body: JSON.stringify({
 			model: model,
 			messages: messages,
@@ -612,6 +701,7 @@ export const generateEmoji = async (
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
+		credentials: 'include',
 		body: JSON.stringify({
 			model: model,
 			prompt: prompt,
@@ -661,6 +751,7 @@ export const generateQueries = async (
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
+		credentials: 'include',
 		body: JSON.stringify({
 			model: model,
 			messages: messages,
@@ -732,6 +823,7 @@ export const generateAutoCompletion = async (
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
+		credentials: 'include',
 		body: JSON.stringify({
 			model: model,
 			prompt: prompt,
@@ -802,6 +894,7 @@ export const generateMoACompletion = async (
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
+		credentials: 'include',
 		body: JSON.stringify({
 			model: model,
 			prompt: prompt,
@@ -830,7 +923,8 @@ export const getPipelinesList = async (token: string = '') => {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
 			...(token && { authorization: `Bearer ${token}` })
-		}
+		},
+		credentials: 'include'
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -864,6 +958,7 @@ export const uploadPipeline = async (token: string, file: File, urlIdx: string) 
 			...(token && { authorization: `Bearer ${token}` })
 			// 'Content-Type': 'multipart/form-data' is not needed as Fetch API will set it automatically
 		},
+		credentials: 'include',
 		body: formData
 	})
 		.then(async (res) => {

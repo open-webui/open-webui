@@ -15,6 +15,7 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
+	import MFAVerifyModal from '$lib/components/MFAVerifyModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -27,6 +28,10 @@
 	let password = '';
 
 	let ldapUsername = '';
+	
+	// MFA verification state
+	let showMFAVerify = false;
+	// No longer need partial token with cookie-based authentication
 
 	const querystringValue = (key) => {
 		const querystring = window.location.search;
@@ -52,12 +57,20 @@
 	};
 
 	const signInHandler = async () => {
-		const sessionUser = await userSignIn(email, password).catch((error) => {
+		const response = await userSignIn(email, password).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
-
-		await setSessionUser(sessionUser);
+		
+		if (!response) return;
+		
+		// Check if MFA is required
+		if (response.mfa_required) {
+			showMFAVerify = true;
+			return;
+		}
+		
+		await setSessionUser(response);
 	};
 
 	const signUpHandler = async () => {
@@ -72,11 +85,20 @@
 	};
 
 	const ldapSignInHandler = async () => {
-		const sessionUser = await ldapUserSignIn(ldapUsername, password).catch((error) => {
+		const response = await ldapUserSignIn(ldapUsername, password).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
-		await setSessionUser(sessionUser);
+		
+		if (!response) return;
+		
+		// Check if MFA is required
+		if (response.mfa_required) {
+			showMFAVerify = true;
+			return;
+		}
+		
+		await setSessionUser(response);
 	};
 
 	const submitHandler = async () => {
@@ -87,6 +109,10 @@
 		} else {
 			await signUpHandler();
 		}
+	};
+	
+	const handleMFAVerified = async (sessionUser) => {
+		await setSessionUser(sessionUser);
 	};
 
 	const checkOauthCallback = async () => {
@@ -168,6 +194,11 @@
 		onboarding = false;
 		mode = $config?.features.enable_ldap ? 'ldap' : 'signup';
 	}}
+/>
+
+<MFAVerifyModal 
+	visible={showMFAVerify} 
+	onVerified={handleMFAVerified}
 />
 
 <div class="w-full h-screen max-h-[100dvh] text-white relative">

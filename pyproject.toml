@@ -119,7 +119,10 @@ dependencies = [
     "azure-storage-blob==12.24.1",
 
     "ldap3==2.9.1",
-
+    
+    "pyotp==2.8.0",
+    "qrcode==7.3.1",
+    
     "firecrawl-py==1.12.0",
 
     "gcp-storage-emulator>=2024.8.3",

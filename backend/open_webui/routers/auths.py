@@ -30,7 +30,7 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import RedirectResponse, Response, JSONResponse
 from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
 from pydantic import BaseModel
 from open_webui.utils.misc import parse_duration, validate_email_format
@@ -45,7 +45,7 @@ from open_webui.utils.auth import (
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions
 
-from typing import Optional, List
+from typing import Optional
 
 from ssl import CERT_REQUIRED, PROTOCOL_TLS
 
@@ -58,6 +58,7 @@ router = APIRouter()
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
+
 ############################
 # GetSessionUser
 ############################
@@ -66,12 +67,18 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 class SessionUserResponse(Token, UserResponse):
     expires_at: Optional[int] = None
     permissions: Optional[dict] = None
+    mfa_enabled: Optional[bool] = False
 
 
 @router.get("/", response_model=SessionUserResponse)
 async def get_session_user(
     request: Request, response: Response, user=Depends(get_current_user)
 ):
+    auth = Auths.get_auth_by_id(user.id)
+    mfa_enabled = False
+    if auth:
+        mfa_enabled = auth.mfa_enabled
+    
     expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
     expires_at = None
     if expires_delta:
@@ -88,7 +95,6 @@ async def get_session_user(
         else None
     )
 
-    # Set the cookie token
     response.set_cookie(
         key="token",
         value=token,
@@ -112,6 +118,7 @@ async def get_session_user(
         "role": user.role,
         "profile_image_url": user.profile_image_url,
         "permissions": user_permissions,
+        "mfa_enabled": mfa_enabled,
     }
 
 
@@ -144,18 +151,26 @@ async def update_profile(
 
 @router.post("/update/password", response_model=bool)
 async def update_password(
-    form_data: UpdatePasswordForm, session_user=Depends(get_current_user)
+    request: Request,
+    form_data: UpdatePasswordForm, 
+    session_user=Depends(get_current_user)
 ):
+    client_ip = request.client.host
+    
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
+    
     if session_user:
         user = Auths.authenticate_user(session_user.email, form_data.password)
 
         if user:
+
             hashed = get_password_hash(form_data.new_password)
             return Auths.update_user_password_by_id(user.id, hashed)
         else:
-            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_PASSWORD)
+            # Log specific details but return generic error
+            log.warning(f"Invalid password provided by user {session_user.id} during password update from IP: {client_ip}")
+            raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
@@ -288,7 +303,6 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     ),
                 )
 
-                # Set the cookie token
                 response.set_cookie(
                     key="token",
                     value=token,
@@ -326,7 +340,21 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
 
 @router.post("/signin", response_model=SessionUserResponse)
+# Rate limiting temporarily removed
 async def signin(request: Request, response: Response, form_data: SigninForm):
+    # Debug logging for request
+    content_type = request.headers.get("content-type", "")
+    log.debug(f"[AUTH DEBUG] Signin request with content-type: {content_type}")
+    log.debug(f"[AUTH DEBUG] Headers: {dict(request.headers)}")
+    
+    # Normalize the email and sanitize inputs immediately, this should be in the basemodel instead
+    email = form_data.email.lower().strip() if form_data.email else ""
+    log.info(f"Signin attempt for email: {email}")
+    
+    # Get the client's IP address for logging
+    client_ip = request.client.host
+    
+    # Continue with the standard authentication flow
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
@@ -346,7 +374,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
                 ),
             )
         user = Auths.authenticate_user_by_trusted_header(trusted_email)
-    elif WEBUI_AUTH == False:
+    elif WEBUI_AUTH is False:
         admin_email = "admin@localhost"
         admin_password = "admin"
 
@@ -367,7 +395,40 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
     if user:
-
+        auth = Auths.get_auth_by_id(user.id)
+        
+        if auth and auth.mfa_enabled:
+            # This is a short-lived token that only indicates we need MFA verification
+            # Using both "id" and "sub" for compatibility - "id" matches standard format,
+            # "sub" follows JWT standards and is used in the MFA flow
+            partial_token = create_token(
+                data={
+                    "id": user.id,  # For compatibility with standard auth
+                    "sub": user.id,  # For JWT standard compliance
+                    "mfa_required": True
+                },
+                expires_delta=datetime.timedelta(minutes=5)  # Short expiration for security
+            )
+            
+            # Create partial response indicating MFA is required
+            partial_response = JSONResponse(
+                content={"mfa_required": True, "email": user.email},
+                status_code=200
+            )
+            
+            # Set partial_token cookie for the MFA verification step
+            partial_response.set_cookie(
+                key="partial_token",
+                value=partial_token,
+                httponly=True,
+                secure=WEBUI_AUTH_COOKIE_SECURE,
+                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                max_age=300,  # 5 minutes
+            )
+            
+            return partial_response
+        
+        # Standard authentication flow (no MFA)
         expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
         expires_at = None
         if expires_delta:
@@ -384,7 +445,6 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             else None
         )
 
-        # Set the cookie token
         response.set_cookie(
             key="token",
             value=token,
@@ -410,6 +470,8 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             "permissions": user_permissions,
         }
     else:
+        # Log specific details internally but return generic error message to prevent account enumeration
+        log.warning(f"Failed authentication attempt for email: {form_data.email.lower()} from IP: {client_ip}")
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
 
@@ -479,7 +541,6 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 else None
             )
 
-            # Set the cookie token
             response.set_cookie(
                 key="token",
                 value=token,
