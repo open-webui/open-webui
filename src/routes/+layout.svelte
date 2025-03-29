@@ -559,6 +559,21 @@
 			loaded = true;
 		}
 
+		// Rimuovi o commenta tutto questo blocco di codice
+		/*
+		// Aggiunge il banner programmaticamente
+		const bannerDiv = document.createElement('div');
+		bannerDiv.className = "fixed top-6 left-100 right-0 text-center z-50"; // Cambiato da bottom-16 a top-16
+		bannerDiv.innerHTML = `
+			<div class="inline-block px-4 py-2 bg-blue-100 dark:bg-blue-900 rounded-full shadow-lg">
+				<span class="font-bold text-blue-700 dark:text-blue-300">
+					BRIDGE: a SEA-EU project
+				</span>
+			</div>
+		`;
+		document.body.appendChild(bannerDiv);
+		*/
+
 		return () => {
 			window.removeEventListener('resize', onResize);
 		};
@@ -576,17 +591,24 @@
 </svelte:head>
 
 {#if loaded}
-	{#if $isApp}
-		<div class="flex flex-row h-screen">
-			<AppSidebar />
+    {#if $isApp}
+        <div class="flex flex-row h-screen">
+            <AppSidebar />
 
-			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
-				<slot />
-			</div>
-		</div>
-	{:else}
-		<slot />
-	{/if}
+            <div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
+                <slot />
+            </div>
+        </div>
+    {:else}
+        <slot />
+    {/if}
+
+    <!-- Footer added to all pages -->
+    <footer class="fixed bottom-0 left-0 right-0 text-center py-2 bg-white dark:bg-gray-900 z-10">
+        <div class="font-bold text-blue-600 dark:text-blue-400">
+            BRIDGE: a SEA-EU project
+        </div>
+    </footer>
 {/if}
 
 <Toaster

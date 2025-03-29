@@ -7,7 +7,6 @@
 
 	import { blur, fade } from 'svelte/transition';
 
-	import Suggestions from './Suggestions.svelte';
 	import { sanitizeResponseContent } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
@@ -120,21 +119,26 @@
 							{$i18n.t('How can I help you today?')}
 						</div>
 					{/if}
+					
+					<!-- TESTO DEL PROGETTO SPOSTATO QUI (fuori dal condizionale) -->
+					<div class="mt-4 text-center font-bold text-blue-600 dark:text-blue-400">
+						BRIDGE: a SEA-EU project
+					</div>
 				</div>
 			</div>
 		</div>
 
-		<div class=" w-full font-primary" in:fade={{ duration: 200, delay: 300 }}>
-			<Suggestions
-				className="grid grid-cols-2"
-				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
-					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
-					$config?.default_prompt_suggestions ??
-					[]}
-				on:select={(e) => {
-					submitPrompt(e.detail);
-				}}
-			/>
+		<div class="w-full font-primary" in:fade={{ duration: 200, delay: 300 }}>
+			 <!-- Componente suggestions rimosso -->
 		</div>
 	</div>
 {/key}
+
+<!-- Aggiungi questo nuovo div dopo gli altri -->
+<div class="fixed bottom-16 left-0 right-0 text-center">
+    <div class="inline-block px-4 py-2 bg-blue-100 dark:bg-blue-900 rounded-full">
+        <span class="font-bold text-blue-700 dark:text-blue-300">
+            BRIDGE: a SEA-EU project
+        </span>
+    </div>
+</div>

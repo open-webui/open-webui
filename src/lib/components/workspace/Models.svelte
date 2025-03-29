@@ -222,7 +222,7 @@
 			</div>
 		</div>
 
-		<div class=" flex flex-1 items-center w-full space-x-2">
+		<div class="flex flex-1 items-center w-full space-x-2">
 			<div class="flex flex-1 items-center">
 				<div class=" self-center ml-1 mr-3">
 					<Search className="size-3.5" />
@@ -232,15 +232,6 @@
 					bind:value={searchValue}
 					placeholder={$i18n.t('Search Models')}
 				/>
-			</div>
-
-			<div>
-				<a
-					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
-					href="/workspace/models/create"
-				>
-					<Plus className="size-3.5" />
-				</a>
 			</div>
 		</div>
 	</div>
@@ -400,7 +391,8 @@
 	</div>
 
 	{#if $user?.role === 'admin'}
-		<div class=" flex justify-end w-full mb-3">
+		<!-- Rimuovi completamente questo div che contiene i pulsanti di import/export -->
+		<!-- <div class=" flex justify-end w-full mb-3">
 			<div class="flex space-x-1">
 				<input
 					id="models-import-input"
@@ -410,92 +402,19 @@
 					accept=".json"
 					hidden
 					on:change={() => {
-						console.log(importFiles);
-
-						let reader = new FileReader();
-						reader.onload = async (event) => {
-							let savedModels = JSON.parse(event.target.result);
-							console.log(savedModels);
-
-							for (const model of savedModels) {
-								if (model?.info ?? false) {
-									if ($_models.find((m) => m.id === model.id)) {
-										await updateModelById(localStorage.token, model.id, model.info).catch(
-											(error) => {
-												return null;
-											}
-										);
-									} else {
-										await createNewModel(localStorage.token, model.info).catch((error) => {
-											return null;
-										});
-									}
-								}
-							}
-
-							await _models.set(
-								await getModels(
-									localStorage.token,
-									$config?.features?.enable_direct_connections &&
-										($settings?.directConnections ?? null)
-								)
-							);
-							models = await getWorkspaceModels(localStorage.token);
-						};
-
-						reader.readAsText(importFiles[0]);
+						// ... codice esistente ...
 					}}
 				/>
-
-				<button
-					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-					on:click={() => {
-						modelsImportInputElement.click();
-					}}
-				>
+				<button class="flex text-xs items-center space-x-1 px-3..." on:click={() => { modelsImportInputElement.click(); }}>
 					<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import Models')}</div>
-
-					<div class=" self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-3.5 h-3.5"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</div>
+					// ... codice esistente ...
 				</button>
-
-				<button
-					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-					on:click={async () => {
-						downloadModels($_models);
-					}}
-				>
+				<button class="flex text-xs items-center space-x-1 px-3..." on:click={async () => { downloadModels($_models); }}>
 					<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Models')}</div>
-
-					<div class=" self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-3.5 h-3.5"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</div>
+					// ... codice esistente ...
 				</button>
 			</div>
-		</div>
+		</div> -->
 	{/if}
 
 	{#if $config?.features.enable_community_sharing}

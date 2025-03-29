@@ -372,3 +372,24 @@ input[type='number'] {
 .hljs-strong {
 	font-weight: 700;
 }
+
+/* Add these rules at the end of the file */
+/* Blue background for all pages */
+.app > *,
+html, 
+body,
+.bg-white,
+.dark .dark\:bg-gray-800,
+.bg-gray-50,
+.dark .dark\:bg-gray-900 {
+  background-color: #cae8ff !important; /* Light blue shade */
+}
+
+/* Darker blue for dark mode */
+.dark html,
+.dark body,
+.dark .app > *,
+.dark .bg-gray-800,
+.dark .bg-gray-900 {
+  background-color: #0b4f82 !important; /* Darker blue for dark mode */
+}

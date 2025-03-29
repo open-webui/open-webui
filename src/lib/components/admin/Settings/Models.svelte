@@ -167,7 +167,8 @@
 				</div>
 
 				<div class="flex items-center gap-1.5">
-					<Tooltip content={$i18n.t('Manage Models')}>
+					<!-- Rimuovi o commenta questi bottoni -->
+					<!-- <Tooltip content={$i18n.t('Manage Models')}>
 						<button
 							class=" p-1 rounded-full flex gap-1 items-center"
 							type="button"
@@ -177,8 +178,8 @@
 						>
 							<ArrowDownTray />
 						</button>
-					</Tooltip>
-
+					</Tooltip> -->
+					
 					<Tooltip content={$i18n.t('Settings')}>
 						<button
 							class=" p-1 rounded-full flex gap-1 items-center"

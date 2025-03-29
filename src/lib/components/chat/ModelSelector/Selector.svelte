@@ -529,7 +529,8 @@
 				{/each}
 
 				{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user.role === 'admin'}
-					<Tooltip
+					<!-- Commenta o rimuovi questo blocco per disabilitare il download di modelli -->
+					<!-- <Tooltip
 						content={$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, {
 							searchValue: searchValue
 						})}
@@ -545,7 +546,7 @@
 								{$i18n.t(`Pull "{{searchValue}}" from Ollama.com`, { searchValue: searchValue })}
 							</div>
 						</button>
-					</Tooltip>
+					</Tooltip> -->
 				{/if}
 
 				{#each Object.keys($MODEL_DOWNLOAD_POOL) as model}
