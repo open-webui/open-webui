@@ -385,7 +385,7 @@
 		if (event.data.type === 'input:prompt:submit') {
 			console.debug(event.data.text);
 
-			if (prompt !== '') {
+			if (event.data.text !== '') {
 				await tick();
 				submitPrompt(event.data.text);
 			}

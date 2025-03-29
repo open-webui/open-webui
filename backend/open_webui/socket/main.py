@@ -8,7 +8,11 @@ from redis import asyncio as aioredis
 from open_webui.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
-from open_webui.utils.redis import parse_redis_sentinel_url, get_sentinels_from_env, AsyncRedisSentinelManager
+from open_webui.utils.redis import (
+    parse_redis_sentinel_url,
+    get_sentinels_from_env,
+    AsyncRedisSentinelManager,
+)
 
 from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
@@ -35,8 +39,15 @@ log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 if WEBSOCKET_MANAGER == "redis":
     if WEBSOCKET_SENTINEL_HOSTS:
         redis_config = parse_redis_sentinel_url(WEBSOCKET_REDIS_URL)
-        mgr = AsyncRedisSentinelManager(WEBSOCKET_SENTINEL_HOSTS.split(','), sentinel_port=int(WEBSOCKET_SENTINEL_PORT), redis_port=redis_config["port"],
-                                        service=redis_config["service"], db=redis_config["db"], username=redis_config["username"], password=redis_config["password"])
+        mgr = AsyncRedisSentinelManager(
+            WEBSOCKET_SENTINEL_HOSTS.split(","),
+            sentinel_port=int(WEBSOCKET_SENTINEL_PORT),
+            redis_port=redis_config["port"],
+            service=redis_config["service"],
+            db=redis_config["db"],
+            username=redis_config["username"],
+            password=redis_config["password"],
+        )
     else:
         mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
     sio = socketio.AsyncServer(
@@ -64,10 +75,24 @@ TIMEOUT_DURATION = 3
 
 if WEBSOCKET_MANAGER == "redis":
     log.debug("Using Redis to manage websockets.")
-    redis_sentinels=get_sentinels_from_env(WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT)
-    SESSION_POOL = RedisDict("open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL, redis_sentinels=redis_sentinels)
-    USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL, redis_sentinels=redis_sentinels)
-    USAGE_POOL = RedisDict("open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL, redis_sentinels=redis_sentinels)
+    redis_sentinels = get_sentinels_from_env(
+        WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
+    )
+    SESSION_POOL = RedisDict(
+        "open-webui:session_pool",
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_sentinels=redis_sentinels,
+    )
+    USER_POOL = RedisDict(
+        "open-webui:user_pool",
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_sentinels=redis_sentinels,
+    )
+    USAGE_POOL = RedisDict(
+        "open-webui:usage_pool",
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_sentinels=redis_sentinels,
+    )
 
     clean_up_lock = RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,

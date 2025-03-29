@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { decode } from 'html-entities';
+
 	import { getContext, createEventDispatcher } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -32,15 +34,20 @@
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
+	import CodeBlock from '../chat/Messages/CodeBlock.svelte';
+	import Markdown from '../chat/Messages/Markdown.svelte';
 
 	export let open = false;
-	export let id = '';
+
 	export let className = '';
 	export let buttonClassName =
 		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
+
+	export let id = '';
 	export let title = null;
 	export let attributes = null;
 
+	export let chevron = false;
 	export let grow = false;
 
 	export let disabled = false;
@@ -93,6 +100,22 @@
 						{:else}
 							{$i18n.t('Analyzing...')}
 						{/if}
+					{:else if attributes?.type === 'tool_calls'}
+						{#if attributes?.done === 'true'}
+							<Markdown
+								id={`tool-calls-${attributes?.id}`}
+								content={$i18n.t('View Result from `{{NAME}}`', {
+									NAME: attributes.name
+								})}
+							/>
+						{:else}
+							<Markdown
+								id={`tool-calls-${attributes?.id}`}
+								content={$i18n.t('Executing `{{NAME}}`...', {
+									NAME: attributes.name
+								})}
+							/>
+						{/if}
 					{:else}
 						{title}
 					{/if}
@@ -119,7 +142,19 @@
 			}}
 		>
 			<div>
-				<slot />
+				<div class="flex items-start justify-between">
+					<slot />
+
+					{#if chevron}
+						<div class="flex self-start translate-y-1">
+							{#if open}
+								<ChevronUp strokeWidth="3.5" className="size-3.5" />
+							{:else}
+								<ChevronDown strokeWidth="3.5" className="size-3.5" />
+							{/if}
+						</div>
+					{/if}
+				</div>
 
 				{#if grow}
 					{#if open && !hide}
@@ -140,7 +175,26 @@
 	{#if !grow}
 		{#if open && !hide}
 			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-				<slot name="content" />
+				{#if attributes?.type === 'tool_calls'}
+					{#if attributes?.done === 'true'}
+						<Markdown
+							id={`tool-calls-${attributes?.id}-result`}
+							content={`> \`\`\`json
+> ${JSON.stringify(JSON.parse(JSON.parse(decode(attributes?.arguments))), null, 2)}
+> ${JSON.stringify(JSON.parse(JSON.parse(decode(attributes?.result))), null, 2)}
+> \`\`\``}
+						/>
+					{:else}
+						<Markdown
+							id={`tool-calls-${attributes?.id}-result`}
+							content={`> \`\`\`json
+> ${JSON.stringify(JSON.parse(JSON.parse(decode(attributes?.arguments))), null, 2)}
+> \`\`\``}
+						/>
+					{/if}
+				{:else}
+					<slot name="content" />
+				{/if}
 			</div>
 		{/if}
 	{/if}
