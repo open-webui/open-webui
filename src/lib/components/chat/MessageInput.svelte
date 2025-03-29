@@ -46,6 +46,7 @@
 	import Photo from '../icons/Photo.svelte';
 	import CommandLine from '../icons/CommandLine.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+	import ToolServersModal from './ToolServersModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -83,6 +84,8 @@
 		imageGenerationEnabled,
 		webSearchEnabled
 	});
+
+	let showToolServers = false;
 
 	let loaded = false;
 	let recording = false;
@@ -344,6 +347,8 @@
 </script>
 
 <FilesOverlay show={dragged} />
+
+<ToolServersModal bind:show={showToolServers} />
 
 {#if loaded}
 	<div class="w-full font-primary">
@@ -1238,9 +1243,13 @@
 													COUNT: toolServers.length
 												})}
 											>
-												<div
+												<button
 													class="translate-y-[1.5px] flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-lg px-1.5 py-0.5 mr-0.5 self-center border border-gray-100 dark:border-gray-800"
 													aria-label="Available Tool Servers"
+													type="button"
+													on:click={() => {
+														showToolServers = !showToolServers;
+													}}
 												>
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
@@ -1265,7 +1274,7 @@
 													<span class="text-xs">
 														{toolServers.length}
 													</span>
-												</div>
+												</button>
 											</Tooltip>
 										{/if}
 

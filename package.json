@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.5.20",
+	"version": "0.6.0",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -80,6 +80,7 @@
 		"file-saver": "^2.0.5",
 		"fuse.js": "^7.0.0",
 		"highlight.js": "^11.9.0",
+		"html-entities": "^2.5.3",
 		"html2canvas-pro": "^1.5.8",
 		"i18next": "^23.10.0",
 		"i18next-browser-languagedetector": "^7.2.0",
