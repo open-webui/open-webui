@@ -5,12 +5,12 @@ from openai import AzureOpenAI
 
 client = AzureOpenAI(
     api_key="1777ac2662f649a7bbc0c905d85eb7bd",
-    api_version="2024-10-21",
+    api_version="2025-02-01-preview",
     azure_endpoint="https://hkust.azure-api.net"
 )
 
 SYSTEM_PROMPT_HTML = '''
-You are an AI that performs the task of understanding advanced HTML content and converting it into Markdown format. Your job is to read all the information from the provided HTML code accurately, without missing any details, and generate a Markdown document while retaining the original language. The result should be a clear and structured document, categorizing information like titles, links, dates, descriptions, and lists.
+You are an AI that performs the task of understanding advanced HTML content and converting it into Markdown format. Your job is to read all the information from the provided HTML code accurately, without missing any details, and generate a Markdown document while retaining the original language. The result should be a clear and structured document, categorizing information like titles, links, dates, descriptions, lists and images.
 
 Example Input:
 ```html
@@ -29,6 +29,10 @@ Example Output:
 ## Link
 
 [Link Text](url)
+
+## Image
+
+![Alt Text](image-url "Image Title")
 
 ## Access
 

@@ -1,0 +1,624 @@
+{
+    "housing_policies": [
+      {
+        "question": {
+          "korean": "HKUST가 비지역 학생들한테 몇 년 동안 기숙사를 보장해줘?",
+          "english": "How many years does HKUST guarantee housing for non-local students?"
+        },
+        "answer": {
+          "korean": "비지역 학생들은 처음 2년 동안 숙소를 제공받는다. 증명 서류 제출은 필요하지 않다.",
+          "english": "Non-local students are provided accommodation for their first two years. Proof submission is not required."
+        }
+      },
+      {
+        "question": {
+          "korean": "1학년 지역 학생들 기숙사는 최소 몇 학기 보장되나요?",
+          "english": "How many semesters of housing are first-year local students guaranteed at least?"
+        },
+        "answer": {
+          "korean": "1학년 지역 학생들은 최소 한 학기 숙소를 보장받는다. 연장은 통학 시간에 따라 가능하다.",
+          "english": "First-year local students are guaranteed at least one semester of housing. Extension is possible based on travel time."
+        }
+      },
+      {
+        "question": {
+          "korean": "홍콩에 집 없는 지역 학생들 기숙사 몇 년 받나요?",
+          "english": "How many years of housing do local students with no home in Hong Kong get?"
+        },
+        "answer": {
+          "korean": "홍콩에 거주 기반이 없는 지역 학생들은 2년 숙소를 제공받는다. 매년 증명이 필요하다.",
+          "english": "Local students with no home base in Hong Kong receive two years of housing. Valid proof is required each year."
+        }
+      },
+      {
+        "question": {
+          "korean": "통학 시간 120분 넘는 지역 학생들 기숙사 몇 년 줘요?",
+          "english": "How many years of housing do local students with over 120 minutes of commute time get?"
+        },
+        "answer": {
+          "korean": "편도 통학 시간이 120분 이상인 지역 학생들도 2년 숙소 지원을 받는다. 매년 주소 증명이 필요하다.",
+          "english": "Local students with a one-way travel time over 120 minutes also get two years of housing. Valid address proof is required each year."
+        }
+      },
+      {
+        "question": {
+          "korean": "HKUST에서 교환 학생들 기숙사 언제까지 주나요?",
+          "english": "Until when does HKUST provide housing for exchange students?"
+        },
+        "answer": {
+          "korean": "교환 학생들은 교환 기간 동안 숙소를 제공받는다. 신청은 HKUST가 마련한다.",
+          "english": "Exchange-in students are provided housing for their exchange period. The application is arranged by HKUST."
+        }
+      },
+      {
+        "fact": {
+          "english": "Hall places are divided into two pools for Local and Non-Local/No-Home-Base students.",
+          "korean": "기숙사 자리는 지역 학생과 비지역/홍콩에 집 없는 학생을 위한 두 개 풀으로 나뉜다."
+        },
+        "question": {
+          "english": "How are hall places divided at HKUST?",
+          "korean": "HKUST에서 기숙사 자리를 어떻게 나누나요?"
+        },
+        "answer": {
+          "english": "Into two pools: one for Local students and one for Non-Local/No-Home-Base students.",
+          "korean": "두 개 풀: 지역 학생용 하나, 비지역/홍콩에 집 없는 학생용 하나."
+        }
+      },
+      {
+        "fact": {
+          "english": "Local students can earn up to 60 points for Travelling Time to Campus.",
+          "korean": "지역 학생들은 캠퍼스까지 통학 시간으로 최대 60점을 받을 수 있다."
+        },
+        "question": {
+          "english": "How many points can Local students get for Travelling Time?",
+          "korean": "지역 학생들이 통학 시간으로 몇 점 받을 수 있나요?"
+        },
+        "answer": {
+          "english": "Up to 60 points.",
+          "korean": "최대 60점."
+        }
+      },
+      {
+        "fact": {
+          "english": "Non-Local/No-Home-Base students get no points for Travelling Time.",
+          "korean": "비지역/홍콩에 집 없는 학생들은 통학 시간으로 점수를 받지 못한다."
+        },
+        "question": {
+          "english": "Do Non-Local/No-Home-Base students get points for Travelling Time?",
+          "korean": "비지역/홍콩에 집 없는 학생들이 통학 시간으로 점수 받나요?"
+        },
+        "answer": {
+          "english": "No, they get no points.",
+          "korean": "아니요, 점수 없어요."
+        }
+      },
+      {
+        "fact": {
+          "english": "Leadership and Contribution to Campus Life gives up to 25 points for Local students and 50 for Non-Local/No-Home-Base students.",
+          "korean": "캠퍼스 생활 리더십과 기여로 지역 학생은 최대 25점, 비지역/홍콩에 집 없는 학생은 50점을 받는다."
+        },
+        "question": {
+          "english": "How many points do students get for Leadership and Contribution?",
+          "korean": "리더십과 기여로 학생들이 몇 점 받나요?"
+        },
+        "answer": {
+          "english": "Local students get up to 25 points, Non-Local/No-Home-Base students get up to 50 points.",
+          "korean": "지역 학생은 최대 25점, 비지역/홍콩에 집 없는 학생은 최대 50점."
+        }
+      },
+      {
+        "fact": {
+          "english": "About 25% of Non-Local/No-Home-Base quota is reserved for a random lottery.",
+          "korean": "비지역/홍콩에 집 없는 학생 쿼터의 약 25%는 무작위 추첨으로 예약된다."
+        },
+        "question": {
+          "english": "What percentage of Non-Local/No-Home-Base quota is for a lottery?",
+          "korean": "비지역/홍콩에 집 없는 학생 쿼터 중 몇 퍼센트가 추첨이에요?"
+        },
+        "answer": {
+          "english": "About 25%.",
+          "korean": "약 25%."
+        }
+      },
+      {
+        "question": {
+          "english": "What does Leadership and Contribution to Campus Life cover?",
+          "korean": "캠퍼스 생활 리더십과 기여가 뭘 포함하나요?"
+        },
+        "answer": {
+          "english": "Involvement and promotion of student activities and campus/hall life via eligible groups or teams.",
+          "korean": "적격 그룹이나 팀을 통한 학생 활동 참여와 캠퍼스/기숙사 생활 촉진."
+        }
+      },
+      {
+        "question": {
+          "english": "How many points do Local students get for Higher Points roles in Student Societies?",
+          "korean": "지역 학생들이 학생회에서 높은 점수 역할로 몇 점 받나요?"
+        },
+        "answer": {
+          "english": "15 points.",
+          "korean": "15점."
+        }
+      },
+      {
+        "question": {
+          "english": "How many points do Non-Local/No-Home-Base students get for Basic Points in Outreach groups?",
+          "korean": "비지역/홍콩에 집 없는 학생들이 아웃리치 그룹 기본 점수로 몇 점 받나요?"
+        },
+        "answer": {
+          "english": "10 points.",
+          "korean": "10점."
+        }
+      },
+      {
+        "question": {
+          "english": "How many roles can count for hall points?",
+          "korean": "기숙사 점수로 몇 개 역할이 계산되나요?"
+        },
+        "answer": {
+          "english": "At most 2 roles.",
+          "korean": "최대 2개 역할."
+        }
+      },
+      {
+        "question": {
+          "english": "What happens to hall points if a student leaves a position mid-term?",
+          "korean": "학생이 임기 중에 역할을 그만두면 기숙사 점수가 어떻게 되나요?"
+        },
+        "answer": {
+          "english": "The points are recovered, possibly leading to recovery of hall offers.",
+          "korean": "점수가 회수되고, 기숙사 제안도 회수될 수 있다."
+        }
+      },
+      {
+        "question": {
+          "english": "What does No Hall Offer in Previous Year/Years mean?",
+          "korean": "이전 연도 기숙사 미제공이 뭔가요?"
+        },
+        "answer": {
+          "english": "Hall points given to students who didn’t receive a hall offer at HKUST. (e.g., excludes New Students’ Orientation Camp offers)",
+          "korean": "HKUST에서 기숙사 제안을 받지 못한 학생들에게 주는 점수. (예: 신입생 오리엔테이션 캠프 제안 제외)"
+        }
+      },
+      {
+        "question": {
+          "english": "How many points do Local students get for no hall offer?",
+          "korean": "지역 학생들이 기숙사 미제공으로 몇 점 받나요?"
+        },
+        "answer": {
+          "english": "5 points if no offer since beginning of study.",
+          "korean": "공부 시작부터 제안 없으면 5점."
+        }
+      },
+      {
+        "question": {
+          "english": "How many points do Non-Local/No-Home-Base students get for no hall offer?",
+          "korean": "비지역/홍콩에 집 없는 학생들이 기숙사 미제공으로 몇 점 받나요?"
+        },
+        "answer": {
+          "english": "20 points if no offer in the previous year.",
+          "korean": "이전 연도에 제안 없으면 20점."
+        }
+      },
+      {
+        "question": {
+          "english": "Can students with disciplinary records get points in this section?",
+          "korean": "징계 기록 있는 학생들이 이 섹션에서 점수 받을 수 있나요?"
+        },
+        "answer": {
+          "english": "No, they are not considered.",
+          "korean": "아니요, 고려되지 않아요."
+        }
+      },
+      {
+        "question": {
+          "english": "Where are the records for hall points eligibility kept?",
+          "korean": "기숙사 점수 자격 기록은 어디에 보관되나요?"
+        },
+        "answer": {
+          "english": "In the Student Housing and Residential Life Office’s Hall Management Information System.",
+          "korean": "학생 주거 및 기숙 생활 사무소의 기숙사 관리 정보 시스템에."
+        }
+      },
+      {
+        "question": {
+          "english": "Where is Hong Kong Adventist College located?",
+          "korean": "홍콩 재림교 대학이 어디에 있나요?"
+        },
+        "answer": {
+          "english": "At 1111, Clear Water Bay Road, Sai Kung.",
+          "korean": "사이쿵 클리어 워터 베이 로드 1111번지."
+        }
+      },
+      {
+        "question": {
+          "english": "How many students share a bedroom at HKAC?",
+          "korean": "HKAC에서 몇 명이 침실을 같이 쓰나요?"
+        },
+        "answer": {
+          "english": "4 students share a bedroom, equipped with an air-conditioner.",
+          "korean": "4명의 학생이 에어컨이 있는 침실을 같이 쓴다."
+        }
+      },
+      {
+        "question": {
+          "english": "What kind of food does the HKAC dining center provide?",
+          "korean": "HKAC 식당에서 어떤 음식을 주나요?"
+        },
+        "answer": {
+          "english": "Vegetarian food.",
+          "korean": "채식 음식."
+        }
+      },
+      {
+        "question": {
+          "english": "When is the free laundry service available at HKAC?",
+          "korean": "HKAC에서 무료 세탁 서비스는 언제 되나요?"
+        },
+        "answer": {
+          "english": "From Sundays to Fridays, except public holidays.",
+          "korean": "일요일부터 금요일까지, 공휴일 제외."
+        }
+      },
+      {
+        "question": {
+          "english": "Who can use the shuttle bus between HKAC and HKUST?",
+          "korean": "HKAC와 HKUST 간 셔틀버스를 누가 탈 수 있나요?"
+        },
+        "answer": {
+          "english": "Only HKAC residents, on a first-come, first-served basis. (e.g., must show resident card)",
+          "korean": "HKAC 거주자만, 선착순으로. (예: 거주자 카드 보여줘야 함)"
+        }
+      },
+      {
+        "question": {
+          "english": "Who can apply for student housing at HKUST?",
+          "korean": "HKUST에서 누가 기숙사를 신청할 수 있나요?"
+        },
+        "answer": {
+          "english": "All full-time registered UG students, except some with limited eligibility.",
+          "korean": "모든 풀타임 등록 UG 학생, 일부 제한된 자격 제외."
+        }
+      },
+      {
+        "question": {
+          "english": "How are student categories divided at HKUST?",
+          "korean": "HKUST에서 학생 카테고리는 어떻게 나뉘나요?"
+        },
+        "answer": {
+          "english": "Into Local and Non-Local students based on Academic Registry records.",
+          "korean": "Academic Registry 기록에 따라 Local과 Non-Local 학생으로 나뉜다."
+        }
+      },
+      {
+        "question": {
+          "english": "Do students planning an exchange need to apply for housing?",
+          "korean": "교환 계획이 있는 학생들도 기숙사를 신청해야 하나요?"
+        },
+        "answer": {
+          "english": "Yes, they must apply within the official period and inform SHRLO of updates.",
+          "korean": "네, 공식 기간 내에 신청하고 SHRLO에 업데이트를 알려야 한다."
+        }
+      },
+      {
+        "question": {
+          "english": "When do Continuing UG students apply for housing?",
+          "korean": "Continuing UG 학생들은 언제 기숙사를 신청하나요?"
+        },
+        "answer": {
+          "english": "They are the first group to submit applications each year.",
+          "korean": "매년 첫 번째로 신청하는 그룹이다."
+        }
+      },
+      {
+        "question": {
+          "english": "Can I apply for housing after the deadline?",
+          "korean": "기한 후에도 기숙사를 신청할 수 있나요?"
+        },
+        "answer": {
+          "english": "No, late applications are not considered.",
+          "korean": "아니요, 늦은 신청은 고려되지 않는다."
+        }
+      },
+      {
+        "question": {
+          "english": "What should I prepare before applying for housing?",
+          "korean": "기숙사 신청 전에 뭘 준비해야 하나요?"
+        },
+        "answer": {
+          "english": "Read UG Hall Admission Methods and Rules and prepare required documents.",
+          "korean": "UG Hall Admission Methods와 Rules를 읽고 필요한 서류를 준비한다."
+        }
+      },
+      {
+        "question": {
+          "english": "How do I submit a housing application?",
+          "korean": "기숙사 신청은 어떻게 하나요?"
+        },
+        "answer": {
+          "english": "Through the online hall application system.",
+          "korean": "온라인 기숙사 신청 시스템을 통해."
+        }
+      },
+      {
+        "question": {
+          "english": "How do I know my application was submitted?",
+          "korean": "신청이 제출됐는지 어떻게 아나요?"
+        },
+        "answer": {
+          "english": "You’ll get an email to your HKUST account. (e.g., check junk folder)",
+          "korean": "HKUST 이메일로 확인 메일이 온다. (예: 정크 폴더 확인)"
+        }
+      },
+      {
+        "question": {
+          "english": "How many UG halls are there at HKUST?",
+          "korean": "HKUST에 UG 기숙사가 몇 개 있나요?"
+        },
+        "answer": {
+          "english": "10 UG halls with over 4,500 bedspaces.",
+          "korean": "10개의 UG 기숙사에 4,500개 이상의 침대 공간."
+        }
+      },
+      {
+        "question": {
+          "english": "Can I choose my hall at HKUST?",
+          "korean": "HKUST에서 기숙사를 선택할 수 있나요?"
+        },
+        "answer": {
+          "english": "You can list 3 preferences, but no guarantee.",
+          "korean": "3개 선호도를 적을 수 있지만 보장은 없다."
+        }
+      },
+      {
+        "question": {
+          "english": "Can I pick a specific room type at HKUST?",
+          "korean": "HKUST에서 특정 방 타입을 고를 수 있나요?"
+        },
+        "answer": {
+          "english": "No, room types are assigned randomly, except some single rooms for special needs.",
+          "korean": "아니요, 방 타입은 무작위 배정, 특수 필요용 단인실 제외."
+        }
+      },
+      {
+        "question": {
+          "english": "Can I stay in the same room next year?",
+          "korean": "내년에도 같은 방에 머물 수 있나요?"
+        },
+        "answer": {
+          "english": "No guarantee, but Continuing UGs can indicate a preferred roommate.",
+          "korean": "보장은 없지만 Continuing UGs는 선호 룸메이트를 지정할 수 있다."
+        }
+      },
+      {
+        "question": {
+          "english": "Where can I check hall fees at HKUST?",
+          "korean": "HKUST 기숙사 비용은 어디서 확인하나요?"
+        },
+        "answer": {
+          "english": "In the hall charges section under your student category.",
+          "korean": "학생 카테고리별 hall charges 섹션에서."
+        }
+      },
+      {
+        "question": {
+          "english": "Can I change my home address after submitting the application?",
+          "korean": "신청 후에 집 주소를 바꿀 수 있나요?"
+        },
+        "answer": {
+          "english": "No, the information cannot be changed after submission.",
+          "korean": "아니요, 제출 후에는 정보 변경 불가."
+        }
+      },
+      {
+        "question": {
+          "english": "What if my personal info is wrong in the application?",
+          "korean": "신청서에 개인 정보가 틀렸으면 어떻게 하나요?"
+        },
+        "answer": {
+          "english": "Contact the Academic Registry (ARO) for assistance.",
+          "korean": "Academic Registry (ARO)에 연락해 도움을 받는다."
+        }
+      },
+      {
+        "question": {
+          "english": "Can I apply for housing for just one term?",
+          "korean": "한 학기만 기숙사를 신청할 수 있나요?"
+        },
+        "answer": {
+          "english": "The application is for the full year, but you can indicate one-term preference.",
+          "korean": "신청은 전체 연도지만 한 학기 선호를 표시할 수 있다."
+        }
+      },
+      {
+        "question": {
+          "english": "Do Non-Local students on leave get Priority Housing?",
+          "korean": "Non-Local 학생이 휴학하면 Priority Housing을 받나요?"
+        },
+        "answer": {
+          "english": "No, not if leave is during the first two years of study.",
+          "korean": "아니요, 첫 2년 동안 휴학하면 안 된다."
+        }
+      },
+      {
+        "question": {
+          "english": "What documents are needed for No-Home-Base status?",
+          "korean": "No-Home-Base 상태에 어떤 서류가 필요하나요?"
+        },
+        "answer": {
+          "english": "Check Guideline for Part 1 – Priority Housing for the list.",
+          "korean": "Guideline for Part 1 – Priority Housing에서 목록을 확인."
+        }
+      },
+      {
+        "question": {
+          "english": "How is Travelling Time calculated for Local students?",
+          "korean": "Local 학생의 Travelling Time은 어떻게 계산되나요?"
+        },
+        "answer": {
+          "english": "By HKeMobility from the Hong Kong Transport Department.",
+          "korean": "홍콩 교통부의 HKeMobility로."
+        }
+      },
+      {
+        "question": {
+          "english": "Where can I find how to use HKeMobility?",
+          "korean": "HKeMobility 사용법은 어디서 찾나요?"
+        },
+        "answer": {
+          "english": "In Guideline for Section 1 – Travelling Time to Campus.",
+          "korean": "Guideline for Section 1 – Travelling Time to Campus에서."
+        }
+      },
+      {
+        "question": {
+          "english": "What if I have exceptional hardship?",
+          "korean": "특별한 어려움이 있으면 어떻게 하나요?"
+        },
+        "answer": {
+          "english": "Refer to SHRLO for special consideration.",
+          "korean": "SHRLO에 특별 고려를 요청한다."
+        }
+      },
+      {
+        "question": {
+          "english": "What is the Hall Point System?",
+          "korean": "Hall Point System이 뭔가요?"
+        },
+        "answer": {
+          "english": "A system giving points based on four criteria for housing priority.",
+          "korean": "4가지 기준으로 기숙사 우선순위를 주는 점수 시스템."
+        }
+      },
+      {
+        "question": {
+          "english": "Are all student groups eligible for hall points?",
+          "korean": "모든 학생 그룹이 기숙사 점수를 받을 수 있나요?"
+        },
+        "answer": {
+          "english": "Only recognized groups like HKUSTSU affiliates or DAG.",
+          "korean": "HKUSTSU 계열사나 DAG 같은 인정된 그룹만."
+        }
+      },
+      {
+        "question": {
+          "english": "What awards qualify for hall points?",
+          "korean": "어떤 상이 기숙사 점수에 해당하나요?"
+        },
+        "answer": {
+          "english": "2nd runner-up or above from city-level competitions.",
+          "korean": "도시 수준 대회에서 2등 이상."
+        }
+      },
+      {
+        "question": {
+          "english": "What happens if I miss required documents?",
+          "korean": "필요한 서류를 못 내면 어떻게 되나요?"
+        },
+        "answer": {
+          "english": "Your application may be disqualified.",
+          "korean": "신청이 실격될 수 있다."
+        }
+      },
+      {
+        "question": {
+          "english": "Do I get points for not staying in a hall last year?",
+          "korean": "작년에 기숙사에 안 머물렀으면 점수를 받나요?"
+        },
+        "answer": {
+          "english": "Only if you didn’t receive a hall offer.",
+          "korean": "기숙사 제안을 안 받았을 때만."
+        }
+      },
+      {
+        "question": {
+          "english": "How do waitlisted students get a hall offer?",
+          "korean": "대기자 명단에 있는 학생은 어떻게 기숙사 제안을 받나요?"
+        },
+        "answer": {
+          "english": "Through top-up exercises when bedspaces open.",
+          "korean": "침대 공간이 생기면 top-up으로."
+        }
+      },
+      {
+        "question": {
+          "english": "Why are Local and Non-Local students separated?",
+          "korean": "Local과 Non-Local 학생이 왜 분리되나요?"
+        },
+        "answer": {
+          "english": "For fair comparison within categories. (e.g., Travelling Time for Locals)",
+          "korean": "카테고리 내 공정한 비교를 위해. (예: Local의 Travelling Time)"
+        }
+      },
+      {
+        "question": {
+          "english": "How is the allocation ratio set?",
+          "korean": "할당 비율은 어떻게 정해지나요?"
+        },
+        "answer": {
+          "english": "Based on the past 3 years’ hall offer results.",
+          "korean": "지난 3년간 기숙사 제안 결과에 따라."
+        }
+      },
+      {
+        "question": {
+          "english": "How do I receive a hall offer?",
+          "korean": "기숙사 제안을 어떻게 받나요?"
+        },
+        "answer": {
+          "english": "Via email to your HKUST account.",
+          "korean": "HKUST 이메일로."
+        }
+      },
+      {
+        "question": {
+          "english": "What happens if I miss the hall offer deadline?",
+          "korean": "기숙사 제안 기한을 놓치면 어떻게 되나요?"
+        },
+        "answer": {
+          "english": "The offer is recovered.",
+          "korean": "제안이 회수된다."
+        }
+      },
+      {
+        "question": {
+          "english": "When do I know my room assignment?",
+          "korean": "방 배정은 언제 알 수 있나요?"
+        },
+        "answer": {
+          "english": "Usually in the hall offer letter, or after acceptance for Continuing UGs.",
+          "korean": "보통 제안 편지에, Continuing UGs는 수락 후."
+        }
+      },
+      {
+        "question": {
+          "english": "Can I swap my assigned room?",
+          "korean": "배정된 방을 바꿀 수 있나요?"
+        },
+        "answer": {
+          "english": "Yes, with another resident via two-way swapping.",
+          "korean": "네, 다른 거주자와 양방향 교환으로."
+        }
+      },
+      {
+        "question": {
+          "english": "What if I can’t check in within 7 days?",
+          "korean": "7일 안에 체크인 못 하면 어떻게 하나요?"
+        },
+        "answer": {
+          "english": "Email ughousing@ust.hk with reasons, or the offer is recovered.",
+          "korean": "ughousing@ust.hk에 이유를 메일로 보내야, 아니면 제안 회수."
+        }
+      },
+      {
+        "question": {
+          "english": "What if I can’t pay the hall fee on time?",
+          "korean": "기숙사비를 제때 못 내면 어떻게 하나요?"
+        },
+        "answer": {
+          "english": "Contact SFAO before the deadline for help.",
+          "korean": "기한 전에 SFAO에 도움을 요청."
+        }
+      }
+    ]
+  }

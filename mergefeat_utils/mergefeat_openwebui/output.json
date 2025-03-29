@@ -1,0 +1,171 @@
+{
+  "metadata": {
+    "model": "SHRLO",
+    "generated_at": "2025-03-28T01:40:24.665749",
+    "total_questions": 7,
+    "success_rate": "100.0%"
+  },
+  "results": [
+    {
+      "id": 1,
+      "original_question": {
+        "english": "How is the hall allocation ratio set?",
+        "korean": "기숙사 할당 비율은 어떻게 정해지나요?"
+      },
+      "original_answer": {
+        "english": "Based on the past 3 years’ hall offer results.",
+        "korean": "지난 3년간 기숙사 제안 결과에 따라."
+      },
+      "responses": {
+        "korean": "### Introduction\n기숙사 할당 비율은 학생들이 기숙사에 배정되는 방식을 결정하는 중요한 요소입니다. HKUST의 기숙사 할당 정책에 따르면, 기숙사 할당 비율은 여러 기준에 따라 정해집니다.\n\n### Details\n기숙사 할당 비율은 크게 두 가지 방식으로 나뉩니다: **우선 주택**과 **포인트 시스템**입니다. 이 두 가지 방식은 학생의 지역적 배경(로컬 학생과 비로컬 학생)과 관련된 필요를 고려하여 설계되었습니다.\n\n1. **우선 주택**: \n   - 특정 조건을 충족하는 학생들에게 보장된 주거 공간을 제공합니다. 예를 들어, HKUST에서 연구 대학원(RPg) 과정의 첫 2년 동안 재학 중인 학생들은 보장된 거주 공간을 받을 수 있습니다.\n\n2. **포인트 시스템**:\n   - 포인트 시스템은 로컬 학생과 비로컬 학생/홍콩에 홈베이스가 없는 로컬 학생을 위한 두 개의 풀로 나뉘어져 있습니다. 이 시스템에서는 최근 3년간의 기숙사 제공 결과의 평균 비율을 기반으로 할당됩니다.\n   - 학생들은 다음의 기준에 따라 포인트를 받습니다:\n     - **캠퍼스까지의 이동 시간**: 최대 60점 (로컬 학생)\n     - **캠퍼스 생활에 대한 리더십 및 기여도**: 최대 25점 (로컬 학생), 최대 50점 (비로컬/홈베이스 없는 학생)\n     - **우수한 성과**: 최대 10점 (로컬 학생), 최대 30점 (비로컬/홈베이스 없는 학생)\n     - **이전 연도에 기숙사 제공을 받지 않은 경우**: 최대 5점 (로컬 학생), 최대 20점 (비로컬/홈베이스 없는 학생)\n   - **총점**: 로컬 및 비로컬 학생 모두 최대 100점입니다.\n\n   *예를 들어, 참조 문서에서는 다음과 같이 명시합니다: \"Hall places not allocated in the above means will be divided into 2 pools for (i) Local and (ii) Non-Local students/Local students with No-Home-Base in Hong Kong respectively, based on an average ratio of hall offer results of the recent 3 years.\"*\n\n3. **추가 정보**:\n   - 비로컬 학생의 경우, 포인트 시스템에서 할당되지 않은 25%는 무작위 추첨을 위해 예약되어 있습니다.\n\n### Conclusion\n기숙사 할당 비율은 HKUST의 정책에 따라 학생의 지역적 배경과 기여도에 기반하여 결정됩니다. 포인트 시스템과 우선 주택 방식은 학생들이 기숙사에 배정받을 수 있는 기회를 공정하게 분배하는 데 중점을 두고 있습니다. 기숙사 할당에 대한 추가적인 세부 사항은 HKUST의 공식 웹사이트에서 확인할 수 있습니다.",
+        "english": "### Introduction\nThe hall allocation ratio at HKUST is determined through a structured process that categorizes applicants into two distinct pools: Local students and Non-Local students/Local students with No-Home-Base in Hong Kong. This allocation is based on historical data and aims to address the housing needs of different student demographics.\n\n### Details of Hall Allocation Ratio\n1. **Division into Pools**: The hall places not allocated through other means are divided into two pools:\n   - **Local Students**\n   - **Non-Local Students/Local Students with No-Home-Base in Hong Kong**\n\n   This division is based on an average ratio of hall offer results from the recent three years. \n\n2. **Allocation Criteria**: Eligible students receive hall points according to specific criteria, which are prioritized based on their status as Local or Non-Local/No-Home-Base students. The criteria include:\n   - **Travelling Time to Campus**: Local students can earn up to 60 points.\n   - **Leadership and Contribution to Campus Life**: Local students can earn up to 25 points, while Non-Local students can earn up to 50 points.\n   - **Outstanding Achievements**: Local students can earn up to 10 points, whereas Non-Local students can earn up to 30 points.\n   - **No Hall Offer in Previous Year/Years**: Local students can earn 5 points, and Non-Local students can earn up to 20 points.\n\n   The total maximum points for both Local and Non-Local/No-Home-Base students is 100.\n\n   For example, the reference states: \"Hall places not allocated in the above means will be divided into 2 pools for (i) **Local** and (ii) **Non-Local students/Local students with No-Home-Base in Hong Kong** respectively, based on an average ratio of hall offer results of the recent 3 years.\"\n\n3. **Random Lottery**: It is also noted that approximately 25% of the Non-Local/No-Home-Base quota will be reserved for a random lottery for those who do not receive housing offers via the hall points. This is to ensure that all eligible third-year or above Non-Local/No-Home-Base applicants have a chance to secure housing.\n\n### Conclusion\nThe hall allocation ratio is carefully structured to ensure fair distribution of housing among Local and Non-Local students, taking into account various criteria that reflect their needs and contributions. The use of historical data in setting these ratios aims to balance the supply and demand for student housing effectively."
+      },
+      "timestamps": {
+        "korean": "2025-03-28T01:36:08.405334",
+        "english": "2025-03-28T01:36:32.098809"
+      },
+      "attempts": {
+        "korean": 1,
+        "english": 1
+      }
+    },
+    {
+      "id": 2,
+      "original_question": {
+        "english": "How do I receive a hall offer?",
+        "korean": "기숙사 제안을 어떻게 받나요?"
+      },
+      "original_answer": {
+        "english": "Via email to your HKUST account.",
+        "korean": "HKUST 이메일로."
+      },
+      "responses": {
+        "korean": "### 소개\n기숙사 제안을 받는 과정은 HKUST의 기숙사 신청 절차에 따라 이루어집니다. 이 과정은 신청서 제출, 결과 발표, 그리고 제안 수락 단계로 나눌 수 있습니다.\n\n### 세부사항\n\n1. **신청서 제출**\n   - 기숙사 신청은 특정 기간 동안 온라인 시스템을 통해 이루어집니다. 예를 들어, \"Continuing UGs\"의 경우, 2025-26 학년도 기숙사 신청 기간은 2025년 3월 17일부터 4월 6일까지입니다. 이 기간 동안 신청서를 제출해야 합니다. 기한을 놓치면 신청이 불가능하므로 주의해야 합니다.\n\n2. **결과 발표**\n   - 기숙사 신청 결과는 일반적으로 5월 말에 발표되며, 신청자의 HKUST 이메일 주소로 결과가 전송됩니다. 결과는 성공적인 신청자의 기숙사 제안, 대기자 명단, 또는 거절 통지를 포함합니다. \"Hall Application Results (e.g. housing offers for successful applicants, notifications for waitlisted / rejected applicants, etc.) usually will be announced in late May and such result will be sent to applicants' HKUST email addresses and personal email address (if applicable)\"라는 내용이 있습니다.\n\n3. **제안 수락**\n   - 성공적인 신청자는 기숙사 제안 수락을 위한 지침이 포함된 Hall Offer Letter를 이메일로 받습니다. 이들은 온라인 시스템에서 제안 수락을 확인해야 하며, \"They are required to follow instructions to confirm their acceptance of hall offers online within 4 calendar days. Failure to complete the online acceptance by the deadline will result in cancellation of housing offer without further notification.\"라는 규정이 있습니다. 즉, 제안 수락을 위한 기한 내에 절차를 완료하지 않으면 제안이 취소됩니다.\n\n### 결론\n기숙사 제안을 받기 위해서는 정해진 신청 기간에 신청서를 제출하고, 결과 발표 후 이메일을 통해 제안을 확인한 다음, 정해진 기한 내에 제안을 수락해야 합니다. 기숙사 신청 및 제안 수락 과정은 매우 중요하므로, 모든 절차를 정확히 따르는 것이 필요합니다.",
+        "english": "### Introduction\nReceiving a hall offer at HKUST is an important step for students seeking accommodation. This process involves specific procedures that applicants must follow to ensure they receive and respond to their hall offers in a timely manner.\n\n### Details of Receiving a Hall Offer\nAccording to the provided reference documents, the process for receiving a hall offer is as follows:\n\n1. **Notification Method**: When a hall offer becomes available to you, it will be communicated via email directly to your HKUST account.\n   \n   For example, the reference states: \"When a hall offer becomes available to you, you will receive it via email to your HKUST account.\"\n\n2. **Response Requirement**: Once you receive the hall offer email, it is crucial to follow the instructions included in the email. You must respond to the hall offer within the specified hall offer acceptance period.\n\n   The reference emphasizes: \"You should follow the instructions in the email to respond to the hall offer within the hall offer acceptance period.\"\n\n### Consequences of Missing the Acceptance Period\nIt is important to note that if you fail to respond within the acceptance period, there are significant consequences. The reference states:\n\n- \"Late response to the hall offer will result in hall offer recovery. In other words, you will no longer be eligible for hall residence within the same Residential Year.\"\n\n### Conclusion\nIn summary, you will receive a hall offer via email to your HKUST account. It is essential to respond promptly within the acceptance period to secure your accommodation, as late responses will lead to the loss of eligibility for hall residence. Be vigilant in checking your email and adhering to the instructions provided to ensure a smooth process."
+      },
+      "timestamps": {
+        "korean": "2025-03-28T01:36:51.687669",
+        "english": "2025-03-28T01:37:11.340599"
+      },
+      "attempts": {
+        "korean": 1,
+        "english": 1
+      }
+    },
+    {
+      "id": 3,
+      "original_question": {
+        "english": "What happens if I miss the hall offer deadline?",
+        "korean": "기숙사 제안 기한을 놓치면 어떻게 되나요?"
+      },
+      "original_answer": {
+        "english": "The offer is recovered.",
+        "korean": "제안이 회수된다."
+      },
+      "responses": {
+        "korean": "### 소개\n기숙사 제안 기한을 놓치는 경우의 결과에 대한 정보를 제공하기 위해, HKUST의 관련 문서에서 확인된 내용을 바탕으로 설명하겠습니다. 기숙사 제안 기한은 학생들이 기숙사에 입주하기 위해 중요한 단계입니다.\n\n### 기숙사 제안 기한의 중요성\n기숙사 제안 기한은 학생들이 기숙사에 대한 제안을 수락하고 필요한 절차를 완료해야 하는 기한을 의미합니다. 이 기한을 놓치면 여러 가지 부정적인 결과가 발생할 수 있습니다.\n\n### 기한을 놓쳤을 때의 결과\n1. **기숙사 제안의 취소**: 기숙사 제안 기한을 놓치면, 해당 기숙사 제안이 취소될 수 있습니다. 예를 들어, 문서에 명시된 바와 같이 \"Failure to settle the hall charges IN FULL by the payment due date will result in the cancellation of the hall offer without prior notification.\"라는 내용은 기숙사 요금이 기한 내에 완전히 지불되지 않을 경우 기숙사 제안이 취소될 수 있음을 나타냅니다.\n\n2. **추가 기회 없음**: 기숙사 신청은 매년 한 번만 진행되므로, 기한을 놓쳤을 경우 다음 기회를 기다려야 할 수 있습니다. 문서에서는 \"the admission exercise for each Residential Year is conducted ONCE ONLY\"라고 명시되어 있어, 기숙사 신청을 위한 기회가 제한적임을 강조합니다.\n\n3. **대체 숙소 찾기**: 기숙사 제안이 취소되면, 학생들은 대체 숙소를 스스로 찾아야 할 수도 있습니다. 이는 추가적인 시간과 노력이 필요하며, 불확실성을 증가시킬 수 있습니다.\n\n### 결론\n기숙사 제안 기한을 놓치는 것은 기숙사 제안의 취소로 이어질 수 있으며, 학생들은 대체 숙소를 찾아야 하는 상황에 처할 수 있습니다. 따라서 기숙사 제안과 관련된 기한을 철저히 준수하는 것이 중요합니다. 기숙사 이용에 대한 모든 절차와 기한을 잘 숙지하고, 필요한 경우 미리 준비하는 것이 좋습니다.",
+        "english": "### Introduction\nMissing the hall offer deadline can have significant consequences for students at HKUST. The specific implications depend on the nature of the deadline that has been missed.\n\n### Details\n1. **Payment Deadline**: If you miss the payment deadline for the hall fees, the consequences are clearly stated. For example, the reference states: \"Failure of hall fee settlement by the deadline will result in access limitation to the hall building and hall offer recovery without prior notice.\" This means that not only will you lose access to the hall, but your hall offer may also be rescinded without any warning.\n\n2. **Hall Offer Acceptance Deadline**: Although the reference documents do not explicitly outline the consequences of missing the hall offer acceptance deadline, it can be inferred that failing to accept the offer within the stipulated period may lead to the forfeiture of your hall placement for that academic year. Typically, such deadlines are set to ensure that housing can be allocated to other students if you choose not to accept your offer.\n\n3. **Submission of Required Documents**: For those applying for hall offer extensions, missing the document submission deadline could result in disqualification from the extension process. The reference states: \"Late submissions will NOT be accepted.\" Therefore, if you do not submit the necessary documents on time, you will not be able to extend your residential period.\n\n### Conclusion\nIn summary, missing the hall offer deadline can lead to serious repercussions, including loss of access to your hall, rescinding of your hall offer, and disqualification from extending your stay. It is crucial to adhere to all deadlines related to hall offers and payments to maintain your housing status at HKUST. Always ensure that you keep track of these important dates to avoid any negative outcomes."
+      },
+      "timestamps": {
+        "korean": "2025-03-28T01:37:33.167046",
+        "english": "2025-03-28T01:37:50.260043"
+      },
+      "attempts": {
+        "korean": 1,
+        "english": 1
+      }
+    },
+    {
+      "id": 4,
+      "original_question": {
+        "english": "When do I know my room assignment?",
+        "korean": "방 배정은 언제 알 수 있나요?"
+      },
+      "original_answer": {
+        "english": "Usually in the hall offer letter, or after acceptance for Continuing UGs.",
+        "korean": "보통 제안 편지에, Continuing UGs는 수락 후."
+      },
+      "responses": {
+        "korean": "### Introduction\n방 배정에 대한 정보는 HKUST의 주거 정책 및 일정에 따라 결정됩니다. 아래에서는 방 배정 결과를 알 수 있는 날짜와 관련된 정보를 정리하였습니다.\n\n### Details\n방 배정 결과는 주거 신청 기간과 관련된 특정 날짜에 발표됩니다. 예를 들어, 다음과 같은 주요 일정을 확인할 수 있습니다:\n\n- **Hall Offer Announcement (RY2025-26)**: 2025년 5월 26일에 방 배정 결과가 발표됩니다. 이 날짜에 학생들은 자신에게 배정된 방에 대한 정보를 받을 수 있습니다.\n  \n- **Accept Hall Offer Period (RY2025-26)**: 2025년 5월 27일부터 2025년 5월 29일까지는 방 배정을 수락할 수 있는 기간입니다. 이 기간 동안 학생들은 배정된 방을 수락할지 결정해야 합니다.\n\n또한, 다른 주거 신청 일정에서도 방 배정 결과를 확인할 수 있는 날짜가 있습니다:\n\n- **Hall Offer Announcement (Spring-only Offer)**: 2025년 12월 15일에 봄 학기 전용 방 배정 결과가 발표됩니다.\n\n### Conclusion\n따라서 방 배정 결과는 주거 신청 일정에 따라 다르며, RY2025-26의 경우 2025년 5월 26일에 발표됩니다. 이 정보를 바탕으로 학생들은 방 배정 결과를 확인하고 필요한 조치를 취할 수 있습니다.",
+        "english": "### Introduction\nAs a student at HKUST, understanding when you will know your room assignment is crucial for planning your accommodation. The information regarding room assignments is specified in the guidelines provided by the Student Housing and Residential Life Office.\n\n### Details\nYou will be informed of your room assignment typically through your hall offer letter. However, it is important to note the timing of this information:\n\n- For the major round of offers for Continuing UGs, the room assignment will be conducted **AFTER the hall offer acceptance period**. This means that you will not receive room-related information regarding your hall offer before or during the hall offer acceptance period.\n\nFor example, the reference states: \"the room assignment result will be released via email to your HKUST account. Please be reminded that the room assignment is on a random basis and no request on specific room/room type will be entertained.\"\n\n### Conclusion\nIn summary, you will know your room assignment after the hall offer acceptance period, and the results will be communicated via email to your HKUST account. It's essential to keep an eye on your email for this important information."
+      },
+      "timestamps": {
+        "korean": "2025-03-28T01:38:08.735889",
+        "english": "2025-03-28T01:38:27.605280"
+      },
+      "attempts": {
+        "korean": 1,
+        "english": 1
+      }
+    },
+    {
+      "id": 5,
+      "original_question": {
+        "english": "Can I swap my assigned room?",
+        "korean": "배정된 방을 바꿀 수 있나요?"
+      },
+      "original_answer": {
+        "english": "Yes, with another resident via two-way swapping.",
+        "korean": "네, 다른 거주자와 양방향 교환으로."
+      },
+      "responses": {
+        "korean": "## Introduction\n배정된 방을 변경하는 것은 가능합니다. 그러나 특정 절차와 조건을 충족해야 합니다. 아래에서 자세한 내용을 설명하겠습니다.\n\n## Details\n### 방 변경 절차\n1. **스와핑 신청**: 방을 변경하려는 두 명의 거주자는 온라인으로 \"Hall/ Room Swapping Application Form\"을 작성해야 합니다. 승인된 스와핑 사례는 이메일로 통보됩니다.\n   \n2. **스와핑 기회**: RPg(Research Postgraduate) 학생들은 최대 3회의 스와핑 기회를 가질 수 있습니다. 스와핑은 다음과 같은 세 가지 기간에 가능합니다:\n   - **1라운드**: 5월 말 (다음 주거 연도 제안을 수락한 후)\n   - **2라운드**: 8월 말에서 9월 초 (가을 학기 시작)\n   - **3라운드**: 1월 말 (봄 학기 시작)\n\n3. **필요 조건**:\n   - 동일 성별의 방 유형이어야 합니다.\n   - 모든 룸메이트의 동의를 받아야 합니다.\n   - 해당 거주지의 Residence Master 및 Hall Office의 승인을 받아야 합니다.\n\n### 스와핑 기간\n스와핑 기간은 일반적으로 체크인 기간 동안 진행됩니다. 자격이 있는 거주자에게 미리 공지되며, 신청 마감일을 준수해야 합니다. \"NO late submission is allowed.\"\n\n### 다른 홀 간 스와핑\n다른 홀에 있는 거주자와의 스와핑도 가능합니다.\n\n## 예시\n예를 들어, 문서에서는 다음과 같이 명시하고 있습니다: \"Two residents who wish to swap should complete the Hall/ Room Swapping Application Form online.\" 또한 \"the request is approved by the respective Residence Master(s) and Hall Office(s)\"라는 조건이 있습니다.\n\n## 결론\n따라서, 배정된 방을 변경할 수 있지만, 정해진 절차와 조건을 준수해야 합니다. 스와핑을 원하신다면, 위에서 언급한 절차를 따라 신청하시기 바랍니다.",
+        "english": "### Introduction\n\nAs a student at HKUST, you may be interested in the possibility of swapping your assigned room. The ability to do so is governed by specific guidelines and procedures outlined by the Student Housing and Residential Life Office (SHRLO).\n\n### Details\n\n1. **Eligibility for Swapping**: \n   - Room swapping is allowed, but it must be a two-way relocation involving at least two residents. According to the reference, \"swapping means two-way relocation, which must involve at least two residents.\"\n   - Only occupied bedspaces can be swapped. The reference clearly states, \"only swapping between occupied bedspaces is allowed.\"\n\n2. **Swapping Procedure**: \n   - You must submit a completed Room/Hall Swapping Application form, which includes signed consent from both applicants' respective roommates. The reference specifies, \"Applicants must submit a completed Room/Hall Swapping Application form, which includes signed consent from BOTH applicants' respective roommates.\"\n   - Incomplete forms will be treated as invalid, and the request will be withdrawn without prior notice.\n\n3. **Inter-Hall Swapping**: \n   - You are allowed to swap with residents in different halls, but you will be responsible for any hall fee differences if you swap to a room type with a higher rate. The reference states, \"Yes, inter-hall swapping is allowed. And you are responsible for the hall fee difference if you swap to a room type with higher rate.\"\n\n4. **Swapping Periods**: \n   - The hall and room swapping periods are conducted once per residential term (Fall term and Spring term). The specific details regarding these periods will be communicated via email and posted on the SHRLO website after the official check-in period.\n\n5. **Limitations**: \n   - You cannot swap with a student who has withdrawn from hall residence, as their bedspace will return to the central pool. The reference states, \"No, you cannot. The resident's bedspace will return to the central pool of bedspace after hall withdrawal.\"\n   - You cannot swap for only a part of your residential period; the swapping applies to the entire offered residential period.\n\n### Conclusion\n\nIn summary, you can swap your assigned room at HKUST, provided you follow the outlined procedures and meet the eligibility criteria. Ensure that you submit a complete application with all necessary consents from involved parties and be mindful of the swapping periods. For more information, you may refer to the SHRLO website or contact them directly for assistance."
+      },
+      "timestamps": {
+        "korean": "2025-03-28T01:38:49.192855",
+        "english": "2025-03-28T01:39:07.308440"
+      },
+      "attempts": {
+        "korean": 1,
+        "english": 1
+      }
+    },
+    {
+      "id": 6,
+      "original_question": {
+        "english": "What if I can’t check in within 7 days?",
+        "korean": "7일 안에 체크인 못 하면 어떻게 하나요?"
+      },
+      "original_answer": {
+        "english": "Email ughousing@ust.hk with reasons, or the offer is recovered.",
+        "korean": "ughousing@ust.hk에 이유를 메일로 보내야, 아니면 제안 회수."
+      },
+      "responses": {
+        "korean": "### Introduction\nIf you are unable to check in within 7 days from the offered check-in date for your hall accommodation at HKUST, it is important to follow the proper procedures to address this situation.\n\n### Details\nAccording to the guidelines provided by the Student Housing and Residential Life Office (SHRLO), you should take the following steps:\n\n1. **Email Notification**: You must email [ughousing@ust.hk](mailto:ughousing@ust.hk) as soon as you realize that you will not be able to check in within the specified timeframe. In your email, you should include the reasons for your inability to check in.\n\n2. **Possible Documentation**: The SHRLO may request you to submit relevant proof to support your request for a late check-in.\n\n3. **Consequences of Inaction**: If you do not raise your late check-in request in advance, your hall offer will be recovered. However, you will still be responsible for any hall fees incurred during this period.\n\nFor example, the reference states: “If you do not raise the late check-in request in advance, your hall offer will be recovered subsequently, but you are still responsible for the hall fee incurred.”\n\n### Conclusion\nIn summary, if you are unable to check in within 7 days, it is crucial to promptly inform the SHRLO via email, provide necessary documentation if requested, and be aware of the potential financial implications if you do not take action. Following these steps will help you manage your situation effectively.",
+        "english": "### Introduction\nIf you find yourself unable to check in to your assigned hall within 7 days from the offered check-in date, it is important to take immediate action to address this situation appropriately.\n\n### Details\nAccording to the provided reference documents, the necessary steps you should follow are as follows:\n\n1. **Email Notification**: You should email the Student Housing and Residential Life Office (SHRLO) at [ughousing@ust.hk](mailto:ughousing@ust.hk) as soon as you know that you are unable to check in. In your email, you must provide the reasons for your inability to check in.\n\n2. **Submission of Proof**: The SHRLO may request you to submit relative proof in support of your request. This could include documentation that justifies your late check-in.\n\n3. **Consequences of Not Reporting**: If you do not raise the late check-in request in advance, your hall offer will be recovered subsequently. However, it is important to note that you will still be responsible for the hall fee incurred during this period.\n\nFor example, the reference states: \"If you do not raise the late check-in request in advance, your hall offer will be recovered subsequently, but you are still responsible for the hall fee incurred.\"\n\n### Conclusion\nIn summary, if you cannot check in within 7 days, promptly notify the SHRLO via email with your reasons and be prepared to provide any necessary documentation. Failing to do so may result in the loss of your hall offer while still holding you accountable for any incurred hall fees. It is crucial to act quickly to mitigate any negative consequences."
+      },
+      "timestamps": {
+        "korean": "2025-03-28T01:39:26.662230",
+        "english": "2025-03-28T01:39:44.868088"
+      },
+      "attempts": {
+        "korean": 1,
+        "english": 1
+      }
+    },
+    {
+      "id": 7,
+      "original_question": {
+        "english": "What if I can’t pay the hall fee on time?",
+        "korean": "기숙사비를 제때 못 내면 어떻게 하나요?"
+      },
+      "original_answer": {
+        "english": "Contact SFAO before the deadline for help.",
+        "korean": "기한 전에 SFAO에 도움을 요청."
+      },
+      "responses": {
+        "korean": "### 소개\n기숙사비를 제때 납부하지 못할 경우의 절차와 결과에 대해 설명하겠습니다. HKUST의 기숙사 및 유틸리티 요금에 대한 정책을 바탕으로 정보를 제공하겠습니다.\n\n### 세부 사항\n1. **유틸리티 요금 미납 시**: GGT(지구촌 대학원 타워) 거주자는 매달 유틸리티 요금 청구서를 정해진 기한 내에 납부해야 합니다. 만약 청구서가 중간까지 납부되지 않으면, 해당 청구서는 학생 정보 시스템(SIS)에 미납 요금으로 게시됩니다. \n   - **예를 들어, 참조 문서에 따르면**: \"If the invoice is not settled by the middle of each month, the invoice will be posted to the Student Information System (SIS) as an outstanding charge under the respective resident(s).\"\n\n2. **숙소 요금 미납 시**: 숙소 요금 또한 매달 정해진 기한 내에 납부해야 하며, 기한 내에 전액 납부하지 않을 경우 기숙사 제공이 취소될 수 있습니다.\n   - **예를 들어, 참조 문서에 따르면**: \"Failure to settle the hall charges IN FULL by the payment due date will result in the cancellation of the hall offer without prior notification.\"\n\n### 예시\n- 유틸리티 요금 청구서를 제때 납부하지 않으면, 해당 요금이 SIS에 미납으로 기록되어, 학생의 계정에 영향을 미칠 수 있습니다.\n- 숙소 요금의 경우, 기한 내에 납부하지 않을 경우 기숙사 제공이 취소되며, 이는 사전 통보 없이 이루어질 수 있습니다.\n\n### 결론\n기숙사비 및 유틸리티 요금을 제때 납부하지 않을 경우, 미납 요금이 SIS에 기록되며, 숙소 제공이 취소될 수 있습니다. 따라서 기한 내에 요금을 납부하는 것이 중요합니다. 기숙사 및 유틸리티 요금에 대한 추가 정보가 필요할 경우, HKUST 관련 웹사이트를 방문하거나 해당 이메일 주소로 문의하시기 바랍니다.",
+        "english": "### Introduction\nIf you are unable to pay the hall fee on time at HKUST, it is crucial to understand the implications and the options available to you. The university has set specific deadlines for hall fee payments, and failure to meet these deadlines can lead to serious consequences.\n\n### Details\n1. **Payment Deadline**: The hall fee must be paid in full by the specified deadline. For example, for the residential year 2024-25, the payment deadline is **5 September 2024**. Failure to settle the hall fee by this date will result in \"access limitation to the hall building and hall offer recovery without prior notice.\" \n\n2. **Consequences of Late Payment**: If you do not pay the hall fee in full by the deadline, your hall offer may be canceled without prior notification. This means you could lose your accommodation, which can significantly impact your studies and living arrangements.\n\n3. **Financial Hardship Assistance**: If you are experiencing financial hardship or require extra time to settle the fees, you are encouraged to reach out to the **Scholarships and Financial Aid Office** directly for assistance. The reference states: \"If you have any financial hardship or require extra time to settle the fees, please reach the [Scholarships and Financial Aid Office](https://sfao.hkust.edu.hk/page.php?i=51) directly for assistance.\"\n\n4. **Payment Deferral**: You may also apply for a deferment of the payment of hall charges. This can be initiated through the Scholarships and Financial Aid Office. The relevant link for payment deferral is: [Payment Deferral](https://sfao.hkust.edu.hk/page.php?i=24).\n\n### Conclusion\nIn summary, if you cannot pay the hall fee on time, it is essential to act promptly. You should contact the Scholarships and Financial Aid Office for assistance with financial difficulties or to discuss the possibility of deferring your payment. Remember that timely communication is key to avoiding the cancellation of your hall offer. Always keep a copy of your payment record for verification in case of any discrepancies in your Student Information System (SIS) account."
+      },
+      "timestamps": {
+        "korean": "2025-03-28T01:40:05.965404",
+        "english": "2025-03-28T01:40:24.164320"
+      },
+      "attempts": {
+        "korean": 1,
+        "english": 1
+      }
+    }
+  ]
+}
