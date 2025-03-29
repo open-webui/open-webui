@@ -908,7 +908,7 @@
 							window.open(googleFormUrl, "_blank"); // Opens in a new tab
 						}}
 						>
-						<div class="self-center font-semibold">{i18n.t('Rate Your Experience')}</div>
+						<div class="self-center font-semibold">{$i18n.t('Rate Your Experience')}</div>
 					</button>	
 					</CreditMenu>
 					<UserMenu
