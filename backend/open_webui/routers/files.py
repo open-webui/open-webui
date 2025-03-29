@@ -5,7 +5,16 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status, Query
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+    Query,
+)
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
@@ -38,7 +47,7 @@ def upload_file(
     file: UploadFile = File(...),
     user=Depends(get_verified_user),
     file_metadata: dict = {},
-    ingest_file: bool = Query(True)
+    process: bool = Query(True),
 ):
     log.info(f"file.content_type: {file.content_type}")
     try:
@@ -67,7 +76,7 @@ def upload_file(
                 }
             ),
         )
-        if ingest_file:
+        if process:
             try:
                 if file.content_type in [
                     "audio/mpeg",
@@ -228,7 +237,9 @@ async def update_file_data_content_by_id(
 
 
 @router.get("/{id}/content")
-async def get_file_content_by_id(id: str, user=Depends(get_verified_user), as_attachment: bool = Query(False)):
+async def get_file_content_by_id(
+    id: str, user=Depends(get_verified_user), attachment: bool = Query(False)
+):
     file = Files.get_file_by_id(id)
     if file and (file.user_id == user.id or user.role == "admin"):
         try:
@@ -246,12 +257,14 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user), as_at
                 encoded_filename = quote(filename)
                 headers = {}
 
-                if as_attachment:
+                if attachment:
                     headers["Content-Disposition"] = (
                         f"attachment; filename*=UTF-8''{encoded_filename}"
                     )
                 else:
-                    if content_type == "application/pdf" or filename.lower().endswith(".pdf"):
+                    if content_type == "application/pdf" or filename.lower().endswith(
+                        ".pdf"
+                    ):
                         headers["Content-Disposition"] = (
                             f"inline; filename*=UTF-8''{encoded_filename}"
                         )
