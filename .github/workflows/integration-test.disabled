@@ -159,11 +159,11 @@ jobs:
           GLOBAL_LOG_LEVEL: debug
         run: |
           cd backend
-          uvicorn open_webui.main:app --port "8080" --forwarded-allow-ips '*' &
+          uvicorn open_webui.main:app --port "8081" --forwarded-allow-ips '*' &
           UVICORN_PID=$!
           # Wait up to 40 seconds for the server to start
           for i in {1..40}; do
-              curl -s http://localhost:8080/api/config > /dev/null && break
+              curl -s http://localhost:8081/api/config > /dev/null && break
               sleep 1
               if [ $i -eq 40 ]; then
                   echo "Server failed to start"

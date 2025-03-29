@@ -33,7 +33,7 @@ def main(
 @app.command()
 def serve(
     host: str = "0.0.0.0",
-    port: int = 8080,
+    port: int = 8081,
 ):
     os.environ["FROM_INIT_PY"] = "true"
     if os.getenv("WEBUI_SECRET_KEY") is None:
@@ -80,7 +80,7 @@ def serve(
 @app.command()
 def dev(
     host: str = "0.0.0.0",
-    port: int = 8080,
+    port: int = 8081,
     reload: bool = True,
 ):
     uvicorn.run(

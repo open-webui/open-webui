@@ -17,7 +17,7 @@ spec:
       - name: open-webui
         image: ghcr.io/open-webui/open-webui:main
         ports:
-        - containerPort: 8080
+        - containerPort: 8081
         resources:
           requests:
             cpu: "500m"

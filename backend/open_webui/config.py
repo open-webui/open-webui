@@ -1079,7 +1079,7 @@ def validate_cors_origin(origin):
 # For production, you should only need one host as
 # fastapi serves the svelte-kit built frontend and backend from the same host and port.
 # To test CORS_ALLOW_ORIGIN locally, you can set something like
-# CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
+# CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8081
 # in your .env file depending on your frontend port, 5173 in this case.
 CORS_ALLOW_ORIGIN = os.environ.get("CORS_ALLOW_ORIGIN", "*").split(";")
 
