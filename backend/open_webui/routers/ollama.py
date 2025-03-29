@@ -465,18 +465,27 @@ async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
     if request.app.state.config.ENABLE_OLLAMA_API:
         if url_idx is None:
             # returns lowest version
-            request_tasks = [
-                send_get_request(
-                    f"{url}/api/version",
+            request_tasks = []
+
+            for idx, url in enumerate(request.app.state.config.OLLAMA_BASE_URLS):
+                api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+                    str(idx),
                     request.app.state.config.OLLAMA_API_CONFIGS.get(
-                        str(idx),
-                        request.app.state.config.OLLAMA_API_CONFIGS.get(
-                            url, {}
-                        ),  # Legacy support
-                    ).get("key", None),
+                        url, {}
+                    ),  # Legacy support
                 )
-                for idx, url in enumerate(request.app.state.config.OLLAMA_BASE_URLS)
-            ]
+
+                enable = api_config.get("enable", True)
+                key = api_config.get("key", None)
+
+                if enable:
+                    request_tasks.append(
+                        send_get_request(
+                            f"{url}/api/version",
+                            key,
+                        )
+                    )
+
             responses = await asyncio.gather(*request_tasks)
             responses = list(filter(lambda x: x is not None, responses))
 
