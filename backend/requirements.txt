@@ -1,4 +1,5 @@
 fastapi==0.115.7
+fastapi-mcp>=0.1.4
 uvicorn[standard]==0.34.0
 pydantic==2.10.6
 python-multipart==0.0.18

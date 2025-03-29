@@ -39,6 +39,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from fastapi_mcp import add_mcp_server
+
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
@@ -436,6 +438,23 @@ app.state.config = AppConfig(
 
 app.state.WEBUI_NAME = WEBUI_NAME
 app.state.LICENSE_METADATA = None
+
+########################################
+#
+# MCP SERVER FASTAPI
+#
+########################################
+
+mcp_server = add_mcp_server(
+    app,                                    # Your FastAPI app
+    mount_path="/mcp",                      # Where to mount the MCP server
+    name="Open-WebUI MCP Server",                      # Name for the MCP server
+    describe_all_responses=True,            # False by default. Include all possible response schemas in tool descriptions, instead of just the successful response.
+    describe_full_response_schema=True      # False by default. Include full JSON schema in tool descriptions, instead of just an LLM-friendly response example.
+)
+
+# TOOLS 
+
 
 
 ########################################
