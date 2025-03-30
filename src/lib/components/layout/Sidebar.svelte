@@ -57,6 +57,11 @@
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
+	import Assistans from '../icons/Assistans.svelte';
+	import Knowledge from '../icons/Knowledge.svelte';
+	import Prompts from '../icons/Prompts.svelte';
+	import PromptMenu from '../workspace/Prompts/PromptMenu.svelte';
+	import ChevronDown from '../icons/ChevronDown.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -465,7 +470,7 @@
 		? 'md:relative w-[260px] max-w-[260px]'
 		: '-translate-x-[260px] w-[0px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
+		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-gray-50 text-gray-900 dark:bg-customGray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
         "
 	data-state={$showSidebar}
 >
@@ -474,34 +479,119 @@
 			? ''
 			: 'invisible'}"
 	>
-		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
+		<div class="flex align-center justify-between items-center px-2.5 pb-2 border-b border-[#313337] mb-2.5">
+			<div class="flex flex-col font-primary">
+				{#if $user !== undefined}
+					<UserMenu
+						role={$user.role}
+						on:show={(e) => {
+							if (e.detail === 'archived-chat') {
+								showArchivedChats.set(true);
+							}
+						}}
+					>
+						<button
+							class=" flex items-center rounded-xl px-2.5 w-full transition"
+							on:click={() => {
+								showDropdown = !showDropdown;
+							}}
+						>
+							<div class=" self-center mr-3">
+								<img
+									src={$user.profile_image_url}
+									class=" max-w-[30px] object-cover rounded-[6px]"
+									alt="User profile"
+								/>
+							</div>
+							<div class=" self-center font-medium text-[13px] mr-1">{$user.name}</div>
+							<ChevronDown className=" size-3" strokeWidth="2.5" />
+						</button>
+					</UserMenu>
+				{/if}
+			</div>
 			<button
-				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class=" cursor-pointer flex justify-center items-center w-[25px] h-[25px] rounded-lg hover:bg-gray-100 dark:hover:bg-[#1E1E1E] border border-transparent dark:hover:border-[#313337] transition"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
 			>
 				<div class=" m-auto self-center">
 					<svg
-						xmlns="http://www.w3.org/2000/svg"
+						width="13"
+						height="13"
+						viewBox="0 0 13 13"
 						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="2"
-						stroke="currentColor"
-						class="size-5"
+						xmlns="http://www.w3.org/2000/svg"
 					>
 						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
+							d="M8.12504 12.3228H4.87504C1.93379 12.3228 0.677124 11.0662 0.677124 8.12492V4.87492C0.677124 1.93367 1.93379 0.677002 4.87504 0.677002H8.12504C11.0663 0.677002 12.323 1.93367 12.323 4.87492V8.12492C12.323 11.0662 11.0663 12.3228 8.12504 12.3228ZM4.87504 1.4895C2.37796 1.4895 1.48962 2.37784 1.48962 4.87492V8.12492C1.48962 10.622 2.37796 11.5103 4.87504 11.5103H8.12504C10.6221 11.5103 11.5105 10.622 11.5105 8.12492V4.87492C11.5105 2.37784 10.6221 1.4895 8.12504 1.4895H4.87504Z"
+							fill="currentColor"
 						/>
+						<path
+							d="M4.875 12.3228C4.65292 12.3228 4.46875 12.1387 4.46875 11.9166V1.08325C4.46875 0.861169 4.65292 0.677002 4.875 0.677002C5.09708 0.677002 5.28125 0.861169 5.28125 1.08325V11.9166C5.28125 12.1387 5.09708 12.3228 4.875 12.3228Z"
+							fill="currentColor"
+						/>
+						<path
+							d="M7.33333 7.99992L6 6.66659L7.33333 5.33325"
+							stroke="currentColor"
+							stroke-width="0.5"
+						/>
+						<path d="M10 6.6665H6" stroke="currentColor" stroke-width="0.5" />
 					</svg>
 				</div>
 			</button>
+		</div>
 
+		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
+			{#if $temporaryChatEnabled}
+				<div class="absolute z-40 w-full h-full flex justify-center"></div>
+			{/if}
+
+			<SearchInput
+				bind:value={search}
+				on:input={searchDebounceHandler}
+				placeholder={$i18n.t('Search')}
+			/>
+		</div>
+
+		<div class="px-2">
+			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
+				<div class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-500 hover:text-gray-700 dark:hover:text-white  dark:hover:bg-[#1E1E1E] transition">
+					<Assistans/>
+					<a
+						class="min-w-fit text-xs"
+						href="/workspace/models">{$i18n.t('Models')}</a
+					>
+				</div>
+			{/if}
+
+			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
+				<div class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-500 hover:text-gray-700 dark:hover:text-white dark:hover:bg-[#1E1E1E] transition">
+					<Knowledge/>
+					<a
+						class="min-w-fit text-xs"
+						href="/workspace/knowledge"
+					>
+						{$i18n.t('Knowledge')}
+					</a>
+				</div>
+			{/if}
+
+			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
+				<div class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-500 hover:text-gray-700 dark:hover:text-white dark:hover:bg-[#1E1E1E] transition">
+					<Prompts/>
+					<a
+						class="min-w-fit text-xs"
+						href="/workspace/prompts">{$i18n.t('Prompts')}</a
+					>
+				</div>
+			{/if}
+		</div>
+
+		<div class="pl-[14px] pr-[11px] my-2 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 			<a
 				id="sidebar-new-chat-button"
-				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
+				class="flex justify-center items-center flex-1 rounded-lg text-[10px] px-2 py-1 border border-[#313337] h-[35px] text-right text-gray-850 dark:text-[#ACABAB] dark:hover:text-white dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-[#181818] transition no-drag-region"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -516,75 +606,11 @@
 					}, 0);
 				}}
 			>
-				<div class="flex items-center">
-					<div class="self-center mx-1.5">
-						<img
-							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class=" size-5 -translate-x-1.5 rounded-full"
-							alt="logo"
-						/>
-					</div>
-					<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
-						{$i18n.t('New Chat')}
-					</div>
+				<div class="relative bottom-[0.5px] mr-[6px]">
+					<Plus className="w-[10px] h-[10px]" />
 				</div>
-
-				<div>
-					<PencilSquare className=" size-5" strokeWidth="2" />
-				</div>
+				{$i18n.t('New Chat')}
 			</a>
-		</div>
-
-		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
-			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-				<a
-					class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					href="/workspace"
-					on:click={() => {
-						selectedChatId = null;
-						chatId.set('');
-
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}}
-					draggable="false"
-				>
-					<div class="self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="size-[1.1rem]"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
-							/>
-						</svg>
-					</div>
-
-					<div class="flex self-center">
-						<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Workspace')}</div>
-					</div>
-				</a>
-			</div>
-		{/if}
-
-		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
-			{#if $temporaryChatEnabled}
-				<div class="absolute z-40 w-full h-full flex justify-center"></div>
-			{/if}
-
-			<SearchInput
-				bind:value={search}
-				on:input={searchDebounceHandler}
-				placeholder={$i18n.t('Search')}
-			/>
 		</div>
 
 		<div
@@ -852,37 +878,6 @@
 					</div>
 				</div>
 			</Folder>
-		</div>
-
-		<div class="px-2">
-			<div class="flex flex-col font-primary">
-				{#if $user !== undefined}
-					<UserMenu
-						role={$user.role}
-						on:show={(e) => {
-							if (e.detail === 'archived-chat') {
-								showArchivedChats.set(true);
-							}
-						}}
-					>
-						<button
-							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							on:click={() => {
-								showDropdown = !showDropdown;
-							}}
-						>
-							<div class=" self-center mr-3">
-								<img
-									src={$user.profile_image_url}
-									class=" max-w-[30px] object-cover rounded-full"
-									alt="User profile"
-								/>
-							</div>
-							<div class=" self-center font-medium">{$user.name}</div>
-						</button>
-					</UserMenu>
-				{/if}
-			</div>
 		</div>
 	</div>
 </div>
