@@ -1846,6 +1846,15 @@ async def process_chat_response(
                             )
                         except Exception as e:
                             log.debug(e)
+                            # Fallback to JSON parsing
+                            try:
+                                tool_function_params = json.loads(
+                                    tool_call.get("function", {}).get("arguments", "{}")
+                                )
+                            except Exception as e:
+                                log.debug(
+                                    f"Error parsing tool call arguments: {tool_call.get('function', {}).get('arguments', '{}')}"
+                                )
 
                         tool_result = None
 
