@@ -203,7 +203,7 @@ async def chat_completion_tools_handler(
                     }
 
                     if tool.get("direct", False):
-                        tool_output = await event_caller(
+                        tool_result = await event_caller(
                             {
                                 "type": "execute:tool",
                                 "data": {
@@ -217,15 +217,15 @@ async def chat_completion_tools_handler(
                         )
                     else:
                         tool_function = tool["callable"]
-                        tool_output = await tool_function(**tool_function_params)
+                        tool_result = await tool_function(**tool_function_params)
 
                 except Exception as e:
-                    tool_output = str(e)
+                    tool_result = str(e)
 
-                if isinstance(tool_output, dict):
-                    tool_output = json.dumps(tool_output, indent=4)
+                if isinstance(tool_result, dict) or isinstance(tool_result, list):
+                    tool_result = json.dumps(tool_result, indent=2)
 
-                if isinstance(tool_output, str):
+                if isinstance(tool_result, str):
                     tool = tools[tool_function_name]
                     tool_id = tool.get("toolkit_id", "")
                     if tool.get("citation", False) or tool.get("direct", False):
@@ -239,7 +239,7 @@ async def chat_completion_tools_handler(
                                         else f"{tool_function_name}"
                                     ),
                                 },
-                                "document": [tool_output],
+                                "document": [tool_result],
                                 "metadata": [
                                     {
                                         "source": (
@@ -255,7 +255,7 @@ async def chat_completion_tools_handler(
                         sources.append(
                             {
                                 "source": {},
-                                "document": [tool_output],
+                                "document": [tool_result],
                                 "metadata": [
                                     {
                                         "source": (
@@ -1891,8 +1891,10 @@ async def process_chat_response(
                             except Exception as e:
                                 tool_result = str(e)
 
-                        if isinstance(tool_result, dict):
-                            tool_result = json.dumps(tool_result)
+                        if isinstance(tool_result, dict) or isinstance(
+                            tool_result, list
+                        ):
+                            tool_result = json.dumps(tool_result, indent=2)
 
                         results.append(
                             {
