@@ -28,6 +28,8 @@
 			{@html html}
 		{:else if token.text.includes(`<iframe src="${WEBUI_BASE_URL}/api/v1/files/`)}
 			{@html `${token.text}`}
+		{:else if token.text.includes(`<iframe ytEmbed`)}
+			{@html `${token.text.replace(`<iframe ytEmbed`, `<iframe`)}`}
 		{:else if token.text.includes(`<source_id`)}
 			<Source {id} {token} onClick={onSourceClick} />
 		{:else}

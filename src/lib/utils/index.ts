@@ -30,6 +30,14 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 		{ regex: /{{char}}/gi, replacement: char },
 		{ regex: /{{user}}/gi, replacement: user },
 		{
+			regex: /{{(VIDEO_YOUTUBE_ID_[^\s{}]+)}}/gi,
+			replacement: (_, fullMatch) => {
+				const ytId = fullMatch.replace("VIDEO_YOUTUBE_ID_", ""); // Extract only the ID
+				const videoUrl = `https://www.youtube.com/embed/${ytId}`;
+				return `<iframe ytEmbed src="${videoUrl}" width="100%" height="500" frameborder="0" allowfullscreen></iframe>`;
+			}
+		},
+		{
 			regex: /{{VIDEO_FILE_ID_([a-f0-9-]+)}}/gi,
 			replacement: (_, fileId) =>
 				`<video src="${WEBUI_BASE_URL}/api/v1/files/${fileId}/content" controls></video>`
