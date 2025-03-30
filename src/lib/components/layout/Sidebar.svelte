@@ -760,6 +760,7 @@
 										className=""
 										id={chat.id}
 										title={chat.title}
+										pinned={true}
 										{shiftKey}
 										selected={selectedChatId === chat.id}
 										on:select={() => {

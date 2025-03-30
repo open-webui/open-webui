@@ -27,6 +27,15 @@
 	import { createMessagesList } from '$lib/utils';
 	import { downloadChatAsPDF } from '$lib/apis/utils';
 	import Download from '$lib/components/icons/Download.svelte';
+	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
+	import RenameIcon from '$lib/components/icons/RenameIcon.svelte';
+	import ExportIcon from '$lib/components/icons/ExportIcon.svelte';
+	import ShareIcon from '$lib/components/icons/ShareIcon.svelte';
+	import ArchiveIcon from '$lib/components/icons/ArchiveIcon.svelte';
+	import CloneIcon from '$lib/components/icons/CloneIcon.svelte';
+	import PinChatIcon from '$lib/components/icons/PinChatIcon.svelte';
+	import UnpinChatIcon from '$lib/components/icons/UnpinChatIcon.svelte';
+
 
 	const i18n = getContext('i18n');
 
@@ -134,72 +143,72 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[200px] rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+			class="w-full max-w-[200px] rounded-lg border border-[#313337] px-1 py-1.5 z-50 bg-white dark:bg-[#1E1E1E] dark:text-white shadow-lg"
 			sideOffset={-2}
 			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex gap-2 items-center px-3 py-1.5 text-xs text-[#D0CECE] cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] dark:hover:text-white rounded-md"
 				on:click={() => {
 					pinHandler();
 				}}
 			>
 				{#if pinned}
-					<BookmarkSlash strokeWidth="2" />
+					<UnpinChatIcon/>
 					<div class="flex items-center">{$i18n.t('Unpin')}</div>
 				{:else}
-					<Bookmark strokeWidth="2" />
+					<PinChatIcon/>
 					<div class="flex items-center">{$i18n.t('Pin')}</div>
 				{/if}
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex gap-2 items-center px-3 py-1.5 text-xs text-[#D0CECE]  cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] dark:hover:text-white rounded-md"
 				on:click={() => {
 					renameHandler();
 				}}
 			>
-				<Pencil strokeWidth="2" />
+				<RenameIcon/>
 				<div class="flex items-center">{$i18n.t('Rename')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex gap-2 items-center px-3 py-1.5 text-xs text-[#D0CECE]  cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] dark:hover:text-white rounded-md"
 				on:click={() => {
 					cloneChatHandler();
 				}}
 			>
-				<DocumentDuplicate strokeWidth="2" />
+				<CloneIcon/>
 				<div class="flex items-center">{$i18n.t('Clone')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex gap-2 items-center px-3 py-1.5 text-xs text-[#D0CECE]  cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] dark:hover:text-white rounded-md"
 				on:click={() => {
 					archiveChatHandler();
 				}}
 			>
-				<ArchiveBox strokeWidth="2" />
+				<ArchiveIcon />
 				<div class="flex items-center">{$i18n.t('Archive')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-md"
+				class="flex gap-2 items-center px-3 py-1.5 text-xs text-[#D0CECE]  cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] dark:hover:text-white  rounded-md"
 				on:click={() => {
 					shareHandler();
 				}}
 			>
-				<Share />
+				<ShareIcon />
 				<div class="flex items-center">{$i18n.t('Share')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Sub>
 				<DropdownMenu.SubTrigger
-					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+					class="flex gap-2 items-center px-3 py-2 text-xs text-[#D0CECE]  cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] dark:hover:text-white rounded-md"
 				>
-					<Download strokeWidth="2" />
+					<ExportIcon/>
 
 					<div class="flex items-center">{$i18n.t('Download')}</div>
 				</DropdownMenu.SubTrigger>
@@ -209,7 +218,7 @@
 					sideOffset={8}
 				>
 					<DropdownMenu.Item
-						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+						class="flex gap-2 items-center px-3 py-2 text-xs text-[#D0CECE]  cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] dark:hover:text-white rounded-md"
 						on:click={() => {
 							downloadJSONExport();
 						}}
@@ -217,7 +226,7 @@
 						<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
 					</DropdownMenu.Item>
 					<DropdownMenu.Item
-						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+						class="flex gap-2 items-center px-3 py-2 text-xs text-[#D0CECE]  cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] dark:hover:text-white rounded-md"
 						on:click={() => {
 							downloadTxt();
 						}}
@@ -226,7 +235,7 @@
 					</DropdownMenu.Item>
 
 					<DropdownMenu.Item
-						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+						class="flex gap-2 items-center px-3 py-2 text-xs text-[#D0CECE]  cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] dark:hover:text-white rounded-md"
 						on:click={() => {
 							downloadPdf();
 						}}
@@ -236,12 +245,12 @@
 				</DropdownMenu.SubContent>
 			</DropdownMenu.Sub>
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex  gap-2  items-center px-3 py-1.5 text-xs text-[#D0CECE]  cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] dark:hover:text-white rounded-md"
 				on:click={() => {
 					deleteHandler();
 				}}
 			>
-				<GarbageBin strokeWidth="2" />
+				<DeleteIcon/>
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</DropdownMenu.Item>
 

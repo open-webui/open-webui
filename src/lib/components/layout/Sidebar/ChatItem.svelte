@@ -38,11 +38,13 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Document from '$lib/components/icons/Document.svelte';
+	import PinnedFilledIcon from '$lib/components/icons/PinnedFilledIcon.svelte';
 
 	export let className = '';
 
 	export let id;
 	export let title;
+	export let pinned;
 
 	export let selected = false;
 	export let shiftKey = false;
@@ -219,7 +221,7 @@
 		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
 			<div class="flex items-center gap-1">
 				<Document className=" size-[18px]" strokeWidth="2" />
-				<div class=" text-xs text-white line-clamp-1">
+				<div class=" text-white line-clamp-1">
 					{title}
 				</div>
 			</div>
@@ -232,26 +234,26 @@
 		<div
 			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-200 dark:bg-gray-900'
+				? 'bg-gray-200 dark:bg-[#1E1E1E]'
 				: selected
-					? 'bg-gray-100 dark:bg-gray-950'
-					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					? 'bg-gray-100 dark:bg-[#1E1E1E]'
+					: 'group-hover:bg-gray-100 dark:group-hover:bg-[#1E1E1E]'}  whitespace-nowrap text-ellipsis"
 		>
 			<input
 				use:focusEdit
 				bind:value={chatTitle}
 				id="chat-title-input-{id}"
-				class=" bg-transparent w-full outline-none mr-10"
+				class=" bg-transparent w-full outline-none mr-10 text-xs"
 			/>
 		</div>
 	{:else}
 		<a
-			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
+			class=" w-full flex text-[#D0CECE] justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
 			confirmEdit
-				? 'bg-gray-200 dark:bg-gray-900'
+				? 'bg-gray-200 dark:bg-[#1E1E1E]'
 				: selected
-					? 'bg-gray-100 dark:bg-gray-950'
-					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					? 'bg-gray-100 dark:bg-[#1E1E1E]'
+					: ' group-hover:bg-gray-100 dark:group-hover:bg-[#1E1E1E]'}  whitespace-nowrap text-ellipsis"
 			href="/c/{id}"
 			on:click={() => {
 				dispatch('select');
@@ -273,8 +275,11 @@
 			on:focus={(e) => {}}
 			draggable="false"
 		>
-			<div class=" flex self-center flex-1 w-full">
-				<div class=" text-left self-center overflow-hidden w-full h-[20px]">
+			<div class=" flex items-center flex-1 w-full">
+				{#if pinned}
+					<PinnedFilledIcon/>
+				{/if}
+				<div class=" text-left text-[12px] ml-[5px] overflow-hidden w-full h-[20px]">
 					{title}
 				</div>
 			</div>
@@ -285,10 +290,10 @@
 	<div
 		class="
         {id === $chatId || confirmEdit
-			? 'from-gray-200 dark:from-gray-900'
+			? 'from-gray-200 dark:from-[#1E1E1E]'
 			: selected
-				? 'from-gray-100 dark:from-gray-950'
-				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
+				? 'from-gray-100 dark:from-[#1E1E1E]'
+				: 'invisible group-hover:visible from-gray-100 dark:from-[#1E1E1E]'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
 			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-gradient-to-l from-80%
