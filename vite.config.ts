@@ -24,6 +24,11 @@ export default defineConfig({
 	build: {
 		sourcemap: true
 	},
+	server: {
+		fs: {
+			allow: ['.']
+		}
+	},
 	worker: {
 		format: 'es'
 	}
