@@ -31,7 +31,7 @@
 			toolServers: servers
 		});
 
-		toolServers.set(await getToolServersData($settings?.toolServers ?? []));
+		toolServers.set(await getToolServersData($i18n, $settings?.toolServers ?? []));
 	};
 
 	onMount(async () => {
@@ -51,6 +51,9 @@
 		{#if servers !== null}
 			<div class="">
 				<div class="pr-1.5">
+					<!-- {$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
+						URL: 'server?.url'
+					})} -->
 					<div class="">
 						<div class="flex justify-between items-center mb-0.5">
 							<div class="font-medium">{$i18n.t('Manage Tool Servers')}</div>

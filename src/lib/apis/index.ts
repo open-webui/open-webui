@@ -2,6 +2,8 @@ import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload } from '$lib/utils';
 import { getOpenAIModelsDirect } from './openai';
 
+import { toast } from 'svelte-sonner';
+
 export const getModels = async (
 	token: string = '',
 	connections: object | null = null,
@@ -296,27 +298,33 @@ export const getToolServerData = async (token: string, url: string) => {
 	return data;
 };
 
-export const getToolServersData = async (servers: object[]) => {
-	return await Promise.all(
-		servers
-			.filter((server) => server?.config?.enable)
-			.map(async (server) => {
-				const data = await getToolServerData(server?.key, server?.url).catch((err) => {
-					console.error(err);
-					return null;
-				});
+export const getToolServersData = async (i18n, servers: object[]) => {
+	return (
+		await Promise.all(
+			servers
+				.filter((server) => server?.config?.enable)
+				.map(async (server) => {
+					const data = await getToolServerData(server?.key, server?.url).catch((err) => {
+						toast.error(
+							i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
+								URL: server?.url
+							})
+						);
+						return null;
+					});
 
-				if (data) {
-					const { openapi, info, specs } = data;
-					return {
-						url: server?.url,
-						openapi: openapi,
-						info: info,
-						specs: specs
-					};
-				}
-			})
-	);
+					if (data) {
+						const { openapi, info, specs } = data;
+						return {
+							url: server?.url,
+							openapi: openapi,
+							info: info,
+							specs: specs
+						};
+					}
+				})
+		)
+	).filter((server) => server);
 };
 
 export const executeToolServer = async (
