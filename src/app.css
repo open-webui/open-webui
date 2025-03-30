@@ -70,7 +70,8 @@ math {
 }
 
 .font-primary {
-	font-family: 'Archivo', sans-serif;
+	font-family: 'Inter', sans-serif;
+	/* font-family: 'Archivo', sans-serif; */
 }
 
 .drag-region {

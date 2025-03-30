@@ -13,4 +13,7 @@
 	pre {
 		white-space: pre-wrap;
 	}
+	body {
+		font-family: 'Inter', sans-serif;
+	}
 }
