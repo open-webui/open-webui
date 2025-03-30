@@ -48,7 +48,7 @@
 			</div>
 			<div class=" text-sm dark:text-gray-300 mb-1">
 				{#each $toolServers as toolServer}
-					<Collapsible chevron>
+					<Collapsible buttonClassName="w-full" chevron>
 						<div>
 							<div class="text-base font-medium dark:text-gray-100 text-gray-800">
 								{toolServer?.openapi?.info?.title} - v{toolServer?.openapi?.info?.version}
