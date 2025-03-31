@@ -1693,9 +1693,10 @@
 		history.messages[responseMessage.id] = responseMessage;
 	};
 
-	const stopResponse = () => {
+	const stopResponse = async () => {
 		if (taskId) {
-			const res = stopTask(localStorage.token, taskId).catch((error) => {
+			const res = await stopTask(localStorage.token, taskId).catch((error) => {
+				toast.error(`${error}`);
 				return null;
 			});
 
