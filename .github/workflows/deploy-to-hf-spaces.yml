@@ -1,11 +1,10 @@
 name: Deploy to HuggingFace Spaces
 
-on:
-  push:
-    branches:
-      - dev
-      - main
-  workflow_dispatch:
+on: workflow_dispatch
+  # push:
+  #   branches:
+  #     - dev
+  #     - main
 
 jobs:
   check-secret:

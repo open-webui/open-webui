@@ -1,13 +1,12 @@
 name: Create and publish Docker images with specific build args
 
-on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-      - dev
-    tags:
-      - v*
+on: workflow_dispatch
+  # push:
+  #   branches:
+  #     - main
+  #     - dev
+  #   tags:
+  #     - v*
 
 env:
   REGISTRY: ghcr.io
