@@ -126,8 +126,13 @@
 		const lastLineWords = lastLine.split(' ');
 		const lastWord = lastLineWords.pop();
 
-		lastLineWords.push(text);
-		lines.push(lastLineWords.join(' '));
+		if ($settings?.richTextInput ?? true) {
+			lastLineWords.push(`${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}`);
+			lines.push(lastLineWords.join(' '));
+		} else {
+			lastLineWords.push(text);
+			lines.push(lastLineWords.join(' '));
+		}
 
 		prompt = lines.join('\n');
 
