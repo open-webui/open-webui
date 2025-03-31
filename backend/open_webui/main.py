@@ -90,6 +90,8 @@ from open_webui.models.users import UserModel, Users
 
 from open_webui.config import (
     # Ollama
+    DOCS_URL,
+    DOCS_URL_FR,
     ENABLE_OLLAMA_API,
     OLLAMA_BASE_URLS,
     OLLAMA_API_CONFIGS,
@@ -130,6 +132,8 @@ from open_webui.config import (
     AUDIO_TTS_VOICE,
     AUDIO_TTS_AZURE_SPEECH_REGION,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+    SURVEY_URL,
+    SURVEY_URL_FR,
     WHISPER_MODEL,
     WHISPER_MODEL_AUTO_UPDATE,
     WHISPER_MODEL_DIR,
@@ -668,6 +672,28 @@ app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = (
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH
 )
 
+########################################
+#
+# Help
+#
+########################################
+app.state.config.DOCS_URL = DOCS_URL
+app.state.config.DOCS_URL_FR = DOCS_URL_FR
+app.state.config.SURVEY_URL = SURVEY_URL
+app.state.config.SURVEY_URL_FR = SURVEY_URL_FR
+
+
+########################################
+#
+# Jira Integration
+#
+########################################
+
+app.state.config.JIRA_API_URL = JIRA_API_URL
+app.state.config.JIRA_USERNAME = JIRA_USERNAME
+app.state.config.JIRA_API_TOKEN = JIRA_API_TOKEN
+app.state.config.JIRA_PROJECT_KEY = JIRA_PROJECT_KEY
+
 
 ########################################
 #
@@ -1034,6 +1060,10 @@ async def get_app_config(request: Request):
             {
                 "default_models": app.state.config.DEFAULT_MODELS,
                 "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
+                "docs_url": app.state.config.DOCS_URL,
+                "docs_url_fr": app.state.config.DOCS_URL_FR,
+                "survey_url": app.state.config.SURVEY_URL,
+                "survey_url_fr": app.state.config.SURVEY_URL_FR,
                 "audio": {
                     "tts": {
                         "engine": app.state.config.TTS_ENGINE,

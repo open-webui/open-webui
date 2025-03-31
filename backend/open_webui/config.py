@@ -2243,6 +2243,30 @@ LDAP_CIPHERS = PersistentConfig(
 )
 
 ####################################
+# Help
+####################################
+DOCS_URL = PersistentConfig(
+    "DOCS_URL",
+    "docs.url",
+    os.environ.get("DOCS_URL", ""),
+)
+DOCS_URL_FR = PersistentConfig(
+    "DOCS_URL_FR",
+    "docs.url.fr",
+    os.environ.get("DOCS_URL_FR", ""),
+)
+SURVEY_URL = PersistentConfig(
+    "SURVEY_URL",
+    "survey.url",
+    os.environ.get("SURVEY_URL", ""),
+)
+SURVEY_URL_FR = PersistentConfig(
+    "SURVEY_URL_FR",
+    "survey.url.fr",
+    os.environ.get("SURVEY_URL_FR", ""),
+)
+
+####################################
 # Jira Integration
 ####################################
 

@@ -2,7 +2,7 @@
 	import { getContext, onMount } from 'svelte';
 	import Modal from './Modal.svelte';
 	import { user } from '$lib/stores';
-	import { createIncident } from '$lib/apis/incidents';
+	import { createIssue } from '$lib/apis/issues';
 	import { toast } from 'svelte-sonner';
 
 	export let show = false;
@@ -78,18 +78,18 @@
 			loading = true;
 			error = '';
 
-			await createIncident(localStorage.token, {
+			await createIssue(localStorage.token, {
 				email: $user?.email || '',
 				description,
 				stepsToReproduce,
 				files
 			});
 
-			toast.success($i18n.t('Thank you! Your incident has been submitted successfully.'));
+			toast.success($i18n.t('Thank you! Your issue has been submitted successfully.'));
 			closeModal();
 		} catch (err) {
 			console.error(err);
-			toast.error($i18n.t('Failed to submit incident. Please try again later.'));
+			toast.error($i18n.t('Failed to submit issue. Please try again later.'));
 		} finally {
 			loading = false;
 		}
@@ -108,7 +108,7 @@
 <Modal bind:show on:close={closeModal} disableClose={loading}>
 	<div class="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
 		<h3 class="text-2xl font-medium font-primary text-gray-900 dark:text-gray-100">
-			{$i18n.t('Incident Form')}
+			{$i18n.t('Issue Form')}
 		</h3>
 		<button
 			on:click={() => !loading && (show = false)}

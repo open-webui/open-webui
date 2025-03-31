@@ -1,21 +1,21 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-type IncidentItem = {
+type IssueItem = {
 	email: string;
 	description: string;
 	stepsToReproduce: string;
 	files?: null | FileList;
 };
 
-export const createIncident = async (token: string, incident: IncidentItem) => {
+export const createIssue = async (token: string, issue: IssueItem) => {
 	const formData = new FormData();
 
-	formData.append('email', incident.email);
-	formData.append('description', incident.description);
-	formData.append('stepsToReproduce', incident.stepsToReproduce);
+	formData.append('email', issue.email);
+	formData.append('description', issue.description);
+	formData.append('stepsToReproduce', issue.stepsToReproduce);
 
-	if (incident.files) {
-		Array.from(incident.files).forEach((file) => {
+	if (issue.files) {
+		Array.from(issue.files).forEach((file) => {
 			formData.append('files', file);
 		});
 	}
@@ -31,7 +31,7 @@ export const createIncident = async (token: string, incident: IncidentItem) => {
 		.then(async (res) => {
 			if (!res.ok) {
 				const error = await res.json();
-				throw new Error(error.detail || 'Failed to create incident');
+				throw new Error(error.detail || 'Failed to create issue');
 			}
 			return res.json();
 		})

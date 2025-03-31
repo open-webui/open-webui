@@ -54,7 +54,7 @@ async def create_bug(
         issue_data = {
             "fields": {
                 "project": {"key": JIRA_PROJECT_KEY},
-                "summary": "User Incident Submission",
+                "summary": "User Issue Submission",
                 "description": description,
                 "issuetype": {"name": "Bug"},
             }
