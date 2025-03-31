@@ -8,7 +8,7 @@ jobs:
     name: 'Lint Backend'
     env:
       PUBLIC_API_BASE_URL: ''
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     strategy:
       matrix:
         node-version:

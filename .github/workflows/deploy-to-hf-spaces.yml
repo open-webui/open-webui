@@ -9,7 +9,7 @@ on:
 
 jobs:
   check-secret:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       token-set: ${{ steps.check-key.outputs.defined }}
     steps:
@@ -20,7 +20,7 @@ jobs:
         run: echo "defined=true" >> $GITHUB_OUTPUT
 
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [check-secret]
     if: needs.check-secret.outputs.token-set == 'true'
     env:
