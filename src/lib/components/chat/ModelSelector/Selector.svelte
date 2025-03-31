@@ -21,6 +21,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 	import { goto } from '$app/navigation';
+	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -42,7 +43,7 @@
 	}[] = [];
 
 	export let className = 'w-[32rem]';
-	export let triggerClassName = 'text-lg';
+	export let triggerClassName = 'text-[10px]';
 
 	let show = false;
 
@@ -230,15 +231,21 @@
 	closeFocus={false}
 >
 	<DropdownMenu.Trigger
-		class="relative w-full font-primary"
+		class="relative w-full font-primary flex"
 		aria-label={placeholder}
 		id="model-selector-{id}-button"
 	>
 		<div
-			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
+			class="flex  w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
 		>
 			{#if selectedModel}
-				{selectedModel.label}
+				
+					<img
+						src={'/static/favicon.png'}
+						alt="Model"
+						class="rounded-full size-4 self-center mr-2"
+					/>
+					{selectedModel.label}
 			{:else}
 				{placeholder}
 			{/if}
@@ -249,20 +256,22 @@
 	<DropdownMenu.Content
 		class=" z-40 {$mobile
 			? `w-full`
-			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg  outline-none"
+			: `${className}`} w-[180px] justify-start rounded-xl border dark:border-[#313337] bg-white dark:bg-[#1E1E1E] dark:text-white shadow-lg  outline-none"
 		transition={flyAndScale}
 		side={$mobile ? 'bottom' : 'bottom-start'}
 		sideOffset={3}
 	>
 		<slot>
 			{#if searchEnabled}
-				<div class="flex items-center gap-2.5 px-5 mt-3.5 mb-3">
-					<Search className="size-4" strokeWidth="2.5" />
+				<div class="flex items-center relative gap-2.5 px-2.5 mt-2.5 mb-3">
+					<div class="absolute left-5 text-[#939292]">
+						<Search className="size-3" strokeWidth="2.5" />
+					</div>
 
 					<input
 						id="model-search-input"
 						bind:value={searchValue}
-						class="w-full text-sm bg-transparent outline-none"
+						class="w-full text-sm bg-transparent outline-none pl-7 h-[25px] rounded-lg border border-[#313337] placeholder:text-[10px]"
 						placeholder={searchPlaceholder}
 						autocomplete="off"
 						on:keydown={(e) => {
@@ -284,15 +293,13 @@
 						}}
 					/>
 				</div>
-
-				<hr class="border-gray-50 dark:border-gray-800" />
 			{/if}
 
-			<div class="px-3 my-2 max-h-64 overflow-y-auto scrollbar-hidden group">
+			<div class="px-[3px] my-2 max-h-64 overflow-y-auto scrollbar-hidden group">
 				{#each filteredItems as item, index}
 					<button
 						aria-label="model-item"
-						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
+						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-[5px] px-2 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-[#181818] rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
 						selectedModelIdx
 							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
 							: ''}"
@@ -320,20 +327,21 @@
 								<div class="flex items-center min-w-fit">
 									<div class="line-clamp-1">
 										<div class="flex items-center min-w-fit">
-											<Tooltip
+											<!-- <Tooltip
 												content={$user?.role === 'admin' ? (item?.value ?? '') : ''}
 												placement="top-start"
-											>
+											> -->
 												<img
 													src={item.model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
 													alt="Model"
 													class="rounded-full size-5 flex items-center mr-2"
 												/>
-												{item.label}
-											</Tooltip>
+												<span class="text-[10px] leading-normal">{item.label}</span>
+											<!-- </Tooltip> -->
 										</div>
+										<div class="text-[9px] ml-7 text-[#808080] leading-normal">Great for most tasks</div>
 									</div>
-									{#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
+									<!-- {#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
 										<div class="flex ml-1 items-center translate-y-[0.5px]">
 											<Tooltip
 												content={`${
@@ -353,12 +361,12 @@
 												>
 											</Tooltip>
 										</div>
-									{/if}
+									{/if} -->
 								</div>
 
 								<!-- {JSON.stringify(item.info)} -->
 
-								{#if item.model.owned_by === 'openai'}
+								<!-- {#if item.model.owned_by === 'openai'}
 									<Tooltip content={`${'External'}`}>
 										<div class="translate-y-[1px]">
 											<svg
@@ -380,9 +388,9 @@
 											</svg>
 										</div>
 									</Tooltip>
-								{/if}
+								{/if} -->
 
-								{#if item.model?.info?.meta?.description}
+								<!-- {#if item.model?.info?.meta?.description}
 									<Tooltip
 										content={`${marked.parse(
 											sanitizeResponseContent(item.model?.info?.meta?.description).replaceAll(
@@ -408,9 +416,9 @@
 											</svg>
 										</div>
 									</Tooltip>
-								{/if}
+								{/if} -->
 
-								{#if !$mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
+								<!-- {#if !$mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
 									<div class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px]">
 										{#each item.model?.info?.meta.tags as tag}
 											<Tooltip content={tag.name}>
@@ -422,13 +430,15 @@
 											</Tooltip>
 										{/each}
 									</div>
-								{/if}
+								{/if} -->
 							</div>
 						</div>
 
 						{#if value === item.value}
 							<div class="ml-auto pl-2 pr-2 md:pr-0">
-								<Check />
+								<svg width="13" height="14" viewBox="0 0 9 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+									<path d="M4.16004 6.27718C4.08868 6.27718 4.02088 6.24863 3.97093 6.19868L2.96115 5.1889C2.85768 5.08542 2.85768 4.91415 2.96115 4.81068C3.06463 4.7072 3.2359 4.7072 3.33937 4.81068L4.16004 5.63135L5.99405 3.79733C6.09753 3.69386 6.2688 3.69386 6.37227 3.79733C6.47575 3.90081 6.47575 4.07208 6.37227 4.17555L4.34915 6.19868C4.2992 6.24863 4.2314 6.27718 4.16004 6.27718Z" fill="white"/>
+								</svg>		
 							</div>
 						{/if}
 					</button>
@@ -544,7 +554,7 @@
 				{/each}
 			</div>
 
-			{#if showTemporaryChatControl}
+			<!-- {#if showTemporaryChatControl}
 				<hr class="border-gray-50 dark:border-gray-800" />
 
 				<div class="flex items-center mx-2 my-2">
@@ -579,7 +589,7 @@
 						</div>
 					</button>
 				</div>
-			{/if}
+			{/if} -->
 
 			<div class="hidden w-[42rem]" />
 			<div class="hidden w-[32rem]" />

@@ -85,6 +85,7 @@
 	import Placeholder from './Placeholder.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import ModelSelector from './ModelSelector.svelte';
 
 	export let chatIdProp = '';
 
@@ -1971,8 +1972,11 @@
 								/>
 							</div>
 						</div>
-
+										
 						<div class=" pb-[1rem]">
+							<div class="pl-2.5 mb-2.5">
+								<ModelSelector bind:selectedModels showSetDefault={!history.currentId} />
+							</div>
 							<MessageInput
 								{history}
 								{selectedModels}
@@ -2027,7 +2031,7 @@
 						<div class="overflow-auto w-full h-full flex items-center">
 							<Placeholder
 								{history}
-								{selectedModels}
+								bind:selectedModels
 								bind:files
 								bind:prompt
 								bind:autoScroll

@@ -57,14 +57,15 @@
 		sortedPrompts = [...(suggestionPrompts ?? [])].sort(() => Math.random() - 0.5);
 		getFilteredPrompts(inputValue);
 	}
+
+	$: limitedPrompts = filteredPrompts.length > 3 ? filteredPrompts.slice(0, 3) : filteredPrompts;
 </script>
 
-<div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-400 dark:text-gray-600">
+<!-- <div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-400 dark:text-gray-600">
 	{#if filteredPrompts.length > 0}
 		<Bolt />
 		{$i18n.t('Suggested')}
 	{:else}
-		<!-- Keine Vorschläge -->
 
 		<div
 			class="flex w-full text-center items-center justify-center self-start text-gray-400 dark:text-gray-600"
@@ -72,11 +73,11 @@
 			{$WEBUI_NAME} ‧ v{WEBUI_VERSION}
 		</div>
 	{/if}
-</div>
+</div> -->
 
-<div class="h-40 overflow-auto scrollbar-none {className} items-start">
-	{#if filteredPrompts.length > 0}
-		{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
+<div class="flex justify-start {className} items-center">
+	{#if limitedPrompts.length > 0}
+		{#each limitedPrompts as prompt, idx (prompt.id || prompt.content)}
 			<button
 				class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
 				       px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
