@@ -271,7 +271,8 @@ class WeaviateClient:
         # Realiza consulta por similaridade usando o vetor
         response = collection.query.hybrid(
             query=query,
-            alpha=0.50,
+            alpha=0.75,
+            max_vector_distance=0.4, 
             return_metadata=MetadataQuery(score=True, explain_score=True),
             limit=limit,
         )
