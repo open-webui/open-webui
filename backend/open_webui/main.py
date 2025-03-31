@@ -1370,8 +1370,19 @@ async def healthcheck_with_db():
     return {"status": True}
 
 
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-app.mount("/cache", StaticFiles(directory=CACHE_DIR), name="cache")
+class CORSStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if isinstance(response, FileResponse):
+            origin = scope.get('headers', {}).get((b'origin', None))
+            if origin:
+                response.headers["Access-Control-Allow-Origin"] = origin.decode()
+                response.headers["Access-Control-Allow-Methods"] = "GET, HEAD, OPTIONS"
+                response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+
+app.mount("/static", CORSStaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/cache", CORSStaticFiles(directory=CACHE_DIR), name="cache")
 
 
 def swagger_ui_html(*args, **kwargs):
