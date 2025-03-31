@@ -50,6 +50,9 @@
 		width: '',
 		height: ''
 	};
+	const forcedImageCompressionWidth = $config?.forced_image_compression_size.width ?? null;
+	const forcedImageCompressionHeight = $config?.forced_image_compression_size.height ?? null;
+	const forcedImageCompression = Boolean(forcedImageCompressionWidth) || Boolean(forcedImageCompressionHeight);
 
 	// Admin - Show Update Available Toast
 	let showUpdateToast = true;
@@ -860,23 +863,29 @@
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">{$i18n.t('Image Compression')}</div>
 
-					<button
-						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
-							toggleImageCompression();
-						}}
-						type="button"
-					>
-						{#if imageCompression === true}
+					{#if forcedImageCompression}
+						<div class="p-1 px-3 text-xs flex rounded-sm transition">
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
-						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-						{/if}
-					</button>
+						</div>
+					{:else}
+						<button
+							class="p-1 px-3 text-xs flex rounded-sm transition"
+							on:click={() => {
+								toggleImageCompression();
+							}}
+							type="button"
+						>
+							{#if imageCompression || forcedImageCompression}
+								<span class="ml-2 self-center">{$i18n.t('On')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+							{/if}
+						</button>
+					{/if}
 				</div>
 			</div>
 
-			{#if imageCompression}
+			{#if imageCompression && !forcedImageCompression}
 				<div>
 					<div class=" py-0.5 flex w-full justify-between text-xs">
 						<div class=" self-center text-xs">{$i18n.t('Image Max Compression Size')}</div>

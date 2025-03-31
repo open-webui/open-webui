@@ -293,6 +293,8 @@ from open_webui.config import (
     DEFAULT_LOCALE,
     OAUTH_PROVIDERS,
     WEBUI_URL,
+    FORCED_IMAGE_COMPRESSION_WIDTH,
+    FORCED_IMAGE_COMPRESSION_HEIGHT,
     # Admin
     ENABLE_ADMIN_CHAT_ACCESS,
     ENABLE_ADMIN_EXPORT,
@@ -1264,6 +1266,10 @@ async def get_app_config(request: Request):
                 "file": {
                     "max_size": app.state.config.FILE_MAX_SIZE,
                     "max_count": app.state.config.FILE_MAX_COUNT,
+                },
+                "forced_image_compression_size": {
+                    "width": FORCED_IMAGE_COMPRESSION_WIDTH,
+                    "height": FORCED_IMAGE_COMPRESSION_HEIGHT,
                 },
                 "permissions": {**app.state.config.USER_PERMISSIONS},
                 "google_drive": {

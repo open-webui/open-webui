@@ -460,3 +460,9 @@ OTEL_TRACES_SAMPLER = os.environ.get(
 
 PIP_OPTIONS = os.getenv("PIP_OPTIONS", "").split()
 PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
+
+####################################
+# FORCED IMAGE COMPRESSION
+####################################
+FORCED_IMAGE_COMPRESSION_WIDTH = os.environ.get("FORCED_IMAGE_COMPRESSION_WIDTH", "")
+FORCED_IMAGE_COMPRESSION_HEIGHT = os.environ.get("FORCED_IMAGE_COMPRESSION_HEIGHT", "")
