@@ -206,6 +206,7 @@ async def set_models_config(
 class PromptSuggestion(BaseModel):
     title: list[str]
     content: str
+    imageUrl: str = ""
 
 
 class SetDefaultSuggestionsForm(BaseModel):

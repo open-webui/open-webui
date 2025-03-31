@@ -5,6 +5,8 @@
 	import { WEBUI_NAME } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
 
+	import Image from '../common/Image.svelte';
+
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
@@ -83,11 +85,11 @@
 	{#if filteredPrompts.length > 0}
 		{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
 			<button
-				class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
-				       px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
+				class="waterfall flex flex-row flex-1 shrink-0 w-full justify-between
+				       pl-3 pr-2 py-2 rounded-xl bg-transparent hover:bg-black/5
 				       dark:hover:bg-white/5 transition group"
 				style="animation-delay: {idx * 60}ms"
-				on:click={() => dispatch('select', prompt.content)}
+				on:click={() => dispatch('select', {content: prompt.content, imageUrl: prompt.imageUrl})}
 			>
 				<div class="flex flex-col text-left">
 					{#if prompt.title && prompt.title[0] !== ''}
@@ -108,6 +110,14 @@
 						<div class="text-xs text-gray-500 font-normal line-clamp-1">{$i18n.t('Prompt')}</div>
 					{/if}
 				</div>
+				{#if prompt.imageUrl && prompt.imageUrl !== ''}
+					<Image
+						src={prompt.imageUrl}
+						alt="input"
+						className="outline-hidden focus:outline-hidden pointer-events-none"
+						imageClassName=" size-10 rounded-lg object-cover"
+					/>
+				{/if}
 			</button>
 		{/each}
 	{/if}

@@ -43,17 +43,22 @@
 	let models = [];
 
 	const selectSuggestionPrompt = async (p) => {
-		let text = p;
+		const {content, imageUrl} = p;
+		let text = content;
 
-		if (p.includes('{{CLIPBOARD}}')) {
+		if (content.includes('{{CLIPBOARD}}')) {
 			const clipboardText = await navigator.clipboard.readText().catch((err) => {
 				toast.error($i18n.t('Failed to read clipboard contents'));
 				return '{{CLIPBOARD}}';
 			});
 
-			text = p.replaceAll('{{CLIPBOARD}}', clipboardText);
+			text = content.replaceAll('{{CLIPBOARD}}', clipboardText);
 
 			console.log('Clipboard text:', clipboardText, text);
+		}
+		
+		if (imageUrl !== "") {
+			files = [{ type: 'image', url: imageUrl }]
 		}
 
 		prompt = text;
