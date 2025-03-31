@@ -19,3 +19,7 @@ steps:
       - '--memory'
       - '4Gi'
       - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'STORAGE_BUCKET=ceylonally-data'
+      - '--mount'
+      - '/app/backend/data=gs://ceylonally-data'
