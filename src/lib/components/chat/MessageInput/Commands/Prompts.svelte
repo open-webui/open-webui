@@ -120,16 +120,16 @@
 			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
 		}
 
-		const paragraphs = prompt.split('\n');
+		const lines = prompt.split('\n');
+		const lastLine = lines.pop();
 
-		let lastParagraph = paragraphs.pop();
-		const promptWords = lastParagraph.split(' ');
+		const lastLineWords = lastLine.split(' ');
+		const lastWord = lastLineWords.pop();
 
-		promptWords.pop();
-		promptWords.push(`${text}`);
+		lastLineWords.push(text);
+		lines.push(lastLineWords.join(' '));
 
-		lastParagraph = promptWords.join(' ');
-		prompt = $settings?.richTextInput ? paragraphs.join('<br/>') : paragraphs.join('\n');
+		prompt = lines.join('\n');
 
 		const chatInputContainerElement = document.getElementById('chat-input-container');
 		const chatInputElement = document.getElementById('chat-input');
