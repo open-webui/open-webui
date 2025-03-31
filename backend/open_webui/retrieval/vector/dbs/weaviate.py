@@ -269,13 +269,22 @@ class WeaviateClient:
         all_dists = []
 
         # Realiza consulta por similaridade usando o vetor
-        response = collection.query.hybrid(
+        
+        
+        response = collection.query.near_text(
             query=query,
-            alpha=0.75,
-            max_vector_distance=0.4, 
-            return_metadata=MetadataQuery(score=True, explain_score=True),
             limit=limit,
+            return_metadata=MetadataQuery(distance=True)
         )
+        
+        
+        # response = collection.query.hybrid(
+        #     query=query,
+        #     alpha=0.75,
+        #     max_vector_distance=0.4, 
+        #     return_metadata=MetadataQuery(score=True, explain_score=True),
+        #     limit=limit,
+        # )
 
         ids = []
         distances = []
@@ -297,7 +306,7 @@ class WeaviateClient:
         meta = [obj.properties.get("metadata", {}) for obj in items]
         # Supõe que a distância esteja disponível em _additional.distance
         dists = [
-            obj.metadata.score for obj in items
+            obj.metadata.distance for obj in items
         ]
         all_ids.append(ids)
         all_docs.append(docs)
