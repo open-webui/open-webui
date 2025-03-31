@@ -876,7 +876,7 @@ async def inspect_websocket(request: Request, call_next):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ALLOW_ORIGIN,
+    allow_origins=["*"],  # 모든 도메인에서 접근 허용,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

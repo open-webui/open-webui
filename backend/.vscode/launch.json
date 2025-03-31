@@ -14,7 +14,7 @@
         "--reload"
       ],
       "python": "/Users/passion1014/anaconda3/envs/openwebui/bin/python",
-      "cwd": "${workspaceFolder}/backend",
+      "cwd": "${workspaceFolder}",
       "env": {
         "WEBUI_SECRET_KEY": "your_secret_key",
         "PORT": "8080",
@@ -22,7 +22,7 @@
         "USE_OLLAMA_DOCKER": "true",
         "USE_CUDA_DOCKER": "true",
         "LD_LIBRARY_PATH": "/usr/local/lib/python3.11/site-packages/torch/lib:/usr/local/lib/python3.11/site-packages/nvidia/cudnn/lib",
-        "PYTHONPATH": "${workspaceFolder}/backend"
+        "PYTHONPATH": "${workspaceFolder}"
       },
       "console": "integratedTerminal",
       "justMyCode": false
