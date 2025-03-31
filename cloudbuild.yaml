@@ -1,0 +1,21 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/ceylonally/ghcr/open-webui/open-webui:$COMMIT_SHA', '.']
+  # Push the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/ceylonally/ghcr/open-webui/open-webui:$COMMIT_SHA']
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'ceylonally'
+      - '--image'
+      - 'us-central1-docker.pkg.dev/ceylonally/ghcr/open-webui/open-webui:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--memory'
+      - '4Gi'
+      - '--allow-unauthenticated'
