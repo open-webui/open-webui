@@ -132,7 +132,8 @@
 						ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
 
 						// Get the base64 representation of the compressed image
-						const compressedSrc = canvas.toDataURL('image/jpeg');
+						const jpegQuality = 0.15;
+						const compressedSrc = canvas.toDataURL('image/jpeg', jpegQuality);
 
 						// Display the compressed image
 						profileImageUrl = compressedSrc;
