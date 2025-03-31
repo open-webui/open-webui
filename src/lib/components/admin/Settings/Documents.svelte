@@ -108,10 +108,6 @@
 			toast.error($i18n.t('OpenAI URL/Key required.'));
 			return;
 		}
-		if (embeddingEngine === 'portkey' && (OpenAIKey === '' || OpenAIUrl === '')) {
-		toast.error($i18n.t('PORTKEY URL/Key required.'));
-		return;
-		}
 
 		console.log('Update embedding model attempt:', embeddingModel);
 
@@ -476,8 +472,6 @@
 											embeddingModel = '';
 										} else if (e.target.value === 'openai') {
 											embeddingModel = 'text-embedding-3-small';
-										} else if (e.target.value === 'portkey') {
-											embeddingModel = 'text-embedding-3-small';
 										} else if (e.target.value === '') {
 											embeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
 										}
@@ -486,7 +480,6 @@
 									<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
 									<option value="ollama">{$i18n.t('Ollama')}</option>
 									<option value="openai">{$i18n.t('OpenAI')}</option>
-									<option value="portkey">{$i18n.t('Portkey')}</option>
 								</select>
 							</div>
 						</div>
@@ -515,19 +508,6 @@
 									placeholder={$i18n.t('API Key')}
 									bind:value={OllamaKey}
 									required={false}
-								/>
-							</div>
-						{:else if embeddingEngine === 'portkey'}
-							<div class="my-0.5 flex gap-2 pr-2">
-								<input
-								class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-								placeholder={$i18n.t('API Base URL')}
-								bind:value={OpenAIUrl}
-								required
-								/>
-								<SensitiveInput 
-								placeholder={$i18n.t('API Key')} 
-								bind:value={OpenAIKey} 
 								/>
 							</div>
 						{/if}
@@ -627,7 +607,7 @@
 						</div>
 					</div>
 
-					{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai' ||  embeddingEngine == 'portkey'}
+					{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai'}
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Batch Size')}</div>
 
