@@ -1,0 +1,90 @@
+
+name: "Build FastAPI App and Deploy to K8s"
+
+# Controls when the workflow will run
+on: "workflow_dispatch"
+
+# see https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs#overview for overview of permissions
+# checks allows actions to be triggered by this workflow, contents allows various things including creating a release
+# permissions:
+#   checks: write
+#   contents: write
+  
+jobs:
+# TODO: Update the SERVICE_NAME field in the Dockerfile to aia-openwebui
+# TODO: Update "name" in setup.py to aia-openwebui
+  # python-pipeline:
+  #   name: Python Pipeline
+  #   uses: 8451LLC/sds-reusable-workflows/.github/workflows/python-pipeline.yml@v2
+  #   with:
+  #     docker-build-and-publish: false
+  #     helm-package-and-publish: true
+  #     artifact-build-name: aia-openwebui
+  #     helm-chart-path: helm
+  #     helm-chart-name: aia-openwebui
+  #     helm-values-path: helm
+  #     project-source-location: app/
+  #   secrets: inherit
+
+  prepare-reusable-workflow-inputs:
+    name: Prepare inputs for python pipeline
+    runs-on: self-hosted
+    outputs:
+      short-sha: ${{ steps.set-outputs.outputs.short_sha }}
+      short-ref: ${{ steps.set-outputs.outputs.short_ref }}
+      workflow-run: ${{ steps.set-outputs.outputs.workflow_run }}
+      build-date: ${{ steps.set-outputs.outputs.build_date }}
+      build-count: ${{ steps.set-outputs.outputs.build_count }}
+    steps:
+      - name: Set outputs
+        id: set-outputs
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          SHORT_REF=${{ github.ref_name }}
+          WORKFLOW_RUN="${{ github.run_id }}-${{ github.run_attempt }}"
+          BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          BUILD_COUNT=${{ github.run_number }}
+
+          echo "short_sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+          echo "short_ref=$SHORT_REF" >> $GITHUB_OUTPUT
+          echo "workflow_run=$WORKFLOW_RUN" >> $GITHUB_OUTPUT
+          echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+          echo "build_count=$BUILD_COUNT" >> $GITHUB_OUTPUT
+      - name: Input Preparation Summary
+        run: |
+          echo '
+          ## Prepared inputs
+          ```yaml
+          short-sha: ${{ steps.set-outputs.outputs.short_sha }}
+          short-ref: ${{ steps.set-outputs.outputs.short_ref }}
+          workflow-run: ${{ steps.set-outputs.outputs.workflow_run }}
+          build-date: ${{ steps.set-outputs.outputs.build_date }}
+          build-count: ${{ steps.set-outputs.outputs.build_count }}
+          ```
+          ' >> $GITHUB_STEP_SUMMARY
+
+
+  semantic-version:
+    name: 🔵 Generate semantic version
+    uses: 8451LLC/sds-reusable-workflows/.github/workflows/bump-semantic-version-component.yml@v2
+    permissions:
+      contents: read
+    needs:
+      - prepare-reusable-workflow-inputs
+    with:
+      release-branches: main
+      prerelease-suffix: "${{ needs.prepare-reusable-workflow-inputs.outputs.short-sha }}"
+      bump-part: ${{ inputs.bump-part }}
+      custom-tag: ${{ inputs.semantic-version }}
+    secrets: inherit
+
+  docker-pipeline:
+    name: Docker Pipeline
+    uses: 8451LLC/sds-reusable-workflows/.github/workflows/docker-pipeline.yml@v2
+    needs:
+      - semantic-version
+      - prepare-reusable-workflow-inputs
+    with:
+      semantic-version: ${{ needs.semantic-version.outputs.semantic-version }}
+      helm-package-and-publish: false
+    secrets: inherit
