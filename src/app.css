@@ -273,9 +273,10 @@ input[type='number'] {
 
 .ProseMirror {
 	@apply h-full min-h-fit max-h-full whitespace-pre-wrap;
+	height: auto !important; /* Ensure height is determined by content */
 }
 
-.ProseMirror:focus {
+.ProseMirror:focus, .ProseMirror.is-focused {
 	outline: none;
 }
 
