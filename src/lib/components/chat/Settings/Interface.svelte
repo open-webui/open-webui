@@ -30,9 +30,12 @@
 	// Interface
 	let defaultModelId = '';
 	let showUsername = false;
-	let richTextInput = true;
-	let largeTextAsFile = false;
 	let notificationSound = true;
+
+	let richTextInput = true;
+	let promptAutocomplete = false;
+
+	let largeTextAsFile = false;
 
 	let landingPageMode = '';
 	let chatBubble = true;
@@ -71,6 +74,11 @@
 	const toggleSplitLargeChunks = async () => {
 		splitLargeChunks = !splitLargeChunks;
 		saveSettings({ splitLargeChunks: splitLargeChunks });
+	};
+
+	const togglePromptAutocomplete = async () => {
+		promptAutocomplete = !promptAutocomplete;
+		saveSettings({ promptAutocomplete: promptAutocomplete });
 	};
 
 	const togglesScrollOnBranchChange = async () => {
@@ -238,6 +246,7 @@
 		voiceInterruption = $settings.voiceInterruption ?? false;
 
 		richTextInput = $settings.richTextInput ?? true;
+		promptAutocomplete = $settings.promptAutocomplete ?? false;
 		largeTextAsFile = $settings.largeTextAsFile ?? false;
 
 		collapseCodeBlocks = $settings.collapseCodeBlocks ?? false;
@@ -563,6 +572,30 @@
 					</button>
 				</div>
 			</div>
+
+			{#if $config?.features?.enable_autocomplete_generation && richTextInput}
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs">
+							{$i18n.t('Prompt Autocompletion')}
+						</div>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded-sm transition"
+							on:click={() => {
+								togglePromptAutocomplete();
+							}}
+							type="button"
+						>
+							{#if promptAutocomplete === true}
+								<span class="ml-2 self-center">{$i18n.t('On')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+							{/if}
+						</button>
+					</div>
+				</div>
+			{/if}
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
