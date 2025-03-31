@@ -1,10 +1,12 @@
-:: This method is not recommended, and we recommend you use the `start.sh` file with WSL instead.
 @echo off
 SETLOCAL ENABLEDELAYEDEXPANSION
 
 :: Get the directory of the current script
 SET "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%" || exit /b
+
+:: Activate the conda environment (replace 'open-webui' with your environment name)
+CALL conda activate open-webui
 
 :: Add conditional Playwright browser installation
 IF /I "%RAG_WEB_LOADER_ENGINE%" == "playwright" (
@@ -13,7 +15,6 @@ IF /I "%RAG_WEB_LOADER_ENGINE%" == "playwright" (
         playwright install chromium
         playwright install-deps chromium
     )
-
     python -c "import nltk; nltk.download('punkt_tab')"
 )
 
@@ -42,3 +43,6 @@ IF "%WEBUI_SECRET_KEY%%WEBUI_JWT_SECRET_KEY%" == " " (
 :: Execute uvicorn
 SET "WEBUI_SECRET_KEY=%WEBUI_SECRET_KEY%"
 uvicorn open_webui.main:app --host "%HOST%" --port "%PORT%" --forwarded-allow-ips '*'
+
+:: Keep the window open
+pause

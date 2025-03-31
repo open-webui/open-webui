@@ -21,10 +21,14 @@ ARG UID=0
 ARG GID=0
 
 ######## WebUI frontend ########
-FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
+FROM node:22-alpine3.20 AS build
 ARG BUILD_HASH
 
 WORKDIR /app
+
+# Add this line to increase Node.js memory limit
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
 
 COPY package.json package-lock.json ./
 RUN npm ci
