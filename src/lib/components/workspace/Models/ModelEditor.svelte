@@ -10,6 +10,7 @@
 	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import Image from '$lib/components/common/Image.svelte';
 	import { getTools } from '$lib/apis/tools';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
@@ -656,6 +657,17 @@
 												placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
 												bind:value={prompt.content}
 											/>
+
+											{#if prompt.imageUrl && prompt.image !== ''}
+												<Image
+													src={prompt.imageUrl}
+													alt="suggestion"
+													className="outline-hidden focus:outline-hidden"
+													imageClassName="min-w-10 size-10 rounded-xl object-cover"
+												/>
+											{/if}
+
+											<!-- TODO: Add way to upload an image (maybe files) -->
 
 											<button
 												class="px-2"

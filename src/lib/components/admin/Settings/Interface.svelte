@@ -15,6 +15,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import Image from '$lib/components/common/Image.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -427,15 +428,25 @@
 												bind:value={prompt.title[1]}
 											/>
 										</div>
+										<div class="flex w-full">
+											<textarea
+												class="px-3 py-1.5 w-full text-xs bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850 resize-none"
+												placeholder={$i18n.t(
+													'Prompt (e.g. Tell me a fun fact about the Roman Empire)'
+												)}
+												rows="3"
+												bind:value={prompt.content}
+											/>
 
-										<textarea
-											class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850 resize-none"
-											placeholder={$i18n.t(
-												'Prompt (e.g. Tell me a fun fact about the Roman Empire)'
-											)}
-											rows="3"
-											bind:value={prompt.content}
-										/>
+											{#if prompt.imageUrl && prompt.image !== ''}
+												<Image
+													src={prompt.imageUrl}
+													alt="suggestion"
+													className="outline-hidden focus:outline-hidden"
+													imageClassName="min-w-14 size-14 rounded-xl object-cover"
+												/>
+											{/if}
+										</div>
 									</div>
 
 									<button
