@@ -206,6 +206,7 @@ type Config = {
 		enable_admin_export: boolean;
 		enable_admin_chat_access: boolean;
 		enable_community_sharing: boolean;
+		ionos_registration_url: string|null;
 	};
 	oauth: {
 		providers: {
