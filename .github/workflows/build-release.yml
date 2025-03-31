@@ -1,3 +1,4 @@
+
 name: Release
 
 on:
@@ -19,13 +20,11 @@ jobs:
             echo "No changes to package.json"
             exit 1
           }
-
       - name: Get version number from package.json
         id: get_version
         run: |
           VERSION=$(jq -r '.version' package.json)
           echo "::set-output name=version::$VERSION"
-
       - name: Extract latest CHANGELOG entry
         id: changelog
         run: |
@@ -34,7 +33,6 @@ jobs:
           echo "Extracted latest release notes from CHANGELOG.md:" 
           echo -e "$CHANGELOG_CONTENT" 
           echo "::set-output name=content::$CHANGELOG_ESCAPED"
-
       - name: Create GitHub release
         uses: actions/github-script@v7
         with:
@@ -49,7 +47,6 @@ jobs:
               body: changelog,
             })
             console.log(`Created release ${release.data.html_url}`)
-
       - name: Upload package to GitHub release
         uses: actions/upload-artifact@v4
         with:
