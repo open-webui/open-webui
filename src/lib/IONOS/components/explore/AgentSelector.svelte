@@ -1,13 +1,13 @@
 <script lang="ts">
 	import type { Readable } from 'svelte/store';
 	import type { I18Next } from '$lib/IONOS/i18next.d.ts';
-	import { getContext } from 'svelte';
-	import { selectAgent } from '$lib/IONOS/services/agent';
+	import { createEventDispatcher, getContext } from 'svelte';
 	import { agents } from '$lib/IONOS/stores/agents';
 	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte';
 	import Sparkles from '$lib/IONOS/components/icons/Sparkles.svelte';
 
 	const i18n = getContext<Readable<I18Next>>('i18n');
+	const dispatch = createEventDispatcher();
 </script>
 
 <div class="flex flex-row gap-4 items-center justify-center flex-wrap">
@@ -40,7 +40,7 @@
 						<div class="mt-4 text-center">
 							<Button
 								name={id}
-								on:click={() => selectAgent(id)}
+								on:click={() => dispatch('select', id)}
 								className="px-4 py-1"
 								type={ButtonType.special}
 							>

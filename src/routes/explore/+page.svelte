@@ -8,6 +8,8 @@
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte'
 	import { init as initAgentsStore } from '$lib/IONOS/stores/agents';
 	import { init as initPromptsStore } from '$lib/IONOS/stores/prompts';
+	import { selectAgent } from '$lib/IONOS/services/agent';
+	import { selectPrompt } from '$lib/IONOS/services/prompt';
 
 	const i18n = getContext('i18n');
 
@@ -44,7 +46,7 @@
 	</div>
 
 	<div class="block py-5 my-2">
-		<AgentSelector />
+		<AgentSelector on:select={({ detail: id }) => selectAgent(id)} />
 	</div>
 
 	<h1 class="my-4 text-xl text-center">
@@ -56,7 +58,7 @@
 	</p>
 
 	<div class="block w-full py-5 my-8">
-		<PromptSelector />
+		<PromptSelector on:select={({ detail: id }) => selectPrompt(id)} />
 	</div>
 
 	<div class="my-20">

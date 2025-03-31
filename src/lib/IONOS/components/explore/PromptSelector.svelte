@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 	import type { ScrollerItem } from './scrollerItem.d.ts';
 	import type { Prompt } from '$lib/IONOS/stores/prompts';
 	import { prompts, init } from '$lib/IONOS/stores/prompts';
-	import { selectPrompt } from '$lib/IONOS/services/prompt';
 	import { split, shuffle } from '$lib/IONOS/utils/arrays';
 	import Scroller from './Scroller.svelte';
+
+	const dispatch = createEventDispatcher();
 
 	const mapper = (prompt: Prompt): ScrollerItem => ({ id: prompt.id, text: prompt.promptDisplayName });
 
@@ -21,12 +22,12 @@
 
 <div>
 	<Scroller
-		on:click={({ detail: id }) => selectPrompt(id)}
+		on:click={({ detail: id }) => dispatch('select', id)}
 		direction="left"
 		items={mappedA}
 	/>
 	<Scroller
-		on:click={({ detail: id }) => selectPrompt(id)}
+		on:click={({ detail: id }) => dispatch('select', id)}
 		direction="right"
 		items={mappedB}
 	/>
