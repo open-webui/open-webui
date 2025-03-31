@@ -256,7 +256,7 @@ def query_collection(
 ) -> dict:
     results = []
     for query in queries:
-        query_embedding = embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
+        query_embedding = embedding_function(query, prefix=RAG_EMBEDDING_QUERY_PREFIX)
         for collection_name in collection_names:
             if collection_name:
                 try:
@@ -334,11 +334,11 @@ def get_embedding_function(
     embedding_batch_size,
 ):
     if embedding_engine == "":
-        return lambda query, prefix, user=None: embedding_function.encode(
+        return lambda query, prefix=None, user=None: embedding_function.encode(
             query, prompt=prefix if prefix else None
         ).tolist()
     elif embedding_engine in ["ollama", "openai"]:
-        func = lambda query, prefix, user=None: generate_embeddings(
+        func = lambda query, prefix=None, user=None: generate_embeddings(
             engine=embedding_engine,
             model=embedding_model,
             text=query,
@@ -363,7 +363,7 @@ def get_embedding_function(
             else:
                 return func(query, prefix, user)
 
-        return lambda query, prefix, user=None: generate_multiple(
+        return lambda query, prefix=None, user=None: generate_multiple(
             query, prefix, user, func
         )
     else:

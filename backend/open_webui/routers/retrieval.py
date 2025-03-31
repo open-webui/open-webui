@@ -1518,8 +1518,8 @@ def query_doc_handler(
             return query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
                 query=form_data.query,
-                embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
-                    query, user=user
+                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                    query, prefix=prefix, user=user
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=request.app.state.rf,
@@ -1569,8 +1569,8 @@ def query_collection_handler(
             return query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
-                embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
-                    query, user=user
+                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                    query, prefix=prefix, user=user
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
                 reranking_function=request.app.state.rf,
@@ -1586,8 +1586,8 @@ def query_collection_handler(
             return query_collection(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
-                embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
-                    query, user=user
+                embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                    query, prefix=prefix, user=user
                 ),
                 k=form_data.k if form_data.k else request.app.state.config.TOP_K,
             )
@@ -1666,7 +1666,7 @@ if ENV == "dev":
     async def get_embeddings(request: Request, text: Optional[str] = "Hello World!"):
         return {
             "result": request.app.state.EMBEDDING_FUNCTION(
-                text, RAG_EMBEDDING_QUERY_PREFIX
+                text, prefix=RAG_EMBEDDING_QUERY_PREFIX
             )
         }
 
