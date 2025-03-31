@@ -157,7 +157,6 @@ async def chat_completion_tools_handler(
     tools_function_calling_prompt = tools_function_calling_generation_template(
         template, tools_specs
     )
-    log.info(f"{tools_function_calling_prompt=}")
     payload = get_tools_function_calling_payload(
         body["messages"], task_model_id, tools_function_calling_prompt
     )
@@ -823,7 +822,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 "__files__": metadata.get("files", []),
             },
         )
-        log.info(f"{tools_dict=}")
 
     if tool_servers:
         for tool_server in tool_servers:
@@ -2105,11 +2103,6 @@ async def process_chat_response(
                                     "content": serialize_content_blocks(content_blocks),
                                 },
                             }
-                        )
-
-                        log.info(f"content_blocks={content_blocks}")
-                        log.info(
-                            f"serialize_content_blocks={serialize_content_blocks(content_blocks)}"
                         )
 
                         try:
