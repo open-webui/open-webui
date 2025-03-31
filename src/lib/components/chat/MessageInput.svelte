@@ -855,7 +855,6 @@
 											on:keydown={async (e) => {
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
-												console.log('keydown', e);
 												const commandsContainerElement =
 													document.getElementById('commands-container');
 

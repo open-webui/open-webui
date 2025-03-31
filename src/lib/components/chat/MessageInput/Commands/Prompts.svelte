@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { prompts, user } from '$lib/stores';
+	import { prompts, settings, user } from '$lib/stores';
 	import {
 		findWordIndices,
 		getUserPosition,
@@ -120,12 +120,16 @@
 			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
 		}
 
-		const promptWords = prompt.split(' ');
+		const paragraphs = prompt.split('\n');
+
+		let lastParagraph = paragraphs.pop();
+		const promptWords = lastParagraph.split(' ');
 
 		promptWords.pop();
 		promptWords.push(`${text}`);
 
-		prompt = promptWords.join(' ');
+		lastParagraph = promptWords.join(' ');
+		prompt = $settings?.richTextInput ? paragraphs.join('<br/>') : paragraphs.join('\n');
 
 		const chatInputContainerElement = document.getElementById('chat-input-container');
 		const chatInputElement = document.getElementById('chat-input');
