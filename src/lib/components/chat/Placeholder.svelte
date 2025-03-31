@@ -16,6 +16,7 @@
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
 	import ModelSelector from './ModelSelector.svelte';
+	import BookIcon from '../icons/BookIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -186,8 +187,15 @@
 			</div> -->
 			
 			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">	
-				<div class="pl-2.5 mb-2.5">
+				<div class="px-2.5 mb-2.5 flex justify-between">
 					<ModelSelector bind:selectedModels showSetDefault={!history.currentId} />
+					<div class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-[6px] dark:bg-[#272525]">
+						<BookIcon/>
+						<a
+						class="min-w-fit text-[10px] dark:text-[#787878]"
+						href="/workspace/prompts">{$i18n.t('Prompts')}
+						</a>
+					</div>
 				</div>
 				<MessageInput
 					{history}
@@ -214,8 +222,8 @@
 			</div>
 		</div>
 	</div>
-	<div class="mx-auto max-w-2xl font-primary" in:fade={{ duration: 200, delay: 200 }}>
-		<div class="mx-5">
+	<div class="font-primary" in:fade={{ duration: 200, delay: 200 }}>
+		<div class="mx-3">
 			<Suggestions
 				suggestionPrompts={models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 					$config?.default_prompt_suggestions ??

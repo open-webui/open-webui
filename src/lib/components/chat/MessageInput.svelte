@@ -348,6 +348,7 @@
 			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
 		}
 	});
+	
 </script>
 
 <FilesOverlay show={dragged} />

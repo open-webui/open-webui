@@ -266,7 +266,7 @@ input[type='number'] {
 }
 
 .ProseMirror {
-	@apply h-full min-h-fit max-h-full whitespace-pre-wrap;
+	@apply h-full min-h-fit max-h-full whitespace-pre-wrap text-[13px];
 }
 
 .ProseMirror:focus {
