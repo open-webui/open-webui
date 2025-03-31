@@ -8,16 +8,16 @@ services:
     restart: unless-stopped
     image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
 
-  open-webui:
+  ceylon-ally:
     build:
       context: .
       args:
         OLLAMA_BASE_URL: '/ollama'
       dockerfile: Dockerfile
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
-    container_name: open-webui
+    image: ghcr.io/ceylon-ally/ceylon-ally:${WEBUI_DOCKER_TAG-main}
+    container_name: ceylon-ally
     volumes:
-      - open-webui:/app/backend/data
+      - ceylon-ally:/app/backend/data
     depends_on:
       - ollama
     ports:
@@ -31,4 +31,4 @@ services:
 
 volumes:
   ollama: {}
-  open-webui: {}
+  ceylon-ally: {}
