@@ -25,9 +25,9 @@ from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
 )
 from open_webui.config import (
-    RAG_EMBEDDING_QUERY_PREFIX, 
-    RAG_EMBEDDING_PASSAGE_PREFIX, 
-    RAG_EMBEDDING_PREFIX_FIELD_NAME
+    RAG_EMBEDDING_QUERY_PREFIX,
+    RAG_EMBEDDING_CONTENT_PREFIX,
+    RAG_EMBEDDING_PREFIX_FIELD_NAME,
 )
 
 log = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ class VectorSearchRetriever(BaseRetriever):
     ) -> list[Document]:
         result = VECTOR_DB_CLIENT.search(
             collection_name=self.collection_name,
-            vectors=[self.embedding_function(query,RAG_EMBEDDING_QUERY_PREFIX)],
+            vectors=[self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)],
             limit=self.top_k,
         )
 
@@ -334,7 +334,9 @@ def get_embedding_function(
     embedding_batch_size,
 ):
     if embedding_engine == "":
-        return lambda query, prefix, user=None: embedding_function.encode(query, prompt = prefix if prefix else None).tolist()
+        return lambda query, prefix, user=None: embedding_function.encode(
+            query, prompt=prefix if prefix else None
+        ).tolist()
     elif embedding_engine in ["ollama", "openai"]:
         func = lambda query, prefix, user=None: generate_embeddings(
             engine=embedding_engine,
@@ -345,20 +347,27 @@ def get_embedding_function(
             key=key,
             user=user,
         )
+
         def generate_multiple(query, prefix, user, func):
             if isinstance(query, list):
                 embeddings = []
                 for i in range(0, len(query), embedding_batch_size):
                     embeddings.extend(
-                        func(query[i : i + embedding_batch_size], prefix=prefix, user=user)
+                        func(
+                            query[i : i + embedding_batch_size],
+                            prefix=prefix,
+                            user=user,
+                        )
                     )
                 return embeddings
             else:
                 return func(query, prefix, user)
-        return lambda query, prefix, user=None: generate_multiple(query, prefix, user, func)
+
+        return lambda query, prefix, user=None: generate_multiple(
+            query, prefix, user, func
+        )
     else:
         raise ValueError(f"Unknown embedding engine: {embedding_engine}")
-
 
 
 def get_sources_from_files(
@@ -579,14 +588,11 @@ def generate_openai_batch_embeddings(
     url: str = "https://api.openai.com/v1",
     key: str = "",
     prefix: str = None,
-    user: UserModel = None
+    user: UserModel = None,
 ) -> Optional[list[list[float]]]:
     try:
-        json_data = {
-            "input": texts, 
-            "model": model
-        }
-        if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME,str) and isinstance(prefix,str):
+        json_data = {"input": texts, "model": model}
+        if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
             json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
 
         r = requests.post(
@@ -619,21 +625,18 @@ def generate_openai_batch_embeddings(
 
 
 def generate_ollama_batch_embeddings(
-    model: str, 
+    model: str,
     texts: list[str],
     url: str,
-    key: str = "", 
-    prefix: str = None, 
-    user: UserModel = None
+    key: str = "",
+    prefix: str = None,
+    user: UserModel = None,
 ) -> Optional[list[list[float]]]:
     try:
-        json_data = {
-            "input": texts, 
-            "model": model
-        }
-        if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME,str) and isinstance(prefix,str):
+        json_data = {"input": texts, "model": model}
+        if isinstance(RAG_EMBEDDING_PREFIX_FIELD_NAME, str) and isinstance(prefix, str):
             json_data[RAG_EMBEDDING_PREFIX_FIELD_NAME] = prefix
-            
+
         r = requests.post(
             f"{url}/api/embed",
             headers={
@@ -664,32 +667,56 @@ def generate_ollama_batch_embeddings(
         return None
 
 
-def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], prefix: Union[str , None] = None, **kwargs):
+def generate_embeddings(
+    engine: str,
+    model: str,
+    text: Union[str, list[str]],
+    prefix: Union[str, None] = None,
+    **kwargs,
+):
     url = kwargs.get("url", "")
     key = kwargs.get("key", "")
     user = kwargs.get("user")
 
     if prefix is not None and RAG_EMBEDDING_PREFIX_FIELD_NAME is None:
         if isinstance(text, list):
-            text = [f'{prefix}{text_element}' for text_element in text]
+            text = [f"{prefix}{text_element}" for text_element in text]
         else:
-            text = f'{prefix}{text}'
+            text = f"{prefix}{text}"
 
     if engine == "ollama":
         if isinstance(text, list):
             embeddings = generate_ollama_batch_embeddings(
-                **{"model": model, "texts": text, "url": url, "key": key, "prefix": prefix, "user": user}
+                **{
+                    "model": model,
+                    "texts": text,
+                    "url": url,
+                    "key": key,
+                    "prefix": prefix,
+                    "user": user,
+                }
             )
         else:
             embeddings = generate_ollama_batch_embeddings(
-                **{"model": model, "texts": [text], "url": url, "key": key, "prefix": prefix, "user": user}
+                **{
+                    "model": model,
+                    "texts": [text],
+                    "url": url,
+                    "key": key,
+                    "prefix": prefix,
+                    "user": user,
+                }
             )
         return embeddings[0] if isinstance(text, str) else embeddings
     elif engine == "openai":
         if isinstance(text, list):
-            embeddings = generate_openai_batch_embeddings(model, text, url, key, prefix, user)
+            embeddings = generate_openai_batch_embeddings(
+                model, text, url, key, prefix, user
+            )
         else:
-            embeddings = generate_openai_batch_embeddings(model, [text], url, key, prefix, user)
+            embeddings = generate_openai_batch_embeddings(
+                model, [text], url, key, prefix, user
+            )
         return embeddings[0] if isinstance(text, str) else embeddings
 
 
@@ -727,8 +754,7 @@ class RerankCompressor(BaseDocumentCompressor):
 
             query_embedding = self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
             document_embedding = self.embedding_function(
-                [doc.page_content for doc in documents], 
-                RAG_EMBEDDING_PASSAGE_PREFIX
+                [doc.page_content for doc in documents], RAG_EMBEDDING_CONTENT_PREFIX
             )
             scores = util.cos_sim(query_embedding, document_embedding)[0]
 
