@@ -1,5 +1,5 @@
 name: Bug Report
-description: Create a detailed bug report to help us improve Open WebUI.
+description: Create a detailed bug report to help us improve Ceylon Ally.
 title: 'issue: '
 labels: ['bug', 'triage']
 assignees: []
@@ -13,9 +13,9 @@ body:
 
         - **Before submitting a bug report**: Please check the [Issues](https://github.com/open-webui/open-webui/issues) or [Discussions](https://github.com/open-webui/open-webui/discussions) sections to see if a similar issue has already been reported. If unsure, start a discussion first, as this helps us efficiently focus on improving the project.
 
-        - **Respectful collaboration**: Open WebUI is a volunteer-driven project with a single maintainer and contributors who also have full-time jobs. Please be constructive and respectful in your communication.
+        - **Respectful collaboration**: Ceylon Ally is a volunteer-driven project with a single maintainer and contributors who also have full-time jobs. Please be constructive and respectful in your communication.
 
-        - **Contributing**: If you encounter an issue, consider submitting a pull request or forking the project. We prioritize preventing contributor burnout to maintain Open WebUI's quality.
+        - **Contributing**: If you encounter an issue, consider submitting a pull request or forking the project. We prioritize preventing contributor burnout to maintain Ceylon Ally's quality.
 
         - **Bug Reproducibility**: If a bug cannot be reproduced using a `:main` or `:dev` Docker setup or with `pip install` on Python 3.11, community assistance may be required. In such cases, we will move it to the "[Issues](https://github.com/open-webui/open-webui/discussions/categories/issues)" Discussions section. Your help is appreciated!
 
@@ -27,14 +27,14 @@ body:
       options:
         - label: I have searched the existing issues and discussions.
           required: true
-        - label: I am using the latest version of Open WebUI.
+        - label: I am using the latest version of Ceylon Ally.
           required: true
 
   - type: dropdown
     id: installation-method
     attributes:
       label: Installation Method
-      description: How did you install Open WebUI?
+      description: How did you install Ceylon Ally?
       options:
         - Git Clone
         - Pip Install
@@ -46,7 +46,7 @@ body:
   - type: input
     id: open-webui-version
     attributes:
-      label: Open WebUI Version
+      label: Ceylon Ally Version
       description: Specify the version (e.g., v0.3.11)
     validations:
       required: true
@@ -83,7 +83,7 @@ body:
       options:
         - label: I have read and followed all instructions in `README.md`.
           required: true
-        - label: I am using the latest version of **both** Open WebUI and Ollama.
+        - label: I am using the latest version of **both** Ceylon Ally and Ollama.
           required: true
         - label: I have included the browser console logs.
           required: true
@@ -143,4 +143,4 @@ body:
       value: |
         ## Note
         If the bug report is incomplete or does not follow instructions, it may not be addressed. Ensure that you've followed all the **README.md** and **troubleshooting.md** guidelines, and provide all necessary information for us to reproduce the issue.  
-        Thank you for contributing to Open WebUI!
+        Thank you for contributing to Ceylon Ally!

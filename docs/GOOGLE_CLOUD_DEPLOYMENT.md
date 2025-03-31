@@ -1,6 +1,6 @@
-# Deploying Open WebUI to Google Cloud
+# Deploying Ceylon Ally to Google Cloud
 
-This guide will help you deploy Open WebUI to Google Cloud Platform using Docker and Cloud Run.
+This guide will help you deploy Ceylon Ally to Google Cloud Platform using Docker and Cloud Run.
 
 ## Prerequisites
 
@@ -23,7 +23,7 @@ gcloud services enable cloudbuild.googleapis.com run.googleapis.com artifactregi
 
 3. Create a Docker repository in Artifact Registry:
 ```bash
-gcloud artifacts repositories create open-webui --repository-format=docker --location=[REGION] --description="Open WebUI Docker repository"
+gcloud artifacts repositories create open-webui --repository-format=docker --location=[REGION] --description="Ceylon Ally Docker repository"
 ```
 
 ## Build and Push Docker Images
@@ -38,7 +38,7 @@ gcloud auth configure-docker [REGION]-docker.pkg.dev
 # Build Ollama image
 docker build -t [REGION]-docker.pkg.dev/[PROJECT_ID]/open-webui/ollama:latest .
 
-# Build Open WebUI image
+# Build Ceylon Ally image
 docker build -t [REGION]-docker.pkg.dev/[PROJECT_ID]/open-webui/open-webui:latest .
 ```
 
@@ -62,7 +62,7 @@ gcloud run deploy ollama \
   --allow-unauthenticated
 ```
 
-2. Deploy Open WebUI service:
+2. Deploy Ceylon Ally service:
 ```bash
 gcloud run deploy open-webui \
   --image=[REGION]-docker.pkg.dev/[PROJECT_ID]/open-webui/open-webui:latest \
@@ -79,7 +79,7 @@ Replace `[PROJECT_ID]`, `[REGION]`, and `[OLLAMA_SERVICE_URL]` with your specifi
 
 ## Access Your Deployment
 
-After deployment, you can access your Open WebUI instance at the URL provided by Cloud Run. You can find this URL in the Google Cloud Console or by running:
+After deployment, you can access your Ceylon Ally instance at the URL provided by Cloud Run. You can find this URL in the Google Cloud Console or by running:
 
 ```bash
 gcloud run services describe open-webui --region=[REGION] --format='value(status.url)'
