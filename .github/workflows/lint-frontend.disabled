@@ -8,7 +8,7 @@ jobs:
     name: 'Lint Frontend'
     env:
       PUBLIC_API_BASE_URL: ''
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - name: Use Bun

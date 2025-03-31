@@ -1,13 +1,13 @@
 name: Release
 
-on:
-  push:
-    branches:
-      - main # or whatever branch you want to use
+on: workflow_dispatch
+  # push:
+  #   branches:
+  #     - main # or whatever branch you want to use
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout repository

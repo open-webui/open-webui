@@ -1,20 +1,19 @@
 name: Create and publish Docker images with specific build args
 
-on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-      - dev
-    tags:
-      - v*
+on: workflow_dispatch
+  # push:
+  #   branches:
+  #     - main
+  #     - dev
+  #   tags:
+  #     - v*
 
 env:
   REGISTRY: ghcr.io
 
 jobs:
   build-main-image:
-    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
@@ -23,7 +22,7 @@ jobs:
       matrix:
         platform:
           - linux/amd64
-          - linux/arm64
+          # - linux/arm64
 
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
@@ -111,7 +110,7 @@ jobs:
           retention-days: 1
 
   build-cuda-image:
-    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
@@ -211,7 +210,7 @@ jobs:
           retention-days: 1
 
   build-ollama-image:
-    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
@@ -311,7 +310,7 @@ jobs:
           retention-days: 1
 
   merge-main-images:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [build-main-image]
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
@@ -365,7 +364,7 @@ jobs:
           docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
 
   merge-cuda-images:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [build-cuda-image]
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
@@ -421,7 +420,7 @@ jobs:
           docker buildx imagetools inspect ${{ env.FULL_IMAGE_NAME }}:${{ steps.meta.outputs.version }}
 
   merge-ollama-images:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [build-ollama-image]
     steps:
       # GitHub Packages requires the entire repository name to be in lowercase
