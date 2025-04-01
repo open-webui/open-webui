@@ -86,7 +86,7 @@
 
 		if (command.content.includes('{{USER_NAME}}')) {
 			console.log($user);
-			const name = $user.name || 'User';
+			const name = $user?.name || 'User';
 			text = text.replaceAll('{{USER_NAME}}', name);
 		}
 

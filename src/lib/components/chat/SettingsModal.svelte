@@ -462,7 +462,7 @@
 								<div class=" self-center">{$i18n.t('Interface')}</div>
 							</button>
 						{:else if tabId === 'connections'}
-							{#if $user.role === 'admin' || ($user.role === 'user' && $config?.features?.enable_direct_connections)}
+							{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
 								<button
 									class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 									'connections'
@@ -488,7 +488,7 @@
 								</button>
 							{/if}
 						{:else if tabId === 'tools'}
-							{#if $user.role === 'admin' || ($user.role === 'user' && $config?.features?.enable_direct_tools)}
+							{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_tools)}
 								<button
 									class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 									'tools'
@@ -636,7 +636,7 @@
 								<div class=" self-center">{$i18n.t('About')}</div>
 							</button>
 						{:else if tabId === 'admin'}
-							{#if $user.role === 'admin'}
+							{#if $user?.role === 'admin'}
 								<button
 									class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 									'admin'
