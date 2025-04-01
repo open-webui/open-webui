@@ -28,8 +28,6 @@
 	}
 
 	$: models = modelIds.map((id) => $_models.find((m) => m.id === id));
-
-	const tempChatTooltipText = 'This chat won’t appear in history and your messages will not be saved.';
 	
 	onMount(() => {
 		mounted = true;
@@ -70,7 +68,7 @@
 
 		{#if $temporaryChatEnabled}
 		<Tooltip
-			content={$i18n.t(tempChatTooltipText)}
+			content={$i18n.t('This chat won’t appear in history and your messages will not be saved.')}
 			className="w-full flex justify-center mb-0.5"
 			placement="top"
 		>
