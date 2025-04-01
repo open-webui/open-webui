@@ -412,7 +412,8 @@ async def update_chat_message_by_id(
             "user_id": user.id,
             "chat_id": id,
             "message_id": message_id,
-        }
+        },
+        False,
     )
 
     if event_emitter:
@@ -428,6 +429,50 @@ async def update_chat_message_by_id(
         )
 
     return ChatResponse(**chat.model_dump())
+
+
+############################
+# SendChatMessageEventById
+############################
+class EventForm(BaseModel):
+    type: str
+    data: dict
+
+
+@router.post("/{id}/messages/{message_id}/event", response_model=Optional[bool])
+async def send_chat_message_event_by_id(
+    id: str, message_id: str, form_data: EventForm, user=Depends(get_verified_user)
+):
+    chat = Chats.get_chat_by_id(id)
+
+    if not chat:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if chat.user_id != user.id and user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    event_emitter = get_event_emitter(
+        {
+            "user_id": user.id,
+            "chat_id": id,
+            "message_id": message_id,
+        }
+    )
+
+    try:
+        if event_emitter:
+            await event_emitter(form_data.model_dump())
+        else:
+            return False
+        return True
+    except:
+        return False
 
 
 ############################

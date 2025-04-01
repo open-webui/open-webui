@@ -76,12 +76,20 @@ class WorkspacePermissions(BaseModel):
     tools: bool = False
 
 
+class SharingPermissions(BaseModel):
+    public_models: bool = True
+    public_knowledge: bool = True
+    public_prompts: bool = True
+    public_tools: bool = True
+
+
 class ChatPermissions(BaseModel):
     controls: bool = True
     file_upload: bool = True
     delete: bool = True
     edit: bool = True
     temporary: bool = True
+    temporary_enforced: bool = False
 
 
 class FeaturesPermissions(BaseModel):
@@ -92,6 +100,7 @@ class FeaturesPermissions(BaseModel):
 
 class UserPermissions(BaseModel):
     workspace: WorkspacePermissions
+    sharing: SharingPermissions
     chat: ChatPermissions
     features: FeaturesPermissions
 
@@ -101,6 +110,9 @@ async def get_default_user_permissions(request: Request, user=Depends(get_admin_
     return {
         "workspace": WorkspacePermissions(
             **request.app.state.config.USER_PERMISSIONS.get("workspace", {})
+        ),
+        "sharing": SharingPermissions(
+            **request.app.state.config.USER_PERMISSIONS.get("sharing", {})
         ),
         "chat": ChatPermissions(
             **request.app.state.config.USER_PERMISSIONS.get("chat", {})

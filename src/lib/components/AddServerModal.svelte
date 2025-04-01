@@ -22,68 +22,16 @@
 	export let show = false;
 	export let edit = false;
 
-	export let ollama = false;
-	export let direct = false;
-
 	export let connection = null;
 
 	let url = '';
 	let key = '';
-
-	let prefixId = '';
 	let enable = true;
-	let tags = [];
-
-	let modelId = '';
-	let modelIds = [];
 
 	let loading = false;
 
-	const verifyOllamaHandler = async () => {
-		const res = await verifyOllamaConnection(localStorage.token, url, key).catch((error) => {
-			toast.error(`${error}`);
-		});
-
-		if (res) {
-			toast.success($i18n.t('Server connection verified'));
-		}
-	};
-
-	const verifyOpenAIHandler = async () => {
-		const res = await verifyOpenAIConnection(localStorage.token, url, key, direct).catch(
-			(error) => {
-				toast.error(`${error}`);
-			}
-		);
-
-		if (res) {
-			toast.success($i18n.t('Server connection verified'));
-		}
-	};
-
-	const verifyHandler = () => {
-		if (ollama) {
-			verifyOllamaHandler();
-		} else {
-			verifyOpenAIHandler();
-		}
-	};
-
-	const addModelHandler = () => {
-		if (modelId) {
-			modelIds = [...modelIds, modelId];
-			modelId = '';
-		}
-	};
-
 	const submitHandler = async () => {
 		loading = true;
-
-		if (!ollama && !url) {
-			loading = false;
-			toast.error('URL is required');
-			return;
-		}
 
 		// remove trailing slash from url
 		url = url.replace(/\/$/, '');
@@ -92,10 +40,7 @@
 			url,
 			key,
 			config: {
-				enable: enable,
-				tags: tags,
-				prefix_id: prefixId,
-				model_ids: modelIds
+				enable: enable
 			}
 		};
 
@@ -106,9 +51,7 @@
 
 		url = '';
 		key = '';
-		prefixId = '';
-		tags = [];
-		modelIds = [];
+		enable = true;
 	};
 
 	const init = () => {
@@ -117,9 +60,6 @@
 			key = connection.key;
 
 			enable = connection.config?.enable ?? true;
-			tags = connection.config?.tags ?? [];
-			prefixId = connection.config?.prefix_id ?? '';
-			modelIds = connection.config?.model_ids ?? [];
 		}
 	};
 
@@ -187,34 +127,17 @@
 								</div>
 							</div>
 
-							<Tooltip content={$i18n.t('Verify Connection')} className="self-end -mb-1">
-								<button
-									class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
-									on:click={() => {
-										verifyHandler();
-									}}
-									type="button"
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
-											clip-rule="evenodd"
-										/>
-									</svg>
-								</button>
-							</Tooltip>
-
 							<div class="flex flex-col shrink-0 self-end">
 								<Tooltip content={enable ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
 									<Switch bind:state={enable} />
 								</Tooltip>
 							</div>
+						</div>
+
+						<div class="text-xs text-gray-500 mt-1">
+							{$i18n.t(`WebUI will make requests to "{{url}}/openapi.json"`, {
+								url: url
+							})}
 						</div>
 
 						<div class="flex gap-2 mt-2">
@@ -229,114 +152,6 @@
 										required={false}
 									/>
 								</div>
-							</div>
-
-							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Prefix ID')}</div>
-
-								<div class="flex-1">
-									<Tooltip
-										content={$i18n.t(
-											'Prefix ID is used to avoid conflicts with other connections by adding a prefix to the model IDs - leave empty to disable'
-										)}
-									>
-										<input
-											class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-											type="text"
-											bind:value={prefixId}
-											placeholder={$i18n.t('Prefix ID')}
-											autocomplete="off"
-										/>
-									</Tooltip>
-								</div>
-							</div>
-						</div>
-
-						<div class="flex gap-2 mt-2">
-							<div class="flex flex-col w-full">
-								<div class=" mb-1.5 text-xs text-gray-500">{$i18n.t('Tags')}</div>
-
-								<div class="flex-1">
-									<Tags
-										bind:tags
-										on:add={(e) => {
-											tags = [
-												...tags,
-												{
-													name: e.detail
-												}
-											];
-										}}
-										on:delete={(e) => {
-											tags = tags.filter((tag) => tag.name !== e.detail);
-										}}
-									/>
-								</div>
-							</div>
-						</div>
-
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
-
-						<div class="flex flex-col w-full">
-							<div class="mb-1 flex justify-between">
-								<div class="text-xs text-gray-500">{$i18n.t('Model IDs')}</div>
-							</div>
-
-							{#if modelIds.length > 0}
-								<div class="flex flex-col">
-									{#each modelIds as modelId, modelIdx}
-										<div class=" flex gap-2 w-full justify-between items-center">
-											<div class=" text-sm flex-1 py-1 rounded-lg">
-												{modelId}
-											</div>
-											<div class="shrink-0">
-												<button
-													type="button"
-													on:click={() => {
-														modelIds = modelIds.filter((_, idx) => idx !== modelIdx);
-													}}
-												>
-													<Minus strokeWidth="2" className="size-3.5" />
-												</button>
-											</div>
-										</div>
-									{/each}
-								</div>
-							{:else}
-								<div class="text-gray-500 text-xs text-center py-2 px-10">
-									{#if ollama}
-										{$i18n.t('Leave empty to include all models from "{{url}}/api/tags" endpoint', {
-											url: url
-										})}
-									{:else}
-										{$i18n.t('Leave empty to include all models from "{{url}}/models" endpoint', {
-											url: url
-										})}
-									{/if}
-								</div>
-							{/if}
-						</div>
-
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
-
-						<div class="flex items-center">
-							<input
-								class="w-full py-1 text-sm rounded-lg bg-transparent {modelId
-									? ''
-									: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-								bind:value={modelId}
-								placeholder={$i18n.t('Add a model ID')}
-							/>
-
-							<div>
-								<button
-									type="button"
-									on:click={() => {
-										addModelHandler();
-									}}
-								>
-									<Plus className="size-3.5" strokeWidth="2" />
-								</button>
 							</div>
 						</div>
 					</div>

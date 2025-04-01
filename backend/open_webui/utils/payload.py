@@ -63,6 +63,7 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
         "seed": lambda x: x,
         "stop": lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
         "logit_bias": lambda x: x,
+        "response_format": dict,
     }
     return apply_model_params_to_body(params, form_data, mappings)
 
@@ -114,6 +115,10 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
     if "options" in form_data and "keep_alive" in form_data["options"]:
         form_data["keep_alive"] = form_data["options"]["keep_alive"]
         del form_data["options"]["keep_alive"]
+
+    if "options" in form_data and "format" in form_data["options"]:
+        form_data["format"] = form_data["options"]["format"]
+        del form_data["options"]["format"]
 
     return apply_model_params_to_body(params, form_data, mappings)
 
@@ -249,5 +254,14 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
 
     if "metadata" in openai_payload:
         ollama_payload["metadata"] = openai_payload["metadata"]
+
+    if "response_format" in openai_payload:
+        response_format = openai_payload["response_format"]
+        format_type = response_format.get("type", None)
+
+        schema = response_format.get(format_type, None)
+        if schema:
+            format = schema.get("schema", None)
+            ollama_payload["format"] = format
 
     return ollama_payload

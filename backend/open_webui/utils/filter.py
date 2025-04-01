@@ -101,7 +101,7 @@ async def process_filter_functions(
                 form_data = handler(**params)
 
         except Exception as e:
-            log.exception(f"Error in {filter_type} handler {filter_id}: {e}")
+            log.debug(f"Error in {filter_type} handler {filter_id}: {e}")
             raise e
 
     # Handle file cleanup for inlet
