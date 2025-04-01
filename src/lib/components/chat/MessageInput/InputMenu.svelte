@@ -338,21 +338,21 @@
 >
 	<Tooltip content={$i18n.t('Tools')}>
 		<button
-		class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
-		type="button"
-		aria-label="Tools"
-	>
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			height="24px"
-			viewBox="0 -960 960 960"
-			width="24px"
-			class="fill-[#5f6368] dark:fill-white"
-			><path
-				d="m270-120-10-88 114-314q15 14 32.5 23.5T444-484L334-182l-64 62Zm420 0-64-62-110-302q20-5 37.5-14.5T586-522l114 314-10 88ZM480-520q-50 0-85-35t-35-85q0-39 22.5-69.5T440-752v-88h80v88q35 12 57.5 42.5T600-640q0 50-35 85t-85 35Zm0-80q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Z"
-			/></svg
+			class="bg-transparent hover:bg-white/80 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-2 outline-none focus:outline-none"
+			type="button"
+			aria-label="Tools"
 		>
-	</button>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				height="24px"
+				viewBox="0 -960 960 960"
+				width="24px"
+				class="fill-[#5f6368] dark:fill-white"
+				><path
+					d="m270-120-10-88 114-314q15 14 32.5 23.5T444-484L334-182l-64 62Zm420 0-64-62-110-302q20-5 37.5-14.5T586-522l114 314-10 88ZM480-520q-50 0-85-35t-35-85q0-39 22.5-69.5T440-752v-88h80v88q35 12 57.5 42.5T600-640q0 50-35 85t-85 35Zm0-80q17 0 28.5-11.5T520-640q0-17-11.5-28.5T480-680q-17 0-28.5 11.5T440-640q0 17 11.5 28.5T480-600Z"
+				/></svg
+			>
+		</button>
 	</Tooltip>
 
 	<div slot="content">
@@ -455,7 +455,6 @@
 				</DropdownMenu.Item>
 			</Tooltip>
 			<!-- Tool B -->
-
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>

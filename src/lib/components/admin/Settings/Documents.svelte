@@ -109,8 +109,8 @@
 			return;
 		}
 		if (embeddingEngine === 'portkey' && (OpenAIKey === '' || OpenAIUrl === '')) {
-		toast.error($i18n.t('PORTKEY URL/Key required.'));
-		return;
+			toast.error($i18n.t('PORTKEY URL/Key required.'));
+			return;
 		}
 
 		console.log('Update embedding model attempt:', embeddingModel);
@@ -336,7 +336,7 @@
 
 						<div class="">
 							<select
-								aria-label = "Select Engine"
+								aria-label="Select Engine"
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={contentExtractionEngine}
 							>
@@ -405,7 +405,7 @@
 						<div class=" self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
 						<div class="flex items-center relative">
 							<select
-								aria-label = "Select Text Splitter"
+								aria-label="Select Text Splitter"
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={textSplitter}
 							>
@@ -520,15 +520,12 @@
 						{:else if embeddingEngine === 'portkey'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<input
-								class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-								placeholder={$i18n.t('API Base URL')}
-								bind:value={OpenAIUrl}
-								required
+									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('API Base URL')}
+									bind:value={OpenAIUrl}
+									required
 								/>
-								<SensitiveInput 
-								placeholder={$i18n.t('API Key')} 
-								bind:value={OpenAIKey} 
-								/>
+								<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={OpenAIKey} />
 							</div>
 						{/if}
 					</div>
@@ -562,7 +559,7 @@
 
 									{#if embeddingEngine === ''}
 										<button
-											aria-label = "Set embedding model"
+											aria-label="Set embedding model"
 											class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
 											on:click={() => {
 												embeddingModelUpdateHandler();
@@ -627,7 +624,7 @@
 						</div>
 					</div>
 
-					{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai' ||  embeddingEngine == 'portkey'}
+					{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai' || embeddingEngine == 'portkey'}
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Batch Size')}</div>
 

@@ -915,7 +915,7 @@
 								/>
 							</div>
 							<div class=" self-center font-medium">{$user.name}</div>
-								<!-- User Image color f29c14 will be changed here -->
+							<!-- User Image color f29c14 will be changed here -->
 						</button>
 					</UserMenu>
 				{/if}

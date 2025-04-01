@@ -108,7 +108,7 @@
 							<select
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 								bind:value={webConfig.search.engine}
-								aria-label = "Select a engine"
+								aria-label="Select a engine"
 								placeholder={$i18n.t('Select a engine')}
 								required
 							>
