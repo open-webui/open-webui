@@ -42,7 +42,7 @@
 		[key: string]: any;
 	}[] = [];
 
-	export let className = 'w-[32rem]';
+	export let className = '180px';
 	export let triggerClassName = 'text-[10px]';
 
 	let show = false;
