@@ -443,25 +443,27 @@
 
 			{#if $user.role === 'admin'}
 				<div>
-					<div class=" py-0.5 flex w-full justify-between">
-						<div class=" self-center text-xs">
-							{$i18n.t('Toast notifications for new updates')}
-						</div>
+					{#if $config?.features.enable_update_notification}
+						<div class=" py-0.5 flex w-full justify-between">
+							<div class=" self-center text-xs">
+								{$i18n.t('Toast notifications for new updates')}
+							</div>
 
-						<button
-							class="p-1 px-3 text-xs flex rounded-sm transition"
-							on:click={() => {
-								toggleShowUpdateToast();
-							}}
-							type="button"
-						>
-							{#if showUpdateToast === true}
-								<span class="ml-2 self-center">{$i18n.t('On')}</span>
-							{:else}
-								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
-							{/if}
-						</button>
-					</div>
+							<button
+								class="p-1 px-3 text-xs flex rounded-sm transition"
+								on:click={() => {
+									toggleShowUpdateToast();
+								}}
+								type="button"
+							>
+								{#if showUpdateToast === true}
+									<span class="ml-2 self-center">{$i18n.t('On')}</span>
+								{:else}
+									<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+								{/if}
+							</button>
+						</div>
+					{/if}
 				</div>
 
 				<div>

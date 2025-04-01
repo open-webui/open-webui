@@ -318,6 +318,7 @@ from open_webui.env import (
     AUDIT_EXCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
     CHANGELOG,
+    ENABLE_UPDATE_NOTIFICATION,
     REDIS_URL,
     REDIS_SENTINEL_HOSTS,
     REDIS_SENTINEL_PORT,
@@ -1222,6 +1223,7 @@ async def get_app_config(request: Request):
             "enable_signup": app.state.config.ENABLE_SIGNUP,
             "enable_login_form": app.state.config.ENABLE_LOGIN_FORM,
             "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
+            "enable_update_notification": ENABLE_UPDATE_NOTIFICATION,
             **(
                 {
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
