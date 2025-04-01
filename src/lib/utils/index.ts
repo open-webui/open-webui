@@ -732,23 +732,45 @@ export const extractParagraphsForAudio = (text: string) => {
 	return paragraphs.map(cleanText).filter(Boolean);
 };
 
-export const extractSentencesForAudio = (text: string) => {
-	return extractSentences(text).reduce((mergedTexts, currentText) => {
-		const lastIndex = mergedTexts.length - 1;
-		if (lastIndex >= 0) {
-			const previousText = mergedTexts[lastIndex];
-			const wordCount = previousText.split(/\s+/).length;
-			const charCount = previousText.length;
-			if (wordCount < 4 || charCount < 50) {
-				mergedTexts[lastIndex] = previousText + ' ' + currentText;
-			} else {
-				mergedTexts.push(currentText);
-			}
-		} else {
-			mergedTexts.push(currentText);
-		}
-		return mergedTexts;
-	}, [] as string[]);
+export const extractSentencesForAudio = (text: string): string[] => {
+    // 1. Get the raw, unmerged sentences/fragments
+    const sentences = extractSentences(text);
+
+    // 2. Handle edge cases: no sentences found
+    if (sentences.length === 0) {
+        return [];
+    }
+
+    // 3. Isolate the first sentence/fragment. It will always be output as is.
+    const firstSentence = sentences[0];
+
+    // 4. Apply the merging logic ONLY to the *rest* of the sentences (if any)
+    const mergedRemainingSentences = sentences.slice(1) // Get all sentences *except* the first one
+        .reduce((mergedTexts, currentText) => {
+            const lastIndex = mergedTexts.length - 1;
+
+            // If mergedTexts is currently empty, this is the first item of the "remaining" sentences
+            if (lastIndex < 0) {
+                mergedTexts.push(currentText); // Start the merged list
+            } else {
+                // Apply the existing merging logic
+                const previousText = mergedTexts[lastIndex];
+                const wordCount = previousText.split(/\s+/).length;
+                const charCount = previousText.length;
+
+                if (wordCount < 4 || charCount < 50) {
+                    // Merge currentText into the previous one
+                    mergedTexts[lastIndex] = previousText + ' ' + currentText;
+                } else {
+                    // Start a new merged sentence
+                    mergedTexts.push(currentText);
+                }
+            }
+            return mergedTexts;
+        }, [] as string[]); // Start the reduce for the remainder with an empty array
+
+    // 5. Combine the guaranteed first sentence with the merged results of the rest
+    return [firstSentence, ...mergedRemainingSentences];
 };
 
 export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {

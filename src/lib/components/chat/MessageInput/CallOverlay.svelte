@@ -564,7 +564,7 @@
 		chatStreaming = true;
 
 		if (currentMessageId !== id) {
-			console.log(`Received chat start event for message ID ${id}`);
+			console.log(`!!Received chat start event for message ID ${id}`);
 
 			currentMessageId = id;
 			if (audioAbortController) {
@@ -586,7 +586,7 @@
 		// there will be many sentences for the same "id"
 
 		if (currentMessageId === id) {
-			console.log(`Received chat event for message ID ${id}: ${content}`);
+			console.log(`!![chateventhandler] Received chat event for message ID ${id}: ${content}`);
 
 			try {
 				if (messages[id] === undefined) {

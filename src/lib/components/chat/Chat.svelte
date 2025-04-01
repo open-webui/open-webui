@@ -1094,77 +1094,67 @@
 			message.sources = sources;
 		}
 
-		if (choices) {
-			if (choices[0]?.message?.content) {
-				// Non-stream response
-				message.content += choices[0]?.message?.content;
-			} else {
-				// Stream response
-				let value = choices[0]?.delta?.content ?? '';
-				if (message.content == '' && value == '\n') {
-					console.log('Empty response');
-				} else {
-					message.content += value;
+		console.log('!!content', content)
 
-					if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
-						navigator.vibrate(5);
-					}
-
-					// Emit chat event for TTS
-					const messageContentParts = getMessageContentParts(
-						message.content,
-						$config?.audio?.tts?.split_on ?? 'punctuation'
-					);
-					messageContentParts.pop();
-
-					// dispatch only last sentence and make sure it hasn't been dispatched before
-					if (
-						messageContentParts.length > 0 &&
-						messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-					) {
-						message.lastSentence = messageContentParts[messageContentParts.length - 1];
-						eventTarget.dispatchEvent(
-							new CustomEvent('chat', {
-								detail: {
-									id: message.id,
-									content: messageContentParts[messageContentParts.length - 1]
-								}
-							})
-						);
-					}
-				}
-			}
-		}
 
 		if (content) {
-			// REALTIME_CHAT_SAVE is disabled
-			message.content = content;
-
+			const currentCumulativeContent = content; // Use a clearer name
 			if (navigator.vibrate && ($settings?.hapticFeedback ?? false)) {
 				navigator.vibrate(5);
 			}
 
-			// Emit chat event for TTS
-			const messageContentParts = getMessageContentParts(
-				message.content,
+			// **** State Tracking: Use index for dispatched SENTENCES ****
+			// Initialize to -1 when the message object is first created.
+			if (typeof message.lastDispatchedSentenceIndex === 'undefined') {
+				message.lastDispatchedSentenceIndex = -1;
+			}
+
+			// **** 1. Split the ENTIRE current cumulative content into parts ****
+			const allParts = getMessageContentParts(
+				currentCumulativeContent,
 				$config?.audio?.tts?.split_on ?? 'punctuation'
 			);
-			messageContentParts.pop();
 
-			// dispatch only last sentence and make sure it hasn't been dispatched before
-			if (
-				messageContentParts.length > 0 &&
-				messageContentParts[messageContentParts.length - 1] !== message.lastSentence
-			) {
-				message.lastSentence = messageContentParts[messageContentParts.length - 1];
-				eventTarget.dispatchEvent(
-					new CustomEvent('chat', {
-						detail: {
-							id: message.id,
-							content: messageContentParts[messageContentParts.length - 1]
-						}
-					})
-				);
+			console.log(`Processing parts. Total parts now: ${allParts.length}, Last dispatched index: ${message.lastDispatchedSentenceIndex}`);
+
+			// **** 2. Dispatch only NEW, COMPLETE parts ****
+			// Iterate through the parts array. Start checking from the index *after* the last one dispatched.
+			// IMPORTANT: Iterate up to allParts.length - 1 because the very last part might still be incomplete in a streaming scenario.
+			// We'll handle the absolute final part when the 'done' flag is received later.
+			const limit = allParts.length - 1; // Don't dispatch the potentially incomplete last part yet
+
+			for (let i = message.lastDispatchedSentenceIndex + 1; i < limit; i++) {
+				const partToDispatch = allParts[i];
+
+				// Make sure the part is not empty or just whitespace
+				if (partToDispatch && partToDispatch.trim() !== '') {
+					const trimmedPart = partToDispatch.trim(); // Use the trimmed version
+					console.log(`Dispatching new complete part at index ${i}: "${trimmedPart}"`);
+
+					eventTarget.dispatchEvent(
+						new CustomEvent('chat', {
+							detail: {
+								id: message.id,
+								content: trimmedPart // Dispatch the sentence/part
+							}
+						})
+					);
+
+					// Update the index to mark this part as dispatched
+					message.lastDispatchedSentenceIndex = i;
+
+				} else {
+					console.log(`Skipping empty or whitespace part found at index ${i}`);
+					// Advance index even for skipped parts to avoid getting stuck
+					message.lastDispatchedSentenceIndex = i;
+				}
+			}
+
+			// **** 3. Update message.content (for display or history) ****
+			message.content = currentCumulativeContent;
+
+			if (typeof message.lastSeenContent !== 'undefined') {
+				delete message.lastSeenContent;
 			}
 		}
 
@@ -1197,6 +1187,7 @@
 					-1
 				) ?? '';
 			if (lastMessageContentPart) {
+				console.log('!!lastMessageContentPart', lastMessageContentPart)
 				eventTarget.dispatchEvent(
 					new CustomEvent('chat', {
 						detail: { id: message.id, content: lastMessageContentPart }
