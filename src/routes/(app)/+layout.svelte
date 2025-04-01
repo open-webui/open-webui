@@ -199,6 +199,12 @@
 				temporaryChatEnabled.set(true);
 			}
 
+			console.log($user.permissions);
+
+			if ($user?.permissions?.chat?.temporary_enforced) {
+				temporaryChatEnabled.set(true);
+			}
+
 			// Check for version updates
 			if ($user.role === 'admin') {
 				// Check if the user has dismissed the update toast in the last 24 hours
