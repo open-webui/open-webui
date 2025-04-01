@@ -45,9 +45,10 @@
 		if (inputValue.length > 500) {
 			filteredPrompts = [];
 		} else {
-			const newFilteredPrompts = inputValue.trim()
-				? fuse.search(inputValue.trim()).map((result) => result.item)
-				: sortedPrompts;
+			const newFilteredPrompts =
+				inputValue.trim() && fuse
+					? fuse.search(inputValue.trim()).map((result) => result.item)
+					: sortedPrompts;
 
 			// Compare with the oldFilteredPrompts
 			// If there's a difference, update array + version

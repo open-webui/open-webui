@@ -63,8 +63,8 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 
 		if (Array.isArray(sourceIds)) {
 			sourceIds.forEach((sourceId, idx) => {
-				const regex = new RegExp(`\\[${idx}\\]`, 'g');
-				segment = segment.replace(regex, `<source_id data="${idx}" title="${sourceId}" />`);
+				const regex = new RegExp(`\\[${idx + 1}\\]`, 'g');
+				segment = segment.replace(regex, `<source_id data="${idx + 1}" title="${sourceId}" />`);
 			});
 		}
 
@@ -608,7 +608,7 @@ export const convertOpenAIChats = (_chats) => {
 				user_id: '',
 				title: convo['title'],
 				chat: chat,
-				timestamp: convo['timestamp']
+				timestamp: convo['create_time']
 			});
 		} else {
 			failed++;
@@ -752,7 +752,7 @@ export const extractSentencesForAudio = (text: string) => {
 };
 
 export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {
-	content = removeDetails(content, ['reasoning', 'code_interpreter']);
+	content = removeDetails(content, ['reasoning', 'code_interpreter', 'tool_calls']);
 	const messageContentParts: string[] = [];
 
 	switch (split_on) {
@@ -1069,4 +1069,114 @@ export const formatFileSize = (size) => {
 export const getLineCount = (text) => {
 	console.log(typeof text);
 	return text ? text.split('\n').length : 0;
+};
+
+// Helper function to recursively resolve OpenAPI schema into JSON schema format
+function resolveSchema(schemaRef, components, resolvedSchemas = new Set()) {
+	if (!schemaRef) return {};
+
+	if (schemaRef['$ref']) {
+		const refPath = schemaRef['$ref'];
+		const schemaName = refPath.split('/').pop();
+
+		if (resolvedSchemas.has(schemaName)) {
+			// Avoid infinite recursion on circular references
+			return {};
+		}
+		resolvedSchemas.add(schemaName);
+		const referencedSchema = components.schemas[schemaName];
+		return resolveSchema(referencedSchema, components, resolvedSchemas);
+	}
+
+	if (schemaRef.type) {
+		const schemaObj = { type: schemaRef.type };
+
+		if (schemaRef.description) {
+			schemaObj.description = schemaRef.description;
+		}
+
+		switch (schemaRef.type) {
+			case 'object':
+				schemaObj.properties = {};
+				schemaObj.required = schemaRef.required || [];
+				for (const [propName, propSchema] of Object.entries(schemaRef.properties || {})) {
+					schemaObj.properties[propName] = resolveSchema(propSchema, components);
+				}
+				break;
+
+			case 'array':
+				schemaObj.items = resolveSchema(schemaRef.items, components);
+				break;
+
+			default:
+				// for primitive types (string, integer, etc.), just use as is
+				break;
+		}
+		return schemaObj;
+	}
+
+	// fallback for schemas without explicit type
+	return {};
+}
+
+// Main conversion function
+export const convertOpenApiToToolPayload = (openApiSpec) => {
+	const toolPayload = [];
+
+	for (const [path, methods] of Object.entries(openApiSpec.paths)) {
+		for (const [method, operation] of Object.entries(methods)) {
+			const tool = {
+				type: 'function',
+				name: operation.operationId,
+				description: operation.summary || 'No description available.',
+				parameters: {
+					type: 'object',
+					properties: {},
+					required: []
+				}
+			};
+
+			// Extract path and query parameters
+			if (operation.parameters) {
+				operation.parameters.forEach((param) => {
+					tool.parameters.properties[param.name] = {
+						type: param.schema.type,
+						description: param.schema.description || ''
+					};
+
+					if (param.required) {
+						tool.parameters.required.push(param.name);
+					}
+				});
+			}
+
+			// Extract and recursively resolve requestBody if available
+			if (operation.requestBody) {
+				const content = operation.requestBody.content;
+				if (content && content['application/json']) {
+					const requestSchema = content['application/json'].schema;
+					const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);
+
+					if (resolvedRequestSchema.properties) {
+						tool.parameters.properties = {
+							...tool.parameters.properties,
+							...resolvedRequestSchema.properties
+						};
+
+						if (resolvedRequestSchema.required) {
+							tool.parameters.required = [
+								...new Set([...tool.parameters.required, ...resolvedRequestSchema.required])
+							];
+						}
+					} else if (resolvedRequestSchema.type === 'array') {
+						tool.parameters = resolvedRequestSchema; // special case when root schema is an array
+					}
+				}
+			}
+
+			toolPayload.push(tool);
+		}
+	}
+
+	return toolPayload;
 };

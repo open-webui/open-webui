@@ -430,6 +430,12 @@
 											return null;
 										});
 									}
+								} else {
+									if (model?.id && model?.name) {
+										await createNewModel(localStorage.token, model).catch((error) => {
+											return null;
+										});
+									}
 								}
 							}
 
@@ -474,7 +480,7 @@
 				<button
 					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 					on:click={async () => {
-						downloadModels($_models);
+						downloadModels(models);
 					}}
 				>
 					<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Models')}</div>

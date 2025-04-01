@@ -64,7 +64,10 @@ class MilvusClient:
 
             for item in match:
                 _ids.append(item.get("id"))
-                _distances.append(item.get("distance"))
+                # normalize milvus score from [-1, 1] to [0, 1] range
+                # https://milvus.io/docs/de/metric.md
+                _dist = (item.get("distance") + 1.0) / 2.0
+                _distances.append(_dist)
                 _documents.append(item.get("entity", {}).get("data", {}).get("text"))
                 _metadatas.append(item.get("entity", {}).get("metadata"))
 
