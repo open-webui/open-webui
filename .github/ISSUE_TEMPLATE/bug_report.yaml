@@ -29,7 +29,7 @@ body:
       label: Installation Method
       description: How did you install RAUX?
       options:
-        - Standalone
+        - Standalone Installer
         - Coupled with GAIA
         - Git Clone
     validations:
@@ -58,18 +58,6 @@ body:
       description: Specify the version (e.g., v0.2.0, or v0.1.32-rc1)
     validations:
       required: false
-
-  - type: dropdown
-    id: mode-selection
-    attributes:
-      label: Installation Mode
-      description: Which mode did you install RAUX in?
-      options:
-        - Hybrid
-        - Generic
-        - NPU
-    validations:
-      required: true
 
   - type: input
     id: operating-system
@@ -132,7 +120,7 @@ body:
     attributes:
       label: Logs & Screenshots
       description: Include relevant logs, errors, or screenshots to help diagnose the issue.
-      placeholder: 'Attach logs from the browser console, Docker logs, or error messages.'
+      placeholder: 'Attach logs from the browser console, or error messages.'
     validations:
       required: true
 
@@ -149,5 +137,5 @@ body:
       value: |
         ## Note
         If the bug report is incomplete or does not follow instructions (especially reproduction steps), it may be closed without review.
-        Ensure that you've followed all the **README.md** and **TROUBLESHOOTING.md** guidelines.
+        Ensure that you've followed all the [README.md](https://github.com/aigdat/raux/blob/main/README.md) guidelines.
         Thank you for contributing to RAUX!
