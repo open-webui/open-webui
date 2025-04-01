@@ -55,7 +55,7 @@ elasticsearch==8.17.1
 transformers
 sentence-transformers==3.3.1
 colbert-ai==0.2.21
-einops==0.8.0
+einops==0.8.1
 
 
 ftfy==6.2.3
