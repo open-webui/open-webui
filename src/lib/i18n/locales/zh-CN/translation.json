@@ -344,7 +344,7 @@
 	"Draw": "平局",
 	"Drop any files here to add to the conversation": "拖动文件到此处以添加到对话中",
 	"e.g. '30s','10m'. Valid time units are 's', 'm', 'h'.": "例如 '30s'，'10m'。有效的时间单位是秒：'s'，分：'m'，时：'h'。",
-	"e.g. \"json\" or a JSON schema": "例如 "json" 或 JSON 结构",
+	"e.g. \"json\" or a JSON schema": "例如 \"json\" 或 JSON 结构",
 	"e.g. 60": "例如 '60'",
 	"e.g. A filter to remove profanity from text": "例如：一个用于过滤文本中不当内容的过滤器",
 	"e.g. My Filter": "例如：我的过滤器",
