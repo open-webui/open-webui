@@ -36,10 +36,17 @@ async def process_filter_functions(
     request, filter_ids, filter_type, form_data, extra_params
 ):
     skip_files = None
+    current_user_email = extra_params.get("__user__", {}).get("email")
+    if not current_user_email:
+        # You might want to raise an error or simply skip if no user is provided.
+        return form_data, {}
 
     for filter_id in filter_ids:
         filter = Functions.get_function_by_id(filter_id)
         if not filter:
+            continue
+
+        if filter.created_by != current_user_email:
             continue
 
         if filter_id in request.app.state.FUNCTIONS:
