@@ -25,7 +25,7 @@
 			edit: true,
 			file_upload: true,
 			temporary: true,
-			temporary_enforced: true
+			temporary_enforced: false
 		},
 		features: {
 			web_search: true,
