@@ -1,7 +1,7 @@
 fastapi==0.115.7
 uvicorn[standard]==0.34.0
 pydantic==2.10.6
-python-multipart==0.0.18
+python-multipart==0.0.20
 
 python-socketio==5.11.3
 python-jose==3.4.0
@@ -55,7 +55,7 @@ elasticsearch==8.17.1
 transformers
 sentence-transformers==3.3.1
 colbert-ai==0.2.21
-einops==0.8.0
+einops==0.8.1
 
 
 ftfy==6.2.3
@@ -67,7 +67,7 @@ python-pptx==1.0.0
 unstructured==0.16.17
 nltk==3.9.1
 Markdown==3.7
-pypandoc==1.13
+pypandoc==1.15
 pandas==2.2.3
 openpyxl==3.1.5
 pyxlsb==1.0.10
