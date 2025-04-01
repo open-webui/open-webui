@@ -105,7 +105,7 @@ for source in log_sources:
 
 log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 
-WEBUI_NAME = os.environ.get("WEBUI_NAME", "Aunsight Intelligence")
+WEBUI_NAME = os.environ.get("WEBUI_NAME", "DiscoverAI")
 
 WEBUI_FAVICON_URL = "static/favicon.png"
 
