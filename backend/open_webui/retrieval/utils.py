@@ -299,7 +299,10 @@ def query_collection_with_hybrid_search(
             log.exception(f"Failed to fetch collection {collection_name}: {e}")
             collection_results[collection_name] = None
 
-    log.info(f"Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections...")
+    log.info(
+        f"Starting hybrid search for {len(queries)} queries in {len(collection_names)} collections..."
+    )
+
     def process_query(collection_name, query):
         try:
             result = query_doc_with_hybrid_search(
@@ -317,7 +320,11 @@ def query_collection_with_hybrid_search(
             log.exception(f"Error when querying the collection with hybrid_search: {e}")
             return None, e
 
-    tasks = [(collection_name, query) for collection_name in collection_names for query in queries]
+    tasks = [
+        (collection_name, query)
+        for collection_name in collection_names
+        for query in queries
+    ]
 
     with ThreadPoolExecutor() as executor:
         future_results = [executor.submit(process_query, cn, q) for cn, q in tasks]
@@ -330,8 +337,10 @@ def query_collection_with_hybrid_search(
             results.append(result)
 
     if error and not results:
-        raise Exception("Hybrid search failed for all collections. Using Non-hybrid search as fallback.")
-        
+        raise Exception(
+            "Hybrid search failed for all collections. Using Non-hybrid search as fallback."
+        )
+
     return merge_and_sort_query_results(results, k=k)
 
 
