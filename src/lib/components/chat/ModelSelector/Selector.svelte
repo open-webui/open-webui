@@ -219,6 +219,26 @@
 			toast.success(`${model} download has been canceled`);
 		}
 	};
+	$: {
+		console.log(filteredItems);
+	}
+	function getModelIcon(label: string): string {
+		const lower = label.toLowerCase();
+
+		if (lower.includes('perplexity')) {
+			return '/perplexity-ai-icon.svg';
+		} else if (lower.includes('gpt')) {
+			return '/chatgpt-icon.svg';
+		} else if(lower.includes('claude')) {
+			return '/claude-ai-icon.svg';
+		} else if(lower.includes('gemini')) {
+			return '/google-gemini-icon.svg';
+		} else if(lower.includes('mistral') || lower.includes('pixtral')) {
+			return '/mistral-color.svg';
+		}else {
+			return '/static/favicon.png'
+		}
+	}
 </script>
 
 <DropdownMenu.Root
@@ -236,16 +256,11 @@
 		id="model-selector-{id}-button"
 	>
 		<div
-			class="flex  w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
+			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
 		>
 			{#if selectedModel}
-				
-					<img
-						src={'/static/favicon.png'}
-						alt="Model"
-						class="rounded-full size-4 self-center mr-2"
-					/>
-					{selectedModel.label}
+				<img src={getModelIcon(selectedModel.label)} alt="Model" class="rounded-full size-4 self-center mr-2" />
+				{selectedModel.label}
 			{:else}
 				{placeholder}
 			{/if}
@@ -331,15 +346,17 @@
 												content={$user?.role === 'admin' ? (item?.value ?? '') : ''}
 												placement="top-start"
 											> -->
-												<img
-													src={item.model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
-													alt="Model"
-													class="rounded-full size-5 flex items-center mr-2"
-												/>
-												<span class="text-[10px] leading-normal">{item.label}</span>
+											<img
+												src={getModelIcon(item.label)}
+												alt="Model"
+												class="rounded-full size-5 flex items-center mr-2"
+											/>
+											<span class="text-[10px] leading-normal">{item.label}</span>
 											<!-- </Tooltip> -->
 										</div>
-										<div class="text-[9px] ml-7 text-[#808080] leading-normal">Great for most tasks</div>
+										<div class="text-[9px] ml-7 text-[#808080] leading-normal">
+											Great for most tasks
+										</div>
 									</div>
 									<!-- {#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
 										<div class="flex ml-1 items-center translate-y-[0.5px]">
@@ -436,9 +453,18 @@
 
 						{#if value === item.value}
 							<div class="ml-auto pl-2 pr-2 md:pr-0">
-								<svg width="13" height="14" viewBox="0 0 9 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-									<path d="M4.16004 6.27718C4.08868 6.27718 4.02088 6.24863 3.97093 6.19868L2.96115 5.1889C2.85768 5.08542 2.85768 4.91415 2.96115 4.81068C3.06463 4.7072 3.2359 4.7072 3.33937 4.81068L4.16004 5.63135L5.99405 3.79733C6.09753 3.69386 6.2688 3.69386 6.37227 3.79733C6.47575 3.90081 6.47575 4.07208 6.37227 4.17555L4.34915 6.19868C4.2992 6.24863 4.2314 6.27718 4.16004 6.27718Z" fill="white"/>
-								</svg>		
+								<svg
+									width="13"
+									height="14"
+									viewBox="0 0 9 10"
+									fill="none"
+									xmlns="http://www.w3.org/2000/svg"
+								>
+									<path
+										d="M4.16004 6.27718C4.08868 6.27718 4.02088 6.24863 3.97093 6.19868L2.96115 5.1889C2.85768 5.08542 2.85768 4.91415 2.96115 4.81068C3.06463 4.7072 3.2359 4.7072 3.33937 4.81068L4.16004 5.63135L5.99405 3.79733C6.09753 3.69386 6.2688 3.69386 6.37227 3.79733C6.47575 3.90081 6.47575 4.07208 6.37227 4.17555L4.34915 6.19868C4.2992 6.24863 4.2314 6.27718 4.16004 6.27718Z"
+										fill="white"
+									/>
+								</svg>
 							</div>
 						{/if}
 					</button>

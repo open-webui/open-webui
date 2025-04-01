@@ -44,7 +44,7 @@
 
 	export let id;
 	export let title;
-	export let pinned;
+	export let pinned = false;
 
 	export let selected = false;
 	export let shiftKey = false;
