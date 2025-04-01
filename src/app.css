@@ -232,7 +232,7 @@ input[type='number'] {
 }
 
 .tippy-box[data-theme~='dark'] {
-	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
+	@apply rounded-[6px] bg-[#1E1E1E] text-[10px] text-[#D0CECE] shadow-xl;
 }
 
 .password {

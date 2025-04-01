@@ -223,7 +223,7 @@
 		</div>
 	</div>
 	<div class="font-primary" in:fade={{ duration: 200, delay: 200 }}>
-		<div class="mx-3">
+		<div class="mx-auto max-w-3xl min-h-[55px]">
 			<Suggestions
 				suggestionPrompts={models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 					$config?.default_prompt_suggestions ??

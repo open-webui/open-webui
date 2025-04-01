@@ -75,7 +75,7 @@
 	{/if}
 </div> -->
 
-<div class="flex justify-start {className} items-center gap-2.5">
+<div class="flex justify-start {className} items-center gap-2.5 px-2">
 	{#if limitedPrompts.length > 0}
 		{#each limitedPrompts as prompt, idx (prompt.id || prompt.content)}
 			<button

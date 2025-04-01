@@ -43,6 +43,12 @@
 	import PhotoSolid from '../icons/PhotoSolid.svelte';
 	import Photo from '../icons/Photo.svelte';
 	import CommandLine from '../icons/CommandLine.svelte';
+	import WebSearchIcon from '../icons/WebSearchIcon.svelte';
+	import CodeInterpreterIcon from '../icons/CodeInterpreterIcon.svelte';
+	import ImageGenerateIcon from '../icons/ImageGenerateIcon.svelte';
+	import InputMenuIcon from '../icons/InputMenuIcon.svelte';
+	import VoiceRecorderIcon from '../icons/VoiceRecorderIcon.svelte';
+	import CallIcon from '../icons/CallIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -389,11 +395,11 @@
 						</div>
 					{/if}
 				</div>
-
+				<!-- class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10" -->
 				<div class="w-full relative">
 					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled || ($settings?.webSearch ?? false) === 'always' || imageGenerationEnabled || codeInterpreterEnabled}
 						<div
-							class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10"
+							
 						>
 							{#if selectedToolIds.length > 0}
 								<div class="flex items-center justify-between w-full">
@@ -427,7 +433,7 @@
 								</div>
 							{/if}
 
-							{#if webSearchEnabled || ($settings?.webSearch ?? false) === 'always'}
+							<!-- {#if webSearchEnabled || ($settings?.webSearch ?? false) === 'always'}
 								<div class="flex items-center justify-between w-full">
 									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
 										<div class="pl-1">
@@ -441,9 +447,9 @@
 										<div class=" translate-y-[0.5px]">{$i18n.t('Search the internet')}</div>
 									</div>
 								</div>
-							{/if}
+							{/if} -->
 
-							{#if imageGenerationEnabled}
+							<!-- {#if imageGenerationEnabled}
 								<div class="flex items-center justify-between w-full">
 									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
 										<div class="pl-1">
@@ -457,9 +463,9 @@
 										<div class=" translate-y-[0.5px]">{$i18n.t('Generate an image')}</div>
 									</div>
 								</div>
-							{/if}
+							{/if} -->
 
-							{#if codeInterpreterEnabled}
+							<!-- {#if codeInterpreterEnabled}
 								<div class="flex items-center justify-between w-full">
 									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
 										<div class="pl-1">
@@ -473,7 +479,7 @@
 										<div class=" translate-y-[0.5px]">{$i18n.t('Execute code for analysis')}</div>
 									</div>
 								</div>
-							{/if}
+							{/if} -->
 
 							{#if atSelectedModel !== undefined}
 								<div class="flex items-center justify-between w-full">
@@ -678,7 +684,7 @@
 									</div>
 								{/if}
 
-								<div class="px-2.5">
+								<div class="px-2.5 min-h-[50px]">
 									{#if $settings?.richTextInput ?? true}
 										<div
 											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
@@ -1113,40 +1119,33 @@
 											}}
 										>
 											<button
-												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-none focus:outline-none"
+												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-[#1E1E1E] transition rounded-[6px] p-[3px] outline-none focus:outline-none"
 												type="button"
 												aria-label="More"
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="size-5"
-												>
-													<path
-														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
-													/>
-												</svg>
+												<InputMenuIcon/>
 											</button>
 										</InputMenu>
 
-										<div class="flex gap-0.5 items-center overflow-x-auto scrollbar-none flex-1">
+										<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
 											{#if $_user}
 												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
 															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 															type="button"
-															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
+															class="p-[3px] flex gap-1.5 items-center text-[10px] leading-none rounded-[6px] font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
-																? 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'
-																: 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+																? 'bg-blue-100 dark:bg-[#272D9899] text-blue-500 dark:text-white'
+																: 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 hover:bg-gray-100 dark:hover:bg-[#1E1E1E]'}"
 														>
-															<GlobeAlt className="size-5" strokeWidth="1.75" />
+															<WebSearchIcon/>
+															{#if (webSearchEnabled || ($settings?.webSearch ?? false) === 'always')}
 															<span
 																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
 																>{$i18n.t('Web Search')}</span
-															>
+															> 
+															{/if}
 														</button>
 													</Tooltip>
 												{/if}
@@ -1157,15 +1156,17 @@
 															on:click|preventDefault={() =>
 																(imageGenerationEnabled = !imageGenerationEnabled)}
 															type="button"
-															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
-																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+															class="p-[3px] flex gap-1.5 items-center text-[10px] leading-none rounded-[6px] font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
+																? 'bg-gray-100 dark:bg-[#272D9899] text-gray-600 dark:text-white'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-[#1E1E1E] '}"
 														>
-															<Photo className="size-5" strokeWidth="1.75" />
+															<ImageGenerateIcon/>
+															{#if (imageGenerationEnabled)}
 															<span
 																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
 																>{$i18n.t('Image')}</span
 															>
+															{/if}
 														</button>
 													</Tooltip>
 												{/if}
@@ -1176,15 +1177,17 @@
 															on:click|preventDefault={() =>
 																(codeInterpreterEnabled = !codeInterpreterEnabled)}
 															type="button"
-															class="px-1.5 @sm:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
-																? 'bg-gray-100 dark:bg-gray-500/20 text-gray-600 dark:text-gray-400'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+															class="p-[3px] flex gap-1.5 items-center text-[10px] leading-none rounded-lg font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
+																? 'bg-gray-100 dark:bg-[#272D9899] text-gray-600 dark:text-white'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-[#1E1E1E] '}"
 														>
-															<CommandLine className="size-5" strokeWidth="1.75" />
-															<span
-																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-																>{$i18n.t('Code Interpreter')}</span
-															>
+															<CodeInterpreterIcon/>
+															{#if (codeInterpreterEnabled)}
+																<span
+																	class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																	>{$i18n.t('Code Interpreter')}</span
+																>
+															{/if}
 														</button>
 													</Tooltip>
 												{/if}
@@ -1197,7 +1200,7 @@
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
 													id="voice-input-button"
-													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
+													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 dark:hover:bg-[#1E1E1E] transition rounded-[6px] p-[3px] mr-0.5 self-center"
 													type="button"
 													on:click={async () => {
 														try {
@@ -1227,17 +1230,7 @@
 													}}
 													aria-label="Voice Input"
 												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 20 20"
-														fill="currentColor"
-														class="w-5 h-5 translate-y-[0.5px]"
-													>
-														<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-														<path
-															d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
-														/>
-													</svg>
+												<VoiceRecorderIcon/>
 												</button>
 											</Tooltip>
 										{/if}
@@ -1250,7 +1243,7 @@
 															class=" {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
 																? 'bg-blue-500 text-white hover:bg-blue-400 '
-																: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100'} transition rounded-full p-1.5 self-center"
+																: 'bg-black text-white hover:bg-gray-900 dark:bg-transparent dark:text-[#D0CECE] dark:hover:bg-[#1E1E1E]'} transition rounded-[6px] p-[3px]  self-center"
 															type="button"
 															on:click={async () => {
 																if (selectedModels.length > 1) {
@@ -1293,7 +1286,7 @@
 															}}
 															aria-label="Call"
 														>
-															<Headphone className="size-5" />
+															<CallIcon/>
 														</button>
 													</Tooltip>
 												</div>
@@ -1314,7 +1307,7 @@
 																xmlns="http://www.w3.org/2000/svg"
 																viewBox="0 0 16 16"
 																fill="currentColor"
-																class="size-5"
+																class="size-2"
 															>
 																<path
 																	fill-rule="evenodd"
