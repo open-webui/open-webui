@@ -1,5 +1,9 @@
 [
 	{
+		"code": "ar",
+		"title": "Arabic (العربية)"
+	},
+	{
 		"code": "en-US",
 		"title": "English (US)"
 	},
@@ -9,7 +13,7 @@
 	},
 	{
 		"code": "ar-BH",
-		"title": "Arabic (عربي)"
+		"title": "Arabic (Bahrain)"
 	},
 	{
 		"code": "eu-ES",
