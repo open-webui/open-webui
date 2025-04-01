@@ -21,7 +21,7 @@ from langchain_community.document_loaders import (
 )
 from langchain_core.documents import Document
 
-from mistralai import Mistral
+from .mistral import MistralLoader
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
@@ -164,53 +164,6 @@ class DoclingLoader:
                 except Exception:
                     error_msg += f" - {r.text}"
             raise Exception(f"Error calling Docling: {error_msg}")
-
-
-class MistralLoader:
-    def __init__(self, api_key: str, file_path: str):
-        self.api_key = api_key
-        self.file_path = file_path
-        self.client = Mistral(api_key=api_key)
-
-    def load(self) -> list[Document]:
-        log.info("Uploading file to Mistral OCR")
-        uploaded_pdf = self.client.files.upload(
-            file={
-                "file_name": self.file_path.split("/")[-1],
-                "content": open(self.file_path, "rb"),
-            },
-            purpose="ocr",
-        )
-        log.info("File uploaded to Mistral OCR, getting signed URL")
-        signed_url = self.client.files.get_signed_url(file_id=uploaded_pdf.id)
-        log.info("Signed URL received, processing OCR")
-        ocr_response = self.client.ocr.process(
-            model="mistral-ocr-latest",
-            document={
-                "type": "document_url",
-                "document_url": signed_url.url,
-            },
-        )
-        log.info("OCR processing done, deleting uploaded file")
-        deleted_pdf = self.client.files.delete(file_id=uploaded_pdf.id)
-        log.info("Uploaded file deleted")
-        log.debug("OCR response: %s", ocr_response)
-        if not hasattr(ocr_response, "pages") or not ocr_response.pages:
-            log.error("No pages found in OCR response")
-            return [Document(page_content="No text content found", metadata={})]
-
-        return [
-            Document(
-                page_content=page.markdown,
-                metadata={
-                    "page": page.index,
-                    "page_label": page.index + 1,
-                    "total_pages": len(ocr_response.pages),
-                },
-            )
-            for page in ocr_response.pages
-            if hasattr(page, "markdown") and hasattr(page, "index")
-        ]
 
 
 class Loader:
