@@ -247,7 +247,11 @@ async def update_embedding_config(
         request.app.state.config.RAG_EMBEDDING_ENGINE = form_data.embedding_engine
         request.app.state.config.RAG_EMBEDDING_MODEL = form_data.embedding_model
 
-        if request.app.state.config.RAG_EMBEDDING_ENGINE in ["ollama", "openai", "portkey"]:
+        if request.app.state.config.RAG_EMBEDDING_ENGINE in [
+            "ollama",
+            "openai",
+            "portkey",
+        ]:
             if form_data.openai_config is not None:
                 request.app.state.config.RAG_OPENAI_API_BASE_URL = (
                     form_data.openai_config.url
@@ -279,12 +283,14 @@ async def update_embedding_config(
             request.app.state.ef,
             (
                 request.app.state.config.RAG_OPENAI_API_BASE_URL
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai" or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
+                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
                 else request.app.state.config.RAG_OLLAMA_BASE_URL
             ),
             (
                 request.app.state.config.RAG_OPENAI_API_KEY
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai" or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
+                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
                 else request.app.state.config.RAG_OLLAMA_API_KEY
             ),
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
@@ -865,12 +871,14 @@ def save_docs_to_vector_db(
             request.app.state.ef,
             (
                 request.app.state.config.RAG_OPENAI_API_BASE_URL
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai" or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
+                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
                 else request.app.state.config.RAG_OLLAMA_BASE_URL
             ),
             (
                 request.app.state.config.RAG_OPENAI_API_KEY
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai" or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
+                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
                 else request.app.state.config.RAG_OLLAMA_API_KEY
             ),
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
@@ -902,11 +910,13 @@ def save_docs_to_vector_db(
         log.exception(e)
         raise e
 
+
 import logging
 import uuid
 import json
 from datetime import datetime
 from typing import Optional, Callable, Any
+
 
 def get_embeddings_with_fallback(
     embedding_engine: str,
@@ -919,7 +929,7 @@ def get_embeddings_with_fallback(
     get_single_batch_embedding_function: Callable,
     get_embedding_function: Callable,
     user: Optional[Any] = None,
-    backoff: bool = True
+    backoff: bool = True,
 ) -> list[list[float]]:
     """
     Generate embeddings with a fallback mechanism to the default method of OpenWebUI with multiple API calls for each chunk
@@ -939,15 +949,15 @@ def get_embeddings_with_fallback(
             embedding_batch_size,
             backoff=False,
         )
-        
+
         # Explicitly try to generate embeddings with the single batch function
         return single_batch_func(texts, user)
-    
+
     except Exception as e:
         # Log the specific error from single batch attempt
         logging.warning(f"Single batch embedding failed. Error: {str(e)}")
         logging.warning(f"Falling back to batched embedding function")
-        
+
         # Fallback to the original get_embedding_function
         fallback_func = get_embedding_function(
             embedding_engine,
@@ -958,9 +968,10 @@ def get_embeddings_with_fallback(
             embedding_batch_size,
             backoff=True,
         )
-        
+
         # Return the result from the fallback function
         return fallback_func(texts, user)
+
 
 def save_docs_to_multiple_collections(
     request: Request,
@@ -974,6 +985,7 @@ def save_docs_to_multiple_collections(
     """
     Save documents to multiple collections using a single embedding operation
     """
+
     def _get_docs_info(docs: list[Document]) -> str:
         docs_info = set()
 
@@ -1004,7 +1016,9 @@ def save_docs_to_multiple_collections(
         if result is not None:
             existing_doc_ids = result.ids[0]
             if existing_doc_ids:
-                log.info(f"Document with hash {metadata['hash']} already exists in collection {collection_name}")
+                log.info(
+                    f"Document with hash {metadata['hash']} already exists in collection {collection_name}"
+                )
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
@@ -1078,19 +1092,21 @@ def save_docs_to_multiple_collections(
             request.app.state.ef,
             (
                 request.app.state.config.RAG_OPENAI_API_BASE_URL
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai" or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
+                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
                 else request.app.state.config.RAG_OLLAMA_BASE_URL
             ),
             (
                 request.app.state.config.RAG_OPENAI_API_KEY
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai" or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
+                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                or request.app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
                 else request.app.state.config.RAG_OLLAMA_API_KEY
             ),
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
             list(map(lambda x: x.replace("\n", " "), texts)),
             get_single_batch_embedding_function,  # Pass this function
             get_embedding_function,  # Pass this function
-            user=user
+            user=user,
         )
 
         # Create items once
@@ -1117,6 +1133,7 @@ def save_docs_to_multiple_collections(
         log.exception(e)
         raise e
 
+
 class ProcessFileForm(BaseModel):
     file_id: str
     content: Optional[str] = None
@@ -1128,7 +1145,9 @@ def process_file(
     request: Request,
     form_data: ProcessFileForm,
     user=Depends(get_verified_user),
-    knowledge_id: Optional[str] = None,  # Add knowledge_id parameter to signify generating embeddings for both file and knowledge base at once
+    knowledge_id: Optional[
+        str
+    ] = None,  # Add knowledge_id parameter to signify generating embeddings for both file and knowledge base at once
 ):
     try:
         file = Files.get_file_by_id(form_data.file_id)
@@ -1254,9 +1273,11 @@ def process_file(
                 if knowledge_id:
                     file_collection = f"file-{file.id}"
                     collections = [file_collection, knowledge_id]
-                    
-                    log.info(f"Processing file for both file collection and knowledge base: {collections}")
-                    
+
+                    log.info(
+                        f"Processing file for both file collection and knowledge base: {collections}"
+                    )
+
                     result = save_docs_to_multiple_collections(
                         request,
                         docs=docs,
@@ -1268,7 +1289,7 @@ def process_file(
                         },
                         user=user,
                     )
-                    
+
                     # Use file collection name for file metadata
                     if result:
                         Files.update_file_metadata_by_id(
@@ -1290,7 +1311,7 @@ def process_file(
                         add=(True if form_data.collection_name else False),
                         user=user,
                     )
-                    
+
                     if result:
                         Files.update_file_metadata_by_id(
                             file.id,
@@ -1302,7 +1323,9 @@ def process_file(
                 if result:
                     return {
                         "status": True,
-                        "collection_name": knowledge_id if knowledge_id else collection_name,
+                        "collection_name": (
+                            knowledge_id if knowledge_id else collection_name
+                        ),
                         "filename": file.filename,
                         "content": text_content,
                     }

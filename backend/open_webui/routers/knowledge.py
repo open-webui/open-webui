@@ -256,11 +256,11 @@ def add_file_to_knowledge_by_id(
     file: UploadFile = File(...),
     user=Depends(get_verified_user),
     file_metadata: dict = {},
-):  
-    import os 
+):
+    import os
     import uuid
     from open_webui.models.files import FileForm
-    
+
     knowledge = Knowledges.get_knowledge_by_id(id=id)
 
     if not knowledge:
@@ -281,7 +281,7 @@ def add_file_to_knowledge_by_id(
 
     log.info(f"file.content_type: {file.content_type}")
     try:
-        
+
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)
 
@@ -326,10 +326,10 @@ def add_file_to_knowledge_by_id(
             else:
                 # Process the file for both file and knowledge collections
                 process_file(
-                    request, 
-                    ProcessFileForm(file_id=file_id), 
-                    user=user, 
-                    knowledge_id=id  # Pass knowledge_id for single embedding
+                    request,
+                    ProcessFileForm(file_id=file_id),
+                    user=user,
+                    knowledge_id=id,  # Pass knowledge_id for single embedding
                 )
 
             file_item = Files.get_file_by_id(id=file_id)
