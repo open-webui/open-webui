@@ -1,6 +1,6 @@
 name: Bug Report
-description: Create a detailed bug report to help us improve Open WebUI.
-title: 'issue: '
+description: Create a detailed bug report to help us improve RAUX.
+title: '[Bug]: '
 labels: ['bug', 'triage']
 assignees: []
 body:
@@ -9,44 +9,36 @@ body:
       value: |
         # Bug Report
 
-        ## Important Notes
+        **Before submitting**: Please check the [Issues](https://github.com/aigdat/raux/issues) or [Discussions](https://github.com/aigdat/raux/discussions) to see if a similar issue has already been reported.
+        If unsure, start a discussion first.
 
-        - **Before submitting a bug report**: Please check the [Issues](https://github.com/open-webui/open-webui/issues) or [Discussions](https://github.com/open-webui/open-webui/discussions) sections to see if a similar issue has already been reported. If unsure, start a discussion first, as this helps us efficiently focus on improving the project.
-
-        - **Respectful collaboration**: Open WebUI is a volunteer-driven project with a single maintainer and contributors who also have full-time jobs. Please be constructive and respectful in your communication.
-
-        - **Contributing**: If you encounter an issue, consider submitting a pull request or forking the project. We prioritize preventing contributor burnout to maintain Open WebUI's quality.
-
-        - **Bug Reproducibility**: If a bug cannot be reproduced using a `:main` or `:dev` Docker setup or with `pip install` on Python 3.11, community assistance may be required. In such cases, we will move it to the "[Issues](https://github.com/open-webui/open-webui/discussions/categories/issues)" Discussions section. Your help is appreciated!
+        Thank you for contributing to RAUX!
 
   - type: checkboxes
     id: issue-check
     attributes:
-      label: Check Existing Issues
-      description: Confirm that you’ve checked for existing reports before submitting a new one.
+      label: Preliminary Checks
+      description: Confirm you've done these steps before submitting.
       options:
         - label: I have searched the existing issues and discussions.
-          required: true
-        - label: I am using the latest version of Open WebUI.
           required: true
 
   - type: dropdown
     id: installation-method
     attributes:
       label: Installation Method
-      description: How did you install Open WebUI?
+      description: How did you install RAUX?
       options:
+        - Standalone
+        - Coupled with GAIA
         - Git Clone
-        - Pip Install
-        - Docker
-        - Other
     validations:
       required: true
 
   - type: input
-    id: open-webui-version
+    id: raux-version
     attributes:
-      label: Open WebUI Version
+      label: RAUX Version
       description: Specify the version (e.g., v0.3.11)
     validations:
       required: true
@@ -58,6 +50,26 @@ body:
       description: Specify the version (e.g., v0.2.0, or v0.1.32-rc1)
     validations:
       required: false
+
+  - type: input
+    id: lemonade-version
+    attributes:
+      label: Lemonade Version (if applicable)
+      description: Specify the version (e.g., v0.2.0, or v0.1.32-rc1)
+    validations:
+      required: false
+
+  - type: dropdown
+    id: mode-selection
+    attributes:
+      label: Installation Mode
+      description: Which mode did you install RAUX in?
+      options:
+        - Hybrid
+        - Generic
+        - NPU
+    validations:
+      required: true
 
   - type: input
     id: operating-system
@@ -82,12 +94,6 @@ body:
       description: Ensure the following prerequisites have been met.
       options:
         - label: I have read and followed all instructions in `README.md`.
-          required: true
-        - label: I am using the latest version of **both** Open WebUI and Ollama.
-          required: true
-        - label: I have included the browser console logs.
-          required: true
-        - label: I have included the Docker container logs.
           required: true
         - label: I have listed steps to reproduce the bug in detail.
           required: true
@@ -142,5 +148,6 @@ body:
     attributes:
       value: |
         ## Note
-        If the bug report is incomplete or does not follow instructions, it may not be addressed. Ensure that you've followed all the **README.md** and **troubleshooting.md** guidelines, and provide all necessary information for us to reproduce the issue.  
-        Thank you for contributing to Open WebUI!
+        If the bug report is incomplete or does not follow instructions (especially reproduction steps), it may be closed without review.
+        Ensure that you've followed all the **README.md** and **TROUBLESHOOTING.md** guidelines.
+        Thank you for contributing to RAUX!
