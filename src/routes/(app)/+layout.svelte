@@ -195,13 +195,16 @@
 				showChangelog.set($settings?.version !== $config.version);
 			}
 
-			if ($page.url.searchParams.get('temporary-chat') === 'true') {
+			// check if searchParam is set, if yes & user is allowed to use param, then param > permission
+			// If "temporary-chat=true" is set in the URL, always enable temporary chat
+			const searchParam = $page.url.searchParams.get('temporary-chat');
+			if (searchParam === 'true') {
 				temporaryChatEnabled.set(true);
-			}
-
-			console.log($user.permissions);
-
-			if ($user?.permissions?.chat?.temporary_enforced) {
+			// If "temporary-chat=false" is set in the URL, always disable temporary chat
+			} else if (searchParam === 'false') {
+				temporaryChatEnabled.set(false);
+			// If "temporary-chat" is not set in the URL, check if user has permission to use temporary chat
+			} else if ($user?.permissions?.chat?.temporary_enforced) {
 				temporaryChatEnabled.set(true);
 			}
 
