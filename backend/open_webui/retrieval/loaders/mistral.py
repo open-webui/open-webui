@@ -14,7 +14,7 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 class MistralLoader:
     """
-    Loads documents by processing them through the Mistral OCR API using requests.
+    Loads documents by processing them through the Mistral OCR API.
     """
 
     BASE_API_URL = "https://api.mistral.ai/v1"
@@ -64,7 +64,7 @@ class MistralLoader:
             with open(self.file_path, "rb") as f:
                 files = {"file": (file_name, f, "application/pdf")}
                 data = {"purpose": "ocr"}
-                # No explicit Content-Type header needed here, requests handles it for multipart/form-data
+
                 upload_headers = self.headers.copy()  # Avoid modifying self.headers
 
                 response = requests.post(
@@ -85,8 +85,7 @@ class MistralLoader:
         """Retrieves a temporary signed URL for the uploaded file."""
         log.info(f"Getting signed URL for file ID: {file_id}")
         url = f"{self.BASE_API_URL}/files/{file_id}/url"
-        # Using expiry=24 as per the curl example; adjust if needed.
-        params = {"expiry": 24}
+        params = {"expiry": 1}
         signed_url_headers = {**self.headers, "Accept": "application/json"}
 
         try:
@@ -116,7 +115,7 @@ class MistralLoader:
                 "type": "document_url",
                 "document_url": signed_url,
             },
-            # "include_image_base64": False # Explicitly set if needed, default seems false
+            "include_image_base64": False,
         }
 
         try:
