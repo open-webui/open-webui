@@ -1295,13 +1295,13 @@
 													<Tooltip content={$i18n.t('Send message')}>
 														<button
 															id="send-message-button"
-															class="{prompt !== ''
+															class="{!(prompt === '' && files.length === 0)
 																? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
 																	? 'bg-blue-500 text-white hover:bg-blue-400 '
 																	: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1 self-center"
 															type="submit"
-															disabled={prompt === ''}
+															disabled={prompt === '' && files.length === 0}
 														>
 															<svg
 																xmlns="http://www.w3.org/2000/svg"
@@ -1323,7 +1323,7 @@
 											<div class=" flex items-center">
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
-														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
+														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1"
 														on:click={() => {
 															stopResponse();
 														}}
@@ -1332,7 +1332,7 @@
 															xmlns="http://www.w3.org/2000/svg"
 															viewBox="0 0 24 24"
 															fill="currentColor"
-															class="size-5"
+															class="size-2"
 														>
 															<path
 																fill-rule="evenodd"

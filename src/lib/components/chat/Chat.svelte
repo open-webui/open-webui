@@ -1975,7 +1975,7 @@
 						</div>
 										
 						<div class=" pb-[1rem]">
-							<div class="px-2.5 mb-2.5 flex items-center justify-between max-w-6xl mx-auto">
+							<div class="mb-2.5 flex items-center justify-between max-w-6xl mx-auto">
 								<ModelSelector bind:selectedModels showSetDefault={!history.currentId} />
 								<div class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-[6px] dark:bg-[#272525]">
 									<BookIcon/>
