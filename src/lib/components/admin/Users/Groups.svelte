@@ -64,7 +64,7 @@
 			delete: true,
 			edit: true,
 			temporary: true,
-			temporary_enforced: true
+			temporary_enforced: false
 		},
 		features: {
 			web_search: true,
