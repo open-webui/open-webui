@@ -1,15 +1,17 @@
 import json
-import redis
 import uuid
+from open_webui.utils.redis import get_redis_connection
 
 
 class RedisLock:
-    def __init__(self, redis_url, lock_name, timeout_secs):
+    def __init__(self, redis_url, lock_name, timeout_secs, redis_sentinels=[]):
         self.lock_name = lock_name
         self.lock_id = str(uuid.uuid4())
         self.timeout_secs = timeout_secs
         self.lock_obtained = False
-        self.redis = redis.Redis.from_url(redis_url, decode_responses=True)
+        self.redis = get_redis_connection(
+            redis_url, redis_sentinels, decode_responses=True
+        )
 
     def aquire_lock(self):
         # nx=True will only set this key if it _hasn't_ already been set
@@ -31,9 +33,11 @@ class RedisLock:
 
 
 class RedisDict:
-    def __init__(self, name, redis_url):
+    def __init__(self, name, redis_url, redis_sentinels=[]):
         self.name = name
-        self.redis = redis.Redis.from_url(redis_url, decode_responses=True)
+        self.redis = get_redis_connection(
+            redis_url, redis_sentinels, decode_responses=True
+        )
 
     def __setitem__(self, key, value):
         serialized_value = json.dumps(value)

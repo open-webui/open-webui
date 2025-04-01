@@ -13,12 +13,19 @@
 			prompts: false,
 			tools: false
 		},
+		sharing: {
+			public_models: false,
+			public_knowledge: false,
+			public_prompts: false,
+			public_tools: false
+		},
 		chat: {
 			controls: true,
 			delete: true,
 			edit: true,
+			file_upload: true,
 			temporary: true,
-			file_upload: true
+			temporary_enforced: true
 		},
 		features: {
 			web_search: true,
@@ -39,6 +46,7 @@
 			...defaults,
 			...obj,
 			workspace: { ...defaults.workspace, ...obj.workspace },
+			sharing: { ...defaults.sharing, ...obj.sharing },
 			chat: { ...defaults.chat, ...obj.chat },
 			features: { ...defaults.features, ...obj.features }
 		};
@@ -195,6 +203,40 @@
 	<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 	<div>
+		<div class=" mb-2 text-sm font-medium">{$i18n.t('Sharing Permissions')}</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Models Public Sharing')}
+			</div>
+			<Switch bind:state={permissions.sharing.public_models} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Knowledge Public Sharing')}
+			</div>
+			<Switch bind:state={permissions.sharing.public_knowledge} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Prompts Public Sharing')}
+			</div>
+			<Switch bind:state={permissions.sharing.public_prompts} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Tools Public Sharing')}
+			</div>
+			<Switch bind:state={permissions.sharing.public_tools} />
+		</div>
+	</div>
+
+	<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+	<div>
 		<div class=" mb-2 text-sm font-medium">{$i18n.t('Chat Permissions')}</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
@@ -236,6 +278,16 @@
 
 			<Switch bind:state={permissions.chat.temporary} />
 		</div>
+
+		{#if permissions.chat.temporary}
+			<div class="  flex w-full justify-between my-2 pr-2">
+				<div class=" self-center text-xs font-medium">
+					{$i18n.t('Enforce Temporary Chat')}
+				</div>
+
+				<Switch bind:state={permissions.chat.temporary_enforced} />
+			</div>
+		{/if}
 	</div>
 
 	<hr class=" border-gray-100 dark:border-gray-850 my-2" />
