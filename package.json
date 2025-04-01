@@ -24,7 +24,7 @@
 		"@sveltejs/adapter-auto": "3.2.2",
 		"@sveltejs/adapter-static": "^3.0.2",
 		"@sveltejs/kit": "^2.5.20",
-		"@sveltejs/vite-plugin-svelte": "^3.1.1",
+		"@sveltejs/vite-plugin-svelte": "^5.0.3",
 		"@tailwindcss/container-queries": "^0.1.1",
 		"@tailwindcss/postcss": "^4.0.0",
 		"@tailwindcss/typography": "^0.5.13",
@@ -46,8 +46,8 @@
 		"tailwindcss": "^4.0.0",
 		"tslib": "^2.4.1",
 		"typescript": "^5.5.4",
-		"vite": "^5.4.14",
-		"vitest": "^1.6.1"
+		"vite": "^6.2.4",
+		"vitest": "^3.1.1"
 	},
 	"type": "module",
 	"dependencies": {
@@ -75,7 +75,7 @@
 		"codemirror-lang-hcl": "^0.0.0-beta.2",
 		"crc-32": "^1.2.2",
 		"dayjs": "^1.11.10",
-		"dompurify": "^3.1.6",
+		"dompurify": "^3.2.4",
 		"eventsource-parser": "^1.1.2",
 		"file-saver": "^2.0.5",
 		"fuse.js": "^7.0.0",
@@ -91,7 +91,7 @@
 		"katex": "^0.16.21",
 		"kokoro-js": "^1.1.1",
 		"marked": "^9.1.0",
-		"mermaid": "^10.9.3",
+		"mermaid": "^11.6.0",
 		"paneforge": "^0.0.6",
 		"panzoom": "^9.4.3",
 		"prosemirror-commands": "^1.6.0",
