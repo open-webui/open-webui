@@ -535,30 +535,26 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
     user_count = Users.get_num_users()
 
-    # Make sure it's a valid email format
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
         )
 
-    # Make sure it’s not already taken
     if Users.get_user_by_email(form_data.email.lower()):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
-    # Decide the user's role
     role = request.app.state.config.DEFAULT_USER_ROLE
 
     # If there are no users in the DB, enforce special rules for the "first" user
     if user_count == 0:
-        REQUIRED_FIRST_EMAIL = "chetangiridhar96@gmail.com"
-        if form_data.email.lower() != REQUIRED_FIRST_EMAIL:
+        REQUIRED_FIRST_EMAIL = ["ms15138@nyu.edu", "chetangiridhar96@gmail.com"]
+        if form_data.email.lower() not in [em.lower() for em in REQUIRED_FIRST_EMAIL]:
             raise HTTPException(
                 status_code=400,
-                detail=f"The first user must have the email {REQUIRED_FIRST_EMAIL}",
+                detail=f"Kindly wait until an authorized administrator has completed the initial login",
             )
-        # Force the first user to be admin
         role = "admin"
-        # (Optional) Disable further signup after creating this first user
+
         request.app.state.config.ENABLE_SIGNUP = False
 
     try:

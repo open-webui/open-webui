@@ -8,7 +8,7 @@
 
 	const i18n = getContext('i18n');
 
-	const SPECIAL_ADMIN_EMAILS = ['chetangiridhar96@gmail.com'];
+	const SPECIAL_ADMIN_EMAILS = ['ms15138@nyu.edu','mb484@nyu.edu', 'sm11538@nyu.edu', 'chetangiridhar96@gmail.com'];
 
 	let loaded = false;
 
