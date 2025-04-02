@@ -10,6 +10,10 @@ export default {
 			fontFamily: {
 				sans: ['Inter', 'ui-sans-serif', 'system-ui'], 
 			  },
+			fontSize: {
+			'2xs': '10px',
+			'xs-plus': '13px',
+			},
 			colors: {
 				gray: {
 					50: '#f9f9f9',

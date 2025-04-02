@@ -253,7 +253,7 @@
 						<Markdown
 							id={message.id}
 							content={message.content}
-						/>{#if message.created_at !== message.updated_at}<span class="text-gray-500 text-[10px]"
+						/>{#if message.created_at !== message.updated_at}<span class="text-gray-500 text-2xs"
 								>(edited)</span
 							>{/if}
 					</div>

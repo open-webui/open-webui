@@ -507,7 +507,7 @@
 
 				{#if message.timestamp}
 					<div
-						class=" self-center text-[10px] invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
+						class=" self-center text-2xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 					>
 						<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
 							<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
@@ -669,7 +669,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="w-full flex flex-col relative text-[13px] leading-[1.8]" id="response-content-container">
+							<div class="w-full flex flex-col relative text-xs-plus leading-[1.8]" id="response-content-container">
 								{#if message.content === '' && !message.error}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
@@ -765,7 +765,7 @@
 									</button>
 
 									<div
-										class="text-[10px] tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
+										class="text-2xs tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
 									>
 										{siblings.indexOf(message.id) + 1}/{siblings.length}
 									</div>

@@ -1119,7 +1119,7 @@
 											}}
 										>
 											<button
-												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-[#1E1E1E] transition rounded-[6px] p-[3px] outline-none focus:outline-none"
+												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-[#1E1E1E] transition rounded-md p-[3px] outline-none focus:outline-none"
 												type="button"
 												aria-label="More"
 											>
@@ -1134,7 +1134,7 @@
 														<button
 															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 															type="button"
-															class="p-[3px] flex gap-1.5 items-center text-[10px] leading-none rounded-[6px] font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
+															class="p-[3px] flex gap-1.5 items-center text-2xs leading-none rounded-md font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
 																? 'bg-blue-100 dark:bg-[#272D9899] text-blue-500 dark:text-white'
 																: 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 hover:bg-gray-100 dark:hover:bg-[#1E1E1E]'}"
@@ -1156,7 +1156,7 @@
 															on:click|preventDefault={() =>
 																(imageGenerationEnabled = !imageGenerationEnabled)}
 															type="button"
-															class="p-[3px] flex gap-1.5 items-center text-[10px] leading-none rounded-[6px] font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
+															class="p-[3px] flex gap-1.5 items-center text-2xs leading-none rounded-md font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
 																? 'bg-gray-100 dark:bg-[#272D9899] text-gray-600 dark:text-white'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-[#1E1E1E] '}"
 														>
@@ -1177,7 +1177,7 @@
 															on:click|preventDefault={() =>
 																(codeInterpreterEnabled = !codeInterpreterEnabled)}
 															type="button"
-															class="p-[3px] flex gap-1.5 items-center text-[10px] leading-none rounded-lg font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
+															class="p-[3px] flex gap-1.5 items-center text-2xs leading-none rounded-lg font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
 																? 'bg-gray-100 dark:bg-[#272D9899] text-gray-600 dark:text-white'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-[#1E1E1E] '}"
 														>
@@ -1200,7 +1200,7 @@
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
 													id="voice-input-button"
-													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 dark:hover:bg-[#1E1E1E] transition rounded-[6px] p-[3px] mr-0.5 self-center"
+													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 dark:hover:bg-[#1E1E1E] transition rounded-md p-[3px] mr-0.5 self-center"
 													type="button"
 													on:click={async () => {
 														try {
@@ -1243,7 +1243,7 @@
 															class=" {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
 																? 'bg-blue-500 text-white hover:bg-blue-400 '
-																: 'bg-black text-white hover:bg-gray-900 dark:bg-transparent dark:text-[#D0CECE] dark:hover:bg-[#1E1E1E]'} transition rounded-[6px] p-[3px]  self-center"
+																: 'bg-black text-white hover:bg-gray-900 dark:bg-transparent dark:text-[#D0CECE] dark:hover:bg-[#1E1E1E]'} transition rounded-md p-[3px]  self-center"
 															type="button"
 															on:click={async () => {
 																if (selectedModels.length > 1) {

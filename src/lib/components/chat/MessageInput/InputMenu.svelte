@@ -150,7 +150,7 @@
 				className="w-full"
 			>
 				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-[10px]  dark:text-[#D0CECE] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818]  rounded-lg {!fileUploadEnabled
+					class="flex gap-2 items-center px-3 py-2 text-2xs  dark:text-[#D0CECE] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818]  rounded-lg {!fileUploadEnabled
 						? 'opacity-50'
 						: ''}"
 					on:click={() => {
@@ -177,7 +177,7 @@
 				className="w-full"
 			>
 				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-[10px] dark:text-[#D0CECE] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] rounded-lg {!fileUploadEnabled
+					class="flex gap-2 items-center px-3 py-2 text-2xs dark:text-[#D0CECE] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] rounded-lg {!fileUploadEnabled
 						? 'opacity-50'
 						: ''}"
 					on:click={() => {

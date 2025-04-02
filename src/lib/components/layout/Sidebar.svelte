@@ -499,11 +499,11 @@
 							<div class=" self-center mr-3">
 								<img
 									src={$user.profile_image_url}
-									class=" max-w-[30px] object-cover rounded-[6px]"
+									class=" max-w-[30px] object-cover rounded-md"
 									alt="User profile"
 								/>
 							</div>
-							<div class=" self-center font-medium text-[13px] mr-1">{$user.name}</div>
+							<div class=" self-center font-medium text-xs-plus mr-1">{$user.name}</div>
 							<ChevronDown className=" size-3" strokeWidth="2.5" />
 						</button>
 					</UserMenu>
@@ -591,7 +591,7 @@
 		<div class="pl-[14px] pr-[11px] my-2 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 			<a
 				id="sidebar-new-chat-button"
-				class="flex justify-center items-center flex-1 rounded-lg text-[10px] px-2 py-1 border border-[#313337] h-[35px] text-right text-gray-850 dark:text-[#ACABAB] dark:hover:text-white dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-[#181818] transition no-drag-region"
+				class="flex justify-center items-center flex-1 rounded-lg text-2xs px-2 py-1 border border-[#313337] h-[35px] text-right text-gray-850 dark:text-[#ACABAB] dark:hover:text-white dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-[#181818] transition no-drag-region"
 				href="/"
 				draggable="false"
 				on:click={async () => {

@@ -139,7 +139,7 @@
 						{/if}
 					</div>
 
-					<div class="translate-y-[0.5px] text-[10px]">
+					<div class="translate-y-[0.5px] text-2xs">
 						{name}
 					</div>
 				</button>

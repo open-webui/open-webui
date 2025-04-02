@@ -33,7 +33,7 @@
 	
 </script>
 
-<div class="flex flex-col items-start dark:bg-[#272525] py-[3px] px-[6px] rounded-[6px] w-fit">
+<div class="flex flex-col items-start dark:bg-[#272525] py-[3px] px-[6px] rounded-md w-fit">
 	{#each selectedModels as selectedModel, selectedModelIdx}
 		<div class="flex w-full max-w-fit">
 			<div class="overflow-hidden w-full">

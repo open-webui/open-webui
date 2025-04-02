@@ -1977,10 +1977,10 @@
 						<div class=" pb-[1rem] max-w-[980px] mx-auto w-full">
 							<div class="px-3 mb-2.5 flex items-center justify-between ">
 								<ModelSelector bind:selectedModels showSetDefault={!history.currentId} />
-								<div class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-[6px] dark:bg-[#272525]">
+								<div class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-md dark:bg-[#272525]">
 									<BookIcon/>
 									<a
-									class="min-w-fit text-[10px] dark:text-[#787878]"
+									class="min-w-fit text-2xs dark:text-[#787878]"
 									href="/workspace/prompts">{$i18n.t('Prompts')}
 									</a>
 								</div>

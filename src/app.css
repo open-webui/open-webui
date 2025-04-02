@@ -232,7 +232,7 @@ input[type='number'] {
 }
 
 .tippy-box[data-theme~='dark'] {
-	@apply rounded-[6px] bg-[#1E1E1E] text-[10px] text-[#D0CECE] shadow-xl;
+	@apply rounded-md bg-[#1E1E1E] text-2xs text-[#D0CECE] shadow-xl;
 }
 
 .password {
@@ -266,7 +266,7 @@ input[type='number'] {
 }
 
 .ProseMirror {
-	@apply h-full min-h-fit max-h-full whitespace-pre-wrap text-[13px];
+	@apply h-full min-h-fit max-h-full whitespace-pre-wrap text-xs-plus;
 }
 
 .ProseMirror:focus {
