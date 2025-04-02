@@ -95,6 +95,37 @@ class UserUpdateForm(BaseModel):
 
 
 class UsersTable:
+    # def insert_new_user(
+    #     self,
+    #     id: str,
+    #     name: str,
+    #     email: str,
+    #     profile_image_url: str = "/user.png",
+    #     role: str = "pending",
+    #     oauth_sub: Optional[str] = None,
+    # ) -> Optional[UserModel]:
+    #     with get_db() as db:
+    #         user = UserModel(
+    #             **{
+    #                 "id": id,
+    #                 "name": name,
+    #                 "email": email,
+    #                 "role": role,
+    #                 "profile_image_url": profile_image_url,
+    #                 "last_active_at": int(time.time()),
+    #                 "created_at": int(time.time()),
+    #                 "updated_at": int(time.time()),
+    #                 "oauth_sub": oauth_sub,
+    #             }
+    #         )
+    #         result = User(**user.model_dump())
+    #         db.add(result)
+    #         db.commit()
+    #         db.refresh(result)
+    #         if result:
+    #             return user
+    #         else:
+    #             return None
     def insert_new_user(
         self,
         id: str,
@@ -105,27 +136,52 @@ class UsersTable:
         oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
+            # Ensure we check the current number of users.
+            user_count = self.get_num_users()
+
+            # If no users yet, enforce the required email for the first user.
+            if user_count == 0:
+                REQUIRED_FIRST_EMAIL = "chetangiridhar96@gmail.com"
+                # If it's not the required email, raise an error.
+                if email.lower() != REQUIRED_FIRST_EMAIL:
+                    raise ValueError(
+                        f"The first user must have the email {REQUIRED_FIRST_EMAIL}"
+                    )
+                # Make sure the first user is automatically admin.
+                role = "admin"
+
+            # If you want *any* signup with this email to be admin (not just the first user):
+            # if email.lower() == "chetangiridhar96@gmail.com":
+            #     role = "admin"
+
             user = UserModel(
-                **{
-                    "id": id,
-                    "name": name,
-                    "email": email,
-                    "role": role,
-                    "profile_image_url": profile_image_url,
-                    "last_active_at": int(time.time()),
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
-                    "oauth_sub": oauth_sub,
-                }
+                id=id,
+                name=name,
+                email=email,
+                role=role,
+                profile_image_url=profile_image_url,
+                last_active_at=int(time.time()),
+                created_at=int(time.time()),
+                updated_at=int(time.time()),
+                oauth_sub=oauth_sub,
             )
+
+            # Convert the Pydantic model to the SQLAlchemy model
             result = User(**user.model_dump())
-            db.add(result)
-            db.commit()
-            db.refresh(result)
-            if result:
-                return user
-            else:
-                return None
+
+            # Use a try/except to make sure we rollback if any unexpected error occurs
+            try:
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+            except Exception:
+                db.rollback()  # ensure no partial user remains
+                raise
+
+            return user if result else None
+
+
+
 
     def get_user_by_id(self, id: str) -> Optional[UserModel]:
         try:

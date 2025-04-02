@@ -42,10 +42,10 @@ router = APIRouter()
 async def get_knowledge(user=Depends(get_verified_user)):
     knowledge_bases = []
 
-    if user.role == "admin":
-        knowledge_bases = Knowledges.get_knowledge_bases()
-    else:
-        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "read")
+    # if user.role == "admin":
+    #     knowledge_bases = Knowledges.get_knowledge_bases()
+    # else:
+    knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "read")
 
     # Get files for each knowledge base
     knowledge_with_files = []
@@ -90,10 +90,10 @@ async def get_knowledge(user=Depends(get_verified_user)):
 async def get_knowledge_list(user=Depends(get_verified_user)):
     knowledge_bases = []
 
-    if user.role == "admin":
-        knowledge_bases = Knowledges.get_knowledge_bases()
-    else:
-        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "write")
+    # if user.role == "admin":
+    #     knowledge_bases = Knowledges.get_knowledge_bases()
+    # else:
+    knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "write")
 
     # Get files for each knowledge base
     knowledge_with_files = []
@@ -170,27 +170,52 @@ class KnowledgeFilesResponse(KnowledgeResponse):
     files: list[FileModel]
 
 
+# @router.get("/{id}", response_model=Optional[KnowledgeFilesResponse])
+# async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
+#     knowledge = Knowledges.get_knowledge_by_id(id=id)
+
+#     if knowledge:
+
+#         if (
+#             user.role == "admin"
+#             or knowledge.user_id == user.id
+#             or has_access(user.id, "read", knowledge.access_control)
+#         ):
+
+#             file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
+#             files = Files.get_files_by_ids(file_ids)
+
+#             return KnowledgeFilesResponse(
+#                 **knowledge.model_dump(),
+#                 files=files,
+#             )
+#     else:
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail=ERROR_MESSAGES.NOT_FOUND,
+#         )
+
+
 @router.get("/{id}", response_model=Optional[KnowledgeFilesResponse])
 async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
 
-    if knowledge:
+    if not knowledge:
+        raise HTTPException(status_code=404, detail="Knowledge not found")
 
-        if (
-            user.role == "admin"
-            or knowledge.user_id == user.id
-            or has_access(user.id, "read", knowledge.access_control)
-        ):
+    if (
+        knowledge.user_id == user.id
+        or has_access(user.id, "read", knowledge.access_control)
+    ):
 
-            file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
-            files = Files.get_files_by_ids(file_ids)
+        file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
+        files = Files.get_files_by_ids(file_ids)
 
-            return KnowledgeFilesResponse(
-                **knowledge.model_dump(),
-                files=files,
-            )
-    else:
-        raise HTTPException(
+        return KnowledgeFilesResponse(
+            **knowledge.model_dump(),
+            files=files,
+        )
+    raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )

@@ -8,6 +8,8 @@
 
 	const i18n = getContext('i18n');
 
+	const SPECIAL_ADMIN_EMAILS = ['chetangiridhar96@gmail.com'];
+
 	let loaded = false;
 
 	onMount(async () => {
@@ -71,13 +73,14 @@
 								: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'} transition"
 							href="/admin/functions">{$i18n.t('Functions')}</a
 						>
-
+						{#if $user.role === 'admin' && SPECIAL_ADMIN_EMAILS.includes($user.email)}
 						<a
 							class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/admin/settings')
 								? 'text-[#57068c] dark:text-white'
 								: 'text-gray-600 dark:text-gray-600 hover:text-[#57068c] dark:hover:text-white'} transition"
 							href="/admin/settings">{$i18n.t('Settings')}</a
 						>
+						{/if}
 					</div>
 				</div>
 			</div>
