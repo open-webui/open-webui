@@ -72,7 +72,7 @@ async def get_function_models(request,user: UserModel = None):
     pipe_models = []
 
     for pipe in pipes:
-        if pipe.created_by != user.email and (pipe.created_by != "chetangiridhar96@gmail.com" or pipe.created_by != "ms15138@nyu.edu"):
+        if pipe.created_by != user.email and (pipe.created_by != "mb484@nyu.edu" or pipe.created_by != "ms15138@nyu.edu" or pipe.created_by != "sm11538@nyu.edu" or pipe.created_by != "cg4532@nyu.edu"):
             continue
         function_module = get_function_module_by_id(request, pipe.id)
 

@@ -135,7 +135,7 @@ async def update_user_permissions(
 #         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
 #     # Define a list of allowed emails that can bypass the admin-to-admin restriction.
-#     allowed_emails = ["sm11538@nyu.edu", "ms15138@nyu.edu", "mb484@nyu.edu", "chetangiridhar96@gmail.com"]
+#     allowed_emails = ["sm11538@nyu.edu", "ms15138@nyu.edu", "mb484@nyu.edu", "cg4532@nyu.edu"]
 
 #     # Allow the first registered user (super-admin) or allowed emails to change admin roles.
 #     if target_user.role == "admin" and not (user.id == Users.get_first_user().id or user.email in allowed_emails):
@@ -169,7 +169,7 @@ async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     # Emails that get super-admin-like privileges for admin-to-admin changes.
-    allowed_emails = ["sm11538@nyu.edu", "ms15138@nyu.edu", "mb484@nyu.edu", "chetangiridhar96@gmail.com"]
+    allowed_emails = ["sm11538@nyu.edu", "ms15138@nyu.edu", "mb484@nyu.edu", "cg4532@nyu.edu", "jy4421@nyu.edu"]
 
     # Prevent users from changing their own role.
     if user.id == form_data.id:

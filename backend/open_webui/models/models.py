@@ -220,7 +220,7 @@ class ModelsTable:
     #                     Model.base_model_id == None,
     #                     or_(
     #                         Model.created_by == user_email,
-    #                         Model.created_by == "chetangiridhar96@gmail.com" 
+    #                         Model.created_by == "cg4532@nyu.edu" 
     #                     )
     #                 )
     #                 .all()
@@ -276,7 +276,7 @@ class ModelsTable:
     #                 return None
     #             # Only return the model if it was created by the current user
     #             # or by the specific shared email.
-    #             if model.created_by != user_email and model.created_by != "chetangiridhar96@gmail.com":
+    #             if model.created_by != user_email and model.created_by != "cg4532@nyu.edu":
     #                 return None
     #             return ModelModel.model_validate(model)
     #     except Exception:

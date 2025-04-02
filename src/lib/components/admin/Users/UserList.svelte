@@ -32,7 +32,7 @@
 	const i18n = getContext('i18n');
 
 
-	const SUPER_ADMIN_EMAILS = ["ms15138@nyu.edu", "mb484@nyu.edu", "sm11538@nyu.edu", "chetangiridhar96@gmail.com"];
+	const SUPER_ADMIN_EMAILS = ["ms15138@nyu.edu", "mb484@nyu.edu", "sm11538@nyu.edu", "cg4532@nyu.edu", "jy4421@nyu.edu"];
 
 	// function to override the label if the user is truly "admin" + in SUPER_ADMIN_EMAILS
 	function getRoleLabel(user) {
