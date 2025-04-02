@@ -16,6 +16,8 @@
 	import CameraSolid from '$lib/components/icons/CameraSolid.svelte';
 	import PhotoSolid from '$lib/components/icons/PhotoSolid.svelte';
 	import CommandLineSolid from '$lib/components/icons/CommandLineSolid.svelte';
+	import UploadFile from '$lib/components/icons/UploadFile.svelte';
+	import TakeAScreenshot from '$lib/components/icons/TakeAScreenshot.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -92,7 +94,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[220px] rounded-xl px-1 py-1  border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow"
+			class="w-full max-w-[220px] rounded-lg px-1 py-1  border-gray-300/30 border dark:border-[#313337] z-50 bg-white dark:bg-[#1E1E1E] dark:text-white shadow"
 			sideOffset={15}
 			alignOffset={-8}
 			side="top"
@@ -148,7 +150,7 @@
 				className="w-full"
 			>
 				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl {!fileUploadEnabled
+					class="flex gap-2 items-center px-3 py-2 text-[10px]  dark:text-[#D0CECE] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818]  rounded-lg {!fileUploadEnabled
 						? 'opacity-50'
 						: ''}"
 					on:click={() => {
@@ -165,7 +167,7 @@
 						}
 					}}
 				>
-					<CameraSolid />
+					<TakeAScreenshot/>
 					<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
 				</DropdownMenu.Item>
 			</Tooltip>
@@ -175,7 +177,7 @@
 				className="w-full"
 			>
 				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl {!fileUploadEnabled
+					class="flex gap-2 items-center px-3 py-2 text-[10px] dark:text-[#D0CECE] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] rounded-lg {!fileUploadEnabled
 						? 'opacity-50'
 						: ''}"
 					on:click={() => {
@@ -183,8 +185,8 @@
 							uploadFilesHandler();
 						}
 					}}
-				>
-					<DocumentArrowUpSolid />
+				>	
+						<UploadFile/>
 					<div class="line-clamp-1">{$i18n.t('Upload Files')}</div>
 				</DropdownMenu.Item>
 			</Tooltip>

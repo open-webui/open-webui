@@ -83,6 +83,6 @@
 	</button>
 
 	{#if label && !showTagInput}
-		<span class="text-xs pl-2 self-center">{label}</span>
+		<span class="text-xs pl-2 self-center text-[#D0CECE]">{label}</span>
 	{/if}
 </div>

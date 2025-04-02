@@ -11,6 +11,9 @@
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
+	import RenameIcon from '$lib/components/icons/RenameIcon.svelte';
+	import ExportIcon from '$lib/components/icons/ExportIcon.svelte';
+	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
 
 	let show = false;
 </script>
@@ -29,40 +32,40 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[160px] rounded-lg px-1 py-1.5  z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+			class="w-full max-w-[160px] rounded-lg border border-[#313337] px-1 py-1.5  z-50 bg-white dark:bg-[#1E1E1E] dark:text-white shadow-lg"
 			sideOffset={-2}
 			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex gap-2 items-center px-3 py-1.5 text-xs  text-[#D0CECE] dark:hover:text-white cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] rounded-md"
 				on:click={() => {
 					dispatch('rename');
 				}}
 			>
-				<Pencil strokeWidth="2" />
+				<RenameIcon/>
 				<div class="flex items-center">{$i18n.t('Rename')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex gap-2 items-center px-3 py-1.5 text-xs  text-[#D0CECE] dark:hover:text-white cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] rounded-md"
 				on:click={() => {
 					dispatch('export');
 				}}
 			>
-				<Download strokeWidth="2" />
+				<ExportIcon/>
 
 				<div class="flex items-center">{$i18n.t('Export')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex  gap-2  items-center px-3 py-1.5 text-xs text-[#D0CECE] dark:hover:text-white cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] rounded-md"
 				on:click={() => {
 					dispatch('delete');
 				}}
 			>
-				<GarbageBin strokeWidth="2" />
+				<DeleteIcon/>
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</DropdownMenu.Item>
 		</DropdownMenu.Content>
