@@ -939,33 +939,55 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
     "DEFAULT_PROMPT_SUGGESTIONS",
     "ui.prompt_suggestions",
     [
-        {
-            "title": ["Help me study", "vocabulary for a college entrance exam"],
-            "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
-        },
-        {
-            "title": ["Give me ideas", "for what to do with my kids' art"],
-            "content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
-        },
-        {
-            "title": ["Tell me a fun fact", "about the Roman Empire"],
-            "content": "Tell me a random fun fact about the Roman Empire",
-        },
-        {
-            "title": ["Show me a code snippet", "of a website's sticky header"],
-            "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
-        },
-        {
-            "title": [
-                "Explain options trading",
-                "if I'm familiar with buying and selling stocks",
-            ],
-            "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
-        },
-        {
-            "title": ["Overcome procrastination", "give me tips"],
-            "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
-        },
+            {
+                "title": [
+                    "Java 코드 작성",
+                    "간단한 REST API 만들기",
+                ],
+                "content": "Spring Boot를 사용해서 'Hello, World'를 반환하는 REST API 컨트롤러 코드를 작성해줘.",
+            },
+            {
+                "title": [
+                    "SQL 쿼리 생성",
+                    "활성 사용자 조회",
+                ],
+                "content": "'users' 테이블에서 상태(status)가 'active'이고 최근 30일 이내에 생성된 계정을 조회하는 SQL 쿼리를 작성해줘.",
+            },
+            {
+                "title": [
+                    "JavaScript 코드 작성",
+                    "폼 유효성 검사",
+                ],
+                "content": "폼 제출 시 이메일 입력 필드를 검사하는 JavaScript 코드를 작성해줘.",
+            },
+            {
+                "title": [
+                    "Java 코드 예시",
+                    "데이터베이스 연결",
+                ],
+                "content": "JDBC를 사용하여 PostgreSQL 데이터베이스에 연결하고 SELECT 쿼리를 실행하는 Java 코드를 보여줘.",
+            },
+            {
+                "title": [
+                    "SQL 테이블 생성",
+                    "외래 키 포함",
+                ],
+                "content": "'posts' 테이블을 만들고, 'users' 테이블을 참조하는 외래 키를 포함하는 SQL 코드를 작성해줘.",
+            },
+            {
+                "title": [
+                    "JavaScript 기능 구현",
+                    "다크 모드 토글",
+                ],
+                "content": "사용자의 다크 모드 설정을 localStorage에 저장하면서 다크 모드를 토글할 수 있는 JavaScript 코드를 작성해줘.",
+            },
+            {
+                "title": [
+                    "Java 제네릭 설명",
+                    "코드 예시 포함",
+                ],
+                "content": "Java의 제네릭(Generic)이 어떻게 작동하는지, T 타입을 사용하는 간단한 클래스와 메서드 예시로 설명해줘.",
+            },
     ],
 )
 
