@@ -103,7 +103,7 @@ if os.path.exists(f"{DATA_DIR}/config.json"):
     os.rename(f"{DATA_DIR}/config.json", f"{DATA_DIR}/old_config.json")
 
 DEFAULT_CONFIG = {
-    "version": 0,
+    "version": 1,
     "ui": {
         "default_locale": "ko",
         "prompt_suggestions": [
