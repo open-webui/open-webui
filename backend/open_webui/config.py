@@ -1727,6 +1727,11 @@ DOCUMENT_INTELLIGENCE_KEY = PersistentConfig(
     os.getenv("DOCUMENT_INTELLIGENCE_KEY", ""),
 )
 
+MISTRAL_OCR_API_KEY = PersistentConfig(
+    "MISTRAL_OCR_API_KEY",
+    "rag.mistral_ocr_api_key",
+    os.getenv("MISTRAL_OCR_API_KEY", ""),
+)
 
 BYPASS_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
     "BYPASS_EMBEDDING_AND_RETRIEVAL",

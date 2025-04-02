@@ -20,6 +20,9 @@ from langchain_community.document_loaders import (
     YoutubeLoader,
 )
 from langchain_core.documents import Document
+
+from open_webui.retrieval.loaders.mistral import MistralLoader
+
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -221,6 +224,15 @@ class Loader:
                 file_path=file_path,
                 api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
                 api_key=self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY"),
+            )
+        elif (
+            self.engine == "mistral_ocr"
+            and self.kwargs.get("MISTRAL_OCR_API_KEY") != ""
+            and file_ext
+            in ["pdf"]  # Mistral OCR currently only supports PDF and images
+        ):
+            loader = MistralLoader(
+                api_key=self.kwargs.get("MISTRAL_OCR_API_KEY"), file_path=file_path
             )
         else:
             if file_ext == "pdf":
