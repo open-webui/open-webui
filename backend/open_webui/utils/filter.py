@@ -101,11 +101,12 @@ async def process_filter_functions(
                 form_data = handler(**params)
 
         except Exception as e:
-            log.exception(f"Error in {filter_type} handler {filter_id}: {e}")
+            log.debug(f"Error in {filter_type} handler {filter_id}: {e}")
             raise e
 
     # Handle file cleanup for inlet
     if skip_files and "files" in form_data.get("metadata", {}):
+        del form_data["files"]
         del form_data["metadata"]["files"]
 
     return form_data, {}

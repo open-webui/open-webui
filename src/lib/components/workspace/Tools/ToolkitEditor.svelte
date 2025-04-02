@@ -11,6 +11,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import { user } from '$lib/stores';
 
 	let formElement = null;
 	let loading = false;
@@ -183,6 +184,7 @@ class Tools:
 	bind:show={showAccessControlModal}
 	bind:accessControl
 	accessRoles={['read', 'write']}
+	allowPublic={$user?.permissions?.sharing?.public_tools || $user?.role === 'admin'}
 />
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
