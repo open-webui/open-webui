@@ -83,28 +83,41 @@
 		}
 	};
 
-	const checkOauthCallback = async () => {
+	const isHandlingOidcCallback = () => {
 		if (!$page.url.hash) {
-			return;
+			return false;
 		}
 		const hash = $page.url.hash.substring(1);
 		if (!hash) {
-			return;
+			return false;
+		}
+		const params = new URLSearchParams(hash);
+		return params.has('token');
+	};
+
+	const checkOauthCallback = async () => {
+		if (!$page.url.hash) {
+			return false;
+		}
+		const hash = $page.url.hash.substring(1);
+		if (!hash) {
+			return false;
 		}
 		const params = new URLSearchParams(hash);
 		const token = params.get('token');
 		if (!token) {
-			return;
+			return false;
 		}
 		const sessionUser = await getSessionUser(token).catch((error) => {
 			toast.error(`${error}`);
-			return null;
+			return false;
 		});
 		if (!sessionUser) {
-			return;
+			return false;
 		}
 		localStorage.token = token;
 		await setSessionUser(sessionUser);
+		return true;
 	};
 
 	let onboarding = false;
@@ -115,15 +128,29 @@
 			return;
 		}
 
-		await checkOauthCallback();
-		await handleSignupDone();
+		if (isHandlingOidcCallback()) {
+			const oauthSuccessfullyCompleted = await checkOauthCallback();
+
+			if (oauthSuccessfullyCompleted) {
+				await handleSignupDone();
+			} else {
+				goto('/error');
+			}
+
+			return;
+		}
+
+		const oidcLoginConfigured = $config?.oauth?.providers?.oidc;
+
+		if (oidcLoginConfigured) {
+			// Immediatly go through the OIDC login process
+			window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
+			return;
+		}
+
+		// Fall back to Other login methods
 
 		loaded = true;
-		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
-			await signInHandler();
-		} else {
-			onboarding = $config?.onboarding ?? false;
-		}
 	});
 </script>
 
