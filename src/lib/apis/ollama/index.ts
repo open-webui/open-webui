@@ -175,6 +175,64 @@ export const updateOllamaUrls = async (token: string = '', urls: string[]) => {
 	return res.OLLAMA_BASE_URLS;
 };
 
+export const getOllamaModelsLoaded = async (token: string = '', urlIdx: null | number = null) => {
+	let error = null;
+
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/ps`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+	.then(async (res) => {
+		if (!res.ok) throw await res.json();
+		return res.json();
+	})
+	.catch((err) => {
+		console.log(err);
+		if ('detail' in err) {
+			error = err.detail;
+		} else {
+			error = 'Server connection failed';
+		}
+		return null;
+	});
+
+if (error) {
+	throw error;
+}
+
+	if (urlIdx !== null && Array.isArray(Object.keys(res)) && Object.keys(res)[urlIdx]) {
+		const serverUrl = Object.keys(res)[urlIdx];
+		const serverData = res[serverUrl] || { models: [] };
+		
+		return (serverData.models || [])
+			.map((model) => ({ id: model.model, name: model.name ?? model.model, ...model }))
+			.sort((a, b) => {
+			return a.name.localeCompare(b.name);
+			});
+		}		
+
+		const serverUrls = Object.keys(res);
+		let serverUrl = serverUrls[0];	
+
+		const baseUrlParts = OLLAMA_API_BASE_URL.replace(/^https?:\/\//, '').split(':')[0];
+		const matchingServer = serverUrls.find(url => url.includes(baseUrlParts));
+		if (matchingServer) {
+			serverUrl = matchingServer;
+		}
+		
+		const serverData = res[serverUrl] || { models: [] };
+	
+	return (serverData.models || [])
+		.map((model) => ({ id: model.model, name: model.name ?? model.model, ...model }))
+		.sort((a, b) => {
+			return a.name.localeCompare(b.name);
+	});
+};
+
 export const getOllamaVersion = async (token: string, urlIdx?: number) => {
 	let error = null;
 
@@ -524,6 +582,46 @@ export const uploadModel = async (token: string, file: File, urlIdx: string | nu
 	if (error) {
 		throw error;
 	}
+	return res;
+};
+
+export const unloadModel = async (token: string, tagName: string, urlIdx: string | null = null) => {
+	let error = null;
+
+	const res = await fetch(
+		`${OLLAMA_API_BASE_URL}/api/generate`,
+		{
+			method: 'POST',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify({
+				model: tagName,
+				keep_alive: 0,
+				prompt: ""
+			})
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = 'Server connection failed';
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
 	return res;
 };
 

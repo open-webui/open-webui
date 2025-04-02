@@ -13,19 +13,23 @@
 		getOllamaUrls,
 		getOllamaVersion,
 		pullModel,
+		unloadModel,
 		uploadModel,
 		getOllamaConfig,
-		getOllamaModels
+		getOllamaModels,
+		getOllamaModelsLoaded
 	} from '$lib/apis/ollama';
 	import { getModels } from '$lib/apis';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ModelDeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import ModelUnloadConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	let modelUploadInputElement: HTMLInputElement;
 	let showModelDeleteConfirm = false;
+	let showModelUnloadConfirm = false;
 
 	let loading = true;
 
@@ -33,6 +37,7 @@
 	export let urlIdx: number | null = null;
 
 	let ollamaModels = [];
+	let ollamaModelsLoaded = [];
 
 	let updateModelId = null;
 	let updateProgress = null;
@@ -63,6 +68,7 @@
 	let uploadMessage = '';
 
 	let deleteModelTag = '';
+	let unloadModelTag = '';
 
 	const updateModelsHandler = async () => {
 		for (const model of ollamaModels) {
@@ -425,6 +431,24 @@
 		);
 	};
 
+	const unloadModelHandler = async () => {
+		const res = await unloadModel(localStorage.token, unloadModelTag, urlIdx).catch((error) => {
+			toast.error(`${error}`);
+		});
+
+		if (res) {
+			toast.success($i18n.t(`Unloaded {{unloadModelTag}}`, { unloadModelTag }));
+		}
+
+		unloadModelTag = '';
+		models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
+	};
+
 	const cancelModelPullHandler = async (model: string) => {
 		const { reader, abortController } = $MODEL_DOWNLOAD_POOL[model];
 		if (abortController) {
@@ -544,6 +568,9 @@
 		});
 
 		if (ollamaModels) {
+			ollamaModelsLoaded = await getOllamaModelsLoaded(localStorage.token, urlIdx).catch((error) => {
+				toast.error(`${error}`);
+			});
 			loading = false;
 		}
 	};
@@ -557,6 +584,13 @@
 	bind:show={showModelDeleteConfirm}
 	on:confirm={() => {
 		deleteModelHandler();
+	}}
+/>
+
+<ModelUnloadConfirmDialog
+	bind:show={showModelUnloadConfirm}
+	on:confirm={() => {
+		unloadModelHandler();
 	}}
 />
 
@@ -731,6 +765,53 @@
 							{/if}
 						{/each}
 					{/if}
+				</div>
+
+				<div>
+					<div class=" mb-2 text-sm font-medium">{$i18n.t('Unload a model')}</div>
+					<div class="flex w-full">
+						<div
+							class="flex-1 mr-2 pr-1.5 rounded-lg bg-gray-50 dark:text-gray-300 dark:bg-gray-850"
+						>
+							<select
+								class="w-full py-2 px-4 text-sm outline-hidden bg-transparent"
+								bind:value={unloadModelTag}
+								placeholder={$i18n.t('Select a model')}
+							>
+								{#if !unloadModelTag}
+									<option value="" disabled selected>{$i18n.t('Select a loaded model')}</option>
+								{/if}
+								{#each ollamaModelsLoaded as model}
+									<option value={model.id} class="bg-gray-50 dark:bg-gray-700"
+										>{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}</option
+									>
+								{/each}
+							</select>
+						</div>
+						<button
+							class="px-2.5 bg-gray-50 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+							on:click={() => {
+								showModelUnloadConfirm = true;
+							}}
+						>
+							<svg 
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="w-5 h-5">
+									<path 
+										fill-rule="evenodd"
+										d="M3 4.25A2.25 2.25 0 015.25 2h5.5A2.25 2.25 0 0113 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75h-5.5a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0110.75 18h-5.5A2.25 2.25 0 013 15.75V4.25z"
+										clip-rule="evenodd">
+									</path>
+									<path 
+										fill-rule="evenodd" 
+										d="M6 10a.75.75 0 01.75-.75h9.546l-1.048-.943a.75.75 0 111.004-1.114l2.5 2.25a.75.75 0 010 1.114l-2.5 2.25a.75.75 0 11-1.004-1.114l1.048-.943H6.75A.75.75 0 016 10z"
+										clip-rule="evenodd">
+									</path>
+							</svg>
+						</button>
+					</div>
 				</div>
 
 				<div>
