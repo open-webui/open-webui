@@ -263,7 +263,7 @@
 			</div>
 		{:else}
 			<div
-				class="py-1 flex dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border dark:border-gray-850 w-72 rounded-full shadow-xl"
+				class="py-1 flex dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-850 w-72 rounded-full shadow-xl"
 			>
 				<input
 					type="text"

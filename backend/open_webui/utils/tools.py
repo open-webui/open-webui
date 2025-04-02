@@ -1,6 +1,9 @@
 import inspect
 import logging
 import re
+import inspect
+import uuid
+
 from typing import Any, Awaitable, Callable, get_type_hints
 from functools import update_wrapper, partial
 
@@ -88,10 +91,11 @@ def get_tools(
 
             # TODO: This needs to be a pydantic model
             tool_dict = {
-                "toolkit_id": tool_id,
-                "callable": callable,
                 "spec": spec,
+                "callable": callable,
+                "toolkit_id": tool_id,
                 "pydantic_model": function_to_pydantic_model(callable),
+                # Misc info
                 "file_handler": hasattr(module, "file_handler") and module.file_handler,
                 "citation": hasattr(module, "citation") and module.citation,
             }

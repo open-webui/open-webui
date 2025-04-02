@@ -80,10 +80,21 @@
 									/>
 								</div>
 							</div>
-						{:else}
+						{:else if (valvesSpec.properties[property]?.type ?? null) !== 'string'}
 							<input
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
 								type="text"
+								placeholder={valvesSpec.properties[property].title}
+								bind:value={valves[property]}
+								autocomplete="off"
+								required
+								on:change={() => {
+									dispatch('change');
+								}}
+							/>
+						{:else}
+							<textarea
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100 dark:border-gray-850"
 								placeholder={valvesSpec.properties[property].title}
 								bind:value={valves[property]}
 								autocomplete="off"
