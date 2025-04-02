@@ -2040,7 +2040,7 @@
 						<div class="overflow-auto w-full h-full flex items-center">
 							<Placeholder
 								{history}
-								bind:selectedModels
+								{selectedModels}
 								bind:files
 								bind:prompt
 								bind:autoScroll

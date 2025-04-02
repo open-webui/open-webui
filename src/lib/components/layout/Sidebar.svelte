@@ -480,7 +480,9 @@
 			? ''
 			: 'invisible'}"
 	>
-		<div class="flex align-center justify-between items-center px-2.5 pb-2 border-b border-customGray-700 mb-2.5">
+		<div
+			class="flex align-center justify-between items-center px-2.5 pb-2 border-b border-customGray-700 mb-2.5"
+		>
 			<div class="flex flex-col font-primary">
 				{#if $user !== undefined}
 					<UserMenu
@@ -517,7 +519,7 @@
 				}}
 			>
 				<div class=" m-auto self-center">
-					<ShowSidebarIcon/>
+					<ShowSidebarIcon />
 				</div>
 			</button>
 		</div>
@@ -533,24 +535,46 @@
 				placeholder={$i18n.t('Search')}
 			/>
 		</div>
-
+		
 		<div class="px-2">
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
-				<div class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white  dark:hover:bg-customGray-900 transition">
-					<Assistans/>
+				<div
+					class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition"
+				>
+					<Assistans />
 					<a
 						class="min-w-fit text-xs"
-						href="/workspace/models">{$i18n.t('Models')}</a
+						href="/workspace/models"
+						on:click={() => {
+							selectedChatId = null;
+							chatId.set('');
+
+							if ($mobile) {
+								showSidebar.set(false);
+							}
+						}}
+						draggable="false">{$i18n.t('Models')}</a
 					>
 				</div>
 			{/if}
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
-				<div class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition">
-					<Knowledge/>
+				<div
+					class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition"
+				>
+					<Knowledge />
 					<a
 						class="min-w-fit text-xs"
 						href="/workspace/knowledge"
+						on:click={() => {
+							selectedChatId = null;
+							chatId.set('');
+
+							if ($mobile) {
+								showSidebar.set(false);
+							}
+						}}
+						draggable="false"
 					>
 						{$i18n.t('Knowledge')}
 					</a>
@@ -558,17 +582,30 @@
 			{/if}
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
-				<div class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition">
-					<Prompts/>
+				<div
+					class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition"
+				>
+					<Prompts />
 					<a
 						class="min-w-fit text-xs"
-						href="/workspace/prompts">{$i18n.t('Prompts')}</a
+						href="/workspace/prompts"
+						on:click={() => {
+							selectedChatId = null;
+							chatId.set('');
+
+							if ($mobile) {
+								showSidebar.set(false);
+							}
+						}}
+						draggable="false">{$i18n.t('Prompts')}</a
 					>
 				</div>
 			{/if}
 		</div>
 
-		<div class="pl-[14px] pr-[11px] my-2 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
+		<div
+			class="pl-[14px] pr-[11px] my-2 flex justify-between space-x-1 text-gray-600 dark:text-gray-400"
+		>
 			<a
 				id="sidebar-new-chat-button"
 				class="flex justify-center items-center flex-1 rounded-lg text-2xs px-2 py-1 border border-customGray-700 h-[35px] text-right text-gray-850 dark:text-customGray-200 dark:hover:text-white dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-customGray-950 transition no-drag-region"
