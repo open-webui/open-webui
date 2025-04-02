@@ -38,7 +38,7 @@ export default defineConfig({
 		},
 		host: '0.0.0.0',
 		port: 5173,
-		allowedHosts: ['codeassist.axlrator.com'], // 여기를 추가		
+		allowedHosts: ['codeassist.axlrator.com','axlrator.com', 'www.axlrator.com'], // 여기를 추가		
 	},	
 	define: {
 		APP_VERSION: JSON.stringify(process.env.npm_package_version),
