@@ -14,6 +14,7 @@
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
 
 	import { handleSignupDone } from '$lib/IONOS/services/signup';
+	import { isShowLoginForm } from '$lib/IONOS/services/auth';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
@@ -138,6 +139,9 @@
 			}
 
 			return;
+		} else if (isShowLoginForm()) {
+			loaded = true;
+			return
 		}
 
 		const oidcLoginConfigured = $config?.oauth?.providers?.oidc;
