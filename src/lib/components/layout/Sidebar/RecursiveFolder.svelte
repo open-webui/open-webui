@@ -377,12 +377,12 @@
 		<div class="w-full group">
 			<button
 				id="folder-{folderId}-button"
-				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-customGray-500 font-medium hover:bg-gray-100 dark:hover:bg-[#1E1E1E] transition"
+				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-customGray-100 font-medium hover:bg-gray-100 dark:hover:bg-customGray-900 transition"
 				on:dblclick={() => {
 					editHandler();
 				}}
 			>
-				<div class="text-gray-300 dark:text-customGray-600">
+				<div class="text-gray-300 dark:text-customGray-300">
 					{#if open}
 						<ChevronDown className=" size-3" strokeWidth="2.5" />
 					{:else}
@@ -390,7 +390,7 @@
 					{/if}
 				</div>
 				
-				<div class="text-gray-300 dark:text-customGray-600">
+				<div class="text-gray-300 dark:text-customGray-300">
 					{#if open}
 						<FolderOpenIcon />	
 					{:else}

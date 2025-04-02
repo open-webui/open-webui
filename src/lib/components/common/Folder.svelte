@@ -128,10 +128,10 @@
 		>
 			<!-- svelte-ignore a11y-no-static-element-interactions -->
 			<div
-				class="w-full group rounded-md relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-[#1E1E1E] text-gray-500 dark:text-gray-500 transition"
+				class="w-full group rounded-md relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-customGray-900 text-gray-500 dark:text-gray-500 transition"
 			>
 				<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-medium">
-					<div class="text-gray-300 dark:text-[#939292]">
+					<div class="text-gray-300 dark:text-customGray-300">
 						{#if open}
 							<ChevronDown className=" size-3" strokeWidth="2.5" />
 						{:else}
@@ -146,7 +146,7 @@
 
 				{#if onAdd}
 					<button
-						class="absolute z-10 right-2 self-center flex items-center dark:text-[#939292]"
+						class="absolute z-10 right-2 self-center flex items-center dark:text-customGray-300"
 						on:pointerup={(e) => {
 							e.stopPropagation();
 						}}

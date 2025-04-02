@@ -33,14 +33,14 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="w-full {className} text-sm rounded-lg border border-[#313337] px-1 py-1.5 z-50 bg-white dark:bg-[#1E1E1E] dark:text-white shadow-lg font-primary"
+			class="w-full {className} text-sm rounded-lg border border-customGray-700 px-1 py-1.5 z-50 bg-white dark:bg-customGray-900 dark:text-white shadow-lg font-primary"
 			sideOffset={8}
 			side="bottom"
 			align="start"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 			<button
-				class="flex rounded-md text-xs text-[#D0CECE] py-2 px-3 w-full hover:bg-gray-50 dark:hover:text-white dark:hover:bg-[#181818] transition"
+				class="flex rounded-md text-xs text-customGray-100 py-2 px-3 w-full hover:bg-gray-50 dark:hover:text-white dark:hover:bg-customGray-950 transition"
 				on:click={async () => {
 					await showSettings.set(true);
 					show = false;
@@ -138,7 +138,7 @@
 			<hr class=" border-gray-50 dark:border-gray-850 my-1 p-0" />
 
 			<button
-				class="flex rounded-md text-xs text-[#D0CECE] py-2 px-3 w-full hover:bg-gray-50 dark:hover:text-white dark:hover:bg-[#181818] transition"
+				class="flex rounded-md text-xs text-customGray-100 py-2 px-3 w-full hover:bg-gray-50 dark:hover:text-white dark:hover:bg-customGray-950 transition"
 				on:click={async () => {
 					await userSignOut();
 					localStorage.removeItem('token');

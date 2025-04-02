@@ -271,7 +271,7 @@
 	<DropdownMenu.Content
 		class=" z-40 {$mobile
 			? `w-full`
-			: `${className}`} w-[180px] justify-start rounded-xl border dark:border-[#313337] bg-white dark:bg-[#1E1E1E] dark:text-white shadow-lg  outline-none"
+			: `${className}`} w-[180px] justify-start rounded-xl border dark:border-customGray-700 bg-white dark:bg-customGray-900 dark:text-white shadow-lg  outline-none"
 		transition={flyAndScale}
 		side={$mobile ? 'bottom' : 'bottom-start'}
 		sideOffset={3}
@@ -279,14 +279,14 @@
 		<slot>
 			{#if searchEnabled}
 				<div class="flex items-center relative gap-2.5 px-2.5 mt-2.5 mb-3">
-					<div class="absolute left-5 text-[#939292]">
+					<div class="absolute left-5 text-customGray-300">
 						<Search className="size-3" strokeWidth="2.5" />
 					</div>
 
 					<input
 						id="model-search-input"
 						bind:value={searchValue}
-						class="w-full text-sm bg-transparent outline-none pl-7 h-[25px] rounded-lg border border-[#313337] placeholder:text-2xs"
+						class="w-full text-sm bg-transparent outline-none pl-7 h-[25px] rounded-lg border border-customGray-700 placeholder:text-2xs"
 						placeholder={searchPlaceholder}
 						autocomplete="off"
 						on:keydown={(e) => {
@@ -314,7 +314,7 @@
 				{#each filteredItems as item, index}
 					<button
 						aria-label="model-item"
-						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-[5px] px-2 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-[#181818] rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
+						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-[5px] px-2 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-customGray-950 rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
 						selectedModelIdx
 							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
 							: ''}"

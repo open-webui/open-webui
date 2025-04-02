@@ -470,7 +470,7 @@
 		? 'md:relative w-[260px] max-w-[260px]'
 		: '-translate-x-[260px] w-[0px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-gray-50 text-gray-900 dark:bg-customGray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
+		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-gray-50 text-gray-900 dark:bg-customGray-800 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
         "
 	data-state={$showSidebar}
 >
@@ -479,7 +479,7 @@
 			? ''
 			: 'invisible'}"
 	>
-		<div class="flex align-center justify-between items-center px-2.5 pb-2 border-b border-[#313337] mb-2.5">
+		<div class="flex align-center justify-between items-center px-2.5 pb-2 border-b border-customGray-700 mb-2.5">
 			<div class="flex flex-col font-primary">
 				{#if $user !== undefined}
 					<UserMenu
@@ -510,7 +510,7 @@
 				{/if}
 			</div>
 			<button
-				class=" cursor-pointer flex justify-center items-center w-[25px] h-[25px] rounded-lg hover:bg-gray-100 dark:hover:bg-[#1E1E1E] border border-transparent dark:hover:border-[#313337] transition"
+				class=" cursor-pointer flex justify-center items-center w-[25px] h-[25px] rounded-lg hover:bg-gray-100 dark:hover:bg-customGray-900 border border-transparent dark:hover:border-customGray-700 transition"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
@@ -556,7 +556,7 @@
 
 		<div class="px-2">
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
-				<div class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-500 hover:text-gray-700 dark:hover:text-white  dark:hover:bg-[#1E1E1E] transition">
+				<div class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white  dark:hover:bg-customGray-900 transition">
 					<Assistans/>
 					<a
 						class="min-w-fit text-xs"
@@ -566,7 +566,7 @@
 			{/if}
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
-				<div class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-500 hover:text-gray-700 dark:hover:text-white dark:hover:bg-[#1E1E1E] transition">
+				<div class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition">
 					<Knowledge/>
 					<a
 						class="min-w-fit text-xs"
@@ -578,7 +578,7 @@
 			{/if}
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
-				<div class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-500 hover:text-gray-700 dark:hover:text-white dark:hover:bg-[#1E1E1E] transition">
+				<div class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition">
 					<Prompts/>
 					<a
 						class="min-w-fit text-xs"
@@ -591,7 +591,7 @@
 		<div class="pl-[14px] pr-[11px] my-2 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 			<a
 				id="sidebar-new-chat-button"
-				class="flex justify-center items-center flex-1 rounded-lg text-2xs px-2 py-1 border border-[#313337] h-[35px] text-right text-gray-850 dark:text-[#ACABAB] dark:hover:text-white dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-[#181818] transition no-drag-region"
+				class="flex justify-center items-center flex-1 rounded-lg text-2xs px-2 py-1 border border-customGray-700 h-[35px] text-right text-gray-850 dark:text-customGray-200 dark:hover:text-white dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-customGray-950 transition no-drag-region"
 				href="/"
 				draggable="false"
 				on:click={async () => {
