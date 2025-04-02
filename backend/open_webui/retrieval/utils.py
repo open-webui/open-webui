@@ -174,6 +174,24 @@ def query_doc_with_hybrid_search(
         raise e
 
 
+
+def query_doc_with_hybrid_search_weaviate(
+    collection_name: str,
+    query: str,
+    k: int,
+) -> dict:
+    try:
+        result = VECTOR_DB_CLIENT.hybrid_search(collection_name=collection_name, query = query, limit = k)
+
+        if result:
+            log.info(f"query_doc_weaviate_hybrid:result {result.ids} {result.metadatas} {result.distances}")
+
+        return result
+    except Exception as e:
+        raise e
+
+
+
 def merge_get_results(get_results: list[dict]) -> dict:
     # Initialize lists to store combined data
     combined_documents = []
@@ -272,7 +290,7 @@ def query_collection(
             if collection_name:
                 result = None
                 try:
-                    if VECTOR_DB == 'weaviate':
+                    if VECTOR_DB == 'weaviate' :
                         result = query_doc_weaviate(
                         collection_name=collection_name,
                         k=k,
@@ -312,14 +330,22 @@ def query_collection_with_hybrid_search(
     for collection_name in collection_names:
         try:
             for query in queries:
-                result = query_doc_with_hybrid_search(
-                    collection_name=collection_name,
-                    query=query,
-                    embedding_function=embedding_function,
-                    k=k,
-                    reranking_function=reranking_function,
-                    r=r,
-                )
+                if VECTOR_DB == 'weaviate':
+                    result = query_doc_with_hybrid_search_weaviate(
+                        collection_name=collection_name,
+                        query=query,
+                        k=k,
+                    )
+                else:
+                    result = query_doc_with_hybrid_search(
+                        collection_name=collection_name,
+                        query=query,
+                        embedding_function=embedding_function,
+                        k=k,
+                        reranking_function=reranking_function,
+                        r=r,
+                    )
+                    
                 results.append(result)
         except Exception as e:
             log.exception(

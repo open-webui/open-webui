@@ -318,6 +318,63 @@ class WeaviateClient:
             )
         return None
 
+    def hybrid_search(
+        self, collection_name: str, query: str, limit: int
+    ) -> Optional[SearchResult]:
+        """
+        Realiza busca por similaridade para cada vetor fornecido, utilizando o recurso near_vector.
+        Retorna os resultados encapsulados em SearchResult, contendo ids, documentos,
+        metadados e as distâncias (se disponíveis).
+        """
+        collection_name = self.transform_collection_name(collection_name)
+        collection = self.client.collections.get(collection_name)
+        all_ids = []
+        all_docs = []
+        all_meta = []
+        all_dists = []
+
+        # Realiza consulta por similaridade usando o vetor
+        
+    
+        response = collection.query.hybrid(
+            query=query,
+            alpha=0.5, 
+            return_metadata=MetadataQuery(score=True, explain_score=True),
+            limit=limit,
+        )
+
+        ids = []
+        distances = []
+        documents = []
+        metadatas = []
+
+
+        if not response:
+            return SearchResult(
+                ids=ids,
+                distances=distances,
+                documents=documents,
+                metadatas=metadatas,
+            )
+
+        items = response.objects
+        ids = [obj.properties.get("file_id", "") for obj in items]
+        docs = [obj.properties.get("documents", "") for obj in items]
+        meta = [obj.properties.get("metadata", {}) for obj in items]
+        # Supõe que a distância esteja disponível em _additional.distance
+        dists = [
+            obj.metadata.score for obj in items
+        ]
+        all_ids.append(ids)
+        all_docs.append(docs)
+        all_meta.append(meta)
+        all_dists.append(dists)
+        if all_ids:
+            return SearchResult(
+                ids=all_ids, documents=all_docs, metadatas=all_meta, distances=all_dists
+            )
+        return None
+
     def delete(
         self,
         collection_name: str,
