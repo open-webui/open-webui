@@ -21,7 +21,7 @@ from langchain_community.document_loaders import (
 )
 from langchain_core.documents import Document
 
-from .mistral import MistralLoader
+from open_webui.retrieval.loaders.mistral import MistralLoader
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
