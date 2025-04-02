@@ -1,7 +1,9 @@
 from typing import List, Optional
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File
 import logging
+import os 
+import uuid
 
 from open_webui.models.knowledge import (
     Knowledges,
@@ -9,7 +11,7 @@ from open_webui.models.knowledge import (
     KnowledgeResponse,
     KnowledgeUserResponse,
 )
-from open_webui.models.files import Files, FileModel
+from open_webui.models.files import Files, FileModel, FileForm
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
     process_file,
@@ -278,9 +280,11 @@ class KnowledgeFileIdForm(BaseModel):
 def add_file_to_knowledge_by_id(
     request: Request,
     id: str,
-    form_data: KnowledgeFileIdForm,
+    file: UploadFile = File(...),
     user=Depends(get_verified_user),
-):
+    file_metadata: dict = {},
+):  
+    
     knowledge = Knowledges.get_knowledge_by_id(id=id)
 
     if not knowledge:
@@ -299,38 +303,76 @@ def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    file = Files.get_file_by_id(form_data.file_id)
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-    if not file.data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
-        )
-
-    # Add content to the vector database
+    log.info(f"file.content_type: {file.content_type}")
     try:
-        process_file(
-            request,
-            ProcessFileForm(file_id=form_data.file_id, collection_name=id),
-            user=user,
-        )
-    except Exception as e:
-        log.debug(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+        
+        unsanitized_filename = file.filename
+        filename = os.path.basename(unsanitized_filename)
+
+        # replace filename with uuid
+        file_id = str(uuid.uuid4())
+        name = filename
+        filename = f"{file_id}_{filename}"
+        contents, file_path = Storage.upload_file(file.file, filename)
+
+        file_item = Files.insert_new_file(
+            user.id,
+            FileForm(
+                **{
+                    "id": file_id,
+                    "filename": name,
+                    "path": file_path,
+                    "meta": {
+                        "name": name,
+                        "content_type": file.content_type,
+                        "size": len(contents),
+                        "data": file_metadata,
+                    },
+                }
+            ),
         )
 
-    if knowledge:
-        data = knowledge.data or {}
-        file_ids = data.get("file_ids", [])
+        try:
+            if file.content_type in [
+                "audio/mpeg",
+                "audio/wav",
+                "audio/ogg",
+                "audio/x-m4a",
+            ]:
+                file_path = Storage.get_file(file_path)
+                result = transcribe(request, file_path)
+                process_file(
+                    request,
+                    ProcessFileForm(file_id=file_id, content=result.get("text", "")),
+                    user=user,
+                    knowledge_id=id,  # Pass knowledge_id for single embedding
+                )
+            else:
+                # Process the file for both file and knowledge collections
+                process_file(
+                    request, 
+                    ProcessFileForm(file_id=file_id), 
+                    user=user, 
+                    knowledge_id=id  # Pass knowledge_id for single embedding
+                )
 
-        if form_data.file_id not in file_ids:
-            file_ids.append(form_data.file_id)
+            file_item = Files.get_file_by_id(id=file_id)
+        except Exception as e:
+            log.exception(e)
+            log.error(f"Error processing file: {file_item.id}")
+            file_item = FileModelResponse(
+                **{
+                    **file_item.model_dump(),
+                    "error": str(e.detail) if hasattr(e, "detail") else str(e),
+                }
+            )
+
+        # Update knowledge base metadata
+        if file_item:
+            data = knowledge.data or {}
+            file_ids = data.get("file_ids", [])
+
+            file_ids.append(file_id)
             data["file_ids"] = file_ids
 
             knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
@@ -350,12 +392,14 @@ def add_file_to_knowledge_by_id(
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("file_id"),
+                detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
             )
-    else:
+
+    except Exception as e:
+        log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
+            detail=ERROR_MESSAGES.DEFAULT(e),
         )
 
 
