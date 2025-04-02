@@ -44,7 +44,7 @@
 	async function deleteFile({ detail: fileId }: { detail: KnowledgeFileId }): Promise<void> {
 		try {
 			await removeFile(knowledge.id, fileId);
-			toast.success($i18n.t('File removed successfully.'));
+			toast.success($i18n.t('File removed successfully.', { ns: 'ionos' }));
 		} catch (e) {
 			console.error(`Error deleting file ${fileId}`, e);
 			toast.error($i18n.t('Error deleting file', { ns: 'ionos' }));

@@ -62,7 +62,7 @@
 
 <div
 	bind:this={el}
-	aria-label={$i18n.t('Drop zone for file upload via drag and drop')}
+	aria-label={$i18n.t('Drop zone for file upload via drag and drop', { ns: 'ionos' })}
 	role="form"
 	data-id="drop-zone"
 	data-state={draggedOver ? 'dragged-over' : ''}

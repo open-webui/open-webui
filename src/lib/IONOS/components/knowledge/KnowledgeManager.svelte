@@ -83,7 +83,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Knowledge')} | {$WEBUI_NAME}
+		{$i18n.t('Knowledge', { ns: 'ionos' })} | {$WEBUI_NAME}
 	</title>
 </svelte:head>
 
@@ -102,7 +102,7 @@
 				<input
 					class="w-full text-sm py-1 rounded-r-xl outline-none bg-transparent"
 					bind:value={query}
-					placeholder={$i18n.t('Search Knowledge')}
+					placeholder={$i18n.t('Search Knowledge', { ns: 'ionos' })}
 				/>
 			</div>
 			<div>
@@ -124,7 +124,7 @@
 		</div>
 
 		<div class=" text-gray-500 text-xs py-4 border-t">
-			ⓘ {$i18n.t("Use '#' in the prompt input to load and include your knowledge.")}
+			ⓘ {$i18n.t("Use '#' in the prompt input to load and include your knowledge.", { ns: 'ionos' })}
 		</div>
 	{:else}
 		<div class="w-full h-full flex justify-center items-center">

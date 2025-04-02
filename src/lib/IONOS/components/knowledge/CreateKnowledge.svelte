@@ -59,7 +59,7 @@
 				bind:value={name}
 				type="text"
 				required
-				placeholder={$i18n.t('Name your knowledge base')}
+				placeholder={$i18n.t('Name your knowledge base', { ns: 'ionos' })}
 			/>
 		</div>
 
@@ -73,7 +73,7 @@
 				bind:value={description}
 				rows="4"
 				required
-				placeholder={$i18n.t('Describe your knowledge base')}
+				placeholder={$i18n.t('Describe your knowledge base', { ns: 'ionos' })}
 			/>
 		</div>
 
