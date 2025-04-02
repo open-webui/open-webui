@@ -79,6 +79,10 @@ class WeaviateClient:
         )
 
     def transform_collection_name(self, collection_name):
+        """
+        Transforms a collection name by removing non-alphanumeric characters
+        and ensuring it starts with 'C' for consistency.
+        """
         collection_name = re.sub(r"[^a-zA-Z0-9]", "", collection_name)
         if not (collection_name.startswith('c') or collection_name.startswith('C')):
             collection_name = f'c{collection_name}'
@@ -87,7 +91,7 @@ class WeaviateClient:
 
     def has_collection(self, collection_name: str) -> bool:
         """
-        Verifica se a collection (classe) já existe.
+        Checks if a collection (class) already exists.
         """
         # try:
         collection_names = self.client.collections.list_all()
@@ -97,7 +101,7 @@ class WeaviateClient:
 
     def _ensure_collection(self, collection_name: str):
         """
-        Garante que a collection exista; se não, cria-a.
+        Ensures that the collection exists; if not, it creates it.
         """
         log.info(f"Collection para buscar: {collection_name}")
         if not self.has_collection(collection_name):
@@ -106,9 +110,9 @@ class WeaviateClient:
 
     def create_collection(self, collection_name: str):
         """
-        Cria a collection com uma configuração padrão:
-          - Utiliza o vectorizer 'text2vec-openai' baseado na propriedade 'text'
-          - Define as propriedades 'documents' e 'metadata'
+        Creates a collection with a default configuration:
+          - Uses 'text2vec-openai' vectorizer based on the 'text' property
+          - Defines 'documents' and 'metadata' properties
         """
         collection_name = self.transform_collection_name(collection_name)
         self.client.collections.create(
@@ -145,15 +149,15 @@ class WeaviateClient:
 
     def delete_collection(self, collection_name: str):
         """
-        Exclui a collection (classe) do Weaviate.
+        Deletes a collection (class) from Weaviate.
         """
         collection_name = self.transform_collection_name(collection_name)
         self.client.collections.delete(collection_name)
 
     def insert(self, collection_name: str, items: List[VectorItem]):
         """
-        Insere os itens na collection. Caso a collection não exista, ela será criada.
-        Cada item insere as propriedades 'file_id', 'text' e 'metadata'.
+        Inserts items into the collection. If the collection does not exist, it will be created.
+        Each item contains the properties 'file_id', 'text', and 'metadata'.
         """
         collection_name = self.transform_collection_name(collection_name)
         self._ensure_collection(collection_name)
@@ -181,8 +185,8 @@ class WeaviateClient:
 
     def upsert(self, collection_name: str, items: List[VectorItem]):
         """
-        Atualiza (ou insere, se não existir) os itens na collection.
-        Para cada item, tenta buscá-lo; se existir, realiza a atualização; caso contrário, insere-o.
+        Removes all collections from Weaviate.
+        WARNING: This operation deletes ALL data.
         """
         collection_name = self.transform_collection_name(collection_name)
         self._ensure_collection(collection_name)
@@ -257,9 +261,9 @@ class WeaviateClient:
         self, collection_name: str, query: str, limit: int
     ) -> Optional[SearchResult]:
         """
-        Realiza busca por similaridade para cada vetor fornecido, utilizando o recurso near_vector.
-        Retorna os resultados encapsulados em SearchResult, contendo ids, documentos,
-        metadados e as distâncias (se disponíveis).
+        Performs a similarity search using the 'near_text' feature.
+        Returns results wrapped in SearchResult, including ids, documents,
+        metadata, and distances (if available).
         """
         collection_name = self.transform_collection_name(collection_name)
         collection = self.client.collections.get(collection_name)
@@ -322,9 +326,9 @@ class WeaviateClient:
         self, collection_name: str, query: str, limit: int
     ) -> Optional[SearchResult]:
         """
-        Realiza busca por similaridade para cada vetor fornecido, utilizando o recurso near_vector.
-        Retorna os resultados encapsulados em SearchResult, contendo ids, documentos,
-        metadados e as distâncias (se disponíveis).
+        Performs a hybrid search using both keyword and vector search.
+        Returns results wrapped in SearchResult, including ids, documents,
+        metadata, and relevance scores.
         """
         collection_name = self.transform_collection_name(collection_name)
         collection = self.client.collections.get(collection_name)
@@ -333,9 +337,8 @@ class WeaviateClient:
         all_meta = []
         all_dists = []
 
-        # Realiza consulta por similaridade usando o vetor
+        # Performs similarity query using vector
         
-    
         response = collection.query.hybrid(
             query=query,
             alpha=0.5, 
@@ -361,7 +364,7 @@ class WeaviateClient:
         ids = [obj.properties.get("file_id", "") for obj in items]
         docs = [obj.properties.get("documents", "") for obj in items]
         meta = [obj.properties.get("metadata", {}) for obj in items]
-        # Supõe que a distância esteja disponível em _additional.distance
+        # Assumes distance is available in metadata.score
         dists = [
             obj.metadata.score for obj in items
         ]
@@ -382,10 +385,10 @@ class WeaviateClient:
         filter: Optional[dict] = None,
     ):
         """
-        Remove objetos da collection com base em uma lista de ids ou utilizando um filtro.
-        Se um filtro for informado, realiza a consulta para obter os ids correspondentes e os deleta.
+        Removes objects from the collection based on a list of ids or using a filter. 
+        If a filter is provided, performs the query to obtain the corresponding ids and deletes them.
         """
-        collection_name = self.transform_collection_name(collection_name)
+        collection_name = self.transform_collection_name(collection_name)   
         collection = self.client.collections.get(collection_name)
 
         if ids:
@@ -400,8 +403,8 @@ class WeaviateClient:
 
     def reset(self):
         """
-        Remove todas as collections do Weaviate.
-        CUIDADO: Essa operação apaga TODOS os dados.
+        Removes all collections from Weaviate. 
+        CAUTION: This operation deletes ALL data.
         """
 
         collections = self.client.collections.list_all()
