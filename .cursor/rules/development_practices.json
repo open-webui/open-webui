@@ -1,0 +1,49 @@
+{
+  "development_practices": {
+    "code_organization": {
+      "structure": {
+        "src": "Core RAUX implementation",
+        "ui": "Web interface components",
+        "api": "Backend API endpoints",
+        "tests": "Test suites and test data",
+        "docs": "Project documentation"
+      },
+      "naming_conventions": {
+        "files": "snake_case.py",
+        "classes": "PascalCase",
+        "functions": "snake_case",
+        "constants": "UPPER_SNAKE_CASE"
+      }
+    },
+    "code_quality": {
+      "documentation": {
+        "required": [
+          "Copyright notice and MIT license header",
+          "Function/class docstrings",
+          "API endpoint documentation",
+          "UI component documentation"
+        ]
+      },
+      "testing": {
+        "unit_tests": "Required for new functionality",
+        "test_location": "tests/ directory matching source structure",
+        "ui_tests": "Required for UI components"
+      },
+      "error_handling": {
+        "practices": [
+          "Use descriptive error messages",
+          "Log errors with appropriate context",
+          "Graceful UI error handling",
+          "API error responses"
+        ]
+      }
+    },
+    "integration": {
+      "gaia": {
+        "separation": "Maintain clear separation between RAUX and GAIA",
+        "communication": "Use defined interfaces for RAUX-GAIA interaction",
+        "installation": "Support standalone installation"
+      }
+    }
+  }
+} 

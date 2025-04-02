@@ -5,6 +5,17 @@ import subprocess
 import logging
 from typing import Optional
 
+# Read version from package.json
+def get_package_version() -> str:
+    """Get version from package.json."""
+    try:
+        import json
+        with open("package.json", "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data.get("version", "0.0.0")
+    except Exception as e:
+        print(f"Failed to read version from package.json: {str(e)}")
+        return "0.0.0"
 
 def get_git_hash(hash_length: int = 8) -> str:
     """Get the current Git commit hash.
@@ -25,18 +36,17 @@ def get_git_hash(hash_length: int = 8) -> str:
             .strip()
         )
     except subprocess.SubprocessError as e:
-        logging.warning(f"Failed to get Git hash: {str(e)}")
+        print(f"Failed to get Git hash: {str(e)}")
         return "unknown"
     except Exception as e:
-        logging.error(f"Unexpected error while getting Git hash: {str(e)}")
+        print(f"Unexpected error while getting Git hash: {str(e)}")
         return "unknown"
-
 
 def get_github_root() -> Optional[str]:
     """Get the GitHub repository root (organization/user name).
 
     Returns:
-        Optional[str]: The GitHub repository root (e.g., 'amd' from 'github.com/amd/gaia').
+        Optional[str]: The GitHub repository root (e.g., 'amd' from 'github.com/amd/raux').
             Returns None if the command fails or the remote URL is not from GitHub.
     """
     try:
@@ -60,21 +70,27 @@ def get_github_root() -> Optional[str]:
 
             return parts[0]
     except (subprocess.SubprocessError, IndexError) as e:
-        logging.warning(f"Failed to get GitHub root: {str(e)}")
+        print(f"Failed to get GitHub root: {str(e)}")
         return None
     except Exception as e:
-        logging.error(f"Unexpected error while getting GitHub root: {str(e)}")
+        print(f"Unexpected error while getting GitHub root: {str(e)}")
         return None
 
+def main():
+    __version__ = get_package_version()
+    git_hash = get_git_hash()
 
-__version__ = "0.7.3"
-github_root = get_github_root()
-git_hash = get_git_hash()
+    # Just use version and hash without any prefix
+    version_with_hash = f"{__version__}+{git_hash}"
 
-version_with_hash = (
-    f"{github_root}/v{__version__}+{git_hash}"
-    if github_root
-    else f"v{__version__}+{git_hash}"
-)
+    # Write version to version.txt file
+    try:
+        with open("version.txt", "w", encoding="utf-8") as f:
+            f.write(version_with_hash)
+        print(f"Version written to version.txt: {version_with_hash}")
+    except Exception as e:
+        print(f"Failed to write version.txt: {str(e)}")
+        raise
 
-# print(f"Version with hash: {version_with_hash}")
+if __name__ == "__main__":
+    main()

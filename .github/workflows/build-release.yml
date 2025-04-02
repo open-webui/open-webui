@@ -157,6 +157,22 @@ jobs:
             exit 1
           }
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Generate version.txt
+        run: |
+          python installer/version.py
+          if (Test-Path -Path "version.txt") {
+            Write-Host "version.txt generated successfully"
+            Get-Content -Path "version.txt"
+          } else {
+            Write-Host "ERROR: version.txt was not generated!"
+            exit 1
+          }
+
       - name: Install NSIS
         run: |
           # Download NSIS installer
@@ -256,6 +272,14 @@ jobs:
             Copy-Item -Path "installer/launch_raux.ps1" -Destination "installer/package/"
           } else {
             Write-Host "WARNING: launch_raux.ps1 not found in installer directory"
+          }
+          
+          # Copy version.txt to package
+          if (Test-Path -Path "version.txt") {
+            Write-Host "Copying version.txt to package"
+            Copy-Item -Path "version.txt" -Destination "installer/package/"
+          } else {
+            Write-Host "WARNING: version.txt not found"
           }
           
           if (Test-Path -Path "installer/launch_raux.cmd") {

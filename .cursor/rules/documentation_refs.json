@@ -1,0 +1,28 @@
+{
+  "name": "RAUX Documentation References",
+  "description": "Documentation references for the RAUX project",
+  "patterns": ["**/*.md", "**/*.py", "**/*.js", "**/*.jsx"],
+  "references": {
+    "external": {
+      "@https://github.com/aigdat/raux/blob/main/docs": "Main RAUX documentation",
+      "@https://github.com/open-webui/open-webui": "Open-WebUI documentation (fork source)"
+    },
+    "internal": {
+      "@docs/installation.md": "Installation guide",
+      "@docs/api.md": "API documentation",
+      "@docs/ui.md": "UI component documentation"
+    }
+  },
+  "rules": {
+    "documentation_priority": {
+      "primary": ["@docs/installation.md", "@docs/api.md"],
+      "ui": ["@ui/**/*.{js,jsx}"],
+      "api": ["@api/**/*.py"]
+    },
+    "maintenance": {
+      "update_frequency": "With each release",
+      "versioning": "Matches software versions",
+      "review_process": "Required for all documentation changes"
+    }
+  }
+} 

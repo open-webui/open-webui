@@ -28,7 +28,7 @@ InstallDir "$LOCALAPPDATA\${PRODUCT_NAME}"
 
 ; Read version from version.py
 !tempfile TMPFILE
-!system 'python -c "with open(\"../version.py\") as f: exec(f.read()); print(version_with_hash)" > "${TMPFILE}"'
+!system 'python -c "import sys; sys.path.append(\"..\"); from version import main; main()" > "${TMPFILE}"'
 !define /file raux_VERSION "${TMPFILE}"
 !delfile "${TMPFILE}"
 

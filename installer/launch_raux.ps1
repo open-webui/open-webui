@@ -1,20 +1,24 @@
-# PowerShell script to launch RAUX
-# This script activates the conda environment, runs the server,
-# waits for it to be ready, and opens the browser
+# PowerShell script to launch RAUX and Lemonade
+# This script activates the conda environments, runs both servers,
+# waits for them to be ready, and opens the browser
 
 # Clear the screen and set title
 Clear-Host
-$host.UI.RawUI.WindowTitle = "RAUX Server"
+$host.UI.RawUI.WindowTitle = "RAUX & Lemonade Servers"
 
 Write-Host "=================================================" -ForegroundColor Blue
-Write-Host " RAUX Server - AI Web Interface" -ForegroundColor Blue
-Write-Host " This window will minimize when the server is ready" -ForegroundColor Blue
+Write-Host " RAUX & Lemonade Servers - AI Web Interface" -ForegroundColor Blue
+Write-Host " This window will minimize when the servers are ready" -ForegroundColor Blue
 Write-Host "=================================================" -ForegroundColor Blue
+
+# Set version with default value
+$version = " $($env:RAUX_VERSION)"
 
 # Parameters
-$condaEnvName = "raux_env"
-$condaEnvPath = "$env:LOCALAPPDATA\RAUX\raux_env"
-$serverUrl = "http://localhost:8080"
+$condaEnvPath = $env:RAUX_CONDA_ENV
+$lemonadeEnvPath = $env:LEMONADE_CONDA_ENV
+$rauxUrl = "http://localhost:8080"
+$lemonadeUrl = "http://localhost:8000"
 $maxAttempts = 60  # Increased maximum attempts
 $waitTimeSeconds = 2  # Increased wait time between attempts
 
@@ -27,71 +31,68 @@ $originalTreatControlCAsInput = [Console]::TreatControlCAsInput
 # Change the setting to capture Ctrl+C
 [Console]::TreatControlCAsInput = $true
 
-Write-Host "Starting RAUX server..." -ForegroundColor Cyan
-
-# Function to check if the server is running
+# Function to check if a server is running
 function Test-ServerReady {
     param (
-        [string]$Url
+        [string]$Url,
+        [string]$ServerName = "Server"
     )
     
     try {
-        Write-Host "  Trying to connect to $Url..." -ForegroundColor DarkGray
-        
-        # Try multiple methods to check if server is ready
-        # Method 1: Using Invoke-WebRequest
-        try {
+        # Special handling for Lemonade health check
+        if ($ServerName -eq "Lemonade") {
+            try {
+                $healthUrl = "http://localhost:8000/api/v0/health"
+                $response = Invoke-WebRequest -Uri $healthUrl -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
+                
+                # Check if we got a response
+                if ($response.Content) {
+                    try {
+                        # Try to parse the JSON
+                        $jsonResponse = $response.Content | ConvertFrom-Json
+                        
+                        # Check if status is "ok"
+                        if ($jsonResponse.status -eq "ok") {
+                            Write-Host "  Lemonade health check passed - status is 'ok'" -ForegroundColor DarkGray
+                            return $true
+                        } else {
+                            Write-Host "  Lemonade health check failed - status is not 'ok'" -ForegroundColor DarkGray
+                            return $false
+                        }
+                    }
+                    catch {
+                        Write-Host "  Failed to parse JSON response - $($_.Exception.Message)" -ForegroundColor DarkGray
+                        return $false
+                    }
+                }
+            }
+            catch {
+                Write-Host "  Failed to connect to Lemonade health endpoint - $($_.Exception.Message)" -ForegroundColor DarkGray
+                return $false
+            }
+        }
+        else {
+            # Regular server check for RAUX
             $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
-            Write-Host "  Method 1: Server responded with status code: $($response.StatusCode)" -ForegroundColor DarkGray
-            if ($response.StatusCode -eq 200) {
-                return $true
-            }
+            return $response.StatusCode -eq 200
         }
-        catch {
-            Write-Host "  Method 1 failed: $($_.Exception.Message)" -ForegroundColor DarkGray
-        }
-        
-        # Method 2: Using System.Net.WebClient
-        try {
-            $webClient = New-Object System.Net.WebClient
-            $content = $webClient.DownloadString($Url)
-            Write-Host "  Method 2: Successfully downloaded content from server" -ForegroundColor DarkGray
-            return $true
-        }
-        catch {
-            Write-Host "  Method 2 failed: $($_.Exception.Message)" -ForegroundColor DarkGray
-        }
-        
-        # Method 3: Using System.Net.Sockets.TcpClient to check if port is open
-        try {
-            $uri = [System.Uri]$Url
-            $tcpClient = New-Object System.Net.Sockets.TcpClient
-            $portOpen = $tcpClient.ConnectAsync($uri.Host, $uri.Port).Wait(3000)
-            $tcpClient.Close()
-            Write-Host "  Method 3: Port check result: $portOpen" -ForegroundColor DarkGray
-            if ($portOpen) {
-                return $true
-            }
-        }
-        catch {
-            Write-Host "  Method 3 failed: $($_.Exception.Message)" -ForegroundColor DarkGray
-        }
-        
-        return $false
     }
     catch {
-        Write-Host "  Error in Test-ServerReady: $($_.Exception.Message)" -ForegroundColor DarkGray
+        Write-Host "  Error checking $ServerName - $($_.Exception.Message)" -ForegroundColor DarkGray
         return $false
     }
+    
+    return $false
 }
 
 # Function to stop a process and all its child processes
 function Stop-ProcessTree {
     param (
-        [int]$ProcessId
+        [int]$ProcessId,
+        [string]$ProcessName = "Process"
     )
     
-    Write-Host "Stopping process tree for PID: $ProcessId" -ForegroundColor Yellow
+    Write-Host "Stopping $ProcessName tree for PID - $ProcessId" -ForegroundColor Yellow
     
     try {
         # Get all child processes
@@ -100,38 +101,210 @@ function Stop-ProcessTree {
         
         # Recursively stop each child process
         foreach ($childProcess in $childProcesses) {
-            Stop-ProcessTree -ProcessId $childProcess.ProcessId
+            Stop-ProcessTree -ProcessId $childProcess.ProcessId -ProcessName "$ProcessName child"
         }
         
         # Stop the parent process
         $process = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
         if ($process) {
-            Write-Host "  Stopping process: $($process.Name) (ID: $ProcessId)" -ForegroundColor Yellow
+            Write-Host "  Stopping $ProcessName - $($process.Name) (ID - $ProcessId)" -ForegroundColor Yellow
             Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
         }
     }
     catch {
-        Write-Host "  Error stopping process tree: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  Error stopping $ProcessName tree - $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
-# Create a process to run the server
-$pinfo = New-Object System.Diagnostics.ProcessStartInfo
-$pinfo.FileName = "cmd.exe"
-$pinfo.Arguments = "/C call conda activate $condaEnvPath && open-webui serve"
-$pinfo.RedirectStandardError = $false
-$pinfo.RedirectStandardOutput = $false
-$pinfo.UseShellExecute = $true
-$pinfo.CreateNoWindow = $false  # Show the window
+# Function to launch and test Lemonade server
+function Start-LemonadeServer {
+    # Verify Lemonade environment exists
+    if (-not (Test-Path $lemonadeEnvPath)) {
+        Write-Host "ERROR: Lemonade conda environment not found at $lemonadeEnvPath" -ForegroundColor Red
+        return $null
+    }
 
-# Store the current time before starting the process
-$startTime = Get-Date
+    Write-Host "Starting Lemonade server..." -ForegroundColor Cyan
+    $lemonadePinfo = New-Object System.Diagnostics.ProcessStartInfo
+    $lemonadePinfo.FileName = "cmd.exe"
+    $lemonadePinfo.Arguments = "/C call conda activate $lemonadeEnvPath && lemonade serve"
+    $lemonadePinfo.RedirectStandardError = $false
+    $lemonadePinfo.RedirectStandardOutput = $false
+    $lemonadePinfo.UseShellExecute = $true
+    $lemonadePinfo.CreateNoWindow = $false
 
-$serverProcess = New-Object System.Diagnostics.Process
-$serverProcess.StartInfo = $pinfo
-$serverProcess.Start() | Out-Null
-$serverProcessId = $serverProcess.Id
-Write-Host "Server process started with PID: $serverProcessId" -ForegroundColor Cyan
+    $lemonadeProcess = New-Object System.Diagnostics.Process
+    $lemonadeProcess.StartInfo = $lemonadePinfo
+    $lemonadeProcess.Start() | Out-Null
+    $lemonadeProcessId = $lemonadeProcess.Id
+    Write-Host "Lemonade server process started with PID: $lemonadeProcessId" -ForegroundColor Cyan
+
+    # Wait for Lemonade to be ready
+    $attempt = 0
+    $lemonadeReady = $false
+
+    Write-Host "Waiting for Lemonade server to be ready..." -ForegroundColor Yellow
+
+    # Give the server some initial time to start up before checking
+    Write-Host "Giving the Lemonade server some time to start up..." -ForegroundColor Cyan
+    Start-Sleep -Seconds 10
+
+    while (-not $lemonadeReady -and $attempt -lt $maxAttempts -and -not $exitRequested) {
+        $attempt++
+        Write-Host "Checking if Lemonade server is ready (attempt $attempt of $maxAttempts)..." -ForegroundColor Yellow
+        
+        if (Test-ServerReady -Url $lemonadeUrl -ServerName "Lemonade") {
+            $lemonadeReady = $true
+            Write-Host "Lemonade server is ready!" -ForegroundColor Green
+        }
+        else {
+            Write-Host "Lemonade server not ready yet. Waiting $waitTimeSeconds seconds..." -ForegroundColor Yellow
+            Start-Sleep -Seconds $waitTimeSeconds
+        }
+    }
+
+    # If Lemonade server is still not ready after all attempts, try one more time with a longer timeout
+    if (-not $lemonadeReady -and -not $exitRequested) {
+        Write-Host "Lemonade server did not respond in expected time. Trying one more time with longer timeout..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 5
+        
+        if (Test-ServerReady -Url $lemonadeUrl -ServerName "Lemonade") {
+            $lemonadeReady = $true
+            Write-Host "Lemonade server is finally ready!" -ForegroundColor Green
+        }
+    }
+
+    if (-not $lemonadeReady) {
+        Write-Host "WARNING: Lemonade server did not start properly. RAUX may not function correctly." -ForegroundColor Red
+        if (-not $exitRequested) {
+            Write-Host "Would you like to continue anyway? (Y/N)" -ForegroundColor Yellow
+            $response = Read-Host
+            if ($response -ne "Y") {
+                Write-Host "Aborting startup..." -ForegroundColor Red
+                $exitRequested = $true
+                exit
+            }
+        }
+    }
+
+    return $lemonadeProcessId
+}
+
+# Function to launch and test RAUX server
+function Start-RAUXServer {
+    # Verify RAUX environment exists
+    if (-not (Test-Path $condaEnvPath)) {
+        Write-Host "ERROR: RAUX conda environment not found at $condaEnvPath" -ForegroundColor Red
+        Write-Host "Please ensure RAUX is properly installed." -ForegroundColor Red
+        exit 1
+    }
+
+    Write-Host "Starting RAUX$version server..." -ForegroundColor Cyan
+    $rauxPinfo = New-Object System.Diagnostics.ProcessStartInfo
+    $rauxPinfo.FileName = "cmd.exe"
+    $rauxPinfo.Arguments = "/C call conda activate $condaEnvPath && open-webui serve"
+    $rauxPinfo.RedirectStandardError = $false
+    $rauxPinfo.RedirectStandardOutput = $false
+    $rauxPinfo.UseShellExecute = $true
+    $rauxPinfo.CreateNoWindow = $false
+
+    # Store the current time before starting the process
+    $startTime = Get-Date
+
+    $rauxProcess = New-Object System.Diagnostics.Process
+    $rauxProcess.StartInfo = $rauxPinfo
+    $rauxProcess.Start() | Out-Null
+    $rauxProcessId = $rauxProcess.Id
+    Write-Host "RAUX server process started with PID: $rauxProcessId" -ForegroundColor Cyan
+
+    # Store potential server-related processes that started after we launched
+    $pythonProcesses = Get-ProcessesStartedAfter -StartTime $startTime -NamePattern "*python*"
+    $cmdProcesses = Get-ProcessesStartedAfter -StartTime $startTime -NamePattern "*cmd*"
+    $nodeProcesses = Get-ProcessesStartedAfter -StartTime $startTime -NamePattern "*node*"
+
+    Write-Host "Detected potential server processes:" -ForegroundColor DarkGray
+    $pythonProcesses | ForEach-Object { Write-Host "  Python process: $($_.Name) (ID: $($_.Id))" -ForegroundColor DarkGray }
+    $cmdProcesses | ForEach-Object { Write-Host "  CMD process: $($_.Name) (ID: $($_.Id))" -ForegroundColor DarkGray }
+    $nodeProcesses | ForEach-Object { Write-Host "  Node process: $($_.Name) (ID: $($_.Id))" -ForegroundColor DarkGray }
+
+    Write-Host "RAUX server process started. Waiting for server to be ready..." -ForegroundColor Cyan
+    Write-Host "This may take a minute or two..." -ForegroundColor Yellow
+
+    # Wait for the RAUX server to be ready
+    $attempt = 0
+    $rauxReady = $false
+
+    # Give the server some initial time to start up before checking
+    Write-Host "Giving the RAUX server some time to start up..." -ForegroundColor Cyan
+    Start-Sleep -Seconds 10
+
+    while (-not $rauxReady -and $attempt -lt $maxAttempts -and -not $exitRequested) {
+        $attempt++
+        Write-Host "Checking if RAUX server is ready (attempt $attempt of $maxAttempts)..." -ForegroundColor Yellow
+        
+        if (Test-ServerReady -Url $rauxUrl -ServerName "RAUX") {
+            $rauxReady = $true
+            Write-Host "RAUX server is ready!" -ForegroundColor Green
+        }
+        else {
+            Write-Host "RAUX server not ready yet. Waiting $waitTimeSeconds seconds..." -ForegroundColor Yellow
+            Start-Sleep -Seconds $waitTimeSeconds
+        }
+    }
+
+    # If RAUX server is still not ready after all attempts, try one more time with a longer timeout
+    if (-not $rauxReady -and -not $exitRequested) {
+        Write-Host "RAUX server did not respond in expected time. Trying one more time with longer timeout..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 5
+        
+        try {
+            $response = Invoke-WebRequest -Uri $rauxUrl -UseBasicParsing -TimeoutSec 10 -ErrorAction SilentlyContinue
+            if ($response.StatusCode -eq 200) {
+                $rauxReady = $true
+                Write-Host "RAUX server is finally ready!" -ForegroundColor Green
+            }
+        }
+        catch {
+            Write-Host "Final check failed: $($_.Exception.Message)" -ForegroundColor DarkGray
+        }
+    }
+
+    if ($rauxReady -and -not $exitRequested) {
+        Write-Host "Opening browser to $rauxUrl" -ForegroundColor Green
+        Write-Host "RAUX server is now running. You can minimize this window." -ForegroundColor Green
+        Write-Host "Do not close this window or the server will stop." -ForegroundColor Yellow
+        Start-Process $rauxUrl
+        
+        # Minimize window if possible
+        $code = @'
+using System;
+using System.Runtime.InteropServices;
+public class Win32 {
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+}
+'@
+        
+        try {
+            Add-Type -TypeDefinition $code -ErrorAction SilentlyContinue
+            $currentWindow = (Get-Process -Id $pid).MainWindowHandle
+            # Minimize window (SW_MINIMIZE = 6)
+            [Win32]::ShowWindow($currentWindow, 6) | Out-Null
+        }
+        catch {
+            Write-Host "Could not minimize window: $($_.Exception.Message)" -ForegroundColor DarkGray
+        }
+    }
+    elseif (-not $exitRequested) {
+        Write-Host "RAUX server did not start in the expected time. You can try accessing $rauxUrl manually." -ForegroundColor Red
+        Write-Host "Do not close this window or the server will stop." -ForegroundColor Yellow
+        # Still try to open the browser as a last attempt
+        Start-Process $rauxUrl
+    }
+
+    return $rauxProcessId
+}
 
 # Function to find processes started after a specific time
 function Get-ProcessesStartedAfter {
@@ -146,94 +319,18 @@ function Get-ProcessesStartedAfter {
     }
 }
 
-# Store potential server-related processes that started after we launched
-$pythonProcesses = Get-ProcessesStartedAfter -StartTime $startTime -NamePattern "*python*"
-$cmdProcesses = Get-ProcessesStartedAfter -StartTime $startTime -NamePattern "*cmd*"
-$nodeProcesses = Get-ProcessesStartedAfter -StartTime $startTime -NamePattern "*node*"
+# Launch servers based on parameters
+$lemonadeProcessId = $null
+$rauxProcessId = $null
 
-Write-Host "Detected potential server processes:" -ForegroundColor DarkGray
-$pythonProcesses | ForEach-Object { Write-Host "  Python process: $($_.Name) (ID: $($_.Id))" -ForegroundColor DarkGray }
-$cmdProcesses | ForEach-Object { Write-Host "  CMD process: $($_.Name) (ID: $($_.Id))" -ForegroundColor DarkGray }
-$nodeProcesses | ForEach-Object { Write-Host "  Node process: $($_.Name) (ID: $($_.Id))" -ForegroundColor DarkGray }
-
-Write-Host "Server process started. Waiting for server to be ready..." -ForegroundColor Cyan
-Write-Host "This may take a minute or two..." -ForegroundColor Yellow
-
-# Wait for the server to be ready
-$attempt = 0
-$serverReady = $false
-
-# Give the server some initial time to start up before checking
-Write-Host "Giving the server some time to start up..." -ForegroundColor Cyan
-Start-Sleep -Seconds 10
-
-while (-not $serverReady -and $attempt -lt $maxAttempts -and -not $exitRequested) {
-    $attempt++
-    Write-Host "Checking if server is ready (attempt $attempt of $maxAttempts)..." -ForegroundColor Yellow
-    
-    if (Test-ServerReady -Url $serverUrl) {
-        $serverReady = $true
-        Write-Host "Server is ready!" -ForegroundColor Green
-    }
-    else {
-        Write-Host "Server not ready yet. Waiting $waitTimeSeconds seconds..." -ForegroundColor Yellow
-        Start-Sleep -Seconds $waitTimeSeconds
-    }
+if ($env:LAUNCH_LEMONADE -eq "true" -or $env:LAUNCH_LEMONADE -eq "TRUE") {
+    $lemonadeProcessId = Start-LemonadeServer
 }
 
-# If server is still not ready after all attempts, try one more time with a longer timeout
-if (-not $serverReady -and -not $exitRequested) {
-    Write-Host "Server did not respond in expected time. Trying one more time with longer timeout..." -ForegroundColor Yellow
-    Start-Sleep -Seconds 5
-    
-    try {
-        $response = Invoke-WebRequest -Uri $serverUrl -UseBasicParsing -TimeoutSec 10 -ErrorAction SilentlyContinue
-        if ($response.StatusCode -eq 200) {
-            $serverReady = $true
-            Write-Host "Server is finally ready!" -ForegroundColor Green
-        }
-    }
-    catch {
-        Write-Host "Final check failed: $($_.Exception.Message)" -ForegroundColor DarkGray
-    }
-}
+$rauxProcessId = Start-RAUXServer
 
-if ($serverReady -and -not $exitRequested) {
-    Write-Host "Opening browser to $serverUrl" -ForegroundColor Green
-    Write-Host "RAUX server is now running. You can minimize this window." -ForegroundColor Green
-    Write-Host "Do not close this window or the server will stop." -ForegroundColor Yellow
-    Start-Process $serverUrl
-    
-    # Minimize window if possible
-    $code = @'
-using System;
-using System.Runtime.InteropServices;
-public class Win32 {
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-}
-'@
-    
-    try {
-        Add-Type -TypeDefinition $code -ErrorAction SilentlyContinue
-        $currentWindow = (Get-Process -Id $pid).MainWindowHandle
-        # Minimize window (SW_MINIMIZE = 6)
-        [Win32]::ShowWindow($currentWindow, 6) | Out-Null
-    }
-    catch {
-        Write-Host "Could not minimize window: $($_.Exception.Message)" -ForegroundColor DarkGray
-    }
-}
-elseif (-not $exitRequested) {
-    Write-Host "Server did not start in the expected time. You can try accessing $serverUrl manually." -ForegroundColor Red
-    Write-Host "Do not close this window or the server will stop." -ForegroundColor Yellow
-    # Still try to open the browser as a last attempt
-    Start-Process $serverUrl
-}
-
-# Keep the window running
-Write-Host "`nPress Ctrl+C to stop the server..." -ForegroundColor Cyan
+# Keep the window running and monitor both servers
+Write-Host "`nPress Ctrl+C to stop the servers..." -ForegroundColor Cyan
 
 try {
     # Loop until exit is requested
@@ -248,7 +345,15 @@ try {
             }
         }
         
-        Start-Sleep -Milliseconds 100
+        # Monitor servers
+        if ($lemonadeProcessId -and -not (Test-ServerReady -Url $lemonadeUrl -ServerName "Lemonade")) {
+            Write-Host "WARNING - Lemonade server appears to be down!" -ForegroundColor Red
+        }
+        if (-not (Test-ServerReady -Url $rauxUrl -ServerName "RAUX")) {
+            Write-Host "WARNING - RAUX server appears to be down!" -ForegroundColor Red
+        }
+        
+        Start-Sleep -Seconds 5  # Check server status every 5 seconds
     }
 }
 finally {
@@ -256,15 +361,18 @@ finally {
     [Console]::TreatControlCAsInput = $originalTreatControlCAsInput
     
     # This will execute when Ctrl+C is pressed or when the script exits
-    Write-Host "Stopping RAUX server..." -ForegroundColor Red
+    Write-Host "Stopping servers..." -ForegroundColor Red
     
-    # Try to stop the server process tree
-    if ($serverProcessId) {
-        Stop-ProcessTree -ProcessId $serverProcessId
+    # Try to stop both server process trees
+    if ($lemonadeProcessId) {
+        Stop-ProcessTree -ProcessId $lemonadeProcessId -ProcessName "Lemonade"
+    }
+    if ($rauxProcessId) {
+        Stop-ProcessTree -ProcessId $rauxProcessId -ProcessName "RAUX"
     }
     
-    # Find and kill any remaining open-webui processes
-    Write-Host "Checking for any remaining open-webui processes..." -ForegroundColor Yellow
+    # Find and kill any remaining open-webui or lemonade processes
+    Write-Host "Checking for any remaining server processes..." -ForegroundColor Yellow
     $webUiProcesses = Get-Process | Where-Object { $_.Name -like "*python*" } -ErrorAction SilentlyContinue
     
     foreach ($proc in $webUiProcesses) {
@@ -273,9 +381,9 @@ finally {
             $wmiQuery = "SELECT CommandLine FROM Win32_Process WHERE ProcessId = '$($proc.Id)'"
             $commandLine = (Get-WmiObject -Query $wmiQuery -ErrorAction SilentlyContinue).CommandLine
             
-            # If the command line contains open-webui, stop the process
-            if ($commandLine -and $commandLine -like "*open-webui serve*") {
-                Write-Host "  Stopping open-webui process: $($proc.Id)" -ForegroundColor Yellow
+            # If the command line contains open-webui or lemonade, stop the process
+            if ($commandLine -and ($commandLine -like "*open-webui serve*" -or $commandLine -like "*lemonade serve*")) {
+                Write-Host "  Stopping process - $($proc.Id)" -ForegroundColor Yellow
                 Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
             }
         }
@@ -286,5 +394,5 @@ finally {
     
     Write-Host "Server shutdown complete." -ForegroundColor Green
     Write-Host "Press any key to exit..." -ForegroundColor Cyan
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
 } 
