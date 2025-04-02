@@ -795,7 +795,7 @@
 							{/if}
 
 							{#if message.done}
-								{#if !readOnly}
+								<!-- {#if !readOnly}
 									{#if $user.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
@@ -810,7 +810,7 @@
 											</button>
 										</Tooltip>
 									{/if}
-								{/if}
+								{/if} -->
 
 								<Tooltip content={$i18n.t('Copy')} placement="bottom">
 									<button
@@ -890,7 +890,7 @@
 									</button>
 								</Tooltip>
 
-								{#if $config?.features.enable_image_generation && ($user.role === 'admin' || $user?.permissions?.features?.image_generation) && !readOnly}
+								<!-- {#if $config?.features.enable_image_generation && ($user.role === 'admin' || $user?.permissions?.features?.image_generation) && !readOnly}
 									<Tooltip content={$i18n.t('Generate Image')} placement="bottom">
 										<button
 											class="{isLastMessage
@@ -952,9 +952,9 @@
 											{/if}
 										</button>
 									</Tooltip>
-								{/if}
+								{/if} -->
 
-								{#if message.usage}
+								<!-- {#if message.usage}
 									<Tooltip
 										content={message.usage
 											? `<pre>${sanitizeResponseContent(
@@ -994,10 +994,10 @@
 											</svg>
 										</button>
 									</Tooltip>
-								{/if}
+								{/if} -->
 
 								{#if !readOnly}
-									{#if $config?.features.enable_message_rating ?? true}
+									<!-- {#if $config?.features.enable_message_rating ?? true}
 										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 											<button
 												class="{isLastMessage
@@ -1069,9 +1069,9 @@
 												</svg>
 											</button>
 										</Tooltip>
-									{/if}
+									{/if} -->
 
-									{#if isLastMessage}
+									<!-- {#if isLastMessage}
 										<Tooltip content={$i18n.t('Continue Response')} placement="bottom">
 											<button
 												type="button"
@@ -1104,7 +1104,7 @@
 												</svg>
 											</button>
 										</Tooltip>
-									{/if}
+									{/if} -->
 
 									<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
 										<button
