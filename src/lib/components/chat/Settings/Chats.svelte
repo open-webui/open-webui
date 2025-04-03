@@ -10,624 +10,724 @@
 		createNewChat,
 		deleteAllChats,
 		getAllChats,
-		getAllUserChats,
+		// getAllUserChats, // This seems unused, potentially removable
 		getChatList
 	} from '$lib/apis/chats';
 	import { getImportOrigin, convertOpenAIChats } from '$lib/utils';
-	import { onMount, getContext } from 'svelte';
+	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import ArchivedChatsModal from '$lib/components/layout/Sidebar/ArchivedChatsModal.svelte';
 
 	const i18n = getContext('i18n');
 
-	export let saveSettings: Function;
+	export let saveSettings: Function; // Assuming this is used elsewhere
 
-	// Chats
-	let importFiles;
-	let importZipFiles;
+	// State Variables
+	let importJsonFiles: FileList | null = null;
+	let importZipFiles: FileList | null = null;
 
 	let showArchiveConfirm = false;
 	let showDeleteConfirm = false;
 	let showArchivedChatsModal = false;
-	let isExporting = false;
-	let isExportingJson = false;
-	let isImporting = false;
-	let isImportingZip = false;
 
-	let chatImportInputElement: HTMLInputElement;
+	// Refined state flags for clarity (Point 7)
+	let isImportingJson = false;
+	let isImportingZip = false;
+	let isExportingJson = false;
+	let isExportingZip = false; // Renamed from isExporting
+
+	let chatImportJsonInputElement: HTMLInputElement;
 	let chatImportZipInputElement: HTMLInputElement;
 
-	$: if (importFiles) {
-		handleImport(importFiles);
+	// Computed state for disabling buttons during any operation (Point 8)
+	$: isAnyOperationInProgress =
+		isImportingJson || isImportingZip || isExportingJson || isExportingZip;
+
+	// Reactive triggers for file inputs
+	$: if (importJsonFiles) {
+		handleImportJson(importJsonFiles);
+		// Reset input immediately after triggering handler (Point 11)
+		if (chatImportJsonInputElement) chatImportJsonInputElement.value = '';
+		importJsonFiles = null;
 	}
 
 	$: if (importZipFiles) {
-		handleImportZip(importZipFiles);
+		handleImportZipFileSelect(importZipFiles);
+		// Reset input immediately after triggering handler (Point 11)
+		if (chatImportZipInputElement) chatImportZipInputElement.value = '';
+		importZipFiles = null;
 	}
 
-	const handleImport = async (files) => {
-		if (files.length === 0) return;
-
-		if (isImporting) {
-			toast.error($i18n.t('Import already in progress'));
-			return;
-		}
-
-		try {
-			isImporting = true;
-			const file = files[0];
-
-			// Check if it's a ZIP file by examining the file extension
-			if (file.name.toLowerCase().endsWith('.zip')) {
-				toast.error($i18n.t('Please use "Import Chats as .zip" for ZIP files'));
-				return;
-			} else {
-				// Assume it's a JSON file
-				await importJsonFile(file);
-			}
-
-			// Reset the file input
-			if (chatImportInputElement) {
-				chatImportInputElement.value = '';
-			}
-			importFiles = null;
-		} catch (error) {
-			console.error('Import error:', error);
-			toast.error($i18n.t('Failed to import: ') + error.message);
-		} finally {
-			isImporting = false;
-		}
-	};
-
-	const handleImportZip = async (files) => {
-		if (files.length === 0) return;
-
-		if (isImportingZip) {
-			toast.error($i18n.t('ZIP import already in progress'));
-			return;
-		}
-
-		try {
-			isImportingZip = true;
-			const file = files[0];
-
-			// Check if it's a ZIP file
-			if (!file.name.toLowerCase().endsWith('.zip')) {
-				toast.error($i18n.t('Please use "Import Chats" for JSON files'));
-				return;
-			}
-
-			toast.info($i18n.t('Processing ZIP file, please wait...'));
-			await importZipChats(file);
-
-			// Reset the file input
-			if (chatImportZipInputElement) {
-				chatImportZipInputElement.value = '';
-			}
-			importZipFiles = null;
-		} catch (error) {
-			console.error('ZIP import error:', error);
-			toast.error($i18n.t('Failed to import ZIP: ') + error.message);
-		} finally {
-			isImportingZip = false;
-		}
-	};
-
-	const importJsonFile = (file) => {
-		// No need to return a promise here, use toast.promise for async feedback
-		let reader = new FileReader();
-		let toastId = null; // Keep track of the toast
-
-		reader.onload = async (event) => {
-			try {
-				const fileContent = event.target.result;
-				if (!fileContent || typeof fileContent !== 'string') {
-					throw new Error('File content could not be read.');
-				}
-				const parsedData = JSON.parse(fileContent);
-
-				let chatsToImport;
-				let origin = 'unknown'; // Default origin
-
-				try {
-					// Attempt to determine origin, but catch errors if it fails
-					// This handles the case where getImportOrigin isn't expecting
-					// the single-object format.
-					origin = getImportOrigin(parsedData);
-				} catch (error) {
-					console.warn(
-						`Failed to determine import origin for ${file.name}, assuming standard format. Error: ${error.message}`
-					);
-					// Keep origin as 'unknown' or set explicitly to 'standard' if preferred
-					// origin = 'standard';
-				}
-
-				if (origin === 'openai') {
-					try {
-						// Show converting message (if toastId exists)
-						if (toastId) toast.info($i18n.t('Converting OpenAI format...'), { id: toastId });
-						chatsToImport = convertOpenAIChats(parsedData);
-						if (toastId) toast.dismiss(toastId); // Dismiss converting message before import promise
-					} catch (error) {
-						console.error('Unable to convert OpenAI chats:', error);
-						toast.error(`${$i18n.t('Failed to convert OpenAI chats:')} ${error.message}`, {
-							id: toastId
-						});
-						return; // Stop import if conversion fails
-					}
+	// Helper Functions (Point 13)
+	const readFileAsText = (file: File): Promise<string> => {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = (event) => {
+				if (event.target?.result && typeof event.target.result === 'string') {
+					resolve(event.target.result);
 				} else {
-					// Assume standard format (single chat or array of chats)
-					// This block now runs if origin is 'unknown', 'standard', or anything else non-'openai',
-					// including when getImportOrigin failed.
-					if (typeof parsedData === 'object' && parsedData !== null) {
-						chatsToImport = Array.isArray(parsedData) ? parsedData : [parsedData];
-						if (toastId) toast.dismiss(toastId); // Dismiss reading message before import promise
-					} else {
-						// If parsedData isn't an object/array after successful JSON.parse (shouldn't happen with valid JSON)
-						throw new Error('Parsed JSON data is not a valid object or array.');
-					}
+					reject(new Error($i18n.t('File content could not be read as text.')));
 				}
-
-				if (!chatsToImport || chatsToImport.length === 0) {
-					toast.info($i18n.t('No valid chats found in the file.'));
-					return;
-				}
-
-				const chatCount = chatsToImport.length;
-
-				// Use toast.promise for the import process
-				toast.promise(importChats(chatsToImport), {
-					loading: `${$i18n.t('Importing')} ${chatCount} ${$i18n.t(chatCount > 1 ? 'chats...' : 'chat...')}`,
-					success: (result) => {
-						// importChats doesn't return specific counts, so we use the count from the file
-						return `${$i18n.t('Successfully imported')} ${chatCount} ${$i18n.t(chatCount > 1 ? 'chats' : 'chat')}`;
-					},
-					error: (err) => {
-						console.error('Error during chat import:', err);
-						return `${$i18n.t('Failed to import chats:')} ${err.message || err}`;
-					}
-				});
-			} catch (error) {
-				console.error('Error processing JSON file:', error);
-				// Make sure the error message includes the actual error
-				toast.error(`${$i18n.t('Failed to read or parse JSON file:')} ${error.message}`, {
-					id: toastId
-				});
-			}
-		};
-
-		reader.onerror = (error) => {
-			console.error('File reading error:', error);
-			toast.error($i18n.t('Failed to read file.'), { id: toastId });
-		};
-
-		// Show initial loading toast
-		toastId = toast.loading($i18n.t('Reading file...'));
-		reader.readAsText(file);
-		// Note: The outer function doesn't need to be async or return a promise
-		// because the feedback is handled internally by toast.promise.
+			};
+			reader.onerror = (error) => {
+				console.error('File reading error:', error);
+				reject(new Error($i18n.t('Failed to read file.')));
+			};
+			reader.readAsText(file);
+		});
 	};
 
-	const importZipChats = async (zipFile) => {
-		let toastId = null; // Keep track of the toast ID
-		try {
-			// Load the zip file
-			const zip = await JSZip.loadAsync(zipFile);
-			const chatFiles = [];
+	const importChats = async (chatsToImport: any[]) => {
+		// Ensure we handle both single chat objects and arrays correctly within the batch
+		const validChats = (Array.isArray(chatsToImport) ? chatsToImport : [chatsToImport]).filter(
+			(c) => c !== null
+		);
 
-			// Look for JSON files in the chats folder
-			zip.folder('chats').forEach((relativePath, file) => {
-				if (relativePath.endsWith('.json') && !file.dir) {
-					// Ensure it's a file, not a directory entry
+		if (validChats.length === 0) return; // Nothing to import in this batch
+
+		// Assuming createNewChat can handle the structure (either chat object directly or { chat: chatObject })
+		// Modify this part if createNewChat expects a specific format only
+		for (const chat of validChats) {
+			// Check if the chat data is nested under a 'chat' key or is the root object
+			const chatData = chat.chat && typeof chat.chat === 'object' ? chat.chat : chat;
+			// Basic check for some content, adjust as needed
+			if (chatData && (chatData.id || chatData.title || chatData.messages?.length > 0)) {
+				await createNewChat(localStorage.token, chatData);
+			} else {
+				console.warn('Skipping potentially empty or invalid chat object during import:', chat);
+			}
+		}
+
+		// Refresh chat list after importing all chats in the batch/file
+		currentChatPage.set(1);
+		await chats.set(await getChatList(localStorage.token, 1)); // Use page 1 explicitly
+		scrollPaginationEnabled.set(true);
+	};
+
+	// Standardized Error Message Formatting (Point 12 applied throughout)
+	const formatError = (prefixKey: string, err: any): string => {
+		const prefix = $i18n.t(prefixKey);
+		const message = err?.message || (typeof err === 'string' ? err : JSON.stringify(err));
+		return `${prefix} ${message}`;
+	};
+
+	// 1. handleImportJson (Refactored from handleImport/importJsonFile) (Point 1)
+	const handleImportJson = async (files: FileList) => {
+		if (files.length === 0) return;
+		const file = files[0];
+
+		// Basic check before starting the promise
+		if (!file.name.toLowerCase().endsWith('.json')) {
+			toast.error($i18n.t('Invalid file type. Please select a .json file.'));
+			return;
+		}
+
+		if (isAnyOperationInProgress) {
+			toast.error($i18n.t('Another operation is already in progress.'));
+			return;
+		}
+
+		isImportingJson = true;
+
+		const importPromise = async () => {
+			// Read file content using helper
+			const fileContent = await readFileAsText(file);
+			const parsedData = JSON.parse(fileContent); // JSON parsing errors will reject the promise
+
+			let chatsToImport: any[] = [];
+			let origin = 'unknown';
+
+			try {
+				origin = getImportOrigin(parsedData);
+			} catch (error) {
+				console.warn(
+					`Could not determine import origin for ${file.name}, assuming standard format. Error: ${error?.message}`
+				);
+				// Proceed with standard/unknown logic
+			}
+
+			if (origin === 'openai') {
+				// Show converting message temporarily? toast.promise only has one loading state.
+				// We can include conversion in the main promise logic.
+				try {
+					chatsToImport = convertOpenAIChats(parsedData);
+				} catch (conversionError) {
+					console.error('OpenAI conversion failed:', conversionError);
+					// Throw specific error to be caught by toast.promise error handler
+					throw new Error(formatError('Failed to convert OpenAI chats:', conversionError));
+				}
+			} else {
+				// Handle standard format (single chat object or array of chats)
+				if (typeof parsedData === 'object' && parsedData !== null) {
+					chatsToImport = Array.isArray(parsedData) ? parsedData : [parsedData];
+				} else {
+					throw new Error($i18n.t('Parsed JSON data is not a valid object or array.'));
+				}
+			}
+
+			// Filter out potentially null/invalid entries before counting/importing
+			// This check might be redundant if importChats also filters, but good for early feedback
+			const validChatsToImport = chatsToImport.filter((chat) => chat && typeof chat === 'object');
+
+			if (validChatsToImport.length === 0) {
+				// Resolve with 0 to indicate success but no chats imported.
+				// This allows the success handler to provide a specific message.
+				return 0;
+			}
+
+			// Perform the actual import (API calls + list refresh)
+			await importChats(validChatsToImport);
+
+			// Resolve the promise with the count of successfully processed chats
+			return validChatsToImport.length;
+		};
+
+		toast.promise(importPromise(), {
+			loading: $i18n.t('Importing chats from JSON...'),
+			success: (count) => {
+				isImportingJson = false; // Reset flag on success
+				if (count === 0) {
+					return $i18n.t('No valid chats found in the file.');
+				}
+				return `${$i18n.t('Successfully imported')} ${count} ${$i18n.t(count > 1 ? 'chats' : 'chat')}`;
+			},
+			error: (err) => {
+				isImportingJson = false; // Reset flag on error
+				console.error('JSON Import error:', err);
+				// If the error was thrown by us (e.g., conversion), it's already formatted.
+				// Otherwise, format it. Check if it's an error object first.
+				if (err instanceof Error && err.message.startsWith($i18n.t('Failed to'))) {
+					return err.message;
+				}
+				return formatError('Failed to import JSON:', err);
+			}
+			// No finally callback in svelte-sonner's promise type, reset flags in success/error
+		});
+	};
+
+	// Wrapper function triggered by file input change for ZIP
+	const handleImportZipFileSelect = async (files: FileList) => {
+		if (files.length === 0) return;
+		const file = files[0];
+
+		// Basic check
+		if (!file.name.toLowerCase().endsWith('.zip')) {
+			toast.error($i18n.t('Invalid file type. Please select a .zip file.'));
+			return;
+		}
+
+		if (isAnyOperationInProgress) {
+			toast.error($i18n.t('Another operation is already in progress.'));
+			return;
+		}
+
+		// Call the main ZIP import logic
+		await handleImportZip(file);
+	};
+
+	// 2. handleImportZip (Refactored from importZipChats) (Point 2)
+	const handleImportZip = async (zipFile: File) => {
+		isImportingZip = true;
+		let toastId = toast.loading($i18n.t('Processing ZIP file...')); // Initial toast
+
+		try {
+			const zip = await JSZip.loadAsync(zipFile);
+			const chatFiles: JSZip.JSZipObject[] = [];
+			const chatsFolder = zip.folder('chats'); // Use optional chaining (Point 2)
+
+			if (!chatsFolder) {
+				throw new Error($i18n.t('No "chats" folder found in the ZIP archive.'));
+			}
+
+			// Iterate safely over files within the 'chats' folder
+			chatsFolder.forEach((relativePath, file) => {
+				// Ensure it's a file directly within 'chats' and ends with .json
+				if (!file.dir && relativePath.endsWith('.json') && !relativePath.includes('/')) {
 					chatFiles.push(file);
 				}
 			});
 
 			if (chatFiles.length === 0) {
-				throw new Error(
-					$i18n.t('No valid chat JSON files found in the /chats folder of the ZIP archive')
-				);
+				// Update toast to show info/error
+				toast.info($i18n.t('No valid .json chat files found directly in the /chats folder.'), {
+					id: toastId
+				});
+				isImportingZip = false; // Reset flag
+				return; // Exit early
 			}
 
-			// Use template literals for string interpolation with i18n
-			toast.info(`${$i18n.t('Found')} ${chatFiles.length} ${$i18n.t('chats to import...')}`);
+			toast.info(
+				`${$i18n.t('Found')} ${chatFiles.length} ${$i18n.t('potential chat files. Starting import...')}`,
+				{ id: toastId }
+			);
+			// Update to a new loading toast for progress tracking
+			toastId = toast.loading(`${$i18n.t('Import Progress:')} 0%`);
 
-			// Process files in batches to prevent memory issues
-			const BATCH_SIZE = 20;
+			// Process files in batches
+			const BATCH_SIZE = 25; // Adjusted batch size
 			const totalBatches = Math.ceil(chatFiles.length / BATCH_SIZE);
-			let importedCount = 0;
-
-			// Initial progress toast
-			toastId = toast.loading(`${$i18n.t('Import progress:')} 0%`);
+			let totalImportedCount = 0;
+			let totalSkippedCount = 0;
 
 			for (let i = 0; i < totalBatches; i++) {
 				const start = i * BATCH_SIZE;
 				const end = Math.min(start + BATCH_SIZE, chatFiles.length);
 				const batchFiles = chatFiles.slice(start, end);
+				const currentBatchNum = i + 1;
 
-				// Process this batch
-				const batchPromises = batchFiles.map(async (file) => {
+				// Update progress toast before processing batch
+				const progressPercent = Math.round((i / totalBatches) * 100); // Progress before batch starts
+				toast.loading(
+					`${$i18n.t('Import Progress:')} ${progressPercent}% (${$i18n.t('Batch')} ${currentBatchNum}/${totalBatches})`,
+					{ id: toastId }
+				);
+
+				const batchParsePromises = batchFiles.map(async (file) => {
 					try {
 						const content = await file.async('text');
 						const chatData = JSON.parse(content);
-						// Basic validation: check for an ID, or a nested chat with an ID
-						if (
-							chatData &&
-							(typeof chatData.id === 'string' ||
-								(chatData.chat && typeof chatData.chat.id === 'string'))
-						) {
-							return chatData;
-						}
-						console.warn(`Skipping invalid chat file: ${file.name}`);
-						return null;
+						// Add basic validation if needed, e.g., check for essential fields
+						// Let importChats handle deeper validation for now
+						return chatData;
 					} catch (e) {
-						console.error(`Error parsing chat file ${file.name}:`, e);
+						console.error(`Error processing file ${file.name}:`, e);
+						// Provide specific feedback about skipped file (Point 2)
 						toast.warning(`${$i18n.t('Skipped invalid JSON file:')} ${file.name}`);
-						return null; // Skip this file on error
+						totalSkippedCount++;
+						return null; // Indicate failure for this file
 					}
 				});
 
-				const batchResults = await Promise.all(batchPromises);
-				const validChatsInBatch = batchResults.filter((chat) => chat !== null);
+				const parsedChatsInBatch = await Promise.all(batchParsePromises);
+				const validChatsInBatch = parsedChatsInBatch.filter((chat) => chat !== null);
 
 				if (validChatsInBatch.length > 0) {
+					// Import the valid chats from this batch
+					// Note: importChats now handles the list refresh internally
 					await importChats(validChatsInBatch);
-					importedCount += validChatsInBatch.length;
+					totalImportedCount += validChatsInBatch.length;
 				}
 
-				// Update progress after processing the batch
-				const progress = Math.min(100, Math.round(((i + 1) / totalBatches) * 100));
-				// Update the existing loading toast
-				toast.loading(`${$i18n.t('Import progress:')} ${progress}%`, { id: toastId });
-
-				// Yield to the event loop if processing many batches
-				if (totalBatches > 2) {
+				// Optional: Yield to event loop for large imports
+				if (totalBatches > 5) {
 					await new Promise((resolve) => setTimeout(resolve, 0));
 				}
 			}
 
-			// Update toast to success, replacing the loading one
-			toast.success(`${$i18n.t('Successfully imported')} ${importedCount} ${$i18n.t('chats')}`, {
+			// Final progress update before success message
+			toast.loading(`${$i18n.t('Import Progress:')} 100% - ${$i18n.t('Finalizing...')}`, {
 				id: toastId
 			});
+
+			// Final toast update: Success
+			let successMessage = `${$i18n.t('Successfully imported')} ${totalImportedCount} ${$i18n.t(totalImportedCount !== 1 ? 'chats' : 'chat')}.`;
+			if (totalSkippedCount > 0) {
+				successMessage += ` ${$i18n.t('Skipped')} ${totalSkippedCount} ${$i18n.t(totalSkippedCount !== 1 ? 'files' : 'file')}.`;
+			}
+			toast.success(successMessage, { id: toastId });
 		} catch (error) {
-			console.error('Error importing ZIP:', error);
-			// Update toast to error if it exists, otherwise show a new error
-			const errorMsg = `${$i18n.t('Failed to import ZIP:')} ${error.message}`;
-			if (toastId) {
-				toast.error(errorMsg, { id: toastId });
-			} else {
-				toast.error(errorMsg);
-			}
-			// Re-throw the error if needed for upstream handling, though maybe not necessary here
-			// throw error;
+			console.error('ZIP Import Error:', error);
+			// Update toast to error, replacing the loading one
+			toast.error(formatError('Failed to import ZIP:', error), { id: toastId });
+		} finally {
+			isImportingZip = false; // Reset flag regardless of outcome
 		}
-		// No finally block needed for toast dismissal when updating by ID
 	};
 
-	const importChats = async (_chats) => {
-		// Make sure we're dealing with an array
-		const chatsArray = Array.isArray(_chats) ? _chats : [_chats];
-
-		for (const chat of chatsArray) {
-			if (chat.chat) {
-				await createNewChat(localStorage.token, chat.chat);
-			} else {
-				await createNewChat(localStorage.token, chat);
-			}
-		}
-
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		scrollPaginationEnabled.set(true);
-	};
-
+	// 3. exportChats (JSON) (Point 3)
 	const exportChats = async () => {
-		if (isExportingJson) {
-			toast.error($i18n.t('Export already in progress'));
+		if (isAnyOperationInProgress) {
+			toast.error($i18n.t('Another operation is already in progress.'));
 			return;
 		}
-
 		isExportingJson = true;
+		const fetchToastId = toast.loading($i18n.t('Fetching chats...')); // Initial fetch toast
 
-		// Use toast.promise for the entire async operation
-		toast.promise(
-			// The async function to execute
-			async () => {
-				const allChats = await getAllChats(localStorage.token);
-
-				if (!allChats || allChats.length === 0) {
-					// Throw an error to be caught by the promise's error handler,
-					// or handle it as a specific non-error case if preferred.
-					// Throwing allows using the error state of the promise toast.
-					throw new Error($i18n.t('No chats found to export.'));
-				}
-
-				const blob = new Blob([JSON.stringify(allChats, null, 2)], {
-					// Add indentation for readability
-					type: 'application/json;charset=utf-8'
-				});
-				saveAs(blob, `chats-export-${Date.now()}.json`);
-				return allChats.length; // Return the count for the success message
-			},
-			// Configuration for the toast messages
-			{
-				loading: $i18n.t('Preparing export...'),
-				success: (count) =>
-					`${$i18n.t('Successfully exported')} ${count} ${$i18n.t(count > 1 ? 'chats' : 'chat')}`,
-				error: (err) => {
-					console.error('Export error:', err);
-					// Check if it's the specific "no chats" error we threw
-					if (err.message === $i18n.t('No chats found to export.')) {
-						return err.message; // Display the specific info message as an "error" toast
-					}
-					return `${$i18n.t('Export failed:')} ${err.message || err}`;
-				},
-				finally: () => {
-					isExportingJson = false; // Reset the flag regardless of success or failure
-				}
-			}
-		);
-	};
-
-	const exportChatsAsZip = async () => {
-		if (isExporting) {
-			toast.error($i18n.t('Export already in progress'));
-			return;
-		}
-
-		let toastId = null; // Initialize toastId
 		try {
-			isExporting = true;
-			// Use loading toast immediately, this will be updated
-			toastId = toast.loading($i18n.t('Preparing export, please wait...'));
-
 			const allChats = await getAllChats(localStorage.token);
 
 			if (!allChats || allChats.length === 0) {
-				toast.info($i18n.t('No chats found to export.'), { id: toastId }); // Update the loading toast
-				isExporting = false; // Reset flag early
-				return; // Exit if no chats
+				toast.info($i18n.t('No chats found to export.'), { id: fetchToastId });
+				isExportingJson = false; // Reset flag
+				return; // Exit early
 			}
 
+			// Dismiss fetch toast, proceed with export promise
+			toast.dismiss(fetchToastId);
+
+			const exportPromise = new Promise((resolve, reject) => {
+				try {
+					const blob = new Blob([JSON.stringify(allChats, null, 2)], {
+						type: 'application/json;charset=utf-8'
+					});
+					saveAs(blob, `chats-export-${Date.now()}.json`);
+					resolve(allChats.length); // Resolve with the count
+				} catch (err) {
+					reject(err);
+				}
+			});
+
+			toast.promise(exportPromise, {
+				loading: $i18n.t('Saving JSON file...'),
+				success: (count) => {
+					isExportingJson = false; // Reset flag on success
+					return `${$i18n.t('Successfully exported')} ${count} ${$i18n.t(count !== 1 ? 'chats' : 'chat')}`;
+				},
+				error: (err) => {
+					isExportingJson = false; // Reset flag on error
+					console.error('JSON Export error:', err);
+					return formatError('Failed to save JSON file:', err);
+				}
+			});
+		} catch (fetchError) {
+			console.error('Failed to fetch chats for export:', fetchError);
+			toast.error(formatError('Failed to fetch chats:', fetchError), { id: fetchToastId });
+			isExportingJson = false; // Reset flag on fetch error
+		}
+		// Note: isExportingJson is reset within success/error handlers or early exits.
+	};
+
+	// 4. exportChatsAsZip (Point 4)
+	const exportChatsAsZip = async () => {
+		if (isAnyOperationInProgress) {
+			toast.error($i18n.t('Another operation is already in progress.'));
+			return;
+		}
+		isExportingZip = true;
+		let toastId = toast.loading($i18n.t('Fetching chats...')); // Start with fetching state
+
+		try {
+			const allChats = await getAllChats(localStorage.token);
+
+			if (!allChats || allChats.length === 0) {
+				// Update the existing toast to info and exit (Point 4)
+				toast.info($i18n.t('No chats found to export.'), { id: toastId });
+				isExportingZip = false; // Reset flag early
+				return;
+			}
+
+			// Update toast: Found chats, starting ZIP process
+			toast.loading(
+				`${$i18n.t('Found')} ${allChats.length} ${$i18n.t('chats. Preparing ZIP...')}`,
+				{ id: toastId }
+			);
+
 			const zip = new JSZip();
+			const chatsFolder = zip.folder('chats'); // Required by import format
 
-			// Create a folder for the chats
-			const chatsFolder = zip.folder('chats');
+			if (!chatsFolder) {
+				// This should not happen with jszip, but good practice to check
+				throw new Error("Failed to create 'chats' folder in ZIP.");
+			}
 
-			// Process chats in batches to prevent memory issues and update progress
+			// Process in batches for progress updates
 			const BATCH_SIZE = 50;
 			const totalBatches = Math.ceil(allChats.length / BATCH_SIZE);
-
-			// Update toast to show initial progress
-			toast.loading(`${$i18n.t('Export progress:')} 0%`, { id: toastId });
+			const totalChats = allChats.length;
 
 			for (let i = 0; i < totalBatches; i++) {
 				const start = i * BATCH_SIZE;
-				const end = Math.min(start + BATCH_SIZE, allChats.length);
+				const end = Math.min(start + BATCH_SIZE, totalChats);
 				const batchChats = allChats.slice(start, end);
+				const currentBatchNum = i + 1;
 
-				// Add each chat in this batch as an individual JSON file
-				batchChats.forEach((chat) => {
-					// Use chat.id if available, otherwise generate a fallback based on index
-					const chatId = chat.id || `generated-${start + batchChats.indexOf(chat)}`;
-					const chatTitle = chat.title || `chat`;
-					// Create a safer filename - replace invalid characters
+				// Update progress before processing batch
+				const progressPercent = Math.round((i / totalBatches) * 100);
+				toast.loading(
+					`${$i18n.t('Export Progress:')} ${progressPercent}% (${$i18n.t('Processing batch')} ${currentBatchNum}/${totalBatches})`,
+					{ id: toastId }
+				);
+
+				batchChats.forEach((chat, index) => {
+					const chatId = chat.id || `no-id-${start + index}`;
+					const chatTitle = chat.title || `Untitled Chat`;
 					const safeTitle = chatTitle
-						.replace(/[<>:"/\\|?*]/g, '_') // Replace forbidden characters
-						.replace(/\s+/g, '_') // Replace whitespace with underscore
-						.replace(/__/g, '_') // Replace double underscores
-						.substring(0, 50); // Limit length to avoid issues
+						.replace(/[<>:"/\\|?*]/g, '_')
+						.replace(/\s+/g, '_')
+						.substring(0, 60);
+					const fileName = `${safeTitle}_${chatId}.json`;
 
-					const fileName = `${safeTitle}-${chatId}.json`;
-
-					// Use stringify with spacing for better readability,
-					// but minimize if we have a lot of chats
-					const spacing = allChats.length > 100 ? 0 : 2;
+					// Add file to zip - consider minimal spacing for large exports
+					const spacing = totalChats > 200 ? 0 : 2;
 					chatsFolder.file(fileName, JSON.stringify(chat, null, spacing));
 				});
 
-				// Update progress
-				const progress = Math.min(100, Math.round(((i + 1) / totalBatches) * 100));
-				// Update the existing loading toast
-				toast.loading(`${$i18n.t('Export progress:')} ${progress}%`, { id: toastId });
-
-				// Yield to the event loop if processing many batches
-				if (totalBatches > 2) {
-					await new Promise((resolve) => setTimeout(resolve, 0));
+				// Optional: Yield to event loop
+				if (totalBatches > 4) {
+					await new Promise((resolve) => setTimeout(resolve, 5)); // Small delay
 				}
 			}
 
 			// Update toast for compression phase
-			toast.loading($i18n.t('Compressing files...'), { id: toastId });
-
-			// Use compression level based on number of chats
-			const compressionLevel = allChats.length > 200 ? 3 : 9; // Lower compression for many files (faster)
-
-			// Generate the zip file with appropriate options
-			const content = await zip.generateAsync({
-				type: 'blob',
-				compression: 'DEFLATE',
-				compressionOptions: {
-					level: compressionLevel
-				},
-				streamFiles: allChats.length > 100 // Use streaming for large number of files
+			toast.loading($i18n.t('Compressing files... (May take some time)'), {
+				id: toastId
 			});
 
-			// Save the zip file
+			// Generate ZIP
+			const compressionLevel = totalChats > 200 ? 1 : 6; // Faster compression for many files
+			const content = await zip.generateAsync(
+				{
+					type: 'blob',
+					compression: 'DEFLATE',
+					compressionOptions: { level: compressionLevel },
+					streamFiles: totalChats > 100 // Stream if many files
+				},
+				(metadata) => {
+					// Optional metadata callback for finer progress during compression
+					// toast.loading(`${$i18n.t('Compressing:')} ${Math.round(metadata.percent)}%`, { id: toastId });
+				}
+			);
+
 			saveAs(content, `chats-export-${Date.now()}.zip`);
 
-			// Update the loading toast to success
-			toast.success($i18n.t('Export completed successfully'), { id: toastId });
+			// Final success toast
+			toast.success(
+				`${$i18n.t('Successfully exported')} ${totalChats} ${$i18n.t(totalChats !== 1 ? 'chats' : 'chat')} ${$i18n.t('as ZIP')}.`,
+				{ id: toastId }
+			);
 		} catch (error) {
-			console.error('Export error:', error);
-			const errorMsg = `${$i18n.t('Failed to create zip:')} ${error.message}`;
-			// Update the loading toast to error, or show new error if toastId wasn't set
-			if (toastId) {
-				toast.error(errorMsg, { id: toastId });
-			} else {
-				toast.error(errorMsg);
-			}
+			console.error('ZIP Export error:', error);
+			// Update toast to error
+			toast.error(formatError('Failed to export ZIP:', error), { id: toastId });
 		} finally {
-			isExporting = false;
-			// No need to dismiss toast here, success/error update handled it via ID
+			isExportingZip = false; // Reset flag
 		}
 	};
 
+	// 5. archiveAllChatsHandler / deleteAllChatsHandler (Point 5)
 	const archiveAllChatsHandler = async () => {
-		await goto('/');
-		await archiveAllChats(localStorage.token).catch((error) => {
-			toast.error(`${error}`);
-		});
+		showArchiveConfirm = false; // Hide UI immediately
 
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		scrollPaginationEnabled.set(true);
+		if (isAnyOperationInProgress) {
+			toast.error($i18n.t('Another operation is already in progress.'));
+			return;
+		}
+
+		await goto('/'); // Navigate first
+
+		let fetchToastId = toast.loading($i18n.t('Checking active chats...'));
+
+		try {
+			// Fetch all chats to get the count *before* archiving
+			const activeChats = await getAllChats(localStorage.token);
+			const count = activeChats.length;
+
+			if (count === 0) {
+				toast.info($i18n.t('No active chats to archive.'), { id: fetchToastId });
+				return; // Nothing to do
+			}
+
+			// Dismiss the checking toast and show the archiving toast
+			toast.dismiss(fetchToastId);
+
+			const archivePromise = async () => {
+				await archiveAllChats(localStorage.token);
+				// Refresh list after archiving
+				currentChatPage.set(1);
+				const updatedChats = await getChatList(localStorage.token, 1);
+				chats.set(updatedChats);
+				scrollPaginationEnabled.set(true);
+				return count; // Resolve with the count for the success message
+			};
+
+			toast.promise(archivePromise(), {
+				loading: $i18n.t('Archiving all chats...'),
+				success: (archivedCount) =>
+					`${$i18n.t('Successfully archived')} ${archivedCount} ${$i18n.t(archivedCount > 1 ? 'chats' : 'chat')}.`,
+				error: (err) => formatError('Failed to archive chats:', err)
+			});
+		} catch (fetchError) {
+			console.error('Failed to fetch chats before archiving:', fetchError);
+			toast.error(formatError('Failed to check active chats:', fetchError), { id: fetchToastId });
+		}
 	};
 
 	const deleteAllChatsHandler = async () => {
-		await goto('/');
-		await deleteAllChats(localStorage.token).catch((error) => {
-			toast.error(`${error}`);
-		});
+		showDeleteConfirm = false; // Hide UI immediately
 
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		scrollPaginationEnabled.set(true);
+		if (isAnyOperationInProgress) {
+			toast.error($i18n.t('Another operation is already in progress.'));
+			return;
+		}
+
+		await goto('/'); // Navigate first
+
+		let fetchToastId = toast.loading($i18n.t('Checking active chats...'));
+
+		try {
+			// Fetch all chats to get the count *before* deleting
+			const activeChats = await getAllChats(localStorage.token);
+			const count = activeChats.length;
+
+			if (count === 0) {
+				toast.info($i18n.t('No active chats to delete.'), { id: fetchToastId });
+				return; // Nothing to do
+			}
+
+			// Dismiss the checking toast and show the deleting toast
+			toast.dismiss(fetchToastId);
+
+			const deletePromise = async () => {
+				await deleteAllChats(localStorage.token);
+				// Refresh list after deleting
+				currentChatPage.set(1);
+				const updatedChats = await getChatList(localStorage.token, 1);
+				chats.set(updatedChats);
+				scrollPaginationEnabled.set(true);
+				return count; // Resolve with the count for the success message
+			};
+
+			toast.promise(deletePromise(), {
+				loading: $i18n.t('Deleting all chats...'),
+				success: (deletedCount) =>
+					`${$i18n.t('Successfully deleted')} ${deletedCount} ${$i18n.t(deletedCount > 1 ? 'chats' : 'chat')}.`,
+				error: (err) => formatError('Failed to delete chats:', err)
+			});
+		} catch (fetchError) {
+			console.error('Failed to fetch chats before deleting:', fetchError);
+			toast.error(formatError('Failed to check active chats:', fetchError), { id: fetchToastId });
+		}
 	};
 
+	// 6. handleArchivedChatsChange (Point 6)
 	const handleArchivedChatsChange = async () => {
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
-		scrollPaginationEnabled.set(true);
+		// Show loading toast during refresh for better UX
+		const refreshPromise = async () => {
+			currentChatPage.set(1);
+			const updatedChats = await getChatList(localStorage.token, 1);
+			chats.set(updatedChats);
+			scrollPaginationEnabled.set(true);
+		};
+
+		toast.promise(refreshPromise(), {
+			loading: $i18n.t('Refreshing chat list...'),
+			success: $i18n.t('Archived chat list updated.'), // Simple success feedback
+			error: (err) => formatError('Failed to refresh list:', err)
+		});
 	};
 </script>
 
 <ArchivedChatsModal bind:show={showArchivedChatsModal} on:change={handleArchivedChatsChange} />
 
 <div class="flex flex-col h-full justify-between space-y-3 text-sm">
-	<div class=" space-y-2 overflow-y-scroll max-h-[28rem] lg:max-h-full">
+	<div class=" space-y-2 overflow-y-scroll max-h-[28rem] lg:max-h-full scrollbar-thin">
 		<div class="flex flex-col">
-			<!-- JSON Import -->
+			<!-- JSON Import (Point 9: Button Text, Point 8: Disabling) -->
 			<input
-				id="chat-import-input"
-				bind:this={chatImportInputElement}
-				bind:files={importFiles}
+				id="chat-import-json-input"
+				bind:this={chatImportJsonInputElement}
+				bind:files={importJsonFiles}
 				type="file"
 				accept=".json"
 				hidden
+				disabled={isAnyOperationInProgress}
 			/>
 			<button
-				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-				on:click={() => {
-					chatImportInputElement.click();
-				}}
-				disabled={isImporting}
+				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+				on:click={() => chatImportJsonInputElement.click()}
+				disabled={isAnyOperationInProgress}
 			>
+				<!-- Icon -->
 				<div class=" self-center mr-3">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 16 16"
 						fill="currentColor"
 						class="w-4 h-4"
-					>
-						<path
+						><path
 							fill-rule="evenodd"
 							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
 							clip-rule="evenodd"
-						/>
-					</svg>
+						/></svg
+					>
 				</div>
 				<div class=" self-center text-sm font-medium">
-					{isImporting ? $i18n.t('Importing...') : $i18n.t('Import Chats')}
+					{isImportingJson ? $i18n.t('Importing JSON...') : $i18n.t('Import Chats (.json)')}
 				</div>
 			</button>
 
-			<!-- ZIP Import -->
+			<!-- ZIP Import (Point 9: Button Text, Point 8: Disabling) -->
 			<input
 				id="chat-import-zip-input"
 				bind:this={chatImportZipInputElement}
 				bind:files={importZipFiles}
 				type="file"
-				accept=".zip"
+				accept=".zip,application/zip,application/x-zip-compressed"
 				hidden
+				disabled={isAnyOperationInProgress}
 			/>
 			<button
-				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-				on:click={() => {
-					chatImportZipInputElement.click();
-				}}
-				disabled={isImportingZip}
+				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+				on:click={() => chatImportZipInputElement.click()}
+				disabled={isAnyOperationInProgress}
 			>
+				<!-- Icon -->
 				<div class=" self-center mr-3">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 16 16"
 						fill="currentColor"
 						class="w-4 h-4"
-					>
-						<path
+						><path
 							fill-rule="evenodd"
 							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
 							clip-rule="evenodd"
-						/>
-					</svg>
+						/></svg
+					>
 				</div>
 				<div class=" self-center text-sm font-medium">
-					{isImportingZip ? $i18n.t('Importing...') : $i18n.t('Import Chats as .zip')}
+					{isImportingZip ? $i18n.t('Importing ZIP...') : $i18n.t('Import Chats (.zip)')}
 				</div>
 			</button>
 
-			<!-- JSON Export -->
+			<!-- JSON Export (Point 9: Button Text, Point 8: Disabling) -->
 			<button
-				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
 				on:click={exportChats}
-				disabled={isExportingJson}
+				disabled={isAnyOperationInProgress}
 			>
+				<!-- Icon -->
 				<div class=" self-center mr-3">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 16 16"
 						fill="currentColor"
 						class="w-4 h-4"
-					>
-						<path
+						><path
 							fill-rule="evenodd"
 							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
 							clip-rule="evenodd"
-						/>
-					</svg>
+						/></svg
+					>
 				</div>
 				<div class=" self-center text-sm font-medium">
-					{isExportingJson ? $i18n.t('Exporting...') : $i18n.t('Export Chats')}
+					{isExportingJson ? $i18n.t('Exporting JSON...') : $i18n.t('Export Chats (.json)')}
 				</div>
 			</button>
 
-			<!-- ZIP Export -->
+			<!-- ZIP Export (Point 9: Button Text, Point 8: Disabling) -->
 			<button
-				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-				on:click={() => {
-					exportChatsAsZip();
-				}}
-				disabled={isExporting}
+				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+				on:click={exportChatsAsZip}
+				disabled={isAnyOperationInProgress}
 			>
+				<!-- Icon -->
 				<div class=" self-center mr-3">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 16 16"
 						fill="currentColor"
 						class="w-4 h-4"
-					>
-						<path
+						><path
 							fill-rule="evenodd"
 							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
 							clip-rule="evenodd"
-						/>
-					</svg>
+						/></svg
+					>
 				</div>
 				<div class=" self-center text-sm font-medium">
-					{isExporting ? $i18n.t('Exporting...') : $i18n.t('Export Chats as .zip')}
+					{isExportingZip ? $i18n.t('Exporting ZIP...') : $i18n.t('Export Chats (.zip)')}
 				</div>
 			</button>
 		</div>
@@ -635,198 +735,186 @@
 		<hr class=" border-gray-100 dark:border-gray-850" />
 
 		<div class="flex flex-col">
+			<!-- Archived Chats Button -->
 			<button
-				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-				on:click={() => {
-					showArchivedChatsModal = true;
-				}}
+				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+				on:click={() => (showArchivedChatsModal = true)}
+				disabled={isAnyOperationInProgress}
 			>
+				<!-- Icon -->
 				<div class=" self-center mr-3">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 24 24"
 						fill="currentColor"
 						class="size-4"
-					>
-						<path
+						><path
 							d="M3.375 3C2.339 3 1.5 3.84 1.5 4.875v.75c0 1.036.84 1.875 1.875 1.875h17.25c1.035 0 1.875-.84 1.875-1.875v-.75C22.5 3.839 21.66 3 20.625 3H3.375Z"
-						/>
-						<path
+						/><path
 							fill-rule="evenodd"
 							d="m3.087 9 .54 9.176A3 3 0 0 0 6.62 21h10.757a3 3 0 0 0 2.995-2.824L20.913 9H3.087ZM12 10.5a.75.75 0 0 1 .75.75v4.94l1.72-1.72a.75.75 0 1 1 1.06 1.06l-3 3a.75.75 0 0 1-1.06 0l-3-3a.75.75 0 1 1 1.06-1.06l1.72 1.72v-4.94a.75.75 0 0 1 .75-.75Z"
 							clip-rule="evenodd"
-						/>
-					</svg>
+						/></svg
+					>
 				</div>
 				<div class=" self-center text-sm font-medium">{$i18n.t('Archived Chats')}</div>
 			</button>
 
+			<!-- Archive All Section (Point 10: Confirmation UI - minor tweaks/consistency) -->
 			{#if showArchiveConfirm}
-				<div class="flex justify-between rounded-md items-center py-2 px-3.5 w-full transition">
-					<div class="flex items-center space-x-3">
+				<div
+					class="flex justify-between items-center rounded-md py-2 px-3.5 w-full bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 transition"
+				>
+					<div class="flex items-center space-x-2">
+						<!-- Warning Icon -->
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 16 16"
 							fill="currentColor"
 							class="w-4 h-4"
-						>
-							<path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z" />
-							<path
+							><path
 								fill-rule="evenodd"
-								d="M13 6H3v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6ZM5.72 7.47a.75.75 0 0 1 1.06 0L8 8.69l1.22-1.22a.75.75 0 1 1 1.06 1.06L9.06 9.75l1.22 1.22a.75.75 0 1 1-1.06 1.06L8 10.81l-1.22 1.22a.75.75 0 0 1-1.06-1.06l1.22-1.22-1.22-1.22a.75.75 0 0 1 0-1.06Z"
+								d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
 								clip-rule="evenodd"
-							/>
-						</svg>
-						<span>{$i18n.t('Are you sure?')}</span>
+							/></svg
+						>
+						<span class="text-sm font-medium">{$i18n.t('Archive all?')}</span>
 					</div>
-
-					<div class="flex space-x-1.5 items-center">
+					<div class="flex space-x-2 items-center">
 						<button
-							class="hover:text-white transition"
-							on:click={() => {
-								archiveAllChatsHandler();
-								showArchiveConfirm = false;
-							}}
+							class="p-1 rounded hover:bg-yellow-200 dark:hover:bg-yellow-700 transition"
+							on:click={archiveAllChatsHandler}
+							title={$i18n.t('Confirm Archive')}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
+								viewBox="0 0 16 16"
 								fill="currentColor"
 								class="w-4 h-4"
-							>
-								<path
+								><path
 									fill-rule="evenodd"
-									d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+									d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"
 									clip-rule="evenodd"
-								/>
-							</svg>
+								/></svg
+							>
 						</button>
 						<button
-							class="hover:text-white transition"
-							on:click={() => {
-								showArchiveConfirm = false;
-							}}
+							class="p-1 rounded hover:bg-yellow-200 dark:hover:bg-yellow-700 transition"
+							on:click={() => (showArchiveConfirm = false)}
+							title={$i18n.t('Cancel')}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
+								viewBox="0 0 16 16"
 								fill="currentColor"
 								class="w-4 h-4"
+								><path
+									d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+								/></svg
 							>
-								<path
-									d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-								/>
-							</svg>
 						</button>
 					</div>
 				</div>
 			{:else}
 				<button
-					class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-					on:click={() => {
-						showArchiveConfirm = true;
-					}}
+					class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+					on:click={() => (showArchiveConfirm = true)}
+					disabled={isAnyOperationInProgress}
 				>
+					<!-- Icon -->
 					<div class=" self-center mr-3">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 24 24"
 							fill="currentColor"
 							class="size-4"
-						>
-							<path
+							><path
 								d="M3.375 3C2.339 3 1.5 3.84 1.5 4.875v.75c0 1.036.84 1.875 1.875 1.875h17.25c1.035 0 1.875-.84 1.875-1.875v-.75C22.5 3.839 21.66 3 20.625 3H3.375Z"
-							/>
-							<path
+							/><path
 								fill-rule="evenodd"
 								d="m3.087 9 .54 9.176A3 3 0 0 0 6.62 21h10.757a3 3 0 0 0 2.995-2.824L20.913 9H3.087Zm6.163 3.75A.75.75 0 0 1 10 12h4a.75.75 0 0 1 0 1.5h-4a.75.75 0 0 1-.75-.75Z"
 								clip-rule="evenodd"
-							/>
-						</svg>
+							/></svg
+						>
 					</div>
 					<div class=" self-center text-sm font-medium">{$i18n.t('Archive All Chats')}</div>
 				</button>
 			{/if}
 
+			<!-- Delete All Section (Point 10: Confirmation UI - minor tweaks/consistency) -->
 			{#if showDeleteConfirm}
-				<div class="flex justify-between rounded-md items-center py-2 px-3.5 w-full transition">
-					<div class="flex items-center space-x-3">
+				<div
+					class="flex justify-between items-center rounded-md py-2 px-3.5 w-full bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200 transition"
+				>
+					<div class="flex items-center space-x-2">
+						<!-- Danger Icon -->
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 16 16"
 							fill="currentColor"
 							class="w-4 h-4"
-						>
-							<path d="M2 3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3Z" />
-							<path
+							><path
 								fill-rule="evenodd"
-								d="M13 6H3v6a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6ZM5.72 7.47a.75.75 0 0 1 1.06 0L8 8.69l1.22-1.22a.75.75 0 1 1 1.06 1.06L9.06 9.75l1.22 1.22a.75.75 0 1 1-1.06 1.06L8 10.81l-1.22 1.22a.75.75 0 0 1-1.06-1.06l1.22-1.22-1.22-1.22a.75.75 0 0 1 0-1.06Z"
+								d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
 								clip-rule="evenodd"
-							/>
-						</svg>
-						<span>{$i18n.t('Are you sure?')}</span>
+							/></svg
+						>
+						<span class="text-sm font-medium">{$i18n.t('Delete all forever?')}</span>
 					</div>
-
-					<div class="flex space-x-1.5 items-center">
+					<div class="flex space-x-2 items-center">
 						<button
-							class="hover:text-white transition"
-							on:click={() => {
-								deleteAllChatsHandler();
-								showDeleteConfirm = false;
-							}}
+							class="p-1 rounded hover:bg-red-200 dark:hover:bg-red-700 transition"
+							on:click={deleteAllChatsHandler}
+							title={$i18n.t('Confirm Delete')}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
+								viewBox="0 0 16 16"
 								fill="currentColor"
 								class="w-4 h-4"
-							>
-								<path
+								><path
 									fill-rule="evenodd"
-									d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+									d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z"
 									clip-rule="evenodd"
-								/>
-							</svg>
+								/></svg
+							>
 						</button>
 						<button
-							class="hover:text-white transition"
-							on:click={() => {
-								showDeleteConfirm = false;
-							}}
+							class="p-1 rounded hover:bg-red-200 dark:hover:bg-red-700 transition"
+							on:click={() => (showDeleteConfirm = false)}
+							title={$i18n.t('Cancel')}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 20 20"
+								viewBox="0 0 16 16"
 								fill="currentColor"
 								class="w-4 h-4"
+								><path
+									d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"
+								/></svg
 							>
-								<path
-									d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-								/>
-							</svg>
 						</button>
 					</div>
 				</div>
 			{:else}
 				<button
-					class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
-					on:click={() => {
-						showDeleteConfirm = true;
-					}}
+					class=" flex rounded-md py-2 px-3.5 w-full hover:bg-red-200/50 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+					on:click={() => (showDeleteConfirm = true)}
+					disabled={isAnyOperationInProgress}
 				>
+					<!-- Trash Icon -->
 					<div class=" self-center mr-3">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 16 16"
 							fill="currentColor"
 							class="w-4 h-4"
-						>
-							<path
+							><path
 								fill-rule="evenodd"
-								d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm7 7a.75.75 0 0 1-.75.75h-4.5a.75.75 0 0 1 0-1.5h4.5A.75.75 0 0 1 11 9Z"
+								d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .75.75l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .748-.675Z"
 								clip-rule="evenodd"
-							/>
-						</svg>
+							/></svg
+						>
 					</div>
 					<div class=" self-center text-sm font-medium">{$i18n.t('Delete All Chats')}</div>
 				</button>
