@@ -14,10 +14,11 @@
 	export let disabled = false;
 	export let pressed = false;
 	export let pressable = false;
+	export let iconOnly = false;
 
 	const baseClasses = 'select-none rounded-3xl outline-offset-2';
 
-	$: classes = `${className} ${baseClasses} ${stateClassBuilder(type, disabled, pressed)}`;
+	$: classes = `${className} ${iconOnly ? 'p-1.5' : 'px-4 py-1'} ${baseClasses} ${stateClassBuilder(type, disabled, pressed)}`;
 </script>
 
 <button
