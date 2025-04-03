@@ -8,7 +8,9 @@ import requests
 import os
 
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
+import pytz
+from pytz import UTC
 from typing import Optional, Union, List, Dict
 
 from open_webui.models.users import Users
