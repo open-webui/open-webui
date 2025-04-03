@@ -1,3 +1,4 @@
+
 # syntax=docker/dockerfile:1
 
 # GitHub 저장소에서 클론할 브랜치 및 URL 설정
@@ -5,6 +6,7 @@ ARG GITHUB_REPO=https://github.com/Merge-Feat/hkust-open-webui.git
 ARG GITHUB_BRANCH=develop
 
 ######## WebUI frontend ########
+
 FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
 ARG BUILD_HASH
 
@@ -20,10 +22,9 @@ COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
 RUN npm run build
 
-######## WebUI backend ########
+# 기존 WebUI Backend 설정
 FROM python:3.11-slim-bookworm AS base
 
-# Use args
 ARG USE_CUDA
 ARG USE_OLLAMA
 ARG USE_CUDA_VER
@@ -32,7 +33,7 @@ ARG USE_RERANKING_MODEL
 ARG UID
 ARG GID
 
-## Basis ##
+# 환경 변수 설정
 ENV ENV=prod \
     PORT=8080 \
     USE_OLLAMA_DOCKER=${USE_OLLAMA} \
@@ -92,15 +93,22 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
 
-EXPOSE 8080
 
-HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1
+# IIS 서버 추가
+FROM mcr.microsoft.com/windows/servercore/iis AS iis
 
-USER $UID:$GID
+# Git 설치
+RUN powershell -Command \
+    Invoke-WebRequest -Uri "https://github.com/git-for-windows/git/releases/latest/download/Git-64-bit.exe" -OutFile "C:\Git-64-bit.exe"; \
+    Start-Process -FilePath "C:\Git-64-bit.exe" -ArgumentList "/VERYSILENT /NORESTART" -Wait; \
+    Remove-Item -Path "C:\Git-64-bit.exe"
 
-ARG BUILD_HASH
-ENV WEBUI_BUILD_VERSION=${BUILD_HASH}
-ENV DOCKER=true
+# GitHub 저장소에서 develop 브랜치 가져오기
+WORKDIR C:\inetpub\wwwroot
+RUN git clone --single-branch --branch develop https://github.com/Merge-Feat/hkust-open-webui.git .
+
+# IIS 포트 개방
+EXPOSE 80
 
 CMD [ "bash", "start.sh"]
 
