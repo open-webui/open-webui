@@ -37,7 +37,7 @@
 
 	let chatImportJsonInputElement: HTMLInputElement;
 	let chatImportZipInputElement: HTMLInputElement;
-	
+
 	$: isAnyOperationInProgress =
 		isImportingJson || isImportingZip || isExportingJson || isExportingZip;
 
