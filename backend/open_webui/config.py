@@ -331,6 +331,12 @@ JWT_EXPIRES_IN = PersistentConfig(
 # OAuth config
 ####################################
 
+OAUTH_USE_PICTURE_CLAIM = PersistentConfig(
+    "OAUTH_USE_PICTURE_CLAIM",
+    "oauth.oidc.use_picture_claim",
+    os.environ.get("OAUTH_USE_PICTURE_CLAIM", "True").lower() == "true",
+)
+
 ENABLE_OAUTH_SIGNUP = PersistentConfig(
     "ENABLE_OAUTH_SIGNUP",
     "oauth.enable_signup",
