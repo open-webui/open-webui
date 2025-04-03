@@ -10,6 +10,6 @@
 	</div>
 
 	<div class=" self-center text-sm">
-		{typeof content === 'string' ? content : JSON.stringify(content)}
+		Es ist ein Fehler aufgetreten, bitte probiere es später nochmal.
 	</div>
 </div>
