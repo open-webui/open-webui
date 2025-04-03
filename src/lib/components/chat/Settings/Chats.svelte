@@ -549,6 +549,9 @@
 <!-- Main Settings Content -->
 <div class="flex flex-col h-full justify-between space-y-3 text-sm">
 	<div class=" space-y-2 overflow-y-auto max-h-[28rem] lg:max-h-full scrollbar-thin">
+		<h3 class="text-sm font-semibold px-3.5 py-1 text-gray-600 dark:text-gray-400">
+			{$i18n.t('Import / Export')}
+		</h3>
 		<!-- Import/Export Section -->
 		<div class="flex flex-col">
 			<!-- JSON Import -->
@@ -675,7 +678,9 @@
 		</div>
 
 		<hr class=" border-gray-100 dark:border-gray-850" />
-
+		<h3 class="text-sm font-semibold px-3.5 py-1 text-gray-600 dark:text-gray-400">
+			{$i18n.t('Manage Chats')}
+		</h3>
 		<!-- Chat Management Section -->
 		<div class="flex flex-col">
 			<!-- Archived Chats Button -->
