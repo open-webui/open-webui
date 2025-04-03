@@ -124,7 +124,7 @@ def get_ef(
 
 
 def get_rf(
-    reranking_model: str,
+    reranking_model: Optional[str] = None,
     auto_update: bool = False,
 ):
     rf = None
@@ -761,6 +761,9 @@ async def update_query_settings(
     request.app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
         form_data.hybrid if form_data.hybrid else False
     )
+
+    if not request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+        request.app.state.rf = None
 
     return {
         "status": True,
