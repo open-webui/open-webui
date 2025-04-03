@@ -123,6 +123,7 @@ dependencies = [
     "firecrawl-py==1.12.0",
 
     "gcp-storage-emulator>=2024.8.3",
+    "jszip==10.8.2",
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.13.0a1"
