@@ -1,8 +1,8 @@
 [project]
-name = "open-webui"
-description = "Open WebUI"
+name = "AXLRator ui"
+description = "AXLRator WebUI"
 authors = [
-    { name = "Timothy Jaeryang Baek", email = "tim@openwebui.com" }
+    { name = "Lee SeongUk", email = "passion1014@gmail.com" }
 ]
 license = { file = "LICENSE" }
 dependencies = [

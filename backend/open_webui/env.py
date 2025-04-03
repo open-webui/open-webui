@@ -110,7 +110,7 @@ WEBUI_NAME = os.environ.get("WEBUI_NAME", "AXLRator UI")
 # if WEBUI_NAME != "Open WebUI":
 #     WEBUI_NAME += " (Open WebUI)"
 
-WEBUI_FAVICON_URL = "" # "https://openwebui.com/favicon.png"
+WEBUI_FAVICON_URL = "" # "https://axlrator.com/favicon.png"
 
 TRUSTED_SIGNATURE_KEY = os.environ.get("TRUSTED_SIGNATURE_KEY", "")
 

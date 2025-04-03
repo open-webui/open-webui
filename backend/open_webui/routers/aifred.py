@@ -186,8 +186,8 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     "Authorization": f"Bearer {request.app.state.config.AIFRED_API_KEYS[idx]}",
                     **(
                         {
-                            "HTTP-Referer": "https://openwebui.com/",
-                            "X-Title": "Open WebUI",
+                            "HTTP-Referer": "https://axlrator.com/",
+                            "X-Title": "AXLRator",
                         }
                         if "openrouter.ai" in url
                         else {}
@@ -587,8 +587,8 @@ async def generate_chat_completion(
                 "Content-Type": "application/json",
                 **(
                     {
-                        "HTTP-Referer": "https://openwebui.com/",
-                        "X-Title": "Open WebUI",
+                        "HTTP-Referer": "https://axlrator.com/",
+                        "X-Title": "AXLRator",
                     }
                     if "openrouter.ai" in url
                     else {}

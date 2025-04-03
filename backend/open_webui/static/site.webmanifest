@@ -1,6 +1,6 @@
 {
-  "name": "Open WebUI",
-  "short_name": "WebUI",
+  "name": "AXLRator UI",
+  "short_name": "AXL",
   "icons": [
     {
       "src": "/static/web-app-manifest-192x192.png",
