@@ -55,16 +55,18 @@
 
 	let selectedModelIdx = 0;
 
+	const filteredSourceItems = items.filter((item) => item.model?.info?.base_model_id == null);
+
 	const fuse = new Fuse(
-		items.map((item) => {
-			const _item = {
-				...item,
-				modelName: item.model?.name,
-				tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' '),
-				desc: item.model?.info?.meta?.description
-			};
-			return _item;
-		}),
+		filteredSourceItems.map((item) => {
+				const _item = {
+					...item,
+					modelName: item.model?.name,
+					tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' '),
+					desc: item.model?.info?.meta?.description
+				};
+				return _item;
+			}),
 		{
 			keys: ['value', 'tags', 'modelName'],
 			threshold: 0.4
@@ -75,7 +77,7 @@
 		? fuse.search(searchValue).map((e) => {
 				return e.item;
 			})
-		: items;
+		: filteredSourceItems;
 
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = searchValue.trim().replace(/^ollama\s+(run|pull)\s+/, '');
@@ -219,9 +221,7 @@
 			toast.success(`${model} download has been canceled`);
 		}
 	};
-	$: {
-		console.log(filteredItems);
-	}
+	
 	function getModelIcon(label: string): string {
 		const lower = label.toLowerCase();
 
@@ -229,14 +229,14 @@
 			return '/perplexity-ai-icon.svg';
 		} else if (lower.includes('gpt')) {
 			return '/chatgpt-icon.svg';
-		} else if(lower.includes('claude')) {
+		} else if (lower.includes('claude')) {
 			return '/claude-ai-icon.svg';
-		} else if(lower.includes('gemini')) {
+		} else if (lower.includes('gemini')) {
 			return '/google-gemini-icon.svg';
-		} else if(lower.includes('mistral') || lower.includes('pixtral')) {
+		} else if (lower.includes('mistral') || lower.includes('pixtral')) {
 			return '/mistral-color.svg';
-		}else {
-			return '/static/favicon.png'
+		} else {
+			return '/static/favicon.png';
 		}
 	}
 </script>
@@ -259,7 +259,11 @@
 			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
 		>
 			{#if selectedModel}
-				<img src={getModelIcon(selectedModel.label)} alt="Model" class="rounded-full size-4 self-center mr-2" />
+				<img
+					src={getModelIcon(selectedModel.label)}
+					alt="Model"
+					class="rounded-full size-4 self-center mr-2"
+				/>
 				{selectedModel.label}
 			{:else}
 				{placeholder}
