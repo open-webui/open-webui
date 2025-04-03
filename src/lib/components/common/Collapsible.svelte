@@ -214,18 +214,6 @@
 > ${formatJSONString(result)}
 > \`\`\``}
 							/>
-
-							{#if typeof files === 'object'}
-								{#each files ?? [] as file, idx}
-									{#if file.startsWith('data:image/')}
-										<Image
-											id={`tool-calls-${attributes?.id}-result-${idx}`}
-											src={file}
-											alt="Image"
-										/>
-									{/if}
-								{/each}
-							{/if}
 						{:else}
 							<Markdown
 								id={`tool-calls-${attributes?.id}-result`}
