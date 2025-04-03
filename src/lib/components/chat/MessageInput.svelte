@@ -354,7 +354,6 @@
 			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
 		}
 	});
-	
 </script>
 
 <FilesOverlay show={dragged} />
@@ -398,9 +397,7 @@
 				<!-- class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10" -->
 				<div class="w-full relative">
 					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled || ($settings?.webSearch ?? false) === 'always' || imageGenerationEnabled || codeInterpreterEnabled}
-						<div
-							
-						>
+						<div>
 							{#if selectedToolIds.length > 0}
 								<div class="flex items-center justify-between w-full">
 									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
@@ -1123,7 +1120,7 @@
 												type="button"
 												aria-label="More"
 											>
-												<InputMenuIcon/>
+												<InputMenuIcon />
 											</button>
 										</InputMenu>
 
@@ -1132,19 +1129,23 @@
 												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
-															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+															on:click|preventDefault={() => {
+																webSearchEnabled = !webSearchEnabled
+																imageGenerationEnabled = false;
+																codeInterpreterEnabled = false;
+																}}
 															type="button"
 															class="p-[3px] flex gap-1.5 items-center text-2xs leading-none rounded-md font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
 																? 'bg-blue-100 dark:bg-customBlue-700/60 text-blue-500 dark:text-white'
 																: 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 hover:bg-gray-100 dark:hover:bg-customGray-900'}"
 														>
-															<WebSearchIcon/>
-															{#if (webSearchEnabled || ($settings?.webSearch ?? false) === 'always')}
-															<span
-																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-																>{$i18n.t('Web Search')}</span
-															> 
+															<WebSearchIcon />
+															{#if webSearchEnabled || ($settings?.webSearch ?? false) === 'always'}
+																<span
+																	class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																	>{$i18n.t('Web Search')}</span
+																>
 															{/if}
 														</button>
 													</Tooltip>
@@ -1153,19 +1154,22 @@
 												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
 													<Tooltip content={$i18n.t('Generate an image')} placement="top">
 														<button
-															on:click|preventDefault={() =>
-																(imageGenerationEnabled = !imageGenerationEnabled)}
+															on:click|preventDefault={() => {
+																imageGenerationEnabled = !imageGenerationEnabled;
+																codeInterpreterEnabled = false;
+																webSearchEnabled = false;
+															}}
 															type="button"
 															class="p-[3px] flex gap-1.5 items-center text-2xs leading-none rounded-md font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
 																? 'bg-gray-100 dark:bg-customBlue-700/60 text-gray-600 dark:text-white'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-customGray-900 '}"
 														>
-															<ImageGenerateIcon/>
-															{#if (imageGenerationEnabled)}
-															<span
-																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-																>{$i18n.t('Image')}</span
-															>
+															<ImageGenerateIcon />
+															{#if imageGenerationEnabled}
+																<span
+																	class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																	>{$i18n.t('Image')}</span
+																>
 															{/if}
 														</button>
 													</Tooltip>
@@ -1174,15 +1178,18 @@
 												{#if $_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
-															on:click|preventDefault={() =>
-																(codeInterpreterEnabled = !codeInterpreterEnabled)}
+															on:click|preventDefault={() => {
+																codeInterpreterEnabled = !codeInterpreterEnabled;
+																imageGenerationEnabled = false;
+																webSearchEnabled = false;
+															}}
 															type="button"
 															class="p-[3px] flex gap-1.5 items-center text-2xs leading-none rounded-lg font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
 																? 'bg-gray-100 dark:bg-customBlue-700/60 text-gray-600 dark:text-white'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-customGray-900 '}"
 														>
-															<CodeInterpreterIcon/>
-															{#if (codeInterpreterEnabled)}
+															<CodeInterpreterIcon />
+															{#if codeInterpreterEnabled}
 																<span
 																	class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
 																	>{$i18n.t('Code Interpreter')}</span
@@ -1230,7 +1237,7 @@
 													}}
 													aria-label="Voice Input"
 												>
-												<VoiceRecorderIcon/>
+													<VoiceRecorderIcon />
 												</button>
 											</Tooltip>
 										{/if}
@@ -1240,10 +1247,7 @@
 												<div class=" flex items-center">
 													<Tooltip content={$i18n.t('Call')}>
 														<button
-															class=" {webSearchEnabled ||
-															($settings?.webSearch ?? false) === 'always'
-																? 'bg-blue-500 text-white hover:bg-blue-400 '
-																: 'bg-black text-white hover:bg-gray-900 dark:bg-transparent dark:text-customGray-100 dark:hover:bg-customGray-900'} transition rounded-md p-[3px]  self-center"
+															class="bg-black text-white hover:bg-gray-900 dark:bg-transparent dark:text-customGray-100 dark:hover:bg-customGray-900 transition rounded-md p-[3px] self-center"
 															type="button"
 															on:click={async () => {
 																if (selectedModels.length > 1) {
@@ -1286,7 +1290,7 @@
 															}}
 															aria-label="Call"
 														>
-															<CallIcon/>
+															<CallIcon />
 														</button>
 													</Tooltip>
 												</div>
@@ -1296,9 +1300,7 @@
 														<button
 															id="send-message-button"
 															class="{!(prompt === '' && files.length === 0)
-																? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
-																	? 'bg-blue-500 text-white hover:bg-blue-400 '
-																	: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+																?  'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1 self-center"
 															type="submit"
 															disabled={prompt === '' && files.length === 0}
