@@ -251,7 +251,7 @@
             const allowedLanguages = new Set([
   'html', 'css', 'javascript', 'js', 'typescript', 'ts', 'csharp', 'python', 'java',
   'php', 'ruby', 'bash', 'shell', 'applescript', 'sql', 'json', 'xml', 'xaml', 'yaml', 'markdown',
-  'c', 'c++', 'powershell', 'scheme', 'dart', 'liquid', 'asp', 'kotlin', 'jsx', 'react'
+  'c', 'c++', 'powershell', 'sh', 'scheme', 'dart', 'liquid', 'asp', 'kotlin', 'jsx', 'react'
 ]);
 
             const codeDictionary = {};
@@ -498,6 +498,7 @@
   codeDictionary.php ||
   codeDictionary.ruby ||
   codeDictionary.bash ||
+  codeDictionary.sh ||
   codeDictionary.shell ||
   codeDictionary.applescript ||
   codeDictionary.sql ||
@@ -535,6 +536,7 @@
                     ruby: 'ruby',
                     bash: 'shell',
                     shell: 'shell',
+                    sh: 'shell',
                     applescript: 'applescript',
                     sql: 'sql',
                     json: 'application/json',
@@ -808,6 +810,7 @@
                     codeDictionary.ruby ||
                     codeDictionary.bash ||
                     codeDictionary.shell ||
+                    codeDictionary.sh ||
                     codeDictionary.applescript ||
                     codeDictionary.sql ||
                     codeDictionary.json ||
@@ -825,6 +828,7 @@
                     codeDictionary.c ||
                     codeDictionary['c++'] ||
                     codeDictionary.powershell ||
+                    codeDictionary.sh ||
                     codeDictionary.scheme ||
                     codeDictionary.dart ||
                     codeDictionary.liquid ||
