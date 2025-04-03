@@ -18,5 +18,17 @@ services:
       - host.docker.internal:host-gateway
     restart: unless-stopped
 
+  webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        GITHUB_REPO: "https://github.com/Merge-Feat/hkust-open-webui.git"
+        GITHUB_BRANCH: "develop"
+    container_name: webserver
+    ports:
+      - "8081:80"
+    restart: unless-stopped
+
 volumes:
   open-webui: {}
