@@ -1323,9 +1323,7 @@
 		isMagicLoading = true;
 
 		try {
-			const res = await generateMagicPrompt(localStorage.token, {
-				form_data: { prompt: userPrompt }
-			});
+			const res = await generateMagicPrompt(localStorage.token, { prompt: userPrompt });
 			console.log(res);
 			prompt = res;
 		} catch (err) {
