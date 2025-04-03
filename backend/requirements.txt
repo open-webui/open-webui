@@ -112,3 +112,5 @@ ldap3==2.9.1
 
 ## Firecrawl
 firecrawl-py==1.12.0
+
+sentry-sdk==2.23.1
