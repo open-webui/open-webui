@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
+from beyond_the_loop.utils import magicPromptUtil
 from beyond_the_loop.routers.payments import charge_customer
 from beyond_the_loop.models.models import Models
 from beyond_the_loop.models.model_message_credit_costs import ModelMessageCreditCosts
@@ -553,6 +554,7 @@ async def generate_chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
+    magicPromt: Optional[bool] = False
 ):
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
@@ -575,7 +577,7 @@ async def generate_chat_completion(
 
     model_id = model_info.base_model_id if model_info.base_model_id else model_info.id
 
-    if has_chat_id:
+    if has_chat_id or magicPromt:
         # Check for base_model_id first in case of user defined custom model
         model_message_credit_cost = ModelMessageCreditCosts.get_cost_by_model(model_id)
 
@@ -634,13 +636,13 @@ async def generate_chat_completion(
             ):
                 raise HTTPException(
                     status_code=403,
-                    detail="Model not found",
+                    detail="Model not found, no access for user",
                 )
     elif not bypass_filter:
         if user.role != "admin":
             raise HTTPException(
                 status_code=403,
-                detail="Model not found",
+                detail="Model not found, user is no admin",
             )
 
     await get_all_models(request)
@@ -650,7 +652,7 @@ async def generate_chat_completion(
     else:
         raise HTTPException(
             status_code=404,
-            detail="Model not found",
+            detail="Model not found, not defined",
         )
 
     # Get the API config for the model
@@ -689,10 +691,6 @@ async def generate_chat_completion(
 
     if "max_tokens" in payload and "max_completion_tokens" in payload:
         del payload["max_tokens"]
-
-    # Add stream_options to include usage information in streaming responses
-    if "stream" in payload and payload["stream"]:
-        payload["stream_options"] = {"include_usage": True}
 
     # Convert the modified body back to JSON
     payload = json.dumps(payload)
@@ -807,6 +805,22 @@ async def generate_chat_completion(
                 r.close()
             await session.close()
 
+@router.post("/magicPrompt")
+async def generate_prompt(request: Request, form_data: dict, user=Depends(get_verified_user)):
+    messages = magicPromptUtil.generateMagicPromptMessages(form_data["prompt"])
+
+    form_data = {
+        "model": "Claude 3.5 Sonnet",
+        "messages": messages,
+        "stream": False,
+        "metadata": {"chat_id": None},
+        "max_completion_tokens": 4096,
+        "temperature": 0
+    }
+
+    message = await generate_chat_completion(request, form_data, user, None, True)
+
+    return magicPromptUtil.extract_prompt(message.get('choices', [{}])[0].get('message', {}).get('content', ''))
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
@@ -869,7 +883,6 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
         if r is not None:
             try:
                 res = await r.json()
-                print(res)
                 if "error" in res:
                     detail = f"External Error: {res['error']['message'] if 'message' in res['error'] else res['error']}"
             except Exception:
