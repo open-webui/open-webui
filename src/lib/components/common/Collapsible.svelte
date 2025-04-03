@@ -197,41 +197,63 @@
 		</div>
 	{/if}
 
-	{#if !grow}
-		{#if open && !hide}
-			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-				{#if attributes?.type === 'tool_calls'}
-					{@const args = decode(attributes?.arguments)}
-					{@const result = decode(attributes?.result ?? '')}
-					{@const files = parseJSONString(decode(attributes?.files ?? ''))}
+	{#if attributes?.type === 'tool_calls'}
+		{@const args = decode(attributes?.arguments)}
+		{@const result = decode(attributes?.result ?? '')}
+		{@const files = parseJSONString(decode(attributes?.files ?? ''))}
 
-					{#if attributes?.done === 'true'}
-						<Markdown
-							id={`tool-calls-${attributes?.id}-result`}
-							content={`> \`\`\`json
+		{#if !grow}
+			{#if open && !hide}
+				<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
+					{#if attributes?.type === 'tool_calls'}
+						{#if attributes?.done === 'true'}
+							<Markdown
+								id={`tool-calls-${attributes?.id}-result`}
+								content={`> \`\`\`json
 > ${formatJSONString(args)}
 > ${formatJSONString(result)}
 > \`\`\``}
-						/>
+							/>
 
-						{#if typeof files === 'object'}
-							{#each files ?? [] as file, idx}
-								{#if file.startsWith('data:image/')}
-									<Image id={`tool-calls-${attributes?.id}-result-${idx}`} src={file} alt="Image" />
-								{/if}
-							{/each}
-						{/if}
-					{:else}
-						<Markdown
-							id={`tool-calls-${attributes?.id}-result`}
-							content={`> \`\`\`json
+							{#if typeof files === 'object'}
+								{#each files ?? [] as file, idx}
+									{#if file.startsWith('data:image/')}
+										<Image
+											id={`tool-calls-${attributes?.id}-result-${idx}`}
+											src={file}
+											alt="Image"
+										/>
+									{/if}
+								{/each}
+							{/if}
+						{:else}
+							<Markdown
+								id={`tool-calls-${attributes?.id}-result`}
+								content={`> \`\`\`json
 > ${formatJSONString(args)}
 > \`\`\``}
-						/>
+							/>
+						{/if}
+					{:else}
+						<slot name="content" />
 					{/if}
-				{:else}
-					<slot name="content" />
+				</div>
+			{/if}
+
+			{#if attributes?.done === 'true'}
+				{#if typeof files === 'object'}
+					{#each files ?? [] as file, idx}
+						{#if file.startsWith('data:image/')}
+							<Image id={`tool-calls-${attributes?.id}-result-${idx}`} src={file} alt="Image" />
+						{/if}
+					{/each}
 				{/if}
+			{/if}
+		{/if}
+	{:else if !grow}
+		{#if open && !hide}
+			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
+				<slot name="content" />
 			</div>
 		{/if}
 	{/if}
