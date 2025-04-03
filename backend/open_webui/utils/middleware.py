@@ -1201,13 +1201,15 @@ async def process_chat_response(
                                 )
 
                                 tool_result = None
+                                tool_result_files = None
                                 for result in results:
                                     if tool_call_id == result.get("tool_call_id", ""):
                                         tool_result = result.get("content", None)
+                                        tool_result_files = result.get("files", None)
                                         break
 
                                 if tool_result:
-                                    tool_calls_display_content = f'{tool_calls_display_content}\n<details type="tool_calls" done="true" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}" result="{html.escape(json.dumps(tool_result))}">\n<summary>Tool Executed</summary>\n</details>'
+                                    tool_calls_display_content = f'{tool_calls_display_content}\n<details type="tool_calls" done="true" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}" result="{html.escape(json.dumps(tool_result))}" files="{html.escape(json.dumps(tool_result_files)) if tool_result_files else ""}">\n<summary>Tool Executed</summary>\n</details>\n'
                                 else:
                                     tool_calls_display_content = f'{tool_calls_display_content}\n<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}">\n<summary>Executing...</summary>\n</details>'
 
@@ -1901,6 +1903,13 @@ async def process_chat_response(
                             except Exception as e:
                                 tool_result = str(e)
 
+                        tool_result_files = []
+                        if isinstance(tool_result, list):
+                            for item in tool_result:
+                                if item.startswith("data:"):
+                                    tool_result_files.append(item)
+                                    tool_result.remove(item)
+
                         if isinstance(tool_result, dict) or isinstance(
                             tool_result, list
                         ):
@@ -1910,6 +1919,11 @@ async def process_chat_response(
                             {
                                 "tool_call_id": tool_call_id,
                                 "content": tool_result,
+                                **(
+                                    {"files": tool_result_files}
+                                    if tool_result_files
+                                    else {}
+                                ),
                             }
                         )
 

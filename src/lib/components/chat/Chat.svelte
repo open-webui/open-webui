@@ -48,7 +48,8 @@
 		splitStream,
 		sleep,
 		removeDetails,
-		getPromptVariables
+		getPromptVariables,
+		processDetails
 	} from '$lib/utils';
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
@@ -1514,7 +1515,7 @@
 				: undefined,
 			...createMessagesList(_history, responseMessageId).map((message) => ({
 				...message,
-				content: removeDetails(message.content, ['reasoning', 'code_interpreter'])
+				content: processDetails(message.content)
 			}))
 		].filter((message) => message);
 

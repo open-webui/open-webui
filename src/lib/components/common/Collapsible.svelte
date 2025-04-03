@@ -36,6 +36,7 @@
 	import Spinner from './Spinner.svelte';
 	import CodeBlock from '../chat/Messages/CodeBlock.svelte';
 	import Markdown from '../chat/Messages/Markdown.svelte';
+	import Image from './Image.svelte';
 
 	export let open = false;
 
@@ -53,9 +54,17 @@
 	export let disabled = false;
 	export let hide = false;
 
-	function formatJSONString(obj) {
+	function parseJSONString(str) {
 		try {
-			const parsed = JSON.parse(JSON.parse(obj));
+			return parseJSONString(JSON.parse(str));
+		} catch (e) {
+			return str;
+		}
+	}
+
+	function formatJSONString(str) {
+		try {
+			const parsed = parseJSONString(str);
 			// If parsed is an object/array, then it's valid JSON
 			if (typeof parsed === 'object') {
 				return JSON.stringify(parsed, null, 2);
@@ -65,7 +74,7 @@
 			}
 		} catch (e) {
 			// Not valid JSON, return as-is
-			return obj;
+			return str;
 		}
 	}
 </script>
@@ -120,14 +129,14 @@
 						{#if attributes?.done === 'true'}
 							<Markdown
 								id={`tool-calls-${attributes?.id}`}
-								content={$i18n.t('View Result from `{{NAME}}`', {
+								content={$i18n.t('View Result from **{{NAME}}**', {
 									NAME: attributes.name
 								})}
 							/>
 						{:else}
 							<Markdown
-								id={`tool-calls-${attributes?.id}`}
-								content={$i18n.t('Executing `{{NAME}}`...', {
+								id={`tool-calls-${attributes?.id}-executing`}
+								content={$i18n.t('Executing **{{NAME}}**...', {
 									NAME: attributes.name
 								})}
 							/>
@@ -194,6 +203,7 @@
 				{#if attributes?.type === 'tool_calls'}
 					{@const args = decode(attributes?.arguments)}
 					{@const result = decode(attributes?.result ?? '')}
+					{@const files = parseJSONString(decode(attributes?.files ?? ''))}
 
 					{#if attributes?.done === 'true'}
 						<Markdown
@@ -203,6 +213,14 @@
 > ${formatJSONString(result)}
 > \`\`\``}
 						/>
+
+						{#if typeof files === 'object'}
+							{#each files ?? [] as file, idx}
+								{#if file.startsWith('data:image/')}
+									<Image id={`tool-calls-${attributes?.id}-result-${idx}`} src={file} alt="Image" />
+								{/if}
+							{/each}
+						{/if}
 					{:else}
 						<Markdown
 							id={`tool-calls-${attributes?.id}-result`}
