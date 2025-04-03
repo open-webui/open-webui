@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { decode } from 'html-entities';
+	import { v4 as uuidv4 } from 'uuid';
 
 	import { getContext, createEventDispatcher } from 'svelte';
 	const i18n = getContext('i18n');
@@ -53,6 +54,8 @@
 
 	export let disabled = false;
 	export let hide = false;
+
+	const collapsibleId = uuidv4();
 
 	function parseJSONString(str) {
 		try {
@@ -128,14 +131,14 @@
 					{:else if attributes?.type === 'tool_calls'}
 						{#if attributes?.done === 'true'}
 							<Markdown
-								id={`tool-calls-${attributes?.id}`}
+								id={`${collapsibleId}-tool-calls-${attributes?.id}`}
 								content={$i18n.t('View Result from **{{NAME}}**', {
 									NAME: attributes.name
 								})}
 							/>
 						{:else}
 							<Markdown
-								id={`tool-calls-${attributes?.id}-executing`}
+								id={`${collapsibleId}-tool-calls-${attributes?.id}-executing`}
 								content={$i18n.t('Executing **{{NAME}}**...', {
 									NAME: attributes.name
 								})}
@@ -208,7 +211,7 @@
 					{#if attributes?.type === 'tool_calls'}
 						{#if attributes?.done === 'true'}
 							<Markdown
-								id={`tool-calls-${attributes?.id}-result`}
+								id={`${collapsibleId}-tool-calls-${attributes?.id}-result`}
 								content={`> \`\`\`json
 > ${formatJSONString(args)}
 > ${formatJSONString(result)}
@@ -216,7 +219,7 @@
 							/>
 						{:else}
 							<Markdown
-								id={`tool-calls-${attributes?.id}-result`}
+								id={`${collapsibleId}-tool-calls-${attributes?.id}-result`}
 								content={`> \`\`\`json
 > ${formatJSONString(args)}
 > \`\`\``}
@@ -232,7 +235,11 @@
 				{#if typeof files === 'object'}
 					{#each files ?? [] as file, idx}
 						{#if file.startsWith('data:image/')}
-							<Image id={`tool-calls-${attributes?.id}-result-${idx}`} src={file} alt="Image" />
+							<Image
+								id={`${collapsibleId}-tool-calls-${attributes?.id}-result-${idx}`}
+								src={file}
+								alt="Image"
+							/>
 						{/if}
 					{/each}
 				{/if}

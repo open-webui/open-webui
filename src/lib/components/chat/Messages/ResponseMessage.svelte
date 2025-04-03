@@ -332,9 +332,37 @@
 		}
 	};
 
+	let preprocessedDetailsCache = [];
+
+	function preprocessForEditing(content: string): string {
+		// Replace <details>...</details> with unique ID placeholder
+		const detailsBlocks = [];
+		let i = 0;
+
+		content = content.replace(/<details[\s\S]*?<\/details>/gi, (match) => {
+			detailsBlocks.push(match);
+			return `<details id="__DETAIL_${i++}__"/>`;
+		});
+
+		// Store original blocks in the editedContent or globally (see merging later)
+		preprocessedDetailsCache = detailsBlocks;
+
+		return content;
+	}
+
+	function postprocessAfterEditing(content: string): string {
+		const restoredContent = content.replace(
+			/<details id="__DETAIL_(\d+)__"\/>/g,
+			(_, index) => preprocessedDetailsCache[parseInt(index)] || ''
+		);
+
+		return restoredContent;
+	}
+
 	const editMessageHandler = async () => {
 		edit = true;
-		editedContent = message.content;
+
+		editedContent = preprocessForEditing(message.content);
 
 		await tick();
 
@@ -343,7 +371,8 @@
 	};
 
 	const editMessageConfirmHandler = async () => {
-		editMessage(message.id, editedContent ? editedContent : '', false);
+		const messageContent = postprocessAfterEditing(editedContent ? editedContent : '');
+		editMessage(message.id, messageContent, false);
 
 		edit = false;
 		editedContent = '';
@@ -352,7 +381,9 @@
 	};
 
 	const saveAsCopyHandler = async () => {
-		editMessage(message.id, editedContent ? editedContent : '');
+		const messageContent = postprocessAfterEditing(editedContent ? editedContent : '');
+
+		editMessage(message.id, messageContent);
 
 		edit = false;
 		editedContent = '';
