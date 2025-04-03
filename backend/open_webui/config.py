@@ -331,17 +331,13 @@ JWT_EXPIRES_IN = PersistentConfig(
 # OAuth config
 ####################################
 
-OAUTH_USE_PICTURE_CLAIM = PersistentConfig(
-    "OAUTH_USE_PICTURE_CLAIM",
-    "oauth.oidc.use_picture_claim",
-    os.environ.get("OAUTH_USE_PICTURE_CLAIM", "True").lower() == "true",
-)
 
 ENABLE_OAUTH_SIGNUP = PersistentConfig(
     "ENABLE_OAUTH_SIGNUP",
     "oauth.enable_signup",
     os.environ.get("ENABLE_OAUTH_SIGNUP", "False").lower() == "true",
 )
+
 
 OAUTH_MERGE_ACCOUNTS_BY_EMAIL = PersistentConfig(
     "OAUTH_MERGE_ACCOUNTS_BY_EMAIL",
@@ -471,6 +467,7 @@ OAUTH_USERNAME_CLAIM = PersistentConfig(
     "oauth.oidc.username_claim",
     os.environ.get("OAUTH_USERNAME_CLAIM", "name"),
 )
+
 
 OAUTH_PICTURE_CLAIM = PersistentConfig(
     "OAUTH_PICTURE_CLAIM",
