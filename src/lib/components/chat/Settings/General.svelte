@@ -315,7 +315,7 @@
 				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
 				<Textarea
 					bind:value={system}
-					className="w-full text-sm bg-white dark:text-gray-300 dark:bg-gray-850 outline-hidden resize-none"
+					className="w-full text-sm bg-white dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
 					rows="4"
 					placeholder={$i18n.t('Enter system prompt here')}
 				/>
@@ -399,7 +399,7 @@
 						{#if requestFormat !== null}
 							<div class="flex mt-1 space-x-2">
 								<Textarea
-									className="w-full  text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									className="w-full  text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden"
 									placeholder={$i18n.t('e.g. "json" or a JSON schema')}
 									bind:value={requestFormat}
 								/>
