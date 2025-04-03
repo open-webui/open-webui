@@ -7,7 +7,7 @@ import types
 import tempfile
 import logging
 
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, PIP_OPTIONS, PIP_PACKAGE_INDEX_OPTIONS
 from open_webui.models.functions import Functions
 from open_webui.models.tools import Tools
 
@@ -45,7 +45,7 @@ def extract_frontmatter(content):
                     frontmatter[key.strip()] = value.strip()
 
     except Exception as e:
-        print(f"An error occurred: {e}")
+        log.exception(f"Failed to extract frontmatter: {e}")
         return {}
 
     return frontmatter
@@ -165,11 +165,20 @@ def load_function_module_by_id(function_id, content=None):
         os.unlink(temp_file.name)
 
 
-def install_frontmatter_requirements(requirements):
+def install_frontmatter_requirements(requirements: str):
     if requirements:
-        req_list = [req.strip() for req in requirements.split(",")]
-        for req in req_list:
-            log.info(f"Installing requirement: {req}")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", req])
+        try:
+            req_list = [req.strip() for req in requirements.split(",")]
+            log.info(f"Installing requirements: {' '.join(req_list)}")
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install"]
+                + PIP_OPTIONS
+                + req_list
+                + PIP_PACKAGE_INDEX_OPTIONS
+            )
+        except Exception as e:
+            log.error(f"Error installing packages: {' '.join(req_list)}")
+            raise e
+
     else:
         log.info("No requirements found in frontmatter.")

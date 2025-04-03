@@ -16,7 +16,9 @@
 	import Markdown from './Markdown.svelte';
 	import Name from './Name.svelte';
 	import Skeleton from './Skeleton.svelte';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	const i18n = getContext('i18n');
+	dayjs.extend(localizedFormat);
 
 	export let chatId;
 	export let history;
@@ -32,6 +34,8 @@
 	export let actionMessage: Function;
 
 	export let submitMessage: Function;
+	export let deleteMessage: Function;
+
 	export let continueResponse: Function;
 	export let regenerateResponse: Function;
 	export let mergeResponses: Function;
@@ -53,6 +57,35 @@
 			message = JSON.parse(JSON.stringify(history.messages[messageId]));
 		}
 	}
+
+	const gotoMessage = async (modelIdx, messageIdx) => {
+		// Clamp messageIdx to ensure it's within valid range
+		groupedMessageIdsIdx[modelIdx] = Math.max(
+			0,
+			Math.min(messageIdx, groupedMessageIds[modelIdx].messageIds.length - 1)
+		);
+
+		// Get the messageId at the specified index
+		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
+		console.log(messageId);
+
+		// Traverse the branch to find the deepest child message
+		let messageChildrenIds = history.messages[messageId].childrenIds;
+		while (messageChildrenIds.length !== 0) {
+			messageId = messageChildrenIds.at(-1);
+			messageChildrenIds = history.messages[messageId].childrenIds;
+		}
+
+		// Update the current message ID in history
+		history.currentId = messageId;
+
+		// Await UI updates
+		await tick();
+		await updateChat();
+
+		// Trigger scrolling after navigation
+		triggerScroll();
+	};
 
 	const showPreviousMessage = async (modelIdx) => {
 		groupedMessageIdsIdx[modelIdx] = Math.max(0, groupedMessageIdsIdx[modelIdx] - 1);
@@ -190,10 +223,10 @@
 					<div
 						class=" snap-center w-full max-w-full m-1 border {history.messages[messageId]
 							?.modelIdx == modelIdx
-							? `border-gray-100 dark:border-gray-800 border-[1.5px] ${
+							? `border-gray-100 dark:border-gray-850 border-[1.5px] ${
 									$mobile ? 'min-w-full' : 'min-w-80'
 								}`
-							: `border-gray-50 dark:border-gray-850 border-dashed ${
+							: `border-gray-100 dark:border-gray-850 border-dashed ${
 									$mobile ? 'min-w-full' : 'min-w-80'
 								}`} transition-all p-5 rounded-2xl"
 						on:click={async () => {
@@ -220,12 +253,14 @@
 									messageId={_messageId}
 									isLastMessage={true}
 									siblings={groupedMessageIds[modelIdx].messageIds}
+									gotoMessage={(message, messageIdx) => gotoMessage(modelIdx, messageIdx)}
 									showPreviousMessage={() => showPreviousMessage(modelIdx)}
 									showNextMessage={() => showNextMessage(modelIdx)}
 									{updateChat}
 									{editMessage}
 									{saveMessage}
 									{rateMessage}
+									{deleteMessage}
 									{actionMessage}
 									{submitMessage}
 									{continueResponse}
@@ -264,7 +299,7 @@
 										<span
 											class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
 										>
-											{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
+											{dayjs(message.timestamp * 1000).format('LT')}
 										</span>
 									{/if}
 								</Name>
@@ -281,7 +316,7 @@
 					</div>
 
 					{#if isLastMessage}
-						<div class=" flex-shrink-0 text-gray-600 dark:text-gray-500 mt-1">
+						<div class=" shrink-0 text-gray-600 dark:text-gray-500 mt-1">
 							<Tooltip content={$i18n.t('Merge Responses')} placement="bottom">
 								<button
 									type="button"

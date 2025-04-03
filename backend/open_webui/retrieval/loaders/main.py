@@ -4,6 +4,7 @@ import ftfy
 import sys
 
 from langchain_community.document_loaders import (
+    AzureAIDocumentIntelligenceLoader,
     BSHTMLLoader,
     CSVLoader,
     Docx2txtLoader,
@@ -76,6 +77,7 @@ known_source_ext = [
     "jsx",
     "hs",
     "lhs",
+    "json",
 ]
 
 
@@ -103,7 +105,7 @@ class TikaLoader:
 
         if r.ok:
             raw_metadata = r.json()
-            text = raw_metadata.get("X-TIKA:content", "<No text content found>")
+            text = raw_metadata.get("X-TIKA:content", "<No text content found>").strip()
 
             if "Content-Type" in raw_metadata:
                 headers["Content-Type"] = raw_metadata["Content-Type"]
@@ -113,6 +115,52 @@ class TikaLoader:
             return [Document(page_content=text, metadata=headers)]
         else:
             raise Exception(f"Error calling Tika: {r.reason}")
+
+
+class DoclingLoader:
+    def __init__(self, url, file_path=None, mime_type=None):
+        self.url = url.rstrip("/")
+        self.file_path = file_path
+        self.mime_type = mime_type
+
+    def load(self) -> list[Document]:
+        with open(self.file_path, "rb") as f:
+            files = {
+                "files": (
+                    self.file_path,
+                    f,
+                    self.mime_type or "application/octet-stream",
+                )
+            }
+
+            params = {
+                "image_export_mode": "placeholder",
+                "table_mode": "accurate",
+            }
+
+            endpoint = f"{self.url}/v1alpha/convert/file"
+            r = requests.post(endpoint, files=files, data=params)
+
+        if r.ok:
+            result = r.json()
+            document_data = result.get("document", {})
+            text = document_data.get("md_content", "<No text content found>")
+
+            metadata = {"Content-Type": self.mime_type} if self.mime_type else {}
+
+            log.debug("Docling extracted text: %s", text)
+
+            return [Document(page_content=text, metadata=metadata)]
+        else:
+            error_msg = f"Error calling Docling API: {r.reason}"
+            if r.text:
+                try:
+                    error_data = r.json()
+                    if "detail" in error_data:
+                        error_msg += f" - {error_data['detail']}"
+                except Exception:
+                    error_msg += f" - {r.text}"
+            raise Exception(f"Error calling Docling: {error_msg}")
 
 
 class Loader:
@@ -147,13 +195,40 @@ class Loader:
                     file_path=file_path,
                     mime_type=file_content_type,
                 )
+        elif self.engine == "docling" and self.kwargs.get("DOCLING_SERVER_URL"):
+            loader = DoclingLoader(
+                url=self.kwargs.get("DOCLING_SERVER_URL"),
+                file_path=file_path,
+                mime_type=file_content_type,
+            )
+        elif (
+            self.engine == "document_intelligence"
+            and self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT") != ""
+            and self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY") != ""
+            and (
+                file_ext in ["pdf", "xls", "xlsx", "docx", "ppt", "pptx"]
+                or file_content_type
+                in [
+                    "application/vnd.ms-excel",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "application/vnd.ms-powerpoint",
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                ]
+            )
+        ):
+            loader = AzureAIDocumentIntelligenceLoader(
+                file_path=file_path,
+                api_endpoint=self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT"),
+                api_key=self.kwargs.get("DOCUMENT_INTELLIGENCE_KEY"),
+            )
         else:
             if file_ext == "pdf":
                 loader = PyPDFLoader(
                     file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
                 )
             elif file_ext == "csv":
-                loader = CSVLoader(file_path)
+                loader = CSVLoader(file_path, autodetect_encoding=True)
             elif file_ext == "rst":
                 loader = UnstructuredRSTLoader(file_path, mode="elements")
             elif file_ext == "xml":

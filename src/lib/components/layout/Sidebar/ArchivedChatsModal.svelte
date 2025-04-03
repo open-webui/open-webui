@@ -4,6 +4,9 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { getContext, createEventDispatcher } from 'svelte';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
+
+	dayjs.extend(localizedFormat);
 
 	const dispatch = createEventDispatcher();
 
@@ -117,13 +120,13 @@
 						</svg>
 					</div>
 					<input
-						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
+						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 						bind:value={searchValue}
 						placeholder={$i18n.t('Search Chats')}
 					/>
 				</div>
 			</div>
-			<hr class=" dark:border-gray-850 my-2" />
+			<hr class="border-gray-100 dark:border-gray-850 my-2" />
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				{#if chats.length > 0}
 					<div class="w-full">
@@ -131,7 +134,7 @@
 							<div class="relative overflow-x-auto">
 								<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
 									<thead
-										class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-800"
+										class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-850"
 									>
 										<tr>
 											<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
@@ -159,7 +162,7 @@
 
 												<td class=" px-3 py-1 hidden md:flex h-[2.5rem]">
 													<div class="my-auto">
-														{dayjs(chat.created_at * 1000).format($i18n.t('MMMM DD, YYYY HH:mm'))}
+														{dayjs(chat.created_at * 1000).format('LLL')}
 													</div>
 												</td>
 

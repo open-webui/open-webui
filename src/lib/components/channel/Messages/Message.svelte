@@ -3,10 +3,12 @@
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import isToday from 'dayjs/plugin/isToday';
 	import isYesterday from 'dayjs/plugin/isYesterday';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	dayjs.extend(relativeTime);
 	dayjs.extend(isToday);
 	dayjs.extend(isYesterday);
+	dayjs.extend(localizedFormat);
 
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext<Writable<i18nType>>('i18n');
@@ -70,7 +72,7 @@
 				class=" absolute {showButtons ? '' : 'invisible group-hover:visible'} right-1 -top-2 z-10"
 			>
 				<div
-					class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100 dark:border-gray-800"
+					class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100 dark:border-gray-850"
 				>
 					<ReactionPicker
 						onClose={() => (showButtons = false)}
@@ -136,7 +138,7 @@
 			dir={$settings.chatDirection}
 		>
 			<div
-				class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'} w-9`}
+				class={`shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'} w-9`}
 			>
 				{#if showUserProfile}
 					<ProfilePreview user={message.user}>
@@ -151,11 +153,9 @@
 
 					{#if message.created_at}
 						<div
-							class="mt-1.5 flex flex-shrink-0 items-center text-xs self-center invisible group-hover:visible text-gray-500 font-medium first-letter:capitalize"
+							class="mt-1.5 flex shrink-0 items-center text-xs self-center invisible group-hover:visible text-gray-500 font-medium first-letter:capitalize"
 						>
-							<Tooltip
-								content={dayjs(message.created_at / 1000000).format('dddd, DD MMMM YYYY HH:mm')}
-							>
+							<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
 								{dayjs(message.created_at / 1000000).format('HH:mm')}
 							</Tooltip>
 						</div>
@@ -174,9 +174,7 @@
 							<div
 								class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 							>
-								<Tooltip
-									content={dayjs(message.created_at / 1000000).format('dddd, DD MMMM YYYY HH:mm')}
-								>
+								<Tooltip content={dayjs(message.created_at / 1000000).format('LLLL')}>
 									<span class="line-clamp-1">{formatDate(message.created_at / 1000000)}</span>
 								</Tooltip>
 							</div>
@@ -208,7 +206,7 @@
 				{#if edit}
 					<div class="py-2">
 						<Textarea
-							className=" bg-transparent outline-none w-full resize-none"
+							className=" bg-transparent outline-hidden w-full resize-none"
 							bind:value={editedContent}
 							onKeydown={(e) => {
 								if (e.key === 'Escape') {

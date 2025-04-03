@@ -14,7 +14,7 @@
 	});
 </script>
 
-<div class="fixed w-full h-full flex z-[999]">
+<div class="fixed w-full h-full flex z-999">
 	<div
 		class="absolute w-full h-full backdrop-blur-lg bg-white/10 dark:bg-gray-900/50 flex justify-center"
 	>

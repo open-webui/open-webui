@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { decode } from 'html-entities';
+
 	import { getContext, createEventDispatcher } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -32,21 +34,43 @@
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
+	import CodeBlock from '../chat/Messages/CodeBlock.svelte';
+	import Markdown from '../chat/Messages/Markdown.svelte';
 
 	export let open = false;
+
 	export let className = '';
 	export let buttonClassName =
 		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
+
+	export let id = '';
 	export let title = null;
 	export let attributes = null;
 
+	export let chevron = false;
 	export let grow = false;
 
 	export let disabled = false;
 	export let hide = false;
+
+	function formatJSONString(obj) {
+		try {
+			const parsed = JSON.parse(JSON.parse(obj));
+			// If parsed is an object/array, then it's valid JSON
+			if (typeof parsed === 'object') {
+				return JSON.stringify(parsed, null, 2);
+			} else {
+				// It's a primitive value like a number, boolean, etc.
+				return String(parsed);
+			}
+		} catch (e) {
+			// Not valid JSON, return as-is
+			return obj;
+		}
+	}
 </script>
 
-<div class={className}>
+<div {id} class={className}>
 	{#if title !== null}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -74,11 +98,39 @@
 				<div class="">
 					{#if attributes?.type === 'reasoning'}
 						{#if attributes?.done === 'true' && attributes?.duration}
-							{$i18n.t('Thought for {{DURATION}}', {
-								DURATION: dayjs.duration(attributes.duration, 'seconds').humanize()
-							})}
+							{#if attributes.duration < 60}
+								{$i18n.t('Thought for {{DURATION}} seconds', {
+									DURATION: attributes.duration
+								})}
+							{:else}
+								{$i18n.t('Thought for {{DURATION}}', {
+									DURATION: dayjs.duration(attributes.duration, 'seconds').humanize()
+								})}
+							{/if}
 						{:else}
 							{$i18n.t('Thinking...')}
+						{/if}
+					{:else if attributes?.type === 'code_interpreter'}
+						{#if attributes?.done === 'true'}
+							{$i18n.t('Analyzed')}
+						{:else}
+							{$i18n.t('Analyzing...')}
+						{/if}
+					{:else if attributes?.type === 'tool_calls'}
+						{#if attributes?.done === 'true'}
+							<Markdown
+								id={`tool-calls-${attributes?.id}`}
+								content={$i18n.t('View Result from `{{NAME}}`', {
+									NAME: attributes.name
+								})}
+							/>
+						{:else}
+							<Markdown
+								id={`tool-calls-${attributes?.id}`}
+								content={$i18n.t('Executing `{{NAME}}`...', {
+									NAME: attributes.name
+								})}
+							/>
 						{/if}
 					{:else}
 						{title}
@@ -106,7 +158,19 @@
 			}}
 		>
 			<div>
-				<slot />
+				<div class="flex items-start justify-between">
+					<slot />
+
+					{#if chevron}
+						<div class="flex self-start translate-y-1">
+							{#if open}
+								<ChevronUp strokeWidth="3.5" className="size-3.5" />
+							{:else}
+								<ChevronDown strokeWidth="3.5" className="size-3.5" />
+							{/if}
+						</div>
+					{/if}
+				</div>
 
 				{#if grow}
 					{#if open && !hide}
@@ -127,7 +191,29 @@
 	{#if !grow}
 		{#if open && !hide}
 			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-				<slot name="content" />
+				{#if attributes?.type === 'tool_calls'}
+					{@const args = decode(attributes?.arguments)}
+					{@const result = decode(attributes?.result ?? '')}
+
+					{#if attributes?.done === 'true'}
+						<Markdown
+							id={`tool-calls-${attributes?.id}-result`}
+							content={`> \`\`\`json
+> ${formatJSONString(args)}
+> ${formatJSONString(result)}
+> \`\`\``}
+						/>
+					{:else}
+						<Markdown
+							id={`tool-calls-${attributes?.id}-result`}
+							content={`> \`\`\`json
+> ${formatJSONString(args)}
+> \`\`\``}
+						/>
+					{/if}
+				{:else}
+					<slot name="content" />
+				{/if}
 			</div>
 		{/if}
 	{/if}

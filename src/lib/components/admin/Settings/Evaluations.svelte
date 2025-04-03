@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { models, user } from '$lib/stores';
+	import { models, settings, user, config } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 
 	const dispatch = createEventDispatcher();
@@ -16,49 +16,69 @@
 
 	const i18n = getContext('i18n');
 
-	let config = null;
+	let evaluationConfig = null;
 	let showAddModel = false;
 
 	const submitHandler = async () => {
-		config = await updateConfig(localStorage.token, config).catch((err) => {
+		evaluationConfig = await updateConfig(localStorage.token, evaluationConfig).catch((err) => {
 			toast.error(err);
 			return null;
 		});
 
-		if (config) {
+		if (evaluationConfig) {
 			toast.success('Settings saved successfully');
-			models.set(await getModels(localStorage.token));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		}
 	};
 
 	const addModelHandler = async (model) => {
-		config.EVALUATION_ARENA_MODELS.push(model);
-		config.EVALUATION_ARENA_MODELS = [...config.EVALUATION_ARENA_MODELS];
+		evaluationConfig.EVALUATION_ARENA_MODELS.push(model);
+		evaluationConfig.EVALUATION_ARENA_MODELS = [...evaluationConfig.EVALUATION_ARENA_MODELS];
 
 		await submitHandler();
-		models.set(await getModels(localStorage.token));
+		models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 	};
 
 	const editModelHandler = async (model, modelIdx) => {
-		config.EVALUATION_ARENA_MODELS[modelIdx] = model;
-		config.EVALUATION_ARENA_MODELS = [...config.EVALUATION_ARENA_MODELS];
+		evaluationConfig.EVALUATION_ARENA_MODELS[modelIdx] = model;
+		evaluationConfig.EVALUATION_ARENA_MODELS = [...evaluationConfig.EVALUATION_ARENA_MODELS];
 
 		await submitHandler();
-		models.set(await getModels(localStorage.token));
+		models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 	};
 
 	const deleteModelHandler = async (modelIdx) => {
-		config.EVALUATION_ARENA_MODELS = config.EVALUATION_ARENA_MODELS.filter(
+		evaluationConfig.EVALUATION_ARENA_MODELS = evaluationConfig.EVALUATION_ARENA_MODELS.filter(
 			(m, mIdx) => mIdx !== modelIdx
 		);
 
 		await submitHandler();
-		models.set(await getModels(localStorage.token));
+		models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 	};
 
 	onMount(async () => {
 		if ($user.role === 'admin') {
-			config = await getConfig(localStorage.token).catch((err) => {
+			evaluationConfig = await getConfig(localStorage.token).catch((err) => {
 				toast.error(err);
 				return null;
 			});
@@ -81,61 +101,67 @@
 	}}
 >
 	<div class="overflow-y-scroll scrollbar-hidden h-full">
-		{#if config !== null}
+		{#if evaluationConfig !== null}
 			<div class="">
-				<div class="text-sm font-medium mb-2">{$i18n.t('General Settings')}</div>
+				<div class="mb-3">
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('General')}</div>
 
-				<div class=" mb-2">
-					<div class="flex justify-between items-center text-xs">
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+					<div class="mb-2.5 flex w-full justify-between">
 						<div class=" text-xs font-medium">{$i18n.t('Arena Models')}</div>
 
 						<Tooltip content={$i18n.t(`Message rating should be enabled to use this feature`)}>
-							<Switch bind:state={config.ENABLE_EVALUATION_ARENA_MODELS} />
+							<Switch bind:state={evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS} />
 						</Tooltip>
 					</div>
 				</div>
 
-				{#if config.ENABLE_EVALUATION_ARENA_MODELS}
-					<hr class=" border-gray-50 dark:border-gray-700/10 my-2" />
-
-					<div class="flex justify-between items-center mb-2">
-						<div class="text-sm font-medium">{$i18n.t('Manage Arena Models')}</div>
-
-						<div>
-							<Tooltip content={$i18n.t('Add Arena Model')}>
-								<button
-									class="p-1"
-									type="button"
-									on:click={() => {
-										showAddModel = true;
-									}}
-								>
-									<Plus />
-								</button>
-							</Tooltip>
-						</div>
-					</div>
-
-					<div class="flex flex-col gap-2">
-						{#if (config?.EVALUATION_ARENA_MODELS ?? []).length > 0}
-							{#each config.EVALUATION_ARENA_MODELS as model, index}
-								<Model
-									{model}
-									on:edit={(e) => {
-										editModelHandler(e.detail, index);
-									}}
-									on:delete={(e) => {
-										deleteModelHandler(index);
-									}}
-								/>
-							{/each}
-						{:else}
-							<div class=" text-center text-xs text-gray-500">
-								{$i18n.t(
-									`Using the default arena model with all models. Click the plus button to add custom models.`
-								)}
+				{#if evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS}
+					<div class="mb-3">
+						<div class=" mb-2.5 text-base font-medium flex justify-between items-center">
+							<div>
+								{$i18n.t('Manage')}
 							</div>
-						{/if}
+
+							<div>
+								<Tooltip content={$i18n.t('Add Arena Model')}>
+									<button
+										class="p-1"
+										type="button"
+										on:click={() => {
+											showAddModel = true;
+										}}
+									>
+										<Plus />
+									</button>
+								</Tooltip>
+							</div>
+						</div>
+
+						<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+						<div class="flex flex-col gap-2">
+							{#if (evaluationConfig?.EVALUATION_ARENA_MODELS ?? []).length > 0}
+								{#each evaluationConfig.EVALUATION_ARENA_MODELS as model, index}
+									<Model
+										{model}
+										on:edit={(e) => {
+											editModelHandler(e.detail, index);
+										}}
+										on:delete={(e) => {
+											deleteModelHandler(index);
+										}}
+									/>
+								{/each}
+							{:else}
+								<div class=" text-center text-xs text-gray-500">
+									{$i18n.t(
+										`Using the default arena model with all models. Click the plus button to add custom models.`
+									)}
+								</div>
+							{/if}
+						</div>
 					</div>
 				{/if}
 			</div>

@@ -2,9 +2,27 @@ import hashlib
 import re
 import time
 import uuid
+import logging
 from datetime import timedelta
 from pathlib import Path
 from typing import Callable, Optional
+import json
+
+
+import collections.abc
+from open_webui.env import SRC_LOG_LEVELS
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+
+def deep_update(d, u):
+    for k, v in u.items():
+        if isinstance(v, collections.abc.Mapping):
+            d[k] = deep_update(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d
 
 
 def get_message_list(messages, message_id):
@@ -20,7 +38,7 @@ def get_message_list(messages, message_id):
     current_message = messages.get(message_id)
 
     if not current_message:
-        return f"Message ID {message_id} not found in the history."
+        return None
 
     # Reconstruct the chain by following the parentId links
     message_list = []
@@ -131,6 +149,44 @@ def add_or_update_system_message(content: str, messages: list[dict]):
     return messages
 
 
+def add_or_update_user_message(content: str, messages: list[dict]):
+    """
+    Adds a new user message at the end of the messages list
+    or updates the existing user message at the end.
+
+    :param msg: The message to be added or appended.
+    :param messages: The list of message dictionaries.
+    :return: The updated list of message dictionaries.
+    """
+
+    if messages and messages[-1].get("role") == "user":
+        messages[-1]["content"] = f"{messages[-1]['content']}\n{content}"
+    else:
+        # Insert at the end
+        messages.append({"role": "user", "content": content})
+
+    return messages
+
+
+def append_or_update_assistant_message(content: str, messages: list[dict]):
+    """
+    Adds a new assistant message at the end of the messages list
+    or updates the existing assistant message at the end.
+
+    :param msg: The message to be added or appended.
+    :param messages: The list of message dictionaries.
+    :return: The updated list of message dictionaries.
+    """
+
+    if messages and messages[-1].get("role") == "assistant":
+        messages[-1]["content"] = f"{messages[-1]['content']}\n{content}"
+    else:
+        # Insert at the end
+        messages.append({"role": "assistant", "content": content})
+
+    return messages
+
+
 def openai_chat_message_template(model: str):
     return {
         "id": f"{model}-{str(uuid.uuid4())}",
@@ -141,13 +197,24 @@ def openai_chat_message_template(model: str):
 
 
 def openai_chat_chunk_message_template(
-    model: str, message: Optional[str] = None, usage: Optional[dict] = None
+    model: str,
+    content: Optional[str] = None,
+    tool_calls: Optional[list[dict]] = None,
+    usage: Optional[dict] = None,
 ) -> dict:
     template = openai_chat_message_template(model)
     template["object"] = "chat.completion.chunk"
-    if message:
-        template["choices"][0]["delta"] = {"content": message}
-    else:
+
+    template["choices"][0]["index"] = 0
+    template["choices"][0]["delta"] = {}
+
+    if content:
+        template["choices"][0]["delta"]["content"] = content
+
+    if tool_calls:
+        template["choices"][0]["delta"]["tool_calls"] = tool_calls
+
+    if not content and not tool_calls:
         template["choices"][0]["finish_reason"] = "stop"
 
     if usage:
@@ -156,12 +223,20 @@ def openai_chat_chunk_message_template(
 
 
 def openai_chat_completion_message_template(
-    model: str, message: Optional[str] = None, usage: Optional[dict] = None
+    model: str,
+    message: Optional[str] = None,
+    tool_calls: Optional[list[dict]] = None,
+    usage: Optional[dict] = None,
 ) -> dict:
     template = openai_chat_message_template(model)
     template["object"] = "chat.completion"
     if message is not None:
-        template["choices"][0]["message"] = {"content": message, "role": "assistant"}
+        template["choices"][0]["message"] = {
+            "content": message,
+            "role": "assistant",
+            **({"tool_calls": tool_calls} if tool_calls else {}),
+        }
+
     template["choices"][0]["finish_reason"] = "stop"
 
     if usage:
@@ -183,11 +258,12 @@ def get_gravatar_url(email):
     return f"https://www.gravatar.com/avatar/{hash_hex}?d=mp"
 
 
-def calculate_sha256(file):
+def calculate_sha256(file_path, chunk_size):
+    # Compute SHA-256 hash of a file efficiently in chunks
     sha256 = hashlib.sha256()
-    # Read the file in chunks to efficiently handle large files
-    for chunk in iter(lambda: file.read(8192), b""):
-        sha256.update(chunk)
+    with open(file_path, "rb") as f:
+        while chunk := f.read(chunk_size):
+            sha256.update(chunk)
     return sha256.hexdigest()
 
 
@@ -342,7 +418,7 @@ def parse_ollama_modelfile(model_text):
                 elif param_type is bool:
                     value = value.lower() == "true"
             except Exception as e:
-                print(e)
+                log.exception(f"Failed to parse parameter {param}: {e}")
                 continue
 
             data["params"][param] = value
@@ -375,3 +451,15 @@ def parse_ollama_modelfile(model_text):
         data["params"]["messages"] = messages
 
     return data
+
+
+def convert_logit_bias_input_to_json(user_input):
+    logit_bias_pairs = user_input.split(",")
+    logit_bias_json = {}
+    for pair in logit_bias_pairs:
+        token, bias = pair.split(":")
+        token = str(token.strip())
+        bias = int(bias.strip())
+        bias = 100 if bias > 100 else -100 if bias < -100 else bias
+        logit_bias_json[token] = bias
+    return json.dumps(logit_bias_json)

@@ -60,7 +60,7 @@
 
 	const deleteModelHandler = async (model) => {
 		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
-			toast.error(e);
+			toast.error(`${e}`);
 			return null;
 		});
 
@@ -68,7 +68,12 @@
 			toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
 		}
 
-		await _models.set(await getModels(localStorage.token));
+		await _models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 		models = await getWorkspaceModels(localStorage.token);
 	};
 
@@ -82,7 +87,7 @@
 	};
 
 	const shareModelHandler = async (model) => {
-		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
+		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
 
 		const url = 'https://openwebui.com';
 
@@ -134,7 +139,12 @@
 			);
 		}
 
-		await _models.set(await getModels(localStorage.token));
+		await _models.set(
+			await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+			)
+		);
 		models = await getWorkspaceModels(localStorage.token);
 	};
 
@@ -177,12 +187,12 @@
 
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
-		window.addEventListener('blur', onBlur);
+		window.addEventListener('blur-sm', onBlur);
 
 		return () => {
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
-			window.removeEventListener('blur', onBlur);
+			window.removeEventListener('blur-sm', onBlur);
 		};
 	});
 </script>
@@ -218,7 +228,7 @@
 					<Search className="size-3.5" />
 				</div>
 				<input
-					class=" w-full text-sm py-1 rounded-r-xl outline-none bg-transparent"
+					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={searchValue}
 					placeholder={$i18n.t('Search Models')}
 				/>
@@ -371,7 +381,13 @@
 										bind:state={model.is_active}
 										on:change={async (e) => {
 											toggleModelById(localStorage.token, model.id);
-											_models.set(await getModels(localStorage.token));
+											_models.set(
+												await getModels(
+													localStorage.token,
+													$config?.features?.enable_direct_connections &&
+														($settings?.directConnections ?? null)
+												)
+											);
 										}}
 									/>
 								</Tooltip>
@@ -414,10 +430,22 @@
 											return null;
 										});
 									}
+								} else {
+									if (model?.id && model?.name) {
+										await createNewModel(localStorage.token, model).catch((error) => {
+											return null;
+										});
+									}
 								}
 							}
 
-							await _models.set(await getModels(localStorage.token));
+							await _models.set(
+								await getModels(
+									localStorage.token,
+									$config?.features?.enable_direct_connections &&
+										($settings?.directConnections ?? null)
+								)
+							);
 							models = await getWorkspaceModels(localStorage.token);
 						};
 
@@ -452,7 +480,7 @@
 				<button
 					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
 					on:click={async () => {
-						downloadModels($_models);
+						downloadModels(models);
 					}}
 				>
 					<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Models')}</div>
@@ -479,7 +507,7 @@
 	{#if $config?.features.enable_community_sharing}
 		<div class=" my-16">
 			<div class=" text-xl font-medium mb-1 line-clamp-1">
-				{$i18n.t('Made by OpenWebUI Community')}
+				{$i18n.t('Made by Open WebUI Community')}
 			</div>
 
 			<a

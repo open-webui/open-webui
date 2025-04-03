@@ -1,6 +1,14 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-	import { chats, config, settings, user as _user, mobile, currentChatPage } from '$lib/stores';
+	import {
+		chats,
+		config,
+		settings,
+		user as _user,
+		mobile,
+		currentChatPage,
+		temporaryChatEnabled
+	} from '$lib/stores';
 	import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
@@ -24,6 +32,7 @@
 	export let prompt;
 	export let history = {};
 	export let selectedModels;
+	export let atSelectedModel;
 
 	let messages = [];
 
@@ -85,15 +94,58 @@
 	};
 
 	const updateChat = async () => {
-		history = history;
-		await tick();
-		await updateChatById(localStorage.token, chatId, {
-			history: history,
-			messages: messages
-		});
+		if (!$temporaryChatEnabled) {
+			history = history;
+			await tick();
+			await updateChatById(localStorage.token, chatId, {
+				history: history,
+				messages: messages
+			});
 
-		currentChatPage.set(1);
-		await chats.set(await getChatList(localStorage.token, $currentChatPage));
+			currentChatPage.set(1);
+			await chats.set(await getChatList(localStorage.token, $currentChatPage));
+		}
+	};
+
+	const gotoMessage = async (message, idx) => {
+		// Determine the correct sibling list (either parent's children or root messages)
+		let siblings;
+		if (message.parentId !== null) {
+			siblings = history.messages[message.parentId].childrenIds;
+		} else {
+			siblings = Object.values(history.messages)
+				.filter((msg) => msg.parentId === null)
+				.map((msg) => msg.id);
+		}
+
+		// Clamp index to a valid range
+		idx = Math.max(0, Math.min(idx, siblings.length - 1));
+
+		let messageId = siblings[idx];
+
+		// If we're navigating to a different message
+		if (message.id !== messageId) {
+			// Drill down to the deepest child of that branch
+			let messageChildrenIds = history.messages[messageId].childrenIds;
+			while (messageChildrenIds.length !== 0) {
+				messageId = messageChildrenIds.at(-1);
+				messageChildrenIds = history.messages[messageId].childrenIds;
+			}
+
+			history.currentId = messageId;
+		}
+
+		await tick();
+
+		// Optional auto-scroll
+		if ($settings?.scrollOnBranchChange ?? true) {
+			const element = document.getElementById('messages-container');
+			autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+
+			setTimeout(() => {
+				scrollToBottom();
+			}, 100);
+		}
 	};
 
 	const showPreviousMessage = async (message) => {
@@ -217,7 +269,8 @@
 					role: 'user',
 					content: userPrompt,
 					...(history.messages[messageId].files && { files: history.messages[messageId].files }),
-					models: selectedModels
+					models: selectedModels,
+					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 				};
 
 				let messageParentId = history.messages[messageId].parentId;
@@ -233,7 +286,7 @@
 				history.currentId = userMessageId;
 
 				await tick();
-				await sendPrompt(userPrompt, userMessageId);
+				await sendPrompt(history, userPrompt, userMessageId);
 			} else {
 				// Edit user message
 				history.messages[messageId].content = content;
@@ -339,6 +392,7 @@
 	{#if Object.keys(history?.messages ?? {}).length == 0}
 		<ChatPlaceholder
 			modelIds={selectedModels}
+			{atSelectedModel}
 			submitPrompt={async (p) => {
 				let text = p;
 
@@ -395,6 +449,7 @@
 							messageId={message.id}
 							idx={messageIdx}
 							{user}
+							{gotoMessage}
 							{showPreviousMessage}
 							{showNextMessage}
 							{updateChat}

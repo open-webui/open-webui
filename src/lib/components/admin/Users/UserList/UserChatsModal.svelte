@@ -2,14 +2,17 @@
 	import { toast } from 'svelte-sonner';
 	import dayjs from 'dayjs';
 	import { getContext, createEventDispatcher } from 'svelte';
+	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	const dispatch = createEventDispatcher();
+	dayjs.extend(localizedFormat);
 
 	import { getChatListByUserId, deleteChatById, getArchivedChatList } from '$lib/apis/chats';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -17,6 +20,8 @@
 	export let user;
 
 	let chats = null;
+	let showDeleteConfirmDialog = false;
+	let chatToDelete = null;
 
 	const deleteChatHandler = async (chatId) => {
 		const res = await deleteChatById(localStorage.token, chatId).catch((error) => {
@@ -47,6 +52,16 @@
 		}
 	}
 </script>
+
+<ConfirmDialog
+	bind:show={showDeleteConfirmDialog}
+	on:confirm={() => {
+		if (chatToDelete) {
+			deleteChatHandler(chatToDelete);
+			chatToDelete = null;
+		}
+	}}
+/>
 
 <Modal size="lg" bind:show>
 	<div class=" flex justify-between dark:text-gray-300 px-5 pt-4">
@@ -80,7 +95,7 @@
 						<div class="relative overflow-x-auto">
 							<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
 								<thead
-									class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-800"
+									class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-850"
 								>
 									<tr>
 										<th
@@ -130,7 +145,7 @@
 
 											<td class=" px-3 py-1 hidden md:flex h-[2.5rem] justify-end">
 												<div class="my-auto shrink-0">
-													{dayjs(chat.updated_at * 1000).format($i18n.t('MMMM DD, YYYY HH:mm'))}
+													{dayjs(chat.updated_at * 1000).format('LLL')}
 												</div>
 											</td>
 
@@ -140,7 +155,8 @@
 														<button
 															class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 															on:click={async () => {
-																deleteChatHandler(chat.id);
+																chatToDelete = chat.id;
+																showDeleteConfirmDialog = true;
 															}}
 														>
 															<svg

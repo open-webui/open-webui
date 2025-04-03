@@ -41,11 +41,13 @@ export const shortCodesToEmojis = writable(
 	}, {})
 );
 
+export const TTSWorker = writable(null);
+
 export const chatId = writable('');
 export const chatTitle = writable('');
 
 export const channels = writable([]);
-export const chats = writable([]);
+export const chats = writable(null);
 export const pinnedChats = writable([]);
 export const tags = writable([]);
 
@@ -55,6 +57,8 @@ export const prompts: Writable<null | Prompt[]> = writable(null);
 export const knowledge: Writable<null | Document[]> = writable(null);
 export const tools = writable(null);
 export const functions = writable(null);
+
+export const toolServers = writable([]);
 
 export const banners: Writable<Banner[]> = writable([]);
 
@@ -139,6 +143,7 @@ type Settings = {
 	title?: TitleSettings;
 	splitLargeDeltas?: boolean;
 	chatDirection: 'LTR' | 'RTL';
+	ctrlEnterToSend?: boolean;
 
 	system?: string;
 	requestFormat?: string;
@@ -203,10 +208,12 @@ type Config = {
 		enable_login_form: boolean;
 		enable_web_search?: boolean;
 		enable_google_drive_integration: boolean;
+		enable_onedrive_integration: boolean;
 		enable_image_generation: boolean;
 		enable_admin_export: boolean;
 		enable_admin_chat_access: boolean;
 		enable_community_sharing: boolean;
+		enable_autocomplete_generation: boolean;
 	};
 	oauth: {
 		providers: {

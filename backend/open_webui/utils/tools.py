@@ -1,6 +1,9 @@
 import inspect
 import logging
 import re
+import inspect
+import uuid
+
 from typing import Any, Awaitable, Callable, get_type_hints
 from functools import update_wrapper, partial
 
@@ -61,6 +64,12 @@ def get_tools(
             )
 
         for spec in tools.specs:
+            # TODO: Fix hack for OpenAI API
+            # Some times breaks OpenAI but others don't. Leaving the comment
+            for val in spec.get("parameters", {}).get("properties", {}).values():
+                if val["type"] == "str":
+                    val["type"] = "string"
+
             # Remove internal parameters
             spec["parameters"]["properties"] = {
                 key: val
@@ -73,12 +82,20 @@ def get_tools(
             # convert to function that takes only model params and inserts custom params
             original_func = getattr(module, function_name)
             callable = apply_extra_params_to_tool_function(original_func, extra_params)
+
+            if callable.__doc__ and callable.__doc__.strip() != "":
+                s = re.split(":(param|return)", callable.__doc__, 1)
+                spec["description"] = s[0]
+            else:
+                spec["description"] = function_name
+
             # TODO: This needs to be a pydantic model
             tool_dict = {
-                "toolkit_id": tool_id,
-                "callable": callable,
                 "spec": spec,
+                "callable": callable,
+                "toolkit_id": tool_id,
                 "pydantic_model": function_to_pydantic_model(callable),
+                # Misc info
                 "file_handler": hasattr(module, "file_handler") and module.file_handler,
                 "citation": hasattr(module, "citation") and module.citation,
             }
