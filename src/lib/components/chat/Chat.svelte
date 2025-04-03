@@ -136,6 +136,7 @@
 	let chatFiles = [];
 	let files = [];
 	let params = {};
+	let isMagicLoading = false;
 
 	$: if (chatIdProp) {
 		(async () => {
@@ -1319,9 +1320,20 @@
 	};
 
 	const submitMagicPrompt = async (userPrompt) => {
-		const res = await generateMagicPrompt(localStorage.token, {form_data: {prompt: userPrompt}});
-		console.log(res);
-	}
+		isMagicLoading = true;
+
+		try {
+			const res = await generateMagicPrompt(localStorage.token, {
+				form_data: { prompt: userPrompt }
+			});
+			console.log(res);
+			prompt = res;
+		} catch (err) {
+			console.error('Magic prompt error:', err);
+		} finally {
+			isMagicLoading = false;
+		}
+	};
 
 	const sendPrompt = async (
 		_history,
@@ -1978,19 +1990,20 @@
 								/>
 							</div>
 						</div>
-										
+
 						<div class=" pb-[1rem] max-w-[980px] mx-auto w-full">
-							<div class="px-3 mb-2.5 flex items-center justify-between ">
+							<div class="px-3 mb-2.5 flex items-center justify-between">
 								<ModelSelector bind:selectedModels showSetDefault={!history.currentId} />
-								<div class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-md dark:bg-customGray-800">
-									<BookIcon/>
-									<a
-									class="min-w-fit text-2xs dark:text-customGray-600"
-									href="/workspace/prompts">{$i18n.t('Prompts')}
+								<div
+									class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-md dark:bg-customGray-800"
+								>
+									<BookIcon />
+									<a class="min-w-fit text-2xs dark:text-customGray-600" href="/workspace/prompts"
+										>{$i18n.t('Prompts')}
 									</a>
 								</div>
 							</div>
-							
+
 							<MessageInput
 								{history}
 								{selectedModels}
@@ -2002,6 +2015,7 @@
 								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
 								bind:atSelectedModel
+								{isMagicLoading}
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}
@@ -2065,6 +2079,7 @@
 								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
 								bind:atSelectedModel
+								{isMagicLoading}
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}

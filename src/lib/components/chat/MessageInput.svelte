@@ -50,6 +50,7 @@
 	import VoiceRecorderIcon from '../icons/VoiceRecorderIcon.svelte';
 	import CallIcon from '../icons/CallIcon.svelte';
 	import MagicSearch from '../icons/MagicSearch.svelte';
+	import LoadingIcon from '../icons/LoadingIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -63,6 +64,7 @@
 
 	export let atSelectedModel: Model | undefined = undefined;
 	export let selectedModels: [''];
+	export let isMagicLoading;
 
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
@@ -1208,16 +1210,22 @@
 											<Tooltip content={$i18n.t('Magic prompt')}>
 												<button
 													id="magic-search-button"
-													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition rounded-md p-[3px] mr-0.5 self-center"
+													class={`${isMagicLoading ? 'dark:bg-customBlue-700/60' : ''} text-gray-600 dark:text-gray-300 text-2xs hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition rounded-md p-[3px] mr-0.5 self-center`}
 													type="button"
 													aria-label="Voice Input"
-													
+													disabled={prompt === '' || isMagicLoading}
 													on:click|preventDefault={() => {
-														console.log(prompt, '-------------->')
 														dispatch('magicPrompt', prompt);
 													}}
 												>
-													<MagicSearch />
+													{#if isMagicLoading}
+														<span class="flex items-center"
+															><LoadingIcon /><span class="ml-1">{$i18n.t('Magic prompt')}</span
+															></span
+														>
+													{:else}
+														<MagicSearch />
+													{/if}
 												</button>
 											</Tooltip>
 										{/if}

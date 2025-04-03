@@ -39,6 +39,7 @@
 	export let imageGenerationEnabled = false;
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
+	export let isMagicLoading;
 
 	let models = [];
 
@@ -211,6 +212,7 @@
 					{transparentBackground}
 					{stopResponse}
 					{createMessagePair}
+					{isMagicLoading}
 					placeholder={$i18n.t('How can I help you today?')}
 					on:upload={(e) => {
 						dispatch('upload', e.detail);
