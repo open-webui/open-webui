@@ -218,6 +218,9 @@
 					on:submit={(e) => {
 						dispatch('submit', e.detail);
 					}}
+					on:magicPrompt={(e) => {
+						dispatch('magicPrompt', prompt);
+					}}	
 				/>
 			</div>
 		</div>

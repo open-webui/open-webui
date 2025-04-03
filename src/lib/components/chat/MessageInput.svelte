@@ -49,6 +49,7 @@
 	import InputMenuIcon from '../icons/InputMenuIcon.svelte';
 	import VoiceRecorderIcon from '../icons/VoiceRecorderIcon.svelte';
 	import CallIcon from '../icons/CallIcon.svelte';
+	import MagicSearch from '../icons/MagicSearch.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -1130,10 +1131,10 @@
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
 															on:click|preventDefault={() => {
-																webSearchEnabled = !webSearchEnabled
+																webSearchEnabled = !webSearchEnabled;
 																imageGenerationEnabled = false;
 																codeInterpreterEnabled = false;
-																}}
+															}}
 															type="button"
 															class="p-[3px] flex gap-1.5 items-center text-2xs leading-none rounded-md font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
@@ -1203,6 +1204,23 @@
 									</div>
 
 									<div class="self-end flex space-x-1 mr-1 flex-shrink-0">
+										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
+											<Tooltip content={$i18n.t('Magic prompt')}>
+												<button
+													id="magic-search-button"
+													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition rounded-md p-[3px] mr-0.5 self-center"
+													type="button"
+													aria-label="Voice Input"
+													
+													on:click|preventDefault={() => {
+														console.log(prompt, '-------------->')
+														dispatch('magicPrompt', prompt);
+													}}
+												>
+													<MagicSearch />
+												</button>
+											</Tooltip>
+										{/if}
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
@@ -1300,7 +1318,7 @@
 														<button
 															id="send-message-button"
 															class="{!(prompt === '' && files.length === 0)
-																?  'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+																? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1 self-center"
 															type="submit"
 															disabled={prompt === '' && files.length === 0}

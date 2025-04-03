@@ -62,7 +62,7 @@
 		getTagsById,
 		updateChatById
 	} from '$lib/apis/chats';
-	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
+	import { generateOpenAIChatCompletion, generateMagicPrompt } from '$lib/apis/openai';
 	import { processWeb, processWebSearch, processYoutubeVideo } from '$lib/apis/retrieval';
 	import { createOpenAITextStream } from '$lib/apis/streaming';
 	import { queryMemory } from '$lib/apis/memories';
@@ -1318,6 +1318,11 @@
 		await sendPrompt(history, userPrompt, userMessageId, { newChat: true });
 	};
 
+	const submitMagicPrompt = async (userPrompt) => {
+		const res = await generateMagicPrompt(localStorage.token, {form_data: {prompt: userPrompt}});
+		console.log(res);
+	}
+
 	const sendPrompt = async (
 		_history,
 		prompt: string,
@@ -2028,6 +2033,17 @@
 										);
 									}
 								}}
+								on:magicPrompt={async (e) => {
+									console.log('🔥 magicPrompt from child:', e.detail);
+									if (e.detail) {
+										await tick();
+										submitMagicPrompt(
+											($settings?.richTextInput ?? true)
+												? e.detail.replaceAll('\n\n', '\n')
+												: e.detail
+										);
+									}
+								}}
 							/>
 
 							<div
@@ -2063,8 +2079,20 @@
 								}}
 								on:submit={async (e) => {
 									if (e.detail) {
+										// console.log(e.detail)
 										await tick();
 										submitPrompt(
+											($settings?.richTextInput ?? true)
+												? e.detail.replaceAll('\n\n', '\n')
+												: e.detail
+										);
+									}
+								}}
+								on:magicPrompt={async (e) => {
+									console.log('🔥 magicPrompt from child:', e.detail);
+									if (e.detail) {
+										await tick();
+										submitMagicPrompt(
 											($settings?.richTextInput ?? true)
 												? e.detail.replaceAll('\n\n', '\n')
 												: e.detail
