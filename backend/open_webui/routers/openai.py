@@ -42,7 +42,9 @@ from open_webui.utils.misc import (
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access
-
+from open_webui.socket.main import (
+    get_event_emitter,
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
@@ -599,6 +601,8 @@ async def generate_chat_completion(
 
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
+    
+    __event_emitter__ = get_event_emitter(metadata)
 
     model_id = form_data.get("model")
     model_info = Models.get_model_by_id(model_id)
@@ -728,14 +732,37 @@ async def generate_chat_completion(
         # Check if response is SSE
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
-            return StreamingResponse(
-                r.content,
-                status_code=r.status,
-                headers=dict(r.headers),
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
-            )
+            
+            if "pipeline" in model and model.get("pipeline"):
+            # Read each event from the stream and parse event
+                async def stream_events():
+                    async for line in r.content:
+                        if line:
+                            log.error(line)
+                            if line.startswith(b"event: "):
+                                event = json.loads(line[6:])
+                                await __event_emitter__(event)
+                            else:
+                                yield line
+                
+                
+                return StreamingResponse(
+                    stream_events(),
+                    status_code=r.status,
+                    headers=dict(r.headers),
+                    background=BackgroundTask(
+                        cleanup_response, response=r, session=session
+                    ),
+                )
+            else:
+                 return StreamingResponse(
+                    r.content,
+                    status_code=r.status,
+                    headers=dict(r.headers),
+                    background=BackgroundTask(
+                        cleanup_response, response=r, session=session
+                    ),
+                )
         else:
             try:
                 response = await r.json()
