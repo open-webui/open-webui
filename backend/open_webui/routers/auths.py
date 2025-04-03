@@ -764,11 +764,6 @@ async def update_ldap_server(
         if not value:
             raise HTTPException(400, detail=f"Required field {key} is empty")
 
-    if form_data.use_tls and not form_data.certificate_path:
-        raise HTTPException(
-            400, detail="TLS is enabled but certificate file path is missing"
-        )
-
     request.app.state.config.LDAP_SERVER_LABEL = form_data.label
     request.app.state.config.LDAP_SERVER_HOST = form_data.host
     request.app.state.config.LDAP_SERVER_PORT = form_data.port
