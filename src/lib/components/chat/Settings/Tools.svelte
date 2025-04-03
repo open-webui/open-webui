@@ -74,9 +74,7 @@
 						<div class="flex flex-col gap-1.5">
 							{#each servers as server, idx}
 								<Connection
-									bind:url={server.url}
-									bind:key={server.key}
-									bind:config={server.config}
+									bind:connection={server}
 									onSubmit={() => {
 										updateHandler();
 									}}

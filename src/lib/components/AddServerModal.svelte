@@ -25,7 +25,7 @@
 	export let connection = null;
 
 	let url = '';
-	let openApiPath = '/openapi.json';
+	let path = '/openapi.json';
 
 	let auth_type = 'bearer';
 	let key = '';
@@ -42,6 +42,8 @@
 
 		const connection = {
 			url,
+			path,
+			auth_type,
 			key,
 			config: {
 				enable: enable
@@ -55,15 +57,18 @@
 
 		url = '';
 		key = '';
+		path = '/openapi.json';
+		auth_type = 'bearer';
+
 		enable = true;
 	};
 
 	const init = () => {
 		if (connection) {
 			url = connection.url;
-			openApiPath = connection.openApiPath ?? '/openapi.json';
+			path = connection?.path ?? '/openapi.json';
 
-			auth_type = connection.auth_type ?? 'bearer';
+			auth_type = connection?.auth_type ?? 'bearer';
 			key = connection?.key ?? '';
 
 			enable = connection.config?.enable ?? true;
@@ -137,7 +142,7 @@
 									<input
 										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										type="text"
-										bind:value={openApiPath}
+										bind:value={path}
 										placeholder={$i18n.t('openapi.json Path')}
 										autocomplete="off"
 										required
@@ -155,7 +160,7 @@
 						<div class="text-xs text-gray-500 mt-1">
 							{$i18n.t(`WebUI will make requests to "{{url}}{{path}}"`, {
 								url: url,
-								path: openApiPath
+								path: path
 							})}
 						</div>
 
