@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   open-webui:
     build:
@@ -17,6 +19,16 @@ services:
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
+
+  iis-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: my-iis-server
+    container_name: iis-server
+    ports:
+      - "8081:80"
+    restart: always
 
 volumes:
   open-webui: {}
