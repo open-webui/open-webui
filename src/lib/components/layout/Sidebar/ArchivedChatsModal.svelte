@@ -136,7 +136,7 @@
 				{#if chats.length > 0}
 					<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-100 dark:bg-gray-850" />
 					<span class="text-base font-medium text-gray-500 dark:text-gray-300">
-						{chats.length}
+						{sortedChats.length}
 					</span>
 				{/if}
 			</div>
