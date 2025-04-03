@@ -31,6 +31,8 @@
 	import ChatItem from './ChatItem.svelte';
 	import FolderMenu from './Folders/FolderMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import FolderIcon from '$lib/components/icons/FolderIcon.svelte';
+	import FolderOpenIcon from '$lib/components/icons/FolderOpenIcon.svelte';
 
 	export let open = false;
 
@@ -375,17 +377,25 @@
 		<div class="w-full group">
 			<button
 				id="folder-{folderId}-button"
-				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-customGray-500 font-medium hover:bg-gray-100 dark:hover:bg-[#1E1E1E] transition"
 				on:dblclick={() => {
 					editHandler();
 				}}
 			>
-				<div class="text-gray-300 dark:text-gray-600">
+				<div class="text-gray-300 dark:text-customGray-600">
 					{#if open}
 						<ChevronDown className=" size-3" strokeWidth="2.5" />
 					{:else}
 						<ChevronRight className=" size-3" strokeWidth="2.5" />
 					{/if}
+				</div>
+				
+				<div class="text-gray-300 dark:text-customGray-600">
+					{#if open}
+						<FolderOpenIcon />	
+					{:else}
+						<FolderIcon />	
+					{/if}	
 				</div>
 
 				<div class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1">

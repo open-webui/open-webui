@@ -70,7 +70,8 @@ math {
 }
 
 .font-primary {
-	font-family: 'Archivo', sans-serif;
+	font-family: 'Inter', sans-serif;
+	/* font-family: 'Archivo', sans-serif; */
 }
 
 .drag-region {
@@ -231,7 +232,7 @@ input[type='number'] {
 }
 
 .tippy-box[data-theme~='dark'] {
-	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
+	@apply rounded-[6px] bg-[#1E1E1E] text-[10px] text-[#D0CECE] shadow-xl;
 }
 
 .password {
@@ -265,7 +266,7 @@ input[type='number'] {
 }
 
 .ProseMirror {
-	@apply h-full min-h-fit max-h-full whitespace-pre-wrap;
+	@apply h-full min-h-fit max-h-full whitespace-pre-wrap text-[13px];
 }
 
 .ProseMirror:focus {

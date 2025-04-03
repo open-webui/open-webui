@@ -57,14 +57,15 @@
 		sortedPrompts = [...(suggestionPrompts ?? [])].sort(() => Math.random() - 0.5);
 		getFilteredPrompts(inputValue);
 	}
+
+	$: limitedPrompts = filteredPrompts.length > 3 ? filteredPrompts.slice(0, 3) : filteredPrompts;
 </script>
 
-<div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-400 dark:text-gray-600">
+<!-- <div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-400 dark:text-gray-600">
 	{#if filteredPrompts.length > 0}
 		<Bolt />
 		{$i18n.t('Suggested')}
 	{:else}
-		<!-- Keine Vorschläge -->
 
 		<div
 			class="flex w-full text-center items-center justify-center self-start text-gray-400 dark:text-gray-600"
@@ -72,31 +73,31 @@
 			{$WEBUI_NAME} ‧ v{WEBUI_VERSION}
 		</div>
 	{/if}
-</div>
+</div> -->
 
-<div class="h-40 overflow-auto scrollbar-none {className} items-start">
-	{#if filteredPrompts.length > 0}
-		{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
+<div class="flex justify-start {className} items-center gap-2.5 px-2">
+	{#if limitedPrompts.length > 0}
+		{#each limitedPrompts as prompt, idx (prompt.id || prompt.content)}
 			<button
 				class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
-				       px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
-				       dark:hover:bg-white/5 transition group"
+				       px-3 py-3 rounded-xl bg-transparent hover:bg-black/5
+				       dark:bg-[#272525] transition group"
 				style="animation-delay: {idx * 60}ms"
 				on:click={() => dispatch('select', prompt.content)}
 			>
 				<div class="flex flex-col text-left">
 					{#if prompt.title && prompt.title[0] !== ''}
 						<div
-							class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
+							class="font-medium text-[10px] dark:text-[#D0CECE] dark:group-hover:text-gray-200 transition line-clamp-1"
 						>
 							{prompt.title[0]}
 						</div>
-						<div class="text-xs text-gray-500 font-normal line-clamp-1">
+						<div class="text-xs text-[10px] text-gray-500 dark:text-[#8E8E8E] font-normal line-clamp-1">
 							{prompt.title[1]}
 						</div>
 					{:else}
 						<div
-							class="font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
+							class="font-medium text-[10px] dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
 						>
 							{prompt.content}
 						</div>

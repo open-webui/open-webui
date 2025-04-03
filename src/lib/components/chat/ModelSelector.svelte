@@ -30,9 +30,10 @@
 			$models.map((m) => m.id).includes(model) ? model : ''
 		);
 	}
+	
 </script>
 
-<div class="flex flex-col w-full items-start">
+<div class="flex flex-col items-start dark:bg-[#272525] py-[3px] px-[6px] rounded-[6px] w-fit">
 	{#each selectedModels as selectedModel, selectedModelIdx}
 		<div class="flex w-full max-w-fit">
 			<div class="overflow-hidden w-full">
@@ -53,7 +54,7 @@
 				</div>
 			</div>
 
-			{#if selectedModelIdx === 0}
+			<!-- {#if selectedModelIdx === 0}
 				<div
 					class="  self-center mx-1 disabled:text-gray-600 disabled:hover:text-gray-600 -translate-y-[0.5px]"
 				>
@@ -105,13 +106,13 @@
 						</button>
 					</Tooltip>
 				</div>
-			{/if}
+			{/if} -->
 		</div>
 	{/each}
 </div>
 
-{#if showSetDefault}
+<!-- {#if showSetDefault}
 	<div class=" absolute text-left mt-[1px] ml-1 text-[0.7rem] text-gray-500 font-primary">
 		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
 	</div>
-{/if}
+{/if} -->

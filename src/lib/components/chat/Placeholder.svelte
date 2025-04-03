@@ -15,6 +15,8 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
+	import ModelSelector from './ModelSelector.svelte';
+	import BookIcon from '../icons/BookIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -105,7 +107,7 @@
 		class="w-full text-3xl text-gray-800 dark:text-gray-100 font-medium text-center flex items-center gap-4 font-primary"
 	>
 		<div class="w-full flex flex-col justify-center items-center">
-			<div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5">
+			<!-- <div class="flex flex-row justify-center gap-3 @sm:gap-3.5 w-fit px-5">
 				<div class="flex flex-shrink-0 justify-center">
 					<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
 						{#each models as model, modelIdx}
@@ -134,7 +136,7 @@
 							</Tooltip>
 						{/each}
 					</div>
-				</div>
+				</div> 
 
 				<div class=" text-3xl @sm:text-4xl line-clamp-1" in:fade={{ duration: 100 }}>
 					{#if models[selectedModelIdx]?.name}
@@ -142,10 +144,10 @@
 					{:else}
 						{$i18n.t('Hello, {{name}}', { name: $user.name })}
 					{/if}
-				</div>
-			</div>
+				</div> 
+			</div>  -->
 
-			<div class="flex mt-1 mb-2">
+			<!-- <div class="flex mt-1 mb-2">
 				<div in:fade={{ duration: 100, delay: 50 }}>
 					{#if models[selectedModelIdx]?.info?.meta?.description ?? null}
 						<Tooltip
@@ -182,9 +184,19 @@
 						{/if}
 					{/if}
 				</div>
-			</div>
-
-			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
+			</div> -->
+			
+			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">	
+				<div class="px-2.5 mb-2.5 flex justify-between">
+					<ModelSelector bind:selectedModels showSetDefault={!history.currentId} />
+					<div class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-[6px] dark:bg-[#272525]">
+						<BookIcon/>
+						<a
+						class="min-w-fit text-[10px] dark:text-[#787878]"
+						href="/workspace/prompts">{$i18n.t('Prompts')}
+						</a>
+					</div>
+				</div>
 				<MessageInput
 					{history}
 					{selectedModels}
@@ -210,8 +222,8 @@
 			</div>
 		</div>
 	</div>
-	<div class="mx-auto max-w-2xl font-primary" in:fade={{ duration: 200, delay: 200 }}>
-		<div class="mx-5">
+	<div class="font-primary" in:fade={{ duration: 200, delay: 200 }}>
+		<div class="mx-auto max-w-3xl min-h-[55px]">
 			<Suggestions
 				suggestionPrompts={models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 					$config?.default_prompt_suggestions ??

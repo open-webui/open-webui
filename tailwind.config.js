@@ -7,6 +7,9 @@ export default {
 	content: ['./src/**/*.{html,js,svelte,ts}'],
 	theme: {
 		extend: {
+			fontFamily: {
+				sans: ['Inter', 'ui-sans-serif', 'system-ui'], 
+			  },
 			colors: {
 				gray: {
 					50: '#f9f9f9',
@@ -21,6 +24,20 @@ export default {
 					850: 'var(--color-gray-850, #262626)',
 					900: 'var(--color-gray-900, #171717)',
 					950: 'var(--color-gray-950, #0d0d0d)'
+				},
+				customGray: {
+					50: '#f9f9f9',
+					100: '#ececec',
+					200: '#e3e3e3',
+					300: '#cdcdcd',
+					400: '#b4b4b4',
+					500: '#D0CECE',
+					600: '#939292',
+					700: '#4e4e4e',
+					800: 'var(--color-gray-800, #333)',
+					850: 'var(--color-gray-850, #262626)',
+					900: 'var(--color-gray-900, #1E1E1E)',
+					950: 'var(--color-gray-950, #272525)'
 				}
 			},
 			typography: {
