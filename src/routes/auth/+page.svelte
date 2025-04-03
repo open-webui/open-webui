@@ -27,6 +27,7 @@
 	let email = '';
 	let password = '';
 	let apikey = '';
+	let reenter_password = '';
 
 	let ldapUsername = '';
 
@@ -63,6 +64,11 @@
 	};
 
 	const signUpHandler = async () => {
+		if (password !== reenter_password) {
+			toast.error($i18n.t('Passwords do not match.'));
+			return;
+		}
+
 		const result = await checkUstApiKey(apikey).catch(
 			(error) => {
 				toast.error(`${error}`);
@@ -286,6 +292,18 @@
 										/>
 									</div>
 									{#if mode === 'signup'}
+										<div>
+											<div class=" text-sm font-medium text-left mb-1">{$i18n.t('Re-enter password')}</div>
+											<input
+												bind:value={reenter_password}
+												type="password"
+												class="my-0.5 w-full text-sm outline-hidden bg-transparent"
+												placeholder={$i18n.t('Re-enter Your Password')}
+												autocomplete="reenter_password"
+												name="reenter_password"
+												required
+											/>
+										</div>
 										<div>
 											<div class="text-sm font-medium text-left mb-1 cursor-pointer hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full py-1.5 px-1.5" on:click={() => {showHkustApiHelp.set(!$showHkustApiHelp)}}>HKUST Open API Key(<span style="color: blue">?</span>)</div>
 											<input
