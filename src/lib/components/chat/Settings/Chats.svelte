@@ -48,16 +48,16 @@
 
 	const handleImport = async (files) => {
 		if (files.length === 0) return;
-		
+
 		if (isImporting) {
 			toast.error($i18n.t('Import already in progress'));
 			return;
 		}
-		
+
 		try {
 			isImporting = true;
 			const file = files[0];
-			
+
 			// Check if it's a ZIP file by examining the file extension
 			if (file.name.toLowerCase().endsWith('.zip')) {
 				toast.error($i18n.t('Please use "Import Chats as .zip" for ZIP files'));
@@ -66,13 +66,12 @@
 				// Assume it's a JSON file
 				await importJsonFile(file);
 			}
-			
+
 			// Reset the file input
 			if (chatImportInputElement) {
 				chatImportInputElement.value = '';
 			}
 			importFiles = null;
-			
 		} catch (error) {
 			console.error('Import error:', error);
 			toast.error($i18n.t('Failed to import: ') + error.message);
@@ -80,34 +79,33 @@
 			isImporting = false;
 		}
 	};
-	
+
 	const handleImportZip = async (files) => {
 		if (files.length === 0) return;
-		
+
 		if (isImportingZip) {
 			toast.error($i18n.t('ZIP import already in progress'));
 			return;
 		}
-		
+
 		try {
 			isImportingZip = true;
 			const file = files[0];
-			
+
 			// Check if it's a ZIP file
 			if (!file.name.toLowerCase().endsWith('.zip')) {
 				toast.error($i18n.t('Please use "Import Chats" for JSON files'));
 				return;
 			}
-			
+
 			toast.info($i18n.t('Processing ZIP file, please wait...'));
 			await importZipChats(file);
-			
+
 			// Reset the file input
 			if (chatImportZipInputElement) {
 				chatImportZipInputElement.value = '';
 			}
 			importZipFiles = null;
-			
 		} catch (error) {
 			console.error('ZIP import error:', error);
 			toast.error($i18n.t('Failed to import ZIP: ') + error.message);
@@ -125,7 +123,7 @@
 			try {
 				const fileContent = event.target.result;
 				if (!fileContent || typeof fileContent !== 'string') {
-					throw new Error("File content could not be read.");
+					throw new Error('File content could not be read.');
 				}
 				const parsedData = JSON.parse(fileContent);
 
@@ -138,11 +136,12 @@
 					// the single-object format.
 					origin = getImportOrigin(parsedData);
 				} catch (error) {
-					console.warn(`Failed to determine import origin for ${file.name}, assuming standard format. Error: ${error.message}`);
+					console.warn(
+						`Failed to determine import origin for ${file.name}, assuming standard format. Error: ${error.message}`
+					);
 					// Keep origin as 'unknown' or set explicitly to 'standard' if preferred
 					// origin = 'standard';
 				}
-
 
 				if (origin === 'openai') {
 					try {
@@ -152,7 +151,9 @@
 						if (toastId) toast.dismiss(toastId); // Dismiss converting message before import promise
 					} catch (error) {
 						console.error('Unable to convert OpenAI chats:', error);
-						toast.error(`${$i18n.t('Failed to convert OpenAI chats:')} ${error.message}`, { id: toastId });
+						toast.error(`${$i18n.t('Failed to convert OpenAI chats:')} ${error.message}`, {
+							id: toastId
+						});
 						return; // Stop import if conversion fails
 					}
 				} else {
@@ -164,7 +165,7 @@
 						if (toastId) toast.dismiss(toastId); // Dismiss reading message before import promise
 					} else {
 						// If parsedData isn't an object/array after successful JSON.parse (shouldn't happen with valid JSON)
-						throw new Error("Parsed JSON data is not a valid object or array.");
+						throw new Error('Parsed JSON data is not a valid object or array.');
 					}
 				}
 
@@ -187,11 +188,12 @@
 						return `${$i18n.t('Failed to import chats:')} ${err.message || err}`;
 					}
 				});
-
 			} catch (error) {
 				console.error('Error processing JSON file:', error);
 				// Make sure the error message includes the actual error
-				toast.error(`${$i18n.t('Failed to read or parse JSON file:')} ${error.message}`, { id: toastId });
+				toast.error(`${$i18n.t('Failed to read or parse JSON file:')} ${error.message}`, {
+					id: toastId
+				});
 			}
 		};
 
@@ -215,14 +217,17 @@
 			const chatFiles = [];
 
 			// Look for JSON files in the chats folder
-			zip.folder("chats").forEach((relativePath, file) => {
-				if (relativePath.endsWith('.json') && !file.dir) { // Ensure it's a file, not a directory entry
+			zip.folder('chats').forEach((relativePath, file) => {
+				if (relativePath.endsWith('.json') && !file.dir) {
+					// Ensure it's a file, not a directory entry
 					chatFiles.push(file);
 				}
 			});
 
 			if (chatFiles.length === 0) {
-				throw new Error($i18n.t('No valid chat JSON files found in the /chats folder of the ZIP archive'));
+				throw new Error(
+					$i18n.t('No valid chat JSON files found in the /chats folder of the ZIP archive')
+				);
 			}
 
 			// Use template literals for string interpolation with i18n
@@ -244,10 +249,14 @@
 				// Process this batch
 				const batchPromises = batchFiles.map(async (file) => {
 					try {
-						const content = await file.async("text");
+						const content = await file.async('text');
 						const chatData = JSON.parse(content);
 						// Basic validation: check for an ID, or a nested chat with an ID
-						if (chatData && (typeof chatData.id === 'string' || (chatData.chat && typeof chatData.chat.id === 'string'))) {
+						if (
+							chatData &&
+							(typeof chatData.id === 'string' ||
+								(chatData.chat && typeof chatData.chat.id === 'string'))
+						) {
 							return chatData;
 						}
 						console.warn(`Skipping invalid chat file: ${file.name}`);
@@ -260,7 +269,7 @@
 				});
 
 				const batchResults = await Promise.all(batchPromises);
-				const validChatsInBatch = batchResults.filter(chat => chat !== null);
+				const validChatsInBatch = batchResults.filter((chat) => chat !== null);
 
 				if (validChatsInBatch.length > 0) {
 					await importChats(validChatsInBatch);
@@ -274,13 +283,14 @@
 
 				// Yield to the event loop if processing many batches
 				if (totalBatches > 2) {
-					await new Promise(resolve => setTimeout(resolve, 0));
+					await new Promise((resolve) => setTimeout(resolve, 0));
 				}
 			}
 
 			// Update toast to success, replacing the loading one
-			toast.success(`${$i18n.t('Successfully imported')} ${importedCount} ${$i18n.t('chats')}`, { id: toastId });
-
+			toast.success(`${$i18n.t('Successfully imported')} ${importedCount} ${$i18n.t('chats')}`, {
+				id: toastId
+			});
 		} catch (error) {
 			console.error('Error importing ZIP:', error);
 			// Update toast to error if it exists, otherwise show a new error
@@ -296,11 +306,10 @@
 		// No finally block needed for toast dismissal when updating by ID
 	};
 
-
 	const importChats = async (_chats) => {
 		// Make sure we're dealing with an array
 		const chatsArray = Array.isArray(_chats) ? _chats : [_chats];
-		
+
 		for (const chat of chatsArray) {
 			if (chat.chat) {
 				await createNewChat(localStorage.token, chat.chat);
@@ -335,7 +344,8 @@
 					throw new Error($i18n.t('No chats found to export.'));
 				}
 
-				const blob = new Blob([JSON.stringify(allChats, null, 2)], { // Add indentation for readability
+				const blob = new Blob([JSON.stringify(allChats, null, 2)], {
+					// Add indentation for readability
 					type: 'application/json;charset=utf-8'
 				});
 				saveAs(blob, `chats-export-${Date.now()}.json`);
@@ -344,9 +354,10 @@
 			// Configuration for the toast messages
 			{
 				loading: $i18n.t('Preparing export...'),
-				success: (count) => `${$i18n.t('Successfully exported')} ${count} ${$i18n.t(count > 1 ? 'chats' : 'chat')}`,
+				success: (count) =>
+					`${$i18n.t('Successfully exported')} ${count} ${$i18n.t(count > 1 ? 'chats' : 'chat')}`,
 				error: (err) => {
-					console.error("Export error:", err);
+					console.error('Export error:', err);
 					// Check if it's the specific "no chats" error we threw
 					if (err.message === $i18n.t('No chats found to export.')) {
 						return err.message; // Display the specific info message as an "error" toast
@@ -383,7 +394,7 @@
 			const zip = new JSZip();
 
 			// Create a folder for the chats
-			const chatsFolder = zip.folder("chats");
+			const chatsFolder = zip.folder('chats');
 
 			// Process chats in batches to prevent memory issues and update progress
 			const BATCH_SIZE = 50;
@@ -391,7 +402,6 @@
 
 			// Update toast to show initial progress
 			toast.loading(`${$i18n.t('Export progress:')} 0%`, { id: toastId });
-
 
 			for (let i = 0; i < totalBatches; i++) {
 				const start = i * BATCH_SIZE;
@@ -406,9 +416,9 @@
 					// Create a safer filename - replace invalid characters
 					const safeTitle = chatTitle
 						.replace(/[<>:"/\\|?*]/g, '_') // Replace forbidden characters
-						.replace(/\s+/g, '_')          // Replace whitespace with underscore
-						.replace(/__/g, '_')           // Replace double underscores
-						.substring(0, 50);             // Limit length to avoid issues
+						.replace(/\s+/g, '_') // Replace whitespace with underscore
+						.replace(/__/g, '_') // Replace double underscores
+						.substring(0, 50); // Limit length to avoid issues
 
 					const fileName = `${safeTitle}-${chatId}.json`;
 
@@ -423,10 +433,9 @@
 				// Update the existing loading toast
 				toast.loading(`${$i18n.t('Export progress:')} ${progress}%`, { id: toastId });
 
-
 				// Yield to the event loop if processing many batches
 				if (totalBatches > 2) {
-					await new Promise(resolve => setTimeout(resolve, 0));
+					await new Promise((resolve) => setTimeout(resolve, 0));
 				}
 			}
 
@@ -438,8 +447,8 @@
 
 			// Generate the zip file with appropriate options
 			const content = await zip.generateAsync({
-				type: "blob",
-				compression: "DEFLATE",
+				type: 'blob',
+				compression: 'DEFLATE',
 				compressionOptions: {
 					level: compressionLevel
 				},
@@ -451,9 +460,8 @@
 
 			// Update the loading toast to success
 			toast.success($i18n.t('Export completed successfully'), { id: toastId });
-
 		} catch (error) {
-			console.error("Export error:", error);
+			console.error('Export error:', error);
 			const errorMsg = `${$i18n.t('Failed to create zip:')} ${error.message}`;
 			// Update the loading toast to error, or show new error if toastId wasn't set
 			if (toastId) {
@@ -488,7 +496,7 @@
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		scrollPaginationEnabled.set(true);
 	};
-	
+
 	const handleArchivedChatsChange = async () => {
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
@@ -535,7 +543,7 @@
 					{isImporting ? $i18n.t('Importing...') : $i18n.t('Import Chats')}
 				</div>
 			</button>
-			
+
 			<!-- ZIP Import -->
 			<input
 				id="chat-import-zip-input"
@@ -570,7 +578,7 @@
 					{isImportingZip ? $i18n.t('Importing...') : $i18n.t('Import Chats as .zip')}
 				</div>
 			</button>
-			
+
 			<!-- JSON Export -->
 			<button
 				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
@@ -592,10 +600,10 @@
 					</svg>
 				</div>
 				<div class=" self-center text-sm font-medium">
-			{isExportingJson ? $i18n.t('Exporting...') : $i18n.t('Export Chats')}
-		</div>
+					{isExportingJson ? $i18n.t('Exporting...') : $i18n.t('Export Chats')}
+				</div>
 			</button>
-			
+
 			<!-- ZIP Export -->
 			<button
 				class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"

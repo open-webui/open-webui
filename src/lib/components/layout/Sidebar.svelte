@@ -232,21 +232,21 @@
 
 	const importChatHandler = async (items, pinned = false, folderId = null) => {
 		console.log('importChatHandler', items, pinned, folderId);
-		
+
 		// Check if items exists and make sure it's iterable
 		if (!items) return;
-		
+
 		// Handle single item (not in array form)
 		if (!Array.isArray(items) && typeof items === 'object') {
 			items = [items];
 		}
-		
+
 		// Verify we have something iterable now
 		if (!items[Symbol.iterator]) {
 			console.error('Items is not iterable:', items);
 			return;
 		}
-		
+
 		// Now process the items
 		for (const item of items) {
 			console.log(item);
