@@ -36,12 +36,14 @@
 		showSettings,
 		showChangelog,
 		temporaryChatEnabled,
-		toolServers
+		toolServers,
+		showCustomModal,
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
+	import CustomLoginModal from '$lib/components/CustomLoginModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import { get } from 'svelte/store';
@@ -195,6 +197,19 @@
 				showChangelog.set($settings?.version !== $config.version);
 			}
 
+			if ($config?.features?.enable_custom_login_modal) {
+				if ($config?.features?.show_custom_login_modal_each_login) {
+					// Always show custom login modal
+					showCustomModal.set(true);
+
+					// Show custom login modal if not already acknowledged
+				} else if (userSettings['ui'] && !userSettings['ui']['custom_login_modal_acknowledged']) {
+					showCustomModal.set(true);
+				} else {
+					showCustomModal.set(false);
+				}
+			}
+
 			if ($page.url.searchParams.get('temporary-chat') === 'true') {
 				temporaryChatEnabled.set(true);
 			}
@@ -237,6 +252,7 @@
 
 <SettingsModal bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
+<CustomLoginModal bind:show={$showCustomModal} />
 
 {#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}
 	<div class=" absolute bottom-8 right-8 z-50" in:fade={{ duration: 100 }}>

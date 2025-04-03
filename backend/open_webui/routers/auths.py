@@ -29,6 +29,7 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SECURE,
     SRC_LOG_LEVELS,
 )
+from open_webui.routers.users import refresh_custom_login_modal
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response
 from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
@@ -645,6 +646,10 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
+        "ENABLE_CUSTOM_LOGIN_MODAL": request.app.state.config.ENABLE_CUSTOM_LOGIN_MODAL,
+        "SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN": request.app.state.config.SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN,
+        "CUSTOM_MODAL_TITLE": request.app.state.config.CUSTOM_MODAL_TITLE,
+        "CUSTOM_MODAL_CONTENT": request.app.state.config.CUSTOM_MODAL_CONTENT,
     }
 
 
@@ -661,6 +666,10 @@ class AdminConfig(BaseModel):
     ENABLE_MESSAGE_RATING: bool
     ENABLE_CHANNELS: bool
     ENABLE_USER_WEBHOOKS: bool
+    ENABLE_CUSTOM_LOGIN_MODAL: bool
+    SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN: bool
+    CUSTOM_MODAL_TITLE: str
+    CUSTOM_MODAL_CONTENT: str
 
 
 @router.post("/admin/config")
@@ -696,6 +705,24 @@ async def update_admin_config(
     request.app.state.config.ENABLE_MESSAGE_RATING = form_data.ENABLE_MESSAGE_RATING
 
     request.app.state.config.ENABLE_USER_WEBHOOKS = form_data.ENABLE_USER_WEBHOOKS
+    request.app.state.config.ENABLE_CUSTOM_LOGIN_MODAL = (
+        form_data.ENABLE_CUSTOM_LOGIN_MODAL
+    )
+    request.app.state.config.SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN = (
+        form_data.SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN
+    )
+
+    # If the title or content changed, make it so all users view the custom modal again on next login.
+    if (
+        request.app.state.config.CUSTOM_MODAL_TITLE != form_data.CUSTOM_MODAL_TITLE
+        or request.app.state.config.CUSTOM_MODAL_CONTENT
+        != form_data.CUSTOM_MODAL_CONTENT
+    ):
+
+        await refresh_custom_login_modal(user=user)
+
+    request.app.state.config.CUSTOM_MODAL_TITLE = form_data.CUSTOM_MODAL_TITLE
+    request.app.state.config.CUSTOM_MODAL_CONTENT = form_data.CUSTOM_MODAL_CONTENT
 
     return {
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
@@ -710,6 +737,10 @@ async def update_admin_config(
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
+        "ENABLE_CUSTOM_MODAL": request.app.state.config.ENABLE_CUSTOM_LOGIN_MODAL,
+        "SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN": request.app.state.config.SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN,
+        "CUSTOM_MODAL_TITLE": request.app.state.config.CUSTOM_MODAL_TITLE,
+        "CUSTOM_MODAL_CONTENT": request.app.state.config.CUSTOM_MODAL_CONTENT,
     }
 
 

@@ -1173,6 +1173,32 @@ export const getChangelog = async () => {
 	return res;
 };
 
+export const getCustomModal = async () => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/custom_modal`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json'
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getVersionUpdates = async (token: string) => {
 	let error = null;
 

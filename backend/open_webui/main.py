@@ -18,6 +18,7 @@ from typing import Optional
 from aiocache import cached
 import aiohttp
 import requests
+import asyncio
 
 
 from fastapi import (
@@ -85,6 +86,7 @@ from open_webui.routers.retrieval import (
 )
 
 from open_webui.internal.db import Session, engine
+from open_webui.routers.users import refresh_custom_login_modal
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
@@ -263,6 +265,10 @@ from open_webui.config import (
     DEFAULT_ARENA_MODEL,
     MODEL_ORDER_LIST,
     EVALUATION_ARENA_MODELS,
+    ENABLE_CUSTOM_LOGIN_MODAL,
+    SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN,
+    CUSTOM_MODAL_TITLE,
+    CUSTOM_MODAL_CONTENT,
     # WebUI (OAuth)
     ENABLE_OAUTH_ROLE_MANAGEMENT,
     OAUTH_ROLES_CLAIM,
@@ -556,6 +562,12 @@ app.state.AUTH_TRUSTED_NAME_HEADER = WEBUI_AUTH_TRUSTED_NAME_HEADER
 app.state.USER_COUNT = None
 app.state.TOOLS = {}
 app.state.FUNCTIONS = {}
+
+app.state.config.ENABLE_CUSTOM_LOGIN_MODAL = ENABLE_CUSTOM_LOGIN_MODAL
+app.state.config.SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN = SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN
+app.state.config.CUSTOM_MODAL_TITLE = CUSTOM_MODAL_TITLE
+app.state.config.CUSTOM_MODAL_CONTENT = CUSTOM_MODAL_CONTENT
+asyncio.ensure_future(refresh_custom_login_modal())  # In case the login modal is changed as env vars
 
 ########################################
 #
@@ -1240,6 +1252,8 @@ async def get_app_config(request: Request):
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
                     "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+                    "enable_custom_login_modal": app.state.config.ENABLE_CUSTOM_LOGIN_MODAL,
+                    "show_custom_login_modal_each_login": app.state.config.SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN,
                 }
                 if user is not None
                 else {}
@@ -1339,6 +1353,14 @@ async def get_app_latest_release_version(user=Depends(get_verified_user)):
 @app.get("/api/changelog")
 async def get_app_changelog():
     return {key: CHANGELOG[key] for idx, key in enumerate(CHANGELOG) if idx < 5}
+
+
+@app.get("/api/custom_modal")
+async def get_custom_modal(user=Depends(get_verified_user)):
+    return {
+        "title": app.state.config.CUSTOM_MODAL_TITLE,
+        "content": app.state.config.CUSTOM_MODAL_CONTENT,
+    }
 
 
 ############################

@@ -1,6 +1,4 @@
 <script lang="ts">
-	import DOMPurify from 'dompurify';
-
 	import { getBackendConfig, getVersionUpdates, getWebhookUrl, updateWebhookUrl } from '$lib/apis';
 	import {
 		getAdminConfig,
@@ -10,8 +8,10 @@
 		updateLdapConfig,
 		updateLdapServer
 	} from '$lib/apis/auths';
+	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { WEBUI_BUILD_HASH, WEBUI_VERSION } from '$lib/constants';
 	import { config, showChangelog } from '$lib/stores';
@@ -222,44 +222,15 @@
 								<div class="">
 									{$i18n.t('License')}
 								</div>
-
-								{#if $config?.license_metadata}
-									<a
-										href="https://docs.openwebui.com/enterprise"
-										target="_blank"
-										class="text-gray-500 mt-0.5"
-									>
-										<span class=" capitalize text-black dark:text-white"
-											>{$config?.license_metadata?.type}
-											license</span
-										>
-										registered to
-										<span class=" capitalize text-black dark:text-white"
-											>{$config?.license_metadata?.organization_name}</span
-										>
-										for
-										<span class=" font-medium text-black dark:text-white"
-											>{$config?.license_metadata?.seats ?? 'Unlimited'} users.</span
-										>
-									</a>
-									{#if $config?.license_metadata?.html}
-										<div class="mt-0.5">
-											{@html DOMPurify.sanitize($config?.license_metadata?.html)}
-										</div>
-									{/if}
-								{:else}
-									<a
-										class=" text-xs hover:underline"
-										href="https://docs.openwebui.com/enterprise"
-										target="_blank"
-									>
-										<span class="text-gray-500">
-											{$i18n.t(
-												'Upgrade to a licensed plan for enhanced capabilities, including custom theming and branding, and dedicated support.'
-											)}
-										</span>
-									</a>
-								{/if}
+								<a
+									class=" text-xs text-gray-500 hover:underline"
+									href="https://docs.openwebui.com/enterprise"
+									target="_blank"
+								>
+									{$i18n.t(
+										'Upgrade to a licensed plan for enhanced capabilities, including custom theming and branding, and dedicated support.'
+									)}
+								</a>
 							</div>
 
 							<!-- <button
@@ -554,6 +525,7 @@
 													</div>
 													<input
 														class="w-full bg-transparent outline-hidden py-0.5"
+														required
 														placeholder={$i18n.t('Enter certificate path')}
 														bind:value={LDAP_SERVER.certificate_path}
 													/>
@@ -609,14 +581,6 @@
 						<Switch bind:state={adminConfig.ENABLE_CHANNELS} />
 					</div>
 
-					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('User Webhooks')}
-						</div>
-
-						<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
-					</div>
-
 					<div class="mb-2.5 w-full justify-between">
 						<div class="flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('WebUI URL')}</div>
@@ -649,6 +613,52 @@
 								type="text"
 								placeholder={`https://example.com/webhook`}
 								bind:value={webhookUrl}
+							/>
+						</div>
+					</div>
+				</div>
+				<div class="mb-3">
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Custom Login Modal')}</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Enable Custom Login Modal')}
+						</div>
+
+						<Switch bind:state={adminConfig.ENABLE_CUSTOM_LOGIN_MODAL} />
+					</div>
+					<Tooltip
+						content={$i18n.t(
+							'When disabled, only shows on first login for each user, or after OpenWebUI is restarted.'
+						)}
+						placement="top-start"
+						className="w-full"
+					>
+						<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Show Custom Login Modal at Each Login')}
+							</div>
+
+							<Switch bind:state={adminConfig.SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN} />
+						</div>
+					</Tooltip>
+					<div class=" w-full justify-between">
+						<div class="flex mt-2 space-x-2">
+							
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								type="text"
+								placeholder={$i18n.t('Custom Login Modal Title')}
+								bind:value={adminConfig.CUSTOM_MODAL_TITLE}
+							/>
+						</div>
+						<div class="mb-1 text-xs font-medium"></div>
+						<div class="border-gray-50 mb-2 flex w-full items-center relative">
+							<Textarea
+								placeholder={$i18n.t('Custom Mogin Modal Content, supports markdown')}
+								bind:value={adminConfig.CUSTOM_MODAL_CONTENT}
 							/>
 						</div>
 					</div>
