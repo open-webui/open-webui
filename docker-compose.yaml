@@ -20,15 +20,17 @@ services:
       - host.docker.internal:host-gateway
     restart: unless-stopped
 
-  iis-server:
+  webserver:
     build:
       context: .
       dockerfile: Dockerfile
-    image: my-iis-server
-    container_name: iis-server
+      args:
+        GITHUB_REPO: "https://github.com/Merge-Feat/hkust-open-webui.git"
+        GITHUB_BRANCH: "develop"
+    container_name: webserver
     ports:
       - "8081:80"
-    restart: always
+    restart: unless-stopped
 
 volumes:
   open-webui: {}
