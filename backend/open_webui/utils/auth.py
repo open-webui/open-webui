@@ -182,7 +182,11 @@ def get_current_user(
                 ).split(",")
             ]
 
-            if request.url.path not in allowed_paths:
+            # Check if the request path matches any allowed endpoint.
+            if not any(
+                request.url.path == allowed or request.url.path.startswith(allowed + "/")
+                for allowed in allowed_paths
+            ):
                 raise HTTPException(
                     status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.API_KEY_NOT_ALLOWED
                 )
