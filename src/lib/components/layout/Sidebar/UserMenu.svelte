@@ -5,7 +5,7 @@
 	import { page } from '$app/state'
 	import { fade } from 'svelte/transition';
 	import { showKnowlegeManager } from '$lib/IONOS/stores/dialogs';
-	import { userSignOut } from '$lib/apis/auths';
+	import { signout } from '$lib/services/auths';
 	import StacksIcon from '$lib/IONOS/components/icons/Stacks.svelte';
 
 	const i18n = getContext('i18n');
@@ -152,12 +152,7 @@
 
 			<button
 				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-				on:click={async () => {
-					await userSignOut();
-					localStorage.removeItem('token');
-					location.href = '/auth';
-					show = false;
-				}}
+				on:click={() => { signout(); show = false; }}
 			>
 				<div class=" self-center mr-3">
 					<svg

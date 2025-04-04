@@ -339,6 +339,8 @@ export const userSignOut = async () => {
 
 		throw new Error(detail ?? `Request failed with no details: ${res.status} ${res.statusText}`);
 	}
+
+	return await res.json();
 };
 
 export const addUser = async (
