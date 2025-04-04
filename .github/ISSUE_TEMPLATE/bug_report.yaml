@@ -1,5 +1,5 @@
 name: Bug Report
-description: Create a detailed bug report to help us improve RAUX.
+description: Help us improve RAUX by sharing your experience. We appreciate your feedback!
 title: '[Bug]: '
 labels: ['bug', 'triage']
 assignees: []
@@ -7,47 +7,47 @@ body:
   - type: markdown
     attributes:
       value: |
-        # Bug Report
+        # Welcome! 👋
 
-        **Before submitting**: Please check the [Issues](https://github.com/aigdat/raux/issues) or [Discussions](https://github.com/aigdat/raux/discussions) to see if a similar issue has already been reported.
-        If unsure, start a discussion first.
-
-        Thank you for contributing to RAUX!
+        Thanks for taking the time to help improve RAUX! Before submitting, you might want to check our [Issues](https://github.com/aigdat/raux/issues) or [Discussions](https://github.com/aigdat/raux/discussions) to see if someone else has reported something similar.
+        
+        Don't worry if you can't fill out all the fields - just share what you can and we'll work together to figure it out!
 
   - type: checkboxes
     id: issue-check
     attributes:
-      label: Preliminary Checks
-      description: Confirm you've done these steps before submitting.
+      label: Quick Check ✨
+      description: Let us know if you've had a chance to look around
       options:
-        - label: I have searched the existing issues and discussions.
-          required: true
+        - label: I've taken a look at existing issues and discussions
+          required: false
 
   - type: dropdown
     id: installation-method
     attributes:
-      label: Installation Method
-      description: How did you install RAUX?
+      label: How did you install RAUX?
+      description: This helps us understand your setup better
       options:
         - Standalone Installer
         - Coupled with GAIA
         - Git Clone
     validations:
-      required: true
+      required: false
 
   - type: input
     id: raux-version
     attributes:
-      label: RAUX Version
-      description: Specify the version (e.g., v0.3.11)
+      label: Which version of RAUX are you using?
+      description: For example, v0.1.1 - don't worry if you're not sure!
     validations:
-      required: true
+      required: false
 
   - type: input
     id: ollama-version
     attributes:
       label: Ollama Version (if applicable)
-      description: Specify the version (e.g., v0.2.0, or v0.1.32-rc1)
+      description: If you're using Ollama, which version?
+      placeholder: For example, v0.2.0
     validations:
       required: false
 
@@ -55,87 +55,107 @@ body:
     id: lemonade-version
     attributes:
       label: Lemonade Version (if applicable)
-      description: Specify the version (e.g., v0.2.0, or v0.1.32-rc1)
+      description: If you're using Lemonade, which version?
+      placeholder: For example, v6.4.1
     validations:
       required: false
 
   - type: input
     id: operating-system
     attributes:
-      label: Operating System
-      description: Specify the OS (e.g., Windows 10, macOS Sonoma, Ubuntu 22.04)
+      label: What's your operating system?
+      description: Which OS are you running RAUX on?
+      placeholder: For example, Windows 10,Windows 11, macOS Sonoma, Ubuntu 22.04
     validations:
-      required: true
+      required: false
 
   - type: input
     id: browser
     attributes:
       label: Browser (if applicable)
-      description: Specify the browser/version (e.g., Chrome 100.0, Firefox 98.0)
+      description: If this is a web interface issue, which browser are you using?
+      placeholder: For example, Chrome 120, Firefox 115
     validations:
       required: false
 
   - type: checkboxes
     id: confirmation
     attributes:
-      label: Confirmation
-      description: Ensure the following prerequisites have been met.
+      label: Quick Confirmation
+      description: Just to help us help you better
       options:
-        - label: I have read and followed all instructions in `README.md`.
-          required: true
-        - label: I have listed steps to reproduce the bug in detail.
-          required: true
+        - label: I've taken a look at the README.md guide
+          required: false
+        - label: I can share steps to reproduce what I'm seeing
+          required: false
 
   - type: textarea
     id: expected-behavior
     attributes:
-      label: Expected Behavior
-      description: Describe what should have happened.
+      label: What did you expect to happen?
+      description: Tell us what you were trying to do
+      placeholder: For example, "I expected RAUX to..."
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: actual-behavior
     attributes:
-      label: Actual Behavior
-      description: Describe what actually happened.
+      label: What actually happened?
+      description: Share what you observed instead
+      placeholder: For example, "Instead of working, I saw..."
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: reproduction-steps
     attributes:
-      label: Steps to Reproduce
-      description: Providing clear, step-by-step instructions helps us reproduce and fix the issue faster. If we can't reproduce it, we can't fix it.
+      label: How can we see what you're seeing?
+      description: If you can, walk us through the steps
       placeholder: |
-        1. Go to '...'
+        For example:
+        1. Open RAUX
         2. Click on '...'
-        3. Scroll down to '...'
-        4. See the error message '...'
+        3. Try to '...'
+        4. See error '...'
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: logs-screenshots
     attributes:
-      label: Logs & Screenshots
-      description: Include relevant logs, errors, or screenshots to help diagnose the issue.
-      placeholder: 'Attach logs from the browser console, or error messages.'
+      label: Any error messages or screenshots to share?
+      description: These really help us understand what's happening
+      placeholder: |
+        Helpful things to share if you have them:
+        - Full browser screenshots of the issue
+        - Error messages you saw
+        - Log files (if you know where to find them)
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: additional-info
     attributes:
-      label: Additional Information
-      description: Provide any extra details that may assist in understanding the issue.
+      label: Anything else you'd like to share?
+      description: Feel free to add any other details that might help
+      placeholder: Any other context or information you think might be relevant
     validations:
       required: false
 
   - type: markdown
     attributes:
       value: |
-        ## Note
-        If the bug report is incomplete or does not follow instructions (especially reproduction steps), it may be closed without review.
-        Ensure that you've followed all the [README.md](https://github.com/aigdat/raux/blob/main/README.md) guidelines.
-        Thank you for contributing to RAUX!
+        ## Thank You! 🙌
+        
+        Your feedback helps make RAUX better for everyone! We'll look into this as soon as we can.
+        
+        The more details you can share, the better we can help, but don't worry if you can't provide everything.
+        Key things that often help us investigate:
+        - Steps to reproduce what you're seeing
+        - Any error messages or logs
+        - Your system setup
+        
+        Feel free to check our [README.md](https://github.com/aigdat/raux/blob/main/README.md) while you wait for a response.
+        
+        We appreciate your help in improving RAUX! ✨
