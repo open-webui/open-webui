@@ -10,6 +10,7 @@ on:
     branches:
       - main
       - dev
+  workflow_dispatch:
 
 jobs:
   build:
@@ -35,8 +36,8 @@ jobs:
 
       - name: Check for Changes After Format
         run: |
-    		git diff
-    		git diff --exit-code
+          git diff
+          git diff --exit-code
 
       - name: Build Frontend
         run: npm run build
