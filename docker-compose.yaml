@@ -4,32 +4,33 @@ services:
   open-webui:
     build:
       context: .
-      args:
-        OLLAMA_BASE_URL: '/ollama'
       dockerfile: Dockerfile
+      target: base
     image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
-    ports:
-      - ${OPEN_WEBUI_PORT-3000}:8080
     environment:
-      - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY='
+      # Add any additional environment variables needed for your OpenAI or other model integrations
+      - 'OPENAI_API_KEY=${OPENAI_API_KEY-}'
+      - 'OPENAI_API_BASE_URL=${OPENAI_API_BASE_URL-}'
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
+    expose:
+      - 8080
 
-  webserver:
+  nginx:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        GITHUB_REPO: "https://github.com/Merge-Feat/hkust-open-webui.git"
-        GITHUB_BRANCH: "develop"
-    container_name: webserver
+      target: nginx
+    container_name: nginx-webui
     ports:
-      - "8081:80"
+      - ${OPEN_WEBUI_PORT-3000}:80
+    depends_on:
+      - open-webui
     restart: unless-stopped
 
 volumes:
