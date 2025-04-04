@@ -16,8 +16,8 @@ ARG USE_TIKTOKEN_ENCODING_NAME="cl100k_base"
 
 ARG BUILD_HASH=dev-build
 # Override at your own risk - non-root configurations are untested
-ARG UID=1000
-ARG GID=1000
+ARG UID=0
+ARG GID=0
 
 ######## WebUI frontend ########
 FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
