@@ -12,7 +12,6 @@ import requests
 
 from fastapi import Depends, FastAPI, HTTPException, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from open_webui.env import DISABLE_OPENAI_SSL_VERIFICATION
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
@@ -26,6 +25,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     BYPASS_MODEL_ACCESS_CONTROL,
+    DISABLE_OPENAI_SSL_VERIFICATION,
 )
 from open_webui.models.users import UserModel
 
@@ -59,7 +59,15 @@ log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 async def send_get_request(url, key=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
-        async with aiohttp.ClientSession(timeout=timeout, trust_env=True, connector=aiohttp.TCPConnector(ssl=False) if DISABLE_OPENAI_SSL_VERIFICATION else None) as session:
+        async with aiohttp.ClientSession(
+            timeout=timeout,
+            trust_env=True,
+            connector=(
+                aiohttp.TCPConnector(ssl=False)
+                if DISABLE_OPENAI_SSL_VERIFICATION
+                else None
+            ),
+        ) as session:
 
             async with session.get(
                 url,
@@ -465,7 +473,11 @@ async def get_models(
         r = None
         async with aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
-            connector=aiohttp.TCPConnector(ssl=False) if DISABLE_OPENAI_SSL_VERIFICATION else None
+            connector=(
+                aiohttp.TCPConnector(ssl=False)
+                if DISABLE_OPENAI_SSL_VERIFICATION
+                else None
+            ),
         ) as session:
             try:
                 async with session.get(
@@ -546,7 +558,9 @@ async def verify_connection(
 
     async with aiohttp.ClientSession(
         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
-        connector=aiohttp.TCPConnector(ssl=False) if DISABLE_OPENAI_SSL_VERIFICATION else None
+        connector=(
+            aiohttp.TCPConnector(ssl=False) if DISABLE_OPENAI_SSL_VERIFICATION else None
+        ),
     ) as session:
         try:
             async with session.get(
@@ -698,8 +712,13 @@ async def generate_chat_completion(
 
     try:
         session = aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
-            connector=aiohttp.TCPConnector(ssl=False) if DISABLE_OPENAI_SSL_VERIFICATION else None
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            connector=(
+                aiohttp.TCPConnector(ssl=False)
+                if DISABLE_OPENAI_SSL_VERIFICATION
+                else None
+            ),
         )
 
         r = await session.request(
@@ -790,7 +809,11 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     try:
         session = aiohttp.ClientSession(
             trust_env=True,
-            connector=aiohttp.TCPConnector(ssl=False) if DISABLE_OPENAI_SSL_VERIFICATION else None
+            connector=(
+                aiohttp.TCPConnector(ssl=False)
+                if DISABLE_OPENAI_SSL_VERIFICATION
+                else None
+            ),
         )
         r = await session.request(
             method=request.method,

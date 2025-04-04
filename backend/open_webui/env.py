@@ -462,4 +462,9 @@ PIP_OPTIONS = os.getenv("PIP_OPTIONS", "").split()
 PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
 
 
-DISABLE_OPENAI_SSL_VERIFICATION = os.environ.get("DISABLE_OPENAI_SSL_VERIFICATION", "false").lower() == "true"
+DISABLE_OPENAI_SSL_VERIFICATION = (
+    os.environ.get("DISABLE_OPENAI_SSL_VERIFICATION", "false").lower() == "true"
+)
+DISABLE_OLLAMA_SSL_VERIFICATION = (
+    os.environ.get("DISABLE_OPENAI_SSL_VERIFICATION", "false").lower() == "true"
+)

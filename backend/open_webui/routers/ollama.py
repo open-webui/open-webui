@@ -18,6 +18,7 @@ from open_webui.models.users import UserModel
 
 from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
+    DISABLE_OLLAMA_SSL_VERIFICATION,
 )
 
 from fastapi import (
@@ -114,7 +115,13 @@ async def send_post_request(
     r = None
     try:
         session = aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            connector=(
+                aiohttp.TCPConnector(ssl=False)
+                if DISABLE_OLLAMA_SSL_VERIFICATION
+                else None
+            ),
         )
 
         r = await session.post(
