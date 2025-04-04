@@ -2,7 +2,6 @@ import { describe, beforeEach, expect, it, vi } from 'vitest';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { userSignOut } from '$lib/apis/auths';
 
-
 const mocks = vi.hoisted(() => {
 	return {
 		fetch: vi.fn(),
@@ -32,12 +31,12 @@ describe('userSignOut()', () => {
 		);
 	});
 
-	it('should not throw on OK response', async () => {
+	it('should return the OK response', async () => {
 		mocks.fetch.mockImplementation(() => {
 			return new Response('{ "status": true }', { status: 200 });
 		});
 
-		await expect(userSignOut()).resolves.toBe(undefined);
+		await expect(userSignOut()).resolves.toEqual({ "status": true });
 	});
 
 	describe("failed", () => {

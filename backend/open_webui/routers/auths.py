@@ -539,10 +539,10 @@ async def signout(request: Request, response: Response):
                             logout_url = openid_data.get("end_session_endpoint")
                             if logout_url:
                                 response.delete_cookie("oauth_id_token")
-                                return RedirectResponse(
-                                    headers=response.headers,
-                                    url=f"{logout_url}?id_token_hint={oauth_id_token}",
-                                )
+                                return {
+                                    "status": True,
+                                    "end_session_endpoint": f"{logout_url}?id_token_hint={oauth_id_token}"
+                                }
                         else:
                             raise HTTPException(
                                 status_code=resp.status,

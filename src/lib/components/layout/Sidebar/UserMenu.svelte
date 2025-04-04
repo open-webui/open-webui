@@ -1,14 +1,13 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
-
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import { showSettings, activeUserIds, USAGE_POOL, mobile, showSidebar, user } from '$lib/stores';
 	import { fade, slide } from 'svelte/transition';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import { userSignOut } from '$lib/apis/auths';
+	import { signout } from '$lib/services/auths';
 
 	const i18n = getContext('i18n');
 
@@ -155,15 +154,7 @@
 
 			<button
 				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-				on:click={async () => {
-					await userSignOut();
-					user.set(null);
-
-					localStorage.removeItem('token');
-					location.href = '/auth';
-
-					show = false;
-				}}
+				on:click={() => { signout(); show = false; }}
 			>
 				<div class=" self-center mr-3">
 					<svg
