@@ -540,20 +540,20 @@
 										required
 									>
 										{#if banner.type == ''}
-											<option value="" selected disabled class="text-gray-900 dark:text-gray-100"
+											<option value="" selected disabled class="text-gray-900"
 												>{$i18n.t('Type')}</option
 											>
 										{/if}
-										<option value="info" class="text-gray-900 dark:text-gray-100"
+										<option value="info" class="text-gray-900"
 											>{$i18n.t('Info')}</option
 										>
-										<option value="warning" class="text-gray-900 dark:text-gray-100"
+										<option value="warning" class="text-gray-900"
 											>{$i18n.t('Warning')}</option
 										>
-										<option value="error" class="text-gray-900 dark:text-gray-100"
+										<option value="error" class="text-gray-900"
 											>{$i18n.t('Error')}</option
 										>
-										<option value="success" class="text-gray-900 dark:text-gray-100"
+										<option value="success" class="text-gray-900"
 											>{$i18n.t('Success')}</option
 										>
 									</select>
