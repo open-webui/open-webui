@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, tick } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -8,8 +8,6 @@
 	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
-	import { connect } from 'socket.io-client';
-
 	export let onDelete = () => {};
 	export let onSubmit = () => {};
 
@@ -17,7 +15,7 @@
 
 	export let url = '';
 	export let key = '';
-	export let config = {};
+	export let config = { disable_ssl_verification: false }; // Default to false
 
 	let showConfigModal = false;
 	let showDeleteConfirmDialog = false;
@@ -44,7 +42,7 @@
 	onSubmit={(connection) => {
 		url = connection.url;
 		key = connection.key;
-		config = connection.config;
+		config = connection.config; // Includes disable_ssl_verification
 		onSubmit(connection);
 	}}
 />
@@ -52,9 +50,7 @@
 <div class="flex w-full gap-2 items-center">
 	<Tooltip
 		className="w-full relative"
-		content={$i18n.t(`WebUI will make requests to "{{url}}/chat/completions"`, {
-			url
-		})}
+		content={$i18n.t(`WebUI will make requests to "{{url}}/chat/completions"`, { url })}
 		placement="top-start"
 	>
 		{#if !(config?.enable ?? true)}
@@ -65,14 +61,13 @@
 		<div class="flex w-full">
 			<div class="flex-1 relative">
 				<input
-					class=" outline-hidden w-full bg-transparent {pipeline ? 'pr-8' : ''}"
+					class="outline-hidden w-full bg-transparent {pipeline ? 'pr-8' : ''}"
 					placeholder={$i18n.t('API Base URL')}
 					bind:value={url}
 					autocomplete="off"
 				/>
-
 				{#if pipeline}
-					<div class=" absolute top-0.5 right-2.5">
+					<div class="absolute top-0.5 right-2.5">
 						<Tooltip content="Pipelines">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -96,7 +91,7 @@
 			</div>
 
 			<SensitiveInput
-				inputClassName=" outline-hidden bg-transparent w-full"
+				inputClassName="outline-hidden bg-transparent w-full"
 				placeholder={$i18n.t('API Key')}
 				bind:value={key}
 			/>

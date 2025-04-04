@@ -25,7 +25,7 @@
 	export let ollama = false;
 	export let direct = false;
 
-	export let connection = null;
+	export let connection = { url: '', key: '', config: { disable_ssl_verification: false } };
 
 	let url = '';
 	let key = '';
@@ -36,7 +36,7 @@
 
 	let modelId = '';
 	let modelIds = [];
-
+	let disable_ssl_verification = false; // Add this
 	let loading = false;
 
 	const verifyOllamaHandler = async () => {
@@ -95,7 +95,8 @@
 				enable: enable,
 				tags: tags,
 				prefix_id: prefixId,
-				model_ids: modelIds
+				model_ids: modelIds,
+				disable_ssl_verification: disable_ssl_verification // Add this
 			}
 		};
 
@@ -109,6 +110,7 @@
 		prefixId = '';
 		tags = [];
 		modelIds = [];
+		disable_ssl_verification = false; // Reset this
 	};
 
 	const init = () => {
@@ -120,6 +122,7 @@
 			tags = connection.config?.tags ?? [];
 			prefixId = connection.config?.prefix_id ?? '';
 			modelIds = connection.config?.model_ids ?? [];
+			disable_ssl_verification = connection.config?.disable_ssl_verification ?? false; // Add this
 		}
 	};
 
@@ -219,8 +222,7 @@
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
-								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('Key')}</div>
-
+								<div class="mb-0.5 text-xs text-gray-500">{$i18n.t('Key')}</div>
 								<div class="flex-1">
 									<SensitiveInput
 										className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
@@ -230,10 +232,8 @@
 									/>
 								</div>
 							</div>
-
 							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Prefix ID')}</div>
-
+								<div class="mb-1 text-xs text-gray-500">{$i18n.t('Prefix ID')}</div>
 								<div class="flex-1">
 									<Tooltip
 										content={$i18n.t(
@@ -275,6 +275,16 @@
 							</div>
 						</div>
 
+						<div class="flex items-center mt-2">
+							<Tooltip
+								content={disable_ssl_verification
+									? $i18n.t('SSL Verification Disabled')
+									: $i18n.t('SSL Verification Enabled')}
+							>
+								<Switch bind:state={disable_ssl_verification} />
+							</Tooltip>
+							<span class="ml-2 text-sm">{$i18n.t('Disable SSL Verification')}</span>
+						</div>
 						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
 
 						<div class="flex flex-col w-full">

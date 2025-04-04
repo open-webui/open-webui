@@ -71,30 +71,23 @@ log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 ##########################################
 
 
-async def send_get_request(url, key=None, user: UserModel = None):
+async def send_get_request(url, key=None, config=None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+    disable_ssl = (
+        config.get("disable_ssl_verification", DISABLE_OLLAMA_SSL_VERIFICATION)
+        if config
+        else DISABLE_OLLAMA_SSL_VERIFICATION
+    )
     try:
-        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-            async with session.get(
-                url,
-                headers={
-                    "Content-Type": "application/json",
-                    **({"Authorization": f"Bearer {key}"} if key else {}),
-                    **(
-                        {
-                            "X-OpenWebUI-User-Name": user.name,
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
-                        }
-                        if ENABLE_FORWARD_USER_INFO_HEADERS and user
-                        else {}
-                    ),
-                },
-            ) as response:
+        async with aiohttp.ClientSession(
+            timeout=timeout,
+            trust_env=True,
+            connector=aiohttp.TCPConnector(ssl=False) if disable_ssl else None,
+        ) as session:
+            headers = {"Authorization": f"Bearer {key}"} if key else {}
+            async with session.get(url, headers=headers) as response:
                 return await response.json()
     except Exception as e:
-        # Handle connection error here
         log.error(f"Connection error: {e}")
         return None
 
