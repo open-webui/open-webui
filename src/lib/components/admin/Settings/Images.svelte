@@ -113,9 +113,10 @@
 	};
 
 	// Parses the workflow and populates workflowNodesConfig based on discovered primitive inputs
-	function parseAndPopulateWorkflowNodes(workflow, savedNodesConfig = []) {
+	// Added 'showToast' parameter to control notifications
+	function parseAndPopulateWorkflowNodes(workflow, savedNodesConfig = [], showToast = false) {
 		if (!workflow || typeof workflow !== 'object') {
-			toast.error('Invalid workflow data provided for parsing.');
+			if (showToast) toast.error('Invalid workflow data provided for parsing.');
 			workflowNodesConfig = []; // Clear existing config
 			return;
 		}
@@ -183,7 +184,7 @@
 			}
 		} catch (error) {
 			console.error('Error parsing workflow nodes:', error);
-			toast.error(`Error occurred during workflow parsing: ${error.message}`);
+			if (showToast) toast.error(`Error occurred during workflow parsing: ${error.message}`);
 			workflowNodesConfig = []; // Clear on error
 			return;
 		}
@@ -197,27 +198,29 @@
 			node_ids: node.node_ids.join(',') // Join for display/editing in input field
 		}));
 
-		// Provide feedback
-		if (workflowNodesConfig.length > 0) {
-			if (savedNodesConfig.length > 0 && discoveredPrimitiveCount > 0) {
-				toast.success(
-					`Workflow parsed. ${workflowNodesConfig.length} configurable inputs found/updated based on workflow and saved settings. Please review.`
-				);
-			} else if (discoveredPrimitiveCount > 0) {
-				toast.success(
-					`Workflow parsed. ${workflowNodesConfig.length} configurable inputs found. Please review the Node IDs.`
-				);
-			} else {
-				// Workflow parsed, but only previously saved nodes are shown (no new primitives found)
+		// Provide feedback only if requested
+		if (showToast) {
+			if (workflowNodesConfig.length > 0) {
+				if (savedNodesConfig.length > 0 && discoveredPrimitiveCount > 0) {
+					toast.success(
+						`Workflow parsed. ${workflowNodesConfig.length} configurable inputs found/updated based on workflow and saved settings. Please review.`
+					);
+				} else if (discoveredPrimitiveCount > 0) {
+					toast.success(
+						`Workflow parsed. ${workflowNodesConfig.length} configurable inputs found. Please review the Node IDs.`
+					);
+				} else {
+					// Workflow parsed, but only previously saved nodes are shown (no new primitives found)
+					// Avoid toast if only saved nodes are shown after user action
+					// toast.info(
+					// 	`Workflow parsed. Displaying ${workflowNodesConfig.length} previously saved configurations. No new primitive inputs were found in this workflow.`
+					// );
+				}
+			} else if (discoveredPrimitiveCount === 0 && Object.keys(workflow).length > 0) {
 				toast.info(
-					`Workflow parsed. Displaying ${workflowNodesConfig.length} previously saved configurations. No new primitive inputs were found in this workflow.`
+					'Workflow parsed, but no primitive input nodes (like text fields, numbers, booleans) were automatically found to configure.'
 				);
 			}
-		} else if (discoveredPrimitiveCount === 0 && Object.keys(workflow).length > 0) {
-			// Check if workflow wasn't empty before saying no primitives found
-			toast.info(
-				'Workflow parsed, but no primitive input nodes (like text fields, numbers, booleans) were automatically found to configure.'
-			);
 		}
 	}
 
@@ -233,16 +236,6 @@
 				loading = false;
 				return;
 			}
-			// Optional: Re-parse before saving to ensure consistency?
-			// try {
-			//     const parsedWorkflow = JSON.parse(config.comfyui.COMFYUI_WORKFLOW);
-			//     // Re-running parse might overwrite manual edits in the node ID fields.
-			//     // Let's skip re-parsing here and save the user's current input.
-			// } catch (e) {
-			//     toast.error('Workflow JSON is invalid. Cannot save.');
-			//     loading = false;
-			//     return;
-			// }
 		} else if (config?.engine === 'comfyui') {
 			// Clear node configs if workflow is removed
 			config.comfyui.COMFYUI_WORKFLOW_NODES = [];
@@ -319,6 +312,7 @@
 				}
 			);
 
+			toast.success('Settings saved successfully.');
 			getModels(); // Refresh models list if applicable
 			dispatch('save');
 		} catch (error) {
@@ -326,6 +320,30 @@
 			console.error('Save handler failed:', error);
 		} finally {
 			loading = false;
+		}
+	};
+
+	// Function to handle parsing from textarea input/paste
+	const handleWorkflowInput = () => {
+		if (config.comfyui.COMFYUI_WORKFLOW && config.comfyui.COMFYUI_WORKFLOW.trim() !== '') {
+			try {
+				const parsedWorkflow = JSON.parse(config.comfyui.COMFYUI_WORKFLOW);
+				if (validateJSON(config.comfyui.COMFYUI_WORKFLOW)) {
+					// Parse and show toast on user input/paste
+					parseAndPopulateWorkflowNodes(parsedWorkflow, [], true); // Pass true for showToast
+				} else {
+					// JSON is valid structure but not API format
+					workflowNodesConfig = []; // Clear nodes
+					// Optionally show a warning toast here if desired, but might be noisy
+					// toast.warning('Pasted content is not a valid ComfyUI API Workflow JSON format.');
+				}
+			} catch (error) {
+				// JSON is invalid syntax
+				workflowNodesConfig = []; // Clear nodes
+				// Avoid toast spam during typing/pasting invalid JSON
+			}
+		} else {
+			workflowNodesConfig = []; // Clear nodes if text area is empty
 		}
 	};
 
@@ -385,27 +403,25 @@
 			// Load saved node configurations
 			let savedNodes = config.comfyui.COMFYUI_WORKFLOW_NODES;
 
-			// Try to parse the stored workflow and populate/reconcile node configurations
+			// Try to parse the stored workflow BUT DO NOT show toast on initial mount
 			if (config.comfyui.COMFYUI_WORKFLOW && config.comfyui.COMFYUI_WORKFLOW.trim() !== '') {
 				try {
 					const parsedWorkflow = JSON.parse(config.comfyui.COMFYUI_WORKFLOW);
 					// Pretty print for display
 					config.comfyui.COMFYUI_WORKFLOW = JSON.stringify(parsedWorkflow, null, 2);
-					// Parse workflow and reconcile with saved node configurations
-					parseAndPopulateWorkflowNodes(parsedWorkflow, savedNodes);
+					// Parse workflow and reconcile with saved node configurations, NO TOAST on mount
+					parseAndPopulateWorkflowNodes(parsedWorkflow, savedNodes, false); // Pass false for showToast
 				} catch (e) {
 					console.warn('Stored ComfyUI workflow is not valid JSON:', e);
-					toast.warning(
-						'Stored ComfyUI workflow is not valid JSON. Cannot auto-populate nodes. Displaying saved configurations if any.'
-					);
-					// Attempt to load saved nodes directly into the UI state, even without parsing workflow
+					// Don't show toast on mount for invalid stored JSON either
+					// Attempt to load saved nodes directly into the UI state
 					workflowNodesConfig = savedNodes.map((n) => ({
 						type: n.type ?? 'unknown',
 						key: n.key ?? 'unknown',
 						node_ids: Array.isArray(n.node_ids)
 							? n.node_ids.join(',')
 							: (n.node_ids?.toString() ?? ''),
-						class_type: n.type?.split('::')[0] ?? 'Unknown' // Attempt to extract class_type from saved type
+						class_type: n.type?.split('::')[0] ?? 'Unknown'
 					}));
 				}
 			} else {
@@ -704,32 +720,7 @@
 								rows="10"
 								bind:value={config.comfyui.COMFYUI_WORKFLOW}
 								placeholder={$i18n.t('Upload or paste your ComfyUI API format workflow JSON here.')}
-								on:change={() => {
-									// Attempt to parse and update nodes when text area changes manually
-									// This provides feedback if the pasted JSON is valid and updates the node list
-									if (
-										config.comfyui.COMFYUI_WORKFLOW &&
-										config.comfyui.COMFYUI_WORKFLOW.trim() !== ''
-									) {
-										try {
-											const parsedWorkflow = JSON.parse(config.comfyui.COMFYUI_WORKFLOW);
-											if (validateJSON(config.comfyui.COMFYUI_WORKFLOW)) {
-												// Use empty array for savedNodes to force re-discovery from the pasted workflow
-												parseAndPopulateWorkflowNodes(parsedWorkflow, []);
-											} else {
-												toast.error(
-													'Pasted content is not a valid ComfyUI API Workflow JSON format.'
-												);
-												workflowNodesConfig = []; // Clear nodes if pasted JSON is invalid
-											}
-										} catch (error) {
-											toast.error(`Invalid JSON pasted: ${error.message}`);
-											workflowNodesConfig = []; // Clear nodes if JSON is invalid
-										}
-									} else {
-										workflowNodesConfig = []; // Clear nodes if text area is empty
-									}
-								}}
+								on:input={handleWorkflowInput}
 							/>
 						{/if}
 
@@ -770,8 +761,8 @@
 												// Validate format using our function
 												if (validateJSON(rawJson)) {
 													config.comfyui.COMFYUI_WORKFLOW = JSON.stringify(parsedWorkflow, null, 2); // Pretty print
-													// Parse the newly uploaded workflow, clearing previous node configs
-													parseAndPopulateWorkflowNodes(parsedWorkflow, []);
+													// Parse the newly uploaded workflow, clearing previous node configs, SHOW TOAST
+													parseAndPopulateWorkflowNodes(parsedWorkflow, [], true);
 												} else {
 													toast.error(
 														'Invalid ComfyUI API Workflow JSON format. Ensure it was exported as API format.'
