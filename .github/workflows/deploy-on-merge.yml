@@ -1,4 +1,4 @@
-name: Deploy Open WebUI
+name: Deploy Open WebUI via Tailscale
 
 on:
   push:
@@ -8,26 +8,30 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Start Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
       - name: Install SSH key
         uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Deploy via Docker Compose
+      - name: Deploy via Docker Compose (Tailscale IP)
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
             cd /path/to/your/project
 
-            # 환경 변수 설정 (Secrets 사용)
             export OPENAI_API_KEY='${{ secrets.OPENAI_API_KEY }}'
             export OPENAI_API_BASE_URL='${{ secrets.OPENAI_API_BASE_URL }}'
             export OPEN_WEBUI_PORT='${{ secrets.OPEN_WEBUI_PORT }}'
 
-            # Docker Compose 실행
             docker-compose down
             docker-compose pull
             docker-compose up -d --force-recreate
