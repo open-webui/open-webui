@@ -11,7 +11,7 @@ on:
 
       
 jobs:
-  release:
+  build-and-package:
     runs-on: ubuntu-latest
 
     permissions:
@@ -94,7 +94,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
-      # Save the wheel file as an artifact for the create-installer job
+      # Save the wheel file as an artifact for the publish-installer job
       - name: Save wheel as artifact
         uses: actions/upload-artifact@v4
         with:
@@ -102,8 +102,9 @@ jobs:
           path: dist/*.whl
           retention-days: 1
 
-  create-installer:
-    needs: release
+  publish-installer:
+    needs: build-and-package
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: windows-latest
     permissions:
       contents: write
