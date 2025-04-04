@@ -1,7 +1,7 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
-
 import { viteStaticCopy } from 'vite-plugin-static-copy';
+import path from 'path';
 
 // /** @type {import('vite').Plugin} */
 // const viteServerConfig = {
@@ -24,8 +24,15 @@ export default defineConfig({
 			targets: [
 				{
 					src: 'node_modules/onnxruntime-web/dist/*.jsep.*',
-
 					dest: 'wasm'
+				},
+				{
+					src: 'static/assets/emojis/*',
+					dest: 'assets/emojis'
+				},
+				{
+					src: 'static/pyodide/*',
+					dest: 'pyodide'
 				}
 			]
 		})
@@ -39,5 +46,16 @@ export default defineConfig({
 	},
 	worker: {
 		format: 'es'
+	},
+	resolve: {
+		alias: {
+			'@sveltejs/svelte-virtual-list': path.resolve(__dirname, 'node_modules/@sveltejs/svelte-virtual-list'),
+			'@': path.resolve(__dirname, './src')
+		}
+	},
+	server: {
+		fs: {
+			allow: ['static', 'src', 'node_modules']
+		}
 	}
 });

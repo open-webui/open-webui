@@ -10,14 +10,15 @@ const packages = [
 	'scipy',
 	'regex',
 	'sympy',
-	'tiktoken',
 	'seaborn',
 	'pytz'
 ];
 
-import { loadPyodide } from 'pyodide';
+import { loadPyodide } from 'pyodide/pyodide.js';
 import { setGlobalDispatcher, ProxyAgent } from 'undici';
-import { writeFile, readFile, copyFile, readdir, rmdir } from 'fs/promises';
+import { writeFile, readFile, copyFile, readdir, rmdir, mkdir } from 'fs/promises';
+import { existsSync } from 'fs';
+import path from 'path';
 
 /**
  * Loading network proxy configurations from the environment variables.
@@ -87,7 +88,7 @@ async function downloadPackages() {
 		try {
 			for (const pkg of packages) {
 				console.log(`Installing package: ${pkg}`);
-				await micropip.install(pkg);
+				await micropip.install(pkg, { keep_going: true });
 			}
 		} catch (err) {
 			console.error('Package installation failed:', err);
@@ -110,11 +111,104 @@ async function downloadPackages() {
 async function copyPyodide() {
 	console.log('Copying Pyodide files into static directory');
 	// Copy all files from node_modules/pyodide to static/pyodide
-	for await (const entry of await readdir('node_modules/pyodide')) {
-		await copyFile(`node_modules/pyodide/${entry}`, `static/pyodide/${entry}`);
+	try {
+		// Ensure the static/pyodide directory exists
+		await mkdir('static/pyodide', { recursive: true });
+		
+		// Create index.html and console.html files
+		await writeFile('static/pyodide/index.html', `<!DOCTYPE html>
+<html>
+<head>
+  <title>Pyodide Environment</title>
+  <meta charset="UTF-8">
+</head>
+<body>
+  <h1>Pyodide Environment</h1>
+  <p>This directory contains Pyodide files for the Open WebUI application.</p>
+</body>
+</html>`);
+		
+		await writeFile('static/pyodide/console.html', `<!DOCTYPE html>
+<html>
+<head>
+  <title>Pyodide Console</title>
+  <meta charset="UTF-8">
+  <script src="./pyodide.js"></script>
+</head>
+<body>
+  <h1>Pyodide Console</h1>
+  <div id="status">Loading Pyodide...</div>
+  
+  <script>
+    async function main() {
+      try {
+        const pyodide = await loadPyodide();
+        const statusElement = document.getElementById('status');
+        statusElement.textContent = 'Pyodide loaded successfully!';
+        console.log('Pyodide loaded successfully');
+      } catch (error) {
+        console.error(error);
+        const statusElement = document.getElementById('status');
+        statusElement.textContent = 'Error loading Pyodide: ' + error.message;
+      }
+    }
+    
+    window.onload = main;
+  </script>
+</body>
+</html>`);
+		
+		const entries = await readdir('node_modules/pyodide');
+		for (const entry of entries) {
+			try {
+				const sourcePath = `node_modules/pyodide/${entry}`;
+				const destPath = `static/pyodide/${entry}`;
+				
+				// Skip if destination already exists and is not index.html or console.html
+				if (existsSync(destPath) && entry !== 'index.html' && entry !== 'console.html') {
+					console.log(`Skipping ${entry} as it already exists`);
+					continue;
+				}
+				
+				await copyFile(sourcePath, destPath);
+				console.log(`Copied ${entry} successfully`);
+			} catch (err) {
+				console.error(`Failed to copy ${entry}: ${err.message}`);
+			}
+		}
+	} catch (err) {
+		console.error(`Error in copyPyodide: ${err.message}`);
 	}
 }
 
-initNetworkProxyFromEnv();
-await downloadPackages();
-await copyPyodide();
+async function ensureEmojiAssets() {
+	console.log('Ensuring emoji assets are available');
+	try {
+		// Ensure the emoji directory exists
+		await mkdir('static/assets/emojis', { recursive: true });
+		
+		// Create placeholder emoji files if they don't exist
+		const requiredEmojis = ['1f3bf.svg', '1f6cb.svg'];
+		for (const emoji of requiredEmojis) {
+			const emojiPath = `static/assets/emojis/${emoji}`;
+			if (!existsSync(emojiPath)) {
+				const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36"><circle cx="18" cy="18" r="18" fill="#CCCCCC"/></svg>`;
+				await writeFile(emojiPath, svgContent);
+				console.log(`Created placeholder emoji: ${emoji}`);
+			}
+		}
+	} catch (err) {
+		console.error(`Error ensuring emoji assets: ${err.message}`);
+	}
+}
+
+try {
+	initNetworkProxyFromEnv();
+	await ensureEmojiAssets();
+	await downloadPackages();
+	await copyPyodide();
+	console.log('Pyodide setup completed successfully');
+} catch (err) {
+	console.error('Error during Pyodide setup:', err);
+	process.exit(1);
+}
