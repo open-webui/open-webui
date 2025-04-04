@@ -23,7 +23,7 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Deploy via Docker Compose (Tailscale IP)
+      - name: Deploy via Docker Compose v2 (Tailscale IP)
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
             cd /home/mergefeat/hkust-open-webui
@@ -32,7 +32,7 @@ jobs:
             export OPENAI_API_BASE_URL='${{ secrets.OPENAI_API_BASE_URL }}'
             export OPEN_WEBUI_PORT='${{ secrets.OPEN_WEBUI_PORT }}'
 
-            sudo docker-compose down
-            sudo docker-compose pull
-            sudo docker-compose up -d --force-recreate
+            sudo docker compose down
+            sudo docker compose pull
+            sudo docker compose up -d --force-recreate
           "
