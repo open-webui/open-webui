@@ -1148,6 +1148,29 @@ ENABLE_USER_WEBHOOKS = PersistentConfig(
     os.environ.get("ENABLE_USER_WEBHOOKS", "True").lower() == "true",
 )
 
+ENABLE_CUSTOM_LOGIN_MODAL = PersistentConfig(
+    "ENABLE_CUSTOM_LOGIN_MODAL",
+    "ui.enable_custom_login_modal",
+    os.environ.get("ENABLE_CUSTOM_LOGIN_MODAL", "True").lower() == "true",
+)
+
+SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN = PersistentConfig(
+    "SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN",
+    "ui.SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN",
+    os.environ.get("SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN", "True").lower() == "true",
+)
+
+CUSTOM_MODAL_TITLE = PersistentConfig(
+    "CUSTOM_MODAL_TITLE",
+    "ui.custom_modal_title",
+    os.environ.get("CUSTOM_MODAL_TITLE", ""),
+)
+CUSTOM_MODAL_CONTENT = PersistentConfig(
+    "CUSTOM_MODAL_CONTENT",
+    "ui.custom_modal_content",
+    os.environ.get("CUSTOM_MODAL_CONTENT", ""),
+)
+
 
 def validate_cors_origins(origins):
     for origin in origins:

@@ -185,6 +185,29 @@ async def update_user_settings_by_session_user(
 
 
 ############################
+# Refresh the custom login modal for all users, typically used when custom modal is changed.
+############################
+
+
+@router.post("/users/settings/refresh_custom_login_modal", response_model=UserSettings)
+async def refresh_custom_login_modal(user=Depends(get_admin_user)):
+    all_users = Users.get_users()
+    for curr_user in all_users:
+        if not curr_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.USER_NOT_FOUND,
+            )
+
+        curr_user_settings = curr_user.settings
+        curr_user_settings.ui["custom_login_modal_acknowledged"] = False
+
+        curr_user = Users.update_user_settings_by_id(
+            curr_user.id, curr_user_settings.model_dump()
+        )
+
+
+############################
 # GetUserInfoBySessionUser
 ############################
 

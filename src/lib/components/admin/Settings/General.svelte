@@ -12,6 +12,7 @@
 	} from '$lib/apis/auths';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { WEBUI_BUILD_HASH, WEBUI_VERSION } from '$lib/constants';
 	import { config, showChangelog } from '$lib/stores';
@@ -649,6 +650,52 @@
 								type="text"
 								placeholder={`https://example.com/webhook`}
 								bind:value={webhookUrl}
+							/>
+						</div>
+					</div>
+				</div>
+				<div class="mb-3">
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Custom Login Modal')}</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Enable Custom Login Modal')}
+						</div>
+
+						<Switch bind:state={adminConfig.ENABLE_CUSTOM_LOGIN_MODAL} />
+					</div>
+					<Tooltip
+						content={$i18n.t(
+							'When disabled, only shows on first login for each user, or after OpenWebUI is restarted.'
+						)}
+						placement="top-start"
+						className="w-full"
+					>
+						<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Show Custom Login Modal at Each Login')}
+							</div>
+
+							<Switch bind:state={adminConfig.SHOW_CUSTOM_LOGIN_MODAL_EACH_LOGIN} />
+						</div>
+					</Tooltip>
+					<div class=" w-full justify-between">
+						<div class="flex mt-2 space-x-2">
+							
+							<input
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								type="text"
+								placeholder={$i18n.t('Custom Login Modal Title')}
+								bind:value={adminConfig.CUSTOM_MODAL_TITLE}
+							/>
+						</div>
+						<div class="mb-1 text-xs font-medium"></div>
+						<div class="border-gray-50 mb-2 flex w-full items-center relative">
+							<Textarea
+								placeholder={$i18n.t('Custom Mogin Modal Content, supports markdown')}
+								bind:value={adminConfig.CUSTOM_MODAL_CONTENT}
 							/>
 						</div>
 					</div>
