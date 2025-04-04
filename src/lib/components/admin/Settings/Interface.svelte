@@ -51,6 +51,8 @@
 	let banners: Banner[] = [];
 	let fileInput: HTMLInputElement;
 
+	const BANNER_CONTENT_MAX_LENGTH = 512; // Define the character limit
+
 	const updateInterfaceHandler = async () => {
 		try {
 			taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
@@ -532,41 +534,47 @@
 						{#each banners as banner, bannerIdx (banner.id)}
 							<div class=" flex justify-between">
 								<div
-									class="flex flex-row flex-1 border rounded-xl border-gray-100 dark:border-gray-850"
+									class="flex flex-col flex-1 border rounded-xl border-gray-100 dark:border-gray-850"
 								>
-									<select
-										class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-hidden"
-										bind:value={banner.type}
-										required
-									>
-										{#if banner.type == ''}
-											<option value="" selected disabled class="text-gray-900"
-												>{$i18n.t('Type')}</option
-											>
-										{/if}
-										<option value="info" class="text-gray-900"
-											>{$i18n.t('Info')}</option
+									<div class="flex flex-row flex-1">
+										<select
+											class="w-fit capitalize rounded-tl-xl py-2 px-4 text-xs bg-transparent outline-hidden"
+											bind:value={banner.type}
+											required
 										>
-										<option value="warning" class="text-gray-900"
-											>{$i18n.t('Warning')}</option
-										>
-										<option value="error" class="text-gray-900"
-											>{$i18n.t('Error')}</option
-										>
-										<option value="success" class="text-gray-900"
-											>{$i18n.t('Success')}</option
-										>
-									</select>
-									<input
-										class="pr-5 py-1.5 text-xs w-full bg-transparent outline-hidden"
-										placeholder={$i18n.t('Content')}
-										bind:value={banner.content}
-									/>
-									<div class="relative top-1.5 -left-2">
-										<Tooltip content={$i18n.t('Dismissible')} className="flex h-fit items-center">
-											<Switch bind:state={banner.dismissible} />
-										</Tooltip>
+											{#if banner.type == ''}
+												<option value="" selected disabled class="text-gray-900"
+													>{$i18n.t('Type')}</option
+												>
+											{/if}
+											<option value="info" class="text-gray-900">{$i18n.t('Info')}</option>
+											<option value="warning" class="text-gray-900">{$i18n.t('Warning')}</option>
+											<option value="error" class="text-gray-900">{$i18n.t('Error')}</option>
+											<option value="success" class="text-gray-900">{$i18n.t('Success')}</option>
+										</select>
+										<input
+											class="pr-5 py-1.5 text-xs w-full bg-transparent outline-hidden border-l border-gray-100 dark:border-gray-850"
+											placeholder={$i18n.t('Content (Max {{maxLength}} chars)', {
+												maxLength: BANNER_CONTENT_MAX_LENGTH
+											})}
+											bind:value={banner.content}
+											maxlength={BANNER_CONTENT_MAX_LENGTH}
+										/>
+										<div class="relative top-1.5 right-2 flex items-center px-2">
+											<Tooltip content={$i18n.t('Dismissible')} className="flex h-fit items-center">
+												<Switch bind:state={banner.dismissible} />
+											</Tooltip>
+										</div>
 									</div>
+									{#if banner.content.length > BANNER_CONTENT_MAX_LENGTH * 0.8}
+										<div
+											class="text-xs px-4 pb-1 {banner.content.length > BANNER_CONTENT_MAX_LENGTH
+												? 'text-red-500'
+												: 'text-gray-500 dark:text-gray-400'}"
+										>
+											{banner.content.length}/{BANNER_CONTENT_MAX_LENGTH}
+										</div>
+									{/if}
 								</div>
 								<button
 									class="px-2"
