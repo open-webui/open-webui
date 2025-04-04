@@ -9,7 +9,7 @@
 
 	import { banners as _banners } from '$lib/stores';
 	import type { Banner } from '$lib/types';
-	type PromptSuggestion = { content: string; title: [string, string] };
+	type PromptSuggestion = { clientId: string; content: string; title: [string, string] };
 
 	import { getBanners, setBanners } from '$lib/apis/configs';
 
@@ -55,12 +55,15 @@
 		try {
 			taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
 
-			const validPromptSuggestions = promptSuggestions.filter(
-				(p) => p.title[0]?.trim() !== '' && p.content?.trim() !== ''
-			);
+			const validPromptSuggestions = promptSuggestions
+				.filter((p) => p.title[0]?.trim() !== '' && p.content?.trim() !== '')
+				.map((p) => ({ title: p.title, content: p.content }));
 
 			await setDefaultPromptSuggestions(localStorage.token, validPromptSuggestions);
-			promptSuggestions = validPromptSuggestions;
+
+			promptSuggestions = promptSuggestions.filter(
+				(p) => p.title[0]?.trim() !== '' && p.content?.trim() !== ''
+			);
 
 			await updateBanners();
 			await config.set(await getBackendConfig());
@@ -80,6 +83,7 @@
 			config.set(backendConfig);
 
 			promptSuggestions = (backendConfig?.default_prompt_suggestions ?? []).map((p) => ({
+				clientId: uuidv4(),
 				title: Array.isArray(p.title) && p.title.length === 2 ? p.title : ['', ''],
 				content: p.content ?? ''
 			}));
@@ -195,6 +199,7 @@
 					) {
 						const subtitle = typeof item.subtitle === 'string' ? item.subtitle : '';
 						newSuggestions.push({
+							clientId: uuidv4(),
 							title: [item.title, subtitle],
 							content: item.prompt
 						});
@@ -243,7 +248,10 @@
 			promptSuggestions.at(-1)?.content.trim() !== '' ||
 			promptSuggestions.at(-1)?.title[0].trim() !== ''
 		) {
-			promptSuggestions = [...promptSuggestions, { content: '', title: ['', ''] }];
+			promptSuggestions = [
+				...promptSuggestions,
+				{ clientId: uuidv4(), content: '', title: ['', ''] }
+			];
 		} else {
 			toast.info($i18n.t('Please fill the last empty prompt suggestion before adding a new one.'));
 		}
@@ -638,7 +646,7 @@
 						</div>
 
 						<div class="grid lg:grid-cols-2 flex-col gap-1.5">
-							{#each promptSuggestions as prompt, promptIdx (promptIdx)}
+							{#each promptSuggestions as prompt, promptIdx (prompt.clientId)}
 								<div
 									class=" flex border border-gray-100 dark:border-none dark:bg-gray-850 rounded-xl py-1.5"
 								>
