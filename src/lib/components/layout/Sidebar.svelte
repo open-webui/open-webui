@@ -920,7 +920,7 @@
 						}}
 					>
 						<button
-							class="flex items-center rounded-xl border-b border-l border-r border-gray-500 py-4.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 dark:border-gray-800 transition"
+							class="flex items-center rounded-xl border-b border-l border-r border-gray-200 py-4.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 dark:border-gray-800 transition"
 							on:click={() => {
 								showDropdown = !showDropdown;
 							}}
