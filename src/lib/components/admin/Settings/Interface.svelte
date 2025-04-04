@@ -9,6 +9,7 @@
 
 	import { banners as _banners } from '$lib/stores';
 	import type { Banner } from '$lib/types';
+	type PromptSuggestion = { content: string; title: [string, string] };
 
 	import { getBanners, setBanners } from '$lib/apis/configs';
 
@@ -19,6 +20,16 @@
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
+
+	interface ExportedPrompt {
+		title: string;
+		subtitle?: string;
+		prompt: string;
+	}
+
+	interface ExportedPromptsFile {
+		prompts: ExportedPrompt[];
+	}
 
 	let taskConfig = {
 		TASK_MODEL: '',
@@ -36,44 +47,222 @@
 		TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: ''
 	};
 
-	let promptSuggestions = [];
+	let promptSuggestions: PromptSuggestion[] = [];
 	let banners: Banner[] = [];
+	let fileInput: HTMLInputElement;
 
 	const updateInterfaceHandler = async () => {
-		taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
+		try {
+			taskConfig = await updateTaskConfig(localStorage.token, taskConfig);
 
-		promptSuggestions = await setDefaultPromptSuggestions(localStorage.token, promptSuggestions);
-		await updateBanners();
+			const validPromptSuggestions = promptSuggestions.filter(
+				(p) => p.title[0]?.trim() !== '' && p.content?.trim() !== ''
+			);
 
-		await config.set(await getBackendConfig());
+			await setDefaultPromptSuggestions(localStorage.token, validPromptSuggestions);
+			promptSuggestions = validPromptSuggestions;
+
+			await updateBanners();
+			await config.set(await getBackendConfig());
+
+			dispatch('save');
+		} catch (error) {
+			console.error('Error saving settings:', error);
+
+			toast.error($i18n.t('Failed to save settings.'));
+		}
 	};
 
 	onMount(async () => {
-		taskConfig = await getTaskConfig(localStorage.token);
+		try {
+			taskConfig = await getTaskConfig(localStorage.token);
+			const backendConfig = await getBackendConfig();
+			config.set(backendConfig);
 
-		promptSuggestions = $config?.default_prompt_suggestions ?? [];
-		banners = await getBanners(localStorage.token);
+			promptSuggestions = (backendConfig?.default_prompt_suggestions ?? []).map((p) => ({
+				title: Array.isArray(p.title) && p.title.length === 2 ? p.title : ['', ''],
+				content: p.content ?? ''
+			}));
+
+			banners = await getBanners(localStorage.token);
+		} catch (error) {
+			console.error('Error loading initial settings:', error);
+
+			toast.error($i18n.t('Failed to load settings.'));
+			promptSuggestions = [];
+			banners = [];
+		}
 	});
 
 	const updateBanners = async () => {
-		_banners.set(await setBanners(localStorage.token, banners));
+		try {
+			_banners.set(await setBanners(localStorage.token, banners));
+		} catch (error) {
+			console.error('Error updating banners:', error);
+
+			toast.error($i18n.t('Failed to update banners.'));
+		}
 	};
+
+	const exportPromptSuggestions = () => {
+		const validSuggestionsToExport = promptSuggestions.filter(
+			(p) => p.title[0]?.trim() !== '' && p.content?.trim() !== ''
+		);
+
+		if (validSuggestionsToExport.length === 0) {
+			toast.info($i18n.t('No valid prompt suggestions to export.'));
+			return;
+		}
+
+		try {
+			const exportedData: ExportedPromptsFile = {
+				prompts: validSuggestionsToExport.map((p) => ({
+					title: p.title[0] ?? '',
+					subtitle: p.title[1] ?? '',
+					prompt: p.content ?? ''
+				}))
+			};
+
+			const jsonString = JSON.stringify(exportedData, null, 2);
+			const blob = new Blob([jsonString], { type: 'application/json' });
+			const url = URL.createObjectURL(blob);
+
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = 'open-webui-prompt-suggestions.json';
+			document.body.appendChild(link);
+			link.click();
+
+			document.body.removeChild(link);
+			URL.revokeObjectURL(url);
+
+			toast.success($i18n.t('Prompt suggestions exported successfully!'));
+		} catch (error) {
+			console.error('Error exporting prompt suggestions:', error);
+
+			toast.error($i18n.t('Failed to export prompt suggestions.'));
+		}
+	};
+
+	const triggerImport = () => {
+		if (fileInput) {
+			fileInput.click();
+		}
+	};
+
+	const handleFileImport = (event: Event) => {
+		const target = event.target as HTMLInputElement;
+		const file = target.files?.[0];
+
+		if (!file) {
+			return;
+		}
+
+		if (file.type !== 'application/json') {
+			toast.error($i18n.t('Invalid file type. Please select a JSON file.'));
+			target.value = '';
+			return;
+		}
+
+		const reader = new FileReader();
+
+		reader.onload = (e) => {
+			try {
+				const content = e.target?.result as string;
+				const parsedData: unknown = JSON.parse(content);
+
+				if (
+					typeof parsedData !== 'object' ||
+					parsedData === null ||
+					!('prompts' in parsedData) ||
+					!Array.isArray((parsedData as ExportedPromptsFile).prompts)
+				) {
+					throw new Error('Invalid JSON structure. Missing "prompts" array.');
+				}
+
+				const importedPrompts = (parsedData as ExportedPromptsFile).prompts;
+				const newSuggestions: PromptSuggestion[] = [];
+				let validationError = false;
+
+				for (const item of importedPrompts) {
+					if (
+						typeof item === 'object' &&
+						item !== null &&
+						typeof item.title === 'string' &&
+						item.title.trim() !== '' &&
+						typeof item.prompt === 'string' &&
+						item.prompt.trim() !== ''
+					) {
+						const subtitle = typeof item.subtitle === 'string' ? item.subtitle : '';
+						newSuggestions.push({
+							title: [item.title, subtitle],
+							content: item.prompt
+						});
+					} else {
+						console.warn('Skipping invalid prompt item during import:', item);
+						validationError = true;
+					}
+				}
+
+				if (newSuggestions.length > 0) {
+					promptSuggestions = [...promptSuggestions, ...newSuggestions];
+
+					toast.success(
+						$i18n.t('{{count}} prompt suggestions imported successfully!', {
+							count: newSuggestions.length
+						})
+					);
+					if (validationError) {
+						toast.warning($i18n.t('Some prompt items in the file were invalid and were skipped.'));
+					}
+				} else {
+					toast.error($i18n.t('No valid prompt suggestions found in the file.'));
+				}
+			} catch (error: any) {
+				console.error('Error importing prompt suggestions:', error);
+
+				toast.error(`${$i18n.t('Failed to import file:')} ${error.message}`);
+			} finally {
+				target.value = '';
+			}
+		};
+
+		reader.onerror = (e) => {
+			console.error('Error reading file:', e);
+
+			toast.error($i18n.t('Failed to read the selected file.'));
+			target.value = '';
+		};
+
+		reader.readAsText(file);
+	};
+
+	const addNewPromptSuggestion = () => {
+		if (
+			promptSuggestions.length === 0 ||
+			promptSuggestions.at(-1)?.content.trim() !== '' ||
+			promptSuggestions.at(-1)?.title[0].trim() !== ''
+		) {
+			promptSuggestions = [...promptSuggestions, { content: '', title: ['', ''] }];
+		} else {
+			toast.info($i18n.t('Please fill the last empty prompt suggestion before adding a new one.'));
+		}
+	};
+
+	$: hasValidPromptSuggestions = promptSuggestions.some(
+		(p) => p.title[0]?.trim() !== '' && p.content?.trim() !== ''
+	);
 </script>
 
 {#if taskConfig}
 	<form
 		class="flex flex-col h-full justify-between space-y-3 text-sm"
-		on:submit|preventDefault={() => {
-			updateInterfaceHandler();
-			dispatch('save');
-		}}
+		on:submit|preventDefault={updateInterfaceHandler}
 	>
-		<div class="  overflow-y-scroll scrollbar-hidden h-full pr-1.5">
+		<div class="overflow-y-scroll scrollbar-hidden h-full pr-1.5">
 			<div class="mb-3.5">
 				<div class=" mb-2.5 text-base font-medium">{$i18n.t('Tasks')}</div>
-
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
-
 				<div class=" mb-1 font-medium flex items-center">
 					<div class=" text-xs mr-1">{$i18n.t('Set Task Model')}</div>
 					<Tooltip
@@ -97,7 +286,6 @@
 						</svg>
 					</Tooltip>
 				</div>
-
 				<div class=" mb-2.5 flex w-full gap-2">
 					<div class="flex-1">
 						<div class=" text-xs mb-1">{$i18n.t('Local Models')}</div>
@@ -107,14 +295,13 @@
 							placeholder={$i18n.t('Select a model')}
 						>
 							<option value="" selected>{$i18n.t('Current Model')}</option>
-							{#each $models.filter((m) => m.owned_by === 'ollama') as model}
+							{#each $models.filter((m) => m.owned_by === 'ollama') as model (model.id)}
 								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
 									{model.name}
 								</option>
 							{/each}
 						</select>
 					</div>
-
 					<div class="flex-1">
 						<div class=" text-xs mb-1">{$i18n.t('External Models')}</div>
 						<select
@@ -123,7 +310,7 @@
 							placeholder={$i18n.t('Select a model')}
 						>
 							<option value="" selected>{$i18n.t('Current Model')}</option>
-							{#each $models as model}
+							{#each $models as model (model.id)}
 								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
 									{model.name}
 								</option>
@@ -131,19 +318,15 @@
 						</select>
 					</div>
 				</div>
-
 				<div class="mb-2.5 flex w-full items-center justify-between">
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Title Generation')}
 					</div>
-
 					<Switch bind:state={taskConfig.ENABLE_TITLE_GENERATION} />
 				</div>
-
 				{#if taskConfig.ENABLE_TITLE_GENERATION}
 					<div class="mb-2.5">
 						<div class=" mb-1 text-xs font-medium">{$i18n.t('Title Generation Prompt')}</div>
-
 						<Tooltip
 							content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 							placement="top-start"
@@ -157,19 +340,15 @@
 						</Tooltip>
 					</div>
 				{/if}
-
 				<div class="mb-2.5 flex w-full items-center justify-between">
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Tags Generation')}
 					</div>
-
 					<Switch bind:state={taskConfig.ENABLE_TAGS_GENERATION} />
 				</div>
-
 				{#if taskConfig.ENABLE_TAGS_GENERATION}
 					<div class="mb-2.5">
 						<div class=" mb-1 text-xs font-medium">{$i18n.t('Tags Generation Prompt')}</div>
-
 						<Tooltip
 							content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 							placement="top-start"
@@ -183,26 +362,20 @@
 						</Tooltip>
 					</div>
 				{/if}
-
 				<div class="mb-2.5 flex w-full items-center justify-between">
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Retrieval Query Generation')}
 					</div>
-
 					<Switch bind:state={taskConfig.ENABLE_RETRIEVAL_QUERY_GENERATION} />
 				</div>
-
 				<div class="mb-2.5 flex w-full items-center justify-between">
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Web Search Query Generation')}
 					</div>
-
 					<Switch bind:state={taskConfig.ENABLE_SEARCH_QUERY_GENERATION} />
 				</div>
-
 				<div class="mb-2.5">
 					<div class=" mb-1 text-xs font-medium">{$i18n.t('Query Generation Prompt')}</div>
-
 					<Tooltip
 						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 						placement="top-start"
@@ -215,39 +388,35 @@
 						/>
 					</Tooltip>
 				</div>
-
 				<div class="mb-2.5 flex w-full items-center justify-between">
 					<div class=" self-center text-xs font-medium">
 						{$i18n.t('Autocomplete Generation')}
 					</div>
-
 					<Tooltip content={$i18n.t('Enable autocomplete generation for chat messages')}>
 						<Switch bind:state={taskConfig.ENABLE_AUTOCOMPLETE_GENERATION} />
 					</Tooltip>
 				</div>
-
 				{#if taskConfig.ENABLE_AUTOCOMPLETE_GENERATION}
 					<div class="mb-2.5">
 						<div class=" mb-1 text-xs font-medium">
 							{$i18n.t('Autocomplete Generation Input Max Length')}
 						</div>
-
 						<Tooltip
 							content={$i18n.t('Character limit for autocomplete generation input')}
 							placement="top-start"
 						>
 							<input
-								class="w-full outline-hidden bg-transparent"
+								type="number"
+								min="-1"
+								class="w-full outline-hidden bg-transparent border border-gray-100 dark:border-gray-800 rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850"
 								bind:value={taskConfig.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH}
 								placeholder={$i18n.t('-1 for no limit, or a positive integer for a specific limit')}
 							/>
 						</Tooltip>
 					</div>
 				{/if}
-
 				<div class="mb-2.5">
 					<div class=" mb-1 text-xs font-medium">{$i18n.t('Image Prompt Generation Prompt')}</div>
-
 					<Tooltip
 						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 						placement="top-start"
@@ -260,10 +429,8 @@
 						/>
 					</Tooltip>
 				</div>
-
 				<div class="mb-2.5">
 					<div class=" mb-1 text-xs font-medium">{$i18n.t('Tools Function Calling Prompt')}</div>
-
 					<Tooltip
 						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 						placement="top-start"
@@ -280,20 +447,17 @@
 
 			<div class="mb-3.5">
 				<div class=" mb-2.5 text-base font-medium">{$i18n.t('UI')}</div>
-
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
-
 				<div class="  {banners.length > 0 ? ' mb-3' : ''}">
 					<div class="mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-sm font-semibold">
 							{$i18n.t('Banners')}
 						</div>
-
 						<button
 							class="p-1 px-3 text-xs flex rounded-sm transition"
 							type="button"
 							on:click={() => {
-								if (banners.length === 0 || banners.at(-1).content !== '') {
+								if (banners.length === 0 || banners.at(-1)?.content.trim() !== '') {
 									banners = [
 										...banners,
 										{
@@ -305,6 +469,8 @@
 											timestamp: Math.floor(Date.now() / 1000)
 										}
 									];
+								} else {
+									toast.info($i18n.t('Please fill the last empty banner before adding a new one.'));
 								}
 							}}
 						>
@@ -320,9 +486,8 @@
 							</svg>
 						</button>
 					</div>
-
 					<div class=" flex flex-col space-y-1">
-						{#each banners as banner, bannerIdx}
+						{#each banners as banner, bannerIdx (banner.id)}
 							<div class=" flex justify-between">
 								<div
 									class="flex flex-row flex-1 border rounded-xl border-gray-100 dark:border-gray-850"
@@ -333,29 +498,34 @@
 										required
 									>
 										{#if banner.type == ''}
-											<option value="" selected disabled class="text-gray-900"
+											<option value="" selected disabled class="text-gray-900 dark:text-gray-100"
 												>{$i18n.t('Type')}</option
 											>
 										{/if}
-										<option value="info" class="text-gray-900">{$i18n.t('Info')}</option>
-										<option value="warning" class="text-gray-900">{$i18n.t('Warning')}</option>
-										<option value="error" class="text-gray-900">{$i18n.t('Error')}</option>
-										<option value="success" class="text-gray-900">{$i18n.t('Success')}</option>
+										<option value="info" class="text-gray-900 dark:text-gray-100"
+											>{$i18n.t('Info')}</option
+										>
+										<option value="warning" class="text-gray-900 dark:text-gray-100"
+											>{$i18n.t('Warning')}</option
+										>
+										<option value="error" class="text-gray-900 dark:text-gray-100"
+											>{$i18n.t('Error')}</option
+										>
+										<option value="success" class="text-gray-900 dark:text-gray-100"
+											>{$i18n.t('Success')}</option
+										>
 									</select>
-
 									<input
 										class="pr-5 py-1.5 text-xs w-full bg-transparent outline-hidden"
 										placeholder={$i18n.t('Content')}
 										bind:value={banner.content}
 									/>
-
 									<div class="relative top-1.5 -left-2">
 										<Tooltip content={$i18n.t('Dismissible')} className="flex h-fit items-center">
 											<Switch bind:state={banner.dismissible} />
 										</Tooltip>
 									</div>
 								</div>
-
 								<button
 									class="px-2"
 									type="button"
@@ -380,36 +550,95 @@
 					</div>
 				</div>
 
-				{#if $user?.role === 'admin'}
+				{#if $user.role === 'admin'}
 					<div class=" space-y-3">
-						<div class="flex w-full justify-between mb-2">
+						<div class="flex w-full justify-between items-center mb-2">
 							<div class=" self-center text-sm font-semibold">
 								{$i18n.t('Default Prompt Suggestions')}
 							</div>
 
-							<button
-								class="p-1 px-3 text-xs flex rounded-sm transition"
-								type="button"
-								on:click={() => {
-									if (promptSuggestions.length === 0 || promptSuggestions.at(-1).content !== '') {
-										promptSuggestions = [...promptSuggestions, { content: '', title: ['', ''] }];
-									}
-								}}
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 20 20"
-									fill="currentColor"
-									class="w-4 h-4"
-								>
-									<path
-										d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-									/>
-								</svg>
-							</button>
+							<div class="flex space-x-2">
+								<Tooltip content={$i18n.t('Add New Prompt Suggestion')}>
+									<button
+										class="p-1 px-2 text-xs flex items-center justify-center rounded-md transition bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+										type="button"
+										aria-label={$i18n.t('Add New Prompt Suggestion')}
+										on:click={addNewPromptSuggestion}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+											/>
+										</svg>
+										<span class="ml-1 hidden sm:inline">{$i18n.t('Add')}</span>
+									</button>
+								</Tooltip>
+
+								<input
+									type="file"
+									bind:this={fileInput}
+									on:change={handleFileImport}
+									accept=".json"
+									class="hidden"
+									aria-hidden="true"
+								/>
+
+								<Tooltip content={$i18n.t('Import Prompt Suggestions from JSON')}>
+									<button
+										class="p-1 px-2 text-xs flex items-center justify-center rounded-md transition bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+										type="button"
+										aria-label={$i18n.t('Import Prompt Suggestions from JSON')}
+										on:click={triggerImport}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v4.59L7.3 9.7a.75.75 0 0 0-1.1 1.02l3.25 3.5a.75.75 0 0 0 1.1 0l3.25-3.5a.75.75 0 1 0-1.1-1.02l-1.95 2.1V6.75Z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+										<span class="ml-1 hidden sm:inline">{$i18n.t('Import')}</span>
+									</button>
+								</Tooltip>
+
+								<Tooltip content={$i18n.t('Export Prompt Suggestions to JSON')}>
+									<button
+										class="p-1 px-2 text-xs flex items-center justify-center rounded-md transition bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+										type="button"
+										aria-label={$i18n.t('Export Prompt Suggestions to JSON')}
+										on:click={exportPromptSuggestions}
+										disabled={!promptSuggestions || promptSuggestions.length === 0}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												fill-rule="evenodd"
+												d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-.75-6.75a.75.75 0 0 0 1.5 0V6.59l1.95 2.1a.75.75 0 1 0 1.1-1.02l-3.25-3.5a.75.75 0 0 0-1.1 0l-3.25 3.5a.75.75 0 1 0 1.1 1.02l1.95-2.1v4.66Z"
+												clip-rule="evenodd"
+											/>
+										</svg>
+										<span class="ml-1 hidden sm:inline">{$i18n.t('Export')}</span>
+									</button>
+								</Tooltip>
+							</div>
 						</div>
+
 						<div class="grid lg:grid-cols-2 flex-col gap-1.5">
-							{#each promptSuggestions as prompt, promptIdx}
+							{#each promptSuggestions as prompt, promptIdx (promptIdx)}
 								<div
 									class=" flex border border-gray-100 dark:border-none dark:bg-gray-850 rounded-xl py-1.5"
 								>
@@ -419,15 +648,14 @@
 												class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
 												placeholder={$i18n.t('Title (e.g. Tell me a fun fact)')}
 												bind:value={prompt.title[0]}
+												required
 											/>
-
 											<input
 												class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850"
 												placeholder={$i18n.t('Subtitle (e.g. about the Roman Empire)')}
 												bind:value={prompt.title[1]}
 											/>
 										</div>
-
 										<textarea
 											class="px-3 py-1.5 text-xs w-full bg-transparent outline-hidden border-r border-gray-100 dark:border-gray-850 resize-none"
 											placeholder={$i18n.t(
@@ -435,12 +663,13 @@
 											)}
 											rows="3"
 											bind:value={prompt.content}
+											required
 										/>
 									</div>
-
 									<button
 										class="px-3"
 										type="button"
+										aria-label={$i18n.t('Delete Prompt Suggestion')}
 										on:click={() => {
 											promptSuggestions.splice(promptIdx, 1);
 											promptSuggestions = promptSuggestions;
@@ -450,7 +679,7 @@
 											xmlns="http://www.w3.org/2000/svg"
 											viewBox="0 0 20 20"
 											fill="currentColor"
-											class="w-4 h-4"
+											class="w-4 h-4 text-gray-500 hover:text-red-500"
 										>
 											<path
 												d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
@@ -462,7 +691,7 @@
 						</div>
 
 						{#if promptSuggestions.length > 0}
-							<div class="text-xs text-left w-full mt-2">
+							<div class="text-xs text-left w-full mt-2 text-gray-500 dark:text-gray-400">
 								{$i18n.t('Adjusting these settings will apply changes universally to all users.')}
 							</div>
 						{/if}
