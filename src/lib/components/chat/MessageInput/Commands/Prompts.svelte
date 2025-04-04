@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { prompts, settings, user } from '$lib/stores';
 	import {
-		findWordIndices,
+		extractCurlyBraceWords,
 		getUserPosition,
 		getFormattedDate,
 		getFormattedTime,
@@ -127,29 +127,32 @@
 		const lastWord = lastLineWords.pop();
 
 		if ($settings?.richTextInput ?? true) {
-			lastLineWords.push(`${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}`);
+			lastLineWords.push(
+				`${text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replaceAll('\n', '<br/>')}`
+			);
+
 			lines.push(lastLineWords.join(' '));
+			prompt = lines.join('<br/>');
 		} else {
 			lastLineWords.push(text);
 			lines.push(lastLineWords.join(' '));
+			prompt = lines.join('\n');
 		}
-
-		prompt = lines.join('\n');
 
 		const chatInputContainerElement = document.getElementById('chat-input-container');
 		const chatInputElement = document.getElementById('chat-input');
 
 		await tick();
 		if (chatInputContainerElement) {
-			chatInputContainerElement.style.height = '';
-			chatInputContainerElement.style.height =
-				Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
+			chatInputContainerElement.scrollTop = chatInputContainerElement.scrollHeight;
 		}
 
 		await tick();
 		if (chatInputElement) {
 			chatInputElement.focus();
 			chatInputElement.dispatchEvent(new Event('input'));
+
+			chatInputElement.scrollTop = chatInputElement.scrollHeight;
 		}
 	};
 </script>

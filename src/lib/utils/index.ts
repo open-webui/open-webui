@@ -361,14 +361,14 @@ export const compareVersion = (latest, current) => {
 			}) < 0;
 };
 
-export const findWordIndices = (text) => {
-	const regex = /\[([^\]]+)\]/g;
+export const extractCurlyBraceWords = (text) => {
+	const regex = /\{\{([^}]+)\}\}/g;
 	const matches = [];
 	let match;
 
 	while ((match = regex.exec(text)) !== null) {
 		matches.push({
-			word: match[1],
+			word: match[1].trim(),
 			startIndex: match.index,
 			endIndex: regex.lastIndex - 1
 		});

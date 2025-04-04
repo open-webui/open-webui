@@ -21,7 +21,12 @@
 		TTSWorker
 	} from '$lib/stores';
 
-	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
+	import {
+		blobToFile,
+		compressImage,
+		createMessagesList,
+		extractCurlyBraceWords
+	} from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { uploadFile } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
@@ -631,6 +636,7 @@
 									{#if $settings?.richTextInput ?? true}
 										<div
 											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
+											id="chat-input-container"
 										>
 											<RichTextInput
 												bind:this={chatInputElement}
@@ -977,7 +983,7 @@
 												}
 
 												if (e.key === 'Tab') {
-													const words = findWordIndices(prompt);
+													const words = extractCurlyBraceWords(prompt);
 
 													if (words.length > 0) {
 														const word = words.at(0);
