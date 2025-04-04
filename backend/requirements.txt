@@ -110,9 +110,6 @@ azure-storage-blob==12.24.1
 ## LDAP
 ldap3==2.9.1
 
-## Firecrawl
-firecrawl-py==1.12.0
-
 sentry-sdk==2.23.1
 
 loguru==0.7.3

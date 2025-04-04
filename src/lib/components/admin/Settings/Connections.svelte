@@ -38,7 +38,7 @@
 	let OPENAI_API_BASE_URLS = [''];
 	let OPENAI_API_CONFIGS = {};
 
-	let ENABLE_OPENAI_API: null | boolean = null;
+	let ENABLE_OPENAI_API: null | boolean = true;
 	let ENABLE_OLLAMA_API: null | boolean = null;
 
 	let directConnectionsConfig = null;
