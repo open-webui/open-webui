@@ -325,27 +325,19 @@ export const userSignUp = async (
 };
 
 export const userSignOut = async () => {
-	let error = null;
-
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signout`, {
 		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json'
-		},
 		credentials: 'include'
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res;
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
+	});
 
-	if (error) {
-		throw error;
+	if (!res.ok) {
+		let detail;
+
+		try {
+			detail = (await res.json())?.detail;
+		} catch (e) { /* don't try to recover if server errors are no JSON */ }
+
+		throw new Error(detail ?? `Request failed with no details: ${res.status} ${res.statusText}`);
 	}
 };
 
