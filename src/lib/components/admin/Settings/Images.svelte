@@ -312,7 +312,6 @@
 				}
 			);
 
-			toast.success('Settings saved successfully.');
 			getModels(); // Refresh models list if applicable
 			dispatch('save');
 		} catch (error) {
