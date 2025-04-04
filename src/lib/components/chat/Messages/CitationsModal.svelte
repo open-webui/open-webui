@@ -98,7 +98,7 @@
 												: `#`}
 										target="_blank"
 									>
-										{document?.metadata?.name ?? document.source.name}
+										{decodeURIComponent(document?.metadata?.name ?? document.source.name)}
 									</a>
 									{#if document?.metadata?.page}
 										<span class="text-xs text-gray-500 dark:text-gray-400">
@@ -128,11 +128,11 @@
 													{percentage.toFixed(2)}%
 												</span>
 												<span class="text-gray-500 dark:text-gray-500">
-													({document.distance.toFixed(4)})
+													({(document?.distance ?? 0).toFixed(4)})
 												</span>
 											{:else}
 												<span class="text-gray-500 dark:text-gray-500">
-													{document.distance.toFixed(4)}
+													{(document?.distance ?? 0).toFixed(4)}
 												</span>
 											{/if}
 										</div>
