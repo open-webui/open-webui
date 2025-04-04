@@ -26,8 +26,6 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 - 🌲 **GAIA Integration**: Seamless connection with AMD's GAIA solution, providing enhanced performance for AMD hardware users. Run AI models efficiently on AMD GPUs and NPUS mode through the same intuitive interface you use for other backends like Ollama, with optimized resource utilization and acceleration features specific to AMD architecture. No AMD CPU, GPU or NPU, we got you covered! Check out the [Architecture Docs](docs/architecture.md) for more information.
 
-- 🚀 **Effortless Setup**: Install seamlessly using Docker or Kubernetes (kubectl, kustomize or helm) for a hassle-free experience with support for both `:ollama` and `:cuda` tagged images.
-
 - 🤝 **Lemonade/Ollama/OpenAI API Integration**: Effortlessly integrate OpenAI-compatible APIs for versatile conversations alongside Lemonade 🍋 and Ollama models. Customize the OpenAI API URL to link with **LMStudio, GroqCloud, Mistral, OpenRouter, and more**.
 
 - 🛡️ **Granular Permissions and User Groups**: By allowing administrators to create detailed user roles and permissions, we ensure a secure user environment. This granularity not only enhances security but also allows for customized user experiences, fostering a sense of ownership and responsibility amongst users.
@@ -62,12 +60,6 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 - 🌟 **Continuous Updates**: We are committed to improving Open WebUI with regular updates, fixes, and new features.
 
-Want to learn more about Open WebUI's features? Check out our [Open WebUI documentation](https://docs.openwebui.com/features) for a comprehensive overview!
-
-## 🔗 Also Check Out Open WebUI Community!
-
-Don't forget to explore our sibling project, [Open WebUI Community](https://openwebui.com/), where you can discover, download, and explore customized Modelfiles. Open WebUI Community offers a wide range of exciting possibilities for enhancing your chat interactions with Open WebUI! 🚀
-
 ## How to Install 🚀
 
 ### Intallation with [GAIA](https://github.com/aigdat/gaia)
@@ -76,42 +68,7 @@ This version of OpenWebUI is installed in conjunction with [GAIA](https://github
 
 ### Installation via Python pip 🐍
 
-### Troubleshooting
-
-Encountering connection issues? Our [Open WebUI Documentation](https://docs.openwebui.com/troubleshooting/) has got you covered. For further assistance and to join our vibrant community, visit the [Open WebUI Discord](https://discord.gg/5rJgQTnV4s).
-
 #### Open WebUI: Server Connection Error
-
-If you're experiencing connection issues, it's often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
-
-**Example Docker Command**:
-
-```bash
-docker run -d --network=host -v open-webui:/app/backend/data -e OLLAMA_BASE_URL=http://127.0.0.1:11434 --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-```
-
-### Keeping Your Docker Installation Up-to-Date
-
-In case you want to update your local Docker installation to the latest version, you can do it with [Watchtower](https://containrrr.dev/watchtower/):
-
-```bash
-docker run --rm --volume /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower --run-once open-webui
-```
-
-In the last part of the command, replace `open-webui` with your container name if it is different.
-
-Check our Updating Guide available in our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/updating).
-
-### Using the Dev Branch 🌙
-
-> [!WARNING]
-> The `:dev` branch contains the latest unstable features and changes. Use it at your own risk as it may have bugs or incomplete features.
-
-If you want to try out the latest bleeding-edge features and are okay with occasional instability, you can use the `:dev` tag like this:
-
-```bash
-docker run -d -p 3000:8080 -v open-webui:/app/backend/data --name open-webui --add-host=host.docker.internal:host-gateway --restart always ghcr.io/open-webui/open-webui:dev
-```
 
 ### Offline Mode
 
@@ -121,29 +78,9 @@ If you are running Open WebUI in an offline environment, you can set the `HF_HUB
 export HF_HUB_OFFLINE=1
 ```
 
-## What's Next? 🌟
-
-Discover upcoming features on our roadmap in the [Open WebUI Documentation](https://docs.openwebui.com/roadmap/).
-
 ## License 📜
 
 This project is licensed under the [BSD-3-Clause License](LICENSE) - see the [LICENSE](LICENSE) file for details. 📄
-
-## Support 💬
-
-If you have any questions, suggestions, or need assistance, please open an issue or join our
-[Open WebUI Discord community](https://discord.gg/5rJgQTnV4s) to connect with us! 🤝
-
-## Star History
-
-<a href="https://star-history.com/#open-webui/open-webui&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
-  </picture>
-</a>
-
 ---
 
 Created by [Timothy Jaeryang Baek](https://github.com/tjbck) - Let's make Open WebUI even more amazing together! 💪

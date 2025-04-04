@@ -22,6 +22,34 @@ body:
         - label: I've taken a look at existing issues and discussions
           required: false
 
+  - type: input
+    id: raux-version
+    attributes:
+      label: Which version of RAUX are you using?
+      description: For example, v0.1.1 - don't worry if you're not sure!
+    validations:
+      required: false
+
+  - type: textarea
+    id: bug-details
+    attributes:
+      label: What's happening?
+      description: Tell us what you were trying to do, what actually happened, and how we can reproduce it
+      placeholder: |
+        Expected behavior:
+        For example, "I expected RAUX to..."
+        
+        Actual behavior:
+        For example, "Instead of working, I saw..."
+        
+        Steps to reproduce:
+        1. Open RAUX
+        2. Click on '...'
+        3. Try to '...'
+        4. See error '...'
+    validations:
+      required: false
+
   - type: dropdown
     id: installation-method
     attributes:
@@ -31,32 +59,6 @@ body:
         - Standalone Installer
         - Coupled with GAIA
         - Git Clone
-    validations:
-      required: false
-
-  - type: input
-    id: raux-version
-    attributes:
-      label: Which version of RAUX are you using?
-      description: For example, v0.1.1 - don't worry if you're not sure!
-    validations:
-      required: false
-
-  - type: input
-    id: ollama-version
-    attributes:
-      label: Ollama Version (if applicable)
-      description: If you're using Ollama, which version?
-      placeholder: For example, v0.2.0
-    validations:
-      required: false
-
-  - type: input
-    id: lemonade-version
-    attributes:
-      label: Lemonade Version (if applicable)
-      description: If you're using Lemonade, which version?
-      placeholder: For example, v6.4.1
     validations:
       required: false
 
@@ -75,71 +77,6 @@ body:
       label: Browser (if applicable)
       description: If this is a web interface issue, which browser are you using?
       placeholder: For example, Chrome 120, Firefox 115
-    validations:
-      required: false
-
-  - type: checkboxes
-    id: confirmation
-    attributes:
-      label: Quick Confirmation
-      description: Just to help us help you better
-      options:
-        - label: I've taken a look at the README.md guide
-          required: false
-        - label: I can share steps to reproduce what I'm seeing
-          required: false
-
-  - type: textarea
-    id: expected-behavior
-    attributes:
-      label: What did you expect to happen?
-      description: Tell us what you were trying to do
-      placeholder: For example, "I expected RAUX to..."
-    validations:
-      required: false
-
-  - type: textarea
-    id: actual-behavior
-    attributes:
-      label: What actually happened?
-      description: Share what you observed instead
-      placeholder: For example, "Instead of working, I saw..."
-    validations:
-      required: false
-
-  - type: textarea
-    id: reproduction-steps
-    attributes:
-      label: How can we see what you're seeing?
-      description: If you can, walk us through the steps
-      placeholder: |
-        For example:
-        1. Open RAUX
-        2. Click on '...'
-        3. Try to '...'
-        4. See error '...'
-    validations:
-      required: false
-
-  - type: textarea
-    id: logs-screenshots
-    attributes:
-      label: Any error messages or screenshots to share?
-      description: These really help us understand what's happening
-      placeholder: |
-        Helpful things to share if you have them:
-        - Full browser screenshots of the issue
-        - Error messages you saw
-        - Log files (if you know where to find them)
-    validations:
-      required: false
-
-  - type: textarea
-    id: additional-info
-    attributes:
-      label: Anything else you'd like to share?
-      description: Feel free to add any other details that might help
-      placeholder: Any other context or information you think might be relevant
     validations:
       required: false
 
