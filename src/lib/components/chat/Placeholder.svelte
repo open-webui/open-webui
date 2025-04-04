@@ -40,6 +40,7 @@
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
 	export let isMagicLoading;
+	export let initNewChatCompleted;
 
 	let models = [];
 
@@ -189,7 +190,7 @@
 			
 			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">	
 				<div class="px-2.5 mb-2.5 flex justify-between">
-					<ModelSelector bind:selectedModels showSetDefault={!history.currentId} />
+					<ModelSelector {initNewChatCompleted} bind:selectedModels showSetDefault={!history.currentId} />
 					<div class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-md dark:bg-customGray-800">
 						<BookIcon/>
 						<a

@@ -137,6 +137,7 @@
 	let files = [];
 	let params = {};
 	let isMagicLoading = false;
+	let initNewChatCompleted = false;
 
 	$: if (chatIdProp) {
 		(async () => {
@@ -398,6 +399,7 @@
 			chatIdUnsubscriber = chatId.subscribe(async (value) => {
 				if (!value) {
 					await initNewChat();
+					initNewChatCompleted = true;
 				}
 			});
 		} else {
@@ -1991,7 +1993,7 @@
 
 						<div class=" pb-[1rem] max-w-[980px] mx-auto w-full">
 							<div class="px-3 mb-2.5 flex items-center justify-between">
-								<ModelSelector bind:selectedModels showSetDefault={!history.currentId} />
+								<ModelSelector {initNewChatCompleted} bind:selectedModels showSetDefault={!history.currentId} />
 								<div
 									class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-md dark:bg-customGray-800"
 								>
@@ -2046,7 +2048,6 @@
 									}
 								}}
 								on:magicPrompt={async (e) => {
-									console.log('🔥 magicPrompt from child:', e.detail);
 									if (e.detail) {
 										await tick();
 										submitMagicPrompt(
@@ -2068,7 +2069,8 @@
 						<div class="overflow-auto w-full h-full flex items-center">
 							<Placeholder
 								{history}
-								{selectedModels}
+								{initNewChatCompleted}
+								bind:selectedModels
 								bind:files
 								bind:prompt
 								bind:autoScroll
