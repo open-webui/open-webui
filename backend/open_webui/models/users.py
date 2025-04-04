@@ -184,8 +184,14 @@ class UsersTable:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [UserModel.model_validate(user) for user in users]
 
-    def get_num_users(self) -> Optional[int]:
+    def get_user_domains(self) -> list[str]:
         with get_db() as db:
+            return [domain[0] for domain in db.query(User.domain).distinct().all()]
+
+    def get_num_users(self, domain: Optional[str] = None) -> Optional[int]:
+        with get_db() as db:
+            if domain:
+                return db.query(User).filter_by(domain=domain).count()
             return db.query(User).count()
 
     def get_first_user(self) -> UserModel:
@@ -247,6 +253,21 @@ class UsersTable:
 
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
+        except Exception:
+            return None
+
+    def get_daily_users_number(
+        self, days: int = 1, domain: Optional[str] = None
+    ) -> Optional[int]:
+        try:
+            with get_db() as db:
+                start_time = int(time.time()) - (days * 24 * 60 * 60)
+                query = db.query(User).filter(User.last_active_at >= start_time)
+
+                if domain:
+                    query = query.filter(User.domain == domain)
+
+                return query.count()
         except Exception:
             return None
 

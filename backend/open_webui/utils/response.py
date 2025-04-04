@@ -24,7 +24,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
         usage = None
         if done:
             usage = {
-                "response_token/s": (
+                "completion_tokens": (
                     round(
                         (
                             (
@@ -38,7 +38,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
                     if data.get("eval_duration", 0) > 0
                     else "N/A"
                 ),
-                "prompt_token/s": (
+                "prompt_tokens": (
                     round(
                         (
                             (
@@ -50,6 +50,54 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
                         2,
                     )
                     if data.get("prompt_eval_duration", 0) > 0
+                    else "N/A"
+                ),
+                "total_tokens": (
+                    round(
+                        (
+                            (
+                                round(
+                                    (
+                                        (
+                                            data.get("eval_count", 0)
+                                            / (
+                                                (
+                                                    data.get("eval_duration", 0)
+                                                    / 10_000_000
+                                                )
+                                            )
+                                        )
+                                        * 100
+                                    ),
+                                    2,
+                                )
+                                if data.get("eval_duration", 0) > 0
+                                else 0
+                            )
+                            + (
+                                round(
+                                    (
+                                        (
+                                            data.get("prompt_eval_count", 0)
+                                            / (
+                                                (
+                                                    data.get("prompt_eval_duration", 0)
+                                                    / 10_000_000
+                                                )
+                                            )
+                                        )
+                                        * 100
+                                    ),
+                                    2,
+                                )
+                                if data.get("prompt_eval_duration", 0) > 0
+                                else 0
+                            )
+                        ),
+                        2,
+                    )
+                    if data.get("eval_duration", 0) > 0
+                    or data.get("prompt_eval_duration", 0) > 0
                     else "N/A"
                 ),
                 "total_duration": data.get("total_duration", 0),

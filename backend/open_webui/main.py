@@ -66,6 +66,7 @@ from open_webui.routers import (
     files,
     functions,
     memories,
+    metrics,
     models,
     knowledge,
     prompts,
@@ -822,6 +823,7 @@ app.include_router(
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(jira.router, prefix="/api/v1/jira", tags=["jira"])
+app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["metrics"])
 
 
 ##################################
