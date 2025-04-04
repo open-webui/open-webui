@@ -28,6 +28,11 @@ jobs:
             cat <<EOT > .env
 OPEN_WEBUI_PORT=${{ secrets.OPEN_WEBUI_PORT }}
 WEBUI_DOCKER_TAG=main
+OPEN_WEBUI_PORT=3000
+USE_OLLAMA_DOCKER=false
+CORS_ALLOW_ORIGIN=http://localhost:3000;http://10.89.211.27:3000;http://10.89.211.27:80;http://localhost:5173
+DEFAULT_VALID_UST_API_KEY=${{ secrets.DEFAULT_VALID_UST_API_KEY }}
+ENABLE_OPENAI_API=true
 EOT
 
             echo "📦 Pulling and deploying Docker Compose..."
