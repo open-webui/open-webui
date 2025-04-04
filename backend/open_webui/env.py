@@ -466,5 +466,5 @@ DISABLE_OPENAI_SSL_VERIFICATION = (
     os.environ.get("DISABLE_OPENAI_SSL_VERIFICATION", "false").lower() == "true"
 )
 DISABLE_OLLAMA_SSL_VERIFICATION = (
-    os.environ.get("DISABLE_OPENAI_SSL_VERIFICATION", "false").lower() == "true"
+    os.environ.get("DISABLE_OLLAMA_SSL_VERIFICATION", "false").lower() == "true"
 )
