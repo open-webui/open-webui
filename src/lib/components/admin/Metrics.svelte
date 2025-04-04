@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import Chart from 'chart.js/auto';
+	// import Chart from 'chart.js/auto';
 	import {
 		getDailyPrompts,
 		getDailyTokens,
