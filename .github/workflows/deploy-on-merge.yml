@@ -26,7 +26,7 @@ jobs:
       - name: Deploy via Docker Compose (Tailscale IP)
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.TAILSCALE_SERVER_IP }} "
-            cd /path/to/your/project
+            cd /home/mergefeat/hkust-open-webui
 
             export OPENAI_API_KEY='${{ secrets.OPENAI_API_KEY }}'
             export OPENAI_API_BASE_URL='${{ secrets.OPENAI_API_BASE_URL }}'
