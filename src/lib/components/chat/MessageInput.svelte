@@ -1210,9 +1210,9 @@
 											<Tooltip content={$i18n.t('Magic prompt')}>
 												<button
 													id="magic-search-button"
-													class={`${isMagicLoading ? 'dark:bg-customBlue-700/60' : ''} text-gray-600 dark:text-gray-300 text-2xs hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition rounded-md p-[3px] mr-0.5 self-center`}
+													class={`${isMagicLoading ? 'dark:bg-customBlue-700/60' : ''} text-gray-600 dark:text-gray-300 text-2xs leading-none hover:text-gray-700 dark:hover:text-white ${!isMagicLoading? 'dark:hover:bg-customGray-900' : ''}  transition rounded-md py-[3px] px-[5px] mr-0.5 self-center`}
 													type="button"
-													aria-label="Voice Input"
+													aria-label="Magic Prompt"
 													disabled={prompt === '' || isMagicLoading}
 													on:click|preventDefault={() => {
 														dispatch('magicPrompt', prompt);
@@ -1351,22 +1351,38 @@
 											<div class=" flex items-center">
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
-														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1"
+														class=" text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1"
 														on:click={() => {
 															stopResponse();
 														}}
 													>
 														<svg
+															width="13"
+															height="13"
+															viewBox="0 0 13 13"
+															fill="none"
 															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 24 24"
-															fill="currentColor"
-															class="size-2"
 														>
 															<path
-																fill-rule="evenodd"
-																d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
-																clip-rule="evenodd"
+																d="M0 6.5C-1.27195e-08 7.35359 0.168127 8.19883 0.494783 8.98744C0.821438 9.77606 1.30023 10.4926 1.90381 11.0962C2.50739 11.6998 3.22394 12.1786 4.01256 12.5052C4.80117 12.8319 5.64641 13 6.5 13C7.35359 13 8.19883 12.8319 8.98744 12.5052C9.77606 12.1786 10.4926 11.6998 11.0962 11.0962C11.6998 10.4926 12.1786 9.77606 12.5052 8.98744C12.8319 8.19883 13 7.35359 13 6.5C13 5.64641 12.8319 4.80117 12.5052 4.01256C12.1786 3.22394 11.6998 2.50739 11.0962 1.90381C10.4926 1.30023 9.77606 0.821438 8.98744 0.494783C8.19883 0.168127 7.35359 0 6.5 0C5.64641 0 4.80117 0.168127 4.01256 0.494783C3.22394 0.821438 2.50739 1.30023 1.90381 1.90381C1.30023 2.50739 0.821438 3.22394 0.494783 4.01256C0.168127 4.80117 -1.27195e-08 5.64641 0 6.5Z"
+																fill="white"
 															/>
+															<g clip-path="url(#clip0_495_25245)">
+																<path
+																	d="M3.79175 4.56483C3.79175 4.3596 3.87327 4.16278 4.01839 4.01766C4.16351 3.87254 4.36033 3.79102 4.56556 3.79102H8.43461C8.63983 3.79102 8.83665 3.87254 8.98177 4.01766C9.12689 4.16278 9.20842 4.3596 9.20842 4.56483V8.43387C9.20842 8.6391 9.12689 8.83592 8.98177 8.98104C8.83665 9.12616 8.63983 9.20768 8.43461 9.20768H4.56556C4.36033 9.20768 4.16351 9.12616 4.01839 8.98104C3.87327 8.83592 3.79175 8.6391 3.79175 8.43387V4.56483Z"
+																	fill="#272525"
+																/>
+															</g>
+															<defs>
+																<clipPath id="clip0_495_25245">
+																	<rect
+																		width="9.28571"
+																		height="9.28571"
+																		fill="white"
+																		transform="translate(1.85718 1.85645)"
+																	/>
+																</clipPath>
+															</defs>
 														</svg>
 													</button>
 												</Tooltip>
