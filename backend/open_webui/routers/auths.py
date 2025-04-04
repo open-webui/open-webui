@@ -19,12 +19,14 @@ from open_webui.models.auths import (
     UserResponse,
 )
 from open_webui.models.users import Users
+from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
     WEBUI_AUTH,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
+    WEBUI_AUTH_TRUSTED_GROUP_HEADER,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
     SRC_LOG_LEVELS,
@@ -346,6 +348,15 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
                 ),
             )
         user = Auths.authenticate_user_by_trusted_header(trusted_email)
+
+        # Sync groups if using trusted header and user is not admin
+        if WEBUI_AUTH_TRUSTED_GROUP_HEADER and user and user.role != "admin":
+            update_trusted_header_user_groups(
+                user=user,
+                request=request,
+                default_permissions=request.app.state.config.USER_PERMISSIONS
+            )
+
     elif WEBUI_AUTH == False:
         admin_email = "admin@localhost"
         admin_password = "admin"
@@ -859,3 +870,91 @@ async def get_api_key(user=Depends(get_current_user)):
         }
     else:
         raise HTTPException(404, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+
+
+################################################
+# Sync Trusted Header User Groups
+################################################
+
+def update_trusted_header_user_groups(user, request, default_permissions):
+    """
+    Synchronize user's groups based on trusted auth header group information
+    """
+    log.debug("Running Trusted Header Group management")
+    
+    # Get groups from trusted header
+    trusted_group_header = WEBUI_AUTH_TRUSTED_GROUP_HEADER
+    user_trusted_groups = []
+    
+    if trusted_group_header and trusted_group_header in request.headers:
+        # Assuming groups are comma-separated in the header
+        header_groups = request.headers[trusted_group_header]
+        user_trusted_groups = [g.strip() for g in header_groups.split(';') if g.strip()]
+    
+    user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
+    all_available_groups: list[GroupModel] = Groups.get_groups()
+
+    log.debug(f"Trusted Group Header: {trusted_group_header}")
+    log.debug(f"User trusted groups: {user_trusted_groups}")
+    log.debug(f"User's current groups: {[g.name for g in user_current_groups]}")
+    log.debug(
+        f"All groups available in OpenWebUI: {[g.name for g in all_available_groups]}"
+    )
+
+    # Remove groups that user is no longer a part of
+    for group_model in user_current_groups:
+        if user_trusted_groups and group_model.name not in user_trusted_groups:
+            log.debug(
+                f"Removing user from group {group_model.name} as it is no longer in their trusted header groups"
+            )
+            
+            user_ids = group_model.user_ids
+            user_ids = [i for i in user_ids if i != user.id]
+
+            # Handle case where group has no permissions set
+            group_permissions = group_model.permissions
+            if not group_permissions:
+                group_permissions = default_permissions
+
+            update_form = GroupUpdateForm(
+                name=group_model.name,
+                description=group_model.description,
+                permissions=group_permissions,
+                user_ids=user_ids,
+            )
+            Groups.update_group_by_id(
+                id=group_model.id, 
+                form_data=update_form, 
+                overwrite=False
+            )
+
+    # Add user to new groups from trusted header
+    for group_model in all_available_groups:
+        if (
+            user_trusted_groups 
+            and group_model.name in user_trusted_groups
+            and not any(gm.name == group_model.name for gm in user_current_groups)
+        ):
+            log.debug(
+                f"Adding user to group {group_model.name} as it was found in their trusted header groups"
+            )
+            
+            user_ids = group_model.user_ids
+            user_ids.append(user.id)
+
+            # Handle case where group has no permissions set
+            group_permissions = group_model.permissions
+            if not group_permissions:
+                group_permissions = default_permissions
+
+            update_form = GroupUpdateForm(
+                name=group_model.name,
+                description=group_model.description,
+                permissions=group_permissions,
+                user_ids=user_ids,
+            )
+            Groups.update_group_by_id(
+                id=group_model.id, 
+                form_data=update_form, 
+                overwrite=False
+            )
