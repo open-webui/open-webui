@@ -274,6 +274,8 @@
 			{@html `${token.text}`}
 		{:else if token.text.includes(`<source_id`)}
 			<Source {id} {token} onClick={onSourceClick} />
+		{:else if token.text.includes(`<iframe ytEmbed`)}
+			{@html `${token.text.replace(`<iframe ytEmbed`, `<iframe`)}`}
 		{:else}
 			{token.text}
 		{/if}
