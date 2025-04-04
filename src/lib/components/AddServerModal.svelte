@@ -56,8 +56,8 @@
 		show = false;
 
 		url = '';
-		key = '';
 		path = '/openapi.json';
+		key = '';
 		auth_type = 'bearer';
 
 		enable = true;

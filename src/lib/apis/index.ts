@@ -262,7 +262,7 @@ export const stopTask = async (token: string, id: string) => {
 export const getToolServerData = async (token: string, url: string) => {
 	let error = null;
 
-	const res = await fetch(`${url}/openapi.json`, {
+	const res = await fetch(`${url}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -304,10 +304,13 @@ export const getToolServersData = async (i18n, servers: object[]) => {
 			servers
 				.filter((server) => server?.config?.enable)
 				.map(async (server) => {
-					const data = await getToolServerData(server?.key, server?.url).catch((err) => {
+					const data = await getToolServerData(
+						server?.key,
+						server?.url + (server?.path ?? '/openapi.json')
+					).catch((err) => {
 						toast.error(
 							i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
-								URL: server?.url
+								URL: server?.url + (server?.path ?? '/openapi.json')
 							})
 						);
 						return null;
