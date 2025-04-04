@@ -30,6 +30,7 @@ services:
     restart: unless-stopped
     extra_hosts:
       - host.docker.internal:host-gateway
+    dns: 8.8.8.8
 
 volumes:
   # ollama: {}
