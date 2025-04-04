@@ -34,7 +34,9 @@ jobs:
         run: npm run i18n:parse
 
       - name: Check for Changes After Format
-        run: git diff --exit-code
+        run: |
+    		git diff
+    		git diff --exit-code
 
       - name: Build Frontend
         run: npm run build
