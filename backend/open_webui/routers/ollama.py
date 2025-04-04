@@ -70,6 +70,8 @@ log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 #
 ##########################################
 
+def get_model(model):
+  return model.get("model") or model.get("name")
 
 async def send_get_request(url, key=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
@@ -361,7 +363,7 @@ async def get_all_models(request: Request, user: UserModel = None):
             for idx, model_list in enumerate(model_lists):
                 if model_list is not None:
                     for model in model_list:
-                        id = model["model"]
+                        id = get_model(model)
                         if id not in merged_models:
                             model["urls"] = [idx]
                             merged_models[id] = model
@@ -383,7 +385,7 @@ async def get_all_models(request: Request, user: UserModel = None):
         models = {"models": []}
 
     request.app.state.OLLAMA_MODELS = {
-        model["model"]: model for model in models["models"]
+        get_model(model): model for model in models["models"]
     }
     return models
 
@@ -392,7 +394,7 @@ async def get_filtered_models(models, user):
     # Filter models based on user access control
     filtered_models = []
     for model in models.get("models", []):
-        model_info = Models.get_model_by_id(model["model"])
+        model_info = Models.get_model_by_id(get_model(model))
         if model_info:
             if user.id == model_info.user_id or has_access(
                 user.id, type="read", access_control=model_info.access_control
@@ -1384,7 +1386,7 @@ async def get_openai_models(
         model_list = await get_all_models(request, user=user)
         models = [
             {
-                "id": model["model"],
+                "id": get_model(model),
                 "object": "model",
                 "created": int(time.time()),
                 "owned_by": "openai",
@@ -1402,7 +1404,7 @@ async def get_openai_models(
 
             models = [
                 {
-                    "id": model["model"],
+                    "id": get_model(model),
                     "object": "model",
                     "created": int(time.time()),
                     "owned_by": "openai",
