@@ -1,5 +1,7 @@
 services:
   open-webui:
+    ports:
+      - "8080:8080"
     build:
       context: .
       dockerfile: Dockerfile
@@ -17,7 +19,7 @@ services:
       - host.docker.internal:host-gateway
     restart: unless-stopped
     expose:
-      - 8080
+      - "8080"
 
   nginx:
     build:
