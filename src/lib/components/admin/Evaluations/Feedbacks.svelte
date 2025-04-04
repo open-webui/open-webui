@@ -92,6 +92,11 @@
 	};
 
 	const exportHandler = async () => {
+		if (feedbacks.length === 0) {
+			toast.info($i18n.t('No feedback available to export.'));
+			return;
+		}
+
 		const _feedbacks = await exportAllFeedbacks(localStorage.token).catch((err) => {
 			toast.error(err);
 			return null;
@@ -115,7 +120,7 @@
 		<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{feedbacks.length}</span>
 	</div>
 
-	<div>
+	{#if feedbacks.length > 0}
 		<div>
 			<Tooltip content={$i18n.t('Export')}>
 				<button
@@ -128,7 +133,7 @@
 				</button>
 			</Tooltip>
 		</div>
-	</div>
+	{/if}
 </div>
 
 <div
