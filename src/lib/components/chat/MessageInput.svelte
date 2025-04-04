@@ -55,6 +55,10 @@
 
 	const i18n = getContext('i18n');
 
+	const forcedImageCompressionWidth = $config?.forced_image_compression_size.width ?? null;
+	const forcedImageCompressionHeight = $config?.forced_image_compression_size.height ?? null;
+	const forcedImageCompression = Boolean(forcedImageCompressionWidth) || Boolean(forcedImageCompressionHeight);
+
 	export let transparentBackground = false;
 
 	export let onChange: Function = () => {};
@@ -257,7 +261,10 @@
 				reader.onload = async (event) => {
 					let imageUrl = event.target.result;
 
-					if ($settings?.imageCompression ?? false) {
+					if (forcedImageCompression) {
+						imageUrl = await compressImage(imageUrl, forcedImageCompressionWidth, forcedImageCompressionHeight);
+					}
+					else if ($settings?.imageCompression ?? false) {
 						const width = $settings?.imageCompressionSize?.width ?? null;
 						const height = $settings?.imageCompressionSize?.height ?? null;
 

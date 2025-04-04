@@ -199,6 +199,10 @@ type Config = {
 	default_locale: string;
 	default_models: string;
 	default_prompt_suggestions: PromptSuggestion[];
+	forced_image_compression_size: {
+		width: number;
+		height: number;
+	};
 	features: {
 		auth: boolean;
 		auth_trusted_header: boolean;
