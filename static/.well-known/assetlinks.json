@@ -3,6 +3,6 @@
       "target": {
         "namespace": "android_app",
         "package_name": "dev.aibrary.chat.twa",
-        "sha256_cert_fingerprints": ["1A:BF:3C:36:DD:98:F3:20:6B:2D:7F:CF:1C:41:0A:63:0B:C0:B0:1D:E5:39:1D:F5:78:4C:60:49:5E:63:AD:34"]
+        "sha256_cert_fingerprints": ["8C:C9:C5:9C:C5:F2:EF:64:15:93:71:B3:25:8C:64:C1:A3:19:7D:E8:A8:1B:5C:30:D7:3B:74:FC:7B:0D:0C:25"]
       }
     }]
