@@ -92,10 +92,6 @@
 	};
 
 	const exportHandler = async () => {
-		if (feedbacks.length === 0) {
-			toast.info($i18n.t('No feedback available to export.'));
-			return;
-		}
 
 		const _feedbacks = await exportAllFeedbacks(localStorage.token).catch((err) => {
 			toast.error(err);
