@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.2.0] - 2025-04-04
+
+### Changed
+
+- **⚙️ Help Button Placement**: Moved the help button to the top right menu for easier access and improved user navigation.
+
+### Added
+
+- **🔗 V1 Prompts Importation**: Users can now import their V1 private prompts within their dedicated Prompt Workspace.
+- **📋 Report Issue and Suggestion Forms**: Added forms for reporting issues and submitting suggestions.
+- **🌐 User Domain**: Added user domain for multitenancy.
+- **📊 Usage Metrics Admin Dashboard**: Added an admin dashboard to track usage metrics.
+
+### Fixed
+
+- **🔧 Saving Models Groups RBAC Issue**: Fixed an issue with saving models related to Groups RBAC.
+- **🔧 PWA Manifest**: Fixed an issue with the Progressive Web App (PWA) manifest to ensure proper functionality and compatibility across devices.
+
 ## [0.5.7-ccv2-1.1.2] - 2025-02-27
 
 ### Fix
