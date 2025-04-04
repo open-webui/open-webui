@@ -377,16 +377,26 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 class SPAStaticFiles(StaticFiles):
+    def __init__(self, *args, no_cache_paths, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.no_cache_paths = no_cache_paths
+
     async def get_response(self, path: str, scope):
         try:
-            return await super().get_response(path, scope)
+            res = await super().get_response(path, scope)
+            if path in self.no_cache_paths:
+                res.headers["cache-control"] = "no-cache"
+            return res
         except (HTTPException, StarletteHTTPException) as ex:
             if ex.status_code == 404:
                 if path.endswith(".js"):
                     # Return 404 for javascript files
                     raise ex
                 else:
-                    return await super().get_response("index.html", scope)
+                    res = await super().get_response("index.html", scope)
+                    if "index.html" in self.no_cache_paths:
+                        res.headers["cache-control"] = "no-cache"
+                    return res
             else:
                 raise ex
 
@@ -1443,7 +1453,11 @@ if os.path.exists(FRONTEND_BUILD_DIR):
     mimetypes.add_type("text/javascript", ".js")
     app.mount(
         "/",
-        SPAStaticFiles(directory=FRONTEND_BUILD_DIR, html=True),
+        SPAStaticFiles(
+            directory=FRONTEND_BUILD_DIR,
+            html=True,
+            no_cache_paths=[".", "index.html"]
+        ),
         name="spa-static-files",
     )
 else:
