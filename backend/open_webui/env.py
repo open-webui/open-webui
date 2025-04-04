@@ -460,3 +460,6 @@ OTEL_TRACES_SAMPLER = os.environ.get(
 
 PIP_OPTIONS = os.getenv("PIP_OPTIONS", "").split()
 PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
+
+
+DISABLE_OPENAI_SSL_VERIFICATION = os.environ.get("DISABLE_OPENAI_SSL_VERIFICATION", "false").lower() == "true"
