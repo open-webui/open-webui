@@ -762,6 +762,17 @@ ENABLE_DIRECT_CONNECTIONS = PersistentConfig(
 )
 
 ####################################
+# CONNECTION SSL VERIFICATION
+####################################
+
+DISABLE_OPENAI_SSL_VERIFICATION = os.environ.get(
+    "DISABLE_OPENAI_SSL_VERIFICATION", "false"
+)
+DISABLE_OLLAMA_SSL_VERIFICATION = os.environ.get(
+    "DISABLE_OLLAMA_SSL_VERIFICATION", "false"
+)
+
+####################################
 # OLLAMA_BASE_URL
 ####################################
 

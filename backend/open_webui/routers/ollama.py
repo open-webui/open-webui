@@ -16,10 +16,6 @@ from aiocache import cached
 import requests
 from open_webui.models.users import UserModel
 
-from open_webui.env import (
-    ENABLE_FORWARD_USER_INFO_HEADERS,
-    DISABLE_OLLAMA_SSL_VERIFICATION,
-)
 
 from fastapi import (
     Depends,
@@ -51,13 +47,15 @@ from open_webui.utils.access_control import has_access
 
 from open_webui.config import (
     UPLOAD_DIR,
+    DISABLE_OLLAMA_SSL_VERIFICATION,
 )
 from open_webui.env import (
-    ENV,
-    SRC_LOG_LEVELS,
+    ENABLE_FORWARD_USER_INFO_HEADERS,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     BYPASS_MODEL_ACCESS_CONTROL,
+    ENV,
+    SRC_LOG_LEVELS,
 )
 from open_webui.constants import ERROR_MESSAGES
 
@@ -125,13 +123,13 @@ async def send_post_request(
     key: Optional[str] = None,
     content_type: Optional[str] = None,
     user: UserModel = None,
-    config: Optional[dict] = None,  # Add config param
+    config: Optional[dict] = None,
 ):
     r = None
     disable_ssl = (
-        config.get("disable_ssl_verification", DISABLE_OLLAMA_SSL_VERIFICATION)
+        config.get("disable_ssl_verification", DISABLE_OPENAI_SSL_VERIFICATION)
         if config
-        else DISABLE_OLLAMA_SSL_VERIFICATION
+        else DISABLE_OPENAI_SSL_VERIFICATION
     )
     try:
         session = aiohttp.ClientSession(
@@ -139,7 +137,6 @@ async def send_post_request(
             timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
             connector=aiohttp.TCPConnector(ssl=False) if disable_ssl else None,
         )
-
         r = await session.post(
             url,
             data=payload,
@@ -159,13 +156,10 @@ async def send_post_request(
             },
         )
         r.raise_for_status()
-
         if stream:
             response_headers = dict(r.headers)
-
             if content_type:
                 response_headers["Content-Type"] = content_type
-
             return StreamingResponse(
                 r.content,
                 status_code=r.status,
@@ -178,10 +172,8 @@ async def send_post_request(
             res = await r.json()
             await cleanup_response(r, session)
             return res
-
     except Exception as e:
         detail = None
-
         if r is not None:
             try:
                 res = await r.json()
@@ -189,7 +181,6 @@ async def send_post_request(
                     detail = f"Ollama: {res.get('error', 'Unknown error')}"
             except Exception:
                 detail = f"Ollama: {e}"
-
         raise HTTPException(
             status_code=r.status if r else 500,
             detail=detail if detail else "Open WebUI: Server Connection Error",
@@ -299,7 +290,6 @@ async def update_config(
     request: Request, form_data: OllamaConfigForm, user=Depends(get_admin_user)
 ):
     request.app.state.config.ENABLE_OLLAMA_API = form_data.ENABLE_OLLAMA_API
-
     request.app.state.config.OLLAMA_BASE_URLS = form_data.OLLAMA_BASE_URLS
     request.app.state.config.OLLAMA_API_CONFIGS = form_data.OLLAMA_API_CONFIGS
 

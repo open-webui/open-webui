@@ -105,6 +105,9 @@ from open_webui.config import (
     OPENAI_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
+    # Disable Connection SSL Verification
+    DISABLE_OPENAI_SSL_VERIFICATION,
+    DISABLE_OLLAMA_SSL_VERIFICATION,
     # Code Execution
     ENABLE_CODE_EXECUTION,
     CODE_EXECUTION_ENGINE,
@@ -337,8 +340,6 @@ from open_webui.env import (
     RESET_CONFIG_ON_START,
     OFFLINE_MODE,
     ENABLE_OTEL,
-    DISABLE_OPENAI_SSL_VERIFICATION,
-    DISABLE_OLLAMA_SSL_VERIFICATION,
 )
 
 

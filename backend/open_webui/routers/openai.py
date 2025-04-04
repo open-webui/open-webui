@@ -18,6 +18,7 @@ from starlette.background import BackgroundTask
 
 from open_webui.models.models import Models
 from open_webui.config import (
+    DISABLE_OPENAI_SSL_VERIFICATION,
     CACHE_DIR,
 )
 from open_webui.env import (
@@ -25,12 +26,12 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     BYPASS_MODEL_ACCESS_CONTROL,
-    DISABLE_OPENAI_SSL_VERIFICATION,
+    ENV,
+    SRC_LOG_LEVELS,
 )
 from open_webui.models.users import UserModel
 
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import ENV, SRC_LOG_LEVELS
 
 
 from open_webui.utils.payload import (
@@ -56,7 +57,7 @@ log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 ##########################################
 
 
-async def send_get_request(url, key=None, user: UserModel = None):
+async def send_get_request(url, key=None, user: UserModel = None, config=None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
         async with aiohttp.ClientSession(
