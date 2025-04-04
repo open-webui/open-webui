@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Initialize device type args
 # use build args in the docker build command with --build-arg="BUILDARG=true"
 ARG USE_CUDA=false
@@ -19,13 +20,12 @@ ARG UID=0
 ARG GID=0
 
 ######## WebUI frontend ########
-FROM node:22-alpine3.20 AS build
+FROM --platform=$BUILDPLATFORM node:22-alpine3.20 AS build
 ARG BUILD_HASH
 
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN npm ci
 
 COPY . .
@@ -40,6 +40,7 @@ COPY --from=build /app/build /usr/share/nginx/html
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
 
+# Use args
 ARG USE_CUDA
 ARG USE_OLLAMA
 ARG USE_CUDA_VER
@@ -48,7 +49,7 @@ ARG USE_RERANKING_MODEL
 ARG UID
 ARG GID
 
-# 환경 변수 설정
+## Basis ##
 ENV ENV=prod \
     PORT=8080 \
     # pass build args to the build
@@ -145,21 +146,14 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
 
+EXPOSE 8080
 
-# IIS 서버 추가
-FROM mcr.microsoft.com/windows/servercore/iis AS iis
+HEALTHCHECK CMD curl --silent --fail http://localhost:${PORT:-8080}/health | jq -ne 'input.status == true' || exit 1
 
-# Git 설치
-RUN powershell -Command \
-    Invoke-WebRequest -Uri "https://github.com/git-for-windows/git/releases/latest/download/Git-64-bit.exe" -OutFile "C:\Git-64-bit.exe"; \
-    Start-Process -FilePath "C:\Git-64-bit.exe" -ArgumentList "/VERYSILENT /NORESTART" -Wait; \
-    Remove-Item -Path "C:\Git-64-bit.exe"
+USER $UID:$GID
 
-# GitHub 저장소에서 develop 브랜치 가져오기
-WORKDIR C:\inetpub\wwwroot
-RUN git clone --single-branch --branch develop https://github.com/Merge-Feat/hkust-open-webui.git .
-
-# IIS 포트 개방
-EXPOSE 80
+ARG BUILD_HASH
+ENV WEBUI_BUILD_VERSION=${BUILD_HASH}
+ENV DOCKER=true
 
 CMD [ "bash", "start.sh"]
