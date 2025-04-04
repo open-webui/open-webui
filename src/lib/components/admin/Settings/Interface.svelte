@@ -187,6 +187,7 @@
 				const importedPrompts = (parsedData as ExportedPromptsFile).prompts;
 				const newSuggestions: PromptSuggestion[] = [];
 				let validationError = false;
+				let duplicateCount = 0;
 
 				for (const item of importedPrompts) {
 					if (
@@ -197,12 +198,26 @@
 						typeof item.prompt === 'string' &&
 						item.prompt.trim() !== ''
 					) {
-						const subtitle = typeof item.subtitle === 'string' ? item.subtitle : '';
-						newSuggestions.push({
-							clientId: uuidv4(),
-							title: [item.title, subtitle],
-							content: item.prompt
-						});
+						const title = item.title.trim();
+						const subtitle = (typeof item.subtitle === 'string' ? item.subtitle : '').trim();
+						const promptContent = item.prompt.trim();
+
+						const isDuplicate = promptSuggestions.some(
+							(existing) =>
+								existing.title[0]?.trim() === title &&
+								existing.title[1]?.trim() === subtitle &&
+								existing.content?.trim() === promptContent
+						);
+
+						if (!isDuplicate) {
+							newSuggestions.push({
+								clientId: uuidv4(),
+								title: [title, subtitle],
+								content: promptContent
+							});
+						} else {
+							duplicateCount++;
+						}
 					} else {
 						console.warn('Skipping invalid prompt item during import:', item);
 						validationError = true;
@@ -217,11 +232,30 @@
 							count: newSuggestions.length
 						})
 					);
+					if (duplicateCount > 0) {
+						toast.info(
+							$i18n.t('{{count}} duplicate prompt suggestions were skipped.', {
+								count: duplicateCount
+							})
+						);
+					}
 					if (validationError) {
 						toast.warning($i18n.t('Some prompt items in the file were invalid and were skipped.'));
 					}
 				} else {
-					toast.error($i18n.t('No valid prompt suggestions found in the file.'));
+					if (duplicateCount > 0) {
+						toast.info(
+							$i18n.t('No new suggestions added. {{count}} duplicates were skipped.', {
+								count: duplicateCount
+							})
+						);
+					} else if (validationError) {
+						toast.warning(
+							$i18n.t('No valid prompt suggestions found in the file or all were invalid.')
+						);
+					} else {
+						toast.error($i18n.t('No valid prompt suggestions found in the file.'));
+					}
 				}
 			} catch (error: any) {
 				console.error('Error importing prompt suggestions:', error);
@@ -625,7 +659,7 @@
 										type="button"
 										aria-label={$i18n.t('Export Prompt Suggestions to JSON')}
 										on:click={exportPromptSuggestions}
-										disabled={!promptSuggestions || promptSuggestions.length === 0}
+										disabled={!hasValidPromptSuggestions}
 									>
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
