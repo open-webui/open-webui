@@ -1,0 +1,37 @@
+name: Deploy Open WebUI
+
+on:
+  push:
+    branches: [ "develop" ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy via SSH and Docker Compose
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            set -e
+            cd /home/${USER}/hkust-open-webui
+
+            echo "🔐 Setting up environment variables..."
+            cat <<EOT > .env
+OPEN_WEBUI_PORT=${{ secrets.OPEN_WEBUI_PORT }}
+WEBUI_DOCKER_TAG=main
+EOT
+
+            echo "📦 Pulling and deploying Docker Compose..."
+            docker-compose down
+            docker-compose pull
+            docker-compose up -d --force-recreate
+          EOF
