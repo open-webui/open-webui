@@ -286,6 +286,81 @@ export const userSignIn = async (email: string, password: string) => {
 	return res;
 };
 
+// Step 1: Inizializza la registrazione e ricevi un codice OTP
+export const userSignUpInitiate = async (
+    name: string,
+    email: string,
+    password: string,
+    profile_image_url: string
+) => {
+    let error = null;
+
+    const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signup/initiate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+            name: name,
+            email: email,
+            password: password,
+            profile_image_url: profile_image_url
+        })
+    })
+        .then(async (res) => {
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
+
+    if (error) {
+        throw error;
+    }
+
+    return res;
+};
+
+// Step 2: Verifica l'OTP per completare la registrazione
+export const verifyUserSignUp = async (email: string, otpCode: string) => {
+    let error = null;
+
+    const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signup/verify`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+            email: email,
+            otp_code: otpCode
+        })
+    })
+        .then(async (res) => {
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
+
+    if (error) {
+        throw error;
+    }
+
+    return res;
+};
+
+// Per retrocompatibilità, puoi mantenere la funzione originale ma segnalarla come deprecata
+/**
+ * @deprecated Usa userSignUpInitiate seguito da verifyUserSignUp per implementare la verifica OTP
+ */
 export const userSignUp = async (
 	name: string,
 	email: string,
