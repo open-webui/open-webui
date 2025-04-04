@@ -105,9 +105,6 @@ from open_webui.config import (
     OPENAI_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
-    # Disable Connection SSL Verification
-    DISABLE_OPENAI_SSL_VERIFICATION,
-    DISABLE_OLLAMA_SSL_VERIFICATION,
     # Code Execution
     ENABLE_CODE_EXECUTION,
     CODE_EXECUTION_ENGINE,
@@ -464,7 +461,6 @@ if ENABLE_OTEL:
 app.state.config.ENABLE_OLLAMA_API = ENABLE_OLLAMA_API
 app.state.config.OLLAMA_BASE_URLS = OLLAMA_BASE_URLS
 app.state.config.OLLAMA_API_CONFIGS = OLLAMA_API_CONFIGS
-app.state.config.DISABLE_OLLAMA_SSL_VERIFICATION = DISABLE_OLLAMA_SSL_VERIFICATION
 
 app.state.OLLAMA_MODELS = {}
 
@@ -478,8 +474,6 @@ app.state.config.ENABLE_OPENAI_API = ENABLE_OPENAI_API
 app.state.config.OPENAI_API_BASE_URLS = OPENAI_API_BASE_URLS
 app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
-app.state.config.DISABLE_OPENAI_SSL_VERIFICATION = DISABLE_OPENAI_SSL_VERIFICATION
-
 app.state.OPENAI_MODELS = {}
 
 ########################################
