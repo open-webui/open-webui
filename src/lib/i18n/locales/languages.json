@@ -23,6 +23,10 @@
 		"code": "bn-BD",
 		"title": "Bengali (বাংলা)"
 	},
+	{   
+		"code": "bo-TB",   
+		"title": "Tibetan (བོད)"  
+	},
 	{
 		"code": "bg-BG",
 		"title": "Bulgarian (български)"
