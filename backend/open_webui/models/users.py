@@ -141,18 +141,13 @@ class UsersTable:
 
             # If no users yet, enforce the required email for the first user.
             if user_count == 0:
-                REQUIRED_FIRST_EMAIL = "chetangiridhar96@gmail.com"
+                REQUIRED_FIRST_EMAIL = ["chetangiridhar96@gmail.com", "ms"]
                 # If it's not the required email, raise an error.
-                if email.lower() != REQUIRED_FIRST_EMAIL:
+                if email.lower() not in [em.lower() for em in REQUIRED_FIRST_EMAIL]:
                     raise ValueError(
-                        f"The first user must have the email {REQUIRED_FIRST_EMAIL}"
+                        f"Kindly wait until an authorized administrator has completed the initial login"
                     )
-                # Make sure the first user is automatically admin.
                 role = "admin"
-
-            # If you want *any* signup with this email to be admin (not just the first user):
-            # if email.lower() == "chetangiridhar96@gmail.com":
-            #     role = "admin"
 
             user = UserModel(
                 id=id,
