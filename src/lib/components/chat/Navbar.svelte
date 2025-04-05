@@ -8,6 +8,7 @@
 		mobile,
 		settings,
 		showArchivedChats,
+		showArtifacts,
 		showControls,
 		showSidebar,
 		temporaryChatEnabled,
@@ -114,6 +115,36 @@
 							</div>
 						</button>
 					</Menu>
+					<Tooltip content={$i18n.t('Artifacts')}>
+						<button
+							class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							on:click={async () => {
+								if (!$showControls){
+									await showControls.set(true);
+									await showArtifacts.set(true);
+								}
+								else{
+									await showControls.set(false);
+									await showArtifacts.set(false);
+								}
+
+							}}
+						>
+							<div class=" m-auto self-center">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="size-5"
+								>
+								<path d="M7 8L3 11.6923L7 16M17 8L21 11.6923L17 16M14 4L10 20" stroke="currentCOlor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+								</svg>
+							</div>
+						</button>
+				</Tooltip>
+					
 				{/if}
 
 				<Tooltip content={$i18n.t('Controls')}>

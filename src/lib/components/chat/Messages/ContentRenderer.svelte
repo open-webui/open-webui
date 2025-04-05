@@ -23,7 +23,7 @@
 	export let onAddMessages = () => {};
 
 	let contentContainerElement;
-
+	let firstOpen = true;
 	let floatingButtonsElement;
 
 	const updateButtonPosition = (event) => {
@@ -159,14 +159,18 @@
 		}}
 		on:code={(e) => {
 			const { lang, code } = e.detail;
-
+			const supportedLanguages = ['html', 'svg', 'css', 'javascript', 'js', 'typescript', 'ts', 'csharp', 'python', 'java', 'php', 'ruby', 'bash', 'shell', 'applescript', 'sql', 'json', 'xml', 'yaml', 'markdown'];
 			if (
-				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
+				(supportedLanguages.includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
 				!$mobile &&
 				$chatId
 			) {
-				showArtifacts.set(true);
-				showControls.set(true);
+				if (firstOpen){
+					showArtifacts.set(true);
+					showControls.set(true);
+					firstOpen = false;
+				}
+
 			}
 		}}
 	/>
