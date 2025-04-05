@@ -225,6 +225,49 @@
 		}
 	}
 
+	// Reusable function to parse the workflow string and update nodes
+	const parseWorkflowAndUpdateNodes = (showToast = false) => {
+		// Check if workflow exists and is not empty
+		if (config.comfyui.COMFYUI_WORKFLOW && config.comfyui.COMFYUI_WORKFLOW.trim() !== '') {
+			try {
+				const workflowString = config.comfyui.COMFYUI_WORKFLOW;
+				const parsedWorkflow = JSON.parse(workflowString);
+
+				// Validate the structure *after* successful JSON parsing
+				if (validateJSON(workflowString)) {
+					// Parse and populate, show toast if requested
+					// Use the currently saved node configurations for reconciliation
+					parseAndPopulateWorkflowNodes(
+						parsedWorkflow,
+						config.comfyui.COMFYUI_WORKFLOW_NODES || [],
+						showToast
+					);
+				} else {
+					// Valid JSON, but not the expected API format
+					workflowNodesConfig = []; // Clear nodes
+					if (showToast) {
+						toast.warning(
+							'Pasted/entered content is not a valid ComfyUI API Workflow JSON format. No inputs parsed.'
+						);
+					}
+				}
+			} catch (error) {
+				// Invalid JSON syntax
+				workflowNodesConfig = []; // Clear nodes
+				if (showToast) {
+					toast.error('Invalid JSON syntax in ComfyUI Workflow. Please correct it.');
+				}
+				// Optionally log the error for debugging
+				console.error('Error parsing workflow JSON:', error);
+			}
+		} else {
+			// Workflow is empty or only whitespace
+			workflowNodesConfig = []; // Clear nodes if text area is empty
+		}
+		// Trigger reactivity manually if needed (usually not necessary with Svelte)
+		// workflowNodesConfig = [...workflowNodesConfig];
+	};
+
 	const saveHandler = async () => {
 		loading = true;
 
@@ -325,27 +368,16 @@
 
 	// Function to handle parsing when the textarea loses focus (blur event)
 	const handleWorkflowBlur = () => {
-		if (config.comfyui.COMFYUI_WORKFLOW && config.comfyui.COMFYUI_WORKFLOW.trim() !== '') {
-			try {
-				const parsedWorkflow = JSON.parse(config.comfyui.COMFYUI_WORKFLOW);
-				if (validateJSON(config.comfyui.COMFYUI_WORKFLOW)) {
-					// Parse and show toast on blur if content is valid API format
-					parseAndPopulateWorkflowNodes(parsedWorkflow, [], true); // Pass true for showToast
-				} else {
-					// JSON is valid structure but not API format
-					workflowNodesConfig = []; // Clear nodes
-					toast.warning(
-						'Pasted content is not a valid ComfyUI API Workflow JSON format. No inputs parsed.'
-					);
-				}
-			} catch (error) {
-				// JSON is invalid syntax
-				workflowNodesConfig = []; // Clear nodes
-				toast.error('Invalid JSON syntax in ComfyUI Workflow. Please correct it.');
-			}
-		} else {
-			workflowNodesConfig = []; // Clear nodes if text area is empty
-		}
+		// Parse and show toast on blur, as the user might have manually edited.
+		parseWorkflowAndUpdateNodes(true); // Pass true for showToast
+	};
+
+	// Function to handle parsing immediately after a paste event
+	const handleWorkflowPaste = () => {
+		// Use setTimeout to allow bind:value to update before parsing
+		setTimeout(() => {
+			parseWorkflowAndUpdateNodes(true); // Parse immediately after paste, show toast
+		}, 10); // Small delay (e.g., 10ms)
 	};
 
 	// Function to process a file (used by both upload and drop)
@@ -371,8 +403,8 @@
 				if (validateJSON(rawJson)) {
 					config.comfyui.COMFYUI_WORKFLOW = JSON.stringify(parsedWorkflow, null, 2); // Pretty print
 					// Parse the newly uploaded workflow, clearing previous node configs, SHOW TOAST
-					parseAndPopulateWorkflowNodes(parsedWorkflow, [], true);
-					toast.success('Workflow JSON loaded and parsed successfully.');
+					// Use the reusable function, passing true for toast
+					parseWorkflowAndUpdateNodes(true);
 				} else {
 					toast.error(
 						'Invalid ComfyUI API Workflow JSON format. Ensure it was exported as API format.'
@@ -802,6 +834,7 @@
 									'Upload, drag & drop, or paste your ComfyUI API format workflow JSON here.'
 								)}
 								on:blur={handleWorkflowBlur}
+								on:paste={handleWorkflowPaste}
 								on:dragover={handleDragOver}
 								on:dragleave={handleDragLeave}
 								on:drop={handleDrop}
@@ -843,7 +876,7 @@
 						</div>
 						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 							{$i18n.t(
-								'Make sure to export your workflow as API format from ComfyUI ("Save (API format)"). Uploading or dropping will discover primitive inputs (text, numbers, etc.) and populate the list below.'
+								'Make sure to export your workflow as API format from ComfyUI ("Save (API format)"). Uploading, dropping, or pasting will discover primitive inputs (text, numbers, etc.) and populate the list below.'
 							)}
 						</div>
 					</div>
