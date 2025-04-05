@@ -226,7 +226,7 @@ async def chat_completion_tools_handler(
 
                 if isinstance(tool_result, str):
                     tool = tools[tool_function_name]
-                    tool_id = tool.get("toolkit_id", "")
+                    tool_id = tool.get("tool_id", "")
                     if tool.get("metadata", {}).get("citation", False) or tool.get(
                         "direct", False
                     ):

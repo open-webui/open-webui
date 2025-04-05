@@ -40,15 +40,14 @@ def apply_extra_params_to_tool_function(
     return new_function
 
 
-# Mutation on extra_params
 def get_tools(
     request: Request, tool_ids: list[str], user: UserModel, extra_params: dict
 ) -> dict[str, dict]:
     tools_dict = {}
 
     for tool_id in tool_ids:
-        tools = Tools.get_tool_by_id(tool_id)
-        if tools is None:
+        tool = Tools.get_tool_by_id(tool_id)
+        if tool is None:
 
             if tool_id.startswith("server:"):
                 server_idx = int(tool_id.split(":")[1])
@@ -57,7 +56,7 @@ def get_tools(
                 tool_dict = {
                     "spec": spec,
                     "callable": callable,
-                    "toolkit_id": tool_id,
+                    "tool_id": tool_id,
                     # Misc info
                     "metadata": {
                         "file_handler": hasattr(module, "file_handler")
@@ -65,9 +64,9 @@ def get_tools(
                         "citation": hasattr(module, "citation") and module.citation,
                     },
                 }
-
+            else:
+                continue
         else:
-
             module = request.app.state.TOOLS.get(tool_id, None)
             if module is None:
                 module, _ = load_tools_module_by_id(tool_id)
@@ -83,7 +82,7 @@ def get_tools(
                     **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
                 )
 
-            for spec in tools.specs:
+            for spec in tool.specs:
                 # TODO: Fix hack for OpenAI API
                 # Some times breaks OpenAI but others don't. Leaving the comment
                 for val in spec.get("parameters", {}).get("properties", {}).values():
@@ -114,7 +113,7 @@ def get_tools(
                 tool_dict = {
                     "spec": spec,
                     "callable": callable,
-                    "toolkit_id": tool_id,
+                    "tool_id": tool_id,
                     # Misc info
                     "metadata": {
                         "file_handler": hasattr(module, "file_handler")
@@ -128,8 +127,8 @@ def get_tools(
                     log.warning(
                         f"Tool {function_name} already exists in another tools!"
                     )
-                    log.warning(f"Collision between {tools} and {tool_id}.")
-                    log.warning(f"Discarding {tools}.{function_name}")
+                    log.warning(f"Collision between {tool} and {tool_id}.")
+                    log.warning(f"Discarding {tool}.{function_name}")
                 else:
                     tools_dict[function_name] = tool_dict
 
@@ -239,8 +238,9 @@ def get_callable_attributes(tool: object) -> list[Callable]:
 
 
 def get_tools_specs(tool_class: object) -> list[dict]:
-    function_list = get_callable_attributes(tool_class)
-    function_model_list = map(function_to_pydantic_model, function_list)
+    function_model_list = map(
+        function_to_pydantic_model, get_callable_attributes(tool_class)
+    )
     return [
         convert_to_openai_function(function_model)
         for function_model in function_model_list
