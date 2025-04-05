@@ -322,7 +322,12 @@ def query_collection_with_hybrid_search(
 
     # Prepare tasks for all collections and queries
     # Avoid running any tasks for collections that failed to fetch data (have assigned None)
-    tasks = [(cn, q) for cn in collection_names if collection_results[cn] is not None for q in queries]
+    tasks = [
+        (cn, q)
+        for cn in collection_names
+        if collection_results[cn] is not None
+        for q in queries
+    ]
 
     with ThreadPoolExecutor() as executor:
         future_results = [executor.submit(process_query, cn, q) for cn, q in tasks]
