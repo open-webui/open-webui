@@ -896,7 +896,7 @@
 									'Discovered primitive inputs from the workflow. Verify or edit the Node ID(s) for each input you want the backend to control.'
 								)}
 								{$i18n.t(
-									'The backend will use the Type (Node Type::Input Key) and Key to map incoming generation parameters.'
+									'The backend will use the Type (Node Type::Input Key) and Key to map incoming generation parameters (like prompt, seed, steps, model, etc.) to these nodes.'
 								)}
 							</div>
 						</div>
