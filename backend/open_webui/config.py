@@ -882,6 +882,17 @@ except Exception:
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 ####################################
+# TOOL_SERVERS
+####################################
+
+
+TOOL_SERVER_CONNECTIONS = PersistentConfig(
+    "TOOL_SERVER_CONNECTIONS",
+    "tool_server.connections",
+    [],
+)
+
+####################################
 # WEBUI
 ####################################
 

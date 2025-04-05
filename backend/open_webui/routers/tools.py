@@ -18,6 +18,8 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 from open_webui.env import SRC_LOG_LEVELS
 
+from open_webui.utils.tools import get_tool_servers_data
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
@@ -30,7 +32,17 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[ToolUserResponse])
-async def get_tools(user=Depends(get_verified_user)):
+async def get_tools(request: Request, user=Depends(get_verified_user)):
+
+    if not request.app.state.TOOL_SERVERS:
+        # If the tool servers are not set, we need to set them
+        # This is done only once when the server starts
+        # This is done to avoid loading the tool servers every time
+
+        request.app.state.TOOL_SERVERS = await get_tool_servers_data(
+            request.app.state.config.TOOL_SERVER_CONNECTIONS
+        )
+
     if user.role == "admin":
         tools = Tools.get_tools()
     else:

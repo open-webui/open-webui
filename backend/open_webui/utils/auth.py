@@ -143,12 +143,14 @@ def create_api_key():
     return f"sk-{key}"
 
 
-def get_http_authorization_cred(auth_header: str):
+def get_http_authorization_cred(auth_header: Optional[str]):
+    if not auth_header:
+        return None
     try:
         scheme, credentials = auth_header.split(" ")
         return HTTPAuthorizationCredentials(scheme=scheme, credentials=credentials)
     except Exception:
-        raise ValueError(ERROR_MESSAGES.INVALID_TOKEN)
+        return None
 
 
 def get_current_user(

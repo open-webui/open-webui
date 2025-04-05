@@ -15,6 +15,8 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tags from './common/Tags.svelte';
+	import { getToolServerData } from '$lib/apis';
+	import { verifyToolServerConnection } from '$lib/apis/configs';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -22,10 +24,12 @@
 	export let show = false;
 	export let edit = false;
 
+	export let direct = false;
+
 	export let connection = null;
 
 	let url = '';
-	let path = '/openapi.json';
+	let path = 'openapi.json';
 
 	let auth_type = 'bearer';
 	let key = '';
@@ -33,6 +37,49 @@
 	let enable = true;
 
 	let loading = false;
+
+	const verifyHandler = async () => {
+		if (url === '') {
+			toast.error($i18n.t('Please enter a valid URL'));
+			return;
+		}
+
+		if (path === '') {
+			toast.error($i18n.t('Please enter a valid path'));
+			return;
+		}
+
+		if (direct) {
+			const res = await getToolServerData(
+				auth_type === 'bearer' ? key : localStorage.token,
+				`${url}/${path}`
+			).catch((err) => {
+				toast.error($i18n.t('Connection failed'));
+			});
+
+			if (res) {
+				toast.success($i18n.t('Connection successful'));
+				console.debug('Connection successful', res);
+			}
+		} else {
+			const res = await verifyToolServerConnection(localStorage.token, {
+				url,
+				path,
+				auth_type,
+				key,
+				config: {
+					enable: enable
+				}
+			}).catch((err) => {
+				toast.error($i18n.t('Connection failed'));
+			});
+
+			if (res) {
+				toast.success($i18n.t('Connection successful'));
+				console.debug('Connection successful', res);
+			}
+		}
+	};
 
 	const submitHandler = async () => {
 		loading = true;
@@ -56,7 +103,7 @@
 		show = false;
 
 		url = '';
-		path = '/openapi.json';
+		path = 'openapi.json';
 		key = '';
 		auth_type = 'bearer';
 
@@ -66,7 +113,7 @@
 	const init = () => {
 		if (connection) {
 			url = connection.url;
-			path = connection?.path ?? '/openapi.json';
+			path = connection?.path ?? 'openapi.json';
 
 			auth_type = connection?.auth_type ?? 'bearer';
 			key = connection?.key ?? '';
@@ -125,20 +172,53 @@
 					<div class="px-1">
 						<div class="flex gap-2">
 							<div class="flex flex-col w-full">
-								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('URL')}</div>
+								<div class="flex justify-between mb-0.5">
+									<div class=" text-xs text-gray-500">{$i18n.t('URL')}</div>
+								</div>
 
-								<div class="flex-1">
+								<div class="flex flex-1 items-center">
 									<input
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										class="w-full flex-1 text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										type="text"
 										bind:value={url}
 										placeholder={$i18n.t('API Base URL')}
 										autocomplete="off"
 										required
 									/>
+
+									<Tooltip
+										content={$i18n.t('Verify Connection')}
+										className="shrink-0 flex items-center mr-1"
+									>
+										<button
+											class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
+											on:click={() => {
+												verifyHandler();
+											}}
+											type="button"
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 20 20"
+												fill="currentColor"
+												class="w-4 h-4"
+											>
+												<path
+													fill-rule="evenodd"
+													d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+													clip-rule="evenodd"
+												/>
+											</svg>
+										</button>
+									</Tooltip>
+
+									<Tooltip content={enable ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
+										<Switch bind:state={enable} />
+									</Tooltip>
 								</div>
 
-								<div class="flex-1">
+								<div class="flex-1 flex items-center">
+									<div class="text-sm">/</div>
 									<input
 										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										type="text"
@@ -149,18 +229,11 @@
 									/>
 								</div>
 							</div>
-
-							<div class="flex flex-col shrink-0 self-start">
-								<Tooltip content={enable ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
-									<Switch bind:state={enable} />
-								</Tooltip>
-							</div>
 						</div>
 
 						<div class="text-xs text-gray-500 mt-1">
-							{$i18n.t(`WebUI will make requests to "{{url}}{{path}}"`, {
-								url: url,
-								path: path
+							{$i18n.t(`WebUI will make requests to "{{url}}"`, {
+								url: `${url}/${path}`
 							})}
 						</div>
 
