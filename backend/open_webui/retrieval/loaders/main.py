@@ -184,13 +184,16 @@ class Loader:
             for doc in docs
         ]
 
+    def _is_text_file(self, file_ext: str, file_content_type: str) -> bool:
+        return file_ext in known_source_ext or (
+            file_content_type and file_content_type.find("text/") >= 0
+        )
+
     def _get_loader(self, filename: str, file_content_type: str, file_path: str):
         file_ext = filename.split(".")[-1].lower()
 
         if self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
-            if file_ext in known_source_ext or (
-                file_content_type and file_content_type.find("text/") >= 0
-            ):
+            if self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
             else:
                 loader = TikaLoader(
@@ -199,11 +202,14 @@ class Loader:
                     mime_type=file_content_type,
                 )
         elif self.engine == "docling" and self.kwargs.get("DOCLING_SERVER_URL"):
-            loader = DoclingLoader(
-                url=self.kwargs.get("DOCLING_SERVER_URL"),
-                file_path=file_path,
-                mime_type=file_content_type,
-            )
+            if self._is_text_file(file_ext, file_content_type):
+                loader = TextLoader(file_path, autodetect_encoding=True)
+            else:
+                loader = DoclingLoader(
+                    url=self.kwargs.get("DOCLING_SERVER_URL"),
+                    file_path=file_path,
+                    mime_type=file_content_type,
+                )
         elif (
             self.engine == "document_intelligence"
             and self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT") != ""
@@ -269,9 +275,7 @@ class Loader:
                 loader = UnstructuredPowerPointLoader(file_path)
             elif file_ext == "msg":
                 loader = OutlookMessageLoader(file_path)
-            elif file_ext in known_source_ext or (
-                file_content_type and file_content_type.find("text/") >= 0
-            ):
+            elif self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
             else:
                 loader = TextLoader(file_path, autodetect_encoding=True)
