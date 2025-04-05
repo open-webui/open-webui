@@ -66,6 +66,7 @@
 	// This will hold the dynamically generated node configurations
 	let workflowNodesConfig = [];
 	let isDraggingOver = false; // State for drag-and-drop visual feedback
+	let lastKnownWorkflowString: string | null = null; // Store the last successfully parsed workflow string
 
 	const getModels = async () => {
 		models = await getImageGenerationModels(localStorage.token).catch((error) => {
@@ -119,7 +120,7 @@
 		if (!workflow || typeof workflow !== 'object') {
 			if (showToast) toast.error('Invalid workflow data provided for parsing.');
 			workflowNodesConfig = []; // Clear existing config
-			return;
+			return false; // Indicate failure or no action
 		}
 
 		// Map to group nodes by class_type and input_key
@@ -187,7 +188,7 @@
 			console.error('Error parsing workflow nodes:', error);
 			if (showToast) toast.error(`Error occurred during workflow parsing: ${error.message}`);
 			workflowNodesConfig = []; // Clear on error
-			return;
+			return false; // Indicate failure
 		}
 
 		// Convert map values to array
@@ -223,28 +224,40 @@
 				);
 			}
 		}
+		return true; // Indicate success
 	}
 
 	// Reusable function to parse the workflow string and update nodes
 	const parseWorkflowAndUpdateNodes = (showToast = false) => {
+		const currentWorkflowString = config.comfyui.COMFYUI_WORKFLOW ?? '';
+
+		// If called with showToast (likely blur/paste/drop) and content hasn't changed, do nothing.
+		if (showToast && currentWorkflowString === lastKnownWorkflowString) {
+			return;
+		}
+
 		// Check if workflow exists and is not empty
-		if (config.comfyui.COMFYUI_WORKFLOW && config.comfyui.COMFYUI_WORKFLOW.trim() !== '') {
+		if (currentWorkflowString.trim() !== '') {
 			try {
-				const workflowString = config.comfyui.COMFYUI_WORKFLOW;
-				const parsedWorkflow = JSON.parse(workflowString);
+				const parsedWorkflow = JSON.parse(currentWorkflowString);
 
 				// Validate the structure *after* successful JSON parsing
-				if (validateJSON(workflowString)) {
+				if (validateJSON(currentWorkflowString)) {
 					// Parse and populate, show toast if requested
 					// Use the currently saved node configurations for reconciliation
-					parseAndPopulateWorkflowNodes(
+					const success = parseAndPopulateWorkflowNodes(
 						parsedWorkflow,
 						config.comfyui.COMFYUI_WORKFLOW_NODES || [],
 						showToast
 					);
+					// If parsing was successful, update the last known string
+					if (success) {
+						lastKnownWorkflowString = currentWorkflowString;
+					}
 				} else {
 					// Valid JSON, but not the expected API format
 					workflowNodesConfig = []; // Clear nodes
+					// Do not update lastKnownWorkflowString as it wasn't a valid API format
 					if (showToast) {
 						toast.warning(
 							'Pasted/entered content is not a valid ComfyUI API Workflow JSON format. No inputs parsed.'
@@ -254,6 +267,7 @@
 			} catch (error) {
 				// Invalid JSON syntax
 				workflowNodesConfig = []; // Clear nodes
+				// Do not update lastKnownWorkflowString as it failed parsing
 				if (showToast) {
 					toast.error('Invalid JSON syntax in ComfyUI Workflow. Please correct it.');
 				}
@@ -263,6 +277,7 @@
 		} else {
 			// Workflow is empty or only whitespace
 			workflowNodesConfig = []; // Clear nodes if text area is empty
+			lastKnownWorkflowString = currentWorkflowString; // Update last known string to empty
 		}
 		// Trigger reactivity manually if needed (usually not necessary with Svelte)
 		// workflowNodesConfig = [...workflowNodesConfig];
@@ -368,7 +383,7 @@
 
 	// Function to handle parsing when the textarea loses focus (blur event)
 	const handleWorkflowBlur = () => {
-		// Parse and show toast on blur, as the user might have manually edited.
+		// Parse and show toast on blur ONLY if content has changed.
 		parseWorkflowAndUpdateNodes(true); // Pass true for showToast
 	};
 
@@ -412,6 +427,7 @@
 					// Display the raw text but clear parsed nodes
 					config.comfyui.COMFYUI_WORKFLOW = rawJson;
 					workflowNodesConfig = [];
+					lastKnownWorkflowString = rawJson; // Update last known string even if invalid format
 				}
 			} catch (error) {
 				toast.error(`Error reading or parsing workflow file: ${error.message}`);
@@ -421,6 +437,7 @@
 					config.comfyui.COMFYUI_WORKFLOW = '';
 				}
 				workflowNodesConfig = []; // Clear nodes on error
+				lastKnownWorkflowString = config.comfyui.COMFYUI_WORKFLOW; // Update last known string on error
 			}
 		};
 		reader.onerror = (error) => {
@@ -517,7 +534,14 @@
 					// Pretty print for display
 					config.comfyui.COMFYUI_WORKFLOW = JSON.stringify(parsedWorkflow, null, 2);
 					// Parse workflow and reconcile with saved node configurations, NO TOAST on mount
-					parseAndPopulateWorkflowNodes(parsedWorkflow, savedNodes, false); // Pass false for showToast
+					const success = parseAndPopulateWorkflowNodes(parsedWorkflow, savedNodes, false); // Pass false for showToast
+					// Set the initial last known string
+					if (success) {
+						lastKnownWorkflowString = config.comfyui.COMFYUI_WORKFLOW;
+					} else {
+						// Even if parsing failed to find nodes, store the initial string if it was valid JSON
+						lastKnownWorkflowString = config.comfyui.COMFYUI_WORKFLOW;
+					}
 				} catch (e) {
 					console.warn('Stored ComfyUI workflow is not valid JSON:', e);
 					// Don't show toast on mount for invalid stored JSON either
@@ -530,6 +554,8 @@
 							: (n.node_ids?.toString() ?? ''),
 						class_type: n.type?.split('::')[0] ?? 'Unknown'
 					}));
+					// Store the invalid string as the last known one
+					lastKnownWorkflowString = config.comfyui.COMFYUI_WORKFLOW;
 				}
 			} else {
 				// No workflow stored, just load saved nodes configurations if any exist
@@ -541,6 +567,7 @@
 						: (n.node_ids?.toString() ?? ''),
 					class_type: n.type?.split('::')[0] ?? 'Unknown'
 				}));
+				lastKnownWorkflowString = config.comfyui.COMFYUI_WORKFLOW; // Store empty string
 			}
 
 			const imageConfigRes = await getImageGenerationConfig(localStorage.token).catch((error) => {
