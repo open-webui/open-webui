@@ -1322,10 +1322,6 @@
 			history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
 		}
 
-		if (autoScroll) {
-			scrollToBottom();
-		}
-
 		// focus on chat input
 		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
@@ -1341,6 +1337,10 @@
 		parentId: string,
 		{ modelId = null, modelIdx = null, newChat = false } = {}
 	) => {
+		if (autoScroll) {
+			scrollToBottom();
+		}
+
 		let _chatId = JSON.parse(JSON.stringify($chatId));
 		_history = JSON.parse(JSON.stringify(_history));
 
