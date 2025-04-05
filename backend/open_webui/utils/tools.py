@@ -69,14 +69,18 @@ def get_tools(
                     elif auth_type == "session":
                         token = request.state.token.credentials
 
+                    async def tool_function(**args):
+                        return await execute_tool_server(
+                            token=token,
+                            url=tool_server_data["url"],
+                            name=function_name,
+                            params=args,
+                            server_data=tool_server_data,
+                        )
+
                     callable = get_async_tool_function_and_apply_extra_params(
-                        execute_tool_server,
-                        {
-                            "token": token,
-                            "url": tool_server_data["url"],
-                            "name": function_name,
-                            "server_data": tool_server_data,
-                        },
+                        tool_function,
+                        {},
                     )
 
                     tool_dict = {

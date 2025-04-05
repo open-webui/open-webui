@@ -1912,7 +1912,8 @@ async def process_chat_response(
                         tool_result_files = []
                         if isinstance(tool_result, list):
                             for item in tool_result:
-                                if item.startswith("data:"):
+                                # check if string
+                                if isinstance(item, str) and item.startswith("data:"):
                                     tool_result_files.append(item)
                                     tool_result.remove(item)
 
