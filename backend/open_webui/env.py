@@ -460,3 +460,8 @@ OTEL_TRACES_SAMPLER = os.environ.get(
 
 PIP_OPTIONS = os.getenv("PIP_OPTIONS", "").split()
 PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
+
+
+ENABLE_UPDATE_NOTIFICATION = (
+    os.environ.get("ENABLE_UPDATE_NOTIFICATION", "True").lower() == "true"
+)

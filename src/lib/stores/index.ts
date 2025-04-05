@@ -213,6 +213,7 @@ type Config = {
 		enable_admin_chat_access: boolean;
 		enable_community_sharing: boolean;
 		enable_autocomplete_generation: boolean;
+		enable_update_notification: boolean;
 	};
 	oauth: {
 		providers: {
