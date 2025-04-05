@@ -33,6 +33,5 @@ jobs:
             export OPEN_WEBUI_PORT='${{ secrets.OPEN_WEBUI_PORT }}'
 
             sudo docker compose down
-            sudo docker compose pull
-            sudo docker compose up -d --forece-recreate
+            sudo docker compose up -d
           "
