@@ -15,6 +15,7 @@
 	import Connection from '$lib/components/chat/Settings/Tools/Connection.svelte';
 
 	import AddServerModal from '$lib/components/AddServerModal.svelte';
+	import { getToolServerConnections, setToolServerConnections } from '$lib/apis/configs';
 
 	export let saveSettings: Function;
 
@@ -26,10 +27,23 @@
 		await updateHandler();
 	};
 
-	const updateHandler = async () => {};
+	const updateHandler = async () => {
+		const res = await setToolServerConnections(localStorage.token, {
+			TOOL_SERVER_CONNECTIONS: servers
+		}).catch((err) => {
+			toast.error($i18n.t('Failed to save connections'));
+
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Connections saved successfully'));
+		}
+	};
 
 	onMount(async () => {
-		servers = [];
+		const res = await getToolServerConnections(localStorage.token);
+		servers = res.TOOL_SERVER_CONNECTIONS;
 	});
 </script>
 

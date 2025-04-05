@@ -100,7 +100,9 @@ async def set_tool_servers_config(
     form_data: ToolServersConfigForm,
     user=Depends(get_admin_user),
 ):
-    request.app.state.config.TOOL_SERVER_CONNECTIONS = form_data.TOOL_SERVER_CONNECTIONS
+    request.app.state.config.TOOL_SERVER_CONNECTIONS = [
+        connection.model_dump() for connection in form_data.TOOL_SERVER_CONNECTIONS
+    ]
 
     request.app.state.TOOL_SERVERS = await get_tool_servers_data(
         request.app.state.config.TOOL_SERVER_CONNECTIONS
