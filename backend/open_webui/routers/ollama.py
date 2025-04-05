@@ -16,9 +16,6 @@ from aiocache import cached
 import requests
 from open_webui.models.users import UserModel
 
-from open_webui.env import (
-    ENABLE_FORWARD_USER_INFO_HEADERS,
-)
 
 from fastapi import (
     Depends,
@@ -50,13 +47,15 @@ from open_webui.utils.access_control import has_access
 
 from open_webui.config import (
     UPLOAD_DIR,
+    DISABLE_OLLAMA_SSL_VERIFICATION,
 )
 from open_webui.env import (
-    ENV,
-    SRC_LOG_LEVELS,
+    ENABLE_FORWARD_USER_INFO_HEADERS,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     BYPASS_MODEL_ACCESS_CONTROL,
+    ENV,
+    SRC_LOG_LEVELS,
 )
 from open_webui.constants import ERROR_MESSAGES
 
@@ -71,10 +70,19 @@ log.setLevel(SRC_LOG_LEVELS["OLLAMA"])
 ##########################################
 
 
-async def send_get_request(url, key=None, user: UserModel = None):
+async def send_get_request(url, key=None, user=None, config=None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+    disable_ssl = (
+        config.get("disable_ssl_verification", DISABLE_OLLAMA_SSL_VERIFICATION)
+        if config
+        else DISABLE_OLLAMA_SSL_VERIFICATION
+    )
     try:
-        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+        async with aiohttp.ClientSession(
+            timeout=timeout,
+            trust_env=True,
+            connector=aiohttp.TCPConnector(ssl=False) if disable_ssl else None,
+        ) as session:
             async with session.get(
                 url,
                 headers={
@@ -94,7 +102,6 @@ async def send_get_request(url, key=None, user: UserModel = None):
             ) as response:
                 return await response.json()
     except Exception as e:
-        # Handle connection error here
         log.error(f"Connection error: {e}")
         return None
 
@@ -116,14 +123,20 @@ async def send_post_request(
     key: Optional[str] = None,
     content_type: Optional[str] = None,
     user: UserModel = None,
+    config: Optional[dict] = None,
 ):
-
     r = None
+    disable_ssl = (
+        config.get("disable_ssl_verification", DISABLE_OPENAI_SSL_VERIFICATION)
+        if config
+        else DISABLE_OPENAI_SSL_VERIFICATION
+    )
     try:
         session = aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+            connector=aiohttp.TCPConnector(ssl=False) if disable_ssl else None,
         )
-
         r = await session.post(
             url,
             data=payload,
@@ -143,13 +156,10 @@ async def send_post_request(
             },
         )
         r.raise_for_status()
-
         if stream:
             response_headers = dict(r.headers)
-
             if content_type:
                 response_headers["Content-Type"] = content_type
-
             return StreamingResponse(
                 r.content,
                 status_code=r.status,
@@ -162,10 +172,8 @@ async def send_post_request(
             res = await r.json()
             await cleanup_response(r, session)
             return res
-
     except Exception as e:
         detail = None
-
         if r is not None:
             try:
                 res = await r.json()
@@ -173,7 +181,6 @@ async def send_post_request(
                     detail = f"Ollama: {res.get('error', 'Unknown error')}"
             except Exception:
                 detail = f"Ollama: {e}"
-
         raise HTTPException(
             status_code=r.status if r else 500,
             detail=detail if detail else "Open WebUI: Server Connection Error",
@@ -214,9 +221,16 @@ async def verify_connection(
 ):
     url = form_data.url
     key = form_data.key
+    config = {
+        "disable_ssl_verification": True
+    }  # Temporary for /verify; adjust if config is passed
 
+    disable_ssl = config.get(
+        "disable_ssl_verification", DISABLE_OLLAMA_SSL_VERIFICATION
+    )
     async with aiohttp.ClientSession(
-        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
+        connector=aiohttp.TCPConnector(ssl=False) if disable_ssl else None,
     ) as session:
         try:
             async with session.get(
@@ -276,7 +290,6 @@ async def update_config(
     request: Request, form_data: OllamaConfigForm, user=Depends(get_admin_user)
 ):
     request.app.state.config.ENABLE_OLLAMA_API = form_data.ENABLE_OLLAMA_API
-
     request.app.state.config.OLLAMA_BASE_URLS = form_data.OLLAMA_BASE_URLS
     request.app.state.config.OLLAMA_API_CONFIGS = form_data.OLLAMA_API_CONFIGS
 
@@ -571,9 +584,7 @@ async def pull_model(
     user=Depends(get_admin_user),
 ):
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-    log.info(f"url: {url}")
-
-    # Admin should be able to pull models from any source
+    config = request.app.state.config.OLLAMA_API_CONFIGS.get(str(url_idx), {})
     payload = {**form_data.model_dump(exclude_none=True), "insecure": True}
 
     return await send_post_request(
@@ -581,6 +592,7 @@ async def pull_model(
         payload=json.dumps(payload),
         key=get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS),
         user=user,
+        config=config,  # Pass config here
     )
 
 
@@ -1482,7 +1494,23 @@ async def download_file_stream(
     timeout = aiohttp.ClientTimeout(total=600)  # Set the timeout
 
     async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-        async with session.get(file_url, headers=headers) as response:
+        async with session.get(
+            file_url,
+            headers={
+                "Content-Type": "application/json",
+                **({"Authorization": f"Bearer {key}"} if key else {}),
+                **(
+                    {
+                        "X-OpenWebUI-User-Name": user.name,
+                        "X-OpenWebUI-User-Id": user.id,
+                        "X-OpenWebUI-User-Email": user.email,
+                        "X-OpenWebUI-User-Role": user.role,
+                    }
+                    if ENABLE_FORWARD_USER_INFO_HEADERS and user
+                    else {}
+                ),
+            },
+        ) as response:
             total_size = int(response.headers.get("content-length", 0)) + current_size
 
             with open(file_path, "ab+") as file:
