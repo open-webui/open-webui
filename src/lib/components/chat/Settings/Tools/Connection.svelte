@@ -20,7 +20,7 @@
 
 <AddServerModal
 	edit
-	direct
+	{direct}
 	bind:show={showConfigModal}
 	{connection}
 	onDelete={() => {

@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 from typing import Optional
+import time
 
 from open_webui.models.tools import (
     ToolForm,
@@ -43,10 +44,40 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
             request.app.state.config.TOOL_SERVER_CONNECTIONS
         )
 
-    if user.role == "admin":
-        tools = Tools.get_tools()
-    else:
-        tools = Tools.get_tools_by_user_id(user.id, "read")
+    tools = Tools.get_tools()
+    for idx, server in enumerate(request.app.state.TOOL_SERVERS):
+        tools.append(
+            ToolUserResponse(
+                **{
+                    "id": f"server:{server['idx']}",
+                    "user_id": f"server:{server['idx']}",
+                    "name": server["openapi"]
+                    .get("info", {})
+                    .get("title", "Tool Server"),
+                    "meta": {
+                        "description": server["openapi"]
+                        .get("info", {})
+                        .get("description", ""),
+                    },
+                    "access_control": request.app.state.config.TOOL_SERVER_CONNECTIONS[
+                        idx
+                    ]
+                    .get("config", {})
+                    .get("access_control", None),
+                    "updated_at": int(time.time()),
+                    "created_at": int(time.time()),
+                }
+            )
+        )
+
+    if user.role != "admin":
+        tools = [
+            tool
+            for tool in tools
+            if tool.user_id == user.id
+            or has_access(user.id, "read", tool.access_control)
+        ]
+
     return tools
 
 

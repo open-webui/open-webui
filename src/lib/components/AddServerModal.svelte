@@ -17,6 +17,7 @@
 	import Tags from './common/Tags.svelte';
 	import { getToolServerData } from '$lib/apis';
 	import { verifyToolServerConnection } from '$lib/apis/configs';
+	import AccessControl from './workspace/common/AccessControl.svelte';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -33,6 +34,8 @@
 
 	let auth_type = 'bearer';
 	let key = '';
+
+	let accessControl = null;
 
 	let enable = true;
 
@@ -68,7 +71,8 @@
 				auth_type,
 				key,
 				config: {
-					enable: enable
+					enable: enable,
+					access_control: accessControl
 				}
 			}).catch((err) => {
 				toast.error($i18n.t('Connection failed'));
@@ -93,7 +97,8 @@
 			auth_type,
 			key,
 			config: {
-				enable: enable
+				enable: enable,
+				access_control: accessControl
 			}
 		};
 
@@ -108,6 +113,7 @@
 		auth_type = 'bearer';
 
 		enable = true;
+		accessControl = null;
 	};
 
 	const init = () => {
@@ -119,6 +125,7 @@
 			key = connection?.key ?? '';
 
 			enable = connection.config?.enable ?? true;
+			accessControl = connection.config?.access_control ?? null;
 		}
 	};
 
@@ -269,6 +276,16 @@
 								</div>
 							</div>
 						</div>
+
+						{#if !direct}
+							<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+
+							<div class="my-2 -mx-2">
+								<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+									<AccessControl bind:accessControl />
+								</div>
+							</div>
+						{/if}
 					</div>
 
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
