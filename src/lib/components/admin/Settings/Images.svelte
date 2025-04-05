@@ -115,7 +115,8 @@
 	};
 
 	// Parses the workflow and populates workflowNodesConfig based on discovered primitive inputs
-	// Added 'showToast' parameter to control notifications
+	// `savedNodesConfig` is used for reconciliation (e.g., on initial load)
+	// If `savedNodesConfig` is empty or not provided, node IDs are purely based on discovery.
 	function parseAndPopulateWorkflowNodes(workflow, savedNodesConfig = [], showToast = false) {
 		if (!workflow || typeof workflow !== 'object') {
 			if (showToast) toast.error('Invalid workflow data provided for parsing.');
@@ -142,44 +143,35 @@
 								const valueType = typeof inputValue;
 
 								// Identify primitive inputs (string, number, boolean)
-								// These are the most likely candidates for dynamic control
 								if (valueType === 'string' || valueType === 'number' || valueType === 'boolean') {
 									discoveredPrimitiveCount++;
 									const groupKey = `${node.class_type}::${inputKey}`; // Unique identifier for the input type
 
-									// Find if this specific input was previously saved/configured
+									// Find if this specific input was previously saved/configured *and* has node IDs specified
 									const savedNode = savedNodesConfig.find(
-										(s) => s.type === groupKey && s.key === inputKey
+										(s) =>
+											s.type === groupKey &&
+											s.key === inputKey &&
+											Array.isArray(s.node_ids) &&
+											s.node_ids.length > 0
 									);
 
-									// Determine if the saved node should be considered "valid" for overriding auto-discovery
-									// A saved node with empty node_ids should NOT prevent auto-discovery
-									const useSavedNodeIds =
-										savedNode && Array.isArray(savedNode.node_ids) && savedNode.node_ids.length > 0;
-
 									if (nodeGroups.has(groupKey)) {
-										// Add node ID to existing group
-										const group = nodeGroups.get(groupKey);
-										// Only add the auto-discovered ID if this group wasn't explicitly saved with non-empty IDs
-										if (!useSavedNodeIds) {
+										// Add node ID to existing group only if we are NOT using saved IDs for this group
+										if (!savedNode) {
+											const group = nodeGroups.get(groupKey);
 											group.node_ids.push(nodeId);
-											// Ensure uniqueness within auto-discovered IDs for the group
-											group.node_ids = [...new Set(group.node_ids)];
+											group.node_ids = [...new Set(group.node_ids)]; // Ensure uniqueness
 										}
-										// If useSavedNodeIds is true, we *don't* add the discovered nodeId,
-										// relying solely on the non-empty saved IDs already set when the group was created.
 									} else {
-										// Create a new group for this input type
-										// Use saved node_ids if available and non-empty, otherwise use the current nodeId
-										const initialNodeIds = useSavedNodeIds
-											? savedNode.node_ids // Use saved non-empty array
-											: [nodeId]; // Start with the newly discovered ID
+										// Create a new group
+										// Use saved node_ids if available and valid, otherwise use the discovered nodeId
+										const initialNodeIds = savedNode ? savedNode.node_ids : [nodeId];
 
 										nodeGroups.set(groupKey, {
-											type: groupKey, // Store the unique identifier as 'type'
+											type: groupKey,
 											key: inputKey,
-											// Ensure initial IDs are unique, especially if savedNode.node_ids might have duplicates
-											node_ids: [...new Set(initialNodeIds)],
+											node_ids: [...new Set(initialNodeIds)], // Ensure initial IDs are unique
 											class_type: node.class_type
 										});
 									}
@@ -216,12 +208,6 @@
 					toast.success(
 						`Workflow parsed. ${workflowNodesConfig.length} configurable inputs found. Please review the Node IDs.`
 					);
-				} else {
-					// Workflow parsed, but only previously saved nodes are shown (no new primitives found)
-					// Avoid toast if only saved nodes are shown after user action
-					// toast.info(
-					// 	`Workflow parsed. Displaying ${workflowNodesConfig.length} previously saved configurations. No new primitive inputs were found in this workflow.`
-					// );
 				}
 			} else if (discoveredPrimitiveCount === 0 && Object.keys(workflow).length > 0) {
 				toast.info(
@@ -233,11 +219,13 @@
 	}
 
 	// Reusable function to parse the workflow string and update nodes
-	const parseWorkflowAndUpdateNodes = (showToast = false) => {
+	// `isNewImport` determines if saved node IDs should be ignored during parsing
+	const parseWorkflowAndUpdateNodes = (showToast = false, isNewImport = false) => {
 		const currentWorkflowString = config.comfyui.COMFYUI_WORKFLOW ?? '';
 
-		// If called with showToast (likely blur/paste/drop) and content hasn't changed, do nothing.
-		if (showToast && currentWorkflowString === lastKnownWorkflowString) {
+		// If content hasn't changed (relevant for blur), do nothing.
+		// Exception: Allow re-parsing if isNewImport is explicitly true (e.g., after file upload that might result in same string but needs node reset)
+		if (showToast && currentWorkflowString === lastKnownWorkflowString && !isNewImport) {
 			return;
 		}
 
@@ -248,11 +236,15 @@
 
 				// Validate the structure *after* successful JSON parsing
 				if (validateJSON(currentWorkflowString)) {
-					// Parse and populate, show toast if requested
-					// Use the currently saved node configurations for reconciliation
+					// If it's treated as a new import, pass [] to ignore saved node IDs.
+					// Otherwise (e.g., initial load via onMount), pass the actual saved nodes for reconciliation.
+					const nodesToReconcileWith = isNewImport
+						? []
+						: config.comfyui.COMFYUI_WORKFLOW_NODES || [];
+
 					const success = parseAndPopulateWorkflowNodes(
 						parsedWorkflow,
-						config.comfyui.COMFYUI_WORKFLOW_NODES || [],
+						nodesToReconcileWith,
 						showToast
 					);
 					// If parsing was successful, update the last known string
@@ -262,30 +254,27 @@
 				} else {
 					// Valid JSON, but not the expected API format
 					workflowNodesConfig = []; // Clear nodes
-					// Do not update lastKnownWorkflowString as it wasn't a valid API format
 					if (showToast) {
 						toast.warning(
 							'Pasted/entered content is not a valid ComfyUI API Workflow JSON format. No inputs parsed.'
 						);
 					}
+					// Don't update lastKnownWorkflowString as it wasn't a valid *API* format
 				}
 			} catch (error) {
 				// Invalid JSON syntax
 				workflowNodesConfig = []; // Clear nodes
-				// Do not update lastKnownWorkflowString as it failed parsing
 				if (showToast) {
 					toast.error('Invalid JSON syntax in ComfyUI Workflow. Please correct it.');
 				}
-				// Optionally log the error for debugging
 				console.error('Error parsing workflow JSON:', error);
+				// Don't update lastKnownWorkflowString as it failed parsing
 			}
 		} else {
 			// Workflow is empty or only whitespace
 			workflowNodesConfig = []; // Clear nodes if text area is empty
 			lastKnownWorkflowString = currentWorkflowString; // Update last known string to empty
 		}
-		// Trigger reactivity manually if needed (usually not necessary with Svelte)
-		// workflowNodesConfig = [...workflowNodesConfig];
 	};
 
 	const saveHandler = async () => {
@@ -388,15 +377,19 @@
 
 	// Function to handle parsing when the textarea loses focus (blur event)
 	const handleWorkflowBlur = () => {
-		// Parse and show toast on blur ONLY if content has changed.
-		parseWorkflowAndUpdateNodes(true); // Pass true for showToast
+		// Parse ONLY if content has changed. Treat changed content as a new import.
+		const changed = (config.comfyui.COMFYUI_WORKFLOW ?? '') !== lastKnownWorkflowString;
+		if (changed) {
+			parseWorkflowAndUpdateNodes(true, true); // Pass true for showToast, true for isNewImport
+		}
 	};
 
 	// Function to handle parsing immediately after a paste event
 	const handleWorkflowPaste = () => {
 		// Use setTimeout to allow bind:value to update before parsing
 		setTimeout(() => {
-			parseWorkflowAndUpdateNodes(true); // Parse immediately after paste, show toast
+			// Always treat paste as a new import, resetting node IDs
+			parseWorkflowAndUpdateNodes(true, true); // Pass true for showToast, true for isNewImport
 		}, 10); // Small delay (e.g., 10ms)
 	};
 
@@ -422,9 +415,8 @@
 				// Validate format using our function
 				if (validateJSON(rawJson)) {
 					config.comfyui.COMFYUI_WORKFLOW = JSON.stringify(parsedWorkflow, null, 2); // Pretty print
-					// Parse the newly uploaded workflow, clearing previous node configs, SHOW TOAST
-					// Use the reusable function, passing true for toast
-					parseWorkflowAndUpdateNodes(true);
+					// Parse the newly uploaded workflow, treating it as a new import (resetting node IDs)
+					parseWorkflowAndUpdateNodes(true, true); // Pass true for showToast, true for isNewImport
 				} else {
 					toast.error(
 						'Invalid ComfyUI API Workflow JSON format. Ensure it was exported as API format.'
@@ -472,7 +464,7 @@
 				return;
 			}
 			const file = event.dataTransfer.files[0];
-			processWorkflowFile(file);
+			processWorkflowFile(file); // processWorkflowFile now calls parseWorkflowAndUpdateNodes correctly
 		}
 	};
 
@@ -532,14 +524,15 @@
 			// Load saved node configurations
 			let savedNodes = config.comfyui.COMFYUI_WORKFLOW_NODES;
 
-			// Try to parse the stored workflow BUT DO NOT show toast on initial mount
+			// Try to parse the stored workflow on initial mount.
+			// DO NOT show toast and DO NOT treat as new import (allow reconciliation).
 			if (config.comfyui.COMFYUI_WORKFLOW && config.comfyui.COMFYUI_WORKFLOW.trim() !== '') {
 				try {
 					const parsedWorkflow = JSON.parse(config.comfyui.COMFYUI_WORKFLOW);
 					// Pretty print for display
 					config.comfyui.COMFYUI_WORKFLOW = JSON.stringify(parsedWorkflow, null, 2);
-					// Parse workflow and reconcile with saved node configurations, NO TOAST on mount
-					const success = parseAndPopulateWorkflowNodes(parsedWorkflow, savedNodes, false); // Pass false for showToast
+					// Parse workflow, reconcile with savedNodes, NO TOAST, NOT a new import
+					const success = parseAndPopulateWorkflowNodes(parsedWorkflow, savedNodes, false);
 					// Set the initial last known string
 					if (success) {
 						lastKnownWorkflowString = config.comfyui.COMFYUI_WORKFLOW;
@@ -549,8 +542,7 @@
 					}
 				} catch (e) {
 					console.warn('Stored ComfyUI workflow is not valid JSON:', e);
-					// Don't show toast on mount for invalid stored JSON either
-					// Attempt to load saved nodes directly into the UI state
+					// Attempt to load saved nodes directly into the UI state if parsing fails on mount
 					workflowNodesConfig = savedNodes.map((n) => ({
 						type: n.type ?? 'unknown',
 						key: n.key ?? 'unknown',
