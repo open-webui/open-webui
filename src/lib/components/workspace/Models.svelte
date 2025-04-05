@@ -57,6 +57,7 @@
 	}
 
 	let searchValue = '';
+	let showInput = false;
 
 	const deleteModelHandler = async (model) => {
 		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
@@ -201,36 +202,51 @@
 		}}
 	/>
 
-	<div class="flex flex-col gap-1 my-1.5">
+	<div class="pl-5 pr-4 py-2.5 border-b dark:border-customGray-700">
 		<div class="flex justify-between items-center">
-			<div class="flex items-center md:self-center text-xl font-medium px-0.5">
-				{$i18n.t('Models')}
+			<div class="flex items-center md:self-center text-xs-plus font-medium leading-none px-0.5">
+				{$i18n.t('Assistants')}
 				<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
+				<!-- <span class="text-lg font-medium text-gray-500 dark:text-gray-300"
 					>{filteredModels.length}</span
-				>
+				> -->
 			</div>
-		</div>
-
-		<div class=" flex flex-1 items-center w-full space-x-2">
-			<div class="flex flex-1 items-center">
-				<div class=" self-center ml-1 mr-3">
-					<Search className="size-3.5" />
+			<div class="flex">
+				<div class="flex flex-1 items-center p-2.5 rounded-lg mr-1 border dark:border-customGray-700 hover:bg-gray-100 dark:hover:bg-customGray-950 dark:hover:text-white transition">
+					<!-- <div class=" self-center ml-1 mr-3"> -->
+						<button
+						class=""
+						on:click={() => {
+							showInput = !showInput;
+							if (!showInput) searchValue = '';
+						}}
+						aria-label="Toggle Search"
+					>
+						<Search className="size-3.5" />
+					</button>
+					<!-- </div> -->
+					{#if showInput}
+					<input
+						class=" w-full text-2xs outline-none bg-transparent leading-none pl-2"
+						bind:value={searchValue}
+						placeholder={$i18n.t('Search Models')}
+						autofocus
+						on:blur={() => {
+							if (searchValue.trim() === '') showInput = false;
+						}}
+					
+					/>
+					{/if}
 				</div>
-				<input
-					class=" w-full text-sm py-1 rounded-r-xl outline-none bg-transparent"
-					bind:value={searchValue}
-					placeholder={$i18n.t('Search Models')}
-				/>
-			</div>
-
-			<div>
-				<a
-					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
-					href="/workspace/models/create"
-				>
-					<Plus className="size-3.5" />
-				</a>
+				<div>
+					<a
+						class=" px-2 py-2.5 w-[220px] rounded-lg leading-none border border-customGray-700 hover:bg-gray-700/10 dark:hover:bg-customGray-950 dark:text-customGray-200 dark:hover:text-white transition font-medium text-2xs flex items-center justify-center space-x-1"
+						href="/workspace/models/create"
+					>
+						<Plus className="size-3.5" />
+						<span>{$i18n.t('Create new')}</span>
+					</a>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -383,7 +399,7 @@
 		{/each}
 	</div>
 
-	{#if $user?.role === 'admin'}
+	<!-- {#if $user?.role === 'admin'}
 		<div class=" flex justify-end w-full mb-3">
 			<div class="flex space-x-1">
 				<input
@@ -474,9 +490,9 @@
 				</button>
 			</div>
 		</div>
-	{/if}
+	{/if} -->
 
-	{#if $config?.features.enable_community_sharing}
+	<!-- {#if $config?.features.enable_community_sharing}
 		<div class=" my-16">
 			<div class=" text-xl font-medium mb-1 line-clamp-1">
 				{$i18n.t('Made by OpenWebUI Community')}
@@ -501,7 +517,7 @@
 				</div>
 			</a>
 		</div>
-	{/if}
+	{/if} -->
 {:else}
 	<div class="w-full h-full flex justify-center items-center">
 		<Spinner />

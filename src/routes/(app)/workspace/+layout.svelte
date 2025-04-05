@@ -55,7 +55,7 @@
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''} max-w-full"
 	>
-		<nav class="   px-2.5 pt-1 backdrop-blur-xl drag-region">
+		<!-- <nav class="   px-2.5 pt-1 backdrop-blur-xl drag-region">
 			<div class=" flex items-center gap-1">
 				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
 					<button
@@ -124,11 +124,11 @@
 					</div>
 				</div>
 
-				<!-- <div class="flex items-center text-xl font-semibold">{$i18n.t('Workspace')}</div> -->
+				
 			</div>
-		</nav>
+		</nav> -->
 
-		<div class="  pb-1 px-[18px] flex-1 max-h-full overflow-y-auto" id="workspace-container">
+		<div class="  pb-1 flex-1 max-h-full overflow-y-auto" id="workspace-container">
 			<slot />
 		</div>
 	</div>
