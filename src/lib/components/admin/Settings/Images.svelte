@@ -152,29 +152,34 @@
 										(s) => s.type === groupKey && s.key === inputKey
 									);
 
+									// Determine if the saved node should be considered "valid" for overriding auto-discovery
+									// A saved node with empty node_ids should NOT prevent auto-discovery
+									const useSavedNodeIds =
+										savedNode && Array.isArray(savedNode.node_ids) && savedNode.node_ids.length > 0;
+
 									if (nodeGroups.has(groupKey)) {
 										// Add node ID to existing group
 										const group = nodeGroups.get(groupKey);
-										// Only add the auto-discovered ID if this group wasn't explicitly saved before
-										// If it was saved, we rely solely on the saved IDs for this group.
-										if (!savedNode) {
+										// Only add the auto-discovered ID if this group wasn't explicitly saved with non-empty IDs
+										if (!useSavedNodeIds) {
 											group.node_ids.push(nodeId);
 											// Ensure uniqueness within auto-discovered IDs for the group
 											group.node_ids = [...new Set(group.node_ids)];
 										}
+										// If useSavedNodeIds is true, we *don't* add the discovered nodeId,
+										// relying solely on the non-empty saved IDs already set when the group was created.
 									} else {
 										// Create a new group for this input type
-										// Use saved node_ids if available, otherwise use the current nodeId
-										const initialNodeIds = savedNode
-											? Array.isArray(savedNode.node_ids)
-												? savedNode.node_ids // Use saved array
-												: [savedNode.node_ids.toString()] // Convert saved single ID to array
+										// Use saved node_ids if available and non-empty, otherwise use the current nodeId
+										const initialNodeIds = useSavedNodeIds
+											? savedNode.node_ids // Use saved non-empty array
 											: [nodeId]; // Start with the newly discovered ID
 
 										nodeGroups.set(groupKey, {
 											type: groupKey, // Store the unique identifier as 'type'
 											key: inputKey,
-											node_ids: [...new Set(initialNodeIds)], // Ensure initial IDs are unique
+											// Ensure initial IDs are unique, especially if savedNode.node_ids might have duplicates
+											node_ids: [...new Set(initialNodeIds)],
 											class_type: node.class_type
 										});
 									}
