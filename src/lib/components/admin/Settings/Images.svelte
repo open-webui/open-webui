@@ -322,24 +322,25 @@
 		}
 	};
 
-	// Function to handle parsing from textarea input/paste
-	const handleWorkflowInput = () => {
+	// Function to handle parsing when the textarea loses focus (blur event)
+	const handleWorkflowBlur = () => {
 		if (config.comfyui.COMFYUI_WORKFLOW && config.comfyui.COMFYUI_WORKFLOW.trim() !== '') {
 			try {
 				const parsedWorkflow = JSON.parse(config.comfyui.COMFYUI_WORKFLOW);
 				if (validateJSON(config.comfyui.COMFYUI_WORKFLOW)) {
-					// Parse and show toast on user input/paste
+					// Parse and show toast on blur if content is valid API format
 					parseAndPopulateWorkflowNodes(parsedWorkflow, [], true); // Pass true for showToast
 				} else {
 					// JSON is valid structure but not API format
 					workflowNodesConfig = []; // Clear nodes
-					// Optionally show a warning toast here if desired, but might be noisy
-					// toast.warning('Pasted content is not a valid ComfyUI API Workflow JSON format.');
+					toast.warning(
+						'Pasted content is not a valid ComfyUI API Workflow JSON format. No inputs parsed.'
+					);
 				}
 			} catch (error) {
 				// JSON is invalid syntax
 				workflowNodesConfig = []; // Clear nodes
-				// Avoid toast spam during typing/pasting invalid JSON
+				toast.error('Invalid JSON syntax in ComfyUI Workflow. Please correct it.');
 			}
 		} else {
 			workflowNodesConfig = []; // Clear nodes if text area is empty
@@ -719,7 +720,7 @@
 								rows="10"
 								bind:value={config.comfyui.COMFYUI_WORKFLOW}
 								placeholder={$i18n.t('Upload or paste your ComfyUI API format workflow JSON here.')}
-								on:input={handleWorkflowInput}
+								on:blur={handleWorkflowBlur}
 							/>
 						{/if}
 
