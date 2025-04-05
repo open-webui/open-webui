@@ -195,14 +195,14 @@
 				showChangelog.set($settings?.version !== $config.version);
 			}
 
-			if ($page.url.searchParams.get('temporary-chat') === 'true') {
-				temporaryChatEnabled.set(true);
-			}
+			if ($user?.permissions?.chat?.temporary ?? true) {
+				if ($page.url.searchParams.get('temporary-chat') === 'true') {
+					temporaryChatEnabled.set(true);
+				}
 
-			console.log($user?.permissions);
-
-			if ($user?.permissions?.chat?.temporary_enforced) {
-				temporaryChatEnabled.set(true);
+				if ($user?.permissions?.chat?.temporary_enforced) {
+					temporaryChatEnabled.set(true);
+				}
 			}
 
 			// Check for version updates
