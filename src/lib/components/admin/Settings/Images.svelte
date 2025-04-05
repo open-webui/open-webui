@@ -673,8 +673,10 @@
 								class=" text-gray-300 font-medium"
 								href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/discussions/13993"
 								target="_blank"
-								>{$i18n.t('(e.g. `sh webui.sh --api --api-auth username:password`)')}</a
-							>
+								>{$i18n
+									.t('(e.g. `sh webui.sh --api --api-auth username_password`)')
+									.replace('_', ':')}
+							</a>
 						</div>
 					</div>
 					<div>
@@ -958,20 +960,13 @@
 									list="model-list"
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									bind:value={imageGenerationConfig.MODEL}
-									placeholder="Select or enter a model name/ID"
+									placeholder="Enter a model name/ID"
 									required
 								/>
 								<datalist id="model-list">
-									{#if models && models.length > 0}
-										{#each models ?? [] as model}<option value={model.id}>{model.name}</option
-											>{/each}
-									{:else if config.engine === 'openai'}
-										<option value="dall-e-3">DALL-E 3</option><option value="dall-e-2"
-											>DALL-E 2</option
-										>
-									{:else if config.engine === 'gemini'}
-										<option value="gemini-pro-vision">Gemini Pro Vision</option>
-									{/if}
+									{#each models ?? [] as model}
+										<option value={model.id}>{model.name}</option>
+									{/each}
 								</datalist>
 							</Tooltip>
 						</div>
