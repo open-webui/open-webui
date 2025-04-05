@@ -92,7 +92,6 @@
 	};
 
 	const exportHandler = async () => {
-
 		const _feedbacks = await exportAllFeedbacks(localStorage.token).catch((err) => {
 			toast.error(err);
 			return null;

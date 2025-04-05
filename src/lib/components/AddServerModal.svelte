@@ -251,7 +251,7 @@
 								<div class="flex gap-2">
 									<div class="flex-shrink-0 self-start">
 										<select
-											class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden pr-5"
+											class="w-full text-sm bg-transparent dark:bg-gray-900 placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden pr-5"
 											bind:value={auth_type}
 										>
 											<option value="bearer">Bearer</option>

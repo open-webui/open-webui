@@ -1322,6 +1322,10 @@
 			history.messages[messages.at(-1).id].childrenIds.push(userMessageId);
 		}
 
+		if (autoScroll) {
+			scrollToBottom();
+		}
+
 		// focus on chat input
 		const chatInput = document.getElementById('chat-input');
 		chatInput?.focus();
