@@ -147,10 +147,10 @@
 					</button>
 				</Tooltip>
 
-				{#if $user !== undefined}
+				{#if $user !== undefined && $user !== null}
 					<UserMenu
 						className="max-w-[200px]"
-						role={$user.role}
+						role={$user?.role}
 						on:show={(e) => {
 							if (e.detail === 'archived-chat') {
 								showArchivedChats.set(true);
@@ -163,7 +163,7 @@
 						>
 							<div class=" self-center">
 								<img
-									src={$user.profile_image_url}
+									src={$user?.profile_image_url}
 									class="size-6 object-cover rounded-full"
 									alt="User profile"
 									draggable="false"

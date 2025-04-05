@@ -361,14 +361,14 @@ export const compareVersion = (latest, current) => {
 			}) < 0;
 };
 
-export const findWordIndices = (text) => {
-	const regex = /\[([^\]]+)\]/g;
+export const extractCurlyBraceWords = (text) => {
+	const regex = /\{\{([^}]+)\}\}/g;
 	const matches = [];
 	let match;
 
 	while ((match = regex.exec(text)) !== null) {
 		matches.push({
-			word: match[1],
+			word: match[1].trim(),
 			startIndex: match.index,
 			endIndex: regex.lastIndex - 1
 		});
@@ -678,6 +678,31 @@ export const removeDetails = (content, types) => {
 			new RegExp(`<details\\s+type="${type}"[^>]*>.*?<\\/details>`, 'gis'),
 			''
 		);
+	}
+
+	return content;
+};
+
+export const processDetails = (content) => {
+	content = removeDetails(content, ['reasoning', 'code_interpreter']);
+
+	// This regex matches <details> tags with type="tool_calls" and captures their attributes to convert them to <tool_calls> tags
+	const detailsRegex = /<details\s+type="tool_calls"([^>]*)>([\s\S]*?)<\/details>/gis;
+	const matches = content.match(detailsRegex);
+	if (matches) {
+		for (const match of matches) {
+			const attributesRegex = /(\w+)="([^"]*)"/g;
+			const attributes = {};
+			let attributeMatch;
+			while ((attributeMatch = attributesRegex.exec(match)) !== null) {
+				attributes[attributeMatch[1]] = attributeMatch[2];
+			}
+
+			content = content.replace(
+				match,
+				`<tool_calls name="${attributes.name}" result="${attributes.result}"/>`
+			);
+		}
 	}
 
 	return content;
