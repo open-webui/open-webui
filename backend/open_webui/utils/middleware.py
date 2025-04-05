@@ -227,7 +227,9 @@ async def chat_completion_tools_handler(
                 if isinstance(tool_result, str):
                     tool = tools[tool_function_name]
                     tool_id = tool.get("toolkit_id", "")
-                    if tool.get("citation", False) or tool.get("direct", False):
+                    if tool.get("metadata", {}).get("citation", False) or tool.get(
+                        "direct", False
+                    ):
 
                         sources.append(
                             {
@@ -267,7 +269,11 @@ async def chat_completion_tools_handler(
                             }
                         )
 
-                    if tools[tool_function_name].get("file_handler", False):
+                    if (
+                        tools[tool_function_name]
+                        .get("metadata", {})
+                        .get("file_handler", False)
+                    ):
                         skip_files = True
 
             # check if "tool_calls" in result

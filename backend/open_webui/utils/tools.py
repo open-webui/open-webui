@@ -47,6 +47,20 @@ def get_tools(
     for tool_id in tool_ids:
         tools = Tools.get_tool_by_id(tool_id)
         if tools is None:
+
+            tool_dict = {
+                "spec": spec,
+                "callable": callable,
+                "toolkit_id": tool_id,
+                "pydantic_model": function_to_pydantic_model(callable),
+                # Misc info
+                "metadata": {
+                    "file_handler": hasattr(module, "file_handler")
+                    and module.file_handler,
+                    "citation": hasattr(module, "citation") and module.citation,
+                },
+            }
+
             continue
 
         module = request.app.state.TOOLS.get(tool_id, None)
@@ -97,8 +111,11 @@ def get_tools(
                 "toolkit_id": tool_id,
                 "pydantic_model": function_to_pydantic_model(callable),
                 # Misc info
-                "file_handler": hasattr(module, "file_handler") and module.file_handler,
-                "citation": hasattr(module, "citation") and module.citation,
+                "metadata": {
+                    "file_handler": hasattr(module, "file_handler")
+                    and module.file_handler,
+                    "citation": hasattr(module, "citation") and module.citation,
+                },
             }
 
             # TODO: if collision, prepend toolkit name
