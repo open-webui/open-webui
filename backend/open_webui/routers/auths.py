@@ -277,7 +277,9 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     raise
                 except Exception as err:
                     log.error(f"LDAP user creation error: {str(err)}")
-                    raise HTTPException(500, detail="Internal error occurred during LDAP user creation.")
+                    raise HTTPException(
+                        500, detail="Internal error occurred during LDAP user creation."
+                    )
 
             user = Auths.authenticate_user_by_trusted_header(email)
 
@@ -548,7 +550,10 @@ async def signout(request: Request, response: Response):
                             )
             except Exception as e:
                 log.error(f"OpenID signout error: {str(e)}")
-                raise HTTPException(status_code=500, detail="Failed to sign out from the OpenID provider.")
+                raise HTTPException(
+                    status_code=500,
+                    detail="Failed to sign out from the OpenID provider.",
+                )
 
     return {"status": True}
 
@@ -593,7 +598,9 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
     except Exception as err:
         log.error(f"Add user error: {str(err)}")
-        raise HTTPException(500, detail="An internal error occurred while adding the user.")
+        raise HTTPException(
+            500, detail="An internal error occurred while adding the user."
+        )
 
 
 ############################
