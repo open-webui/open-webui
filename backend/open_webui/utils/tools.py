@@ -18,6 +18,8 @@ from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
 from open_webui.utils.plugin import load_tools_module_by_id
 
+import copy
+
 log = logging.getLogger(__name__)
 
 
@@ -48,83 +50,88 @@ def get_tools(
         tools = Tools.get_tool_by_id(tool_id)
         if tools is None:
 
-            tool_dict = {
-                "spec": spec,
-                "callable": callable,
-                "toolkit_id": tool_id,
-                "pydantic_model": function_to_pydantic_model(callable),
-                # Misc info
-                "metadata": {
-                    "file_handler": hasattr(module, "file_handler")
-                    and module.file_handler,
-                    "citation": hasattr(module, "citation") and module.citation,
-                },
-            }
+            if tool_id.startswith("server:"):
+                server_idx = int(tool_id.split(":")[1])
+                tool_server_data = request.app.state.TOOL_SERVERS[server_idx]
 
-            continue
+                tool_dict = {
+                    "spec": spec,
+                    "callable": callable,
+                    "toolkit_id": tool_id,
+                    # Misc info
+                    "metadata": {
+                        "file_handler": hasattr(module, "file_handler")
+                        and module.file_handler,
+                        "citation": hasattr(module, "citation") and module.citation,
+                    },
+                }
 
-        module = request.app.state.TOOLS.get(tool_id, None)
-        if module is None:
-            module, _ = load_tools_module_by_id(tool_id)
-            request.app.state.TOOLS[tool_id] = module
+        else:
 
-        extra_params["__id__"] = tool_id
-        if hasattr(module, "valves") and hasattr(module, "Valves"):
-            valves = Tools.get_tool_valves_by_id(tool_id) or {}
-            module.valves = module.Valves(**valves)
+            module = request.app.state.TOOLS.get(tool_id, None)
+            if module is None:
+                module, _ = load_tools_module_by_id(tool_id)
+                request.app.state.TOOLS[tool_id] = module
 
-        if hasattr(module, "UserValves"):
-            extra_params["__user__"]["valves"] = module.UserValves(  # type: ignore
-                **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
-            )
+            extra_params["__id__"] = tool_id
+            if hasattr(module, "valves") and hasattr(module, "Valves"):
+                valves = Tools.get_tool_valves_by_id(tool_id) or {}
+                module.valves = module.Valves(**valves)
 
-        for spec in tools.specs:
-            # TODO: Fix hack for OpenAI API
-            # Some times breaks OpenAI but others don't. Leaving the comment
-            for val in spec.get("parameters", {}).get("properties", {}).values():
-                if val["type"] == "str":
-                    val["type"] = "string"
+            if hasattr(module, "UserValves"):
+                extra_params["__user__"]["valves"] = module.UserValves(  # type: ignore
+                    **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
+                )
 
-            # Remove internal parameters
-            spec["parameters"]["properties"] = {
-                key: val
-                for key, val in spec["parameters"]["properties"].items()
-                if not key.startswith("__")
-            }
+            for spec in tools.specs:
+                # TODO: Fix hack for OpenAI API
+                # Some times breaks OpenAI but others don't. Leaving the comment
+                for val in spec.get("parameters", {}).get("properties", {}).values():
+                    if val["type"] == "str":
+                        val["type"] = "string"
 
-            function_name = spec["name"]
+                # Remove internal parameters
+                spec["parameters"]["properties"] = {
+                    key: val
+                    for key, val in spec["parameters"]["properties"].items()
+                    if not key.startswith("__")
+                }
 
-            # convert to function that takes only model params and inserts custom params
-            original_func = getattr(module, function_name)
-            callable = apply_extra_params_to_tool_function(original_func, extra_params)
+                function_name = spec["name"]
 
-            if callable.__doc__ and callable.__doc__.strip() != "":
-                s = re.split(":(param|return)", callable.__doc__, 1)
-                spec["description"] = s[0]
-            else:
-                spec["description"] = function_name
+                # convert to function that takes only model params and inserts custom params
+                original_func = getattr(module, function_name)
+                callable = apply_extra_params_to_tool_function(
+                    original_func, extra_params
+                )
 
-            # TODO: This needs to be a pydantic model
-            tool_dict = {
-                "spec": spec,
-                "callable": callable,
-                "toolkit_id": tool_id,
-                "pydantic_model": function_to_pydantic_model(callable),
-                # Misc info
-                "metadata": {
-                    "file_handler": hasattr(module, "file_handler")
-                    and module.file_handler,
-                    "citation": hasattr(module, "citation") and module.citation,
-                },
-            }
+                if callable.__doc__ and callable.__doc__.strip() != "":
+                    s = re.split(":(param|return)", callable.__doc__, 1)
+                    spec["description"] = s[0]
+                else:
+                    spec["description"] = function_name
 
-            # TODO: if collision, prepend toolkit name
-            if function_name in tools_dict:
-                log.warning(f"Tool {function_name} already exists in another tools!")
-                log.warning(f"Collision between {tools} and {tool_id}.")
-                log.warning(f"Discarding {tools}.{function_name}")
-            else:
-                tools_dict[function_name] = tool_dict
+                tool_dict = {
+                    "spec": spec,
+                    "callable": callable,
+                    "toolkit_id": tool_id,
+                    # Misc info
+                    "metadata": {
+                        "file_handler": hasattr(module, "file_handler")
+                        and module.file_handler,
+                        "citation": hasattr(module, "citation") and module.citation,
+                    },
+                }
+
+                # TODO: if collision, prepend toolkit name
+                if function_name in tools_dict:
+                    log.warning(
+                        f"Tool {function_name} already exists in another tools!"
+                    )
+                    log.warning(f"Collision between {tools} and {tool_id}.")
+                    log.warning(f"Discarding {tools}.{function_name}")
+                else:
+                    tools_dict[function_name] = tool_dict
 
     return tools_dict
 
@@ -233,11 +240,11 @@ def get_callable_attributes(tool: object) -> list[Callable]:
 
 def get_tools_specs(tool_class: object) -> list[dict]:
     function_list = get_callable_attributes(tool_class)
-    models = map(function_to_pydantic_model, function_list)
-    return [convert_to_openai_function(tool) for tool in models]
-
-
-import copy
+    function_model_list = map(function_to_pydantic_model, function_list)
+    return [
+        convert_to_openai_function(function_model)
+        for function_model in function_model_list
+    ]
 
 
 def resolve_schema(schema, components):
