@@ -184,7 +184,8 @@ def get_current_user(
 
             # Check if the request path matches any allowed endpoint.
             if not any(
-                request.url.path == allowed or request.url.path.startswith(allowed + "/")
+                request.url.path == allowed
+                or request.url.path.startswith(allowed + "/")
                 for allowed in allowed_paths
             ):
                 raise HTTPException(
