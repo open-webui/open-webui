@@ -221,6 +221,14 @@ async def chat_completion_tools_handler(
                 except Exception as e:
                     tool_result = str(e)
 
+                tool_result_files = []
+                if isinstance(tool_result, list):
+                    for item in tool_result:
+                        # check if string
+                        if isinstance(item, str) and item.startswith("data:"):
+                            tool_result_files.append(item)
+                            tool_result.remove(item)
+
                 if isinstance(tool_result, dict) or isinstance(tool_result, list):
                     tool_result = json.dumps(tool_result, indent=2)
 
@@ -240,7 +248,7 @@ async def chat_completion_tools_handler(
                                         else f"{tool_function_name}"
                                     ),
                                 },
-                                "document": [tool_result],
+                                "document": [tool_result, *tool_result_files],
                                 "metadata": [
                                     {
                                         "source": (
@@ -256,7 +264,7 @@ async def chat_completion_tools_handler(
                         sources.append(
                             {
                                 "source": {},
-                                "document": [tool_result],
+                                "document": [tool_result, *tool_result_files],
                                 "metadata": [
                                     {
                                         "source": (
