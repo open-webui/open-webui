@@ -65,6 +65,7 @@
 
 	// This will hold the dynamically generated node configurations
 	let workflowNodesConfig = [];
+	let isDraggingOver = false; // State for drag-and-drop visual feedback
 
 	const getModels = async () => {
 		models = await getImageGenerationModels(localStorage.token).catch((error) => {
@@ -344,6 +345,80 @@
 			}
 		} else {
 			workflowNodesConfig = []; // Clear nodes if text area is empty
+		}
+	};
+
+	// Function to process a file (used by both upload and drop)
+	const processWorkflowFile = (file: File) => {
+		if (!file) return;
+
+		// Check if the file is JSON
+		if (!file.type.includes('json') && !file.name.endsWith('.json')) {
+			toast.error('Invalid file type. Please upload a .json file.');
+			return;
+		}
+
+		const reader = new FileReader();
+		reader.onload = (event) => {
+			try {
+				if (!event.target?.result || typeof event.target.result !== 'string') {
+					throw new Error('FileReader did not return a string result.');
+				}
+				const rawJson = event.target.result;
+				const parsedWorkflow = JSON.parse(rawJson);
+
+				// Validate format using our function
+				if (validateJSON(rawJson)) {
+					config.comfyui.COMFYUI_WORKFLOW = JSON.stringify(parsedWorkflow, null, 2); // Pretty print
+					// Parse the newly uploaded workflow, clearing previous node configs, SHOW TOAST
+					parseAndPopulateWorkflowNodes(parsedWorkflow, [], true);
+					toast.success('Workflow JSON loaded and parsed successfully.');
+				} else {
+					toast.error(
+						'Invalid ComfyUI API Workflow JSON format. Ensure it was exported as API format.'
+					);
+					// Display the raw text but clear parsed nodes
+					config.comfyui.COMFYUI_WORKFLOW = rawJson;
+					workflowNodesConfig = [];
+				}
+			} catch (error) {
+				toast.error(`Error reading or parsing workflow file: ${error.message}`);
+				if (event.target?.result && typeof event.target.result === 'string') {
+					config.comfyui.COMFYUI_WORKFLOW = event.target.result; // Show raw text on error
+				} else {
+					config.comfyui.COMFYUI_WORKFLOW = '';
+				}
+				workflowNodesConfig = []; // Clear nodes on error
+			}
+		};
+		reader.onerror = (error) => {
+			toast.error(`Error reading file: ${error}`);
+		};
+		reader.readAsText(file);
+	};
+
+	// Drag and Drop Handlers for Textarea
+	const handleDragOver = (event: DragEvent) => {
+		event.preventDefault(); // Necessary to allow drop
+		isDraggingOver = true;
+	};
+
+	const handleDragLeave = (event: DragEvent) => {
+		event.preventDefault();
+		isDraggingOver = false;
+	};
+
+	const handleDrop = (event: DragEvent) => {
+		event.preventDefault();
+		isDraggingOver = false;
+
+		if (event.dataTransfer?.files) {
+			if (event.dataTransfer.files.length > 1) {
+				toast.error('Please drop only one file.');
+				return;
+			}
+			const file = event.dataTransfer.files[0];
+			processWorkflowFile(file);
 		}
 	};
 
@@ -716,11 +791,18 @@
 
 						{#if config.comfyui.COMFYUI_WORKFLOW !== undefined}
 							<textarea
-								class="w-full rounded-lg mb-1 py-2 px-4 text-xs bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden disabled:text-gray-600 resize-none font-mono"
+								class="w-full rounded-lg mb-1 py-2 px-4 text-xs bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden disabled:text-gray-600 resize-none font-mono transition-colors {isDraggingOver
+									? 'border-2 border-dashed border-blue-500 dark:border-blue-400 bg-blue-50 dark:bg-gray-800'
+									: 'border border-transparent'}"
 								rows="10"
 								bind:value={config.comfyui.COMFYUI_WORKFLOW}
-								placeholder={$i18n.t('Upload or paste your ComfyUI API format workflow JSON here.')}
+								placeholder={$i18n.t(
+									'Upload, drag & drop, or paste your ComfyUI API format workflow JSON here.'
+								)}
 								on:blur={handleWorkflowBlur}
+								on:dragover={handleDragOver}
+								on:dragleave={handleDragLeave}
+								on:drop={handleDrop}
 							/>
 						{/if}
 
@@ -733,63 +815,17 @@
 									accept=".json,application/json"
 									on:change={(e) => {
 										const target = e.target;
-										// Use instanceof for type checking and narrowing
 										if (!(target instanceof HTMLInputElement) || !target.files) {
 											console.error('Event target is not an HTMLInputElement or has no files');
-											// Reset input value if possible, even on error
 											if (target instanceof HTMLInputElement) {
 												target.value = null;
 											}
 											return;
 										}
-										// Now TypeScript knows 'target' is HTMLInputElement here
 										const file = target.files[0];
-										if (!file) {
-											target.value = null; // Reset if no file selected
-											return;
-										}
-
-										const reader = new FileReader();
-										reader.onload = (event) => {
-											try {
-												if (!event.target?.result || typeof event.target.result !== 'string') {
-													throw new Error('FileReader did not return a string result.');
-												}
-												const rawJson = event.target.result;
-												const parsedWorkflow = JSON.parse(rawJson);
-
-												// Validate format using our function
-												if (validateJSON(rawJson)) {
-													config.comfyui.COMFYUI_WORKFLOW = JSON.stringify(parsedWorkflow, null, 2); // Pretty print
-													// Parse the newly uploaded workflow, clearing previous node configs, SHOW TOAST
-													parseAndPopulateWorkflowNodes(parsedWorkflow, [], true);
-												} else {
-													toast.error(
-														'Invalid ComfyUI API Workflow JSON format. Ensure it was exported as API format.'
-													);
-													// Display the raw text but clear parsed nodes
-													config.comfyui.COMFYUI_WORKFLOW = rawJson;
-													workflowNodesConfig = [];
-												}
-											} catch (error) {
-												toast.error(`Error reading or parsing workflow file: ${error.message}`);
-												if (event.target?.result && typeof event.target.result === 'string') {
-													config.comfyui.COMFYUI_WORKFLOW = event.target.result; // Show raw text on error
-												} else {
-													config.comfyui.COMFYUI_WORKFLOW = '';
-												}
-												workflowNodesConfig = []; // Clear nodes on error
-											} finally {
-												// Reset the input value so the same file can be uploaded again
-												target.value = null;
-											}
-										};
-										reader.onerror = (error) => {
-											toast.error(`Error reading file: ${error}`);
-											// Also reset input value on error
-											target.value = null;
-										};
-										reader.readAsText(file);
+										processWorkflowFile(file);
+										// Reset the input value so the same file can be uploaded again
+										target.value = null;
 									}}
 								/>
 								<button
@@ -805,7 +841,7 @@
 						</div>
 						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
 							{$i18n.t(
-								'Make sure to export your workflow as API format from ComfyUI ("Save (API format)"). Uploading will discover primitive inputs (text, numbers, etc.) and populate the list below.'
+								'Make sure to export your workflow as API format from ComfyUI ("Save (API format)"). Uploading or dropping will discover primitive inputs (text, numbers, etc.) and populate the list below.'
 							)}
 						</div>
 					</div>
