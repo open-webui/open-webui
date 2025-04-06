@@ -174,7 +174,7 @@ class ProcessUrlForm(CollectionNameForm):
     url: str
 
 
-class SearchForm(CollectionNameForm):
+class SearchForm(BaseModel):
     query: str
 
 
@@ -1464,10 +1464,6 @@ async def process_web_search(
     log.debug(f"web_results: {web_results}")
 
     try:
-        collection_basename = form_data.collection_name
-        if collection_basename == "" or collection_basename is None:
-            collection_basename = "web-search"
-
         urls = [result.link for result in web_results]
         loader = get_web_loader(
             urls,
@@ -1476,7 +1472,9 @@ async def process_web_search(
             trust_env=request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
         )
         docs = await loader.aload()
-        urls = [doc.metadata["source"] for doc in docs] # only keep URLs which could be retrieved
+        urls = [
+            doc.metadata["source"] for doc in docs
+        ]  # only keep URLs which could be retrieved
 
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
@@ -1495,14 +1493,17 @@ async def process_web_search(
         else:
             collection_names = []
             for doc_idx, doc in enumerate(docs):
-                collection_sha = calculate_sha256_string(f"{form_data.query}-{urls[doc_idx]}")
-                doc_collection_name = f"{collection_basename}-{collection_sha}"[:63]
-                collection_names.append(doc_collection_name)
+                collection_name = f"web-search-{calculate_sha256_string(
+                    f"{form_data.query}-{urls[doc_idx]}"
+                )}"[:63]
+                collection_names.append(collection_name)
+
+
                 await run_in_threadpool(
                     save_docs_to_vector_db,
                     request,
                     [doc],
-                    doc_collection_name,
+                    collection_name,
                     overwrite=True,
                     user=user,
                 )
