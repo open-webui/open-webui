@@ -12,6 +12,7 @@
 	export let onSubmit = () => {};
 
 	export let connection = null;
+	export let direct = false;
 
 	let showConfigModal = false;
 	let showDeleteConfirmDialog = false;
@@ -19,7 +20,7 @@
 
 <AddServerModal
 	edit
-	direct
+	{direct}
 	bind:show={showConfigModal}
 	{connection}
 	onDelete={() => {
@@ -42,9 +43,8 @@
 <div class="flex w-full gap-2 items-center">
 	<Tooltip
 		className="w-full relative"
-		content={$i18n.t(`WebUI will make requests to "{{url}}{{path}}"`, {
-			url: connection?.url,
-			path: connection?.path ?? '/openapi.json'
+		content={$i18n.t(`WebUI will make requests to "{{url}}"`, {
+			url: `${connection?.url}/${connection?.path ?? 'openapi.json'}`
 		})}
 		placement="top-start"
 	>

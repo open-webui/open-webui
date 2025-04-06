@@ -105,6 +105,8 @@ from open_webui.config import (
     OPENAI_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
+    # Tool Server Configs
+    TOOL_SERVER_CONNECTIONS,
     # Code Execution
     ENABLE_CODE_EXECUTION,
     CODE_EXECUTION_ENGINE,
@@ -356,6 +358,7 @@ from open_webui.utils.access_control import has_access
 
 from open_webui.utils.auth import (
     get_license_data,
+    get_http_authorization_cred,
     decode_token,
     get_admin_user,
     get_verified_user,
@@ -477,6 +480,15 @@ app.state.config.OPENAI_API_KEYS = OPENAI_API_KEYS
 app.state.config.OPENAI_API_CONFIGS = OPENAI_API_CONFIGS
 
 app.state.OPENAI_MODELS = {}
+
+########################################
+#
+# TOOL SERVERS
+#
+########################################
+
+app.state.config.TOOL_SERVER_CONNECTIONS = TOOL_SERVER_CONNECTIONS
+app.state.TOOL_SERVERS = []
 
 ########################################
 #
@@ -864,6 +876,10 @@ async def commit_session_after_request(request: Request, call_next):
 @app.middleware("http")
 async def check_url(request: Request, call_next):
     start_time = int(time.time())
+    request.state.token = get_http_authorization_cred(
+        request.headers.get("Authorization")
+    )
+
     request.state.enable_api_key = app.state.config.ENABLE_API_KEY
     response = await call_next(request)
     process_time = int(time.time()) - start_time

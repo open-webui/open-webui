@@ -68,23 +68,23 @@ def replace_imports(content):
     return content
 
 
-def load_tools_module_by_id(toolkit_id, content=None):
+def load_tools_module_by_id(tool_id, content=None):
 
     if content is None:
-        tool = Tools.get_tool_by_id(toolkit_id)
+        tool = Tools.get_tool_by_id(tool_id)
         if not tool:
-            raise Exception(f"Toolkit not found: {toolkit_id}")
+            raise Exception(f"Toolkit not found: {tool_id}")
 
         content = tool.content
 
         content = replace_imports(content)
-        Tools.update_tool_by_id(toolkit_id, {"content": content})
+        Tools.update_tool_by_id(tool_id, {"content": content})
     else:
         frontmatter = extract_frontmatter(content)
         # Install required packages found within the frontmatter
         install_frontmatter_requirements(frontmatter.get("requirements", ""))
 
-    module_name = f"tool_{toolkit_id}"
+    module_name = f"tool_{tool_id}"
     module = types.ModuleType(module_name)
     sys.modules[module_name] = module
 
@@ -108,7 +108,7 @@ def load_tools_module_by_id(toolkit_id, content=None):
         else:
             raise Exception("No Tools class found in the module")
     except Exception as e:
-        log.error(f"Error loading module: {toolkit_id}: {e}")
+        log.error(f"Error loading module: {tool_id}: {e}")
         del sys.modules[module_name]  # Clean up
         raise e
     finally:

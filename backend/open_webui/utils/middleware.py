@@ -221,13 +221,23 @@ async def chat_completion_tools_handler(
                 except Exception as e:
                     tool_result = str(e)
 
+                tool_result_files = []
+                if isinstance(tool_result, list):
+                    for item in tool_result:
+                        # check if string
+                        if isinstance(item, str) and item.startswith("data:"):
+                            tool_result_files.append(item)
+                            tool_result.remove(item)
+
                 if isinstance(tool_result, dict) or isinstance(tool_result, list):
                     tool_result = json.dumps(tool_result, indent=2)
 
                 if isinstance(tool_result, str):
                     tool = tools[tool_function_name]
-                    tool_id = tool.get("toolkit_id", "")
-                    if tool.get("citation", False) or tool.get("direct", False):
+                    tool_id = tool.get("tool_id", "")
+                    if tool.get("metadata", {}).get("citation", False) or tool.get(
+                        "direct", False
+                    ):
 
                         sources.append(
                             {
@@ -238,7 +248,7 @@ async def chat_completion_tools_handler(
                                         else f"{tool_function_name}"
                                     ),
                                 },
-                                "document": [tool_result],
+                                "document": [tool_result, *tool_result_files],
                                 "metadata": [
                                     {
                                         "source": (
@@ -254,7 +264,7 @@ async def chat_completion_tools_handler(
                         sources.append(
                             {
                                 "source": {},
-                                "document": [tool_result],
+                                "document": [tool_result, *tool_result_files],
                                 "metadata": [
                                     {
                                         "source": (
@@ -267,7 +277,11 @@ async def chat_completion_tools_handler(
                             }
                         )
 
-                    if tools[tool_function_name].get("file_handler", False):
+                    if (
+                        tools[tool_function_name]
+                        .get("metadata", {})
+                        .get("file_handler", False)
+                    ):
                         skip_files = True
 
             # check if "tool_calls" in result
@@ -1906,7 +1920,8 @@ async def process_chat_response(
                         tool_result_files = []
                         if isinstance(tool_result, list):
                             for item in tool_result:
-                                if item.startswith("data:"):
+                                # check if string
+                                if isinstance(item, str) and item.startswith("data:"):
                                     tool_result_files.append(item)
                                     tool_result.remove(item)
 

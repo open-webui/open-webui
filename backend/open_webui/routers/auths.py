@@ -194,8 +194,8 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             ciphers=LDAP_CIPHERS,
         )
     except Exception as e:
-        log.error(f"An error occurred on TLS: {str(e)}")
-        raise HTTPException(400, detail=str(e))
+        log.error(f"TLS configuration error: {str(e)}")
+        raise HTTPException(400, detail="Failed to configure TLS for LDAP connection.")
 
     try:
         server = Server(
@@ -232,7 +232,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
         username = str(entry[f"{LDAP_ATTRIBUTE_FOR_USERNAME}"]).lower()
         email = str(entry[f"{LDAP_ATTRIBUTE_FOR_MAIL}"])
         if not email or email == "" or email == "[]":
-            raise HTTPException(400, f"User {form_data.user} does not have email.")
+            raise HTTPException(400, "User does not have a valid email address.")
         else:
             email = email.lower()
 
@@ -248,7 +248,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 authentication="SIMPLE",
             )
             if not connection_user.bind():
-                raise HTTPException(400, f"Authentication failed for {form_data.user}")
+                raise HTTPException(400, "Authentication failed.")
 
             user = Users.get_user_by_email(email)
             if not user:
@@ -276,7 +276,10 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 except HTTPException:
                     raise
                 except Exception as err:
-                    raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
+                    log.error(f"LDAP user creation error: {str(err)}")
+                    raise HTTPException(
+                        500, detail="Internal error occurred during LDAP user creation."
+                    )
 
             user = Auths.authenticate_user_by_trusted_header(email)
 
@@ -312,12 +315,10 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             else:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         else:
-            raise HTTPException(
-                400,
-                f"User {form_data.user} does not match the record. Search result: {str(entry[f'{LDAP_ATTRIBUTE_FOR_USERNAME}'])}",
-            )
+            raise HTTPException(400, "User record mismatch.")
     except Exception as e:
-        raise HTTPException(400, detail=str(e))
+        log.error(f"LDAP authentication error: {str(e)}")
+        raise HTTPException(400, detail="LDAP authentication failed.")
 
 
 ############################
@@ -519,7 +520,8 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
     except Exception as err:
-        raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
+        log.error(f"Signup error: {str(err)}")
+        raise HTTPException(500, detail="An internal error occurred during signup.")
 
 
 @router.get("/signout")
@@ -547,7 +549,11 @@ async def signout(request: Request, response: Response):
                                 detail="Failed to fetch OpenID configuration",
                             )
             except Exception as e:
-                raise HTTPException(status_code=500, detail=str(e))
+                log.error(f"OpenID signout error: {str(e)}")
+                raise HTTPException(
+                    status_code=500,
+                    detail="Failed to sign out from the OpenID provider.",
+                )
 
     return {"status": True}
 
@@ -591,7 +597,10 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
     except Exception as err:
-        raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
+        log.error(f"Add user error: {str(err)}")
+        raise HTTPException(
+            500, detail="An internal error occurred while adding the user."
+        )
 
 
 ############################

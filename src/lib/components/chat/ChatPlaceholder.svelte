@@ -28,7 +28,7 @@
 	}
 
 	$: models = modelIds.map((id) => $_models.find((m) => m.id === id));
-	
+
 	onMount(() => {
 		mounted = true;
 	});
@@ -67,15 +67,15 @@
 		</div>
 
 		{#if $temporaryChatEnabled}
-		<Tooltip
-			content={$i18n.t('This chat won’t appear in history and your messages will not be saved.')}
-			className="w-full flex justify-center mb-0.5"
-			placement="top"
-		>
-			<div class="flex items-center gap-2 text-gray-500 font-medium text-lg my-2 w-fit">
-				<EyeSlash strokeWidth="2.5" className="size-5" />{$i18n.t('Temporary Chat')}
-			</div>
-		</Tooltip>
+			<Tooltip
+				content={$i18n.t('This chat won’t appear in history and your messages will not be saved.')}
+				className="w-full flex justify-center mb-0.5"
+				placement="top"
+			>
+				<div class="flex items-center gap-2 text-gray-500 font-medium text-lg my-2 w-fit">
+					<EyeSlash strokeWidth="2.5" className="size-5" />{$i18n.t('Temporary Chat')}
+				</div>
+			</Tooltip>
 		{/if}
 
 		<div
