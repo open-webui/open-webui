@@ -409,13 +409,29 @@ async def chat_web_search_handler(
                         }
                     )
                 elif results.get("docs"):
-                    for doc_idx, doc in enumerate(results["docs"]):
+                    # Invoked when bypass embedding and retrieval is set to True
+                    docs = results["docs"]
+
+                    if len(docs) == len(results["filenames"]):
+                        # the number of docs and filenames (urls) should be the same
+                        for doc_idx, doc in enumerate(docs):
+                            files.append(
+                                {
+                                    "docs": [doc],
+                                    "name": searchQuery,
+                                    "type": "web_search",
+                                    "urls": [results["filenames"][doc_idx]],
+                                }
+                            )
+                    else:
+                        # edge case when the number of docs and filenames (urls) are not the same
+                        # this should not happen, but if it does, we will just append the docs
                         files.append(
                             {
-                                "docs": [doc],
+                                "docs": results.get("docs", []),
                                 "name": searchQuery,
                                 "type": "web_search",
-                                "urls": [results["filenames"][doc_idx]],
+                                "urls": results["filenames"],
                             }
                         )
 
