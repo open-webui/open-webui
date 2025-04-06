@@ -332,9 +332,37 @@
 		}
 	};
 
+	let preprocessedDetailsCache = [];
+
+	function preprocessForEditing(content: string): string {
+		// Replace <details>...</details> with unique ID placeholder
+		const detailsBlocks = [];
+		let i = 0;
+
+		content = content.replace(/<details[\s\S]*?<\/details>/gi, (match) => {
+			detailsBlocks.push(match);
+			return `<details id="__DETAIL_${i++}__"/>`;
+		});
+
+		// Store original blocks in the editedContent or globally (see merging later)
+		preprocessedDetailsCache = detailsBlocks;
+
+		return content;
+	}
+
+	function postprocessAfterEditing(content: string): string {
+		const restoredContent = content.replace(
+			/<details id="__DETAIL_(\d+)__"\/>/g,
+			(_, index) => preprocessedDetailsCache[parseInt(index)] || ''
+		);
+
+		return restoredContent;
+	}
+
 	const editMessageHandler = async () => {
 		edit = true;
-		editedContent = message.content;
+
+		editedContent = preprocessForEditing(message.content);
 
 		await tick();
 
@@ -343,7 +371,8 @@
 	};
 
 	const editMessageConfirmHandler = async () => {
-		editMessage(message.id, editedContent ? editedContent : '', false);
+		const messageContent = postprocessAfterEditing(editedContent ? editedContent : '');
+		editMessage(message.id, messageContent, false);
 
 		edit = false;
 		editedContent = '';
@@ -352,7 +381,9 @@
 	};
 
 	const saveAsCopyHandler = async () => {
-		editMessage(message.id, editedContent ? editedContent : '');
+		const messageContent = postprocessAfterEditing(editedContent ? editedContent : '');
+
+		editMessage(message.id, messageContent);
 
 		edit = false;
 		editedContent = '';
@@ -698,7 +729,7 @@
 									<div>
 										<button
 											id="save-new-message-button"
-											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 											on:click={() => {
 												saveAsCopyHandler();
 											}}
@@ -920,7 +951,7 @@
 
 							{#if message.done}
 								{#if !readOnly}
-									{#if $user.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
+									{#if $user?.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
 												class="{isLastMessage
@@ -1053,7 +1084,7 @@
 									</button>
 								</Tooltip>
 
-								{#if $config?.features.enable_image_generation && ($user.role === 'admin' || $user?.permissions?.features?.image_generation) && !readOnly}
+								{#if $config?.features.enable_image_generation && ($user?.role === 'admin' || $user?.permissions?.features?.image_generation) && !readOnly}
 									<Tooltip content={$i18n.t('Generate Image')} placement="bottom">
 										<button
 											class="{isLastMessage
