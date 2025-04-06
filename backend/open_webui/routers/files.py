@@ -162,7 +162,9 @@ def upload_file(
 
 
 @router.get("/", response_model=list[FileModelResponse])
-async def list_files(user=Depends(get_verified_user), include_content: bool = Query(True)):
+async def list_files(
+    user=Depends(get_verified_user), include_content: bool = Query(True)
+):
     if user.role == "admin":
         files = Files.get_files()
     else:
@@ -170,7 +172,7 @@ async def list_files(user=Depends(get_verified_user), include_content: bool = Qu
 
     if not include_content:
         for file in files:
-            file.data['content'] = ""
+            file.data["content"] = ""
     return files
 
 
