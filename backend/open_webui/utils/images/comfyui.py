@@ -262,7 +262,7 @@ async def comfyui_generate_image(
     parameters_to_apply = {
         "prompt": payload.prompt,
         "negative_prompt": payload.negative_prompt,
-        "seed": payload.seed if payload.seed is not None else random.randint(0, 18446744073709551615),
+        "seed": payload.seed if payload.seed is not None else random.randint(0, 1125899906842624),
         "steps": payload.steps,
         # "cfg": payload.cfg, # If CFG scale is added to payload later
         "model": payload.model,
