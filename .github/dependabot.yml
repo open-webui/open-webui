@@ -1,12 +1,20 @@
 version: 2
 updates:
-  - package-ecosystem: pip
-    directory: '/backend'
+  - package-ecosystem: uv
+    directory: '/'
     schedule:
       interval: monthly
     target-branch: 'dev'
+
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: monthly
+    target-branch: 'dev'
+
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:
       # Check for updates to GitHub Actions every week
       interval: monthly
+    target-branch: 'dev'
