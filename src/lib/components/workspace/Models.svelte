@@ -365,7 +365,7 @@
 				<div class="flex flex-wrap gap-1">
 					{#each tags as tag}
 						<button
-							class={`flex items-center justify-center rounded-md text-2xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'dark:bg-customBlue-800' : 'dark:bg-customGray-800 dark:hover:bg-customBlue-800'} dark:text-white`}
+							class={`flex items-center justify-center rounded-md text-2xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'dark:bg-customBlue-800' : 'dark:bg-customGray-800 dark:hover:bg-customGray-950'} dark:text-white`}
 							on:click={() => {
 								selectedTags.has(tag) ? selectedTags.delete(tag) : selectedTags.add(tag);
 								selectedTags = new Set(selectedTags);
