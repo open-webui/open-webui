@@ -665,6 +665,7 @@
 			<Folder
 				collapsible={!search}
 				className="px-2 mt-0.5"
+				typeChats={true}
 				name={$i18n.t('Chats')}
 				onAdd={() => {
 					createFolder();
@@ -770,7 +771,7 @@
 							name={$i18n.t('Pinned')}
 						>
 							<div
-								class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
+								class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden"
 							>
 								{#each $pinnedChats as chat, idx}
 									<ChatItem

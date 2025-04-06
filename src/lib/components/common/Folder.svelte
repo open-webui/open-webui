@@ -15,6 +15,8 @@
 
 	export let id = '';
 	export let name = '';
+	export let typeChats = false;
+
 	export let collapsible = true;
 
 	export let onAddLabel: string = '';
@@ -132,10 +134,12 @@
 			>
 				<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-medium">
 					<div class="text-gray-300 dark:text-customGray-300">
-						{#if open}
-							<ChevronDown className=" size-3" strokeWidth="2.5" />
-						{:else}
-							<ChevronRight className=" size-3" strokeWidth="2.5" />
+						{#if !typeChats}
+							{#if open}
+								<ChevronDown className=" size-3" strokeWidth="2.5" />
+							{:else}
+								<ChevronRight className=" size-3" strokeWidth="2.5" />
+							{/if}
 						{/if}
 					</div>
 
