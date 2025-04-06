@@ -52,6 +52,7 @@
 	import CommandLine from '../icons/CommandLine.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import ToolServersModal from './ToolServersModal.svelte';
+	import WebSearchModal from './WebSearchModal.svelte';
 	import Wrench from '../icons/Wrench.svelte';
 
 	const i18n = getContext('i18n');
@@ -92,6 +93,8 @@
 	});
 
 	let showTools = false;
+
+	let showWebSearchModal = false;
 
 	let loaded = false;
 	let recording = false;
@@ -355,6 +358,12 @@
 <FilesOverlay show={dragged} />
 
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
+
+<WebSearchModal 
+	bind:show={showWebSearchModal} 
+	onConfirm={() => { webSearchEnabled = true; }} 
+	onCancel={() => {}}  
+/>
 
 {#if loaded}
 	<div class="w-full font-primary">
@@ -1129,18 +1138,24 @@
 												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
-															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
-															type="button"
-															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
-															($settings?.webSearch ?? false) === 'always'
-																? 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+														on:click|preventDefault={() => {
+															if (webSearchEnabled) {
+																webSearchEnabled = false;
+															} else {
+																showWebSearchModal = true;
+															}
+														}}
+														type="button"
+														class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
+														($settings?.webSearch ?? false) === 'always'
+															? 'bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400'
+															: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
 														>
-															<GlobeAlt className="size-5" strokeWidth="1.75" />
-															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
-																>{$i18n.t('Web Search')}</span
-															>
+														<GlobeAlt className="size-5" strokeWidth="1.75" />
+														<span
+															class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
+															>{$i18n.t('Web Search')}</span
+														>
 														</button>
 													</Tooltip>
 												{/if}
