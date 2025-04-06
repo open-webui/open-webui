@@ -79,7 +79,7 @@
 	{#if limitedPrompts.length > 0}
 		{#each limitedPrompts as prompt, idx (prompt.id || prompt.content)}
 			<button
-				class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
+				class="waterfall flex flex-col w-1/3 justify-between
 				       px-3 py-3 rounded-xl bg-transparent hover:bg-black/5
 				       dark:bg-customGray-800 transition group"
 				style="animation-delay: {idx * 60}ms"
