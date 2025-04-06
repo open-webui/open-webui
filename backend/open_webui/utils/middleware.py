@@ -395,14 +395,15 @@ async def chat_web_search_handler(
                         }
                     )
                 elif results.get("docs"):
-                    files.append(
-                        {
-                            "docs": results.get("docs", []),
-                            "name": searchQuery,
-                            "type": "web_search",
-                            "urls": results["filenames"],
-                        }
-                    )
+                    for doc_idx, doc in enumerate(results["docs"]):
+                        files.append(
+                            {
+                                "docs": [doc],
+                                "name": searchQuery,
+                                "type": "web_search",
+                                "urls": [results["filenames"][doc_idx]],
+                            }
+                        )
 
                 form_data["files"] = files
         except Exception as e:
