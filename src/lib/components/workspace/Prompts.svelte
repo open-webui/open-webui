@@ -5,7 +5,7 @@
 
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
+	import { WEBUI_NAME, config, prompts as _prompts, user, showSidebar } from '$lib/stores';
 
 	import {
 		createNewPrompt,
@@ -23,6 +23,11 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
+	import ShowSidebarIcon from '../icons/ShowSidebarIcon.svelte';
+	import { getGroups } from '$lib/apis/groups';
+	import GroupIcon from '../icons/GroupIcon.svelte';
+	import PublicIcon from '../icons/PublicIcon.svelte';
+	import PrivateIcon from '../icons/PrivateIcon.svelte';
 
 	const i18n = getContext('i18n');
 	let promptsImportInputElement: HTMLInputElement;
@@ -30,6 +35,7 @@
 
 	let importFiles = '';
 	let query = '';
+	let showInput = false;
 
 	let prompts = [];
 
@@ -37,7 +43,26 @@
 	let deletePrompt = null;
 
 	let filteredItems = [];
-	$: filteredItems = prompts.filter((p) => query === '' || p.command.includes(query));
+	let accessFilter = 'all';
+	let groupsForPrompts = [];
+
+	onMount(async () => {
+		groupsForPrompts = await getGroups(localStorage.token);
+	});
+
+	$: {
+		filteredItems = prompts.filter((p) => {
+			const nameMatch = query === '' || p.command.includes(query);
+			const isPublic = p.access_control === null;
+			const isPrivate = p.access_control !== null;
+			const accessMatch =
+				accessFilter === 'all' ||
+				(accessFilter === 'public' && isPublic) ||
+				(accessFilter === 'private' && isPrivate);
+
+			return nameMatch && accessMatch;
+		});
+	}
 
 	const shareHandler = async (prompt) => {
 		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
@@ -84,6 +109,45 @@
 		await init();
 		loaded = true;
 	});
+
+	function getGroupNamesFromAccess(model) {
+		if (!model.access_control) return [];
+
+		const readGroups = model.access_control.read?.group_ids || [];
+		const writeGroups = model.access_control.write?.group_ids || [];
+
+		const allGroupIds = Array.from(new Set([...readGroups, ...writeGroups]));
+
+		const matchedGroups = allGroupIds
+			.map((id) => groupsForPrompts.find((g) => g.id === id))
+			.filter(Boolean)
+			.map((g) => g.name);
+
+		return matchedGroups;
+	}
+	let scrollContainer;
+
+	function updateScrollHeight() {
+		const header = document.getElementById('prompts-header');
+		const filters = document.getElementById('prompts-filters');
+
+		if (header && filters && scrollContainer) {
+			const totalOffset = header.offsetHeight + filters.offsetHeight;
+			scrollContainer.style.height = `calc(100dvh - ${totalOffset}px)`;
+		}
+	}
+
+	onMount(() => {
+		window.addEventListener('resize', updateScrollHeight);
+		return () => {
+			window.removeEventListener('resize', updateScrollHeight);
+		};
+	});
+	$: if (loaded) {
+		setTimeout(() => {
+			updateScrollHeight();
+		}, 0);
+	}
 </script>
 
 <svelte:head>
@@ -105,243 +169,223 @@
 		</div>
 	</DeleteConfirmDialog>
 
-	<div class="flex flex-col gap-1 my-1.5">
+	<div id="prompts-header" class="pl-[22px] pr-[15px] py-2.5 border-b dark:border-customGray-700">
 		<div class="flex justify-between items-center">
-			<div class="flex md:self-center text-xl font-medium px-0.5 items-center">
+			<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
+				<button
+					id="sidebar-toggle-button"
+					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+					on:click={() => {
+						showSidebar.set(!$showSidebar);
+					}}
+					aria-label="Toggle Sidebar"
+				>
+					<div class=" m-auto self-center">
+						<ShowSidebarIcon />
+					</div>
+				</button>
+			</div>
+			<div class="flex items-center md:self-center text-xs-plus font-medium leading-none px-0.5">
 				{$i18n.t('Prompts')}
-				<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-					>{filteredItems.length}</span
-				>
 			</div>
-		</div>
-
-		<div class=" flex w-full space-x-2">
-			<div class="flex flex-1">
-				<div class=" self-center ml-1 mr-3">
-					<Search className="size-3.5" />
+			<div class="flex">
+				<div
+					class="flex flex-1 items-center p-2.5 rounded-lg mr-1 border dark:border-customGray-700 hover:bg-gray-100 dark:hover:bg-customGray-950 dark:hover:text-white transition"
+				>
+					<button
+						class=""
+						on:click={() => {
+							showInput = !showInput;
+							if (!showInput) query = '';
+						}}
+						aria-label="Toggle Search"
+					>
+						<Search className="size-3.5" />
+					</button>
+					<!-- </div> -->
+					{#if showInput}
+						<input
+							class=" w-full text-2xs outline-none bg-transparent leading-none pl-2"
+							bind:value={query}
+							placeholder={$i18n.t('Search Prompts')}
+							autofocus
+							on:blur={() => {
+								if (query.trim() === '') showInput = false;
+							}}
+						/>
+					{/if}
 				</div>
-				<input
-					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
-					bind:value={query}
-					placeholder={$i18n.t('Search Prompts')}
-				/>
-			</div>
-
-			<div>
-				<a
-					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
-					href="/workspace/prompts/create"
-				>
-					<Plus className="size-3.5" />
-				</a>
+				<div>
+					<a
+						class=" px-2 py-2.5 w-[35px] sm:w-[220px] rounded-lg leading-none border border-customGray-700 hover:bg-gray-700/10 dark:hover:bg-customGray-950 dark:text-customGray-200 dark:hover:text-white transition font-medium text-2xs flex items-center justify-center space-x-1"
+						href="/workspace/prompts/create"
+					>
+						<Plus className="size-3.5" />
+						<span class="hidden sm:block">{$i18n.t('Create new')}</span>
+					</a>
+				</div>
 			</div>
 		</div>
 	</div>
 
-	<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
-		{#each filteredItems as prompt}
-			<div
-				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
-			>
-				<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-					<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
-						<div class=" flex-1 flex items-center gap-2 self-center">
-							<div class=" font-semibold line-clamp-1 capitalize">{prompt.title}</div>
-							<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
-								{prompt.command}
+	<div class="pl-[22px] pr-[15px]">
+		<div
+			id="prompts-filters"
+			class="flex items-center justify-between py-5 pr-[22px] flex-col md:flex-row"
+		>
+			<div class="flex items-start space-x-[5px] flex-col sm:flex-row mb-3 sm:mb-0">
+				<div
+					class="dark:text-customGray-300 text-2xs whitespace-nowrap h-[22px] flex items-center mb-2 sm:mb-0"
+				>
+					{$i18n.t('Filter by category:')}
+				</div>
+				<div class="flex flex-wrap gap-1">
+					<!-- {#each tags as tag}
+						<button
+							class={`flex items-center justify-center rounded-md text-2xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'dark:bg-customBlue-800' : 'dark:bg-customGray-800 dark:hover:bg-customBlue-800'} dark:text-white`}
+							on:click={() => {
+								selectedTags.has(tag) ? selectedTags.delete(tag) : selectedTags.add(tag);
+								selectedTags = new Set(selectedTags);
+							}}
+						>
+							{tag.charAt(0).toUpperCase() + tag.slice(1)}
+						</button>
+					{/each} -->
+				</div>
+			</div>
+			<div class="flex dark:bg-customGray-800 rounded-md flex-shrink-0">
+				<button
+					on:click={() => (accessFilter = 'all')}
+					class={`${accessFilter === 'all' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-2xs leading-none dark:text-white`}
+					>{$i18n.t('All')}</button
+				>
+				<button
+					on:click={() => (accessFilter = 'private')}
+					class={`${accessFilter === 'private' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-2xs leading-none dark:text-white`}
+					>{$i18n.t('Private')}</button
+				>
+				<button
+					on:click={() => (accessFilter = 'public')}
+					class={`${accessFilter === 'public' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-2xs leading-none dark:text-white`}
+					>{$i18n.t('Public')}</button
+				>
+				<!-- <button class="px-[23px] py-[7px] flex-shrink-0 text-2xs leading-none dark:text-white"
+					>{$i18n.t('Pre-built')}</button
+				> -->
+			</div>
+		</div>
+		<div
+			id="prompts-scroll-container"
+			bind:this={scrollContainer}
+			class="overflow-y-scroll pr-[3px]"
+		>
+			<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
+				{#each filteredItems as prompt}
+					<div
+						class=" group flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 dark:bg-customGray-800 dark:hover:bg-white/5 hover:bg-black/5 rounded-2xl transition"
+					>
+						<div class="flex items-start justify-between">
+							<div class="flex items-center">
+								<div class="flex items-center gap-1 flex-wrap">
+									{#if prompt.access_control == null}
+										<div
+											class="flex gap-1 items-center dark:text-white text-2xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+										>
+											<PublicIcon />
+											<span>{$i18n.t('Public')}</span>
+										</div>
+									{:else if getGroupNamesFromAccess(prompt).length < 1}
+										<div
+											class="flex gap-1 items-center dark:text-white text-2xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+										>
+											<PrivateIcon />
+											<span>{$i18n.t('Private')}</span>
+										</div>
+									{:else}
+										{#each getGroupNamesFromAccess(prompt) as groupName}
+											<div
+												class="flex gap-1 items-center dark:text-white text-2xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											>
+												<GroupIcon />
+												<span>{groupName}</span>
+											</div>
+										{/each}
+									{/if}
+
+								<!-- {#each model.meta?.tags as modelTag}
+									<div
+										class="flex items-center dark:text-white text-2xs dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
+									>
+										{modelTag.name}
+									</div>
+								{/each} -->
+								</div>
+							</div>
+							<div class="invisible group-hover:visible">
+								<PromptMenu
+									{prompt}
+									shareHandler={() => {
+										shareHandler(prompt);
+									}}
+									cloneHandler={() => {
+										cloneHandler(prompt);
+									}}
+									exportHandler={() => {
+										exportHandler(prompt);
+									}}
+									deleteHandler={async () => {
+										deletePrompt = prompt;
+										showDeleteConfirm = true;
+									}}
+									onClose={() => {}}
+								>
+									<button
+										class="self-center w-fit text-sm px-0.5 h-[21px] dark:text-white dark:hover:text-white hover:bg-black/5 dark:hover:bg-customGray-900 rounded-md"
+										type="button"
+									>
+										<EllipsisHorizontal className="size-5" />
+									</button>
+								</PromptMenu>
 							</div>
 						</div>
-
-						<div class=" text-xs px-0.5">
-							<Tooltip
-								content={prompt?.user?.email ?? $i18n.t('Deleted User')}
-								className="flex shrink-0"
-								placement="top-start"
-							>
-								<div class="shrink-0 text-gray-500">
-									{$i18n.t('By {{name}}', {
-										name: capitalizeFirstLetter(
-											prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
-										)
-									})}
+						<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
+							<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
+								<div class=" flex-1 flex items-center gap-2 self-center">
+									<div class="text-xs-plus line-clamp-1 capitalize dark:text-customGray-100">
+										{prompt.title}
+									</div>
+									<div
+										class=" text-2xs overflow-hidden dark:text-customGray-100 text-ellipsis line-clamp-1"
+									>
+										{prompt.command}
+									</div>
 								</div>
-							</Tooltip>
+								<div class="text-2xs line-clamp-1 dark:text-customGray-100">
+									{prompt.content}
+								</div>
+
+								<div class=" text-2xs px-0.5 dark:text-customGray-100">
+									<Tooltip
+										content={prompt?.user?.email ?? $i18n.t('Deleted User')}
+										className="flex shrink-0"
+										placement="top-start"
+									>
+										<div class="shrink-0 text-gray-500">
+											{$i18n.t('By {{name}}', {
+												name: capitalizeFirstLetter(
+													prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
+												)
+											})}
+										</div>
+									</Tooltip>
+								</div>
+							</a>
 						</div>
-					</a>
-				</div>
-				<div class="flex flex-row gap-0.5 self-center">
-					<a
-						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-						type="button"
-						href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-							/>
-						</svg>
-					</a>
-
-					<PromptMenu
-						shareHandler={() => {
-							shareHandler(prompt);
-						}}
-						cloneHandler={() => {
-							cloneHandler(prompt);
-						}}
-						exportHandler={() => {
-							exportHandler(prompt);
-						}}
-						deleteHandler={async () => {
-							deletePrompt = prompt;
-							showDeleteConfirm = true;
-						}}
-						onClose={() => {}}
-					>
-						<button
-							class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-							type="button"
-						>
-							<EllipsisHorizontal className="size-5" />
-						</button>
-					</PromptMenu>
-				</div>
+					</div>
+				{/each}
 			</div>
-		{/each}
+		</div>
 	</div>
-
-	{#if $user?.role === 'admin'}
-		<div class=" flex justify-end w-full mb-3">
-			<div class="flex space-x-2">
-				<input
-					id="prompts-import-input"
-					bind:this={promptsImportInputElement}
-					bind:files={importFiles}
-					type="file"
-					accept=".json"
-					hidden
-					on:change={() => {
-						console.log(importFiles);
-
-						const reader = new FileReader();
-						reader.onload = async (event) => {
-							const savedPrompts = JSON.parse(event.target.result);
-							console.log(savedPrompts);
-
-							for (const prompt of savedPrompts) {
-								await createNewPrompt(localStorage.token, {
-									command:
-										prompt.command.charAt(0) === '/' ? prompt.command.slice(1) : prompt.command,
-									title: prompt.title,
-									content: prompt.content
-								}).catch((error) => {
-									toast.error(`${error}`);
-									return null;
-								});
-							}
-
-							prompts = await getPromptList(localStorage.token);
-							await _prompts.set(await getPrompts(localStorage.token));
-
-							importFiles = [];
-							promptsImportInputElement.value = '';
-						};
-
-						reader.readAsText(importFiles[0]);
-					}}
-				/>
-
-				<button
-					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-					on:click={() => {
-						promptsImportInputElement.click();
-					}}
-				>
-					<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import Prompts')}</div>
-
-					<div class=" self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</div>
-				</button>
-
-				<button
-					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
-					on:click={async () => {
-						// promptsImportInputElement.click();
-						let blob = new Blob([JSON.stringify(prompts)], {
-							type: 'application/json'
-						});
-						saveAs(blob, `prompts-export-${Date.now()}.json`);
-					}}
-				>
-					<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Prompts')}</div>
-
-					<div class=" self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</div>
-				</button>
-			</div>
-		</div>
-	{/if}
-
-	{#if $config?.features.enable_community_sharing}
-		<div class=" my-16">
-			<div class=" text-xl font-medium mb-1 line-clamp-1">
-				{$i18n.t('Made by OpenWebUI Community')}
-			</div>
-
-			<a
-				class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
-				href="https://openwebui.com/#open-webui-community"
-				target="_blank"
-			>
-				<div class=" self-center">
-					<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a prompt')}</div>
-					<div class=" text-sm line-clamp-1">
-						{$i18n.t('Discover, download, and explore custom prompts')}
-					</div>
-				</div>
-
-				<div>
-					<div>
-						<ChevronRight />
-					</div>
-				</div>
-			</a>
-		</div>
-	{/if}
 {:else}
 	<div class="w-full h-full flex justify-center items-center">
 		<Spinner />
