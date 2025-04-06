@@ -211,7 +211,13 @@
 	};
 
 	const toggleChangeChatDirection = async () => {
-		chatDirection = chatDirection === 'LTR' ? 'RTL' : 'LTR';
+		if (chatDirection === 'auto') {
+			chatDirection = 'LTR';
+		} else if (chatDirection === 'LTR') {
+			chatDirection = 'RTL';
+		} else if (chatDirection === 'RTL') {
+			chatDirection = 'auto';
+		}
 		saveSettings({ chatDirection });
 	};
 
@@ -412,8 +418,10 @@
 					>
 						{#if chatDirection === 'LTR'}
 							<span class="ml-2 self-center">{$i18n.t('LTR')}</span>
-						{:else}
+						{:else if chatDirection === 'RTL'}
 							<span class="ml-2 self-center">{$i18n.t('RTL')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Auto')}</span>
 						{/if}
 					</button>
 				</div>
