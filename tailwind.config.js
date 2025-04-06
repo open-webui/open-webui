@@ -42,7 +42,8 @@ export default {
 					950: '#181818'
 				},
 				customBlue: {
-					700: '#272D98'
+					700: '#272D98',
+					800: '#272A6A'
 				}
 			},
 			typography: {
