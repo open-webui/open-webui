@@ -385,15 +385,16 @@ async def chat_web_search_handler(
                 all_results.append(results)
                 files = form_data.get("files", [])
 
-                if results.get("collection_name"):
-                    files.append(
-                        {
-                            "collection_name": results["collection_name"],
-                            "name": searchQuery,
-                            "type": "web_search",
-                            "urls": results["filenames"],
-                        }
-                    )
+                if results.get("collection_names"):
+                    for col_idx, collection_name in enumerate(results.get("collection_names")):
+                        files.append(
+                            {
+                                "collection_name": collection_name,
+                                "name": searchQuery,
+                                "type": "web_search",
+                                "urls": [results["filenames"][col_idx]],
+                            }
+                        )
                 elif results.get("docs"):
                     files.append(
                         {

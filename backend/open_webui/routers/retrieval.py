@@ -1464,11 +1464,9 @@ async def process_web_search(
     log.debug(f"web_results: {web_results}")
 
     try:
-        collection_name = form_data.collection_name
-        if collection_name == "" or collection_name is None:
-            collection_name = f"web-search-{calculate_sha256_string(form_data.query)}"[
-                :63
-            ]
+        collection_basename = form_data.collection_name
+        if collection_basename == "" or collection_basename is None:
+            collection_basename = "web-search"
 
         urls = [result.link for result in web_results]
         loader = get_web_loader(
@@ -1494,18 +1492,23 @@ async def process_web_search(
                 "loaded_count": len(docs),
             }
         else:
-            await run_in_threadpool(
-                save_docs_to_vector_db,
-                request,
-                docs,
-                collection_name,
-                overwrite=True,
-                user=user,
-            )
+            collection_names = []
+            for doc_idx, doc in enumerate(docs):
+                collection_sha = calculate_sha256_string(f"{form_data.query}-{urls[doc_idx]}")
+                doc_collection_name = f"{collection_basename}-{collection_sha}"[:63]
+                collection_names.append(doc_collection_name)
+                await run_in_threadpool(
+                    save_docs_to_vector_db,
+                    request,
+                    [doc],
+                    doc_collection_name,
+                    overwrite=True,
+                    user=user,
+                )
 
             return {
                 "status": True,
-                "collection_name": collection_name,
+                "collection_names": collection_names,
                 "filenames": urls,
                 "loaded_count": len(docs),
             }
