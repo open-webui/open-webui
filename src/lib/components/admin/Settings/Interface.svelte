@@ -380,7 +380,7 @@
 					</div>
 				</div>
 
-				{#if $user.role === 'admin'}
+				{#if $user?.role === 'admin'}
 					<div class=" space-y-3">
 						<div class="flex w-full justify-between mb-2">
 							<div class=" self-center text-sm font-semibold">

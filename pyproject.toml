@@ -45,7 +45,7 @@ dependencies = [
 
     "openai",
     "anthropic",
-    "google-generativeai==0.7.2",
+    "google-generativeai==0.8.4",
     "tiktoken",
 
     "langchain==0.3.19",
@@ -62,7 +62,7 @@ dependencies = [
     "transformers",
     "sentence-transformers==3.3.1",
     "colbert-ai==0.2.21",
-    "einops==0.8.0",
+    "einops==0.8.1",
 
     "ftfy==6.2.3",
     "pypdf==4.3.1",
@@ -73,7 +73,7 @@ dependencies = [
     "unstructured==0.16.17",
     "nltk==3.9.1",
     "Markdown==3.7",
-    "pypandoc==1.13",
+    "pypandoc==1.15",
     "pandas==2.2.3",
     "openpyxl==3.1.5",
     "pyxlsb==1.0.10",
@@ -88,6 +88,8 @@ dependencies = [
     "opencv-python-headless==4.11.0.86",
     "rapidocr-onnxruntime==1.3.24",
     "rank-bm25==0.2.2",
+
+    "onnxruntime==1.20.1",
 
     "faster-whisper==1.1.1",
 

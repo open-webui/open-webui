@@ -21,7 +21,12 @@
 		TTSWorker
 	} from '$lib/stores';
 
-	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
+	import {
+		blobToFile,
+		compressImage,
+		createMessagesList,
+		extractCurlyBraceWords
+	} from '$lib/utils';
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { uploadFile } from '$lib/apis/files';
 	import { generateAutoCompletion } from '$lib/apis';
@@ -47,6 +52,7 @@
 	import CommandLine from '../icons/CommandLine.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import ToolServersModal from './ToolServersModal.svelte';
+	import Wrench from '../icons/Wrench.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -85,7 +91,7 @@
 		webSearchEnabled
 	});
 
-	let showToolServers = false;
+	let showTools = false;
 
 	let loaded = false;
 	let recording = false;
@@ -348,7 +354,7 @@
 
 <FilesOverlay show={dragged} />
 
-<ToolServersModal bind:show={showToolServers} />
+<ToolServersModal bind:show={showTools} {selectedToolIds} />
 
 {#if loaded}
 	<div class="w-full font-primary">
@@ -392,38 +398,6 @@
 						<div
 							class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-linear-to-t from-white dark:from-gray-900 z-10"
 						>
-							{#if selectedToolIds.length > 0}
-								<div class="flex items-center justify-between w-full">
-									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
-										<div class="pl-1">
-											<span class="relative flex size-2">
-												<span
-													class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"
-												/>
-												<span class="relative inline-flex rounded-full size-2 bg-yellow-500" />
-											</span>
-										</div>
-										<div class="  text-ellipsis line-clamp-1 flex">
-											{#each selectedToolIds.map((id) => {
-												return $tools ? $tools.find((t) => t.id === id) : { id: id, name: id };
-											}) as tool, toolIdx (toolIdx)}
-												<Tooltip
-													content={tool?.meta?.description ?? ''}
-													className=" {toolIdx !== 0 ? 'pl-0.5' : ''} shrink-0"
-													placement="top"
-												>
-													{tool.name}
-												</Tooltip>
-
-												{#if toolIdx !== selectedToolIds.length - 1}
-													<span>, </span>
-												{/if}
-											{/each}
-										</div>
-									</div>
-								</div>
-							{/if}
-
 							{#if atSelectedModel !== undefined}
 								<div class="flex items-center justify-between w-full">
 									<div class="pl-[1px] flex items-center gap-2 text-sm dark:text-gray-500">
@@ -631,6 +605,7 @@
 									{#if $settings?.richTextInput ?? true}
 										<div
 											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
+											id="chat-input-container"
 										>
 											<RichTextInput
 												bind:this={chatInputElement}
@@ -977,7 +952,7 @@
 												}
 
 												if (e.key === 'Tab') {
-													const words = findWordIndices(prompt);
+													const words = extractCurlyBraceWords(prompt);
 
 													if (words.length > 0) {
 														const word = words.at(0);
@@ -1058,7 +1033,7 @@
 								</div>
 
 								<div class=" flex justify-between mt-1.5 mb-2.5 mx-0.5 max-w-full">
-									<div class="ml-1 self-end gap-0.5 flex items-center flex-1 max-w-[80%]">
+									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%] gap-0.5">
 										<InputMenu
 											bind:selectedToolIds
 											{screenCaptureHandler}
@@ -1126,7 +1101,30 @@
 											</button>
 										</InputMenu>
 
-										<div class="flex gap-0.5 items-center overflow-x-auto scrollbar-none flex-1">
+										<div class="flex gap-[2px] items-center overflow-x-auto scrollbar-none flex-1">
+											{#if toolServers.length + selectedToolIds.length > 0}
+												<Tooltip
+													content={$i18n.t('{{COUNT}} Available Tools', {
+														COUNT: toolServers.length + selectedToolIds.length
+													})}
+												>
+													<button
+														class="translate-y-[0.5px] flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg p-1 self-center transition"
+														aria-label="Available Tools"
+														type="button"
+														on:click={() => {
+															showTools = !showTools;
+														}}
+													>
+														<Wrench className="size-4" strokeWidth="1.75" />
+
+														<span class="text-sm font-medium text-gray-600 dark:text-gray-300">
+															{toolServers.length + selectedToolIds.length}
+														</span>
+													</button>
+												</Tooltip>
+											{/if}
+
 											{#if $_user}
 												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
@@ -1140,7 +1138,7 @@
 														>
 															<GlobeAlt className="size-5" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
 																>{$i18n.t('Web Search')}</span
 															>
 														</button>
@@ -1159,7 +1157,7 @@
 														>
 															<Photo className="size-5" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
 																>{$i18n.t('Image')}</span
 															>
 														</button>
@@ -1178,7 +1176,7 @@
 														>
 															<CommandLine className="size-5" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
 																>{$i18n.t('Code Interpreter')}</span
 															>
 														</button>
@@ -1189,47 +1187,6 @@
 									</div>
 
 									<div class="self-end flex space-x-1 mr-1 shrink-0">
-										{#if toolServers.length > 0}
-											<Tooltip
-												content={$i18n.t('{{COUNT}} Available Tool Servers', {
-													COUNT: toolServers.length
-												})}
-											>
-												<button
-													class="translate-y-[1.5px] flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg px-1.5 py-0.5 mr-0.5 self-center border border-gray-100 dark:border-gray-800 transition"
-													aria-label="Available Tool Servers"
-													type="button"
-													on:click={() => {
-														showToolServers = !showToolServers;
-													}}
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														fill="none"
-														viewBox="0 0 24 24"
-														stroke-width="1.5"
-														stroke="currentColor"
-														class="size-3"
-													>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															d="M21.75 6.75a4.5 4.5 0 0 1-4.884 4.484c-1.076-.091-2.264.071-2.95.904l-7.152 8.684a2.548 2.548 0 1 1-3.586-3.586l8.684-7.152c.833-.686.995-1.874.904-2.95a4.5 4.5 0 0 1 6.336-4.486l-3.276 3.276a3.004 3.004 0 0 0 2.25 2.25l3.276-3.276c.256.565.398 1.192.398 1.852Z"
-														/>
-														<path
-															stroke-linecap="round"
-															stroke-linejoin="round"
-															d="M4.867 19.125h.008v.008h-.008v-.008Z"
-														/>
-													</svg>
-
-													<span class="text-xs">
-														{toolServers.length}
-													</span>
-												</button>
-											</Tooltip>
-										{/if}
-
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
