@@ -1053,9 +1053,7 @@ async def chat_completion(
     model_item = form_data.pop("model_item", {})
     tasks = form_data.pop("background_tasks", None)
 
-    # placeholder
     metadata = {}
-
     try:
         if not model_item.get("direct", False):
             model_id = form_data.get("model", None)
