@@ -1,15 +1,15 @@
 [
 	{
-		"code": "ar",
-		"title": "Arabic (العربية)"
-	},
-	{
 		"code": "en-US",
 		"title": "English (US)"
 	},
 	{
 		"code": "en-GB",
 		"title": "English (GB)"
+	},
+	{
+		"code": "ar",
+		"title": "Arabic (العربية)"
 	},
 	{
 		"code": "ar-BH",
