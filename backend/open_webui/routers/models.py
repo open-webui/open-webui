@@ -68,9 +68,7 @@ async def create_new_model(
         )
 
     else:
-        company = Companies.get_company_by_id(user.company_id)
-
-        model = Models.insert_new_model(form_data, company.id)
+        model = Models.insert_new_model(form_data, user.id)
         if model:
             return model
         else:

@@ -54,7 +54,7 @@ async def get_all_base_models(request: Request, user: User):
                         params=ModelParams(),
                         access_control=None,  # None means public access
                     ),
-                    company_id=user.company_id,
+                    user_id=user.id,
                 )
 
     if request.app.state.config.ENABLE_OLLAMA_API:
