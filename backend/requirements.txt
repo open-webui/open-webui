@@ -124,9 +124,9 @@ ldap3==2.9.1
 firecrawl-py==1.12.0
 
 ## Trace
-opentelemetry-api==1.30.0
-opentelemetry-sdk==1.30.0
-opentelemetry-exporter-otlp==1.30.0
+opentelemetry-api==1.31.1
+opentelemetry-sdk==1.31.1
+opentelemetry-exporter-otlp==1.31.1
 opentelemetry-instrumentation==0.51b0
 opentelemetry-instrumentation-fastapi==0.51b0
 opentelemetry-instrumentation-sqlalchemy==0.51b0
