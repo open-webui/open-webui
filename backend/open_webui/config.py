@@ -3,6 +3,7 @@ import logging
 import os
 import shutil
 import base64
+import redis
 
 from datetime import datetime
 from pathlib import Path
@@ -17,6 +18,9 @@ from open_webui.env import (
     DATA_DIR,
     DATABASE_URL,
     ENV,
+    REDIS_URL,
+    REDIS_SENTINEL_HOSTS,
+    REDIS_SENTINEL_PORT,
     FRONTEND_BUILD_DIR,
     OFFLINE_MODE,
     OPEN_WEBUI_DIR,
@@ -26,6 +30,7 @@ from open_webui.env import (
     log,
 )
 from open_webui.internal.db import Base, get_db
+from open_webui.utils.redis import get_redis_connection
 
 
 class EndpointFilter(logging.Filter):
@@ -248,9 +253,17 @@ class PersistentConfig(Generic[T]):
 
 class AppConfig:
     _state: dict[str, PersistentConfig]
+    _redis: Optional[redis.Redis] = None
 
-    def __init__(self):
+    def __init__(
+        self, redis_url: Optional[str] = None, redis_sentinels: Optional[list] = []
+    ):
         super().__setattr__("_state", {})
+        if redis_url:
+            super().__setattr__(
+                "_redis",
+                get_redis_connection(redis_url, redis_sentinels, decode_responses=True),
+            )
 
     def __setattr__(self, key, value):
         if isinstance(value, PersistentConfig):
@@ -259,7 +272,31 @@ class AppConfig:
             self._state[key].value = value
             self._state[key].save()
 
+            if self._redis:
+                redis_key = f"open-webui:config:{key}"
+                self._redis.set(redis_key, json.dumps(self._state[key].value))
+
     def __getattr__(self, key):
+        if key not in self._state:
+            raise AttributeError(f"Config key '{key}' not found")
+
+        # If Redis is available, check for an updated value
+        if self._redis:
+            redis_key = f"open-webui:config:{key}"
+            redis_value = self._redis.get(redis_key)
+
+            if redis_value is not None:
+                try:
+                    decoded_value = json.loads(redis_value)
+
+                    # Update the in-memory value if different
+                    if self._state[key].value != decoded_value:
+                        self._state[key].value = decoded_value
+                        log.info(f"Updated {key} from Redis: {decoded_value}")
+
+                except json.JSONDecodeError:
+                    log.error(f"Invalid JSON format in Redis for {key}: {redis_value}")
+
         return self._state[key].value
 
 
@@ -294,11 +331,13 @@ JWT_EXPIRES_IN = PersistentConfig(
 # OAuth config
 ####################################
 
+
 ENABLE_OAUTH_SIGNUP = PersistentConfig(
     "ENABLE_OAUTH_SIGNUP",
     "oauth.enable_signup",
     os.environ.get("ENABLE_OAUTH_SIGNUP", "False").lower() == "true",
 )
+
 
 OAUTH_MERGE_ACCOUNTS_BY_EMAIL = PersistentConfig(
     "OAUTH_MERGE_ACCOUNTS_BY_EMAIL",
@@ -428,6 +467,7 @@ OAUTH_USERNAME_CLAIM = PersistentConfig(
     "oauth.oidc.username_claim",
     os.environ.get("OAUTH_USERNAME_CLAIM", "name"),
 )
+
 
 OAUTH_PICTURE_CLAIM = PersistentConfig(
     "OAUTH_PICTURE_CLAIM",
@@ -842,6 +882,17 @@ except Exception:
 OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 
 ####################################
+# TOOL_SERVERS
+####################################
+
+
+TOOL_SERVER_CONNECTIONS = PersistentConfig(
+    "TOOL_SERVER_CONNECTIONS",
+    "tool_server.connections",
+    [],
+)
+
+####################################
 # WEBUI
 ####################################
 
@@ -943,6 +994,35 @@ USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS", "False").lower() == "true"
 )
 
+USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_PUBLIC_SHARING = (
+    os.environ.get(
+        "USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_PUBLIC_SHARING", "False"
+    ).lower()
+    == "true"
+)
+
+USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_PUBLIC_SHARING = (
+    os.environ.get(
+        "USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_PUBLIC_SHARING", "False"
+    ).lower()
+    == "true"
+)
+
+USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_PUBLIC_SHARING = (
+    os.environ.get(
+        "USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_PUBLIC_SHARING", "False"
+    ).lower()
+    == "true"
+)
+
+USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING = (
+    os.environ.get(
+        "USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING", "False"
+    ).lower()
+    == "true"
+)
+
+
 USER_PERMISSIONS_CHAT_CONTROLS = (
     os.environ.get("USER_PERMISSIONS_CHAT_CONTROLS", "True").lower() == "true"
 )
@@ -961,6 +1041,16 @@ USER_PERMISSIONS_CHAT_EDIT = (
 
 USER_PERMISSIONS_CHAT_TEMPORARY = (
     os.environ.get("USER_PERMISSIONS_CHAT_TEMPORARY", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_TEMPORARY_ENFORCED = (
+    os.environ.get("USER_PERMISSIONS_CHAT_TEMPORARY_ENFORCED", "False").lower()
+    == "true"
+)
+
+USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS", "False").lower()
+    == "true"
 )
 
 USER_PERMISSIONS_FEATURES_WEB_SEARCH = (
@@ -985,14 +1075,22 @@ DEFAULT_USER_PERMISSIONS = {
         "prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS,
         "tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ACCESS,
     },
+    "sharing": {
+        "public_models": USER_PERMISSIONS_WORKSPACE_MODELS_ALLOW_PUBLIC_SHARING,
+        "public_knowledge": USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ALLOW_PUBLIC_SHARING,
+        "public_prompts": USER_PERMISSIONS_WORKSPACE_PROMPTS_ALLOW_PUBLIC_SHARING,
+        "public_tools": USER_PERMISSIONS_WORKSPACE_TOOLS_ALLOW_PUBLIC_SHARING,
+    },
     "chat": {
         "controls": USER_PERMISSIONS_CHAT_CONTROLS,
         "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "edit": USER_PERMISSIONS_CHAT_EDIT,
         "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
+        "temporary_enforced": USER_PERMISSIONS_CHAT_TEMPORARY_ENFORCED,
     },
     "features": {
+        "direct_tool_servers": USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS,
         "web_search": USER_PERMISSIONS_FEATURES_WEB_SEARCH,
         "image_generation": USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
         "code_interpreter": USER_PERMISSIONS_FEATURES_CODE_INTERPRETER,
@@ -1053,6 +1151,12 @@ ENABLE_MESSAGE_RATING = PersistentConfig(
     "ENABLE_MESSAGE_RATING",
     "ui.enable_message_rating",
     os.environ.get("ENABLE_MESSAGE_RATING", "True").lower() == "true",
+)
+
+ENABLE_USER_WEBHOOKS = PersistentConfig(
+    "ENABLE_USER_WEBHOOKS",
+    "ui.enable_user_webhooks",
+    os.environ.get("ENABLE_USER_WEBHOOKS", "True").lower() == "true",
 )
 
 
@@ -1276,7 +1380,7 @@ Strictly return in JSON format:
 ENABLE_AUTOCOMPLETE_GENERATION = PersistentConfig(
     "ENABLE_AUTOCOMPLETE_GENERATION",
     "task.autocomplete.enable",
-    os.environ.get("ENABLE_AUTOCOMPLETE_GENERATION", "True").lower() == "true",
+    os.environ.get("ENABLE_AUTOCOMPLETE_GENERATION", "False").lower() == "true",
 )
 
 AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = PersistentConfig(
@@ -1548,8 +1652,10 @@ QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
 
 # OpenSearch
 OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
-OPENSEARCH_SSL = os.environ.get("OPENSEARCH_SSL", True)
-OPENSEARCH_CERT_VERIFY = os.environ.get("OPENSEARCH_CERT_VERIFY", False)
+OPENSEARCH_SSL = os.environ.get("OPENSEARCH_SSL", "true").lower() == "true"
+OPENSEARCH_CERT_VERIFY = (
+    os.environ.get("OPENSEARCH_CERT_VERIFY", "false").lower() == "true"
+)
 OPENSEARCH_USERNAME = os.environ.get("OPENSEARCH_USERNAME", None)
 OPENSEARCH_PASSWORD = os.environ.get("OPENSEARCH_PASSWORD", None)
 
@@ -1623,6 +1729,12 @@ TIKA_SERVER_URL = PersistentConfig(
     os.getenv("TIKA_SERVER_URL", "http://tika:9998"),  # Default for sidecar deployment
 )
 
+DOCLING_SERVER_URL = PersistentConfig(
+    "DOCLING_SERVER_URL",
+    "rag.docling_server_url",
+    os.getenv("DOCLING_SERVER_URL", "http://docling:5001"),
+)
+
 DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_ENDPOINT",
     "rag.document_intelligence_endpoint",
@@ -1635,6 +1747,11 @@ DOCUMENT_INTELLIGENCE_KEY = PersistentConfig(
     os.getenv("DOCUMENT_INTELLIGENCE_KEY", ""),
 )
 
+MISTRAL_OCR_API_KEY = PersistentConfig(
+    "MISTRAL_OCR_API_KEY",
+    "rag.mistral_ocr_api_key",
+    os.getenv("MISTRAL_OCR_API_KEY", ""),
+)
 
 BYPASS_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
     "BYPASS_EMBEDDING_AND_RETRIEVAL",
@@ -1645,6 +1762,11 @@ BYPASS_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
 
 RAG_TOP_K = PersistentConfig(
     "RAG_TOP_K", "rag.top_k", int(os.environ.get("RAG_TOP_K", "3"))
+)
+RAG_TOP_K_RERANKER = PersistentConfig(
+    "RAG_TOP_K_RERANKER",
+    "rag.top_k_reranker",
+    int(os.environ.get("RAG_TOP_K_RERANKER", "3")),
 )
 RAG_RELEVANCE_THRESHOLD = PersistentConfig(
     "RAG_RELEVANCE_THRESHOLD",
@@ -1727,6 +1849,14 @@ RAG_EMBEDDING_BATCH_SIZE = PersistentConfig(
     ),
 )
 
+RAG_EMBEDDING_QUERY_PREFIX = os.environ.get("RAG_EMBEDDING_QUERY_PREFIX", None)
+
+RAG_EMBEDDING_CONTENT_PREFIX = os.environ.get("RAG_EMBEDDING_CONTENT_PREFIX", None)
+
+RAG_EMBEDDING_PREFIX_FIELD_NAME = os.environ.get(
+    "RAG_EMBEDDING_PREFIX_FIELD_NAME", None
+)
+
 RAG_RERANKING_MODEL = PersistentConfig(
     "RAG_RERANKING_MODEL",
     "rag.reranking_model",
@@ -1770,7 +1900,7 @@ CHUNK_OVERLAP = PersistentConfig(
 )
 
 DEFAULT_RAG_TEMPLATE = """### Task:
-Respond to the user query using the provided context, incorporating inline citations in the format [source_id] **only when the <source_id> tag is explicitly provided** in the context.
+Respond to the user query using the provided context, incorporating inline citations in the format [id] **only when the <source> tag includes an explicit id attribute** (e.g., <source id="1">).
 
 ### Guidelines:
 - If you don't know the answer, clearly state that.
@@ -1778,18 +1908,17 @@ Respond to the user query using the provided context, incorporating inline citat
 - Respond in the same language as the user's query.
 - If the context is unreadable or of poor quality, inform the user and provide the best possible answer.
 - If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
-- **Only include inline citations using [source_id] (e.g., [1], [2]) when a `<source_id>` tag is explicitly provided in the context.**
-- Do not cite if the <source_id> tag is not provided in the context.  
+- **Only include inline citations using [id] (e.g., [1], [2]) when the <source> tag includes an id attribute.**
+- Do not cite if the <source> tag does not contain an id attribute.
 - Do not use XML tags in your response.
 - Ensure citations are concise and directly related to the information provided.
 
 ### Example of Citation:
-If the user asks about a specific topic and the information is found in "whitepaper.pdf" with a provided <source_id>, the response should include the citation like so:  
-* "According to the study, the proposed method increases efficiency by 20% [whitepaper.pdf]."
-If no <source_id> is present, the response should omit the citation.
+If the user asks about a specific topic and the information is found in a source with a provided id attribute, the response should include the citation like in the following example:
+* "According to the study, the proposed method increases efficiency by 20% [1]."
 
 ### Output:
-Provide a clear and direct response to the user's query, including inline citations in the format [source_id] only when the <source_id> tag is present in the context.
+Provide a clear and direct response to the user's query, including inline citations in the format [id] only when the <source> tag with id attribute is present in the context.
 
 <context>
 {{CONTEXT}}
@@ -1950,6 +2079,12 @@ TAVILY_API_KEY = PersistentConfig(
     os.getenv("TAVILY_API_KEY", ""),
 )
 
+TAVILY_EXTRACT_DEPTH = PersistentConfig(
+    "TAVILY_EXTRACT_DEPTH",
+    "rag.web.search.tavily_extract_depth",
+    os.getenv("TAVILY_EXTRACT_DEPTH", "basic"),
+)
+
 JINA_API_KEY = PersistentConfig(
     "JINA_API_KEY",
     "rag.web.search.jina_api_key",
@@ -2034,6 +2169,12 @@ PLAYWRIGHT_WS_URI = PersistentConfig(
     "PLAYWRIGHT_WS_URI",
     "rag.web.loader.engine.playwright.ws.uri",
     os.environ.get("PLAYWRIGHT_WS_URI", None),
+)
+
+PLAYWRIGHT_TIMEOUT = PersistentConfig(
+    "PLAYWRIGHT_TIMEOUT",
+    "rag.web.loader.engine.playwright.timeout",
+    int(os.environ.get("PLAYWRIGHT_TIMEOUT", "10")),
 )
 
 FIRECRAWL_API_KEY = PersistentConfig(
