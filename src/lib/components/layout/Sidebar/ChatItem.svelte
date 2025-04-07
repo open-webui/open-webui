@@ -243,7 +243,7 @@
 				use:focusEdit
 				bind:value={chatTitle}
 				id="chat-title-input-{id}"
-				class=" bg-transparent w-full outline-none mr-10 text-xs"
+				class=" bg-transparent w-full outline-none mr-10 text-sm"
 			/>
 		</div>
 	{:else}
@@ -279,7 +279,7 @@
 				{#if pinned}
 					<PinnedFilledIcon/>
 				{/if}
-				<div class=" text-left text-[12px] ml-[5px] overflow-hidden w-full h-[20px]">
+				<div class=" text-left text-sm ml-[5px] overflow-hidden w-full h-[20px]">
 					{title}
 				</div>
 			</div>

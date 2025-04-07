@@ -39,7 +39,7 @@
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-xs  text-customGray-100 dark:hover:text-white cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md"
+				class="flex gap-2 items-center px-2 py-1.5 text-sm  text-customGray-100 dark:hover:text-white cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md"
 				on:click={() => {
 					dispatch('rename');
 				}}
@@ -49,7 +49,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-3 py-1.5 text-xs  text-customGray-100 dark:hover:text-white cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md"
+				class="flex gap-2 items-center px-2 py-1.5 text-sm  text-customGray-100 dark:hover:text-white cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md"
 				on:click={() => {
 					dispatch('export');
 				}}
@@ -60,7 +60,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-1.5 text-xs text-customGray-100 dark:hover:text-white cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md"
+				class="flex  gap-2  items-center px-2 py-1.5 text-sm text-customGray-100 dark:hover:text-white cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md"
 				on:click={() => {
 					dispatch('delete');
 				}}

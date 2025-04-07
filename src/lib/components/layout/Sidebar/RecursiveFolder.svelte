@@ -348,7 +348,7 @@
 		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
 			<div class="flex items-center gap-1">
 				<FolderOpen className="size-3.5" strokeWidth="2" />
-				<div class=" text-xs text-white line-clamp-1">
+				<div class=" text-sm text-white line-clamp-1">
 					{folders[folderId].name}
 				</div>
 			</div>
@@ -377,7 +377,7 @@
 		<div class="w-full group">
 			<button
 				id="folder-{folderId}-button"
-				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-customGray-100 font-medium hover:bg-gray-100 dark:hover:bg-customGray-900 transition"
+				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-sm text-gray-500 dark:text-customGray-100 font-medium hover:bg-gray-100 dark:hover:bg-customGray-900 transition"
 				on:dblclick={() => {
 					editHandler();
 				}}
@@ -446,7 +446,7 @@
 							exportHandler();
 						}}
 					>
-						<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
+						<button class="p-0.5 rounded-lg touch-auto" on:click={(e) => {}}>
 							<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
 						</button>
 					</FolderMenu>

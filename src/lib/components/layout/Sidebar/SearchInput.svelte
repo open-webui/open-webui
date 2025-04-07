@@ -98,7 +98,7 @@
 		</div>
 
 		<input
-			class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-center placeholder:text-2xs text-xs bg-transparent dark:text-gray-300 outline-none"
+			class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-center placeholder:text-xs text-xs bg-transparent dark:text-gray-300 outline-none"
 			placeholder={placeholder ? placeholder : $i18n.t('Search')}
 			bind:value
 			on:input={() => {

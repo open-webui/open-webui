@@ -40,7 +40,7 @@
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 			<button
-				class="flex rounded-md text-xs text-customGray-100 py-2 px-3 w-full hover:bg-gray-50 dark:hover:text-white dark:hover:bg-customGray-950 transition"
+				class="flex rounded-md text-sm text-customGray-100 py-2 px-3 w-full hover:bg-gray-50 dark:hover:text-white dark:hover:bg-customGray-950 transition"
 				on:click={async () => {
 					await showSettings.set(true);
 					show = false;
@@ -138,7 +138,7 @@
 			<hr class=" border-gray-50 dark:border-gray-850 my-1 p-0" />
 
 			<button
-				class="flex rounded-md text-xs text-customGray-100 py-2 px-3 w-full hover:bg-gray-50 dark:hover:text-white dark:hover:bg-customGray-950 transition"
+				class="flex rounded-md text-sm text-customGray-100 py-2 px-3 w-full hover:bg-gray-50 dark:hover:text-white dark:hover:bg-customGray-950 transition"
 				on:click={async () => {
 					await userSignOut();
 					localStorage.removeItem('token');

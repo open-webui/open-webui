@@ -132,7 +132,7 @@
 			<div
 				class="w-full group rounded-md relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-customGray-900 text-gray-500 dark:text-gray-500 transition"
 			>
-				<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-medium">
+				<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-sm font-medium">
 					<div class="text-gray-300 dark:text-customGray-300">
 						{#if !typeChats}
 							{#if open}
@@ -143,7 +143,7 @@
 						{/if}
 					</div>
 
-					<div class="translate-y-[0.5px] text-2xs">
+					<div class="translate-y-[0.5px] text-xs">
 						{name}
 					</div>
 				</button>

@@ -506,7 +506,7 @@
 									alt="User profile"
 								/>
 							</div>
-							<div class=" self-center font-medium text-xs-plus mr-1">{$user.name}</div>
+							<div class=" self-center font-medium text-base mr-1">{$user.name}</div>
 							<ChevronDown className=" size-3" strokeWidth="2.5" />
 						</button>
 					</UserMenu>
@@ -543,7 +543,7 @@
 				>
 					<Assistans />
 					<a
-						class="min-w-fit text-xs"
+						class="w-full text-sm"
 						href="/workspace/models"
 						on:click={() => {
 							selectedChatId = null;
@@ -564,7 +564,7 @@
 				>
 					<Knowledge />
 					<a
-						class="min-w-fit text-xs"
+						class="w-full text-sm"
 						href="/workspace/knowledge"
 						on:click={() => {
 							selectedChatId = null;
@@ -587,7 +587,7 @@
 				>
 					<Prompts />
 					<a
-						class="min-w-fit text-xs"
+						class="w-full text-sm"
 						href="/workspace/prompts"
 						on:click={() => {
 							selectedChatId = null;
@@ -608,7 +608,7 @@
 		>
 			<a
 				id="sidebar-new-chat-button"
-				class="flex justify-center items-center flex-1 rounded-lg text-2xs px-2 py-1 border border-customGray-700 h-[35px] text-right text-gray-850 dark:text-customGray-200 dark:hover:text-white dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-customGray-950 transition no-drag-region"
+				class="flex justify-center items-center flex-1 rounded-lg text-xs px-2 py-1 border border-customGray-700 h-[35px] text-right text-gray-850 dark:text-customGray-200 dark:hover:text-white dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-customGray-950 transition no-drag-region"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -624,7 +624,7 @@
 				}}
 			>
 				<div class="relative bottom-[0.5px] mr-[6px]">
-					<Plus className="w-[10px] h-[10px]" />
+					<Plus className="w-[12px] h-[12px]" />
 				</div>
 				{$i18n.t('New Chat')}
 			</a>
@@ -881,7 +881,7 @@
 									}}
 								>
 									<div
-										class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+										class="w-full flex justify-center py-1 text-sm animate-pulse items-center gap-2"
 									>
 										<Spinner className=" size-4" />
 										<div class=" ">Loading...</div>
@@ -889,7 +889,7 @@
 								</Loader>
 							{/if}
 						{:else}
-							<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
+							<div class="w-full flex justify-center py-1 text-sm animate-pulse items-center gap-2">
 								<Spinner className=" size-4" />
 								<div class=" ">Loading...</div>
 							</div>
