@@ -93,7 +93,7 @@ authlib==1.4.1
 
 black==25.1.0
 langfuse==2.44.0
-youtube-transcript-api==0.6.3
+youtube-transcript-api==1.0.3
 pytube==15.0.0
 
 extract_msg
