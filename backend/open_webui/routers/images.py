@@ -204,6 +204,7 @@ async def update_config(
             "VIEWCOMFY_CLIENT_ID": request.app.state.config.VIEWCOMFY_CLIENT_ID,
             "VIEWCOMFY_CLIENT_SECRET": request.app.state.config.VIEWCOMFY_CLIENT_SECRET,
             "VIEWCOMFY_WORKFLOW": request.app.state.config.VIEWCOMFY_WORKFLOW,
+            "VIEWCOMFY_WORKFLOW_NODES": request.app.state.config.VIEWCOMFY_WORKFLOW_NODES,
         },
     }
 
