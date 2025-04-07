@@ -958,7 +958,7 @@ def process_file(
 
         if form_data.content:
             # Update the content in the file
-            # Usage: /files/{file_id}/data/content/update
+            # Usage: /files/{file_id}/data/content/update, /files/ (audio file upload pipeline)
 
             try:
                 # /files/{file_id}/data/content/update

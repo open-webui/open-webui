@@ -122,6 +122,7 @@ def upload_file(
                 ]:
                     file_path = Storage.get_file(file_path)
                     result = transcribe(request, file_path)
+
                     process_file(
                         request,
                         ProcessFileForm(file_id=id, content=result.get("text", "")),
@@ -129,7 +130,8 @@ def upload_file(
                     )
                 elif file.content_type not in ["image/png", "image/jpeg", "image/gif"]:
                     process_file(request, ProcessFileForm(file_id=id), user=user)
-                    file_item = Files.get_file_by_id(id=id)
+
+                file_item = Files.get_file_by_id(id=id)
             except Exception as e:
                 log.exception(e)
                 log.error(f"Error processing file: {file_item.id}")
