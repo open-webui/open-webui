@@ -158,6 +158,26 @@
 			});
 		}
 
+		if (config.viewcomfy.VIEWCOMFY_WORKFLOW) {
+			try {
+				config.viewcomfy.VIEWCOMFY_WORKFLOW = JSON.stringify(
+					JSON.parse(config.viewcomfy.VIEWCOMFY_WORKFLOW),
+					null,
+					2
+				);
+				config.viewcomfy.VIEWCOMFY_WORKFLOW_NODES = requiredWorkflowNodes.map((node) => {
+					return {
+						type: node.type,
+						key: node.key,
+						node_ids:
+							node.node_ids.trim() === '' ? [] : node.node_ids.split(',').map((id) => id.trim())
+					};
+				});
+			} catch (e) {
+				console.log(e);
+			}
+		}
+
 		await updateConfig(localStorage.token, config).catch((error) => {
 			toast.error(`${error}`);
 			loading = false;
@@ -202,8 +222,23 @@
 				}
 			}
 
+			if (config.viewcomfy.VIEWCOMFY_WORKFLOW) {
+				try {
+					config.viewcomfy.VIEWCOMFY_WORKFLOW = JSON.stringify(
+						JSON.parse(config.viewcomfy.VIEWCOMFY_WORKFLOW),
+						null,
+						2
+					);
+				} catch (e) {
+					console.log(e);
+				}
+			}
+
 			requiredWorkflowNodes = requiredWorkflowNodes.map((node) => {
-				const n = config.comfyui.COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
+				let n = config.comfyui.COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type);
+				if (!n && config.engine === 'viewcomfy' && config.viewcomfy.VIEWCOMFY_WORKFLOW_NODES) {
+					n = config.viewcomfy.VIEWCOMFY_WORKFLOW_NODES.find((n) => n.type === node.type);
+				}
 
 				console.log(n);
 
@@ -268,6 +303,17 @@
 										} else if (config.engine === 'gemini' && config.gemini.GEMINI_API_KEY === '') {
 											toast.error($i18n.t('Gemini API Key is required.'));
 											config.enabled = false;
+										} else if (config.engine === 'viewcomfy') {
+											if (config.viewcomfy.VIEWCOMFY_API_URL === '') {
+												toast.error($i18n.t('ViewComfy API URL is required.'));
+												config.enabled = false;
+											} else if (config.viewcomfy.VIEWCOMFY_CLIENT_ID === '') {
+												toast.error($i18n.t('ViewComfy Client ID is required.'));
+												config.enabled = false;
+											} else if (config.viewcomfy.VIEWCOMFY_CLIENT_SECRET === '') {
+												toast.error($i18n.t('ViewComfy Client Secret is required.'));
+												config.enabled = false;
+											}
 										}
 									}
 
@@ -302,6 +348,7 @@
 							<option value="comfyui">{$i18n.t('ComfyUI')}</option>
 							<option value="automatic1111">{$i18n.t('Automatic1111')}</option>
 							<option value="gemini">{$i18n.t('Gemini')}</option>
+							<option value="viewcomfy">{$i18n.t('ViewComfy')}</option>
 						</select>
 					</div>
 				</div>
@@ -552,6 +599,169 @@
 					{#if config.comfyui.COMFYUI_WORKFLOW}
 						<div class="">
 							<div class=" mb-2 text-sm font-medium">{$i18n.t('ComfyUI Workflow Nodes')}</div>
+
+							<div class="text-xs flex flex-col gap-1.5">
+								{#each requiredWorkflowNodes as node}
+									<div class="flex w-full items-center border dark:border-gray-850 rounded-lg">
+										<div class="shrink-0">
+											<div
+												class=" capitalize line-clamp-1 font-medium px-3 py-1 w-20 text-center rounded-l-lg bg-green-500/10 text-green-700 dark:text-green-200"
+											>
+												{node.type}{node.type === 'prompt' ? '*' : ''}
+											</div>
+										</div>
+										<div class="">
+											<Tooltip content="Input Key (e.g. text, unet_name, steps)">
+												<input
+													class="py-1 px-3 w-24 text-xs text-center bg-transparent outline-hidden border-r dark:border-gray-850"
+													placeholder="Key"
+													bind:value={node.key}
+													required
+												/>
+											</Tooltip>
+										</div>
+
+										<div class="w-full">
+											<Tooltip
+												content="Comma separated Node Ids (e.g. 1 or 1,2)"
+												placement="top-start"
+											>
+												<input
+													class="w-full py-1 px-4 rounded-r-lg text-xs bg-transparent outline-hidden"
+													placeholder="Node Ids"
+													bind:value={node.node_ids}
+												/>
+											</Tooltip>
+										</div>
+									</div>
+								{/each}
+							</div>
+
+							<div class="mt-2 text-xs text-right text-gray-400 dark:text-gray-500">
+								{$i18n.t('*Prompt node ID(s) are required for image generation')}
+							</div>
+						</div>
+					{/if}
+				{:else if config?.engine === 'viewcomfy'}
+					<div class="">
+						<div class=" mb-2 text-sm font-medium">{$i18n.t('ViewComfy API URL')}</div>
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									placeholder={$i18n.t('Enter URL (e.g. https://api.viewcomfy.com)')}
+									bind:value={config.viewcomfy.VIEWCOMFY_API_URL}
+								/>
+							</div>
+							<button
+								class="px-2.5 bg-gray-50 hover:bg-gray-100 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-100 rounded-lg transition"
+								type="button"
+								on:click={async () => {
+									await updateConfigHandler();
+									const res = await verifyConfigUrl(localStorage.token).catch((error) => {
+										toast.error(`${error}`);
+										return null;
+									});
+
+									if (res) {
+										toast.success($i18n.t('Server connection verified'));
+									}
+								}}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-4 h-4"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							</button>
+						</div>
+					</div>
+
+					<div class="">
+						<div class=" mb-2 text-sm font-medium">{$i18n.t('ViewComfy Client ID')}</div>
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Client ID')}
+									bind:value={config.viewcomfy.VIEWCOMFY_CLIENT_ID}
+									required={false}
+								/>
+							</div>
+						</div>
+					</div>
+
+					<div class="">
+						<div class=" mb-2 text-sm font-medium">{$i18n.t('ViewComfy Client Secret')}</div>
+						<div class="flex w-full">
+							<div class="flex-1 mr-2">
+								<SensitiveInput
+									placeholder={$i18n.t('Enter Client Secret')}
+									bind:value={config.viewcomfy.VIEWCOMFY_CLIENT_SECRET}
+									required={false}
+								/>
+							</div>
+						</div>
+					</div>
+
+					<div class="">
+						<div class=" mb-2 text-sm font-medium">{$i18n.t('ViewComfy Workflow')}</div>
+
+						{#if config.viewcomfy.VIEWCOMFY_WORKFLOW}
+							<textarea
+								class="w-full rounded-lg mb-1 py-2 px-4 text-xs bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden disabled:text-gray-600 resize-none"
+								rows="10"
+								bind:value={config.viewcomfy.VIEWCOMFY_WORKFLOW}
+								required
+							/>
+						{/if}
+
+						<div class="flex w-full">
+							<div class="flex-1">
+								<input
+									id="upload-viewcomfy-workflow-input"
+									hidden
+									type="file"
+									accept=".json"
+									on:change={(e) => {
+										const file = e.target.files[0];
+										const reader = new FileReader();
+
+										reader.onload = (e) => {
+											config.viewcomfy.VIEWCOMFY_WORKFLOW = e.target.result;
+											e.target.value = null;
+										};
+
+										reader.readAsText(file);
+									}}
+								/>
+
+								<button
+									class="w-full text-sm font-medium py-2 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-850 dark:hover:bg-gray-850 text-center rounded-xl"
+									type="button"
+									on:click={() => {
+										document.getElementById('upload-viewcomfy-workflow-input')?.click();
+									}}
+								>
+									{$i18n.t('Click here to upload a workflow_api.json file.')}
+								</button>
+							</div>
+						</div>
+
+						<div class="mt-2 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('Make sure to export a workflow.json file as API format from ComfyUI.')}
+						</div>
+					</div>
+
+					{#if config.viewcomfy.VIEWCOMFY_WORKFLOW}
+						<div class="">
+							<div class=" mb-2 text-sm font-medium">{$i18n.t('ViewComfy Workflow Nodes')}</div>
 
 							<div class="text-xs flex flex-col gap-1.5">
 								{#each requiredWorkflowNodes as node}

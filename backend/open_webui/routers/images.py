@@ -21,6 +21,8 @@ from open_webui.utils.images.comfyui import (
     comfyui_generate_image,
 )
 from pydantic import BaseModel
+from open_webui.utils.images.viewcomfy import infer as viewcomfy_infer
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["IMAGES"])
@@ -59,6 +61,13 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
             "GEMINI_API_BASE_URL": request.app.state.config.IMAGES_GEMINI_API_BASE_URL,
             "GEMINI_API_KEY": request.app.state.config.IMAGES_GEMINI_API_KEY,
         },
+        "viewcomfy": {
+            "VIEWCOMFY_API_URL": request.app.state.config.VIEWCOMFY_API_URL,
+            "VIEWCOMFY_CLIENT_ID": request.app.state.config.VIEWCOMFY_CLIENT_ID,
+            "VIEWCOMFY_CLIENT_SECRET": request.app.state.config.VIEWCOMFY_CLIENT_SECRET,
+            "VIEWCOMFY_WORKFLOW": request.app.state.config.VIEWCOMFY_WORKFLOW,
+            "VIEWCOMFY_WORKFLOW_NODES": request.app.state.config.VIEWCOMFY_WORKFLOW_NODES,
+        },
     }
 
 
@@ -86,6 +95,13 @@ class GeminiConfigForm(BaseModel):
     GEMINI_API_BASE_URL: str
     GEMINI_API_KEY: str
 
+class ViewComfyConfigForm(BaseModel):
+    VIEWCOMFY_API_URL: str
+    VIEWCOMFY_CLIENT_ID: str
+    VIEWCOMFY_CLIENT_SECRET: str
+    VIEWCOMFY_WORKFLOW: str
+    VIEWCOMFY_WORKFLOW_NODES: list[dict]
+
 
 class ConfigForm(BaseModel):
     enabled: bool
@@ -95,6 +111,7 @@ class ConfigForm(BaseModel):
     automatic1111: Automatic1111ConfigForm
     comfyui: ComfyUIConfigForm
     gemini: GeminiConfigForm
+    viewcomfy: ViewComfyConfigForm
 
 
 @router.post("/config/update")
@@ -151,6 +168,12 @@ async def update_config(
         form_data.comfyui.COMFYUI_WORKFLOW_NODES
     )
 
+    request.app.state.config.VIEWCOMFY_API_URL = form_data.viewcomfy.VIEWCOMFY_API_URL
+    request.app.state.config.VIEWCOMFY_CLIENT_ID = form_data.viewcomfy.VIEWCOMFY_CLIENT_ID
+    request.app.state.config.VIEWCOMFY_CLIENT_SECRET = form_data.viewcomfy.VIEWCOMFY_CLIENT_SECRET
+    request.app.state.config.VIEWCOMFY_WORKFLOW = form_data.viewcomfy.VIEWCOMFY_WORKFLOW
+    request.app.state.config.VIEWCOMFY_WORKFLOW_NODES = form_data.viewcomfy.VIEWCOMFY_WORKFLOW_NODES
+
     return {
         "enabled": request.app.state.config.ENABLE_IMAGE_GENERATION,
         "engine": request.app.state.config.IMAGE_GENERATION_ENGINE,
@@ -175,6 +198,12 @@ async def update_config(
         "gemini": {
             "GEMINI_API_BASE_URL": request.app.state.config.IMAGES_GEMINI_API_BASE_URL,
             "GEMINI_API_KEY": request.app.state.config.IMAGES_GEMINI_API_KEY,
+        },
+        "viewcomfy": {
+            "VIEWCOMFY_API_URL": request.app.state.config.VIEWCOMFY_API_URL,
+            "VIEWCOMFY_CLIENT_ID": request.app.state.config.VIEWCOMFY_CLIENT_ID,
+            "VIEWCOMFY_CLIENT_SECRET": request.app.state.config.VIEWCOMFY_CLIENT_SECRET,
+            "VIEWCOMFY_WORKFLOW": request.app.state.config.VIEWCOMFY_WORKFLOW,
         },
     }
 
@@ -285,6 +314,7 @@ class ImageConfigForm(BaseModel):
     MODEL: str
     IMAGE_SIZE: str
     IMAGE_STEPS: int
+    IMAGE_SEED: Optional[int] = None
 
 
 @router.get("/image/config")
@@ -293,6 +323,7 @@ async def get_image_config(request: Request, user=Depends(get_admin_user)):
         "MODEL": request.app.state.config.IMAGE_GENERATION_MODEL,
         "IMAGE_SIZE": request.app.state.config.IMAGE_SIZE,
         "IMAGE_STEPS": request.app.state.config.IMAGE_STEPS,
+        "IMAGE_SEED": getattr(request.app.state.config, "IMAGE_SEED", None),
     }
 
 
@@ -319,10 +350,13 @@ async def update_image_config(
             detail=ERROR_MESSAGES.INCORRECT_FORMAT("  (e.g., 50)."),
         )
 
+    request.app.state.config.IMAGE_SEED = form_data.IMAGE_SEED
+
     return {
         "MODEL": request.app.state.config.IMAGE_GENERATION_MODEL,
         "IMAGE_SIZE": request.app.state.config.IMAGE_SIZE,
         "IMAGE_STEPS": request.app.state.config.IMAGE_STEPS,
+        "IMAGE_SEED": request.app.state.config.IMAGE_SEED,
     }
 
 
@@ -413,6 +447,7 @@ class GenerateImageForm(BaseModel):
     size: Optional[str] = None
     n: int = 1
     negative_prompt: Optional[str] = None
+    seed: Optional[int] = None
 
 
 def load_b64_image_data(b64_str):
@@ -575,6 +610,9 @@ async def image_generations(
             if form_data.negative_prompt is not None:
                 data["negative_prompt"] = form_data.negative_prompt
 
+            if hasattr(form_data, "seed") and form_data.seed is not None:
+                data["seed"] = form_data.seed
+
             form_data = ComfyUIGenerateImageForm(
                 **{
                     "workflow": ComfyUIWorkflow(
@@ -667,6 +705,57 @@ async def image_generations(
                 )
                 images.append({"url": url})
             return images
+        
+        elif request.app.state.config.IMAGE_GENERATION_ENGINE == "viewcomfy":
+            data = {
+                "prompt": form_data.prompt,
+                "width": width,
+                "height": height,
+                "n": form_data.n,
+            }
+
+            if request.app.state.config.IMAGE_STEPS is not None:
+                data["steps"] = request.app.state.config.IMAGE_STEPS
+
+            if form_data.negative_prompt is not None:
+                data["negative_prompt"] = form_data.negative_prompt
+                
+            if hasattr(form_data, "seed") and form_data.seed is not None:
+                data["seed"] = form_data.seed
+
+            form_data = ComfyUIGenerateImageForm(
+                **{
+                    "workflow": ComfyUIWorkflow(
+                        **{
+                            "workflow": request.app.state.config.VIEWCOMFY_WORKFLOW,
+                            "nodes": request.app.state.config.VIEWCOMFY_WORKFLOW_NODES,
+                        }
+                    ),
+                    **data,
+                }
+            )
+            res = await viewcomfy_infer(
+                request.app.state.config.IMAGE_GENERATION_MODEL,
+                form_data,
+                api_url=request.app.state.config.VIEWCOMFY_API_URL,
+                client_id=request.app.state.config.VIEWCOMFY_CLIENT_ID,
+                client_secret=request.app.state.config.VIEWCOMFY_CLIENT_SECRET,
+            )
+
+            images = []
+            for output in res.outputs:
+                image_data, content_type = load_b64_image_data(output.data)
+                url = upload_image(
+                    request,
+                    form_data,
+                    image_data,
+                    content_type,
+                    user,
+                )
+                images.append({"url": url})
+                print(images)
+            return images
+        
     except Exception as e:
         error = e
         if r != None:

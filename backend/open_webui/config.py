@@ -2364,6 +2364,36 @@ COMFYUI_WORKFLOW_NODES = PersistentConfig(
     [],
 )
 
+VIEWCOMFY_API_URL = PersistentConfig(
+    "VIEWCOMFY_API_URL",
+    "image_generation.viewcomfy.api_url",
+    os.getenv("VIEWCOMFY_API_URL", ""),
+)
+
+VIEWCOMFY_CLIENT_ID = PersistentConfig(
+    "VIEWCOMFY_CLIENT_ID",
+    "image_generation.viewcomfy.client_id",
+    os.getenv("VIEWCOMFY_CLIENT_ID", ""),
+)
+
+VIEWCOMFY_CLIENT_SECRET = PersistentConfig(
+    "VIEWCOMFY_CLIENT_SECRET", 
+    "image_generation.viewcomfy.client_secret",
+    os.getenv("VIEWCOMFY_CLIENT_SECRET", ""),
+)
+
+VIEWCOMFY_WORKFLOW = PersistentConfig(
+    "VIEWCOMFY_WORKFLOW",
+    "image_generation.viewcomfy.workflow",
+    os.getenv("VIEWCOMFY_WORKFLOW", ""),
+)
+
+VIEWCOMFY_WORKFLOW_NODES = PersistentConfig(
+    "VIEWCOMFY_WORKFLOW_NODES",
+    "image_generation.viewcomfy.nodes",
+    [],
+)
+
 IMAGES_OPENAI_API_BASE_URL = PersistentConfig(
     "IMAGES_OPENAI_API_BASE_URL",
     "image_generation.openai.api_base_url",
