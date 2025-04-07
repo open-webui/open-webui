@@ -22,6 +22,7 @@
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import ReindexKnowledgeFilesConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -332,7 +333,7 @@
 />
 
 
-<ResetVectorDBConfirmDialog
+<ReindexKnowledgeFilesConfirmDialog
 	bind:show={showReindexConfirm}
 	on:confirm={async () => {
 		const res = await reindexKnowledgeFiles(localStorage.token).catch((error) => {
