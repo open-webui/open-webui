@@ -156,7 +156,7 @@ async def update_model_by_id(
         )
 
     if (
-        model.company_id != user.company_id
+        model.user_id != user.id
         and not has_access(user.id, "write", model.access_control)
         and user.role != "admin"
     ):

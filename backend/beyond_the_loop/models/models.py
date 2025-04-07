@@ -44,6 +44,8 @@ class ModelMeta(BaseModel):
         User-facing description of the model.
     """
 
+    tags: Optional[list[dict]] = None
+
     capabilities: Optional[dict] = None
 
     model_config = ConfigDict(extra="allow")
