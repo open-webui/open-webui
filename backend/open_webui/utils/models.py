@@ -214,7 +214,7 @@ async def get_all_models(request, user: UserModel = None):
             action_function = Functions.get_function_by_id(action_id)
             if action_function is None:
                 raise Exception(f"Action not found: {action_id}")
-            
+
             if current_user_email and action_function.created_by != current_user_email:
                 continue
 

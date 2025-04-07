@@ -166,11 +166,10 @@ class UsersTable:
                 db.commit()
                 db.refresh(result)
             except Exception:
-                db.rollback() 
+                db.rollback()
                 raise
 
             return user if result else None
-
 
     def get_user_by_id(self, id: str) -> Optional[UserModel]:
         try:

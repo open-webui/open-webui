@@ -79,7 +79,7 @@ async def create_new_prompt(
 # @router.get("/command/{command}", response_model=Optional[PromptModel])
 # async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
 #     prompt = Prompts.get_prompt_by_command(f"/{command}")
-    
+
 #     if prompt:
 #         if (
 #             user.role == "admin"
@@ -92,7 +92,7 @@ async def create_new_prompt(
 #             status_code=status.HTTP_401_UNAUTHORIZED,
 #             detail=ERROR_MESSAGES.NOT_FOUND,
 #         )
-    
+
 
 @router.get("/command/{command}", response_model=Optional[PromptModel])
 async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
@@ -101,10 +101,12 @@ async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt not found")
 
-    if (prompt.user_id == user.id or has_access(user.id, "read", prompt.access_control)):
+    if prompt.user_id == user.id or has_access(user.id, "read", prompt.access_control):
         return prompt
-    
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
+    )
 
 
 ############################

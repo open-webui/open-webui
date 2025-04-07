@@ -99,7 +99,6 @@ async def create_new_model(
 #             status_code=status.HTTP_401_UNAUTHORIZED,
 #             detail=ERROR_MESSAGES.NOT_FOUND,
 #         )
-        
 
 
 @router.get("/model", response_model=Optional[ModelResponse])
@@ -109,13 +108,13 @@ async def get_model_by_id(id: str, user=Depends(get_verified_user)):
     if not model:
         raise HTTPException(status_code=404, detail="Model not found")
 
-    if (model.user_id == user.id or has_access(user.id, "read", model.access_control)):
-            return model
-    
+    if model.user_id == user.id or has_access(user.id, "read", model.access_control):
+        return model
+
     raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=ERROR_MESSAGES.NOT_FOUND,
+    )
 
 
 ############################
