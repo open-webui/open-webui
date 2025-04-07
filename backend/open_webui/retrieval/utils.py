@@ -320,10 +320,13 @@ def query_collection_with_hybrid_search(
             log.exception(f"Error when querying the collection with hybrid_search: {e}")
             return None, e
 
+    # Prepare tasks for all collections and queries
+    # Avoid running any tasks for collections that failed to fetch data (have assigned None)
     tasks = [
-        (collection_name, query)
-        for collection_name in collection_names
-        for query in queries
+        (cn, q)
+        for cn in collection_names
+        if collection_results[cn] is not None
+        for q in queries
     ]
 
     with ThreadPoolExecutor() as executor:
@@ -354,7 +357,7 @@ def get_embedding_function(
 ):
     if embedding_engine == "":
         return lambda query, prefix=None, user=None: embedding_function.encode(
-            query, prompt=prefix if prefix else None
+            query, **({"prompt": prefix} if prefix else {})
         ).tolist()
     elif embedding_engine in ["ollama", "openai"]:
         func = lambda query, prefix=None, user=None: generate_embeddings(

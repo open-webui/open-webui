@@ -105,6 +105,8 @@ from open_webui.config import (
     OPENAI_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
+    # Tool Server Configs
+    TOOL_SERVER_CONNECTIONS,
     # Code Execution
     ENABLE_CODE_EXECUTION,
     CODE_EXECUTION_ENGINE,
@@ -191,6 +193,7 @@ from open_webui.config import (
     DOCLING_SERVER_URL,
     DOCUMENT_INTELLIGENCE_ENDPOINT,
     DOCUMENT_INTELLIGENCE_KEY,
+    MISTRAL_OCR_API_KEY,
     RAG_TOP_K,
     RAG_TOP_K_RERANKER,
     RAG_TEXT_SPLITTER,
@@ -355,6 +358,7 @@ from open_webui.utils.access_control import has_access
 
 from open_webui.utils.auth import (
     get_license_data,
+    get_http_authorization_cred,
     decode_token,
     get_admin_user,
     get_verified_user,
@@ -479,6 +483,15 @@ app.state.OPENAI_MODELS = {}
 
 ########################################
 #
+# TOOL SERVERS
+#
+########################################
+
+app.state.config.TOOL_SERVER_CONNECTIONS = TOOL_SERVER_CONNECTIONS
+app.state.TOOL_SERVERS = []
+
+########################################
+#
 # DIRECT CONNECTIONS
 #
 ########################################
@@ -582,6 +595,7 @@ app.state.config.TIKA_SERVER_URL = TIKA_SERVER_URL
 app.state.config.DOCLING_SERVER_URL = DOCLING_SERVER_URL
 app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = DOCUMENT_INTELLIGENCE_ENDPOINT
 app.state.config.DOCUMENT_INTELLIGENCE_KEY = DOCUMENT_INTELLIGENCE_KEY
+app.state.config.MISTRAL_OCR_API_KEY = MISTRAL_OCR_API_KEY
 
 app.state.config.TEXT_SPLITTER = RAG_TEXT_SPLITTER
 app.state.config.TIKTOKEN_ENCODING_NAME = TIKTOKEN_ENCODING_NAME
@@ -862,6 +876,10 @@ async def commit_session_after_request(request: Request, call_next):
 @app.middleware("http")
 async def check_url(request: Request, call_next):
     start_time = int(time.time())
+    request.state.token = get_http_authorization_cred(
+        request.headers.get("Authorization")
+    )
+
     request.state.enable_api_key = app.state.config.ENABLE_API_KEY
     response = await call_next(request)
     process_time = int(time.time()) - start_time

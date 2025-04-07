@@ -326,40 +326,45 @@ class OAuthManager:
                     raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
                 picture_claim = auth_manager_config.OAUTH_PICTURE_CLAIM
-                picture_url = user_data.get(
-                    picture_claim, OAUTH_PROVIDERS[provider].get("picture_url", "")
-                )
-                if picture_url:
-                    # Download the profile image into a base64 string
-                    try:
-                        access_token = token.get("access_token")
-                        get_kwargs = {}
-                        if access_token:
-                            get_kwargs["headers"] = {
-                                "Authorization": f"Bearer {access_token}",
-                            }
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(picture_url, **get_kwargs) as resp:
-                                if resp.ok:
-                                    picture = await resp.read()
-                                    base64_encoded_picture = base64.b64encode(
-                                        picture
-                                    ).decode("utf-8")
-                                    guessed_mime_type = mimetypes.guess_type(
-                                        picture_url
-                                    )[0]
-                                    if guessed_mime_type is None:
-                                        # assume JPG, browsers are tolerant enough of image formats
-                                        guessed_mime_type = "image/jpeg"
-                                    picture_url = f"data:{guessed_mime_type};base64,{base64_encoded_picture}"
-                                else:
-                                    picture_url = "/user.png"
-                    except Exception as e:
-                        log.error(
-                            f"Error downloading profile image '{picture_url}': {e}"
-                        )
+                if picture_claim:
+                    picture_url = user_data.get(
+                        picture_claim, OAUTH_PROVIDERS[provider].get("picture_url", "")
+                    )
+                    if picture_url:
+                        # Download the profile image into a base64 string
+                        try:
+                            access_token = token.get("access_token")
+                            get_kwargs = {}
+                            if access_token:
+                                get_kwargs["headers"] = {
+                                    "Authorization": f"Bearer {access_token}",
+                                }
+                            async with aiohttp.ClientSession() as session:
+                                async with session.get(
+                                    picture_url, **get_kwargs
+                                ) as resp:
+                                    if resp.ok:
+                                        picture = await resp.read()
+                                        base64_encoded_picture = base64.b64encode(
+                                            picture
+                                        ).decode("utf-8")
+                                        guessed_mime_type = mimetypes.guess_type(
+                                            picture_url
+                                        )[0]
+                                        if guessed_mime_type is None:
+                                            # assume JPG, browsers are tolerant enough of image formats
+                                            guessed_mime_type = "image/jpeg"
+                                        picture_url = f"data:{guessed_mime_type};base64,{base64_encoded_picture}"
+                                    else:
+                                        picture_url = "/user.png"
+                        except Exception as e:
+                            log.error(
+                                f"Error downloading profile image '{picture_url}': {e}"
+                            )
+                            picture_url = "/user.png"
+                    if not picture_url:
                         picture_url = "/user.png"
-                if not picture_url:
+                else:
                     picture_url = "/user.png"
 
                 username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM
