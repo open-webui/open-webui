@@ -130,7 +130,7 @@ opentelemetry-exporter-otlp==1.30.0
 opentelemetry-instrumentation==0.51b0
 opentelemetry-instrumentation-fastapi==0.51b0
 opentelemetry-instrumentation-sqlalchemy==0.51b0
-opentelemetry-instrumentation-redis==0.51b0
+opentelemetry-instrumentation-redis==0.52b0
 opentelemetry-instrumentation-requests==0.51b0
 opentelemetry-instrumentation-logging==0.52b0
 opentelemetry-instrumentation-httpx==0.51b0
