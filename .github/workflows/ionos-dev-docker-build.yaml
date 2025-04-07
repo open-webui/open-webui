@@ -5,12 +5,16 @@ on:
   push:
     branches:
       - ionos-dev
-      - ts*
+      - 'ts**'
+      - 'tl/**'
     tags:
-      - ionos-*
+      - 'ionos-**'
 
 env:
+  JOB_NAME: openwebui-build-push-image
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+  REGISTRY_HOST: ${{ vars.REGISTRY_HOST }}
+  REGISTRY_URL: ${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_PATH }}
 
 jobs:
   build:
@@ -31,27 +35,30 @@ jobs:
       - name: Create Docker Secret Config for Kaniko
         run: |
           mkdir -p $HOME/.docker
-          AUTH="$(echo -n "${{ secrets.HARBOR_USERNAME }}:${{ secrets.HARBOR_PASSWORD }}" | base64)"
-          echo "{\"auths\":{\"reg.1u1.it:443\":{\"auth\":\"${AUTH}\"}}}" > $HOME/.docker/config.json
+          AUTH="$(echo -n "${HARBOR_USERNAME}:${HARBOR_PASSWORD}" | base64 -w0 )"
+          echo "{\"auths\":{\"${REGISTRY_HOST}\":{\"auth\":\"${AUTH}\"}}}" > $HOME/.docker/config.json
           set +e
           kubectl get secret dock-sec -n arc-runners
-          if [ $? -ne 0 ]; then
-            kubectl create secret generic dock-sec --from-file=config.json=$HOME/.docker/config.json --namespace=arc-runners
-          else
-            echo "dock-sec already exists, skipping creation."
+          if [ $? -eq 0 ]; then
+            echo "dock-sec already exists, deleting it ..."
+            kubectl delete secret -n arc-runners dock-sec --ignore-not-found
           fi
-          set -e  
+          echo "Create docker-sec ..."
+          kubectl create secret generic dock-sec --from-file=config.json=$HOME/.docker/config.json --namespace=arc-runners
+          set -e
+        env:
+          HARBOR_USERNAME: ${{ secrets.HARBOR_USERNAME }}
+          HARBOR_PASSWORD: ${{ secrets.HARBOR_PASSWORD }}
 
       - name: Create and Apply Kaniko Job
         run: |
           set +e
           # Check if the job exists
-          kubectl get job openwebui-build-push-image -n arc-runners
+          kubectl get job ${{ env.JOB_NAME }} -n arc-runners
           if [ $? -eq 0 ]; then
             echo "Job gpt-build-push-image, deleting it..."
-            kubectl delete job openwebui-build-push-image -n arc-runners --ignore-not-found
+            kubectl delete job ${{ env.JOB_NAME }} -n arc-runners --ignore-not-found
           fi
-                   
           
           # Create a new job
           echo "
@@ -62,7 +69,7 @@ jobs:
             namespace: arc-runners
           spec:
             template:
-              spec:  
+              spec:
                 initContainers:
                 - name: git-clone
                   image: alpine/git
@@ -79,15 +86,15 @@ jobs:
                   image: gcr.io/kaniko-project/executor:latest
                   args:
                   - --dockerfile=./Dockerfile
-                  - --context=dir:///workspace   
-                  - --destination=reg.1u1.it:443/moc-dev/drive/open-webui:${{ github.run_id }}
-                  - --destination=reg.1u1.it:443/moc-dev/drive/open-webui:latest
+                  - --context=dir:///workspace
+                  - --destination=${{ env.REGISTRY_URL }}:${{ github.run_id }}
+                  - --destination=${{ env.REGISTRY_URL }}:latest
                   - --build-arg=BUILD_HASH=${{ github.sha }}
                   - --git=recurse-submodules=true
                   - --skip-tls-verify
                   volumeMounts:
                   - name: build-context
-                    mountPath: /workspace  
+                    mountPath: /workspace
                   - name: dock-sec
                     mountPath: /kaniko/.docker
                 restartPolicy: Never
@@ -105,53 +112,60 @@ jobs:
 
       - name: Monitor Job Status and Print Logs
         run: |
-          echo "Monitoring build job."          
-          set -e      
-          JOB_NAME="openwebui-build-push-image"
+          echo "Monitoring build job."
+          set -e
           TIMEOUT=1200   # Set your desired timeout in seconds
           INTERVAL=30    # Interval for checking job status and printing logs
 
-          until POD_NAME=$(kubectl get pods --namespace=arc-runners --selector=job-name=${JOB_NAME} --output=jsonpath='{.items[0].metadata.name}' 2>/dev/null); do
+          until POD_NAME=$(kubectl get pods --namespace=arc-runners --selector=job-name=${{ env.JOB_NAME }} --output=jsonpath='{.items[0].metadata.name}' 2>/dev/null); do
             echo "Waiting for pod to be created..."
             sleep 5
-          done      
-          echo "Pod ${POD_NAME} is created."      
+          done
+          echo "Pod ${POD_NAME} is created."
           # Wait for pod to be running
           POD_STATUS=""
           until [ "$POD_STATUS" == "Running" ]; do
             POD_STATUS=$(kubectl get pod ${POD_NAME} -o jsonpath='{.status.phase}')
+            if [ "$POD_STATUS" == "Failed" ]; then
+              echo "Pod failed."
+              echo "git-clone:"
+              kubectl logs -c git-clone ${POD_NAME}
+              echo "kaniko:"
+              kubectl logs -c kaniko ${POD_NAME}
+              exit 1
+            fi
             if [ "$POD_STATUS" != "Running" ]; then
               echo "Waiting for pod ${POD_NAME} to be running. Current status: ${POD_STATUS}"
               sleep 5
             fi
-          done      
+          done
           echo "Pod ${POD_NAME} is running."
           # Monitor the job status and print logs every 30 seconds
           start_time=$(date +%s)
           while true; do
             current_time=$(date +%s)
-            elapsed=$((current_time - start_time))      
+            elapsed=$((current_time - start_time))
             # Print pod logs
             echo "=== Logs for pod ${POD_NAME} ==="
-            kubectl logs --namespace=arc-runners ${POD_NAME}       
+            kubectl logs --namespace=arc-runners ${POD_NAME}
             # Check if the job is complete
-            JOB_STATUS=$(kubectl get job --namespace=arc-runners ${JOB_NAME} -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}')
+            JOB_STATUS=$(kubectl get job --namespace=arc-runners ${{ env.JOB_NAME }} -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}')
             if [[ "$JOB_STATUS" == "True" ]]; then
-              echo "Job ${JOB_NAME} is complete."
+              echo "Job ${{ env.JOB_NAME }} is complete."
               break
-            fi      
+            fi
             # Timeout check
             if [[ $elapsed -ge $TIMEOUT ]]; then
-              echo "Job ${JOB_NAME} did not complete within timeout. Exiting."
+              echo "Job ${{ env.JOB_NAME }} did not complete within timeout. Exiting."
               exit 1
-            fi      
+            fi
             echo "Job is not complete yet. Checking again in ${INTERVAL}s..."
             sleep $INTERVAL
-          done      
+          done
           echo "Image is pushed to the Harbor Registry with TAG '${{ github.run_id }}'"
 
       - name: Delete Kaniko Job
         run: |
-          kubectl delete job openwebui-build-push-image --namespace=arc-runners --ignore-not-found
-          kubectl delete secret -n arc-runners dock-sec --ignore-not-found        
+          kubectl delete job ${{ env.JOB_NAME }} --namespace=arc-runners --ignore-not-found
+          kubectl delete secret -n arc-runners dock-sec --ignore-not-found
           echo "All tasks completed gracefully."
