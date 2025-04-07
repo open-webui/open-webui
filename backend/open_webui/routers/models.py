@@ -4,7 +4,7 @@ from beyond_the_loop.models.models import (
     ModelForm,
     ModelModel,
     ModelResponse,
-    ModelCompanyResponse,
+    ModelUserResponse,
     Models,
 )
 from open_webui.constants import ERROR_MESSAGES
@@ -12,8 +12,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
-
-from beyond_the_loop.models.companies import Companies
 
 router = APIRouter()
 
@@ -23,8 +21,8 @@ router = APIRouter()
 ###########################
 
 
-@router.get("/", response_model=list[ModelCompanyResponse])
-async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
+@router.get("/", response_model=list[ModelUserResponse])
+async def get_models(user=Depends(get_verified_user)):
     if user.role == "admin":
         return Models.get_models()
     else:
