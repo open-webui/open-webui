@@ -23,7 +23,6 @@ services:
       - 'NODE_OPTIONS=--max-old-space-size=8192'
       - 'FRONTEND_URL=${FRONTEND_URL}'
       - 'BACKEND_URL=${BACKEND_URL}'
-      - 'MISTRAL_API_KEY=${MISTRAL_API_KEY}'
       # ProConnect
       - 'PROCONNECT_CLIENT_ID=${PROCONNECT_CLIENT_ID}'
       - 'PROCONNECT_CLIENT_SECRET=${PROCONNECT_CLIENT_SECRET}'

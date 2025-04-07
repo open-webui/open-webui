@@ -1,9 +1,8 @@
 import requests
 import logging
-from open_webui.retrieval.loaders.mistralPdfLoader import MistralVisionPDFLoader
 import ftfy
 import sys
- 
+
 from langchain_community.document_loaders import (
     AzureAIDocumentIntelligenceLoader,
     BSHTMLLoader,
@@ -164,10 +163,7 @@ class Loader:
             )
         else:
             if file_ext == "pdf":
-                # loader = PyPDFLoader(
-                #     file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
-                # )
-                loader = MistralVisionPDFLoader(file_path)
+                loader = PyPDFLoader(file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"))
             elif file_ext == "csv":
                 loader = CSVLoader(file_path)
             elif file_ext == "rst":

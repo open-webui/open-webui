@@ -819,7 +819,6 @@ OPENAI_API_CONFIGS = PersistentConfig(
     {},
 )
 
-MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY", "")
 # Get the actual OpenAI API key based on the base URL
 OPENAI_API_KEY = ""
 try:

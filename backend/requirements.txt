@@ -118,10 +118,5 @@ azure-storage-blob==12.24.1
 ## LDAP
 ldap3==2.9.1
 
-# OCR + Vision PDfs
-mistralai==1.5.0
-PyMuPDF==1.25.3
-pytesseract==0.3.13
-
 ## Firecrawl
 firecrawl-py==1.12.0
