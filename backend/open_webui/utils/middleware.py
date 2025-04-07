@@ -904,7 +904,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     file_id = doc_meta.get('file_id')
                     if file_id not in citated_file_idx:
                         citated_file_idx[file_id] = len(citated_file_idx) + 1
-                    context_string += f"<source><source_id>{citated_file_idx[file_id]}</source_id><source_context>{doc_context}</source_context></source>\n"
+                    context_string += (
+                        f'<source id="{citated_file_idx[file_id]}">{doc_context}</source>\n'
+                    )
 
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])
