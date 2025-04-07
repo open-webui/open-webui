@@ -82,6 +82,9 @@
 		hybrid: false
 	};
 
+	let oneDriveAuthType = 'personal';
+	let oneDriveSharepointUrl = '';
+
 	const embeddingModelUpdateHandler = async () => {
 		if (embeddingEngine === '' && embeddingModel.split('/').length - 1 > 1) {
 			toast.error(
@@ -208,6 +211,8 @@
 			pdf_extract_images: pdfExtractImages,
 			enable_google_drive_integration: enableGoogleDriveIntegration,
 			enable_onedrive_integration: enableOneDriveIntegration,
+			onedrive_authority_type: oneDriveAuthType,
+			onedrive_sharepoint_url: oneDriveSharepointUrl,							
 			file: {
 				max_size: fileMaxSize === '' ? null : fileMaxSize,
 				max_count: fileMaxCount === '' ? null : fileMaxCount
@@ -301,6 +306,8 @@
 
 			enableGoogleDriveIntegration = res.enable_google_drive_integration;
 			enableOneDriveIntegration = res.enable_onedrive_integration;
+			oneDriveAuthType = res.onedrive_authority_type;
+			oneDriveSharepointUrl = res.onedrive_sharepoint_url;
 		}
 	});
 </script>
@@ -914,6 +921,37 @@
 						<Switch bind:state={enableOneDriveIntegration} />
 					</div>
 				</div>
+
+				{#if enableOneDriveIntegration}
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Authority Type')}</div>
+						<div class="flex items-center relative">
+							<select
+								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+								bind:value={oneDriveAuthType}
+							>
+								<option value="personal">{$i18n.t('Personal')}</option>
+								<option value="organizations">{$i18n.t('Organizations')}</option>
+							</select>
+						</div>
+					</div>
+					{#if oneDriveAuthType === 'organizations'}
+						<div class="mb-2.5 flex w-full justify-between flex-col">
+							<div class="self-start text-xs font-medium mb-2">
+								{$i18n.t('Sharepoint URL')} <span class="text-red-500">*</span>
+							</div>
+							<div class="flex items-center w-full">
+								<input
+									class="w-full rounded-lg text-sm bg-transparent outline-hidden"
+									type="text"
+									placeholder={$i18n.t('Enter sharepoint url(eg: tenant.sharepoint.com or tenant-my.sharepoint.com)')}
+									bind:value={oneDriveSharepointUrl}
+									required
+								/>
+							</div>
+						</div>
+					{/if}
+				{/if}
 			</div>
 
 			<div class="mb-3">

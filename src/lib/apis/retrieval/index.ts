@@ -53,6 +53,8 @@ type RAGConfigForm = {
 	pdf_extract_images?: boolean;
 	enable_google_drive_integration?: boolean;
 	enable_onedrive_integration?: boolean;
+	onedrive_authority_type?: string;
+	onedrive_sharepoint_url?: string;
 	chunk?: ChunkConfigForm;
 	content_extraction?: ContentExtractConfigForm;
 	web_loader_ssl_verification?: boolean;

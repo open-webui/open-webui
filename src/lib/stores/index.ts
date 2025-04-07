@@ -214,6 +214,10 @@ type Config = {
 		enable_community_sharing: boolean;
 		enable_autocomplete_generation: boolean;
 	};
+	onedrive: {
+		authority_type: string;
+		sharepoint_url: string;
+	};
 	oauth: {
 		providers: {
 			[key: string]: string;

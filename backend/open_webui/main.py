@@ -99,7 +99,6 @@ from open_webui.config import (
     OLLAMA_API_CONFIGS,
     # OpenAI
     ENABLE_OPENAI_API,
-    ONEDRIVE_CLIENT_ID,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
@@ -239,6 +238,8 @@ from open_webui.config import (
     ENABLE_RAG_WEB_SEARCH,
     ENABLE_GOOGLE_DRIVE_INTEGRATION,
     ENABLE_ONEDRIVE_INTEGRATION,
+    ONEDRIVE_AUTHORITY_TYPE,
+    ONEDRIVE_SHAREPOINT_URL,
     UPLOAD_DIR,
     # WebUI
     WEBUI_AUTH,
@@ -630,6 +631,9 @@ app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = RAG_WEB_SEARCH_DOMAIN_FILTE
 
 app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = ENABLE_GOOGLE_DRIVE_INTEGRATION
 app.state.config.ENABLE_ONEDRIVE_INTEGRATION = ENABLE_ONEDRIVE_INTEGRATION
+app.state.config.ONEDRIVE_AUTHORITY_TYPE = ONEDRIVE_AUTHORITY_TYPE
+app.state.config.ONEDRIVE_SHAREPOINT_URL = ONEDRIVE_SHAREPOINT_URL
+app.state.config.ONEDRIVE_CLIENT_ID = ONEDRIVE_CLIENT_ID
 app.state.config.SEARXNG_QUERY_URL = SEARXNG_QUERY_URL
 app.state.config.GOOGLE_PSE_API_KEY = GOOGLE_PSE_API_KEY
 app.state.config.GOOGLE_PSE_ENGINE_ID = GOOGLE_PSE_ENGINE_ID
@@ -1232,6 +1236,11 @@ async def get_app_config(request: Request):
                 for name, config in OAUTH_PROVIDERS.items()
             }
         },
+        "onedrive": {
+            "authority_type": app.state.config.ONEDRIVE_AUTHORITY_TYPE,
+            "sharepoint_url": app.state.config.ONEDRIVE_SHAREPOINT_URL,
+            "client_id": app.state.config.ONEDRIVE_CLIENT_ID,
+        },
         "features": {
             "auth": WEBUI_AUTH,
             "auth_trusted_header": bool(app.state.AUTH_TRUSTED_EMAIL_HEADER),
@@ -1255,7 +1264,7 @@ async def get_app_config(request: Request):
                     "enable_admin_export": ENABLE_ADMIN_EXPORT,
                     "enable_admin_chat_access": ENABLE_ADMIN_CHAT_ACCESS,
                     "enable_google_drive_integration": app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
-                    "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+                    "enable_onedrive_integration": app.state.config.ENABLE_ONEDRIVE_INTEGRATION,                    
                 }
                 if user is not None
                 else {}
@@ -1288,7 +1297,11 @@ async def get_app_config(request: Request):
                     "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
                     "api_key": GOOGLE_DRIVE_API_KEY.value,
                 },
-                "onedrive": {"client_id": ONEDRIVE_CLIENT_ID.value},
+                "onedrive": {
+                    "client_id": ONEDRIVE_CLIENT_ID.value,
+                    "authority_type": app.state.config.ONEDRIVE_AUTHORITY_TYPE,
+                    "sharepoint_url": app.state.config.ONEDRIVE_SHAREPOINT_URL,
+                },
                 "license_metadata": app.state.LICENSE_METADATA,
                 **(
                     {
