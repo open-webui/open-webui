@@ -42,9 +42,17 @@
 	let showDeleteConfirm = false;
 	let deletePrompt = null;
 
+	let tags = [];
+	let selectedTags = new Set();
 	let filteredItems = [];
 	let accessFilter = 'all';
 	let groupsForPrompts = [];
+
+	$: if (prompts) {
+		tags = Array.from(
+			new Set(prompts.flatMap((p) => p.meta?.tags?.map((t) => t.name.toLowerCase()) || []))
+		);
+	}
 
 	onMount(async () => {
 		groupsForPrompts = await getGroups(localStorage.token);
@@ -55,14 +63,22 @@
 			const nameMatch = query === '' || p.command.includes(query);
 			const isPublic = p.access_control === null;
 			const isPrivate = p.access_control !== null;
+
+			const modelTags = p.meta?.tags?.map((t) => t.name.toLowerCase()) || [];
+
+			const tagsMatch =
+				selectedTags.size === 0 || Array.from(selectedTags).some((tag) => modelTags.includes(tag));
+
 			const accessMatch =
 				accessFilter === 'all' ||
 				(accessFilter === 'public' && isPublic) ||
 				(accessFilter === 'private' && isPrivate);
 
-			return nameMatch && accessMatch;
+			return nameMatch && accessMatch && tagsMatch;
 		});
 	}
+
+	$: console.log(prompts)
 
 	const shareHandler = async (prompt) => {
 		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
@@ -240,7 +256,7 @@
 					{$i18n.t('Filter by category:')}
 				</div>
 				<div class="flex flex-wrap gap-1">
-					<!-- {#each tags as tag}
+					{#each tags as tag}
 						<button
 							class={`flex items-center justify-center rounded-md text-2xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'dark:bg-customBlue-800' : 'dark:bg-customGray-800 dark:hover:bg-customBlue-800'} dark:text-white`}
 							on:click={() => {
@@ -250,7 +266,7 @@
 						>
 							{tag.charAt(0).toUpperCase() + tag.slice(1)}
 						</button>
-					{/each} -->
+					{/each}
 				</div>
 			</div>
 			<div class="flex dark:bg-customGray-800 rounded-md flex-shrink-0">
@@ -311,14 +327,15 @@
 											</div>
 										{/each}
 									{/if}
-
-								<!-- {#each model.meta?.tags as modelTag}
+								{#if prompt.meta && Array.isArray(prompt.meta.tags)}
+								{#each prompt?.meta?.tags as promptTag}
 									<div
 										class="flex items-center dark:text-white text-2xs dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
 									>
-										{modelTag.name}
+										{promptTag.name}
 									</div>
-								{/each} -->
+								{/each}
+								{/if}
 								</div>
 							</div>
 							<div class="invisible group-hover:visible">
@@ -354,11 +371,11 @@
 									<div class="text-xs-plus line-clamp-1 capitalize dark:text-customGray-100">
 										{prompt.title}
 									</div>
-									<div
+									<!-- <div
 										class=" text-2xs overflow-hidden dark:text-customGray-100 text-ellipsis line-clamp-1"
 									>
 										{prompt.command}
-									</div>
+									</div> -->
 								</div>
 								<div class="text-2xs line-clamp-1 dark:text-customGray-100">
 									{prompt.content}

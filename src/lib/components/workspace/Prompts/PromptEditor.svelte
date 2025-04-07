@@ -7,6 +7,7 @@
 	import AccessControl from '../common/AccessControl.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import Tags from '$lib/components/common/Tags.svelte';
 
 	export let onSubmit: Function;
 	export let edit = false;
@@ -19,6 +20,10 @@
 	let title = '';
 	let command = '';
 	let content = '';
+	let meta = {
+			tags: []
+		};
+	$: console.log(meta)
 
 	let accessControl = null;
 
@@ -36,7 +41,8 @@
 				title,
 				command,
 				content,
-				access_control: accessControl
+				access_control: accessControl,
+				meta
 			});
 		} else {
 			toast.error(
@@ -129,6 +135,26 @@
 					</div>
 				</div>
 			</Tooltip>
+		</div>
+
+		<div class=" mt-2 my-1">
+			<div class="dark:bg-customGray-900 min-h-[33px] rounded-lg px-2 py-3">
+				<Tags
+					tags={meta?.tags ?? []}
+					on:delete={(e) => {
+						const tagName = e.detail;
+						meta.tags = meta.tags.filter((tag) => tag.name !== tagName);
+					}}
+					on:add={(e) => {
+						const tagName = e.detail;
+						if (!(meta?.tags ?? null)) {
+							meta.tags = [{ name: tagName }];
+						} else {
+							meta.tags = [...meta.tags, { name: tagName }];
+						}
+					}}
+				/>
+			</div>
 		</div>
 
 		<div class="my-2">
