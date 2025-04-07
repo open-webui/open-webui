@@ -733,36 +733,29 @@ async def generate_chat_completion(
         if "text/event-stream" in r.headers.get("Content-Type", ""):
             streaming = True
             
-            if "pipeline" in model and model.get("pipeline"):
-            # Read each event from the stream and parse event
-                async def stream_events():
-                    async for line in r.content:
-                        if line:
-                            log.error(line)
-                            if line.startswith(b"event: "):
-                                event = json.loads(line[6:])
-                                await __event_emitter__(event)
+
+            # Read the stream and propagate the event if needed
+            async def stream_events():
+                async for line in r.content:
+                    if line:
+                        if line.startswith(b"data: "):
+                            data = json.loads(line[6:])
+                            if data and "event" in data:
+                                await __event_emitter__(data["event"])
                             else:
                                 yield line
-                
-                
-                return StreamingResponse(
-                    stream_events(),
-                    status_code=r.status,
-                    headers=dict(r.headers),
-                    background=BackgroundTask(
-                        cleanup_response, response=r, session=session
-                    ),
-                )
-            else:
-                 return StreamingResponse(
-                    r.content,
-                    status_code=r.status,
-                    headers=dict(r.headers),
-                    background=BackgroundTask(
-                        cleanup_response, response=r, session=session
-                    ),
-                )
+                        else:
+                            yield line
+            
+            
+            return StreamingResponse(
+                stream_events(),
+                status_code=r.status,
+                headers=dict(r.headers),
+                background=BackgroundTask(
+                    cleanup_response, response=r, session=session
+                ),
+            )
         else:
             try:
                 response = await r.json()
