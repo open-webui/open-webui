@@ -67,7 +67,7 @@ body:
     attributes:
       label: What's your operating system?
       description: Which OS are you running RAUX on?
-      placeholder: For example, Windows 10,Windows 11, macOS Sonoma, Ubuntu 22.04
+      placeholder: For example, Windows 11
     validations:
       required: false
 
