@@ -49,7 +49,7 @@
 							show = false;
 						}}
 					>
-						{$i18n.t('Enable')}
+						{$i18n.t('Continue')}
 					</button>
 				</div>
 			</div>

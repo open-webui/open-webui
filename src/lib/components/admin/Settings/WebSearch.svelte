@@ -488,6 +488,21 @@
 							</Tooltip>
 						</div>
 					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Web Search Privacy Notice')}
+						</div>
+						<div class="flex items-center relative">
+							<Tooltip
+								content={webConfig.search.privacy_notice
+									? 'Display a privacy notice when web search is enabled by the user.'
+									: 'Do not display a privacy notice when enabling web search.'}
+							>
+								<Switch bind:state={webConfig.search.privacy_notice} />
+							</Tooltip>
+						</div>
+					</div>
 				</div>
 
 				<div class="mb-3">

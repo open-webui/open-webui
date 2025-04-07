@@ -2165,6 +2165,12 @@ RAG_WEB_SEARCH_TRUST_ENV = PersistentConfig(
     os.getenv("RAG_WEB_SEARCH_TRUST_ENV", "False").lower() == "true",
 )
 
+ENABLE_RAG_WEB_SEARCH_PRIVACY_NOTICE = PersistentConfig(
+    "ENABLE_RAG_WEB_SEARCH_PRIVACY_NOTICE",
+    "rag.web.search.privacy_notice",
+    os.getenv("ENABLE_RAG_WEB_SEARCH_PRIVACY_NOTICE", "False").lower() == "true",
+)
+
 PLAYWRIGHT_WS_URI = PersistentConfig(
     "PLAYWRIGHT_WS_URI",
     "rag.web.loader.engine.playwright.ws.uri",

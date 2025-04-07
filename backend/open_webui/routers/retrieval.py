@@ -413,6 +413,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "perplexity_api_key": request.app.state.config.PERPLEXITY_API_KEY,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
+                "privacy_notice": request.app.state.config.ENABLE_RAG_WEB_SEARCH_PRIVACY_NOTICE,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
                 "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             },
@@ -481,6 +482,7 @@ class WebSearchConfig(BaseModel):
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
     trust_env: Optional[bool] = None
+    privacy_notice: Optional[bool] = None
     domain_filter_list: Optional[List[str]] = []
 
 
@@ -650,6 +652,9 @@ async def update_rag_config(
         request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV = (
             form_data.web.search.trust_env
         )
+        request.app.state.config.ENABLE_RAG_WEB_SEARCH_PRIVACY_NOTICE = (
+            form_data.web.search.privacy_notice
+        )
         request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = (
             form_data.web.search.domain_filter_list
         )
@@ -715,6 +720,7 @@ async def update_rag_config(
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
                 "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
+                "privacy_notice": request.app.state.config.ENABLE_RAG_WEB_SEARCH_PRIVACY_NOTICE,
                 "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             },
         },

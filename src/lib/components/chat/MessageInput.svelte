@@ -1139,10 +1139,10 @@
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
 														on:click|preventDefault={() => {
-															if (webSearchEnabled) {
-																webSearchEnabled = false;
+															if (!webSearchEnabled && $config?.features?.enable_web_search_privacy_notice) {
+															showWebSearchModal = true;
 															} else {
-																showWebSearchModal = true;
+															webSearchEnabled = !webSearchEnabled;
 															}
 														}}
 														type="button"

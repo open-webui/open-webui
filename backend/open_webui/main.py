@@ -207,6 +207,7 @@ from open_webui.config import (
     RAG_WEB_SEARCH_RESULT_COUNT,
     RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
     RAG_WEB_SEARCH_TRUST_ENV,
+    ENABLE_RAG_WEB_SEARCH_PRIVACY_NOTICE,
     RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
     JINA_API_KEY,
     SEARCHAPI_API_KEY,
@@ -656,6 +657,7 @@ app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
 app.state.config.RAG_WEB_LOADER_ENGINE = RAG_WEB_LOADER_ENGINE
 app.state.config.RAG_WEB_SEARCH_TRUST_ENV = RAG_WEB_SEARCH_TRUST_ENV
+app.state.config.ENABLE_RAG_WEB_SEARCH_PRIVACY_NOTICE = ENABLE_RAG_WEB_SEARCH_PRIVACY_NOTICE
 app.state.config.PLAYWRIGHT_WS_URI = PLAYWRIGHT_WS_URI
 app.state.config.PLAYWRIGHT_TIMEOUT = PLAYWRIGHT_TIMEOUT
 app.state.config.FIRECRAWL_API_BASE_URL = FIRECRAWL_API_BASE_URL
@@ -1245,6 +1247,7 @@ async def get_app_config(request: Request):
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
                     "enable_channels": app.state.config.ENABLE_CHANNELS,
                     "enable_web_search": app.state.config.ENABLE_RAG_WEB_SEARCH,
+                    "enable_web_search_privacy_notice": app.state.config.ENABLE_RAG_WEB_SEARCH_PRIVACY_NOTICE,
                     "enable_code_execution": app.state.config.ENABLE_CODE_EXECUTION,
                     "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,
                     "enable_image_generation": app.state.config.ENABLE_IMAGE_GENERATION,
