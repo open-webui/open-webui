@@ -176,7 +176,7 @@
 	};
 
 	onMount(async () => {
-		if ($user.role === 'admin') {
+		if ($user?.role === 'admin') {
 			const res = await getConfig(localStorage.token).catch((error) => {
 				toast.error(`${error}`);
 				return null;
