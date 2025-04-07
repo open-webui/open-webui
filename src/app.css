@@ -266,7 +266,7 @@ input[type='number'] {
 }
 
 .ProseMirror {
-	@apply h-full min-h-fit max-h-full whitespace-pre-wrap text-xs-plus;
+	@apply h-full min-h-fit max-h-full whitespace-pre-wrap text-base;
 }
 
 .ProseMirror:focus {
@@ -278,6 +278,7 @@ input[type='number'] {
 	float: left;
 	color: #adb5bd;
 	pointer-events: none;
+	font-size: 16px;
 
 	@apply line-clamp-1 absolute;
 }

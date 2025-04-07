@@ -403,7 +403,7 @@
 						<div>
 							{#if selectedToolIds.length > 0}
 								<div class="flex items-center justify-between w-full">
-									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
+									<div class="flex items-center gap-2.5 text-base dark:text-gray-500">
 										<div class="pl-1">
 											<span class="relative flex size-2">
 												<span
@@ -435,7 +435,7 @@
 
 							<!-- {#if webSearchEnabled || ($settings?.webSearch ?? false) === 'always'}
 								<div class="flex items-center justify-between w-full">
-									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
+									<div class="flex items-center gap-2.5 text-base dark:text-gray-500">
 										<div class="pl-1">
 											<span class="relative flex size-2">
 												<span
@@ -451,7 +451,7 @@
 
 							<!-- {#if imageGenerationEnabled}
 								<div class="flex items-center justify-between w-full">
-									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
+									<div class="flex items-center gap-2.5 text-base dark:text-gray-500">
 										<div class="pl-1">
 											<span class="relative flex size-2">
 												<span
@@ -467,7 +467,7 @@
 
 							<!-- {#if codeInterpreterEnabled}
 								<div class="flex items-center justify-between w-full">
-									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
+									<div class="flex items-center gap-2.5 text-base dark:text-gray-500">
 										<div class="pl-1">
 											<span class="relative flex size-2">
 												<span
@@ -483,7 +483,7 @@
 
 							{#if atSelectedModel !== undefined}
 								<div class="flex items-center justify-between w-full">
-									<div class="pl-[1px] flex items-center gap-2 text-sm dark:text-gray-500">
+									<div class="pl-[1px] flex items-center gap-2 text-base dark:text-gray-500">
 										<img
 											crossorigin="anonymous"
 											alt="model profile"
@@ -684,7 +684,7 @@
 									</div>
 								{/if}
 
-								<div class="px-2.5 min-h-[50px]">
+								<div class="px-2.5 min-h-[60px]">
 									{#if $settings?.richTextInput ?? true}
 										<div
 											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
@@ -1138,7 +1138,7 @@
 																codeInterpreterEnabled = false;
 															}}
 															type="button"
-															class="p-[3px] flex gap-1.5 items-center text-2xs leading-none rounded-md font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
+															class="p-[3px] flex gap-1.5 items-center text-xs leading-none rounded-md font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
 																? 'bg-blue-100 dark:bg-customBlue-700/60 text-blue-500 dark:text-white'
 																: 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 hover:bg-gray-100 dark:hover:bg-customGray-900'}"
@@ -1163,7 +1163,7 @@
 																webSearchEnabled = false;
 															}}
 															type="button"
-															class="p-[3px] flex gap-1.5 items-center text-2xs leading-none rounded-md font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
+															class="p-[3px] flex gap-1.5 items-center text-xs leading-none rounded-md font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
 																? 'bg-gray-100 dark:bg-customBlue-700/60 text-gray-600 dark:text-white'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-customGray-900 '}"
 														>
@@ -1187,7 +1187,7 @@
 																webSearchEnabled = false;
 															}}
 															type="button"
-															class="p-[3px] flex gap-1.5 items-center text-2xs leading-none rounded-lg font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
+															class="p-[3px] flex gap-1.5 items-center text-xs leading-none rounded-lg font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
 																? 'bg-gray-100 dark:bg-customBlue-700/60 text-gray-600 dark:text-white'
 																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-customGray-900 '}"
 														>
@@ -1210,7 +1210,7 @@
 											<Tooltip content={$i18n.t('Magic prompt')}>
 												<button
 													id="magic-search-button"
-													class={`${isMagicLoading ? 'dark:bg-customBlue-700/60' : ''} text-gray-600 dark:text-gray-300 text-2xs leading-none hover:text-gray-700 dark:hover:text-white ${!isMagicLoading? 'dark:hover:bg-customGray-900' : ''}  transition rounded-md py-[3px] px-[5px] mr-0.5 self-center`}
+													class={`${isMagicLoading ? 'dark:bg-customBlue-700/60' : ''} text-gray-600 dark:text-gray-300 text-xs leading-none hover:text-gray-700 dark:hover:text-white ${!isMagicLoading? 'dark:hover:bg-customGray-900' : ''}  transition rounded-md py-[3px] px-[5px] mr-0.5 self-center`}
 													type="button"
 													aria-label="Magic Prompt"
 													disabled={prompt === '' || isMagicLoading}
@@ -1335,7 +1335,7 @@
 																xmlns="http://www.w3.org/2000/svg"
 																viewBox="0 0 16 16"
 																fill="currentColor"
-																class="size-2"
+																class="size-3"
 															>
 																<path
 																	fill-rule="evenodd"
@@ -1351,14 +1351,14 @@
 											<div class=" flex items-center">
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
-														class=" text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1"
+														class=" text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full"
 														on:click={() => {
 															stopResponse();
 														}}
 													>
 														<svg
-															width="13"
-															height="13"
+															width="16"
+															height="16"
 															viewBox="0 0 13 13"
 															fill="none"
 															xmlns="http://www.w3.org/2000/svg"

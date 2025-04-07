@@ -216,7 +216,7 @@
 					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 						<div
 							class="rounded-md {($settings?.chatBubble ?? true)
-								? `max-w-[90%] px-2.5 py-1.5  bg-gray-50 dark:bg-customGray-800 text-xs-plus dark:text-customGray-100 leading-[1.8] ${
+								? `max-w-[90%] px-2.5 py-1.5  bg-gray-50 dark:bg-customGray-800 text-base dark:text-customGray-100 leading-[1.8] ${
 										message.files ? 'rounded-tr-lg' : ''
 									}`
 								: ' w-full'}"

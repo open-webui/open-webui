@@ -500,7 +500,7 @@
 		<div class="flex-auto w-0 pl-1">
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
-					<span class="line-clamp-1 text-[14px]">
+					<span class="line-clamp-1 text-base">
 						{model?.name ?? message.model}
 					</span>
 				</Tooltip>
@@ -669,7 +669,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="w-full flex flex-col relative text-xs-plus leading-[1.8]" id="response-content-container">
+							<div class="w-full flex flex-col relative text-base leading-[1.8] dark:text-customGray-100" id="response-content-container">
 								{#if message.content === '' && !message.error}
 									<Skeleton />
 								{:else if message.content && message.error !== true}

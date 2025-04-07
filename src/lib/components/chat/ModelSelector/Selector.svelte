@@ -43,7 +43,7 @@
 	}[] = [];
 
 	export let className = '180px';
-	export let triggerClassName = 'text-2xs';
+	export let triggerClassName = 'text-xs';
 
 	let show = false;
 
@@ -251,7 +251,7 @@
 	closeFocus={false}
 >
 	<DropdownMenu.Trigger
-		class="relative w-full font-primary flex"
+		class="relative w-full flex"
 		aria-label={placeholder}
 		id="model-selector-{id}-button"
 	>
@@ -290,7 +290,7 @@
 					<input
 						id="model-search-input"
 						bind:value={searchValue}
-						class="w-full text-sm bg-transparent outline-none pl-7 h-[25px] rounded-lg border border-customGray-700 placeholder:text-2xs"
+						class="w-full text-sm bg-transparent outline-none pl-7 h-[25px] rounded-lg border border-customGray-700 placeholder:text-xs"
 						placeholder={searchPlaceholder}
 						autocomplete="off"
 						on:keydown={(e) => {
@@ -355,10 +355,10 @@
 												alt="Model"
 												class="rounded-full size-5 flex items-center mr-2"
 											/>
-											<span class="text-2xs leading-normal">{item.label}</span>
+											<span class="text-xs leading-none">{item.label}</span>
 											<!-- </Tooltip> -->
 										</div>
-										<div class="text-[9px] ml-7 text-[#808080] leading-normal">
+										<div class="text-2xs ml-7 text-[#808080] leading-normal">
 											Great for most tasks
 										</div>
 									</div>
