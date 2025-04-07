@@ -19,13 +19,20 @@ depends_on = None
 
 def upgrade() -> None:
     op.add_column("user", sa.Column("domain", sa.String(), nullable=True))
-    op.execute(
-        """
-        UPDATE user 
-        SET domain = substr(email, instr(email, '@') + 1)
-        WHERE domain IS NULL
-    """
-    )
+    conn = op.get_bind()
+    if conn.dialect.name == "sqlite":
+        users = conn.execute(sa.text("SELECT id, email FROM user WHERE domain IS NULL")).fetchall()
+        for user_id, email in users:
+            domain = email.split("@")[1] if "@" in email else None
+            conn.execute(sa.text("UPDATE user SET domain = :domain WHERE id = :id"), {"domain": domain, "id": user_id})
+    else:
+        op.execute(
+            """
+            UPDATE user 
+            SET domain = split_part(email, '@', 2)
+            WHERE domain IS NULL
+            """
+        )
 
 
 def downgrade() -> None:
