@@ -295,7 +295,7 @@
 		</p>
 	{:else if token.type === 'text'}
 		{#if top}
-			<p dir="auto">
+			<p>
 				{#if token.tokens}
 					<MarkdownInlineTokens id={`${id}-${tokenIdx}-t`} tokens={token.tokens} {onSourceClick} />
 				{:else}
