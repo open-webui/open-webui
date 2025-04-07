@@ -150,8 +150,8 @@ def get_rf(
                     device=DEVICE_TYPE,
                     trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
                 )
-            except:
-                log.error("CrossEncoder error")
+            except Exception as e:
+                log.error(f"CrossEncoder error: {e}")
                 raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
     return rf
 
