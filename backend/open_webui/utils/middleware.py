@@ -897,12 +897,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # If context is not empty, insert it into the messages
     if len(sources) > 0:
         context_string = ""
-        for source_idx, source in enumerate(sources):
+        citated_file_idx = {}
+        for _, source in enumerate(sources, 1):
             if "document" in source:
-                for doc_idx, doc_context in enumerate(source["document"]):
-                    context_string += (
-                        f'<source id="{source_idx + 1}">{doc_context}</source>\n'
-                    )
+                for doc_context, doc_meta in zip(source["document"], source['metadata']):
+                    file_id = doc_meta.get('file_id')
+                    if file_id not in citated_file_idx:
+                        citated_file_idx[file_id] = len(citated_file_idx) + 1
+                    context_string += f"<source><source_id>{citated_file_idx[file_id]}</source_id><source_context>{doc_context}</source_context></source>\n"
 
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])
