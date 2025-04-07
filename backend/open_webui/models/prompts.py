@@ -1,7 +1,7 @@
 import time
 from typing import Optional
 
-from open_webui.internal.db import Base, get_db
+from open_webui.internal.db import Base, get_db, JSONField
 from beyond_the_loop.models.users import Users, UserResponse
 
 from pydantic import BaseModel, ConfigDict
@@ -40,7 +40,18 @@ class Prompt(Base):
     #      }
     #   }
 
+    meta = Column(JSONField)
+    """
+        Holds a JSON encoded blob of metadata, see `PromptMeta`.
+    """
 
+
+class PromptMeta(BaseModel):
+    tags: Optional[list[dict]] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+# PromptMeta is a model for the data stored in the meta field of the Model table
 class PromptModel(BaseModel):
     command: str
     user_id: str
@@ -51,6 +62,7 @@ class PromptModel(BaseModel):
     access_control: Optional[dict] = None
     model_config = ConfigDict(from_attributes=True)
 
+    meta: Optional[PromptMeta] = None
 
 ####################
 # Forms
@@ -66,6 +78,7 @@ class PromptForm(BaseModel):
     title: str
     content: str
     access_control: Optional[dict] = None
+    meta: PromptMeta
 
 
 class PromptsTable:
