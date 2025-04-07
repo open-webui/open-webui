@@ -1,3 +1,5 @@
+smolagents==1.10.0
+
 fastapi==0.115.7
 uvicorn[standard]==0.34.0
 pydantic==2.10.6
