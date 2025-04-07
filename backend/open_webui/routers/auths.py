@@ -770,8 +770,14 @@ async def logout(request: Request, response: Response, state: str = None):
 
 
 @router.get("/userinfo")
-async def userinfo(current_user: UserInfo = Depends(get_current_user)):
-    return current_user
+async def userinfo(request: Request, current_user: UserInfo = Depends(get_current_user)):
+    user_permissions = get_permissions(
+        current_user.id, request.app.state.config.USER_PERMISSIONS
+    )
+    
+    user_data = current_user.dict()
+    user_data["permissions"] = user_permissions
+    return user_data
 
 
 ############################
