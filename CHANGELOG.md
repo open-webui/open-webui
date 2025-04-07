@@ -20,7 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- 🧠 **RAG Retrieval Source Handling Smarter**: Improved how sources are linked to RAG results, whether embedding is used or bypassed—ensuring cleaner and more reliable document traceability in AI responses.
 - 🧰 **General Backend Refactoring**: Multiple behind-the-scenes improvements streamline backend performance, reduce complexity, and ensure a more stable, maintainable system overall—making everything smoother without changing your workflow.
 
 ## [0.6.1] - 2025-04-05
