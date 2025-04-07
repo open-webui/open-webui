@@ -160,22 +160,24 @@
 
 		if (config.viewcomfy.VIEWCOMFY_WORKFLOW) {
 			try {
-				config.viewcomfy.VIEWCOMFY_WORKFLOW = JSON.stringify(
-					JSON.parse(config.viewcomfy.VIEWCOMFY_WORKFLOW),
-					null,
-					2
-				);
-				config.viewcomfy.VIEWCOMFY_WORKFLOW_NODES = requiredWorkflowNodes.map((node) => {
-					return {
-						type: node.type,
-						key: node.key,
-						node_ids:
-							node.node_ids.trim() === '' ? [] : node.node_ids.split(',').map((id) => id.trim())
-					};
-				});
+				const parsedWorkflow = JSON.parse(config.viewcomfy.VIEWCOMFY_WORKFLOW);
+				config.viewcomfy.VIEWCOMFY_WORKFLOW = JSON.stringify(parsedWorkflow, null, 2);
 			} catch (e) {
-				console.log(e);
+				toast.error('Invalid JSON format for ViewComfy Workflow.');
+				loading = false;
+				return;
 			}
+		}
+
+		if (config?.viewcomfy?.VIEWCOMFY_WORKFLOW) {
+			config.viewcomfy.VIEWCOMFY_WORKFLOW_NODES = requiredWorkflowNodes.map((node) => {
+				return {
+					type: node.type,
+					key: node.key,
+					node_ids:
+						node.node_ids.trim() === '' ? [] : node.node_ids.split(',').map((id) => id.trim())
+				};
+			});
 		}
 
 		await updateConfig(localStorage.token, config).catch((error) => {
@@ -235,9 +237,10 @@
 			}
 
 			requiredWorkflowNodes = requiredWorkflowNodes.map((node) => {
-				let n = config.comfyui.COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type);
-				if (!n && config.engine === 'viewcomfy' && config.viewcomfy.VIEWCOMFY_WORKFLOW_NODES) {
-					n = config.viewcomfy.VIEWCOMFY_WORKFLOW_NODES.find((n) => n.type === node.type);
+				let n = config.comfyui.COMFYUI_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
+
+				if (!n && config.engine === 'viewcomfy') {
+					n = config.viewcomfy.VIEWCOMFY_WORKFLOW_NODES.find((n) => n.type === node.type) ?? node;
 				}
 
 				console.log(n);
