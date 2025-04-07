@@ -8,7 +8,7 @@
 	const dispatch = createEventDispatcher();
 
 	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
-	import { sanitizeResponseContent, findWordIndices } from '$lib/utils';
+	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
 	import Suggestions from './Suggestions.svelte';
@@ -38,6 +38,8 @@
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
 
+	export let toolServers = [];
+
 	let models = [];
 
 	const selectSuggestionPrompt = async (p) => {
@@ -63,9 +65,7 @@
 		const chatInputElement = document.getElementById('chat-input');
 
 		if (chatInputContainerElement) {
-			chatInputContainerElement.style.height = '';
-			chatInputContainerElement.style.height =
-				Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
+			chatInputContainerElement.scrollTop = chatInputContainerElement.scrollHeight;
 		}
 
 		await tick();
@@ -91,12 +91,12 @@
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
 	{#if $temporaryChatEnabled}
 		<Tooltip
-			content="This chat won't appear in history and your messages will not be saved."
+			content={$i18n.t('This chat won’t appear in history and your messages will not be saved.')}
 			className="w-full flex justify-center mb-0.5"
 			placement="top"
 		>
 			<div class="flex items-center gap-2 text-gray-500 font-medium text-lg my-2 w-fit">
-				<EyeSlash strokeWidth="2.5" className="size-5" /> Temporary Chat
+				<EyeSlash strokeWidth="2.5" className="size-5" />{$i18n.t('Temporary Chat')}
 			</div>
 		</Tooltip>
 	{/if}
@@ -140,7 +140,7 @@
 					{#if models[selectedModelIdx]?.name}
 						{models[selectedModelIdx]?.name}
 					{:else}
-						{$i18n.t('Hello, {{name}}', { name: $user.name })}
+						{$i18n.t('Hello, {{name}}', { name: $user?.name })}
 					{/if}
 				</div>
 			</div>
@@ -196,6 +196,7 @@
 					bind:codeInterpreterEnabled
 					bind:webSearchEnabled
 					bind:atSelectedModel
+					{toolServers}
 					{transparentBackground}
 					{stopResponse}
 					{createMessagePair}
