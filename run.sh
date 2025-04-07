@@ -5,6 +5,7 @@ container_name="open-webui"
 host_port=3000
 container_port=8080
 
+export NODE_OPTIONS="--max-old-space-size=8192"
 docker build -t "$image_name" .
 docker stop "$container_name" &>/dev/null || true
 docker rm "$container_name" &>/dev/null || true
