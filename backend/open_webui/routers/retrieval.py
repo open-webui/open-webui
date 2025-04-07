@@ -124,7 +124,7 @@ def get_ef(
 
 
 def get_rf(
-    reranking_model: str,
+    reranking_model: Optional[str] = None,
     auto_update: bool = False,
 ):
     rf = None
@@ -150,8 +150,8 @@ def get_rf(
                     device=DEVICE_TYPE,
                     trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
                 )
-            except:
-                log.error("CrossEncoder error")
+            except Exception as e:
+                log.error(f"CrossEncoder: {e}")
                 raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
     return rf
 
@@ -174,7 +174,7 @@ class ProcessUrlForm(CollectionNameForm):
     url: str
 
 
-class SearchForm(CollectionNameForm):
+class SearchForm(BaseModel):
     query: str
 
 
@@ -364,6 +364,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "endpoint": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                 "key": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
             },
+            "mistral_ocr_config": {
+                "api_key": request.app.state.config.MISTRAL_OCR_API_KEY,
+            },
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
@@ -427,11 +430,16 @@ class DocumentIntelligenceConfigForm(BaseModel):
     key: str
 
 
+class MistralOCRConfigForm(BaseModel):
+    api_key: str
+
+
 class ContentExtractionConfig(BaseModel):
     engine: str = ""
     tika_server_url: Optional[str] = None
     docling_server_url: Optional[str] = None
     document_intelligence_config: Optional[DocumentIntelligenceConfigForm] = None
+    mistral_ocr_config: Optional[MistralOCRConfigForm] = None
 
 
 class ChunkParamUpdateForm(BaseModel):
@@ -553,6 +561,10 @@ async def update_rag_config(
             request.app.state.config.DOCUMENT_INTELLIGENCE_KEY = (
                 form_data.content_extraction.document_intelligence_config.key
             )
+        if form_data.content_extraction.mistral_ocr_config is not None:
+            request.app.state.config.MISTRAL_OCR_API_KEY = (
+                form_data.content_extraction.mistral_ocr_config.api_key
+            )
 
     if form_data.chunk is not None:
         request.app.state.config.TEXT_SPLITTER = form_data.chunk.text_splitter
@@ -659,6 +671,9 @@ async def update_rag_config(
                 "endpoint": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                 "key": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
             },
+            "mistral_ocr_config": {
+                "api_key": request.app.state.config.MISTRAL_OCR_API_KEY,
+            },
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
@@ -746,6 +761,9 @@ async def update_query_settings(
     request.app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
         form_data.hybrid if form_data.hybrid else False
     )
+
+    if not request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+        request.app.state.rf = None
 
     return {
         "status": True,
@@ -940,7 +958,7 @@ def process_file(
 
         if form_data.content:
             # Update the content in the file
-            # Usage: /files/{file_id}/data/content/update
+            # Usage: /files/{file_id}/data/content/update, /files/ (audio file upload pipeline)
 
             try:
                 # /files/{file_id}/data/content/update
@@ -1007,6 +1025,7 @@ def process_file(
                     PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                     DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                     DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+                    MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
                 )
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path
@@ -1445,12 +1464,6 @@ async def process_web_search(
     log.debug(f"web_results: {web_results}")
 
     try:
-        collection_name = form_data.collection_name
-        if collection_name == "" or collection_name is None:
-            collection_name = f"web-search-{calculate_sha256_string(form_data.query)}"[
-                :63
-            ]
-
         urls = [result.link for result in web_results]
         loader = get_web_loader(
             urls,
@@ -1459,6 +1472,9 @@ async def process_web_search(
             trust_env=request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
         )
         docs = await loader.aload()
+        urls = [
+            doc.metadata["source"] for doc in docs
+        ]  # only keep URLs which could be retrieved
 
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
@@ -1475,18 +1491,26 @@ async def process_web_search(
                 "loaded_count": len(docs),
             }
         else:
-            await run_in_threadpool(
-                save_docs_to_vector_db,
-                request,
-                docs,
-                collection_name,
-                overwrite=True,
-                user=user,
-            )
+            collection_names = []
+            for doc_idx, doc in enumerate(docs):
+                collection_name = f"web-search-{calculate_sha256_string(form_data.query + '-' + urls[doc_idx])}"[
+                    :63
+                ]
+
+                collection_names.append(collection_name)
+
+                await run_in_threadpool(
+                    save_docs_to_vector_db,
+                    request,
+                    [doc],
+                    collection_name,
+                    overwrite=True,
+                    user=user,
+                )
 
             return {
                 "status": True,
-                "collection_name": collection_name,
+                "collection_names": collection_names,
                 "filenames": urls,
                 "loaded_count": len(docs),
             }
@@ -1515,8 +1539,13 @@ def query_doc_handler(
 ):
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+            collection_results = {}
+            collection_results[form_data.collection_name] = VECTOR_DB_CLIENT.get(
+                collection_name=form_data.collection_name
+            )
             return query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
+                collection_result=collection_results[form_data.collection_name],
                 query=form_data.query,
                 embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
                     query, prefix=prefix, user=user
