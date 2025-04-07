@@ -48,7 +48,8 @@ class PromptModel(BaseModel):
     content: str
     timestamp: int  # timestamp in epoch
 
-    access_control: Optional[dict] = None
+    #access_control: Optional[dict] = None
+    access_control: Optional[dict] = {}
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -65,7 +66,8 @@ class PromptForm(BaseModel):
     command: str
     title: str
     content: str
-    access_control: Optional[dict] = None
+    #access_control: Optional[dict] = None
+    access_control: Optional[dict] = {}
 
 
 class PromptsTable:
@@ -118,17 +120,39 @@ class PromptsTable:
 
             return prompts
 
+    # def get_prompts_by_user_id(
+    #     self, user_id: str, permission: str = "write"
+    # ) -> list[PromptUserResponse]:
+    #     prompts = self.get_prompts()
+
+    #     return [
+    #         prompt
+    #         for prompt in prompts
+    #         if prompt.user_id == user_id
+    #         or has_access(user_id, permission, prompt.access_control)
+    #     ]
+    
+
     def get_prompts_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[PromptUserResponse]:
-        prompts = self.get_prompts()
+            with get_db() as db:
+                all_prompts = db.query(Prompt).order_by(Prompt.timestamp.desc()).all()
 
-        return [
-            prompt
-            for prompt in prompts
-            if prompt.user_id == user_id
-            or has_access(user_id, permission, prompt.access_control)
-        ]
+                prompts_for_user = []
+                for prompt in all_prompts:
+                    if prompt.user_id == user_id or has_access(user_id, permission, prompt.access_control):
+                        user = Users.get_user_by_id(prompt.user_id)
+                        prompts_for_user.append(
+                            PromptUserResponse.model_validate(
+                                {
+                                    **PromptModel.model_validate(prompt).model_dump(),
+                                    "user": user.model_dump() if user else None,
+                                }
+                            )
+                        )
+                return prompts_for_user
+
 
     def update_prompt_by_command(
         self, command: str, form_data: PromptForm

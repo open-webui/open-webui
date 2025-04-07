@@ -20,6 +20,7 @@ def upgrade():
         "group",
         sa.Column("id", sa.Text(), nullable=False, primary_key=True, unique=True),
         sa.Column("user_id", sa.Text(), nullable=True),
+        sa.Column("created_by", sa.Text(), nullable=True),
         sa.Column("name", sa.Text(), nullable=True),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("data", sa.JSON(), nullable=True),

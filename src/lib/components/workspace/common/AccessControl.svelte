@@ -13,7 +13,16 @@
 	export let onChange: Function = () => {};
 
 	export let accessRoles = ['read'];
-	export let accessControl = null;
+	export let accessControl = {
+		read: {
+			group_ids: [],
+			user_ids: []
+		},
+		write: {
+			group_ids: [],
+			user_ids: []
+		}
+	};
 
 	let selectedGroupId = '';
 	let groups = [];
@@ -22,7 +31,16 @@
 		groups = await getGroups(localStorage.token);
 
 		if (accessControl === null) {
-			accessControl = null;
+			accessControl = {
+				read: {
+					group_ids: [],
+					user_ids: []
+				},
+				write: {
+					group_ids: [],
+					user_ids: []
+				}
+			};
 		} else {
 			accessControl = {
 				read: {
@@ -100,21 +118,17 @@
 					value={accessControl !== null ? 'private' : 'public'}
 					on:change={(e) => {
 						if (e.target.value === 'public') {
-							accessControl = null;
+							accessControl = null; 
 						} else {
 							accessControl = {
-								read: {
-									group_ids: []
-								},
-								write: {
-									group_ids: []
-								}
+								read: { group_ids: [], user_ids: [] },
+								write: { group_ids: [], user_ids: [] }
 							};
 						}
 					}}
 				>
-					<option class=" text-gray-700" value="private" selected>Private</option>
-					<option class=" text-gray-700" value="public" selected>Public</option>
+					<option class=" text-gray-700" value="private" >Private</option>
+					<option class=" text-gray-700" value="public" >Public</option>
 				</select>
 
 				<div class=" text-xs text-gray-400 font-medium">
@@ -129,7 +143,7 @@
 	</div>
 	{#if accessControl !== null}
 		{@const accessGroups = groups.filter((group) =>
-			accessControl.read.group_ids.includes(group.id)
+			 accessControl.read.group_ids.includes(group.id)
 		)}
 		<div>
 			<div class="">
@@ -151,13 +165,14 @@
 								>
 									<option class=" text-gray-700" value="" disabled selected
 										>{$i18n.t('Select a group')}</option
-									>
-									{#each groups.filter((group) => !accessControl.read.group_ids.includes(group.id)) as group}
-										<option class=" text-gray-700" value={group.id}>{group.name}</option>
+										>
+									{#each groups.filter((group) => !accessControl.read.group_ids.includes(group.id)) as group}										
+										<option class=" text-gray-700" value={group.id}>{group.name}</option>											
 									{/each}
 								</select>
 							</div>
-							<!-- <div>
+							<!--
+							<div>
 								<Tooltip content={$i18n.t('Add Group')}>
 									<button
 										class=" p-1 rounded-xl bg-transparent dark:hover:bg-white/5 hover:bg-black/5 transition font-medium text-sm flex items-center space-x-1"
@@ -167,7 +182,8 @@
 										<Plus className="size-3.5" />
 									</button>
 								</Tooltip>
-							</div> -->
+							</div>
+							-->
 						</div>
 					</div>
 				</div>
@@ -190,14 +206,14 @@
 
 								<div class="w-full flex justify-end items-center gap-0.5">
 									<button
-										class=""
+									class=""
 										type="button"
 										on:click={() => {
 											if (accessRoles.includes('write')) {
 												if (accessControl.write.group_ids.includes(group.id)) {
 													accessControl.write.group_ids = accessControl.write.group_ids.filter(
-														(group_id) => group_id !== group.id
-													);
+															(group_id) => group_id !== group.id
+														);
 												} else {
 													accessControl.write.group_ids = [
 														...accessControl.write.group_ids,
@@ -219,8 +235,8 @@
 										type="button"
 										on:click={() => {
 											accessControl.read.group_ids = accessControl.read.group_ids.filter(
-												(id) => id !== group.id
-											);
+													(id) => id !== group.id
+												);
 										}}
 									>
 										<XMark />

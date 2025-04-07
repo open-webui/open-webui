@@ -20,20 +20,20 @@ router = APIRouter()
 
 @router.get("/", response_model=list[PromptModel])
 async def get_prompts(user=Depends(get_verified_user)):
-    if user.role == "admin":
-        prompts = Prompts.get_prompts()
-    else:
-        prompts = Prompts.get_prompts_by_user_id(user.id, "read")
+    # if user.role == "admin":
+    #     prompts = Prompts.get_prompts()
+    # else:
+    prompts = Prompts.get_prompts_by_user_id(user.id, "read")
 
     return prompts
 
 
 @router.get("/list", response_model=list[PromptUserResponse])
 async def get_prompt_list(user=Depends(get_verified_user)):
-    if user.role == "admin":
-        prompts = Prompts.get_prompts()
-    else:
-        prompts = Prompts.get_prompts_by_user_id(user.id, "write")
+    # if user.role == "admin":
+    #     prompts = Prompts.get_prompts()
+    # else:
+    prompts = Prompts.get_prompts_by_user_id(user.id, "write")
 
     return prompts
 
@@ -76,22 +76,35 @@ async def create_new_prompt(
 ############################
 
 
+# @router.get("/command/{command}", response_model=Optional[PromptModel])
+# async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
+#     prompt = Prompts.get_prompt_by_command(f"/{command}")
+    
+#     if prompt:
+#         if (
+#             user.role == "admin"
+#             or prompt.user_id == user.id
+#             or has_access(user.id, "read", prompt.access_control)
+#         ):
+#             return prompt
+#     else:
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail=ERROR_MESSAGES.NOT_FOUND,
+#         )
+    
+
 @router.get("/command/{command}", response_model=Optional[PromptModel])
 async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
     prompt = Prompts.get_prompt_by_command(f"/{command}")
 
-    if prompt:
-        if (
-            user.role == "admin"
-            or prompt.user_id == user.id
-            or has_access(user.id, "read", prompt.access_control)
-        ):
-            return prompt
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    if not prompt:
+        raise HTTPException(status_code=404, detail="Prompt not found")
+
+    if (prompt.user_id == user.id or has_access(user.id, "read", prompt.access_control)):
+        return prompt
+    
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
 
 ############################

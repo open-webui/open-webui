@@ -41,6 +41,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     class Model(pw.Model):
         id = pw.TextField(unique=True)
         user_id = pw.TextField()
+        created_by = pw.TextField()
         base_model_id = pw.TextField(null=True)
 
         name = pw.TextField()

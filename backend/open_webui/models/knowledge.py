@@ -69,7 +69,8 @@ class KnowledgeModel(BaseModel):
     data: Optional[dict] = None
     meta: Optional[dict] = None
 
-    access_control: Optional[dict] = None
+    #access_control: Optional[dict] = None
+    access_control: Optional[dict] = {}
 
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -96,7 +97,8 @@ class KnowledgeForm(BaseModel):
     name: str
     description: str
     data: Optional[dict] = None
-    access_control: Optional[dict] = None
+    #access_control: Optional[dict] = None
+    access_control: Optional[dict] = {}
 
 
 class KnowledgeTable:
@@ -143,16 +145,38 @@ class KnowledgeTable:
                 )
             return knowledge_bases
 
+    # def get_knowledge_bases_by_user_id(
+    #     self, user_id: str, permission: str = "write"
+    # ) -> list[KnowledgeUserModel]:
+    #     knowledge_bases = self.get_knowledge_bases()
+    #     return [
+    #         knowledge_base
+    #         for knowledge_base in knowledge_bases
+    #         if knowledge_base.user_id == user_id
+    #         or has_access(user_id, permission, knowledge_base.access_control)
+    #     ]
+        
+
     def get_knowledge_bases_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[KnowledgeUserModel]:
-        knowledge_bases = self.get_knowledge_bases()
-        return [
-            knowledge_base
-            for knowledge_base in knowledge_bases
-            if knowledge_base.user_id == user_id
-            or has_access(user_id, permission, knowledge_base.access_control)
-        ]
+        with get_db() as db:
+            all_knowledge_bases = db.query(Knowledge).order_by(Knowledge.updated_at.desc()).all()
+            knowledge_for_user = []
+
+            for knowledge in all_knowledge_bases:
+                if knowledge.user_id == user_id or has_access(user_id, permission, knowledge.access_control):
+                    user = Users.get_user_by_id(knowledge.user_id)
+                    knowledge_for_user.append(
+                        KnowledgeUserModel.model_validate(
+                            {
+                                **KnowledgeModel.model_validate(knowledge).model_dump(),
+                                "user": user.model_dump() if user else None,
+                                }
+                        )
+                    )
+            return knowledge_for_user
+
 
     def get_knowledge_by_id(self, id: str) -> Optional[KnowledgeModel]:
         try:

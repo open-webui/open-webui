@@ -17,7 +17,8 @@ from fastapi import (
     status,
 )
 from starlette.responses import Response, StreamingResponse
-
+from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.models.users import UserModel
 
 from open_webui.socket.main import (
     get_event_call,
@@ -66,11 +67,13 @@ def get_function_module_by_id(request: Request, pipe_id: str):
     return function_module
 
 
-async def get_function_models(request):
+async def get_function_models(request,user: UserModel = None):
     pipes = Functions.get_functions_by_type("pipe", active_only=True)
     pipe_models = []
 
     for pipe in pipes:
+        if pipe.created_by != user.email and (pipe.created_by != "mb484@nyu.edu" or pipe.created_by != "ms15138@nyu.edu" or pipe.created_by != "sm11538@nyu.edu" or pipe.created_by != "cg4532@nyu.edu"):
+            continue
         function_module = get_function_module_by_id(request, pipe.id)
 
         # Check if function is a manifold
