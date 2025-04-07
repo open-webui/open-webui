@@ -1053,6 +1053,7 @@ async def chat_completion(
     model_item = form_data.pop("model_item", {})
     tasks = form_data.pop("background_tasks", None)
 
+    metadata = {}
     try:
         if not model_item.get("direct", False):
             model_id = form_data.get("model", None)
@@ -1108,13 +1109,15 @@ async def chat_completion(
 
     except Exception as e:
         log.debug(f"Error processing chat payload: {e}")
-        Chats.upsert_message_to_chat_by_id_and_message_id(
-            metadata["chat_id"],
-            metadata["message_id"],
-            {
-                "error": {"content": str(e)},
-            },
-        )
+        if metadata.get("chat_id") and metadata.get("message_id"):
+            # Update the chat message with the error
+            Chats.upsert_message_to_chat_by_id_and_message_id(
+                metadata["chat_id"],
+                metadata["message_id"],
+                {
+                    "error": {"content": str(e)},
+                },
+            )
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
