@@ -10,9 +10,9 @@ body:
 
         Thanks for thinking about ways to improve RAUX! Your ideas help make this project better for everyone.
         
-        Before sharing your idea, you might want to check our [Issues](https://github.com/aigdat/raux/issues) or [Discussions](https://github.com/aigdat/raux/discussions) to see if someone else has suggested something similar.
+        Before sharing your idea, you might want to check our [Issues](https://github.com/amd/gaia/issues) to see if someone else has suggested something similar.
         
-        We love hearing new ideas and appreciate your contribution! 🌟
+        We love hearing new ideas and appreciate constructive feedback! 🌟
 
   - type: checkboxes
     id: existing-issue
@@ -20,52 +20,18 @@ body:
       label: Quick Check ✨
       description: Let us know if you've had a chance to look around
       options:
-        - label: I've taken a look at existing issues and discussions
+        - label: I've taken a look at existing feature requests
           required: false
 
   - type: textarea
-    id: problem-description
+    id: feature-description
     attributes:
       label: What's on your mind?
       description: |
-        Tell us about the challenge or situation that inspired your idea. For example:
-        - "It would be helpful if..."
-        - "I find myself often needing to..."
-        - "I wish I could..."
-      placeholder: "I'm trying to accomplish... and it would be great if..."
-    validations:
-      required: false
-
-  - type: textarea
-    id: solution-description
-    attributes:
-      label: What's your idea?
-      description: |
-        Share your thoughts on how we could make this better. Feel free to:
-        - Describe how it would work
-        - Share examples of similar features you've seen elsewhere
-        - Include sketches or mockups if you have them
-    validations:
-      required: false
-
-  - type: textarea
-    id: alternatives-considered
-    attributes:
-      label: Any alternatives you've considered?
-      description: If you've thought about different ways to solve this, we'd love to hear them too!
-    validations:
-      required: false
-
-  - type: textarea
-    id: additional-context
-    attributes:
-      label: Anything else to share?
-      description: |
-        Feel free to add any other details that might help explain your idea. This could include:
-        - Screenshots or examples
-        - Use cases or scenarios
-        - Links to similar features elsewhere
-        - Any other helpful context
+        Share what challenge you're facing and your proposed solution. For example:
+        - "It would be helpful if... because I often need to..."
+        - "I wish RAUX could... which would work by..."
+        - Feel free to include examples, similar features from other tools, or mockups
     validations:
       required: false
 
