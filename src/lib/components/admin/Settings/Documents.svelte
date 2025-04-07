@@ -13,14 +13,12 @@
 		updateEmbeddingConfig,
 		getRerankingConfig,
 		updateRerankingConfig,
-		resetUploadDir,
 		getRAGConfig,
 		updateRAGConfig
 	} from '$lib/apis/retrieval';
 
-	import { knowledge, models } from '$lib/stores';
-	import { getKnowledgeBases } from '$lib/apis/knowledge';
-	import { uploadDir, deleteAllFiles, deleteFileById } from '$lib/apis/files';
+	import {  reindexKnowledgeFiles} from '$lib/apis/knowledge';
+	import {  deleteAllFiles } from '$lib/apis/files';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -31,12 +29,12 @@
 
 	const i18n = getContext('i18n');
 
-	let scanDirLoading = false;
 	let updateEmbeddingModelLoading = false;
 	let updateRerankingModelLoading = false;
 
 	let showResetConfirm = false;
 	let showResetUploadDirConfirm = false;
+	let showReindexConfirm = false;
 
 	let embeddingEngine = '';
 	let embeddingModel = '';
@@ -323,6 +321,21 @@
 	bind:show={showResetConfirm}
 	on:confirm={() => {
 		const res = resetVectorDB(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Success'));
+		}
+	}}
+/>
+
+
+<ResetVectorDBConfirmDialog
+	bind:show={showReindexConfirm}
+	on:confirm={async () => {
+		const res = await reindexKnowledgeFiles(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
@@ -947,6 +960,21 @@
 							}}
 						>
 							{$i18n.t('Reset')}
+						</button>
+					</div>
+				</div>
+				<div class="  mb-2.5 flex w-full justify-between">
+					<div class=" self-center text-xs font-medium">
+						{$i18n.t('Reindex Knowledge Base Vectors')}
+					</div>
+					<div class="flex items-center relative">
+						<button
+							class="text-xs"
+							on:click={() => {
+								showReindexConfirm = true;
+							}}
+						>
+							{$i18n.t('Reindex')}
 						</button>
 					</div>
 				</div>
