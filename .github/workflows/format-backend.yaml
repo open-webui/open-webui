@@ -10,6 +10,7 @@ on:
     branches:
       - main
       - dev
+      - half-baked
   workflow_dispatch:
 
 jobs:
