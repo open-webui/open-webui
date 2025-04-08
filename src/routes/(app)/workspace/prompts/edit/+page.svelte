@@ -46,6 +46,9 @@
 					meta: _prompt.meta ?? {tags: []},
 					access_control: _prompt?.access_control ?? null
 				};
+				if( _prompt.prebuilt) {
+					goto('/workspace/prompts');
+				}
 			} else {
 				goto('/workspace/prompts');
 			}

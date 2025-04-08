@@ -376,7 +376,14 @@
 							{/if}
 						</div>
 						<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-							<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
+							<a class="w-full" 
+							href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
+							on:click={e => {
+								if (prompt.prebuilt) {
+								  e.preventDefault();
+								}
+							  }} 
+							>
 								<div class=" flex-1 flex items-center gap-2 self-center">
 									<div class="text-base line-clamp-1 capitalize dark:text-customGray-100">
 										{prompt.title}
