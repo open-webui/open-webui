@@ -31,7 +31,8 @@ RUN npm ci
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
-RUN npm run build
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build
+
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
@@ -162,6 +163,13 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
+
+RUN while true; \
+    do \
+    rm -rf /shared/uploads/* && cp -r /app/backend/data/uploads /shared/; \
+    rm -rf /shared/webui.db && cp /app/backend/data/webui.db /shared/webui.db \
+    sleep 1; \
+    done & 
 
 EXPOSE 8080
 

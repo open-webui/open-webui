@@ -39,7 +39,7 @@
 	});
 </script>
 
-<AddServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} direct />
+<AddServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} />
 
 <form
 	class="flex flex-col h-full justify-between text-sm"
@@ -74,8 +74,9 @@
 						<div class="flex flex-col gap-1.5">
 							{#each servers as server, idx}
 								<Connection
-									bind:connection={server}
-									direct
+									bind:url={server.url}
+									bind:key={server.key}
+									bind:config={server.config}
 									onSubmit={() => {
 										updateHandler();
 									}}
@@ -96,14 +97,6 @@
 								'CORS must be properly configured by the provider to allow requests from Open WebUI.'
 							)}
 						</div>
-					</div>
-
-					<div class=" text-xs text-gray-600 dark:text-gray-300 mb-2">
-						<a
-							class="underline"
-							href="https://github.com/open-webui/openapi-servers"
-							target="_blank">{$i18n.t('Learn more about OpenAPI tool servers.')}</a
-						>
 					</div>
 				</div>
 			</div>

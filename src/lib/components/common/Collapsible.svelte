@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { decode } from 'html-entities';
-	import { v4 as uuidv4 } from 'uuid';
 
 	import { getContext, createEventDispatcher } from 'svelte';
 	const i18n = getContext('i18n');
@@ -37,7 +36,6 @@
 	import Spinner from './Spinner.svelte';
 	import CodeBlock from '../chat/Messages/CodeBlock.svelte';
 	import Markdown from '../chat/Messages/Markdown.svelte';
-	import Image from './Image.svelte';
 
 	export let open = false;
 
@@ -55,19 +53,9 @@
 	export let disabled = false;
 	export let hide = false;
 
-	const collapsibleId = uuidv4();
-
-	function parseJSONString(str) {
+	function formatJSONString(obj) {
 		try {
-			return parseJSONString(JSON.parse(str));
-		} catch (e) {
-			return str;
-		}
-	}
-
-	function formatJSONString(str) {
-		try {
-			const parsed = parseJSONString(str);
+			const parsed = JSON.parse(JSON.parse(obj));
 			// If parsed is an object/array, then it's valid JSON
 			if (typeof parsed === 'object') {
 				return JSON.stringify(parsed, null, 2);
@@ -77,7 +65,7 @@
 			}
 		} catch (e) {
 			// Not valid JSON, return as-is
-			return str;
+			return obj;
 		}
 	}
 </script>
@@ -131,15 +119,15 @@
 					{:else if attributes?.type === 'tool_calls'}
 						{#if attributes?.done === 'true'}
 							<Markdown
-								id={`${collapsibleId}-tool-calls-${attributes?.id}`}
-								content={$i18n.t('View Result from **{{NAME}}**', {
+								id={`tool-calls-${attributes?.id}`}
+								content={$i18n.t('View Result from `{{NAME}}`', {
 									NAME: attributes.name
 								})}
 							/>
 						{:else}
 							<Markdown
-								id={`${collapsibleId}-tool-calls-${attributes?.id}-executing`}
-								content={$i18n.t('Executing **{{NAME}}**...', {
+								id={`tool-calls-${attributes?.id}`}
+								content={$i18n.t('Executing `{{NAME}}`...', {
 									NAME: attributes.name
 								})}
 							/>
@@ -200,55 +188,32 @@
 		</div>
 	{/if}
 
-	{#if attributes?.type === 'tool_calls'}
-		{@const args = decode(attributes?.arguments)}
-		{@const result = decode(attributes?.result ?? '')}
-		{@const files = parseJSONString(decode(attributes?.files ?? ''))}
+	{#if !grow}
+		{#if open && !hide}
+			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
+				{#if attributes?.type === 'tool_calls'}
+					{@const args = decode(attributes?.arguments)}
+					{@const result = decode(attributes?.result ?? '')}
 
-		{#if !grow}
-			{#if open && !hide}
-				<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-					{#if attributes?.type === 'tool_calls'}
-						{#if attributes?.done === 'true'}
-							<Markdown
-								id={`${collapsibleId}-tool-calls-${attributes?.id}-result`}
-								content={`> \`\`\`json
+					{#if attributes?.done === 'true'}
+						<Markdown
+							id={`tool-calls-${attributes?.id}-result`}
+							content={`> \`\`\`json
 > ${formatJSONString(args)}
 > ${formatJSONString(result)}
 > \`\`\``}
-							/>
-						{:else}
-							<Markdown
-								id={`${collapsibleId}-tool-calls-${attributes?.id}-result`}
-								content={`> \`\`\`json
+						/>
+					{:else}
+						<Markdown
+							id={`tool-calls-${attributes?.id}-result`}
+							content={`> \`\`\`json
 > ${formatJSONString(args)}
 > \`\`\``}
-							/>
-						{/if}
-					{:else}
-						<slot name="content" />
+						/>
 					{/if}
-				</div>
-			{/if}
-
-			{#if attributes?.done === 'true'}
-				{#if typeof files === 'object'}
-					{#each files ?? [] as file, idx}
-						{#if file.startsWith('data:image/')}
-							<Image
-								id={`${collapsibleId}-tool-calls-${attributes?.id}-result-${idx}`}
-								src={file}
-								alt="Image"
-							/>
-						{/if}
-					{/each}
+				{:else}
+					<slot name="content" />
 				{/if}
-			{/if}
-		{/if}
-	{:else if !grow}
-		{#if open && !hide}
-			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-				<slot name="content" />
 			</div>
 		{/if}
 	{/if}

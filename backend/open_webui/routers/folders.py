@@ -236,8 +236,7 @@ async def delete_folder_by_id(
     chat_delete_permission = has_permission(
         user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
     )
-
-    if user.role != "admin" and not chat_delete_permission:
+    if not chat_delete_permission:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,

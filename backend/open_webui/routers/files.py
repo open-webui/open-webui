@@ -122,7 +122,6 @@ def upload_file(
                 ]:
                     file_path = Storage.get_file(file_path)
                     result = transcribe(request, file_path)
-
                     process_file(
                         request,
                         ProcessFileForm(file_id=id, content=result.get("text", "")),
@@ -130,8 +129,7 @@ def upload_file(
                     )
                 elif file.content_type not in ["image/png", "image/jpeg", "image/gif"]:
                     process_file(request, ProcessFileForm(file_id=id), user=user)
-
-                file_item = Files.get_file_by_id(id=id)
+                    file_item = Files.get_file_by_id(id=id)
             except Exception as e:
                 log.exception(e)
                 log.error(f"Error processing file: {file_item.id}")
@@ -164,16 +162,11 @@ def upload_file(
 
 
 @router.get("/", response_model=list[FileModelResponse])
-async def list_files(user=Depends(get_verified_user), content: bool = Query(True)):
+async def list_files(user=Depends(get_verified_user)):
     if user.role == "admin":
         files = Files.get_files()
     else:
         files = Files.get_files_by_user_id(user.id)
-
-    if not content:
-        for file in files:
-            del file.data["content"]
-
     return files
 
 

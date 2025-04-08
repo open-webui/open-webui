@@ -141,7 +141,7 @@ type Settings = {
 	notificationEnabled?: boolean;
 	title?: TitleSettings;
 	splitLargeDeltas?: boolean;
-	chatDirection: 'LTR' | 'RTL' | 'auto';
+	chatDirection: 'LTR' | 'RTL';
 	ctrlEnterToSend?: boolean;
 
 	system?: string;

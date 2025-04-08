@@ -39,7 +39,7 @@
 
 	let landingPageMode = '';
 	let chatBubble = true;
-	let chatDirection: 'LTR' | 'RTL' | 'auto' = 'auto';
+	let chatDirection: 'LTR' | 'RTL' = 'LTR';
 	let ctrlEnterToSend = false;
 
 	let collapseCodeBlocks = false;
@@ -211,13 +211,7 @@
 	};
 
 	const toggleChangeChatDirection = async () => {
-		if (chatDirection === 'auto') {
-			chatDirection = 'LTR';
-		} else if (chatDirection === 'LTR') {
-			chatDirection = 'RTL';
-		} else if (chatDirection === 'RTL') {
-			chatDirection = 'auto';
-		}
+		chatDirection = chatDirection === 'LTR' ? 'RTL' : 'LTR';
 		saveSettings({ chatDirection });
 	};
 
@@ -263,7 +257,7 @@
 		widescreenMode = $settings.widescreenMode ?? false;
 		splitLargeChunks = $settings.splitLargeChunks ?? false;
 		scrollOnBranchChange = $settings.scrollOnBranchChange ?? true;
-		chatDirection = $settings.chatDirection ?? 'auto';
+		chatDirection = $settings.chatDirection ?? 'LTR';
 		userLocation = $settings.userLocation ?? false;
 
 		notificationSound = $settings.notificationSound ?? true;
@@ -418,10 +412,8 @@
 					>
 						{#if chatDirection === 'LTR'}
 							<span class="ml-2 self-center">{$i18n.t('LTR')}</span>
-						{:else if chatDirection === 'RTL'}
-							<span class="ml-2 self-center">{$i18n.t('RTL')}</span>
 						{:else}
-							<span class="ml-2 self-center">{$i18n.t('Auto')}</span>
+							<span class="ml-2 self-center">{$i18n.t('RTL')}</span>
 						{/if}
 					</button>
 				</div>
@@ -449,7 +441,7 @@
 				</div>
 			</div>
 
-			{#if $user?.role === 'admin'}
+			{#if $user.role === 'admin'}
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
 						<div class=" self-center text-xs">

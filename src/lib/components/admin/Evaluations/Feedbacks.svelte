@@ -115,7 +115,7 @@
 		<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{feedbacks.length}</span>
 	</div>
 
-	{#if feedbacks.length > 0}
+	<div>
 		<div>
 			<Tooltip content={$i18n.t('Export')}>
 				<button
@@ -128,7 +128,7 @@
 				</button>
 			</Tooltip>
 		</div>
-	{/if}
+	</div>
 </div>
 
 <div

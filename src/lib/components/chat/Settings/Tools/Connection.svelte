@@ -11,8 +11,11 @@
 	export let onDelete = () => {};
 	export let onSubmit = () => {};
 
-	export let connection = null;
-	export let direct = false;
+	export let pipeline = false;
+
+	export let url = '';
+	export let key = '';
+	export let config = {};
 
 	let showConfigModal = false;
 	let showDeleteConfirmDialog = false;
@@ -20,15 +23,21 @@
 
 <AddServerModal
 	edit
-	{direct}
+	direct
 	bind:show={showConfigModal}
-	{connection}
+	connection={{
+		url,
+		key,
+		config
+	}}
 	onDelete={() => {
 		showDeleteConfirmDialog = true;
 	}}
-	onSubmit={(c) => {
-		connection = c;
-		onSubmit(c);
+	onSubmit={(connection) => {
+		url = connection.url;
+		key = connection.key;
+		config = connection.config;
+		onSubmit(connection);
 	}}
 />
 
@@ -43,12 +52,12 @@
 <div class="flex w-full gap-2 items-center">
 	<Tooltip
 		className="w-full relative"
-		content={$i18n.t(`WebUI will make requests to "{{url}}"`, {
-			url: `${connection?.url}/${connection?.path ?? 'openapi.json'}`
+		content={$i18n.t(`WebUI will make requests to "{{url}}/openapi.json"`, {
+			url: url
 		})}
 		placement="top-start"
 	>
-		{#if !(connection?.config?.enable ?? true)}
+		{#if !(config?.enable ?? true)}
 			<div
 				class="absolute top-0 bottom-0 left-0 right-0 opacity-60 bg-white dark:bg-gray-900 z-10"
 			></div>
@@ -56,21 +65,19 @@
 		<div class="flex w-full">
 			<div class="flex-1 relative">
 				<input
-					class=" outline-hidden w-full bg-transparent"
+					class=" outline-hidden w-full bg-transparent {pipeline ? 'pr-8' : ''}"
 					placeholder={$i18n.t('API Base URL')}
-					bind:value={connection.url}
+					bind:value={url}
 					autocomplete="off"
 				/>
 			</div>
 
-			{#if (connection?.auth_type ?? 'bearer') === 'bearer'}
-				<SensitiveInput
-					inputClassName=" outline-hidden bg-transparent w-full"
-					placeholder={$i18n.t('API Key')}
-					bind:value={connection.key}
-					required={false}
-				/>
-			{/if}
+			<SensitiveInput
+				inputClassName=" outline-hidden bg-transparent w-full"
+				placeholder={$i18n.t('API Key')}
+				bind:value={key}
+				required={false}
+			/>
 		</div>
 	</Tooltip>
 
