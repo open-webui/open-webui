@@ -205,12 +205,8 @@ async def search_files(
     # Retrieve files from cache
     files = get_all_files_for_user(user.id, user.role == "admin")
 
-    # Normalize pattern and file names
-    normalized_pattern = normalize_text(filename).lower()
-    matching_files = [
-        file for file in files
-        if fnmatch(normalize_text(file.filename).lower(), normalized_pattern)
-    ]
+    # Get matching files
+    matching_files = [file for file in files if fnmatch(file.filename.lower(), filename.lower())]
     
     if not matching_files:
         raise HTTPException(
