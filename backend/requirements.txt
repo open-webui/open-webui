@@ -98,7 +98,7 @@ pytube==15.0.0
 
 extract_msg
 pydub
-duckduckgo-search~=7.3.2
+duckduckgo-search~=7.5.5
 
 ## Google Drive
 google-api-python-client

@@ -28,7 +28,7 @@ def search_duckduckgo(
         # Use the ddgs.text() method to perform the search
         try:
             search_results = ddgs.text(
-                query, safesearch="moderate", max_results=count, backend="api"
+                query, safesearch="moderate", max_results=count, backend="lite"
             )
         except RatelimitException as e:
             log.error(f"RatelimitException: {e}")
