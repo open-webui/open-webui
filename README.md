@@ -1,3 +1,10 @@
+# BB Explorer 
+
+RAG implementation for exploring the Bibliotech Brittanique. This repository is a fork of the Open-WebUI codebase. BB Explorer is an instance of a Open WebUI app. Custom code for the bb-explorer can generally be found in the bb-explorer directory. 
+
+We deploy bb-explorer on University of Sheffield infrastructure. Details can be found in bb-explorer/deployment. 
+
+
 # Open WebUI 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
