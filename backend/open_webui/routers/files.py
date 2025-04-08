@@ -1,6 +1,8 @@
 import logging
 import os
 import uuid
+from fnmatch import fnmatch
+from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
@@ -70,6 +72,19 @@ def has_access_to_file(
                 break
 
     return has_access
+
+
+############################
+# Get all files for user, with 1 cache
+############################
+
+
+@lru_cache(maxsize=1)
+def get_all_files_for_user(user_id: str, admin: bool):
+    if admin:
+        return Files.get_files()
+    else:
+        return Files.get_files_by_user_id(user_id)
 
 
 ############################
@@ -175,6 +190,34 @@ async def list_files(user=Depends(get_verified_user), content: bool = Query(True
             del file.data["content"]
 
     return files
+
+
+############################
+# Search Files
+############################
+
+
+@router.get("/search", response_model=list[FileModelResponse])
+async def search_files(
+    filename: str = Query(..., description="Filename pattern to search for. Supports wildcards such as '*.pdf'"),
+    user=Depends(get_verified_user)
+):
+    # Retrieve files from cache
+    files = get_all_files_for_user(user.id, user.role == "admin")
+
+    # Normalize pattern and file names
+    normalized_pattern = normalize_text(filename).lower()
+    matching_files = [
+        file for file in files
+        if fnmatch(normalize_text(file.filename).lower(), normalized_pattern)
+    ]
+    
+    if not matching_files:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No files found matching the pattern."
+        )
+    return matching_files
 
 
 ############################
