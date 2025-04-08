@@ -92,7 +92,7 @@ class GroupUpdateForm(GroupForm):
 
 class GroupTable:
     def insert_new_group(
-        self, user_id: str,user_email: str, form_data: GroupForm
+        self, user_id: str, user_email: str, form_data: GroupForm
     ) -> Optional[GroupModel]:
         with get_db() as db:
             group = GroupModel(
@@ -121,10 +121,13 @@ class GroupTable:
 
     def get_groups(self, user_email: str) -> list[GroupModel]:
         with get_db() as db:
-                return [
-                    GroupModel.model_validate(group)
-                    for group in db.query(Group).filter(Group.created_by == user_email).order_by(Group.updated_at.desc()).all()
-                ]
+            return [
+                GroupModel.model_validate(group)
+                for group in db.query(Group)
+                .filter(Group.created_by == user_email)
+                .order_by(Group.updated_at.desc())
+                .all()
+            ]
 
     def get_groups_by_member_id(self, user_id: str) -> list[GroupModel]:
         with get_db() as db:

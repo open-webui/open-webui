@@ -368,7 +368,7 @@
 			<div class=" text-lg font-medium self-center">{$i18n.t('Settings')}</div>
 			<button
 				class="self-center"
-				aria-label = "close button"
+				aria-label="close button"
 				on:click={() => {
 					show = false;
 				}}

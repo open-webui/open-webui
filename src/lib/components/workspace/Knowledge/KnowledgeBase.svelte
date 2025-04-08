@@ -134,7 +134,12 @@
 		knowledge.files = [...(knowledge.files ?? []), fileItem];
 
 		try {
-			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
+			// Single API call to upload and add to knowledge base
+			const uploadedFile = await addFileToKnowledgeById(
+				localStorage.token,
+				id, // knowledge base ID
+				file
+			).catch((e) => {
 				toast.error(`${e}`);
 				return null;
 			});
@@ -143,19 +148,31 @@
 				console.log(uploadedFile);
 				knowledge.files = knowledge.files.map((item) => {
 					if (item.itemId === tempItemId) {
-						item.id = uploadedFile.id;
+						item.id = uploadedFile.files[0].id;
+						item.status = 'complete';
 					}
 
 					// Remove temporary item id
 					delete item.itemId;
 					return item;
 				});
-				await addFileHandler(uploadedFile.id);
+
+				toast.success($i18n.t('File added successfully.'));
 			} else {
 				toast.error($i18n.t('Failed to upload file.'));
+				// Remove the file from the list if upload failed
+				knowledge.files = knowledge.files.filter((item) => item.itemId !== tempItemId);
 			}
 		} catch (e) {
 			toast.error(`${e}`);
+			// Update status to error
+			knowledge.files = knowledge.files.map((item) => {
+				if (item.itemId === tempItemId) {
+					item.status = 'error';
+					item.error = `${e}`;
+				}
+				return item;
+			});
 		}
 	};
 

@@ -642,11 +642,13 @@ app.state.EMBEDDING_FUNCTION = get_embedding_function(
     (
         app.state.config.RAG_OPENAI_API_BASE_URL
         if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+        or app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
         else app.state.config.RAG_OLLAMA_BASE_URL
     ),
     (
         app.state.config.RAG_OPENAI_API_KEY
         if app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+        or app.state.config.RAG_EMBEDDING_ENGINE == "portkey"
         else app.state.config.RAG_OLLAMA_API_KEY
     ),
     app.state.config.RAG_EMBEDDING_BATCH_SIZE,

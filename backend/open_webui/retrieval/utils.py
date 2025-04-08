@@ -309,10 +309,11 @@ def get_embedding_function(
     url,
     key,
     embedding_batch_size,
+    backoff=True,
 ):
     if embedding_engine == "":
         return lambda query, user=None: embedding_function.encode(query).tolist()
-    elif embedding_engine in ["ollama", "openai"]:
+    elif embedding_engine in ["ollama", "openai", "portkey"]:
         func = lambda query, user=None: generate_embeddings(
             engine=embedding_engine,
             model=embedding_model,
@@ -320,6 +321,7 @@ def get_embedding_function(
             url=url,
             key=key,
             user=user,
+            backoff=backoff,
         )
 
         def generate_multiple(query, user, func):
@@ -334,6 +336,38 @@ def get_embedding_function(
                 return func(query, user)
 
         return lambda query, user=None: generate_multiple(query, user, func)
+    else:
+        raise ValueError(f"Unknown embedding engine: {embedding_engine}")
+
+
+# Modified get_embedding_function to send all texts in one batch
+def get_single_batch_embedding_function(
+    embedding_engine,
+    embedding_model,
+    embedding_function,
+    url,
+    key,
+    embedding_batch_size,
+    backoff=True,
+):
+    if embedding_engine == "":
+        return lambda query, user=None: embedding_function.encode(query).tolist()
+    elif embedding_engine in ["ollama", "openai", "portkey"]:
+        engine = embedding_engine
+        model = embedding_model
+        url = url
+        key = key
+
+        # Return a function that processes everything in one go
+        return lambda query, user=None: generate_embeddings(
+            engine=engine,
+            model=model,
+            text=query,
+            url=url,
+            key=key,
+            user=user,
+            backoff=backoff,
+        )
     else:
         raise ValueError(f"Unknown embedding engine: {embedding_engine}")
 
@@ -578,6 +612,101 @@ def generate_openai_batch_embeddings(
         return None
 
 
+from dataclasses import dataclass
+from typing import Optional, List, Union
+
+
+# Create a dataclass to store the result of the embedding generation
+@dataclass
+class EmbeddingResult:
+    embeddings: Optional[List[List[float]]] = None
+    error: Optional[Exception] = None
+    retriable: bool = False
+
+
+def generate_portkey_batch_embeddings(
+    model: str,
+    texts: list[str],
+    url: str = "",
+    key: str = "",
+    user: UserModel = None,
+    backoff: bool = True,
+    virtual_key: str = "text-embedding-d47871",
+    max_retries: int = 10,
+    initial_backoff: float = 62.0,  #  Using single backoff of 62s once rate limit reached
+) -> EmbeddingResult:
+    try:
+        import time
+        import requests
+
+        headers = {
+            "Content-Type": "application/json",
+            "x-portkey-api-key": key,
+            "x-portkey-virtual-key": virtual_key,
+        }
+
+        retry_count = 0
+        backoff_time = initial_backoff
+        log.info(
+            f"Processing embeddings for {len(texts)} text chunks in a single batch"
+        )
+
+        while retry_count <= max_retries:
+            try:
+                r = requests.post(
+                    f"{url}/embeddings",
+                    headers=headers,
+                    json={"input": texts, "model": model, "encoding_format": "float"},
+                    timeout=60,  # To prevent hanging on large requests
+                )
+                r.raise_for_status()
+                data = r.json()
+
+                if "data" in data:
+                    return EmbeddingResult(
+                        embeddings=[elem["embedding"] for elem in data["data"]]
+                    )
+                else:
+                    return EmbeddingResult(
+                        error=ValueError("Response missing expected embedding data"),
+                        retriable=False,
+                    )
+
+            except requests.exceptions.HTTPError as e:
+                if (
+                    e.response.status_code == 429
+                    and retry_count < max_retries
+                    and backoff
+                ):
+                    # Rate limit hit, apply backoff
+                    log.warning(
+                        f"Rate limit hit, retrying in {backoff_time} seconds..."
+                    )
+                    time.sleep(backoff_time)
+                    # backoff_time *= 2  # Exponential backoff (Not using)
+                    retry_count += 1
+                elif e.response.status_code == 413:
+                    # Payload too large - cannot handle in a single batch
+                    log.warning("Request entity too large, need to batch smaller")
+                    return EmbeddingResult(
+                        error=ValueError("Payload too large for single batch"),
+                        retriable=True,
+                    )
+                else:
+                    # Other error or max retries reached
+                    log.exception(f"Error generating portkey batch embeddings: {e}")
+                    return EmbeddingResult(error=e, retriable=False)
+
+        # If we get here, we've exhausted all retries
+        return EmbeddingResult(
+            error=ValueError("Maximum retries exceeded for rate limiting"),
+            retriable=False,
+        )
+    except Exception as e:
+        log.exception(f"Error generating portkey batch embeddings: {e}")
+        return EmbeddingResult(error=e, retriable=False)
+
+
 def generate_ollama_batch_embeddings(
     model: str, texts: list[str], url: str, key: str = "", user: UserModel = None
 ) -> Optional[list[list[float]]]:
@@ -612,7 +741,9 @@ def generate_ollama_batch_embeddings(
         return None
 
 
-def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **kwargs):
+def generate_embeddings(
+    engine: str, model: str, text: Union[str, list[str]], backoff: bool, **kwargs
+):
     url = kwargs.get("url", "")
     key = kwargs.get("key", "")
     user = kwargs.get("user")
@@ -640,6 +771,27 @@ def generate_embeddings(engine: str, model: str, text: Union[str, list[str]], **
             embeddings = generate_openai_batch_embeddings(model, [text], url, key, user)
 
         return embeddings[0] if isinstance(text, str) else embeddings
+    elif engine == "portkey":
+        if isinstance(text, list):
+            embeddings = generate_portkey_batch_embeddings(
+                model, text, url, key, user, backoff
+            )
+        else:
+            embeddings = generate_portkey_batch_embeddings(
+                model, [text], url, key, user, backoff
+            )
+    else:
+        raise ValueError(f"Unknown embedding engine: {engine}")
+
+    # Handle the new EmbeddingResult object
+    if isinstance(embeddings, EmbeddingResult):
+        if embeddings.error:
+            raise embeddings.error
+        return (
+            embeddings.embeddings[0] if isinstance(text, str) else embeddings.embeddings
+        )
+
+    return embeddings[0] if isinstance(text, str) else embeddings
 
 
 import operator

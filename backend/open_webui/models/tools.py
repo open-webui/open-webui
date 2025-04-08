@@ -65,7 +65,7 @@ class ToolModel(BaseModel):
     content: str
     specs: list[dict]
     meta: ToolMeta
-    #access_control: Optional[dict] = None
+    # access_control: Optional[dict] = None
     access_control: Optional[dict] = {}
 
     updated_at: int  # timestamp in epoch
@@ -89,7 +89,7 @@ class ToolResponse(BaseModel):
     created_by: Optional[str] = None
     name: str
     meta: ToolMeta
-    #access_control: Optional[dict] = None
+    # access_control: Optional[dict] = None
     access_control: Optional[dict] = {}
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
@@ -104,7 +104,7 @@ class ToolForm(BaseModel):
     name: str
     content: str
     meta: ToolMeta
-    #access_control: Optional[dict] = None
+    # access_control: Optional[dict] = None
     access_control: Optional[dict] = {}
 
 
@@ -114,7 +114,7 @@ class ToolValves(BaseModel):
 
 class ToolsTable:
     def insert_new_tool(
-        self, user_id: str,user_email: str, form_data: ToolForm, specs: list[dict]
+        self, user_id: str, user_email: str, form_data: ToolForm, specs: list[dict]
     ) -> Optional[ToolModel]:
         with get_db() as db:
             tool = ToolModel(
@@ -175,9 +175,7 @@ class ToolsTable:
     #         if tool.user_id == user_id
     #         or has_access(user_id, permission, tool.access_control)
     #     ]
-        
 
-    
     def get_tools_by_user_id(
         self, user_id: str, permission: str = "write"
     ) -> list[ToolUserModel]:
@@ -191,7 +189,9 @@ class ToolsTable:
             tools_for_user = []
             for tool in all_tools:
                 # Must be the creator OR pass group-based check
-                if tool.user_id == user_id or has_access(user_id, permission, tool.access_control):
+                if tool.user_id == user_id or has_access(
+                    user_id, permission, tool.access_control
+                ):
                     user = Users.get_user_by_id(tool.user_id)
                     tools_for_user.append(
                         ToolUserModel.model_validate(
@@ -202,7 +202,6 @@ class ToolsTable:
                         )
                     )
             return tools_for_user
-
 
     def get_tool_valves_by_id(self, id: str) -> Optional[dict]:
         try:

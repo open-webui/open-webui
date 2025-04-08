@@ -136,10 +136,8 @@ class UsersTable:
         oauth_sub: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
-            # Ensure we check the current number of users.
             user_count = self.get_num_users()
 
-            # If no users yet, enforce the required email for the first user.
             if user_count == 0:
                 REQUIRED_FIRST_EMAIL = ["chetangiridhar96@gmail.com", "ms"]
                 # If it's not the required email, raise an error.
@@ -161,22 +159,17 @@ class UsersTable:
                 oauth_sub=oauth_sub,
             )
 
-            # Convert the Pydantic model to the SQLAlchemy model
             result = User(**user.model_dump())
 
-            # Use a try/except to make sure we rollback if any unexpected error occurs
             try:
                 db.add(result)
                 db.commit()
                 db.refresh(result)
             except Exception:
-                db.rollback()  # ensure no partial user remains
+                db.rollback()
                 raise
 
             return user if result else None
-
-
-
 
     def get_user_by_id(self, id: str) -> Optional[UserModel]:
         try:

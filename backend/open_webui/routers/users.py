@@ -167,7 +167,9 @@ async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin
     target_user = Users.get_user_by_id(form_data.id)
 
     if not target_user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
 
     # Emails that get super-admin-like privileges for admin-to-admin changes.
     allowed_emails = ["sm11538@nyu.edu", "ms15138@nyu.edu", "mb484@nyu.edu", "chetangiridhar96@gmail.com", "jy4421@nyu.edu"]
