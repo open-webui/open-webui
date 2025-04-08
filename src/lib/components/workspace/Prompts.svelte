@@ -392,22 +392,23 @@
 								<div class="text-xs line-clamp-1 dark:text-customGray-100/50">
 									{prompt.description}
 								</div>
-
-								<div class=" text-xs px-0.5 dark:text-customGray-100">
-									<Tooltip
-										content={prompt?.user?.email ?? $i18n.t('Deleted User')}
-										className="flex shrink-0"
-										placement="top-start"
-									>
-										<div class="shrink-0 text-gray-500">
-											{$i18n.t('By {{name}}', {
-												name: capitalizeFirstLetter(
-													prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
-												)
-											})}
-										</div>
-									</Tooltip>
-								</div>
+								{#if !prompt.prebuilt}
+									<div class=" text-xs px-0.5 dark:text-customGray-100">
+										<Tooltip
+											content={prompt?.user?.email ?? $i18n.t('Deleted User')}
+											className="flex shrink-0"
+											placement="top-start"
+										>
+											<div class="shrink-0 text-gray-500">
+												{$i18n.t('By {{name}}', {
+													name: capitalizeFirstLetter(
+														prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
+													)
+												})}
+											</div>
+										</Tooltip>
+									</div>
+								{/if}
 							</a>
 						</div>
 					</div>

@@ -506,7 +506,7 @@
 									alt="User profile"
 								/>
 							</div>
-							<div class=" self-center font-medium text-base mr-1">{$user.name}</div>
+							<div class=" self-center font-medium text-sm mr-1">{$user.name}</div>
 							<ChevronDown className=" size-3" strokeWidth="2.5" />
 						</button>
 					</UserMenu>
