@@ -330,6 +330,7 @@ REDIS_SENTINEL_PORT = os.environ.get("REDIS_SENTINEL_PORT", "26379")
 # UVICORN WORKERS
 ####################################
 
+# Number of uvicorn worker processes for handling requests
 UVICORN_WORKERS = os.environ.get("UVICORN_WORKERS", "1")
 try:
     UVICORN_WORKERS = int(UVICORN_WORKERS)
