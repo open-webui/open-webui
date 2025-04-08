@@ -189,6 +189,7 @@ async def search_files(
         ...,
         description="Filename pattern to search for. Supports wildcards such as '*.txt'",
     ),
+    content: bool = Query(True),
     user=Depends(get_verified_user),
 ):
     """
@@ -210,6 +211,11 @@ async def search_files(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No files found matching the pattern.",
         )
+
+    if not content:
+        for file in matching_files:
+            del file.data["content"]
+
     return matching_files
 
 
