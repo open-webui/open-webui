@@ -776,14 +776,6 @@
 			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 		}
 
-		const userID = await getUserID(localStorage.token);
-
-		if (userID) {
-			userId.set(userID.id);
-		} else {
-			userId.set(JSON.parse(localStorage.getItem('user') ?? '{}'));
-		}
-
 		const chatInput = document.getElementById('chat-input');
 		setTimeout(() => chatInput?.focus(), 0);
 	};
@@ -794,6 +786,7 @@
 			await goto('/');
 			return null;
 		});
+		userId.set(chat.user_id);
 
 		if (chat) {
 			tags = await getTagsById(localStorage.token, $chatId).catch(async (error) => {
@@ -822,14 +815,6 @@
 					await settings.set(userSettings.ui);
 				} else {
 					await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
-				}
-
-				const userID = await getUserID(localStorage.token);
-
-				if (userID) {
-					userId.set(userID);
-				} else {
-					userId.set(JSON.parse(localStorage.getItem('user') ?? '{}'));
 				}
 
 				params = chatContent?.params ?? {};

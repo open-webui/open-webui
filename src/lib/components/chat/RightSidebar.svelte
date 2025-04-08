@@ -1,14 +1,21 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { createEventDispatcher, onMount } from 'svelte';
+	import {
+		getGrantsFeedback,
+		createNewGrantFeedback,
+		updateGrantFeedback
+	} from '$lib/apis/grants_feedback';
+	import { getGrantsNote, createNewGrantNote, updateGrantNote } from '$lib/apis/grants_notes';
 
 	export let open = false;
-    export let chatId = '';
-    export let userId = '';
+	export let chatId = '';
+	export let userId = '';
 	const dispatch = createEventDispatcher();
 
 	let notes = '';
 	let feedback = '';
+	let noteExists = false;
 	let saving = false;
 
 	const close = () => {
@@ -25,18 +32,19 @@
 
 	const saveNotes = async () => {
 		saving = true;
+		if (notes.trim() === '') {
+			saving = false;
+			return;
+		}
 		try {
-			await fetch('/api/notes', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					Authorization: `Bearer ${localStorage.token}`
-				},
-				body: JSON.stringify({
-					chatId: $page.url.pathname,
-					notes
-				})
-			});
+			if (noteExists) {
+				await updateGrantNote(localStorage.token, chatId, notes);
+			} else {
+				await createNewGrantNote(localStorage.tokens, chatId, notes);
+				noteExists = true;
+			}
+		} catch (e) {
+			console.error('Notes save error', e);
 		} finally {
 			saving = false;
 		}
@@ -44,17 +52,26 @@
 
 	const submitFeedback = async () => {
 		if (feedback.trim() === '') return;
-		await fetch('/api/feedback', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ feedback, chatId: $page.url.pathname })
-		});
-		feedback = '';
+
+		try {
+			await createNewGrantFeedback(localStorage.token, chatId, feedback);
+			feedback = '';
+		} catch (e) {
+			console.error('Feedback submit error', e);
+		}
 	};
 
-	onMount(() => {
-		if (open) {
-			document.getElementById('chat-container')?.classList.add('with-sidebar');
+	onMount(async () => {
+		if (chatId && userId) {
+			try {
+				const existingNote = await getGrantsNote(localStorage.token, chatId);
+				if (existingNote?.note) {
+					notes = existingNote.note;
+					noteExists = true;
+				}
+			} catch (e) {
+				console.log('No existing note found for this chat.');
+			}
 		}
 	});
 </script>
@@ -65,52 +82,55 @@
 	class:translate-x-full={!open}
 >
 	{#if open}
-		<div class="flex flex-col h-full">
-			<div class="flex justify-between items-center p-2">
-				<h2 class="text-base font-semibold">Notes & Feedback</h2>
+	<div class="flex flex-col h-full">
+		<!-- Header -->
+		<div class="flex justify-between items-center p-2">
+			<h2 class="text-base font-semibold">Notes & Feedback</h2>
+			<button
+				on:click={close}
+				class="text-sm px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800"
+				title="Close Sidebar"
+			>
+				✕
+			</button>
+		</div>
+	
+		<!-- Content Area -->
+		<div class="flex flex-col flex-grow p-4 space-y-4">
+			<!-- Notes Section -->
+			<div class="flex flex-col flex-1 overflow-hidden space-y-2">
+				<h3 class="font-semibold text-sm">Notes</h3>
+				<textarea
+					bind:value={notes}
+					class="w-full flex-grow p-2 rounded bg-gray-100 dark:bg-gray-800 text-sm resize-none"
+				/>
 				<button
-					on:click={close}
-					class="text-sm px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800"
-					title="Close Sidebar"
+					on:click={saveNotes}
+					class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 disabled:opacity-50"
+					disabled={saving}
 				>
-					✕
+					{saving ? 'Saving...' : 'Save Notes'}
 				</button>
 			</div>
-
-			<div class="flex flex-col justify-between h-full p-4 space-y-4">
-				<!-- Notes -->
-				<div class="space-y-2">
-					<h3 class="font-semibold text-sm">Notes</h3>
-					<textarea
-						bind:value={notes}
-						class="w-full h-32 p-2 rounded bg-gray-100 dark:bg-gray-800 text-sm resize-none"
-					/>
-					<button
-						on:click={saveNotes}
-						class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 disabled:opacity-50"
-						disabled={saving}
-					>
-						{saving ? 'Saving...' : 'Save Notes'}
-					</button>
-				</div>
-
-				<!-- Feedback -->
-				<div class="space-y-2 mt-auto">
-					<h3 class="font-semibold text-sm">Feedback</h3>
-					<textarea
-						bind:value={feedback}
-						class="w-full h-20 p-2 rounded bg-gray-100 dark:bg-gray-800 text-sm resize-none"
-						placeholder="${chatId}: ${userId} - Your feedback here..."
-					/>
-					<button
-						on:click={submitFeedback}
-						class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
-					>
-						Submit Feedback
-					</button>
-				</div>
+	
+			<!-- Feedback Section -->
+			<div class="flex flex-col flex-1 overflow-hidden space-y-2">
+				<h3 class="font-semibold text-sm">Feedback</h3>
+				<textarea
+					bind:value={feedback}
+					class="w-full flex-grow p-2 rounded bg-gray-100 dark:bg-gray-800 text-sm resize-none"
+					placeholder="Your feedback here..."
+				/>
+				<button
+					on:click={submitFeedback}
+					class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+				>
+					Submit Feedback
+				</button>
 			</div>
 		</div>
+	</div>
+	
 	{/if}
 </div>
 
@@ -119,7 +139,7 @@
 	<div class="fixed right-0 top-1/2 transform -translate-y-1/2 z-30">
 		<button
 			on:click={openSidebar}
-			class="bg-gray-700 text-white dark:bg-gray-900 px-2 py-1 rounded-l hover:bg-gray-600 flex flex-col items-center gap-1"
+			class="bg-gray-700 text-white dark:bg-gray-900 px-2 py-1 rounded-l hover:bg-gray-600 flex flex-col items-center gap-1 border border-gray-300 dark:border-gray-700"
 			title="Open Notes & Feedback"
 		>
 			<span class="text-sm">←</span>

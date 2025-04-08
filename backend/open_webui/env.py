@@ -346,9 +346,7 @@ BYPASS_MODEL_ACCESS_CONTROL = (
 
 WEBUI_SECRET_KEY = os.environ.get(
     "WEBUI_SECRET_KEY",
-    os.environ.get(
-        "WEBUI_JWT_SECRET_KEY", "t0p-s3cr3t"
-    ),  # DEPRECATED: remove at next major version
+    "SECRET_KEY"
 )
 
 WEBUI_SESSION_COOKIE_SAME_SITE = os.environ.get("WEBUI_SESSION_COOKIE_SAME_SITE", "lax")
@@ -369,8 +367,8 @@ WEBUI_AUTH_COOKIE_SECURE = (
     == "true"
 )
 
-if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
-    raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
+#if WEBUI_AUTH and WEBUI_SECRET_KEY == "":
+#    raise ValueError(ERROR_MESSAGES.ENV_VAR_NOT_FOUND)
 
 ENABLE_WEBSOCKET_SUPPORT = (
     os.environ.get("ENABLE_WEBSOCKET_SUPPORT", "True").lower() == "true"
