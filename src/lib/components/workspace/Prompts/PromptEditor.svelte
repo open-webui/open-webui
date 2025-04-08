@@ -20,6 +20,7 @@
 	let title = '';
 	let command = '';
 	let content = '';
+	let description = '';
 	let meta = {
 			tags: []
 		};
@@ -41,6 +42,7 @@
 				title,
 				command,
 				content,
+				description,
 				access_control: accessControl,
 				meta
 			});
@@ -68,6 +70,10 @@
 
 			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
 			content = prompt.content;
+			description = prompt.description;
+			meta = prompt.meta ? prompt.meta : {
+				tags: []
+			}
 
 			accessControl = prompt?.access_control ?? null;
 		}
@@ -155,6 +161,16 @@
 					}}
 				/>
 			</div>
+		</div>
+
+		<div>
+			<Textarea
+				className="text-sm w-full bg-transparent outline-none overflow-y-hidden resize-none"
+				placeholder={$i18n.t('Description')}
+				bind:value={description}
+				rows={6}
+				required
+			/>
 		</div>
 
 		<div class="my-2">

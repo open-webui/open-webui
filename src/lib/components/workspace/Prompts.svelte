@@ -61,8 +61,9 @@
 	$: {
 		filteredItems = prompts.filter((p) => {
 			const nameMatch = query === '' || p.command.includes(query);
-			const isPublic = p.access_control === null;
+			const isPublic = p.access_control === null && !p.prebuilt;
 			const isPrivate = p.access_control !== null;
+			const isPrebuilt = p.prebuilt;
 
 			const modelTags = p.meta?.tags?.map((t) => t.name.toLowerCase()) || [];
 
@@ -72,13 +73,14 @@
 			const accessMatch =
 				accessFilter === 'all' ||
 				(accessFilter === 'public' && isPublic) ||
-				(accessFilter === 'private' && isPrivate);
+				(accessFilter === 'private' && isPrivate) ||
+				(accessFilter === 'pre-built' && isPrebuilt);
 
 			return nameMatch && accessMatch && tagsMatch;
 		});
 	}
 
-	$: console.log(prompts)
+	$: console.log(prompts);
 
 	const shareHandler = async (prompt) => {
 		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
@@ -285,9 +287,11 @@
 					class={`${accessFilter === 'public' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('Public')}</button
 				>
-				<!-- <button class="px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white"
+				<button
+					on:click={() => (accessFilter = 'pre-built')}
+					class={`${accessFilter === 'pre-built' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('Pre-built')}</button
-				> -->
+				>
 			</div>
 		</div>
 		<div
@@ -303,7 +307,13 @@
 						<div class="flex items-start justify-between">
 							<div class="flex items-center">
 								<div class="flex items-center gap-1 flex-wrap">
-									{#if prompt.access_control == null}
+									{#if prompt.access_control == null && prompt.prebuilt}
+										<div
+											class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+										>
+											<span>{$i18n.t('Prebuilt')}</span>
+										</div>
+									{:else if prompt.access_control == null}
 										<div
 											class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
@@ -327,43 +337,45 @@
 											</div>
 										{/each}
 									{/if}
-								{#if prompt.meta && Array.isArray(prompt.meta.tags)}
-								{#each prompt?.meta?.tags as promptTag}
-									<div
-										class="flex items-center dark:text-white text-xs dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
-									>
-										{promptTag.name}
-									</div>
-								{/each}
-								{/if}
+									{#if prompt.meta && Array.isArray(prompt.meta.tags)}
+										{#each prompt?.meta?.tags as promptTag}
+											<div
+												class="flex items-center dark:text-white text-xs dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
+											>
+												{promptTag.name}
+											</div>
+										{/each}
+									{/if}
 								</div>
 							</div>
-							<div class="invisible group-hover:visible">
-								<PromptMenu
-									{prompt}
-									shareHandler={() => {
-										shareHandler(prompt);
-									}}
-									cloneHandler={() => {
-										cloneHandler(prompt);
-									}}
-									exportHandler={() => {
-										exportHandler(prompt);
-									}}
-									deleteHandler={async () => {
-										deletePrompt = prompt;
-										showDeleteConfirm = true;
-									}}
-									onClose={() => {}}
-								>
-									<button
-										class="self-center w-fit text-sm px-0.5 h-[21px] dark:text-white dark:hover:text-white hover:bg-black/5 dark:hover:bg-customGray-900 rounded-md"
-										type="button"
+							{#if !prompt.prebuilt}
+								<div class="invisible group-hover:visible">
+									<PromptMenu
+										{prompt}
+										shareHandler={() => {
+											shareHandler(prompt);
+										}}
+										cloneHandler={() => {
+											cloneHandler(prompt);
+										}}
+										exportHandler={() => {
+											exportHandler(prompt);
+										}}
+										deleteHandler={async () => {
+											deletePrompt = prompt;
+											showDeleteConfirm = true;
+										}}
+										onClose={() => {}}
 									>
-										<EllipsisHorizontal className="size-5" />
-									</button>
-								</PromptMenu>
-							</div>
+										<button
+											class="self-center w-fit text-sm px-0.5 h-[21px] dark:text-white dark:hover:text-white hover:bg-black/5 dark:hover:bg-customGray-900 rounded-md"
+											type="button"
+										>
+											<EllipsisHorizontal className="size-5" />
+										</button>
+									</PromptMenu>
+								</div>
+							{/if}
 						</div>
 						<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 							<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
@@ -378,7 +390,7 @@
 									</div> -->
 								</div>
 								<div class="text-xs line-clamp-1 dark:text-customGray-100/50">
-									{prompt.content}
+									{prompt.description}
 								</div>
 
 								<div class=" text-xs px-0.5 dark:text-customGray-100">

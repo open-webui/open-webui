@@ -35,7 +35,7 @@ def upgrade() -> None:
     csv_file_path = current_dir / "data" / "prebuilt_prompts.csv"
     
     # Read the CSV data from file
-    with open(csv_file_path, 'r') as f:
+    with open(csv_file_path, 'r', encoding='utf-8') as f:
         csv_reader = csv.DictReader(f)
         
         # Insert prompts into the database
