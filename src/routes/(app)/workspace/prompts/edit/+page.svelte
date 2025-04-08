@@ -42,6 +42,8 @@
 					title: _prompt.title,
 					command: _prompt.command,
 					content: _prompt.content,
+					description: _prompt.description,
+					meta: _prompt.meta ?? {tags: []},
 					access_control: _prompt?.access_control ?? null
 				};
 			} else {

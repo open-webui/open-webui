@@ -24,7 +24,6 @@
 	let meta = {
 			tags: []
 		};
-	$: console.log(meta)
 
 	let accessControl = null;
 
@@ -67,7 +66,7 @@
 		if (prompt) {
 			title = prompt.title;
 			await tick();
-
+			console.log(prompt)
 			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
 			content = prompt.content;
 			description = prompt.description;

@@ -80,8 +80,6 @@
 		});
 	}
 
-	$: console.log(prompts);
-
 	const shareHandler = async (prompt) => {
 		toast.success($i18n.t('Redirecting you to OpenWebUI Community'));
 
