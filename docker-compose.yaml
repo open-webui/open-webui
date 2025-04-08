@@ -10,6 +10,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
+
   ollama:
     volumes:
       - ollama:/root/.ollama
