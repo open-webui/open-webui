@@ -55,18 +55,20 @@
 
 	let selectedModelIdx = 0;
 
-	const filteredSourceItems = items.filter((item) => item.model?.info?.base_model_id == null);
+	const filteredSourceItems = items
+		.filter?.((item) => !item?.model?.name?.toLowerCase()?.includes('arena'))
+		?.filter((item) => item.model?.info?.base_model_id == null);
 
 	const fuse = new Fuse(
 		filteredSourceItems.map((item) => {
-				const _item = {
-					...item,
-					modelName: item.model?.name,
-					tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' '),
-					desc: item.model?.info?.meta?.description
-				};
-				return _item;
-			}),
+			const _item = {
+				...item,
+				modelName: item.model?.name,
+				tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' '),
+				desc: item.model?.info?.meta?.description
+			};
+			return _item;
+		}),
 		{
 			keys: ['value', 'tags', 'modelName'],
 			threshold: 0.4
@@ -221,7 +223,7 @@
 			toast.success(`${model} download has been canceled`);
 		}
 	};
-	
+
 	function getModelIcon(label: string): string {
 		const lower = label.toLowerCase();
 
