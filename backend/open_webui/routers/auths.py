@@ -548,7 +548,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
     # If there are no users in the DB, enforce special rules for the "first" user
     if user_count == 0:
-        REQUIRED_FIRST_EMAIL = ["ms15138@nyu.edu", "cg4532@nyu.edu"]
+        REQUIRED_FIRST_EMAIL = ["chetangiridhar96@gmail.com", "ms"]
         if form_data.email.lower() not in [em.lower() for em in REQUIRED_FIRST_EMAIL]:
             raise HTTPException(
                 status_code=400,
