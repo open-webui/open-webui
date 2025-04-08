@@ -184,9 +184,9 @@
 		{/if}
 	{:else if token.type === 'list'}
 		{#if token.ordered}
-			<ol start={token.start || 1}>
+			<ol start={token.start || 1} dir="auto">
 				{#each token.items as item, itemIdx}
-					<li dir="auto" class="text-start">
+					<li class="text-start">
 						{#if item?.task}
 							<input
 								class=" translate-y-[1px] -translate-x-1"
@@ -216,9 +216,9 @@
 				{/each}
 			</ol>
 		{:else}
-			<ul>
+			<ul dir="auto">
 				{#each token.items as item, itemIdx}
-					<li dir="auto" class="text-start">
+					<li class="text-start">
 						{#if item?.task}
 							<input
 								class=" translate-y-[1px] -translate-x-1"
@@ -295,7 +295,7 @@
 		</p>
 	{:else if token.type === 'text'}
 		{#if top}
-			<p dir="auto">
+			<p>
 				{#if token.tokens}
 					<MarkdownInlineTokens id={`${id}-${tokenIdx}-t`} tokens={token.tokens} {onSourceClick} />
 				{:else}
