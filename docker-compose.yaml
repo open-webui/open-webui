@@ -1,4 +1,15 @@
 services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin@edubild@#123
+      POSTGRES_DB: mydatabase
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
   ollama:
     volumes:
       - ollama:/root/.ollama
@@ -20,11 +31,13 @@ services:
       - open-webui:/app/backend/data
     depends_on:
       - ollama
+      - postgres
     ports:
       - ${OPEN_WEBUI_PORT-3000}:8080
     environment:
       - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY='
+      - 'DATABASE_URL=postgresql://myuser:mypassword@postgres:5432/mydatabase'
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
@@ -32,3 +45,4 @@ services:
 volumes:
   ollama: {}
   open-webui: {}
+  postgres-data: {}
