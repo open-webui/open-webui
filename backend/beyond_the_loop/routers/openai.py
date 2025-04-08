@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
-from beyond_the_loop.utils import magicPromptUtil
+from beyond_the_loop.utils import magic_prompt_util
 from beyond_the_loop.routers.payments import charge_customer
 from beyond_the_loop.models.models import Models
 from beyond_the_loop.models.model_message_credit_costs import ModelMessageCreditCosts
@@ -807,20 +807,37 @@ async def generate_chat_completion(
 
 @router.post("/magicPrompt")
 async def generate_prompt(request: Request, form_data: dict, user=Depends(get_verified_user)):
-    messages = magicPromptUtil.generateMagicPromptMessages(form_data["prompt"])
+    messages = magic_prompt_util.generate_magic_prompt_messages(form_data["prompt"])
 
     form_data = {
         "model": "Claude 3.5 Sonnet",
         "messages": messages,
         "stream": False,
         "metadata": {"chat_id": None},
-        "max_completion_tokens": 4096,
-        "temperature": 0
+        "temperature": 0.0
     }
 
     message = await generate_chat_completion(request, form_data, user, None, True)
 
-    return magicPromptUtil.extract_prompt(message.get('choices', [{}])[0].get('message', {}).get('content', ''))
+    extracted_prompt_template = magic_prompt_util.extract_prompt(message.get('choices', [{}])[0].get('message', {}).get('content', ''))
+
+    floating_variables = magic_prompt_util.find_free_floating_variables(extracted_prompt_template)
+
+    if len(floating_variables) > 0:
+
+        form_data = {
+            "model": "Claude 3.5 Sonnet",
+            "messages": [{'role': "user", "content": magic_prompt_util.remove_floating_variables_prompt.replace("{$PROMPT}", extracted_prompt_template)}],
+            "stream": False,
+            "metadata": {"chat_id": None},
+            "temperature": 0.0
+        }
+
+        message = await generate_chat_completion(request, form_data, user, None, True)
+
+        extracted_prompt_template = message.get('choices', [{}])[0].get('message', {}).get('content', '')
+
+    return extracted_prompt_template
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def proxy(path: str, request: Request, user=Depends(get_verified_user)):

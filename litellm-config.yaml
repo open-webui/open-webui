@@ -59,7 +59,7 @@ model_list:
       model: 'vertex_ai/claude-3-5-haiku@20241022'
       vertex_project: 'beyond-chat-1111'
       vertex_location: 'us-east5'
-      max_tokens: 808
+      max_tokens: 800
   - model_name: 'Claude 3.5 Sonnet'
     litellm_params:
       model: 'vertex_ai/claude-3-5-sonnet-v2@20241022'
