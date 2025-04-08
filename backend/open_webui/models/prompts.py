@@ -145,6 +145,7 @@ class PromptsTable:
             prompt
             for prompt in prompts
             if prompt.user_id == user_id
+            or prompt.prebuilt
             or has_access(user_id, permission, prompt.access_control)
         ]
 
