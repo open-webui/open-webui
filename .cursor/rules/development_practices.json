@@ -44,6 +44,43 @@
         "communication": "Use defined interfaces for RAUX-GAIA interaction",
         "installation": "Support standalone installation"
       }
+    },
+    "environment": {
+      "docker": {
+        "limitations": "This project does NOT run in Docker for development",
+        "containerization": "Any Docker configurations are for production deployment only"
+      }
+    },
+    "debugging": {
+      "vscode": {
+        "setup": [
+          "Configure both frontend and backend debugging in launch.json",
+          "Use Chrome debugging configuration for Svelte frontend",
+          "Configure tasks.json to run frontend and backend servers simultaneously",
+          "Access application through backend URL (port 8080) for full functionality"
+        ],
+        "svelte_debugging": {
+          "launch_configuration": "Use the 'Launch Chrome against localhost' configuration",
+          "prerequisites": "Ensure frontend files are watched and rebuilt on changes",
+          "source_maps": "Verify source maps are properly generated for accurate debugging"
+        },
+        "backend_debugging": {
+          "launch_configuration": "Use 'Python: Current File' configuration",
+          "environment_variables": "Set proper environment variables in .env file",
+          "api_access": "Backend server must be running for API endpoints to function"
+        }
+      }
+    },
+    "open_webui": {
+      "environment_variables": {
+        "api_configuration": "OPENAI_API_BASE_URLS for OpenAI compatible endpoints",
+        "ollama_integration": "OLLAMA_BASE_URL for Ollama connection"
+      },
+      "development_workflow": {
+        "svelte_frontend": "Use 'npm run dev' for frontend development with hot-reloading",
+        "file_conversions": "Rename svelte.config.js to svelte.config.mjs if encountering ESM errors",
+        "cors_requirements": "CORS must be properly configured by providers to allow requests from Open WebUI"
+      }
     }
   }
 } 
