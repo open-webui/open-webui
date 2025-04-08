@@ -28,6 +28,56 @@
 				"panel": "new",
 			},
 			"problemMatcher": []
+		},
+		{
+			"label": "start-frontend",
+			"type": "npm",
+			"script": "dev",
+			"isBackground": true,
+			"problemMatcher": {
+				"owner": "vite",
+				"pattern": {
+					"regexp": "."
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": ".*VITE.*",
+					"endsPattern": ".*ready in.*ms"
+				}
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated"
+			}
+		},
+		{
+			"label": "start-backend",
+			"type": "shell",
+			"command": "cd ${workspaceFolder}/backend && sh dev.sh",
+			"isBackground": true,
+			"problemMatcher": {
+				"pattern": {
+					"regexp": "."
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "INFO:     Uvicorn running on",
+					"endsPattern": "INFO:     Application startup complete"
+				}
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated"
+			}
+		},
+		{
+			"label": "start-both",
+			"dependsOn": ["start-backend", "start-frontend"],
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
 		}
 	]
 }

@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Backend Dev Server",
+            "name": "Backend",
             "type": "debugpy",
             "request": "launch",
             "module": "uvicorn",
@@ -21,6 +21,16 @@
             ],
             "cwd": "${workspaceFolder}/backend",
             "console": "internalConsole"
+        },
+        {
+            "name": "Frontend",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}",
+            "sourceMaps": true,
+            "preLaunchTask": "start-frontend",
+            "runtimeExecutable": "C:\\Users\\tomas\\scoop\\apps\\googlechrome\\134.0.6998.89\\chrome.exe"
         },
         {
             "name": "Install (exe) Helper",
