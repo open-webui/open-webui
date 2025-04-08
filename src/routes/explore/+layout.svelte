@@ -10,6 +10,10 @@
 </script>
 
 <nav class="fixed top-0 z-30 w-full px-1.5 py-4 -mb-8 flex items-center drag-region">
+	<div
+		class=" bg-gradient-to-b via-60% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-10 -top-6 z-[-1] blur"
+	></div>
+
 	<div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
 		<div class="flex justify-between items-center w-full max-w-full">
 			<div
