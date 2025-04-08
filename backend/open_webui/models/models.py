@@ -2,21 +2,12 @@ import logging
 import time
 from typing import Optional
 
-from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
-
-from open_webui.models.users import Users, UserResponse
-
-
-from pydantic import BaseModel, ConfigDict
-
-from sqlalchemy import or_, and_, func
-from sqlalchemy.dialects import postgresql, sqlite
-from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
-
-
+from open_webui.internal.db import Base, JSONField, get_db
+from open_webui.models.users import UserResponse, Users
 from open_webui.utils.access_control import has_access
-
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import JSON, BigInteger, Boolean, Column, Text
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -57,7 +48,7 @@ class Model(Base):
         The model's id as used in the API. If set to an existing model, it will override the model.
     """
     user_id = Column(Text)
-
+    data_permission_level = Column(BigInteger)
     base_model_id = Column(Text, nullable=True)
     """
         An optional pointer to the actual model that should be used when proxying requests.
@@ -104,6 +95,7 @@ class Model(Base):
 class ModelModel(BaseModel):
     id: str
     user_id: str
+    data_permission_level: int = 0
     base_model_id: Optional[str] = None
 
     name: str
@@ -138,6 +130,7 @@ class ModelForm(BaseModel):
     name: str
     meta: ModelMeta
     params: ModelParams
+    data_permission_level: int = 0
     access_control: Optional[dict] = None
     is_active: bool = True
 

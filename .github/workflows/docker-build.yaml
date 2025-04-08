@@ -10,7 +10,7 @@ on:
       - v*
 
 env:
-  REGISTRY: ghcr.io
+  REGISTRY: docker.io
 
 jobs:
   build-main-image:
@@ -31,9 +31,9 @@ jobs:
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
         env:
-          IMAGE_NAME: '${{ github.repository }}'
+          IMAGE_NAME: 'innodiskorg/open-webui'
 
       - name: Prepare
         run: |
@@ -53,8 +53,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Extract metadata for Docker images (default latest tag)
         id: meta
@@ -128,9 +128,9 @@ jobs:
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
         env:
-          IMAGE_NAME: '${{ github.repository }}'
+          IMAGE_NAME: 'innodiskorg/open-webui'
 
       - name: Prepare
         run: |
@@ -150,8 +150,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Extract metadata for Docker images (cuda tag)
         id: meta
@@ -228,9 +228,9 @@ jobs:
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
         env:
-          IMAGE_NAME: '${{ github.repository }}'
+          IMAGE_NAME: 'innodiskorg/open-webui'
 
       - name: Prepare
         run: |
@@ -250,8 +250,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Extract metadata for Docker images (ollama tag)
         id: meta
@@ -319,9 +319,9 @@ jobs:
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
         env:
-          IMAGE_NAME: '${{ github.repository }}'
+          IMAGE_NAME: 'innodiskorg/open-webui'
 
       - name: Download digests
         uses: actions/download-artifact@v4
@@ -337,8 +337,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Extract metadata for Docker images (default latest tag)
         id: meta
@@ -373,9 +373,9 @@ jobs:
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
         env:
-          IMAGE_NAME: '${{ github.repository }}'
+          IMAGE_NAME: 'innodiskorg/open-webui'
 
       - name: Download digests
         uses: actions/download-artifact@v4
@@ -391,8 +391,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Extract metadata for Docker images (default latest tag)
         id: meta
@@ -429,9 +429,9 @@ jobs:
       - name: Set repository and image name to lowercase
         run: |
           echo "IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
-          echo "FULL_IMAGE_NAME=ghcr.io/${IMAGE_NAME,,}" >>${GITHUB_ENV}
+          echo "FULL_IMAGE_NAME=${IMAGE_NAME,,}" >>${GITHUB_ENV}
         env:
-          IMAGE_NAME: '${{ github.repository }}'
+          IMAGE_NAME: 'innodiskorg/open-webui'
 
       - name: Download digests
         uses: actions/download-artifact@v4
@@ -447,8 +447,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Extract metadata for Docker images (default ollama tag)
         id: meta
