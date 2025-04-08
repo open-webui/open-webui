@@ -469,7 +469,7 @@
 									<img
 										src={!model?.meta?.profile_image_url ||
 										model?.meta?.profile_image_url === '/static/favicon.png'
-											? '/static/assistant-default.png'
+											? '/assistant-default.png'
 											: model?.meta?.profile_image_url}
 										alt="modelfile profile"
 										class=" rounded-md w-full h-auto object-cover"
