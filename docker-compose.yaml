@@ -38,7 +38,7 @@ services:
     environment:
       - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'WEBUI_SECRET_KEY='
-      - 'DATABASE_URL=postgresql://myuser:mypassword@postgres:5432/mydatabase'
+      - 'DATABASE_URL="postgresql://admin:admin@edubild@#123@postgres:5432/mydatabase"
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
