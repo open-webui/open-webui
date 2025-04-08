@@ -49,17 +49,17 @@
 		>
 			<DropdownMenu.Item>
 			<a
-			class="flex w-full items-center gap-2 self-center text-2xs dark:text-cusromGray-100 px-3 py-2 dark:text-gray-300 dark:hover:bg-customGray-950 dark:hover:text-white hover:bg-black/5 rounded-md"
+			class="flex w-full items-center gap-2 self-center text-xs dark:text-cusromGray-100 px-3 py-2 dark:text-gray-300 dark:hover:bg-customGray-950 dark:hover:text-white hover:bg-black/5 rounded-md"
 			type="button"
 			href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
 		>
-			<MessageEditIcon width={10} height={9}/>
+			<MessageEditIcon width={14} height={13}/>
 			<div class="flex items-center">{$i18n.t('Edit')}</div>
 		</a>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-2 text-2xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
+				class="flex  gap-2  items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
 				on:click={() => {
 					deleteHandler();
 				}}

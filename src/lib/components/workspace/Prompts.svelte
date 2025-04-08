@@ -201,7 +201,7 @@
 					</div>
 				</button>
 			</div>
-			<div class="flex items-center md:self-center text-xs-plus font-medium leading-none px-0.5">
+			<div class="flex items-center md:self-center text-base font-medium leading-none px-0.5">
 				{$i18n.t('Prompts')}
 			</div>
 			<div class="flex">
@@ -221,7 +221,7 @@
 					<!-- </div> -->
 					{#if showInput}
 						<input
-							class=" w-full text-2xs outline-none bg-transparent leading-none pl-2"
+							class=" w-full text-xs outline-none bg-transparent leading-none pl-2"
 							bind:value={query}
 							placeholder={$i18n.t('Search Prompts')}
 							autofocus
@@ -233,7 +233,7 @@
 				</div>
 				<div>
 					<a
-						class=" px-2 py-2.5 w-[35px] sm:w-[220px] rounded-lg leading-none border border-customGray-700 hover:bg-gray-700/10 dark:hover:bg-customGray-950 dark:text-customGray-200 dark:hover:text-white transition font-medium text-2xs flex items-center justify-center space-x-1"
+						class=" px-2 py-2.5 w-[35px] sm:w-[220px] rounded-lg leading-none border border-customGray-700 hover:bg-gray-700/10 dark:hover:bg-customGray-950 dark:text-customGray-200 dark:hover:text-white transition font-medium text-xs flex items-center justify-center space-x-1"
 						href="/workspace/prompts/create"
 					>
 						<Plus className="size-3.5" />
@@ -251,14 +251,14 @@
 		>
 			<div class="flex items-start space-x-[5px] flex-col sm:flex-row mb-3 sm:mb-0">
 				<div
-					class="dark:text-customGray-300 text-2xs whitespace-nowrap h-[22px] flex items-center mb-2 sm:mb-0"
+					class="dark:text-customGray-300 text-xs whitespace-nowrap h-[22px] flex items-center mb-2 sm:mb-0"
 				>
 					{$i18n.t('Filter by category:')}
 				</div>
 				<div class="flex flex-wrap gap-1">
 					{#each tags as tag}
 						<button
-							class={`flex items-center justify-center rounded-md text-2xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'dark:bg-customBlue-800' : 'dark:bg-customGray-800 dark:hover:bg-customBlue-800'} dark:text-white`}
+							class={`flex items-center justify-center rounded-md text-xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'dark:bg-customBlue-800' : 'dark:bg-customGray-800 dark:hover:bg-customBlue-800'} dark:text-white`}
 							on:click={() => {
 								selectedTags.has(tag) ? selectedTags.delete(tag) : selectedTags.add(tag);
 								selectedTags = new Set(selectedTags);
@@ -272,20 +272,20 @@
 			<div class="flex dark:bg-customGray-800 rounded-md flex-shrink-0">
 				<button
 					on:click={() => (accessFilter = 'all')}
-					class={`${accessFilter === 'all' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-2xs leading-none dark:text-white`}
+					class={`${accessFilter === 'all' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('All')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'private')}
-					class={`${accessFilter === 'private' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-2xs leading-none dark:text-white`}
+					class={`${accessFilter === 'private' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('Private')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'public')}
-					class={`${accessFilter === 'public' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-2xs leading-none dark:text-white`}
+					class={`${accessFilter === 'public' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('Public')}</button
 				>
-				<!-- <button class="px-[23px] py-[7px] flex-shrink-0 text-2xs leading-none dark:text-white"
+				<!-- <button class="px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white"
 					>{$i18n.t('Pre-built')}</button
 				> -->
 			</div>
@@ -305,14 +305,14 @@
 								<div class="flex items-center gap-1 flex-wrap">
 									{#if prompt.access_control == null}
 										<div
-											class="flex gap-1 items-center dark:text-white text-2xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<PublicIcon />
 											<span>{$i18n.t('Public')}</span>
 										</div>
 									{:else if getGroupNamesFromAccess(prompt).length < 1}
 										<div
-											class="flex gap-1 items-center dark:text-white text-2xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<PrivateIcon />
 											<span>{$i18n.t('Private')}</span>
@@ -320,7 +320,7 @@
 									{:else}
 										{#each getGroupNamesFromAccess(prompt) as groupName}
 											<div
-												class="flex gap-1 items-center dark:text-white text-2xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+												class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 											>
 												<GroupIcon />
 												<span>{groupName}</span>
@@ -330,7 +330,7 @@
 								{#if prompt.meta && Array.isArray(prompt.meta.tags)}
 								{#each prompt?.meta?.tags as promptTag}
 									<div
-										class="flex items-center dark:text-white text-2xs dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
+										class="flex items-center dark:text-white text-xs dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
 									>
 										{promptTag.name}
 									</div>
@@ -368,20 +368,20 @@
 						<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
 							<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
 								<div class=" flex-1 flex items-center gap-2 self-center">
-									<div class="text-xs-plus line-clamp-1 capitalize dark:text-customGray-100">
+									<div class="text-base line-clamp-1 capitalize dark:text-customGray-100">
 										{prompt.title}
 									</div>
 									<!-- <div
-										class=" text-2xs overflow-hidden dark:text-customGray-100 text-ellipsis line-clamp-1"
+										class=" text-xs overflow-hidden dark:text-customGray-100 text-ellipsis line-clamp-1"
 									>
 										{prompt.command}
 									</div> -->
 								</div>
-								<div class="text-2xs line-clamp-1 dark:text-customGray-100">
+								<div class="text-xs line-clamp-1 dark:text-customGray-100/50">
 									{prompt.content}
 								</div>
 
-								<div class=" text-2xs px-0.5 dark:text-customGray-100">
+								<div class=" text-xs px-0.5 dark:text-customGray-100">
 									<Tooltip
 										content={prompt?.user?.email ?? $i18n.t('Deleted User')}
 										className="flex shrink-0"
