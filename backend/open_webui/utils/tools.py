@@ -4,6 +4,7 @@ import re
 import inspect
 import aiohttp
 import asyncio
+import yaml
 
 from typing import Any, Awaitable, Callable, get_type_hints, Dict, List, Union, Optional
 from functools import update_wrapper, partial
@@ -398,7 +399,13 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
                 if response.status != 200:
                     error_body = await response.json()
                     raise Exception(error_body)
-                res = await response.json()
+
+                # Check if URL ends with .yaml or .yml to determine format
+                if url.lower().endswith((".yaml", ".yml")):
+                    text_content = await response.text()
+                    res = yaml.safe_load(text_content)
+                else:
+                    res = await response.json()
     except Exception as err:
         print("Error:", err)
         if isinstance(err, dict) and "detail" in err:
