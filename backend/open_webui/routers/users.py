@@ -41,6 +41,20 @@ async def get_users(
 ):
     return Users.get_users(skip, limit)
 
+############################
+# User Groups
+############################
+
+@router.get("/id")
+async def get_user_id(user=Depends(get_verified_user)):
+    user = Users.get_user_by_id(user.id)
+    if user:
+        return user.id
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
 
 ############################
 # User Groups
@@ -199,7 +213,7 @@ async def get_user_info_by_session_user(user=Depends(get_verified_user)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.USER_NOT_FOUND,
         )
-
+        
 
 ############################
 # UpdateUserInfoBySessionUser

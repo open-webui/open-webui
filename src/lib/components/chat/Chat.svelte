@@ -36,7 +36,8 @@
 		chatTitle,
 		showArtifacts,
 		tools,
-		toolServers
+		toolServers,
+		userId
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -85,12 +86,17 @@
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
+	import RightSidebar from './RightSidebar.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import { getUserID } from '../../apis/users';
 
 	export let chatIdProp = '';
 
 	let loading = false;
+
+	let rightSidebarOpen = false;
+	const toggleRightSidebar = () => (rightSidebarOpen = !rightSidebarOpen);
 
 	const eventTarget = new EventTarget();
 	let controlPane;
@@ -770,6 +776,14 @@
 			settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
 		}
 
+		const userID = await getUserID(localStorage.token);
+
+		if (userID) {
+			userId.set(userID.id);
+		} else {
+			userId.set(JSON.parse(localStorage.getItem('user') ?? '{}'));
+		}
+
 		const chatInput = document.getElementById('chat-input');
 		setTimeout(() => chatInput?.focus(), 0);
 	};
@@ -808,6 +822,14 @@
 					await settings.set(userSettings.ui);
 				} else {
 					await settings.set(JSON.parse(localStorage.getItem('settings') ?? '{}'));
+				}
+
+				const userID = await getUserID(localStorage.token);
+
+				if (userID) {
+					userId.set(userID);
+				} else {
+					userId.set(JSON.parse(localStorage.getItem('user') ?? '{}'));
 				}
 
 				params = chatContent?.params ?? {};
@@ -1940,203 +1962,214 @@
 				class="absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
 			/>
 		{/if}
-
-		<Navbar
-			bind:this={navbarElement}
-			chat={{
-				id: $chatId,
-				chat: {
-					title: $chatTitle,
-					models: selectedModels,
-					system: $settings.system ?? undefined,
-					params: params,
-					history: history,
-					timestamp: Date.now()
-				}
-			}}
-			title={$chatTitle}
-			bind:selectedModels
-			shareEnabled={!!history.currentId}
-			{initNewChat}
-		/>
+		<div class="transition-all duration-300 ease-in-out" class:with-sidebar={rightSidebarOpen}>
+			<Navbar
+				bind:this={navbarElement}
+				chat={{
+					id: $chatId,
+					chat: {
+						title: $chatTitle,
+						models: selectedModels,
+						system: $settings.system ?? undefined,
+						params: params,
+						history: history,
+						timestamp: Date.now()
+					}
+				}}
+				title={$chatTitle}
+				bind:selectedModels
+				shareEnabled={!!history.currentId}
+				{initNewChat}
+			/>
+		</div>
 
 		<PaneGroup direction="horizontal" class="w-full h-full">
-			<Pane defaultSize={50} class="h-full flex w-full relative">
-				{#if !history.currentId && !$chatId && selectedModels.length <= 1 && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
-					<div class="absolute top-12 left-0 right-0 w-full z-30">
-						<div class=" flex flex-col gap-1 w-full">
-							{#if ($config?.license_metadata?.type ?? null) === 'trial'}
-								<Banner
-									banner={{
-										type: 'info',
-										title: 'Trial License',
-										content: $i18n.t(
-											'You are currently using a trial license. Please contact support to upgrade your license.'
-										)
-									}}
-								/>
-							{/if}
-
-							{#if ($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats}
-								<Banner
-									banner={{
-										type: 'error',
-										title: 'License Error',
-										content: $i18n.t(
-											'Exceeded the number of seats in your license. Please contact support to increase the number of seats.'
-										)
-									}}
-								/>
-							{/if}
-
-							{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
-								<Banner
-									{banner}
-									on:dismiss={(e) => {
-										const bannerId = e.detail;
-
-										localStorage.setItem(
-											'dismissedBannerIds',
-											JSON.stringify(
-												[
-													bannerId,
-													...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]')
-												].filter((id) => $banners.find((b) => b.id === id))
+			<div
+				class="relative w-full h-full transition-all duration-300 ease-in-out"
+				class:with-sidebar={rightSidebarOpen}
+			>
+				<Pane defaultSize={50} class="h-full flex w-full relative">
+					{#if !history.currentId && !$chatId && selectedModels.length <= 1 && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
+						<div class="absolute top-12 left-0 right-0 w-full z-30">
+							<div class=" flex flex-col gap-1 w-full">
+								{#if ($config?.license_metadata?.type ?? null) === 'trial'}
+									<Banner
+										banner={{
+											type: 'info',
+											title: 'Trial License',
+											content: $i18n.t(
+												'You are currently using a trial license. Please contact support to upgrade your license.'
 											)
-										);
-									}}
-								/>
-							{/each}
-						</div>
-					</div>
-				{/if}
+										}}
+									/>
+								{/if}
 
-				<div class="flex flex-col flex-auto z-10 w-full @container">
-					{#if $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}
-						<div
-							class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
-							id="messages-container"
-							bind:this={messagesContainerElement}
-							on:scroll={(e) => {
-								autoScroll =
-									messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
-									messagesContainerElement.clientHeight + 5;
-							}}
-						>
-							<div class=" h-full w-full flex flex-col">
-								<Messages
-									chatId={$chatId}
-									bind:history
-									bind:autoScroll
-									bind:prompt
-									{selectedModels}
-									{atSelectedModel}
-									{sendPrompt}
-									{showMessage}
-									{submitMessage}
-									{continueResponse}
-									{regenerateResponse}
-									{mergeResponses}
-									{chatActionHandler}
-									{addMessages}
-									bottomPadding={files.length > 0}
-								/>
+								{#if ($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats}
+									<Banner
+										banner={{
+											type: 'error',
+											title: 'License Error',
+											content: $i18n.t(
+												'Exceeded the number of seats in your license. Please contact support to increase the number of seats.'
+											)
+										}}
+									/>
+								{/if}
+
+								{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
+									<Banner
+										{banner}
+										on:dismiss={(e) => {
+											const bannerId = e.detail;
+
+											localStorage.setItem(
+												'dismissedBannerIds',
+												JSON.stringify(
+													[
+														bannerId,
+														...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]')
+													].filter((id) => $banners.find((b) => b.id === id))
+												)
+											);
+										}}
+									/>
+								{/each}
 							</div>
-						</div>
-
-						<div class=" pb-[1rem]">
-							<MessageInput
-								{history}
-								{selectedModels}
-								bind:files
-								bind:prompt
-								bind:autoScroll
-								bind:selectedToolIds
-								bind:imageGenerationEnabled
-								bind:codeInterpreterEnabled
-								bind:webSearchEnabled
-								bind:atSelectedModel
-								toolServers={$toolServers}
-								transparentBackground={$settings?.backgroundImageUrl ?? false}
-								{stopResponse}
-								{createMessagePair}
-								onChange={(input) => {
-									if (input.prompt) {
-										localStorage.setItem(`chat-input-${$chatId}`, JSON.stringify(input));
-									} else {
-										localStorage.removeItem(`chat-input-${$chatId}`);
-									}
-								}}
-								on:upload={async (e) => {
-									const { type, data } = e.detail;
-
-									if (type === 'web') {
-										await uploadWeb(data);
-									} else if (type === 'youtube') {
-										await uploadYoutubeTranscription(data);
-									} else if (type === 'google-drive') {
-										await uploadGoogleDriveFile(data);
-									}
-								}}
-								on:submit={async (e) => {
-									if (e.detail || files.length > 0) {
-										await tick();
-										submitPrompt(
-											($settings?.richTextInput ?? true)
-												? e.detail.replaceAll('\n\n', '\n')
-												: e.detail
-										);
-									}
-								}}
-							/>
-
-							<div
-								class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
-							>
-								<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
-							</div>
-						</div>
-					{:else}
-						<div class="overflow-auto w-full h-full flex items-center">
-							<Placeholder
-								{history}
-								{selectedModels}
-								bind:files
-								bind:prompt
-								bind:autoScroll
-								bind:selectedToolIds
-								bind:imageGenerationEnabled
-								bind:codeInterpreterEnabled
-								bind:webSearchEnabled
-								bind:atSelectedModel
-								transparentBackground={$settings?.backgroundImageUrl ?? false}
-								toolServers={$toolServers}
-								{stopResponse}
-								{createMessagePair}
-								on:upload={async (e) => {
-									const { type, data } = e.detail;
-
-									if (type === 'web') {
-										await uploadWeb(data);
-									} else if (type === 'youtube') {
-										await uploadYoutubeTranscription(data);
-									}
-								}}
-								on:submit={async (e) => {
-									if (e.detail || files.length > 0) {
-										await tick();
-										submitPrompt(
-											($settings?.richTextInput ?? true)
-												? e.detail.replaceAll('\n\n', '\n')
-												: e.detail
-										);
-									}
-								}}
-							/>
 						</div>
 					{/if}
-				</div>
-			</Pane>
+
+					<div class="flex flex-col flex-auto z-10 w-full @container">
+						{#if $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}
+							<div
+								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
+								id="messages-container"
+								bind:this={messagesContainerElement}
+								on:scroll={(e) => {
+									autoScroll =
+										messagesContainerElement.scrollHeight - messagesContainerElement.scrollTop <=
+										messagesContainerElement.clientHeight + 5;
+								}}
+							>
+								<div class=" h-full w-full flex flex-col">
+									<Messages
+										chatId={$chatId}
+										bind:history
+										bind:autoScroll
+										bind:prompt
+										{selectedModels}
+										{atSelectedModel}
+										{sendPrompt}
+										{showMessage}
+										{submitMessage}
+										{continueResponse}
+										{regenerateResponse}
+										{mergeResponses}
+										{chatActionHandler}
+										{addMessages}
+										bottomPadding={files.length > 0}
+									/>
+								</div>
+							</div>
+
+							<div class=" pb-[1rem]">
+								<MessageInput
+									{history}
+									{selectedModels}
+									bind:files
+									bind:prompt
+									bind:autoScroll
+									bind:selectedToolIds
+									bind:imageGenerationEnabled
+									bind:codeInterpreterEnabled
+									bind:webSearchEnabled
+									bind:atSelectedModel
+									toolServers={$toolServers}
+									transparentBackground={$settings?.backgroundImageUrl ?? false}
+									{stopResponse}
+									{createMessagePair}
+									onChange={(input) => {
+										if (input.prompt) {
+											localStorage.setItem(`chat-input-${$chatId}`, JSON.stringify(input));
+										} else {
+											localStorage.removeItem(`chat-input-${$chatId}`);
+										}
+									}}
+									on:upload={async (e) => {
+										const { type, data } = e.detail;
+
+										if (type === 'web') {
+											await uploadWeb(data);
+										} else if (type === 'youtube') {
+											await uploadYoutubeTranscription(data);
+										} else if (type === 'google-drive') {
+											await uploadGoogleDriveFile(data);
+										}
+									}}
+									on:submit={async (e) => {
+										if (e.detail || files.length > 0) {
+											await tick();
+											submitPrompt(
+												($settings?.richTextInput ?? true)
+													? e.detail.replaceAll('\n\n', '\n')
+													: e.detail
+											);
+										}
+									}}
+								/>
+
+								<div
+									class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
+								>
+									<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
+								</div>
+							</div>
+						{:else}
+							<div class="overflow-auto w-full h-full flex items-center">
+								<Placeholder
+									{history}
+									{selectedModels}
+									bind:files
+									bind:prompt
+									bind:autoScroll
+									bind:selectedToolIds
+									bind:imageGenerationEnabled
+									bind:codeInterpreterEnabled
+									bind:webSearchEnabled
+									bind:atSelectedModel
+									transparentBackground={$settings?.backgroundImageUrl ?? false}
+									toolServers={$toolServers}
+									{stopResponse}
+									{createMessagePair}
+									on:upload={async (e) => {
+										const { type, data } = e.detail;
+
+										if (type === 'web') {
+											await uploadWeb(data);
+										} else if (type === 'youtube') {
+											await uploadYoutubeTranscription(data);
+										}
+									}}
+									on:submit={async (e) => {
+										if (e.detail || files.length > 0) {
+											await tick();
+											submitPrompt(
+												($settings?.richTextInput ?? true)
+													? e.detail.replaceAll('\n\n', '\n')
+													: e.detail
+											);
+										}
+									}}
+								/>
+							</div>
+						{/if}
+					</div>
+					<RightSidebar
+						bind:open={rightSidebarOpen}
+						bind:chatId={$chatId}
+						bind:userId={$userId}
+					/>
+				</Pane>
+			</div>
 
 			<ChatControls
 				bind:this={controlPaneComponent}
@@ -2168,3 +2201,11 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	/* Tailwind's pr-80 doesn't animate width well, so we use a class toggle */
+	.with-sidebar {
+		width: calc(100% - 20rem); /* 20rem = 80 Tailwind spacing units = 320px */
+		transition: width 0.3s ease;
+	}
+</style>
