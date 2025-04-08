@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { prompts, user } from '$lib/stores';
+	import { prompts, settings, user } from '$lib/stores';
 	import {
-		findWordIndices,
+		extractCurlyBraceWords,
 		getUserPosition,
 		getFormattedDate,
 		getFormattedTime,
@@ -86,7 +86,7 @@
 
 		if (command.content.includes('{{USER_NAME}}')) {
 			console.log($user);
-			const name = $user.name || 'User';
+			const name = $user?.name || 'User';
 			text = text.replaceAll('{{USER_NAME}}', name);
 		}
 
@@ -120,22 +120,56 @@
 			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
 		}
 
-		prompt = text;
+		const lines = prompt.split('\n');
+		const lastLine = lines.pop();
+
+		const lastLineWords = lastLine.split(' ');
+		const lastWord = lastLineWords.pop();
+
+		if ($settings?.richTextInput ?? true) {
+			lastLineWords.push(
+				`${text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replaceAll('\n', '<br/>')}`
+			);
+
+			lines.push(lastLineWords.join(' '));
+			prompt = lines.join('<br/>');
+		} else {
+			lastLineWords.push(text);
+			lines.push(lastLineWords.join(' '));
+			prompt = lines.join('\n');
+		}
 
 		const chatInputContainerElement = document.getElementById('chat-input-container');
 		const chatInputElement = document.getElementById('chat-input');
 
 		await tick();
 		if (chatInputContainerElement) {
-			chatInputContainerElement.style.height = '';
-			chatInputContainerElement.style.height =
-				Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
+			chatInputContainerElement.scrollTop = chatInputContainerElement.scrollHeight;
 		}
 
 		await tick();
 		if (chatInputElement) {
 			chatInputElement.focus();
 			chatInputElement.dispatchEvent(new Event('input'));
+
+			const words = extractCurlyBraceWords(prompt);
+
+			if (words.length > 0) {
+				const word = words.at(0);
+				const fullPrompt = prompt;
+
+				prompt = prompt.substring(0, word?.endIndex + 1);
+				await tick();
+
+				chatInputElement.scrollTop = chatInputElement.scrollHeight;
+
+				prompt = fullPrompt;
+				await tick();
+
+				chatInputElement.setSelectionRange(word?.startIndex, word.endIndex + 1);
+			} else {
+				chatInputElement.scrollTop = chatInputElement.scrollHeight;
+			}
 		}
 	};
 </script>

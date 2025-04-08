@@ -30,6 +30,7 @@
 	};
 
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	export let saveSettings: Function;
 	export let getModels: Function;
@@ -61,7 +62,7 @@
 	};
 
 	// Advanced
-	let requestFormat = '';
+	let requestFormat = null;
 	let keepAlive: string | null = null;
 
 	type ParamValue = string | number | boolean | string[] | null;
@@ -126,16 +127,76 @@
 		template: null
 	};
 
+
+
+	const validateJSON = (json) => {
+		try {
+			const obj = JSON.parse(json);
+
+			if (obj && typeof obj === 'object') {
+				return true;
+			}
+		} catch (e) {}
+		return false;
+	};
+
 	const toggleRequestFormat = async () => {
-		if (requestFormat === '') {
+		if (requestFormat === null) {
 			requestFormat = 'json';
 		} else {
-			requestFormat = '';
+			requestFormat = null;
+		}
+
+		saveSettings({ requestFormat: requestFormat !== null ? requestFormat : undefined });
+	};
+
+	const saveHandler = async () => {
+		if (requestFormat !== null && requestFormat !== 'json') {
+			if (validateJSON(requestFormat) === false) {
+				toast.error($i18n.t('Invalid JSON schema'));
+				return;
+			} else {
+				requestFormat = JSON.parse(requestFormat);
+			}
 		}
 
 		saveSettings({
-			requestFormat: requestFormat !== '' ? requestFormat : undefined
+			system: system !== '' ? system : undefined,
+			params: {
+				stream_response: params.stream_response !== null ? params.stream_response : undefined,
+				function_calling: params.function_calling !== null ? params.function_calling : undefined,
+				seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
+				stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
+				temperature: params.temperature !== null ? params.temperature : undefined,
+				reasoning_effort: params.reasoning_effort !== null ? params.reasoning_effort : undefined,
+				logit_bias: params.logit_bias !== null ? params.logit_bias : undefined,
+				frequency_penalty: params.frequency_penalty !== null ? params.frequency_penalty : undefined,
+				presence_penalty: params.frequency_penalty !== null ? params.frequency_penalty : undefined,
+				repeat_penalty: params.frequency_penalty !== null ? params.frequency_penalty : undefined,
+				repeat_last_n: params.repeat_last_n !== null ? params.repeat_last_n : undefined,
+				mirostat: params.mirostat !== null ? params.mirostat : undefined,
+				mirostat_eta: params.mirostat_eta !== null ? params.mirostat_eta : undefined,
+				mirostat_tau: params.mirostat_tau !== null ? params.mirostat_tau : undefined,
+				top_k: params.top_k !== null ? params.top_k : undefined,
+				top_p: params.top_p !== null ? params.top_p : undefined,
+				min_p: params.min_p !== null ? params.min_p : undefined,
+				tfs_z: params.tfs_z !== null ? params.tfs_z : undefined,
+				num_ctx: params.num_ctx !== null ? params.num_ctx : undefined,
+				num_batch: params.num_batch !== null ? params.num_batch : undefined,
+				num_keep: params.num_keep !== null ? params.num_keep : undefined,
+				max_tokens: params.max_tokens !== null ? params.max_tokens : undefined,
+				use_mmap: params.use_mmap !== null ? params.use_mmap : undefined,
+				use_mlock: params.use_mlock !== null ? params.use_mlock : undefined,
+				num_thread: params.num_thread !== null ? params.num_thread : undefined,
+				num_gpu: params.num_gpu !== null ? params.num_gpu : undefined
+			},
+			keepAlive: keepAlive ? (isNaN(keepAlive) ? keepAlive : parseInt(keepAlive)) : undefined,
+			requestFormat: requestFormat !== null ? requestFormat : undefined
 		});
+		dispatch('save');
+
+		requestFormat =
+			typeof requestFormat === 'object' ? JSON.stringify(requestFormat, null, 2) : requestFormat;
 	};
 
 	onMount(async () => {
@@ -161,7 +222,12 @@
 		notificationEnabled = $settings.notificationEnabled ?? false;
 		system = $settings.system ?? '';
 
-		requestFormat = $settings.requestFormat ?? '';
+		requestFormat = $settings.requestFormat ?? null;
+		if (requestFormat !== null && requestFormat !== 'json') {
+			requestFormat =
+				typeof requestFormat === 'object' ? JSON.stringify(requestFormat, null, 2) : requestFormat;
+		}
+
 		keepAlive = $settings.keepAlive ?? null;
 
 		if ($settings.params) {
@@ -414,44 +480,7 @@
 		<button
 			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 			on:click={() => {
-				saveSettings({
-					system: system !== '' ? system : undefined,
-					params: {
-						stream_response: params.stream_response !== null ? params.stream_response : undefined,
-						function_calling:
-							params.function_calling !== null ? params.function_calling : undefined,
-						seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
-						stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
-						temperature: params.temperature !== null ? params.temperature : undefined,
-						reasoning_effort:
-							params.reasoning_effort !== null ? params.reasoning_effort : undefined,
-						logit_bias: params.logit_bias !== null ? params.logit_bias : undefined,
-						frequency_penalty:
-							params.frequency_penalty !== null ? params.frequency_penalty : undefined,
-						presence_penalty:
-							params.frequency_penalty !== null ? params.frequency_penalty : undefined,
-						repeat_penalty:
-							params.frequency_penalty !== null ? params.frequency_penalty : undefined,
-						repeat_last_n: params.repeat_last_n !== null ? params.repeat_last_n : undefined,
-						mirostat: params.mirostat !== null ? params.mirostat : undefined,
-						mirostat_eta: params.mirostat_eta !== null ? params.mirostat_eta : undefined,
-						mirostat_tau: params.mirostat_tau !== null ? params.mirostat_tau : undefined,
-						top_k: params.top_k !== null ? params.top_k : undefined,
-						top_p: params.top_p !== null ? params.top_p : undefined,
-						min_p: params.min_p !== null ? params.min_p : undefined,
-						tfs_z: params.tfs_z !== null ? params.tfs_z : undefined,
-						num_ctx: params.num_ctx !== null ? params.num_ctx : undefined,
-						num_batch: params.num_batch !== null ? params.num_batch : undefined,
-						num_keep: params.num_keep !== null ? params.num_keep : undefined,
-						max_tokens: params.max_tokens !== null ? params.max_tokens : undefined,
-						use_mmap: params.use_mmap !== null ? params.use_mmap : undefined,
-						use_mlock: params.use_mlock !== null ? params.use_mlock : undefined,
-						num_thread: params.num_thread !== null ? params.num_thread : undefined,
-						num_gpu: params.num_gpu !== null ? params.num_gpu : undefined
-					},
-					keepAlive: keepAlive ? (isNaN(keepAlive) ? keepAlive : parseInt(keepAlive)) : undefined
-				});
-				dispatch('save');
+				saveHandler();
 			}}
 		>
 			{$i18n.t('Save')}

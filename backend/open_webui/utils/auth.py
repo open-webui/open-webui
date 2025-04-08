@@ -8,7 +8,9 @@ import requests
 import os
 
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
+import pytz
+from pytz import UTC
 from typing import Optional, Union, List, Dict
 
 from open_webui.models.users import Users
@@ -144,12 +146,15 @@ def get_organization_name(siret: str):
     return org.json()["results"][0]["nom_complet"] if org.json()["results"] else ""
 
 
-def get_http_authorization_cred(auth_header: str):
+
+def get_http_authorization_cred(auth_header: Optional[str]):
+    if not auth_header:
+        return None
     try:
         scheme, credentials = auth_header.split(" ")
         return HTTPAuthorizationCredentials(scheme=scheme, credentials=credentials)
     except Exception:
-        raise ValueError(ERROR_MESSAGES.INVALID_TOKEN)
+        return None
 
 
 async def get_current_user(request: Request, background_tasks: BackgroundTasks,):

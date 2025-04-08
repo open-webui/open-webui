@@ -163,7 +163,8 @@
 
 	onMount(async () => {
 		if ($user !== undefined) {
-			await goto('/');
+			const redirectPath = querystringValue('redirect') || '/';
+			goto(redirectPath);
 		}
 
 		await checkOauthCallback();

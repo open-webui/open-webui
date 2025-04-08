@@ -530,7 +530,11 @@
 
 					<div class="my-2">
 						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-							<AccessControl bind:accessControl accessRoles={['read', 'write']} />
+							<AccessControl
+								bind:accessControl
+								accessRoles={['read', 'write']}
+								allowPublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
+							/>
 						</div>
 					</div>
 
