@@ -2,7 +2,6 @@ import logging
 import os
 import uuid
 from fnmatch import fnmatch
-from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
@@ -72,19 +71,6 @@ def has_access_to_file(
                 break
 
     return has_access
-
-
-############################
-# Get all files for user, with 1 cache
-############################
-
-
-@lru_cache(maxsize=1)
-def get_all_files_for_user(user_id: str, admin: bool):
-    if admin:
-        return Files.get_files()
-    else:
-        return Files.get_files_by_user_id(user_id)
 
 
 ############################
@@ -205,8 +191,14 @@ async def search_files(
     ),
     user=Depends(get_verified_user),
 ):
-    # Retrieve files from cache
-    files = get_all_files_for_user(user.id, user.role == "admin")
+    """
+    Search for files by filename with support for wildcard patterns.
+    """
+    # Get files according to user role
+    if user.role == "admin":
+        files = Files.get_files()
+    else:
+        files = Files.get_files_by_user_id(user.id)
 
     # Get matching files
     matching_files = [
