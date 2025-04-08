@@ -68,8 +68,8 @@ from pydub import AudioSegment
 from pydub.utils import mediainfo
 
 
-def is_mp4_audio(file_path):
-    """Check if the given file is an MP4 audio file."""
+def audio_needs_conversion(file_path):
+    """Check if the given file needs to be converted to a different format."""
     if not os.path.isfile(file_path):
         log.error(f"File not found: {file_path}")
         return False
@@ -80,13 +80,15 @@ def is_mp4_audio(file_path):
         and info.get("codec_type") == "audio"
         and info.get("codec_tag_string") == "mp4a"
     ):
-        return True
-    return False
+        return "mp4"
+    elif info.get("format_name") == "ogg":
+        return "ogg"
+    return None
 
 
-def convert_mp4_to_wav(file_path, output_path):
-    """Convert MP4 audio file to WAV format."""
-    audio = AudioSegment.from_file(file_path, format="mp4")
+def convert_audio_to_wav(file_path, output_path, conversion_type):
+    """Convert MP4/OGG audio file to WAV format."""
+    audio = AudioSegment.from_file(file_path, format=conversion_type)
     audio.export(output_path, format="wav")
     log.info(f"Converted {file_path} to {output_path}")
 
@@ -496,10 +498,15 @@ def transcribe(request: Request, file_path):
         log.debug(data)
         return data
     elif request.app.state.config.STT_ENGINE == "openai":
-        if is_mp4_audio(file_path):
-            os.rename(file_path, file_path.replace(".wav", ".mp4"))
-            # Convert MP4 audio file to WAV format
-            convert_mp4_to_wav(file_path.replace(".wav", ".mp4"), file_path)
+        conversion_type = audio_needs_conversion(file_path)
+        if conversion_type:
+            os.rename(file_path, file_path.replace(".wav", f".{conversion_type}"))
+            # Convert unsupported audio file to WAV format
+            convert_audio_to_wav(
+                file_path.replace(".wav", f".{conversion_type}"),
+                file_path,
+                conversion_type,
+            )
 
         r = None
         try:
