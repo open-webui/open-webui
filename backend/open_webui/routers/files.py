@@ -201,9 +201,9 @@ async def list_files(user=Depends(get_verified_user), content: bool = Query(True
 async def search_files(
     filename: str = Query(
         ...,
-        description="Filename pattern to search for. Supports wildcards such as '*.txt'"
+        description="Filename pattern to search for. Supports wildcards such as '*.txt'",
     ),
-    user=Depends(get_verified_user)
+    user=Depends(get_verified_user),
 ):
     # Retrieve files from cache
     files = get_all_files_for_user(user.id, user.role == "admin")
@@ -212,7 +212,7 @@ async def search_files(
     matching_files = [
         file for file in files if fnmatch(file.filename.lower(), filename.lower())
     ]
-    
+
     if not matching_files:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
