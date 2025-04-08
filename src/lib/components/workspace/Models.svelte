@@ -44,6 +44,8 @@
 	import { capitalizeFirstLetter } from '$lib/utils';
 	import ShowSidebarIcon from '../icons/ShowSidebarIcon.svelte';
 	import GroupIcon from '../icons/GroupIcon.svelte';
+	import PublicIcon from '../icons/PublicIcon.svelte';
+	import PrivateIcon from '../icons/PrivateIcon.svelte';
 
 	let shiftKey = false;
 
@@ -411,14 +413,31 @@
 						<div class="flex items-start justify-between">
 							<div class="flex items-center">
 								<div class="flex items-center gap-1 flex-wrap">
-									{#each getGroupNamesFromAccess(model) as groupName}
+									{#if model.access_control == null}
 										<div
-											class="flex items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
-											<GroupIcon />
-											<span>{groupName}</span>
+											<PublicIcon />
+											<span>{$i18n.t('Public')}</span>
 										</div>
-									{/each}
+									{:else if getGroupNamesFromAccess(model).length < 1}
+										<div
+											class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+										>
+											<PrivateIcon />
+											<span>{$i18n.t('Private')}</span>
+										</div>
+									{:else}
+										{#each getGroupNamesFromAccess(model) as groupName}
+											<div
+												class="flex items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											>
+												<GroupIcon />
+												<span>{groupName}</span>
+											</div>
+										{/each}
+									{/if}
+
 									{#each model.meta?.tags as modelTag}
 										<div
 											class="flex items-center dark:text-white text-xs dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
