@@ -327,6 +327,19 @@ REDIS_SENTINEL_HOSTS = os.environ.get("REDIS_SENTINEL_HOSTS", "")
 REDIS_SENTINEL_PORT = os.environ.get("REDIS_SENTINEL_PORT", "26379")
 
 ####################################
+# UVICORN WORKERS
+####################################
+
+UVICORN_WORKERS = os.environ.get("UVICORN_WORKERS", "1")
+try:
+    UVICORN_WORKERS = int(UVICORN_WORKERS)
+    if UVICORN_WORKERS < 1:
+        UVICORN_WORKERS = 1
+except ValueError:
+    UVICORN_WORKERS = 1
+    log.info(f"Invalid UVICORN_WORKERS value, defaulting to {UVICORN_WORKERS}")
+
+####################################
 # WEBUI_AUTH (Required for security)
 ####################################
 
