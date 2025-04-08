@@ -80,7 +80,7 @@ def serve(
         host=host, 
         port=port, 
         forwarded_allow_ips="*",
-        workers=UVICORN_WORKERS
+        workers=UVICORN_WORKERS,
     )
 
 
