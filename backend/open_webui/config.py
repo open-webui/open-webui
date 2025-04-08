@@ -1107,7 +1107,7 @@ TITLE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get("TITLE_GENERATION_PROMPT_TEMPLATE", ""),
 )
 
-DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = """Create a concise, 3-5 word title as a title for the chat history, in the given language. Avoid quotation marks, emojis or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
+DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = """Create a concise, 3-5 word title as a title for the chat history. Write the title in the user's primary language. Avoid quotation marks, emojis or special formatting. RESPOND ONLY WITH THE TITLE TEXT.
 
 
 Examples of titles:
