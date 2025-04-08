@@ -481,8 +481,12 @@
 						<div class="flex items-center relative">
 							<Tooltip
 								content={webConfig.search.trust_env
-									? 'Use proxy designated by http_proxy and https_proxy environment variables to fetch page contents'
-									: 'Use no proxy to fetch page contents.'}
+									? $i18n.t(
+											'Use proxy designated by http_proxy and https_proxy environment variables to fetch page contents.'
+										)
+									: $i18n.t(
+											'Use no proxy to fetch page contents.'
+										)}
 							>
 								<Switch bind:state={webConfig.search.trust_env} />
 							</Tooltip>
