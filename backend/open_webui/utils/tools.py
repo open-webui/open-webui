@@ -407,7 +407,7 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
                 else:
                     res = await response.json()
     except Exception as err:
-        print("Error:", err)
+        log.exception(f"Could not fetch tool server spec from {url}")
         if isinstance(err, dict) and "detail" in err:
             error = err["detail"]
         else:
