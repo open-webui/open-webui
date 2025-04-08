@@ -106,10 +106,17 @@ async def update_prompt_by_command(
     user=Depends(get_verified_user),
 ):
     prompt = Prompts.get_prompt_by_command(f"/{command}")
+
     if not prompt:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if prompt.prebuilt:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
     # Is the user the original creator, in a group with write access, or an admin
@@ -145,6 +152,12 @@ async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    if prompt.prebuilt:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
     if (
