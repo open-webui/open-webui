@@ -161,7 +161,6 @@ async def update_user_permissions(
 #     return Users.update_user_role_by_id(form_data.id, form_data.role)
 
 
-
 @router.post("/update/role", response_model=Optional[UserModel])
 async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin_user)):
     target_user = Users.get_user_by_id(form_data.id)
@@ -172,7 +171,13 @@ async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin
         )
 
     # Emails that get super-admin-like privileges for admin-to-admin changes.
-    allowed_emails = ["sm11538@nyu.edu", "ms15138@nyu.edu", "mb484@nyu.edu", "chetangiridhar96@gmail.com", "jy4421@nyu.edu"]
+    allowed_emails = [
+        "sm11538@nyu.edu",
+        "ms15138@nyu.edu",
+        "mb484@nyu.edu",
+        "chetangiridhar96@gmail.com",
+        "jy4421@nyu.edu",
+    ]
 
     # Prevent users from changing their own role.
     if user.id == form_data.id:
@@ -183,12 +188,13 @@ async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin
 
     # If the target user is currently an admin,
     # only the super-admin or an allowed email can change that role.
-    if target_user.role == "admin" and not (user.id == Users.get_first_user().id or user.email in allowed_emails):
+    if target_user.role == "admin" and not (
+        user.id == Users.get_first_user().id or user.email in allowed_emails
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot change another admin's or super-admin's role",
         )
-
 
     # Prevent modifying the role of the first registered user.
     if form_data.id == Users.get_first_user().id:

@@ -229,10 +229,10 @@
 		await updateQuerySettings(localStorage.token, querySettings);
 
 		if (fileMaxSize === '' || fileMaxSize === null) {
-		fileMaxSize = 5;
+			fileMaxSize = 5;
 		}
 		if (fileMaxCount === '' || fileMaxCount === null) {
-		fileMaxCount = 2;
+			fileMaxCount = 2;
 		}
 
 		dispatch('save');
