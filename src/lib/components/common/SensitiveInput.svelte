@@ -3,17 +3,16 @@
 	export let placeholder = '';
 	export let required = true;
 	export let readOnly = false;
-	export let outerClassName = 'flex flex-1 bg-transparent';
-	export let inputClassName =
-		'w-full text-sm py-0.5 placeholder:text-gray-300 dark:placeholder:text-gray-700 bg-transparent outline-hidden';
-	export let showButtonClassName = 'pl-1.5  transition bg-transparent';
+	export let outerClassName = 'flex flex-1 bg-transparent relative';
+	export let inputClassName = 'input-setting';
+	export let showButtonClassName = 'pl-1.5 transition bg-transparent absolute inset-y-0 end-0 flex items-center z-20 px-3 cursor-pointer';
 
 	let show = false;
 </script>
 
 <div class={outerClassName}>
 	<input
-		class={`${inputClassName} ${show ? '' : 'password'}`}
+		class={`${inputClassName} ${show ? '' : 'password'} !pr-9`}
 		{placeholder}
 		bind:value
 		required={required && !readOnly}

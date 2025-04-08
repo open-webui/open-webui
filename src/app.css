@@ -54,6 +54,10 @@ textarea::placeholder {
 	direction: auto;
 }
 
+.input-setting {
+	@apply w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 placeholder-gray-500 dark:outline-hidden border dark:border-none;
+}
+
 .input-prose {
 	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }

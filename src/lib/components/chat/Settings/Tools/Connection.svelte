@@ -7,6 +7,7 @@
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import AddServerModal from '$lib/components/AddServerModal.svelte';
+	import Pencil from '$lib/components/icons/Pencil.svelte';
 
 	export let onDelete = () => {};
 	export let onSubmit = () => {};
@@ -56,7 +57,7 @@
 		<div class="flex w-full">
 			<div class="flex-1 relative">
 				<input
-					class=" outline-hidden w-full bg-transparent"
+					class="input-setting"
 					placeholder={$i18n.t('API Base URL')}
 					bind:value={connection.url}
 					autocomplete="off"
@@ -65,7 +66,7 @@
 
 			{#if (connection?.auth_type ?? 'bearer') === 'bearer'}
 				<SensitiveInput
-					inputClassName=" outline-hidden bg-transparent w-full"
+					inputClassName="input-setting ml-2"
 					placeholder={$i18n.t('API Key')}
 					bind:value={connection.key}
 					required={false}
@@ -75,7 +76,7 @@
 	</Tooltip>
 
 	<div class="flex gap-1">
-		<Tooltip content={$i18n.t('Configure')} className="self-start">
+		<Tooltip content={$i18n.t('Edit Connection')} className="self-start">
 			<button
 				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
 				on:click={() => {
@@ -83,7 +84,7 @@
 				}}
 				type="button"
 			>
-				<Cog6 />
+				<Pencil />
 			</button>
 		</Tooltip>
 	</div>

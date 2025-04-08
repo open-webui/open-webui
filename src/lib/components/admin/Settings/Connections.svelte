@@ -217,9 +217,9 @@
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
 		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && directConnectionsConfig !== null}
 			<div class="my-2">
-				<div class="mt-2 space-y-2 pr-1.5">
+				<div class="mt-2 pr-1.5">
 					<div class="flex justify-between items-center text-sm">
-						<div class="  font-medium">{$i18n.t('OpenAI API')}</div>
+						<div class="text-base font-medium">{$i18n.t('OpenAI API')}</div>
 
 						<div class="flex items-center">
 							<div class="">
@@ -234,11 +234,11 @@
 					</div>
 
 					{#if ENABLE_OPENAI_API}
-						<hr class=" border-gray-100 dark:border-gray-850" />
+						<hr class="border-gray-100 dark:border-gray-850 my-2" />
 
 						<div class="">
 							<div class="flex justify-between items-center">
-								<div class="font-medium">{$i18n.t('Manage OpenAI API Connections')}</div>
+								<div class="text-xs font-medium">{$i18n.t('Manage OpenAI API Connections')}</div>
 
 								<Tooltip content={$i18n.t(`Add Connection`)}>
 									<button
@@ -284,11 +284,9 @@
 				</div>
 			</div>
 
-			<hr class=" border-gray-100 dark:border-gray-850" />
-
 			<div class="pr-1.5 my-2">
-				<div class="flex justify-between items-center text-sm mb-2">
-					<div class="  font-medium">{$i18n.t('Ollama API')}</div>
+				<div class="flex justify-between items-center text-sm">
+					<div class="text-base font-medium">{$i18n.t('Ollama API')}</div>
 
 					<div class="mt-1">
 						<Switch
@@ -301,11 +299,11 @@
 				</div>
 
 				{#if ENABLE_OLLAMA_API}
-					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class="border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="">
 						<div class="flex justify-between items-center">
-							<div class="font-medium">{$i18n.t('Manage Ollama API Connections')}</div>
+							<div class="text-xs font-medium">{$i18n.t('Manage Ollama API Connections')}</div>
 
 							<Tooltip content={$i18n.t(`Add Connection`)}>
 								<button
