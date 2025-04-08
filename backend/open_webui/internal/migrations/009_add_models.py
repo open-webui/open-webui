@@ -29,9 +29,8 @@ from contextlib import suppress
 import peewee as pw
 from peewee_migrate import Migrator
 
-
 with suppress(ImportError):
-    import playhouse.postgres_ext as pw_pext
+    pass
 
 
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
@@ -41,6 +40,7 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     class Model(pw.Model):
         id = pw.TextField(unique=True)
         user_id = pw.TextField()
+        data_permission_level = pw.BigIntegerField(null=True, default=0)
         base_model_id = pw.TextField(null=True)
 
         name = pw.TextField()
@@ -53,6 +53,8 @@ def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
 
         class Meta:
             table_name = "model"
+
+    migrator.add_default("model", "data_permission_level", 0)
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):

@@ -1,23 +1,22 @@
 import logging
 from typing import Optional
 
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.auths import Auths
 from open_webui.models.chats import Chats
 from open_webui.models.users import (
+    UserDataPermissionUpdateForm,
     UserModel,
     UserRoleUpdateForm,
     Users,
     UserSettings,
     UserUpdateForm,
 )
-
-
 from open_webui.socket.main import get_active_status_by_user_id
-from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import SRC_LOG_LEVELS
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel
 from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -120,6 +119,26 @@ async def update_user_permissions(
 async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin_user)):
     if user.id != form_data.id and form_data.id != Users.get_first_user().id:
         return Users.update_user_role_by_id(form_data.id, form_data.role)
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+    )
+
+
+############################
+# UpdateUserPermission
+############################
+
+
+@router.post("/update/UserDataPermission", response_model=Optional[UserModel])
+async def update_user_data_permission(
+    form_data: UserDataPermissionUpdateForm, user=Depends(get_admin_user)
+):
+    if user.id != form_data.id and form_data.id != Users.get_first_user().id:
+        return Users.update_user_permission_by_id(
+            form_data.id, form_data.data_permission_level
+        )
 
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
