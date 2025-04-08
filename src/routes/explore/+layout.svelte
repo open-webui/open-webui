@@ -1,6 +1,7 @@
 <script lang="ts">
 	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
 	import IonosLogo from '$lib/IONOS/components/icons/IonosLogo.svelte';
+	import Footer from '$lib/IONOS/components/Footer.svelte';
 
 	import {
 		user
@@ -44,7 +45,14 @@
 	</div>
 </nav>
 
-<slot />
+<div class="flex flex-col h-full z-[100]">
+	<div class="flex-1 grow">
+		<slot />
+	</div>
+	<div>
+		<Footer />
+	</div>
+</div>
 
 <style>
 	/* Override this style from app.html */

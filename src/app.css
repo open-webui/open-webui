@@ -26,6 +26,10 @@ html {
 	word-break: break-word;
 }
 
+html, body {
+	height: 100%;
+}
+
 code {
 	/* white-space-collapse: preserve !important; */
 	overflow-x: auto;

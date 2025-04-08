@@ -84,6 +84,8 @@
 	import NotificationToast from '../NotificationToast.svelte';
 	import { startup as ionosGptStartup } from '$lib/IONOS/services/startup';
 
+	import Footer from '$lib/IONOS/components/Footer.svelte';
+
 	export let chatIdProp = '';
 
 	export function newChat() {
@@ -2078,4 +2080,8 @@
 			/>
 		</PaneGroup>
 	{/if}
+
+	<div class="mt-auto px-4 pt-5">
+		<Footer />
+	</div>
 </div>

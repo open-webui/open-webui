@@ -99,10 +99,6 @@
 	<div class="my-20">
 		<Robot />
 	</div>
-
-	<p class="max-w-2xl my-5 text-sm text-center">
-		{$i18n.t('By sending messages to IONOS GPT, you agree to our terms and conditions and confirm that you\'ve read our privacy policy.', { ns: 'ionos' })}
-	</p>
 </content>
 
 <LoginRegisterOverlay
