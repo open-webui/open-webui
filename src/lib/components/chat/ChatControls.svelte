@@ -92,7 +92,7 @@
 
 		// initialize the minSize based on the container width
 		minSize = Math.floor((350 / container.clientWidth) * 100);
-		howToUseMinSize = Math.floor((410 / container.clientWidth) * 100);
+		howToUseMinSize = Math.floor((415 / container.clientWidth) * 100);
 
 		// Create a new ResizeObserver instance
 		const resizeObserver = new ResizeObserver((entries) => {
@@ -104,7 +104,7 @@
 				minSize = Math.floor(percentage);
 				
 				// calculate the percentage for HowToUse (410px)
-				const howToUsePercentage = (410 / width) * 100;
+				const howToUsePercentage = (415 / width) * 100;
 				howToUseMinSize = Math.floor(howToUsePercentage);
 
 				if ($showControls || $showHowToUse) {
@@ -221,7 +221,7 @@
 
 				if (($showControls || $showHowToUse) && pane.isExpanded()) {
 					// Use 410px minimum width when $showHowToUse is true
-					const currentMinSize = $showHowToUse ? Math.floor((410 / document.getElementById('chat-container').clientWidth) * 100) : minSize;
+					const currentMinSize = $showHowToUse ? Math.floor((415 / document.getElementById('chat-container').clientWidth) * 100) : minSize;
 					
 					if (size < currentMinSize) {
 						pane.resize(currentMinSize);
