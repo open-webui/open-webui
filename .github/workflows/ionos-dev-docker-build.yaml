@@ -6,7 +6,7 @@ on:
     branches:
       - ionos-dev
       - 'ts**'
-      - 'tl/**'
+      - 'tl/ci-test-**'
     tags:
       - 'ionos-**'
 
