@@ -30,12 +30,12 @@ describe('auth', () => {
 		});
 
 		it('should return false if set to false in localStorage', async () => {
-			mockLocalStorage(LOCALSTORAGE_SHOW_LOGIN_FORM, false);
+			mockLocalStorage(LOCALSTORAGE_SHOW_LOGIN_FORM, 'false');
 			expect(isShowLoginForm()).toBe(false);
 		});
 
 		it('should return true if set to true in localStorage', async () => {
-			mockLocalStorage(LOCALSTORAGE_SHOW_LOGIN_FORM, true);
+			mockLocalStorage(LOCALSTORAGE_SHOW_LOGIN_FORM, 'true');
 			expect(isShowLoginForm()).toBe(true);
 		});
 	});
