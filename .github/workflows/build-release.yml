@@ -48,14 +48,23 @@ jobs:
       contents: write
 
     steps:
-      - name: Check for changes in package.json
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract branch name and commit ID
+        shell: bash
         run: |
-          if ! git diff --exit-code package.json; then
-            echo "Changes detected in package.json"
-          else
-            echo "No changes to package.json"
-            exit 1
-          fi
+          # Extract branch name, replacing / with - for valid filename
+          BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          BRANCH_NAME=${BRANCH_NAME//\//-}
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          
+          # Get short commit ID (first 7 characters)
+          COMMIT_ID=$(git rev-parse --short=7 HEAD)
+          echo "COMMIT_ID=$COMMIT_ID" >> $GITHUB_ENV
+          
+          echo "Branch name: $BRANCH_NAME"
+          echo "Commit ID: $COMMIT_ID"
 
       - name: Get version number from package.json
         id: get_version
@@ -114,11 +123,6 @@ jobs:
           name: wheel-file
           path: dist/*.whl
           retention-days: 1
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history to ensure we have all files
 
       - name: List repository contents
         run: |
