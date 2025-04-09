@@ -52,35 +52,40 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Extract branch name and commit ID
-        shell: bash
         run: |
           # Extract branch name, replacing / with - for valid filename
-          BRANCH_NAME=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
-          BRANCH_NAME=${BRANCH_NAME//\//-}
-          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          $BRANCH_NAME = if ($env:GITHUB_HEAD_REF) { $env:GITHUB_HEAD_REF } else { $env:GITHUB_REF -replace '^refs/heads/' }
+          $BRANCH_NAME = $BRANCH_NAME -replace '/', '-'
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $env:GITHUB_ENV
           
           # Get short commit ID (first 7 characters)
-          COMMIT_ID=$(git rev-parse --short=7 HEAD)
-          echo "COMMIT_ID=$COMMIT_ID" >> $GITHUB_ENV
+          $COMMIT_ID = git rev-parse --short=7 HEAD
+          echo "COMMIT_ID=$COMMIT_ID" >> $env:GITHUB_ENV
           
-          echo "Branch name: $BRANCH_NAME"
-          echo "Commit ID: $COMMIT_ID"
+          Write-Host "Branch name: $BRANCH_NAME"
+          Write-Host "Commit ID: $COMMIT_ID"
 
       - name: Get version number from package.json
         id: get_version
         run: |
-          VERSION=$(jq -r '.version' package.json)
-          echo "::set-output name=version::$VERSION"
+          $VERSION = (Get-Content package.json | ConvertFrom-Json).version
+          echo "version=$VERSION" >> $env:GITHUB_ENV
+          Write-Host "Version: $VERSION"
 
       - name: Extract latest CHANGELOG entry
         id: changelog
         run: |
-          CHANGELOG_CONTENT=$(awk 'BEGIN {print_section=0;} /^## \[/ {if (print_section == 0) {print_section=1;} else {exit;}} print_section {print;}' CHANGELOG.md)
-          CHANGELOG_ESCAPED=$(echo "$CHANGELOG_CONTENT" | sed ':a;N;$!ba;s/\n/%0A/g')
-          echo "Extracted latest release notes from CHANGELOG.md:" 
-          echo -e "$CHANGELOG_CONTENT" 
-          echo "::set-output name=content::$CHANGELOG_ESCAPED"
-          
+          $content = Get-Content CHANGELOG.md -Raw
+          if ($content -match '(?s)^## \[(.*?)\n## \[') {
+              $CHANGELOG_CONTENT = $matches[1].Trim()
+          } else {
+              $CHANGELOG_CONTENT = ""
+          }
+          $CHANGELOG_ESCAPED = $CHANGELOG_CONTENT -replace "`n", "%0A"
+          Write-Host "Extracted latest release notes from CHANGELOG.md:"
+          Write-Host $CHANGELOG_CONTENT
+          echo "content=$CHANGELOG_ESCAPED" >> $env:GITHUB_ENV
+
       - name: Create GitHub release
         id: create_release
         uses: actions/github-script@v7
@@ -138,7 +143,8 @@ jobs:
           }
 
       - name: Create dist directory
-        run: mkdir -p dist
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
 
       # Download the wheel file directly from the artifact
       - name: Download wheel artifact
@@ -248,7 +254,7 @@ jobs:
         if: success()
         run: |
           # First, create a directory to hold all files we want to include in the zip
-          mkdir -p installer/package
+          New-Item -ItemType Directory -Force -Path installer/package
           
           # Copy the installer executable
           Copy-Item "installer/$env:INSTALLER_NAME" -Destination "installer/package/"
