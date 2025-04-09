@@ -357,7 +357,7 @@ def get_embedding_function(
 ):
     if embedding_engine == "":
         return lambda query, prefix=None, user=None: embedding_function.encode(
-            query, prompt=prefix if prefix else None
+            query, **({"prompt": prefix} if prefix else {})
         ).tolist()
     elif embedding_engine in ["ollama", "openai"]:
         func = lambda query, prefix=None, user=None: generate_embeddings(

@@ -150,8 +150,8 @@ def get_rf(
                     device=DEVICE_TYPE,
                     trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
                 )
-            except:
-                log.error("CrossEncoder error")
+            except Exception as e:
+                log.error(f"CrossEncoder: {e}")
                 raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
     return rf
 
@@ -174,7 +174,7 @@ class ProcessUrlForm(CollectionNameForm):
     url: str
 
 
-class SearchForm(CollectionNameForm):
+class SearchForm(BaseModel):
     query: str
 
 
@@ -958,7 +958,7 @@ def process_file(
 
         if form_data.content:
             # Update the content in the file
-            # Usage: /files/{file_id}/data/content/update
+            # Usage: /files/{file_id}/data/content/update, /files/ (audio file upload pipeline)
 
             try:
                 # /files/{file_id}/data/content/update
@@ -1464,12 +1464,6 @@ async def process_web_search(
     log.debug(f"web_results: {web_results}")
 
     try:
-        collection_name = form_data.collection_name
-        if collection_name == "" or collection_name is None:
-            collection_name = f"web-search-{calculate_sha256_string(form_data.query)}"[
-                :63
-            ]
-
         urls = [result.link for result in web_results]
         loader = get_web_loader(
             urls,
@@ -1478,6 +1472,9 @@ async def process_web_search(
             trust_env=request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
         )
         docs = await loader.aload()
+        urls = [
+            doc.metadata["source"] for doc in docs
+        ]  # only keep URLs which could be retrieved
 
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
@@ -1494,18 +1491,26 @@ async def process_web_search(
                 "loaded_count": len(docs),
             }
         else:
-            await run_in_threadpool(
-                save_docs_to_vector_db,
-                request,
-                docs,
-                collection_name,
-                overwrite=True,
-                user=user,
-            )
+            collection_names = []
+            for doc_idx, doc in enumerate(docs):
+                collection_name = f"web-search-{calculate_sha256_string(form_data.query + '-' + urls[doc_idx])}"[
+                    :63
+                ]
+
+                collection_names.append(collection_name)
+
+                await run_in_threadpool(
+                    save_docs_to_vector_db,
+                    request,
+                    [doc],
+                    collection_name,
+                    overwrite=True,
+                    user=user,
+                )
 
             return {
                 "status": True,
-                "collection_name": collection_name,
+                "collection_names": collection_names,
                 "filenames": urls,
                 "loaded_count": len(docs),
             }

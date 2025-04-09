@@ -337,7 +337,9 @@ def convert_openapi_to_tool_payload(openapi_spec):
             tool = {
                 "type": "function",
                 "name": operation.get("operationId"),
-                "description": operation.get("summary", "No description available."),
+                "description": operation.get(
+                    "description", operation.get("summary", "No description available.")
+                ),
                 "parameters": {"type": "object", "properties": {}, "required": []},
             }
 
