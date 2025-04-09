@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **⚙️ Help Button Placement**: Moved the help button to the top right menu for easier access and improved user navigation.
+- **🔄 Pending Page Enhancements**: The pending page now auto-refreshes upon role changes, providing real-time updates and improved clarity.
 
 ### Added
 
