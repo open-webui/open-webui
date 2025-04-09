@@ -356,6 +356,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "BYPASS_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         "enable_google_drive_integration": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "enable_onedrive_integration": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
+        "onedrive_authority_type": request.app.state.config.ONEDRIVE_AUTHORITY_TYPE,
+        "onedrive_sharepoint_url": request.app.state.config.ONEDRIVE_SHAREPOINT_URL,
+        "onedrive_client_id": request.app.state.config.ONEDRIVE_CLIENT_ID,
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
             "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
@@ -496,6 +499,8 @@ class ConfigUpdateForm(BaseModel):
     pdf_extract_images: Optional[bool] = None
     enable_google_drive_integration: Optional[bool] = None
     enable_onedrive_integration: Optional[bool] = None
+    onedrive_authority_type: Optional[str] = None
+    onedrive_sharepoint_url: Optional[str] = None
     file: Optional[FileConfig] = None
     content_extraction: Optional[ContentExtractionConfig] = None
     chunk: Optional[ChunkParamUpdateForm] = None
@@ -535,6 +540,18 @@ async def update_rag_config(
         form_data.enable_onedrive_integration
         if form_data.enable_onedrive_integration is not None
         else request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION
+    )
+
+    request.app.state.config.ONEDRIVE_AUTHORITY_TYPE = (
+        form_data.onedrive_authority_type
+        if form_data.onedrive_authority_type is not None
+        else request.app.state.config.ONEDRIVE_AUTHORITY_TYPE
+    )
+    
+    request.app.state.config.ONEDRIVE_SHAREPOINT_URL = (
+        form_data.onedrive_sharepoint_url
+        if form_data.onedrive_sharepoint_url is not None
+        else request.app.state.config.ONEDRIVE_SHAREPOINT_URL
     )
 
     if form_data.file is not None:

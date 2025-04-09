@@ -1716,6 +1716,18 @@ ONEDRIVE_CLIENT_ID = PersistentConfig(
     os.environ.get("ONEDRIVE_CLIENT_ID", ""),
 )
 
+ONEDRIVE_AUTHORITY_TYPE = PersistentConfig(
+    "ONEDRIVE_AUTHORITY_TYPE",
+    "onedrive.authority_type",
+    os.environ.get("ONEDRIVE_AUTHORITY_TYPE", "personal"),
+)
+
+ONEDRIVE_SHAREPOINT_URL = PersistentConfig(
+    "ONEDRIVE_SHAREPOINT_URL",
+    "onedrive.sharepoint_url",
+    os.environ.get("ONEDRIVE_SHAREPOINT_URL", ""),
+)
+
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(
     "CONTENT_EXTRACTION_ENGINE",
