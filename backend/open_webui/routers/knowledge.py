@@ -284,7 +284,9 @@ def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
         )
 
+    # TODO: test with this removed. When is this necessary if its already happening in file upload?
     # Add content to the vector database
+    print(f">>>>>>>> COLLECTION NAME: {id}")
     try:
         process_file(
             request,
@@ -298,15 +300,23 @@ def add_file_to_knowledge_by_id(
             detail=str(e),
         )
 
+    print(f"KNOWLEDGE {knowledge}")
+
     if knowledge:
         data = knowledge.data or {}
         file_ids = data.get("file_ids", [])
 
+        print(f"DATA {data}")
+        print(f"FILE IDS {file_ids}")
+        print(f"FORM ID {form_data.file_id}")
+
         if form_data.file_id not in file_ids:
+            print("UPDATING KNOWLEDGE")
             file_ids.append(form_data.file_id)
             data["file_ids"] = file_ids
 
             knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
+            print(f"UPDATED KNOWLEDGE {knowledge}")
 
             if knowledge:
                 files = Files.get_files_by_ids(file_ids)
@@ -339,6 +349,7 @@ def update_file_from_knowledge_by_id(
         form_data: KnowledgeFileIdForm,
         user=Depends(get_verified_user),
 ):
+    print(">>>>> UPDATING NEW KNOWLEDGE")
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(

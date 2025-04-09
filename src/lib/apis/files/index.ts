@@ -1,11 +1,26 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const uploadFile = async (token: string, file: File) => {
+export const uploadFile = async (token: string, file: File, process: boolean = true) => {
+	console.log("uploading...")
+	console.log(file)
+	console.log(process)
 	const data = new FormData();
 	data.append('file', file);
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {
+    if (process == true){
+        var url = `${WEBUI_API_BASE_URL}/files/`
+    }
+    else
+    {
+        var url = `${WEBUI_API_BASE_URL}/files/no_process/`
+    }
+    console.log(url)
+
+    // pretty sure vvvv this calls openwebui::routers::files::upload_file
+    // can we add an optional parameter that does the processing that is only
+    //triggered via the direct upload, and not the knowledge?
+	const res = await fetch(url, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

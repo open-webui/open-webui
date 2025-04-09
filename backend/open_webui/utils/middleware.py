@@ -551,6 +551,9 @@ async def chat_completion_files_handler(
 
         if len(queries) == 0:
             queries = [get_last_user_message(body["messages"])]
+        else:
+            # wasn't generating similar messages, trialing direct application of message as well
+            queries.append(get_last_user_message(body["messages"]))
 
         try:
             # Offload get_sources_from_files to a separate thread

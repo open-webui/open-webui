@@ -764,15 +764,41 @@ def process_file(
     form_data: ProcessFileForm,
     user=Depends(get_verified_user),
 ):
+    # really two things happening
+    # - uploading and parsing files
+    # - storing parsed files into knowledge (This can be pulled off)
+
+    # should never be a situation where knowledge is uploaded without a file
+
+    # perhaps set things so that info is stored in file object and when knowledge is added,
+    # it pulls from the file instead.
+    # Check if file info exists,
+    #     if yes pull and return.
+    #     if no, parse, push, return
+
+
+
+    import traceback
+    print("\n\n>>>> *** process_file")
+    print("call stack:")
+    for line in traceback.format_stack():
+        print(line.strip())
+
     try:
         file = Files.get_file_by_id(form_data.file_id)
 
         collection_name = form_data.collection_name
+        print(f"FORM DATA: {form_data}")
 
         if collection_name is None:
+            print("COLLECTION NAME NOT KNOWN, USING FILE ID AS COLLECTION")
             collection_name = f"file-{file.id}"
+        else:
+            print("COLLECTION IDENTIFIED")
 
         if form_data.content:
+            print(">>>>>>>> CONTENT ALREADY VISIBLE (ONLY FOR AUDIO)")
+
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
 
@@ -798,6 +824,7 @@ def process_file(
 
             text_content = form_data.content
         elif form_data.collection_name:
+            print(">>>>>>>> COLLECTION ALREADY KNOWN (DIRECTORY SYNC)")
             # Check if the file has already been processed and save the content
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
@@ -829,10 +856,12 @@ def process_file(
 
             text_content = file.data.get("content", "")
         else:
+            print(">>>>>>>> STANDARD ADDITION")
             # Process the file and save the content
             # Usage: /files/
             file_path = file.path
             if file_path:
+                print(">>>>>>>> FILE PATH KNOWN, LOADING FROM FILE STORAGE")
                 file_path = Storage.get_file(file_path)
                 loader = Loader(
                     engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
@@ -841,6 +870,8 @@ def process_file(
                     DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                     DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
                 )
+
+                # doc's already stored so it can be hashed and added to knowledge
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path
                 )
@@ -859,6 +890,7 @@ def process_file(
                     for doc in docs
                 ]
             else:
+                print(">>>>>>>> FILE PATH UNKNOWN, READING CONTENT DIRECTLY")
                 docs = [
                     Document(
                         page_content=file.data.get("content", ""),
@@ -879,6 +911,12 @@ def process_file(
             {"content": text_content},
         )
 
+        # docs are preparsed so they can be hashed for file id, embedded, and uploaded
+        # the logic for when to split and when to not was originally all over the place
+        # new plan: only split inside the parser, use better plan for getting hash.
+        # TODO: remove docs from save_docs_to_vector_db and thus, text_content from this
+        # function
+
         hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)
         parsers = get_parsers_by_type(request, PARSER_TYPE.FILE)
@@ -897,6 +935,7 @@ def process_file(
                         },
                         add=(True if form_data.collection_name else False),
                         user=user,
+                        file_path=file.path
                     )
 
                     if result:
@@ -1537,6 +1576,8 @@ def process_files_batch(
     results: List[BatchProcessFilesResult] = []
     errors: List[BatchProcessFilesResult] = []
     collection_name = form_data.collection_name
+
+    print(">>>> BATCH FILE UPLOAD")
 
     # Prepare all documents first
     all_docs: List[Document] = []
