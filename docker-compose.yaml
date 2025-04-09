@@ -15,6 +15,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_API_BASE_URL=${OPENAI_API_BASE_URL}
       - OLLAMA_BASE_URL=http://127.0.0.1:11434 
+      - ENABLE_EVALUATION_ARENA_MODELS=false
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
