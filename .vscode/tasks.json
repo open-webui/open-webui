@@ -16,7 +16,7 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "Clean RAUX Environment: Local",
+			"label": "Clean RAUX Environment: AppData",
 			"type": "shell",
 			"command": "cmd",
 			"args": [
@@ -26,6 +26,24 @@
 			"presentation": {
 				"reveal": "silent",
 				"panel": "new",
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "Reset RAUX: Development",
+			"type": "shell",
+			"command": "rm",
+			"args": [
+				"-rf",
+				"${workspaceFolder}/backend/data/cache/",
+				"${workspaceFolder}/backend/data/uploads/",
+				"${workspaceFolder}/backend/data/vector_db/",
+				"${workspaceFolder}/backend/data/webui.db"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "new",
+				"close": true
 			},
 			"problemMatcher": []
 		},
@@ -71,7 +89,7 @@
 			}
 		},
 		{
-			"label": "start-both",
+			"label": "start-faull-stack",
 			"dependsOn": ["start-backend", "start-frontend"],
 			"problemMatcher": [],
 			"group": {
