@@ -63,6 +63,7 @@
 	import PromptMenu from '../workspace/Prompts/PromptMenu.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import ShowSidebarIcon from '../icons/ShowSidebarIcon.svelte';
+	import AddNewFolderDialog from '../common/ConfirmDialog.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -82,6 +83,7 @@
 	let allChatsLoaded = false;
 
 	let folders = {};
+	let newFolderName = '';
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -423,6 +425,8 @@
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
 	});
+
+	let showCreateFolder = false;
 </script>
 
 <ArchivedChatsModal
@@ -475,6 +479,24 @@
         "
 	data-state={$showSidebar}
 >
+	<!-- <button on:click={() => (showCreateFolder = true)}>test</button> -->
+	<AddNewFolderDialog
+		bind:show={showCreateFolder}
+		title="Create New Folder"
+		bind:inputValue={newFolderName}
+		input={true}
+		inputPlaceholder={$i18n.t('Title')}
+		confirmLabel={$i18n.t('Done')}
+		noMessage={true}
+		inputType="input"
+		on:confirm={(e) => {
+			createFolder(e.detail);
+			newFolderName = '';
+		}}
+		on:cancel={() => {
+			newFolderName = '';
+		}}
+	/>
 	<div
 		class="py-2 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
 			? ''
@@ -535,7 +557,7 @@
 				placeholder={$i18n.t('Search')}
 			/>
 		</div>
-		
+
 		<div class="px-2">
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
 				<div
@@ -667,6 +689,9 @@
 				className="px-2 mt-0.5"
 				typeChats={true}
 				name={$i18n.t('Chats')}
+				on:showAddFolder={() => {
+					showCreateFolder = true;
+				}}
 				onAdd={() => {
 					createFolder();
 				}}
@@ -770,9 +795,7 @@
 							}}
 							name={$i18n.t('Pinned')}
 						>
-							<div
-								class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden"
-							>
+							<div class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden">
 								{#each $pinnedChats as chat, idx}
 									<ChatItem
 										className=""

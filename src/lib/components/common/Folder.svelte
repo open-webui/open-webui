@@ -156,7 +156,8 @@
 						}}
 						on:click={(e) => {
 							e.stopPropagation();
-							onAdd();
+							dispatch('showAddFolder')
+							// onAdd();
 						}}
 					>
 						<Tooltip content={onAddLabel}>

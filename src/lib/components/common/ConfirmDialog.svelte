@@ -10,6 +10,10 @@
 	export let title = '';
 	export let message = '';
 
+	export let noMessage = false;
+
+	export let inputType = 'textarea';
+
 	export let cancelLabel = $i18n.t('Cancel');
 	export let confirmLabel = $i18n.t('Confirm');
 
@@ -73,16 +77,19 @@
 		}}
 	>
 		<div
-			class=" m-auto relative rounded-2xl max-w-full w-[24rem] mx-2 bg-gray-50 dark:bg-customGray-800 max-h-[100dvh] shadow-3xl"
+			class=" m-auto relative rounded-2xl max-w-full w-[32rem] mx-2 bg-gray-50 dark:bg-customGray-800 max-h-[100dvh] shadow-3xl"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();
 			}}
 		>
-			<button class="absolute top-4 right-4 text-customGray-300" on:click={() => {
-				show = false;
-			}}>
-				<CloseIcon/>
+			<button
+				class="absolute top-4 right-4 text-customGray-300"
+				on:click={() => {
+					show = false;
+				}}
+			>
+				<CloseIcon />
 			</button>
 
 			<div class="px-10 pt-14 pb-6 py-6 flex flex-col text-center">
@@ -96,20 +103,31 @@
 
 				<slot>
 					<div class=" text-sm text-gray-500 flex-1 text-center">
-						{#if message !== ''}
-							{message}
-						{:else}
-							{$i18n.t('This action cannot be undone. Do you wish to continue?')}
+						{#if !noMessage}
+							{#if message !== ''}
+								{message}
+							{:else}
+								{$i18n.t('This action cannot be undone. Do you wish to continue?')}
+							{/if}
 						{/if}
 
 						{#if input}
-							<textarea
-								bind:value={inputValue}
-								placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
-								class="w-full mt-2 rounded-lg px-4 py-2 text-sm dark:text-gray-300 dark:bg-gray-900 outline-none resize-none"
-								rows="3"
-								required
-							/>
+							{#if inputType === 'textarea'}
+								<textarea
+									bind:value={inputValue}
+									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
+									class="w-full mt-2 rounded-md px-4 py-2 text-sm dark:text-gray-300 dark:bg-customGray-900 outline-none resize-none"
+									rows="3"
+									required
+								/>
+							{:else}
+								<input
+									bind:value={inputValue}
+									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
+									class="w-full mt-2 rounded-md px-4 py-2 text-sm dark:text-gray-300 dark:bg-customGray-900 outline-none resize-none"
+									required
+								/>
+							{/if}
 						{/if}
 					</div>
 				</slot>
