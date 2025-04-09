@@ -28,32 +28,33 @@
 	let groups = [];
 
 	onMount(async () => {
-		groups = await getGroups(localStorage.token);
+	groups = await getGroups(localStorage.token);
 
-		if (accessControl === null) {
-			accessControl = {
-				read: {
-					group_ids: [],
-					user_ids: []
-				},
-				write: {
-					group_ids: [],
-					user_ids: []
-				}
-			};
-		} else {
-			accessControl = {
-				read: {
-					group_ids: accessControl?.read?.group_ids ?? [],
-					user_ids: accessControl?.read?.user_ids ?? []
-				},
-				write: {
-					group_ids: accessControl?.write?.group_ids ?? [],
-					user_ids: accessControl?.write?.user_ids ?? []
-				}
-			};
-		}
-	});
+	// If completely missing or missing its read/write fields,
+	// provide default "private" structure:
+	if (
+		accessControl === undefined ||
+		(typeof accessControl === 'object' && (!accessControl.read || !accessControl.write))
+	) {
+		accessControl = {
+			read: { group_ids: [], user_ids: [] },
+			write: { group_ids: [], user_ids: [] }
+		};
+	}
+	// If it’s already an object, just ensure each field is at least an empty array:
+	else if (typeof accessControl === 'object') {
+		accessControl = {
+			read: {
+				group_ids: accessControl.read?.group_ids ?? [],
+				user_ids: accessControl.read?.user_ids ?? []
+			},
+			write: {
+				group_ids: accessControl.write?.group_ids ?? [],
+				user_ids: accessControl.write?.user_ids ?? []
+			}
+		};
+	}
+});
 
 	$: onChange(accessControl);
 
