@@ -4,6 +4,7 @@ import time
 import datetime
 import logging
 from aiohttp import ClientSession
+import os
 
 from open_webui.models.auths import (
     AddUserForm,
@@ -614,6 +615,10 @@ async def auth_callback(request: Request, response: Response):
 
 @router.post("/signup", response_model=SessionUserResponse)
 async def signup(request: Request, response: Response, form_data: SignupForm):
+    print("Debug - WEBUI_AUTH:", WEBUI_AUTH)
+    print("Debug - ENABLE_SIGNUP env:", os.environ.get("ENABLE_SIGNUP"))
+    print("Debug - ENABLE_SIGNUP config:", request.app.state.config.ENABLE_SIGNUP)
+    
     if not request.app.state.config.ENABLE_SIGNUP:
         raise HTTPException(400, detail=ERROR_MESSAGES.SIGNUP_DISABLED)
 
@@ -626,6 +631,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
+        user_count = Users.get_num_users()
         role = (
             "admin" if user_count == 0 else request.app.state.config.DEFAULT_USER_ROLE
         )

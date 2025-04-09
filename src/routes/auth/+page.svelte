@@ -1,4 +1,4 @@
-	<script lang="ts">
+<script lang="ts">
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, tick } from 'svelte';
@@ -6,7 +6,7 @@
 	import { page } from '$app/stores';
 
 	import { getBackendConfig } from '$lib/apis';
-	import { ldapUserSignIn, getSessionUser } from '$lib/apis/auths';
+	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
@@ -26,10 +26,20 @@
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
+	interface SessionUser {
+		token: string;
+		id: string;
+		email: string;
+		name: string;
+		role: string;
+		profile_image_url: string;
+	}
+
 	let loaded = false;
-	let mode = $config?.features.enable_ldap ? 'ldap' : 'signin';
-	let ldapUsername = '';
+	let name = '';
+	let email = '';
 	let password = '';
+	let onboarding = false;
 
 	// Carousel state
 	let currentIndex = 0;
@@ -66,13 +76,13 @@
 		return () => clearInterval(carouselInterval);
 	});
 
-	const querystringValue = (key) => {
+	const querystringValue = (key: string) => {
 		const querystring = window.location.search;
 		const urlParams = new URLSearchParams(querystring);
 		return urlParams.get(key);
 	};
 
-	const setSessionUser = async (sessionUser) => {
+	const setSessionUser = async (sessionUser: SessionUser) => {
 		if (sessionUser) {
 			console.log(sessionUser);
 			toast.success($i18n.t(`You're now logged in.`));
@@ -89,19 +99,28 @@
 		}
 	};
 
-	const ldapSignInHandler = async () => {
-		const sessionUser = await ldapUserSignIn(ldapUsername, password).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-		await setSessionUser(sessionUser);
+	const signUpHandler = async () => {
+		try {
+			const sessionUser = await userSignUp(
+				name,
+				email,
+				password,
+				generateInitialsImage(name)
+			).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			await setSessionUser(sessionUser);
+		} catch (error) {
+			console.error('Sign-up error:', error);
+			const errorMsg = error instanceof Error ? error.message : String(error);
+			toast.error(`Sign-up error: ${errorMsg}`);
+		}
 	};
 
 	const submitHandler = async () => {
-		console.log('Submit Handler', mode);
-		if (mode === 'ldap') {
-			await ldapSignInHandler();
-		}
+		await signUpHandler();
 	};
 
 	const checkOauthCallback = async () => {
@@ -136,8 +155,6 @@
 		goto('/');
 	};
 
-	let onboarding = false;
-
 	async function setLogoImage() {
 		await tick();
 		const logo = document.getElementById('logo');
@@ -150,7 +167,7 @@
 				darkImage.src = '/static/favicon-dark.png';
 
 				darkImage.onload = () => {
-					logo.src = '/static/favicon-dark.png';
+					(logo as HTMLImageElement).src = '/static/favicon-dark.png';
 					logo.style.filter = ''; // Ensure no inversion is applied if favicon-dark.png exists
 				};
 
@@ -170,12 +187,6 @@
 
 		loaded = true;
 		setLogoImage();
-
-		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
-			await ldapSignInHandler();
-		} else {
-			onboarding = $config?.onboarding ?? false;
-		}
 	});
 </script>
 
@@ -185,13 +196,6 @@
 	</title>
 </svelte:head>
 
-<OnBoarding
-	bind:show={onboarding}
-	getStartedHandler={() => {
-		onboarding = false;
-		mode = $config?.features.enable_ldap ? 'ldap' : 'signin';
-	}}
-/>
 <Header />
 <!-- Main container -->
 <div class="w-full h-screen max-h-[100dvh] text-white relative">
@@ -201,122 +205,186 @@
 	<!-- Drag region -->
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
 
-	<!-- Loading spinner -->
-	{#if !loaded || !$i18n?.isInitialized}
-		<div
-			class="fixed bg-transparent min-h-screen w-full flex justify-center items-center font-primary z-10"
-		>
-			<Spinner />
+	{#if loaded}
+		<div class="fixed m-10 z-50">
+			<div class="flex space-x-2">
+				<div class=" self-center">
+					<img
+						id="logo"
+						crossorigin="anonymous"
+						src="{WEBUI_BASE_URL}/static/splash.png"
+						class=" w-6 rounded-full"
+						alt="logo"
+					/>
+				</div>
+			</div>
 		</div>
-	{:else}
-		<!-- Main content -->
+
 		<div
-			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-10 text-black dark:text-white pt-16"
+			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-50 text-black dark:text-white"
 		>
-			<!-- Content container -->	
-			<div
-				class="container max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-start md:items-center md:justify-between min-h-[calc(100vh-10rem)] md:min-h-[calc(100vh-8rem)] py-4 md:py-0 gap-4 md:gap-12"
-			>
-				{#if ($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false}
-					<!-- Trusted header auth loading state -->
-					<div class="w-full order-1 md:order-none">
-						<div class="pb-6 md:pb-10 w-full">
-							<div
-								class="flex items-center justify-center gap-3 text-lg sm:text-xl md:text-2xl text-center font-semibold dark:text-gray-200"
-							>
-								<div>
-									{$i18n.t('Signing in to {{WEBUI_NAME}}', { WEBUI_NAME: $WEBUI_NAME })}
+			<div class="w-full px-10 min-h-screen flex flex-col text-center">
+				<div class="my-auto pb-10 w-full dark:text-gray-100">
+					{#if $config?.onboarding}
+						<form
+							class="flex flex-col justify-center max-w-md mx-auto"
+							on:submit={(e) => {
+								e.preventDefault();
+								submitHandler();
+							}}
+						>
+							<div class="mb-1">
+								<div class="text-2xl font-medium">
+									{$i18n.t(`Create Admin Account for {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
+								</div>
+								<div class="text-sm text-gray-500 mt-2">
+									{$i18n.t('Please fill in the details below to create your admin account.')}
+								</div>
+							</div>
+
+							<div class="flex flex-col mt-4">
+								<div class="mb-2">
+									<div class="text-sm font-medium text-left mb-1">{$i18n.t('Name')}</div>
+									<input
+										bind:value={name}
+										type="text"
+										class="my-0.5 w-full text-sm outline-hidden bg-transparent border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2"
+										autocomplete="name"
+										placeholder={$i18n.t('Enter Your Full Name')}
+										required
+									/>
+								</div>
+
+								<div class="mb-2">
+									<div class="text-sm font-medium text-left mb-1">{$i18n.t('Email')}</div>
+									<input
+										bind:value={email}
+										type="email"
+										class="my-0.5 w-full text-sm outline-hidden bg-transparent border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2"
+										autocomplete="email"
+										name="email"
+										placeholder={$i18n.t('Enter Your Email')}
+										required
+									/>
 								</div>
 
 								<div>
-									<Spinner />
+									<div class="text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
+									<input
+										bind:value={password}
+										type="password"
+										class="my-0.5 w-full text-sm outline-hidden bg-transparent border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2"
+										placeholder={$i18n.t('Choose a Strong Password')}
+										autocomplete="new-password"
+										name="new-password"
+										required
+									/>
 								</div>
 							</div>
-						</div>
-					</div>
-				{:else}
-					<!-- Left column - Login content -->
-					<div class="flex flex-col w-full md:w-1/2 gap-4 items-center justify-center">
-						<!-- Title section -->
-						<div class="">
-							<div class="w-full max-w-md mx-auto">
-								<div class="pb-4 w-full dark:text-gray-100 text-center">
-									<div class="flex flex-col gap-3 items-center text-center">
-										<div
-											class="text-2xl sm:text-4xl md:text-5xl fr-text-default--grey font-bold text-center"
-										>
-											{$i18n.t("L'IA")}
-											<br />
-											{$i18n.t('au service')}
-											<br />
-											{$i18n.t('des agents.')}
+
+							<div class="mt-5">
+								<button
+									class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
+									type="submit"
+								>
+									{$i18n.t('Create Admin Account')}
+								</button>
+							</div>
+						</form>
+					{:else}
+						<div
+							class="flex flex-col md:flex-row w-full gap-8 md:gap-16 items-center justify-center"
+						>
+							<!-- Left column - Login content -->
+							<div class="flex flex-col w-full md:w-1/2 gap-4 items-center justify-center">
+								<!-- Title section -->
+								<div class="">
+									<div class="w-full max-w-md mx-auto">
+										<div class="pb-4 w-full dark:text-gray-100 text-center">
+											<div class="flex flex-col gap-3 items-center text-center">
+												<div
+													class="text-2xl sm:text-4xl md:text-5xl fr-text-default--grey font-bold text-center"
+												>
+													{$i18n.t("L'IA")}
+													<br />
+													{$i18n.t('au service')}
+													<br />
+													{$i18n.t('des agents.')}
+												</div>
+											</div>
 										</div>
+									</div>
+								</div>
+
+								<!-- Login button -->
+								<div class="w-full flex justify-center">
+									<ProconnectButton />
+								</div>
+							</div>
+
+							<!-- Right column - Carousel -->
+							<div class="w-full md:w-1/2">
+								<div class="w-full max-w-md mx-auto">
+									<!-- Carousel container -->
+									<div
+										class="carousel relative min-h-[180px] sm:min-h-[250px] md:min-h-[300px] mb-16 md:mb-0"
+									>
+										{#each carouselItems as item, i}
+											{#if currentIndex === i}
+												<!-- Carousel item -->
+												<div
+													class="carousel-item flex flex-col gap-4 md:gap-6 absolute w-full"
+													in:fly={{ x: 200, duration: 1000, opacity: 1 }}
+													out:fly={{ x: -200, duration: 1000, opacity: 0 }}
+												>
+													<!-- Carousel text content -->
+													<div class="text-center">
+														<h2 class="text-xl md:text-2xl font-bold mb-2">
+															{$i18n.t(item.title)}
+														</h2>
+														<p class="text-sm md:text-base text-gray-600 dark:text-gray-300">
+															{$i18n.t(item.description)}
+														</p>
+													</div>
+													<!-- Carousel image -->
+													<div class="w-full h-36 md:h-48 relative">
+														<img
+															src={item.image}
+															alt={$i18n.t(item.title)}
+															class="w-full h-full object-contain"
+														/>
+													</div>
+													<!-- Carousel navigation dots -->
+													<div class="flex justify-center gap-2 mt-2 md:mt-4">
+														{#each carouselItems as _, i}
+															<button
+																class="w-2 h-2 rounded-full transition-colors duration-200 {currentIndex ===
+																i
+																	? 'bg-blue-500'
+																	: 'bg-gray-300 dark:bg-gray-600'}"
+																on:click={() => (currentIndex = i)}
+																aria-label={$i18n.t('Go to slide {{number}}', {
+																	number: i + 1
+																})}
+															/>
+														{/each}
+													</div>
+												</div>
+											{/if}
+										{/each}
 									</div>
 								</div>
 							</div>
 						</div>
-
-						<!-- Login button -->
-						<div class=" w-full flex justify-center">
-							<ProconnectButton />
-						</div>
-					</div>
-
-					<!-- Right column - Carousel -->
-					<div class="mt-6 md:mt-0 md:order-none w-full md:w-1/2">
-						<div class="w-full max-w-md mx-auto">
-							<!-- Carousel container -->
-							<div
-								class="carousel relative min-h-[180px] sm:min-h-[250px] md:min-h-[300px] mb-16 md:mb-0"
-							>
-								{#each carouselItems as item, i}
-									{#if currentIndex === i}
-										<!-- Carousel item -->
-										<div
-											class="carousel-item flex flex-col gap-4 md:gap-6 absolute w-full"
-											in:fly={{ x: 200, duration: 1000, opacity: 1 }}
-											out:fly={{ x: -200, duration: 1000, opacity: 0 }}
-										>
-											<!-- Carousel text content -->
-											<div class="text-center md:text-left">
-												<h2 class="text-xl md:text-2xl font-bold mb-2">
-													{$i18n.t(item.title)}
-												</h2>
-												<p class="text-sm md:text-base text-gray-600 dark:text-gray-300">
-													{$i18n.t(item.description)}
-												</p>
-											</div>
-											<!-- Carousel image -->
-											<div class="w-full h-36 md:h-48 relative">
-												<img
-													src={item.image}
-													alt={$i18n.t(item.title)}
-													class="w-full h-full object-contain"
-												/>
-											</div>
-											<!-- Carousel navigation dots -->
-											<div class="flex justify-center gap-2 mt-2 md:mt-4">
-												{#each carouselItems as _, i}
-													<button
-														class="w-2 h-2 rounded-full transition-colors duration-200 {currentIndex ===
-														i
-															? 'bg-blue-500'
-															: 'bg-gray-300 dark:bg-gray-600'}"
-														on:click={() => (currentIndex = i)}
-														aria-label={$i18n.t('Go to slide {{number}}', {
-															number: i + 1
-														})}
-													/>
-												{/each}
-											</div>
-										</div>
-									{/if}
-								{/each}
-							</div>
-						</div>
-					</div>
-				{/if}
+					{/if}
+				</div>
 			</div>
+		</div>
+	{:else}
+		<div
+			class="fixed bg-transparent min-h-screen w-full flex justify-center items-center font-primary z-10"
+		>
+			<Spinner />
 		</div>
 	{/if}
 
