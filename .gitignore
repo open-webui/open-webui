@@ -309,4 +309,3 @@ cypress/screenshots
 installer/**.exe
 release_info.json
 version.txt
-
