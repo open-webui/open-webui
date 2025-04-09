@@ -1188,5 +1188,6 @@
 	"This model is based on documents from studyabroad.hkust.edu.hk. It is suitable for questions about study abroad applications and related matters.": "해당 모델은 studyabroad.hkust.edu.hk의 문서를 기반으로 답변합니다. 교환학생 신청 등 관련 질문에 적합합니다.",
 	"Advanced": "고급 설정",
 	"You can adjust the model's behavior and response method using the system prompt.": "시스템 프롬프트를 사용하여 모델의 동작과 응답 방식을 조정할 수 있습니다.",
-	"How to use HKUST Open WebUI": "HKUST Open WebUI를 어떻게 사용하나요?"
+	"How to use HKUST Open WebUI": "HKUST Open WebUI를 어떻게 사용하나요?",
+	"Usage / Model Selection / Settings": "사용 방법 / 주제별 모델 / 설정을 제공합니다."
 }

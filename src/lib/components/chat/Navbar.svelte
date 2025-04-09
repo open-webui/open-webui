@@ -83,7 +83,7 @@
 
 			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 				<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
-				<Tooltip content={$i18n.t('사용 방법 / 주제별 모델 / 고급 설정 / 튜토리얼을 제공합니다.')}>
+				<Tooltip content={$i18n.t("Usage / Model Selection / Settings")}>
 					<button
 						class="flex cursor-pointer px-3 py-2 rounded-xl bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 transition font-medium text-blue-700 dark:text-blue-300"
 						on:click={async () => {
