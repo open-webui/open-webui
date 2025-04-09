@@ -22,6 +22,9 @@
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 	import { goto } from '$app/navigation';
 	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
+	import StarRating from './IntelligenceRating.svelte';
+	import SpeedRating from './SpeedRating.svelte';
+	import { modelsInfo } from '../../../../data/modelsInfo';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -241,6 +244,21 @@
 			return '/static/favicon.png';
 		}
 	}
+	let hoveredItem = null;
+
+	let knowledgeCutoff = null;
+
+	$: {
+		if (modelsInfo?.[hoveredItem?.label]?.knowledge_cutoff) {
+			const date = new Date(modelsInfo?.[hoveredItem?.label]?.knowledge_cutoff);
+
+			const formatted = date.toLocaleString('default', {
+				year: 'numeric',
+				month: 'long'
+			});
+			knowledgeCutoff = formatted;
+		}
+	}
 </script>
 
 <DropdownMenu.Root
@@ -325,6 +343,8 @@
 							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
 							: ''}"
 						data-arrow-selected={index === selectedModelIdx}
+						on:mouseenter={() => (hoveredItem = item)}
+						on:mouseleave={() => (hoveredItem = null)}
 						on:click={() => {
 							value = item.value;
 							selectedModelIdx = index;
@@ -357,11 +377,11 @@
 												alt="Model"
 												class="rounded-full size-5 flex items-center mr-2"
 											/>
-											<span class="text-xs leading-none">{item.label}</span>
+											<span class="text-xs">{item.label}</span>
 											<!-- </Tooltip> -->
 										</div>
 										<div class="text-2xs ml-7 text-[#808080] leading-normal">
-											Great for most tasks
+											{modelsInfo?.[item.label]?.description}
 										</div>
 									</div>
 									<!-- {#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
@@ -481,6 +501,64 @@
 						</div>
 					</div>
 				{/each}
+				{#if hoveredItem}
+					<div
+						class="absolute px-3 py-1 left-full ml-2 top-0 w-52 p-2 rounded-xl border border-customGray-700 bg-white dark:bg-customGray-900 text-sm text-gray-800 dark:text-white z-50"
+					>
+						{#if modelsInfo?.[hoveredItem?.label]?.organization}
+							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+								<p class="text-xs dark:text-white">
+									{modelsInfo?.[hoveredItem?.label]?.organization}
+								</p>
+								<p class="text-2xs dark:text-white/50">{$i18n.t('Organization')}</p>
+							</div>
+						{/if}
+						{#if modelsInfo?.[hoveredItem?.label]?.hosted_in}
+							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+								<p class="text-xs dark:text-white">{modelsInfo?.[hoveredItem?.label]?.hosted_in}</p>
+								<p class="text-2xs dark:text-white/50">{$i18n.t('Hosted In')}</p>
+							</div>
+						{/if}
+						{#if modelsInfo?.[hoveredItem?.label]?.context_window}
+							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+								<p class="text-xs dark:text-white">
+									{modelsInfo?.[hoveredItem?.label]?.context_window}
+								</p>
+								<p class="text-2xs dark:text-white/50">{$i18n.t('Context Window')}</p>
+							</div>
+						{/if}
+						{#if knowledgeCutoff}
+							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+								<p class="text-xs dark:text-white">
+									{knowledgeCutoff}
+								</p>
+								<p class="text-2xs dark:text-white/50">{$i18n.t('Knowledge Cutoff')}</p>
+							</div>
+						{/if}
+						{#if modelsInfo?.[hoveredItem?.label]?.intelligence_score}
+							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+								<StarRating rating={modelsInfo?.[hoveredItem?.label]?.intelligence_score} />
+								<p class="text-2xs dark:text-white/50">{$i18n.t('Intelligence Score')}</p>
+							</div>
+						{/if}
+						{#if modelsInfo?.[hoveredItem?.label]?.speed}
+							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+								<SpeedRating rating={modelsInfo?.[hoveredItem?.label]?.speed} />
+								<p class="text-2xs dark:text-white/50">{$i18n.t('Speed')}</p>
+							</div>
+						{/if}
+						{#if modelsInfo?.[hoveredItem?.label]?.multimodal}
+							<div class="py-2.5 border-b dark:border-customGray-700 last:border-b-0">
+								<p class="text-xs dark:text-white">{$i18n.t('Multimodal')}</p>
+							</div>
+						{/if}
+						{#if modelsInfo?.[hoveredItem?.label]?.reasoning}
+							<div class="py-2.5 border-b dark:border-customGray-700 last:border-b-0">
+								<p class="text-xs dark:text-white">{$i18n.t('Reasoning')}</p>
+							</div>
+						{/if}
+					</div>
+				{/if}
 
 				{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user.role === 'admin'}
 					<Tooltip
