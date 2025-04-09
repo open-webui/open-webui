@@ -1,18 +1,8 @@
-name: Build and package solution (PR)
-
-# This workflow handles two main jobs:
-# 1. build-and-package: Builds the Python wheel on Ubuntu
-# 2. publish-installer: Creates and publishes Windows installer packages
-#
-# Note: The publish-installer job only runs when the workflow is manually triggered
+name: Build and package solution (pr)
 
 on:
   pull_request:
-    branches:
-      - main
-  workflow_dispatch:
 
-      
 jobs:
   build-and-package:
     runs-on: ubuntu-latest
@@ -26,23 +16,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract branch name and commit ID
-        id: extract_info
-        shell: bash
+      - name: Check for changes in package.json
         run: |
-          # Extract branch name from GITHUB_HEAD_REF for PRs
-          BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
-          # Get short commit hash
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          
-          # Set outputs
-          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
-          echo "commit_id=$SHORT_SHA" >> $GITHUB_OUTPUT
-          
-          # Also set as environment variables for later steps
-          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
-          echo "COMMIT_ID=$SHORT_SHA" >> $GITHUB_ENV
-
+          git diff --cached --diff-filter=d package.json || {
+            echo "No changes to package.json"
+            exit 1
+          }
+      - name: Get version number from package.json
+        id: get_version
+        run: |
+          VERSION=$(jq -r '.version' package.json)
+          echo "::set-output name=version::$VERSION"
+      - name: Extract latest CHANGELOG entry
+        id: changelog
+        run: |
+          CHANGELOG_CONTENT=$(awk 'BEGIN {print_section=0;} /^## \[/ {if (print_section == 0) {print_section=1;} else {exit;}} print_section {print;}' CHANGELOG.md)
+          CHANGELOG_ESCAPED=$(echo "$CHANGELOG_CONTENT" | sed ':a;N;$!ba;s/\n/%0A/g')
+          echo "Extracted latest release notes from CHANGELOG.md:" 
+          echo -e "$CHANGELOG_CONTENT" 
+          echo "::set-output name=content::$CHANGELOG_ESCAPED"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -56,48 +48,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install build
           python -m build .
-
-  publish-installer:
-    needs: build-and-package
-    runs-on: windows-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history to ensure we have all files
-
-      - name: Check for changes in package.json
-        run: |
-          # Get the current version from package.json
-          $currentVersion = (Get-Content -Path "package.json" | ConvertFrom-Json).version
-          Write-Host "Current version in package.json: $currentVersion"
-          
-          # If we can read the version, consider it a valid change
-          if ($currentVersion) {
-            Write-Host "Valid package.json found with version $currentVersion, proceeding with release"
-          } else {
-            Write-Host "Could not read version from package.json, skipping release"
-            exit 1
-          }
-
-      - name: Get version number from package.json
-        id: get_version
-        run: |
-          VERSION=$(jq -r '.version' package.json)
-          echo "::set-output name=version::$VERSION"
-
-      - name: Extract latest CHANGELOG entry
-        id: changelog
-        run: |
-          CHANGELOG_CONTENT=$(awk 'BEGIN {print_section=0;} /^## \[/ {if (print_section == 0) {print_section=1;} else {exit;}} print_section {print;}' CHANGELOG.md)
-          CHANGELOG_ESCAPED=$(echo "$CHANGELOG_CONTENT" | sed ':a;N;$!ba;s/\n/%0A/g')
-          echo "Extracted latest release notes from CHANGELOG.md:" 
-          echo -e "$CHANGELOG_CONTENT" 
-          echo "::set-output name=content::$CHANGELOG_ESCAPED"
-          
       - name: Create GitHub release
         id: create_release
         uses: actions/github-script@v7
@@ -114,7 +64,6 @@ jobs:
             })
             console.log(`Created release ${release.data.html_url}`)
             return release.data.id;
-
       - name: Upload package to GitHub release
         uses: actions/upload-artifact@v4
         with:
@@ -133,13 +82,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
-      # Save the wheel file as an artifact for the publish-installer job
+      # Save the wheel file as an artifact for the create-installer job
       - name: Save wheel as artifact
         uses: actions/upload-artifact@v4
         with:
           name: wheel-file
           path: dist/*.whl
           retention-days: 1
+
+  publish-installer:
+    needs: build-and-package
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history to ensure we have all files
 
       - name: List repository contents
         run: |
@@ -153,10 +114,15 @@ jobs:
           } else {
             Write-Host "Installer directory does not exist!"
           }
-
       - name: Create dist directory
         run: mkdir -p dist
 
+      - name: Get version from package.json
+        id: get_version
+        run: |
+          $VERSION = (Get-Content package.json | ConvertFrom-Json).version
+          echo "VERSION=$VERSION" >> $env:GITHUB_ENV
+          echo "RELEASE_TAG=v$VERSION" >> $env:GITHUB_ENV
       # Download the wheel file directly from the artifact
       - name: Download wheel artifact
         uses: actions/download-artifact@v4
@@ -176,23 +142,6 @@ jobs:
             Write-Host "ERROR: No wheel file found in dist directory!"
             exit 1
           }
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Generate version.txt
-        run: |
-          python installer/version.py
-          if (Test-Path -Path "version.txt") {
-            Write-Host "version.txt generated successfully"
-            Get-Content -Path "version.txt"
-          } else {
-            Write-Host "ERROR: version.txt was not generated!"
-            exit 1
-          }
-
       - name: Install NSIS
         run: |
           # Download NSIS installer
@@ -203,7 +152,6 @@ jobs:
           
           # Add NSIS to PATH
           echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
-
       - name: Check for NSIS script
         run: |
           $SCRIPT_PATH = "installer/Installer-UX.nsi"
@@ -216,7 +164,6 @@ jobs:
             Write-Host "Listing all files in the repository:"
             Get-ChildItem -Path . -Recurse | Select-Object -ExpandProperty FullName
           }
-
       - name: Build installer
         run: |
           echo "Building installer with NSIS..."
@@ -230,7 +177,6 @@ jobs:
             Write-Host "ERROR: NSIS script not found at $SCRIPT_PATH"
             exit 1
           }
-
       - name: Rename installer
         if: success()
         run: |
@@ -251,7 +197,6 @@ jobs:
             Write-Host "ERROR: Installer directory not found!"
             exit 1
           }
-
       - name: Create checksums
         if: success()
         run: |
@@ -260,7 +205,6 @@ jobs:
           $CHECKSUM = (Get-FileHash -Path $INSTALLER_PATH -Algorithm SHA256).Hash.ToLower()
           $CHECKSUM | Out-File -FilePath "installer/$env:INSTALLER_NAME.sha256" -Encoding ascii
           Write-Host "Created checksum file with value: $CHECKSUM"
-
       - name: Zip installer executable
         if: success()
         run: |
@@ -285,21 +229,12 @@ jobs:
           } else {
             Write-Host "WARNING: launch_lemonade.ps1 not found in installer directory"
           }
-
             # Copy the launcher lemonade scripts
           if (Test-Path -Path "installer/launch_raux.ps1") {
             Write-Host "Copying launch_raux.ps1 to package"
             Copy-Item -Path "installer/launch_raux.ps1" -Destination "installer/package/"
           } else {
             Write-Host "WARNING: launch_raux.ps1 not found in installer directory"
-          }
-          
-          # Copy version.txt to package
-          if (Test-Path -Path "version.txt") {
-            Write-Host "Copying version.txt to package"
-            Copy-Item -Path "version.txt" -Destination "installer/package/"
-          } else {
-            Write-Host "WARNING: version.txt not found"
           }
           
           if (Test-Path -Path "installer/launch_raux.cmd") {
@@ -314,7 +249,6 @@ jobs:
           Compress-Archive -Path "installer/package/*" -DestinationPath "installer/$ZIP_NAME"
           echo "ZIP_NAME=$ZIP_NAME" >> $env:GITHUB_ENV
           Write-Host "Created zip file: $ZIP_NAME with installer, ux_installer directory, and launcher scripts"
-
       - name: Upload installer to GitHub release
         if: success()
         uses: softprops/action-gh-release@v1

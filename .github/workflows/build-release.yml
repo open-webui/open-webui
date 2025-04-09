@@ -4,12 +4,7 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
-  workflow_dispatch:
 
-      
 jobs:
   build-and-package:
     runs-on: ubuntu-latest
