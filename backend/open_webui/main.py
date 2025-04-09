@@ -281,6 +281,7 @@ from open_webui.env import (
     RESET_CONFIG_ON_START,
     OFFLINE_MODE,
     IONOS_REGISTRATION_URL,
+    IONOS_LOGOUT_URL,
 )
 
 
@@ -994,6 +995,7 @@ async def get_app_config(request: Request):
             "enable_login_form": app.state.config.ENABLE_LOGIN_FORM,
             "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
             "ionos_registration_url": IONOS_REGISTRATION_URL,
+            "ionos_logout_url": IONOS_LOGOUT_URL,
             **(
                 {
                     "enable_channels": app.state.config.ENABLE_CHANNELS,

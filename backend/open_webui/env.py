@@ -416,3 +416,4 @@ if OFFLINE_MODE:
 ####################################
 
 IONOS_REGISTRATION_URL = os.environ.get("IONOS_REGISTRATION_URL", None)
+IONOS_LOGOUT_URL = os.environ.get("IONOS_LOGOUT_URL", None)
