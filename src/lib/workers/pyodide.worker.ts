@@ -21,8 +21,6 @@ async function loadPyodideAndPackages(packages: string[] = []) {
 	self.pyodide = await loadPyodide({
 		indexURL: '/pyodide/',
 		stdout: (text) => {
-			console.log('Python output:', text);
-
 			if (self.stdout) {
 				self.stdout += `${text}\n`;
 			} else {
@@ -48,8 +46,6 @@ async function loadPyodideAndPackages(packages: string[] = []) {
 
 self.onmessage = async (event) => {
 	const { id, code, ...context } = event.data;
-
-	console.log(event.data);
 
 	// The worker copies the context in its own "memory" (an object mapping name to values)
 	for (const key of Object.keys(context)) {

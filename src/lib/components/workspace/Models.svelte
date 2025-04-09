@@ -356,13 +356,9 @@
 					accept=".json"
 					hidden
 					on:change={() => {
-						console.log(importFiles);
-
 						let reader = new FileReader();
 						reader.onload = async (event) => {
 							let savedModels = JSON.parse(event.target.result);
-							console.log(savedModels);
-
 							for (const model of savedModels) {
 								if (model?.info ?? false) {
 									if ($_models.find((m) => m.id === model.id)) {

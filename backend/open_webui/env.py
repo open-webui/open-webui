@@ -92,6 +92,8 @@ log_sources = [
     "RAG",
     "WEBHOOK",
     "SOCKET",
+    "JIRA",
+    "METRICS",
 ]
 
 SRC_LOG_LEVELS = {}

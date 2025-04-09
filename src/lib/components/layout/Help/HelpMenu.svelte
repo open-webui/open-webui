@@ -2,23 +2,23 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { getContext } from 'svelte';
 
-	import { showSurvey } from '$lib/stores';
 	import { flyAndScale } from '$lib/utils/transitions';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
 	import Lifebuoy from '$lib/components/icons/Lifebuoy.svelte';
 	import Keyboard from '$lib/components/icons/Keyboard.svelte';
+	import ExclamationCircle from '$lib/components/icons/ExclamationCircle.svelte';
+	import LightBlub from '$lib/components/icons/LightBlub.svelte';
 	const i18n = getContext('i18n');
 
 	export let showShortcutsHandler: Function;
 	export let showSurveyHandler: Function;
 	export let showDocsHandler: Function;
+	export let showIssueHandler: Function;
+	export let showSuggestionHandler: Function;
 
 	export let onClose: Function = () => {};
-
-	// Show survey
-	//showSurvey.set(true);
 </script>
 
 <Dropdown
@@ -40,7 +40,7 @@
 		>
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				id="governance-docs-button"
+				id="docs-button"
 				on:click={() => {
 					showDocsHandler();
 				}}
@@ -51,7 +51,39 @@
 
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-				id="chat-share-button"
+				id="issue-button"
+				on:click={() => {
+					showIssueHandler();
+				}}
+			>
+				<ExclamationCircle className="size-5" />
+				<div class="flex items-center">{$i18n.t('Report an Issue')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				id="suggestion-button"
+				on:click={() => {
+					showSuggestionHandler();
+				}}
+			>
+				<LightBlub className="size-5" />
+				<div class="flex items-center">{$i18n.t('Suggestion Box')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				id="survey-button"
+				on:click={() => {
+					showSurveyHandler();
+				}}
+			>
+				<Lifebuoy className="size-5" />
+				<div class="flex items-center">{$i18n.t('User Survey')}</div>
+			</DropdownMenu.Item>
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				id="shortcut-button"
 				on:click={() => {
 					showShortcutsHandler();
 				}}
@@ -59,19 +91,6 @@
 				<Keyboard className="size-5" />
 				<div class="flex items-center">{$i18n.t('Keyboard shortcuts')}</div>
 			</DropdownMenu.Item>
-
-			{#if $showSurvey}
-				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-					id="chat-share-button"
-					on:click={() => {
-						showSurveyHandler();
-					}}
-				>
-					<Lifebuoy className="size-5" />
-					<div class="flex items-center">{$i18n.t('Survey')}</div>
-				</DropdownMenu.Item>
-			{/if}
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>

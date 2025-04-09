@@ -34,7 +34,6 @@
 		});
 
 		if (res) {
-			console.log(res);
 			toast.success($i18n.t('Memory updated successfully'));
 			dispatch('save');
 			show = false;

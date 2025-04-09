@@ -12,6 +12,7 @@ from uuid import uuid4
 from concurrent.futures import ThreadPoolExecutor
 
 
+from open_webui.models.message_metrics import MessageMetrics
 from fastapi import Request
 from fastapi import BackgroundTasks
 
@@ -1103,6 +1104,18 @@ async def process_chat_response(
 
                     try:
                         data = json.loads(data)
+
+                        if "usage" in data:
+                            model_used = (
+                                data["model"]
+                                or metadata["selected_model_id"]
+                                or form_data["model"]
+                            )
+                            MessageMetrics.insert_new_metrics(
+                                user,
+                                model_used,
+                                data["usage"],
+                            )
 
                         if "selected_model_id" in data:
                             Chats.upsert_message_to_chat_by_id_and_message_id(

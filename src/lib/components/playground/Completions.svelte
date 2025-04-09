@@ -34,7 +34,6 @@
 
 	const stopResponse = () => {
 		stopResponseFlag = true;
-		console.log('stopResponse');
 	};
 
 	const textCompletionHandler = async () => {
@@ -79,8 +78,6 @@
 								console.log('done');
 							} else {
 								let data = JSON.parse(line.replace(/^data: /, ''));
-								console.log(data);
-
 								text += data.choices[0].delta.content ?? '';
 							}
 						}

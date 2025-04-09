@@ -2241,3 +2241,55 @@ LDAP_CA_CERT_FILE = PersistentConfig(
 LDAP_CIPHERS = PersistentConfig(
     "LDAP_CIPHERS", "ldap.server.ciphers", os.environ.get("LDAP_CIPHERS", "ALL")
 )
+
+####################################
+# Help
+####################################
+DOCS_URL = PersistentConfig(
+    "DOCS_URL",
+    "docs.url",
+    os.environ.get("DOCS_URL", ""),
+)
+DOCS_URL_FR = PersistentConfig(
+    "DOCS_URL_FR",
+    "docs.url.fr",
+    os.environ.get("DOCS_URL_FR", ""),
+)
+SURVEY_URL = PersistentConfig(
+    "SURVEY_URL",
+    "survey.url",
+    os.environ.get("SURVEY_URL", ""),
+)
+SURVEY_URL_FR = PersistentConfig(
+    "SURVEY_URL_FR",
+    "survey.url.fr",
+    os.environ.get("SURVEY_URL_FR", ""),
+)
+
+####################################
+# Jira Integration
+####################################
+
+JIRA_API_URL = PersistentConfig(
+    "JIRA_API_URL",
+    "jira.api_url",
+    os.environ.get("JIRA_API_URL", ""),
+)
+
+JIRA_USERNAME = PersistentConfig(
+    "JIRA_USERNAME",
+    "jira.username",
+    os.environ.get("JIRA_USERNAME", ""),
+)
+
+JIRA_API_TOKEN = PersistentConfig(
+    "JIRA_API_TOKEN",
+    "jira.api_token",
+    os.environ.get("JIRA_API_TOKEN", ""),
+)
+
+JIRA_PROJECT_KEY = PersistentConfig(
+    "JIRA_PROJECT_KEY",
+    "jira.project_key",
+    os.environ.get("JIRA_PROJECT_KEY", ""),
+)

@@ -91,12 +91,10 @@
 		});
 
 		_socket.on('user-list', (data) => {
-			console.log('user-list', data);
 			activeUserIds.set(data.user_ids);
 		});
 
 		_socket.on('usage', (data) => {
-			console.log('usage', data);
 			USAGE_POOL.set(data['models']);
 		});
 	};
@@ -258,7 +256,6 @@
 		let backendConfig = null;
 		try {
 			backendConfig = await getBackendConfig();
-			console.log('Backend config:', backendConfig);
 		} catch (error) {
 			console.error('Error loading backend config:', error);
 		}

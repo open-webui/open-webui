@@ -66,12 +66,14 @@ from open_webui.routers import (
     files,
     functions,
     memories,
+    metrics,
     models,
     knowledge,
     prompts,
     evaluations,
     tools,
     users,
+    jira,
     utils,
 )
 
@@ -89,6 +91,8 @@ from open_webui.models.users import UserModel, Users
 
 from open_webui.config import (
     # Ollama
+    DOCS_URL,
+    DOCS_URL_FR,
     ENABLE_OLLAMA_API,
     OLLAMA_BASE_URLS,
     OLLAMA_API_CONFIGS,
@@ -129,6 +133,8 @@ from open_webui.config import (
     AUDIO_TTS_VOICE,
     AUDIO_TTS_AZURE_SPEECH_REGION,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+    SURVEY_URL,
+    SURVEY_URL_FR,
     WHISPER_MODEL,
     WHISPER_MODEL_AUTO_UPDATE,
     WHISPER_MODEL_DIR,
@@ -263,6 +269,11 @@ from open_webui.config import (
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
     AppConfig,
     reset_config,
+    # Jira
+    JIRA_API_URL,
+    JIRA_USERNAME,
+    JIRA_API_TOKEN,
+    JIRA_PROJECT_KEY,
 )
 from open_webui.env import (
     CHANGELOG,
@@ -662,6 +673,40 @@ app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH = (
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH
 )
 
+########################################
+#
+# Help
+#
+########################################
+app.state.config.DOCS_URL = DOCS_URL
+app.state.config.DOCS_URL_FR = DOCS_URL_FR
+app.state.config.SURVEY_URL = SURVEY_URL
+app.state.config.SURVEY_URL_FR = SURVEY_URL_FR
+
+
+########################################
+#
+# Jira Integration
+#
+########################################
+
+app.state.config.JIRA_API_URL = JIRA_API_URL
+app.state.config.JIRA_USERNAME = JIRA_USERNAME
+app.state.config.JIRA_API_TOKEN = JIRA_API_TOKEN
+app.state.config.JIRA_PROJECT_KEY = JIRA_PROJECT_KEY
+
+
+########################################
+#
+# Jira Integration
+#
+########################################
+
+app.state.config.JIRA_API_URL = JIRA_API_URL
+app.state.config.JIRA_USERNAME = JIRA_USERNAME
+app.state.config.JIRA_API_TOKEN = JIRA_API_TOKEN
+app.state.config.JIRA_PROJECT_KEY = JIRA_PROJECT_KEY
+
 
 ########################################
 #
@@ -777,6 +822,8 @@ app.include_router(
     evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"]
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
+app.include_router(jira.router, prefix="/api/v1/jira", tags=["jira"])
+app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["metrics"])
 
 
 ##################################
@@ -1015,6 +1062,10 @@ async def get_app_config(request: Request):
             {
                 "default_models": app.state.config.DEFAULT_MODELS,
                 "default_prompt_suggestions": app.state.config.DEFAULT_PROMPT_SUGGESTIONS,
+                "docs_url": app.state.config.DOCS_URL,
+                "docs_url_fr": app.state.config.DOCS_URL_FR,
+                "survey_url": app.state.config.SURVEY_URL,
+                "survey_url_fr": app.state.config.SURVEY_URL_FR,
                 "audio": {
                     "tts": {
                         "engine": app.state.config.TTS_ENGINE,
@@ -1119,33 +1170,6 @@ async def oauth_login(provider: str, request: Request):
 @app.get("/oauth/{provider}/callback")
 async def oauth_callback(provider: str, request: Request, response: Response):
     return await oauth_manager.handle_callback(provider, request, response)
-
-
-@app.get("/manifest.json")
-async def get_manifest_json():
-    return {
-        "name": WEBUI_NAME,
-        "short_name": WEBUI_NAME,
-        "description": "Open WebUI is an open, extensible, user-friendly interface for AI that adapts to your workflow.",
-        "start_url": "/",
-        "display": "standalone",
-        "background_color": "#343541",
-        "orientation": "natural",
-        "icons": [
-            {
-                "src": "/static/logo.png",
-                "type": "image/png",
-                "sizes": "500x500",
-                "purpose": "any",
-            },
-            {
-                "src": "/static/logo.png",
-                "type": "image/png",
-                "sizes": "500x500",
-                "purpose": "maskable",
-            },
-        ],
-    }
 
 
 @app.get("/opensearch.xml")

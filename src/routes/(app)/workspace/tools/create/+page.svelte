@@ -15,11 +15,8 @@
 	let tool = null;
 
 	const saveHandler = async (data) => {
-		console.log(data);
-
 		const manifest = extractFrontmatter(data.content);
 		if (compareVersion(manifest?.required_open_webui_version ?? '0.0.0', WEBUI_VERSION)) {
-			console.log('Version is lower than required');
 			toast.error(
 				$i18n.t(
 					'Open WebUI version (v{{OPEN_WEBUI_VERSION}}) is lower than required version (v{{REQUIRED_VERSION}})',
@@ -61,7 +58,6 @@
 				return;
 
 			tool = JSON.parse(event.data);
-			console.log(tool);
 		});
 
 		if (window.opener ?? false) {
@@ -71,8 +67,6 @@
 		if (sessionStorage.tool) {
 			tool = JSON.parse(sessionStorage.tool);
 			sessionStorage.removeItem('tool');
-
-			console.log(tool);
 			clone = true;
 		}
 

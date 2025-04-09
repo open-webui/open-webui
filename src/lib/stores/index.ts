@@ -6,9 +6,6 @@ import type { Socket } from 'socket.io-client';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
 
-// Help
-export const showSurvey = writable(false); // false by default
-
 // Backend
 export const WEBUI_NAME = writable(APP_NAME);
 export const config: Writable<Config | undefined> = writable(undefined);
@@ -198,6 +195,10 @@ type Config = {
 	default_locale: string;
 	default_models: string;
 	default_prompt_suggestions: PromptSuggestion[];
+	docs_url: string;
+	docs_url_fr: string;
+	survey_url: string;
+	survey_url_fr: string;
 	features: {
 		auth: boolean;
 		auth_trusted_header: boolean;

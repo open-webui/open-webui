@@ -8,14 +8,19 @@
 		showControls,
 		showArchivedChats,
 		showSidebar,
-		temporaryChatEnabled,
-		suggestionCycle
+		suggestionCycle,
+		config
 	} from '$lib/stores';
 	import Tooltip from '../common/Tooltip.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
+	import QuestionMarkCircle from '../icons/QuestionMarkCircle.svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import HelpMenu from './Help/HelpMenu.svelte';
+	import ShortcutsModal from '../chat/ShortcutsModal.svelte';
+	import IssueModal from '../common/IssueModal.svelte';
+	import SuggestionModal from '../common/SuggestionModal.svelte';
 
 	export let shareEnabled = false;
 	export let chat = null;
@@ -37,6 +42,15 @@
 		suggestionCycle.update((n) => n + 1);
 		goto('/');
 	};
+
+	// Help functionality
+	let showShortcuts = false;
+	let showIssue = false;
+	let showSuggestion = false;
+
+	$: SurveyUrl = $i18n.language === 'fr-CA' ? $config?.survey_url_fr : $config?.survey_url;
+
+	$: DocsUrl = $i18n.language === 'fr-CA' ? $config?.docs_url_fr : $config?.docs_url;
 </script>
 
 <div class="fixed top-0 right-0 px-2 py-[7px] z-50 flex items-center gap-1">
@@ -72,6 +86,44 @@
 			</Tooltip>
 		{/if}
 
+		<!-- Help Button -->
+		<div class="flex">
+			<button
+				id="show-shortcuts-button"
+				class="hidden"
+				on:click={() => {
+					showShortcuts = !showShortcuts;
+				}}
+			/>
+			<HelpMenu
+				showDocsHandler={() => {
+					window.open(DocsUrl, '_blank');
+				}}
+				showShortcutsHandler={() => {
+					showShortcuts = !showShortcuts;
+				}}
+				showSurveyHandler={() => {
+					window.open(SurveyUrl, '_blank');
+				}}
+				showIssueHandler={() => {
+					showIssue = true;
+				}}
+				showSuggestionHandler={() => {
+					showSuggestion = true;
+				}}
+			>
+				<Tooltip content={$i18n.t('Help')} placement="bottom">
+					<div
+						class="group flex cursor-pointer p-2 rounded-xl bg-white dark:bg-gray-900 transition hover:bg-gray-100 dark:hover:bg-gray-800"
+					>
+						<div class="flex items-center justify-center text-gray-900 dark:text-white">
+							<QuestionMarkCircle className="size-5" strokeWidth="2" />
+						</div>
+					</div>
+				</Tooltip>
+			</HelpMenu>
+		</div>
+
 		<!-- Keep GlobalLanguageSelector and UserMenu together -->
 		<div class="flex items-center gap-1">
 			<GlobalLanguageSelector />
@@ -99,3 +151,7 @@
 		</div>
 	</div>
 </div>
+
+<ShortcutsModal bind:show={showShortcuts} />
+<IssueModal bind:show={showIssue} />
+<SuggestionModal bind:show={showSuggestion} />

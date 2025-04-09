@@ -81,7 +81,6 @@
 	});
 
 	const saveHandler = () => {
-		console.log('saveHandler');
 		// if (!selectedReason) {
 		// 	toast.error($i18n.t('Please select a reason'));
 		// 	return;

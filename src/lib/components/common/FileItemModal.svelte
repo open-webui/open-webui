@@ -18,8 +18,6 @@
 	let enableFullContent = false;
 
 	onMount(() => {
-		console.log(item);
-
 		if (item?.context === 'full') {
 			enableFullContent = true;
 		}

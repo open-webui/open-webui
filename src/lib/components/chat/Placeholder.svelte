@@ -56,13 +56,10 @@
 			});
 
 			text = p.replaceAll('{{CLIPBOARD}}', clipboardText);
-
-			console.log('Clipboard text:', clipboardText, text);
 		}
 
 		prompt = text;
 
-		console.log(prompt);
 		await tick();
 
 		const chatInputContainerElement = document.getElementById('chat-input-container');

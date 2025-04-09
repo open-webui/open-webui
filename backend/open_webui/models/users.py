@@ -24,6 +24,7 @@ class User(Base):
     email = Column(String)
     role = Column(String)
     profile_image_url = Column(Text)
+    domain = Column(String)
 
     last_active_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -48,6 +49,7 @@ class UserModel(BaseModel):
     email: str
     role: str = "pending"
     profile_image_url: str
+    domain: str = "*"
 
     last_active_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
@@ -103,6 +105,7 @@ class UsersTable:
         profile_image_url: str = "/user.png",
         role: str = "pending",
         oauth_sub: Optional[str] = None,
+        domain: str = "*",
     ) -> Optional[UserModel]:
         with get_db() as db:
             user = UserModel(
@@ -112,6 +115,7 @@ class UsersTable:
                     "email": email,
                     "role": role,
                     "profile_image_url": profile_image_url,
+                    "domain": domain,
                     "last_active_at": int(time.time()),
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
@@ -180,8 +184,14 @@ class UsersTable:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [UserModel.model_validate(user) for user in users]
 
-    def get_num_users(self) -> Optional[int]:
+    def get_user_domains(self) -> list[str]:
         with get_db() as db:
+            return [domain[0] for domain in db.query(User.domain).distinct().all()]
+
+    def get_num_users(self, domain: Optional[str] = None) -> Optional[int]:
+        with get_db() as db:
+            if domain:
+                return db.query(User).filter_by(domain=domain).count()
             return db.query(User).count()
 
     def get_first_user(self) -> UserModel:
@@ -243,6 +253,21 @@ class UsersTable:
 
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
+        except Exception:
+            return None
+
+    def get_daily_users_number(
+        self, days: int = 1, domain: Optional[str] = None
+    ) -> Optional[int]:
+        try:
+            with get_db() as db:
+                start_time = int(time.time()) - (days * 24 * 60 * 60)
+                query = db.query(User).filter(User.last_active_at >= start_time)
+
+                if domain:
+                    query = query.filter(User.domain == domain)
+
+                return query.count()
         except Exception:
             return None
 

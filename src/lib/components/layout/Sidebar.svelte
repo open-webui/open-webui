@@ -199,7 +199,6 @@
 	let searchDebounceTimeout;
 
 	const searchDebounceHandler = async () => {
-		console.log('search', search);
 		chats.set(null);
 
 		if (searchDebounceTimeout) {
@@ -238,9 +237,7 @@
 	};
 
 	const importChatHandler = async (items, pinned = false, folderId = null) => {
-		console.log('importChatHandler', items, pinned, folderId);
 		for (const item of items) {
-			console.log(item);
 			if (item.chat) {
 				await importChat(localStorage.token, item.chat, item?.meta ?? {}, pinned, folderId);
 			}
@@ -250,8 +247,6 @@
 	};
 
 	const inputFilesHandler = async (files) => {
-		console.log(files);
-
 		for (const file of files) {
 			const reader = new FileReader();
 			reader.onload = async (e) => {
@@ -270,7 +265,6 @@
 	};
 
 	const tagEventHandler = async (type, tagName, chatId) => {
-		console.log(type, tagName, chatId);
 		if (type === 'delete') {
 			initChatList();
 		} else if (type === 'add') {
@@ -297,14 +291,11 @@
 
 	const onDrop = async (e) => {
 		e.preventDefault();
-		console.log(e); // Log the drop event
-
 		// Perform file drop check and handle it accordingly
 		if (e.dataTransfer?.files) {
 			const inputFiles = Array.from(e.dataTransfer?.files);
 
 			if (inputFiles && inputFiles.length > 0) {
-				console.log(inputFiles); // Log the dropped files
 				inputFilesHandler(inputFiles); // Handle the dropped files
 			}
 		}
@@ -330,7 +321,6 @@
 
 	const onTouchStart = (e) => {
 		touchstart = e.changedTouches[0];
-		console.log(touchstart.clientX);
 	};
 
 	const onTouchEnd = (e) => {
@@ -659,7 +649,6 @@
 						}
 
 						if (chat) {
-							console.log(chat);
 							if (chat.folder_id) {
 								const res = await updateChatFolderIdById(localStorage.token, chat.id, null).catch(
 									(error) => {
@@ -704,7 +693,6 @@
 							bind:open={showPinnedChat}
 							on:change={(e) => {
 								localStorage.setItem('showPinnedChat', e.detail);
-								console.log(e.detail);
 							}}
 							on:import={(e) => {
 								importChatHandler(e.detail, true);
@@ -721,7 +709,6 @@
 									}
 
 									if (chat) {
-										console.log(chat);
 										if (chat.folder_id) {
 											const res = await updateChatFolderIdById(
 												localStorage.token,
