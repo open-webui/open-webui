@@ -230,11 +230,13 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
         entry = connection_app.entries[0]
         username = str(entry[f"{LDAP_ATTRIBUTE_FOR_USERNAME}"]).lower()
-        email = str(entry[f"{LDAP_ATTRIBUTE_FOR_MAIL}"])
-        if not email or email == "" or email == "[]":
+        email = entry[f"{LDAP_ATTRIBUTE_FOR_MAIL}"]
+        if not email:
             raise HTTPException(400, "User does not have a valid email address.")
-        else:
+        elif isinstance(email, str):
             email = email.lower()
+        elif isinstance(email, list):
+            email = email[0].lower()
 
         cn = str(entry["cn"])
         user_dn = entry.entry_dn
