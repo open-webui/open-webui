@@ -13,8 +13,19 @@ from feddersen.entra.groups import UserGroupsRetriever
 from feddersen.models import ExtraMetadata
 from pgvector.sqlalchemy import Vector
 from pydantic import ValidationError
-from sqlalchemy import (Column, Integer, MetaData, Table, Text, cast, column,
-                        create_engine, select, text, values)
+from sqlalchemy import (
+    Column,
+    Integer,
+    MetaData,
+    Table,
+    Text,
+    cast,
+    column,
+    create_engine,
+    select,
+    text,
+    values,
+)
 from sqlalchemy.dialects.postgresql import JSONB, array
 from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy.ext.mutable import MutableDict
@@ -23,9 +34,13 @@ from sqlalchemy.pool import NullPool
 from sqlalchemy.sql import true
 from sqlalchemy.sql.elements import ColumnElement
 
-from open_webui.config import (MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET,
-                               MICROSOFT_CLIENT_TENANT_ID, PGVECTOR_DB_URL,
-                               PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH)
+from open_webui.config import (
+    MICROSOFT_CLIENT_ID,
+    MICROSOFT_CLIENT_SECRET,
+    MICROSOFT_CLIENT_TENANT_ID,
+    PGVECTOR_DB_URL,
+    PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH,
+)
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.users import UserModel
 from open_webui.retrieval.vector.main import GetResult, SearchResult, VectorItem
@@ -107,9 +122,7 @@ class DocumentAuthChunk(Base):
             except json.JSONDecodeError:
                 # If parsing as json fails, try parsing as python object (safe version)
                 try:
-                    meta[custom_metadata_key] = ast.literal_eval(
-                        custom_metadata
-                    )
+                    meta[custom_metadata_key] = ast.literal_eval(custom_metadata)
                 except (ValueError, SyntaxError):
                     # If both parsing attempts fail, keep it as a string
                     log.warning(
@@ -188,8 +201,7 @@ class FeddersenPGVectorConnector(VectorSearchClient):
 
         try:
             # Ensure the pgvector extension is available
-            self.session.execute(
-                text("CREATE EXTENSION IF NOT EXISTS vector;"))
+            self.session.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
 
             # Check vector length consistency
             self.check_vector_length()
@@ -269,11 +281,12 @@ class FeddersenPGVectorConnector(VectorSearchClient):
         # find all duplicate titles and append the date to the title
         source_names = defaultdict(set)
         for m in metadatas:
-            name = m.get('name')
-            source_names[name].update({m.get('file_id')})
+            name = m.get("name")
+            source_names[name].update({m.get("file_id")})
 
-        duplicated_titles = [name for name,
-                             files in source_names.items() if len(files) > 1]
+        duplicated_titles = [
+            name for name, files in source_names.items() if len(files) > 1
+        ]
         if not duplicated_titles:
             # No duplicates found, return original metadata
             return metadatas
@@ -281,14 +294,14 @@ class FeddersenPGVectorConnector(VectorSearchClient):
         meta_copy = deepcopy(metadatas)
         for duplicated_title in duplicated_titles:
             for m in meta_copy:
-                if m.get('name') == duplicated_title:
+                if m.get("name") == duplicated_title:
                     # Append the date to the title
-                    date_string = m[EXTRA_MIDDLEWARE_METADATA_KEY].get('date')
+                    date_string = m[EXTRA_MIDDLEWARE_METADATA_KEY].get("date")
                     if date_string:
                         date = datetime.fromisoformat(date_string)
                         # format as MM/YY
                         date_str = date.strftime("%m/%y")
-                        m['name'] = f"{duplicated_title} ({date_str})"
+                        m["name"] = f"{duplicated_title} ({date_str})"
         return meta_copy
 
     def search(
@@ -315,8 +328,7 @@ class FeddersenPGVectorConnector(VectorSearchClient):
             query_vectors = (
                 values(qid_col, q_vector_col)
                 .data(
-                    [(idx, vector_expr(vector))
-                     for idx, vector in enumerate(vectors)]
+                    [(idx, vector_expr(vector)) for idx, vector in enumerate(vectors)]
                 )
                 .alias("query_vectors")
             )
@@ -327,8 +339,7 @@ class FeddersenPGVectorConnector(VectorSearchClient):
                 DocumentAuthChunk.text,
                 DocumentAuthChunk.vmetadata,
                 (
-                    DocumentAuthChunk.vector.cosine_distance(
-                        query_vectors.c.q_vector)
+                    DocumentAuthChunk.vector.cosine_distance(query_vectors.c.q_vector)
                 ).label("distance"),
             ).where(DocumentAuthChunk.collection_name == collection_name)
 
@@ -381,7 +392,7 @@ class FeddersenPGVectorConnector(VectorSearchClient):
                 distances[qid].append((2.0 - row.distance) / 2.0)
                 documents[qid].append(row.text)
                 metadatas[qid].append(row.vmetadata)
-            
+
             # Make titles unique for each query by adding the date to the name
             for i in range(num_queries):
                 metadatas[i] = self.make_titles_unique(metadatas[i])
@@ -597,8 +608,7 @@ class FeddersenPGVectorConnector(VectorSearchClient):
                     )
             deleted = query.delete(synchronize_session=False)
             self.session.commit()
-            log.info(
-                f"Deleted {deleted} items from collection '{collection_name}'.")
+            log.info(f"Deleted {deleted} items from collection '{collection_name}'.")
         except Exception as e:
             self.session.rollback()
             log.exception(f"Error during delete: {e}")

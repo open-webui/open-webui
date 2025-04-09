@@ -42,9 +42,9 @@ class GeminiLoader(BaseLoader):
         file_path: str = None,
         bytes_source: bytes = None,
     ) -> None:
-        assert file_path is not None or bytes_source is not None, (
-            "Either file_path or bytes_source must be specified"
-        )
+        assert (
+            file_path is not None or bytes_source is not None
+        ), "Either file_path or bytes_source must be specified"
 
         self.file_path = file_path
         self.bytes_source = bytes_source

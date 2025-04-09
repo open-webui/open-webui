@@ -901,8 +901,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         citated_file_idx = {}
         for _, source in enumerate(sources, 1):
             if "document" in source:
-                for doc_context, doc_meta in zip(source["document"], source['metadata']):
-                    file_id = doc_meta.get('file_id')
+                for doc_context, doc_meta in zip(
+                    source["document"], source["metadata"]
+                ):
+                    file_id = doc_meta.get("file_id")
                     if file_id not in citated_file_idx:
                         citated_file_idx[file_id] = len(citated_file_idx) + 1
                     context_string += f'<source id="{citated_file_idx[file_id]}">{doc_context}</source>\n'

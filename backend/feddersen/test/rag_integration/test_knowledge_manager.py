@@ -127,9 +127,9 @@ class TestKnowledgeManager:
 
             # Delete the knowledge base
             result = await knowledge_manager.delete_knowledge(kb_id)
-            assert result["success"], (
-                f"Failed to delete knowledge base: {result.get('error')}"
-            )
+            assert result[
+                "success"
+            ], f"Failed to delete knowledge base: {result.get('error')}"
 
             # Verify the knowledge base is deleted by trying to retrieve its files
             # This should fail or return empty results
@@ -242,9 +242,9 @@ class TestKnowledgeManager:
 
             # Verify all files were processed
             assert len(results) == 7, "Expected seven results for seven files"
-            assert all(result["success"] for result in results), (
-                "Failed to add all files in batch"
-            )
+            assert all(
+                result["success"] for result in results
+            ), "Failed to add all files in batch"
 
             # Verify files were added by retrieving them
             files = await knowledge_manager._retrieve_files_in_knowledge(
@@ -264,9 +264,9 @@ class TestKnowledgeManager:
                 remove_results = await knowledge_manager.remove_files(
                     knowledge_id=knowledge_base_id, file_ids=file_ids
                 )
-                assert all(result["success"] for result in remove_results), (
-                    "Failed to clean up test files"
-                )
+                assert all(
+                    result["success"] for result in remove_results
+                ), "Failed to clean up test files"
 
         finally:
             # Clean up temporary files
@@ -297,9 +297,9 @@ class TestKnowledgeManager:
         )
 
         assert len(remove_results) == 1, "Expected one result for one file removal"
-        assert remove_results[0]["success"], (
-            f"Failed to remove file: {remove_results[0].get('error')}"
-        )
+        assert remove_results[0][
+            "success"
+        ], f"Failed to remove file: {remove_results[0].get('error')}"
 
     @pytest.mark.asyncio
     async def test_update_files(
@@ -336,9 +336,9 @@ class TestKnowledgeManager:
         )
 
         assert len(update_results) == 1, "Expected one result for one file update"
-        assert update_results[0]["success"], (
-            f"Failed to update file: {update_results[0].get('error')}"
-        )
+        assert update_results[0][
+            "success"
+        ], f"Failed to update file: {update_results[0].get('error')}"
 
     @pytest.mark.asyncio
     async def test_retrieve_files_in_knowledge(
@@ -411,9 +411,9 @@ class TestKnowledgeManager:
             )
 
             assert len(add_results) == 4, "Expected four results for four files"
-            assert all(result["success"] for result in add_results), (
-                "Failed to add files in lifecycle test"
-            )
+            assert all(
+                result["success"] for result in add_results
+            ), "Failed to add files in lifecycle test"
 
             # Wait to ensure files are processed
             await asyncio.sleep(1)
@@ -437,9 +437,9 @@ class TestKnowledgeManager:
                 metadata=[updated_metadata],
             )
 
-            assert update_results[0]["success"], (
-                "Failed to update file in lifecycle test"
-            )
+            assert update_results[0][
+                "success"
+            ], "Failed to update file in lifecycle test"
 
             # Retrieve files to get file IDs
             files = await knowledge_manager._retrieve_files_in_knowledge(kb_id)
@@ -456,15 +456,15 @@ class TestKnowledgeManager:
                 remove_results = await knowledge_manager.remove_files(
                     knowledge_id=kb_id, file_ids=[file_id]
                 )
-                assert remove_results[0]["success"], (
-                    f"Failed to remove file {file_id} in lifecycle test"
-                )
+                assert remove_results[0][
+                    "success"
+                ], f"Failed to remove file {file_id} in lifecycle test"
 
             # Delete the knowledge base
             delete_result = await knowledge_manager.delete_knowledge(kb_id)
-            assert delete_result["success"], (
-                "Failed to delete knowledge base in lifecycle test"
-            )
+            assert delete_result[
+                "success"
+            ], "Failed to delete knowledge base in lifecycle test"
 
         finally:
             # Clean up the temporary files

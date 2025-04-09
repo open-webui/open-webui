@@ -74,7 +74,7 @@
 			{$showSidebar ? 'ml-1' : ''}
 			"
 			>
-			<!-- Only show the model selector when the chat has no content yet -->
+				<!-- Only show the model selector when the chat has no content yet -->
 				{#if showModelSelector && (!chat || chat.id === '')}
 					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
 				{/if}

@@ -241,14 +241,18 @@ class Loader:
             )
         else:
             if file_ext == "pdf":
-                if self.kwargs.get("LITELLM_BASE_URL") and self.kwargs.get("LITELLM_API_KEY"):
+                if self.kwargs.get("LITELLM_BASE_URL") and self.kwargs.get(
+                    "LITELLM_API_KEY"
+                ):
                     loader = GeminiLoader(
                         base_url=self.kwargs.get("LITELLM_BASE_URL"),
                         api_key=self.kwargs.get("LITELLM_API_KEY"),
                         file_path=file_path,
-                     )
+                    )
                 else:
-                    loader = PyPDFLoader(file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"))
+                    loader = PyPDFLoader(
+                        file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
+                    )
             elif file_ext == "csv":
                 loader = CSVLoader(file_path, autodetect_encoding=True)
             elif file_ext == "rst":
