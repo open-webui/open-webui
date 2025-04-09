@@ -227,40 +227,52 @@
 				<div class="my-auto pb-10 w-full dark:text-gray-100">
 					{#if $config?.onboarding}
 						<form
-							class="flex flex-col justify-center max-w-md mx-auto"
+							class="w-full max-w-md mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden p-6"
 							on:submit={(e) => {
 								e.preventDefault();
 								submitHandler();
 							}}
 						>
-							<div class="mb-1">
-								<div class="text-2xl font-medium">
-									{$i18n.t(`Create Admin Account for {{WEBUI_NAME}}`, { WEBUI_NAME: $WEBUI_NAME })}
-								</div>
-								<div class="text-sm text-gray-500 mt-2">
+							<div class="text-center mb-6">
+								<h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+									{$i18n.t(`Create Admin Account`)}
+								</h1>
+								<p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
 									{$i18n.t('Please fill in the details below to create your admin account.')}
-								</div>
+								</p>
 							</div>
 
-							<div class="flex flex-col mt-4">
-								<div class="mb-2">
-									<div class="text-sm font-medium text-left mb-1">{$i18n.t('Name')}</div>
+							<div class="flex flex-col space-y-4">
+								<div class="flex flex-col space-y-2">
+									<label
+										for="name"
+										class="text-left text-sm font-medium text-gray-700 dark:text-gray-300"
+									>
+										{$i18n.t('Name')}
+									</label>
 									<input
+										id="name"
 										bind:value={name}
 										type="text"
-										class="my-0.5 w-full text-sm outline-hidden bg-transparent border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2"
+										class="px-3 text-left py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white"
 										autocomplete="name"
 										placeholder={$i18n.t('Enter Your Full Name')}
 										required
 									/>
 								</div>
 
-								<div class="mb-2">
-									<div class="text-sm font-medium text-left mb-1">{$i18n.t('Email')}</div>
+								<div class="flex flex-col space-y-2">
+									<label
+										for="email"
+										class="text-sm font-medium text-left text-gray-700 dark:text-gray-300"
+									>
+										{$i18n.t('Email')}
+									</label>
 									<input
+										id="email"
 										bind:value={email}
 										type="email"
-										class="my-0.5 w-full text-sm outline-hidden bg-transparent border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2"
+										class="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white"
 										autocomplete="email"
 										name="email"
 										placeholder={$i18n.t('Enter Your Email')}
@@ -268,12 +280,18 @@
 									/>
 								</div>
 
-								<div>
-									<div class="text-sm font-medium text-left mb-1">{$i18n.t('Password')}</div>
+								<div class="flex flex-col space-y-2">
+									<label
+										for="password"
+										class="text-sm font-medium text-left text-gray-700 dark:text-gray-300"
+									>
+										{$i18n.t('Password')}
+									</label>
 									<input
+										id="password"
 										bind:value={password}
 										type="password"
-										class="my-0.5 w-full text-sm outline-hidden bg-transparent border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2"
+										class="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white"
 										placeholder={$i18n.t('Choose a Strong Password')}
 										autocomplete="new-password"
 										name="new-password"
@@ -282,14 +300,12 @@
 								</div>
 							</div>
 
-							<div class="mt-5">
-								<button
-									class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
-									type="submit"
-								>
-									{$i18n.t('Create Admin Account')}
-								</button>
-							</div>
+							<button
+								type="submit"
+								class="w-full mt-6 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white fr-background-action-high--blue-france focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+							>
+								{$i18n.t('Create Admin Account')}
+							</button>
 						</form>
 					{:else}
 						<div
