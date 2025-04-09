@@ -8,8 +8,6 @@ name: Build and package solution
 
 on:
   push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
@@ -45,7 +43,6 @@ jobs:
 
   publish-installer:
     needs: build-and-package
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: windows-latest
     permissions:
       contents: write
@@ -53,10 +50,12 @@ jobs:
     steps:
       - name: Check for changes in package.json
         run: |
-          git diff --cached --diff-filter=d package.json || {
+          if ! git diff --exit-code package.json; then
+            echo "Changes detected in package.json"
+          else
             echo "No changes to package.json"
             exit 1
-          }
+          fi
 
       - name: Get version number from package.json
         id: get_version
