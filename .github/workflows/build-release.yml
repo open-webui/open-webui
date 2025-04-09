@@ -53,16 +53,19 @@ jobs:
     steps:
       - name: Check for changes in package.json
         run: |
-          git diff --cached --diff-filter=d package.json || {
-            echo "No changes to package.json"
+          # Check if package.json has been modified in this commit
+          $changes = git diff HEAD^ HEAD -- package.json
+          if (-not $changes) {
+            Write-Host "No changes to package.json detected. Skipping release."
             exit 1
           }
+          Write-Host "Changes to package.json detected. Proceeding with release."
 
       - name: Get version number from package.json
         id: get_version
         run: |
-          VERSION=$(jq -r '.version' package.json)
-          echo "::set-output name=version::$VERSION"
+          $version = (Get-Content -Path "package.json" | ConvertFrom-Json).version
+          echo "::set-output name=version::$version"
 
       - name: Extract latest CHANGELOG entry
         id: changelog
