@@ -1156,7 +1156,7 @@
 	"Passwords do not match.": "비밀번호가 일치하지 않습니다.",
 	"Rate your experience" : "피드백 공유",
 	"How to use": "어떻게 사용하나요?",
-	"Basic Usage": "기본 사용법",
+	"Usage": "기본 사용법",
 	"1. Select a Model": "1. 모델 선택하기",
 	"Choose a suitable model from the model list in the top left corner.": "좌측 상단의 모델 리스트에서 질문에 맞는 모델을 선택해보세요.",
 	"2. Check Question Guide": "2. 질문 가이드 확인하기",
@@ -1186,6 +1186,6 @@
 	"This model is based on documents from urop.hkust.edu.hk. It is suitable for questions about UROP applications, previous project inquiries, and related matters.": "해당 모델은 urop.hkust.edu.hk의 문서를 기반으로 답변합니다. UROP 신청, 이전 프로젝트 조회 등 관련 질문에 적합합니다.",
 	"Study Abroad": "교환학생(Study Abroad)",
 	"This model is based on documents from studyabroad.hkust.edu.hk. It is suitable for questions about study abroad applications and related matters.": "해당 모델은 studyabroad.hkust.edu.hk의 문서를 기반으로 답변합니다. 교환학생 신청 등 관련 질문에 적합합니다.",
-	"Advanced Settings": "고급 설정",
+	"Advanced": "고급 설정",
 	"You can adjust the model's behavior and response method using the system prompt.": "시스템 프롬프트를 사용하여 모델의 동작과 응답 방식을 조정할 수 있습니다."
 }
