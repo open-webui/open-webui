@@ -810,7 +810,7 @@ async def generate_prompt(request: Request, form_data: dict, user=Depends(get_ve
     messages = magic_prompt_util.generate_magic_prompt_messages(form_data["prompt"])
 
     form_data = {
-        "model": "Claude 3.5 Sonnet",
+        "model": "Gemini 2.0 Flash",
         "messages": messages,
         "stream": False,
         "metadata": {"chat_id": None},
@@ -826,7 +826,7 @@ async def generate_prompt(request: Request, form_data: dict, user=Depends(get_ve
     if len(floating_variables) > 0:
 
         form_data = {
-            "model": "Claude 3.5 Sonnet",
+            "model": "Gemini 2.0 Flash",
             "messages": [{'role': "user", "content": magic_prompt_util.remove_floating_variables_prompt.replace("{$PROMPT}", extracted_prompt_template)}],
             "stream": False,
             "metadata": {"chat_id": None},

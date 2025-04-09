@@ -680,7 +680,12 @@ def strip_last_sentence(text):
         return text
 
 def extract_prompt(metaprompt_response):
+    # Check if there is an opening <Instructions> tag without a matching closing tag
+    if "<Instructions>" in metaprompt_response and "</Instructions>" not in metaprompt_response:
+        metaprompt_response += "</Instructions>"
+
     between_tags = extract_between_tags("Instructions", metaprompt_response)[0]
+
     return between_tags[:1000] + strip_last_sentence(remove_empty_tags(remove_empty_tags(between_tags[1000:]).strip()).strip())
 
 def extract_variables(prompt):
