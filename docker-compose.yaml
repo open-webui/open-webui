@@ -10,16 +10,16 @@ services:
   #   restart: unless-stopped
   #   image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
 
-  open-webui:
+  axlrator-webui:
     build:
       context: .
       args:
         OLLAMA_BASE_URL: '/ollama'
       dockerfile: Dockerfile
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
-    container_name: open-webui
+    image: ghcr.io/axlrator-webui/axlrator-webui:${WEBUI_DOCKER_TAG-main}
+    container_name: axlrator-webui
     volumes:
-      - open-webui:/app/backend/data
+      - axlrator-webui:/app/backend/data
       - ./backend:/app/backend # 로컬 소스와 마운트
       - ./frontend:/app/frontend # 로컬 소스와 마운트
     # depends_on:
@@ -37,7 +37,7 @@ services:
 
 volumes:
   # ollama: {}
-  open-webui: {}
+  axlrator-webui: {}
 
 
 # 2024/02/20

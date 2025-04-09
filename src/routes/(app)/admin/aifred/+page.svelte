@@ -1,5 +1,5 @@
 <script>
-	import Aifred from '$lib/components/admin/aifred/Aifred.svelte';
+	import Aifred from '$lib/components/admin/Aifred/Aifred.svelte';
 </script>
 
 <Aifred />
