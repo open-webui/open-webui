@@ -12,85 +12,85 @@
 	
 	// 탭 데이터
 	const tabs = [
-		{ id: 0, title: '기본 사용법', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
-		{ id: 1, title: '모델 선택', icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z' },
-		{ id: 2, title: '고급 설정', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' }
+		{ id: 0, title: 'Basic Usage', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+		{ id: 1, title: 'Model Selection', icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z' },
+		{ id: 2, title: 'Advanced Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' }
 	];
 	
 	// 탭 내용
 	const tabContents = [
 		{
-			title: '기본 사용법',
+			title: $i18n?.t('Basic Usage'),
 			content: [
 				{
-					title: '1. 모델 선택하기',
-					description: '좌측 상단의 모델 리스트에서 질문에 맞는 모델을 선택해보세요.'
+					title: $i18n?.t('1. Select a Model'),
+					description: $i18n?.t('Choose a suitable model from the model list in the top left corner.')
 				},
 				{
-					title: '2. 질문 가이드 확인하기',
-					description: '각 모델에 어떤 질문을 할 수 있는지는 우측 탭의 "모델 선택" 메뉴에서 확인할 수 있어요.'
+					title: $i18n?.t('2. Check Question Guide'),
+					description: $i18n?.t('You can check what questions you can ask for each model in the "Model Selection" menu in the right tab.')
 				},
 				{
-					title: '3. 사실 기반 답변 & 출처 제공',
-					description: '답변은 공식 문서를 바탕으로 제공되며, 하단의 출처 링크를 통해 원문도 직접 확인할 수 있어요.'
+					title: $i18n?.t('3. Fact-based Answers & Sources'),
+					description: $i18n?.t('Answers are provided based on official documents, and you can check the original text through the source link at the bottom.')
 				},
                 {
-					title: '4. OpenAI 모델도 사용 가능',
-					description: '공식 문서 기반 모델 외에도 Open AI에서 제공하는 GPT-4o-mini, GPT-4o 모델도 사용할 수 있어요.'
+					title: $i18n?.t('4. OpenAI Models Available'),
+					description: $i18n?.t('In addition to official document-based models, you can also use GPT-4o-mini and GPT-4o models provided by OpenAI.')
 				},
                 {
-					title: '5. 복수 모델 선택 가능',
-					description: '여러 모델을 동시에 선택하여 질문할 수 있습니다.'
+					title: $i18n?.t('5. Multiple Model Selection'),
+					description: $i18n?.t('You can select multiple models to ask questions simultaneously.')
 				},
                 {
-					title: '6. 크레딧 안내',
-					description: '모델 사용에 필요한 Credit은 학교에서 매달 8 HKD 상당의 API를 통해 제공되며, 매월 초기화돼요. 공식 문서 기반 모델은 질문 1회당 평균 0.005 HKD 정도가 소모됩니다.'
+					title: $i18n?.t('6. Credit Information'),
+					description: $i18n?.t('The Credit required for model use is provided by the school through 8 HKD worth of API per month and is reset at the beginning of each month. The official document-based model consumes about 0.005 HKD per question on average.')
 				},
                 {
-					title: '7. 더 좋은 답변을 위한 팁',
-					description: '한국어 질문에도 능숙하지만, 영어로 질문을 주시면 더 정확한 답변을 얻으실 수 있어요.'
+					title: $i18n?.t('7. Tips for Better Answers'),
+					description: $i18n?.t('While it is proficient in Korean questions, you can get more accurate answers by asking in English.')
 				}
 			]
 		},
 		{
-			title: '모델 선택',
+			title: $i18n?.t('Model Selection'),
 			content: [
 				{
-					title: 'GPT-4o-mini & GPT-4o',
-					description: 'Open AI에서 제공하는 모델과 동일합니다.'
+					title: $i18n?.t('GPT-4o-mini & GPT-4o'),
+					description: $i18n?.t('These are the same models provided by OpenAI.')
 				},
 				{
-					title: '기숙사 (Student Housing and Residential Life)',
-					description: '해당 모델은 shrl.hkust.edu.hk의 문서를 기반으로 답변합니다. 기숙사 (신청, 홀포인트, 기숙사 규정, 체크인-체크아웃, 셔틀 버스, Off-campus 등) 관련 질문에 적합합니다.'
+					title: $i18n?.t('Student Housing and Residential Life'),
+					description: $i18n?.t('This model is based on documents from shrl.hkust.edu.hk. It is suitable for questions about housing (application, hall points, housing regulations, check-in-check-out, shuttle bus, Off-campus, etc.).')
 				},
 				{
-					title: '학사지원 (Academic Registry Office)',
-					description: '해당 모델은 registry.hkust.edu.hk의 문서를 기반으로 답변합니다. 휴학 신청, 학점 규정, 학업 연장, 크래딧 트랜스퍼, 성적표 조회, SIS 등 학사 지원 관련 질문에 적합합니다.'
+					title: $i18n?.t('Academic Registry Office'),
+					description: $i18n?.t('This model is based on documents from registry.hkust.edu.hk. It is suitable for questions about leave of absence, credit regulations, study extension, credit transfer, transcript inquiries, SIS, and other academic support.')
 				},
 				{
-					title: '학생지원 (Campus Services Office & Dean\'s Office)',
-					description: '해당 모델은 (cso.hkust.edu.hk, dst.hkust.edu.hk)의 문서를 기반으로 답변합니다. 학교 시설, 교내 활동, 교통수단 등 학생 지원 관련 질문에 적합합니다.'
+					title: $i18n?.t('Campus Services Office & Dean\'s Office'),
+					description: $i18n?.t('This model is based on documents from (cso.hkust.edu.hk, dst.hkust.edu.hk). It is suitable for questions about campus facilities, campus activities, transportation, and other student support.')
 				},
 				{
-					title: 'IT Service (IT Services Office)',
-					description: '해당 모델은 (itso.hkust.edu.hk)의 문서를 기반으로 답변합니다. VPN 설정 방법, 프린터기 사용 방법, 2FA 인증 등 학교 IT 서비스 관련 질문에 적합합니다.'
+					title: $i18n?.t('IT Services Office'),
+					description: $i18n?.t('This model is based on documents from (itso.hkust.edu.hk). It is suitable for questions about VPN setup, printer usage, 2FA authentication, and other school IT services.')
 				},
 				{
-					title: 'UROP (Undergraduate Research Opportunities Program)',
-					description: '해당 모델은 urop.hkust.edu.hk의 문서를 기반으로 답변합니다. UROP 신청, 이전 프로젝트 조회 등 관련 질문에 적합합니다.'
+					title: $i18n?.t('Undergraduate Research Opportunities Program'),
+					description: $i18n?.t('This model is based on documents from urop.hkust.edu.hk. It is suitable for questions about UROP applications, previous project inquiries, and related matters.')
 				},
                 {
-					title: '교환학생(Study Abroad)',
-					description: '해당 모델은 studyabroad.hkust.edu.hk의 문서를 기반으로 답변합니다. 교환학생 신청 등 관련 질문에 적합합니다.'
+					title: $i18n?.t('Study Abroad'),
+					description: $i18n?.t('This model is based on documents from studyabroad.hkust.edu.hk. It is suitable for questions about study abroad applications and related matters.')
 				},
 			]
 		},
 		{
-			title: '고급 설정',
+			title: $i18n?.t('Advanced Settings'),
 			content: [
 				{
-					title: '시스템 프롬프트',
-					description: '시스템 프롬프트를 사용하여 모델의 동작과 응답 방식을 조정할 수 있습니다.'
+					title: $i18n?.t('System Prompt'),
+					description: $i18n?.t('You can adjust the model\'s behavior and response method using the system prompt.')
 				}
 			]
 		}
