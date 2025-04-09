@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { tick } from 'svelte';
 
 	import {
 		WEBUI_NAME,
@@ -9,6 +10,7 @@
 		settings,
 		showArchivedChats,
 		showControls,
+		showHowToUse,
 		showSidebar,
 		temporaryChatEnabled,
 		user
@@ -81,6 +83,28 @@
 
 			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 				<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
+				<Tooltip content={$i18n.t('사용 방법 / 주제별 모델 / 고급 설정 / 튜토리얼을 제공합니다.')}>
+					<button
+						class="flex cursor-pointer px-3 py-2 rounded-xl bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 transition font-medium text-blue-700 dark:text-blue-300"
+						on:click={async () => {
+							if (!$showHowToUse) {
+								showControls.set(false);
+								await tick();
+								showHowToUse.set(true);
+							} else {
+								showHowToUse.set(false);
+							}
+						}}
+						aria-label="How to use"
+					>
+						<div class="m-auto self-center flex items-center">
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+								<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+							</svg>
+							{$i18n.t('How to use')}
+						</div>
+					</button>
+				</Tooltip>
 				{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
 					<Menu
 						{chat}
