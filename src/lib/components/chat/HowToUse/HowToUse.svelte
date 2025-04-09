@@ -20,7 +20,7 @@
 	// 탭 내용
 	const tabContents = [
 		{
-			title: $i18n?.t('Usage'),
+			title: 'Usage',
 			content: [
 				{
 					title: $i18n?.t('1. Select a Model'),
@@ -53,7 +53,7 @@
 			]
 		},
 		{
-			title: $i18n?.t('Model'),
+			title: 'Model Selection',
 			content: [
 				{
 					title: $i18n?.t('GPT-4o-mini & GPT-4o'),
@@ -86,7 +86,7 @@
 			]
 		},
 		{
-			title: $i18n?.t('Advanced'),
+			title: 'Advanced',
 			content: [
 				{
 					title: $i18n?.t('System Prompt'),
@@ -99,7 +99,7 @@
 
 <div class="dark:text-white">
 	<div class="flex items-center justify-between dark:text-gray-100 mb-2">
-		<div class="text-lg font-medium self-center font-primary">{$i18n?.t('How to use')}</div>
+		<div class="text-lg font-medium self-center font-primary">{$i18n?.t("How to use HKUST Open WebUI")}</div>
 		<button
 			class="self-center"
 			on:click={() => {
@@ -121,7 +121,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={tab.icon} />
                     </svg>
-                    {tab.title}
+                    {$i18n?.t(tab.title)}
                 </button>
             {/each}
         </div>

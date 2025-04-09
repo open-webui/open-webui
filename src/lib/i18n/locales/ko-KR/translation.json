@@ -1180,12 +1180,13 @@
 	"This model is based on documents from registry.hkust.edu.hk. It is suitable for questions about leave of absence, credit regulations, study extension, credit transfer, transcript inquiries, SIS, and other academic support.": "해당 모델은 registry.hkust.edu.hk의 문서를 기반으로 답변합니다. 휴학 신청, 학점 규정, 학업 연장, 크래딧 트랜스퍼, 성적표 조회, SIS 등 학사 지원 관련 질문에 적합합니다.",
 	"Campus Services Office & Dean's Office": "학생지원 (Campus Services Office & Dean's Office)",
 	"This model is based on documents from (cso.hkust.edu.hk, dst.hkust.edu.hk). It is suitable for questions about campus facilities, campus activities, transportation, and other student support.": "해당 모델은 (cso.hkust.edu.hk, dst.hkust.edu.hk)의 문서를 기반으로 답변합니다. 학교 시설, 교내 활동, 교통수단 등 학생 지원 관련 질문에 적합합니다.",
-	"IT Services Office": "IT Service (IT Services Office)",
+	"IT Services Office": "기술지원 (IT Services Office)",
 	"This model is based on documents from (itso.hkust.edu.hk). It is suitable for questions about VPN setup, printer usage, 2FA authentication, and other school IT services.": "해당 모델은 (itso.hkust.edu.hk)의 문서를 기반으로 답변합니다. VPN 설정 방법, 프린터기 사용 방법, 2FA 인증 등 학교 IT 서비스 관련 질문에 적합합니다.",
-	"Undergraduate Research Opportunities Program": "UROP (Undergraduate Research Opportunities Program)",
+	"Undergraduate Research Opportunities Program": "학부연구 (Undergraduate Research Opportunities Program)",
 	"This model is based on documents from urop.hkust.edu.hk. It is suitable for questions about UROP applications, previous project inquiries, and related matters.": "해당 모델은 urop.hkust.edu.hk의 문서를 기반으로 답변합니다. UROP 신청, 이전 프로젝트 조회 등 관련 질문에 적합합니다.",
-	"Study Abroad": "교환학생(Study Abroad)",
+	"Study Abroad": "교환학생 (Study Abroad)",
 	"This model is based on documents from studyabroad.hkust.edu.hk. It is suitable for questions about study abroad applications and related matters.": "해당 모델은 studyabroad.hkust.edu.hk의 문서를 기반으로 답변합니다. 교환학생 신청 등 관련 질문에 적합합니다.",
 	"Advanced": "고급 설정",
-	"You can adjust the model's behavior and response method using the system prompt.": "시스템 프롬프트를 사용하여 모델의 동작과 응답 방식을 조정할 수 있습니다."
+	"You can adjust the model's behavior and response method using the system prompt.": "시스템 프롬프트를 사용하여 모델의 동작과 응답 방식을 조정할 수 있습니다.",
+	"How to use HKUST Open WebUI": "HKUST Open WebUI를 어떻게 사용하나요?"
 }
