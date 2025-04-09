@@ -1,5 +1,6 @@
 fastapi==0.115.7
 uvicorn[standard]==0.34.0
+gunicorn==23.0.0
 pydantic==2.10.6
 python-multipart==0.0.18
 
@@ -106,6 +107,10 @@ google-auth-oauthlib
 docker~=7.1.0
 pytest~=8.3.2
 pytest-docker~=3.1.1
+pytest-mock~=3.10.0
+pytest-postgresql~=7.0.0
+psycopg[binary]~=3.2.0  # psycopg3 needed for pytest-postgresql
+pytest-asyncio~=0.25.3
 
 googleapis-common-protos==1.63.2
 google-cloud-storage==2.19.0

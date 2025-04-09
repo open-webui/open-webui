@@ -65,6 +65,11 @@
 					_source = { ..._source, name: id, url: id };
 				}
 
+				// Check for middleware_metadata to set itemUrl
+				if (metadata.middleware_metadata?.url) {
+					_source = { ..._source, url: metadata.middleware_metadata.url };
+				}
+
 				const existingSource = acc.find((item) => item.id === id);
 
 				if (existingSource) {

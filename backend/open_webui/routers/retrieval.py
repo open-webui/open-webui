@@ -1,26 +1,19 @@
 import json
 import logging
-import mimetypes
 import os
 import shutil
 
 import uuid
 from datetime import datetime
-from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Union
+from typing import List, Optional
 
 from fastapi import (
     Depends,
-    FastAPI,
-    File,
-    Form,
     HTTPException,
-    UploadFile,
     Request,
     status,
     APIRouter,
 )
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 import tiktoken
@@ -76,9 +69,7 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 
 from open_webui.config import (
     ENV,
-    RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
-    RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     UPLOAD_DIR,
     DEFAULT_LOCALE,
@@ -799,6 +790,7 @@ def save_docs_to_vector_db(
         result = VECTOR_DB_CLIENT.query(
             collection_name=collection_name,
             filter={"hash": metadata["hash"]},
+            user=user,
         )
 
         if result is not None:
@@ -968,7 +960,9 @@ def process_file(
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
             result = VECTOR_DB_CLIENT.query(
-                collection_name=f"file-{file.id}", filter={"file_id": file.id}
+                collection_name=f"file-{file.id}",
+                filter={"file_id": file.id},
+                user=user,
             )
 
             if result is not None and len(result.ids[0]) > 0:
@@ -1007,6 +1001,8 @@ def process_file(
                     PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                     DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                     DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+                    LITELLM_BASE_URL=request.app.state.config.RAG_OPENAI_API_BASE_URL,
+                    LITELLM_API_KEY=request.app.state.config.RAG_OPENAI_API_KEY,
                 )
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path
@@ -1056,6 +1052,7 @@ def process_file(
                     docs=docs,
                     collection_name=collection_name,
                     metadata={
+                        **file.meta,
                         "file_id": file.id,
                         "name": file.filename,
                         "hash": hash,

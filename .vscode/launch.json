@@ -1,0 +1,25 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+      {
+          "name": "Python Debugger: FastAPI",
+          "type": "debugpy",
+          "request": "launch",
+          "module": "uvicorn",
+          "args": [
+              "open_webui.main:app",
+              "--forwarded-allow-ips", 
+              "'*'",
+              "--port",
+              "8080",
+              "--reload"
+          ],
+          "cwd": "${workspaceFolder}/backend",
+          "jinja": true,
+          "env": {}
+      }
+  ]
+}
