@@ -258,7 +258,11 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     )
 
                     user = Auths.insert_new_auth(
-                        email=mail, password=str(uuid.uuid4()), name=cn, role=role, domain=mail.split("@")[1]
+                        email=mail,
+                        password=str(uuid.uuid4()),
+                        name=cn,
+                        role=role,
+                        domain=mail.split("@")[1],
                     )
 
                     if not user:
