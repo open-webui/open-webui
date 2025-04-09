@@ -52,16 +52,22 @@ jobs:
 
       - name: Get version number from package.json
         run: |
-          VERSION=$(jq -r '.version' package.json)
-          echo "::set-output name=version::$VERSION"
+          $VERSION = (Get-Content package.json | ConvertFrom-Json).version
+          echo "version=$VERSION" >> $env:GITHUB_ENV
+          Write-Host "Version: $VERSION"
 
       - name: Extract latest CHANGELOG entry
         run: |
-          CHANGELOG_CONTENT=$(awk 'BEGIN {print_section=0;} /^## \[/ {if (print_section == 0) {print_section=1;} else {exit;}} print_section {print;}' CHANGELOG.md)
-          CHANGELOG_ESCAPED=$(echo "$CHANGELOG_CONTENT" | sed ':a;N;$!ba;s/\n/%0A/g')
-          echo "Extracted latest release notes from CHANGELOG.md:" 
-          echo -e "$CHANGELOG_CONTENT" 
-          echo "::set-output name=content::$CHANGELOG_ESCAPED"
+          $content = Get-Content CHANGELOG.md -Raw
+          if ($content -match '(?s)^## \[(.*?)\n## \[') {
+              $CHANGELOG_CONTENT = $matches[1].Trim()
+          } else {
+              $CHANGELOG_CONTENT = ""
+          }
+          $CHANGELOG_ESCAPED = $CHANGELOG_CONTENT -replace "`n", "%0A"
+          Write-Host "Extracted latest release notes from CHANGELOG.md:"
+          Write-Host $CHANGELOG_CONTENT
+          echo "content=$CHANGELOG_ESCAPED" >> $env:GITHUB_ENV
           
       - name: Create GitHub release
         uses: actions/github-script@v7
@@ -236,9 +242,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            installer/${{ env.ZIP_NAME }}
             installer/${{ env.INSTALLER_NAME }}
             installer/${{ env.INSTALLER_NAME }}.sha256
-          tag_name: ${{ env.RELEASE_TAG }}
+          tag_name: v${{ env.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
