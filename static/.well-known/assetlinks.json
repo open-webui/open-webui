@@ -1,8 +1,11 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "dev.aibrary.chat.twa",
-        "sha256_cert_fingerprints": ["8C:C9:C5:9C:C5:F2:EF:64:15:93:71:B3:25:8C:64:C1:A3:19:7D:E8:A8:1B:5C:30:D7:3B:74:FC:7B:0D:0C:25"]
-      }
-    }]
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "dev.aibrary.chat.twa",
+      "sha256_cert_fingerprints":
+        ["BE:4F:72:52:32:11:3A:CE:A2:35:8E:B8:D7:93:07:19:9C:D8:28:15:80:85:73:A1:4E:AF:53:4F:EE:28:A3:04", "73:12:36:F9:E0:1D:27:85:8F:26:C4:85:9E:D1:42:D2:52:9E:5B:21:2D:85:73:3C:E2:E2:0C:5F:8B:E9:5E:9E"]
+    }
+  }
+]
