@@ -18,7 +18,7 @@ alembic==1.14.0
 peewee==3.17.9
 peewee-migrate==1.12.2
 psycopg2-binary==2.9.9
-pgvector==0.3.5
+pgvector==0.4.0
 PyMySQL==1.1.1
 bcrypt==4.3.0
 
@@ -44,7 +44,7 @@ langchain==0.3.19
 langchain-community==0.3.18
 
 fake-useragent==2.1.0
-chromadb==0.6.2
+chromadb==0.6.3
 pymilvus==2.5.0
 qdrant-client~=1.12.0
 opensearch-py==2.8.0
@@ -93,12 +93,12 @@ authlib==1.4.1
 
 black==25.1.0
 langfuse==2.44.0
-youtube-transcript-api==0.6.3
+youtube-transcript-api==1.0.3
 pytube==15.0.0
 
 extract_msg
 pydub
-duckduckgo-search~=7.3.2
+duckduckgo-search~=7.5.5
 
 ## Google Drive
 google-api-python-client
@@ -113,7 +113,7 @@ pytest-docker~=3.1.1
 googleapis-common-protos==1.63.2
 google-cloud-storage==2.19.0
 
-azure-identity==1.20.0
+azure-identity==1.21.0
 azure-storage-blob==12.24.1
 
 
@@ -124,14 +124,14 @@ ldap3==2.9.1
 firecrawl-py==1.12.0
 
 ## Trace
-opentelemetry-api==1.30.0
-opentelemetry-sdk==1.30.0
-opentelemetry-exporter-otlp==1.30.0
-opentelemetry-instrumentation==0.51b0
-opentelemetry-instrumentation-fastapi==0.51b0
-opentelemetry-instrumentation-sqlalchemy==0.51b0
-opentelemetry-instrumentation-redis==0.51b0
-opentelemetry-instrumentation-requests==0.51b0
-opentelemetry-instrumentation-logging==0.51b0
-opentelemetry-instrumentation-httpx==0.51b0
-opentelemetry-instrumentation-aiohttp-client==0.51b0
+opentelemetry-api==1.31.1
+opentelemetry-sdk==1.31.1
+opentelemetry-exporter-otlp==1.31.1
+opentelemetry-instrumentation==0.52b1
+opentelemetry-instrumentation-fastapi==0.52b1
+opentelemetry-instrumentation-sqlalchemy==0.52b1
+opentelemetry-instrumentation-redis==0.52b1
+opentelemetry-instrumentation-requests==0.52b1
+opentelemetry-instrumentation-logging==0.52b1
+opentelemetry-instrumentation-httpx==0.52b1
+opentelemetry-instrumentation-aiohttp-client==0.52b1

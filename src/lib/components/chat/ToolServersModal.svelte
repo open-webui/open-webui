@@ -15,7 +15,7 @@
 
 	let selectedTools = [];
 
-	$: selectedTools = $tools.filter((tool) => selectedToolIds.includes(tool.id));
+	$: selectedTools = ($tools ?? []).filter((tool) => selectedToolIds.includes(tool.id));
 
 	const i18n = getContext('i18n');
 </script>

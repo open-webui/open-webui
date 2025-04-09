@@ -98,6 +98,16 @@
 			}
 		})
 	);
+	languages.push(
+		LanguageDescription.of({
+			name: 'Elixir',
+			extensions: ['ex', 'exs'],
+			load() {
+				return import('codemirror-lang-elixir').then((m) => m.elixir());
+			}
+		})
+	);
+
 	const getLang = async () => {
 		const language = languages.find((l) => l.alias.includes(lang));
 		return await language?.load();
