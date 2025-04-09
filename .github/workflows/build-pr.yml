@@ -4,12 +4,9 @@ name: Build and package solution (PR)
 # 1. build-and-package: Builds the Python wheel on Ubuntu
 # 2. publish-installer: Creates and publishes Windows installer packages
 #
-# Note: The publish-installer job is skipped for pull requests and only runs on main branch pushes
+# Note: The publish-installer job only runs when the workflow is manually triggered
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
@@ -62,7 +59,6 @@ jobs:
 
   publish-installer:
     needs: build-and-package
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: windows-latest
     permissions:
       contents: write
