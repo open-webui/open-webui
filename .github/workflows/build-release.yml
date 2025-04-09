@@ -92,15 +92,25 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const changelog = `${{ env.content }}`;
+            const isMainBranch = '${{ env.BRANCH_NAME }}' === 'main';
+            const version = '${{ env.version }}';
+            const branchName = '${{ env.BRANCH_NAME }}';
+            const commitId = '${{ env.COMMIT_ID }}';
+            
+            // Determine release name and tag based on branch
+            const releaseName = isMainBranch 
+              ? `v${version}`
+              : `v${version}-${branchName}-${commitId}`;
+            
             const release = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: `v${{ env.version }}`,
-              name: `v${{ env.version }}`,
-              body: changelog,
-            })
-            console.log(`Created release ${release.data.html_url}`)
+              tag_name: releaseName,
+              name: releaseName,
+              body: `${{ env.content }}`,
+              prerelease: !isMainBranch  // Mark as pre-release if not on main
+            });
+            console.log(`Created release ${release.data.html_url}`);
             return release.data.id;
 
       - name: Setup Python
@@ -152,10 +162,18 @@ jobs:
             if ($INSTALLER_FILES) {
               $INSTALLER_PATH = $INSTALLER_FILES[0].FullName
               Write-Host "Found installer at: $INSTALLER_PATH"
-              $NEW_NAME = "raux-$env:VERSION-setup.exe"
+              
+              # Use conditional naming based on branch
+              $NEW_NAME = if ($env:BRANCH_NAME -eq 'main') {
+                "raux-$env:VERSION-setup.exe"
+              } else {
+                "raux-$env:VERSION-$env:BRANCH_NAME-$env:COMMIT_ID-setup.exe"
+              }
+              
               $DESTINATION = "installer/$NEW_NAME"
               Move-Item -Path $INSTALLER_PATH -Destination $DESTINATION -Force
               echo "INSTALLER_NAME=$NEW_NAME" >> $env:GITHUB_ENV
+              Write-Host "Renamed installer to: $NEW_NAME"
             } else {
               Write-Host "ERROR: No installer .exe files found in installer directory!"
               exit 1
