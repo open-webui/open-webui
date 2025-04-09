@@ -1,4 +1,4 @@
-name: Build and package solution
+name: Build and package solution (PR)
 
 # This workflow handles two main jobs:
 # 1. build-and-package: Builds the Python wheel on Ubuntu
