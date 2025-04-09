@@ -4,10 +4,11 @@
 	import { Pane, PaneResizer } from 'paneforge';
 
 	import { onDestroy, onMount, tick } from 'svelte';
-	import { mobile, showControls, showCallOverlay, showOverview, showArtifacts } from '$lib/stores';
+	import { mobile, showControls, showHowToUse, showCallOverlay, showOverview, showArtifacts } from '$lib/stores';
 
 	import Modal from '../common/Modal.svelte';
 	import Controls from './Controls/Controls.svelte';
+	import HowToUse from './HowToUse/HowToUse.svelte';
 	import CallOverlay from './MessageInput/CallOverlay.svelte';
 	import Drawer from '../common/Drawer.svelte';
 	import Overview from './Overview.svelte';
@@ -114,6 +115,7 @@
 
 	onDestroy(() => {
 		showControls.set(false);
+		showHowToUse.set(false);
 
 		mediaQuery.removeEventListener('change', handleMediaQuery);
 		document.removeEventListener('mousedown', onMouseDown);
@@ -122,6 +124,7 @@
 
 	const closeHandler = () => {
 		showControls.set(false);
+		showHowToUse.set(false);
 		showOverview.set(false);
 		showArtifacts.set(false);
 
@@ -207,7 +210,7 @@
 			onResize={(size) => {
 				console.log('size', size, minSize);
 
-				if ($showControls && pane.isExpanded()) {
+				if (($showControls || $showHowToUse) && pane.isExpanded()) {
 					if (size < minSize) {
 						pane.resize(minSize);
 					}
@@ -221,11 +224,19 @@
 			}}
 			onCollapse={() => {
 				showControls.set(false);
+				showHowToUse.set(false);
 			}}
 			collapsible={true}
 			class="pt-8"
 		>
-			{#if $showControls}
+			{#if $showHowToUse}
+				<HowToUse
+					selectedModel={modelId || 'Shrl'}
+					on:close={() => {
+						showHowToUse.set(false);
+					}}
+				/>
+			{:else if $showControls}
 				<div class="pr-4 pb-8 flex max-h-full min-h-full">
 					<div
 						class="w-full {($showOverview || $showArtifacts) && !$showCallOverlay

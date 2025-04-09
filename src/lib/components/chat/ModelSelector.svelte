@@ -65,6 +65,7 @@
 								selectedModels = [...selectedModels, ''];
 							}}
 							aria-label="Add Model"
+							id="add-model-button"
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"

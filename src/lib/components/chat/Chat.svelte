@@ -28,6 +28,7 @@
 		user,
 		socket,
 		showControls,
+		showHowToUse,
 		showCallOverlay,
 		currentChatPage,
 		temporaryChatEnabled,
@@ -422,6 +423,7 @@
 		}
 
 		showControls.subscribe(async (value) => {
+			showHowToUse.set(false);
 			if (controlPane && !$mobile) {
 				try {
 					if (value) {
@@ -438,6 +440,20 @@
 				showCallOverlay.set(false);
 				showOverview.set(false);
 				showArtifacts.set(false);
+			}
+		});
+
+		showHowToUse.subscribe(async (value) => {
+			if (controlPane && !$mobile) {
+				try {
+					if (value) {
+						controlPaneComponent.openPane();
+					} else {
+						controlPane.collapse();
+					}
+				} catch (e) {
+					// ignore
+				}
 			}
 		});
 
