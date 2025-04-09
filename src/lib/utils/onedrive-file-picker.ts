@@ -20,7 +20,6 @@ class OneDriveConfig {
 
 	public async initialize(): Promise<void> {
 		await this.getCredentials();
-		console.log('OneDrive credentials initialized with authority type:', this.authorityType);
 	}
 
 	public async ensureInitialized(): Promise<void> {
@@ -54,8 +53,6 @@ class OneDriveConfig {
 		if (newAuthorityType !== 'personal' && newAuthorityType !== 'organizations') {
 			throw new Error(`Invalid authority type: ${newAuthorityType}`);
 		}
-
-		console.log('Setting new authority type:', newAuthorityType);
 
 		// Reset MSAL instance if config changes
 		if (this.clientId && 
@@ -122,13 +119,11 @@ async function getToken(resource?: string): Promise<string> {
 	await config.ensureInitialized();
 	
 	const authorityType = config.getAuthorityType();
-	console.log('Current authority type:', authorityType);
 
 	const scopes = authorityType === 'organizations'
 		? [`${resource || config.getBaseUrl()}/.default`]
 		: ['OneDrive.ReadWrite'];
 	
-	console.log('Selected scopes:', scopes);
 	const authParams: PopupRequest = { scopes };
 	let accessToken = '';
 
