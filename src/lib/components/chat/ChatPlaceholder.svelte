@@ -16,6 +16,7 @@
 
 	export let modelIds = [];
 	export let models = [];
+	export let atSelectedModel;
 
 	export let submitPrompt;
 
@@ -67,12 +68,12 @@
 
 		{#if $temporaryChatEnabled}
 			<Tooltip
-				content="This chat won't appear in history and your messages will not be saved."
-				className="w-fit"
-				placement="top-start"
+				content={$i18n.t('This chat won’t appear in history and your messages will not be saved.')}
+				className="w-full flex justify-center mb-0.5"
+				placement="top"
 			>
 				<div class="flex items-center gap-2 text-gray-500 font-medium text-lg my-2 w-fit">
-					<EyeSlash strokeWidth="2.5" className="size-5" /> Temporary Chat
+					<EyeSlash strokeWidth="2.5" className="size-5" />{$i18n.t('Temporary Chat')}
 				</div>
 			</Tooltip>
 		{/if}
@@ -85,7 +86,7 @@
 					{#if models[selectedModelIdx]?.name}
 						{models[selectedModelIdx]?.name}
 					{:else}
-						{$i18n.t('Hello, {{name}}', { name: $user.name })}
+						{$i18n.t('Hello, {{name}}', { name: $user?.name })}
 					{/if}
 				</div>
 
@@ -126,7 +127,8 @@
 		<div class=" w-full font-primary" in:fade={{ duration: 200, delay: 300 }}>
 			<Suggestions
 				className="grid grid-cols-2"
-				suggestionPrompts={models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+				suggestionPrompts={atSelectedModel?.info?.meta?.suggestion_prompts ??
+					models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
 					$config?.default_prompt_suggestions ??
 					[]}
 				on:select={(e) => {

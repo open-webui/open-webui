@@ -1,5 +1,7 @@
+import logging
 from pathlib import Path
 from typing import Optional
+import time
 
 from open_webui.models.tools import (
     ToolForm,
@@ -15,6 +17,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.utils.tools import get_tools_specs
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
+from open_webui.env import SRC_LOG_LEVELS
+
+from open_webui.utils.tools import get_tool_servers_data
+
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
 router = APIRouter()
@@ -25,11 +33,51 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[ToolUserResponse])
-async def get_tools(user=Depends(get_verified_user)):
-    if user.role == "admin":
-        tools = Tools.get_tools()
-    else:
-        tools = Tools.get_tools_by_user_id(user.id, "read")
+async def get_tools(request: Request, user=Depends(get_verified_user)):
+
+    if not request.app.state.TOOL_SERVERS:
+        # If the tool servers are not set, we need to set them
+        # This is done only once when the server starts
+        # This is done to avoid loading the tool servers every time
+
+        request.app.state.TOOL_SERVERS = await get_tool_servers_data(
+            request.app.state.config.TOOL_SERVER_CONNECTIONS
+        )
+
+    tools = Tools.get_tools()
+    for idx, server in enumerate(request.app.state.TOOL_SERVERS):
+        tools.append(
+            ToolUserResponse(
+                **{
+                    "id": f"server:{server['idx']}",
+                    "user_id": f"server:{server['idx']}",
+                    "name": server["openapi"]
+                    .get("info", {})
+                    .get("title", "Tool Server"),
+                    "meta": {
+                        "description": server["openapi"]
+                        .get("info", {})
+                        .get("description", ""),
+                    },
+                    "access_control": request.app.state.config.TOOL_SERVER_CONNECTIONS[
+                        idx
+                    ]
+                    .get("config", {})
+                    .get("access_control", None),
+                    "updated_at": int(time.time()),
+                    "created_at": int(time.time()),
+                }
+            )
+        )
+
+    if user.role != "admin":
+        tools = [
+            tool
+            for tool in tools
+            if tool.user_id == user.id
+            or has_access(user.id, "read", tool.access_control)
+        ]
+
     return tools
 
 
@@ -100,7 +148,7 @@ async def create_new_tools(
             specs = get_tools_specs(TOOLS[form_data.id])
             tools = Tools.insert_new_tool(user.id, form_data, specs)
 
-            tool_cache_dir = Path(CACHE_DIR) / "tools" / form_data.id
+            tool_cache_dir = CACHE_DIR / "tools" / form_data.id
             tool_cache_dir.mkdir(parents=True, exist_ok=True)
 
             if tools:
@@ -111,7 +159,7 @@ async def create_new_tools(
                     detail=ERROR_MESSAGES.DEFAULT("Error creating tools"),
                 )
         except Exception as e:
-            print(e)
+            log.exception(f"Failed to load the tool by id {form_data.id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT(str(e)),
@@ -193,7 +241,7 @@ async def update_tools_by_id(
             "specs": specs,
         }
 
-        print(updated)
+        log.debug(updated)
         tools = Tools.update_tool_by_id(id, updated)
 
         if tools:
@@ -343,7 +391,7 @@ async def update_tools_valves_by_id(
         Tools.update_tool_valves_by_id(id, valves.model_dump())
         return valves.model_dump()
     except Exception as e:
-        print(e)
+        log.exception(f"Failed to update tool valves by id {id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(str(e)),
@@ -421,7 +469,7 @@ async def update_tools_user_valves_by_id(
                 )
                 return user_valves.model_dump()
             except Exception as e:
-                print(e)
+                log.exception(f"Failed to update user valves by id {id}: {e}")
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.DEFAULT(str(e)),

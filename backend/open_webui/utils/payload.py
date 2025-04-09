@@ -62,6 +62,8 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
         "reasoning_effort": str,
         "seed": lambda x: x,
         "stop": lambda x: [bytes(s, "utf-8").decode("unicode_escape") for s in x],
+        "logit_bias": lambda x: x,
+        "response_format": dict,
     }
     return apply_model_params_to_body(params, form_data, mappings)
 
@@ -109,6 +111,15 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         "num_thread": int,
     }
 
+    # Extract keep_alive from options if it exists
+    if "options" in form_data and "keep_alive" in form_data["options"]:
+        form_data["keep_alive"] = form_data["options"]["keep_alive"]
+        del form_data["options"]["keep_alive"]
+
+    if "options" in form_data and "format" in form_data["options"]:
+        form_data["format"] = form_data["options"]["format"]
+        del form_data["options"]["format"]
+
     return apply_model_params_to_body(params, form_data, mappings)
 
 
@@ -124,7 +135,7 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
         tool_call_id = message.get("tool_call_id", None)
 
         # Check if the content is a string (just a simple message)
-        if isinstance(content, str):
+        if isinstance(content, str) and not tool_calls:
             # If the content is a string, it's pure text
             new_message["content"] = content
 
@@ -230,7 +241,27 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
                 "system"
             ]  # To prevent Ollama warning of invalid option provided
 
+        # Extract keep_alive from options if it exists
+        if "keep_alive" in ollama_options:
+            ollama_payload["keep_alive"] = ollama_options["keep_alive"]
+            del ollama_options["keep_alive"]
+
+    # If there is the "stop" parameter in the openai_payload, remap it to the ollama_payload.options
+    if "stop" in openai_payload:
+        ollama_options = ollama_payload.get("options", {})
+        ollama_options["stop"] = openai_payload.get("stop")
+        ollama_payload["options"] = ollama_options
+
     if "metadata" in openai_payload:
         ollama_payload["metadata"] = openai_payload["metadata"]
+
+    if "response_format" in openai_payload:
+        response_format = openai_payload["response_format"]
+        format_type = response_format.get("type", None)
+
+        schema = response_format.get(format_type, None)
+        if schema:
+            format = schema.get("schema", None)
+            ollama_payload["format"] = format
 
     return ollama_payload

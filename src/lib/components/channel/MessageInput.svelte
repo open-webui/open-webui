@@ -157,22 +157,6 @@
 		}
 
 		files = [...files, fileItem];
-		// Check if the file is an audio file and transcribe/convert it to text file
-		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
-			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
-				toast.error(`${error}`);
-				return null;
-			});
-
-			if (res) {
-				console.log(res);
-				const blob = new Blob([res.text], { type: 'text/plain' });
-				file = blobToFile(blob, `${file.name}.txt`);
-
-				fileItem.name = file.name;
-				fileItem.size = file.size;
-			}
-		}
 
 		try {
 			// During the file upload, file content is automatically extracted.
@@ -397,7 +381,7 @@
 				>
 					<div
 						class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-600/5 dark:bg-gray-400/5 dark:text-gray-100"
-						dir={$settings?.chatDirection ?? 'LTR'}
+						dir={$settings?.chatDirection ?? 'auto'}
 					>
 						{#if files.length > 0}
 							<div class="mx-2 mt-2.5 -mb-1 flex flex-wrap gap-2">
