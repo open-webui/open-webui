@@ -20,12 +20,7 @@ jobs:
 
       - name: Deploy via SSH and Docker Compose
         run: |
-          echo "Adding known host..."
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
-
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
+          ssh -v ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
             set -e
             cd /home/${{ secrets.SSH_USER }}/hkust-open-webui
 
