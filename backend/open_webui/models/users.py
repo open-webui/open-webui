@@ -104,8 +104,8 @@ class UsersTable:
         email: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
-        domain: str = "*",
         oauth_sub: Optional[str] = None,
+        domain: str = "*",
     ) -> Optional[UserModel]:
         with get_db() as db:
             user = UserModel(

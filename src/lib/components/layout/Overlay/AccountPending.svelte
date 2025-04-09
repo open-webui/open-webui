@@ -1,19 +1,22 @@
 <script lang="ts">
+	import { getUserRole } from '$lib/apis/users';
+	import { onMount } from 'svelte';
+
 	const translations = {
 		'en-GB': {
 			welcome: 'Welcome to CANChat',
-			message: 'Your account is pending activation.',
-			action: 'For access, please reach out to our team here:',
-			team: 'Intake Team',
-			button: 'Check Again',
+			message: 'Please wait while we activate your account.',
+			message2: '(approx. 10 minutes)',
+			message3: 'Issues with your activation?',
+			action: 'Please reach out to our team here',
 			signout: 'Sign Out'
 		},
 		'fr-CA': {
 			welcome: 'Bienvenue sur CANChat',
-			message: "Votre compte est en attente d'activation.",
-			action: 'Pour accéder, veuillez contacter notre équipe ici :',
-			team: "Équipe d'intégration",
-			button: 'Vérifiez à nouveau',
+			message: 'Veuillez patienter pendant que nous activons votre compte.',
+			message2: '(environ 10 minutes)',
+			message3: 'Des problèmes avec votre activation?',
+			action: 'Veuillez contacter notre équipe ici',
 			signout: 'Déconnexion'
 		}
 	};
@@ -25,11 +28,30 @@
 	const toggleLanguage = () => {
 		currentLang = currentLang === 'en-GB' ? 'fr-CA' : 'en-GB';
 	};
+
+	onMount(() => {
+		const checkUserRole = async () => {
+			try {
+				const role = await getUserRole(localStorage.token);
+				if (role !== 'pending') {
+					location.href = '/';
+				}
+			} catch (error) {
+				console.error('Error checking user role:', error);
+			}
+		};
+
+		const interval = setInterval(checkUserRole, 60000);
+		checkUserRole();
+
+		return () => clearInterval(interval);
+	});
 </script>
 
 <div class="fixed w-full h-full flex z-[999]">
 	<div
 		class="absolute w-full h-full backdrop-blur-lg bg-white/10 dark:bg-gray-900/50 flex justify-center"
+		style="-webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);"
 	>
 		<div class="m-auto pb-10 flex flex-col justify-center">
 			<div class="max-w-lg">
@@ -45,34 +67,31 @@
 				<div class="mt-6 text-center text-lg dark:text-gray-200 w-full">
 					{currentTranslation.message}
 					<br />
-					{currentTranslation.action}
+					{currentTranslation.message2}
+					<br />
+					<br />
+					{currentTranslation.message3}
 					<br />
 					<a
 						href="mailto:dsaiclientengagement.sdiaclientmobilisation@ssc-spc.gc.ca"
 						class="underline"
 					>
-						{currentTranslation.team}
+						{currentTranslation.action}
 					</a>
 				</div>
-				<div class="mt-6 mx-auto relative group w-fit">
-					<button
-						class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 text-gray-700 transition font-medium text-md"
-						on:click={async () => {
-							location.href = '/';
-						}}
-					>
-						{currentTranslation.button}
-					</button>
-					<button
-						class="text-xs text-center w-full mt-3 text-gray-700 dark:text-gray-200 underline"
-						on:click={async () => {
-							localStorage.removeItem('token');
-							location.href = '/auth';
-						}}
-					>
-						{currentTranslation.signout}
-					</button>
-				</div>
+				{#if location.hostname === 'localhost'}
+					<div class="mt-6 mx-auto relative group w-fit">
+						<button
+							class="text-xs text-center w-full mt-3 text-gray-700 dark:text-gray-200 underline"
+							on:click={async () => {
+								localStorage.removeItem('token');
+								location.href = '/auth';
+							}}
+						>
+							{currentTranslation.signout}
+						</button>
+					</div>
+				{/if}
 			</div>
 		</div>
 	</div>

@@ -258,7 +258,11 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     )
 
                     user = Auths.insert_new_auth(
-                        email=mail, password=str(uuid.uuid4()), name=cn, role=role
+                        email=mail,
+                        password=str(uuid.uuid4()),
+                        name=cn,
+                        role=role,
+                        domain=mail.split("@")[1],
                     )
 
                     if not user:
@@ -448,7 +452,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             form_data.name,
             form_data.profile_image_url,
             role,
-            form_data.email.split("@")[1],
+            domain=form_data.email.split("@")[1],
         )
 
         if user:
@@ -563,7 +567,7 @@ async def add_user(form_data: AddUserForm, user=Depends(get_admin_user)):
             form_data.name,
             form_data.profile_image_url,
             form_data.role,
-            form_data.email.split("@")[1],
+            domain=form_data.email.split("@")[1],
         )
 
         if user:
