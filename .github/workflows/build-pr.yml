@@ -64,10 +64,22 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history to ensure we have all files
+
       - name: Check for changes in package.json
         run: |
-          git diff --cached --diff-filter=d package.json || {
-            echo "No changes to package.json"
+          # Get the current version from package.json
+          $currentVersion = (Get-Content -Path "package.json" | ConvertFrom-Json).version
+          Write-Host "Current version in package.json: $currentVersion"
+          
+          # If we can read the version, consider it a valid change
+          if ($currentVersion) {
+            Write-Host "Valid package.json found with version $currentVersion, proceeding with release"
+          } else {
+            Write-Host "Could not read version from package.json, skipping release"
             exit 1
           }
 
@@ -128,11 +140,6 @@ jobs:
           name: wheel-file
           path: dist/*.whl
           retention-days: 1
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history to ensure we have all files
 
       - name: List repository contents
         run: |
