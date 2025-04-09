@@ -71,13 +71,16 @@ async def get_function_models(request, user: UserModel = None):
     pipes = Functions.get_functions_by_type("pipe", active_only=True)
     pipe_models = []
 
+    allowed_emails = [ user.email,
+        "sm11538@nyu.edu",
+        "ms15138@nyu.edu",
+        "mb484@nyu.edu",
+        "cg4532@nyu.edu",
+        "jy4421@nyu.edu",
+    ]
+
     for pipe in pipes:
-        if pipe.created_by != user.email and (
-            pipe.created_by != "mb484@nyu.edu"
-            or pipe.created_by != "ms15138@nyu.edu"
-            or pipe.created_by != "sm11538@nyu.edu"
-            or pipe.created_by != "cg4532@nyu.edu"
-        ):
+        if pipe.created_by not in allowed_emails:
             continue
         function_module = get_function_module_by_id(request, pipe.id)
 
