@@ -1,4 +1,4 @@
-name: Build and package solution
+name: Build and publish release
 
 # This workflow handles two main jobs:
 # 1. build-and-package: Builds the Python wheel on Ubuntu
@@ -10,12 +10,8 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
-      
 jobs:
   build-and-package:
     runs-on: ubuntu-latest
@@ -51,21 +47,15 @@ jobs:
       contents: write
 
     steps:
-      - name: Check for changes in package.json
-        run: |
-          git diff --cached --diff-filter=d package.json || {
-            echo "No changes to package.json"
-            exit 1
-          }
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Get version number from package.json
-        id: get_version
         run: |
           VERSION=$(jq -r '.version' package.json)
           echo "::set-output name=version::$VERSION"
 
       - name: Extract latest CHANGELOG entry
-        id: changelog
         run: |
           CHANGELOG_CONTENT=$(awk 'BEGIN {print_section=0;} /^## \[/ {if (print_section == 0) {print_section=1;} else {exit;}} print_section {print;}' CHANGELOG.md)
           CHANGELOG_ESCAPED=$(echo "$CHANGELOG_CONTENT" | sed ':a;N;$!ba;s/\n/%0A/g')
@@ -74,20 +64,20 @@ jobs:
           echo "::set-output name=content::$CHANGELOG_ESCAPED"
           
       - name: Create GitHub release
-        id: create_release
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const changelog = `${{ steps.changelog.outputs.content }}`;
+            const version = '${{ env.version }}';
             const release = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: `v${{ steps.get_version.outputs.version }}`,
-              name: `v${{ steps.get_version.outputs.version }}`,
-              body: changelog,
-            })
-            console.log(`Created release ${release.data.html_url}`)
+              tag_name: `v${version}`,
+              name: `v${version}`,
+              body: `${{ env.content }}`,
+              prerelease: false
+            });
+            console.log(`Created release ${release.data.html_url}`);
             return release.data.id;
 
       - name: Upload package to GitHub release
@@ -219,6 +209,7 @@ jobs:
             if ($INSTALLER_FILES) {
               $INSTALLER_PATH = $INSTALLER_FILES[0].FullName
               Write-Host "Found installer at: $INSTALLER_PATH"
+              
               $NEW_NAME = "raux-$env:VERSION-setup.exe"
               $DESTINATION = "installer/$NEW_NAME"
               Move-Item -Path $INSTALLER_PATH -Destination $DESTINATION -Force
@@ -241,62 +232,7 @@ jobs:
           $CHECKSUM | Out-File -FilePath "installer/$env:INSTALLER_NAME.sha256" -Encoding ascii
           Write-Host "Created checksum file with value: $CHECKSUM"
 
-      - name: Zip installer executable
-        if: success()
-        run: |
-          # First, create a directory to hold all files we want to include in the zip
-          mkdir -p installer/package
-          
-          # Copy the installer executable
-          Copy-Item "installer/$env:INSTALLER_NAME" -Destination "installer/package/"
-          
-          # Copy the ux_installer directory with install.py
-          if (Test-Path -Path "installer/ux_installer") {
-            Write-Host "Copying ux_installer directory to package"
-            Copy-Item -Path "installer/ux_installer" -Destination "installer/package/" -Recurse
-          } else {
-            Write-Host "WARNING: ux_installer directory not found in installer directory"
-          }
-          
-          # Copy the launcher raux scripts
-          if (Test-Path -Path "installer/launch_lemonade.ps1") {
-            Write-Host "Copying launch_lemonade.ps1 to package"
-            Copy-Item -Path "installer/launch_lemonade.ps1" -Destination "installer/package/"
-          } else {
-            Write-Host "WARNING: launch_lemonade.ps1 not found in installer directory"
-          }
-
-            # Copy the launcher lemonade scripts
-          if (Test-Path -Path "installer/launch_raux.ps1") {
-            Write-Host "Copying launch_raux.ps1 to package"
-            Copy-Item -Path "installer/launch_raux.ps1" -Destination "installer/package/"
-          } else {
-            Write-Host "WARNING: launch_raux.ps1 not found in installer directory"
-          }
-          
-          # Copy version.txt to package
-          if (Test-Path -Path "version.txt") {
-            Write-Host "Copying version.txt to package"
-            Copy-Item -Path "version.txt" -Destination "installer/package/"
-          } else {
-            Write-Host "WARNING: version.txt not found"
-          }
-          
-          if (Test-Path -Path "installer/launch_raux.cmd") {
-            Write-Host "Copying launch_raux.cmd to package"
-            Copy-Item -Path "installer/launch_raux.cmd" -Destination "installer/package/"
-          } else {
-            Write-Host "WARNING: launch_raux.cmd not found in installer directory"
-          }
-          
-          # Create the zip file with all contents
-          $ZIP_NAME = "raux-$env:VERSION-setup.zip"
-          Compress-Archive -Path "installer/package/*" -DestinationPath "installer/$ZIP_NAME"
-          echo "ZIP_NAME=$ZIP_NAME" >> $env:GITHUB_ENV
-          Write-Host "Created zip file: $ZIP_NAME with installer, ux_installer directory, and launcher scripts"
-
-      - name: Upload installer to GitHub release
-        if: success()
+      - name: Upload to GitHub release
         uses: softprops/action-gh-release@v1
         with:
           files: |
