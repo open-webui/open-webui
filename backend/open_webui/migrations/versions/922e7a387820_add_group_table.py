@@ -8,6 +8,7 @@ Create Date: 2024-11-14 03:00:00.000000
 
 from alembic import op
 import sqlalchemy as sa
+from open_webui.migrations.util import get_existing_tables
 
 revision = "922e7a387820"
 down_revision = "4ace53fd72c8"
@@ -16,6 +17,10 @@ depends_on = None
 
 
 def upgrade():
+    existing_tables = set(get_existing_tables())
+    if "group" in existing_tables:
+        op.drop_table("group")
+
     op.create_table(
         "group",
         sa.Column("id", sa.Text(), nullable=False, primary_key=True, unique=True),

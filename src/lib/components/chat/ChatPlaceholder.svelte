@@ -116,7 +116,10 @@
 							</div>
 						{/if}
 					{:else}
-						<div aria-label="Start Chat Textbox" class=" font-medium text-gray-600 dark:text-gray-500 line-clamp-1 font-p">
+						<div
+							aria-label="Start Chat Textbox"
+							class=" font-medium text-gray-600 dark:text-gray-500 line-clamp-1 font-p"
+						>
 							{$i18n.t('How can I help you today?')}
 						</div>
 					{/if}

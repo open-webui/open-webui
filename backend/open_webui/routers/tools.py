@@ -104,7 +104,7 @@ async def create_new_tools(
             TOOLS[form_data.id] = tools_module
 
             specs = get_tools_specs(TOOLS[form_data.id])
-            tools = Tools.insert_new_tool(user.id,user.email, form_data, specs)
+            tools = Tools.insert_new_tool(user.id, user.email, form_data, specs)
 
             tool_cache_dir = Path(CACHE_DIR) / "tools" / form_data.id
             tool_cache_dir.mkdir(parents=True, exist_ok=True)
@@ -150,7 +150,6 @@ async def create_new_tools(
 #             status_code=status.HTTP_401_UNAUTHORIZED,
 #             detail=ERROR_MESSAGES.NOT_FOUND,
 #         )
-    
 
 
 @router.get("/id/{id}", response_model=Optional[ToolModel])
@@ -164,7 +163,6 @@ async def get_tools_by_id(id: str, user=Depends(get_verified_user)):
         return tool
 
     raise HTTPException(status_code=401, detail="Not allowed to view this tool")
-
 
 
 ############################

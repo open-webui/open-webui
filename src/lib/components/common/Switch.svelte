@@ -9,7 +9,7 @@
 </script>
 
 <Switch.Root
-	aria-label = "Switch"
+	aria-label="Switch"
 	bind:checked={state}
 	class="flex h-5 min-h-5 w-9 shrink-0 cursor-pointer items-center rounded-full px-[3px] mx-[1px] transition  {state
 		? ' bg-emerald-600'

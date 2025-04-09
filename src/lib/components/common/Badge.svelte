@@ -9,7 +9,6 @@
 		error: 'bg-red-500/20 text-red-700 dark:text-red-200',
 		muted: 'bg-gray-500/20 text-gray-700 dark:text-gray-200',
 		super: 'bg-purple-500/20 text-purple-700 dark:text-purple-200'
-
 	};
 </script>
 

@@ -5,10 +5,13 @@ on:
     branches:
       - main
       - dev
+      - GenAi-Dev
   pull_request:
     branches:
       - main
       - dev
+      - half-baked
+  workflow_dispatch:
 
 jobs:
   build:

@@ -3,6 +3,12 @@
 
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 
+	import { user } from '$lib/stores';
+
+	const SPECIAL_ADMIN_EMAILS = ['cg4532@nyu.edu','ms15138@nyu.edu','mb484@nyu.edu','jy4421@nyu.edu','sm11538@nyu.edu'];
+
+	const canViewFileSettings = () => SPECIAL_ADMIN_EMAILS.includes($user?.email);
+
 	const dispatch = createEventDispatcher();
 
 	import {
@@ -109,8 +115,8 @@
 			return;
 		}
 		if (embeddingEngine === 'portkey' && (OpenAIKey === '' || OpenAIUrl === '')) {
-		toast.error($i18n.t('PORTKEY URL/Key required.'));
-		return;
+			toast.error($i18n.t('PORTKEY URL/Key required.'));
+			return;
 		}
 
 		console.log('Update embedding model attempt:', embeddingModel);
@@ -200,8 +206,8 @@
 			enable_google_drive_integration: enableGoogleDriveIntegration,
 			enable_onedrive_integration: enableOneDriveIntegration,
 			file: {
-				max_size: fileMaxSize === '' ? null : fileMaxSize,
-				max_count: fileMaxCount === '' ? null : fileMaxCount
+				max_size: fileMaxSize === '' || fileMaxSize === null ? 5 : fileMaxSize,
+				max_count: fileMaxCount === '' || fileMaxCount === null ? 2 : fileMaxCount
 			},
 			RAG_FULL_CONTEXT: RAG_FULL_CONTEXT,
 			BYPASS_EMBEDDING_AND_RETRIEVAL: BYPASS_EMBEDDING_AND_RETRIEVAL,
@@ -221,6 +227,13 @@
 		});
 
 		await updateQuerySettings(localStorage.token, querySettings);
+
+		if (fileMaxSize === '' || fileMaxSize === null) {
+			fileMaxSize = 5;
+		}
+		if (fileMaxCount === '' || fileMaxCount === null) {
+			fileMaxCount = 2;
+		}
 
 		dispatch('save');
 	};
@@ -278,8 +291,8 @@
 			documentIntelligenceKey = res.content_extraction.document_intelligence_config.key;
 			showDocumentIntelligenceConfig = contentExtractionEngine === 'document_intelligence';
 
-			fileMaxSize = res?.file.max_size ?? '';
-			fileMaxCount = res?.file.max_count ?? '';
+			fileMaxSize = res?.file.max_size ?? 5;
+			fileMaxCount = res?.file.max_count ?? 2;
 
 			enableGoogleDriveIntegration = res.enable_google_drive_integration;
 			enableOneDriveIntegration = res.enable_onedrive_integration;
@@ -336,7 +349,7 @@
 
 						<div class="">
 							<select
-								aria-label = "Select Engine"
+								aria-label="Select Engine"
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={contentExtractionEngine}
 							>
@@ -405,7 +418,7 @@
 						<div class=" self-center text-xs font-medium">{$i18n.t('Text Splitter')}</div>
 						<div class="flex items-center relative">
 							<select
-								aria-label = "Select Text Splitter"
+								aria-label="Select Text Splitter"
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={textSplitter}
 							>
@@ -520,15 +533,12 @@
 						{:else if embeddingEngine === 'portkey'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<input
-								class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-								placeholder={$i18n.t('API Base URL')}
-								bind:value={OpenAIUrl}
-								required
+									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('API Base URL')}
+									bind:value={OpenAIUrl}
+									required
 								/>
-								<SensitiveInput 
-								placeholder={$i18n.t('API Key')} 
-								bind:value={OpenAIKey} 
-								/>
+								<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={OpenAIKey} />
 							</div>
 						{/if}
 					</div>
@@ -562,7 +572,7 @@
 
 									{#if embeddingEngine === ''}
 										<button
-											aria-label = "Set embedding model"
+											aria-label="Set embedding model"
 											class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
 											on:click={() => {
 												embeddingModelUpdateHandler();
@@ -627,7 +637,7 @@
 						</div>
 					</div>
 
-					{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai' ||  embeddingEngine == 'portkey'}
+					{#if embeddingEngine === 'ollama' || embeddingEngine === 'openai' || embeddingEngine == 'portkey'}
 						<div class="  mb-2.5 flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('Embedding Batch Size')}</div>
 
@@ -807,53 +817,55 @@
 				</div>
 			{/if}
 
-			<div class="mb-3">
-				<div class=" mb-2.5 text-base font-medium">{$i18n.t('Files')}</div>
+			{#if canViewFileSettings()}
+				<div class="mb-3">
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Files')}</div>
 
-				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
-				<div class="  mb-2.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Max Upload Size')}</div>
-					<div class="flex items-center relative">
-						<Tooltip
-							content={$i18n.t(
-								'The maximum file size in MB. If the file size exceeds this limit, the file will not be uploaded.'
-							)}
-							placement="top-start"
-						>
-							<input
-								class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-								type="number"
-								placeholder={$i18n.t('Leave empty for unlimited')}
-								bind:value={fileMaxSize}
-								autocomplete="off"
-								min="0"
-							/>
-						</Tooltip>
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Max Upload Size')}</div>
+						<div class="flex items-center relative">
+							<Tooltip
+								content={$i18n.t(
+									'The maximum file size in MB. If the file size exceeds this limit, the file will not be uploaded.'
+								)}
+								placement="top-start"
+							>
+								<input
+									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+									type="number"
+									placeholder={$i18n.t('Leave empty for unlimited')}
+									bind:value={fileMaxSize}
+									autocomplete="off"
+									min="0"
+								/>
+							</Tooltip>
+						</div>
+					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Max Upload Count')}</div>
+						<div class="flex items-center relative">
+							<Tooltip
+								content={$i18n.t(
+									'The maximum number of files that can be used at once in chat. If the number of files exceeds this limit, the files will not be uploaded.'
+								)}
+								placement="top-start"
+							>
+								<input
+									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+									type="number"
+									placeholder={$i18n.t('Leave empty for unlimited')}
+									bind:value={fileMaxCount}
+									autocomplete="off"
+									min="0"
+								/>
+							</Tooltip>
+						</div>
 					</div>
 				</div>
-
-				<div class="  mb-2.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Max Upload Count')}</div>
-					<div class="flex items-center relative">
-						<Tooltip
-							content={$i18n.t(
-								'The maximum number of files that can be used at once in chat. If the number of files exceeds this limit, the files will not be uploaded.'
-							)}
-							placement="top-start"
-						>
-							<input
-								class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-								type="number"
-								placeholder={$i18n.t('Leave empty for unlimited')}
-								bind:value={fileMaxCount}
-								autocomplete="off"
-								min="0"
-							/>
-						</Tooltip>
-					</div>
-				</div>
-			</div>
+			{/if}
 
 			<div class="mb-3">
 				<div class=" mb-2.5 text-base font-medium">{$i18n.t('Integration')}</div>

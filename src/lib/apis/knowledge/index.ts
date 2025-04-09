@@ -192,15 +192,15 @@ export const addFileToKnowledgeById = async (token: string, knowledgeId: string,
 		},
 		body: data
 	})
-	.then(async (res) => {
-		if (!res.ok) throw await res.json();
-		return res.json();
-	})
-	.catch((err) => {
-		error = err.detail;
-		console.log(err);
-		return null;
-	});
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.log(err);
+			return null;
+		});
 
 	if (error) {
 		throw error;

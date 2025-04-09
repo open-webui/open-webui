@@ -514,7 +514,8 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 #             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
 #     except Exception as err:
 #         raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
-    
+
+
 @router.post("/signup", response_model=SessionUserResponse)
 async def signup(request: Request, response: Response, form_data: SignupForm):
 
@@ -547,7 +548,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
 
     # If there are no users in the DB, enforce special rules for the "first" user
     if user_count == 0:
-        REQUIRED_FIRST_EMAIL = ["ms15138@nyu.edu", "cg4532@nyu.edu"]
+        REQUIRED_FIRST_EMAIL = ["cg4532@nyu.edu", "ms15138@nyu.edu"]
         if form_data.email.lower() not in [em.lower() for em in REQUIRED_FIRST_EMAIL]:
             raise HTTPException(
                 status_code=400,
@@ -593,7 +594,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 key="token",
                 value=token,
                 expires=datetime_expires_at,
-                httponly=True,  
+                httponly=True,
                 samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
                 secure=WEBUI_AUTH_COOKIE_SECURE,
             )
@@ -634,7 +635,6 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         # This catches both your own ValueError from `insert_new_user`
         # and any other database or code errors
         raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
-
 
 
 @router.get("/signout")
