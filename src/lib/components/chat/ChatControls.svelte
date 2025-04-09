@@ -38,6 +38,10 @@
 	let dragged = false;
 
 	let minSize = 0;
+	let howToUseMinSize = 0;
+
+	// Calculate the appropriate minimum size based on whether HowToUse is shown
+	$: effectiveMinSize = $showHowToUse ? howToUseMinSize : minSize;
 
 	export const openPane = () => {
 		if (parseInt(localStorage?.chatControlsSize)) {
@@ -88,19 +92,24 @@
 
 		// initialize the minSize based on the container width
 		minSize = Math.floor((350 / container.clientWidth) * 100);
+		howToUseMinSize = Math.floor((410 / container.clientWidth) * 100);
 
 		// Create a new ResizeObserver instance
 		const resizeObserver = new ResizeObserver((entries) => {
 			for (let entry of entries) {
 				const width = entry.contentRect.width;
-				// calculate the percentage of 200px
+				// calculate the percentage of 350px
 				const percentage = (350 / width) * 100;
 				// set the minSize to the percentage, must be an integer
 				minSize = Math.floor(percentage);
+				
+				// calculate the percentage for HowToUse (410px)
+				const howToUsePercentage = (410 / width) * 100;
+				howToUseMinSize = Math.floor(howToUsePercentage);
 
-				if ($showControls) {
-					if (pane && pane.isExpanded() && pane.getSize() < minSize) {
-						pane.resize(minSize);
+				if ($showControls || $showHowToUse) {
+					if (pane && pane.isExpanded() && pane.getSize() < effectiveMinSize) {
+						pane.resize(effectiveMinSize);
 					}
 				}
 			}
@@ -211,11 +220,14 @@
 				console.log('size', size, minSize);
 
 				if (($showControls || $showHowToUse) && pane.isExpanded()) {
-					if (size < minSize) {
-						pane.resize(minSize);
+					// Use 410px minimum width when $showHowToUse is true
+					const currentMinSize = $showHowToUse ? Math.floor((410 / document.getElementById('chat-container').clientWidth) * 100) : minSize;
+					
+					if (size < currentMinSize) {
+						pane.resize(currentMinSize);
 					}
 
-					if (size < minSize) {
+					if (size < currentMinSize) {
 						localStorage.chatControlsSize = 0;
 					} else {
 						localStorage.chatControlsSize = size;
