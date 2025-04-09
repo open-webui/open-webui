@@ -112,6 +112,8 @@
 
 	let chatIdUnsubscriber: Unsubscriber | undefined;
 
+	let modelUnsubscriber: Unsubscriber | undefined;
+
 	let selectedModels = [''];
 	let atSelectedModel: Model | undefined;
 	let selectedModelIds = [];
@@ -397,10 +399,25 @@
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
-		models.subscribe(async () => {
-			await tick();
-			await initNewChat();
-		});
+
+		const currentUrl = window.location.href;
+
+		// only run if there are no models.
+		// Prevents initNewChat from running if the models are already loaded.
+		// prevents user-initiated modifications to $models from showing a new chat screen.
+		if (!$models.length) {
+			modelUnsubscriber = models.subscribe(async () => {
+				// used to rehydrate modelSelector on load.
+
+				// check model length again to prevent a ui change
+				// if this event is triggered outside of the load sequence.
+				if (currentUrl === window.location.href && !$models.length) {
+					// if the user has navigated elsewhere, ignore this event
+					await tick();
+					await initNewChat();
+				}
+			});
+		}
 
 		if (!$chatId) {
 			chatIdUnsubscriber = chatId.subscribe(async (value) => {
@@ -459,6 +476,7 @@
 
 	onDestroy(() => {
 		chatIdUnsubscriber?.();
+		modelUnsubscriber?.();
 		window.removeEventListener('message', onMessageHandler);
 		$socket?.off('chat-events', chatEventHandler);
 	});
