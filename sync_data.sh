@@ -79,3 +79,13 @@ echo "🔐 파일 소유권 변경 중..."
 sudo chown -R $(whoami) "$LOCAL_BASE_PATH/data"
 sudo chown -R $(whoami) "$LOCAL_BASE_PATH/open_webui/data"
 echo "✅ 파일 소유권 변경 완료!"
+
+# 데이터베이스 파일 권한 설정
+echo "📝 데이터베이스 파일 쓰기 권한 설정 중..."
+if $ONLY_OPEN_WEBUI; then
+  chmod 666 "$LOCAL_BASE_PATH/open_webui/data/webui.db"*
+else
+  chmod 666 "$LOCAL_BASE_PATH/data/webui.db"*
+  chmod 666 "$LOCAL_BASE_PATH/open_webui/data/webui.db"*
+fi
+echo "✅ 데이터베이스 파일 권한 설정 완료!"
