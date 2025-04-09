@@ -127,29 +127,17 @@ jobs:
           Write-Host "Created checksum file with value: $CHECKSUM"
 
       - name: Create GitHub release
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const release = await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: `${process.env.BRANCH_NAME}-${process.env.version}-${process.env.COMMIT_ID}`,
-              body: `Branch build for ${process.env.BRANCH_NAME}\nCommit: ${process.env.COMMIT_ID}`,
-              prerelease: true,
-              draft: false,
-              generate_release_notes: true
-            });
-            console.log(`Created release ${release.data.html_url}`);
-            return release.data.id;
-
-      - name: Upload to GitHub release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             installer/${{ env.INSTALLER_NAME }}
             installer/${{ env.INSTALLER_NAME }}.sha256
           name: ${{ env.BRANCH_NAME }}-${{ env.version }}-${{ env.COMMIT_ID }}
+          prerelease: true
+          generate_release_notes: true
+          body: |
+            Branch build for ${{ env.BRANCH_NAME }}
+            Commit: ${{ env.COMMIT_ID }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
