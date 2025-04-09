@@ -550,7 +550,7 @@ def retry_embedding_request(
         log.warning(f"text length: {len(texts[0])}")
     try:
         r = requests.post(
-            f"{url}/embeddings?api-version=2025-02-01-preview",
+            f"{url}/embeddings?api-version=2024-10-21",
             headers={
                 "Content-Type": "application/json",
                 "api-key": f"{user.ust_api_key}",
