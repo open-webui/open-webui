@@ -1,0 +1,35 @@
+{
+	"name": "feddersen-openwebui",
+	"image": "mcr.microsoft.com/devcontainers/python:3.11-bookworm",
+	"features": {
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "lts"
+		},
+		"ghcr.io/devcontainers/features/azure-cli:1": {},
+		"ghcr.io/prulloac/devcontainer-features/pre-commit:1": {}
+	},
+	"remoteUser": "vscode",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"ms-azuretools.vscode-docker",
+				"github.copilot",
+				"svelte.svelte-vscode",
+				"ms-python.isort",
+				"mikoz.autoflake-extension",
+				"github.vscode-github-actions"
+			],
+			"settings": {
+				"python.linting.enabled": true,
+				"python.formatting.provider": "black",
+				"editor.formatOnSave": true
+			}
+		}
+	},
+	"containerEnv": {
+		"NODE_OPTIONS": "--max-old-space-size=4096"
+	},
+	"runArgs": ["--network=host"]
+}

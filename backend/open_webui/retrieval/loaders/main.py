@@ -13,17 +13,16 @@ from langchain_community.document_loaders import (
     TextLoader,
     UnstructuredEPubLoader,
     UnstructuredExcelLoader,
-    UnstructuredMarkdownLoader,
     UnstructuredPowerPointLoader,
     UnstructuredRSTLoader,
     UnstructuredXMLLoader,
-    YoutubeLoader,
 )
 from langchain_core.documents import Document
 
 from open_webui.retrieval.loaders.mistral import MistralLoader
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+from feddersen.loaders.gemini import GeminiLoader
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -242,9 +241,18 @@ class Loader:
             )
         else:
             if file_ext == "pdf":
-                loader = PyPDFLoader(
-                    file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
-                )
+                if self.kwargs.get("LITELLM_BASE_URL") and self.kwargs.get(
+                    "LITELLM_API_KEY"
+                ):
+                    loader = GeminiLoader(
+                        base_url=self.kwargs.get("LITELLM_BASE_URL"),
+                        api_key=self.kwargs.get("LITELLM_API_KEY"),
+                        file_path=file_path,
+                    )
+                else:
+                    loader = PyPDFLoader(
+                        file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
+                    )
             elif file_ext == "csv":
                 loader = CSVLoader(file_path, autodetect_encoding=True)
             elif file_ext == "rst":

@@ -51,7 +51,13 @@
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-2">
 			<div class=" text-lg font-medium self-center capitalize">
-				{$i18n.t('Citation')}
+				{#each mergedDocuments.slice(0, 1) as document, documentIdx}
+					{#if document.metadata?.middleware_metadata?.title}
+						{document.metadata.middleware_metadata.title}
+					{:else}
+						{$i18n.t('Citation')}
+					{/if}
+				{/each}
 			</div>
 			<button
 				class="self-center"
@@ -76,12 +82,11 @@
 			<div
 				class="flex flex-col w-full dark:text-gray-200 overflow-y-scroll max-h-[22rem] scrollbar-hidden"
 			>
-				{#each mergedDocuments as document, documentIdx}
+				{#each mergedDocuments.slice(0, 1) as document, documentIdx}
 					<div class="flex flex-col w-full">
 						<div class="text-sm font-medium dark:text-gray-300">
 							{$i18n.t('Source')}
 						</div>
-
 						{#if document.source?.name}
 							<Tooltip
 								className="w-fit"
@@ -92,14 +97,24 @@
 								<div class="text-sm dark:text-gray-400 flex items-center gap-2 w-fit">
 									<a
 										class="hover:text-gray-500 dark:hover:text-gray-100 underline grow"
-										href={document?.metadata?.file_id
-											? `${WEBUI_API_BASE_URL}/files/${document?.metadata?.file_id}/content${document?.metadata?.page !== undefined ? `#page=${document.metadata.page + 1}` : ''}`
-											: document.source?.url?.includes('http')
-												? document.source.url
-												: `#`}
+										href={document.source?.url?.includes('http')
+											? document.source.url
+											: document?.metadata?.file_id
+												? `${WEBUI_API_BASE_URL}/files/${document?.metadata?.file_id}/content${document?.metadata?.page !== undefined ? `#page=${document.metadata.page + 1}` : ''}`
+												: '#'}
 										target="_blank"
 									>
-										{decodeURIComponent(document?.metadata?.name ?? document.source.name)}
+										{#if document.metadata.middleware_metadata}
+											{$i18n.t('Item Url')}
+										{:else}
+											{decodeURIComponent(document?.metadata?.name ?? document.source.name)}
+										{/if}
+										{#if document?.metadata?.page}
+											<span class="text-xs text-gray-500 dark:text-gray-400">
+												({$i18n.t('page')}
+												{document.metadata.page + 1})
+											</span>
+										{/if}
 									</a>
 									{#if document?.metadata?.page}
 										<span class="text-xs text-gray-500 dark:text-gray-400">
@@ -109,6 +124,38 @@
 									{/if}
 								</div>
 							</Tooltip>
+							<Tooltip
+								className="w-fit"
+								content={$i18n.t('Open file')}
+								placement="top-start"
+								tippyOptions={{ duration: [500, 0] }}
+							>
+								<div class="text-sm dark:text-gray-400 flex items-center gap-2 w-fit">
+									{#if document.metadata.middleware_metadata?.context_url}
+										<a
+											class="hover:text-gray-500 dark:hover:text-gray-100 underline grow"
+											href={document.metadata.middleware_metadata?.context_url}
+											target="_blank"
+										>
+											{$i18n.t('Context Item Url')}
+										</a>
+										{#if document?.metadata?.page}
+											<span class="text-xs text-gray-500 dark:text-gray-400">
+												({$i18n.t('page')}
+												{document.metadata.page + 1})
+											</span>
+										{/if}
+									{/if}
+								</div>
+							</Tooltip>
+							{#if document.metadata?.middleware_metadata?.date}
+								<div class="text-sm font-medium dark:text-gray-300 mt-2">
+									{$i18n.t('Created at')}
+								</div>
+								<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
+									{new Date(document.metadata.middleware_metadata.date).toLocaleString()}
+								</pre>
+							{/if}
 							{#if showRelevance}
 								<div class="text-sm font-medium dark:text-gray-300 mt-2">
 									{$i18n.t('Relevance')}
@@ -132,11 +179,11 @@
 													</span>
 												{/if}
 												<span class="text-gray-500 dark:text-gray-500">
-													({(document?.distance ?? 0).toFixed(4)})
+													({document.distance.toFixed(4)})
 												</span>
 											{:else}
 												<span class="text-gray-500 dark:text-gray-500">
-													{(document?.distance ?? 0).toFixed(4)}
+													{document.distance.toFixed(4)}
 												</span>
 											{/if}
 										</div>
@@ -153,23 +200,25 @@
 							</div>
 						{/if}
 					</div>
-					<div class="flex flex-col w-full">
-						<div class=" text-sm font-medium dark:text-gray-300 mt-2">
-							{$i18n.t('Content')}
+					{#if !document?.metadata?.middleware_metadata}
+						<div class="flex flex-col w-full">
+							<div class=" text-sm font-medium dark:text-gray-300 mt-2">
+								{$i18n.t('Content')}
+							</div>
+							{#if document.metadata?.html}
+								<iframe
+									class="w-full border-0 h-auto rounded-none"
+									sandbox="allow-scripts allow-forms allow-same-origin"
+									srcdoc={document.document}
+									title={$i18n.t('Content')}
+								></iframe>
+							{:else}
+								<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
+									{document.document}
+								</pre>
+							{/if}
 						</div>
-						{#if document.metadata?.html}
-							<iframe
-								class="w-full border-0 h-auto rounded-none"
-								sandbox="allow-scripts allow-forms allow-same-origin"
-								srcdoc={document.document}
-								title={$i18n.t('Content')}
-							></iframe>
-						{:else}
-							<pre class="text-sm dark:text-gray-400 whitespace-pre-line">
-                {document.document}
-              </pre>
-						{/if}
-					</div>
+					{/if}
 
 					{#if documentIdx !== mergedDocuments.length - 1}
 						<hr class="border-gray-100 dark:border-gray-850 my-3" />

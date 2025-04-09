@@ -16,6 +16,10 @@ elif VECTOR_DB == "pgvector":
     from open_webui.retrieval.vector.dbs.pgvector import PgvectorClient
 
     VECTOR_DB_CLIENT = PgvectorClient()
+elif VECTOR_DB == "pgvector_feddersen":
+    from feddersen.connectors.pgvector.pgvector import FeddersenPGVectorConnector
+
+    VECTOR_DB_CLIENT = FeddersenPGVectorConnector()
 elif VECTOR_DB == "elasticsearch":
     from open_webui.retrieval.vector.dbs.elasticsearch import ElasticsearchClient
 
