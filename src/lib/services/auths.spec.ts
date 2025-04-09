@@ -4,6 +4,8 @@ import { signout } from '$lib/services/auths';
 
 const mocks = vi.hoisted(() => {
 	return {
+		originUrl: 'https://gpt.local/somewhere',
+		ionos_logout_url: 'https://auth.local/logout',
 		userSignOut: vi.fn(),
 	};
 });
@@ -40,8 +42,11 @@ describe('signout()', () => {
 					oidc: 'Test',
 				},
 			},
+			features: {
+				ionos_logout_url: mocks.ionos_logout_url,
+			},
 		});
-		location.href = 'unset';
+		location.href = mocks.originUrl;
 		mocks.userSignOut.mockImplementation(() => ({ status: true }));
 	});
 
@@ -65,7 +70,7 @@ describe('signout()', () => {
 	});
 
 	describe("signout successful", () => {
-		describe('no end_session_endpoint', () => {
+		describe('no OIDC and no ionos_logout_url', () => {
 			beforeEach(() => {
 				mocks.config.set({ /* No oauth configured */ });
 
@@ -83,9 +88,10 @@ describe('signout()', () => {
 			});
 		});
 
-		describe('has no end_session_endpoint with OIDC configured', () => {
+		describe('has no ionos_logout_url with OIDC configured and no end_session_endpoint was sent', () => {
 			beforeEach(() => {
 				mocks.config.set({
+					// No ionos_logout_url
 					oauth: {
 						providers: {
 							oidc: 'Test',
@@ -108,11 +114,12 @@ describe('signout()', () => {
 			});
 		});
 
-		describe('has end_session_endpoint', () => {
+		describe('has no ionos_logout_url with OIDC configured and end_session_endpoint works', () => {
 			const endpoint = 'https://acmeauth.com/logout';
 
 			beforeEach(() => {
 				mocks.config.set({
+					// No ionos_logout_url
 					oauth: {
 						providers: {
 							oidc: 'Test',
@@ -123,9 +130,60 @@ describe('signout()', () => {
 				mocks.userSignOut.mockImplementation(() => ({ status: true, end_session_endpoint: endpoint }));
 			});
 
-			it('should set location to /auth', async () => {
+			it('should remove token from localStorage', async () => {
+				await signout();
+				expect(localStorage.removeItem).toHaveBeenCalledWith('token');
+			});
+
+			it('should set location to the end_session_endpoint', async () => {
 				await signout();
 				expect(location.href).toBe(endpoint);
+			});
+		});
+
+		// Can happen with certain Minikube configurations
+		describe('has no ionos_logout_url with OIDC configured and end_session_endpoint works', () => {
+			const endpoint = 'https://acmeauth.com/logout';
+
+			beforeEach(() => {
+				mocks.config.set({
+					oauth: {
+						providers: {
+							oidc: 'Test',
+						},
+					},
+					features: {
+						// Empty string = effectively disabled
+						ionos_logout_url: ''
+					},
+				});
+
+				mocks.userSignOut.mockImplementation(() => ({ status: true, end_session_endpoint: endpoint }));
+			});
+
+			it('should remove token from localStorage', async () => {
+				await signout();
+				expect(localStorage.removeItem).toHaveBeenCalledWith('token');
+			});
+
+			it('should set location to the end_session_endpoint', async () => {
+				await signout();
+				expect(location.href).toBe(endpoint);
+			});
+		});
+
+		describe('has end_session_endpoint', () => {
+			beforeEach(() => {
+				mocks.userSignOut.mockImplementation(() => ({ status: true, end_session_endpoint: 'https://doesnotmatter.local/' }));
+			});
+
+			it('should set location to ionos_logout_url with redirect_url set to /explore', async () => {
+				const postLogoutUrl = new URL(mocks.originUrl);
+				postLogoutUrl.pathname = '/explore';
+				const logoutUrl = new URL(mocks.ionos_logout_url);
+				logoutUrl.searchParams.set('redirect_url', postLogoutUrl);
+				await signout();
+				expect(location.href).toBe(logoutUrl.toString());
 			});
 
 			it('should remove token from localStorage', async () => {

@@ -11,11 +11,26 @@ export async function signout(response) {
 
 	localStorage.removeItem('token');
 
-	if (get(config)?.oauth?.providers?.oidc && !signoutResponse?.end_session_endpoint) {
+	const isOidcConfigured = !!get(config)?.oauth?.providers?.oidc;
+	const oidcEndSessionEndpoint = signoutResponse?.end_session_endpoint ?? null;
+	const logoutEndpoint = get(config)?.features?.ionos_logout_url ?? null;
+
+	if (isOidcConfigured && !oidcEndSessionEndpoint && !logoutEndpoint) {
 		throw new Error('OIDC configured but no end_session_endpoint sent');
 	}
 
-	const postSignoutLocation = signoutResponse?.end_session_endpoint ?? '/auth';
+	const postLogoutRedirectTarget = new URL('/explore', location.href).toString();
 
-	location.href = postSignoutLocation;
+	if (logoutEndpoint !== null && logoutEndpoint !== '') {
+		const logoutEndpointUrl = new URL(logoutEndpoint);
+
+		// The user should come back to the startpage (explore) after logout finished
+		logoutEndpointUrl.searchParams.set('redirect_url', postLogoutRedirectTarget);
+
+		location.href = logoutEndpointUrl.toString();
+	} else if (oidcEndSessionEndpoint !== null) {
+		location.href = oidcEndSessionEndpoint;
+	} else {
+		location.href = '/auth';
+	}
 };
