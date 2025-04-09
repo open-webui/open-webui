@@ -201,7 +201,7 @@ def save_config(config):
 
 T = TypeVar("T")
 
-PERSISTENT_CONFIG_ENABLED = os.environ.get("PERSISTENT_CONFIG_ENABLED", "True").lower() == "true"
+ENABLE_PERSISTENT_CONFIG = os.environ.get("ENABLE_PERSISTENT_CONFIG", "True").lower() == "true"
 
 class PersistentConfig(Generic[T]):
     def __init__(self, env_name: str, config_path: str, env_value: T):
@@ -209,7 +209,7 @@ class PersistentConfig(Generic[T]):
         self.config_path = config_path
         self.env_value = env_value
         self.config_value = get_config_value(config_path)
-        if self.config_value is not None and PERSISTENT_CONFIG_ENABLED:
+        if self.config_value is not None and ENABLE_PERSISTENT_CONFIG:
             log.info(f"'{env_name}' loaded from the latest database entry")
             self.value = self.config_value
         else:
