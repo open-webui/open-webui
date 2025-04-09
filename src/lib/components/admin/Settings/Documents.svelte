@@ -54,6 +54,8 @@
 	let documentIntelligenceEndpoint = '';
 	let documentIntelligenceKey = '';
 	let showDocumentIntelligenceConfig = false;
+	let mistralApiKey = '';
+	let showMistralOcrConfig = false;
 
 	let textSplitter = '';
 	let chunkSize = 0;
@@ -189,6 +191,10 @@
 			toast.error($i18n.t('Document Intelligence endpoint and key required.'));
 			return;
 		}
+		if (contentExtractionEngine === 'mistral_ocr' && mistralApiKey === '') {
+			toast.error($i18n.t('Mistral OCR API Key required.'));
+			return;
+		}
 
 		if (!BYPASS_EMBEDDING_AND_RETRIEVAL) {
 			await embeddingModelUpdateHandler();
@@ -220,6 +226,9 @@
 				document_intelligence_config: {
 					key: documentIntelligenceKey,
 					endpoint: documentIntelligenceEndpoint
+				},
+				mistral_ocr_config: {
+					api_key: mistralApiKey
 				}
 			}
 		});
@@ -284,6 +293,8 @@
 			documentIntelligenceEndpoint = res.content_extraction.document_intelligence_config.endpoint;
 			documentIntelligenceKey = res.content_extraction.document_intelligence_config.key;
 			showDocumentIntelligenceConfig = contentExtractionEngine === 'document_intelligence';
+			mistralApiKey = res.content_extraction.mistral_ocr_config.api_key;
+			showMistralOcrConfig = contentExtractionEngine === 'mistral_ocr';
 
 			fileMaxSize = res?.file.max_size ?? '';
 			fileMaxCount = res?.file.max_count ?? '';
@@ -335,21 +346,21 @@
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
-				<div class="  mb-2.5 flex flex-col w-full justify-between">
+				<div class="mb-2.5 flex flex-col w-full justify-between">
 					<div class="flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
+						<div class="self-center text-xs font-medium">
 							{$i18n.t('Content Extraction Engine')}
 						</div>
-
 						<div class="">
 							<select
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
 								bind:value={contentExtractionEngine}
 							>
-								<option value="">{$i18n.t('Default')} </option>
+								<option value="">{$i18n.t('Default')}</option>
 								<option value="tika">{$i18n.t('Tika')}</option>
 								<option value="docling">{$i18n.t('Docling')}</option>
 								<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
+								<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
 							</select>
 						</div>
 					</div>
@@ -378,10 +389,16 @@
 								placeholder={$i18n.t('Enter Document Intelligence Endpoint')}
 								bind:value={documentIntelligenceEndpoint}
 							/>
-
 							<SensitiveInput
 								placeholder={$i18n.t('Enter Document Intelligence Key')}
 								bind:value={documentIntelligenceKey}
+							/>
+						</div>
+					{:else if contentExtractionEngine === 'mistral_ocr'}
+						<div class="my-0.5 flex gap-2 pr-2">
+							<SensitiveInput
+								placeholder={$i18n.t('Enter Mistral API Key')}
+								bind:value={mistralApiKey}
 							/>
 						</div>
 					{/if}
