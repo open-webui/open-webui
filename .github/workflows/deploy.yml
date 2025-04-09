@@ -20,9 +20,14 @@ jobs:
 
       - name: Deploy via SSH and Docker Compose
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          echo "Adding known host..."
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
             set -e
-            cd /home/${USER}/hkust-open-webui
+            cd /home/${{ secrets.SSH_USER }}/hkust-open-webui
 
             echo "🔐 Setting up environment variables..."
             echo "📦 Pulling and deploying Docker Compose..."
