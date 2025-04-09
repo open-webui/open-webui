@@ -175,7 +175,7 @@ async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin
         "sm11538@nyu.edu",
         "ms15138@nyu.edu",
         "mb484@nyu.edu",
-        "chetangiridhar96@gmail.com",
+        "cg4532@nyu.edu",
         "jy4421@nyu.edu",
     ]
 
