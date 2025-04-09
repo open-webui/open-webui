@@ -1160,6 +1160,8 @@
 	"Use Gravatar": "Gravatar བེད་སྤྱོད།",
 	"Use groups to group your users and assign permissions.": "ཁྱེད་ཀྱི་བེད་སྤྱོད་མཁན་ཚོགས་པ་བཟོ་བ་དང་དབང་ཚད་སྤྲོད་པར་ཚོགས་པ་བེད་སྤྱོད་གཏོང་བ།",
 	"Use Initials": "མིང་གི་ཡིག་འབྲུ་མགོ་མ་བེད་སྤྱོད།",
+	"Use no proxy to fetch page contents.": "",
+	"Use proxy designated by http_proxy and https_proxy environment variables to fetch page contents.": "",
 	"use_mlock (Ollama)": "use_mlock (Ollama)",
 	"use_mmap (Ollama)": "use_mmap (Ollama)",
 	"user": "བེད་སྤྱོད་མཁན།",

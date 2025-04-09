@@ -1160,6 +1160,8 @@
 	"Use Gravatar": "گراویٹر استعمال کریں",
 	"Use groups to group your users and assign permissions.": "",
 	"Use Initials": "ابتدائیات استعمال کریں",
+	"Use no proxy to fetch page contents.": "",
+	"Use proxy designated by http_proxy and https_proxy environment variables to fetch page contents.": "",
 	"use_mlock (Ollama)": "استعمال کریں_mlock (Ollama)",
 	"use_mmap (Ollama)": "استعمال_mmap (Ollama)",
 	"user": "صارف",

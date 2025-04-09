@@ -1160,6 +1160,8 @@
 	"Use Gravatar": "Gravatar Kullan",
 	"Use groups to group your users and assign permissions.": "Kullanıcılarınızı gruplamak ve izinler atamak için grupları kullanın.",
 	"Use Initials": "Baş Harfleri Kullan",
+	"Use no proxy to fetch page contents.": "",
+	"Use proxy designated by http_proxy and https_proxy environment variables to fetch page contents.": "",
 	"use_mlock (Ollama)": "use_mlock (Ollama)",
 	"use_mmap (Ollama)": "use_mmap (Ollama)",
 	"user": "kullanıcı",
