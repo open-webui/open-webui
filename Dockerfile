@@ -33,10 +33,10 @@ COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
 RUN npm run build
 
-######## Nginx setup ########
-FROM nginx:stable-alpine AS nginx
-COPY ./nginx/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/build /usr/share/nginx/html
+# ######## Nginx setup ########
+# FROM nginx:stable-alpine AS nginx
+# COPY ./nginx/nginx.conf /etc/nginx/conf.d/default.conf
+# COPY --from=build /app/build /usr/share/nginx/html
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
