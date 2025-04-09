@@ -1,9 +1,24 @@
 from enum import Enum
 import os
+from pathlib import Path
 
+####################################
+# Load .env file
+####################################
 
+OPEN_WEBUI_DIR = Path(__file__).parent  # the path containing this file
 
-GOOGLE_SHEET_CREDENTIALS = os.environ['GOOGLE_SHEET_CREDENTIALS']
+BACKEND_DIR = OPEN_WEBUI_DIR.parent  # the path containing this file
+BASE_DIR = BACKEND_DIR.parent  # the path containing the backend/
+
+try:
+    from dotenv import find_dotenv, load_dotenv
+
+    load_dotenv(find_dotenv(str(BASE_DIR / ".env")))
+except ImportError:
+    print("dotenv not installed, skipping...")
+
+GOOGLE_SHEET_CREDENTIALS = os.environ["GOOGLE_SHEET_CREDENTIALS"]
 
 
 class MESSAGES(str, Enum):

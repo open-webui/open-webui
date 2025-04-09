@@ -84,7 +84,12 @@
 		}
 
 		if (floatingButtonsElement) {
-			floatingButtonsElement.closeHandler();
+			// check if closeHandler is defined
+
+			if (typeof floatingButtonsElement?.closeHandler === 'function') {
+				// call the closeHandler function
+				floatingButtonsElement?.closeHandler();
+			}
 		}
 	};
 

@@ -94,7 +94,7 @@ class OAuthManager:
             oauth_claim = auth_manager_config.OAUTH_ROLES_CLAIM
             oauth_allowed_roles = auth_manager_config.OAUTH_ALLOWED_ROLES
             oauth_admin_roles = auth_manager_config.OAUTH_ADMIN_ROLES
-            oauth_roles = None
+            oauth_roles = []
             # Default/fallback role if no matching roles are found
             role = auth_manager_config.DEFAULT_USER_ROLE
 
@@ -104,7 +104,7 @@ class OAuthManager:
                 nested_claims = oauth_claim.split(".")
                 for nested_claim in nested_claims:
                     claim_data = claim_data.get(nested_claim, {})
-                oauth_roles = claim_data if isinstance(claim_data, list) else None
+                oauth_roles = claim_data if isinstance(claim_data, list) else []
 
             log.debug(f"Oauth Roles claim: {oauth_claim}")
             log.debug(f"User roles from oauth: {oauth_roles}")
@@ -140,13 +140,14 @@ class OAuthManager:
         log.debug("Running OAUTH Group management")
         oauth_claim = auth_manager_config.OAUTH_GROUPS_CLAIM
 
+        user_oauth_groups = []
         # Nested claim search for groups claim
         if oauth_claim:
             claim_data = user_data
             nested_claims = oauth_claim.split(".")
             for nested_claim in nested_claims:
                 claim_data = claim_data.get(nested_claim, {})
-            user_oauth_groups = claim_data if isinstance(claim_data, list) else None
+            user_oauth_groups = claim_data if isinstance(claim_data, list) else []
 
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
         all_available_groups: list[GroupModel] = Groups.get_groups()
@@ -160,7 +161,7 @@ class OAuthManager:
 
         # Remove groups that user is no longer a part of
         for group_model in user_current_groups:
-            if group_model.name not in user_oauth_groups:
+            if user_oauth_groups and group_model.name not in user_oauth_groups:
                 # Remove group from user
                 log.debug(
                     f"Removing user from group {group_model.name} as it is no longer in their oauth groups"
@@ -186,8 +187,10 @@ class OAuthManager:
 
         # Add user to new groups
         for group_model in all_available_groups:
-            if group_model.name in user_oauth_groups and not any(
-                gm.name == group_model.name for gm in user_current_groups
+            if (
+                user_oauth_groups
+                and group_model.name in user_oauth_groups
+                and not any(gm.name == group_model.name for gm in user_current_groups)
             ):
                 # Add user to group
                 log.debug(
@@ -234,7 +237,7 @@ class OAuthManager:
             log.warning(f"OAuth callback error: {e}")
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
         user_data: UserInfo = token.get("userinfo")
-        if not user_data or "email" not in user_data:
+        if not user_data or auth_manager_config.OAUTH_EMAIL_CLAIM not in user_data:
             user_data: UserInfo = await client.userinfo(token=token)
         if not user_data:
             log.warning(f"OAuth callback failed, user data is missing: {token}")
@@ -315,15 +318,6 @@ class OAuthManager:
         if not user:
             user_count = Users.get_num_users()
 
-            if (
-                request.app.state.USER_COUNT
-                and user_count >= request.app.state.USER_COUNT
-            ):
-                raise HTTPException(
-                    403,
-                    detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-                )
-
             # If the user does not exist, check if signups are enabled
             if auth_manager_config.ENABLE_OAUTH_SIGNUP:
                 # Check if an existing user with the same email already exists
@@ -332,40 +326,45 @@ class OAuthManager:
                     raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
                 picture_claim = auth_manager_config.OAUTH_PICTURE_CLAIM
-                picture_url = user_data.get(
-                    picture_claim, OAUTH_PROVIDERS[provider].get("picture_url", "")
-                )
-                if picture_url:
-                    # Download the profile image into a base64 string
-                    try:
-                        access_token = token.get("access_token")
-                        get_kwargs = {}
-                        if access_token:
-                            get_kwargs["headers"] = {
-                                "Authorization": f"Bearer {access_token}",
-                            }
-                        async with aiohttp.ClientSession() as session:
-                            async with session.get(picture_url, **get_kwargs) as resp:
-                                if resp.ok:
-                                    picture = await resp.read()
-                                    base64_encoded_picture = base64.b64encode(
-                                        picture
-                                    ).decode("utf-8")
-                                    guessed_mime_type = mimetypes.guess_type(
-                                        picture_url
-                                    )[0]
-                                    if guessed_mime_type is None:
-                                        # assume JPG, browsers are tolerant enough of image formats
-                                        guessed_mime_type = "image/jpeg"
-                                    picture_url = f"data:{guessed_mime_type};base64,{base64_encoded_picture}"
-                                else:
-                                    picture_url = "/user.png"
-                    except Exception as e:
-                        log.error(
-                            f"Error downloading profile image '{picture_url}': {e}"
-                        )
+                if picture_claim:
+                    picture_url = user_data.get(
+                        picture_claim, OAUTH_PROVIDERS[provider].get("picture_url", "")
+                    )
+                    if picture_url:
+                        # Download the profile image into a base64 string
+                        try:
+                            access_token = token.get("access_token")
+                            get_kwargs = {}
+                            if access_token:
+                                get_kwargs["headers"] = {
+                                    "Authorization": f"Bearer {access_token}",
+                                }
+                            async with aiohttp.ClientSession() as session:
+                                async with session.get(
+                                    picture_url, **get_kwargs
+                                ) as resp:
+                                    if resp.ok:
+                                        picture = await resp.read()
+                                        base64_encoded_picture = base64.b64encode(
+                                            picture
+                                        ).decode("utf-8")
+                                        guessed_mime_type = mimetypes.guess_type(
+                                            picture_url
+                                        )[0]
+                                        if guessed_mime_type is None:
+                                            # assume JPG, browsers are tolerant enough of image formats
+                                            guessed_mime_type = "image/jpeg"
+                                        picture_url = f"data:{guessed_mime_type};base64,{base64_encoded_picture}"
+                                    else:
+                                        picture_url = "/user.png"
+                        except Exception as e:
+                            log.error(
+                                f"Error downloading profile image '{picture_url}': {e}"
+                            )
+                            picture_url = "/user.png"
+                    if not picture_url:
                         picture_url = "/user.png"
-                if not picture_url:
+                else:
                     picture_url = "/user.png"
 
                 username_claim = auth_manager_config.OAUTH_USERNAME_CLAIM

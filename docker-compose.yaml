@@ -12,7 +12,6 @@ services:
       - RAG_WEB_SEARCH_RESULT_COUNT=${RAG_WEB_SEARCH_RESULT_COUNT}
       - RAG_WEB_SEARCH_CONCURRENT_REQUESTS=${RAG_WEB_SEARCH_CONCURRENT_REQUESTS}
       - SEARXNG_QUERY_URL=${SEARXNG_QUERY_URL}
-    
     ports:
       - "3000:8080"
     volumes:
@@ -20,34 +19,33 @@ services:
     restart: always
     env_file:
       - .env
-  # searxng:
-  #   container_name: searxng
-  #   image: searxng/searxng:latest
-  #   environment:
-  #     - SEARXNG_UWSGI_WORKERS=${SEARXNG_UWSGI_WORKERS}
-  #     - SEARXNG_UWSGI_THREADS=${SEARXNG_UWSGI_THREADS}
-  #     - SEARXNG_HOSTNAME=${SEARXNG_HOSTNAME}
-  #   ports:
-  #     - "8080:8080"
-  #   volumes:
-  #     - searxng-data:/etc/searxng:rw
-  #     - ./searx-settings.yml:/usr/local/searxng/searx/settings.yml:ro
-  #   env_file:
-  #     - .env
-  #   restart: always
-  #   cap_drop:
-  #     - ALL
-  #   cap_add:
-  #     - CHOWN
-  #     - SETGID
-  #     - SETUID
-  #     - DAC_OVERRIDE
-  #   logging:
-  #     driver: "json-file"
-  #     options:
-  #       max-size: "1m"
-  #       max-file: "1"
+    depends_on:
+      - searxng
+    networks:
+      - shared-network
+
+  searxng:
+    container_name: searxng
+    image: searxng/searxng
+    ports:
+      - "8081:8080"
+    volumes:
+      - searxng-config:/etc/searxng:rw
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - shared-network
 
 volumes:
   open-webui-data:
-  # searxng-data:
+  searxng-config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./searxng
+
+networks:
+  shared-network:
+    external: true
