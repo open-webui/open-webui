@@ -174,7 +174,6 @@ async def update_user_settings_by_session_user(
 
 @router.get("/user/info", response_model=Optional[dict])
 async def get_user_info_by_session_user(user=Depends(get_verified_user)):
-    print(user)
     user = Users.get_user_by_id(user.id)
     if user:
         return user.info
