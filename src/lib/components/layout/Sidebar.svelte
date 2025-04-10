@@ -480,31 +480,32 @@
 			: 'invisible'}"
 	>
 		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
-			<button
-				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-				on:click={() => {
-					showSidebar.set(!$showSidebar);
-				}}
-				aria-label={$i18n.t('Toggle sidebar')}
-				title={$i18n.t('Toggle sidebar')}
-			>
-				<div class=" m-auto self-center">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="2"
-						stroke="currentColor"
-						class="size-5"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
-						/>
-					</svg>
-				</div>
-			</button>
+			<Tooltip content={$i18n.t('Hide sidebar')}>
+				<button
+					class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					on:click={() => {
+						showSidebar.set(!$showSidebar);
+					}}
+					aria-label={$i18n.t('Hide sidebar')}
+				>
+					<div class=" m-auto self-center">
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="2"
+							stroke="currentColor"
+							class="size-5"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
+							/>
+						</svg>
+					</div>
+				</button>
+			</Tooltip>
 
 			<a
 				id="sidebar-new-chat-button"
@@ -860,17 +861,18 @@
 
 		<div class="px-2">
 			<div class="flex flex-col font-primary">
-				{#if $user !== undefined}
-					<UserMenu
-						role={$user.role}
-						on:show={(e) => {
-							if (e.detail === 'archived-chat') {
-								showArchivedChats.set(true);
-							}
-						}}
+				{#if $user !== undefined && $user !== null}
+					<Tooltip
+						content={$user.name ? $user.name + ' ' + $i18n.t('User Menu') : $i18n.t('User Menu')}
 					>
-						<div
-							class="select-none flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+						<UserMenu
+							role={$user?.role}
+							buttonClass="select-none flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							on:show={(e) => {
+								if (e.detail === 'archived-chat') {
+									showArchivedChats.set(true);
+								}
+							}}
 						>
 							<div class="self-center mr-3">
 								<img
@@ -880,9 +882,9 @@
 									draggable="false"
 								/>
 							</div>
-							<div class="self-center font-medium">{$user.name}</div>
-						</div>
-					</UserMenu>
+							<div class=" self-center font-medium">{$user?.name}</div>
+						</UserMenu>
+					</Tooltip>
 				{/if}
 			</div>
 		</div>

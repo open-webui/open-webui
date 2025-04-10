@@ -5,3 +5,4 @@
 </script>
 
 <Chat chatIdProp={$page.params.id} />
+<Help />

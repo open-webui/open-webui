@@ -15,6 +15,7 @@
 	export let show = false;
 	export let role = '';
 	export let className = 'max-w-[240px]';
+	export let buttonClass = '';
 
 	const dispatch = createEventDispatcher();
 </script>
@@ -25,7 +26,7 @@
 		dispatch('change', state);
 	}}
 >
-	<DropdownMenu.Trigger>
+	<DropdownMenu.Trigger class={buttonClass}>
 		<slot />
 	</DropdownMenu.Trigger>
 

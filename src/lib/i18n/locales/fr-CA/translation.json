@@ -1152,5 +1152,9 @@
 	"Your Domain:": "Votre domaine :",
 	"Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.": "Votre contribution entière ira directement au développeur de l'extention ; Open WebUI ne prend aucun pourcentage. Cependant, la plateforme de financement choisie peut avoir ses propres frais.",
 	"Youtube": "YouTube",
-	"Youtube Loader Settings": "Paramètres de l'outil de téléchargement YouTube"
+	"Youtube Loader Settings": "Paramètres de l'outil de téléchargement YouTube",
+	"Show Sidebar": "Montrer la barre latérale",
+	"Hide Sidebar": "Masquer la barre latérale",
+	"Chat Context Menu": "Menu contextuel du chat",
+	"User Menu": "Menu utilisateur"
 }

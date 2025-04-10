@@ -61,18 +61,20 @@
 					? 'md:hidden'
 					: ''} mr-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
 			>
-				<button
-					id="sidebar-toggle-button"
-					class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-					on:click={() => {
-						showSidebar.set(!$showSidebar);
-					}}
-					aria-label="Toggle Sidebar"
-				>
-					<div class=" m-auto self-center">
-						<MenuLines />
-					</div>
-				</button>
+				<Tooltip content={$i18n.t('Show Sidebar')}>
+					<button
+						id="sidebar-toggle-button"
+						class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+						on:click={() => {
+							showSidebar.set(!$showSidebar);
+						}}
+						aria-label="Show Sidebar"
+					>
+						<div class=" m-auto self-center">
+							<MenuLines />
+						</div>
+					</button>
+				</Tooltip>
 			</div>
 
 			<div
@@ -98,27 +100,29 @@
 							showDownloadChatModal = !showDownloadChatModal;
 						}}
 					>
-						<button
-							class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							id="chat-context-menu-button"
-						>
-							<div class=" m-auto self-center">
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="1.5"
-									stroke="currentColor"
-									class="size-5"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
-									/>
-								</svg>
-							</div>
-						</button>
+						<Tooltip content={$i18n.t('Chat Context Menu')}>
+							<button
+								class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+								id="chat-context-menu-button"
+							>
+								<div class=" m-auto self-center">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+										class="size-5"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M6.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM12.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0ZM18.75 12a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
+										/>
+									</svg>
+								</div>
+							</button>
+						</Tooltip>
 					</Menu>
 				{:else if $mobile && ($user.role === 'admin' || $user?.permissions.chat?.controls)}
 					<Tooltip content={$i18n.t('Controls')}>

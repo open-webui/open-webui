@@ -253,40 +253,55 @@
 			/>
 		</div>
 	{:else}
-		<a
-			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
-			confirmEdit
-				? 'bg-gray-200 dark:bg-gray-900'
-				: selected
-					? 'bg-gray-100 dark:bg-gray-950'
-					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
-			href="/c/{id}"
-			on:click={() => {
-				dispatch('select');
-
-				if ($mobile) {
-					showSidebar.set(false);
-				}
+		<Tooltip
+			content={title}
+			placement="bottom-start"
+			popperOptions={{
+				modifiers: [
+					{
+						name: 'offset',
+						options: {
+							offset: ({ reference }) => [reference.width / 2, 4]
+						}
+					}
+				]
 			}}
-			on:dblclick={() => {
-				chatTitle = title;
-				confirmEdit = true;
-			}}
-			on:mouseenter={(e) => {
-				mouseOver = true;
-			}}
-			on:mouseleave={(e) => {
-				mouseOver = false;
-			}}
-			on:focus={(e) => {}}
-			draggable="false"
 		>
-			<div class=" flex self-center flex-1 w-full">
-				<div class=" text-left self-center overflow-hidden w-full h-[20px]">
-					{title}
+			<a
+				class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
+				confirmEdit
+					? 'bg-gray-200 dark:bg-gray-900'
+					: selected
+						? 'bg-gray-100 dark:bg-gray-950'
+						: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+				href="/c/{id}"
+				on:click={() => {
+					dispatch('select');
+
+					if ($mobile) {
+						showSidebar.set(false);
+					}
+				}}
+				on:dblclick={() => {
+					chatTitle = title;
+					confirmEdit = true;
+				}}
+				on:mouseenter={(e) => {
+					mouseOver = true;
+				}}
+				on:mouseleave={(e) => {
+					mouseOver = false;
+				}}
+				on:focus={(e) => {}}
+				draggable="false"
+			>
+				<div class=" flex self-center flex-1 w-full">
+					<div dir="auto" class="text-left self-center overflow-hidden w-full h-[20px]">
+						{title}
+					</div>
 				</div>
-			</div>
-		</a>
+			</a>
+		</Tooltip>
 	{/if}
 
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -294,9 +309,7 @@
 		class="
         {id === $chatId || confirmEdit
 			? 'from-gray-200 dark:from-gray-900'
-			: selected
-				? 'from-gray-100 dark:from-gray-950'
-				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
+			: 'from-gray-100 dark:from-gray-950'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
 			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-gradient-to-l from-80%

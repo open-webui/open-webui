@@ -106,7 +106,7 @@
 
 					{#if message.timestamp}
 						<div
-							class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
+							class=" self-center text-xs text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 						>
 							<Tooltip content={dayjs(message.timestamp * 1000).format('dddd, DD MMMM YYYY HH:mm')}>
 								<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
@@ -249,7 +249,7 @@
 									</button>
 
 									<div class="text-sm tracking-widest font-semibold self-center dark:text-gray-100">
-										{siblings.indexOf(message.id) + 1}/{siblings.length}
+										{siblings.indexOf(message.id) + 1} of {siblings.length}
 									</div>
 
 									<button
@@ -279,7 +279,7 @@
 						{#if !readOnly}
 							<Tooltip content={$i18n.t('Edit')} placement="bottom">
 								<button
-									class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
+									class="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition edit-user-message-button"
 									on:click={() => {
 										editMessageHandler();
 									}}
@@ -304,7 +304,7 @@
 
 						<Tooltip content={$i18n.t('Copy')} placement="bottom">
 							<button
-								class="invisible group-hover:visible p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+								class=" p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 								on:click={() => {
 									copyToClipboard(message.content);
 								}}
@@ -329,7 +329,7 @@
 						{#if !isFirstMessage && !readOnly}
 							<Tooltip content={$i18n.t('Delete')} placement="bottom">
 								<button
-									class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition"
+									class=" p-1 rounded dark:hover:text-white hover:text-black transition"
 									on:click={() => {
 										deleteMessageHandler();
 									}}
@@ -378,7 +378,7 @@
 									</button>
 
 									<div class="text-sm tracking-widest font-semibold self-center dark:text-gray-100">
-										{siblings.indexOf(message.id) + 1}/{siblings.length}
+										{siblings.indexOf(message.id) + 1} of {siblings.length}
 									</div>
 
 									<button
