@@ -18,6 +18,7 @@ from langchain_core.utils.function_calling import convert_to_openai_function
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
 from open_webui.utils.plugin import load_tools_module_by_id
+from open_webui.env import AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA
 
 import copy
 
@@ -399,7 +400,8 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
 
     error = None
     try:
-        async with aiohttp.ClientSession() as session:
+        timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(url, headers=headers) as response:
                 if response.status != 200:
                     error_body = await response.json()

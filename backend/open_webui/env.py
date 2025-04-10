@@ -422,6 +422,11 @@ else:
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = 10
 
+
+AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = os.environ.get(
+    "AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA", "10"
+)
+
 ####################################
 # OFFLINE_MODE
 ####################################
