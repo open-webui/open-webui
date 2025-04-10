@@ -44,7 +44,7 @@
 	</div>
 
 	<div class=" w-full p-4 px-5 text-gray-700 dark:text-gray-100">
-		<div class=" overflow-y-scroll max-h-96 scrollbar-hidden">
+		<div class=" overflow-y-scroll max-h-140 scrollbar-hidden">
 			<div class="pr-4">
 				<div class="font-semibold text-xl mb-1 dark:text-white">
 					1. 아래 이미지를 눌러서 HKUST API Developer Portal에 접속합니다.
@@ -56,7 +56,7 @@
 				/>
 				</a>
 				<div class="font-semibold text-xl mb-1 dark:text-white">
-					2. HKUST 계정으로 로그인합니다.
+					2. "Azure Active Directory" 버튼을 통해 ITSO 계정으로 HKUST API에 가입합니다.
 				</div>
 				<Image
 					src={'assets/images/hkust_api_guide_2.png'}
