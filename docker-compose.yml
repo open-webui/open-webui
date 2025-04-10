@@ -17,7 +17,7 @@ services:
     # image: ghcr.io/open-webui/open-webui:main
     container_name: open-webui
     volumes:
-      - open-webui:/app/backend/data
+      - ./open-webui-data:/app/backend/data
     # depends_on:
     #   - ollama
     ports:
@@ -36,4 +36,4 @@ services:
 
 volumes:
   ollama: {}
-  open-webui: {}
+  #open-webui: {}

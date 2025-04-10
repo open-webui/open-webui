@@ -309,3 +309,4 @@ cypress/screenshots
 .vscode/settings.json
 
 letsencrypt
+open-webui-data
