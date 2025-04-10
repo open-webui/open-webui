@@ -1,6 +1,6 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const uploadFile = async (token: string, file: File) => {
+export const uploadFile = async (token: string, file: File, process: boolean = true) => {
 	const data = new FormData();
 	data.append('file', file);
 	let error = null;

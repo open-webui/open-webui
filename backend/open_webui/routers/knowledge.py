@@ -9,6 +9,7 @@ from open_webui.models.knowledge import (
     KnowledgeResponse,
     KnowledgeUserResponse,
 )
+from open_webui.utils.parser import PARSER_TYPE
 from open_webui.models.files import Files, FileModel
 from open_webui.routers.retrieval import (
     process_file,
@@ -253,7 +254,6 @@ def add_file_to_knowledge_by_id(
         form_data: KnowledgeFileIdForm,
         user=Depends(get_verified_user),
 ):
-    print(">>>>> ADDING NEW KNOWLEDGE")
     knowledge = Knowledges.get_knowledge_by_id(id=id)
 
     if not knowledge:
@@ -284,23 +284,37 @@ def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
         )
 
-    # Add content to the vector database
-    try:
-        process_file(
-            request,
-            ProcessFileForm(file_id=form_data.file_id, collection_name=id),
-            user=user,
-        )
-    except Exception as e:
-        log.debug(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
+    parsers = get_parsers_by_type(request, PARSER_TYPE.FILE)
+    # content is the raw data and not to be used in collection
+    content_keys = [k for k in file.data.keys() if k != 'content']
+
+    assert 'content' in file.data.keys()
+    assert len(content_keys) > 0
+
+    for key in content_keys:
+        content = file.data[key]
+
+        assert 'texts' in content.keys()
+        assert 'embeddings' in content.keys()
+        assert 'metadatas' in content.keys()
+
+        for parser in parsers:
+            parser.store(request,
+                         id,
+                         content['texts'],
+                         content['embeddings'],
+                         content['metadatas'])
 
     if knowledge:
         data = knowledge.data or {}
         file_ids = data.get("file_ids", [])
+
+        Files.update_file_metadata_by_id(
+            file.id,
+            {
+                "collection_name": id,
+            },
+        )
 
         if form_data.file_id not in file_ids:
             file_ids.append(form_data.file_id)
@@ -408,8 +422,6 @@ def remove_file_from_knowledge_by_id(
         form_data: KnowledgeFileIdForm,
         user=Depends(get_verified_user),
 ):
-    print("FILE DELETE")
-    print(request)
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
@@ -486,8 +498,6 @@ def remove_file_from_knowledge_by_id(
 async def delete_knowledge_by_id(request: Request,
                                  id: str,
                                  user=Depends(get_verified_user)):
-    print("REQUEST")
-    print(request)
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(

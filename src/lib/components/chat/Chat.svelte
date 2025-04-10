@@ -544,6 +544,7 @@
 
 			// Upload file to server
 			console.log('Uploading file to server...');
+			console.log("CHHHHHHHHHHHHHHHHAAAAAT")
 			const uploadedFile = await uploadFile(localStorage.token, file);
 
 			if (!uploadedFile) {

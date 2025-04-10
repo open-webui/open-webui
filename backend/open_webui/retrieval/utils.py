@@ -92,7 +92,7 @@ def get_doc(collection_name: str, user: UserModel = None):
         result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
 
         if result:
-            log.info(f"query_doc:result {result.ids} {result.metadatas}")
+            log.info(f"get_doc:result {result.ids} {result.metadatas}")
 
         return result
     except Exception as e:
@@ -236,6 +236,8 @@ def query_collection(
     k: int,
 ) -> dict:
     results = []
+    print("<<<<< QUERIES:")
+    print(queries)
     for query in queries:
         query_embedding = embedding_function(query)
         for collection_name in collection_names:
@@ -310,6 +312,11 @@ def get_embedding_function(
     key,
     embedding_batch_size,
 ):
+    print("INFO *************************")
+    print(embedding_engine)
+    print(embedding_model)
+    print(embedding_function)
+
     if embedding_engine == "":
         return lambda query, user=None: embedding_function.encode(query).tolist()
     elif embedding_engine in ["ollama", "openai"]:

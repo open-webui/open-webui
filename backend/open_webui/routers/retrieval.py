@@ -755,8 +755,6 @@ async def update_query_settings(
 class ProcessFileForm(BaseModel):
     file_id: str
     content: Optional[str] = None
-    collection_name: Optional[str] = None
-
 
 @router.post("/process/file")
 def process_file(
@@ -766,22 +764,14 @@ def process_file(
 ):
     try:
         file = Files.get_file_by_id(form_data.file_id)
-
-        collection_name = form_data.collection_name
-
-        if collection_name is None:
-            collection_name = f"file-{file.id}"
+        collection_name = f"file-{file.id}"
 
         if form_data.content:
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
 
-            try:
-                # /files/{file_id}/data/content/update
-                VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
-            except:
-                # Audio file upload pipeline
-                pass
+            # /files/{file_id}/data/content/update
+            VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
 
             docs = [
                 Document(
@@ -797,37 +787,7 @@ def process_file(
             ]
 
             text_content = form_data.content
-        elif form_data.collection_name:
-            # Check if the file has already been processed and save the content
-            # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
-            result = VECTOR_DB_CLIENT.query(
-                collection_name=f"file-{file.id}", filter={"file_id": file.id}
-            )
-
-            if result is not None and len(result.ids[0]) > 0:
-                docs = [
-                    Document(
-                        page_content=result.documents[0][idx],
-                        metadata=result.metadatas[0][idx],
-                    )
-                    for idx, id in enumerate(result.ids[0])
-                ]
-            else:
-                docs = [
-                    Document(
-                        page_content=file.data.get("content", ""),
-                        metadata={
-                            **file.meta,
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            "source": file.filename,
-                        },
-                    )
-                ]
-
-            text_content = file.data.get("content", "")
         else:
             # Process the file and save the content
             # Usage: /files/
@@ -841,6 +801,8 @@ def process_file(
                     DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                     DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
                 )
+
+                # doc's already stored so it can be hashed and added to knowledge
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path
                 )
@@ -874,45 +836,50 @@ def process_file(
             text_content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {text_content}")
+        hash = calculate_sha256_string(text_content)
+
+        Files.update_file_hash_by_id(file.id, hash)
         Files.update_file_data_by_id(
             file.id,
             {"content": text_content},
         )
+        Files.update_file_metadata_by_id(
+            file.id,
+            {
+                "collection_name": collection_name,
+            },
+        )
 
-        hash = calculate_sha256_string(text_content)
-        Files.update_file_hash_by_id(file.id, hash)
         parsers = get_parsers_by_type(request, PARSER_TYPE.FILE)
 
         if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
             try:
                 for parser in parsers:
-                    result = parser.save_docs_to_vector_db(
+                    result_dict = parser.parse(
                         request,
                         docs=docs,
-                        collection_name=collection_name,
                         metadata={
                             "file_id": file.id,
                             "name": file.filename,
                             "hash": hash,
                         },
-                        add=(True if form_data.collection_name else False),
                         user=user,
+                        file_path=file.path
                     )
 
-                    if result:
-                        Files.update_file_metadata_by_id(
-                            file.id,
-                            {
-                                "collection_name": collection_name,
-                            },
-                        )
+                    Files.update_file_data_by_id(
+                        file.id,
+                        {f"parser_{parser.name}_content": result_dict},
+                    )
 
-                        return {
-                            "status": True,
-                            "collection_name": collection_name,
-                            "filename": file.filename,
-                            "content": text_content,
-                        }
+                    parser.store(request, collection_name, result_dict['texts'], result_dict['embeddings'], result_dict['metadatas'])
+
+                    return {
+                        "status": True,
+                        "collection_name": collection_name,
+                        "filename": file.filename,
+                        "content": text_content,
+                    }
             except Exception as e:
                 raise e
         else:
@@ -1000,9 +967,17 @@ def process_youtube_video(
         parsers = get_parsers_by_type(request, PARSER_TYPE.YOUTUBE)
 
         for parser in parsers:
-            parser.save_docs_to_vector_db(
-                request, docs, collection_name, overwrite=True, user=user
+            result_dict = parser.parse(
+                request,
+                docs=docs,
+                user=user,
             )
+
+            parser.store(request,
+                         collection_name,
+                         result_dict['texts'],
+                         result_dict['embeddings'],
+                         result_dict['metadatas'])
 
         return {
             "status": True,
@@ -1042,15 +1017,22 @@ def process_web(
         docs = loader.load()
         content = " ".join([doc.page_content for doc in docs])
 
-
-
         log.debug(f"text_content: {content}")
 
         if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             parsers = get_parsers_by_type(request, PARSER_TYPE.WEB_CONTENT)
             for parser in parsers:
-                parser.save_docs_to_vector_db(
-                    request, docs, collection_name, overwrite=True, user=user)
+                result_dict = parser.parse(
+                    request,
+                    docs=docs,
+                    user=user,
+                )
+
+                parser.store(request,
+                             collection_name,
+                             result_dict['texts'],
+                             result_dict['embeddings'],
+                             result_dict['metadatas'])
 
         else:
             collection_name = None
@@ -1323,14 +1305,19 @@ async def process_web_search(
             # TODO: ENABLE
             parsers = get_parsers_by_type(request, PARSER_TYPE.WEB_SEARCH)
             for parser in parsers:
-                await run_in_threadpool(
-                    parser.save_docs_to_vector_db,
+
+                # TODO: this was originally async here, does it need to be again?
+                result_dict = parser.parse(
                     request,
-                    docs,
-                    collection_name,
-                    overwrite=True,
+                    docs=docs,
                     user=user,
                 )
+
+                parser.store(request,
+                             collection_name,
+                             result_dict['texts'],
+                             result_dict['embeddings'],
+                             result_dict['metadatas'])
 
             return {
                 "status": True,
@@ -1575,13 +1562,17 @@ def process_files_batch(
         try:
             parsers = get_parsers_by_type(request, PARSER_TYPE.FILE)
             for parser in parsers:
-                parser.save_docs_to_vector_db(
-                    request=request,
+                result_dict = parser.parse(
+                    request,
                     docs=all_docs,
-                    collection_name=collection_name,
-                    add=True,
                     user=user,
                 )
+
+                parser.store(request,
+                             collection_name,
+                             result_dict['texts'],
+                             result_dict['embeddings'],
+                             result_dict['metadatas'])
 
             # Update all files with collection name
             for result in results:
