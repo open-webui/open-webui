@@ -1076,7 +1076,7 @@
 	"This will reset the knowledge base and sync all files. Do you wish to continue?": "Это сбросит базу знаний и синхронизирует все файлы. Хотите продолжить?",
 	"Thorough explanation": "Подробное объяснение",
 	"Thought for {{DURATION}}": "Рассуждаю {{DURATION}}",
-	"Thought for {{DURATION}} seconds": "Рассуждаю {{DURATION}} секунд(ы)",
+	"Thought for {{DURATION}} seconds": "Рассуждал {{DURATION}} секунд",
 	"Tika": "Tika",
 	"Tika Server URL required.": "Требуется URL-адрес сервера Tika.",
 	"Tiktoken": "",
