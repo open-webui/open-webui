@@ -1,6 +1,6 @@
 {
-  "name": "Open WebUI",
-  "short_name": "WebUI",
+  "name": "ContextOps AI",
+  "short_name": "ContextOps",
   "icons": [
     {
       "src": "/static/web-app-manifest-192x192.png",
