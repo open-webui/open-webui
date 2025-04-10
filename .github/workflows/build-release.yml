@@ -216,6 +216,14 @@ jobs:
           # Copy the installer executable
           Copy-Item "installer/$env:INSTALLER_NAME" -Destination "installer/package/"
           
+          # Copy the .env.example file
+          if (Test-Path -Path ".env.example") {
+            Write-Host "Copying .env.example to package"
+            Copy-Item -Path ".env.example" -Destination "installer/package/"
+          } else {
+            Write-Host "WARNING: .env.example not found in root directory"
+          }
+          
           # Copy the ux_installer directory with install.py
           if (Test-Path -Path "installer/ux_installer") {
             Write-Host "Copying ux_installer directory to package"
@@ -250,7 +258,7 @@ jobs:
           $ZIP_NAME = "raux-$env:VERSION-setup.zip"
           Compress-Archive -Path "installer/package/*" -DestinationPath "installer/$ZIP_NAME"
           echo "ZIP_NAME=$ZIP_NAME" >> $env:GITHUB_ENV
-          Write-Host "Created zip file: $ZIP_NAME with installer, ux_installer directory, and launcher scripts"
+          Write-Host "Created zip file: $ZIP_NAME with installer, .env.example, ux_installer directory, and launcher scripts"
       - name: Upload installer to GitHub release
         if: success()
         uses: softprops/action-gh-release@v1
