@@ -2498,6 +2498,24 @@ AUDIO_STT_MODEL = PersistentConfig(
     os.getenv("AUDIO_STT_MODEL", ""),
 )
 
+AUDIO_STT_AZURE_API_KEY = PersistentConfig(
+    "AUDIO_STT_AZURE_API_KEY",
+    "audio.stt.azure.api_key",
+    os.getenv("AUDIO_STT_AZURE_API_KEY", ""),
+)
+
+AUDIO_STT_AZURE_REGION = PersistentConfig(
+    "AUDIO_STT_AZURE_REGION",
+    "audio.stt.azure.region",
+    os.getenv("AUDIO_STT_AZURE_REGION", ""),
+)
+
+AUDIO_STT_AZURE_LOCALES = PersistentConfig(
+    "AUDIO_STT_AZURE_LOCALES",
+    "audio.stt.azure.locales",
+    os.getenv("AUDIO_STT_AZURE_LOCALES", ""),
+)
+
 AUDIO_TTS_OPENAI_API_BASE_URL = PersistentConfig(
     "AUDIO_TTS_OPENAI_API_BASE_URL",
     "audio.tts.openai.api_base_url",

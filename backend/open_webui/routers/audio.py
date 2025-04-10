@@ -50,6 +50,8 @@ router = APIRouter()
 # Constants
 MAX_FILE_SIZE_MB = 25
 MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
+AZURE_MAX_FILE_SIZE_MB = 200
+AZURE_MAX_FILE_SIZE = AZURE_MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["AUDIO"])
@@ -145,6 +147,9 @@ class STTConfigForm(BaseModel):
     MODEL: str
     WHISPER_MODEL: str
     DEEPGRAM_API_KEY: str
+    AZURE_API_KEY: str
+    AZURE_REGION: str
+    AZURE_LOCALES: str
 
 
 class AudioConfigUpdateForm(BaseModel):
@@ -173,6 +178,9 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "MODEL": request.app.state.config.STT_MODEL,
             "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
             "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
+            "AZURE_API_KEY": request.app.state.config.AUDIO_STT_AZURE_API_KEY,
+            "AZURE_REGION": request.app.state.config.AUDIO_STT_AZURE_REGION,
+            "AZURE_LOCALES": request.app.state.config.AUDIO_STT_AZURE_LOCALES,
         },
     }
 
@@ -199,6 +207,9 @@ async def update_audio_config(
     request.app.state.config.STT_MODEL = form_data.stt.MODEL
     request.app.state.config.WHISPER_MODEL = form_data.stt.WHISPER_MODEL
     request.app.state.config.DEEPGRAM_API_KEY = form_data.stt.DEEPGRAM_API_KEY
+    request.app.state.config.AUDIO_STT_AZURE_API_KEY = form_data.stt.AZURE_API_KEY
+    request.app.state.config.AUDIO_STT_AZURE_REGION = form_data.stt.AZURE_REGION
+    request.app.state.config.AUDIO_STT_AZURE_LOCALES = form_data.stt.AZURE_LOCALES
 
     if request.app.state.config.STT_ENGINE == "":
         request.app.state.faster_whisper_model = set_faster_whisper_model(
@@ -224,6 +235,9 @@ async def update_audio_config(
             "MODEL": request.app.state.config.STT_MODEL,
             "WHISPER_MODEL": request.app.state.config.WHISPER_MODEL,
             "DEEPGRAM_API_KEY": request.app.state.config.DEEPGRAM_API_KEY,
+            "AZURE_API_KEY": request.app.state.config.AUDIO_STT_AZURE_API_KEY,
+            "AZURE_REGION": request.app.state.config.AUDIO_STT_AZURE_REGION,
+            "AZURE_LOCALES": request.app.state.config.AUDIO_STT_AZURE_LOCALES,
         },
     }
 
@@ -606,6 +620,107 @@ def transcribe(request: Request, file_path):
                 except Exception:
                     detail = f"External: {e}"
             raise Exception(detail if detail else "Open WebUI: Server Connection Error")
+
+    elif request.app.state.config.STT_ENGINE == "azure":
+        # Check file exists and size
+        if not os.path.exists(file_path):
+            raise HTTPException(
+                status_code=400,
+                detail="Audio file not found"
+            )
+
+        # Check file size (Azure has a larger limit of 200MB)
+        file_size = os.path.getsize(file_path)
+        if file_size > AZURE_MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File size exceeds Azure's limit of {AZURE_MAX_FILE_SIZE_MB}MB",
+            )
+
+        api_key = request.app.state.config.AUDIO_STT_AZURE_API_KEY
+        region = request.app.state.config.AUDIO_STT_AZURE_REGION
+        locales = request.app.state.config.AUDIO_STT_AZURE_LOCALES
+
+        # IF NO LOCALES, USE DEFAULTS
+        if len(locales) < 2:
+            locales = ['en-US', 'es-ES', 'es-MX', 'fr-FR', 'hi-IN', 
+                       'it-IT','de-DE', 'en-GB', 'en-IN', 'ja-JP', 
+                       'ko-KR', 'pt-BR', 'zh-CN']
+            locales = ','.join(locales)
+
+
+        if not api_key or not region:
+            raise HTTPException(
+                status_code=400,
+                detail="Azure API key and region are required for Azure STT",
+            )
+
+        r = None
+        try:
+            # Prepare the request
+            data = {'definition': json.dumps({
+                                                "locales": locales.split(','),
+                                                "diarization": {"maxSpeakers": 3,"enabled": True}
+                                              } if locales else {}
+                                              )
+            }
+            url = f"https://{region}.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version=2024-11-15"
+            
+            # Use context manager to ensure file is properly closed
+            with open(file_path, 'rb') as audio_file:
+                r = requests.post(
+                    url=url,
+                    files={'audio': audio_file},
+                    data=data,
+                    headers={
+                        'Ocp-Apim-Subscription-Key': api_key,
+                    },
+                )
+
+            r.raise_for_status()
+            response = r.json()
+
+            # Extract transcript from response
+            if not response.get('combinedPhrases'):
+                raise ValueError("No transcription found in response")
+
+            # Get the full transcript from combinedPhrases
+            transcript = response['combinedPhrases'][0].get('text', '').strip()
+            if not transcript:
+                raise ValueError("Empty transcript in response")
+
+            data = {"text": transcript}
+
+            # Save transcript to json file (consistent with other providers)
+            transcript_file = f"{file_dir}/{id}.json"
+            with open(transcript_file, "w") as f:
+                json.dump(data, f)
+
+            log.debug(data)
+            return data
+
+        except (KeyError, IndexError, ValueError) as e:
+            log.exception("Error parsing Azure response")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to parse Azure response: {str(e)}",
+            )
+        except requests.exceptions.RequestException as e:
+            log.exception(e)
+            detail = None
+
+            try:
+                if r is not None and r.status_code != 200:
+                    res = r.json()
+                    if "error" in res:
+                        detail = f"External: {res['error'].get('message', '')}"
+            except Exception:
+                detail = f"External: {e}"
+
+            raise HTTPException(
+                status_code=getattr(r, 'status_code', 500) if r else 500,
+                detail=detail if detail else "Open WebUI: Server Connection Error",
+            )
 
 
 def compress_audio(file_path):
