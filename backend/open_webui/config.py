@@ -2142,6 +2142,18 @@ PERPLEXITY_API_KEY = PersistentConfig(
     os.getenv("PERPLEXITY_API_KEY", ""),
 )
 
+SOUGOU_API_SID = PersistentConfig(
+    "SOUGOU_API_SID",
+    "rag.web.search.sougou_api_sid",
+    os.getenv("SOUGOU_API_SID", ""),
+)
+
+SOUGOU_API_SK = PersistentConfig(
+    "SOUGOU_API_SK",
+    "rag.web.search.sougou_api_sk",
+    os.getenv("SOUGOU_API_SK", ""),
+)
+
 RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     "RAG_WEB_SEARCH_RESULT_COUNT",
     "rag.web.search.result_count",
