@@ -60,7 +60,7 @@ jobs:
               repo: context.repo.repo,
               tag_name: '',
               target_commitish: context.sha,
-              name: `PR #${context.payload.pull_request.number} - v${{ steps.get_version.outputs.version }}`,
+              name: `${{ steps.get_version.outputs.version }}_${context.payload.pull_request.head.ref}_${context.sha.substring(0, 7)}`,
               body: changelog,
               draft: true,
               prerelease: true
@@ -81,7 +81,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: dist/*.whl
-          name: PR #${{ github.event.pull_request.number }} - v${{ steps.get_version.outputs.version }}
+          name: ${{ steps.get_version.outputs.version }}_${{ github.head_ref }}_${{ github.sha }}
           draft: true
           prerelease: true
         env:
@@ -262,7 +262,7 @@ jobs:
             installer/${{ env.ZIP_NAME }}
             installer/${{ env.INSTALLER_NAME }}
             installer/${{ env.INSTALLER_NAME }}.sha256
-          name: PR #${{ github.event.pull_request.number }} - v${{ steps.get_version.outputs.version }}
+          name: ${{ steps.get_version.outputs.version }}_${{ github.head_ref }}_${{ github.sha }}
           draft: true
           prerelease: true
         env:
