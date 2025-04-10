@@ -37,6 +37,10 @@
 	export let chat;
 	export let onClose: Function = () => {};
 
+	export let buttonClass = '';
+	export let ariaLabel = '';
+	export let buttonID = '';
+
 	const getChatAsText = async () => {
 		const history = chat.chat.history;
 		const messages = createMessagesList(history, history.currentId);
@@ -88,6 +92,9 @@
 			onClose();
 		}
 	}}
+	{buttonClass}
+	{ariaLabel}
+	{buttonID}
 >
 	<slot />
 

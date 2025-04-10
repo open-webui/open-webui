@@ -31,6 +31,7 @@
 	import ChatItem from './ChatItem.svelte';
 	import FolderMenu from './Folders/FolderMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	export let open = false;
 
@@ -363,7 +364,7 @@
 		}}
 	>
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<div class="w-full group">
+		<div class="w-full group relative">
 			<button
 				id="folder-{folderId}-button"
 				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 font-medium hover:bg-gray-100 dark:hover:bg-gray-900 transition"
@@ -409,14 +410,14 @@
 						{folders[folderId].name}
 					{/if}
 				</div>
-
-				<button
-					class="absolute z-10 right-2 self-center flex items-center dark:text-gray-300"
-					on:pointerup={(e) => {
-						e.stopPropagation();
-					}}
-				>
+			</button>
+			<div
+				class="absolute top-1/2 -translate-y-1/2 z-10 right-2 self-center flex items-center dark:text-gray-300"
+			>
+				<Tooltip content={$i18n.t('Folder Menu')}>
 					<FolderMenu
+						buttonClass="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
+						ariaLabel={$i18n.t('Folder Menu')}
 						on:rename={() => {
 							editHandler();
 						}}
@@ -426,13 +427,17 @@
 						on:export={() => {
 							exportHandler();
 						}}
+						on:pointerup={(e) => {
+							e.stopPropagation();
+						}}
+						on:click={(e) => {}}
 					>
-						<button class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto" on:click={(e) => {}}>
+						<div>
 							<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
-						</button>
+						</div>
 					</FolderMenu>
-				</button>
-			</button>
+				</Tooltip>
+			</div>
 		</div>
 
 		<div slot="content" class="w-full">

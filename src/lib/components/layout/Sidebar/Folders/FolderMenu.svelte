@@ -12,6 +12,9 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 
+	export let buttonClass = '';
+	export let ariaLabel = '';
+
 	let show = false;
 </script>
 
@@ -22,10 +25,10 @@
 			dispatch('close');
 		}
 	}}
+	{buttonClass}
+	{ariaLabel}
 >
-	<Tooltip content={$i18n.t('More')}>
-		<slot />
-	</Tooltip>
+	<slot />
 
 	<div slot="content">
 		<DropdownMenu.Content

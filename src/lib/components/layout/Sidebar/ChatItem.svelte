@@ -379,60 +379,60 @@
 			</div>
 		{:else}
 			<div class="flex self-center space-x-1 z-10">
-				<ChatMenu
-					chatId={id}
-					cloneChatHandler={() => {
-						cloneChatHandler(id);
-					}}
-					shareHandler={() => {
-						showShareChatModal = true;
-					}}
-					archiveChatHandler={() => {
-						archiveChatHandler(id);
-					}}
-					renameHandler={async () => {
-						chatTitle = title;
-						confirmEdit = true;
+				<Tooltip content={$i18n.t('Chat Menu')}>
+					<ChatMenu
+						ariaLabel={$i18n.t('Chat Menu')}
+						chatId={id}
+						cloneChatHandler={() => {
+							cloneChatHandler(id);
+						}}
+						shareHandler={() => {
+							showShareChatModal = true;
+						}}
+						archiveChatHandler={() => {
+							archiveChatHandler(id);
+						}}
+						renameHandler={async () => {
+							chatTitle = title;
+							confirmEdit = true;
 
-						await tick();
-						const input = document.getElementById(`chat-title-input-${id}`);
-						if (input) {
-							input.focus();
-						}
-					}}
-					deleteHandler={() => {
-						showDeleteConfirm = true;
-					}}
-					onClose={() => {
-						dispatch('unselect');
-					}}
-					on:change={async () => {
-						dispatch('change');
-					}}
-					on:tag={(e) => {
-						dispatch('tag', e.detail);
-					}}
-				>
-					<button
-						aria-label="Chat Menu"
-						class=" self-center dark:hover:text-white transition"
+							await tick();
+							const input = document.getElementById(`chat-title-input-${id}`);
+							if (input) {
+								input.focus();
+							}
+						}}
+						deleteHandler={() => {
+							showDeleteConfirm = true;
+						}}
+						buttonClass="dark:hover:bg-gray-850 rounded-lg touch-auto"
+						onClose={() => {
+							dispatch('unselect');
+						}}
+						on:change={async () => {
+							dispatch('change');
+						}}
+						on:tag={(e) => {
+							dispatch('tag', e.detail);
+						}}
 						on:click={() => {
 							dispatch('select');
 						}}
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
-							/>
-						</svg>
-					</button>
-				</ChatMenu>
-
+						<div class="self-center dark:hover:text-white transition">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 16 16"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
+								/>
+							</svg>
+						</div>
+					</ChatMenu>
+				</Tooltip>
 				{#if id === $chatId}
 					<!-- Shortcut support using "delete-chat-button" id -->
 					<button

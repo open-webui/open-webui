@@ -866,6 +866,9 @@
 						content={$user.name ? $user.name + ' ' + $i18n.t('User Menu') : $i18n.t('User Menu')}
 					>
 						<UserMenu
+							ariaLabel={$user.name
+								? $user.name + ' ' + $i18n.t('User Menu')
+								: $i18n.t('User Menu')}
 							role={$user?.role}
 							buttonClass="select-none flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 							on:show={(e) => {

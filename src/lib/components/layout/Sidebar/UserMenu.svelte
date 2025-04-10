@@ -16,6 +16,7 @@
 	export let role = '';
 	export let className = 'max-w-[240px]';
 	export let buttonClass = '';
+	export let ariaLabel = '';
 
 	const dispatch = createEventDispatcher();
 </script>
@@ -26,7 +27,7 @@
 		dispatch('change', state);
 	}}
 >
-	<DropdownMenu.Trigger class={buttonClass}>
+	<DropdownMenu.Trigger class={buttonClass} aria-label={ariaLabel}>
 		<slot />
 	</DropdownMenu.Trigger>
 
