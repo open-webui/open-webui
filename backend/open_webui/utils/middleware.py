@@ -1653,10 +1653,14 @@ async def process_chat_response(
                                             )
 
                                             if tool_call_index is not None:
-                                                if (
-                                                    len(response_tool_calls)
-                                                    <= tool_call_index
-                                                ):
+                                                # find delta_tool_call in response_tool_calls
+                                                found_response_tool_call = None
+                                                for response_tool_call in response_tool_calls:
+                                                    if response_tool_call.get("index") == tool_call_index:
+                                                      found_response_tool_call = response_tool_call
+                                                      break
+
+                                                if found_response_tool_call is None:
                                                     response_tool_calls.append(
                                                         delta_tool_call
                                                     )
@@ -1671,16 +1675,12 @@ async def process_chat_response(
                                                     )
 
                                                     if delta_name:
-                                                        response_tool_calls[
-                                                            tool_call_index
-                                                        ]["function"][
+                                                        found_response_tool_call["function"][
                                                             "name"
                                                         ] += delta_name
 
                                                     if delta_arguments:
-                                                        response_tool_calls[
-                                                            tool_call_index
-                                                        ]["function"][
+                                                        found_response_tool_call["function"][
                                                             "arguments"
                                                         ] += delta_arguments
 
