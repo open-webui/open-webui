@@ -63,7 +63,22 @@ jobs:
       - name: Download wheel artifact
         uses: actions/download-artifact@v4
         with:
+          pattern: '*.whl'
           path: dist
+          merge-multiple: true
+
+      - name: List downloaded wheel files
+        run: |
+          Write-Host "Listing downloaded wheel files:"
+          Get-ChildItem -Path dist -Filter "*.whl"
+          $WHEEL_FILE = Get-ChildItem -Path dist -Filter "*.whl" | Select-Object -First 1
+          if ($WHEEL_FILE) {
+            echo "WHEEL_FILENAME=$($WHEEL_FILE.Name)" >> $env:GITHUB_ENV
+            Write-Host "Using wheel file: $($WHEEL_FILE.Name)"
+          } else {
+            Write-Host "ERROR: No wheel file found in dist directory!"
+            exit 1
+          }
 
   publish-installer:
     needs: build-and-package
