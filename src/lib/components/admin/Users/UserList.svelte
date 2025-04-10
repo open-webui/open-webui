@@ -8,7 +8,7 @@
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	dayjs.extend(relativeTime);
 
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 
 	import { updateUserRole, getUsers, deleteUserById } from '$lib/apis/users';
 

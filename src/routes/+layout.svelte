@@ -28,7 +28,7 @@
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { Toaster, toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 
 	import { getBackendConfig } from '$lib/apis';
 	import { getSessionUser } from '$lib/apis/auths';
@@ -45,6 +45,8 @@
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import TopRightControls from '$lib/components/layout/TopRightControls.svelte';
+
+	import Toaster from '$lib/components/common/Toaster.svelte';
 
 	setContext('i18n', i18n);
 
@@ -383,14 +385,4 @@
 	{/if}
 {/if}
 
-<Toaster
-	theme={$theme.includes('dark')
-		? 'dark'
-		: $theme === 'system'
-			? window.matchMedia('(prefers-color-scheme: dark)').matches
-				? 'dark'
-				: 'light'
-			: 'light'}
-	richColors
-	position="top-right"
-/>
+<Toaster />

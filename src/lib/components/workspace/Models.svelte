@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { marked } from 'marked';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 	import { onMount, getContext } from 'svelte';

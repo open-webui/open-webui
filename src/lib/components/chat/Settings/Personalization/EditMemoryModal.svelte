@@ -1,6 +1,6 @@
 <script>
 	import { createEventDispatcher, getContext } from 'svelte';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 
 	import { updateMemoryById } from '$lib/apis/memories';
 

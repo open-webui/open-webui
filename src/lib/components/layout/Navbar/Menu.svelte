@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { DropdownMenu } from 'bits-ui';
 	import { getContext } from 'svelte';
 

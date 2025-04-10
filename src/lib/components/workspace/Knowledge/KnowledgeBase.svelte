@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Fuse from 'fuse.js';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { v4 as uuidv4 } from 'uuid';
 	import { PaneGroup, Pane, PaneResizer } from 'paneforge';
 

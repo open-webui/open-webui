@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { tick, getContext, onMount, onDestroy } from 'svelte';

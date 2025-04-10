@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { config, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { updateUserInfo } from '$lib/apis/users';
 	import { getUserPosition } from '$lib/utils';
 	const dispatch = createEventDispatcher();

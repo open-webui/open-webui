@@ -14,7 +14,7 @@
 	import { onMount, createEventDispatcher, getContext, tick } from 'svelte';
 
 	import { formatPythonCode } from '$lib/apis/utils';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');

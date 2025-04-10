@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import dayjs from 'dayjs';
 
 	import { createEventDispatcher } from 'svelte';

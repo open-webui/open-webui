@@ -9,7 +9,7 @@
 	import MessageInput from './MessageInput.svelte';
 	import Messages from './Messages.svelte';
 	import { onDestroy, onMount, tick } from 'svelte';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 
 	export let threadId = null;
 	export let channel = null;

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import dayjs from 'dayjs';
 	import { getContext, createEventDispatcher } from 'svelte';
 

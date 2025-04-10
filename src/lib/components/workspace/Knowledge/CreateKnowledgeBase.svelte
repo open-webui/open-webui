@@ -4,7 +4,7 @@
 	const i18n = getContext('i18n');
 
 	import { createNewKnowledge, getKnowledgeBases } from '$lib/apis/knowledge';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { knowledge } from '$lib/stores';
 	import AccessControl from '../common/AccessControl.svelte';
 

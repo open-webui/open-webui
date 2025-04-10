@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, tick, getContext } from 'svelte';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import AccessControl from '../common/AccessControl.svelte';
 	import { user } from '$lib/stores';
 	import { goto } from '$app/navigation';

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { marked } from 'marked';
 
 	import { getContext, tick, createEventDispatcher } from 'svelte';

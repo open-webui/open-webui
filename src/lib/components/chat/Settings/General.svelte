@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();

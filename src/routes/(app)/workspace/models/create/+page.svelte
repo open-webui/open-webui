@@ -1,6 +1,6 @@
 <script>
 	import { v4 as uuidv4 } from 'uuid';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { goto } from '$app/navigation';
 	import { models } from '$lib/stores';
 

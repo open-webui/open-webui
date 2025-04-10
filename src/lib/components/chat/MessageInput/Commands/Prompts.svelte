@@ -10,7 +10,7 @@
 		getWeekday
 	} from '$lib/utils';
 	import { tick, getContext } from 'svelte';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 
 	const i18n = getContext('i18n');
 

@@ -6,7 +6,7 @@
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	const i18n = getContext('i18n');

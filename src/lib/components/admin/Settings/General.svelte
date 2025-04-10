@@ -13,7 +13,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { config } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
-	import { toast } from 'svelte-sonner';
+	import { toast } from '$lib/utils/toast';
 
 	const i18n = getContext('i18n');
 
