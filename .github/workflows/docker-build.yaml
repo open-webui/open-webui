@@ -9,15 +9,16 @@ on:
     tags:
       - v*
 
+permissions:
+      contents: read
+      packages: write
+
 env:
   REGISTRY: ghcr.io
 
 jobs:
   build-main-image:
     runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
-    permissions:
-      contents: read
-      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -112,9 +113,6 @@ jobs:
 
   build-cuda-image:
     runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
-    permissions:
-      contents: read
-      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -212,9 +210,6 @@ jobs:
 
   build-ollama-image:
     runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
-    permissions:
-      contents: read
-      packages: write
     strategy:
       fail-fast: false
       matrix:
