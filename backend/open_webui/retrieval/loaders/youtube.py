@@ -110,7 +110,7 @@ class YoutubeLoader:
 
         transcript = " ".join(
             map(
-                lambda transcript_piece: transcript_piece["text"].strip(" "),
+                lambda transcript_piece: transcript_piece.text.strip(" "),
                 transcript_pieces,
             )
         )
