@@ -1,0 +1,51 @@
+name: Custom Backend Tests
+description: "Runs unit tests for the backend extensions."
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "uv.lock"
+
+# Only run one workflow at a time
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt --extra-index-url=https://download.pytorch.org/whl/cpu
+
+      - name: Run tests
+        run: cd backend && python -m pytest feddersen/ -k "not integration"

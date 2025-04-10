@@ -181,3 +181,11 @@ skip = '.git*,*.svg,package-lock.json,i18n,*.lock,*.css,*-bundle.js,locales,exam
 check-hidden = true
 # ignore-regex = ''
 ignore-words-list = 'ans'
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: calls the apis (deselect with '-m \"not integration\"')",
+    "serial",
+]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
