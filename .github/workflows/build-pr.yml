@@ -55,6 +55,7 @@ jobs:
       - name: Save wheel as artifact
         uses: actions/upload-artifact@v4
         with:
+          name: wheel
           path: dist/*.whl
           retention-days: 1
 
@@ -98,6 +99,7 @@ jobs:
       - name: Download wheel artifact
         uses: actions/download-artifact@v4
         with:
+          name: wheel
           path: dist
 
       - name: List downloaded wheel files
