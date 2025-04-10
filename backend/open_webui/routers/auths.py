@@ -454,6 +454,13 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             # Disable signup after the first user is created
             request.app.state.config.ENABLE_SIGNUP = False
 
+        # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
+        if len(form_data.password.encode("utf-8")) > 72:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.PASSWORD_TOO_LONG,
+            )
+
         hashed = get_password_hash(form_data.password)
         user = Auths.insert_new_auth(
             form_data.email.lower(),
