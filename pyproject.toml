@@ -125,6 +125,8 @@ dependencies = [
 
     "firecrawl-py==1.12.0",
 
+    "tencentcloud-sdk-python==3.0.1336",
+
     "gcp-storage-emulator>=2024.8.3",
 ]
 readme = "README.md"

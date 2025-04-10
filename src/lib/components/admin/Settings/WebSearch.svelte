@@ -30,7 +30,8 @@
 		'jina',
 		'bing',
 		'exa',
-		'perplexity'
+		'perplexity',
+		'sougou'
 	];
 
 	let youtubeLanguage = 'en';
@@ -404,6 +405,31 @@
 									/>
 								</div>
 							</div>
+							{:else if webConfig.search.engine === 'sougou'}
+								<div class="mb-2.5 flex w-full flex-col">
+									<div>
+										<div class=" self-center text-xs font-medium mb-1">
+											{$i18n.t('Sougou Search API sID')}
+										</div>
+	
+										<SensitiveInput
+											placeholder={$i18n.t('Enter Sougou Search API sID')}
+											bind:value={webConfig.search.sougou_api_sid}
+										/>
+									</div>
+								</div>
+								<div class="mb-2.5 flex w-full flex-col">
+									<div>
+										<div class=" self-center text-xs font-medium mb-1">
+											{$i18n.t('Sougou Search API SK')}
+										</div>
+	
+										<SensitiveInput
+											placeholder={$i18n.t('Enter Sougou Search API SK')}
+											bind:value={webConfig.search.sougou_api_sk}
+										/>
+									</div>
+								</div>
 						{/if}
 					{/if}
 
