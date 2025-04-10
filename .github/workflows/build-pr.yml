@@ -55,7 +55,6 @@ jobs:
       - name: Save wheel as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: wheel-file
           path: dist/*.whl
           retention-days: 1
 
@@ -99,7 +98,6 @@ jobs:
       - name: Download wheel artifact
         uses: actions/download-artifact@v4
         with:
-          name: wheel-file
           path: dist
 
       - name: List downloaded wheel files
@@ -232,9 +230,8 @@ jobs:
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: installer-artifacts
           path: |
-            installer/${{ env.INSTALLER_NAME }}
-            installer/${{ env.INSTALLER_NAME }}.sha256
-            installer/${{ env.ZIP_NAME }}
+            ${{ env.INSTALLER_NAME }}
+            ${{ env.INSTALLER_NAME }}.sha256
+            ${{ env.ZIP_NAME }}
           retention-days: 7
