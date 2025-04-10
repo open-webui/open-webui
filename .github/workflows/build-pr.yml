@@ -1,20 +1,33 @@
-name: Build PR installer
+name: Build and package solution (pr)
 
 on:
-  push:
-    branches-ignore:
-      - main
   pull_request:
-    branches:
-      - main
-  workflow_dispatch:
 
 jobs:
   build-and-package:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: write
+      actions: write
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Check for changes in package.json
+        run: |
+          git diff --cached --diff-filter=d package.json || {
+            echo "No changes to package.json"
+            exit 1
+          }
+
+      - name: Get version number from package.json
+        id: get_version
+        run: |
+          VERSION=$(jq -r '.version' package.json)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - uses: actions/setup-node@v4
         with:
@@ -29,62 +42,97 @@ jobs:
           python -m pip install --upgrade pip
           pip install build
           python -m build .
+          
+      # Save the wheel file as an artifact for the create-installer job
+      - name: Save wheel as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-file
+          path: dist/*.whl
+          retention-days: 1
 
-  build-installer:
+  publish-installer:
     needs: build-and-package
     runs-on: windows-latest
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history to ensure we have all files
 
-      - name: Extract branch name and commit ID
+      - name: List repository contents
         run: |
-          # Extract branch name, replacing / with - for valid filename
-          $BRANCH_NAME = if ($env:GITHUB_HEAD_REF) { $env:GITHUB_HEAD_REF } else { $env:GITHUB_REF -replace '^refs/heads/' }
-          $BRANCH_NAME = $BRANCH_NAME -replace '/', '-'
-          echo "BRANCH_NAME=$BRANCH_NAME" >> $env:GITHUB_ENV
+          Write-Host "Listing repository root contents:"
+          Get-ChildItem -Path .
           
-          # Get short commit ID (first 7 characters)
-          $COMMIT_ID = git rev-parse --short=7 HEAD
-          echo "COMMIT_ID=$COMMIT_ID" >> $env:GITHUB_ENV
-          
-          Write-Host "Branch name: $BRANCH_NAME"
-          Write-Host "Commit ID: $COMMIT_ID"
+          Write-Host "Checking if installer directory exists:"
+          if (Test-Path -Path "installer") {
+            Write-Host "Installer directory exists. Listing contents:"
+            Get-ChildItem -Path "installer"
+          } else {
+            Write-Host "Installer directory does not exist!"
+          }
 
-      - name: Get version number from package.json
+      - name: Create dist directory
+        run: mkdir -p dist
+
+      - name: Get version from package.json
+        id: get_version
         run: |
           $VERSION = (Get-Content package.json | ConvertFrom-Json).version
-          echo "version=$VERSION" >> $env:GITHUB_ENV
-          Write-Host "Version: $VERSION"
+          echo "VERSION=$VERSION" >> $env:GITHUB_ENV
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      # Download the wheel file directly from the artifact
+      - name: Download wheel artifact
+        uses: actions/download-artifact@v4
         with:
-          python-version: '3.10'
+          name: wheel-file
+          path: dist
 
-      - name: Generate version.txt
+      - name: List downloaded wheel files
         run: |
-          python installer/version.py
-          if (Test-Path -Path "version.txt") {
-            Write-Host "version.txt generated successfully"
-            Get-Content -Path "version.txt"
+          Write-Host "Listing downloaded wheel files:"
+          Get-ChildItem -Path dist -Filter "*.whl"
+          $WHEEL_FILE = Get-ChildItem -Path dist -Filter "*.whl" | Select-Object -First 1
+          if ($WHEEL_FILE) {
+            echo "WHEEL_FILENAME=$($WHEEL_FILE.Name)" >> $env:GITHUB_ENV
+            Write-Host "Using wheel file: $($WHEEL_FILE.Name)"
           } else {
-            Write-Host "ERROR: version.txt was not generated!"
+            Write-Host "ERROR: No wheel file found in dist directory!"
             exit 1
           }
 
       - name: Install NSIS
         run: |
+          # Download NSIS installer
           Invoke-WebRequest -UserAgent "Wget" -Uri "https://sourceforge.net/projects/nsis/files/NSIS%203/3.10/nsis-3.10-setup.exe" -OutFile "nsis.exe"
+          
+          # Install NSIS
           Start-Process nsis.exe -ArgumentList '/S' -Wait
+          
+          # Add NSIS to PATH
           echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
+
+      - name: Check for NSIS script
+        run: |
+          $SCRIPT_PATH = "installer/Installer-UX.nsi"
+          if (Test-Path -Path $SCRIPT_PATH) {
+            Write-Host "NSIS script found at $SCRIPT_PATH"
+            Get-Content -Path $SCRIPT_PATH -TotalCount 10  # Show first 10 lines
+          } else {
+            Write-Host "ERROR: NSIS script not found at $SCRIPT_PATH"
+            Write-Host "Current directory: $(Get-Location)"
+            Write-Host "Listing all files in the repository:"
+            Get-ChildItem -Path . -Recurse | Select-Object -ExpandProperty FullName
+          }
 
       - name: Build installer
         run: |
           echo "Building installer with NSIS..."
+          # Use the full path to the script
           $SCRIPT_PATH = "$(Get-Location)\installer\Installer-UX.nsi"
           Write-Host "Using NSIS script at: $SCRIPT_PATH"
           
@@ -103,12 +151,10 @@ jobs:
             if ($INSTALLER_FILES) {
               $INSTALLER_PATH = $INSTALLER_FILES[0].FullName
               Write-Host "Found installer at: $INSTALLER_PATH"
-              
-              $NEW_NAME = "raux-$env:BRANCH_NAME-$env:VERSION-$env:COMMIT_ID-setup.exe"
+              $NEW_NAME = "raux-$env:VERSION-setup.exe"
               $DESTINATION = "installer/$NEW_NAME"
               Move-Item -Path $INSTALLER_PATH -Destination $DESTINATION -Force
               echo "INSTALLER_NAME=$NEW_NAME" >> $env:GITHUB_ENV
-              Write-Host "Renamed installer to: $NEW_NAME"
             } else {
               Write-Host "ERROR: No installer .exe files found in installer directory!"
               exit 1
@@ -121,44 +167,66 @@ jobs:
       - name: Create checksums
         if: success()
         run: |
+          # Create SHA256 checksum file
           $INSTALLER_PATH = "installer/$env:INSTALLER_NAME"
           $CHECKSUM = (Get-FileHash -Path $INSTALLER_PATH -Algorithm SHA256).Hash.ToLower()
           $CHECKSUM | Out-File -FilePath "installer/$env:INSTALLER_NAME.sha256" -Encoding ascii
           Write-Host "Created checksum file with value: $CHECKSUM"
 
-      - name: Create GitHub release
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const release = await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              name: `${process.env.BRANCH_NAME}-${process.env.version}-${process.env.COMMIT_ID}`,
-              body: `Branch build for ${process.env.BRANCH_NAME}\nCommit: ${process.env.COMMIT_ID}`,
-              prerelease: true,
-              draft: false,
-              generate_release_notes: true
-            });
-            console.log(`Created release ${release.data.html_url}`);
-            return release.data.id;
+      - name: Zip installer executable
+        if: success()
+        run: |
+          # First, create a directory to hold all files we want to include in the zip
+          mkdir -p installer/package
+          
+          # Copy the installer executable
+          Copy-Item "installer/$env:INSTALLER_NAME" -Destination "installer/package/"
+          
+          # Copy the ux_installer directory with install.py
+          if (Test-Path -Path "installer/ux_installer") {
+            Write-Host "Copying ux_installer directory to package"
+            Copy-Item -Path "installer/ux_installer" -Destination "installer/package/" -Recurse
+          } else {
+            Write-Host "WARNING: ux_installer directory not found in installer directory"
+          }
+          
+          # Copy the launcher raux scripts
+          if (Test-Path -Path "installer/launch_lemonade.ps1") {
+            Write-Host "Copying launch_lemonade.ps1 to package"
+            Copy-Item -Path "installer/launch_lemonade.ps1" -Destination "installer/package/"
+          } else {
+            Write-Host "WARNING: launch_lemonade.ps1 not found in installer directory"
+          }
 
-      - name: Upload to GitHub release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            installer/${{ env.INSTALLER_NAME }}
-            installer/${{ env.INSTALLER_NAME }}.sha256
-          name: ${{ env.BRANCH_NAME }}-${{ env.version }}-${{ env.COMMIT_ID }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Copy the launcher lemonade scripts
+          if (Test-Path -Path "installer/launch_raux.ps1") {
+            Write-Host "Copying launch_raux.ps1 to package"
+            Copy-Item -Path "installer/launch_raux.ps1" -Destination "installer/package/"
+          } else {
+            Write-Host "WARNING: launch_raux.ps1 not found in installer directory"
+          }
+          
+          if (Test-Path -Path "installer/launch_raux.cmd") {
+            Write-Host "Copying launch_raux.cmd to package"
+            Copy-Item -Path "installer/launch_raux.cmd" -Destination "installer/package/"
+          } else {
+            Write-Host "WARNING: launch_raux.cmd not found in installer directory"
+          }
+          
+          # Create the zip file with all contents
+          $ZIP_NAME = "raux-$env:VERSION-setup.zip"
+          Compress-Archive -Path "installer/package/*" -DestinationPath "installer/$ZIP_NAME"
+          echo "ZIP_NAME=$ZIP_NAME" >> $env:GITHUB_ENV
+          Write-Host "Created zip file: $ZIP_NAME with installer, ux_installer directory, and launcher scripts"
 
-      # Keep artifact upload as backup and for CI system visibility
-      - name: Upload build artifacts
+      - name: Upload artifacts
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: installer-${{ env.BRANCH_NAME }}
+          name: package
           path: |
+            installer/${{ env.ZIP_NAME }}
             installer/${{ env.INSTALLER_NAME }}
             installer/${{ env.INSTALLER_NAME }}.sha256
-          retention-days: 5  # Keep branch builds for 5 days 
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
