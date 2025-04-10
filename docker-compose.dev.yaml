@@ -22,6 +22,8 @@ services:
       - ./static/assets:/app/static/assets
       - ./static/avatars:/app/static/avatars
       - ./static/data:/app/static/data
+      - ./static/favicon:/app/static/favicon
+      - ./static/static:/app/static/static
       - ./vite.config.ts:/app/vite.config.ts
       - ./svelte.config.js:/app/svelte.config.js
       - ./tsconfig.json:/app/tsconfig.json
