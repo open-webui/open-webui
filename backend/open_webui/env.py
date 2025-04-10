@@ -427,6 +427,16 @@ AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = os.environ.get(
     "AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA", "10"
 )
 
+if AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA == "":
+    AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = None
+else:
+    try:
+        AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = int(
+            AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA
+        )
+    except Exception:
+        AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = 10
+
 ####################################
 # OFFLINE_MODE
 ####################################
