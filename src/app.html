@@ -5,7 +5,7 @@
 		<link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96" />
 		<link rel="icon" type="image/svg+xml" href="/favicon/favicon.svg" />
 		<link rel="shortcut icon" href="/favicon/favicon.ico" />
-		<link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+		<link rel="apple-touch-icon" sizes="192x192" href="/favicon/web-app-manifest-192x192.png" />
 		<meta name="apple-mobile-web-app-title" content="IONOS GPT" />
 		<link rel="manifest" href="/favicon/site.webmanifest" />
 		<meta
@@ -88,66 +88,44 @@
 				}
 			</style>
 
-			<img
-				id="logo"
-				style="
-					position: absolute;
-					width: auto;
-					height: 6rem;
-					top: 44%;
-					left: 50%;
-					transform: translateX(-50%);
-				"
-				src="/static/splash.png"
-			/>
-
-			<div
-				style="
-					position: absolute;
-					top: 33%;
-					left: 50%;
-
-					width: 24rem;
-					transform: translateX(-50%);
-
-					display: flex;
-					flex-direction: column;
-					align-items: center;
-				"
-			>
-				<img
-					id="logo-her"
-					style="width: auto; height: 13rem"
-					src="/static/splash.png"
-					class="animate-pulse-fast"
-				/>
-
-				<div style="position: relative; width: 24rem; margin-top: 0.5rem">
-					<div
-						id="progress-background"
-						style="
-							position: absolute;
-							width: 100%;
-							height: 0.75rem;
-
-							border-radius: 9999px;
-							background-color: #fafafa9a;
-						"
-					></div>
-
-					<div
-						id="progress-bar"
-						style="
-							position: absolute;
-							width: 0%;
-							height: 0.75rem;
-							border-radius: 9999px;
-							background-color: #fff;
-						"
-						class="bg-white"
-					></div>
-				</div>
+			<div class="spinner-container">
+				<div class="spinner"></div>
+				<div class="text">Die Neuronen werden aufgewärmt…</div>
 			</div>
+
+			<style>
+			body, html {
+				height: 100%;
+			}
+			.spinner-container {
+				font-family: OpenSans, Arial;
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				align-items: center;
+				width: 100%;
+				height: 100%;
+			}
+			.spinner-container .text {
+				margin-top: 20px;
+			}
+			.spinner {
+			   width: 56px;
+			   height: 56px;
+			   border-radius: 50%;
+			   background: radial-gradient(farthest-side,#1474c4 94%,#0000) top/9px 9px no-repeat,
+			          conic-gradient(#0000 30%,#1474c4);
+			   -webkit-mask: radial-gradient(farthest-side,#0000 calc(100% - 9px),#000 0);
+			   animation: spinner-c7wet2 1s infinite linear;
+			}
+
+			@keyframes spinner-c7wet2 {
+			   100% {
+			      transform: rotate(1turn);
+			   }
+			}
+			</style>
+
 
 			<!-- <span style="position: absolute; bottom: 32px; left: 50%; margin: -36px 0 0 -36px">
 				Footer content
