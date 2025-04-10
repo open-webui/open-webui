@@ -5,15 +5,10 @@ from typing import Optional
 from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
 
-from beyond_the_loop.models.users import Users
-
-from beyond_the_loop.models.companies import CompanyResponse
-
+from beyond_the_loop.models.users import UserResponse, Users
 
 from pydantic import BaseModel, ConfigDict
 
-from sqlalchemy import or_, and_, func
-from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
 
 
@@ -129,13 +124,11 @@ class ModelModel(BaseModel):
 # Forms
 ####################
 
-
-class ModelCompanyResponse(ModelModel):
-    company: Optional[CompanyResponse] = None
-
-
 class ModelResponse(ModelModel):
     pass
+
+class ModelUserResponse(ModelModel):
+    user: Optional[UserResponse] = None
 
 
 class ModelForm(BaseModel):
@@ -179,13 +172,13 @@ class ModelsTable:
         with get_db() as db:
             return [ModelModel.model_validate(model) for model in db.query(Model).all()]
 
-    def get_models(self) -> list[ModelCompanyResponse]:
+    def get_models(self) -> list[ModelUserResponse]:
         with get_db() as db:
             models = []
             for model in db.query(Model).filter(Model.base_model_id != None).all():
                 user = Users.get_user_by_id(model.user_id)
                 models.append(
-                    ModelCompanyResponse.model_validate(
+                    ModelUserResponse.model_validate(
                         {
                             **ModelModel.model_validate(model).model_dump(),
                             "user": user.model_dump() if user else None,
@@ -203,7 +196,7 @@ class ModelsTable:
 
     def get_models_by_user_id(
         self, user_id: str, permission: str = "write"
-    ) -> list[ModelCompanyResponse]:
+    ) -> list[ModelUserResponse]:
         models = self.get_models()
         return [
             model

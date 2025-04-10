@@ -39,6 +39,8 @@
 	export let imageGenerationEnabled = false;
 	export let codeInterpreterEnabled = false;
 	export let webSearchEnabled = false;
+	export let isMagicLoading;
+	export let initNewChatCompleted;
 
 	let models = [];
 
@@ -185,15 +187,20 @@
 					{/if}
 				</div>
 			</div> -->
-			
-			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">	
+
+			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
 				<div class="px-2.5 mb-2.5 flex justify-between">
-					<ModelSelector bind:selectedModels showSetDefault={!history.currentId} />
-					<div class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-[6px] dark:bg-[#272525]">
-						<BookIcon/>
-						<a
-						class="min-w-fit text-[10px] dark:text-[#787878]"
-						href="/workspace/prompts">{$i18n.t('Prompts')}
+					<ModelSelector
+						{initNewChatCompleted}
+						bind:selectedModels
+						showSetDefault={!history.currentId}
+					/>
+					<div
+						class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-md dark:bg-customGray-800"
+					>
+						<BookIcon />
+						<a class="min-w-fit text-xs dark:text-customGray-600" href="/workspace/prompts"
+							>{$i18n.t('Prompts')}
 						</a>
 					</div>
 				</div>
@@ -211,12 +218,16 @@
 					{transparentBackground}
 					{stopResponse}
 					{createMessagePair}
+					{isMagicLoading}
 					placeholder={$i18n.t('How can I help you today?')}
 					on:upload={(e) => {
 						dispatch('upload', e.detail);
 					}}
 					on:submit={(e) => {
 						dispatch('submit', e.detail);
+					}}
+					on:magicPrompt={(e) => {
+						dispatch('magicPrompt', prompt);
 					}}
 				/>
 			</div>

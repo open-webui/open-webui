@@ -49,6 +49,8 @@
 	import InputMenuIcon from '../icons/InputMenuIcon.svelte';
 	import VoiceRecorderIcon from '../icons/VoiceRecorderIcon.svelte';
 	import CallIcon from '../icons/CallIcon.svelte';
+	import MagicSearch from '../icons/MagicSearch.svelte';
+	import LoadingIcon from '../icons/LoadingIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -62,6 +64,7 @@
 
 	export let atSelectedModel: Model | undefined = undefined;
 	export let selectedModels: [''];
+	export let isMagicLoading;
 
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
@@ -354,7 +357,6 @@
 			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
 		}
 	});
-	
 </script>
 
 <FilesOverlay show={dragged} />
@@ -398,12 +400,10 @@
 				<!-- class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white dark:from-gray-900 z-10" -->
 				<div class="w-full relative">
 					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled || ($settings?.webSearch ?? false) === 'always' || imageGenerationEnabled || codeInterpreterEnabled}
-						<div
-							
-						>
+						<div>
 							{#if selectedToolIds.length > 0}
 								<div class="flex items-center justify-between w-full">
-									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
+									<div class="flex items-center gap-2.5 text-base dark:text-gray-500">
 										<div class="pl-1">
 											<span class="relative flex size-2">
 												<span
@@ -435,7 +435,7 @@
 
 							<!-- {#if webSearchEnabled || ($settings?.webSearch ?? false) === 'always'}
 								<div class="flex items-center justify-between w-full">
-									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
+									<div class="flex items-center gap-2.5 text-base dark:text-gray-500">
 										<div class="pl-1">
 											<span class="relative flex size-2">
 												<span
@@ -451,7 +451,7 @@
 
 							<!-- {#if imageGenerationEnabled}
 								<div class="flex items-center justify-between w-full">
-									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
+									<div class="flex items-center gap-2.5 text-base dark:text-gray-500">
 										<div class="pl-1">
 											<span class="relative flex size-2">
 												<span
@@ -467,7 +467,7 @@
 
 							<!-- {#if codeInterpreterEnabled}
 								<div class="flex items-center justify-between w-full">
-									<div class="flex items-center gap-2.5 text-sm dark:text-gray-500">
+									<div class="flex items-center gap-2.5 text-base dark:text-gray-500">
 										<div class="pl-1">
 											<span class="relative flex size-2">
 												<span
@@ -483,7 +483,7 @@
 
 							{#if atSelectedModel !== undefined}
 								<div class="flex items-center justify-between w-full">
-									<div class="pl-[1px] flex items-center gap-2 text-sm dark:text-gray-500">
+									<div class="pl-[1px] flex items-center gap-2 text-base dark:text-gray-500">
 										<img
 											crossorigin="anonymous"
 											alt="model profile"
@@ -535,7 +535,7 @@
 			</div>
 		</div>
 
-		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-[#1E1E1E]'} ">
+		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-customGray-900'} ">
 			<div
 				class="{($settings?.widescreenMode ?? null)
 					? 'max-w-full'
@@ -592,7 +592,7 @@
 							}}
 						>
 							<div
-								class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-600/5 dark:bg-[#272525] dark:text-gray-100"
+								class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-600/5 dark:bg-customGray-800 dark:text-gray-100"
 								dir={$settings?.chatDirection ?? 'LTR'}
 							>
 								{#if files.length > 0}
@@ -684,7 +684,7 @@
 									</div>
 								{/if}
 
-								<div class="px-2.5 min-h-[50px]">
+								<div class="px-2.5 min-h-[60px]">
 									{#if $settings?.richTextInput ?? true}
 										<div
 											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
@@ -1119,11 +1119,11 @@
 											}}
 										>
 											<button
-												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-[#1E1E1E] transition rounded-[6px] p-[3px] outline-none focus:outline-none"
+												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-customGray-900 transition rounded-md p-[3px] outline-none focus:outline-none"
 												type="button"
 												aria-label="More"
 											>
-												<InputMenuIcon/>
+												<InputMenuIcon />
 											</button>
 										</InputMenu>
 
@@ -1132,19 +1132,23 @@
 												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
-															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+															on:click|preventDefault={() => {
+																webSearchEnabled = !webSearchEnabled;
+																imageGenerationEnabled = false;
+																codeInterpreterEnabled = false;
+															}}
 															type="button"
-															class="p-[3px] flex gap-1.5 items-center text-[10px] leading-none rounded-[6px] font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
+															class="p-[3px] flex gap-1.5 items-center text-xs rounded-md font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
-																? 'bg-blue-100 dark:bg-[#272D9899] text-blue-500 dark:text-white'
-																: 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 hover:bg-gray-100 dark:hover:bg-[#1E1E1E]'}"
+																? 'bg-blue-100 dark:bg-customBlue-700/60 text-blue-500 dark:text-white'
+																: 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 hover:bg-gray-100 dark:hover:bg-customGray-900'}"
 														>
-															<WebSearchIcon/>
-															{#if (webSearchEnabled || ($settings?.webSearch ?? false) === 'always')}
-															<span
-																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-																>{$i18n.t('Web Search')}</span
-															> 
+															<WebSearchIcon />
+															{#if webSearchEnabled || ($settings?.webSearch ?? false) === 'always'}
+																<span
+																	class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis mr-0.5"
+																	>{$i18n.t('Web Search')}</span
+																>
 															{/if}
 														</button>
 													</Tooltip>
@@ -1153,19 +1157,22 @@
 												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
 													<Tooltip content={$i18n.t('Generate an image')} placement="top">
 														<button
-															on:click|preventDefault={() =>
-																(imageGenerationEnabled = !imageGenerationEnabled)}
+															on:click|preventDefault={() => {
+																imageGenerationEnabled = !imageGenerationEnabled;
+																codeInterpreterEnabled = false;
+																webSearchEnabled = false;
+															}}
 															type="button"
-															class="p-[3px] flex gap-1.5 items-center text-[10px] leading-none rounded-[6px] font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
-																? 'bg-gray-100 dark:bg-[#272D9899] text-gray-600 dark:text-white'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-[#1E1E1E] '}"
+															class="p-[3px] flex gap-1.5 items-center text-xs rounded-md font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
+																? 'bg-gray-100 dark:bg-customBlue-700/60 text-gray-600 dark:text-white'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-customGray-900 '}"
 														>
-															<ImageGenerateIcon/>
-															{#if (imageGenerationEnabled)}
-															<span
-																class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
-																>{$i18n.t('Image')}</span
-															>
+															<ImageGenerateIcon />
+															{#if imageGenerationEnabled}
+																<span
+																	class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis mr-0.5"
+																	>{$i18n.t('Image')}</span
+																>
 															{/if}
 														</button>
 													</Tooltip>
@@ -1174,17 +1181,20 @@
 												{#if $_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
-															on:click|preventDefault={() =>
-																(codeInterpreterEnabled = !codeInterpreterEnabled)}
+															on:click|preventDefault={() => {
+																codeInterpreterEnabled = !codeInterpreterEnabled;
+																imageGenerationEnabled = false;
+																webSearchEnabled = false;
+															}}
 															type="button"
-															class="p-[3px] flex gap-1.5 items-center text-[10px] leading-none rounded-lg font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
-																? 'bg-gray-100 dark:bg-[#272D9899] text-gray-600 dark:text-white'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-[#1E1E1E] '}"
+															class="p-[3px] flex gap-1.5 items-center text-xs rounded-lg font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
+																? 'bg-gray-100 dark:bg-customBlue-700/60 text-gray-600 dark:text-white'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-customGray-900 '}"
 														>
-															<CodeInterpreterIcon/>
-															{#if (codeInterpreterEnabled)}
+															<CodeInterpreterIcon />
+															{#if codeInterpreterEnabled}
 																<span
-																	class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px] mr-0.5"
+																	class="hidden @sm:block whitespace-nowrap overflow-hidden text-ellipsis mr-0.5"
 																	>{$i18n.t('Code Interpreter')}</span
 																>
 															{/if}
@@ -1197,10 +1207,33 @@
 
 									<div class="self-end flex space-x-1 mr-1 flex-shrink-0">
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
+											<Tooltip content={$i18n.t('Magic prompt')}>
+												<button
+													id="magic-search-button"
+													class={`${isMagicLoading ? 'dark:bg-customBlue-700/60' : ''} text-gray-600 dark:text-gray-300 text-xs leading-none hover:text-gray-700 dark:hover:text-white ${!isMagicLoading? 'dark:hover:bg-customGray-900' : ''}  transition rounded-md py-[3px] px-[5px] mr-0.5 self-center`}
+													type="button"
+													aria-label="Magic Prompt"
+													disabled={prompt === '' || isMagicLoading}
+													on:click|preventDefault={() => {
+														dispatch('magicPrompt', prompt);
+													}}
+												>
+													{#if isMagicLoading}
+														<span class="flex items-center"
+															><LoadingIcon /><span class="ml-1">{$i18n.t('Magic prompt')}</span
+															></span
+														>
+													{:else}
+														<MagicSearch />
+													{/if}
+												</button>
+											</Tooltip>
+										{/if}
+										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
 													id="voice-input-button"
-													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 dark:hover:bg-[#1E1E1E] transition rounded-[6px] p-[3px] mr-0.5 self-center"
+													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 dark:hover:bg-customGray-900 transition rounded-md p-[3px] mr-0.5 self-center"
 													type="button"
 													on:click={async () => {
 														try {
@@ -1230,7 +1263,7 @@
 													}}
 													aria-label="Voice Input"
 												>
-												<VoiceRecorderIcon/>
+													<VoiceRecorderIcon />
 												</button>
 											</Tooltip>
 										{/if}
@@ -1240,10 +1273,7 @@
 												<div class=" flex items-center">
 													<Tooltip content={$i18n.t('Call')}>
 														<button
-															class=" {webSearchEnabled ||
-															($settings?.webSearch ?? false) === 'always'
-																? 'bg-blue-500 text-white hover:bg-blue-400 '
-																: 'bg-black text-white hover:bg-gray-900 dark:bg-transparent dark:text-[#D0CECE] dark:hover:bg-[#1E1E1E]'} transition rounded-[6px] p-[3px]  self-center"
+															class="bg-black text-white hover:bg-gray-900 dark:bg-transparent dark:text-customGray-100 dark:hover:bg-customGray-900 transition rounded-md p-[3px] self-center"
 															type="button"
 															on:click={async () => {
 																if (selectedModels.length > 1) {
@@ -1286,7 +1316,7 @@
 															}}
 															aria-label="Call"
 														>
-															<CallIcon/>
+															<CallIcon />
 														</button>
 													</Tooltip>
 												</div>
@@ -1296,9 +1326,7 @@
 														<button
 															id="send-message-button"
 															class="{!(prompt === '' && files.length === 0)
-																? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
-																	? 'bg-blue-500 text-white hover:bg-blue-400 '
-																	: 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+																? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1 self-center"
 															type="submit"
 															disabled={prompt === '' && files.length === 0}
@@ -1307,7 +1335,7 @@
 																xmlns="http://www.w3.org/2000/svg"
 																viewBox="0 0 16 16"
 																fill="currentColor"
-																class="size-2"
+																class="size-3"
 															>
 																<path
 																	fill-rule="evenodd"
@@ -1323,22 +1351,38 @@
 											<div class=" flex items-center">
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
-														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1"
+														class=" text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full"
 														on:click={() => {
 															stopResponse();
 														}}
 													>
 														<svg
+															width="16"
+															height="16"
+															viewBox="0 0 13 13"
+															fill="none"
 															xmlns="http://www.w3.org/2000/svg"
-															viewBox="0 0 24 24"
-															fill="currentColor"
-															class="size-2"
 														>
 															<path
-																fill-rule="evenodd"
-																d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
-																clip-rule="evenodd"
+																d="M0 6.5C-1.27195e-08 7.35359 0.168127 8.19883 0.494783 8.98744C0.821438 9.77606 1.30023 10.4926 1.90381 11.0962C2.50739 11.6998 3.22394 12.1786 4.01256 12.5052C4.80117 12.8319 5.64641 13 6.5 13C7.35359 13 8.19883 12.8319 8.98744 12.5052C9.77606 12.1786 10.4926 11.6998 11.0962 11.0962C11.6998 10.4926 12.1786 9.77606 12.5052 8.98744C12.8319 8.19883 13 7.35359 13 6.5C13 5.64641 12.8319 4.80117 12.5052 4.01256C12.1786 3.22394 11.6998 2.50739 11.0962 1.90381C10.4926 1.30023 9.77606 0.821438 8.98744 0.494783C8.19883 0.168127 7.35359 0 6.5 0C5.64641 0 4.80117 0.168127 4.01256 0.494783C3.22394 0.821438 2.50739 1.30023 1.90381 1.90381C1.30023 2.50739 0.821438 3.22394 0.494783 4.01256C0.168127 4.80117 -1.27195e-08 5.64641 0 6.5Z"
+																fill="white"
 															/>
+															<g clip-path="url(#clip0_495_25245)">
+																<path
+																	d="M3.79175 4.56483C3.79175 4.3596 3.87327 4.16278 4.01839 4.01766C4.16351 3.87254 4.36033 3.79102 4.56556 3.79102H8.43461C8.63983 3.79102 8.83665 3.87254 8.98177 4.01766C9.12689 4.16278 9.20842 4.3596 9.20842 4.56483V8.43387C9.20842 8.6391 9.12689 8.83592 8.98177 8.98104C8.83665 9.12616 8.63983 9.20768 8.43461 9.20768H4.56556C4.36033 9.20768 4.16351 9.12616 4.01839 8.98104C3.87327 8.83592 3.79175 8.6391 3.79175 8.43387V4.56483Z"
+																	fill="#272525"
+																/>
+															</g>
+															<defs>
+																<clipPath id="clip0_495_25245">
+																	<rect
+																		width="9.28571"
+																		height="9.28571"
+																		fill="white"
+																		transform="translate(1.85718 1.85645)"
+																	/>
+																</clipPath>
+															</defs>
 														</svg>
 													</button>
 												</Tooltip>

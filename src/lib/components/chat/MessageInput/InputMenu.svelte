@@ -94,7 +94,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[220px] rounded-lg px-1 py-1  border-gray-300/30 border dark:border-[#313337] z-50 bg-white dark:bg-[#1E1E1E] dark:text-white shadow"
+			class="w-full max-w-[220px] rounded-lg px-1 py-1  border-gray-300/30 border dark:border-customGray-700 z-50 bg-white dark:bg-customGray-900 dark:text-white shadow"
 			sideOffset={15}
 			alignOffset={-8}
 			side="top"
@@ -150,7 +150,7 @@
 				className="w-full"
 			>
 				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-[10px]  dark:text-[#D0CECE] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818]  rounded-lg {!fileUploadEnabled
+					class="flex gap-2 items-center px-2 py-2 text-xs  dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950  rounded-lg {!fileUploadEnabled
 						? 'opacity-50'
 						: ''}"
 					on:click={() => {
@@ -177,7 +177,7 @@
 				className="w-full"
 			>
 				<DropdownMenu.Item
-					class="flex gap-2 items-center px-3 py-2 text-[10px] dark:text-[#D0CECE] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-[#181818] rounded-lg {!fileUploadEnabled
+					class="flex gap-2 items-center px-2 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-lg {!fileUploadEnabled
 						? 'opacity-50'
 						: ''}"
 					on:click={() => {

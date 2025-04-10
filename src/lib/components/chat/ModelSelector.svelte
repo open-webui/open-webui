@@ -12,6 +12,7 @@
 	export let disabled = false;
 
 	export let showSetDefault = true;
+	export let initNewChatCompleted;
 
 	const saveDefaultModel = async () => {
 		const hasEmptyModel = selectedModels.filter((it) => it === '');
@@ -25,7 +26,7 @@
 		toast.success($i18n.t('Default model updated'));
 	};
 
-	$: if (selectedModels.length > 0 && $models.length > 0) {
+	$: if (initNewChatCompleted && selectedModels.length > 0 && $models.length > 0) {
 		selectedModels = selectedModels.map((model) =>
 			$models.map((m) => m.id).includes(model) ? model : ''
 		);
@@ -33,7 +34,7 @@
 	
 </script>
 
-<div class="flex flex-col items-start dark:bg-[#272525] py-[3px] px-[6px] rounded-[6px] w-fit">
+<div class="flex flex-col items-start dark:bg-customGray-800 py-[3px] px-[6px] rounded-md w-fit">
 	{#each selectedModels as selectedModel, selectedModelIdx}
 		<div class="flex w-full max-w-fit">
 			<div class="overflow-hidden w-full">

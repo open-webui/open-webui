@@ -54,6 +54,8 @@
 				title: _prompt.title,
 				command: _prompt.command,
 				content: _prompt.content,
+				description: _prompt.description,
+				meta: _prompt.meta ?? {tags: []},
 				access_control: null
 			};
 			sessionStorage.removeItem('prompt');

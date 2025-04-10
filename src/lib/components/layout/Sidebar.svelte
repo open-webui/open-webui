@@ -62,6 +62,8 @@
 	import Prompts from '../icons/Prompts.svelte';
 	import PromptMenu from '../workspace/Prompts/PromptMenu.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
+	import ShowSidebarIcon from '../icons/ShowSidebarIcon.svelte';
+	import AddNewFolderDialog from '../common/ConfirmDialog.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -81,6 +83,7 @@
 	let allChatsLoaded = false;
 
 	let folders = {};
+	let newFolderName = '';
 
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
@@ -422,6 +425,8 @@
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
 	});
+
+	let showCreateFolder = false;
 </script>
 
 <ArchivedChatsModal
@@ -470,16 +475,36 @@
 		? 'md:relative w-[260px] max-w-[260px]'
 		: '-translate-x-[260px] w-[0px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-gray-50 text-gray-900 dark:bg-customGray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
+		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-gray-50 text-gray-900 dark:bg-customGray-800 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
         "
 	data-state={$showSidebar}
 >
+	<!-- <button on:click={() => (showCreateFolder = true)}>test</button> -->
+	<AddNewFolderDialog
+		bind:show={showCreateFolder}
+		title="Create New Folder"
+		bind:inputValue={newFolderName}
+		input={true}
+		inputPlaceholder={$i18n.t('Title')}
+		confirmLabel={$i18n.t('Done')}
+		noMessage={true}
+		inputType="input"
+		on:confirm={(e) => {
+			createFolder(e.detail);
+			newFolderName = '';
+		}}
+		on:cancel={() => {
+			newFolderName = '';
+		}}
+	/>
 	<div
 		class="py-2 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
-		<div class="flex align-center justify-between items-center px-2.5 pb-2 border-b border-[#313337] mb-2.5">
+		<div
+			class="flex align-center justify-between items-center px-2.5 pb-2 border-b border-customGray-700 mb-2.5"
+		>
 			<div class="flex flex-col font-primary">
 				{#if $user !== undefined}
 					<UserMenu
@@ -499,45 +524,24 @@
 							<div class=" self-center mr-3">
 								<img
 									src={$user.profile_image_url}
-									class=" max-w-[30px] object-cover rounded-[6px]"
+									class=" max-w-[30px] object-cover rounded-md"
 									alt="User profile"
 								/>
 							</div>
-							<div class=" self-center font-medium text-[13px] mr-1">{$user.name}</div>
+							<div class=" self-center font-medium text-sm mr-1">{$user.name}</div>
 							<ChevronDown className=" size-3" strokeWidth="2.5" />
 						</button>
 					</UserMenu>
 				{/if}
 			</div>
 			<button
-				class=" cursor-pointer flex justify-center items-center w-[25px] h-[25px] rounded-lg hover:bg-gray-100 dark:hover:bg-[#1E1E1E] border border-transparent dark:hover:border-[#313337] transition"
+				class=" cursor-pointer flex justify-center items-center w-[25px] h-[25px] rounded-lg hover:bg-gray-100 dark:hover:bg-customGray-900 border border-transparent dark:hover:border-customGray-700 transition"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
 			>
 				<div class=" m-auto self-center">
-					<svg
-						width="13"
-						height="13"
-						viewBox="0 0 13 13"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-					>
-						<path
-							d="M8.12504 12.3228H4.87504C1.93379 12.3228 0.677124 11.0662 0.677124 8.12492V4.87492C0.677124 1.93367 1.93379 0.677002 4.87504 0.677002H8.12504C11.0663 0.677002 12.323 1.93367 12.323 4.87492V8.12492C12.323 11.0662 11.0663 12.3228 8.12504 12.3228ZM4.87504 1.4895C2.37796 1.4895 1.48962 2.37784 1.48962 4.87492V8.12492C1.48962 10.622 2.37796 11.5103 4.87504 11.5103H8.12504C10.6221 11.5103 11.5105 10.622 11.5105 8.12492V4.87492C11.5105 2.37784 10.6221 1.4895 8.12504 1.4895H4.87504Z"
-							fill="currentColor"
-						/>
-						<path
-							d="M4.875 12.3228C4.65292 12.3228 4.46875 12.1387 4.46875 11.9166V1.08325C4.46875 0.861169 4.65292 0.677002 4.875 0.677002C5.09708 0.677002 5.28125 0.861169 5.28125 1.08325V11.9166C5.28125 12.1387 5.09708 12.3228 4.875 12.3228Z"
-							fill="currentColor"
-						/>
-						<path
-							d="M7.33333 7.99992L6 6.66659L7.33333 5.33325"
-							stroke="currentColor"
-							stroke-width="0.5"
-						/>
-						<path d="M10 6.6665H6" stroke="currentColor" stroke-width="0.5" />
-					</svg>
+					<ShowSidebarIcon />
 				</div>
 			</button>
 		</div>
@@ -556,21 +560,43 @@
 
 		<div class="px-2">
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
-				<div class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-500 hover:text-gray-700 dark:hover:text-white  dark:hover:bg-[#1E1E1E] transition">
-					<Assistans/>
+				<div
+					class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition"
+				>
+					<Assistans />
 					<a
-						class="min-w-fit text-xs"
-						href="/workspace/models">{$i18n.t('Models')}</a
+						class="w-full text-sm"
+						href="/workspace/models"
+						on:click={() => {
+							selectedChatId = null;
+							chatId.set('');
+
+							if ($mobile) {
+								showSidebar.set(false);
+							}
+						}}
+						draggable="false">{$i18n.t('Models')}</a
 					>
 				</div>
 			{/if}
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
-				<div class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-500 hover:text-gray-700 dark:hover:text-white dark:hover:bg-[#1E1E1E] transition">
-					<Knowledge/>
+				<div
+					class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition"
+				>
+					<Knowledge />
 					<a
-						class="min-w-fit text-xs"
+						class="w-full text-sm"
 						href="/workspace/knowledge"
+						on:click={() => {
+							selectedChatId = null;
+							chatId.set('');
+
+							if ($mobile) {
+								showSidebar.set(false);
+							}
+						}}
+						draggable="false"
 					>
 						{$i18n.t('Knowledge')}
 					</a>
@@ -578,20 +604,33 @@
 			{/if}
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
-				<div class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-500 hover:text-gray-700 dark:hover:text-white dark:hover:bg-[#1E1E1E] transition">
-					<Prompts/>
+				<div
+					class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition"
+				>
+					<Prompts />
 					<a
-						class="min-w-fit text-xs"
-						href="/workspace/prompts">{$i18n.t('Prompts')}</a
+						class="w-full text-sm"
+						href="/workspace/prompts"
+						on:click={() => {
+							selectedChatId = null;
+							chatId.set('');
+
+							if ($mobile) {
+								showSidebar.set(false);
+							}
+						}}
+						draggable="false">{$i18n.t('Prompts')}</a
 					>
 				</div>
 			{/if}
 		</div>
 
-		<div class="pl-[14px] pr-[11px] my-2 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
+		<div
+			class="pl-[14px] pr-[11px] my-2 flex justify-between space-x-1 text-gray-600 dark:text-gray-400"
+		>
 			<a
 				id="sidebar-new-chat-button"
-				class="flex justify-center items-center flex-1 rounded-lg text-[10px] px-2 py-1 border border-[#313337] h-[35px] text-right text-gray-850 dark:text-[#ACABAB] dark:hover:text-white dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-[#181818] transition no-drag-region"
+				class="flex justify-center items-center flex-1 rounded-lg text-xs px-2 py-1 border border-customGray-700 h-[35px] text-right text-gray-850 dark:text-customGray-200 dark:hover:text-white dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-customGray-950 transition no-drag-region"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -607,7 +646,7 @@
 				}}
 			>
 				<div class="relative bottom-[0.5px] mr-[6px]">
-					<Plus className="w-[10px] h-[10px]" />
+					<Plus className="w-[12px] h-[12px]" />
 				</div>
 				{$i18n.t('New Chat')}
 			</a>
@@ -648,7 +687,11 @@
 			<Folder
 				collapsible={!search}
 				className="px-2 mt-0.5"
+				typeChats={true}
 				name={$i18n.t('Chats')}
+				on:showAddFolder={() => {
+					showCreateFolder = true;
+				}}
 				onAdd={() => {
 					createFolder();
 				}}
@@ -752,9 +795,7 @@
 							}}
 							name={$i18n.t('Pinned')}
 						>
-							<div
-								class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
-							>
+							<div class="ml-3 pl-1 mt-[1px] flex flex-col overflow-y-auto scrollbar-hidden">
 								{#each $pinnedChats as chat, idx}
 									<ChatItem
 										className=""
@@ -863,7 +904,7 @@
 									}}
 								>
 									<div
-										class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+										class="w-full flex justify-center py-1 text-sm animate-pulse items-center gap-2"
 									>
 										<Spinner className=" size-4" />
 										<div class=" ">Loading...</div>
@@ -871,7 +912,7 @@
 								</Loader>
 							{/if}
 						{:else}
-							<div class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2">
+							<div class="w-full flex justify-center py-1 text-sm animate-pulse items-center gap-2">
 								<Spinner className=" size-4" />
 								<div class=" ">Loading...</div>
 							</div>

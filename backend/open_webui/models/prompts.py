@@ -5,7 +5,7 @@ from open_webui.internal.db import Base, get_db, JSONField
 from beyond_the_loop.models.users import Users, UserResponse
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text, JSON
+from sqlalchemy import BigInteger, Column, String, Text, JSON, Boolean
 
 from open_webui.utils.access_control import has_access
 
@@ -22,6 +22,8 @@ class Prompt(Base):
     title = Column(Text)
     content = Column(Text)
     timestamp = Column(BigInteger)
+    description = Column(Text)
+    prebuilt = Column(Boolean)
 
     access_control = Column(JSON, nullable=True)  # Controls data access levels.
     # Defines access control rules for this entry.
@@ -63,6 +65,8 @@ class PromptModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     meta: Optional[PromptMeta] = None
+    description: Optional[str] = None
+    prebuilt: Optional[bool] = None
 
 ####################
 # Forms
@@ -79,6 +83,7 @@ class PromptForm(BaseModel):
     content: str
     access_control: Optional[dict] = None
     meta: PromptMeta
+    description: Optional[str] = None
 
 
 class PromptsTable:
@@ -140,6 +145,7 @@ class PromptsTable:
             prompt
             for prompt in prompts
             if prompt.user_id == user_id
+            or prompt.prebuilt
             or has_access(user_id, permission, prompt.access_control)
         ]
 
@@ -153,6 +159,7 @@ class PromptsTable:
                 prompt.content = form_data.content
                 prompt.access_control = form_data.access_control
                 prompt.timestamp = int(time.time())
+                prompt.description = form_data.description
                 db.commit()
                 return PromptModel.model_validate(prompt)
         except Exception:

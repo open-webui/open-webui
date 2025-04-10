@@ -3,5 +3,5 @@
 	import Help from '$lib/components/layout/Help.svelte';
 </script>
 
-<Help />
+<!-- <Help /> -->
 <Chat />

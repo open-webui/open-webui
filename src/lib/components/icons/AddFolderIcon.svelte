@@ -1,4 +1,8 @@
-<svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+<script lang="ts">
+	export let className = 'size-4';
+</script>
+<svg class={className} viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
 	<path
 		d="M6.53247 9.34383C6.31039 9.34383 6.12622 9.15966 6.12622 8.93758V6.22925C6.12622 6.00716 6.31039 5.823 6.53247 5.823C6.75455 5.823 6.93872 6.00716 6.93872 6.22925V8.93758C6.93872 9.15966 6.75455 9.34383 6.53247 9.34383Z"
 		fill="currentColor"

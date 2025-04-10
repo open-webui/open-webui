@@ -26,6 +26,7 @@
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
+	import ShowSidebarIcon from '../icons/ShowSidebarIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -43,12 +44,12 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 
-<nav class="sticky top-0 z-30 w-[1px] px-1.5 py-1.5 -mb-8 flex items-center drag-region">
+<nav class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center drag-region h-8">
 	<div
 		class=" bg-gradient-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1] blur"
 	></div>
 
-	<div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
+	<div class=" max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
 		<div class="flex items-center w-full max-w-full">
 			<div
 				class="{$showSidebar
@@ -57,31 +58,32 @@
 			>
 				<button
 					id="sidebar-toggle-button"
-					class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+					class="cursor-pointer flex justify-center items-center w-[25px] h-[25px] rounded-lg hover:bg-gray-100 dark:hover:bg-customGray-900 border border-transparent dark:hover:border-customGray-700 transition"
 					on:click={() => {
 						showSidebar.set(!$showSidebar);
 					}}
 					aria-label="Toggle Sidebar"
 				>
 					<div class=" m-auto self-center">
-						<MenuLines />
+						<ShowSidebarIcon/>
 					</div>
 				</button>
 			</div>
 
-			<!-- <div
+			<div
 				class="flex-1 overflow-hidden max-w-full py-0.5
 			{$showSidebar ? 'ml-1' : ''}
 			"
-			>-->
-				<!-- {#if showModelSelector}
-					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
-				{/if} -->
-			<!-- </div>  -->
+			>
+			
+			<!-- {#if showModelSelector}
+				<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+			{/if} -->
+			</div> 
 
-			<!-- <div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
+			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 				
-				{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
+				<!-- {#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
 					<Menu
 						{chat}
 						{shareEnabled}
@@ -128,8 +130,8 @@
 							</div>
 						</button>
 					</Tooltip>
-				{/if}
-
+				{/if} -->
+<!-- 
 				{#if !$mobile && ($user.role === 'admin' || $user?.permissions.chat?.controls)}
 					<Tooltip content={$i18n.t('Controls')}>
 						<button
@@ -144,12 +146,12 @@
 							</div>
 						</button>
 					</Tooltip>
-				{/if}
+				{/if} -->
 
 				<Tooltip content={$i18n.t('New Chat')}>
 					<button
 						id="new-chat-button"
-						class=" flex {$showSidebar
+						class=" hidden {$showSidebar
 							? 'md:hidden'
 							: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 						on:click={() => {
@@ -163,7 +165,7 @@
 					</button>
 				</Tooltip>
 
-				{#if $user !== undefined}
+				<!-- {#if $user !== undefined}
 					<UserMenu
 						className="max-w-[200px]"
 						role={$user.role}
@@ -187,8 +189,8 @@
 							</div>
 						</button>
 					</UserMenu>
-				{/if}
-			</div> -->
+				{/if} -->
+			</div>
 		</div>
 	</div>
 </nav>

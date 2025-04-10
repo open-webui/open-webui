@@ -43,7 +43,7 @@
 
 	<div>
 		{#if title}
-			<div class=" text-[13px] font-medium mb-0.5 line-clamp-1 capitalize">{title}</div>
+			<div class=" text-xs-plus font-medium mb-0.5 line-clamp-1 capitalize">{title}</div>
 		{/if}
 
 		<div class=" line-clamp-2 text-xs self-center dark:text-gray-300 font-normal">

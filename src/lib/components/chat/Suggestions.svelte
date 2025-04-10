@@ -79,25 +79,25 @@
 	{#if limitedPrompts.length > 0}
 		{#each limitedPrompts as prompt, idx (prompt.id || prompt.content)}
 			<button
-				class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
+				class="waterfall flex flex-col w-1/3 justify-between
 				       px-3 py-3 rounded-xl bg-transparent hover:bg-black/5
-				       dark:bg-[#272525] transition group"
+				       dark:bg-customGray-800 transition group"
 				style="animation-delay: {idx * 60}ms"
 				on:click={() => dispatch('select', prompt.content)}
 			>
 				<div class="flex flex-col text-left">
 					{#if prompt.title && prompt.title[0] !== ''}
 						<div
-							class="font-medium text-[10px] dark:text-[#D0CECE] dark:group-hover:text-gray-200 transition line-clamp-1"
+							class="font-medium text-xs dark:text-customGray-100 dark:group-hover:text-gray-200 transition line-clamp-1"
 						>
 							{prompt.title[0]}
 						</div>
-						<div class="text-xs text-[10px] text-gray-500 dark:text-[#8E8E8E] font-normal line-clamp-1">
+						<div class="text-xs text-gray-500 dark:text-customGray-500 font-normal line-clamp-1">
 							{prompt.title[1]}
 						</div>
 					{:else}
 						<div
-							class="font-medium text-[10px] dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
+							class="font-medium text-xs dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
 						>
 							{prompt.content}
 						</div>

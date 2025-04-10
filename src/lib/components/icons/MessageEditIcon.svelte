@@ -1,4 +1,8 @@
-<svg width="13" height="12" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+<script>
+	export let width = 13;
+	export let height = 12;
+</script>
+<svg width={width} height={height} viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
 	<path
 		d="M8 1.49634L11 4.49634"
 		stroke="currentColor"

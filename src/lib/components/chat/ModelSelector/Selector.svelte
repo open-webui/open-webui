@@ -22,6 +22,9 @@
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 	import { goto } from '$app/navigation';
 	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
+	import StarRating from './IntelligenceRating.svelte';
+	import SpeedRating from './SpeedRating.svelte';
+	import { modelsInfo } from '../../../../data/modelsInfo';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -43,7 +46,7 @@
 	}[] = [];
 
 	export let className = '180px';
-	export let triggerClassName = 'text-[10px]';
+	export let triggerClassName = 'text-xs';
 
 	let show = false;
 
@@ -55,8 +58,12 @@
 
 	let selectedModelIdx = 0;
 
+	const filteredSourceItems = items
+		.filter?.((item) => !item?.model?.name?.toLowerCase()?.includes('arena'))
+		?.filter((item) => item.model?.info?.base_model_id == null);
+
 	const fuse = new Fuse(
-		items.map((item) => {
+		filteredSourceItems.map((item) => {
 			const _item = {
 				...item,
 				modelName: item.model?.name,
@@ -75,7 +82,7 @@
 		? fuse.search(searchValue).map((e) => {
 				return e.item;
 			})
-		: items;
+		: filteredSourceItems;
 
 	const pullModelHandler = async () => {
 		const sanitizedModelTag = searchValue.trim().replace(/^ollama\s+(run|pull)\s+/, '');
@@ -219,9 +226,7 @@
 			toast.success(`${model} download has been canceled`);
 		}
 	};
-	$: {
-		console.log(filteredItems);
-	}
+
 	function getModelIcon(label: string): string {
 		const lower = label.toLowerCase();
 
@@ -229,14 +234,29 @@
 			return '/perplexity-ai-icon.svg';
 		} else if (lower.includes('gpt')) {
 			return '/chatgpt-icon.svg';
-		} else if(lower.includes('claude')) {
+		} else if (lower.includes('claude')) {
 			return '/claude-ai-icon.svg';
-		} else if(lower.includes('gemini')) {
+		} else if (lower.includes('gemini')) {
 			return '/google-gemini-icon.svg';
-		} else if(lower.includes('mistral') || lower.includes('pixtral')) {
+		} else if (lower.includes('mistral') || lower.includes('pixtral')) {
 			return '/mistral-color.svg';
-		}else {
-			return '/static/favicon.png'
+		} else {
+			return '/static/favicon.png';
+		}
+	}
+	let hoveredItem = null;
+
+	let knowledgeCutoff = null;
+
+	$: {
+		if (modelsInfo?.[hoveredItem?.label]?.knowledge_cutoff) {
+			const date = new Date(modelsInfo?.[hoveredItem?.label]?.knowledge_cutoff);
+
+			const formatted = date.toLocaleString('default', {
+				year: 'numeric',
+				month: 'long'
+			});
+			knowledgeCutoff = formatted;
 		}
 	}
 </script>
@@ -251,7 +271,7 @@
 	closeFocus={false}
 >
 	<DropdownMenu.Trigger
-		class="relative w-full font-primary flex"
+		class="relative w-full flex"
 		aria-label={placeholder}
 		id="model-selector-{id}-button"
 	>
@@ -259,7 +279,11 @@
 			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
 		>
 			{#if selectedModel}
-				<img src={getModelIcon(selectedModel.label)} alt="Model" class="rounded-full size-4 self-center mr-2" />
+				<img
+					src={getModelIcon(selectedModel.label)}
+					alt="Model"
+					class="rounded-full size-4 self-center mr-2"
+				/>
 				{selectedModel.label}
 			{:else}
 				{placeholder}
@@ -271,7 +295,7 @@
 	<DropdownMenu.Content
 		class=" z-40 {$mobile
 			? `w-full`
-			: `${className}`} w-[180px] justify-start rounded-xl border dark:border-[#313337] bg-white dark:bg-[#1E1E1E] dark:text-white shadow-lg  outline-none"
+			: `${className}`} w-[180px] justify-start rounded-xl border dark:border-customGray-700 bg-white dark:bg-customGray-900 dark:text-white shadow-lg  outline-none"
 		transition={flyAndScale}
 		side={$mobile ? 'bottom' : 'bottom-start'}
 		sideOffset={3}
@@ -279,14 +303,14 @@
 		<slot>
 			{#if searchEnabled}
 				<div class="flex items-center relative gap-2.5 px-2.5 mt-2.5 mb-3">
-					<div class="absolute left-5 text-[#939292]">
+					<div class="absolute left-5 text-customGray-300">
 						<Search className="size-3" strokeWidth="2.5" />
 					</div>
 
 					<input
 						id="model-search-input"
 						bind:value={searchValue}
-						class="w-full text-sm bg-transparent outline-none pl-7 h-[25px] rounded-lg border border-[#313337] placeholder:text-[10px]"
+						class="w-full text-sm bg-transparent outline-none pl-7 h-[25px] rounded-lg border border-customGray-700 placeholder:text-xs"
 						placeholder={searchPlaceholder}
 						autocomplete="off"
 						on:keydown={(e) => {
@@ -314,11 +338,13 @@
 				{#each filteredItems as item, index}
 					<button
 						aria-label="model-item"
-						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-[5px] px-2 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-[#181818] rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
+						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-[5px] px-2 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-customGray-950 rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
 						selectedModelIdx
 							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
 							: ''}"
 						data-arrow-selected={index === selectedModelIdx}
+						on:mouseenter={() => (hoveredItem = item)}
+						on:mouseleave={() => (hoveredItem = null)}
 						on:click={() => {
 							value = item.value;
 							selectedModelIdx = index;
@@ -351,11 +377,11 @@
 												alt="Model"
 												class="rounded-full size-5 flex items-center mr-2"
 											/>
-											<span class="text-[10px] leading-normal">{item.label}</span>
+											<span class="text-xs">{item.label}</span>
 											<!-- </Tooltip> -->
 										</div>
-										<div class="text-[9px] ml-7 text-[#808080] leading-normal">
-											Great for most tasks
+										<div class="text-2xs ml-7 text-[#808080] leading-normal">
+											{modelsInfo?.[item.label]?.description}
 										</div>
 									</div>
 									<!-- {#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
@@ -475,6 +501,64 @@
 						</div>
 					</div>
 				{/each}
+				{#if hoveredItem}
+					<div
+						class="absolute px-3 py-1 left-full ml-2 top-0 w-52 p-2 rounded-xl border border-customGray-700 bg-white dark:bg-customGray-900 text-sm text-gray-800 dark:text-white z-50"
+					>
+						{#if modelsInfo?.[hoveredItem?.label]?.organization}
+							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+								<p class="text-xs dark:text-white">
+									{modelsInfo?.[hoveredItem?.label]?.organization}
+								</p>
+								<p class="text-2xs dark:text-white/50">{$i18n.t('Organization')}</p>
+							</div>
+						{/if}
+						{#if modelsInfo?.[hoveredItem?.label]?.hosted_in}
+							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+								<p class="text-xs dark:text-white">{modelsInfo?.[hoveredItem?.label]?.hosted_in}</p>
+								<p class="text-2xs dark:text-white/50">{$i18n.t('Hosted In')}</p>
+							</div>
+						{/if}
+						{#if modelsInfo?.[hoveredItem?.label]?.context_window}
+							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+								<p class="text-xs dark:text-white">
+									{modelsInfo?.[hoveredItem?.label]?.context_window}
+								</p>
+								<p class="text-2xs dark:text-white/50">{$i18n.t('Context Window')}</p>
+							</div>
+						{/if}
+						{#if knowledgeCutoff}
+							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+								<p class="text-xs dark:text-white">
+									{knowledgeCutoff}
+								</p>
+								<p class="text-2xs dark:text-white/50">{$i18n.t('Knowledge Cutoff')}</p>
+							</div>
+						{/if}
+						{#if modelsInfo?.[hoveredItem?.label]?.intelligence_score}
+							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+								<StarRating rating={modelsInfo?.[hoveredItem?.label]?.intelligence_score} />
+								<p class="text-2xs dark:text-white/50">{$i18n.t('Intelligence Score')}</p>
+							</div>
+						{/if}
+						{#if modelsInfo?.[hoveredItem?.label]?.speed}
+							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+								<SpeedRating rating={modelsInfo?.[hoveredItem?.label]?.speed} />
+								<p class="text-2xs dark:text-white/50">{$i18n.t('Speed')}</p>
+							</div>
+						{/if}
+						{#if modelsInfo?.[hoveredItem?.label]?.multimodal}
+							<div class="py-2.5 border-b dark:border-customGray-700 last:border-b-0">
+								<p class="text-xs dark:text-white">{$i18n.t('Multimodal')}</p>
+							</div>
+						{/if}
+						{#if modelsInfo?.[hoveredItem?.label]?.reasoning}
+							<div class="py-2.5 border-b dark:border-customGray-700 last:border-b-0">
+								<p class="text-xs dark:text-white">{$i18n.t('Reasoning')}</p>
+							</div>
+						{/if}
+					</div>
+				{/if}
 
 				{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user.role === 'admin'}
 					<Tooltip

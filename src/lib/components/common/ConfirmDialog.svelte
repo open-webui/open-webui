@@ -5,9 +5,14 @@
 
 	import { fade } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
+	import CloseIcon from '../icons/CloseIcon.svelte';
 
 	export let title = '';
 	export let message = '';
+
+	export let noMessage = false;
+
+	export let inputType = 'textarea';
 
 	export let cancelLabel = $i18n.t('Cancel');
 	export let confirmLabel = $i18n.t('Confirm');
@@ -65,21 +70,30 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		bind:this={modalElement}
-		class=" fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-[99999999] overflow-hidden overscroll-contain"
+		class=" fixed top-0 right-0 left-0 bottom-0 bg-[#1D1A1A]/50 backdrop-blur-[7.44px] w-full h-screen max-h-[100dvh] flex justify-center z-[99999999] overflow-hidden overscroll-contain"
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
 			show = false;
 		}}
 	>
 		<div
-			class=" m-auto rounded-2xl max-w-full w-[32rem] mx-2 bg-gray-50 dark:bg-gray-950 max-h-[100dvh] shadow-3xl"
+			class=" m-auto relative rounded-2xl max-w-full w-[32rem] mx-2 bg-gray-50 dark:bg-customGray-800 max-h-[100dvh] shadow-3xl"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();
 			}}
 		>
-			<div class="px-[1.75rem] py-6 flex flex-col">
-				<div class=" text-lg font-semibold dark:text-gray-200 mb-2.5">
+			<button
+				class="absolute top-4 right-4 text-customGray-300"
+				on:click={() => {
+					show = false;
+				}}
+			>
+				<CloseIcon />
+			</button>
+
+			<div class="px-10 pt-14 pb-6 py-6 flex flex-col text-center">
+				<div class=" text-base dark:text-white mb-2.5 text-center">
 					{#if title !== ''}
 						{title}
 					{:else}
@@ -88,28 +102,39 @@
 				</div>
 
 				<slot>
-					<div class=" text-sm text-gray-500 flex-1">
-						{#if message !== ''}
-							{message}
-						{:else}
-							{$i18n.t('This action cannot be undone. Do you wish to continue?')}
+					<div class=" text-sm text-gray-500 flex-1 text-center">
+						{#if !noMessage}
+							{#if message !== ''}
+								{message}
+							{:else}
+								{$i18n.t('This action cannot be undone. Do you wish to continue?')}
+							{/if}
 						{/if}
 
 						{#if input}
-							<textarea
-								bind:value={inputValue}
-								placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
-								class="w-full mt-2 rounded-lg px-4 py-2 text-sm dark:text-gray-300 dark:bg-gray-900 outline-none resize-none"
-								rows="3"
-								required
-							/>
+							{#if inputType === 'textarea'}
+								<textarea
+									bind:value={inputValue}
+									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
+									class="w-full mt-2 rounded-md px-4 py-2 text-sm dark:text-gray-300 dark:bg-customGray-900 outline-none resize-none"
+									rows="3"
+									required
+								/>
+							{:else}
+								<input
+									bind:value={inputValue}
+									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
+									class="w-full mt-2 rounded-md px-4 py-2 text-sm dark:text-gray-300 dark:bg-customGray-900 outline-none resize-none"
+									required
+								/>
+							{/if}
 						{/if}
 					</div>
 				</slot>
 
-				<div class="mt-6 flex justify-between gap-1.5">
+				<div class="mt-6 flex justify-end gap-7">
 					<button
-						class="bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white font-medium w-full py-2.5 rounded-lg transition"
+						class="text-gray-800 w-fit text-sm dark:text-customGray-200 py-2.5 rounded-lg transition"
 						on:click={() => {
 							show = false;
 							dispatch('cancel');
@@ -119,7 +144,7 @@
 						{cancelLabel}
 					</button>
 					<button
-						class="bg-gray-900 hover:bg-gray-850 text-gray-100 dark:bg-gray-100 dark:hover:bg-white dark:text-gray-800 font-medium w-full py-2.5 rounded-lg transition"
+						class="bg-gray-900 text-sm dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 text-gray-100 dark:text-customGray-200 w-1/2 py-2.5 rounded-lg transition"
 						on:click={() => {
 							confirmHandler();
 						}}

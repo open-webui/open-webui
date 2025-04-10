@@ -81,7 +81,7 @@
 </script>
 
 <div class="pl-[14px] pr-[11px] mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
-	<div class="relative flex w-full rounded-lg border border-[#313337] dark:text-[#ACABAB] dark:hover:text-white dark:bg-customGray-900" id="chat-search">
+	<div class="relative flex w-full rounded-lg border border-customGray-700 dark:text-customGray-200 dark:hover:text-white dark:bg-customGray-900" id="chat-search">
 		<div class="absolute left-[66px] self-center pl-3 py-2 rounded-l-xl bg-transparent">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -98,7 +98,7 @@
 		</div>
 
 		<input
-			class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-center placeholder:text-[10px] text-xs bg-transparent dark:text-gray-300 outline-none"
+			class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-center placeholder:text-xs text-xs bg-transparent dark:text-gray-300 outline-none"
 			placeholder={placeholder ? placeholder : $i18n.t('Search')}
 			bind:value
 			on:input={() => {
