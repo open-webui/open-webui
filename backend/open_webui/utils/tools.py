@@ -56,7 +56,12 @@ def get_tools(
                 tool_server_connection = (
                     request.app.state.config.TOOL_SERVER_CONNECTIONS[server_idx]
                 )
-                tool_server_data = request.app.state.TOOL_SERVERS[server_idx]
+                tool_server_data = None
+                for server in request.app.state.TOOL_SERVERS:
+                    if server["idx"] == server_idx:
+                        tool_server_data = server
+                        break
+                assert tool_server_data is not None
                 specs = tool_server_data.get("specs", [])
 
                 for spec in specs:

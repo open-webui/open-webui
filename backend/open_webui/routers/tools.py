@@ -45,7 +45,7 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
         )
 
     tools = Tools.get_tools()
-    for idx, server in enumerate(request.app.state.TOOL_SERVERS):
+    for server in request.app.state.TOOL_SERVERS:
         tools.append(
             ToolUserResponse(
                 **{
@@ -60,7 +60,7 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
                         .get("description", ""),
                     },
                     "access_control": request.app.state.config.TOOL_SERVER_CONNECTIONS[
-                        idx
+                        server["idx"]
                     ]
                     .get("config", {})
                     .get("access_control", None),
