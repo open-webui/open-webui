@@ -1033,7 +1033,7 @@
 									{/if}
 								</div>
 
-								<div class=" flex justify-between mt-1.5 mb-2.5 mx-0.5 max-w-full" dir="ltr">
+								<div class=" flex justify-between mt-1 mb-2.5 mx-0.5 max-w-full" dir="ltr">
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%] gap-0.5">
 										<InputMenu
 											bind:selectedToolIds
