@@ -1,0 +1,27 @@
+name: Test SSH connection to EC2
+
+on: workflow_dispatch
+
+jobs:
+  ssh-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH into EC2 DEV
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 51.94.9.62
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY_DEV }}
+          script: |
+            echo "Conexión SSH exitosa en EC2 DEV!"
+            hostname
+
+      - name: SSH into EC2 PROD
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 51.94.5.133 
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY_PROD }}
+          script: |
+            echo "Conexión SSH exitosa en EC2 PROD!"
+            hostname
