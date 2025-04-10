@@ -457,6 +457,12 @@ OAUTH_SCOPES = PersistentConfig(
     os.environ.get("OAUTH_SCOPES", "openid email profile"),
 )
 
+OAUTH_CODE_CHALLENGE_METHOD = PersistentConfig(
+    "OAUTH_CODE_CHALLENGE_METHOD",
+    "oauth.oidc.code_challenge_method",
+    os.environ.get("OAUTH_CODE_CHALLENGE_METHOD", None),
+)
+
 OAUTH_PROVIDER_NAME = PersistentConfig(
     "OAUTH_PROVIDER_NAME",
     "oauth.oidc.provider_name",
@@ -602,14 +608,21 @@ def load_oauth_providers():
     ):
 
         def oidc_oauth_register(client):
+            client_kwargs = {
+                "scope": OAUTH_SCOPES.value,
+            }
+
+            if OAUTH_CODE_CHALLENGE_METHOD.value and OAUTH_CODE_CHALLENGE_METHOD.value == "S256":
+                client_kwargs["code_challenge_method"] = "S256"
+            elif OAUTH_CODE_CHALLENGE_METHOD.value:
+                raise Exception('Code challenge methods other than "%s" not supported. Given: "%s"' % ("S256", OAUTH_CODE_CHALLENGE_METHOD.value))
+
             client.register(
                 name="oidc",
                 client_id=OAUTH_CLIENT_ID.value,
                 client_secret=OAUTH_CLIENT_SECRET.value,
                 server_metadata_url=OPENID_PROVIDER_URL.value,
-                client_kwargs={
-                    "scope": OAUTH_SCOPES.value,
-                },
+                client_kwargs=client_kwargs,
                 redirect_uri=OPENID_REDIRECT_URI.value,
             )
 
