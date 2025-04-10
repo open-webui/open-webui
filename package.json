@@ -113,7 +113,8 @@
 		"turndown": "^7.2.0",
 		"undici": "^7.3.0",
 		"uuid": "^9.0.1",
-		"vite-plugin-static-copy": "^2.2.0"
+		"vite-plugin-static-copy": "^2.2.0",
+		"yaml": "^2.7.1"
 	},
 	"engines": {
 		"node": ">=18.13.0 <=22.x.x",
