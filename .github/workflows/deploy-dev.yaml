@@ -1,0 +1,52 @@
+name: Deploy DEV EC2 (auto)
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Create and publish Docker images with specific build args"]
+    types:
+      - completed
+    branches:
+      - dev
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Deploy to EC2 Dev
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 51.94.9.62
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY_DEV }}
+          envs: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, OPENAI_API_KEY, WEBUI_SECRET_KEY_DEV
+          script: |
+            cat <<EOF > ~/.env
+            ENV=dev
+            WEBUI_NAME=DEV-Boti
+            DEFAULT_LOCALE=es
+            OPENAI_API_KEY=${OPENAI_API_KEY}
+            WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY_DEV}
+            ENABLE_LOGIN_FORM=false
+            ENABLE_OAUTH_SIGNUP=true
+            GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+            GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+            EOF
+            
+            docker pull ghcr.io/${{ github.repository }}:latest
+            docker stop boti_openwebui || true
+            docker rm boti_openwebui || true
+            
+            docker run -d \
+              -p 3000:8080 \
+              -v open-webui:/app/backend/data \
+              --env-file ~/.env \
+              --name boti_openwebui \
+              ghcr.io/${{ github.repository }}:latest
+
+            rm ~/app.env
