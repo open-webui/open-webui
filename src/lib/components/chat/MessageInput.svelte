@@ -176,7 +176,6 @@
 		files = [...files, fileItem];
 
 		try {
-		    console.log("DIRECT CHAT UPLOAD")
 			// During the file upload, file content is automatically extracted.
 			const uploadedFile = await uploadFile(localStorage.token, file);
 
@@ -208,8 +207,6 @@
 			files = files.filter((item) => item?.itemId !== tempItemId);
 		}
 	};
-
-	console.log("TTTTTEEEEESSSSSSTTTT")
 
 	const inputFilesHandler = async (inputFiles) => {
 
@@ -268,7 +265,6 @@
 				};
 				reader.readAsDataURL(file);
 			} else {
-                console.log('** FILE **');
 				uploadFileHandler(file);
 			}
 		});
@@ -299,7 +295,6 @@
 	const onDrop = async (e) => {
 		e.preventDefault();
 		console.log(e);
-		console.log("FILE DROP");
 
 		if (e.dataTransfer?.files) {
 			const inputFiles = Array.from(e.dataTransfer?.files);

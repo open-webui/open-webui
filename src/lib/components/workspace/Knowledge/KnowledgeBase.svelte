@@ -141,11 +141,7 @@
 				return null;
 			});
 
-			console.log("UPLOADED FILE:")
-			console.log(uploadedFile)
-
 			if (uploadedFile) {
-
 				knowledge.files = knowledge.files.map((item) => {
 					if (item.itemId === tempItemId) {
 						item.id = uploadedFile.id;
@@ -347,8 +343,6 @@
 	};
 
 	const addFileHandler = async (fileId) => {
-	    console.log("UPDATING KNOWLEDGE WITH NEW FILE:")
-	    console.log(fileId)
 		const updatedKnowledge = await addFileToKnowledgeById(localStorage.token, id, fileId).catch(
 			(e) => {
 				toast.error(`${e}`);

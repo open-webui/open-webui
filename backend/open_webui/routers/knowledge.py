@@ -254,7 +254,6 @@ def add_file_to_knowledge_by_id(
         form_data: KnowledgeFileIdForm,
         user=Depends(get_verified_user),
 ):
-    print(">>>>> ADDING NEW KNOWLEDGE")
     knowledge = Knowledges.get_knowledge_by_id(id=id)
 
     if not knowledge:
@@ -300,7 +299,6 @@ def add_file_to_knowledge_by_id(
         assert 'metadatas' in content.keys()
 
         for parser in parsers:
-            print(f"STORING DATA THROUGH {parser.name}")
             parser.store(request,
                          id,
                          content['texts'],
@@ -318,17 +316,11 @@ def add_file_to_knowledge_by_id(
             },
         )
 
-        print(f"DATA {data}")
-        print(f"FILE IDS {file_ids}")
-        print(f"FORM ID {form_data.file_id}")
-
         if form_data.file_id not in file_ids:
-            print("UPDATING KNOWLEDGE")
             file_ids.append(form_data.file_id)
             data["file_ids"] = file_ids
 
             knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
-            print(f"UPDATED KNOWLEDGE {knowledge}")
 
             if knowledge:
                 files = Files.get_files_by_ids(file_ids)
@@ -361,7 +353,6 @@ def update_file_from_knowledge_by_id(
         form_data: KnowledgeFileIdForm,
         user=Depends(get_verified_user),
 ):
-    print(">>>>> UPDATING NEW KNOWLEDGE")
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
@@ -431,8 +422,6 @@ def remove_file_from_knowledge_by_id(
         form_data: KnowledgeFileIdForm,
         user=Depends(get_verified_user),
 ):
-    print("FILE DELETE")
-    print(request)
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
@@ -509,8 +498,6 @@ def remove_file_from_knowledge_by_id(
 async def delete_knowledge_by_id(request: Request,
                                  id: str,
                                  user=Depends(get_verified_user)):
-    print("REQUEST")
-    print(request)
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(

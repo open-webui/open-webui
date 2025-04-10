@@ -65,34 +65,6 @@ class DefaultParser:
 
         return {"texts": texts, "embeddings": embeddings, "metadatas": metadatas}
 
-    def save_docs_to_vector_db(self,
-                               request: Request,
-                               docs,
-                               collection_name,
-                               metadata: Optional[dict] = None,
-                               overwrite: bool = False,
-                               add: bool = False,
-                               user=None,
-                               **kwargs
-                               ) -> bool:
-
-        self.pre(request, docs=docs, collection_name=collection_name)
-
-        docs = self.split(request, docs)
-        texts = [doc.page_content for doc in docs]
-        metadatas = self.metadata(request, docs, metadata)
-
-        assert texts is not None
-
-        embeddings = self.embed(request, texts, user)
-
-        assert len(metadatas) == len(texts) and f"length mismatch: metadata {metadatas} vs texts {texts}"
-        assert len(metadatas) == len(embeddings) and f"length mismatch: metadata {metadatas} vs embeddings {embeddings}"
-
-        self.store(request, collection_name, texts, embeddings, metadatas, overwrite, add)
-
-        return True
-
     def pre(self, request, **kwargs):
         '''
         called before the rest of the parser functions
@@ -196,7 +168,6 @@ class DefaultParser:
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
-        print(embedding_function)
 
         embeddings = embedding_function(
             list(map(lambda x: x.replace("\n", " "), texts)), user=user
@@ -207,7 +178,6 @@ class DefaultParser:
     def store(self, request, collection_name, texts, embeddings, metadatas, overwrite=False, add=True):
         # don't do this until the last step to limit deleting collections if errors are thrown
 
-        print(f"STORE() ADD PARAMETER: {add}")
         if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
             log.info(f"collection {collection_name} already exists")
 
@@ -230,7 +200,6 @@ class DefaultParser:
             }
             for idx, text in enumerate(texts)
         ]
-        print(f"UPLOADING DATA TO {collection_name}")
 
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,

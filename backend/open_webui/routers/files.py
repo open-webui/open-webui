@@ -37,11 +37,6 @@ def upload_file(
         user=Depends(get_verified_user),
         file_metadata: dict = {},
 ):
-    print("^^^^^ OLD METHOD")
-    print(request.method)
-    print(request.url)
-    print(request.headers)
-    print("^^^^ UPLOADING FILE")
     log.info(f"file.content_type: {file.content_type}")
     try:
         unsanitized_filename = file.filename
