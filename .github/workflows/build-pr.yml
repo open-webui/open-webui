@@ -55,6 +55,7 @@ jobs:
       - name: Save wheel as artifact
         uses: actions/upload-artifact@v4
         with:
+          name: wheel
           path: dist/*.whl
           if-no-files-found: error
           retention-days: 1
