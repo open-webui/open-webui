@@ -567,7 +567,7 @@ def load_oauth_providers():
                 name="microsoft",
                 client_id=MICROSOFT_CLIENT_ID.value,
                 client_secret=MICROSOFT_CLIENT_SECRET.value,
-                server_metadata_url=f"https://login.microsoftonline.com/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration",
+                server_metadata_url=f"https://login.microsoftonline.com/{MICROSOFT_CLIENT_TENANT_ID.value}/v2.0/.well-known/openid-configuration?appid={MICROSOFT_CLIENT_ID.value}",
                 client_kwargs={
                     "scope": MICROSOFT_OAUTH_SCOPE.value,
                 },
