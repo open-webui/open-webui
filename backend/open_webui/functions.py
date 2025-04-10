@@ -322,12 +322,16 @@ def verify_parser(parser):
         raise NotImplementedError("Parser instance requires self.name as a attribute")
     if not hasattr(parser, 'parser_type'):
         raise NotImplementedError(f"Parser {parser.name} requires parser_type as a attribute")
-    if not hasattr(parser, 'save_docs_to_vector_db'):
-        raise NotImplementedError(f"Parser {parser.name} requires save_docs_to_vector_db as a method")
-    if not hasattr(parser, 'delete_docs'):
-        raise NotImplementedError(f"Parser {parser.name} requires delete_docs as a method")
+    if not hasattr(parser, 'parse'):
+        raise NotImplementedError(f"Parser {parser.name} requires parse as a method")
+    if not hasattr(parser, 'store'):
+        raise NotImplementedError(f"Parser {parser.name} requires store as a method")
+    if not hasattr(parser, 'delete_doc'):
+        raise NotImplementedError(f"Parser {parser.name} requires delete_doc as a method")
     if not hasattr(parser, 'delete_collection'):
         raise NotImplementedError(f"Parser {parser.name} requires delete_collection as a method")
+    if not hasattr(parser, 'reset'):
+        raise NotImplementedError(f"Parser {parser.name} requires reset as a method")
 
     return True
 

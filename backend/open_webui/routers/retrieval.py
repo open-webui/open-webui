@@ -1442,16 +1442,12 @@ class DeleteForm(BaseModel):
 
 
 @router.post("/delete")
-def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin_user)):
+def delete_entries_from_collection(request, form_data: DeleteForm, user=Depends(get_admin_user)):
     try:
         if VECTOR_DB_CLIENT.has_collection(collection_name=form_data.collection_name):
-            file = Files.get_file_by_id(form_data.file_id)
-            hash = file.hash
-
-            VECTOR_DB_CLIENT.delete(
-                collection_name=form_data.collection_name,
-                metadata={"hash": hash},
-            )
+            parsers = get_all_parsers(request)
+            for parser in parsers:
+                parser.delete_doc(form_data.collection_name, form_data.file_id)
             return {"status": True}
         else:
             return {"status": False}
@@ -1461,9 +1457,12 @@ def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin
 
 
 @router.post("/reset/db")
-def reset_vector_db(user=Depends(get_admin_user)):
-    VECTOR_DB_CLIENT.reset()
+def reset_vector_db(request, user=Depends(get_admin_user)):
     Knowledges.delete_all_knowledge()
+
+    parsers = get_all_parsers(request)
+    for parser in parsers:
+        parser.reset()
 
 
 @router.post("/reset/uploads")

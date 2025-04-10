@@ -156,7 +156,7 @@ def load_function_module_by_id(function_id, content=None):
         elif hasattr(module, "Parser"):
             return module.Parser(), "parser", frontmatter
         else:
-            raise Exception("No Function class found in the module")
+            raise Exception("No Function class found in the module. Expected Pipe, Filter, Action, or Parser.")
     except Exception as e:
         log.error(f"Error loading module: {function_id}: {e}")
         del sys.modules[module_name]  # Cleanup by removing the module in case of error

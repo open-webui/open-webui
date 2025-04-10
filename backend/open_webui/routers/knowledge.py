@@ -379,7 +379,7 @@ def update_file_from_knowledge_by_id(
 
     parsers = get_all_parsers(request)
     for parser in parsers:
-        parser.delete_docs(knowledge.id, form_data.file_id)
+        parser.delete_doc(knowledge.id, form_data.file_id)
 
     try:
         process_file(
@@ -449,7 +449,8 @@ def remove_file_from_knowledge_by_id(
     file_collection = f"file-{form_data.file_id}"
     parsers = get_all_parsers(request)
     for parser in parsers:
-        parser.delete_docs(knowledge.id, form_data.file_id)
+        parser.delete_doc(knowledge.id, form_data.file_id)
+        # note that this is only deleting the file-specific collection
         parser.delete_collection(file_collection)
 
     # Delete file from database
