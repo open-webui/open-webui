@@ -33,11 +33,6 @@ COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
 RUN npm run build
 
-# ######## Nginx setup ########
-# FROM nginx:stable-alpine AS nginx
-# COPY ./nginx/nginx.conf /etc/nginx/conf.d/default.conf
-# COPY --from=build /app/build /usr/share/nginx/html
-
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
 
@@ -158,3 +153,15 @@ ENV WEBUI_BUILD_VERSION=${BUILD_HASH}
 ENV DOCKER=true
 
 CMD [ "bash", "start.sh"]
+
+######## Nginx reverse proxy ########
+FROM nginx:alpine AS nginx
+
+# Copy the nginx configuration
+COPY ./nginx/nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+# Simple health check to ensure nginx is running
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost/health || exit 1
