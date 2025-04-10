@@ -45,6 +45,26 @@ class DefaultParser:
         if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
             VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
 
+    def parse(self,
+               request: Request,
+               docs,
+               metadata: Optional[dict] = None,
+               user=None,
+               **kwargs
+               ) -> dict:
+        docs = self.split(request, docs)
+        texts = [doc.page_content for doc in docs]
+        metadatas = self.metadata(request, docs, metadata)
+
+        assert texts is not None
+
+        embeddings = self.embed(request, texts, user)
+
+        assert len(metadatas) == len(texts) and f"length mismatch: metadata {metadatas} vs texts {texts}"
+        assert len(metadatas) == len(embeddings) and f"length mismatch: metadata {metadatas} vs embeddings {embeddings}"
+
+        return {"texts": texts, "embeddings": embeddings, "metadatas": metadatas}
+
     def save_docs_to_vector_db(self,
                                request: Request,
                                docs,
@@ -60,7 +80,7 @@ class DefaultParser:
 
         docs = self.split(request, docs)
         texts = [doc.page_content for doc in docs]
-        metadatas = self.metadata(request, collection_name, docs, metadata)
+        metadatas = self.metadata(request, docs, metadata)
 
         assert texts is not None
 
@@ -70,8 +90,6 @@ class DefaultParser:
         assert len(metadatas) == len(embeddings) and f"length mismatch: metadata {metadatas} vs embeddings {embeddings}"
 
         self.store(request, collection_name, texts, embeddings, metadatas, overwrite, add)
-
-        self.post(request)
 
         return True
 
@@ -103,12 +121,6 @@ class DefaultParser:
             f"{self.name}: save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
         )
 
-    def post(self, request, **kwargs):
-        '''
-        called after the rest of the parser functions
-        '''
-        pass
-
     def split(self, request, docs) -> Tuple[List[Document]]:
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(
@@ -138,20 +150,7 @@ class DefaultParser:
 
         return docs
 
-    def metadata(self, request, collection_name, docs, metadata):
-        # Check if entries with the same hash (metadata.hash) already exist
-        if metadata and "hash" in metadata:
-            result = VECTOR_DB_CLIENT.query(
-                collection_name=collection_name,
-                filter={"hash": metadata["hash"]},
-            )
-
-            if result is not None:
-                existing_doc_ids = result.ids[0]
-                if existing_doc_ids:
-                    log.info(f"Document with hash {metadata['hash']} already exists")
-                    raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
-
+    def metadata(self, request, docs, metadata):
         metadatas = [
             {
                 **doc.metadata,

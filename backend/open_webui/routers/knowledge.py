@@ -9,6 +9,7 @@ from open_webui.models.knowledge import (
     KnowledgeResponse,
     KnowledgeUserResponse,
 )
+from open_webui.utils.parser import PARSER_TYPE
 from open_webui.models.files import Files, FileModel
 from open_webui.routers.retrieval import (
     process_file,
@@ -284,27 +285,38 @@ def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
         )
 
-    # TODO: test with this removed. When is this necessary if its already happening in file upload?
-    # Add content to the vector database
-    print(f">>>>>>>> COLLECTION NAME: {id}")
-    try:
-        process_file(
-            request,
-            ProcessFileForm(file_id=form_data.file_id, collection_name=id),
-            user=user,
-        )
-    except Exception as e:
-        log.debug(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
+    parsers = get_parsers_by_type(request, PARSER_TYPE.FILE)
+    # content is the raw data and not to be used in collection
+    content_keys = [k for k in file.data.keys() if k != 'content']
 
-    print(f"KNOWLEDGE {knowledge}")
+    assert 'content' in file.data.keys()
+    assert len(content_keys) > 0
+
+    for key in content_keys:
+        content = file.data[key]
+
+        assert 'texts' in content.keys()
+        assert 'embeddings' in content.keys()
+        assert 'metadatas' in content.keys()
+
+        for parser in parsers:
+            print(f"STORING DATA THROUGH {parser.name}")
+            parser.store(request,
+                         id,
+                         content['texts'],
+                         content['embeddings'],
+                         content['metadatas'])
 
     if knowledge:
         data = knowledge.data or {}
         file_ids = data.get("file_ids", [])
+
+        Files.update_file_metadata_by_id(
+            file.id,
+            {
+                "collection_name": id,
+            },
+        )
 
         print(f"DATA {data}")
         print(f"FILE IDS {file_ids}")

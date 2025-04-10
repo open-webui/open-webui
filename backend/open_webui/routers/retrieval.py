@@ -755,8 +755,6 @@ async def update_query_settings(
 class ProcessFileForm(BaseModel):
     file_id: str
     content: Optional[str] = None
-    collection_name: Optional[str] = None
-
 
 @router.post("/process/file")
 def process_file(
@@ -764,37 +762,11 @@ def process_file(
     form_data: ProcessFileForm,
     user=Depends(get_verified_user),
 ):
-    # really two things happening
-    # - uploading and parsing files
-    # - storing parsed files into knowledge (This can be pulled off)
-
-    # should never be a situation where knowledge is uploaded without a file
-
-    # perhaps set things so that info is stored in file object and when knowledge is added,
-    # it pulls from the file instead.
-    # Check if file info exists,
-    #     if yes pull and return.
-    #     if no, parse, push, return
-
-
-
-    import traceback
-    print("\n\n>>>> *** process_file")
-    print("call stack:")
-    for line in traceback.format_stack():
-        print(line.strip())
-
     try:
         file = Files.get_file_by_id(form_data.file_id)
 
-        collection_name = form_data.collection_name
         print(f"FORM DATA: {form_data}")
-
-        if collection_name is None:
-            print("COLLECTION NAME NOT KNOWN, USING FILE ID AS COLLECTION")
-            collection_name = f"file-{file.id}"
-        else:
-            print("COLLECTION IDENTIFIED")
+        collection_name = f"file-{file.id}"
 
         if form_data.content:
             print(">>>>>>>> CONTENT ALREADY VISIBLE (ONLY FOR AUDIO)")
@@ -802,12 +774,10 @@ def process_file(
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
 
-            try:
-                # /files/{file_id}/data/content/update
-                VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
-            except:
-                # Audio file upload pipeline
-                pass
+
+            # /files/{file_id}/data/content/update
+            VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
+
 
             docs = [
                 Document(
@@ -823,38 +793,7 @@ def process_file(
             ]
 
             text_content = form_data.content
-        elif form_data.collection_name:
-            print(">>>>>>>> COLLECTION ALREADY KNOWN (DIRECTORY SYNC)")
-            # Check if the file has already been processed and save the content
-            # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
-            result = VECTOR_DB_CLIENT.query(
-                collection_name=f"file-{file.id}", filter={"file_id": file.id}
-            )
-
-            if result is not None and len(result.ids[0]) > 0:
-                docs = [
-                    Document(
-                        page_content=result.documents[0][idx],
-                        metadata=result.metadatas[0][idx],
-                    )
-                    for idx, id in enumerate(result.ids[0])
-                ]
-            else:
-                docs = [
-                    Document(
-                        page_content=file.data.get("content", ""),
-                        metadata={
-                            **file.meta,
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            "source": file.filename,
-                        },
-                    )
-                ]
-
-            text_content = file.data.get("content", "")
         else:
             print(">>>>>>>> STANDARD ADDITION")
             # Process the file and save the content
@@ -906,52 +845,51 @@ def process_file(
             text_content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {text_content}")
+        hash = calculate_sha256_string(text_content)
+
+        Files.update_file_hash_by_id(file.id, hash)
         Files.update_file_data_by_id(
             file.id,
             {"content": text_content},
         )
+        Files.update_file_metadata_by_id(
+            file.id,
+            {
+                "collection_name": collection_name,
+            },
+        )
 
-        # docs are preparsed so they can be hashed for file id, embedded, and uploaded
-        # the logic for when to split and when to not was originally all over the place
-        # new plan: only split inside the parser, use better plan for getting hash.
-        # TODO: remove docs from save_docs_to_vector_db and thus, text_content from this
-        # function
-
-        hash = calculate_sha256_string(text_content)
-        Files.update_file_hash_by_id(file.id, hash)
         parsers = get_parsers_by_type(request, PARSER_TYPE.FILE)
 
         if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
             try:
                 for parser in parsers:
-                    result = parser.save_docs_to_vector_db(
+                    result_dict = parser.parse(
                         request,
                         docs=docs,
-                        collection_name=collection_name,
                         metadata={
                             "file_id": file.id,
                             "name": file.filename,
                             "hash": hash,
                         },
-                        add=(True if form_data.collection_name else False),
                         user=user,
                         file_path=file.path
                     )
 
-                    if result:
-                        Files.update_file_metadata_by_id(
-                            file.id,
-                            {
-                                "collection_name": collection_name,
-                            },
-                        )
+                    # how is the data being pulled out? Is it just the content?
+                    Files.update_file_data_by_id(
+                        file.id,
+                        {f"parser_{parser.name}_content": result_dict},
+                    )
 
-                        return {
-                            "status": True,
-                            "collection_name": collection_name,
-                            "filename": file.filename,
-                            "content": text_content,
-                        }
+                    parser.store(request, collection_name, result_dict['texts'], result_dict['embeddings'], result_dict['metadatas'])
+
+                    return {
+                        "status": True,
+                        "collection_name": collection_name,
+                        "filename": file.filename,
+                        "content": text_content,
+                    }
             except Exception as e:
                 raise e
         else:

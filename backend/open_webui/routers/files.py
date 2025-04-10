@@ -30,36 +30,6 @@ router = APIRouter()
 ############################
 # Upload File
 ############################
-def _insert_file(file, file_metadata, user):
-    unsanitized_filename = file.filename
-    filename = os.path.basename(unsanitized_filename)
-
-    # replace filename with uuid
-    id = str(uuid.uuid4())
-    name = filename
-    filename = f"{id}_{filename}"
-    contents, file_path = Storage.upload_file(file.file, filename)
-
-    file_item = Files.insert_new_file(
-        user.id,
-        FileForm(
-            **{
-                "id": id,
-                "filename": name,
-                "path": file_path,
-                "meta": {
-                    "name": name,
-                    "content_type": file.content_type,
-                    "size": len(contents),
-                    "data": file_metadata,
-                },
-            }
-        ),
-    )
-
-    return file_item, file_path
-
-
 @router.post("/", response_model=FileModelResponse)
 def upload_file(
         request: Request,
@@ -115,9 +85,7 @@ def upload_file(
                     user=user,
                 )
             else:
-                pass
-                # this is exclusively necessary when uploading a file directly into a chat
-                # process_file(request, ProcessFileForm(file_id=id), user=user)
+                process_file(request, ProcessFileForm(file_id=id), user=user)
 
             file_item = Files.get_file_by_id(id=id)
         except Exception as e:
@@ -129,65 +97,6 @@ def upload_file(
                     "error": str(e.detail) if hasattr(e, "detail") else str(e),
                 }
             )
-
-        if file_item:
-            return file_item
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
-            )
-
-    except Exception as e:
-        log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
-        )
-
-
-@router.post("/no_process", response_model=FileModelResponse)
-def upload_file_no_process(
-        request: Request,
-        file: UploadFile = File(...),
-        user=Depends(get_verified_user),
-        file_metadata: dict = {},
-):
-    print("^^^^^ CALLING THE NEW NO PROCESS METHOD")
-    print(request.method)
-    print(request.url)
-    print(request.headers)
-    print("^^^^ UPLOADING FILE")
-    log.info(f"file.content_type: {file.content_type}")
-    try:
-        unsanitized_filename = file.filename
-        filename = os.path.basename(unsanitized_filename)
-
-        # replace filename with uuid
-        id = str(uuid.uuid4())
-        print("FILE ID")
-        print(id)
-        name = filename
-        filename = f"{id}_{filename}"
-        contents, file_path = Storage.upload_file(file.file, filename)
-
-        file_item = Files.insert_new_file(
-            user.id,
-            FileForm(
-                **{
-                    "id": id,
-                    "filename": name,
-                    "path": file_path,
-                    "meta": {
-                        "name": name,
-                        "content_type": file.content_type,
-                        "size": len(contents),
-                        "data": file_metadata,
-                    },
-                }
-            ),
-        )
-        print(file_item)
 
         if file_item:
             return file_item
