@@ -378,7 +378,7 @@
 				</div>
 			{/if}
 
-			<div class="px-3 mb-2 max-h-64 overflow-y-auto scrollbar-hidden group relative">
+			<div class="px-3 max-h-64 overflow-y-auto scrollbar-hidden group relative">
 				{#if tags && items.filter((item) => !(item.model?.info?.meta?.hidden ?? false)).length > 0}
 					<div
 						class=" flex w-full sticky top-0 z-10 bg-white dark:bg-gray-850 overflow-x-auto scrollbar-none"
@@ -746,9 +746,7 @@
 			</div>
 
 			{#if showTemporaryChatControl}
-				<hr class="border-gray-100 dark:border-gray-800" />
-
-				<div class="flex items-center mx-2 my-2">
+				<div class="flex items-center mx-2 mb-2">
 					<button
 						class="flex justify-between w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 px-3 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted"
 						on:click={async () => {
