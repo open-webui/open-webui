@@ -132,11 +132,15 @@
 						{/if}
 					</div>
 
-					<div
-						class="flex w-full text-gray-900 dark:text-white bg-transparent group-hover:bg-gray-100 dark:group-hover:bg-transparent px-1 rounded transition"
-					>
-						{name}
-					</div>
+					{#if name === 'Chats'}
+						<h2 class="translate-y-[0.5px]">
+							{name}
+						</h2>
+					{:else}
+						<h3 class="translate-y-[0.5px]">
+							{name}
+						</h3>
+					{/if}
 				</button>
 
 				{#if onAdd}

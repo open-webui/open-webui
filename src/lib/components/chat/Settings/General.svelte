@@ -138,7 +138,7 @@
 <div class="flex flex-col h-full justify-between text-sm">
 	<div class="  overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div class="">
-			<div class=" mb-1 text-sm font-medium">{$i18n.t('Settings')}</div>
+			<h3 class=" mb-1 text-sm font-medium">{$i18n.t('Settings')}</h3>
 
 			<div class="flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
@@ -181,7 +181,7 @@
 			<hr class=" dark:border-gray-850 my-3" />
 
 			<div>
-				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
+				<h3 class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</h3>
 				<textarea
 					bind:value={system}
 					class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
@@ -191,7 +191,7 @@
 
 			<div class="mt-2 space-y-3 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
-					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
+					<h3 class="  font-medium">{$i18n.t('Advanced Parameters')}</h3>
 					<button
 						class=" text-xs font-medium text-gray-500"
 						type="button"

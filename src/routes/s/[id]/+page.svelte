@@ -32,7 +32,7 @@
 	let chat = null;
 	let user = null;
 
-	let title = '';
+	let title = 'EVA Chat';
 	let files = [];
 
 	let messages = [];

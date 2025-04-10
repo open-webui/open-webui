@@ -147,7 +147,7 @@
 				</div>
 
 				<div class="flex-1 flex flex-col self-center gap-0.5">
-					<div class=" mb-0.5 text-sm font-medium">{$i18n.t('Profile Image')}</div>
+					<h3 class=" mb-0.5 text-sm font-medium">{$i18n.t('Profile Image')}</h3>
 
 					<div>
 						<button
@@ -189,7 +189,7 @@
 
 			<div class="pt-0.5">
 				<div class="flex flex-col w-full">
-					<div class=" mb-1 text-xs font-medium">{$i18n.t('Name')}</div>
+					<h3 class=" mb-1 text-xs font-medium">{$i18n.t('Name')}</h3>
 
 					<div class="flex-1">
 						<input

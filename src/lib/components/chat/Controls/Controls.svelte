@@ -19,7 +19,7 @@
 
 <div class=" dark:text-white">
 	<div class=" flex items-center justify-between dark:text-gray-100 mb-2">
-		<div class=" text-lg font-medium self-center font-primary">{$i18n.t('Chat Controls')}</div>
+		<h2 class=" text-lg font-medium self-center font-primary">{$i18n.t('Chat Controls')}</h2>
 		<button
 			class="self-center"
 			on:click={() => {

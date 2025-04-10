@@ -82,9 +82,9 @@
 			<div class="px-[1.75rem] py-6 flex flex-col">
 				<div class=" text-lg font-semibold dark:text-gray-200 mb-2.5">
 					{#if title !== ''}
-						{title}
+						<h2>{title}</h2>
 					{:else}
-						{$i18n.t('Confirm your action')}
+						<h2>{$i18n.t('Confirm your action')}</h2>
 					{/if}
 				</div>
 

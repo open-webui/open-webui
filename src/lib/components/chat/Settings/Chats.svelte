@@ -123,7 +123,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center text-sm font-medium">{$i18n.t('Archive All Chats')}</div>
+					<h3 class=" self-center text-sm font-medium">{$i18n.t('Archive All Chats')}</h3>
 				</button>
 			{/if}
 
@@ -207,7 +207,7 @@
 							/>
 						</svg>
 					</div>
-					<div class=" self-center text-sm font-medium">{$i18n.t('Delete All Chats')}</div>
+					<h3 class=" self-center text-sm font-medium">{$i18n.t('Delete All Chats')}</h3>
 				</button>
 			{/if}
 		</div>

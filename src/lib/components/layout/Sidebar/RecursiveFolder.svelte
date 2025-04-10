@@ -380,7 +380,7 @@
 					{/if}
 				</div>
 
-				<div class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1">
+				<h3 class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1">
 					{#if edit}
 						<input
 							id="folder-{folderId}-input"
@@ -409,7 +409,7 @@
 					{:else}
 						{folders[folderId].name}
 					{/if}
-				</div>
+				</h3>
 			</button>
 			<div
 				class="absolute top-1/2 -translate-y-1/2 z-10 right-2 self-center flex items-center dark:text-gray-300"
