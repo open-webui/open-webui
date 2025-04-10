@@ -61,15 +61,15 @@
 				},
 				{
 					title: $i18n?.t('Student Housing and Residential Life'),
-					description: $i18n?.t('This model is based on documents from shrl.hkust.edu.hk. It is suitable for questions about housing (application, hall points, housing regulations, check-in-check-out, shuttle bus, Off-campus, etc.).')
+					description: $i18n?.t('This model is based on documents from (shrl.hkust.edu.hk). It is suitable for questions about housing (application, hall points, housing regulations, check-in-check-out, shuttle bus, Off-campus, etc.).')
 				},
 				{
 					title: $i18n?.t('Academic Registry Office'),
-					description: $i18n?.t('This model is based on documents from registry.hkust.edu.hk. It is suitable for questions about leave of absence, credit regulations, study extension, credit transfer, transcript inquiries, SIS, and other academic support.')
+					description: $i18n?.t('This model is based on documents from (registry.hkust.edu.hk). It is suitable for questions about leave of absence, credit regulations, study extension, credit transfer, transcript inquiries, SIS, and other academic support.')
 				},
 				{
-					title: $i18n?.t('Campus Services Office & Dean\'s Office'),
-					description: $i18n?.t('This model is based on documents from (cso.hkust.edu.hk, dst.hkust.edu.hk). It is suitable for questions about campus facilities, campus activities, transportation, and other student support.')
+					title: $i18n?.t('Campus Services Office & Dean\'s Office & Campus Management Office'),
+					description: $i18n?.t('This model is based on documents from (cso.hkust.edu.hk, dst.hkust.edu.hk, cmo.hkust.edu.hk). It is suitable for questions about campus facilities, campus activities, transportation, and other student support.')
 				},
 				{
 					title: $i18n?.t('IT Services Office'),
@@ -77,11 +77,11 @@
 				},
 				{
 					title: $i18n?.t('Undergraduate Research Opportunities Program'),
-					description: $i18n?.t('This model is based on documents from urop.hkust.edu.hk. It is suitable for questions about UROP applications, previous project inquiries, and related matters.')
+					description: $i18n?.t('This model is based on documents from (urop.hkust.edu.hk). It is suitable for questions about UROP applications, previous project inquiries, and related matters.')
 				},
                 {
 					title: $i18n?.t('Study Abroad'),
-					description: $i18n?.t('This model is based on documents from studyabroad.hkust.edu.hk. It is suitable for questions about study abroad applications and related matters.')
+					description: $i18n?.t('This model is based on documents from (studyabroad.hkust.edu.hk, summercampus.hkust.edu.hk). It is suitable for questions about study abroad applications and related matters.')
 				},
 			]
 		},
