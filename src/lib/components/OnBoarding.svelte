@@ -54,7 +54,7 @@
 			</div>
 		</div>
 
-		<!-- <SlideShow duration={5000} /> -->
+		<SlideShow duration={5000} />
 
 		<div
 			class="w-full h-full absolute top-0 left-0 bg-linear-to-t from-20% from-black to-transparent"
