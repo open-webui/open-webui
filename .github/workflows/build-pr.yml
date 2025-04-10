@@ -48,6 +48,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install build
           python -m build .
+          # Get the original wheel filename
+          WHEEL_FILE=$(ls dist/*.whl)
+          # Extract the base name without extension
+          BASE_NAME=$(basename "$WHEEL_FILE" .whl)
+          # Remove the "none" part and add commit ID
+          NEW_NAME="${BASE_NAME%-none-any}-${GITHUB_SHA::7}-any"
+          # Rename the file
+          mv "$WHEEL_FILE" "dist/$NEW_NAME.whl"
       - name: Create GitHub release
         id: create_release
         uses: actions/github-script@v7
