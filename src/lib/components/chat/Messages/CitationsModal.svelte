@@ -163,6 +163,7 @@
 								sandbox="allow-scripts allow-forms allow-same-origin"
 								srcdoc={document.document}
 								title={$i18n.t('Content')}
+								
 							></iframe>
 						{:else}
 							<pre class="text-sm dark:text-gray-400 whitespace-pre-line">

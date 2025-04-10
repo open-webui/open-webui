@@ -89,6 +89,11 @@ export const processResponseContent = (content: string) => {
 	return content.trim();
 };
 
+
+export const revertSanitizedResponseContent = (content: string) => {
+	return content.replaceAll('&lt;', '<').replaceAll('&gt;', '>');
+};
+
 export function unescapeHtml(html: string) {
 	const doc = new DOMParser().parseFromString(html, 'text/html');
 	return doc.documentElement.textContent;

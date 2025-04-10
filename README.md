@@ -1,3 +1,79 @@
+# Open WebUI (Nick's Artifacts Overhaul Edition) BETA
+
+ **This is a fork/branch of Open-WebUI that aims to completely overhaul the Artifacts system. This is currently in beta and just needs some testing before I submit it as a pull request to the main branch.**
+
+## Key Features of this branch ⭐
+
+- 🖼️ **Coding Canvas**: Whenever a LLM outputs code, it will appear on the right side of the page with Monaco editor, similar to VSCode. Here you can cycle through different files produced via the LLM and also different versions
+- 🔍 **Difference Checker**: If a LLM makes changes to code, the differences will be highlight. This can be easily disabled or enabled via a single click!
+- 🎨 **Design Viewer**: Easily toggle between code view and design view with the click of a button! This currently supports HTML/CSS/JavaScript like before, but now with Tailwind styles built in. React components work too!
+- ⚛️ **React Visualizer**: As mentioned above, React components work too. This seems to work 80% of the time and I'm working hard to get it 100% of the time! As long as the code block has an export default it should work.
+- 💼 **Compacted Code**: When the canvas is open, code blocks in the regular chat are compacted and visualized as an attachment. 
+- 🌐 **MANY supported languages**: See the list below!
+
+### Supported Languages
+
+- **Web Development Languages**
+  - JavaScript (`js`)
+  - TypeScript (`ts`)
+  - HTML
+  - CSS
+
+- **Programming Languages**
+  - Python
+  - Java
+  - C#
+  - C
+  - C++
+  - Kotlin
+  - Dart
+  - Ruby
+
+- **Scripting Languages**
+  - Bash
+  - Shell
+  - PowerShell
+
+- **Markup and Data Formats**
+  - JSON
+  - XML
+  - XAML
+  - YAML
+  - Markdown
+
+- **Other Languages**
+  - SQL
+  - PHP
+  - ASP
+  - Applescript
+  - Scheme
+  - Liquid
+
+![Difference Viewer Demo](./demo-diffeditor.webp)
+![File Navigation Demo](./demo-filenavigator.gif)
+![React Demo](./demo-react.webp)
+
+# 🧪 TESTING HELP NEEDED! 🧪
+
+I did a lot of testing with everyday coding and got it to the point where I'm comfortable releasing the code (which is why it's here now on github) but I would LOVE some extra help. If you are downloading this build, 
+**PLEASE SUBMIT ISSUES, PULL REQUESTS, AND FEATURE REQUESTS!!!**
+Help from the community with an extremely diverse set of use cases is the final thing I need before submitting this to be merged with the main branch. Any and ALL help will be greatly appreciated!
+
+Thank you all very much for showing interest in this project
+
+-Nick
+
+
+### NOTE FOR INSTALLATION
+
+Please refer to the original instructions on how to build the app (or docker image) from source in order to get this version working instead of the regular version.
+
+Otherwise, here's the quickest way IMO:
+
+1. Create a Conda environment with Python 3.11 or 3.10, then activate it
+2. In the main folder, run `npm install --no-package-lock`, then `npm install @floating-ui/utils`, and finally `npm run build`
+3. Change directory to the 'backend' folder and run `pip install -r requirements.txt` and then run `start.sh`
+
 # Open WebUI 👋
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
