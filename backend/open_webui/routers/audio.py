@@ -68,7 +68,7 @@ from pydub import AudioSegment
 from pydub.utils import mediainfo
 
 
-def audio_needs_conversion(file_path):
+def get_audio_format(file_path):
     """Check if the given file needs to be converted to a different format."""
     if not os.path.isfile(file_path):
         log.error(f"File not found: {file_path}")
@@ -500,14 +500,14 @@ def transcribe(request: Request, file_path):
         log.debug(data)
         return data
     elif request.app.state.config.STT_ENGINE == "openai":
-        conversion_type = audio_needs_conversion(file_path)
-        if conversion_type:
-            os.rename(file_path, file_path.replace(".wav", f".{conversion_type}"))
+        audio_format = get_audio_format(file_path)
+        if audio_format:
+            os.rename(file_path, file_path.replace(".wav", f".{audio_format}"))
             # Convert unsupported audio file to WAV format
             convert_audio_to_wav(
-                file_path.replace(".wav", f".{conversion_type}"),
+                file_path.replace(".wav", f".{audio_format}"),
                 file_path,
-                conversion_type,
+                audio_format,
             )
 
         r = None
