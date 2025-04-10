@@ -69,16 +69,16 @@ jobs:
 
       - name: List downloaded wheel files
         run: |
-          Write-Host "Listing downloaded wheel files:"
-          Get-ChildItem -Path dist -Filter "*.whl"
-          $WHEEL_FILE = Get-ChildItem -Path dist -Filter "*.whl" | Select-Object -First 1
-          if ($WHEEL_FILE) {
-            echo "WHEEL_FILENAME=$($WHEEL_FILE.Name)" >> $env:GITHUB_ENV
-            Write-Host "Using wheel file: $($WHEEL_FILE.Name)"
-          } else {
-            Write-Host "ERROR: No wheel file found in dist directory!"
+          echo "Listing downloaded wheel files:"
+          ls -l dist/*.whl
+          WHEEL_FILE=$(ls -1 dist/*.whl | head -n 1)
+          if [ -n "$WHEEL_FILE" ]; then
+            echo "WHEEL_FILENAME=$(basename "$WHEEL_FILE")" >> $GITHUB_ENV
+            echo "Using wheel file: $(basename "$WHEEL_FILE")"
+          else
+            echo "ERROR: No wheel file found in dist directory!"
             exit 1
-          }
+          fi
 
   publish-installer:
     needs: build-and-package
