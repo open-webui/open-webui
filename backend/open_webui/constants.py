@@ -31,6 +31,7 @@ class ERROR_MESSAGES(str, Enum):
     USERNAME_TAKEN = (
         "Uh-oh! This username is already registered. Please choose another username."
     )
+    SIGNUP_DISABLED = "Sign up is currently disabled. Please contact your administrator for assistance."
     COMMAND_TAKEN = "Uh-oh! This command is already registered. Please choose another command string."
     FILE_EXISTS = "Uh-oh! This file is already registered. Please choose another file."
 
