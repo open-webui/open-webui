@@ -417,7 +417,7 @@ def get_sources_from_files(
     user: UserModel = None,
 ):
     log.debug(
-        f"files: {files} {queries} {embedding_function} {reranking_function} {full_context}"
+        f"files: {len(files)} {queries} {embedding_function} {reranking_function} {full_context}"
     )
 
     extracted_collections = []
@@ -573,6 +573,7 @@ def get_sources_from_files(
         except Exception as e:
             log.exception(e)
 
+    log.warning(f"get_sources_from_files: {len(sources)} sources found for {queries}")
     return sources
 
 
