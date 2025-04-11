@@ -17,7 +17,7 @@ from langchain_core.utils.function_calling import convert_to_openai_function
 
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
-from open_webui.utils.plugin import load_tools_module_by_id
+from open_webui.utils.plugin import load_tool_module_by_id
 from open_webui.env import AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA
 
 import copy
@@ -119,7 +119,7 @@ def get_tools(
         else:
             module = request.app.state.TOOLS.get(tool_id, None)
             if module is None:
-                module, _ = load_tools_module_by_id(tool_id)
+                module, _ = load_tool_module_by_id(tool_id)
                 request.app.state.TOOLS[tool_id] = module
 
             extra_params["__id__"] = tool_id
@@ -277,23 +277,29 @@ def function_to_pydantic_model(func: Callable) -> type[BaseModel]:
     return model
 
 
-def get_callable_attributes(tool: object) -> list[Callable]:
+def get_functions_from_tool(tool: object) -> list[Callable]:
     return [
         getattr(tool, func)
         for func in dir(tool)
-        if callable(getattr(tool, func))
-        and not func.startswith("__")
-        and not inspect.isclass(getattr(tool, func))
+        if callable(
+            getattr(tool, func)
+        )  # checks if the attribute is callable (a method or function).
+        and not func.startswith(
+            "__"
+        )  # filters out special (dunder) methods like init, str, etc. — these are usually built-in functions of an object that you might not need to use directly.
+        and not inspect.isclass(
+            getattr(tool, func)
+        )  # ensures that the callable is not a class itself, just a method or function.
     ]
 
 
-def get_tools_specs(tool_class: object) -> list[dict]:
-    function_model_list = map(
-        function_to_pydantic_model, get_callable_attributes(tool_class)
+def get_tool_specs(tool_module: object) -> list[dict]:
+    function_models = map(
+        function_to_pydantic_model, get_functions_from_tool(tool_module)
     )
+
     return [
-        convert_to_openai_function(function_model)
-        for function_model in function_model_list
+        convert_to_openai_function(function_model) for function_model in function_models
     ]
 
 

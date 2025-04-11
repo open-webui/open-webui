@@ -10,11 +10,11 @@ from open_webui.models.tools import (
     ToolUserResponse,
     Tools,
 )
-from open_webui.utils.plugin import load_tools_module_by_id, replace_imports
+from open_webui.utils.plugin import load_tool_module_by_id, replace_imports
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from open_webui.utils.tools import get_tools_specs
+from open_webui.utils.tools import get_tool_specs
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 from open_webui.env import SRC_LOG_LEVELS
@@ -137,15 +137,15 @@ async def create_new_tools(
     if tools is None:
         try:
             form_data.content = replace_imports(form_data.content)
-            tools_module, frontmatter = load_tools_module_by_id(
+            tool_module, frontmatter = load_tool_module_by_id(
                 form_data.id, content=form_data.content
             )
             form_data.meta.manifest = frontmatter
 
             TOOLS = request.app.state.TOOLS
-            TOOLS[form_data.id] = tools_module
+            TOOLS[form_data.id] = tool_module
 
-            specs = get_tools_specs(TOOLS[form_data.id])
+            specs = get_tool_specs(TOOLS[form_data.id])
             tools = Tools.insert_new_tool(user.id, form_data, specs)
 
             tool_cache_dir = CACHE_DIR / "tools" / form_data.id
@@ -226,15 +226,13 @@ async def update_tools_by_id(
 
     try:
         form_data.content = replace_imports(form_data.content)
-        tools_module, frontmatter = load_tools_module_by_id(
-            id, content=form_data.content
-        )
+        tool_module, frontmatter = load_tool_module_by_id(id, content=form_data.content)
         form_data.meta.manifest = frontmatter
 
         TOOLS = request.app.state.TOOLS
-        TOOLS[id] = tools_module
+        TOOLS[id] = tool_module
 
-        specs = get_tools_specs(TOOLS[id])
+        specs = get_tool_specs(TOOLS[id])
 
         updated = {
             **form_data.model_dump(exclude={"id"}),
@@ -332,7 +330,7 @@ async def get_tools_valves_spec_by_id(
         if id in request.app.state.TOOLS:
             tools_module = request.app.state.TOOLS[id]
         else:
-            tools_module, _ = load_tools_module_by_id(id)
+            tools_module, _ = load_tool_module_by_id(id)
             request.app.state.TOOLS[id] = tools_module
 
         if hasattr(tools_module, "Valves"):
@@ -375,7 +373,7 @@ async def update_tools_valves_by_id(
     if id in request.app.state.TOOLS:
         tools_module = request.app.state.TOOLS[id]
     else:
-        tools_module, _ = load_tools_module_by_id(id)
+        tools_module, _ = load_tool_module_by_id(id)
         request.app.state.TOOLS[id] = tools_module
 
     if not hasattr(tools_module, "Valves"):
@@ -431,7 +429,7 @@ async def get_tools_user_valves_spec_by_id(
         if id in request.app.state.TOOLS:
             tools_module = request.app.state.TOOLS[id]
         else:
-            tools_module, _ = load_tools_module_by_id(id)
+            tools_module, _ = load_tool_module_by_id(id)
             request.app.state.TOOLS[id] = tools_module
 
         if hasattr(tools_module, "UserValves"):
@@ -455,7 +453,7 @@ async def update_tools_user_valves_by_id(
         if id in request.app.state.TOOLS:
             tools_module = request.app.state.TOOLS[id]
         else:
-            tools_module, _ = load_tools_module_by_id(id)
+            tools_module, _ = load_tool_module_by_id(id)
             request.app.state.TOOLS[id] = tools_module
 
         if hasattr(tools_module, "UserValves"):
