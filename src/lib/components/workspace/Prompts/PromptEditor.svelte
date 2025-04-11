@@ -21,7 +21,8 @@
 	let command = '';
 	let content = '';
 
-	let accessControl = null;
+	// Default to private ({}) unless user has public sharing permission, then default to public (null)
+	let accessControl = $user?.permissions?.sharing?.public_prompts || $user?.role === 'admin' ? null : {};
 
 	let showAccessControlModal = false;
 
@@ -64,7 +65,8 @@
 			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
 			content = prompt.content;
 
-			accessControl = prompt?.access_control ?? null;
+			// Use existing access control or default based on user permissions
+			accessControl = prompt?.access_control ?? ($user?.permissions?.sharing?.public_prompts || $user?.role === 'admin' ? null : {});
 		}
 	});
 </script>
