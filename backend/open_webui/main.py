@@ -148,6 +148,9 @@ from open_webui.config import (
     AUDIO_STT_MODEL,
     AUDIO_STT_OPENAI_API_BASE_URL,
     AUDIO_STT_OPENAI_API_KEY,
+    AUDIO_STT_AZURE_API_KEY,
+    AUDIO_STT_AZURE_REGION,
+    AUDIO_STT_AZURE_LOCALES,
     AUDIO_TTS_API_KEY,
     AUDIO_TTS_ENGINE,
     AUDIO_TTS_MODEL,
@@ -225,6 +228,8 @@ from open_webui.config import (
     BRAVE_SEARCH_API_KEY,
     EXA_API_KEY,
     PERPLEXITY_API_KEY,
+    SOUGOU_API_SID,
+    SOUGOU_API_SK,
     KAGI_SEARCH_API_KEY,
     MOJEEK_SEARCH_API_KEY,
     BOCHA_SEARCH_API_KEY,
@@ -341,6 +346,7 @@ from open_webui.env import (
     RESET_CONFIG_ON_START,
     OFFLINE_MODE,
     ENABLE_OTEL,
+    EXTERNAL_PWA_MANIFEST_URL,
 )
 
 
@@ -427,6 +433,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
+    title="Open WebUI",
     docs_url="/docs" if ENV == "dev" else None,
     openapi_url="/openapi.json" if ENV == "dev" else None,
     redoc_url=None,
@@ -566,6 +573,7 @@ app.state.config.LDAP_CIPHERS = LDAP_CIPHERS
 app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 app.state.AUTH_TRUSTED_NAME_HEADER = WEBUI_AUTH_TRUSTED_NAME_HEADER
 app.state.SIGNOUT_REDIRECT_URI = SIGNOUT_REDIRECT_URI
+app.state.EXTERNAL_PWA_MANIFEST_URL = EXTERNAL_PWA_MANIFEST_URL
 
 app.state.USER_COUNT = None
 app.state.TOOLS = {}
@@ -653,6 +661,8 @@ app.state.config.BING_SEARCH_V7_ENDPOINT = BING_SEARCH_V7_ENDPOINT
 app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = BING_SEARCH_V7_SUBSCRIPTION_KEY
 app.state.config.EXA_API_KEY = EXA_API_KEY
 app.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY
+app.state.config.SOUGOU_API_SID = SOUGOU_API_SID
+app.state.config.SOUGOU_API_SK = SOUGOU_API_SK
 
 app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = RAG_WEB_SEARCH_RESULT_COUNT
 app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = RAG_WEB_SEARCH_CONCURRENT_REQUESTS
@@ -779,6 +789,10 @@ app.state.config.STT_MODEL = AUDIO_STT_MODEL
 
 app.state.config.WHISPER_MODEL = WHISPER_MODEL
 app.state.config.DEEPGRAM_API_KEY = DEEPGRAM_API_KEY
+
+app.state.config.AUDIO_STT_AZURE_API_KEY = AUDIO_STT_AZURE_API_KEY
+app.state.config.AUDIO_STT_AZURE_REGION = AUDIO_STT_AZURE_REGION
+app.state.config.AUDIO_STT_AZURE_LOCALES = AUDIO_STT_AZURE_LOCALES
 
 app.state.config.TTS_OPENAI_API_BASE_URL = AUDIO_TTS_OPENAI_API_BASE_URL
 app.state.config.TTS_OPENAI_API_KEY = AUDIO_TTS_OPENAI_API_KEY
@@ -1055,6 +1069,7 @@ async def chat_completion(
     model_item = form_data.pop("model_item", {})
     tasks = form_data.pop("background_tasks", None)
 
+    metadata = {}
     try:
         if not model_item.get("direct", False):
             model_id = form_data.get("model", None)
@@ -1110,13 +1125,15 @@ async def chat_completion(
 
     except Exception as e:
         log.debug(f"Error processing chat payload: {e}")
-        Chats.upsert_message_to_chat_by_id_and_message_id(
-            metadata["chat_id"],
-            metadata["message_id"],
-            {
-                "error": {"content": str(e)},
-            },
-        )
+        if metadata.get("chat_id") and metadata.get("message_id"):
+            # Update the chat message with the error
+            Chats.upsert_message_to_chat_by_id_and_message_id(
+                metadata["chat_id"],
+                metadata["message_id"],
+                {
+                    "error": {"content": str(e)},
+                },
+            )
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1392,29 +1409,32 @@ async def oauth_callback(provider: str, request: Request, response: Response):
 
 @app.get("/manifest.json")
 async def get_manifest_json():
-    return {
-        "name": app.state.WEBUI_NAME,
-        "short_name": app.state.WEBUI_NAME,
-        "description": "Open WebUI is an open, extensible, user-friendly interface for AI that adapts to your workflow.",
-        "start_url": "/",
-        "display": "standalone",
-        "background_color": "#343541",
-        "orientation": "natural",
-        "icons": [
-            {
-                "src": "/static/logo.png",
-                "type": "image/png",
-                "sizes": "500x500",
-                "purpose": "any",
-            },
-            {
-                "src": "/static/logo.png",
-                "type": "image/png",
-                "sizes": "500x500",
-                "purpose": "maskable",
-            },
-        ],
-    }
+    if app.state.EXTERNAL_PWA_MANIFEST_URL:
+        return requests.get(app.state.EXTERNAL_PWA_MANIFEST_URL).json()
+    else:
+        return {
+            "name": app.state.WEBUI_NAME,
+            "short_name": app.state.WEBUI_NAME,
+            "description": "Open WebUI is an open, extensible, user-friendly interface for AI that adapts to your workflow.",
+            "start_url": "/",
+            "display": "standalone",
+            "background_color": "#343541",
+            "orientation": "natural",
+            "icons": [
+                {
+                    "src": "/static/logo.png",
+                    "type": "image/png",
+                    "sizes": "500x500",
+                    "purpose": "any",
+                },
+                {
+                    "src": "/static/logo.png",
+                    "type": "image/png",
+                    "sizes": "500x500",
+                    "purpose": "maskable",
+                },
+            ],
+        }
 
 
 @app.get("/opensearch.xml")
