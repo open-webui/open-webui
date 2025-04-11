@@ -313,7 +313,7 @@ export const getToolServersData = async (i18n, servers: object[]) => {
 				.filter((server) => server?.config?.enable)
 				.map(async (server) => {
 					const data = await getToolServerData(
-						server?.key,
+						(server?.auth_type ?? 'bearer') === 'bearer' ? server?.key : localStorage.token,
 						server?.url + '/' + (server?.path ?? 'openapi.json')
 					).catch((err) => {
 						toast.error(
