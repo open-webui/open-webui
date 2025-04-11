@@ -1,7 +1,12 @@
 repos:
--   repo: https://github.com/Yelp/detect-secrets
-    rev: v1.5.0
+  # Using this mirror lets us use mypyc-compiled black, which is about 2x faster
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 25.1.0
     hooks:
-    -   id: detect-secrets
-        args: ['--baseline', '.secrets.baseline']
-        exclude: package.lock.json
+      - id: black
+        # It is recommended to specify the latest version of Python
+        # supported by your project here, or alternatively use
+        # pre-commit's default_language_version, see
+        # https://pre-commit.com/#top_level-default_language_version
+        language_version: python3.11
+        entry: black backend

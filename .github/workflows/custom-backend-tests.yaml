@@ -1,12 +1,12 @@
 name: Custom Backend Tests
-description: "Runs unit tests for the backend extensions."
+description: 'Runs unit tests for the backend extensions.'
 on:
   pull_request:
     branches:
       - main
     paths:
-      - "backend/**"
-      - "uv.lock"
+      - 'backend/**'
+      - 'uv.lock'
 
 # Only run one workflow at a time
 concurrency:
@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PYTHON_VERSION: "3.11"
+  PYTHON_VERSION: '3.11'
 
 jobs:
   test:
@@ -41,7 +41,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: "pip"
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
 
       - name: Install dependencies
         run: |

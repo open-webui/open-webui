@@ -11,7 +11,7 @@ from ...connectors.pgvector.auth_util import FilterUtils
 Base = declarative_base()
 
 
-class TestModel(Base):
+class CustomModel(Base):
     """Mock model for testing"""
 
     __tablename__ = "test_table"
@@ -26,7 +26,7 @@ def filter_utils():
 
 @pytest.fixture
 def metadata_column():
-    return TestModel.metadata_column
+    return CustomModel.metadata_column
 
 
 def test_filter_for_empty_auth(metadata_column):

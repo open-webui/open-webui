@@ -7,21 +7,25 @@ import pytest
 from dotenv import load_dotenv
 from feddersen.entra.groups import Cache, UserGroupsRetriever
 
-USER_DISPLAY_NAME_TO_TEST_PERMISSIONS = os.getenv(USER_DISPLAY_NAME_TO_TEST_PERMISSIONS)
-if not USER_DISPLAY_NAME_TO_TEST_PERMISSIONS:
-    raise ValueError(
-        "Please set the USER_DISPLAY_NAME_TO_TEST_PERMISSIONS environment variable."
-        " This should be the display name of a user in your Azure AD tenant."
-    )
 
-USER_MAIL_NOT_DISPLAY_NAME_TO_TEST_PERMISSIONS = os.getenv(
-    "USER_MAIL_NOT_DISPLAY_NAME_TO_TEST_PERMISSIONS"
-)
-if not USER_MAIL_NOT_DISPLAY_NAME_TO_TEST_PERMISSIONS:
-    raise ValueError(
-        "Please set the USER_MAIL_NOT_DISPLAY_NAME_TO_TEST_PERMISSIONS environment variable."
-        " This should be the email of a user in your Azure AD tenant."
-    )
+@pytest.fixture
+def user_display_name():
+    display_name = os.getenv("USER_DISPLAY_NAME_TO_TEST_PERMISSIONS")
+    if not display_name:
+        pytest.skip(
+            "USER_DISPLAY_NAME_TO_TEST_PERMISSIONS environment variable not set"
+        )
+    return display_name
+
+
+@pytest.fixture
+def user_email():
+    email = os.getenv("USER_MAIL_NOT_DISPLAY_NAME_TO_TEST_PERMISSIONS")
+    if not email:
+        pytest.skip(
+            "USER_MAIL_NOT_DISPLAY_NAME_TO_TEST_PERMISSIONS environment variable not set"
+        )
+    return email
 
 
 @pytest.fixture
@@ -41,36 +45,34 @@ def user_groups_retriever_fn():
 
 @pytest.mark.integration
 class TestGroupRetriever:
-    def test_get_user_groups_real(self, user_groups_retriever_fn):
+    def test_get_user_groups_real(self, user_groups_retriever_fn, user_display_name):
         retriever = user_groups_retriever_fn()
-        groups = retriever.get_user_groups(USER_DISPLAY_NAME_TO_TEST_PERMISSIONS)
+        groups = retriever.get_user_groups(user_display_name)
         assert groups is not None
         assert len(groups) > 0
 
-        assert retriever._user_group_cache[USER_DISPLAY_NAME_TO_TEST_PERMISSIONS]
+        assert retriever._user_group_cache[user_display_name]
 
-    def test_get_user_groups_real_with_filter(self, user_groups_retriever_fn):
+    def test_get_user_groups_real_with_filter(
+        self, user_groups_retriever_fn, user_display_name
+    ):
         retriever = user_groups_retriever_fn()
-        groups = retriever.get_user_groups(
-            USER_DISPLAY_NAME_TO_TEST_PERMISSIONS, group_prefix="ailio"
-        )
+        groups = retriever.get_user_groups(user_display_name, group_prefix="ailio")
         assert groups is not None
         assert len(groups) == 1
 
-        assert retriever._user_group_cache[USER_DISPLAY_NAME_TO_TEST_PERMISSIONS]
+        assert retriever._user_group_cache[user_display_name]
 
-    def test_get_user_groups_real_extra_user_lookup(self, user_groups_retriever_fn):
+    def test_get_user_groups_real_extra_user_lookup(
+        self, user_groups_retriever_fn, user_email
+    ):
         retriever = user_groups_retriever_fn()
 
-        groups = retriever.get_user_groups(
-            USER_MAIL_NOT_DISPLAY_NAME_TO_TEST_PERMISSIONS
-        )
+        groups = retriever.get_user_groups(user_email)
         assert groups is not None
         assert len(groups) > 0
 
-        assert retriever._user_group_cache[
-            USER_MAIL_NOT_DISPLAY_NAME_TO_TEST_PERMISSIONS
-        ]
+        assert retriever._user_group_cache[user_email]
 
     def test_get_user_groups_not_existing_user(self, user_groups_retriever_fn, caplog):
         retriever = user_groups_retriever_fn()

@@ -11,6 +11,16 @@ from feddersen.connectors.base import VectorSearchClient
 from feddersen.connectors.pgvector.auth_util import FilterUtils
 from feddersen.entra.groups import UserGroupsRetriever
 from feddersen.models import ExtraMetadata
+from open_webui.config import (
+    MICROSOFT_CLIENT_ID,
+    MICROSOFT_CLIENT_SECRET,
+    MICROSOFT_CLIENT_TENANT_ID,
+    PGVECTOR_DB_URL,
+    PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH,
+)
+from open_webui.env import SRC_LOG_LEVELS
+from open_webui.models.users import UserModel
+from open_webui.retrieval.vector.main import GetResult, SearchResult, VectorItem
 from pgvector.sqlalchemy import Vector
 from pydantic import ValidationError
 from sqlalchemy import (
@@ -33,17 +43,6 @@ from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
 from sqlalchemy.pool import NullPool
 from sqlalchemy.sql import true
 from sqlalchemy.sql.elements import ColumnElement
-
-from open_webui.config import (
-    MICROSOFT_CLIENT_ID,
-    MICROSOFT_CLIENT_SECRET,
-    MICROSOFT_CLIENT_TENANT_ID,
-    PGVECTOR_DB_URL,
-    PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH,
-)
-from open_webui.env import SRC_LOG_LEVELS
-from open_webui.models.users import UserModel
-from open_webui.retrieval.vector.main import GetResult, SearchResult, VectorItem
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -70,7 +69,7 @@ class DocumentAuthChunk(Base):
         text: Optional[str] = None,
         vector: Optional[List[float]] = None,
         vmetadata: Optional[Dict[str, Any]] = None,
-        custom_metadata_key: str = "middleware_metadata",
+        custom_metadata_key: str = EXTRA_MIDDLEWARE_METADATA_KEY,
         replace_keys: dict = None,
     ) -> "DocumentAuthChunk":
         """Factory-Methode to create a DocumentAuthChunk. Used to manipulate the metadata"""
@@ -107,8 +106,6 @@ class DocumentAuthChunk(Base):
         Returns:
             Tuple of (processed metadata dict, auth metadata dict)
         """
-        # Initialize default return values
-        file_auth = {"groups": [], "users": []}
         custom_meta = {}
 
         # Create a copy of the original metadata or start with an empty dict
@@ -138,7 +135,7 @@ class DocumentAuthChunk(Base):
             # Remove the custom metadata key from the main metadata
             # so that we can check for undefined in the frontend
             meta.pop(custom_metadata_key, None)
-            return meta, file_auth
+            return meta, {"groups": [], "users": []}
 
         # Extract the custom metadata section
         custom_meta_main = meta.pop(custom_metadata_key, {})
@@ -167,7 +164,10 @@ class DocumentAuthChunk(Base):
                         f"Couldn't replace {native_key} with {custom_field}: {str(e)}"
                     )
 
-        return meta, file_auth.model_dump() if not isinstance(file_auth, dict) else {}
+        # make sure the user_ids are all lower case for exact matching
+        file_auth.users = [user.lower() for user in file_auth.users]
+
+        return meta, file_auth.model_dump()
 
 
 class FeddersenPGVectorConnector(VectorSearchClient):

@@ -1,7 +1,8 @@
 import logging
 
-from feddersen.connectors.pgvector.pgvector import DocumentAuthChunk
+import pytest
 from feddersen.config import EXTRA_MIDDLEWARE_METADATA_KEY
+from feddersen.connectors.pgvector.pgvector import DocumentAuthChunk
 
 
 class TestDocumentAuthChunk:
@@ -64,7 +65,9 @@ class TestDocumentAuthChunk:
         assert meta == {}
         assert auth == {"groups": [], "users": []}
 
-    def test_prepare_metadata_with_custom_metadata(self, mocker):
+    @pytest.mark.parametrize("users", [["first.last@test.de"], ["First.Last@test.de"]])
+    def test_prepare_metadata_with_custom_metadata(self, mocker, users):
+        expected_users = [user.lower() for user in users]
         # Setup mock for ExtraMetadata
         mock_metadata = mocker.MagicMock()
         mock_metadata.model_dump.return_value = {
@@ -75,7 +78,10 @@ class TestDocumentAuthChunk:
         }
 
         mock_auth = mocker.MagicMock()
-        mock_auth.model_dump.return_value = {"groups": ["group1"], "users": ["user1"]}
+        mock_auth.model_dump.return_value = {
+            "groups": ["group1"],
+            "users": expected_users,
+        }
 
         mock_extra = mocker.MagicMock()
         mock_extra.metadata = mock_metadata
@@ -87,7 +93,7 @@ class TestDocumentAuthChunk:
         # Test data
         metadata = {
             EXTRA_MIDDLEWARE_METADATA_KEY: {
-                "auth": {"groups": ["group1"], "users": ["user1"]},
+                "auth": {"groups": ["group1"], "users": users},
                 "metadata": {
                     "title": "Test Document",
                     "url": "test_url",
@@ -113,7 +119,7 @@ class TestDocumentAuthChunk:
                 "source": "test_source",
             }
         }
-        assert auth == {"groups": ["group1"], "users": ["user1"]}
+        assert auth == {"groups": ["group1"], "users": expected_users}
 
     def test_prepare_metadata_with_key_replacements(self):
         # Test data with actual values

@@ -40,7 +40,7 @@ class FilterUtils:
         # Check for user email in users array
         if user_mail:
             user_access = metadata_column[user_field_name].contains(
-                json.dumps(user_mail)
+                json.dumps(user_mail.lower())
             )
             conditions.append(user_access)
 
