@@ -102,7 +102,8 @@
 	};
 
 	const toggleShowUpdateToast = async () => {
-		showUpdateToast = !showUpdateToast;
+		// showUpdateToast = !showUpdateToast;
+		showUpdateToast = false;
 		saveSettings({ showUpdateToast: showUpdateToast });
 	};
 
@@ -112,7 +113,8 @@
 	};
 
 	const toggleShowChangelog = async () => {
-		showChangelog = !showChangelog;
+		// showChangelog = !showChangelog;
+		showChangelog = false;
 		saveSettings({ showChangelog: showChangelog });
 	};
 
