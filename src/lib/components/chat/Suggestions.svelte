@@ -59,7 +59,9 @@
 	};
 
 	$: if (suggestionPrompts) {
-		sortedPrompts = [...(suggestionPrompts ?? [])].sort(() => Math.random() - 0.5);
+		sortedPrompts = [...(suggestionPrompts ?? [])]
+			.map((p) => ({ ...p, clientId: p.id || crypto.randomUUID() })) // Add a clientId if no id
+			.sort(() => Math.random() - 0.5);
 		getFilteredPrompts(inputValue);
 	}
 </script>
@@ -81,7 +83,7 @@
 
 <div class="h-40 overflow-auto scrollbar-none {className} items-start">
 	{#if filteredPrompts.length > 0}
-		{#each filteredPrompts as prompt, idx (prompt.id || prompt.content)}
+		{#each filteredPrompts as prompt, idx (idx)}
 			<button
 				class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
 				       px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
