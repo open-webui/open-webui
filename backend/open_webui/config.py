@@ -1942,7 +1942,7 @@ Provide a clear and direct response to the user's query, including inline citati
 {{QUERY}}
 </user_query>
 
-Current time: {{DATE}}
+Current date & time: {{CURRENT_DATETIME}}
 """
 
 RAG_TEMPLATE = PersistentConfig(
