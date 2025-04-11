@@ -41,8 +41,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            UID=0
-            GID=0
+            UID=1001
+            GID=1001
 
   deploy-dev:
     name: Deploy from ${{ github.ref_name }}/${{ github.sha }}
