@@ -12,7 +12,9 @@ from functools import update_wrapper, partial
 
 from fastapi import Request
 from pydantic import BaseModel, Field, create_model
-from langchain_core.utils.function_calling import convert_to_openai_function
+from langchain_core.utils.function_calling import (
+    convert_to_openai_function as convert_pydantic_model_to_openai_function_spec,
+)
 
 
 from open_webui.models.tools import Tools
@@ -240,7 +242,7 @@ def parse_docstring(docstring):
     return param_descriptions
 
 
-def function_to_pydantic_model(func: Callable) -> type[BaseModel]:
+def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
     """
     Converts a Python function's type hints and docstring to a Pydantic model,
     including support for nested types, default values, and descriptions.
@@ -295,11 +297,12 @@ def get_functions_from_tool(tool: object) -> list[Callable]:
 
 def get_tool_specs(tool_module: object) -> list[dict]:
     function_models = map(
-        function_to_pydantic_model, get_functions_from_tool(tool_module)
+        convert_function_to_pydantic_model, get_functions_from_tool(tool_module)
     )
 
     return [
-        convert_to_openai_function(function_model) for function_model in function_models
+        convert_pydantic_model_to_openai_function_spec(function_model)
+        for function_model in function_models
     ]
 
 
