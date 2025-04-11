@@ -211,8 +211,9 @@
 		console.log('executeTool', data, toolServer);
 
 		if (toolServer) {
+			console.log(toolServer);
 			const res = await executeToolServer(
-				toolServer.key,
+				(toolServer?.auth_type ?? 'bearer') === 'bearer' ? toolServer?.key : localStorage.token,
 				toolServer.url,
 				data?.name,
 				data?.params,

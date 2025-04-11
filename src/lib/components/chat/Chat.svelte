@@ -401,6 +401,7 @@
 		if (!$chatId) {
 			chatIdUnsubscriber = chatId.subscribe(async (value) => {
 				if (!value) {
+					await tick(); // Wait for DOM updates
 					await initNewChat();
 				}
 			});
@@ -1927,7 +1928,7 @@
 		: ' '} w-full max-w-full flex flex-col"
 	id="chat-container"
 >
-	{#if chatIdProp === '' || (!loading && chatIdProp)}
+	{#if !loading}
 		{#if $settings?.backgroundImageUrl ?? null}
 			<div
 				class="absolute {$showSidebar
@@ -1941,75 +1942,27 @@
 			/>
 		{/if}
 
-		<Navbar
-			bind:this={navbarElement}
-			chat={{
-				id: $chatId,
-				chat: {
-					title: $chatTitle,
-					models: selectedModels,
-					system: $settings.system ?? undefined,
-					params: params,
-					history: history,
-					timestamp: Date.now()
-				}
-			}}
-			title={$chatTitle}
-			bind:selectedModels
-			shareEnabled={!!history.currentId}
-			{initNewChat}
-		/>
-
 		<PaneGroup direction="horizontal" class="w-full h-full">
-			<Pane defaultSize={50} class="h-full flex w-full relative">
-				{#if !history.currentId && !$chatId && selectedModels.length <= 1 && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
-					<div class="absolute top-12 left-0 right-0 w-full z-30">
-						<div class=" flex flex-col gap-1 w-full">
-							{#if ($config?.license_metadata?.type ?? null) === 'trial'}
-								<Banner
-									banner={{
-										type: 'info',
-										title: 'Trial License',
-										content: $i18n.t(
-											'You are currently using a trial license. Please contact support to upgrade your license.'
-										)
-									}}
-								/>
-							{/if}
-
-							{#if ($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats}
-								<Banner
-									banner={{
-										type: 'error',
-										title: 'License Error',
-										content: $i18n.t(
-											'Exceeded the number of seats in your license. Please contact support to increase the number of seats.'
-										)
-									}}
-								/>
-							{/if}
-
-							{#each $banners.filter( (b) => (b.dismissible ? !JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]').includes(b.id) : true) ) as banner}
-								<Banner
-									{banner}
-									on:dismiss={(e) => {
-										const bannerId = e.detail;
-
-										localStorage.setItem(
-											'dismissedBannerIds',
-											JSON.stringify(
-												[
-													bannerId,
-													...JSON.parse(localStorage.getItem('dismissedBannerIds') ?? '[]')
-												].filter((id) => $banners.find((b) => b.id === id))
-											)
-										);
-									}}
-								/>
-							{/each}
-						</div>
-					</div>
-				{/if}
+			<Pane defaultSize={50} class="h-full flex relative max-w-full flex-col">
+				<Navbar
+					bind:this={navbarElement}
+					chat={{
+						id: $chatId,
+						chat: {
+							title: $chatTitle,
+							models: selectedModels,
+							system: $settings.system ?? undefined,
+							params: params,
+							history: history,
+							timestamp: Date.now()
+						}
+					}}
+					{history}
+					title={$chatTitle}
+					bind:selectedModels
+					shareEnabled={!!history.currentId}
+					{initNewChat}
+				/>
 
 				<div class="flex flex-col flex-auto z-10 w-full @container">
 					{#if $settings?.landingPageMode === 'chat' || createMessagesList(history, history.currentId).length > 0}

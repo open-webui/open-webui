@@ -152,6 +152,8 @@ def rag_template(template: str, context: str, query: str):
     if template.strip() == "":
         template = DEFAULT_RAG_TEMPLATE
 
+    template = prompt_template(template)
+
     if "[context]" not in template and "{{CONTEXT}}" not in template:
         log.debug(
             "WARNING: The RAG template does not contain the '[context]' or '{{CONTEXT}}' placeholder."

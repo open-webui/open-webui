@@ -230,11 +230,13 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
         entry = connection_app.entries[0]
         username = str(entry[f"{LDAP_ATTRIBUTE_FOR_USERNAME}"]).lower()
-        email = str(entry[f"{LDAP_ATTRIBUTE_FOR_MAIL}"])
-        if not email or email == "" or email == "[]":
+        email = entry[f"{LDAP_ATTRIBUTE_FOR_MAIL}"]
+        if not email:
             raise HTTPException(400, "User does not have a valid email address.")
-        else:
+        elif isinstance(email, str):
             email = email.lower()
+        elif isinstance(email, list):
+            email = email[0].lower()
 
         cn = str(entry["cn"])
         user_dn = entry.entry_dn
@@ -453,6 +455,13 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         if user_count == 0:
             # Disable signup after the first user is created
             request.app.state.config.ENABLE_SIGNUP = False
+
+        # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
+        if len(form_data.password.encode("utf-8")) > 72:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=ERROR_MESSAGES.PASSWORD_TOO_LONG,
+            )
 
         hashed = get_password_hash(form_data.password)
         user = Auths.insert_new_auth(

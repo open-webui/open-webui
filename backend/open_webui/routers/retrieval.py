@@ -60,6 +60,7 @@ from open_webui.retrieval.web.tavily import search_tavily
 from open_webui.retrieval.web.bing import search_bing
 from open_webui.retrieval.web.exa import search_exa
 from open_webui.retrieval.web.perplexity import search_perplexity
+from open_webui.retrieval.web.sougou import search_sougou
 
 from open_webui.retrieval.utils import (
     get_embedding_function,
@@ -411,6 +412,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "bing_search_v7_subscription_key": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
                 "exa_api_key": request.app.state.config.EXA_API_KEY,
                 "perplexity_api_key": request.app.state.config.PERPLEXITY_API_KEY,
+                "sougou_api_sid": request.app.state.config.SOUGOU_API_SID,
+                "sougou_api_sk": request.app.state.config.SOUGOU_API_SK,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
@@ -478,6 +481,8 @@ class WebSearchConfig(BaseModel):
     bing_search_v7_subscription_key: Optional[str] = None
     exa_api_key: Optional[str] = None
     perplexity_api_key: Optional[str] = None
+    sougou_api_sid: Optional[str] = None
+    sougou_api_sk: Optional[str] = None
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
     trust_env: Optional[bool] = None
@@ -640,6 +645,12 @@ async def update_rag_config(
         request.app.state.config.PERPLEXITY_API_KEY = (
             form_data.web.search.perplexity_api_key
         )
+        request.app.state.config.SOUGOU_API_SID = (
+            form_data.web.search.sougou_api_sid
+        )
+        request.app.state.config.SOUGOU_API_SK = (
+            form_data.web.search.sougou_api_sk
+        )
 
         request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = (
             form_data.web.search.result_count
@@ -712,6 +723,8 @@ async def update_rag_config(
                 "bing_search_v7_subscription_key": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
                 "exa_api_key": request.app.state.config.EXA_API_KEY,
                 "perplexity_api_key": request.app.state.config.PERPLEXITY_API_KEY,
+                "sougou_api_sid": request.app.state.config.SOUGOU_API_SID,
+                "sougou_api_sk": request.app.state.config.SOUGOU_API_SK,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
                 "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
@@ -1267,6 +1280,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
     - TAVILY_API_KEY
     - EXA_API_KEY
     - PERPLEXITY_API_KEY
+    - SOUGOU_API_SID + SOUGOU_API_SK
     - SEARCHAPI_API_KEY + SEARCHAPI_ENGINE (by default `google`)
     - SERPAPI_API_KEY + SERPAPI_ENGINE (by default `google`)
     Args:
@@ -1438,6 +1452,17 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
+    elif engine == 'sougou':
+        if request.app.state.config.SOUGOU_API_SID and request.app.state.config.SOUGOU_API_SK:
+            return search_sougou(
+                request.app.state.config.SOUGOU_API_SID,
+                request.app.state.config.SOUGOU_API_SK,
+                query,
+                request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception("No SOUGOU_API_SID or SOUGOU_API_SK found in environment variables")
     else:
         raise Exception("No search engine API key found in environment variables")
 

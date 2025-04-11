@@ -73,7 +73,7 @@
 				return JSON.stringify(parsed, null, 2);
 			} else {
 				// It's a primitive value like a number, boolean, etc.
-				return String(parsed);
+				return `${JSON.stringify(String(parsed))}`;
 			}
 		} catch (e) {
 			// Not valid JSON, return as-is

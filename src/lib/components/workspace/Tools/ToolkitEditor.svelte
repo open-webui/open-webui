@@ -30,7 +30,7 @@
 		description: ''
 	};
 	export let content = '';
-	export let accessControl = null;
+	export let accessControl = {};
 
 	let _content = '';
 

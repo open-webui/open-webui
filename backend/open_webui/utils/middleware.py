@@ -897,12 +897,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # If context is not empty, insert it into the messages
     if len(sources) > 0:
         context_string = ""
-        for source_idx, source in enumerate(sources):
+        citated_file_idx = {}
+        for _, source in enumerate(sources, 1):
             if "document" in source:
-                for doc_idx, doc_context in enumerate(source["document"]):
-                    context_string += (
-                        f'<source id="{source_idx + 1}">{doc_context}</source>\n'
-                    )
+                for doc_context, doc_meta in zip(
+                    source["document"], source["metadata"]
+                ):
+                    file_id = doc_meta.get("file_id")
+                    if file_id not in citated_file_idx:
+                        citated_file_idx[file_id] = len(citated_file_idx) + 1
+                    context_string += f'<source id="{citated_file_idx[file_id]}">{doc_context}</source>\n'
 
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])
@@ -1609,6 +1613,9 @@ async def process_chat_response(
                             )
 
                             if data:
+                                if "event" in data:
+                                    await event_emitter(data.get("event", {}))
+
                                 if "selected_model_id" in data:
                                     model_id = data["selected_model_id"]
                                     Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -1653,14 +1660,27 @@ async def process_chat_response(
                                             )
 
                                             if tool_call_index is not None:
-                                                if (
-                                                    len(response_tool_calls)
-                                                    <= tool_call_index
-                                                ):
+                                                # Check if the tool call already exists
+                                                current_response_tool_call = None
+                                                for (
+                                                    response_tool_call
+                                                ) in response_tool_calls:
+                                                    if (
+                                                        response_tool_call.get("index")
+                                                        == tool_call_index
+                                                    ):
+                                                        current_response_tool_call = (
+                                                            response_tool_call
+                                                        )
+                                                        break
+
+                                                if current_response_tool_call is None:
+                                                    # Add the new tool call
                                                     response_tool_calls.append(
                                                         delta_tool_call
                                                     )
                                                 else:
+                                                    # Update the existing tool call
                                                     delta_name = delta_tool_call.get(
                                                         "function", {}
                                                     ).get("name")
@@ -1671,16 +1691,14 @@ async def process_chat_response(
                                                     )
 
                                                     if delta_name:
-                                                        response_tool_calls[
-                                                            tool_call_index
-                                                        ]["function"][
-                                                            "name"
-                                                        ] += delta_name
+                                                        current_response_tool_call[
+                                                            "function"
+                                                        ]["name"] += delta_name
 
                                                     if delta_arguments:
-                                                        response_tool_calls[
-                                                            tool_call_index
-                                                        ]["function"][
+                                                        current_response_tool_call[
+                                                            "function"
+                                                        ][
                                                             "arguments"
                                                         ] += delta_arguments
 
