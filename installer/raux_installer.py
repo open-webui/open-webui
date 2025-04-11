@@ -160,6 +160,27 @@ def install_raux(install_dir, debug=False):
             logging.error(f"ERROR: Failed to extract RAUX zip file: {str(e)}")
             raise ValueError(f"Failed to extract RAUX zip file: {str(e)}")
 
+        # Look for .env.example in the extracted files and copy it to raux_env/Lib/.env
+        logging.info("Looking for .env.example file...")
+        env_example_path = None
+        for root, dirs, files in os.walk(extract_dir):
+            if ".env.example" in files:
+                env_example_path = os.path.join(root, ".env.example")
+                break
+                    
+        if env_example_path:
+            logging.info(f"Found .env.example at: {env_example_path}")
+            env_dest_dir = os.path.join(install_dir, "raux_env", "Lib")
+            os.makedirs(env_dest_dir, exist_ok=True)
+            env_dest_path = os.path.join(env_dest_dir, ".env")
+            try:
+                shutil.copy2(env_example_path, env_dest_path)
+                logging.info(f"Copied .env.example to {env_dest_path}")
+            except Exception as e:
+                logging.warning(f"WARNING: Failed to copy .env.example to {env_dest_path}: {str(e)}")
+        else:
+            logging.warning("WARNING: Could not find .env.example in the extracted files")
+                
         # List extracted files for debugging
         logging.info("Listing extracted files for debugging:")
         for root, dirs, files in os.walk(extract_dir):
