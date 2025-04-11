@@ -35,7 +35,7 @@ ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN npm run build
 
 ######## WebUI backend ########
-FROM python:3.11-slim-bookworm AS base
+FROM python:3.12-slim-bookworm AS base
 
 # Use args
 ARG USE_CUDA
@@ -106,6 +106,26 @@ RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry
 # Make sure the user has access to the app and root directory
 RUN chown -R $UID:$GID /app $HOME
 
+
+# 시스템 의존성 설치
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    procps \
+    lsof \
+    vim \
+    nodejs \
+    npm \
+    libpq-dev \
+    gcc \
+    libffi-dev \
+    swig \
+    libxml2-dev \
+    libxslt-dev \
+    make \
+    git && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get update && \
     # Install pandoc and netcat
@@ -129,6 +149,11 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     # cleanup
     rm -rf /var/lib/apt/lists/*; \
     fi
+
+# python 및 pip에 대한 심볼릭 링크 생성 (Python 3.12 사용)
+RUN ln -sf /usr/bin/python3.12 /usr/bin/python && \
+    ln -sf /usr/bin/python3.12 /usr/bin/python3 && \
+    ln -sf /usr/bin/pip3 /usr/bin/pip    
 
 # install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
@@ -175,3 +200,7 @@ ENV WEBUI_BUILD_VERSION=${BUILD_HASH}
 ENV DOCKER=true
 
 # CMD [ "bash", "start.sh"]
+
+
+
+
