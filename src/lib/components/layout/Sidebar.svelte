@@ -921,12 +921,12 @@
 				<!-- Company Logo -->
 				<div class="mt-2 mb-2 pl-2.5 flex j">
 					<img
-						src="{WEBUI_BASE_URL}/assets/W_logo_n_H.png"
+						src="{WEBUI_BASE_URL}/static/assets/W_logo_n_H.png"
 						alt="Company Logo Light"
 						class="block dark:hidden w-32"
 					/>
 					<img
-						src="{WEBUI_BASE_URL}/assets/W_logo_b_H.png"
+						src="{WEBUI_BASE_URL}/static/assets/W_logo_b_H.png"
 						alt="Company Logo Dark"
 						class="hidden dark:block w-32"
 					/>
