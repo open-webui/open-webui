@@ -16,18 +16,89 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "Clean RAUX Environment: Local",
+			"label": "Clean RAUX Environment: AppData",
 			"type": "shell",
 			"command": "cmd",
 			"args": [
 				"/c",
-				"conda deactivate & rmdir /s /q \"%LOCALAPPDATA%\\RAUX\" & conda env remove -n raux_env -y"
+				"conda deactivate & rmdir /s /q \"%LOCALAPPDATA%\\RAUX\" & del /f /q \"%USERPROFILE%\\Desktop\\RAUX.lnk\" & conda env remove -n raux_env -y"
 			],
 			"presentation": {
 				"reveal": "silent",
-				"panel": "new",
+				"panel": "new"
 			},
 			"problemMatcher": []
+		},
+		{
+			"label": "Reset RAUX: Development",
+			"type": "shell",
+			"command": "rm",
+			"args": [
+				"-rf",
+				"${workspaceFolder}/backend/data/cache/",
+				"${workspaceFolder}/backend/data/uploads/",
+				"${workspaceFolder}/backend/data/vector_db/",
+				"${workspaceFolder}/backend/data/webui.db"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "new",
+				"close": true
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "start-frontend",
+			"type": "npm",
+			"script": "dev",
+			"isBackground": true,
+			"problemMatcher": {
+				"owner": "vite",
+				"pattern": {
+					"regexp": "."
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": ".*VITE.*",
+					"endsPattern": ".*ready in.*ms"
+				}
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated"
+			}
+		},
+		{
+			"label": "start-backend",
+			"type": "shell",
+			"command": "cd ${workspaceFolder}/backend && sh dev.sh",
+			"isBackground": true,
+			"problemMatcher": {
+				"pattern": {
+					"regexp": "."
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "INFO:     Uvicorn running on",
+					"endsPattern": "INFO:     Application startup complete"
+				}
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated"
+			}
+		},
+		{
+			"label": "start-faull-stack",
+			"dependsOn": [
+				"start-backend",
+				"start-frontend"
+			],
+			"problemMatcher": [],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
 		}
 	]
 }

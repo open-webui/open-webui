@@ -245,7 +245,8 @@
 		responseAutoCopy = $settings.responseAutoCopy ?? false;
 
 		showUsername = $settings.showUsername ?? false;
-		showUpdateToast = $settings.showUpdateToast ?? true;
+		// showUpdateToast = $settings.showUpdateToast ?? true;
+		showUpdateToast = false;
 		showChangelog = $settings.showChangelog ?? true;
 
 		showEmojiInCall = $settings.showEmojiInCall ?? false;

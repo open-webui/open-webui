@@ -51,12 +51,35 @@ jobs:
           # Rename the file
           mv "$WHEEL_FILE" "dist/$NEW_NAME.whl"
 
-      # Save the wheel file as an artifact for the create-installer job
+      # Save the wheel file as an artifact
       - name: Save wheel as artifact
         uses: actions/upload-artifact@v4
         with:
+          name: wheel
           path: dist/*.whl
+          if-no-files-found: error
           retention-days: 1
+
+      # Download the wheel file
+      - name: Download wheel artifact
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*.whl'
+          path: dist
+          merge-multiple: true
+
+      - name: List downloaded wheel files
+        run: |
+          echo "Listing downloaded wheel files:"
+          ls -l dist/*.whl
+          WHEEL_FILE=$(ls -1 dist/*.whl | head -n 1)
+          if [ -n "$WHEEL_FILE" ]; then
+            echo "WHEEL_FILENAME=$(basename "$WHEEL_FILE")" >> $GITHUB_ENV
+            echo "Using wheel file: $(basename "$WHEEL_FILE")"
+          else
+            echo "ERROR: No wheel file found in dist directory!"
+            exit 1
+          fi
 
   publish-installer:
     needs: build-and-package
@@ -98,6 +121,7 @@ jobs:
       - name: Download wheel artifact
         uses: actions/download-artifact@v4
         with:
+          name: wheel
           path: dist
 
       - name: List downloaded wheel files
@@ -160,8 +184,7 @@ jobs:
               $INSTALLER_PATH = $INSTALLER_FILES[0].FullName
               Write-Host "Found installer at: $INSTALLER_PATH"
               $NEW_NAME = "raux-$env:VERSION-$env:COMMIT-setup.exe"
-              $DESTINATION = "installer/$NEW_NAME"
-              Move-Item -Path $INSTALLER_PATH -Destination $DESTINATION -Force
+              Move-Item -Path $INSTALLER_PATH -Destination $NEW_NAME -Force
               echo "INSTALLER_NAME=$NEW_NAME" >> $env:GITHUB_ENV
             } else {
               Write-Host "ERROR: No installer .exe files found in installer directory!"
@@ -176,24 +199,23 @@ jobs:
         if: success()
         run: |
           # Create SHA256 checksum file
-          $INSTALLER_PATH = "installer/$env:INSTALLER_NAME"
-          $CHECKSUM = (Get-FileHash -Path $INSTALLER_PATH -Algorithm SHA256).Hash.ToLower()
-          $CHECKSUM | Out-File -FilePath "installer/$env:INSTALLER_NAME.sha256" -Encoding ascii
+          $CHECKSUM = (Get-FileHash -Path $env:INSTALLER_NAME -Algorithm SHA256).Hash.ToLower()
+          $CHECKSUM | Out-File -FilePath "$env:INSTALLER_NAME.sha256" -Encoding ascii
           Write-Host "Created checksum file with value: $CHECKSUM"
 
       - name: Zip installer executable
         if: success()
         run: |
           # First, create a directory to hold all files we want to include in the zip
-          mkdir -p installer/package
+          mkdir -p package
           
           # Copy the installer executable
-          Copy-Item "installer/$env:INSTALLER_NAME" -Destination "installer/package/"
+          Copy-Item "$env:INSTALLER_NAME" -Destination "package/"
           
           # Copy the ux_installer directory with install.py
           if (Test-Path -Path "installer/ux_installer") {
             Write-Host "Copying ux_installer directory to package"
-            Copy-Item -Path "installer/ux_installer" -Destination "installer/package/" -Recurse
+            Copy-Item -Path "installer/ux_installer" -Destination "package/" -Recurse
           } else {
             Write-Host "WARNING: ux_installer directory not found in installer directory"
           }
@@ -201,28 +223,28 @@ jobs:
           # Copy the launcher scripts
           if (Test-Path -Path "installer/launch_lemonade.ps1") {
             Write-Host "Copying launch_lemonade.ps1 to package"
-            Copy-Item -Path "installer/launch_lemonade.ps1" -Destination "installer/package/"
+            Copy-Item -Path "installer/launch_lemonade.ps1" -Destination "package/"
           } else {
             Write-Host "WARNING: launch_lemonade.ps1 not found in installer directory"
           }
           
           if (Test-Path -Path "installer/launch_raux.ps1") {
             Write-Host "Copying launch_raux.ps1 to package"
-            Copy-Item -Path "installer/launch_raux.ps1" -Destination "installer/package/"
+            Copy-Item -Path "installer/launch_raux.ps1" -Destination "package/"
           } else {
             Write-Host "WARNING: launch_raux.ps1 not found in installer directory"
           }
           
           if (Test-Path -Path "installer/launch_raux.cmd") {
             Write-Host "Copying launch_raux.cmd to package"
-            Copy-Item -Path "installer/launch_raux.cmd" -Destination "installer/package/"
+            Copy-Item -Path "installer/launch_raux.cmd" -Destination "package/"
           } else {
             Write-Host "WARNING: launch_raux.cmd not found in installer directory"
           }
           
           # Create the zip file with all contents
           $ZIP_NAME = "raux-$env:VERSION-$env:COMMIT-setup.zip"
-          Compress-Archive -Path "installer/package/*" -DestinationPath "installer/$ZIP_NAME"
+          Compress-Archive -Path "package/*" -DestinationPath $ZIP_NAME
           echo "ZIP_NAME=$ZIP_NAME" >> $env:GITHUB_ENV
           Write-Host "Created zip file: $ZIP_NAME with installer, ux_installer directory, and launcher scripts"
 
@@ -230,6 +252,7 @@ jobs:
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
         with:
+          if-no-files-found: error
           path: |
             ${{ env.INSTALLER_NAME }}
             ${{ env.INSTALLER_NAME }}.sha256
