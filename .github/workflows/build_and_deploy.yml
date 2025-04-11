@@ -40,6 +40,9 @@ jobs:
           tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }},${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            UID=0
+            GID=0
 
   deploy-dev:
     name: Deploy from ${{ github.ref_name }}/${{ github.sha }}
