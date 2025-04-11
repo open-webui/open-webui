@@ -21,7 +21,7 @@
 	let command = '';
 	let content = '';
 
-	// Default to private ({}) unless user has public sharing permission, then default to public (null)
+	// If user is admin or has public sharing permissions, set default value to public (null) otherwise set to private ({})
 	let accessControl = $user?.permissions?.sharing?.public_prompts || $user?.role === 'admin' ? null : {};
 
 	let showAccessControlModal = false;
