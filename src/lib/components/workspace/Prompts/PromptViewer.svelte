@@ -23,6 +23,7 @@
 			title = prompt.title;
 			await tick();
 
+			// Ensure command is properly processed
 			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
 			content = prompt.content;
 			loading = false;
@@ -66,7 +67,7 @@
 							<input
 								class="w-full mt-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-850 dark:text-gray-300"
 								type="text"
-								value={command}
+								value={`/${command}`}
 								readonly
 							/>
 						</div>

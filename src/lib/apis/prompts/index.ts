@@ -104,7 +104,10 @@ export const getPromptList = async (token: string = '') => {
 export const getPromptByCommand = async (token: string, command: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${command}`, {
+	// URL encode the command to properly handle special characters like question marks
+	const encodedCommand = encodeURIComponent(command);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${encodedCommand}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -136,7 +139,10 @@ export const getPromptByCommand = async (token: string, command: string) => {
 export const updatePromptByCommand = async (token: string, prompt: PromptItem) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${prompt.command}/update`, {
+	// URL encode the command to properly handle special characters like question marks
+	const encodedCommand = encodeURIComponent(prompt.command);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${encodedCommand}/update`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',
@@ -174,7 +180,10 @@ export const deletePromptByCommand = async (token: string, command: string) => {
 
 	command = command.charAt(0) === '/' ? command.slice(1) : command;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${command}/delete`, {
+	// URL encode the command to properly handle special characters like question marks
+	const encodedCommand = encodeURIComponent(command);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/prompts/command/${encodedCommand}/delete`, {
 		method: 'DELETE',
 		headers: {
 			Accept: 'application/json',

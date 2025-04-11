@@ -28,13 +28,15 @@
 	onMount(async () => {
 		const command = $page.url.searchParams.get('command');
 		if (command) {
-			const _prompt = await getPromptByCommand(
-				localStorage.token,
-				command.replace(/\//g, '')
-			).catch((error) => {
-				toast.error(`${error}`);
-				return null;
-			});
+			// Ensure proper command format before sending to the API
+			const sanitizedCommand = command.replace(/\//g, '');
+
+			const _prompt = await getPromptByCommand(localStorage.token, sanitizedCommand).catch(
+				(error) => {
+					toast.error(`${error}`);
+					return null;
+				}
+			);
 
 			if (_prompt) {
 				prompt = {

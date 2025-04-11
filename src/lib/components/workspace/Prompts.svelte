@@ -52,6 +52,14 @@
 		return result;
 	};
 
+	const sanitizeCommandString = (inputString) => {
+		// Replace any non-alphanumeric characters with hyphens and ensure no consecutive hyphens
+		return inputString
+			.replace(/[^a-zA-Z0-9-]/g, '-') // Replace special chars with hyphens
+			.replace(/-+/g, '-') // Replace consecutive hyphens with a single hyphen
+			.replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+	};
+
 	const cloneHandler = async (prompt) => {
 		sessionStorage.prompt = JSON.stringify(prompt);
 		goto('/workspace/prompts/create');
@@ -228,7 +236,7 @@
 						<a
 							class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 							type="button"
-							href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
+							href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command.replace(/^\//, ''))}`}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -293,8 +301,12 @@
 
 							for (const prompt of savedPrompts) {
 								if (prompt.name && prompt.content) {
+									// First sanitize the name to replace spaces with hyphens
 									const baseCommand = prompt.name.replace(/\s+/g, '-').toLowerCase();
-									const fullCommand = `${baseCommand}-${generateRandomSuffix()}`;
+									// Then sanitize further to remove any special characters
+									const sanitizedCommand = sanitizeCommandString(baseCommand);
+									// Only then add the random suffix
+									const fullCommand = `${sanitizedCommand}-${generateRandomSuffix()}`;
 									const command = sanitizeResponseContent(fullCommand);
 
 									const title = sanitizeResponseContent(prompt.name);
@@ -366,11 +378,32 @@
 						reader.onload = async (event) => {
 							const savedPrompts = JSON.parse(event.target.result);
 							for (const prompt of savedPrompts) {
+								// Check if the prompt should be private (has access_control)
+								const isPrivate = prompt.access_control !== null;
+
+								// Remove potential random suffix from command for imported prompts
+								let cleanCommand = prompt.command;
+								if (cleanCommand.charAt(0) === '/') {
+									cleanCommand = cleanCommand.slice(1);
+								}
+
+								// If the command has a random suffix pattern (like -abc12), remove it
+								cleanCommand = cleanCommand.replace(/-[a-z0-9]{5}$/, '');
+
+								// Sanitize the command to remove any special characters
+								cleanCommand = sanitizeCommandString(cleanCommand);
+
+								// For private prompts, add a new random suffix
+								if (isPrivate) {
+									cleanCommand = `${cleanCommand}-${generateRandomSuffix()}`;
+								}
+
 								await createNewPrompt(localStorage.token, {
-									command:
-										prompt.command.charAt(0) === '/' ? prompt.command.slice(1) : prompt.command,
+									command: cleanCommand,
 									title: prompt.title,
-									content: prompt.content
+									content: prompt.content,
+									// Preserve access control settings from the imported prompt
+									access_control: prompt.access_control
 								}).catch((error) => {
 									toast.error(`${error}`);
 									return null;
