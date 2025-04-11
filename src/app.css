@@ -91,10 +91,6 @@ textarea::placeholder {
 	-webkit-app-region: no-drag;
 }
 
-iframe {
-	@apply rounded-lg;
-}
-
 li p {
 	display: inline;
 }
