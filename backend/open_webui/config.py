@@ -1941,6 +1941,8 @@ Provide a clear and direct response to the user's query, including inline citati
 <user_query>
 {{QUERY}}
 </user_query>
+
+Current time: {{DATE}}
 """
 
 RAG_TEMPLATE = PersistentConfig(

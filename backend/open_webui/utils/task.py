@@ -148,6 +148,12 @@ def replace_messages_variable(
 # {{prompt:middletruncate:8000}}
 
 
+def get_time_str():
+    current_time = datetime.now()
+    formatted_time = current_time.strftime('%Y-%m-%d %H:%M:%S %Z%z')
+    return formatted_time
+
+
 def rag_template(template: str, context: str, query: str):
     if template.strip() == "":
         template = DEFAULT_RAG_TEMPLATE
@@ -175,6 +181,7 @@ def rag_template(template: str, context: str, query: str):
         template = template.replace("{{QUERY}}", query_placeholder)
         query_placeholders.append(query_placeholder)
 
+    template = template.replace("{{DATE}}", get_time_str())
     template = template.replace("[context]", context)
     template = template.replace("{{CONTEXT}}", context)
     template = template.replace("[query]", query)
