@@ -956,6 +956,74 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
     return {"data": models}
 
 
+@app.get("/api/models/info")
+async def get_model_info():
+    modelInfo = {
+    "models": [
+        {
+        "en": {
+            "name": "Student Housing(SHRL)",
+            "description": "This model is based on documents from shrl.hkust.edu.hk. It is suitable for questions about housing (application, hall points, housing regulations, check-in-check-out, shuttle bus, Off-campus, etc.)."
+        },
+        "kr": {
+            "name": "기숙사 (Student Housing and Residential Life)",
+            "description": "해당 모델은 (shrl.hkust.edu.hk)의 문서를 기반으로 답변합니다. 기숙사 (신청, 홀포인트, 기숙사 규정, 체크인-체크아웃, 셔틀 버스, Off-campus 등) 관련 질문에 적합합니다."
+        }
+        },
+        {
+        "en": {
+            "name": "Academic Support(ARO)",
+            "description": "This model is based on documents from registry.hkust.edu.hk. It is suitable for questions about leave of absence, credit regulations, study extension, credit transfer, transcript inquiries, SIS, and other academic support."
+        },
+        "kr": {
+            "name": "학사지원 (Academic Registry Office)",
+            "description": "해당 모델은 (registry.hkust.edu.hk)의 문서를 기반으로 답변합니다. 휴학 신청, 학점 규정, 학업 연장, 크래딧 트랜스퍼, 성적표 조회, SIS 등 학사 지원 관련 질문에 적합합니다."
+        }
+        },
+        {
+        "en": {
+            "name": "Campus Services(CSO&DST&CMO)",
+            "description": "This model is based on documents from (cso.hkust.edu.hk, dst.hkust.edu.hk). It is suitable for questions about campus facilities, campus activities, transportation, and other student support."
+        },
+        "kr": {
+            "name": "학생지원 (Campus Services Office & Dean's Office & Campus Management Office)",
+            "description": "해당 모델은 (cso.hkust.edu.hk, dst.hkust.edu.hk, cmo.hkust.edu.hk)의 문서를 기반으로 답변합니다. 학교 시설, 교내 활동, 교통수단 등 학생 지원 관련 질문에 적합합니다."
+        }
+        },
+        {
+        "en": {
+            "name": "IT Services(ITSO)",
+            "description": "This model is based on documents from (itso.hkust.edu.hk). It is suitable for questions about VPN setup, printer usage, 2FA authentication, and other school IT services."
+        },
+        "kr": {
+            "name": "기술지원 (IT Services Office)",
+            "description": "해당 모델은 (itso.hkust.edu.hk)의 문서를 기반으로 답변합니다. VPN 설정 방법, 프린터기 사용 방법, 2FA 인증 등 학교 IT 서비스 관련 질문에 적합합니다."
+        }
+        },
+        {
+        "en": {
+            "name": "Undergraduate Research(UROP)",
+            "description": "This model is based on documents from urop.hkust.edu.hk. It is suitable for questions about UROP applications, previous project inquiries, and related matters."
+        },
+        "kr": {
+            "name": "학부연구 (Undergraduate Research Opportunities Program)",
+            "description": "해당 모델은 (urop.hkust.edu.hk)의 문서를 기반으로 답변합니다. UROP 신청, 이전 프로젝트 조회 등 관련 질문에 적합합니다."
+        }
+        },
+        {
+        "en": {
+            "name": "Study Abroad(SA)",
+            "description": "This model is based on documents from (studyabroad.hkust.edu.hk, summercampus.hkust.edu.hk). It is suitable for questions about study abroad applications and related matters."
+        },
+        "kr": {
+            "name": "교환학생 (Study Abroad)",
+            "description": "해당 모델은 (studyabroad.hkust.edu.hk, summercampus.hkust.edu.hk)의 문서를 기반으로 답변합니다. 교환학생 신청 등 관련 질문에 적합합니다."
+        }
+        }
+    ]
+    }
+    return {"data": modelInfo}
+
 @app.get("/api/models/base")
 async def get_base_models(request: Request, user=Depends(get_admin_user)):
     models = await get_all_base_models(request)
