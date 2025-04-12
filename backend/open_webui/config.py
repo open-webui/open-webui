@@ -2087,18 +2087,6 @@ SERPLY_API_KEY = PersistentConfig(
     os.getenv("SERPLY_API_KEY", ""),
 )
 
-TAVILY_API_KEY = PersistentConfig(
-    "TAVILY_API_KEY",
-    "rag.web.search.tavily_api_key",
-    os.getenv("TAVILY_API_KEY", ""),
-)
-
-TAVILY_EXTRACT_DEPTH = PersistentConfig(
-    "TAVILY_EXTRACT_DEPTH",
-    "rag.web.search.tavily_extract_depth",
-    os.getenv("TAVILY_EXTRACT_DEPTH", "basic"),
-)
-
 JINA_API_KEY = PersistentConfig(
     "JINA_API_KEY",
     "rag.web.search.jina_api_key",
@@ -2193,26 +2181,38 @@ RAG_WEB_SEARCH_TRUST_ENV = PersistentConfig(
 
 PLAYWRIGHT_WS_URI = PersistentConfig(
     "PLAYWRIGHT_WS_URI",
-    "rag.web.loader.engine.playwright.ws.uri",
-    os.environ.get("PLAYWRIGHT_WS_URI", None),
+    "rag.web.loader.playwright_ws_uri",
+    os.environ.get("PLAYWRIGHT_WS_URI", ""),
 )
 
 PLAYWRIGHT_TIMEOUT = PersistentConfig(
     "PLAYWRIGHT_TIMEOUT",
-    "rag.web.loader.engine.playwright.timeout",
-    int(os.environ.get("PLAYWRIGHT_TIMEOUT", "10")),
+    "rag.web.loader.playwright_timeout",
+    int(os.environ.get("PLAYWRIGHT_TIMEOUT", "10000")),
 )
 
 FIRECRAWL_API_KEY = PersistentConfig(
     "FIRECRAWL_API_KEY",
-    "firecrawl.api_key",
+    "rag.web.loader.firecrawl_api_key",
     os.environ.get("FIRECRAWL_API_KEY", ""),
 )
 
 FIRECRAWL_API_BASE_URL = PersistentConfig(
     "FIRECRAWL_API_BASE_URL",
-    "firecrawl.api_url",
+    "rag.web.loader.firecrawl_api_url",
     os.environ.get("FIRECRAWL_API_BASE_URL", "https://api.firecrawl.dev"),
+)
+
+TAVILY_API_KEY = PersistentConfig(
+    "TAVILY_API_KEY",
+    "rag.web.loader.tavily_api_key",
+    os.getenv("TAVILY_API_KEY", ""),
+)
+
+TAVILY_EXTRACT_DEPTH = PersistentConfig(
+    "TAVILY_EXTRACT_DEPTH",
+    "rag.web.loader.tavily_extract_depth",
+    os.getenv("TAVILY_EXTRACT_DEPTH", "basic"),
 )
 
 ####################################

@@ -378,18 +378,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "max_size": request.app.state.config.FILE_MAX_SIZE,
             "max_count": request.app.state.config.FILE_MAX_COUNT,
         },
-        "youtube": {
-            "language": request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
-            "translation": request.app.state.YOUTUBE_LOADER_TRANSLATION,
-            "proxy_url": request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
-        },
         "web": {
-            "ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
-            "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
+            "ENABLE_RAG_WEB_SEARCH": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
             "search": {
-                "enabled": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
-                "drive": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
-                "onedrive": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
                 "engine": request.app.state.config.RAG_WEB_SEARCH_ENGINE,
                 "searxng_query_url": request.app.state.config.SEARXNG_QUERY_URL,
                 "google_pse_api_key": request.app.state.config.GOOGLE_PSE_API_KEY,
@@ -415,9 +406,25 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
                 "sougou_api_sid": request.app.state.config.SOUGOU_API_SID,
                 "sougou_api_sk": request.app.state.config.SOUGOU_API_SK,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
-                "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
                 "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+            },
+            "loader": {
+                "engine": request.app.state.config.RAG_WEB_LOADER_ENGINE,
+                "enable_ssl_verification": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+                "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
+                "bypass_embedding_and_retrieval": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
+                "playwright_ws_uri": request.app.state.config.PLAYWRIGHT_WS_URI,
+                "playwright_timeout": request.app.state.config.PLAYWRIGHT_TIMEOUT,
+                "firecrawl_api_key": request.app.state.config.FIRECRAWL_API_KEY,
+                "firecrawl_api_base_url": request.app.state.config.FIRECRAWL_API_BASE_URL,
+                "tavily_api_key": request.app.state.config.TAVILY_API_KEY,
+                "tavily_extract_depth": request.app.state.config.TAVILY_EXTRACT_DEPTH,
+                "youtube": {
+                    "language": request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
+                    "proxy_url": request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
+                    "translation": request.app.state.YOUTUBE_LOADER_TRANSLATION,
+                },
             },
         },
     }
@@ -458,7 +465,6 @@ class YoutubeLoaderConfig(BaseModel):
 
 
 class WebSearchConfig(BaseModel):
-    enabled: bool
     engine: Optional[str] = None
     searxng_query_url: Optional[str] = None
     google_pse_api_key: Optional[str] = None
@@ -485,14 +491,27 @@ class WebSearchConfig(BaseModel):
     sougou_api_sk: Optional[str] = None
     result_count: Optional[int] = None
     concurrent_requests: Optional[int] = None
-    trust_env: Optional[bool] = None
     domain_filter_list: Optional[List[str]] = []
 
 
+class WebLoaderConfig(BaseModel):
+    engine: Optional[str] = None
+    enable_ssl_verification: Optional[bool] = None
+    trust_env: Optional[bool] = None
+    bypass_embedding_and_retrieval: Optional[bool] = None
+    playwright_ws_uri: Optional[str] = None
+    playwright_timeout: Optional[int] = None
+    firecrawl_api_key: Optional[str] = None
+    firecrawl_api_base_url: Optional[str] = None
+    tavily_api_key: Optional[str] = None
+    tavily_extract_depth: Optional[str] = None
+    youtube: Optional[YoutubeLoaderConfig] = None
+
+
 class WebConfig(BaseModel):
+    ENABLE_RAG_WEB_SEARCH: Optional[bool] = None
     search: WebSearchConfig
-    ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION: Optional[bool] = None
-    BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
+    loader: WebLoaderConfig
 
 
 class ConfigUpdateForm(BaseModel):
@@ -504,7 +523,6 @@ class ConfigUpdateForm(BaseModel):
     file: Optional[FileConfig] = None
     content_extraction: Optional[ContentExtractionConfig] = None
     chunk: Optional[ChunkParamUpdateForm] = None
-    youtube: Optional[YoutubeLoaderConfig] = None
     web: Optional[WebConfig] = None
 
 
@@ -576,24 +594,12 @@ async def update_rag_config(
         request.app.state.config.CHUNK_SIZE = form_data.chunk.chunk_size
         request.app.state.config.CHUNK_OVERLAP = form_data.chunk.chunk_overlap
 
-    if form_data.youtube is not None:
-        request.app.state.config.YOUTUBE_LOADER_LANGUAGE = form_data.youtube.language
-        request.app.state.config.YOUTUBE_LOADER_PROXY_URL = form_data.youtube.proxy_url
-        request.app.state.YOUTUBE_LOADER_TRANSLATION = form_data.youtube.translation
-
     if form_data.web is not None:
-        request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
-            # Note: When UI "Bypass SSL verification for Websites"=True then ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION=False
-            form_data.web.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION
+        request.app.state.config.ENABLE_RAG_WEB_SEARCH = (
+            form_data.web.ENABLE_RAG_WEB_SEARCH
         )
 
-        request.app.state.config.ENABLE_RAG_WEB_SEARCH = form_data.web.search.enabled
         request.app.state.config.RAG_WEB_SEARCH_ENGINE = form_data.web.search.engine
-
-        request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
-            form_data.web.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
-        )
-
         request.app.state.config.SEARXNG_QUERY_URL = (
             form_data.web.search.searxng_query_url
         )
@@ -628,10 +634,8 @@ async def update_rag_config(
         request.app.state.config.SEARCHAPI_ENGINE = (
             form_data.web.search.searchapi_engine
         )
-
         request.app.state.config.SERPAPI_API_KEY = form_data.web.search.serpapi_api_key
         request.app.state.config.SERPAPI_ENGINE = form_data.web.search.serpapi_engine
-
         request.app.state.config.JINA_API_KEY = form_data.web.search.jina_api_key
         request.app.state.config.BING_SEARCH_V7_ENDPOINT = (
             form_data.web.search.bing_search_v7_endpoint
@@ -639,30 +643,57 @@ async def update_rag_config(
         request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY = (
             form_data.web.search.bing_search_v7_subscription_key
         )
-
         request.app.state.config.EXA_API_KEY = form_data.web.search.exa_api_key
-
         request.app.state.config.PERPLEXITY_API_KEY = (
             form_data.web.search.perplexity_api_key
         )
-        request.app.state.config.SOUGOU_API_SID = (
-            form_data.web.search.sougou_api_sid
-        )
-        request.app.state.config.SOUGOU_API_SK = (
-            form_data.web.search.sougou_api_sk
-        )
-
+        request.app.state.config.SOUGOU_API_SID = form_data.web.search.sougou_api_sid
+        request.app.state.config.SOUGOU_API_SK = form_data.web.search.sougou_api_sk
         request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT = (
             form_data.web.search.result_count
         )
         request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS = (
             form_data.web.search.concurrent_requests
         )
-        request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV = (
-            form_data.web.search.trust_env
-        )
         request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = (
             form_data.web.search.domain_filter_list
+        )
+
+        request.app.state.config.RAG_WEB_LOADER_ENGINE = form_data.web.loader.engine
+        request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION = (
+            # Note: When UI "Bypass SSL verification for Websites"=True then ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION=False
+            form_data.web.loader.enable_ssl_verification
+        )
+        request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV = (
+            form_data.web.loader.trust_env
+        )
+        request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
+            form_data.web.loader.bypass_embedding_and_retrieval
+        )
+        request.app.state.config.PLAYWRIGHT_WS_URI = (
+            form_data.web.loader.playwright_ws_uri
+        )
+        request.app.state.config.PLAYWRIGHT_TIMEOUT = (
+            form_data.web.loader.playwright_timeout
+        )
+        request.app.state.config.FIRECRAWL_API_KEY = (
+            form_data.web.loader.firecrawl_api_key
+        )
+        request.app.state.config.FIRECRAWL_API_BASE_URL = (
+            form_data.web.loader.firecrawl_api_base_url
+        )
+        request.app.state.config.TAVILY_API_KEY = form_data.web.loader.tavily_api_key
+        request.app.state.config.TAVILY_EXTRACT_DEPTH = (
+            form_data.web.loader.tavily_extract_depth
+        )
+        request.app.state.config.YOUTUBE_LOADER_LANGUAGE = (
+            form_data.web.loader.youtube.language
+        )
+        request.app.state.config.YOUTUBE_LOADER_PROXY_URL = (
+            form_data.web.loader.youtube.proxy_url
+        )
+        request.app.state.YOUTUBE_LOADER_TRANSLATION = (
+            form_data.web.loader.youtube.translation
         )
 
     return {
@@ -691,16 +722,9 @@ async def update_rag_config(
             "chunk_size": request.app.state.config.CHUNK_SIZE,
             "chunk_overlap": request.app.state.config.CHUNK_OVERLAP,
         },
-        "youtube": {
-            "language": request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
-            "proxy_url": request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
-            "translation": request.app.state.YOUTUBE_LOADER_TRANSLATION,
-        },
         "web": {
-            "ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
-            "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
+            "ENABLE_RAG_WEB_SEARCH": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
             "search": {
-                "enabled": request.app.state.config.ENABLE_RAG_WEB_SEARCH,
                 "engine": request.app.state.config.RAG_WEB_SEARCH_ENGINE,
                 "searxng_query_url": request.app.state.config.SEARXNG_QUERY_URL,
                 "google_pse_api_key": request.app.state.config.GOOGLE_PSE_API_KEY,
@@ -713,11 +737,11 @@ async def update_rag_config(
                 "serpstack_https": request.app.state.config.SERPSTACK_HTTPS,
                 "serper_api_key": request.app.state.config.SERPER_API_KEY,
                 "serply_api_key": request.app.state.config.SERPLY_API_KEY,
-                "serachapi_api_key": request.app.state.config.SEARCHAPI_API_KEY,
+                "tavily_api_key": request.app.state.config.TAVILY_API_KEY,
+                "searchapi_api_key": request.app.state.config.SEARCHAPI_API_KEY,
                 "searchapi_engine": request.app.state.config.SEARCHAPI_ENGINE,
                 "serpapi_api_key": request.app.state.config.SERPAPI_API_KEY,
                 "serpapi_engine": request.app.state.config.SERPAPI_ENGINE,
-                "tavily_api_key": request.app.state.config.TAVILY_API_KEY,
                 "jina_api_key": request.app.state.config.JINA_API_KEY,
                 "bing_search_v7_endpoint": request.app.state.config.BING_SEARCH_V7_ENDPOINT,
                 "bing_search_v7_subscription_key": request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
@@ -727,8 +751,24 @@ async def update_rag_config(
                 "sougou_api_sk": request.app.state.config.SOUGOU_API_SK,
                 "result_count": request.app.state.config.RAG_WEB_SEARCH_RESULT_COUNT,
                 "concurrent_requests": request.app.state.config.RAG_WEB_SEARCH_CONCURRENT_REQUESTS,
-                "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
                 "domain_filter_list": request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
+            },
+            "loader": {
+                "engine": request.app.state.config.RAG_WEB_LOADER_ENGINE,
+                "enable_ssl_verification": request.app.state.config.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION,
+                "trust_env": request.app.state.config.RAG_WEB_SEARCH_TRUST_ENV,
+                "bypass_embedding_and_retrieval": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
+                "playwright_ws_uri": request.app.state.config.PLAYWRIGHT_WS_URI,
+                "playwright_timeout": request.app.state.config.PLAYWRIGHT_TIMEOUT,
+                "firecrawl_api_key": request.app.state.config.FIRECRAWL_API_KEY,
+                "firecrawl_api_base_url": request.app.state.config.FIRECRAWL_API_BASE_URL,
+                "tavily_api_key": request.app.state.config.TAVILY_API_KEY,
+                "tavily_extract_depth": request.app.state.config.TAVILY_EXTRACT_DEPTH,
+                "youtube": {
+                    "language": request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
+                    "proxy_url": request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
+                    "translation": request.app.state.YOUTUBE_LOADER_TRANSLATION,
+                },
             },
         },
     }
