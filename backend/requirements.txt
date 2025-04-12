@@ -3,7 +3,7 @@ uvicorn[standard]==0.34.0
 pydantic==2.10.6
 python-multipart==0.0.20
 
-python-socketio==5.11.3
+python-socketio==5.13.0
 python-jose==3.4.0
 passlib[bcrypt]==1.7.4
 
