@@ -13,6 +13,11 @@
 	export let saveHandler: Function;
 
 	let webConfig = null;
+
+	let bypass_ssl_verification = null;
+	let tavily_api_key = null;
+	let youtube_language = null;
+
 	let webSearchEngines = [
 		'searxng',
 		'google_pse',
@@ -33,10 +38,7 @@
 		'perplexity',
 		'sougou'
 	];
-
-	let youtubeLanguage = 'en';
-	let youtubeTranslation = null;
-	let youtubeProxyUrl = '';
+	let webLoaderEngines = ['safe_web', 'playwright', 'firecrawl', 'tavily'];
 
 	const submitHandler = async () => {
 		// Convert domain filter string to array before sending
@@ -49,16 +51,20 @@
 			webConfig.search.domain_filter_list = [];
 		}
 
+		// Set the enable_ssl_verification flag based on the switch state
+		webConfig.loader.enable_ssl_verification = !bypass_ssl_verification;
+
+		// Set shared tavily_api_key
+		webConfig.search.tavily_api_key = tavily_api_key;
+		webConfig.loader.tavily_api_key = tavily_api_key;
+		webConfig.loader.youtube.language = youtube_language.split(',').map((lang) => lang.trim());
+
 		const res = await updateRAGConfig(localStorage.token, {
-			web: webConfig,
-			youtube: {
-				language: youtubeLanguage.split(',').map((lang) => lang.trim()),
-				translation: youtubeTranslation,
-				proxy_url: youtubeProxyUrl
-			}
+			web: webConfig
 		});
 
 		webConfig.search.domain_filter_list = webConfig.search.domain_filter_list.join(', ');
+		youtube_language = webConfig.loader.youtube.language.join(', ');
 	};
 
 	onMount(async () => {
@@ -70,10 +76,9 @@
 			if (webConfig?.search?.domain_filter_list) {
 				webConfig.search.domain_filter_list = webConfig.search.domain_filter_list.join(', ');
 			}
-
-			youtubeLanguage = res.youtube.language.join(',');
-			youtubeTranslation = res.youtube.translation;
-			youtubeProxyUrl = res.youtube.proxy_url;
+			bypass_ssl_verification = !webConfig.loader.enable_ssl_verification;
+			tavily_api_key = webConfig.search.tavily_api_key || webConfig.loader.tavily_api_key;
+			youtube_language = webConfig.loader.youtube.language.join(', ');
 		}
 	});
 </script>
@@ -95,10 +100,10 @@
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Web Search')}
+							{$i18n.t('Enable Web Search')}
 						</div>
 						<div class="flex items-center relative">
-							<Switch bind:state={webConfig.search.enabled} />
+							<Switch bind:state={webConfig.ENABLE_RAG_WEB_SEARCH} />
 						</div>
 					</div>
 
@@ -197,7 +202,6 @@
 										bind:value={webConfig.search.kagi_search_api_key}
 									/>
 								</div>
-								.
 							</div>
 						{:else if webConfig.search.engine === 'mojeek'}
 							<div class="mb-2.5 flex w-full flex-col">
@@ -333,7 +337,7 @@
 
 									<SensitiveInput
 										placeholder={$i18n.t('Enter Tavily API Key')}
-										bind:value={webConfig.search.tavily_api_key}
+										bind:value={tavily_api_key}
 									/>
 								</div>
 							</div>
@@ -405,134 +409,207 @@
 									/>
 								</div>
 							</div>
-							{:else if webConfig.search.engine === 'sougou'}
-								<div class="mb-2.5 flex w-full flex-col">
-									<div>
-										<div class=" self-center text-xs font-medium mb-1">
-											{$i18n.t('Sougou Search API sID')}
-										</div>
-	
-										<SensitiveInput
-											placeholder={$i18n.t('Enter Sougou Search API sID')}
-											bind:value={webConfig.search.sougou_api_sid}
-										/>
+						{:else if webConfig.search.engine === 'sougou'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Sougou Search API sID')}
 									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Sougou Search API sID')}
+										bind:value={webConfig.search.sougou_api_sid}
+									/>
 								</div>
-								<div class="mb-2.5 flex w-full flex-col">
-									<div>
-										<div class=" self-center text-xs font-medium mb-1">
-											{$i18n.t('Sougou Search API SK')}
-										</div>
-	
-										<SensitiveInput
-											placeholder={$i18n.t('Enter Sougou Search API SK')}
-											bind:value={webConfig.search.sougou_api_sk}
-										/>
+							</div>
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Sougou Search API SK')}
 									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Sougou Search API SK')}
+										bind:value={webConfig.search.sougou_api_sk}
+									/>
 								</div>
+							</div>
 						{/if}
 					{/if}
 
-					{#if webConfig.search.enabled}
-						<div class="mb-2.5 flex w-full flex-col">
-							<div class="flex gap-2">
-								<div class="w-full">
-									<div class=" self-center text-xs font-medium mb-1">
-										{$i18n.t('Search Result Count')}
-									</div>
-
-									<input
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-										placeholder={$i18n.t('Search Result Count')}
-										bind:value={webConfig.search.result_count}
-										required
-									/>
+					<div class="mb-2.5 flex w-full flex-col">
+						<div class="flex gap-2">
+							<div class="w-full">
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Search Result Count')}
 								</div>
 
-								<div class="w-full">
-									<div class=" self-center text-xs font-medium mb-1">
-										{$i18n.t('Concurrent Requests')}
-									</div>
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									placeholder={$i18n.t('Search Result Count')}
+									bind:value={webConfig.search.result_count}
+									required
+								/>
+							</div>
 
-									<input
-										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-										placeholder={$i18n.t('Concurrent Requests')}
-										bind:value={webConfig.search.concurrent_requests}
-										required
-									/>
+							<div class="w-full">
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('Concurrent Requests')}
 								</div>
+
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									placeholder={$i18n.t('Concurrent Requests')}
+									bind:value={webConfig.search.concurrent_requests}
+									required
+								/>
 							</div>
-						</div>
-
-						<div class="mb-2.5 flex w-full flex-col">
-							<div class="  text-xs font-medium mb-1">
-								{$i18n.t('Domain Filter List')}
-							</div>
-
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								placeholder={$i18n.t(
-									'Enter domains separated by commas (e.g., example.com,site.org)'
-								)}
-								bind:value={webConfig.search.domain_filter_list}
-							/>
-						</div>
-					{/if}
-
-					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
-							<Tooltip content={$i18n.t('Full Context Mode')} placement="top-start">
-								{$i18n.t('Bypass Embedding and Retrieval')}
-							</Tooltip>
-						</div>
-						<div class="flex items-center relative">
-							<Tooltip
-								content={webConfig.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
-									? $i18n.t(
-											'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
-										)
-									: $i18n.t(
-											'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
-										)}
-							>
-								<Switch bind:state={webConfig.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL} />
-							</Tooltip>
 						</div>
 					</div>
 
-					<div class="  mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Trust Proxy Environment')}
+					<div class="mb-2.5 flex w-full flex-col">
+						<div class="  text-xs font-medium mb-1">
+							{$i18n.t('Domain Filter List')}
 						</div>
-						<div class="flex items-center relative">
-							<Tooltip
-								content={webConfig.search.trust_env
-									? $i18n.t(
-											'Use proxy designated by http_proxy and https_proxy environment variables to fetch page contents.'
-										)
-									: $i18n.t(
-											'Use no proxy to fetch page contents.'
-										)}
-							>
-								<Switch bind:state={webConfig.search.trust_env} />
-							</Tooltip>
-						</div>
-					</div>
-				</div>
 
-				<div class="mb-3">
+						<input
+							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300dark:bg-gray-850 outline-hidden"
+							placeholder={$i18n.t(
+								'Enter domains separated by commas (e.g., example.com,site.org)'
+							)}
+							bind:value={webConfig.search.domain_filter_list}
+						/>
+					</div>
+
 					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Loader')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">
-							{$i18n.t('Bypass SSL verification for Websites')}
+							{$i18n.t('Web Loader Engine')}
 						</div>
 						<div class="flex items-center relative">
-							<Switch bind:state={webConfig.ENABLE_RAG_WEB_LOADER_SSL_VERIFICATION} />
+							<select
+								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+								bind:value={webConfig.loader.engine}
+								placeholder={$i18n.t('Select a engine')}
+								required
+							>
+								<option disabled selected value="">{$i18n.t('Select a engine')}</option>
+								{#each webLoaderEngines as engine}
+									<option value={engine}>{engine}</option>
+								{/each}
+							</select>
 						</div>
 					</div>
+
+					{#if webConfig.loader.engine !== ''}
+						{#if webConfig.loader.engine === 'playwright'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Playwright WebSocket URL')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter Playwright WebSocket URL')}
+												bind:value={webConfig.loader.playwright_ws_uri}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Playwright Timeout (ms)')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												placeholder={$i18n.t('Enter Playwright Timeout (ms)')}
+												bind:value={webConfig.loader.playwright_timeout}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+						{:else if webConfig.loader.engine === 'firecrawl'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Firecrawl API Base URL')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter Firecrawl API Base URL')}
+												bind:value={webConfig.loader.firecrawl_api_base_url}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Firecrawl API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Firecrawl API Key')}
+										bind:value={webConfig.loader.firecrawl_api_key}
+									/>
+								</div>
+							</div>
+						{:else if webConfig.loader.engine === 'tavily'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Tavily Extract Depth')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter Tavily Extract Depth')}
+												bind:value={webConfig.loader.tavily_extract_depth}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+
+								{#if webConfig.search.engine !== 'tavily'}
+									<div class="mt-2">
+										<div class=" self-center text-xs font-medium mb-1">
+											{$i18n.t('Tavily API Key')}
+										</div>
+
+										<SensitiveInput
+											placeholder={$i18n.t('Enter Tavily API Key')}
+											bind:value={tavily_api_key}
+										/>
+									</div>
+								{/if}
+							</div>
+						{/if}
+					{/if}
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">
@@ -543,7 +620,7 @@
 								class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
 								type="text"
 								placeholder={$i18n.t('Enter language codes')}
-								bind:value={youtubeLanguage}
+								bind:value={youtube_language}
 								autocomplete="off"
 							/>
 						</div>
@@ -555,12 +632,61 @@
 						</div>
 						<div class="flex items-center relative">
 							<input
-								class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 								type="text"
 								placeholder={$i18n.t('Enter proxy URL (e.g. https://user:password@host:port)')}
-								bind:value={youtubeProxyUrl}
+								bind:value={webConfig.loader.youtube.proxy_url}
 								autocomplete="off"
 							/>
+						</div>
+					</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Bypass SSL verification for Websites')}
+						</div>
+						<div class="flex items-center relative">
+							<Switch bind:state={bypass_ssl_verification} />
+						</div>
+					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Trust Proxy Environment')}
+						</div>
+						<div class="flex items-center relative">
+							<Tooltip
+								content={webConfig.loader.trust_env
+									? $i18n.t(
+											'Use proxy designated by http_proxy and https_proxy environment variables to fetch page contents.'
+										)
+									: $i18n.t('Use no proxy to fetch page contents.')}
+							>
+								<Switch bind:state={webConfig.loader.trust_env} />
+							</Tooltip>
+						</div>
+					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							<Tooltip content={$i18n.t('Full Context Mode')} placement="top-start">
+								{$i18n.t('Bypass Embedding and Retrieval')}
+							</Tooltip>
+						</div>
+						<div class="flex items-center relative">
+							<Tooltip
+								content={webConfig.loader.bypass_embedding_and_retrieval
+									? $i18n.t(
+											'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
+										)
+									: $i18n.t(
+											'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
+										)}
+							>
+								<Switch bind:state={webConfig.loader.bypass_embedding_and_retrieval} />
+							</Tooltip>
 						</div>
 					</div>
 				</div>
