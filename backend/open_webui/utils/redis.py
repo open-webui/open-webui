@@ -52,5 +52,7 @@ def get_sentinel_url_from_env(redis_url, sentinel_hosts_env, sentinel_port_env):
     auth_part = ""
     if username or password:
         auth_part = f"{username}:{password}@"
-    hosts_part = ",".join(f"{host}:{sentinel_port_env}" for host in sentinel_hosts_env.split(","))
+    hosts_part = ",".join(
+        f"{host}:{sentinel_port_env}" for host in sentinel_hosts_env.split(",")
+    )
     return f"redis+sentinel://{auth_part}{hosts_part}/{redis_config['db']}/{redis_config['service']}"
