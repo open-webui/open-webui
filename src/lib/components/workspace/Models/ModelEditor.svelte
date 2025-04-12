@@ -16,6 +16,15 @@
 	import AccessControl from '../common/AccessControl.svelte';
 	import { stringify } from 'postcss';
 	import { toast } from 'svelte-sonner';
+	import BackIcon from '$lib/components/icons/BackIcon.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
+	import TagSelect from '$lib/components/common/TagSelect.svelte';
+	import AccessSelect from '$lib/components/common/AccessSelect.svelte';
+	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
+	import { onClickOutside } from '$lib/utils';
+	import { getModelIcon } from '$lib/utils';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import CapabilitiesNew from './CapabilitiesNew.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -61,13 +70,14 @@
 		base_model_id: null,
 		name: '',
 		meta: {
-			profile_image_url: '/static/favicon.png',
+			profile_image_url: '',
 			description: '',
-			suggestion_prompts: null,
+			suggestion_prompts: [{ content: '' }],
 			tags: []
 		},
 		params: {
-			system: ''
+			system: '',
+			temperature: 0.8
 		}
 	};
 
@@ -75,8 +85,11 @@
 		system: ''
 	};
 	let capabilities = {
+		websearch: false,
+		image_generation: false,
+		code_interpreter: false,
 		vision: true,
-		usage: undefined,
+		// usage: undefined,
 		citations: true
 	};
 
@@ -85,7 +98,12 @@
 	let filterIds = [];
 	let actionIds = [];
 
+	let access = 'public';
+	let allowedGroups = ['Design', 'Marketing'];
+
 	let accessControl = {};
+	$: console.log(info)
+	$: console.log(accessControl)
 
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
@@ -260,10 +278,29 @@
 
 		loaded = true;
 	});
+	
+	let showDropdown = false;
+	let dropdownRef;
+	$: selectedModel = $models.find((m) => m.id === info.base_model_id);
+
+	let showTemperatureDropdown = false;
+	let temperatureDropdownRef;
+
+	const temperatureOptions = [
+		{ label: 'Precise', value: 0.4 },
+		{ label: 'Balanced', value: 0.8 },
+		{ label: 'Creative', value: 1.0 }
+	];
+
+	$: selectedTemperatureLabel = temperatureOptions.find(
+		(opt) => opt.value === info?.params?.temperature
+	)?.label;
+
+	$: console.log(capabilities, 'capabilities')
 </script>
 
 {#if loaded}
-	{#if onBack}
+	<!-- {#if onBack}
 		<button
 			class="flex space-x-1"
 			on:click={() => {
@@ -286,9 +323,18 @@
 			</div>
 			<div class=" self-center text-sm font-medium">{'Back'}</div>
 		</button>
-	{/if}
+	{/if} -->
+	<div class="flex flex-col h-screen">
+	<div class="py-[22px] px-[15px] border-b border-customGray-700">
+		<button class="flex items-center gap-1" on:click={() => history.back()}>
+			<BackIcon />
+			<div class="flex items-center md:self-center text-sm-plus font-medium leading-none px-0.5">
+				{$i18n.t('Create assistant')}
+			</div>
+		</button>
+	</div>
 
-	<div class="w-full max-h-full flex justify-center">
+	<div class="flex flex-1 overflow-hidden">
 		<input
 			bind:this={filesInputElement}
 			bind:files={inputFiles}
@@ -358,13 +404,14 @@
 		/>
 
 		{#if !edit || (edit && model)}
+		<div class="overflow-y-auto overflow-x-hidden w-[34rem] py-3 px-4">
 			<form
-				class="flex flex-col md:flex-row w-full gap-3 md:gap-6"
+				class="flex flex-col gap-3 dark:bg-customGray-800 rounded-2xl py-5 px-2.5"
 				on:submit|preventDefault={() => {
 					submitHandler();
 				}}
 			>
-				<div class="self-center md:self-start flex justify-center my-2 flex-shrink-0">
+				<div class="self-center flex justify-center flex-shrink-0">
 					<div class="self-center">
 						<button
 							class="rounded-xl flex flex-shrink-0 items-center {info.meta.profile_image_url !==
@@ -380,22 +427,26 @@
 								<img
 									src={info.meta.profile_image_url}
 									alt="model profile"
-									class="rounded-xl size-72 md:size-60 object-cover shrink-0"
+									class="rounded-lg size-16 object-cover shrink-0"
 								/>
 							{:else}
-								<img
+								<div class="rounded-lg size-16 shrink-0 bg-customViolet-300"/>
+
+								
+								<!-- <img
 									src="/static/favicon.png"
 									alt="model profile"
-									class=" rounded-xl size-72 md:size-60 object-cover shrink-0"
-								/>
+									class=" rounded-lg size-16 object-cover shrink-0"
+								/> -->
 							{/if}
 
 							<div class="absolute bottom-0 right-0 z-10">
-								<div class="m-1.5">
+								<div class="-m-2">
 									<div
-										class="shadow-xl p-1 rounded-full border-2 border-white bg-gray-800 text-white group-hover:bg-gray-600 transition dark:border-black dark:bg-white dark:group-hover:bg-gray-200 dark:text-black"
+										class="p-1 rounded-lg border border-white dark:bg-customGray-900 bg-gray-800 text-white transition dark:border-customGray-700 dark:text-white"
 									>
-										<svg
+									<Plus className="size-3" />
+										<!-- <svg
 											xmlns="http://www.w3.org/2000/svg"
 											viewBox="0 0 16 16"
 											fill="currentColor"
@@ -406,17 +457,17 @@
 												d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
 												clip-rule="evenodd"
 											/>
-										</svg>
+										</svg> -->
 									</div>
 								</div>
 							</div>
 
-							<div
+							<!-- <div
 								class="absolute top-0 bottom-0 left-0 right-0 bg-white dark:bg-black rounded-lg opacity-0 group-hover:opacity-20 transition"
-							></div>
+							></div> -->
 						</button>
 
-						<div class="flex w-full mt-1 justify-end">
+						<!-- <div class="flex w-full mt-1 justify-end">
 							<button
 								class="px-2 py-1 text-gray-500 rounded-lg text-xs"
 								on:click={() => {
@@ -426,37 +477,280 @@
 							>
 								Reset Image</button
 							>
-						</div>
+						</div> -->
 					</div>
 				</div>
 
 				<div class="w-full">
 					<div class="mt-2 my-2 flex flex-col">
-						<div class="flex-1">
-							<div>
+						<div class="flex-1 mb-1.5">
+							<div class="relative">
 								<input
-									class="text-3xl font-semibold w-full bg-transparent outline-none"
-									placeholder={$i18n.t('Model Name')}
+									class="px-2.5 text-sm h-10 w-full dark:bg-customGray-900 dark:text-white dark:placeholder:text-customGray-100 rounded-md outline-none"
+									placeholder={$i18n.t('Name')}
 									bind:value={name}
 									required
 								/>
+								{#if !name}
+									<span
+									class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+									>
+									{$i18n.t('E.g. Super Mario')}
+									</span>
+							  	{/if}
 							</div>
 						</div>
 
-						<div class="flex-1">
+						<!-- <div class="flex-1 mb-1.5">
 							<div>
 								<input
-									class="text-xs w-full bg-transparent text-gray-500 outline-none"
+									class="px-2.5 text-sm h-10 w-full dark:bg-customGray-900 dark:text-white dark:placeholder:text-white rounded-md outline-none"
 									placeholder={$i18n.t('Model ID')}
 									bind:value={id}
 									disabled={edit}
 									required
 								/>
 							</div>
+						</div> -->
+						<div class="flex-1 mb-1.5">
+							<div class="relative">
+								<input
+									class="px-2.5 text-sm h-10 w-full dark:bg-customGray-900 dark:text-white dark:placeholder:text-customGray-100 rounded-md outline-none"
+									placeholder={$i18n.t('Description')}
+									bind:value={info.meta.description}
+								/>
+								{#if !info.meta.description}
+									<span
+									class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+									>
+										{$i18n.t('About what this model does')}
+									</span>
+							  	{/if}
+							</div>
 						</div>
+						<div class="mb-1.5">
+							<div class="relative">
+								<Textarea
+									className="px-2.5 py-2.5 text-sm h-20 w-full dark:bg-customGray-900 dark:text-white dark:placeholder:text-customGray-100 rounded-md outline-none"
+									placeholder={$i18n.t('System Prompt')}
+									rows={4}
+									bind:value={info.params.system}
+								/>
+								{#if !info.params.system}
+									<span
+									class="absolute top-[26px] w-[180px] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+									>
+										{$i18n.t('E.g. You are Mario Bros, acting as an assistant')}
+									</span>
+							  	{/if}
+							</div>
+						</div>
+
+						<div class="mb-1.5">
+							<div class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700">
+								<div class="flex w-full justify-between items-center ">		
+									<div class="text-xs dark:text-customGray-300">{$i18n.t('Prompt suggestions')}</div>
+								
+	
+									<!-- <button
+										class="p-1 text-xs flex rounded transition"
+										type="button"
+										on:click={() => {
+											if ((info?.meta?.suggestion_prompts ?? null) === null) {
+												info.meta.suggestion_prompts = [{ content: '' }];
+											} else {
+												info.meta.suggestion_prompts = null;
+											}
+										}}
+									>
+										{#if (info?.meta?.suggestion_prompts ?? null) === null}
+											<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+										{:else}
+											<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
+										{/if}
+									</button> -->
+								</div>
+	
+								<!-- {#if (info?.meta?.suggestion_prompts ?? null) !== null} -->
+									<button
+										class="shrink-0 text-xs dark:text-customGray-200 flex rounded transition"
+										type="button"
+										on:click={() => {
+											if (
+												info.meta.suggestion_prompts.length === 0 ||
+												info.meta.suggestion_prompts.at(-1).content !== ''
+											) {
+												info.meta.suggestion_prompts = [
+													...info.meta.suggestion_prompts,
+													{ content: '' }
+												];
+											}
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="w-4 h-4"
+										>
+											<path
+												d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+											/>
+										</svg>
+										{$i18n.t('Add')}
+									</button>
+								<!-- {/if} -->
+							</div>
+	
+							{#if info?.meta?.suggestion_prompts}
+								<div class="flex flex-col space-y-1 mt-2.5 mb-3">
+									{#if info.meta.suggestion_prompts.length > 0}
+										{#each info.meta.suggestion_prompts as prompt, promptIdx}
+											<div class=" flex rounded-lg">
+												<div class="relative w-full">
+													<input
+														class="px-2.5 text-sm h-10 w-full dark:bg-customGray-900 dark:text-white dark:placeholder:text-customGray-100 rounded-md outline-none"
+														placeholder={$i18n.t('Prompt suggestion')}
+														bind:value={prompt.content}
+													/>
+													{#if !prompt.content}
+														<span
+														class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+														>
+															{$i18n.t('Who are you')}
+														</span>
+													{/if}
+												</div>
+												<button
+													class="px-2 dark:text-customGray-300"
+													type="button"
+													on:click={() => {
+														info.meta.suggestion_prompts.splice(promptIdx, 1);
+														info.meta.suggestion_prompts = info.meta.suggestion_prompts;
+													}}
+												>
+													<DeleteIcon/>
+												</button>
+											</div>
+										{/each}
+									{:else}
+										<div class="text-xs text-center">No suggestion prompts</div>
+									{/if}
+								</div>
+							{/if}
+						</div>
+
+						<div>
+							<div class="py-2.5 border-b border-customGray-700">
+								<div class="text-xs dark:text-customGray-300">{$i18n.t('Organization')}</div>
+							</div>
+							<div class="py-3">
+								<TagSelect bind:selected={info.meta.tags} placeholder="Add category..." />
+								<AccessSelect bind:accessControl accessRoles={['read', 'write']} />
+							</div>
+						</div>
+
+						<div>
+							<div class="py-2.5 border-b border-customGray-700 mb-2">
+								<div class="text-xs dark:text-customGray-300">{$i18n.t('Output settings')}</div>
+							</div>
+						</div>
+
+						{#if preset}
+							<div class="my-1" use:onClickOutside={() => (showDropdown = false)}>
+								<div class="relative" bind:this={dropdownRef}>
+									<button
+										type="button"
+										class={`flex items-center justify-between w-full text-sm h-10 px-3 py-2  ${showDropdown ? "border" : ""} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer`}
+										on:click={() => (showDropdown = !showDropdown)}
+									>	
+										<span class="text-gray-500 dark:text-customGray-100">{$i18n.t('Model Selection')}</span>
+										<div class="flex items-center gap-2">
+										{#if info.base_model_id}	
+											<div class="flex items-center gap-2 text-xs dark:text-customGray-100/50">
+												<img src={getModelIcon(selectedModel.name)} alt="icon" class="w-4 h-4" />
+												{selectedModel.name}
+											</div>											
+										{/if}
+										<ChevronDown className="size-3"/>
+										</div>
+									</button>
+
+									<!-- Dropdown -->
+									{#if showDropdown}
+										<div
+											class="max-h-60 overflow-y-auto absolute z-50 w-full -mt-1 bg-white dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
+										>
+										<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5"/>
+											<div class="px-1">
+												{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena') as model}
+													<button
+														class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
+														on:click={() => {
+															info.base_model_id = model.id;
+															addUsage(model.id);
+															showDropdown = false;
+														}}
+													>
+														<img src={getModelIcon(model.name)} alt="icon" class="w-4 h-4" />
+														{model.name}
+													</button>
+												{/each}
+											</div>
+										</div>
+									{/if}
+								</div>
+							</div>
+						{/if}
+
+						<div class="my-1" use:onClickOutside={() => (showTemperatureDropdown = false)}>
+							<div class="relative" bind:this={temperatureDropdownRef}>
+								<button
+									type="button"
+									class={`flex items-center justify-between w-full text-sm h-10 px-3 py-2 ${
+										showTemperatureDropdown ? 'border' : ''
+									} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer`}
+									on:click={() => (showTemperatureDropdown = !showTemperatureDropdown)}
+								>
+									<span class="text-gray-500 dark:text-customGray-100">{$i18n.t('Creativity Scale')}</span>
+									<div class="flex items-center gap-2 text-xs dark:text-customGray-100/50">
+										{selectedTemperatureLabel}
+										<ChevronDown className="size-3" />
+									</div>
+								</button>
+						
+								{#if showTemperatureDropdown}
+									<div
+										class="max-h-40 overflow-y-auto absolute z-50 w-full -mt-1 bg-white pb-1 dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
+									>
+										<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
+										<div class="px-1">
+											{#each temperatureOptions as option}
+												<button
+													class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
+													on:click={() => {
+														info.params.temperature = option.value;
+														showTemperatureDropdown = false;
+													}}
+												>
+													{option.label}
+												</button>
+											{/each}
+										</div>
+									</div>
+								{/if}
+							</div>
+						</div>
+
+						<CapabilitiesNew bind:capabilities/>
+
+
+
+
+							<!-------------------->
 					</div>
 
-					{#if preset}
+					<!-- {#if preset}
 						<div class="my-1">
 							<div class=" text-sm font-semibold mb-1">{$i18n.t('Base Model (From)')}</div>
 
@@ -479,9 +773,9 @@
 								</select>
 							</div>
 						</div>
-					{/if}
+					{/if} -->
 
-					<div class="my-1">
+					<!-- <div class="my-1">
 						<div class="mb-1 flex w-full justify-between items-center">
 							<div class=" self-center text-sm font-semibold">{$i18n.t('Description')}</div>
 
@@ -507,9 +801,9 @@
 								bind:value={info.meta.description}
 							/>
 						{/if}
-					</div>
+					</div> -->
 
-					<div class=" mt-2 my-1">
+					<!-- <div class=" mt-2 my-1">
 						<div class="">
 							<Tags
 								tags={info?.meta?.tags ?? []}
@@ -527,15 +821,15 @@
 								}}
 							/>
 						</div>
-					</div>
+					</div> -->
 
-					<div class="my-2">
-						<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
+					<!-- <div class="my-2">
+						 <div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
 							<AccessControl bind:accessControl accessRoles={['read', 'write']} />
-						</div>
-					</div>
+						</div> 
+					</div> -->
 
-					<hr class=" border-gray-50 dark:border-gray-850 my-1.5" />
+					<!-- <hr class=" border-gray-50 dark:border-gray-850 my-1.5" />
 
 					<div class="my-2">
 						<div class="flex w-full justify-between">
@@ -553,7 +847,7 @@
 										bind:value={info.params.system}
 									/>
 								</div>
-							</div>
+							</div> 
 
 							<div class="flex w-full justify-between">
 								<div class=" self-center text-xs font-semibold">
@@ -587,11 +881,11 @@
 								</div>
 							{/if}
 						</div>
-					</div>
+					</div> -->
 
-					<hr class=" border-gray-50 dark:border-gray-850 my-1" />
+					<!-- <hr class=" border-gray-50 dark:border-gray-850 my-1" /> -->
 
-					<div class="my-2">
+					<!-- <div class="my-2">
 						<div class="flex w-full justify-between items-center">
 							<div class="flex w-full justify-between items-center">
 								<div class=" self-center text-sm font-semibold">
@@ -684,15 +978,15 @@
 								{/if}
 							</div>
 						{/if}
-					</div>
+					</div> -->
 
-					<hr class=" border-gray-50 dark:border-gray-850 my-1.5" />
+					<!-- <hr class=" border-gray-50 dark:border-gray-850 my-1.5" /> -->
 
 					<div class="my-2">
 						<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
 					</div>
 
-					<div class="my-2">
+					<!-- <div class="my-2">
 						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
 					</div>
 
@@ -708,13 +1002,13 @@
 							bind:selectedActionIds={actionIds}
 							actions={$functions.filter((func) => func.type === 'action')}
 						/>
-					</div>
+					</div> -->
 
-					<div class="my-2">
+					<!-- <div class="my-2">
 						<Capabilities bind:capabilities />
-					</div>
+					</div> -->
 
-					<div class="my-2 text-gray-300 dark:text-gray-700">
+					<!-- <div class="my-2 text-gray-300 dark:text-gray-700">
 						<div class="flex w-full justify-between mb-2">
 							<div class=" self-center text-sm font-semibold">{$i18n.t('JSON Preview')}</div>
 
@@ -744,17 +1038,17 @@
 								/>
 							</div>
 						{/if}
-					</div>
+					</div> -->
 
-					<div class="my-2 flex justify-end pb-20">
+					<div class="my-2 flex justify-end">
 						<button
-							class=" text-sm px-3 py-2 transition rounded-lg {loading
+							class=" text-xs w-[168px] h-10 px-3 py-2 transition rounded-lg {loading
 								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
-								: 'bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'} flex w-full justify-center"
+								: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex w-full justify-center"
 							type="submit"
 							disabled={loading}
 						>
-							<div class=" self-center font-medium">
+							<div class=" self-center">
 								{#if edit}
 									{$i18n.t('Save & Update')}
 								{:else}
@@ -793,6 +1087,11 @@
 					</div>
 				</div>
 			</form>
+		</div>
 		{/if}
+		<div class="w-1/2">
+			Try assistant
+		</div>
+	</div>
 	</div>
 {/if}
