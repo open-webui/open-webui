@@ -2208,7 +2208,7 @@ TAVILY_EXTRACT_DEPTH = PersistentConfig(
 
 PLAYWRIGHT_WS_URL = PersistentConfig(
     "PLAYWRIGHT_WS_URL",
-    "rag.web.loader.PLAYWRIGHT_WS_URL",
+    "rag.web.loader.playwright_ws_url",
     os.environ.get("PLAYWRIGHT_WS_URL", ""),
 )
 
