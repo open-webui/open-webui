@@ -24,7 +24,9 @@
 		getMessageContentParts,
 		sanitizeResponseContent,
 		createMessagesList,
-		formatDate
+		formatDate,
+		removeDetails,
+		removeAllDetails
 	} from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -152,6 +154,7 @@
 	let showRateComment = false;
 
 	const copyToClipboard = async (text) => {
+		text = removeAllDetails(text);
 		const res = await _copyToClipboard(text);
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
