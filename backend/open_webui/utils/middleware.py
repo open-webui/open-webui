@@ -1396,31 +1396,64 @@ async def process_chat_response(
                                 match.end() :
                             ]  # Content after opening tag
 
-                            # Remove the start tag and after from the currently handling text block
-                            content_blocks[-1]["content"] = content_blocks[-1][
-                                "content"
-                            ].replace(match.group(0) + after_tag, "")
+                            # Update current text block with just the content before the tag
+                            content_blocks[-1]["content"] = before_tag.rstrip()
 
-                            if before_tag:
-                                content_blocks[-1]["content"] = before_tag
-
+                            # If there's no content before the tag, remove the empty text block
                             if not content_blocks[-1]["content"]:
                                 content_blocks.pop()
 
-                            # Append the new block
-                            content_blocks.append(
-                                {
-                                    "type": content_type,
-                                    "start_tag": start_tag,
-                                    "end_tag": end_tag,
-                                    "attributes": attributes,
-                                    "content": "",
-                                    "started_at": time.time(),
-                                }
-                            )
-
-                            if after_tag:
-                                content_blocks[-1]["content"] = after_tag
+                            # Look for the end tag in the after_tag content
+                            end_tag_pattern = rf"<{re.escape(end_tag)}>"
+                            end_match = re.search(end_tag_pattern, after_tag)
+                            
+                            if end_match:
+                                # We have both start and end tags in this content segment
+                                # Extract just the content between tags
+                                tag_content = after_tag[:end_match.start()].strip()
+                                
+                                # Create the reasoning block with just the content between tags
+                                content_blocks.append(
+                                    {
+                                        "type": content_type,
+                                        "start_tag": start_tag,
+                                        "end_tag": end_tag,
+                                        "attributes": attributes,
+                                        "content": tag_content,
+                                        "started_at": time.time(),
+                                        "ended_at": time.time(),
+                                        "duration": 1
+                                    }
+                                )
+                                
+                                # Add remaining content after the end tag as normal text
+                                remaining_content = after_tag[end_match.end():].strip()
+                                if remaining_content:
+                                    content_blocks.append(
+                                        {
+                                            "type": "text",
+                                            "content": remaining_content,
+                                        }
+                                    )
+                                else:
+                                    content_blocks.append(
+                                        {
+                                            "type": "text",
+                                            "content": "",
+                                        }
+                                    )
+                            else:
+                                # We only have the start tag, create the reasoning block with current content
+                                content_blocks.append(
+                                    {
+                                        "type": content_type,
+                                        "start_tag": start_tag,
+                                        "end_tag": end_tag,
+                                        "attributes": attributes,
+                                        "content": after_tag,
+                                        "started_at": time.time(),
+                                    }
+                                )
 
                             break
                 elif content_blocks[-1]["type"] == content_type:
@@ -1464,7 +1497,6 @@ async def process_chat_response(
                             # Reset the content_blocks by appending a new text block
                             if content_type != "code_interpreter":
                                 if leftover_content:
-
                                     content_blocks.append(
                                         {
                                             "type": "text",
