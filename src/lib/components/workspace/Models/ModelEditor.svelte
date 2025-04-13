@@ -765,7 +765,9 @@
 								<div class="text-xs dark:text-customGray-300">{$i18n.t('Organization')}</div>
 							</div>
 							<div class="py-3">
-								<TagSelect bind:selected={info.meta.tags} placeholder="Add category..." />
+								<div class="mb-2">
+									<TagSelect bind:selected={info.meta.tags} placeholder="Add category..." />
+								</div>
 								<AccessSelect bind:accessControl accessRoles={['read', 'write']} />
 							</div>
 						</div>

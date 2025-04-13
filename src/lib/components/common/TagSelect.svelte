@@ -55,7 +55,7 @@
 </script>
 
 <div
-	class="relative w-full mb-2"
+	class="relative w-full"
 	use:onClickOutside={() => {
 		showDropdown = false;
 		input = '';
