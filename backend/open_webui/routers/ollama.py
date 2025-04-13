@@ -873,7 +873,7 @@ async def embed(
         prefix_ids = [config.get('prefix_id') for config in configs.values() if config.get('prefix_id')]
         prefix_id = None
         for prefix in prefix_ids:
-            if model.startswith(prefix):
+            if model.startswith(f"{prefix}."):
                 prefix_id = prefix
                 break
 
