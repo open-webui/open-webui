@@ -63,6 +63,9 @@
 
 	let webSearch = null;
 
+	let iframeSandboxAllowSameOrigin = false;
+	let iframeSandboxAllowForms = false;
+
 	const toggleExpandDetails = () => {
 		expandDetails = !expandDetails;
 		saveSettings({ expandDetails });
@@ -243,6 +246,16 @@
 	const toggleWebSearch = async () => {
 		webSearch = webSearch === null ? 'always' : null;
 		saveSettings({ webSearch: webSearch });
+	};
+
+	const toggleIframeSandboxAllowSameOrigin = async () => {
+		iframeSandboxAllowSameOrigin = !iframeSandboxAllowSameOrigin;
+		saveSettings({ iframeSandboxAllowSameOrigin });
+	};
+
+	const toggleIframeSandboxAllowForms = async () => {
+		iframeSandboxAllowForms = !iframeSandboxAllowForms;
+		saveSettings({ iframeSandboxAllowForms });
 	};
 
 	onMount(async () => {
@@ -746,7 +759,9 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Haptic Feedback')}</div>
+					<div class=" self-center text-xs">
+						{$i18n.t('Haptic Feedback')} ({$i18n.t('Android')})
+					</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
@@ -845,6 +860,46 @@
 							<span class="ml-2 self-center">{$i18n.t('Always')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('iframe Sandbox Allow Same Origin')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleIframeSandboxAllowSameOrigin();
+						}}
+						type="button"
+					>
+						{#if iframeSandboxAllowSameOrigin === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('iframe Sandbox Allow Forms')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleIframeSandboxAllowForms();
+						}}
+						type="button"
+					>
+						{#if iframeSandboxAllowForms === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>

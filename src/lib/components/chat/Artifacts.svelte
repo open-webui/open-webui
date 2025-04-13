@@ -4,7 +4,7 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	import { chatId, showArtifacts, showControls } from '$lib/stores';
+	import { chatId, settings, showArtifacts, showControls } from '$lib/stores';
 	import XMark from '../icons/XMark.svelte';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
@@ -305,7 +305,11 @@
 								title="Content"
 								srcdoc={contents[selectedContentIdx].content}
 								class="w-full border-0 h-full rounded-none"
-								sandbox="allow-scripts allow-forms allow-same-origin"
+								sandbox="allow-scripts{($settings?.iframeSandboxAllowForms ?? false)
+									? ' allow-forms'
+									: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false)
+									? ' allow-same-origin'
+									: ''}"
 								on:load={iframeLoadHandler}
 							></iframe>
 						{:else if contents[selectedContentIdx].type === 'svg'}
