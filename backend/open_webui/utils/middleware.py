@@ -216,7 +216,11 @@ async def chat_completion_tools_handler(
                         )
                     else:
                         tool_function = tool["callable"]
-                        tool_result = await tool_function(**tool_function_params)
+                        headers = dict(request.headers)
+                        filtered_llm_params = tool_function_params.copy()
+                        if 'headers' in filtered_llm_params:
+                            del filtered_llm_params['headers'] # Remove the conflicting key
+                        tool_result = await tool_function(headers=headers, **filtered_llm_params)
 
                 except Exception as e:
                     tool_result = str(e)
@@ -1930,8 +1934,13 @@ async def process_chat_response(
 
                                 else:
                                     tool_function = tool["callable"]
+                                    headers = dict(request.headers)
+                                    filtered_llm_params = tool_function_params.copy()
+                                    if 'headers' in filtered_llm_params:
+                                        del filtered_llm_params
                                     tool_result = await tool_function(
-                                        **tool_function_params
+                                        headers=headers,
+                                        **filtered_llm_params
                                     )
 
                             except Exception as e:
