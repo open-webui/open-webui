@@ -683,6 +683,11 @@ export const removeDetails = (content, types) => {
 	return content;
 };
 
+export const removeAllDetails = (content) => {
+	content = content.replace(/<details[^>]*>.*?<\/details>/gis, '');
+	return content;
+};
+
 export const processDetails = (content) => {
 	content = removeDetails(content, ['reasoning', 'code_interpreter']);
 

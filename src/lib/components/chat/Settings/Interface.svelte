@@ -32,6 +32,8 @@
 	let showUsername = false;
 	let notificationSound = true;
 
+	let detectArtifacts = true;
+
 	let richTextInput = true;
 	let promptAutocomplete = false;
 
@@ -60,6 +62,9 @@
 	let hapticFeedback = false;
 
 	let webSearch = null;
+
+	let iframeSandboxAllowSameOrigin = false;
+	let iframeSandboxAllowForms = false;
 
 	const toggleExpandDetails = () => {
 		expandDetails = !expandDetails;
@@ -176,6 +181,11 @@
 		saveSettings({ autoTags });
 	};
 
+	const toggleDetectArtifacts = async () => {
+		detectArtifacts = !detectArtifacts;
+		saveSettings({ detectArtifacts });
+	};
+
 	const toggleRichTextInput = async () => {
 		richTextInput = !richTextInput;
 		saveSettings({ richTextInput });
@@ -238,10 +248,21 @@
 		saveSettings({ webSearch: webSearch });
 	};
 
+	const toggleIframeSandboxAllowSameOrigin = async () => {
+		iframeSandboxAllowSameOrigin = !iframeSandboxAllowSameOrigin;
+		saveSettings({ iframeSandboxAllowSameOrigin });
+	};
+
+	const toggleIframeSandboxAllowForms = async () => {
+		iframeSandboxAllowForms = !iframeSandboxAllowForms;
+		saveSettings({ iframeSandboxAllowForms });
+	};
+
 	onMount(async () => {
 		titleAutoGenerate = $settings?.title?.auto ?? true;
 		autoTags = $settings.autoTags ?? true;
 
+		detectArtifacts = $settings.detectArtifacts ?? true;
 		responseAutoCopy = $settings.responseAutoCopy ?? false;
 
 		showUsername = $settings.showUsername ?? false;
@@ -540,6 +561,28 @@
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">
+						{$i18n.t('Detect Artifacts Automatically')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleDetectArtifacts();
+						}}
+						type="button"
+					>
+						{#if detectArtifacts === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">
 						{$i18n.t('Auto-Copy Response to Clipboard')}
 					</div>
 
@@ -716,7 +759,9 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Haptic Feedback')}</div>
+					<div class=" self-center text-xs">
+						{$i18n.t('Haptic Feedback')} ({$i18n.t('Android')})
+					</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
@@ -815,6 +860,46 @@
 							<span class="ml-2 self-center">{$i18n.t('Always')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('iframe Sandbox Allow Same Origin')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleIframeSandboxAllowSameOrigin();
+						}}
+						type="button"
+					>
+						{#if iframeSandboxAllowSameOrigin === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('iframe Sandbox Allow Forms')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleIframeSandboxAllowForms();
+						}}
+						type="button"
+					>
+						{#if iframeSandboxAllowForms === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>

@@ -24,6 +24,7 @@
 			delete: true,
 			edit: true,
 			file_upload: true,
+			multiple_models: true,
 			temporary: true,
 			temporary_enforced: false
 		},
@@ -270,6 +271,14 @@
 			</div>
 
 			<Switch bind:state={permissions.chat.edit} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Multiple Models in Chat')}
+			</div>
+
+			<Switch bind:state={permissions.chat.multiple_models} />
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
