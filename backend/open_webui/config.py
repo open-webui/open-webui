@@ -691,8 +691,10 @@ if frontend_loader.exists():
 ####################################
 
 CUSTOM_NAME = os.environ.get("CUSTOM_NAME", "")
-
 if CUSTOM_NAME:
+    WEBUI_NAME = CUSTOM_NAME
+
+if False:
     try:
         r = requests.get(f"https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}")
         data = r.json()
