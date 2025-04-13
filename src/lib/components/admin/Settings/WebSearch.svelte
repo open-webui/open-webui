@@ -46,11 +46,21 @@
 			webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = [];
 		}
 
+		// Convert Youtube loader language string to array before sending
+		if (webConfig.YOUTUBE_LOADER_LANGUAGE) {
+			webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.split(',')
+				.map((lang) => lang.trim())
+				.filter((lang) => lang.length > 0);
+		} else {
+			webConfig.YOUTUBE_LOADER_LANGUAGE = [];
+		}
+
 		const res = await updateRAGConfig(localStorage.token, {
 			web: webConfig
 		});
 
-		webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.join(', ');
+		webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.join(',');
+		webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.join(',');
 	};
 
 	onMount(async () => {
@@ -62,7 +72,7 @@
 			// Convert array back to comma-separated string for display
 			if (webConfig?.WEB_SEARCH_DOMAIN_FILTER_LIST) {
 				webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST =
-					webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.join(', ');
+					webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.join(',');
 			}
 
 			webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.join(',');
@@ -524,7 +534,6 @@
 								class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 								bind:value={webConfig.WEB_LOADER_ENGINE}
 								placeholder={$i18n.t('Select a engine')}
-								required
 							>
 								<option value="">{$i18n.t('Default')}</option>
 								{#each webLoaderEngines as engine}
