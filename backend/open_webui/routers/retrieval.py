@@ -353,7 +353,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
     return {
         "status": True,
         # RAG settings
-        "TEMPLATE": request.app.state.config.RAG_TEMPLATE,
+        "RAG_TEMPLATE": request.app.state.config.RAG_TEMPLATE,
         "TOP_K": request.app.state.config.TOP_K,
         "BYPASS_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
@@ -470,7 +470,7 @@ class WebConfig(BaseModel):
 
 class ConfigForm(BaseModel):
     # RAG settings
-    TEMPLATE: Optional[str] = None
+    RAG_TEMPLATE: Optional[str] = None
     TOP_K: Optional[int] = None
     BYPASS_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
     RAG_FULL_CONTEXT: Optional[bool] = None
@@ -512,8 +512,8 @@ async def update_rag_config(
 ):
     # RAG settings
     request.app.state.config.RAG_TEMPLATE = (
-        form_data.TEMPLATE
-        if form_data.TEMPLATE is not None
+        form_data.RAG_TEMPLATE
+        if form_data.RAG_TEMPLATE is not None
         else request.app.state.config.RAG_TEMPLATE
     )
     request.app.state.config.TOP_K = (
@@ -712,8 +712,15 @@ async def update_rag_config(
 
     return {
         "status": True,
+        # RAG settings
+        "RAG_TEMPLATE": request.app.state.config.RAG_TEMPLATE,
+        "TOP_K": request.app.state.config.TOP_K,
         "BYPASS_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
+        # Hybrid search settings
+        "ENABLE_RAG_HYBRID_SEARCH": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+        "TOP_K_RERANKER": request.app.state.config.TOP_K_RERANKER,
+        "RELEVANCE_THRESHOLD": request.app.state.config.RELEVANCE_THRESHOLD,
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
