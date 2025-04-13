@@ -61,6 +61,7 @@ from open_webui.retrieval.web.bing import search_bing
 from open_webui.retrieval.web.exa import search_exa
 from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.sougou import search_sougou
+from open_webui.retrieval.web.external import search_external
 
 from open_webui.retrieval.utils import (
     get_embedding_function,
@@ -1465,6 +1466,14 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             raise Exception(
                 "No SOUGOU_API_SID or SOUGOU_API_SK found in environment variables"
             )
+    elif engine == "external":
+        return search_external(
+            request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
+            request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
+            query,
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
     else:
         raise Exception("No search engine API key found in environment variables")
 
