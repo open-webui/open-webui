@@ -56,7 +56,7 @@ class Tools:
     def __init__(self):
         pass
 
-    # Add your custom tools using pure Python code here, make sure to add type hints
+    # Add your custom tools using pure Python code here, make sure to add type hints and descriptions
 	
     def get_user_name_and_email_and_id(self, __user__: dict = {}) -> str:
         """
