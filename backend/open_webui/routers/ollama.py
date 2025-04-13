@@ -342,7 +342,10 @@ async def get_all_models(request: Request, user: UserModel = None):
                 if len(model_ids) != 0 and "models" in response:
                     response["models"] = list(
                         filter(
-                            lambda model: model["model"] in model_ids,
+                            lambda model: model["model"] in [
+                                model_id if ":" in model_id else f"{model_id}:latest"
+                                for model_id in model_ids
+                            ],
                             response["models"],
                         )
                     )
@@ -866,6 +869,14 @@ async def embed(
 
         model = form_data.model
 
+        configs = request.app.state.config.OLLAMA_API_CONFIGS
+        prefix_ids = [config.get('prefix_id') for config in configs.values() if config.get('prefix_id')]
+        prefix_id = None
+        for prefix in prefix_ids:
+            if model.startswith(prefix):
+                prefix_id = prefix
+                break
+
         if ":" not in model:
             model = f"{model}:latest"
 
@@ -879,6 +890,10 @@ async def embed(
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
+    
+    # Remove prefix_id from model name
+    if prefix_id:
+        form_data.model = form_data.model.replace(f"{prefix_id}.", "")
 
     try:
         r = requests.request(
