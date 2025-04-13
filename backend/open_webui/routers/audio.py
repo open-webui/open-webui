@@ -330,7 +330,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 detail = f"External: {e}"
 
             raise HTTPException(
-                status_code=getattr(r, "status", 500),
+                status_code=getattr(r, "status", 500) if r else 500,
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 
@@ -384,7 +384,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 detail = f"External: {e}"
 
             raise HTTPException(
-                status_code=getattr(r, "status", 500),
+                status_code=getattr(r, "status", 500) if r else 500,
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 
@@ -440,7 +440,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 detail = f"External: {e}"
 
             raise HTTPException(
-                status_code=getattr(r, "status", 500),
+                status_code=getattr(r, "status", 500) if r else 500,
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 
