@@ -961,6 +961,7 @@ async def get_model_info():
     modelInfo = {
     "models": [
         {
+        "id": "shrl",
         "en": {
             "name": "Student Housing(SHRL)",
             "description": "This model is based on documents from shrl.hkust.edu.hk. It is suitable for questions about housing (application, hall points, housing regulations, check-in-check-out, shuttle bus, Off-campus, etc.)."
@@ -971,6 +972,7 @@ async def get_model_info():
         }
         },
         {
+        "id": "aro",
         "en": {
             "name": "Academic Support(ARO)",
             "description": "This model is based on documents from registry.hkust.edu.hk. It is suitable for questions about leave of absence, credit regulations, study extension, credit transfer, transcript inquiries, SIS, and other academic support."
@@ -981,6 +983,7 @@ async def get_model_info():
         }
         },
         {
+        "id": "cso",
         "en": {
             "name": "Campus Services(CSO&DST&CMO)",
             "description": "This model is based on documents from (cso.hkust.edu.hk, dst.hkust.edu.hk). It is suitable for questions about campus facilities, campus activities, transportation, and other student support."
@@ -991,6 +994,7 @@ async def get_model_info():
         }
         },
         {
+        "id": "itso",
         "en": {
             "name": "IT Services(ITSO)",
             "description": "This model is based on documents from (itso.hkust.edu.hk). It is suitable for questions about VPN setup, printer usage, 2FA authentication, and other school IT services."
@@ -1001,6 +1005,7 @@ async def get_model_info():
         }
         },
         {
+        "id": "urop",
         "en": {
             "name": "Undergraduate Research(UROP)",
             "description": "This model is based on documents from urop.hkust.edu.hk. It is suitable for questions about UROP applications, previous project inquiries, and related matters."
@@ -1011,6 +1016,7 @@ async def get_model_info():
         }
         },
         {
+        "id": "sa",
         "en": {
             "name": "Study Abroad(SA)",
             "description": "This model is based on documents from (studyabroad.hkust.edu.hk, summercampus.hkust.edu.hk). It is suitable for questions about study abroad applications and related matters."
