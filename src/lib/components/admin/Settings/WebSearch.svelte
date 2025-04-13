@@ -71,8 +71,7 @@
 
 			// Convert array back to comma-separated string for display
 			if (webConfig?.WEB_SEARCH_DOMAIN_FILTER_LIST) {
-				webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST =
-					webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.join(',');
+				webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST = webConfig.WEB_SEARCH_DOMAIN_FILTER_LIST.join(',');
 			}
 
 			webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.join(',');
