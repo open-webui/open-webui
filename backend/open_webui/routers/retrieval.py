@@ -621,8 +621,8 @@ async def update_rag_config(
 
     # Integration settings
     request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = (
-        form_data.enable_google_drive_integration
-        if form_data.enable_google_drive_integration is not None
+        form_data.ENABLE_GOOGLE_DRIVE_INTEGRATION
+        if form_data.ENABLE_GOOGLE_DRIVE_INTEGRATION is not None
         else request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION
     )
     request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION = (
@@ -706,7 +706,7 @@ async def update_rag_config(
         request.app.state.config.YOUTUBE_LOADER_PROXY_URL = (
             form_data.web.YOUTUBE_LOADER_PROXY_URL
         )
-        request.app.state.config.YOUTUBE_LOADER_TRANSLATION = (
+        request.app.state.YOUTUBE_LOADER_TRANSLATION = (
             form_data.web.YOUTUBE_LOADER_TRANSLATION
         )
 
