@@ -32,12 +32,25 @@ services:
       target: nginx
     container_name: webui-nginx
     ports:
-      - "3000:80"
+      - "80:80"
+      - "443:443"
     restart: unless-stopped
     depends_on:
       - open-webui
     networks:
       - webui-network
+    volumes:
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/nginx/ssl
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: webui-certbot
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+    command: certonly --webroot --webroot-path=/var/www/certbot --email admin@mergefeat.xyz --agree-tos --no-eff-email -d mergefeat.xyz
 
 volumes:
   open-webui: {}
