@@ -22,6 +22,7 @@ from open_webui.config import (
 )
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+from open_webui.models.users import UserModel
 
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -29,17 +30,17 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-async def get_all_base_models(request: Request):
+async def get_all_base_models(request: Request, user: UserModel = None):
     function_models = []
     openai_models = []
     ollama_models = []
 
     if request.app.state.config.ENABLE_OPENAI_API:
-        openai_models = await openai.get_all_models(request)
+        openai_models = await openai.get_all_models(request, user=user)
         openai_models = openai_models["data"]
 
     if request.app.state.config.ENABLE_OLLAMA_API:
-        ollama_models = await ollama.get_all_models(request)
+        ollama_models = await ollama.get_all_models(request, user=user)
         ollama_models = [
             {
                 "id": model["model"],
@@ -48,6 +49,7 @@ async def get_all_base_models(request: Request):
                 "created": int(time.time()),
                 "owned_by": "ollama",
                 "ollama": model,
+                "tags": model.get("tags", []),
             }
             for model in ollama_models["models"]
         ]
@@ -58,8 +60,8 @@ async def get_all_base_models(request: Request):
     return models
 
 
-async def get_all_models(request):
-    models = await get_all_base_models(request)
+async def get_all_models(request, user: UserModel = None):
+    models = await get_all_base_models(request, user=user)
 
     # If there are no models, return an empty list
     if len(models) == 0:
@@ -112,9 +114,12 @@ async def get_all_models(request):
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
             for model in models:
-                if (
-                    custom_model.id == model["id"]
-                    or custom_model.id == model["id"].split(":")[0]
+                if custom_model.id == model["id"] or (
+                    model.get("owned_by") == "ollama"
+                    and custom_model.id
+                    == model["id"].split(":")[
+                        0
+                    ]  # Ollama may return model ids in different formats (e.g., 'llama3' vs. 'llama3:7b')
                 ):
                     if custom_model.is_active:
                         model["name"] = custom_model.name

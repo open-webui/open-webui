@@ -5,7 +5,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, tick, getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
-	import type { i18n as i18nType } from 'i18next';
+	import type { i18n as i18nType, t } from 'i18next';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -24,7 +24,9 @@
 		getMessageContentParts,
 		sanitizeResponseContent,
 		createMessagesList,
-		formatDate
+		formatDate,
+		removeDetails,
+		removeAllDetails
 	} from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -110,6 +112,7 @@
 
 	export let siblings;
 
+	export let gotoMessage: Function = () => {};
 	export let showPreviousMessage: Function;
 	export let showNextMessage: Function;
 
@@ -129,6 +132,7 @@
 	export let isLastMessage = true;
 	export let readOnly = false;
 
+	let buttonsContainerElement: HTMLDivElement;
 	let showDeleteConfirm = false;
 
 	let model = null;
@@ -137,6 +141,8 @@
 	let edit = false;
 	let editedContent = '';
 	let editTextAreaElement: HTMLTextAreaElement;
+
+	let messageIndexEdit = false;
 
 	let audioParts: Record<number, HTMLAudioElement | null> = {};
 	let speaking = false;
@@ -148,6 +154,7 @@
 	let showRateComment = false;
 
 	const copyToClipboard = async (text) => {
+		text = removeAllDetails(text);
 		const res = await _copyToClipboard(text);
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
@@ -328,9 +335,37 @@
 		}
 	};
 
+	let preprocessedDetailsCache = [];
+
+	function preprocessForEditing(content: string): string {
+		// Replace <details>...</details> with unique ID placeholder
+		const detailsBlocks = [];
+		let i = 0;
+
+		content = content.replace(/<details[\s\S]*?<\/details>/gi, (match) => {
+			detailsBlocks.push(match);
+			return `<details id="__DETAIL_${i++}__"/>`;
+		});
+
+		// Store original blocks in the editedContent or globally (see merging later)
+		preprocessedDetailsCache = detailsBlocks;
+
+		return content;
+	}
+
+	function postprocessAfterEditing(content: string): string {
+		const restoredContent = content.replace(
+			/<details id="__DETAIL_(\d+)__"\/>/g,
+			(_, index) => preprocessedDetailsCache[parseInt(index)] || ''
+		);
+
+		return restoredContent;
+	}
+
 	const editMessageHandler = async () => {
 		edit = true;
-		editedContent = message.content;
+
+		editedContent = preprocessForEditing(message.content);
 
 		await tick();
 
@@ -339,7 +374,8 @@
 	};
 
 	const editMessageConfirmHandler = async () => {
-		editMessage(message.id, editedContent ? editedContent : '', false);
+		const messageContent = postprocessAfterEditing(editedContent ? editedContent : '');
+		editMessage(message.id, messageContent, false);
 
 		edit = false;
 		editedContent = '';
@@ -348,7 +384,9 @@
 	};
 
 	const saveAsCopyHandler = async () => {
-		editMessage(message.id, editedContent ? editedContent : '');
+		const messageContent = postprocessAfterEditing(editedContent ? editedContent : '');
+
+		editMessage(message.id, messageContent);
 
 		edit = false;
 		editedContent = '';
@@ -518,6 +556,18 @@
 		// console.log('ResponseMessage mounted');
 
 		await tick();
+		if (buttonsContainerElement) {
+			console.log(buttonsContainerElement);
+			buttonsContainerElement.addEventListener('wheel', function (event) {
+				// console.log(event.deltaY);
+
+				event.preventDefault();
+				if (event.deltaY !== 0) {
+					// Adjust horizontal scroll position based on vertical scroll
+					buttonsContainerElement.scrollLeft += event.deltaY;
+				}
+			});
+		}
 	});
 </script>
 
@@ -535,7 +585,7 @@
 		id="message-{message.id}"
 		dir={$settings.chatDirection}
 	>
-		<div class={`shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
+		<div class={`shrink-0 ltr:mr-3 rtl:ml-3`}>
 			<ProfileImage
 				src={model?.info?.meta?.profile_image_url ??
 					($i18n.language === 'dg-DG' ? `/doge.png` : `${WEBUI_BASE_URL}/static/favicon.png`)}
@@ -546,7 +596,7 @@
 		<div class="flex-auto w-0 pl-1">
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
-					<span class="line-clamp-1">
+					<span class="line-clamp-1 text-black dark:text-white">
 						{model?.name ?? message.model}
 					</span>
 				</Tooltip>
@@ -682,7 +732,7 @@
 									<div>
 										<button
 											id="save-new-message-button"
-											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 											on:click={() => {
 												saveAsCopyHandler();
 											}}
@@ -726,7 +776,7 @@
 										{history}
 										content={message.content}
 										sources={message.sources}
-										floatingButtons={message?.done}
+										floatingButtons={message?.done && !readOnly}
 										save={!readOnly}
 										{model}
 										onTaskClick={async (e) => {
@@ -735,7 +785,9 @@
 										onSourceClick={async (id, idx) => {
 											console.log(id, idx);
 											let sourceButton = document.getElementById(`source-${message.id}-${idx}`);
-											const sourcesCollapsible = document.getElementById(`collapsible-sources`);
+											const sourcesCollapsible = document.getElementById(
+												`collapsible-${message.id}`
+											);
 
 											if (sourceButton) {
 												sourceButton.click();
@@ -802,10 +854,11 @@
 				</div>
 
 				{#if !edit}
-					{#if message.done || siblings.length > 1}
-						<div
-							class=" flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
-						>
+					<div
+						bind:this={buttonsContainerElement}
+						class="flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
+					>
+						{#if message.done || siblings.length > 1}
 							{#if siblings.length > 1}
 								<div class="flex self-center min-w-fit" dir="ltr">
 									<button
@@ -830,11 +883,50 @@
 										</svg>
 									</button>
 
-									<div
-										class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
-									>
-										{siblings.indexOf(message.id) + 1}/{siblings.length}
-									</div>
+									{#if messageIndexEdit}
+										<div
+											class="text-sm flex justify-center font-semibold self-center dark:text-gray-100 min-w-fit"
+										>
+											<input
+												id="message-index-input-{message.id}"
+												type="number"
+												value={siblings.indexOf(message.id) + 1}
+												min="1"
+												max={siblings.length}
+												on:focus={(e) => {
+													e.target.select();
+												}}
+												on:blur={(e) => {
+													gotoMessage(message, e.target.value - 1);
+													messageIndexEdit = false;
+												}}
+												on:keydown={(e) => {
+													if (e.key === 'Enter') {
+														gotoMessage(message, e.target.value - 1);
+														messageIndexEdit = false;
+													}
+												}}
+												class="bg-transparent font-semibold self-center dark:text-gray-100 min-w-fit outline-hidden"
+											/>/{siblings.length}
+										</div>
+									{:else}
+										<!-- svelte-ignore a11y-no-static-element-interactions -->
+										<div
+											class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
+											on:dblclick={async () => {
+												messageIndexEdit = true;
+
+												await tick();
+												const input = document.getElementById(`message-index-input-${message.id}`);
+												if (input) {
+													input.focus();
+													input.select();
+												}
+											}}
+										>
+											{siblings.indexOf(message.id) + 1}/{siblings.length}
+										</div>
+									{/if}
 
 									<button
 										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
@@ -862,7 +954,7 @@
 
 							{#if message.done}
 								{#if !readOnly}
-									{#if $user.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
+									{#if $user?.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
 												class="{isLastMessage
@@ -995,7 +1087,7 @@
 									</button>
 								</Tooltip>
 
-								{#if $config?.features.enable_image_generation && ($user.role === 'admin' || $user?.permissions?.features?.image_generation) && !readOnly}
+								{#if $config?.features.enable_image_generation && ($user?.role === 'admin' || $user?.permissions?.features?.image_generation) && !readOnly}
 									<Tooltip content={$i18n.t('Generate Image')} placement="bottom">
 										<button
 											class="{isLastMessage
@@ -1255,7 +1347,7 @@
 										<Tooltip content={$i18n.t('Delete')} placement="bottom">
 											<button
 												type="button"
-												id="continue-response-button"
+												id="delete-response-button"
 												class="{isLastMessage
 													? 'visible'
 													: 'invisible group-hover:visible'} p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
@@ -1313,8 +1405,8 @@
 									{/if}
 								{/if}
 							{/if}
-						</div>
-					{/if}
+						{/if}
+					</div>
 
 					{#if message.done && showRateComment}
 						<RateComment

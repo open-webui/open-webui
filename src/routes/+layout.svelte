@@ -25,13 +25,14 @@
 		temporaryChatEnabled,
 		isLastActiveTab,
 		isApp,
-		appInfo
+		appInfo,
+		toolServers
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Toaster, toast } from 'svelte-sonner';
 
-	import { getBackendConfig } from '$lib/apis';
+	import { executeToolServer, getBackendConfig } from '$lib/apis';
 	import { getSessionUser } from '$lib/apis/auths';
 
 	import '../tailwind.css';
@@ -40,7 +41,7 @@
 	import 'tippy.js/dist/tippy.css';
 
 	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
-	import i18n, { initI18n, getLanguages } from '$lib/i18n';
+	import i18n, { initI18n, getLanguages, changeLanguage } from '$lib/i18n';
 	import { bestMatchingLanguage } from '$lib/utils';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
@@ -203,6 +204,39 @@
 		};
 	};
 
+	const executeTool = async (data, cb) => {
+		const toolServer = $settings?.toolServers?.find((server) => server.url === data.server?.url);
+		const toolServerData = $toolServers?.find((server) => server.url === data.server?.url);
+
+		console.log('executeTool', data, toolServer);
+
+		if (toolServer) {
+			console.log(toolServer);
+			const res = await executeToolServer(
+				(toolServer?.auth_type ?? 'bearer') === 'bearer' ? toolServer?.key : localStorage.token,
+				toolServer.url,
+				data?.name,
+				data?.params,
+				toolServerData
+			);
+
+			console.log('executeToolServer', res);
+			if (cb) {
+				cb(JSON.parse(JSON.stringify(res)));
+			}
+		} else {
+			if (cb) {
+				cb(
+					JSON.parse(
+						JSON.stringify({
+							error: 'Tool Server Not Found'
+						})
+					)
+				);
+			}
+		}
+	};
+
 	const chatEventHandler = async (event, cb) => {
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
 
@@ -256,6 +290,9 @@
 			if (type === 'execute:python') {
 				console.log('execute:python', data);
 				executePythonAsWorker(data.id, data.code, cb);
+			} else if (type === 'execute:tool') {
+				console.log('execute:tool', data);
+				executeTool(data, cb);
 			} else if (type === 'request:chat:completion') {
 				console.log(data, $socket.id);
 				const { session_id, channel, form_data, model } = data;
@@ -443,6 +480,7 @@
 		theme.set(localStorage.theme);
 
 		mobile.set(window.innerWidth < BREAKPOINT);
+
 		const onResize = () => {
 			if (window.innerWidth < BREAKPOINT) {
 				mobile.set(true);
@@ -450,8 +488,20 @@
 				mobile.set(false);
 			}
 		};
-
 		window.addEventListener('resize', onResize);
+
+		user.subscribe((value) => {
+			if (value) {
+				$socket?.off('chat-events', chatEventHandler);
+				$socket?.off('channel-events', channelEventHandler);
+
+				$socket?.on('chat-events', chatEventHandler);
+				$socket?.on('channel-events', channelEventHandler);
+			} else {
+				$socket?.off('chat-events', chatEventHandler);
+				$socket?.off('channel-events', channelEventHandler);
+			}
+		});
 
 		let backendConfig = null;
 		try {
@@ -463,7 +513,7 @@
 		// Initialize i18n even if we didn't get a backend config,
 		// so `/error` can show something that's not `undefined`.
 
-		initI18n();
+		initI18n(localStorage?.locale);
 		if (!localStorage.locale) {
 			const languages = await getLanguages();
 			const browserLanguages = navigator.languages
@@ -472,7 +522,7 @@
 			const lang = backendConfig.default_locale
 				? backendConfig.default_locale
 				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
-			$i18n.changeLanguage(lang);
+			changeLanguage(lang);
 		}
 
 		if (backendConfig) {
@@ -482,6 +532,9 @@
 
 			if ($config) {
 				await setupSocket($config.features?.enable_websocket ?? true);
+
+				const currentUrl = `${window.location.pathname}${window.location.search}`;
+				const encodedUrl = encodeURIComponent(currentUrl);
 
 				if (localStorage.token) {
 					// Get Session User Info
@@ -494,21 +547,18 @@
 						// Save Session User to Store
 						$socket.emit('user-join', { auth: { token: sessionUser.token } });
 
-						$socket?.on('chat-events', chatEventHandler);
-						$socket?.on('channel-events', channelEventHandler);
-
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
-						await goto('/auth');
+						await goto(`/auth?redirect=${encodedUrl}`);
 					}
 				} else {
 					// Don't redirect if we're already on the auth page
 					// Needed because we pass in tokens from OAuth logins via URL fragments
 					if ($page.url.pathname !== '/auth') {
-						await goto('/auth');
+						await goto(`/auth?redirect=${encodedUrl}`);
 					}
 				}
 			}

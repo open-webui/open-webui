@@ -30,13 +30,22 @@
 	// Interface
 	let defaultModelId = '';
 	let showUsername = false;
-	let richTextInput = true;
-	let largeTextAsFile = false;
 	let notificationSound = true;
+
+	let detectArtifacts = true;
+
+	let richTextInput = true;
+	let promptAutocomplete = false;
+
+	let largeTextAsFile = false;
 
 	let landingPageMode = '';
 	let chatBubble = true;
-	let chatDirection: 'LTR' | 'RTL' = 'LTR';
+	let chatDirection: 'LTR' | 'RTL' | 'auto' = 'auto';
+	let ctrlEnterToSend = false;
+
+	let collapseCodeBlocks = false;
+	let expandDetails = false;
 
 	let imageCompression = false;
 	let imageCompressionSize = {
@@ -54,9 +63,27 @@
 
 	let webSearch = null;
 
+	let iframeSandboxAllowSameOrigin = false;
+	let iframeSandboxAllowForms = false;
+
+	const toggleExpandDetails = () => {
+		expandDetails = !expandDetails;
+		saveSettings({ expandDetails });
+	};
+
+	const toggleCollapseCodeBlocks = () => {
+		collapseCodeBlocks = !collapseCodeBlocks;
+		saveSettings({ collapseCodeBlocks });
+	};
+
 	const toggleSplitLargeChunks = async () => {
 		splitLargeChunks = !splitLargeChunks;
 		saveSettings({ splitLargeChunks: splitLargeChunks });
+	};
+
+	const togglePromptAutocomplete = async () => {
+		promptAutocomplete = !promptAutocomplete;
+		saveSettings({ promptAutocomplete: promptAutocomplete });
 	};
 
 	const togglesScrollOnBranchChange = async () => {
@@ -154,6 +181,11 @@
 		saveSettings({ autoTags });
 	};
 
+	const toggleDetectArtifacts = async () => {
+		detectArtifacts = !detectArtifacts;
+		saveSettings({ detectArtifacts });
+	};
+
 	const toggleRichTextInput = async () => {
 		richTextInput = !richTextInput;
 		saveSettings({ richTextInput });
@@ -189,8 +221,19 @@
 	};
 
 	const toggleChangeChatDirection = async () => {
-		chatDirection = chatDirection === 'LTR' ? 'RTL' : 'LTR';
+		if (chatDirection === 'auto') {
+			chatDirection = 'LTR';
+		} else if (chatDirection === 'LTR') {
+			chatDirection = 'RTL';
+		} else if (chatDirection === 'RTL') {
+			chatDirection = 'auto';
+		}
 		saveSettings({ chatDirection });
+	};
+
+	const togglectrlEnterToSend = async () => {
+		ctrlEnterToSend = !ctrlEnterToSend;
+		saveSettings({ ctrlEnterToSend });
 	};
 
 	const updateInterfaceHandler = async () => {
@@ -205,10 +248,21 @@
 		saveSettings({ webSearch: webSearch });
 	};
 
+	const toggleIframeSandboxAllowSameOrigin = async () => {
+		iframeSandboxAllowSameOrigin = !iframeSandboxAllowSameOrigin;
+		saveSettings({ iframeSandboxAllowSameOrigin });
+	};
+
+	const toggleIframeSandboxAllowForms = async () => {
+		iframeSandboxAllowForms = !iframeSandboxAllowForms;
+		saveSettings({ iframeSandboxAllowForms });
+	};
+
 	onMount(async () => {
 		titleAutoGenerate = $settings?.title?.auto ?? true;
 		autoTags = $settings.autoTags ?? true;
 
+		detectArtifacts = $settings.detectArtifacts ?? true;
 		responseAutoCopy = $settings.responseAutoCopy ?? false;
 
 		showUsername = $settings.showUsername ?? false;
@@ -219,19 +273,24 @@
 		voiceInterruption = $settings.voiceInterruption ?? false;
 
 		richTextInput = $settings.richTextInput ?? true;
+		promptAutocomplete = $settings.promptAutocomplete ?? false;
 		largeTextAsFile = $settings.largeTextAsFile ?? false;
+
+		collapseCodeBlocks = $settings.collapseCodeBlocks ?? false;
+		expandDetails = $settings.expandDetails ?? false;
 
 		landingPageMode = $settings.landingPageMode ?? '';
 		chatBubble = $settings.chatBubble ?? true;
 		widescreenMode = $settings.widescreenMode ?? false;
 		splitLargeChunks = $settings.splitLargeChunks ?? false;
 		scrollOnBranchChange = $settings.scrollOnBranchChange ?? true;
-		chatDirection = $settings.chatDirection ?? 'LTR';
+		chatDirection = $settings.chatDirection ?? 'auto';
 		userLocation = $settings.userLocation ?? false;
 
 		notificationSound = $settings.notificationSound ?? true;
 
 		hapticFeedback = $settings.hapticFeedback ?? false;
+		ctrlEnterToSend = $settings.ctrlEnterToSend ?? false;
 
 		imageCompression = $settings.imageCompression ?? false;
 		imageCompressionSize = $settings.imageCompressionSize ?? { width: '', height: '' };
@@ -380,8 +439,10 @@
 					>
 						{#if chatDirection === 'LTR'}
 							<span class="ml-2 self-center">{$i18n.t('LTR')}</span>
-						{:else}
+						{:else if chatDirection === 'RTL'}
 							<span class="ml-2 self-center">{$i18n.t('RTL')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Auto')}</span>
 						{/if}
 					</button>
 				</div>
@@ -409,7 +470,7 @@
 				</div>
 			</div>
 
-			{#if $user.role === 'admin'}
+			{#if $user?.role === 'admin'}
 				<div>
 					<div class=" py-0.5 flex w-full justify-between">
 						<div class=" self-center text-xs">
@@ -500,6 +561,28 @@
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">
+						{$i18n.t('Detect Artifacts Automatically')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleDetectArtifacts();
+						}}
+						type="button"
+					>
+						{#if detectArtifacts === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">
 						{$i18n.t('Auto-Copy Response to Clipboard')}
 					</div>
 
@@ -541,6 +624,30 @@
 				</div>
 			</div>
 
+			{#if $config?.features?.enable_autocomplete_generation && richTextInput}
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs">
+							{$i18n.t('Prompt Autocompletion')}
+						</div>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded-sm transition"
+							on:click={() => {
+								togglePromptAutocomplete();
+							}}
+							type="button"
+						>
+							{#if promptAutocomplete === true}
+								<span class="ml-2 self-center">{$i18n.t('On')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+							{/if}
+						</button>
+					</div>
+				</div>
+			{/if}
+
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">
@@ -555,6 +662,46 @@
 						type="button"
 					>
 						{#if largeTextAsFile === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('Always Collapse Code Blocks')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleCollapseCodeBlocks();
+						}}
+						type="button"
+					>
+						{#if collapseCodeBlocks === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('Always Expand Details')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleExpandDetails();
+						}}
+						type="button"
+					>
+						{#if expandDetails === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
@@ -612,7 +759,9 @@
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs">{$i18n.t('Haptic Feedback')}</div>
+					<div class=" self-center text-xs">
+						{$i18n.t('Haptic Feedback')} ({$i18n.t('Android')})
+					</div>
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
@@ -655,6 +804,28 @@
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">
+						{$i18n.t('Enter Key Behavior')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded transition"
+						on:click={() => {
+							togglectrlEnterToSend();
+						}}
+						type="button"
+					>
+						{#if ctrlEnterToSend === true}
+							<span class="ml-2 self-center">{$i18n.t('Ctrl+Enter to Send')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Enter to Send')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">
 						{$i18n.t('Scroll to bottom when switching between branches')}
 					</div>
 
@@ -689,6 +860,46 @@
 							<span class="ml-2 self-center">{$i18n.t('Always')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Default')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('iframe Sandbox Allow Same Origin')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleIframeSandboxAllowSameOrigin();
+						}}
+						type="button"
+					>
+						{#if iframeSandboxAllowSameOrigin === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">{$i18n.t('iframe Sandbox Allow Forms')}</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleIframeSandboxAllowForms();
+						}}
+						type="button"
+					>
+						{#if iframeSandboxAllowForms === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
 						{/if}
 					</button>
 				</div>

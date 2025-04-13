@@ -104,7 +104,7 @@ def replace_prompt_variable(template: str, prompt: str) -> str:
 
 
 def replace_messages_variable(
-    template: str, messages: Optional[list[str]] = None
+    template: str, messages: Optional[list[dict]] = None
 ) -> str:
     def replacement_function(match):
         full_match = match.group(0)
@@ -151,6 +151,8 @@ def replace_messages_variable(
 def rag_template(template: str, context: str, query: str):
     if template.strip() == "":
         template = DEFAULT_RAG_TEMPLATE
+
+    template = prompt_template(template)
 
     if "[context]" not in template and "{{CONTEXT}}" not in template:
         log.debug(

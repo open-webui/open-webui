@@ -9,7 +9,7 @@
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { mobile, showSidebar, knowledge as _knowledge } from '$lib/stores';
+	import { mobile, showSidebar, knowledge as _knowledge, config, user } from '$lib/stores';
 
 	import { updateFileDataContentById, uploadFile, deleteFileById } from '$lib/apis/files';
 	import {
@@ -131,21 +131,23 @@
 			return null;
 		}
 
-		knowledge.files = [...(knowledge.files ?? []), fileItem];
-
-		// Check if the file is an audio file and transcribe/convert it to text file
-		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
-			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
-				toast.error(`${error}`);
-				return null;
+		if (
+			($config?.file?.max_size ?? null) !== null &&
+			file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+		) {
+			console.log('File exceeds max size limit:', {
+				fileSize: file.size,
+				maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
 			});
-
-			if (res) {
-				console.log(res);
-				const blob = new Blob([res.text], { type: 'text/plain' });
-				file = blobToFile(blob, `${file.name}.txt`);
-			}
+			toast.error(
+				$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
+					maxSize: $config?.file?.max_size
+				})
+			);
+			return;
 		}
+
+		knowledge.files = [...(knowledge.files ?? []), fileItem];
 
 		try {
 			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
@@ -545,6 +547,14 @@
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
 	});
+
+	const decodeString = (str: string) => {
+		try {
+			return decodeURIComponent(str);
+		} catch (e) {
+			return str;
+		}
+	};
 </script>
 
 {#if dragged}
@@ -617,6 +627,7 @@
 		<AccessControlModal
 			bind:show={showAccessControlModal}
 			bind:accessControl={knowledge.access_control}
+			allowPublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
 			onChange={() => {
 				changeDebounceHandler();
 			}}
@@ -695,7 +706,7 @@
 										href={selectedFile.id ? `/api/v1/files/${selectedFile.id}/content` : '#'}
 										target="_blank"
 									>
-										{selectedFile?.meta?.name}
+										{decodeString(selectedFile?.meta?.name)}
 									</a>
 								</div>
 

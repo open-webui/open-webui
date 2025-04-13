@@ -1,4 +1,6 @@
 <script lang="ts">
+	import DOMPurify from 'dompurify';
+
 	import { getBackendConfig, getVersionUpdates, getWebhookUrl, updateWebhookUrl } from '$lib/apis';
 	import {
 		getAdminConfig,
@@ -220,15 +222,44 @@
 								<div class="">
 									{$i18n.t('License')}
 								</div>
-								<a
-									class=" text-xs text-gray-500 hover:underline"
-									href="https://docs.openwebui.com/enterprise"
-									target="_blank"
-								>
-									{$i18n.t(
-										'Upgrade to a licensed plan for enhanced capabilities, including custom theming and branding, and dedicated support.'
-									)}
-								</a>
+
+								{#if $config?.license_metadata}
+									<a
+										href="https://docs.openwebui.com/enterprise"
+										target="_blank"
+										class="text-gray-500 mt-0.5"
+									>
+										<span class=" capitalize text-black dark:text-white"
+											>{$config?.license_metadata?.type}
+											license</span
+										>
+										registered to
+										<span class=" capitalize text-black dark:text-white"
+											>{$config?.license_metadata?.organization_name}</span
+										>
+										for
+										<span class=" font-medium text-black dark:text-white"
+											>{$config?.license_metadata?.seats ?? 'Unlimited'} users.</span
+										>
+									</a>
+									{#if $config?.license_metadata?.html}
+										<div class="mt-0.5">
+											{@html DOMPurify.sanitize($config?.license_metadata?.html)}
+										</div>
+									{/if}
+								{:else}
+									<a
+										class=" text-xs hover:underline"
+										href="https://docs.openwebui.com/enterprise"
+										target="_blank"
+									>
+										<span class="text-gray-500">
+											{$i18n.t(
+												'Upgrade to a licensed plan for enhanced capabilities, including custom theming and branding, and dedicated support.'
+											)}
+										</span>
+									</a>
+								{/if}
 							</div>
 
 							<!-- <button
@@ -523,7 +554,6 @@
 													</div>
 													<input
 														class="w-full bg-transparent outline-hidden py-0.5"
-														required
 														placeholder={$i18n.t('Enter certificate path')}
 														bind:value={LDAP_SERVER.certificate_path}
 													/>
@@ -577,6 +607,14 @@
 						</div>
 
 						<Switch bind:state={adminConfig.ENABLE_CHANNELS} />
+					</div>
+
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('User Webhooks')}
+						</div>
+
+						<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
 					</div>
 
 					<div class="mb-2.5 w-full justify-between">

@@ -11,7 +11,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	export let id;
+	export let id = '';
 	export let content;
 	export let model = null;
 	export let save = false;
