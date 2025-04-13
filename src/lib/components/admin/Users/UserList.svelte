@@ -488,10 +488,11 @@
 
 <Pagination bind:page count={users.length} />
 
-{#if users.length > 50}
-	<div class="text-sm">
-		<Markdown
-			content={`
+{#if !$config?.license_metadata}
+	{#if users.length > 50}
+		<div class="text-sm">
+			<Markdown
+				content={`
 > [!NOTE]
 > # **Hey there! 👋**
 >
@@ -506,6 +507,7 @@
 > - 👉 **[Click here to learn more about enterprise licensing](https://docs.openwebui.com/enterprise)**
 > - 👉 *[Click here to sponsor the project on GitHub](https://github.com/sponsors/tjbck)*
 `}
-		/>
-	</div>
+			/>
+		</div>
+	{/if}
 {/if}
