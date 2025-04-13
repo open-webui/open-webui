@@ -488,7 +488,7 @@
 
 <Pagination bind:page count={users.length} />
 
-{#if users.length > 3}
+{#if users.length > 50}
 	<div class="text-sm">
 		<Markdown
 			content={`
