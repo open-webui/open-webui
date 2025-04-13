@@ -2,7 +2,7 @@ services:
   open-webui:
     container_name: app
     ports:
-      - "8080"
+      - "3000:8080"
     build:
       context: .
       dockerfile: Dockerfile
@@ -40,17 +40,7 @@ services:
     networks:
       - webui-network
     volumes:
-      - ./nginx/ssl:/etc/nginx/ssl
-      - ./certbot/www:/var/www/certbot
-      - ./certbot/conf:/etc/nginx/ssl
-
-  certbot:
-    image: certbot/certbot:latest
-    container_name: webui-certbot
-    volumes:
-      - ./certbot/www:/var/www/certbot
-      - ./certbot/conf:/etc/letsencrypt
-    command: certonly --webroot --webroot-path=/var/www/certbot --email admin@mergefeat.xyz --agree-tos --no-eff-email -d mergefeat.xyz
+      - ./certbot/conf/live:/etc/nginx/ssl/live:ro
 
 volumes:
   open-webui: {}
