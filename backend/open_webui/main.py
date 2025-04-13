@@ -983,7 +983,7 @@ async def get_model_info():
         }
         },
         {
-        "id": "cso",
+        "id": "csodst",
         "en": {
             "name": "Campus Services(CSO&DST&CMO)",
             "description": "This model is based on documents from (cso.hkust.edu.hk, dst.hkust.edu.hk). It is suitable for questions about campus facilities, campus activities, transportation, and other student support."
@@ -1016,7 +1016,7 @@ async def get_model_info():
         }
         },
         {
-        "id": "sa",
+        "id": "study-abroad",
         "en": {
             "name": "Study Abroad(SA)",
             "description": "This model is based on documents from (studyabroad.hkust.edu.hk, summercampus.hkust.edu.hk). It is suitable for questions about study abroad applications and related matters."
