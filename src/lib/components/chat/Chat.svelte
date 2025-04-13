@@ -130,7 +130,7 @@
 		currentId: null
 	};
 
-	let taskId = null;
+	let taskIds = null;
 
 	// Chat Input
 	let prompt = '';
@@ -818,8 +818,14 @@
 				await tick();
 
 				if (history.currentId) {
-					history.messages[history.currentId].done = true;
+					for (const message of Object.values(history.messages)) {
+						if (message.role === 'assistant') {
+							message.done = true;
+						}
+					}
 				}
+
+				taskIds = chat?.task_ids ?? null;
 				await tick();
 
 				return true;
@@ -891,7 +897,7 @@
 			}
 		}
 
-		taskId = null;
+		taskIds = null;
 	};
 
 	const chatActionHandler = async (chatId, actionId, modelId, responseMessageId, event = null) => {
@@ -1649,7 +1655,11 @@
 			if (res.error) {
 				await handleOpenAIError(res.error, responseMessage);
 			} else {
-				taskId = res.task_id;
+				if (taskIds) {
+					taskIds.push(res.task_id);
+				} else {
+					taskIds = [res.task_id];
+				}
 			}
 		}
 
@@ -1700,23 +1710,27 @@
 	};
 
 	const stopResponse = async () => {
-		if (taskId) {
-			const res = await stopTask(localStorage.token, taskId).catch((error) => {
-				toast.error(`${error}`);
-				return null;
-			});
+		if (taskIds) {
+			for (const taskId of taskIds) {
+				const res = await stopTask(localStorage.token, taskId).catch((error) => {
+					toast.error(`${error}`);
+					return null;
+				});
+			}
 
-			if (res) {
-				taskId = null;
+			taskIds = null;
 
-				const responseMessage = history.messages[history.currentId];
-				responseMessage.done = true;
+			const responseMessage = history.messages[history.currentId];
 
-				history.messages[history.currentId] = responseMessage;
+			// Set all response messages to done
+			for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
+				history.messages[messageId].done = true;
+			}
 
-				if (autoScroll) {
-					scrollToBottom();
-				}
+			history.messages[history.currentId] = responseMessage;
+
+			if (autoScroll) {
+				scrollToBottom();
 			}
 		}
 	};
