@@ -372,7 +372,11 @@ from open_webui.utils.auth import (
 from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
-from open_webui.tasks import stop_task, list_tasks  # Import from tasks.py
+from open_webui.tasks import (
+    list_task_ids_by_chat_id,
+    stop_task,
+    list_tasks,
+)  # Import from tasks.py
 
 from open_webui.utils.redis import get_sentinels_from_env
 
@@ -1196,7 +1200,7 @@ async def chat_action(
 @app.post("/api/tasks/stop/{task_id}")
 async def stop_task_endpoint(task_id: str, user=Depends(get_verified_user)):
     try:
-        result = await stop_task(task_id)  # Use the function from tasks.py
+        result = await stop_task(task_id)
         return result
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
@@ -1204,7 +1208,19 @@ async def stop_task_endpoint(task_id: str, user=Depends(get_verified_user)):
 
 @app.get("/api/tasks")
 async def list_tasks_endpoint(user=Depends(get_verified_user)):
-    return {"tasks": list_tasks()}  # Use the function from tasks.py
+    return {"tasks": list_tasks()}
+
+
+@app.get("/api/tasks/chat/{chat_id}")
+async def list_tasks_by_chat_id_endpoint(chat_id: str, user=Depends(get_verified_user)):
+    chat = Chats.get_chat_by_id(chat_id)
+    if chat is None or chat.user_id != user.id:
+        return {"task_ids": []}
+
+    task_ids = list_task_ids_by_chat_id(chat_id)
+
+    print(f"Task IDs for chat {chat_id}: {task_ids}")
+    return {"task_ids": task_ids}
 
 
 ##################################

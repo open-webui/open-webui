@@ -2245,7 +2245,9 @@ async def process_chat_response(
                 await response.background()
 
         # background_tasks.add_task(post_response_handler, response, events)
-        task_id, _ = create_task(post_response_handler(response, events))
+        task_id, _ = create_task(
+            post_response_handler(response, events), id=metadata["chat_id"]
+        )
         return {"status": True, "task_id": task_id}
 
     else:

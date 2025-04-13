@@ -74,7 +74,8 @@
 		generateQueries,
 		chatAction,
 		generateMoACompletion,
-		stopTask
+		stopTask,
+		getTaskIdsByChatId
 	} from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
 
@@ -825,7 +826,14 @@
 					}
 				}
 
-				taskIds = chat?.task_ids ?? null;
+				const taskRes = await getTaskIdsByChatId(localStorage.token, $chatId).catch((error) => {
+					return null;
+				});
+
+				if (taskRes) {
+					taskIds = taskRes.task_ids;
+				}
+
 				await tick();
 
 				return true;
@@ -1721,7 +1729,6 @@
 			taskIds = null;
 
 			const responseMessage = history.messages[history.currentId];
-
 			// Set all response messages to done
 			for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
 				history.messages[messageId].done = true;
@@ -2014,6 +2021,7 @@
 						<div class=" pb-[1rem]">
 							<MessageInput
 								{history}
+								{taskIds}
 								{selectedModels}
 								bind:files
 								bind:prompt

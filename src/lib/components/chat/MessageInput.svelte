@@ -71,6 +71,7 @@
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
 	export let history;
+	export let taskIds = null;
 
 	export let prompt = '';
 	export let files = [];
@@ -1237,99 +1238,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if !history.currentId || history.messages[history.currentId]?.done == true}
-											{#if prompt === '' && files.length === 0}
-												<div class=" flex items-center">
-													<Tooltip content={$i18n.t('Call')}>
-														<button
-															class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-1.5 self-center"
-															type="button"
-															on:click={async () => {
-																if (selectedModels.length > 1) {
-																	toast.error($i18n.t('Select only one model to call'));
-
-																	return;
-																}
-
-																if ($config.audio.stt.engine === 'web') {
-																	toast.error(
-																		$i18n.t(
-																			'Call feature is not supported when using Web STT engine'
-																		)
-																	);
-
-																	return;
-																}
-																// check if user has access to getUserMedia
-																try {
-																	let stream = await navigator.mediaDevices.getUserMedia({
-																		audio: true
-																	});
-																	// If the user grants the permission, proceed to show the call overlay
-
-																	if (stream) {
-																		const tracks = stream.getTracks();
-																		tracks.forEach((track) => track.stop());
-																	}
-
-																	stream = null;
-
-																	if ($settings.audio?.tts?.engine === 'browser-kokoro') {
-																		// If the user has not initialized the TTS worker, initialize it
-																		if (!$TTSWorker) {
-																			await TTSWorker.set(
-																				new KokoroWorker({
-																					dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
-																				})
-																			);
-
-																			await $TTSWorker.init();
-																		}
-																	}
-
-																	showCallOverlay.set(true);
-																	showControls.set(true);
-																} catch (err) {
-																	// If the user denies the permission or an error occurs, show an error message
-																	toast.error(
-																		$i18n.t('Permission denied when accessing media devices')
-																	);
-																}
-															}}
-															aria-label="Call"
-														>
-															<Headphone className="size-5" />
-														</button>
-													</Tooltip>
-												</div>
-											{:else}
-												<div class=" flex items-center">
-													<Tooltip content={$i18n.t('Send message')}>
-														<button
-															id="send-message-button"
-															class="{!(prompt === '' && files.length === 0)
-																? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
-															type="submit"
-															disabled={prompt === '' && files.length === 0}
-														>
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																viewBox="0 0 16 16"
-																fill="currentColor"
-																class="size-5"
-															>
-																<path
-																	fill-rule="evenodd"
-																	d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
-																	clip-rule="evenodd"
-																/>
-															</svg>
-														</button>
-													</Tooltip>
-												</div>
-											{/if}
-										{:else}
+										{#if taskIds && taskIds.length > 0}
 											<div class=" flex items-center">
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
@@ -1347,6 +1256,94 @@
 															<path
 																fill-rule="evenodd"
 																d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm6-2.438c0-.724.588-1.312 1.313-1.312h4.874c.725 0 1.313.588 1.313 1.313v4.874c0 .725-.588 1.313-1.313 1.313H9.564a1.312 1.312 0 01-1.313-1.313V9.564z"
+																clip-rule="evenodd"
+															/>
+														</svg>
+													</button>
+												</Tooltip>
+											</div>
+										{:else if prompt === '' && files.length === 0}
+											<div class=" flex items-center">
+												<Tooltip content={$i18n.t('Call')}>
+													<button
+														class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-1.5 self-center"
+														type="button"
+														on:click={async () => {
+															if (selectedModels.length > 1) {
+																toast.error($i18n.t('Select only one model to call'));
+
+																return;
+															}
+
+															if ($config.audio.stt.engine === 'web') {
+																toast.error(
+																	$i18n.t('Call feature is not supported when using Web STT engine')
+																);
+
+																return;
+															}
+															// check if user has access to getUserMedia
+															try {
+																let stream = await navigator.mediaDevices.getUserMedia({
+																	audio: true
+																});
+																// If the user grants the permission, proceed to show the call overlay
+
+																if (stream) {
+																	const tracks = stream.getTracks();
+																	tracks.forEach((track) => track.stop());
+																}
+
+																stream = null;
+
+																if ($settings.audio?.tts?.engine === 'browser-kokoro') {
+																	// If the user has not initialized the TTS worker, initialize it
+																	if (!$TTSWorker) {
+																		await TTSWorker.set(
+																			new KokoroWorker({
+																				dtype: $settings.audio?.tts?.engineConfig?.dtype ?? 'fp32'
+																			})
+																		);
+
+																		await $TTSWorker.init();
+																	}
+																}
+
+																showCallOverlay.set(true);
+																showControls.set(true);
+															} catch (err) {
+																// If the user denies the permission or an error occurs, show an error message
+																toast.error(
+																	$i18n.t('Permission denied when accessing media devices')
+																);
+															}
+														}}
+														aria-label="Call"
+													>
+														<Headphone className="size-5" />
+													</button>
+												</Tooltip>
+											</div>
+										{:else}
+											<div class=" flex items-center">
+												<Tooltip content={$i18n.t('Send message')}>
+													<button
+														id="send-message-button"
+														class="{!(prompt === '' && files.length === 0)
+															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
+															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
+														type="submit"
+														disabled={prompt === '' && files.length === 0}
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															viewBox="0 0 16 16"
+															fill="currentColor"
+															class="size-5"
+														>
+															<path
+																fill-rule="evenodd"
+																d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z"
 																clip-rule="evenodd"
 															/>
 														</svg>
