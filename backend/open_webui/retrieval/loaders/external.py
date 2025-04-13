@@ -40,7 +40,7 @@ class ExternalLoader(BaseLoader):
                     },
                     params={
                         "urls": urls,
-                    }
+                    },
                 )
                 response.raise_for_status()
                 results = response.json()

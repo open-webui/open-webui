@@ -26,7 +26,7 @@ def search_external(
             params={
                 "query": query,
                 "count": count,
-            }
+            },
         )
         response.raise_for_status()
         results = response.json()
