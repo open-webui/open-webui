@@ -135,7 +135,7 @@ def get_license_data(app, key):
         for k, v in payload.items():
             if k == "resources":
                 for p, c in v.items():
-                    if v:
+                    if c:
                         globals().get("override_static", lambda a, b: None)(p, c)
             elif k == "count":
                 setattr(app.state, "USER_COUNT", v)
