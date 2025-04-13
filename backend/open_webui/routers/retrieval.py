@@ -512,8 +512,8 @@ async def update_rag_config(
 ):
     # RAG settings
     request.app.state.config.RAG_TEMPLATE = (
-        form_data.TEMPLATE
-        if form_data.TEMPLATE is not None
+        form_data.RAG_TEMPLATE
+        if form_data.RAG_TEMPLATE is not None
         else request.app.state.config.RAG_TEMPLATE
     )
     request.app.state.config.TOP_K = (
