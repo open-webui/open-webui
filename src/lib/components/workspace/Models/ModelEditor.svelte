@@ -25,6 +25,13 @@
 	import { getModelIcon } from '$lib/utils';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import CapabilitiesNew from './CapabilitiesNew.svelte';
+	import { transcribeAudio } from '$lib/apis/audio';
+	import { blobToFile } from '$lib/utils';
+	import { uploadFile } from '$lib/apis/files';
+	import Dropzone from './Dropzone.svelte';
+	import { v4 as uuidv4 } from 'uuid';
+	import DocumentIcon from '$lib/components/icons/DocumentIcon.svelte';
+	
 
 	const i18n = getContext('i18n');
 
@@ -98,8 +105,6 @@
 	let filterIds = [];
 	let actionIds = [];
 
-	let access = 'public';
-	let allowedGroups = ['Design', 'Marketing'];
 
 	let accessControl = {};
 	$: console.log(info)
@@ -130,10 +135,19 @@
 
 		if (name === '') {
 			toast.error('Model Name is required.');
+			loading = false;
+			return;
+		}
+
+		if(!info.base_model_id) {
+			toast.error('Base Model is required.');
+			loading = false;
+			return;
 		}
 
 		info.access_control = accessControl;
 		info.meta.capabilities = capabilities;
+		info.file_ids = file_ids.map(file => file.id);
 
 		if (enableDescription) {
 			info.meta.description = info.meta.description.trim() === '' ? null : info.meta.description;
@@ -296,7 +310,66 @@
 		(opt) => opt.value === info?.params?.temperature
 	)?.label;
 
-	$: console.log(capabilities, 'capabilities')
+	let file_ids: { id: string; name: string }[] = [];
+
+	$: console.log(file_ids);
+
+
+	const uploadFileHandler = async (file) => {
+		console.log(file);
+
+		const tempItemId = uuidv4();
+		const fileItem = {
+			type: 'file',
+			file: '',
+			id: null,
+			url: '',
+			name: file.name,
+			size: file.size,
+			status: 'uploading',
+			error: '',
+			itemId: tempItemId
+		};
+
+		if (fileItem.size == 0) {
+			toast.error($i18n.t('You cannot upload an empty file.'));
+			return null;
+		}
+
+		
+
+		// Check if the file is an audio file and transcribe/convert it to text file
+		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
+			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (res) {
+				console.log(res);
+				const blob = new Blob([res.text], { type: 'text/plain' });
+				file = blobToFile(blob, `${file.name}.txt`);
+			}
+		}
+
+		try {
+			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
+				toast.error(`${e}`);
+				return null;
+			});
+
+			if (uploadedFile) {
+				console.log(uploadedFile);
+				if (uploadedFile?.id) {
+					file_ids = [...file_ids, { id: uploadedFile.id, name: uploadedFile.meta?.name || file.name }];
+				}
+			} else {
+				toast.error($i18n.t('Failed to upload file.'));
+			}
+		} catch (e) {
+			toast.error(`${e}`);
+		}
+	};
 </script>
 
 {#if loaded}
@@ -546,6 +619,52 @@
 							</div>
 						</div>
 
+						<div class="mb-5">
+							<div class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2">
+								<div class="flex w-full justify-between items-center ">		
+									<div class="text-xs dark:text-customGray-300">{$i18n.t('Knowledge')}</div>
+								</div>	
+								<button
+									class="shrink-0 text-xs dark:text-customGray-200 flex rounded transition"
+									type="button"
+									on:click={() => {
+										
+									}}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										viewBox="0 0 20 20"
+										fill="currentColor"
+										class="w-4 h-4"
+									>
+										<path
+											d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+										/>
+									</svg>
+									{$i18n.t('Add')}
+								</button>	
+							</div>
+							<Dropzone uploadFileHandler={uploadFileHandler}/>
+							{#if file_ids.length}
+								<ul class="mt-2.5 space-y-1 text-sm">
+									{#each file_ids as file (file.id)}
+										<li class="group flex justify-start items-center dark:text-customGray-100 cursor-pointer dark:hover:text-white">
+											<DocumentIcon />
+											<span class="truncate ml-2 mr-3.5">{file.name}</span>
+											<button
+												class="opacity-0 group-hover:opacity-100"
+												on:click={() => {
+													file_ids = file_ids.filter((f) => f.id !== file.id);
+												}}
+											>
+											<DeleteIcon/>
+											</button>
+										</li>
+									{/each}
+								</ul>
+							{/if}
+						</div>
+
 						<div class="mb-1.5">
 							<div class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700">
 								<div class="flex w-full justify-between items-center ">		
@@ -640,6 +759,7 @@
 							{/if}
 						</div>
 
+
 						<div>
 							<div class="py-2.5 border-b border-customGray-700">
 								<div class="text-xs dark:text-customGray-300">{$i18n.t('Organization')}</div>
@@ -676,7 +796,6 @@
 										</div>
 									</button>
 
-									<!-- Dropdown -->
 									{#if showDropdown}
 										<div
 											class="max-h-60 overflow-y-auto absolute z-50 w-full -mt-1 bg-white dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
@@ -1043,7 +1162,7 @@
 					<div class="my-2 flex justify-end">
 						<button
 							class=" text-xs w-[168px] h-10 px-3 py-2 transition rounded-lg {loading
-								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-black'
+								? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
 								: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex w-full justify-center"
 							type="submit"
 							disabled={loading}
