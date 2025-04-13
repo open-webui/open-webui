@@ -1238,7 +1238,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if taskIds && taskIds.length > 0}
+										{#if (taskIds && taskIds.length > 0) || (history.currentId && history.messages[history.currentId]?.done != true)}
 											<div class=" flex items-center">
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
