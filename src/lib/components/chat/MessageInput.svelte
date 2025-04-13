@@ -345,6 +345,110 @@
 		dropzoneElement?.addEventListener('dragleave', onDragLeave);
 	});
 
+	const confirmPrompt = async (command) => {
+		let text = command.content;
+
+		if (command.content.includes('{{CLIPBOARD}}')) {
+			const clipboardText = await navigator.clipboard.readText().catch((err) => {
+				toast.error($i18n.t('Failed to read clipboard contents'));
+				return '{{CLIPBOARD}}';
+			});
+
+			const clipboardItems = await navigator.clipboard.read();
+
+			let imageUrl = null;
+			for (const item of clipboardItems) {
+				// Check for known image types
+				for (const type of item.types) {
+					if (type.startsWith('image/')) {
+						const blob = await item.getType(type);
+						imageUrl = URL.createObjectURL(blob);
+					}
+				}
+			}
+
+			if (imageUrl) {
+				files = [
+					...files,
+					{
+						type: 'image',
+						url: imageUrl
+					}
+				];
+			}
+
+			text = text.replaceAll('{{CLIPBOARD}}', clipboardText);
+		}
+
+		if (command.content.includes('{{USER_LOCATION}}')) {
+			const location = await getUserPosition();
+			text = text.replaceAll('{{USER_LOCATION}}', String(location));
+		}
+
+		if (command.content.includes('{{USER_NAME}}')) {
+			console.log($user);
+			const name = $user.name || 'User';
+			text = text.replaceAll('{{USER_NAME}}', name);
+		}
+
+		if (command.content.includes('{{USER_LANGUAGE}}')) {
+			const language = localStorage.getItem('locale') || 'en-US';
+			text = text.replaceAll('{{USER_LANGUAGE}}', language);
+		}
+
+		if (command.content.includes('{{CURRENT_DATE}}')) {
+			const date = getFormattedDate();
+			text = text.replaceAll('{{CURRENT_DATE}}', date);
+		}
+
+		if (command.content.includes('{{CURRENT_TIME}}')) {
+			const time = getFormattedTime();
+			text = text.replaceAll('{{CURRENT_TIME}}', time);
+		}
+
+		if (command.content.includes('{{CURRENT_DATETIME}}')) {
+			const dateTime = getCurrentDateTime();
+			text = text.replaceAll('{{CURRENT_DATETIME}}', dateTime);
+		}
+
+		if (command.content.includes('{{CURRENT_TIMEZONE}}')) {
+			const timezone = getUserTimezone();
+			text = text.replaceAll('{{CURRENT_TIMEZONE}}', timezone);
+		}
+
+		if (command.content.includes('{{CURRENT_WEEKDAY}}')) {
+			const weekday = getWeekday();
+			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
+		}
+
+		prompt = text;
+
+		const chatInputContainerElement = document.getElementById('chat-input-container');
+		const chatInputElement = document.getElementById('chat-input');
+
+		await tick();
+		if (chatInputContainerElement) {
+			chatInputContainerElement.style.height = '';
+			chatInputContainerElement.style.height =
+				Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
+		}
+
+		await tick();
+		if (chatInputElement) {
+			chatInputElement.focus();
+			chatInputElement.dispatchEvent(new Event('input'));
+		}
+	};
+
+	onMount(() => {
+		const stored = localStorage.getItem('selectedPrompt');
+		if (stored) {
+			const prompt = JSON.parse(stored);
+			confirmPrompt(prompt);		
+			localStorage.removeItem('selectedPrompt'); 
+		}
+	});
+
 	onDestroy(() => {
 		console.log('destroy');
 		window.removeEventListener('keydown', handleKeyDown);

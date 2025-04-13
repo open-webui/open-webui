@@ -376,12 +376,10 @@
 							{/if}
 						</div>
 						<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-							<a class="w-full" 
-							href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
-							on:click={e => {
-								if (prompt.prebuilt) {
-								  e.preventDefault();
-								}
+							<button type="button" class="w-full" 
+							on:click={() => {
+								localStorage.setItem('selectedPrompt', JSON.stringify(prompt));
+								goto('/');
 							  }} 
 							>
 								<div class=" flex-1 flex items-center gap-2 self-center">
@@ -414,7 +412,7 @@
 										</Tooltip>
 									</div>
 								{/if}
-							</a>
+							</button>
 						</div>
 					</div>
 				{/each}
