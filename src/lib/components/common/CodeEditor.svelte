@@ -79,7 +79,7 @@
 	export let id = '';
 	export let lang = '';
 
-	let codeEditor;
+	let codeEditor:any;
 
 	export const focus = () => {
 		codeEditor.focus();

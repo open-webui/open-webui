@@ -35,9 +35,15 @@ export default defineConfig({
 		APP_BUILD_HASH: JSON.stringify(process.env.APP_BUILD_HASH || 'dev-build')
 	},
 	build: {
-		sourcemap: true
+		sourcemap: true,
+		rollupOptions: {
+      external: ['@codemirror/view', '@codemirror/state', '@codemirror/autocomplete',
+				'@codemirror/commands','@codemirror/language'
+			]
+    }
 	},
 	worker: {
 		format: 'es'
-	}
+	},
+
 });
