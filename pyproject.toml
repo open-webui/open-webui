@@ -9,7 +9,7 @@ dependencies = [
     "fastapi==0.115.7",
     "uvicorn[standard]==0.34.0",
     "pydantic==2.10.6",
-    "python-multipart==0.0.18",
+    "python-multipart==0.0.20",
 
     "python-socketio==5.13.0",
     "python-jose==3.4.0",
@@ -26,7 +26,7 @@ dependencies = [
     "peewee==3.17.9",
     "peewee-migrate==1.12.2",
     "psycopg2-binary==2.9.9",
-    "pgvector==0.3.5",
+    "pgvector==0.4.0",
     "PyMySQL==1.1.1",
     "bcrypt==4.3.0",
 
@@ -52,7 +52,7 @@ dependencies = [
     "langchain-community==0.3.18",
 
     "fake-useragent==2.1.0",
-    "chromadb==0.6.2",
+    "chromadb==0.6.3",
     "pymilvus==2.5.0",
     "qdrant-client~=1.12.0",
     "opensearch-py==2.8.0",
@@ -99,7 +99,7 @@ dependencies = [
 
     "black==25.1.0",
     "langfuse==2.44.0",
-    "youtube-transcript-api==0.6.3",
+    "youtube-transcript-api==1.0.3",
     "pytube==15.0.0",
 
     "extract_msg",
@@ -113,7 +113,6 @@ dependencies = [
     "docker~=7.1.0",
     "pytest~=8.3.2",
     "pytest-docker~=3.1.1",
-    "moto[s3]>=5.0.26",
 
     "googleapis-common-protos==1.63.2",
     "google-cloud-storage==2.19.0",
@@ -128,6 +127,9 @@ dependencies = [
     "tencentcloud-sdk-python==3.0.1336",
 
     "gcp-storage-emulator>=2024.8.3",
+
+    "moto[s3]>=5.0.26",
+
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.13.0a1"
