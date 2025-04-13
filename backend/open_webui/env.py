@@ -354,6 +354,10 @@ BYPASS_MODEL_ACCESS_CONTROL = (
     os.environ.get("BYPASS_MODEL_ACCESS_CONTROL", "False").lower() == "true"
 )
 
+PASS_HEADERS_TO_TOOL = (
+    os.environ.get("PASS_HEADERS_TO_TOOL", "False").lower() == "true"
+)
+
 ####################################
 # WEBUI_SECRET_KEY
 ####################################
