@@ -162,6 +162,74 @@ async def create_new_knowledge(
 
 
 ############################
+# ReindexKnowledgeFiles
+############################
+
+
+@router.post("/reindex", response_model=bool)
+async def reindex_knowledge_files(request: Request, user=Depends(get_verified_user)):
+    if user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
+    knowledge_bases = Knowledges.get_knowledge_bases()
+
+    log.info(f"Starting reindexing for {len(knowledge_bases)} knowledge bases")
+
+    for knowledge_base in knowledge_bases:
+        try:
+            files = Files.get_files_by_ids(knowledge_base.data.get("file_ids", []))
+
+            try:
+                if VECTOR_DB_CLIENT.has_collection(collection_name=knowledge_base.id):
+                    VECTOR_DB_CLIENT.delete_collection(
+                        collection_name=knowledge_base.id
+                    )
+            except Exception as e:
+                log.error(f"Error deleting collection {knowledge_base.id}: {str(e)}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Error deleting vector DB collection",
+                )
+
+            failed_files = []
+            for file in files:
+                try:
+                    process_file(
+                        request,
+                        ProcessFileForm(
+                            file_id=file.id, collection_name=knowledge_base.id
+                        ),
+                        user=user,
+                    )
+                except Exception as e:
+                    log.error(
+                        f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
+                    )
+                    failed_files.append({"file_id": file.id, "error": str(e)})
+                    continue
+
+        except Exception as e:
+            log.error(f"Error processing knowledge base {knowledge_base.id}: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error processing knowledge base",
+            )
+
+        if failed_files:
+            log.warning(
+                f"Failed to process {len(failed_files)} files in knowledge base {knowledge_base.id}"
+            )
+            for failed in failed_files:
+                log.warning(f"File ID: {failed['file_id']}, Error: {failed['error']}")
+
+    log.info("Reindexing completed successfully")
+    return True
+
+
+############################
 # GetKnowledgeById
 ############################
 
@@ -437,14 +505,24 @@ def remove_file_from_knowledge_by_id(
         )
 
     # Remove content from the vector database
-    VECTOR_DB_CLIENT.delete(
-        collection_name=knowledge.id, filter={"file_id": form_data.file_id}
-    )
+    try:
+        VECTOR_DB_CLIENT.delete(
+            collection_name=knowledge.id, filter={"file_id": form_data.file_id}
+        )
+    except Exception as e:
+        log.debug("This was most likely caused by bypassing embedding processing")
+        log.debug(e)
+        pass
 
-    # Remove the file's collection from vector database
-    file_collection = f"file-{form_data.file_id}"
-    if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-        VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+    try:
+        # Remove the file's collection from vector database
+        file_collection = f"file-{form_data.file_id}"
+        if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+            VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+    except Exception as e:
+        log.debug("This was most likely caused by bypassing embedding processing")
+        log.debug(e)
+        pass
 
     # Delete file from database
     Files.delete_file_by_id(form_data.file_id)

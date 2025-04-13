@@ -24,13 +24,17 @@ from langchain_community.document_loaders import PlaywrightURLLoader, WebBaseLoa
 from langchain_community.document_loaders.firecrawl import FireCrawlLoader
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
+from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
-    PLAYWRIGHT_WS_URI,
-    RAG_WEB_LOADER_ENGINE,
+    PLAYWRIGHT_WS_URL,
+    PLAYWRIGHT_TIMEOUT,
+    WEB_LOADER_ENGINE,
     FIRECRAWL_API_BASE_URL,
     FIRECRAWL_API_KEY,
+    TAVILY_API_KEY,
+    TAVILY_EXTRACT_DEPTH,
 )
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -113,7 +117,47 @@ def verify_ssl_cert(url: str) -> bool:
         return False
 
 
-class SafeFireCrawlLoader(BaseLoader):
+class RateLimitMixin:
+    async def _wait_for_rate_limit(self):
+        """Wait to respect the rate limit if specified."""
+        if self.requests_per_second and self.last_request_time:
+            min_interval = timedelta(seconds=1.0 / self.requests_per_second)
+            time_since_last = datetime.now() - self.last_request_time
+            if time_since_last < min_interval:
+                await asyncio.sleep((min_interval - time_since_last).total_seconds())
+        self.last_request_time = datetime.now()
+
+    def _sync_wait_for_rate_limit(self):
+        """Synchronous version of rate limit wait."""
+        if self.requests_per_second and self.last_request_time:
+            min_interval = timedelta(seconds=1.0 / self.requests_per_second)
+            time_since_last = datetime.now() - self.last_request_time
+            if time_since_last < min_interval:
+                time.sleep((min_interval - time_since_last).total_seconds())
+        self.last_request_time = datetime.now()
+
+
+class URLProcessingMixin:
+    def _verify_ssl_cert(self, url: str) -> bool:
+        """Verify SSL certificate for a URL."""
+        return verify_ssl_cert(url)
+
+    async def _safe_process_url(self, url: str) -> bool:
+        """Perform safety checks before processing a URL."""
+        if self.verify_ssl and not self._verify_ssl_cert(url):
+            raise ValueError(f"SSL certificate verification failed for {url}")
+        await self._wait_for_rate_limit()
+        return True
+
+    def _safe_process_url_sync(self, url: str) -> bool:
+        """Synchronous version of safety checks."""
+        if self.verify_ssl and not self._verify_ssl_cert(url):
+            raise ValueError(f"SSL certificate verification failed for {url}")
+        self._sync_wait_for_rate_limit()
+        return True
+
+
+class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
     def __init__(
         self,
         web_paths,
@@ -184,7 +228,7 @@ class SafeFireCrawlLoader(BaseLoader):
                 yield from loader.lazy_load()
             except Exception as e:
                 if self.continue_on_failure:
-                    log.exception(e, "Error loading %s", url)
+                    log.exception(f"Error loading {url}: {e}")
                     continue
                 raise e
 
@@ -204,47 +248,124 @@ class SafeFireCrawlLoader(BaseLoader):
                     yield document
             except Exception as e:
                 if self.continue_on_failure:
-                    log.exception(e, "Error loading %s", url)
+                    log.exception(f"Error loading {url}: {e}")
                     continue
                 raise e
 
-    def _verify_ssl_cert(self, url: str) -> bool:
-        return verify_ssl_cert(url)
 
-    async def _wait_for_rate_limit(self):
-        """Wait to respect the rate limit if specified."""
-        if self.requests_per_second and self.last_request_time:
-            min_interval = timedelta(seconds=1.0 / self.requests_per_second)
-            time_since_last = datetime.now() - self.last_request_time
-            if time_since_last < min_interval:
-                await asyncio.sleep((min_interval - time_since_last).total_seconds())
-        self.last_request_time = datetime.now()
+class SafeTavilyLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
+    def __init__(
+        self,
+        web_paths: Union[str, List[str]],
+        api_key: str,
+        extract_depth: Literal["basic", "advanced"] = "basic",
+        continue_on_failure: bool = True,
+        requests_per_second: Optional[float] = None,
+        verify_ssl: bool = True,
+        trust_env: bool = False,
+        proxy: Optional[Dict[str, str]] = None,
+    ):
+        """Initialize SafeTavilyLoader with rate limiting and SSL verification support.
 
-    def _sync_wait_for_rate_limit(self):
-        """Synchronous version of rate limit wait."""
-        if self.requests_per_second and self.last_request_time:
-            min_interval = timedelta(seconds=1.0 / self.requests_per_second)
-            time_since_last = datetime.now() - self.last_request_time
-            if time_since_last < min_interval:
-                time.sleep((min_interval - time_since_last).total_seconds())
-        self.last_request_time = datetime.now()
+        Args:
+            web_paths: List of URLs/paths to process.
+            api_key: The Tavily API key.
+            extract_depth: Depth of extraction ("basic" or "advanced").
+            continue_on_failure: Whether to continue if extraction of a URL fails.
+            requests_per_second: Number of requests per second to limit to.
+            verify_ssl: If True, verify SSL certificates.
+            trust_env: If True, use proxy settings from environment variables.
+            proxy: Optional proxy configuration.
+        """
+        # Initialize proxy configuration if using environment variables
+        proxy_server = proxy.get("server") if proxy else None
+        if trust_env and not proxy_server:
+            env_proxies = urllib.request.getproxies()
+            env_proxy_server = env_proxies.get("https") or env_proxies.get("http")
+            if env_proxy_server:
+                if proxy:
+                    proxy["server"] = env_proxy_server
+                else:
+                    proxy = {"server": env_proxy_server}
 
-    async def _safe_process_url(self, url: str) -> bool:
-        """Perform safety checks before processing a URL."""
-        if self.verify_ssl and not self._verify_ssl_cert(url):
-            raise ValueError(f"SSL certificate verification failed for {url}")
-        await self._wait_for_rate_limit()
-        return True
+        # Store parameters for creating TavilyLoader instances
+        self.web_paths = web_paths if isinstance(web_paths, list) else [web_paths]
+        self.api_key = api_key
+        self.extract_depth = extract_depth
+        self.continue_on_failure = continue_on_failure
+        self.verify_ssl = verify_ssl
+        self.trust_env = trust_env
+        self.proxy = proxy
 
-    def _safe_process_url_sync(self, url: str) -> bool:
-        """Synchronous version of safety checks."""
-        if self.verify_ssl and not self._verify_ssl_cert(url):
-            raise ValueError(f"SSL certificate verification failed for {url}")
-        self._sync_wait_for_rate_limit()
-        return True
+        # Add rate limiting
+        self.requests_per_second = requests_per_second
+        self.last_request_time = None
+
+    def lazy_load(self) -> Iterator[Document]:
+        """Load documents with rate limiting support, delegating to TavilyLoader."""
+        valid_urls = []
+        for url in self.web_paths:
+            try:
+                self._safe_process_url_sync(url)
+                valid_urls.append(url)
+            except Exception as e:
+                log.warning(f"SSL verification failed for {url}: {str(e)}")
+                if not self.continue_on_failure:
+                    raise e
+        if not valid_urls:
+            if self.continue_on_failure:
+                log.warning("No valid URLs to process after SSL verification")
+                return
+            raise ValueError("No valid URLs to process after SSL verification")
+        try:
+            loader = TavilyLoader(
+                urls=valid_urls,
+                api_key=self.api_key,
+                extract_depth=self.extract_depth,
+                continue_on_failure=self.continue_on_failure,
+            )
+            yield from loader.lazy_load()
+        except Exception as e:
+            if self.continue_on_failure:
+                log.exception(f"Error extracting content from URLs: {e}")
+            else:
+                raise e
+
+    async def alazy_load(self) -> AsyncIterator[Document]:
+        """Async version with rate limiting and SSL verification."""
+        valid_urls = []
+        for url in self.web_paths:
+            try:
+                await self._safe_process_url(url)
+                valid_urls.append(url)
+            except Exception as e:
+                log.warning(f"SSL verification failed for {url}: {str(e)}")
+                if not self.continue_on_failure:
+                    raise e
+
+        if not valid_urls:
+            if self.continue_on_failure:
+                log.warning("No valid URLs to process after SSL verification")
+                return
+            raise ValueError("No valid URLs to process after SSL verification")
+
+        try:
+            loader = TavilyLoader(
+                urls=valid_urls,
+                api_key=self.api_key,
+                extract_depth=self.extract_depth,
+                continue_on_failure=self.continue_on_failure,
+            )
+            async for document in loader.alazy_load():
+                yield document
+        except Exception as e:
+            if self.continue_on_failure:
+                log.exception(f"Error loading URLs: {e}")
+            else:
+                raise e
 
 
-class SafePlaywrightURLLoader(PlaywrightURLLoader):
+class SafePlaywrightURLLoader(PlaywrightURLLoader, RateLimitMixin, URLProcessingMixin):
     """Load HTML pages safely with Playwright, supporting SSL verification, rate limiting, and remote browser connection.
 
     Attributes:
@@ -256,6 +377,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
         headless (bool): If True, the browser will run in headless mode.
         proxy (dict): Proxy override settings for the Playwright session.
         playwright_ws_url (Optional[str]): WebSocket endpoint URI for remote browser connection.
+        playwright_timeout (Optional[int]): Maximum operation time in milliseconds.
     """
 
     def __init__(
@@ -269,6 +391,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
         remove_selectors: Optional[List[str]] = None,
         proxy: Optional[Dict[str, str]] = None,
         playwright_ws_url: Optional[str] = None,
+        playwright_timeout: Optional[int] = 10000,
     ):
         """Initialize with additional safety parameters and remote browser support."""
 
@@ -295,6 +418,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
         self.last_request_time = None
         self.playwright_ws_url = playwright_ws_url
         self.trust_env = trust_env
+        self.playwright_timeout = playwright_timeout
 
     def lazy_load(self) -> Iterator[Document]:
         """Safely load URLs synchronously with support for remote browser."""
@@ -311,7 +435,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
                 try:
                     self._safe_process_url_sync(url)
                     page = browser.new_page()
-                    response = page.goto(url)
+                    response = page.goto(url, timeout=self.playwright_timeout)
                     if response is None:
                         raise ValueError(f"page.goto() returned None for url {url}")
 
@@ -320,7 +444,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
                     yield Document(page_content=text, metadata=metadata)
                 except Exception as e:
                     if self.continue_on_failure:
-                        log.exception(e, "Error loading %s", url)
+                        log.exception(f"Error loading {url}: {e}")
                         continue
                     raise e
             browser.close()
@@ -342,7 +466,7 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
                 try:
                     await self._safe_process_url(url)
                     page = await browser.new_page()
-                    response = await page.goto(url)
+                    response = await page.goto(url, timeout=self.playwright_timeout)
                     if response is None:
                         raise ValueError(f"page.goto() returned None for url {url}")
 
@@ -351,45 +475,10 @@ class SafePlaywrightURLLoader(PlaywrightURLLoader):
                     yield Document(page_content=text, metadata=metadata)
                 except Exception as e:
                     if self.continue_on_failure:
-                        log.exception(e, "Error loading %s", url)
+                        log.exception(f"Error loading {url}: {e}")
                         continue
                     raise e
             await browser.close()
-
-    def _verify_ssl_cert(self, url: str) -> bool:
-        return verify_ssl_cert(url)
-
-    async def _wait_for_rate_limit(self):
-        """Wait to respect the rate limit if specified."""
-        if self.requests_per_second and self.last_request_time:
-            min_interval = timedelta(seconds=1.0 / self.requests_per_second)
-            time_since_last = datetime.now() - self.last_request_time
-            if time_since_last < min_interval:
-                await asyncio.sleep((min_interval - time_since_last).total_seconds())
-        self.last_request_time = datetime.now()
-
-    def _sync_wait_for_rate_limit(self):
-        """Synchronous version of rate limit wait."""
-        if self.requests_per_second and self.last_request_time:
-            min_interval = timedelta(seconds=1.0 / self.requests_per_second)
-            time_since_last = datetime.now() - self.last_request_time
-            if time_since_last < min_interval:
-                time.sleep((min_interval - time_since_last).total_seconds())
-        self.last_request_time = datetime.now()
-
-    async def _safe_process_url(self, url: str) -> bool:
-        """Perform safety checks before processing a URL."""
-        if self.verify_ssl and not self._verify_ssl_cert(url):
-            raise ValueError(f"SSL certificate verification failed for {url}")
-        await self._wait_for_rate_limit()
-        return True
-
-    def _safe_process_url_sync(self, url: str) -> bool:
-        """Synchronous version of safety checks."""
-        if self.verify_ssl and not self._verify_ssl_cert(url):
-            raise ValueError(f"SSL certificate verification failed for {url}")
-        self._sync_wait_for_rate_limit()
-        return True
 
 
 class SafeWebBaseLoader(WebBaseLoader):
@@ -472,7 +561,7 @@ class SafeWebBaseLoader(WebBaseLoader):
                 yield Document(page_content=text, metadata=metadata)
             except Exception as e:
                 # Log the error and continue with the next URL
-                log.exception(e, "Error loading %s", path)
+                log.exception(f"Error loading {path}: {e}")
 
     async def alazy_load(self) -> AsyncIterator[Document]:
         """Async lazy load text from the url(s) in web_path."""
@@ -495,12 +584,6 @@ class SafeWebBaseLoader(WebBaseLoader):
         return [document async for document in self.alazy_load()]
 
 
-RAG_WEB_LOADER_ENGINES = defaultdict(lambda: SafeWebBaseLoader)
-RAG_WEB_LOADER_ENGINES["playwright"] = SafePlaywrightURLLoader
-RAG_WEB_LOADER_ENGINES["safe_web"] = SafeWebBaseLoader
-RAG_WEB_LOADER_ENGINES["firecrawl"] = SafeFireCrawlLoader
-
-
 def get_web_loader(
     urls: Union[str, Sequence[str]],
     verify_ssl: bool = True,
@@ -518,21 +601,36 @@ def get_web_loader(
         "trust_env": trust_env,
     }
 
-    if PLAYWRIGHT_WS_URI.value:
-        web_loader_args["playwright_ws_url"] = PLAYWRIGHT_WS_URI.value
+    if WEB_LOADER_ENGINE.value == "" or WEB_LOADER_ENGINE.value == "safe_web":
+        WebLoaderClass = SafeWebBaseLoader
+    if WEB_LOADER_ENGINE.value == "playwright":
+        WebLoaderClass = SafePlaywrightURLLoader
+        web_loader_args["playwright_timeout"] = PLAYWRIGHT_TIMEOUT.value * 1000
+        if PLAYWRIGHT_WS_URL.value:
+            web_loader_args["playwright_ws_url"] = PLAYWRIGHT_WS_URL.value
 
-    if RAG_WEB_LOADER_ENGINE.value == "firecrawl":
+    if WEB_LOADER_ENGINE.value == "firecrawl":
+        WebLoaderClass = SafeFireCrawlLoader
         web_loader_args["api_key"] = FIRECRAWL_API_KEY.value
         web_loader_args["api_url"] = FIRECRAWL_API_BASE_URL.value
 
-    # Create the appropriate WebLoader based on the configuration
-    WebLoaderClass = RAG_WEB_LOADER_ENGINES[RAG_WEB_LOADER_ENGINE.value]
-    web_loader = WebLoaderClass(**web_loader_args)
+    if WEB_LOADER_ENGINE.value == "tavily":
+        WebLoaderClass = SafeTavilyLoader
+        web_loader_args["api_key"] = TAVILY_API_KEY.value
+        web_loader_args["extract_depth"] = TAVILY_EXTRACT_DEPTH.value
 
-    log.debug(
-        "Using RAG_WEB_LOADER_ENGINE %s for %s URLs",
-        web_loader.__class__.__name__,
-        len(safe_urls),
-    )
+    if WebLoaderClass:
+        web_loader = WebLoaderClass(**web_loader_args)
 
-    return web_loader
+        log.debug(
+            "Using WEB_LOADER_ENGINE %s for %s URLs",
+            web_loader.__class__.__name__,
+            len(safe_urls),
+        )
+
+        return web_loader
+    else:
+        raise ValueError(
+            f"Invalid WEB_LOADER_ENGINE: {WEB_LOADER_ENGINE.value}. "
+            "Please set it to 'safe_web', 'playwright', 'firecrawl', or 'tavily'."
+        )

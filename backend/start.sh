@@ -4,8 +4,8 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR" || exit
 
 # Add conditional Playwright browser installation
-if [[ "${RAG_WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
-    if [[ -z "${PLAYWRIGHT_WS_URI}" ]]; then
+if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
+    if [[ -z "${PLAYWRIGHT_WS_URL}" ]]; then
         echo "Installing Playwright browsers..."
         playwright install chromium
         playwright install-deps chromium
@@ -65,4 +65,4 @@ if [ -n "$SPACE_ID" ]; then
   export WEBUI_URL=${SPACE_HOST}
 fi
 
-WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*'
+WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*' --workers "${UVICORN_WORKERS:-1}"
