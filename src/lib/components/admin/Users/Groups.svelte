@@ -63,6 +63,7 @@
 			file_upload: true,
 			delete: true,
 			edit: true,
+			multiple_models: true,
 			temporary: true,
 			temporary_enforced: false
 		},
