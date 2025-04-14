@@ -309,3 +309,6 @@ cypress/screenshots
 installer/**.exe
 release_info.json
 version.txt
+
+# static files
+**/*Zone.Identifier
