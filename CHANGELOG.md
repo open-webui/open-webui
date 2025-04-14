@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **🍴 Forked Project**: Project fork was initiated to use Open-WebUI as part of AMDs RyzenAI tooling
 - **🪨 Naming**: Named the project RAUX (Ryzen AI User Experience)
-- **📦 Packaging**: Setup scripts and standalone-installer so that the UX can work with existing Ollama agents
+- **📦 Lemonade Integration**: Added Lemonade integration via env vars
 - **🚠 Integrate with GAIA🌎**: Bundled with GAIA installer for easier access to app using preconfigured connection
 - **⚙️ Improved Generic Installer**: The generic installer wasn't working well and was improved.
 - **📦 Versioning Improvement**: Improved how versioning works with Installer
