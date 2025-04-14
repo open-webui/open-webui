@@ -21,9 +21,12 @@
 		},
 		chat: {
 			controls: true,
+			file_upload: true,
 			delete: true,
 			edit: true,
-			file_upload: true,
+			stt: true,
+			tts: true,
+			call: true,
 			multiple_models: true,
 			temporary: true,
 			temporary_enforced: false
@@ -243,18 +246,18 @@
 
 		<div class="  flex w-full justify-between my-2 pr-2">
 			<div class=" self-center text-xs font-medium">
-				{$i18n.t('Allow Chat Controls')}
-			</div>
-
-			<Switch bind:state={permissions.chat.controls} />
-		</div>
-
-		<div class="  flex w-full justify-between my-2 pr-2">
-			<div class=" self-center text-xs font-medium">
 				{$i18n.t('Allow File Upload')}
 			</div>
 
 			<Switch bind:state={permissions.chat.file_upload} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Chat Controls')}
+			</div>
+
+			<Switch bind:state={permissions.chat.controls} />
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
@@ -271,6 +274,29 @@
 			</div>
 
 			<Switch bind:state={permissions.chat.edit} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Speech to Text')}
+			</div>
+
+			<Switch bind:state={permissions.chat.stt} />
+		</div>
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Text to Speech')}
+			</div>
+
+			<Switch bind:state={permissions.chat.tts} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Allow Call')}
+			</div>
+
+			<Switch bind:state={permissions.chat.call} />
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
