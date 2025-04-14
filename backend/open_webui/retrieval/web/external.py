@@ -17,13 +17,13 @@ def search_external(
     filter_list: Optional[List[str]] = None,
 ) -> List[SearchResult]:
     try:
-        response = requests.get(
+        response = requests.post(
             external_url,
             headers={
                 "User-Agent": "Open WebUI (https://github.com/open-webui/open-webui) RAG Bot",
                 "Authorization": f"Bearer {external_api_key}",
             },
-            params={
+            json={
                 "query": query,
                 "count": count,
             },
@@ -32,7 +32,7 @@ def search_external(
         results = response.json()
         if filter_list:
             results = get_filtered_results(results, filter_list)
-        return [
+        results = [
             SearchResult(
                 link=result.get("link"),
                 title=result.get("title"),
@@ -40,6 +40,8 @@ def search_external(
             )
             for result in results[:count]
         ]
+        log.info(f"External search results: {results}")
+        return results
     except Exception as e:
         log.error(f"Error in External search: {e}")
         return []

@@ -19,9 +19,6 @@ class ExternalLoader(BaseLoader):
         continue_on_failure: bool = True,
         **kwargs,
     ) -> None:
-        if not web_paths:
-            raise ValueError("At least one URL must be provided.")
-
         self.external_url = external_url
         self.external_api_key = external_api_key
         self.urls = web_paths if isinstance(web_paths, list) else [web_paths]
@@ -32,13 +29,13 @@ class ExternalLoader(BaseLoader):
         for i in range(0, len(self.urls), batch_size):
             urls = self.urls[i : i + batch_size]
             try:
-                response = requests.get(
+                response = requests.post(
                     self.external_url,
                     headers={
                         "User-Agent": "Open WebUI (https://github.com/open-webui/open-webui) RAG Bot",
                         "Authorization": f"Bearer {self.external_api_key}",
                     },
-                    params={
+                    json={
                         "urls": urls,
                     },
                 )
