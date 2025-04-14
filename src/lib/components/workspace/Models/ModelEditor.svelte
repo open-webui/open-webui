@@ -84,7 +84,7 @@
 		},
 		params: {
 			system: '',
-			temperature: 0.8
+			temperature: 0.5
 		}
 	};
 
@@ -304,9 +304,9 @@
 	let temperatureDropdownRef;
 
 	const temperatureOptions = [
-		{ label: 'Precise', value: 0.4 },
-		{ label: 'Balanced', value: 0.8 },
-		{ label: 'Creative', value: 1.0 }
+		{ label: 'Determined', value: 0.2 },
+		{ label: 'Balanced', value: 0.5 },
+		{ label: 'Creative', value: 0.8 }
 	];
 
 	$: selectedTemperatureLabel = temperatureOptions.find(
@@ -1220,7 +1220,7 @@
 					</form>
 				</div>
 			{/if}
-			<div class="w-1/2">Try assistant</div>
+			<div class="w-1/2"></div>
 		</div>
 	</div>
 {/if}
