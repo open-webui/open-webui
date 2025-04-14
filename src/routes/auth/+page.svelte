@@ -120,6 +120,14 @@
 			onboarding = $config?.onboarding ?? false;
 		}
 	});
+	let logoSrc = '/logo_light.png';
+
+	onMount(() => {
+		const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+		logoSrc = isDark ? '/logo_dark.png' : '/logo_light.png';
+	});
+
+	$: console.log($WEBUI_NAME)
 </script>
 
 <svelte:head>
@@ -147,8 +155,8 @@
 				<div class=" self-center">
 					<img
 						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/splash.png"
-						class=" w-6 rounded-full dark:invert"
+						src={logoSrc}
+						class=" w-8"
 						alt="logo"
 					/>
 				</div>

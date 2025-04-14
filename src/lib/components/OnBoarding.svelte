@@ -1,5 +1,5 @@
 <script>
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
@@ -10,6 +10,12 @@
 
 	export let show = true;
 	export let getStartedHandler = () => {};
+	let logoSrc = '/logo_light.png';
+
+	onMount(() => {
+		const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+		logoSrc = isDark ? '/logo_dark.png' : '/logo_light.png';
+	});
 </script>
 
 {#if show}
@@ -19,7 +25,7 @@
 				<div class=" self-center">
 					<img
 						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/favicon.png"
+						src={logoSrc}
 						class=" w-6 rounded-full"
 						alt="logo"
 					/>
