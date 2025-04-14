@@ -142,7 +142,7 @@ describe('signout()', () => {
 		});
 
 		// Can happen with certain Minikube configurations
-		describe('has no ionos_logout_url with OIDC configured and end_session_endpoint works', () => {
+		describe('has no (empty string) ionos_logout_url with OIDC configured and end_session_endpoint works', () => {
 			const endpoint = 'https://acmeauth.com/logout';
 
 			beforeEach(() => {
