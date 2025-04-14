@@ -723,9 +723,10 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
     user_message = get_last_user_message(form_data["messages"])
     model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
+    model_files = model.get("info", {}).get("meta", {}).get("files", False)
 
-    if model_knowledge:
-        await event_emitter(
+    if model_knowledge or model_files:
+                await event_emitter(
             {
                 "type": "status",
                 "data": {
@@ -736,6 +737,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             }
         )
 
+    if model_knowledge:
         knowledge_files = []
         for item in model_knowledge:
             if item.get("collection_name"):
@@ -760,6 +762,11 @@ async def process_chat_payload(request, form_data, metadata, user, model):
 
         files = form_data.get("files", [])
         files.extend(knowledge_files)
+        form_data["files"] = files
+
+    if model_files:
+        files = form_data.get("files", [])
+        files.extend(model_files)
         form_data["files"] = files
 
     variables = form_data.pop("variables", None)
@@ -899,7 +906,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
     if len(sources) > 0:
         events.append({"sources": sources})
 
-    if model_knowledge:
+    if model_knowledge or model_files:
         await event_emitter(
             {
                 "type": "status",

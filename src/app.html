@@ -29,6 +29,20 @@
 		</script>
 
 		<script>
+			// Set logo image sources before the app hydrates
+			window.addEventListener('DOMContentLoaded', () => {
+				const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+				const logoSrc = isDark ? '/logo_dark.png' : '/logo_light.png';
+
+				const logo = document.getElementById('logo');
+				const logoHer = document.getElementById('logo-her');
+
+				if (logo) logo.src = logoSrc;
+				if (logoHer) logoHer.src = logoSrc;
+			});
+		</script>
+
+		<script>
 			// On page load or when changing themes, best to add inline in `head` to avoid FOUC
 			(() => {
 				const metaThemeColorTag = document.querySelector('meta[name="theme-color"]');

@@ -345,6 +345,110 @@
 		dropzoneElement?.addEventListener('dragleave', onDragLeave);
 	});
 
+	const confirmPrompt = async (command) => {
+		let text = command.content;
+
+		if (command.content.includes('{{CLIPBOARD}}')) {
+			const clipboardText = await navigator.clipboard.readText().catch((err) => {
+				toast.error($i18n.t('Failed to read clipboard contents'));
+				return '{{CLIPBOARD}}';
+			});
+
+			const clipboardItems = await navigator.clipboard.read();
+
+			let imageUrl = null;
+			for (const item of clipboardItems) {
+				// Check for known image types
+				for (const type of item.types) {
+					if (type.startsWith('image/')) {
+						const blob = await item.getType(type);
+						imageUrl = URL.createObjectURL(blob);
+					}
+				}
+			}
+
+			if (imageUrl) {
+				files = [
+					...files,
+					{
+						type: 'image',
+						url: imageUrl
+					}
+				];
+			}
+
+			text = text.replaceAll('{{CLIPBOARD}}', clipboardText);
+		}
+
+		if (command.content.includes('{{USER_LOCATION}}')) {
+			const location = await getUserPosition();
+			text = text.replaceAll('{{USER_LOCATION}}', String(location));
+		}
+
+		if (command.content.includes('{{USER_NAME}}')) {
+			console.log($user);
+			const name = $user.name || 'User';
+			text = text.replaceAll('{{USER_NAME}}', name);
+		}
+
+		if (command.content.includes('{{USER_LANGUAGE}}')) {
+			const language = localStorage.getItem('locale') || 'en-US';
+			text = text.replaceAll('{{USER_LANGUAGE}}', language);
+		}
+
+		if (command.content.includes('{{CURRENT_DATE}}')) {
+			const date = getFormattedDate();
+			text = text.replaceAll('{{CURRENT_DATE}}', date);
+		}
+
+		if (command.content.includes('{{CURRENT_TIME}}')) {
+			const time = getFormattedTime();
+			text = text.replaceAll('{{CURRENT_TIME}}', time);
+		}
+
+		if (command.content.includes('{{CURRENT_DATETIME}}')) {
+			const dateTime = getCurrentDateTime();
+			text = text.replaceAll('{{CURRENT_DATETIME}}', dateTime);
+		}
+
+		if (command.content.includes('{{CURRENT_TIMEZONE}}')) {
+			const timezone = getUserTimezone();
+			text = text.replaceAll('{{CURRENT_TIMEZONE}}', timezone);
+		}
+
+		if (command.content.includes('{{CURRENT_WEEKDAY}}')) {
+			const weekday = getWeekday();
+			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
+		}
+
+		prompt = text;
+
+		const chatInputContainerElement = document.getElementById('chat-input-container');
+		const chatInputElement = document.getElementById('chat-input');
+
+		await tick();
+		if (chatInputContainerElement) {
+			chatInputContainerElement.style.height = '';
+			chatInputContainerElement.style.height =
+				Math.min(chatInputContainerElement.scrollHeight, 200) + 'px';
+		}
+
+		await tick();
+		if (chatInputElement) {
+			chatInputElement.focus();
+			chatInputElement.dispatchEvent(new Event('input'));
+		}
+	};
+
+	onMount(() => {
+		const stored = localStorage.getItem('selectedPrompt');
+		if (stored) {
+			const prompt = JSON.parse(stored);
+			confirmPrompt(prompt);		
+			localStorage.removeItem('selectedPrompt'); 
+		}
+	});
+
 	onDestroy(() => {
 		console.log('destroy');
 		window.removeEventListener('keydown', handleKeyDown);
@@ -357,6 +461,14 @@
 			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
 		}
 	});
+
+	let customModel = null;
+
+	$: {
+		if(selectedModels.length === 1) {
+			customModel = $models.find(model => model.id === selectedModels[0] && model.info?.base_model_id !== null);
+		}
+	}
 </script>
 
 <FilesOverlay show={dragged} />
@@ -1129,7 +1241,7 @@
 
 										<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
 											{#if $_user}
-												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
+												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search) && (customModel?.info?.meta?.capabilities?.websearch ?? true)}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
 															on:click|preventDefault={() => {
@@ -1154,7 +1266,7 @@
 													</Tooltip>
 												{/if}
 
-												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
+												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation) && (customModel?.info?.meta?.capabilities?.image_generation ?? true)}
 													<Tooltip content={$i18n.t('Generate an image')} placement="top">
 														<button
 															on:click|preventDefault={() => {
@@ -1178,7 +1290,7 @@
 													</Tooltip>
 												{/if}
 
-												{#if $_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter}
+												{#if ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter) && (customModel?.info?.meta?.capabilities?.code_interpreter ?? true)}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
 															on:click|preventDefault={() => {

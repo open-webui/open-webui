@@ -44,6 +44,9 @@ export default {
 				customBlue: {
 					700: '#272D98',
 					800: '#272A6A'
+				},
+				customViolet: {
+					300: '#41386E'
 				}
 			},
 			typography: {
