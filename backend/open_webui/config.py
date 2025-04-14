@@ -1062,6 +1062,18 @@ USER_PERMISSIONS_CHAT_EDIT = (
     os.environ.get("USER_PERMISSIONS_CHAT_EDIT", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_STT = (
+    os.environ.get("USER_PERMISSIONS_CHAT_STT", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_TTS = (
+    os.environ.get("USER_PERMISSIONS_CHAT_TTS", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_CALL = (
+    os.environ.get("USER_PERMISSIONS_CHAT_CALL", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_MULTIPLE_MODELS = (
     os.environ.get("USER_PERMISSIONS_CHAT_MULTIPLE_MODELS", "True").lower() == "true"
 )
@@ -1114,6 +1126,9 @@ DEFAULT_USER_PERMISSIONS = {
         "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "edit": USER_PERMISSIONS_CHAT_EDIT,
+        "stt": USER_PERMISSIONS_CHAT_STT,
+        "tts": USER_PERMISSIONS_CHAT_TTS,
+        "call": USER_PERMISSIONS_CHAT_CALL,
         "multiple_models": USER_PERMISSIONS_CHAT_MULTIPLE_MODELS,
         "temporary": USER_PERMISSIONS_CHAT_TEMPORARY,
         "temporary_enforced": USER_PERMISSIONS_CHAT_TEMPORARY_ENFORCED,
