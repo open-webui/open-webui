@@ -208,6 +208,7 @@ type Config = {
 		enable_community_sharing: boolean;
 		ionos_registration_url: string|null;
 		ionos_logout_url: string|null;
+		ionos_password_reset_url: string|null;
 	};
 	oauth: {
 		providers: {
