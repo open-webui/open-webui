@@ -349,7 +349,7 @@ async def get_all_models(request: Request, user: UserModel = None):
 
                 if prefix_id:
                     for model in response.get("models", []):
-                        model["model"] = f"{prefix_id}.{model['model']}"
+                        model["name"] = f"{prefix_id}.{model['model']}"
 
                 if tags:
                     for model in response.get("models", []):
