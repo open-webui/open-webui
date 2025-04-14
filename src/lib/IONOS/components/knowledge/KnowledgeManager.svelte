@@ -108,7 +108,6 @@
 			<div>
 				<Button
 					on:click={() => create = true}
-					className="px-4 py-1"
 					type={ButtonType.secondary}
 				>
 					{$i18n.t('Create knowledge base', { ns: 'ionos' })}

@@ -79,7 +79,6 @@
 
 		<div class="flex justify-end items-end py-4 cursor-default">
 			<Button
-				className="px-4 py-1"
 				type={ButtonType.secondary}
 			>
 				{$i18n.t('Create knowledge base', { ns: 'ionos' })}

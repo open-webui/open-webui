@@ -29,7 +29,6 @@
 
 		<div class="flex flex-row justify-end pt-8 pb-2">
 			<Button
-				className="px-4 py-1"
 				on:click={cancelHandler}
 				type={ButtonType.tertiary}
 			>
@@ -37,7 +36,6 @@
 			</Button>
 
 			<Button
-				className="px-4 py-1"
 				on:click={() => { confirmHandler() }}
 				type={ButtonType.caution}
 			>

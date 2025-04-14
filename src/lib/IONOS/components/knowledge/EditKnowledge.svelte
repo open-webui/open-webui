@@ -105,7 +105,6 @@
 		<div class="flex justify-end items-end py-4 border-b cursor-default" class:grow={$files.length === 0}>
 			<Button
 				on:click={() => { confirmKnowledgeDeletion = true; }}
-				className="px-4 py-1"
 				type={ButtonType.caution}
 			>
 				{$i18n.t('Delete knowledge base', { ns: 'ionos' })}
