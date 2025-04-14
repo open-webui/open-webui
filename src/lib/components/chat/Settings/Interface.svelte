@@ -48,9 +48,6 @@
 	let collapseCodeBlocks = false;
 	let expandDetails = false;
 
-	let collapseCodeBlocks = false;
-	let expandDetails = false;
-
 	let imageCompression = false;
 	let imageCompressionSize = {
 		width: '',

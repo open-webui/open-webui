@@ -17,8 +17,6 @@
 
 	export let allowPublic = true;
 
-	export let allowPublic = true;
-
 	let selectedGroupId = '';
 	let groups = [];
 
