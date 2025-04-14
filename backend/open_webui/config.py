@@ -2037,6 +2037,12 @@ BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
 )
 
 
+BYPASS_WEB_LOADING_FOR_WEB_SEARCH = PersistentConfig(
+    "BYPASS_WEB_LOADING_FOR_WEB_SEARCH",
+    "rag.web.load.bypass_web_loading_for_web_search",
+    os.getenv("BYPASS_WEB_LOADING_FOR_WEB_SEARCH", "False").lower() == "true",
+)
+
 WEB_SEARCH_RESULT_COUNT = PersistentConfig(
     "WEB_SEARCH_RESULT_COUNT",
     "rag.web.search.result_count",

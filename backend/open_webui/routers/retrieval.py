@@ -388,6 +388,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "WEB_SEARCH_CONCURRENT_REQUESTS": request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
             "WEB_SEARCH_DOMAIN_FILTER_LIST": request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
+            "BYPASS_WEB_LOADING_FOR_WEB_SEARCH": request.app.state.config.BYPASS_WEB_LOADING_FOR_WEB_SEARCH,
             "SEARXNG_QUERY_URL": request.app.state.config.SEARXNG_QUERY_URL,
             "GOOGLE_PSE_API_KEY": request.app.state.config.GOOGLE_PSE_API_KEY,
             "GOOGLE_PSE_ENGINE_ID": request.app.state.config.GOOGLE_PSE_ENGINE_ID,
@@ -433,6 +434,7 @@ class WebConfig(BaseModel):
     WEB_SEARCH_CONCURRENT_REQUESTS: Optional[int] = None
     WEB_SEARCH_DOMAIN_FILTER_LIST: Optional[List[str]] = []
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
+    BYPASS_WEB_LOADING_FOR_WEB_SEARCH: Optional[bool] = None
     SEARXNG_QUERY_URL: Optional[str] = None
     GOOGLE_PSE_API_KEY: Optional[str] = None
     GOOGLE_PSE_ENGINE_ID: Optional[str] = None
@@ -650,6 +652,9 @@ async def update_rag_config(
         request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
             form_data.web.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
         )
+        request.app.state.config.BYPASS_WEB_LOADING_FOR_WEB_SEARCH = (
+            form_data.web.BYPASS_WEB_LOADING_FOR_WEB_SEARCH
+        )
         request.app.state.config.SEARXNG_QUERY_URL = form_data.web.SEARXNG_QUERY_URL
         request.app.state.config.GOOGLE_PSE_API_KEY = form_data.web.GOOGLE_PSE_API_KEY
         request.app.state.config.GOOGLE_PSE_ENGINE_ID = (
@@ -748,6 +753,7 @@ async def update_rag_config(
             "WEB_SEARCH_CONCURRENT_REQUESTS": request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
             "WEB_SEARCH_DOMAIN_FILTER_LIST": request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
             "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
+            "BYPASS_WEB_LOADING_FOR_WEB_SEARCH": request.app.state.config.BYPASS_WEB_LOADING_FOR_WEB_SEARCH,
             "SEARXNG_QUERY_URL": request.app.state.config.SEARXNG_QUERY_URL,
             "GOOGLE_PSE_API_KEY": request.app.state.config.GOOGLE_PSE_API_KEY,
             "GOOGLE_PSE_ENGINE_ID": request.app.state.config.GOOGLE_PSE_ENGINE_ID,
@@ -1497,6 +1503,7 @@ async def process_web_search(
             verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
             requests_per_second=request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
             trust_env=request.app.state.config.WEB_SEARCH_TRUST_ENV,
+            search_results=web_results
         )
         docs = await loader.aload()
         urls = [
