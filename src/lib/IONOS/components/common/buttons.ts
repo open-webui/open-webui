@@ -53,7 +53,6 @@ const stateMap = {
 		'disabled-pressed': 'bg-red-100 cursor-default',
 	},
 	'special': {
-		// bg-ai-main-500 hover:bg-ai-main-700
 		'all': 'border-2 bg-purple-700 border-purple-700 text-white rounded-full',
 		'stateless': 'outline-offset-4',
 		'hover': 'hover:bg-purple-600',

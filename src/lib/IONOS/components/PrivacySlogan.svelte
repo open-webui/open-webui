@@ -8,9 +8,9 @@
 </script>
 
 <div class="flex flex-row mx-10 items-center">
-	<Shield className={"h-6 w-6 inline-block mr-2 fill-ai-main-500"} />
+	<Shield className={"h-6 w-6 inline-block mr-2 fill-purple-700"} />
 
-	<span class="text-ai-main-500">
+	<span class="text-purple-700">
 		{$i18n.t('Privacy by Design!', { ns: 'ionos' })}
 	</span>
 </div>
