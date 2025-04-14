@@ -11,7 +11,6 @@
 		config,
 		user,
 		settings,
-		theme,
 		WEBUI_NAME,
 		mobile,
 		socket,
@@ -242,8 +241,6 @@
 		// Call visibility change handler initially to set state on load
 		handleVisibilityChange();
 
-		theme.set(localStorage.theme);
-
 		mobile.set(window.innerWidth < BREAKPOINT);
 		const onResize = () => {
 			if (window.innerWidth < BREAKPOINT) {
@@ -373,13 +370,7 @@
 {/if}
 
 <Toaster
-	theme={$theme.includes('dark')
-		? 'dark'
-		: $theme === 'system'
-			? window.matchMedia('(prefers-color-scheme: dark)').matches
-				? 'dark'
-				: 'light'
-			: 'light'}
+	theme={'light'}
 	richColors
 	position="top-right"
 />
