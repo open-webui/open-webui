@@ -19,17 +19,21 @@ export async function signout() {
 		throw new Error('OIDC configured but no end_session_endpoint sent');
 	}
 
+	// The user should come back to the startpage (explore) after logout finished
 	const postLogoutRedirectTarget = new URL('/explore', location.href).toString();
 
 	if (logoutEndpoint !== null && logoutEndpoint !== '') {
 		const logoutEndpointUrl = new URL(logoutEndpoint);
 
-		// The user should come back to the startpage (explore) after logout finished
 		logoutEndpointUrl.searchParams.set('redirect_url', postLogoutRedirectTarget);
 
 		location.href = logoutEndpointUrl.toString();
 	} else if (oidcEndSessionEndpoint !== null) {
-		location.href = oidcEndSessionEndpoint;
+		const logoutEndpointUrl = new URL(oidcEndSessionEndpoint);
+
+		logoutEndpointUrl.searchParams.set('post_logout_redirect_uri', postLogoutRedirectTarget);
+
+		location.href = logoutEndpointUrl.toString();
 	} else {
 		location.href = '/auth';
 	}

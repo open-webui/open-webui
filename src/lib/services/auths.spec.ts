@@ -137,7 +137,12 @@ describe('signout()', () => {
 
 			it('should set location to the end_session_endpoint', async () => {
 				await signout();
-				expect(location.href).toBe(endpoint);
+
+				const postLogoutUrl = new URL(mocks.originUrl);
+				postLogoutUrl.pathname = '/explore';
+				const logoutUrl = new URL(endpoint);
+				logoutUrl.searchParams.set('post_logout_redirect_uri', postLogoutUrl);
+				expect(location.href).toBe(logoutUrl.toString());
 			});
 		});
 
@@ -168,7 +173,12 @@ describe('signout()', () => {
 
 			it('should set location to the end_session_endpoint', async () => {
 				await signout();
-				expect(location.href).toBe(endpoint);
+
+				const postLogoutUrl = new URL(mocks.originUrl);
+				postLogoutUrl.pathname = '/explore';
+				const logoutUrl = new URL(endpoint);
+				logoutUrl.searchParams.set('post_logout_redirect_uri', postLogoutUrl);
+				expect(location.href).toBe(logoutUrl.toString());
 			});
 		});
 
