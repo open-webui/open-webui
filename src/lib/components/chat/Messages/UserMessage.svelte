@@ -53,7 +53,7 @@
 	}
 
 	const copyToClipboard = async (text) => {
-		const res = await _copyToClipboard(text, $settings?.copyFormatted ?? false);
+		const res = await _copyToClipboard(text);
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
 		}
