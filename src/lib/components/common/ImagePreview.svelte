@@ -1,28 +1,36 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { onDestroy, onMount } from 'svelte';
 	import panzoom, { type PanZoom } from 'panzoom';
 
-	export let show = false;
-	export let src = '';
-	export let alt = '';
+	interface Props {
+		show?: boolean;
+		src?: string;
+		alt?: string;
+	}
+
+	let { show = $bindable(false), src = '', alt = '' }: Props = $props();
 
 	let mounted = false;
 
-	let previewElement = null;
+	let previewElement = $state(null);
 
-	let instance: PanZoom;
+	let instance: PanZoom = $state();
 
 	let sceneParentElement: HTMLElement;
-	let sceneElement: HTMLElement;
+	let sceneElement: HTMLElement = $state();
 
-	$: if (sceneElement) {
-		instance = panzoom(sceneElement, {
-			bounds: true,
-			boundsPadding: 0.1,
+	run(() => {
+		if (sceneElement) {
+			instance = panzoom(sceneElement, {
+				bounds: true,
+				boundsPadding: 0.1,
 
-			zoomSpeed: 0.065
-		});
-	}
+				zoomSpeed: 0.065
+			});
+		}
+	});
 	const resetPanZoomViewport = () => {
 		instance.moveTo(0, 0);
 		instance.zoomAbs(0, 0, 1);
@@ -56,15 +64,17 @@
 		mounted = true;
 	});
 
-	$: if (show && previewElement) {
-		document.body.appendChild(previewElement);
-		window.addEventListener('keydown', handleKeyDown);
-		document.body.style.overflow = 'hidden';
-	} else if (previewElement) {
-		window.removeEventListener('keydown', handleKeyDown);
-		document.body.removeChild(previewElement);
-		document.body.style.overflow = 'unset';
-	}
+	run(() => {
+		if (show && previewElement) {
+			document.body.appendChild(previewElement);
+			window.addEventListener('keydown', handleKeyDown);
+			document.body.style.overflow = 'hidden';
+		} else if (previewElement) {
+			window.removeEventListener('keydown', handleKeyDown);
+			document.body.removeChild(previewElement);
+			document.body.style.overflow = 'unset';
+		}
+	});
 
 	onDestroy(() => {
 		show = false;
@@ -76,8 +86,8 @@
 </script>
 
 {#if show}
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={previewElement}
 		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black text-white w-full min-h-screen h-screen flex justify-center z-9999 overflow-hidden overscroll-contain"
@@ -86,12 +96,12 @@
 			<div>
 				<button
 					class=" p-5"
-					on:pointerdown={(e) => {
+					onpointerdown={(e) => {
 						e.stopImmediatePropagation();
 						e.preventDefault();
 						show = false;
 					}}
-					on:click={(e) => {
+					onclick={(e) => {
 						show = false;
 					}}
 				>
@@ -111,12 +121,12 @@
 			<div>
 				<button
 					class=" p-5"
-					on:pointerdown={(e) => {
+					onpointerdown={(e) => {
 						e.stopImmediatePropagation();
 						e.preventDefault();
 						downloadImage(src, src.substring(src.lastIndexOf('/') + 1), alt);
 					}}
-					on:click={(e) => {
+					onclick={(e) => {
 						downloadImage(src, src.substring(src.lastIndexOf('/') + 1), alt);
 					}}
 				>

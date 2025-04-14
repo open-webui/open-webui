@@ -1,12 +1,16 @@
-<script>
+<script lang="ts">
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import ManageOllama from './ManageOllama.svelte';
 
-	export let ollamaConfig = null;
+	interface Props {
+		ollamaConfig?: any;
+	}
 
-	let selectedUrlIdx = 0;
+	let { ollamaConfig = null }: Props = $props();
+
+	let selectedUrlIdx = $state(0);
 </script>
 
 {#if ollamaConfig}

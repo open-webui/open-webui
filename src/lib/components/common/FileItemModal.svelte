@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { preventDefault } from 'svelte/legacy';
+
 	import { getContext, onMount } from 'svelte';
 	import { formatFileSize, getLineCount } from '$lib/utils';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -11,14 +13,18 @@
 	import Switch from './Switch.svelte';
 	import Tooltip from './Tooltip.svelte';
 
-	export let item;
-	export let show = false;
-	export let edit = false;
+	interface Props {
+		item: any;
+		show?: boolean;
+		edit?: boolean;
+	}
 
-	let enableFullContent = false;
-	$: isPDF =
-		item?.meta?.content_type === 'application/pdf' ||
-		(item?.name && item?.name.toLowerCase().endsWith('.pdf'));
+	let { item = $bindable(), show = $bindable(false), edit = false }: Props = $props();
+
+	let enableFullContent = $state(false);
+	let isPDF =
+		$derived(item?.meta?.content_type === 'application/pdf' ||
+		(item?.name && item?.name.toLowerCase().endsWith('.pdf')));
 
 	onMount(() => {
 		console.log(item);
@@ -37,14 +43,14 @@
 						<a
 							href="#"
 							class="hover:underline line-clamp-1"
-							on:click|preventDefault={() => {
+							onclick={preventDefault(() => {
 								if (!isPDF && item.url) {
 									window.open(
 										item.type === 'file' ? `${item.url}/content` : `${item.url}`,
 										'_blank'
 									);
 								}
-							}}
+							})}
 						>
 							{item?.name ?? 'File'}
 						</a>
@@ -53,7 +59,7 @@
 
 				<div>
 					<button
-						on:click={() => {
+						onclick={() => {
 							show = false;
 						}}
 					>
@@ -120,7 +126,7 @@
 					title={item?.name}
 					src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
 					class="w-full h-[70vh] border-0 rounded-lg mt-4"
-				/>
+				></iframe>
 			{:else}
 				<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
 					{item?.file?.data?.content ?? 'No content'}

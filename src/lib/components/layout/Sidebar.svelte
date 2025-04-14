@@ -61,22 +61,22 @@
 
 	const BREAKPOINT = 768;
 
-	let navElement;
-	let search = '';
+	let navElement = $state();
+	let search = $state('');
 
-	let shiftKey = false;
+	let shiftKey = $state(false);
 
-	let selectedChatId = null;
-	let showDropdown = false;
-	let showPinnedChat = true;
+	let selectedChatId = $state(null);
+	let showDropdown = $state(false);
+	let showPinnedChat = $state(true);
 
-	let showCreateChannel = false;
+	let showCreateChannel = $state(false);
 
 	// Pagination variables
-	let chatListLoading = false;
-	let allChatsLoaded = false;
+	let chatListLoading = $state(false);
+	let allChatsLoaded = $state(false);
 
-	let folders = {};
+	let folders = $state({});
 	let newFolderId = null;
 
 	const initFolders = async () => {
@@ -453,17 +453,17 @@
 	}}
 />
 
-<!-- svelte-ignore a11y-no-static-element-interactions -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 
 {#if $showSidebar}
 	<div
 		class=" {$isApp
 			? ' ml-[4.5rem] md:ml-0'
 			: ''} fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-black/60 w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain"
-		on:mousedown={() => {
+		onmousedown={() => {
 			showSidebar.set(!$showSidebar);
 		}}
-	/>
+	></div>
 {/if}
 
 <div
@@ -485,7 +485,7 @@
 		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
 			<button
 				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-				on:click={() => {
+				onclick={() => {
 					showSidebar.set(!$showSidebar);
 				}}
 			>
@@ -512,7 +512,7 @@
 				class="flex justify-between items-center flex-1 rounded-lg px-2 py-1 h-full text-right hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
 				href="/"
 				draggable="false"
-				on:click={async () => {
+				onclick={async () => {
 					selectedChatId = null;
 					await goto('/');
 					const newChatButton = document.getElementById('new-chat-button');
@@ -575,7 +575,7 @@
 				<a
 					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/workspace"
-					on:click={() => {
+					onclick={() => {
 						selectedChatId = null;
 						chatId.set('');
 
@@ -902,7 +902,7 @@
 					>
 						<button
 							class=" flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-							on:click={() => {
+							onclick={() => {
 								showDropdown = !showDropdown;
 							}}
 						>

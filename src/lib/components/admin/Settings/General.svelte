@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { preventDefault } from 'svelte/legacy';
+
 	import DOMPurify from 'dompurify';
 
 	import { getBackendConfig, getVersionUpdates, getWebhookUrl, updateWebhookUrl } from '$lib/apis';
@@ -21,20 +23,24 @@
 
 	const i18n = getContext('i18n');
 
-	export let saveHandler: Function;
+	interface Props {
+		saveHandler: Function;
+	}
 
-	let updateAvailable = null;
-	let version = {
+	let { saveHandler }: Props = $props();
+
+	let updateAvailable = $state(null);
+	let version = $state({
 		current: '',
 		latest: ''
-	};
+	});
 
-	let adminConfig = null;
-	let webhookUrl = '';
+	let adminConfig = $state(null);
+	let webhookUrl = $state('');
 
 	// LDAP
-	let ENABLE_LDAP = false;
-	let LDAP_SERVER = {
+	let ENABLE_LDAP = $state(false);
+	let LDAP_SERVER = $state({
 		label: '',
 		host: '',
 		port: '',
@@ -47,7 +53,7 @@
 		use_tls: false,
 		certificate_path: '',
 		ciphers: ''
-	};
+	});
 
 	const checkForVersionUpdates = async () => {
 		updateAvailable = null;
@@ -110,9 +116,9 @@
 
 <form
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
-	on:submit|preventDefault={async () => {
+	onsubmit={preventDefault(async () => {
 		updateHandler();
-	}}
+	})}
 >
 	<div class="mt-0.5 space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		{#if adminConfig !== null}
@@ -150,7 +156,7 @@
 								<button
 									class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
 									type="button"
-									on:click={() => {
+									onclick={() => {
 										showChangelog.set(true);
 									}}
 								>
@@ -161,7 +167,7 @@
 							<button
 								class=" text-xs px-3 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
 								type="button"
-								on:click={() => {
+								onclick={() => {
 									checkForVersionUpdates();
 								}}
 							>

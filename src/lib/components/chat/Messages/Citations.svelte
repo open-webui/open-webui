@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { getContext } from 'svelte';
 	import CitationsModal from './CitationsModal.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
@@ -7,16 +9,20 @@
 
 	const i18n = getContext('i18n');
 
-	export let id = '';
-	export let sources = [];
+	interface Props {
+		id?: string;
+		sources?: any;
+	}
 
-	let citations = [];
-	let showPercentage = false;
-	let showRelevance = true;
+	let { id = '', sources = [] }: Props = $props();
 
-	let showCitationModal = false;
-	let selectedCitation: any = null;
-	let isCollapsibleOpen = false;
+	let citations = $state([]);
+	let showPercentage = $state(false);
+	let showRelevance = $state(true);
+
+	let showCitationModal = $state(false);
+	let selectedCitation: any = $state(null);
+	let isCollapsibleOpen = $state(false);
 
 	function calculateShowRelevance(sources: any[]) {
 		const distances = sources.flatMap((citation) => citation.distances ?? []);
@@ -42,7 +48,7 @@
 		return distances.every((d) => d !== undefined && d >= -1 && d <= 1);
 	}
 
-	$: {
+	run(() => {
 		console.log('sources', sources);
 		citations = sources.reduce((acc, source) => {
 			if (Object.keys(source).length === 0) {
@@ -86,7 +92,7 @@
 
 		showRelevance = calculateShowRelevance(citations);
 		showPercentage = shouldShowPercentage(citations);
-	}
+	});
 
 	const decodeString = (str: string) => {
 		try {
@@ -112,7 +118,7 @@
 					<button
 						id={`source-${id}-${idx + 1}`}
 						class="no-toggle outline-hidden flex dark:text-gray-300 p-1 bg-white dark:bg-gray-900 rounded-xl max-w-96"
-						on:click={() => {
+						onclick={() => {
 							showCitationModal = true;
 							selectedCitation = citation;
 						}}
@@ -151,11 +157,11 @@
 								{#each citations.slice(0, 2) as citation, idx}
 									<button
 										class="no-toggle outline-hidden flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
-										on:click={() => {
+										onclick={() => {
 											showCitationModal = true;
 											selectedCitation = citation;
 										}}
-										on:pointerup={(e) => {
+										onpointerup={(e) => {
 											e.stopPropagation();
 										}}
 									>
@@ -185,29 +191,31 @@
 						{/if}
 					</div>
 				</div>
-				<div slot="content">
-					<div class="flex text-xs font-medium flex-wrap">
-						{#each citations as citation, idx}
-							<button
-								id={`source-${id}-${idx + 1}`}
-								class="no-toggle outline-hidden flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
-								on:click={() => {
+				{#snippet content()}
+								<div >
+						<div class="flex text-xs font-medium flex-wrap">
+							{#each citations as citation, idx}
+								<button
+									id={`source-${id}-${idx + 1}`}
+									class="no-toggle outline-hidden flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
+									onclick={() => {
 									showCitationModal = true;
 									selectedCitation = citation;
 								}}
-							>
-								{#if citations.every((c) => c.distances !== undefined)}
-									<div class="bg-gray-50 dark:bg-gray-800 rounded-full size-4">
-										{idx + 1}
+								>
+									{#if citations.every((c) => c.distances !== undefined)}
+										<div class="bg-gray-50 dark:bg-gray-800 rounded-full size-4">
+											{idx + 1}
+										</div>
+									{/if}
+									<div class="flex-1 mx-1 truncate">
+										{decodeString(citation.source.name)}
 									</div>
-								{/if}
-								<div class="flex-1 mx-1 truncate">
-									{decodeString(citation.source.name)}
-								</div>
-							</button>
-						{/each}
+								</button>
+							{/each}
+						</div>
 					</div>
-				</div>
+							{/snippet}
 			</Collapsible>
 		{/if}
 	</div>

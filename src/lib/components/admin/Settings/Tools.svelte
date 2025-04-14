@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { preventDefault } from 'svelte/legacy';
+
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 	import { getModels as _getModels } from '$lib/apis';
@@ -17,10 +19,14 @@
 	import AddServerModal from '$lib/components/AddServerModal.svelte';
 	import { getToolServerConnections, setToolServerConnections } from '$lib/apis/configs';
 
-	export let saveSettings: Function;
+	interface Props {
+		saveSettings: Function;
+	}
 
-	let servers = null;
-	let showConnectionModal = false;
+	let { saveSettings }: Props = $props();
+
+	let servers = $state(null);
+	let showConnectionModal = $state(false);
 
 	const addConnectionHandler = async (server) => {
 		servers = [...servers, server];
@@ -51,9 +57,9 @@
 
 <form
 	class="flex flex-col h-full justify-between text-sm"
-	on:submit|preventDefault={() => {
+	onsubmit={preventDefault(() => {
 		updateHandler();
-	}}
+	})}
 >
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
 		{#if servers !== null}
@@ -73,7 +79,7 @@
 							<Tooltip content={$i18n.t(`Add Connection`)}>
 								<button
 									class="px-1"
-									on:click={() => {
+									onclick={() => {
 										showConnectionModal = true;
 									}}
 									type="button"

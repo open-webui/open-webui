@@ -1,5 +1,9 @@
 <script lang="ts">
-	export let className: string = 'size-5';
+	interface Props {
+		className?: string;
+	}
+
+	let { className = 'size-5' }: Props = $props();
 </script>
 
 <div class="flex justify-center text-center">

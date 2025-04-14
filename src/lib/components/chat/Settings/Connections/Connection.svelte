@@ -8,17 +8,28 @@
 	import AddConnectionModal from '$lib/components/AddConnectionModal.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
-	export let onDelete = () => {};
-	export let onSubmit = () => {};
 
-	export let pipeline = false;
 
-	export let url = '';
-	export let key = '';
-	export let config = {};
+	interface Props {
+		onDelete?: any;
+		onSubmit?: any;
+		pipeline?: boolean;
+		url?: string;
+		key?: string;
+		config?: any;
+	}
 
-	let showConfigModal = false;
-	let showDeleteConfirmDialog = false;
+	let {
+		onDelete = () => {},
+		onSubmit = () => {},
+		pipeline = false,
+		url = $bindable(''),
+		key = $bindable(''),
+		config = $bindable({})
+	}: Props = $props();
+
+	let showConfigModal = $state(false);
+	let showDeleteConfirmDialog = $state(false);
 </script>
 
 <AddConnectionModal
@@ -84,7 +95,7 @@
 		<Tooltip content={$i18n.t('Configure')} className="self-start">
 			<button
 				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
-				on:click={() => {
+				onclick={() => {
 					showConfigModal = true;
 				}}
 				type="button"

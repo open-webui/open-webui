@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { toast } from 'svelte-sonner';
 	import Fuse from 'fuse.js';
 
@@ -12,27 +14,35 @@
 
 	const i18n = getContext('i18n');
 
-	export let prompt = '';
-	export let command = '';
+	interface Props {
+		prompt?: string;
+		command?: string;
+	}
+
+	let { prompt = $bindable(''), command = '' }: Props = $props();
 
 	const dispatch = createEventDispatcher();
-	let selectedIdx = 0;
+	let selectedIdx = $state(0);
 
-	let items = [];
-	let fuse = null;
+	let items = $state([]);
+	let fuse = $state(null);
 
-	let filteredItems = [];
-	$: if (fuse) {
-		filteredItems = command.slice(1)
-			? fuse.search(command).map((e) => {
-					return e.item;
-				})
-			: items;
-	}
+	let filteredItems = $state([]);
+	run(() => {
+		if (fuse) {
+			filteredItems = command.slice(1)
+				? fuse.search(command).map((e) => {
+						return e.item;
+					})
+				: items;
+		}
+	});
 
-	$: if (command) {
-		selectedIdx = 0;
-	}
+	run(() => {
+		if (command) {
+			selectedIdx = 0;
+		}
+	});
 
 	export const selectUp = () => {
 		selectedIdx = Math.max(0, selectedIdx - 1);
@@ -181,11 +191,11 @@
 								? ' bg-gray-50 dark:bg-gray-850 dark:text-gray-100 selected-command-option-button'
 								: ''}"
 							type="button"
-							on:click={() => {
+							onclick={() => {
 								console.log(item);
 								confirmSelect(item);
 							}}
-							on:mousemove={() => {
+							onmousemove={() => {
 								selectedIdx = idx;
 							}}
 						>
@@ -279,7 +289,7 @@
 						<button
 							class="px-3 py-1.5 rounded-xl w-full text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 selected-command-option-button"
 							type="button"
-							on:click={() => {
+							onclick={() => {
 								const url = prompt.split(' ')?.at(0)?.substring(1);
 								if (isValidHttpUrl(url)) {
 									confirmSelectYoutube(url);
@@ -302,7 +312,7 @@
 						<button
 							class="px-3 py-1.5 rounded-xl w-full text-left bg-gray-50 dark:bg-gray-850 dark:text-gray-100 selected-command-option-button"
 							type="button"
-							on:click={() => {
+							onclick={() => {
 								const url = prompt.split(' ')?.at(0)?.substring(1);
 								if (isValidHttpUrl(url)) {
 									confirmSelectWeb(url);

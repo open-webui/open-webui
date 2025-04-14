@@ -2,7 +2,12 @@
 	import { onMount, getContext } from 'svelte';
 	import { WEBUI_NAME, showSidebar, functions } from '$lib/stores';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
+	interface Props {
+		children?: import('svelte').Snippet;
+	}
+
+	let { children }: Props = $props();
 
 	const i18n = getContext('i18n');
 
@@ -26,7 +31,7 @@
 				<button
 					id="sidebar-toggle-button"
 					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-					on:click={() => {
+					onclick={() => {
 						showSidebar.set(!$showSidebar);
 					}}
 					aria-label="Toggle Sidebar"
@@ -43,7 +48,7 @@
 				>
 					<a
 						class="min-w-fit rounded-full p-1.5 {['/playground', '/playground/'].includes(
-							$page.url.pathname
+							page.url.pathname
 						)
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
@@ -51,14 +56,14 @@
 					>
 
 					<!-- <a
-						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/playground/notes')
+						class="min-w-fit rounded-full p-1.5 {page.url.pathname.includes('/playground/notes')
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 						href="/playground/notes">{$i18n.t('Notes')}</a
 					> -->
 
 					<a
-						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+						class="min-w-fit rounded-full p-1.5 {page.url.pathname.includes(
 							'/playground/completions'
 						)
 							? ''
@@ -71,6 +76,6 @@
 	</nav>
 
 	<div class=" flex-1 max-h-full overflow-y-auto">
-		<slot />
+		{@render children?.()}
 	</div>
 </div>

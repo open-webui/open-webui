@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { toast } from 'svelte-sonner';
 
 	import { goto } from '$app/navigation';
@@ -29,22 +31,22 @@
 
 	let loaded = false;
 
-	let selectedModelId = '';
-	let loading = false;
+	let selectedModelId = $state('');
+	let loading = $state(false);
 	let stopResponseFlag = false;
 
-	let systemTextareaElement: HTMLTextAreaElement;
-	let messagesContainerElement: HTMLDivElement;
+	let systemTextareaElement: HTMLTextAreaElement = $state();
+	let messagesContainerElement: HTMLDivElement = $state();
 
-	let showSystem = false;
-	let showSettings = false;
+	let showSystem = $state(false);
+	let showSettings = $state(false);
 
-	let system = '';
+	let system = $state('');
 
-	let role = 'user';
-	let message = '';
+	let role = $state('user');
+	let message = $state('');
 
-	let messages = [];
+	let messages = $state([]);
 
 	const scrollToBottom = () => {
 		const element = messagesContainerElement;
@@ -67,9 +69,11 @@
 		}
 	};
 
-	$: if (showSystem) {
-		resizeSystemTextarea();
-	}
+	run(() => {
+		if (showSystem) {
+			resizeSystemTextarea();
+		}
+	});
 
 	const chatCompletionHandler = async () => {
 		if (selectedModelId === '') {
@@ -219,7 +223,7 @@
 					<div class=" translate-x-1.5">
 						<button
 							class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
-							on:click={() => {
+							onclick={() => {
 								showSettings = !showSettings;
 							}}
 						>
@@ -277,26 +281,28 @@
 						</div>
 					</div>
 
-					<div slot="content">
-						<div class="pt-1 px-1.5">
-							<textarea
-								bind:this={systemTextareaElement}
-								class="w-full h-full bg-transparent resize-none outline-hidden text-sm"
-								bind:value={system}
-								placeholder={$i18n.t("You're a helpful assistant.")}
-								on:input={() => {
+					{#snippet content()}
+										<div >
+							<div class="pt-1 px-1.5">
+								<textarea
+									bind:this={systemTextareaElement}
+									class="w-full h-full bg-transparent resize-none outline-hidden text-sm"
+									bind:value={system}
+									placeholder={$i18n.t("You're a helpful assistant.")}
+									oninput={() => {
 									resizeSystemTextarea();
 								}}
-								rows="4"
-							/>
+									rows="4"
+								></textarea>
+							</div>
 						</div>
-					</div>
+									{/snippet}
 				</Collapsible>
 
 				<div class="translate-y-1">
 					<button
 						class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
-						on:click={() => {
+						onclick={() => {
 							showSettings = !showSettings;
 						}}
 					>
@@ -331,23 +337,23 @@
 							placeholder={$i18n.t(`Enter {{role}} message here`, {
 								role: role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
 							})}
-							on:input={(e) => {
+							oninput={(e) => {
 								e.target.style.height = '';
 								e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
 							}}
-							on:focus={(e) => {
+							onfocus={(e) => {
 								e.target.style.height = '';
 								e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
 							}}
 							rows="2"
-						/>
+						></textarea>
 					</div>
 
 					<div class="flex justify-between">
 						<div>
 							<button
 								class="px-3.5 py-1.5 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
-								on:click={() => {
+								onclick={() => {
 									role = role === 'user' ? 'assistant' : 'user';
 								}}
 							>
@@ -364,7 +370,7 @@
 								<button
 									disabled={message === ''}
 									class="px-3.5 py-1.5 text-sm font-medium disabled:bg-gray-50 dark:disabled:hover:bg-gray-850 disabled:cursor-not-allowed bg-gray-50 hover:bg-gray-100 text-gray-900 dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-gray-200 transition rounded-lg"
-									on:click={() => {
+									onclick={() => {
 										addHandler();
 										role = role === 'user' ? 'assistant' : 'user';
 									}}
@@ -374,7 +380,7 @@
 
 								<button
 									class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-lg"
-									on:click={() => {
+									onclick={() => {
 										submitHandler();
 									}}
 								>
@@ -383,7 +389,7 @@
 							{:else}
 								<button
 									class="px-3 py-1.5 text-sm font-medium bg-gray-300 text-black transition rounded-lg"
-									on:click={() => {
+									onclick={() => {
 										stopResponse();
 									}}
 								>

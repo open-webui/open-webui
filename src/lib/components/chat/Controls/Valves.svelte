@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run, preventDefault } from 'svelte/legacy';
+
 	import { toast } from 'svelte-sonner';
 
 	import { config, functions, models, settings, tools, user } from '$lib/stores';
@@ -25,15 +27,19 @@
 
 	const i18n = getContext('i18n');
 
-	export let show = false;
+	interface Props {
+		show?: boolean;
+	}
 
-	let tab = 'tools';
-	let selectedId = '';
+	let { show = false }: Props = $props();
 
-	let loading = false;
+	let tab = $state('tools');
+	let selectedId = $state('');
 
-	let valvesSpec = null;
-	let valves = {};
+	let loading = $state(false);
+
+	let valvesSpec = $state(null);
+	let valves = $state({});
 
 	let debounceTimer;
 
@@ -109,17 +115,8 @@
 		}
 	};
 
-	$: if (tab) {
-		selectedId = '';
-	}
 
-	$: if (selectedId) {
-		getUserValves();
-	}
 
-	$: if (show) {
-		init();
-	}
 
 	const init = async () => {
 		loading = true;
@@ -133,15 +130,30 @@
 
 		loading = false;
 	};
+	run(() => {
+		if (tab) {
+			selectedId = '';
+		}
+	});
+	run(() => {
+		if (selectedId) {
+			getUserValves();
+		}
+	});
+	run(() => {
+		if (show) {
+			init();
+		}
+	});
 </script>
 
 {#if show && !loading}
 	<form
 		class="flex flex-col h-full justify-between space-y-3 text-sm"
-		on:submit|preventDefault={() => {
+		onsubmit={preventDefault(() => {
 			submitHandler();
 			dispatch('save');
-		}}
+		})}
 	>
 		<div class="flex flex-col">
 			<div class="space-y-1">
@@ -163,7 +175,7 @@
 						<select
 							class="w-full rounded-sm py-2 px-1 text-xs bg-transparent outline-hidden"
 							bind:value={selectedId}
-							on:change={async () => {
+							onchange={async () => {
 								await tick();
 							}}
 						>

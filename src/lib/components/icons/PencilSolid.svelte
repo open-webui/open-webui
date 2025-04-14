@@ -1,6 +1,10 @@
 <script lang="ts">
-	export let className = 'w-4 h-4';
-	export let strokeWidth = '1.5';
+	interface Props {
+		className?: string;
+		strokeWidth?: string;
+	}
+
+	let { className = 'w-4 h-4', strokeWidth = '1.5' }: Props = $props();
 </script>
 
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class={className}>

@@ -1,18 +1,17 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import CodeExecutionModal from './CodeExecutionModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 
-	export let codeExecutions = [];
+	let { codeExecutions = [] } = $props();
 
-	let selectedCodeExecution = null;
-	let showCodeExecutionModal = false;
+	let selectedCodeExecution = $state(null);
+	let showCodeExecutionModal = $state(false);
 
-	$: if (codeExecutions) {
-		updateSelectedCodeExecution();
-	}
 
 	const updateSelectedCodeExecution = () => {
 		if (selectedCodeExecution) {
@@ -21,6 +20,11 @@
 			);
 		}
 	};
+	run(() => {
+		if (codeExecutions) {
+			updateSelectedCodeExecution();
+		}
+	});
 </script>
 
 <CodeExecutionModal bind:show={showCodeExecutionModal} codeExecution={selectedCodeExecution} />
@@ -31,7 +35,7 @@
 			<div class="flex gap-1 text-xs font-semibold">
 				<button
 					class="flex dark:text-gray-300 py-1 px-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-xl max-w-96"
-					on:click={() => {
+					onclick={() => {
 						selectedCodeExecution = execution;
 						showCodeExecutionModal = true;
 					}}

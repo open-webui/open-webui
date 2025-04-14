@@ -12,33 +12,53 @@
 	import ResponseMessage from './ResponseMessage.svelte';
 	import UserMessage from './UserMessage.svelte';
 
-	export let chatId;
-	export let idx = 0;
+	interface Props {
+		chatId: any;
+		idx?: number;
+		history: any;
+		messageId: any;
+		user: any;
+		gotoMessage: any;
+		showPreviousMessage: any;
+		showNextMessage: any;
+		updateChat: any;
+		editMessage: any;
+		saveMessage: any;
+		deleteMessage: any;
+		rateMessage: any;
+		actionMessage: any;
+		submitMessage: any;
+		regenerateResponse: any;
+		continueResponse: any;
+		mergeResponses: any;
+		addMessages: any;
+		triggerScroll: any;
+		readOnly?: boolean;
+	}
 
-	export let history;
-	export let messageId;
-
-	export let user;
-
-	export let gotoMessage;
-	export let showPreviousMessage;
-	export let showNextMessage;
-	export let updateChat;
-
-	export let editMessage;
-	export let saveMessage;
-	export let deleteMessage;
-	export let rateMessage;
-	export let actionMessage;
-	export let submitMessage;
-
-	export let regenerateResponse;
-	export let continueResponse;
-	export let mergeResponses;
-
-	export let addMessages;
-	export let triggerScroll;
-	export let readOnly = false;
+	let {
+		chatId,
+		idx = 0,
+		history = $bindable(),
+		messageId,
+		user,
+		gotoMessage,
+		showPreviousMessage,
+		showNextMessage,
+		updateChat,
+		editMessage,
+		saveMessage,
+		deleteMessage,
+		rateMessage,
+		actionMessage,
+		submitMessage,
+		regenerateResponse,
+		continueResponse,
+		mergeResponses,
+		addMessages,
+		triggerScroll,
+		readOnly = false
+	}: Props = $props();
 </script>
 
 <div

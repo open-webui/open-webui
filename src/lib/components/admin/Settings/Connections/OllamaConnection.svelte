@@ -12,16 +12,26 @@
 	import ManageOllamaModal from './ManageOllamaModal.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
 
-	export let onDelete = () => {};
-	export let onSubmit = () => {};
 
-	export let url = '';
-	export let idx = 0;
-	export let config = {};
+	interface Props {
+		onDelete?: any;
+		onSubmit?: any;
+		url?: string;
+		idx?: number;
+		config?: any;
+	}
 
-	let showManageModal = false;
-	let showConfigModal = false;
-	let showDeleteConfirmDialog = false;
+	let {
+		onDelete = () => {},
+		onSubmit = () => {},
+		url = $bindable(''),
+		idx = 0,
+		config = $bindable({})
+	}: Props = $props();
+
+	let showManageModal = $state(false);
+	let showConfigModal = $state(false);
+	let showDeleteConfirmDialog = $state(false);
 </script>
 
 <AddConnectionModal
@@ -78,7 +88,7 @@
 		<Tooltip content={$i18n.t('Manage')} className="self-start">
 			<button
 				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
-				on:click={() => {
+				onclick={() => {
 					showManageModal = true;
 				}}
 				type="button"
@@ -90,7 +100,7 @@
 		<Tooltip content={$i18n.t('Configure')} className="self-start">
 			<button
 				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 rounded-lg transition"
-				on:click={() => {
+				onclick={() => {
 					showConfigModal = true;
 				}}
 				type="button"

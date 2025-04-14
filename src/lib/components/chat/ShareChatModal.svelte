@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { getContext, onMount } from 'svelte';
 	import { models, config } from '$lib/stores';
 
@@ -9,9 +11,8 @@
 	import Modal from '../common/Modal.svelte';
 	import Link from '../icons/Link.svelte';
 
-	export let chatId;
 
-	let chat = null;
+	let chat = $state(null);
 	let shareUrl = null;
 	const i18n = getContext('i18n');
 
@@ -53,7 +54,12 @@
 		);
 	};
 
-	export let show = false;
+	interface Props {
+		chatId: any;
+		show?: boolean;
+	}
+
+	let { chatId, show = $bindable(false) }: Props = $props();
 
 	const isDifferentChat = (_chat) => {
 		if (!chat) {
@@ -65,19 +71,21 @@
 		return chat.id !== _chat.id || chat.share_id !== _chat.share_id;
 	};
 
-	$: if (show) {
-		(async () => {
-			if (chatId) {
-				const _chat = await getChatById(localStorage.token, chatId);
-				if (isDifferentChat(_chat)) {
-					chat = _chat;
+	run(() => {
+		if (show) {
+			(async () => {
+				if (chatId) {
+					const _chat = await getChatById(localStorage.token, chatId);
+					if (isDifferentChat(_chat)) {
+						chat = _chat;
+					}
+				} else {
+					chat = null;
+					console.log(chat);
 				}
-			} else {
-				chat = null;
-				console.log(chat);
-			}
-		})();
-	}
+			})();
+		}
+	});
 </script>
 
 <Modal bind:show size="md">
@@ -86,7 +94,7 @@
 			<div class=" text-lg font-medium self-center">{$i18n.t('Share Chat')}</div>
 			<button
 				class="self-center"
-				on:click={() => {
+				onclick={() => {
 					show = false;
 				}}
 			>
@@ -114,7 +122,7 @@
 						{$i18n.t('Click here to')}
 						<button
 							class="underline"
-							on:click={async () => {
+							onclick={async () => {
 								const res = await deleteSharedChatById(localStorage.token, chatId);
 
 								if (res) {
@@ -138,7 +146,7 @@
 								<button
 									class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800 transition rounded-full"
 									type="button"
-									on:click={() => {
+									onclick={() => {
 										shareChat();
 										show = false;
 									}}
@@ -151,7 +159,7 @@
 								class="self-center flex items-center gap-1 px-3.5 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
 								type="button"
 								id="copy-and-share-chat-button"
-								on:click={async () => {
+								onclick={async () => {
 									const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 									if (isSafari) {

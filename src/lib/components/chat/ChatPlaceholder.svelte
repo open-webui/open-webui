@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { marked } from 'marked';
 
@@ -14,20 +16,26 @@
 
 	const i18n = getContext('i18n');
 
-	export let modelIds = [];
-	export let models = [];
-	export let atSelectedModel;
 
-	export let submitPrompt;
+	let {
+		modelIds = [],
+		models = $bindable([]),
+		atSelectedModel,
+		submitPrompt
+	} = $props();
 
-	let mounted = false;
-	let selectedModelIdx = 0;
+	let mounted = $state(false);
+	let selectedModelIdx = $state(0);
 
-	$: if (modelIds.length > 0) {
-		selectedModelIdx = models.length - 1;
-	}
+	run(() => {
+		if (modelIds.length > 0) {
+			selectedModelIdx = models.length - 1;
+		}
+	});
 
-	$: models = modelIds.map((id) => $_models.find((m) => m.id === id));
+	run(() => {
+		models = modelIds.map((id) => $_models.find((m) => m.id === id));
+	});
 
 	onMount(() => {
 		mounted = true;
@@ -40,7 +48,7 @@
 			<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 200 }}>
 				{#each models as model, modelIdx}
 					<button
-						on:click={() => {
+						onclick={() => {
 							selectedModelIdx = modelIdx;
 						}}
 					>

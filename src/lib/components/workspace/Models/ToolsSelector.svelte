@@ -2,11 +2,10 @@
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import { getContext, onMount } from 'svelte';
 
-	export let tools = [];
 
-	let _tools = {};
+	let _tools = $state({});
 
-	export let selectedToolIds = [];
+	let { tools = [], selectedToolIds = $bindable([]) } = $props();
 
 	const i18n = getContext('i18n');
 

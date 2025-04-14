@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run, preventDefault } from 'svelte/legacy';
+
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 
@@ -20,26 +22,39 @@
 	import { transcribeAudio } from '$lib/apis/audio';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 
-	export let placeholder = $i18n.t('Send a Message');
-	export let transparentBackground = false;
 
-	export let id = null;
 
-	let draggedOver = false;
+	let draggedOver = $state(false);
 
-	let recording = false;
-	let content = '';
-	let files = [];
+	let recording = $state(false);
+	let content = $state('');
+	let files = $state([]);
 
-	let filesInputElement;
-	let inputFiles;
+	let filesInputElement = $state();
+	let inputFiles = $state();
 
-	export let typingUsers = [];
 
-	export let onSubmit: Function;
-	export let onChange: Function;
-	export let scrollEnd = true;
-	export let scrollToBottom: Function = () => {};
+	interface Props {
+		placeholder?: any;
+		transparentBackground?: boolean;
+		id?: any;
+		typingUsers?: any;
+		onSubmit: Function;
+		onChange: Function;
+		scrollEnd?: boolean;
+		scrollToBottom?: Function;
+	}
+
+	let {
+		placeholder = $i18n.t('Send a Message'),
+		transparentBackground = false,
+		id = null,
+		typingUsers = [],
+		onSubmit,
+		onChange,
+		scrollEnd = $bindable(true),
+		scrollToBottom = () => {}
+	}: Props = $props();
 
 	const screenCaptureHandler = async () => {
 		try {
@@ -249,9 +264,11 @@
 		chatInputElement?.focus();
 	};
 
-	$: if (content) {
-		onChange();
-	}
+	run(() => {
+		if (content) {
+			onChange();
+		}
+	});
 
 	onMount(async () => {
 		window.setTimeout(() => {
@@ -291,7 +308,7 @@
 	type="file"
 	hidden
 	multiple
-	on:change={async () => {
+	onchange={async () => {
 		if (inputFiles && inputFiles.length > 0) {
 			inputFilesHandler(Array.from(inputFiles));
 		} else {
@@ -316,7 +333,7 @@
 						>
 							<button
 								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
-								on:click={() => {
+								onclick={() => {
 									scrollEnd = true;
 									scrollToBottom();
 								}}
@@ -375,9 +392,9 @@
 			{:else}
 				<form
 					class="w-full flex gap-1.5"
-					on:submit|preventDefault={() => {
+					onsubmit={preventDefault(() => {
 						submitHandler();
-					}}
+					})}
 				>
 					<div
 						class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-600/5 dark:bg-gray-400/5 dark:text-gray-100"
@@ -399,7 +416,7 @@
 												<button
 													class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
 													type="button"
-													on:click={() => {
+													onclick={() => {
 														files.splice(fileIdx, 1);
 														files = files;
 													}}
@@ -524,7 +541,7 @@
 											id="voice-input-button"
 											class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
 											type="button"
-											on:click={async () => {
+											onclick={async () => {
 												try {
 													let stream = await navigator.mediaDevices
 														.getUserMedia({ audio: true })

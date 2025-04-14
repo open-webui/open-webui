@@ -6,11 +6,23 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { activeUserIds } from '$lib/stores';
 
-	export let side = 'right';
-	export let align = 'top';
 
-	export let user = null;
-	let show = false;
+	interface Props {
+		side?: string;
+		align?: string;
+		user?: any;
+		children?: import('svelte').Snippet;
+		content?: import('svelte').Snippet;
+	}
+
+	let {
+		side = 'right',
+		align = 'top',
+		user = null,
+		children,
+		content
+	}: Props = $props();
+	let show = $state(false);
 
 	const dispatch = createEventDispatcher();
 </script>
@@ -24,10 +36,10 @@
 	typeahead={false}
 >
 	<DropdownMenu.Trigger>
-		<slot />
+		{@render children?.()}
 	</DropdownMenu.Trigger>
 
-	<slot name="content">
+	{#if content}{@render content()}{:else}
 		<DropdownMenu.Content
 			class="max-w-full w-[240px] rounded-lg z-9999 bg-white dark:bg-black dark:text-white shadow-lg"
 			sideOffset={8}
@@ -57,8 +69,8 @@
 									<span class="relative flex size-2">
 										<span
 											class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
-										/>
-										<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+										></span>
+										<span class="relative inline-flex rounded-full size-2 bg-green-500"></span>
 									</span>
 								</div>
 
@@ -68,7 +80,7 @@
 							{:else}
 								<div>
 									<span class="relative flex size-2">
-										<span class="relative inline-flex rounded-full size-2 bg-gray-500" />
+										<span class="relative inline-flex rounded-full size-2 bg-gray-500"></span>
 									</span>
 								</div>
 
@@ -81,5 +93,5 @@
 				</div>
 			{/if}
 		</DropdownMenu.Content>
-	</slot>
+	{/if}
 </DropdownMenu.Root>

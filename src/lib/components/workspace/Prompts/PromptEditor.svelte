@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run, preventDefault } from 'svelte/legacy';
+
 	import { onMount, tick, getContext } from 'svelte';
 
 	import Textarea from '$lib/components/common/Textarea.svelte';
@@ -9,25 +11,31 @@
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import { user } from '$lib/stores';
 
-	export let onSubmit: Function;
-	export let edit = false;
-	export let prompt = null;
+	interface Props {
+		onSubmit: Function;
+		edit?: boolean;
+		prompt?: any;
+	}
+
+	let { onSubmit, edit = false, prompt = null }: Props = $props();
 
 	const i18n = getContext('i18n');
 
-	let loading = false;
+	let loading = $state(false);
 
-	let title = '';
-	let command = '';
-	let content = '';
+	let title = $state('');
+	let command = $state('');
+	let content = $state('');
 
-	let accessControl = {};
+	let accessControl = $state({});
 
-	let showAccessControlModal = false;
+	let showAccessControlModal = $state(false);
 
-	$: if (!edit) {
-		command = title !== '' ? `${title.replace(/\s+/g, '-').toLowerCase()}` : '';
-	}
+	run(() => {
+		if (!edit) {
+			command = title !== '' ? `${title.replace(/\s+/g, '-').toLowerCase()}` : '';
+		}
+	});
 
 	const submitHandler = async () => {
 		loading = true;
@@ -79,9 +87,9 @@
 <div class="w-full max-h-full flex justify-center">
 	<form
 		class="flex flex-col w-full mb-10"
-		on:submit|preventDefault={() => {
+		onsubmit={preventDefault(() => {
 			submitHandler();
-		}}
+		})}
 	>
 		<div class="my-2">
 			<Tooltip
@@ -106,7 +114,7 @@
 							<button
 								class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
 								type="button"
-								on:click={() => {
+								onclick={() => {
 									showAccessControlModal = true;
 								}}
 							>

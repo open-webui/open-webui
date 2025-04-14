@@ -1,11 +1,19 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { createEventDispatcher, tick } from 'svelte';
 	import { Switch } from 'bits-ui';
-	export let state = true;
+	interface Props {
+		state?: boolean;
+	}
+
+	let { state = $bindable(true) }: Props = $props();
 
 	const dispatch = createEventDispatcher();
 
-	$: dispatch('change', state);
+	run(() => {
+		dispatch('change', state);
+	});
 </script>
 
 <Switch.Root

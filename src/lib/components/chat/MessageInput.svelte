@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run, preventDefault } from 'svelte/legacy';
+
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
@@ -56,65 +58,76 @@
 
 	const i18n = getContext('i18n');
 
-	export let transparentBackground = false;
 
-	export let onChange: Function = () => {};
-	export let createMessagePair: Function;
-	export let stopResponse: Function;
 
-	export let autoScroll = false;
 
-	export let atSelectedModel: Model | undefined = undefined;
-	export let selectedModels: [''];
 
-	let selectedModelIds = [];
-	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
+	let selectedModelIds = $state([]);
 
-	export let history;
-	export let taskIds = null;
 
-	export let prompt = '';
-	export let files = [];
 
-	export let toolServers = [];
 
-	export let selectedToolIds = [];
 
-	export let imageGenerationEnabled = false;
-	export let webSearchEnabled = false;
-	export let codeInterpreterEnabled = false;
 
-	$: onChange({
-		prompt,
-		files,
-		selectedToolIds,
-		imageGenerationEnabled,
-		webSearchEnabled
-	});
 
-	let showTools = false;
+	let showTools = $state(false);
 
-	let loaded = false;
-	let recording = false;
+	let loaded = $state(false);
+	let recording = $state(false);
 
-	let isComposing = false;
+	let isComposing = $state(false);
 
 	let chatInputContainerElement;
-	let chatInputElement;
+	let chatInputElement = $state();
 
-	let filesInputElement;
-	let commandsElement;
+	let filesInputElement = $state();
+	let commandsElement = $state();
 
-	let inputFiles;
-	let dragged = false;
+	let inputFiles = $state();
+	let dragged = $state(false);
 
 	let user = null;
-	export let placeholder = '';
+	interface Props {
+		transparentBackground?: boolean;
+		onChange?: Function;
+		createMessagePair: Function;
+		stopResponse: Function;
+		autoScroll?: boolean;
+		atSelectedModel?: Model | undefined;
+		selectedModels: [''];
+		history: any;
+		taskIds?: any;
+		prompt?: string;
+		files?: any;
+		toolServers?: any;
+		selectedToolIds?: any;
+		imageGenerationEnabled?: boolean;
+		webSearchEnabled?: boolean;
+		codeInterpreterEnabled?: boolean;
+		placeholder?: string;
+	}
 
-	let visionCapableModels = [];
-	$: visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
-		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
-	);
+	let {
+		transparentBackground = false,
+		onChange = () => {},
+		createMessagePair,
+		stopResponse,
+		autoScroll = $bindable(false),
+		atSelectedModel = $bindable(undefined),
+		selectedModels,
+		history,
+		taskIds = null,
+		prompt = $bindable(''),
+		files = $bindable([]),
+		toolServers = [],
+		selectedToolIds = $bindable([]),
+		imageGenerationEnabled = $bindable(false),
+		webSearchEnabled = $bindable(false),
+		codeInterpreterEnabled = $bindable(false),
+		placeholder = ''
+	}: Props = $props();
+
+	let visionCapableModels = $state([]);
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
@@ -351,6 +364,23 @@
 			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
 		}
 	});
+	run(() => {
+		selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
+	});
+	run(() => {
+		onChange({
+			prompt,
+			files,
+			selectedToolIds,
+			imageGenerationEnabled,
+			webSearchEnabled
+		});
+	});
+	run(() => {
+		visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
+			(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
+		);
+	});
 </script>
 
 <FilesOverlay show={dragged} />
@@ -372,7 +402,7 @@
 						>
 							<button
 								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
-								on:click={() => {
+								onclick={() => {
 									autoScroll = true;
 									scrollToBottom();
 								}}
@@ -419,7 +449,7 @@
 									<div>
 										<button
 											class="flex items-center dark:text-gray-500"
-											on:click={() => {
+											onclick={() => {
 												atSelectedModel = undefined;
 											}}
 										>
@@ -466,7 +496,7 @@
 						type="file"
 						hidden
 						multiple
-						on:change={async () => {
+						onchange={async () => {
 							if (inputFiles && inputFiles.length > 0) {
 								const _inputFiles = Array.from(inputFiles);
 								inputFilesHandler(_inputFiles);
@@ -504,10 +534,10 @@
 					{:else}
 						<form
 							class="w-full flex gap-1.5"
-							on:submit|preventDefault={() => {
+							onsubmit={preventDefault(() => {
 								// check if selectedModels support image input
 								dispatch('submit', prompt);
-							}}
+							})}
 						>
 							<div
 								class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border border-gray-50 dark:border-gray-850 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition px-1 bg-white/90 dark:bg-gray-400/5 dark:text-gray-100"
@@ -554,7 +584,7 @@
 														<button
 															class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
 															type="button"
-															on:click={() => {
+															onclick={() => {
 																files.splice(fileIdx, 1);
 																files = files;
 															}}
@@ -827,9 +857,9 @@
 											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
-											on:compositionstart={() => (isComposing = true)}
-											on:compositionend={() => (isComposing = false)}
-											on:keydown={async (e) => {
+											oncompositionstart={() => (isComposing = true)}
+											oncompositionend={() => (isComposing = false)}
+											onkeydown={async (e) => {
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
 												const commandsContainerElement =
@@ -984,15 +1014,15 @@
 												}
 											}}
 											rows="1"
-											on:input={async (e) => {
+											oninput={async (e) => {
 												e.target.style.height = '';
 												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
 											}}
-											on:focus={async (e) => {
+											onfocus={async (e) => {
 												e.target.style.height = '';
 												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
 											}}
-											on:paste={async (e) => {
+											onpaste={async (e) => {
 												const clipboardData = e.clipboardData || window.clipboardData;
 
 												if (clipboardData && clipboardData.items) {
@@ -1030,7 +1060,7 @@
 													}
 												}
 											}}
-										/>
+										></textarea>
 									{/if}
 								</div>
 
@@ -1114,7 +1144,7 @@
 														class="translate-y-[0.5px] flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg p-1 self-center transition"
 														aria-label="Available Tools"
 														type="button"
-														on:click={() => {
+														onclick={() => {
 															showTools = !showTools;
 														}}
 													>
@@ -1131,7 +1161,7 @@
 												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
-															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
+															onclick={preventDefault(() => (webSearchEnabled = !webSearchEnabled))}
 															type="button"
 															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
@@ -1150,8 +1180,8 @@
 												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
 													<Tooltip content={$i18n.t('Generate an image')} placement="top">
 														<button
-															on:click|preventDefault={() =>
-																(imageGenerationEnabled = !imageGenerationEnabled)}
+															onclick={preventDefault(() =>
+																(imageGenerationEnabled = !imageGenerationEnabled))}
 															type="button"
 															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {imageGenerationEnabled
 																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400'
@@ -1169,8 +1199,8 @@
 												{#if $config?.features?.enable_code_interpreter && ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter)}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
-															on:click|preventDefault={() =>
-																(codeInterpreterEnabled = !codeInterpreterEnabled)}
+															onclick={preventDefault(() =>
+																(codeInterpreterEnabled = !codeInterpreterEnabled))}
 															type="button"
 															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {codeInterpreterEnabled
 																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100  dark:border-gray-700 text-gray-600 dark:text-gray-400  '
@@ -1195,7 +1225,7 @@
 													id="voice-input-button"
 													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 mr-0.5 self-center"
 													type="button"
-													on:click={async () => {
+													onclick={async () => {
 														try {
 															let stream = await navigator.mediaDevices
 																.getUserMedia({ audio: true })
@@ -1243,7 +1273,7 @@
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
 														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5"
-														on:click={() => {
+														onclick={() => {
 															stopResponse();
 														}}
 													>
@@ -1268,7 +1298,7 @@
 													<button
 														class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-1.5 self-center"
 														type="button"
-														on:click={async () => {
+														onclick={async () => {
 															if (selectedModels.length > 1) {
 																toast.error($i18n.t('Select only one model to call'));
 

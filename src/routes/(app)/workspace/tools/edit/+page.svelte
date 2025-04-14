@@ -1,6 +1,6 @@
-<script>
+<script lang="ts">
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import { getToolById, getTools, updateToolById } from '$lib/apis/tools';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ToolkitEditor from '$lib/components/workspace/Tools/ToolkitEditor.svelte';
@@ -12,7 +12,7 @@
 
 	const i18n = getContext('i18n');
 
-	let tool = null;
+	let tool = $state(null);
 
 	const saveHandler = async (data) => {
 		console.log(data);
@@ -53,7 +53,7 @@
 
 	onMount(async () => {
 		console.log('mounted');
-		const id = $page.url.searchParams.get('id');
+		const id = page.url.searchParams.get('id');
 
 		if (id) {
 			tool = await getToolById(localStorage.token, id).catch((error) => {

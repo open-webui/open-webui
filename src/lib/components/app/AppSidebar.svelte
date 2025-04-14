@@ -2,7 +2,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 
-	let selected = '';
+	let selected = $state('');
 </script>
 
 <div class="min-w-[4.5rem] bg-gray-50 dark:bg-gray-950 flex gap-2.5 flex-col pt-8">
@@ -16,7 +16,7 @@
 		<Tooltip content="Home" placement="right">
 			<button
 				class=" cursor-pointer {selected === 'home' ? 'rounded-2xl' : 'rounded-full'}"
-				on:click={() => {
+				onclick={() => {
 					selected = 'home';
 
 					if (window.electronAPI) {
@@ -44,7 +44,7 @@
 		{/if}
 		<button
 			class=" cursor-pointer bg-transparent"
-			on:click={() => {
+			onclick={() => {
 				selected = '';
 			}}
 		>

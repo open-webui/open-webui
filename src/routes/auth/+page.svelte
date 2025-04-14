@@ -1,9 +1,9 @@
-<script>
+<script lang="ts">
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, tick } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 
 	import { getBackendConfig } from '$lib/apis';
 	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
@@ -18,15 +18,15 @@
 
 	const i18n = getContext('i18n');
 
-	let loaded = false;
+	let loaded = $state(false);
 
-	let mode = $config?.features.enable_ldap ? 'ldap' : 'signin';
+	let mode = $state($config?.features.enable_ldap ? 'ldap' : 'signin');
 
-	let name = '';
-	let email = '';
-	let password = '';
+	let name = $state('');
+	let email = $state('');
+	let password = $state('');
 
-	let ldapUsername = '';
+	let ldapUsername = $state('');
 
 	const querystringValue = (key) => {
 		const querystring = window.location.search;
@@ -90,10 +90,10 @@
 	};
 
 	const checkOauthCallback = async () => {
-		if (!$page.url.hash) {
+		if (!page.url.hash) {
 			return;
 		}
-		const hash = $page.url.hash.substring(1);
+		const hash = page.url.hash.substring(1);
 		if (!hash) {
 			return;
 		}
@@ -113,7 +113,7 @@
 		await setSessionUser(sessionUser);
 	};
 
-	let onboarding = false;
+	let onboarding = $state(false);
 
 	async function setLogoImage() {
 		await tick();
@@ -173,7 +173,7 @@
 <div class="w-full h-screen max-h-[100dvh] text-white relative">
 	<div class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"></div>
 
-	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
+	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region"></div>
 
 	{#if loaded}
 		<div class="fixed m-10 z-50">
@@ -212,7 +212,7 @@
 					<div class="  my-auto pb-10 w-full dark:text-gray-100">
 						<form
 							class=" flex flex-col justify-center"
-							on:submit={(e) => {
+							onsubmit={(e) => {
 								e.preventDefault();
 								submitHandler();
 							}}
@@ -329,7 +329,7 @@
 												<button
 													class=" font-medium underline"
 													type="button"
-													on:click={() => {
+													onclick={() => {
 														if (mode === 'signin') {
 															mode = 'signup';
 														} else {
@@ -362,7 +362,7 @@
 								{#if $config?.oauth?.providers?.google}
 									<button
 										class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
-										on:click={() => {
+										onclick={() => {
 											window.location.href = `${WEBUI_BASE_URL}/oauth/google/login`;
 										}}
 									>
@@ -387,7 +387,7 @@
 								{#if $config?.oauth?.providers?.microsoft}
 									<button
 										class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
-										on:click={() => {
+										onclick={() => {
 											window.location.href = `${WEBUI_BASE_URL}/oauth/microsoft/login`;
 										}}
 									>
@@ -412,7 +412,7 @@
 								{#if $config?.oauth?.providers?.github}
 									<button
 										class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
-										on:click={() => {
+										onclick={() => {
 											window.location.href = `${WEBUI_BASE_URL}/oauth/github/login`;
 										}}
 									>
@@ -428,7 +428,7 @@
 								{#if $config?.oauth?.providers?.oidc}
 									<button
 										class="flex justify-center items-center bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
-										on:click={() => {
+										onclick={() => {
 											window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
 										}}
 									>
@@ -462,7 +462,7 @@
 								<button
 									class="flex justify-center items-center text-xs w-full text-center underline"
 									type="button"
-									on:click={() => {
+									onclick={() => {
 										if (mode === 'ldap')
 											mode = ($config?.onboarding ?? false) ? 'signup' : 'signin';
 										else mode = 'ldap';

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { getContext, onMount } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -10,29 +12,25 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 
-	export let onChange: Function = () => {};
 
-	export let accessRoles = ['read'];
-	export let accessControl = {};
 
-	export let allowPublic = true;
-
-	let selectedGroupId = '';
-	let groups = [];
-
-	$: if (!allowPublic && accessControl === null) {
-		accessControl = {
-			read: {
-				group_ids: [],
-				user_ids: []
-			},
-			write: {
-				group_ids: [],
-				user_ids: []
-			}
-		};
-		onChange(accessControl);
+	interface Props {
+		onChange?: Function;
+		accessRoles?: any;
+		accessControl?: any;
+		allowPublic?: boolean;
 	}
+
+	let {
+		onChange = () => {},
+		accessRoles = ['read'],
+		accessControl = $bindable({}),
+		allowPublic = true
+	}: Props = $props();
+
+	let selectedGroupId = $state('');
+	let groups = $state([]);
+
 
 	onMount(async () => {
 		groups = await getGroups(localStorage.token);
@@ -67,11 +65,7 @@
 		}
 	});
 
-	$: onChange(accessControl);
 
-	$: if (selectedGroupId) {
-		onSelectGroup();
-	}
 
 	const onSelectGroup = () => {
 		if (selectedGroupId !== '') {
@@ -80,6 +74,29 @@
 			selectedGroupId = '';
 		}
 	};
+	run(() => {
+		if (!allowPublic && accessControl === null) {
+			accessControl = {
+				read: {
+					group_ids: [],
+					user_ids: []
+				},
+				write: {
+					group_ids: [],
+					user_ids: []
+				}
+			};
+			onChange(accessControl);
+		}
+	});
+	run(() => {
+		onChange(accessControl);
+	});
+	run(() => {
+		if (selectedGroupId) {
+			onSelectGroup();
+		}
+	});
 </script>
 
 <div class=" rounded-lg flex flex-col gap-2">
@@ -128,7 +145,7 @@
 					id="models"
 					class="outline-hidden bg-transparent text-sm font-medium rounded-lg block w-fit pr-10 max-w-full placeholder-gray-400"
 					value={accessControl !== null ? 'private' : 'public'}
-					on:change={(e) => {
+					onchange={(e) => {
 						if (e.target.value === 'public') {
 							accessControl = null;
 						} else {
@@ -226,7 +243,7 @@
 									<button
 										class=""
 										type="button"
-										on:click={() => {
+										onclick={() => {
 											if (accessRoles.includes('write')) {
 												if (accessControl.write.group_ids.includes(group.id)) {
 													accessControl.write.group_ids = accessControl.write.group_ids.filter(
@@ -251,7 +268,7 @@
 									<button
 										class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
 										type="button"
-										on:click={() => {
+										onclick={() => {
 											accessControl.read.group_ids = accessControl.read.group_ids.filter(
 												(id) => id !== group.id
 											);

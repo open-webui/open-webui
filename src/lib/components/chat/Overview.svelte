@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { getContext, createEventDispatcher, onDestroy } from 'svelte';
 	import { useSvelteFlow, useNodesInitialized, useStore } from '@xyflow/svelte';
 
@@ -22,9 +24,9 @@
 	const { fitView, getViewport } = useSvelteFlow();
 	const nodesInitialized = useNodesInitialized();
 
-	export let history;
+	let { history } = $props();
 
-	let selectedMessageId = null;
+	let selectedMessageId = $state(null);
 
 	const nodes = writable([]);
 	const edges = writable([]);
@@ -33,13 +35,7 @@
 		custom: CustomNode
 	};
 
-	$: if (history) {
-		drawFlow();
-	}
 
-	$: if (history && history.currentId) {
-		focusNode();
-	}
 
 	const focusNode = async () => {
 		if (selectedMessageId === null) {
@@ -157,6 +153,16 @@
 		nodes.set([]);
 		edges.set([]);
 	});
+	run(() => {
+		if (history) {
+			drawFlow();
+		}
+	});
+	run(() => {
+		if (history && history.currentId) {
+			focusNode();
+		}
+	});
 </script>
 
 <div class="w-full h-full relative">
@@ -164,7 +170,7 @@
 		<div class="flex items-center gap-2.5">
 			<button
 				class="self-center p-0.5"
-				on:click={() => {
+				onclick={() => {
 					showOverview.set(false);
 				}}
 			>
@@ -174,7 +180,7 @@
 		</div>
 		<button
 			class="self-center p-0.5"
-			on:click={() => {
+			onclick={() => {
 				dispatch('close');
 				showOverview.set(false);
 			}}

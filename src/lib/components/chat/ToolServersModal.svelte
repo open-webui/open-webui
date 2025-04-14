@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { getContext, onMount } from 'svelte';
 	import { models, config, toolServers, tools } from '$lib/stores';
 
@@ -10,12 +12,18 @@
 	import Link from '../icons/Link.svelte';
 	import Collapsible from '../common/Collapsible.svelte';
 
-	export let show = false;
-	export let selectedToolIds = [];
+	interface Props {
+		show?: boolean;
+		selectedToolIds?: any;
+	}
 
-	let selectedTools = [];
+	let { show = $bindable(false), selectedToolIds = [] }: Props = $props();
 
-	$: selectedTools = ($tools ?? []).filter((tool) => selectedToolIds.includes(tool.id));
+	let selectedTools = $state([]);
+
+	run(() => {
+		selectedTools = ($tools ?? []).filter((tool) => selectedToolIds.includes(tool.id));
+	});
 
 	const i18n = getContext('i18n');
 </script>
@@ -26,7 +34,7 @@
 			<div class=" text-lg font-medium self-center">{$i18n.t('Available Tools')}</div>
 			<button
 				class="self-center"
-				on:click={() => {
+				onclick={() => {
 					show = false;
 				}}
 			>
@@ -105,19 +113,21 @@
 								</div>
 							</div>
 
-							<div slot="content">
-								{#each toolServer?.specs ?? [] as tool_spec}
-									<div class="my-1">
-										<div class="font-medium text-gray-800 dark:text-gray-100">
-											{tool_spec?.name}
-										</div>
+							{#snippet content()}
+														<div >
+									{#each toolServer?.specs ?? [] as tool_spec}
+										<div class="my-1">
+											<div class="font-medium text-gray-800 dark:text-gray-100">
+												{tool_spec?.name}
+											</div>
 
-										<div>
-											{tool_spec?.description}
+											<div>
+												{tool_spec?.description}
+											</div>
 										</div>
-									</div>
-								{/each}
-							</div>
+									{/each}
+								</div>
+													{/snippet}
 						</Collapsible>
 					{/each}
 				</div>

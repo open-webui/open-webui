@@ -15,20 +15,24 @@
 
 	const i18n = getContext('i18n');
 
-	export let saveHandler: Function;
-	export let saveSettings: Function;
+	interface Props {
+		saveHandler: Function;
+		saveSettings: Function;
+	}
 
-	let profileImageUrl = '';
-	let name = '';
+	let { saveHandler, saveSettings }: Props = $props();
 
-	let webhookUrl = '';
-	let showAPIKeys = false;
+	let profileImageUrl = $state('');
+	let name = $state('');
 
-	let JWTTokenCopied = false;
+	let webhookUrl = $state('');
+	let showAPIKeys = $state(false);
 
-	let APIKey = '';
-	let APIKeyCopied = false;
-	let profileImageInputElement: HTMLInputElement;
+	let JWTTokenCopied = $state(false);
+
+	let APIKey = $state('');
+	let APIKeyCopied = $state(false);
+	let profileImageInputElement: HTMLInputElement = $state();
 
 	const submitHandler = async () => {
 		if (name !== $user?.name) {
@@ -94,7 +98,7 @@
 			type="file"
 			hidden
 			accept="image/*"
-			on:change={(e) => {
+			onchange={(e) => {
 				const files = profileImageInputElement.files ?? [];
 				let reader = new FileReader();
 				reader.onload = (event) => {
@@ -159,7 +163,7 @@
 						<button
 							class="relative rounded-full dark:bg-gray-700"
 							type="button"
-							on:click={() => {
+							onclick={() => {
 								profileImageInputElement.click();
 							}}
 						>
@@ -195,7 +199,7 @@
 					<div>
 						<button
 							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850"
-							on:click={async () => {
+							onclick={async () => {
 								if (canvasPixelTest()) {
 									profileImageUrl = generateInitialsImage(name);
 								} else {
@@ -213,7 +217,7 @@
 
 						<button
 							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850"
-							on:click={async () => {
+							onclick={async () => {
 								const url = await getGravatarUrl(localStorage.token, $user?.email);
 
 								profileImageUrl = url;
@@ -222,7 +226,7 @@
 
 						<button
 							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg px-2 py-1"
-							on:click={async () => {
+							onclick={async () => {
 								profileImageUrl = '/user.png';
 							}}>{$i18n.t('Remove')}</button
 						>
@@ -276,7 +280,7 @@
 			<button
 				class=" text-xs font-medium text-gray-500"
 				type="button"
-				on:click={() => {
+				onclick={() => {
 					showAPIKeys = !showAPIKeys;
 				}}>{showAPIKeys ? $i18n.t('Hide') : $i18n.t('Show')}</button
 			>
@@ -294,7 +298,7 @@
 
 						<button
 							class="ml-1.5 px-1.5 py-1 dark:hover:bg-gray-850 transition rounded-lg"
-							on:click={() => {
+							onclick={() => {
 								copyToClipboard(localStorage.token);
 								JWTTokenCopied = true;
 								setTimeout(() => {
@@ -348,7 +352,7 @@
 
 								<button
 									class="ml-1.5 px-1.5 py-1 dark:hover:bg-gray-850 transition rounded-lg"
-									on:click={() => {
+									onclick={() => {
 										copyToClipboard(APIKey);
 										APIKeyCopied = true;
 										setTimeout(() => {
@@ -393,7 +397,7 @@
 								<Tooltip content={$i18n.t('Create new key')}>
 									<button
 										class=" px-1.5 py-1 dark:hover:bg-gray-850transition rounded-lg"
-										on:click={() => {
+										onclick={() => {
 											createAPIKeyHandler();
 										}}
 									>
@@ -416,7 +420,7 @@
 							{:else}
 								<button
 									class="flex gap-1.5 items-center font-medium px-3.5 py-1.5 rounded-lg bg-gray-100/70 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-850 transition"
-									on:click={() => {
+									onclick={() => {
 										createAPIKeyHandler();
 									}}
 								>
@@ -435,7 +439,7 @@
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
 			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-			on:click={async () => {
+			onclick={async () => {
 				const res = await submitHandler();
 
 				if (res) {

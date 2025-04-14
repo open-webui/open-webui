@@ -5,14 +5,18 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
-	export let onSubmit: Function = () => {};
-	export let show = false;
+	interface Props {
+		onSubmit?: Function;
+		show?: boolean;
+	}
 
-	let name = '';
-	let description = '';
+	let { onSubmit = () => {}, show = $bindable(false) }: Props = $props();
+
+	let name = $state('');
+	let description = $state('');
 	let userIds = [];
 
-	let loading = false;
+	let loading = $state(false);
 
 	const submitHandler = async () => {
 		loading = true;
@@ -45,7 +49,7 @@
 			</div>
 			<button
 				class="self-center"
-				on:click={() => {
+				onclick={() => {
 					show = false;
 				}}
 			>
@@ -66,7 +70,7 @@
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
-					on:submit={(e) => {
+					onsubmit={(e) => {
 						e.preventDefault();
 						submitHandler();
 					}}

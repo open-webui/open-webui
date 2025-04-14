@@ -2,7 +2,12 @@
 	import { onMount, getContext } from 'svelte';
 	import { WEBUI_NAME, showSidebar, functions } from '$lib/stores';
 	import MenuLines from '$lib/components/icons/MenuLines.svelte';
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
+	interface Props {
+		children?: import('svelte').Snippet;
+	}
+
+	let { children }: Props = $props();
 
 	const i18n = getContext('i18n');
 
@@ -26,7 +31,7 @@
 				<button
 					id="sidebar-toggle-button"
 					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-					on:click={() => {
+					onclick={() => {
 						showSidebar.set(!$showSidebar);
 					}}
 					aria-label="Toggle Sidebar"
@@ -42,14 +47,14 @@
 					class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent pt-1"
 				>
 					<a
-						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/home/notes')
+						class="min-w-fit rounded-full p-1.5 {page.url.pathname.includes('/home/notes')
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 						href="/playground/notes">{$i18n.t('Notes')}</a
 					>
 
 					<a
-						class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes('/playground/calendar')
+						class="min-w-fit rounded-full p-1.5 {page.url.pathname.includes('/playground/calendar')
 							? ''
 							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
 						href="/playground/completions">{$i18n.t('Calendar')}</a
@@ -60,6 +65,6 @@
 	</nav>
 
 	<div class=" flex-1 max-h-full overflow-y-auto">
-		<slot />
+		{@render children?.()}
 	</div>
 </div>

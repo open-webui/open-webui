@@ -1,4 +1,6 @@
-<script>
+<script lang="ts">
+	import { run, preventDefault } from 'svelte/legacy';
+
 	import { createEventDispatcher, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -8,17 +10,13 @@
 
 	const dispatch = createEventDispatcher();
 
-	export let show;
-	export let memory = {};
+	let { show = $bindable(), memory = {} } = $props();
 
 	const i18n = getContext('i18n');
 
-	let loading = false;
-	let content = '';
+	let loading = $state(false);
+	let content = $state('');
 
-	$: if (show) {
-		setContent();
-	}
 
 	const setContent = () => {
 		content = memory.content;
@@ -42,6 +40,11 @@
 
 		loading = false;
 	};
+	run(() => {
+		if (show) {
+			setContent();
+		}
+	});
 </script>
 
 <Modal bind:show size="sm">
@@ -52,7 +55,7 @@
 			</div>
 			<button
 				class="self-center"
-				on:click={() => {
+				onclick={() => {
 					show = false;
 				}}
 			>
@@ -73,9 +76,9 @@
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
-					on:submit|preventDefault={() => {
+					onsubmit={preventDefault(() => {
 						submitHandler();
-					}}
+					})}
 				>
 					<div class="">
 						<textarea
@@ -83,7 +86,7 @@
 							class=" bg-transparent w-full text-sm resize-none rounded-xl p-3 outline outline-1 outline-gray-100 dark:outline-gray-800"
 							rows="3"
 							placeholder={$i18n.t('Enter a detail about yourself for your LLMs to recall')}
-						/>
+						></textarea>
 
 						<div class="text-xs text-gray-500">
 							ⓘ {$i18n.t('Refer to yourself as "User" (e.g., "User is learning Spanish")')}

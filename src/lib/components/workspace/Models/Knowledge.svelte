@@ -3,8 +3,7 @@
 	import Selector from './Knowledge/Selector.svelte';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 
-	export let selectedKnowledge = [];
-	export let collections = [];
+	let { selectedKnowledge = $bindable([]), collections = [] } = $props();
 
 	const i18n = getContext('i18n');
 </script>

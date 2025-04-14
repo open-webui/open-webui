@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -8,42 +10,43 @@
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 
-	export let users = [];
-	export let userIds = [];
+	let { users = [], userIds = $bindable([]) } = $props();
 
-	let filteredUsers = [];
+	let filteredUsers = $state([]);
 
-	$: filteredUsers = users
-		.filter((user) => {
-			if (user?.role === 'admin') {
-				return false;
-			}
 
-			if (query === '') {
-				return true;
-			}
+	let query = $state('');
+	run(() => {
+		filteredUsers = users
+			.filter((user) => {
+				if (user?.role === 'admin') {
+					return false;
+				}
 
-			return (
-				user.name.toLowerCase().includes(query.toLowerCase()) ||
-				user.email.toLowerCase().includes(query.toLowerCase())
-			);
-		})
-		.sort((a, b) => {
-			const aUserIndex = userIds.indexOf(a.id);
-			const bUserIndex = userIds.indexOf(b.id);
+				if (query === '') {
+					return true;
+				}
 
-			// Compare based on userIds or fall back to alphabetical order
-			if (aUserIndex !== -1 && bUserIndex === -1) return -1; // 'a' has valid userId -> prioritize
-			if (bUserIndex !== -1 && aUserIndex === -1) return 1; // 'b' has valid userId -> prioritize
+				return (
+					user.name.toLowerCase().includes(query.toLowerCase()) ||
+					user.email.toLowerCase().includes(query.toLowerCase())
+				);
+			})
+			.sort((a, b) => {
+				const aUserIndex = userIds.indexOf(a.id);
+				const bUserIndex = userIds.indexOf(b.id);
 
-			// Both a and b are either in the userIds array or not, so we'll sort them by their indices
-			if (aUserIndex !== -1 && bUserIndex !== -1) return aUserIndex - bUserIndex;
+				// Compare based on userIds or fall back to alphabetical order
+				if (aUserIndex !== -1 && bUserIndex === -1) return -1; // 'a' has valid userId -> prioritize
+				if (bUserIndex !== -1 && aUserIndex === -1) return 1; // 'b' has valid userId -> prioritize
 
-			// If both are not in the userIds, fallback to alphabetical sorting by name
-			return a.name.localeCompare(b.name);
-		});
+				// Both a and b are either in the userIds array or not, so we'll sort them by their indices
+				if (aUserIndex !== -1 && bUserIndex !== -1) return aUserIndex - bUserIndex;
 
-	let query = '';
+				// If both are not in the userIds, fallback to alphabetical sorting by name
+				return a.name.localeCompare(b.name);
+			});
+	});
 </script>
 
 <div>

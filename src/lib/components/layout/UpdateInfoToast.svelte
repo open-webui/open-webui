@@ -7,10 +7,10 @@
 	import { WEBUI_VERSION } from '$lib/constants';
 	import XMark from '../icons/XMark.svelte';
 
-	export let version = {
+	let { version = {
 		current: WEBUI_VERSION,
 		latest: WEBUI_VERSION
-	};
+	} } = $props();
 </script>
 
 <div
@@ -29,7 +29,7 @@
 	<div class=" shrink-0 pr-1">
 		<button
 			class=" hover:text-blue-900 dark:hover:text-blue-300 transition"
-			on:click={() => {
+			onclick={() => {
 				dispatch('close');
 			}}
 		>

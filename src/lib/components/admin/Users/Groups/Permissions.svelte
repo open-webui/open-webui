@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -36,12 +38,8 @@
 		}
 	};
 
-	export let permissions = {};
+	let { permissions = $bindable({}) } = $props();
 
-	// Reactive statement to ensure all fields are present in `permissions`
-	$: {
-		permissions = fillMissingProperties(permissions, defaultPermissions);
-	}
 
 	function fillMissingProperties(obj: any, defaults: any) {
 		return {
@@ -55,6 +53,10 @@
 	}
 
 	onMount(() => {
+		permissions = fillMissingProperties(permissions, defaultPermissions);
+	});
+	// Reactive statement to ensure all fields are present in `permissions`
+	run(() => {
 		permissions = fillMissingProperties(permissions, defaultPermissions);
 	});
 </script>

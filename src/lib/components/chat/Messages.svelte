@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { v4 as uuidv4 } from 'uuid';
 	import {
 		chats,
@@ -24,35 +26,58 @@
 
 	const i18n = getContext('i18n');
 
-	export let className = 'h-full flex pt-8';
 
-	export let chatId = '';
-	export let user = $_user;
 
-	export let prompt;
-	export let history = {};
-	export let selectedModels;
-	export let atSelectedModel;
 
-	let messages = [];
+	let messages = $state([]);
 
-	export let sendPrompt: Function;
-	export let continueResponse: Function;
-	export let regenerateResponse: Function;
-	export let mergeResponses: Function;
 
-	export let chatActionHandler: Function;
-	export let showMessage: Function = () => {};
-	export let submitMessage: Function = () => {};
-	export let addMessages: Function = () => {};
 
-	export let readOnly = false;
 
-	export let bottomPadding = false;
-	export let autoScroll;
+	interface Props {
+		className?: string;
+		chatId?: string;
+		user?: any;
+		prompt: any;
+		history?: any;
+		selectedModels: any;
+		atSelectedModel: any;
+		sendPrompt: Function;
+		continueResponse: Function;
+		regenerateResponse: Function;
+		mergeResponses: Function;
+		chatActionHandler: Function;
+		showMessage?: Function;
+		submitMessage?: Function;
+		addMessages?: Function;
+		readOnly?: boolean;
+		bottomPadding?: boolean;
+		autoScroll: any;
+	}
 
-	let messagesCount = 20;
-	let messagesLoading = false;
+	let {
+		className = 'h-full flex pt-8',
+		chatId = '',
+		user = $_user,
+		prompt = $bindable(),
+		history = $bindable({}),
+		selectedModels,
+		atSelectedModel,
+		sendPrompt,
+		continueResponse,
+		regenerateResponse,
+		mergeResponses,
+		chatActionHandler,
+		showMessage = () => {},
+		submitMessage = () => {},
+		addMessages = () => {},
+		readOnly = false,
+		bottomPadding = false,
+		autoScroll = $bindable()
+	}: Props = $props();
+
+	let messagesCount = $state(20);
+	let messagesLoading = $state(false);
 
 	const loadMoreMessages = async () => {
 		// scroll slightly down to disable continuous loading
@@ -67,26 +92,7 @@
 		messagesLoading = false;
 	};
 
-	$: if (history.currentId) {
-		let _messages = [];
 
-		let message = history.messages[history.currentId];
-		while (message && _messages.length <= messagesCount) {
-			_messages.unshift({ ...message });
-			message = message.parentId !== null ? history.messages[message.parentId] : null;
-		}
-
-		messages = _messages;
-	} else {
-		messages = [];
-	}
-
-	$: if (autoScroll && bottomPadding) {
-		(async () => {
-			await tick();
-			scrollToBottom();
-		})();
-	}
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
@@ -386,6 +392,29 @@
 			}, 100);
 		}
 	};
+	run(() => {
+		if (history.currentId) {
+			let _messages = [];
+
+			let message = history.messages[history.currentId];
+			while (message && _messages.length <= messagesCount) {
+				_messages.unshift({ ...message });
+				message = message.parentId !== null ? history.messages[message.parentId] : null;
+			}
+
+			messages = _messages;
+		} else {
+			messages = [];
+		}
+	});
+	run(() => {
+		if (autoScroll && bottomPadding) {
+			(async () => {
+				await tick();
+				scrollToBottom();
+			})();
+		}
+	});
 </script>
 
 <div class={className}>
@@ -455,9 +484,9 @@
 						/>
 					{/each}
 				</div>
-				<div class="pb-12" />
+				<div class="pb-12"></div>
 				{#if bottomPadding}
-					<div class="  pb-6" />
+					<div class="  pb-6"></div>
 				{/if}
 			{/key}
 		</div>

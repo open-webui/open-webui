@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { onMount, tick, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -21,40 +23,29 @@
 	const i18n = getContext('i18n');
 	dayjs.extend(localizedFormat);
 
-	let loaded = false;
+	let loaded = $state(false);
 
-	let autoScroll = true;
+	let autoScroll = $state(true);
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
 
 	// let chatId = $page.params.id;
 	let showModelSelector = false;
-	let selectedModels = [''];
+	let selectedModels = $state(['']);
 
-	let chat = null;
-	let user = null;
+	let chat = $state(null);
+	let user = $state(null);
 
-	let title = '';
+	let title = $state('');
 	let files = [];
 
-	let messages = [];
-	let history = {
+	let messages = $state([]);
+	let history = $state({
 		messages: {},
 		currentId: null
-	};
+	});
 
-	$: messages = createMessagesList(history, history.currentId);
 
-	$: if ($page.params.id) {
-		(async () => {
-			if (await loadSharedChat()) {
-				await tick();
-				loaded = true;
-			} else {
-				await goto('/');
-			}
-		})();
-	}
 
 	//////////////////////////
 	// Web functions
@@ -140,6 +131,21 @@
 			goto(`/c/${res.id}`);
 		}
 	};
+	run(() => {
+		messages = createMessagesList(history, history.currentId);
+	});
+	run(() => {
+		if ($page.params.id) {
+			(async () => {
+				if (await loadSharedChat()) {
+					await tick();
+					loaded = true;
+				} else {
+					await goto('/');
+				}
+			})();
+		}
+	});
 </script>
 
 <svelte:head>
@@ -201,7 +207,7 @@
 				<div class="pb-5">
 					<button
 						class="px-4 py-2 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-						on:click={cloneSharedChat}
+						onclick={cloneSharedChat}
 					>
 						{$i18n.t('Clone Chat')}
 					</button>

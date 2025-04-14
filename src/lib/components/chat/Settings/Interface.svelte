@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { preventDefault } from 'svelte/legacy';
+
 	import { getBackendConfig } from '$lib/apis';
 	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { config, models, settings, user } from '$lib/stores';
@@ -11,60 +13,64 @@
 
 	const i18n = getContext('i18n');
 
-	export let saveSettings: Function;
+	interface Props {
+		saveSettings: Function;
+	}
 
-	let backgroundImageUrl = null;
-	let inputFiles = null;
-	let filesInputElement;
+	let { saveSettings }: Props = $props();
+
+	let backgroundImageUrl = $state(null);
+	let inputFiles = $state(null);
+	let filesInputElement = $state();
 
 	// Addons
-	let titleAutoGenerate = true;
-	let autoTags = true;
+	let titleAutoGenerate = $state(true);
+	let autoTags = $state(true);
 
-	let responseAutoCopy = false;
-	let widescreenMode = false;
+	let responseAutoCopy = $state(false);
+	let widescreenMode = $state(false);
 	let splitLargeChunks = false;
-	let scrollOnBranchChange = true;
-	let userLocation = false;
+	let scrollOnBranchChange = $state(true);
+	let userLocation = $state(false);
 
 	// Interface
 	let defaultModelId = '';
-	let showUsername = false;
-	let notificationSound = true;
+	let showUsername = $state(false);
+	let notificationSound = $state(true);
 
-	let detectArtifacts = true;
+	let detectArtifacts = $state(true);
 
-	let richTextInput = true;
-	let promptAutocomplete = false;
+	let richTextInput = $state(true);
+	let promptAutocomplete = $state(false);
 
-	let largeTextAsFile = false;
+	let largeTextAsFile = $state(false);
 
-	let landingPageMode = '';
-	let chatBubble = true;
-	let chatDirection: 'LTR' | 'RTL' | 'auto' = 'auto';
-	let ctrlEnterToSend = false;
+	let landingPageMode = $state('');
+	let chatBubble = $state(true);
+	let chatDirection: 'LTR' | 'RTL' | 'auto' = $state('auto');
+	let ctrlEnterToSend = $state(false);
 
-	let collapseCodeBlocks = false;
-	let expandDetails = false;
+	let collapseCodeBlocks = $state(false);
+	let expandDetails = $state(false);
 
-	let imageCompression = false;
-	let imageCompressionSize = {
+	let imageCompression = $state(false);
+	let imageCompressionSize = $state({
 		width: '',
 		height: ''
-	};
+	});
 
 	// Admin - Show Update Available Toast
-	let showUpdateToast = true;
-	let showChangelog = true;
+	let showUpdateToast = $state(true);
+	let showChangelog = $state(true);
 
-	let showEmojiInCall = false;
-	let voiceInterruption = false;
-	let hapticFeedback = false;
+	let showEmojiInCall = $state(false);
+	let voiceInterruption = $state(false);
+	let hapticFeedback = $state(false);
 
-	let webSearch = null;
+	let webSearch = $state(null);
 
-	let iframeSandboxAllowSameOrigin = false;
-	let iframeSandboxAllowForms = false;
+	let iframeSandboxAllowSameOrigin = $state(false);
+	let iframeSandboxAllowForms = $state(false);
 
 	const toggleExpandDetails = () => {
 		expandDetails = !expandDetails;
@@ -307,10 +313,10 @@
 
 <form
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
-	on:submit|preventDefault={() => {
+	onsubmit={preventDefault(() => {
 		updateInterfaceHandler();
 		dispatch('save');
-	}}
+	})}
 >
 	<input
 		bind:this={filesInputElement}
@@ -318,7 +324,7 @@
 		type="file"
 		hidden
 		accept="image/*"
-		on:change={() => {
+		onchange={() => {
 			let reader = new FileReader();
 			reader.onload = (event) => {
 				let originalImageUrl = `${event.target.result}`;
@@ -350,7 +356,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleLandingPageMode();
 						}}
 						type="button"
@@ -370,7 +376,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleChatBubble();
 						}}
 						type="button"
@@ -393,7 +399,7 @@
 
 						<button
 							class="p-1 px-3 text-xs flex rounded-sm transition"
-							on:click={() => {
+							onclick={() => {
 								toggleShowUsername();
 							}}
 							type="button"
@@ -414,7 +420,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleWidescreenMode();
 						}}
 						type="button"
@@ -434,7 +440,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={toggleChangeChatDirection}
+						onclick={toggleChangeChatDirection}
 						type="button"
 					>
 						{#if chatDirection === 'LTR'}
@@ -456,7 +462,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleNotificationSound();
 						}}
 						type="button"
@@ -479,7 +485,7 @@
 
 						<button
 							class="p-1 px-3 text-xs flex rounded-sm transition"
-							on:click={() => {
+							onclick={() => {
 								toggleShowUpdateToast();
 							}}
 							type="button"
@@ -501,7 +507,7 @@
 
 						<button
 							class="p-1 px-3 text-xs flex rounded-sm transition"
-							on:click={() => {
+							onclick={() => {
 								toggleShowChangelog();
 							}}
 							type="button"
@@ -524,7 +530,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleTitleAutoGenerate();
 						}}
 						type="button"
@@ -544,7 +550,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleAutoTags();
 						}}
 						type="button"
@@ -566,7 +572,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleDetectArtifacts();
 						}}
 						type="button"
@@ -588,7 +594,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleResponseAutoCopy();
 						}}
 						type="button"
@@ -610,7 +616,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleRichTextInput();
 						}}
 						type="button"
@@ -633,7 +639,7 @@
 
 						<button
 							class="p-1 px-3 text-xs flex rounded-sm transition"
-							on:click={() => {
+							onclick={() => {
 								togglePromptAutocomplete();
 							}}
 							type="button"
@@ -656,7 +662,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleLargeTextAsFile();
 						}}
 						type="button"
@@ -676,7 +682,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleCollapseCodeBlocks();
 						}}
 						type="button"
@@ -696,7 +702,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleExpandDetails();
 						}}
 						type="button"
@@ -718,7 +724,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							if (backgroundImageUrl !== null) {
 								backgroundImageUrl = null;
 								saveSettings({ backgroundImageUrl });
@@ -743,7 +749,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleUserLocation();
 						}}
 						type="button"
@@ -765,7 +771,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleHapticFeedback();
 						}}
 						type="button"
@@ -809,7 +815,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded transition"
-						on:click={() => {
+						onclick={() => {
 							togglectrlEnterToSend();
 						}}
 						type="button"
@@ -831,7 +837,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							togglesScrollOnBranchChange();
 						}}
 						type="button"
@@ -851,7 +857,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleWebSearch();
 						}}
 						type="button"
@@ -871,7 +877,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleIframeSandboxAllowSameOrigin();
 						}}
 						type="button"
@@ -891,7 +897,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleIframeSandboxAllowForms();
 						}}
 						type="button"
@@ -913,7 +919,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleVoiceInterruption();
 						}}
 						type="button"
@@ -933,7 +939,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleEmojiInCall();
 						}}
 						type="button"
@@ -955,7 +961,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleImageCompression();
 						}}
 						type="button"

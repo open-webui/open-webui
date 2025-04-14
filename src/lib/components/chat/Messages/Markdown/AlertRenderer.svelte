@@ -1,4 +1,4 @@
-<script lang="ts" context="module">
+<script lang="ts" module>
 	import { marked, type Token } from 'marked';
 
 	type AlertType = 'NOTE' | 'TIP' | 'IMPORTANT' | 'WARNING' | 'CAUTION';
@@ -71,12 +71,25 @@
 	import MarkdownTokens from './MarkdownTokens.svelte';
 	import type { ComponentType } from 'svelte';
 
-	export let token: Token;
-	export let alert: AlertData;
-	export let id = '';
-	export let tokenIdx = 0;
-	export let onTaskClick: ((event: MouseEvent) => void) | undefined = undefined;
-	export let onSourceClick: ((event: MouseEvent) => void) | undefined = undefined;
+	interface Props {
+		token: Token;
+		alert: AlertData;
+		id?: string;
+		tokenIdx?: number;
+		onTaskClick?: ((event: MouseEvent) => void) | undefined;
+		onSourceClick?: ((event: MouseEvent) => void) | undefined;
+	}
+
+	let {
+		token,
+		alert,
+		id = '',
+		tokenIdx = 0,
+		onTaskClick = undefined,
+		onSourceClick = undefined
+	}: Props = $props();
+
+	const SvelteComponent = $derived(alertStyles[alert.type].icon);
 </script>
 
 <!--
@@ -101,7 +114,7 @@ Renders the following Markdown as alerts:
 -->
 <div class={`border-l-4 pl-2.5 ${alertStyles[alert.type].border} my-0.5`}>
 	<div class="{alertStyles[alert.type].text} items-center flex gap-1 py-1.5">
-		<svelte:component this={alertStyles[alert.type].icon} className="inline-block size-4" />
+		<SvelteComponent className="inline-block size-4" />
 		<span class=" font-medium">{alert.type}</span>
 	</div>
 	<div class="pb-2">

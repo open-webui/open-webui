@@ -5,10 +5,9 @@
 
 	const i18n = getContext('i18n');
 
-	export let filters = [];
-	export let selectedFilterIds = [];
+	let { filters = [], selectedFilterIds = $bindable([]) } = $props();
 
-	let _filters = {};
+	let _filters = $state({});
 
 	onMount(() => {
 		_filters = filters.reduce((acc, filter) => {

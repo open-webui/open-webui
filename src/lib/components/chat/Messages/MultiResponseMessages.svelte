@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import dayjs from 'dayjs';
 	import { onMount, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
@@ -20,43 +22,61 @@
 	const i18n = getContext('i18n');
 	dayjs.extend(localizedFormat);
 
-	export let chatId;
-	export let history;
-	export let messageId;
+	interface Props {
+		chatId: any;
+		history: any;
+		messageId: any;
+		isLastMessage: any;
+		readOnly?: boolean;
+		updateChat: Function;
+		editMessage: Function;
+		saveMessage: Function;
+		rateMessage: Function;
+		actionMessage: Function;
+		submitMessage: Function;
+		deleteMessage: Function;
+		continueResponse: Function;
+		regenerateResponse: Function;
+		mergeResponses: Function;
+		addMessages: Function;
+		triggerScroll: Function;
+	}
 
-	export let isLastMessage;
-	export let readOnly = false;
-
-	export let updateChat: Function;
-	export let editMessage: Function;
-	export let saveMessage: Function;
-	export let rateMessage: Function;
-	export let actionMessage: Function;
-
-	export let submitMessage: Function;
-	export let deleteMessage: Function;
-
-	export let continueResponse: Function;
-	export let regenerateResponse: Function;
-	export let mergeResponses: Function;
-
-	export let addMessages: Function;
-
-	export let triggerScroll: Function;
+	let {
+		chatId,
+		history = $bindable(),
+		messageId,
+		isLastMessage,
+		readOnly = false,
+		updateChat,
+		editMessage,
+		saveMessage,
+		rateMessage,
+		actionMessage,
+		submitMessage,
+		deleteMessage,
+		continueResponse,
+		regenerateResponse,
+		mergeResponses,
+		addMessages,
+		triggerScroll
+	}: Props = $props();
 
 	const dispatch = createEventDispatcher();
 
 	let currentMessageId;
-	let parentMessage;
-	let groupedMessageIds = {};
-	let groupedMessageIdsIdx = {};
+	let parentMessage = $state();
+	let groupedMessageIds = $state({});
+	let groupedMessageIdsIdx = $state({});
 
-	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
-	$: if (history.messages) {
-		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
-			message = JSON.parse(JSON.stringify(history.messages[messageId]));
+	let message = $state(JSON.parse(JSON.stringify(history.messages[messageId])));
+	run(() => {
+		if (history.messages) {
+			if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
+				message = JSON.parse(JSON.stringify(history.messages[messageId]));
+			}
 		}
-	}
+	});
 
 	const gotoMessage = async (modelIdx, messageIdx) => {
 		// Clamp messageIdx to ensure it's within valid range
@@ -215,8 +235,8 @@
 		>
 			{#each Object.keys(groupedMessageIds) as modelIdx}
 				{#if groupedMessageIdsIdx[modelIdx] !== undefined && groupedMessageIds[modelIdx].messageIds.length > 0}
-					<!-- svelte-ignore a11y-no-static-element-interactions -->
-					<!-- svelte-ignore a11y-click-events-have-key-events -->
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					{@const _messageId =
 						groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]]}
 
@@ -229,7 +249,7 @@
 							: `border-gray-100 dark:border-gray-850 border-dashed ${
 									$mobile ? 'min-w-full' : 'min-w-80'
 								}`} transition-all p-5 rounded-2xl"
-						on:click={async () => {
+						onclick={async () => {
 							if (messageId != _messageId) {
 								let currentMessageId = _messageId;
 								let messageChildrenIds = history.messages[currentMessageId].childrenIds;
@@ -324,7 +344,7 @@
 									class="{true
 										? 'visible'
 										: 'invisible group-hover:visible'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
-									on:click={() => {
+									onclick={() => {
 										mergeResponsesHandler();
 									}}
 								>

@@ -1,4 +1,6 @@
-<script>
+<script lang="ts">
+	import { run, preventDefault } from 'svelte/legacy';
+
 	import { getContext, onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 
@@ -10,36 +12,42 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 
-	let formElement = null;
+	let formElement = $state(null);
 	let loading = false;
-	let showConfirm = false;
+	let showConfirm = $state(false);
 
-	export let onSave = () => {};
 
-	export let edit = false;
-	export let clone = false;
 
-	export let id = '';
-	export let name = '';
-	export let meta = {
-		description: ''
-	};
-	export let content = '';
-	let _content = '';
-
-	$: if (content) {
-		updateContent();
+	interface Props {
+		onSave?: any;
+		edit?: boolean;
+		clone?: boolean;
+		id?: string;
+		name?: string;
+		meta?: any;
+		content?: string;
 	}
+
+	let {
+		onSave = () => {},
+		edit = false,
+		clone = false,
+		id = $bindable(''),
+		name = $bindable(''),
+		meta = $bindable({
+		description: ''
+	}),
+		content = $bindable('')
+	}: Props = $props();
+	let _content = $state('');
+
 
 	const updateContent = () => {
 		_content = content;
 	};
 
-	$: if (name && !edit && !clone) {
-		id = name.replace(/\s+/g, '_').toLowerCase();
-	}
 
-	let codeEditor;
+	let codeEditor = $state();
 	let boilerplate = `"""
 title: Example Filter
 author: open-webui
@@ -283,6 +291,16 @@ class Pipe:
 			}
 		}
 	};
+	run(() => {
+		if (content) {
+			updateContent();
+		}
+	});
+	run(() => {
+		if (name && !edit && !clone) {
+			id = name.replace(/\s+/g, '_').toLowerCase();
+		}
+	});
 </script>
 
 <div class=" flex flex-col justify-between w-full overflow-y-auto h-full">
@@ -290,13 +308,13 @@ class Pipe:
 		<form
 			bind:this={formElement}
 			class=" flex flex-col max-h-[100dvh] h-full"
-			on:submit|preventDefault={() => {
+			onsubmit={preventDefault(() => {
 				if (edit) {
 					submitHandler();
 				} else {
 					showConfirm = true;
 				}
-			}}
+			})}
 		>
 			<div class="flex flex-col flex-1 overflow-auto h-0 rounded-lg">
 				<div class="w-full mb-2 flex flex-col gap-0.5">
@@ -305,7 +323,7 @@ class Pipe:
 							<Tooltip content={$i18n.t('Back')}>
 								<button
 									class="w-full text-left text-sm py-1.5 px-1 rounded-lg dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-gray-850"
-									on:click={() => {
+									onclick={() => {
 										goto('/admin/functions');
 									}}
 									type="button"

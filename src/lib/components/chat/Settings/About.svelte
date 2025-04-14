@@ -10,13 +10,13 @@
 
 	const i18n = getContext('i18n');
 
-	let ollamaVersion = '';
+	let ollamaVersion = $state('');
 
-	let updateAvailable = null;
-	let version = {
+	let updateAvailable = $state(null);
+	let version = $state({
 		current: '',
 		latest: ''
-	};
+	});
 
 	const checkForVersionUpdates = async () => {
 		updateAvailable = null;
@@ -72,7 +72,7 @@
 
 					<button
 						class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
-						on:click={() => {
+						onclick={() => {
 							showChangelog.set(true);
 						}}
 					>
@@ -82,7 +82,7 @@
 
 				<button
 					class=" text-xs px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-lg font-medium"
-					on:click={() => {
+					onclick={() => {
 						checkForVersionUpdates();
 					}}
 				>

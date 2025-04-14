@@ -20,16 +20,28 @@
 
 	const i18n = getContext('i18n');
 
-	export let id = null;
-	export let channel = null;
-	export let messages = [];
-	export let top = false;
-	export let thread = false;
 
-	export let onLoad: Function = () => {};
-	export let onThread: Function = () => {};
+	interface Props {
+		id?: any;
+		channel?: any;
+		messages?: any;
+		top?: boolean;
+		thread?: boolean;
+		onLoad?: Function;
+		onThread?: Function;
+	}
 
-	let messagesLoading = false;
+	let {
+		id = null,
+		channel = null,
+		messages = $bindable([]),
+		top = false,
+		thread = false,
+		onLoad = () => {},
+		onThread = () => {}
+	}: Props = $props();
+
+	let messagesLoading = $state(false);
 
 	const loadMoreMessages = async () => {
 		// scroll slightly down to disable continuous loading
@@ -192,6 +204,6 @@
 			/>
 		{/each}
 
-		<div class="pb-6" />
+		<div class="pb-6"></div>
 	</div>
 {/if}

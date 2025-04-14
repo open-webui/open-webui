@@ -12,9 +12,13 @@
 
 	const i18n = getContext('i18n');
 
-	export let show = false;
+	interface Props {
+		show?: boolean;
+	}
 
-	let changelog = null;
+	let { show = $bindable(false) }: Props = $props();
+
+	let changelog = $state(null);
 
 	onMount(async () => {
 		const res = await getChangelog();
@@ -32,7 +36,7 @@
 			</div>
 			<button
 				class="self-center"
-				on:click={() => {
+				onclick={() => {
 					localStorage.version = $config.version;
 					show = false;
 				}}
@@ -51,7 +55,7 @@
 		</div>
 		<div class="flex items-center mt-1">
 			<div class="text-sm dark:text-gray-200">{$i18n.t('Release Notes')}</div>
-			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700" />
+			<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-200 dark:bg-gray-700"></div>
 			<div class="text-sm dark:text-gray-200">
 				v{WEBUI_VERSION}
 			</div>
@@ -105,7 +109,7 @@
 		</div>
 		<div class="flex justify-end pt-3 text-sm font-medium">
 			<button
-				on:click={async () => {
+				onclick={async () => {
 					localStorage.version = $config.version;
 					await settings.set({ ...$settings, ...{ version: $config.version } });
 					await updateUserSettings(localStorage.token, { ui: $settings });

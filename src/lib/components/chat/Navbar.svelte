@@ -32,17 +32,29 @@
 
 	const i18n = getContext('i18n');
 
-	export let initNewChat: Function;
-	export let title: string = $WEBUI_NAME;
-	export let shareEnabled: boolean = false;
 
-	export let chat;
-	export let history;
-	export let selectedModels;
-	export let showModelSelector = true;
+	interface Props {
+		initNewChat: Function;
+		title?: string;
+		shareEnabled?: boolean;
+		chat: any;
+		history: any;
+		selectedModels: any;
+		showModelSelector?: boolean;
+	}
 
-	let showShareChatModal = false;
-	let showDownloadChatModal = false;
+	let {
+		initNewChat,
+		title = $WEBUI_NAME,
+		shareEnabled = false,
+		chat,
+		history,
+		selectedModels = $bindable(),
+		showModelSelector = true
+	}: Props = $props();
+
+	let showShareChatModal = $state(false);
+	let showDownloadChatModal = $state(false);
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
@@ -63,7 +75,7 @@
 					<button
 						id="sidebar-toggle-button"
 						class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-						on:click={() => {
+						onclick={() => {
 							showSidebar.set(!$showSidebar);
 						}}
 						aria-label="Toggle Sidebar"
@@ -124,7 +136,7 @@
 					<Tooltip content={$i18n.t('Controls')}>
 						<button
 							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							on:click={async () => {
+							onclick={async () => {
 								await showControls.set(!$showControls);
 							}}
 							aria-label="Controls"
@@ -141,7 +153,7 @@
 							class=" flex {$showSidebar
 								? 'md:hidden'
 								: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							on:click={() => {
+							onclick={() => {
 								initNewChat();
 							}}
 							aria-label="New Chat"

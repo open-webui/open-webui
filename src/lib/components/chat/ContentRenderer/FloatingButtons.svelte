@@ -14,19 +14,28 @@
 	import Markdown from '../Messages/Markdown.svelte';
 	import Skeleton from '../Messages/Skeleton.svelte';
 
-	export let id = '';
-	export let model = null;
-	export let messages = [];
-	export let onAdd = () => {};
+	interface Props {
+		id?: string;
+		model?: any;
+		messages?: any;
+		onAdd?: any;
+	}
 
-	let floatingInput = false;
+	let {
+		id = '',
+		model = null,
+		messages = [],
+		onAdd = () => {}
+	}: Props = $props();
 
-	let selectedText = '';
-	let floatingInputValue = '';
+	let floatingInput = $state(false);
 
-	let prompt = '';
-	let responseContent = null;
-	let responseDone = false;
+	let selectedText = $state('');
+	let floatingInputValue = $state('');
+
+	let prompt = $state('');
+	let responseContent = $state(null);
+	let responseDone = $state(false);
 
 	const autoScroll = async () => {
 		// Scroll to bottom only if the scroll is at the bottom give 50px buffer
@@ -232,7 +241,7 @@
 			>
 				<button
 					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm flex items-center gap-1 min-w-fit"
-					on:click={async () => {
+					onclick={async () => {
 						selectedText = window.getSelection().toString();
 						floatingInput = true;
 
@@ -251,7 +260,7 @@
 				</button>
 				<button
 					class="px-1 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-sm flex items-center gap-1 min-w-fit"
-					on:click={() => {
+					onclick={() => {
 						selectedText = window.getSelection().toString();
 						explainHandler();
 					}}
@@ -271,7 +280,7 @@
 					class="ml-5 bg-transparent outline-hidden w-full flex-1 text-sm"
 					placeholder={$i18n.t('Ask a question')}
 					bind:value={floatingInputValue}
-					on:keydown={(e) => {
+					onkeydown={(e) => {
 						if (e.key === 'Enter') {
 							askHandler();
 						}
@@ -283,7 +292,7 @@
 						class="{floatingInputValue !== ''
 							? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 							: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 m-0.5 self-center"
-						on:click={() => {
+						onclick={() => {
 							askHandler();
 						}}
 					>
@@ -327,7 +336,7 @@
 						<div class="flex justify-end pt-3 text-sm font-medium">
 							<button
 								class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
-								on:click={addHandler}
+								onclick={addHandler}
 							>
 								{$i18n.t('Add')}
 							</button>

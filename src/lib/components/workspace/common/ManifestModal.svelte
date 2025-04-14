@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { preventDefault } from 'svelte/legacy';
+
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
@@ -8,8 +10,12 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	export let show = false;
-	export let manifest = {};
+	interface Props {
+		show?: boolean;
+		manifest?: any;
+	}
+
+	let { show = $bindable(false), manifest = {} }: Props = $props();
 </script>
 
 <Modal size="sm" bind:show>
@@ -18,7 +24,7 @@
 			<div class=" text-lg font-medium self-center">{$i18n.t('Show your support!')}</div>
 			<button
 				class="self-center"
-				on:click={() => {
+				onclick={() => {
 					show = false;
 				}}
 			>
@@ -39,9 +45,9 @@
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
-					on:submit|preventDefault={() => {
+					onsubmit={preventDefault(() => {
 						show = false;
-					}}
+					})}
 				>
 					<div class="px-1 text-sm">
 						<div class="my-2">

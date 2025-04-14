@@ -1,7 +1,11 @@
 <script lang="ts">
 	import Info from '$lib/components/icons/Info.svelte';
 
-	export let content = '';
+	interface Props {
+		content?: string;
+	}
+
+	let { content = '' }: Props = $props();
 </script>
 
 <div class="flex my-2 gap-2.5 border px-4 py-3 border-red-600/10 bg-red-600/10 rounded-lg">

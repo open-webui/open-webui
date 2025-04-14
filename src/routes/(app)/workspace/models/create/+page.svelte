@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
@@ -54,7 +54,7 @@
 		}
 	};
 
-	let model = null;
+	let model = $state(null);
 
 	onMount(async () => {
 		window.addEventListener('message', async (event) => {

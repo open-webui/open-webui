@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { preventDefault } from 'svelte/legacy';
+
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 
@@ -31,21 +33,21 @@
 	};
 
 	// External
-	let OLLAMA_BASE_URLS = [''];
-	let OLLAMA_API_CONFIGS = {};
+	let OLLAMA_BASE_URLS = $state(['']);
+	let OLLAMA_API_CONFIGS = $state({});
 
-	let OPENAI_API_KEYS = [''];
-	let OPENAI_API_BASE_URLS = [''];
-	let OPENAI_API_CONFIGS = {};
+	let OPENAI_API_KEYS = $state(['']);
+	let OPENAI_API_BASE_URLS = $state(['']);
+	let OPENAI_API_CONFIGS = $state({});
 
-	let ENABLE_OPENAI_API: null | boolean = null;
-	let ENABLE_OLLAMA_API: null | boolean = null;
+	let ENABLE_OPENAI_API: null | boolean = $state(null);
+	let ENABLE_OLLAMA_API: null | boolean = $state(null);
 
-	let directConnectionsConfig = null;
+	let directConnectionsConfig = $state(null);
 
-	let pipelineUrls = {};
-	let showAddOpenAIConnectionModal = false;
-	let showAddOllamaConnectionModal = false;
+	let pipelineUrls = $state({});
+	let showAddOpenAIConnectionModal = $state(false);
+	let showAddOllamaConnectionModal = $state(false);
 
 	const updateOpenAIHandler = async () => {
 		if (ENABLE_OPENAI_API !== null) {
@@ -213,7 +215,7 @@
 	onSubmit={addOllamaConnectionHandler}
 />
 
-<form class="flex flex-col h-full justify-between text-sm" on:submit|preventDefault={submitHandler}>
+<form class="flex flex-col h-full justify-between text-sm" onsubmit={preventDefault(submitHandler)}>
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
 		{#if ENABLE_OPENAI_API !== null && ENABLE_OLLAMA_API !== null && directConnectionsConfig !== null}
 			<div class="my-2">
@@ -243,7 +245,7 @@
 								<Tooltip content={$i18n.t(`Add Connection`)}>
 									<button
 										class="px-1"
-										on:click={() => {
+										onclick={() => {
 											showAddOpenAIConnectionModal = true;
 										}}
 										type="button"
@@ -310,7 +312,7 @@
 							<Tooltip content={$i18n.t(`Add Connection`)}>
 								<button
 									class="px-1"
-									on:click={() => {
+									onclick={() => {
 										showAddOllamaConnectionModal = true;
 									}}
 									type="button"

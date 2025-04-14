@@ -1,14 +1,16 @@
 <script lang="ts">
+	import { preventDefault } from 'svelte/legacy';
+
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { updateUserPassword } from '$lib/apis/auths';
 
 	const i18n = getContext('i18n');
 
-	let show = false;
-	let currentPassword = '';
-	let newPassword = '';
-	let newPasswordConfirm = '';
+	let show = $state(false);
+	let currentPassword = $state('');
+	let newPassword = $state('');
+	let newPasswordConfirm = $state('');
 
 	const updatePasswordHandler = async () => {
 		if (newPassword === newPasswordConfirm) {
@@ -38,16 +40,16 @@
 
 <form
 	class="flex flex-col text-sm"
-	on:submit|preventDefault={() => {
+	onsubmit={preventDefault(() => {
 		updatePasswordHandler();
-	}}
+	})}
 >
 	<div class="flex justify-between items-center text-sm">
 		<div class="  font-medium">{$i18n.t('Change Password')}</div>
 		<button
 			class=" text-xs font-medium text-gray-500"
 			type="button"
-			on:click={() => {
+			onclick={() => {
 				show = !show;
 			}}>{show ? $i18n.t('Hide') : $i18n.t('Show')}</button
 		>

@@ -14,11 +14,15 @@
 		citations: $i18n.t('Displays citations in the response')
 	};
 
-	export let capabilities: {
+	interface Props {
+		capabilities?: {
 		vision?: boolean;
 		usage?: boolean;
 		citations?: boolean;
-	} = {};
+	};
+	}
+
+	let { capabilities = $bindable({}) }: Props = $props();
 </script>
 
 <div>

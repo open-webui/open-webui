@@ -9,7 +9,7 @@
 	import { createNewPrompt, getPrompts } from '$lib/apis/prompts';
 	import PromptEditor from '$lib/components/workspace/Prompts/PromptEditor.svelte';
 
-	let prompt = null;
+	let prompt = $state(null);
 	const onSubmit = async (_prompt) => {
 		const prompt = await createNewPrompt(localStorage.token, _prompt).catch((error) => {
 			toast.error(`${error}`);

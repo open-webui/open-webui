@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
@@ -429,7 +429,7 @@
 					{/if}
 				</div>
 
-				<button
+				<div
 					class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 					on:pointerup={(e) => {
 						e.stopPropagation();
@@ -453,7 +453,7 @@
 							<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
 						</button>
 					</FolderMenu>
-				</button>
+				</div>
 			</button>
 		</div>
 

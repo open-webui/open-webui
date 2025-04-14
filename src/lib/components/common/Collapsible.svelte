@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { decode } from 'html-entities';
 	import { v4 as uuidv4 } from 'uuid';
 
@@ -23,11 +25,8 @@
 		}
 	}
 
-	// Assuming $i18n.languages is an array of language codes
-	$: loadLocale($i18n.languages);
 
 	const dispatch = createEventDispatcher();
-	$: dispatch('change', open);
 
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
@@ -39,21 +38,39 @@
 	import Markdown from '../chat/Messages/Markdown.svelte';
 	import Image from './Image.svelte';
 
-	export let open = false;
 
-	export let className = '';
-	export let buttonClassName =
-		'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
 
-	export let id = '';
-	export let title = null;
-	export let attributes = null;
 
-	export let chevron = false;
-	export let grow = false;
 
-	export let disabled = false;
-	export let hide = false;
+	interface Props {
+		open?: boolean;
+		className?: string;
+		buttonClassName?: string;
+		id?: string;
+		title?: any;
+		attributes?: any;
+		chevron?: boolean;
+		grow?: boolean;
+		disabled?: boolean;
+		hide?: boolean;
+		children?: import('svelte').Snippet;
+		content?: import('svelte').Snippet;
+	}
+
+	let {
+		open = $bindable(false),
+		className = '',
+		buttonClassName = 'w-fit text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition',
+		id = '',
+		title = null,
+		attributes = null,
+		chevron = false,
+		grow = false,
+		disabled = false,
+		hide = false,
+		children,
+		content
+	}: Props = $props();
 
 	const collapsibleId = uuidv4();
 
@@ -80,15 +97,22 @@
 			return str;
 		}
 	}
+	// Assuming $i18n.languages is an array of language codes
+	run(() => {
+		loadLocale($i18n.languages);
+	});
+	run(() => {
+		dispatch('change', open);
+	});
 </script>
 
 <div {id} class={className}>
 	{#if title !== null}
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<!-- svelte-ignore a11y-click-events-have-key-events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<div
 			class="{buttonClassName} cursor-pointer"
-			on:pointerup={() => {
+			onpointerup={() => {
 				if (!disabled) {
 					open = !open;
 				}
@@ -159,11 +183,11 @@
 			</div>
 		</div>
 	{:else}
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<!-- svelte-ignore a11y-click-events-have-key-events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<div
 			class="{buttonClassName} cursor-pointer"
-			on:pointerup={() => {
+			onpointerup={() => {
 				if (!disabled) {
 					open = !open;
 				}
@@ -171,7 +195,7 @@
 		>
 			<div>
 				<div class="flex items-start justify-between">
-					<slot />
+					{@render children?.()}
 
 					{#if chevron}
 						<div class="flex self-start translate-y-1">
@@ -188,11 +212,11 @@
 					{#if open && !hide}
 						<div
 							transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}
-							on:pointerup={(e) => {
+							onpointerup={(e) => {
 								e.stopPropagation();
 							}}
 						>
-							<slot name="content" />
+							{@render content?.()}
 						</div>
 					{/if}
 				{/if}
@@ -226,7 +250,7 @@
 							/>
 						{/if}
 					{:else}
-						<slot name="content" />
+						{@render content?.()}
 					{/if}
 				</div>
 			{/if}
@@ -248,7 +272,7 @@
 	{:else if !grow}
 		{#if open && !hide}
 			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-				<slot name="content" />
+				{@render content?.()}
 			</div>
 		{/if}
 	{/if}

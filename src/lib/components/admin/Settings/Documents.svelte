@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { preventDefault } from 'svelte/legacy';
+
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
@@ -31,23 +33,23 @@
 
 	const i18n = getContext('i18n');
 
-	let updateEmbeddingModelLoading = false;
-	let updateRerankingModelLoading = false;
+	let updateEmbeddingModelLoading = $state(false);
+	let updateRerankingModelLoading = $state(false);
 
-	let showResetConfirm = false;
-	let showResetUploadDirConfirm = false;
-	let showReindexConfirm = false;
+	let showResetConfirm = $state(false);
+	let showResetUploadDirConfirm = $state(false);
+	let showReindexConfirm = $state(false);
 
-	let embeddingEngine = '';
-	let embeddingModel = '';
-	let embeddingBatchSize = 1;
-	let rerankingModel = '';
+	let embeddingEngine = $state('');
+	let embeddingModel = $state('');
+	let embeddingBatchSize = $state(1);
+	let rerankingModel = $state('');
 
-	let OpenAIUrl = '';
-	let OpenAIKey = '';
+	let OpenAIUrl = $state('');
+	let OpenAIKey = $state('');
 
-	let OllamaUrl = '';
-	let OllamaKey = '';
+	let OllamaUrl = $state('');
+	let OllamaKey = $state('');
 
 	let querySettings = {
 		template: '',
@@ -57,7 +59,7 @@
 		hybrid: false
 	};
 
-	let RAGConfig = null;
+	let RAGConfig = $state(null);
 
 	const embeddingModelUpdateHandler = async () => {
 		if (embeddingEngine === '' && embeddingModel.split('/').length - 1 > 1) {
@@ -266,9 +268,9 @@
 
 <form
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
-	on:submit|preventDefault={() => {
+	onsubmit={preventDefault(() => {
 		submitHandler();
-	}}
+	})}
 >
 	{#if RAGConfig}
 		<div class=" space-y-2.5 overflow-y-scroll scrollbar-hidden h-full pr-1.5">
@@ -438,7 +440,7 @@
 										class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 										bind:value={embeddingEngine}
 										placeholder="Select an embedding model engine"
-										on:change={(e) => {
+										onchange={(e) => {
 											if (e.target.value === 'ollama') {
 												embeddingModel = '';
 											} else if (e.target.value === 'openai') {
@@ -514,7 +516,7 @@
 										{#if embeddingEngine === ''}
 											<button
 												class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
-												on:click={() => {
+												onclick={() => {
 													embeddingModelUpdateHandler();
 												}}
 												disabled={updateEmbeddingModelLoading}
@@ -649,7 +651,7 @@
 											</div>
 											<button
 												class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
-												on:click={() => {
+												onclick={() => {
 													rerankingModelUpdateHandler();
 												}}
 												disabled={updateRerankingModelLoading}
@@ -865,7 +867,7 @@
 						<div class="flex items-center relative">
 							<button
 								class="text-xs"
-								on:click={() => {
+								onclick={() => {
 									showResetUploadDirConfirm = true;
 								}}
 							>
@@ -881,7 +883,7 @@
 						<div class="flex items-center relative">
 							<button
 								class="text-xs"
-								on:click={() => {
+								onclick={() => {
 									showResetConfirm = true;
 								}}
 							>
@@ -896,7 +898,7 @@
 						<div class="flex items-center relative">
 							<button
 								class="text-xs"
-								on:click={() => {
+								onclick={() => {
 									showReindexConfirm = true;
 								}}
 							>

@@ -5,10 +5,9 @@
 
 	const i18n = getContext('i18n');
 
-	export let actions = [];
-	export let selectedActionIds = [];
+	let { actions = [], selectedActionIds = $bindable([]) } = $props();
 
-	let _actions = {};
+	let _actions = $state({});
 
 	onMount(() => {
 		_actions = actions.reduce((acc, action) => {

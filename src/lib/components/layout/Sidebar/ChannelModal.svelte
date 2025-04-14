@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run, preventDefault } from 'svelte/legacy';
+
 	import { getContext, createEventDispatcher, onMount } from 'svelte';
 	import { createNewChannel, deleteChannelById } from '$lib/apis/channels';
 
@@ -11,21 +13,33 @@
 	import { goto } from '$app/navigation';
 	const i18n = getContext('i18n');
 
-	export let show = false;
-	export let onSubmit: Function = () => {};
-	export let onUpdate: Function = () => {};
 
-	export let channel = null;
-	export let edit = false;
-
-	let name = '';
-	let accessControl = {};
-
-	let loading = false;
-
-	$: if (name) {
-		name = name.replace(/\s/g, '-').toLocaleLowerCase();
+	interface Props {
+		show?: boolean;
+		onSubmit?: Function;
+		onUpdate?: Function;
+		channel?: any;
+		edit?: boolean;
 	}
+
+	let {
+		show = $bindable(false),
+		onSubmit = () => {},
+		onUpdate = () => {},
+		channel = null,
+		edit = false
+	}: Props = $props();
+
+	let name = $state('');
+	let accessControl = $state({});
+
+	let loading = $state(false);
+
+	run(() => {
+		if (name) {
+			name = name.replace(/\s/g, '-').toLocaleLowerCase();
+		}
+	});
 
 	const submitHandler = async () => {
 		loading = true;
@@ -42,11 +56,13 @@
 		accessControl = channel.access_control;
 	};
 
-	$: if (channel) {
-		init();
-	}
+	run(() => {
+		if (channel) {
+			init();
+		}
+	});
 
-	let showDeleteConfirmDialog = false;
+	let showDeleteConfirmDialog = $state(false);
 
 	const deleteHandler = async () => {
 		showDeleteConfirmDialog = false;
@@ -80,7 +96,7 @@
 			</div>
 			<button
 				class="self-center"
-				on:click={() => {
+				onclick={() => {
 					show = false;
 				}}
 			>
@@ -103,9 +119,9 @@
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
-					on:submit|preventDefault={() => {
+					onsubmit={preventDefault(() => {
 						submitHandler();
-					}}
+					})}
 				>
 					<div class="flex flex-col w-full mt-2">
 						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Channel Name')}</div>
@@ -134,7 +150,7 @@
 							<button
 								class="px-3.5 py-1.5 text-sm font-medium dark:bg-black dark:hover:bg-black/90 dark:text-white bg-white text-black hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
 								type="button"
-								on:click={() => {
+								onclick={() => {
 									showDeleteConfirmDialog = true;
 								}}
 							>

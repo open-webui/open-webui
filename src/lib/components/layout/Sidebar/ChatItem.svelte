@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { toast } from 'svelte-sonner';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import { onMount, getContext, createEventDispatcher, tick, onDestroy } from 'svelte';
@@ -39,21 +41,28 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Document from '$lib/components/icons/Document.svelte';
 
-	export let className = '';
 
-	export let id;
-	export let title;
 
-	export let selected = false;
-	export let shiftKey = false;
+	interface Props {
+		className?: string;
+		id: any;
+		title: any;
+		selected?: boolean;
+		shiftKey?: boolean;
+	}
+
+	let {
+		className = '',
+		id,
+		title,
+		selected = false,
+		shiftKey = false
+	}: Props = $props();
 
 	let chat = null;
 
-	let mouseOver = false;
-	let draggable = false;
-	$: if (mouseOver) {
-		loadChat();
-	}
+	let mouseOver = $state(false);
+	let draggable = $state(false);
 
 	const loadChat = async () => {
 		if (!chat) {
@@ -63,10 +72,10 @@
 		}
 	};
 
-	let showShareChatModal = false;
-	let confirmEdit = false;
+	let showShareChatModal = $state(false);
+	let confirmEdit = $state(false);
 
-	let chatTitle = title;
+	let chatTitle = $state(title);
 
 	const editChatTitle = async (id, title) => {
 		if (title === '') {
@@ -137,11 +146,11 @@
 		node.focus();
 	};
 
-	let itemElement;
+	let itemElement = $state();
 
-	let dragged = false;
-	let x = 0;
-	let y = 0;
+	let dragged = $state(false);
+	let x = $state(0);
+	let y = $state(0);
 
 	const dragImage = new Image();
 	dragImage.src =
@@ -199,7 +208,7 @@
 		}
 	});
 
-	let showDeleteConfirm = false;
+	let showDeleteConfirm = $state(false);
 
 	const chatTitleInputKeydownHandler = (e) => {
 		if (e.key === 'Enter') {
@@ -213,6 +222,11 @@
 			chatTitle = '';
 		}
 	};
+	run(() => {
+		if (mouseOver) {
+			loadChat();
+		}
+	});
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={id} />
@@ -261,7 +275,7 @@
 				bind:value={chatTitle}
 				id="chat-title-input-{id}"
 				class=" bg-transparent w-full outline-hidden mr-10"
-				on:keydown={chatTitleInputKeydownHandler}
+				onkeydown={chatTitleInputKeydownHandler}
 			/>
 		</div>
 	{:else}
@@ -273,24 +287,24 @@
 					? 'bg-gray-100 dark:bg-gray-950'
 					: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 			href="/c/{id}"
-			on:click={() => {
+			onclick={() => {
 				dispatch('select');
 
 				if ($mobile) {
 					showSidebar.set(false);
 				}
 			}}
-			on:dblclick={() => {
+			ondblclick={() => {
 				chatTitle = title;
 				confirmEdit = true;
 			}}
-			on:mouseenter={(e) => {
+			onmouseenter={(e) => {
 				mouseOver = true;
 			}}
-			on:mouseleave={(e) => {
+			onmouseleave={(e) => {
 				mouseOver = false;
 			}}
-			on:focus={(e) => {}}
+			onfocus={(e) => {}}
 			draggable="false"
 		>
 			<div class=" flex self-center flex-1 w-full">
@@ -301,7 +315,7 @@
 		</a>
 	{/if}
 
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="
         {id === $chatId || confirmEdit
@@ -314,10 +328,10 @@
 			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
 
               to-transparent"
-		on:mouseenter={(e) => {
+		onmouseenter={(e) => {
 			mouseOver = true;
 		}}
-		on:mouseleave={(e) => {
+		onmouseleave={(e) => {
 			mouseOver = false;
 		}}
 	>
@@ -328,7 +342,7 @@
 				<Tooltip content={$i18n.t('Confirm')}>
 					<button
 						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
+						onclick={() => {
 							editChatTitle(id, chatTitle);
 							confirmEdit = false;
 							chatTitle = '';
@@ -341,7 +355,7 @@
 				<Tooltip content={$i18n.t('Cancel')}>
 					<button
 						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
+						onclick={() => {
 							confirmEdit = false;
 							chatTitle = '';
 						}}
@@ -355,7 +369,7 @@
 				<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 					<button
 						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
+						onclick={() => {
 							archiveChatHandler(id);
 						}}
 						type="button"
@@ -367,7 +381,7 @@
 				<Tooltip content={$i18n.t('Delete')}>
 					<button
 						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
+						onclick={() => {
 							deleteChatHandler(id);
 						}}
 						type="button"
@@ -415,7 +429,7 @@
 					<button
 						aria-label="Chat Menu"
 						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
+						onclick={() => {
 							dispatch('select');
 						}}
 					>
@@ -437,7 +451,7 @@
 					<button
 						id="delete-chat-button"
 						class="hidden"
-						on:click={() => {
+						onclick={() => {
 							showDeleteConfirm = true;
 						}}
 					>

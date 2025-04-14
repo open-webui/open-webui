@@ -1,4 +1,6 @@
-<script>
+<script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -15,11 +17,15 @@
 	import Models from './Commands/Models.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 
-	export let prompt = '';
-	export let files = [];
+	interface Props {
+		prompt?: string;
+		files?: any;
+	}
 
-	let loading = false;
-	let commandElement = null;
+	let { prompt = $bindable(''), files = $bindable([]) }: Props = $props();
+
+	let loading = $state(false);
+	let commandElement = $state(null);
 
 	export const selectUp = () => {
 		commandElement?.selectUp();
@@ -29,15 +35,10 @@
 		commandElement?.selectDown();
 	};
 
-	let command = '';
-	$: command = prompt?.split('\n').pop()?.split(' ')?.pop() ?? '';
+	let command = $state('');
 
-	let show = false;
-	$: show = ['/', '#', '@'].includes(command?.charAt(0)) || '\\#' === command.slice(0, 2);
+	let show = $state(false);
 
-	$: if (show) {
-		init();
-	}
 
 	const init = async () => {
 		loading = true;
@@ -51,6 +52,17 @@
 		]);
 		loading = false;
 	};
+	run(() => {
+		command = prompt?.split('\n').pop()?.split(' ')?.pop() ?? '';
+	});
+	run(() => {
+		show = ['/', '#', '@'].includes(command?.charAt(0)) || '\\#' === command.slice(0, 2);
+	});
+	run(() => {
+		if (show) {
+			init();
+		}
+	});
 </script>
 
 {#if show}

@@ -6,11 +6,20 @@
 
 	const i18n = getContext('i18n');
 
-	export let tags;
-	export let deleteTag: Function;
-	export let addTag: Function;
 
-	export let show = false;
+	interface Props {
+		tags: any;
+		deleteTag: Function;
+		addTag: Function;
+		show?: boolean;
+	}
+
+	let {
+		tags,
+		deleteTag,
+		addTag,
+		show = $bindable(false)
+	}: Props = $props();
 </script>
 
 <Modal bind:show size="xs">

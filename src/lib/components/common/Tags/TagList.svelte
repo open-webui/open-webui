@@ -5,7 +5,7 @@
 	import Badge from '../Badge.svelte';
 	const dispatch = createEventDispatcher();
 
-	export let tags = [];
+	let { tags = [] } = $props();
 </script>
 
 {#each tags as tag}
@@ -19,7 +19,7 @@
 			<div class="absolute invisible right-0.5 group-hover/tags:visible transition">
 				<button
 					class="rounded-full border bg-white dark:bg-gray-700 h-full flex self-center cursor-pointer"
-					on:click={() => {
+					onclick={() => {
 						dispatch('delete', tag.name);
 					}}
 					type="button"

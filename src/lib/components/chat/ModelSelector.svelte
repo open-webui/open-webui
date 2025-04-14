@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { models, showSettings, settings, user, mobile, config } from '$lib/stores';
 	import { onMount, tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -8,10 +10,17 @@
 	import { updateUserSettings } from '$lib/apis/users';
 	const i18n = getContext('i18n');
 
-	export let selectedModels = [''];
-	export let disabled = false;
+	interface Props {
+		selectedModels?: any;
+		disabled?: boolean;
+		showSetDefault?: boolean;
+	}
 
-	export let showSetDefault = true;
+	let {
+		selectedModels = $bindable(['']),
+		disabled = false,
+		showSetDefault = true
+	}: Props = $props();
 
 	const saveDefaultModel = async () => {
 		const hasEmptyModel = selectedModels.filter((it) => it === '');
@@ -25,11 +34,13 @@
 		toast.success($i18n.t('Default model updated'));
 	};
 
-	$: if (selectedModels.length > 0 && $models.length > 0) {
-		selectedModels = selectedModels.map((model) =>
-			$models.map((m) => m.id).includes(model) ? model : ''
-		);
-	}
+	run(() => {
+		if (selectedModels.length > 0 && $models.length > 0) {
+			selectedModels = selectedModels.map((model) =>
+				$models.map((m) => m.id).includes(model) ? model : ''
+			);
+		}
+	});
 </script>
 
 <div class="flex flex-col w-full items-start">
@@ -49,7 +60,7 @@
 							? ($user?.permissions?.chat?.temporary ?? true) &&
 								!($user?.permissions?.chat?.temporary_enforced ?? false)
 							: true}
-						bind:value={selectedModel}
+						bind:value={selectedModels[selectedModelIdx]}
 					/>
 				</div>
 			</div>
@@ -63,7 +74,7 @@
 							<button
 								class=" "
 								{disabled}
-								on:click={() => {
+								onclick={() => {
 									selectedModels = [...selectedModels, ''];
 								}}
 								aria-label="Add Model"
@@ -88,7 +99,7 @@
 						<Tooltip content={$i18n.t('Remove Model')}>
 							<button
 								{disabled}
-								on:click={() => {
+								onclick={() => {
 									selectedModels.splice(selectedModelIdx, 1);
 									selectedModels = selectedModels;
 								}}
@@ -115,6 +126,6 @@
 
 {#if showSetDefault}
 	<div class=" absolute text-left mt-[1px] ml-1 text-[0.7rem] text-gray-500 font-primary">
-		<button on:click={saveDefaultModel}> {$i18n.t('Set as default')}</button>
+		<button onclick={saveDefaultModel}> {$i18n.t('Set as default')}</button>
 	</div>
 {/if}

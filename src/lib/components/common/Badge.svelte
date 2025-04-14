@@ -1,6 +1,10 @@
 <script lang="ts">
-	export let type = 'info';
-	export let content = '';
+	interface Props {
+		type?: string;
+		content?: string;
+	}
+
+	let { type = 'info', content = '' }: Props = $props();
 
 	const classNames: Record<string, string> = {
 		info: 'bg-blue-500/20 text-blue-700 dark:text-blue-200 ',

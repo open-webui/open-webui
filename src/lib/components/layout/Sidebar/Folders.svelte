@@ -1,20 +1,24 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 	import RecursiveFolder from './RecursiveFolder.svelte';
-	export let folders = {};
+	let { folders = {} } = $props();
 
-	let folderList = [];
+	let folderList = $state([]);
 	// Get the list of folders that have no parent, sorted by name alphabetically
-	$: folderList = Object.keys(folders)
-		.filter((key) => folders[key].parent_id === null)
-		.sort((a, b) =>
-			folders[a].name.localeCompare(folders[b].name, undefined, {
-				numeric: true,
-				sensitivity: 'base'
-			})
-		);
+	run(() => {
+		folderList = Object.keys(folders)
+			.filter((key) => folders[key].parent_id === null)
+			.sort((a, b) =>
+				folders[a].name.localeCompare(folders[b].name, undefined, {
+					numeric: true,
+					sensitivity: 'base'
+				})
+			);
+	});
 </script>
 
 {#each folderList as folderId (folderId)}

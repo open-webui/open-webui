@@ -6,8 +6,12 @@
 	import Badge from '$lib/components/common/Badge.svelte';
 	const i18n = getContext('i18n');
 
-	export let show = false;
-	export let codeExecution = null;
+	interface Props {
+		show?: boolean;
+		codeExecution?: any;
+	}
+
+	let { show = $bindable(false), codeExecution = $bindable(null) }: Props = $props();
 </script>
 
 <Modal size="lg" bind:show>
@@ -44,7 +48,7 @@
 			</div>
 			<button
 				class="self-center"
-				on:click={() => {
+				onclick={() => {
 					show = false;
 					codeExecution = null;
 				}}

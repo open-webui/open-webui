@@ -1,17 +1,25 @@
 <script lang="ts">
+	import { run } from 'svelte/legacy';
+
 	import { showSidebar } from '$lib/stores';
 	import AddFilesPlaceholder from '$lib/components/AddFilesPlaceholder.svelte';
 
-	export let show = false;
-	let overlayElement = null;
-
-	$: if (show && overlayElement) {
-		document.body.appendChild(overlayElement);
-		document.body.style.overflow = 'hidden';
-	} else if (overlayElement) {
-		document.body.removeChild(overlayElement);
-		document.body.style.overflow = 'unset';
+	interface Props {
+		show?: boolean;
 	}
+
+	let { show = false }: Props = $props();
+	let overlayElement = $state(null);
+
+	run(() => {
+		if (show && overlayElement) {
+			document.body.appendChild(overlayElement);
+			document.body.style.overflow = 'hidden';
+		} else if (overlayElement) {
+			document.body.removeChild(overlayElement);
+			document.body.style.overflow = 'unset';
+		}
+	});
 </script>
 
 {#if show}

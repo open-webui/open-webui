@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { preventDefault } from 'svelte/legacy';
+
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 	import { getCodeExecutionConfig, setCodeExecutionConfig } from '$lib/apis/configs';
@@ -11,9 +13,13 @@
 
 	const i18n = getContext('i18n');
 
-	export let saveHandler: Function;
+	interface Props {
+		saveHandler: Function;
+	}
 
-	let config = null;
+	let { saveHandler }: Props = $props();
+
+	let config = $state(null);
 
 	let engines = ['pyodide', 'jupyter'];
 
@@ -32,10 +38,10 @@
 
 <form
 	class="flex flex-col h-full justify-between space-y-3 text-sm"
-	on:submit|preventDefault={async () => {
+	onsubmit={preventDefault(async () => {
 		await submitHandler();
 		saveHandler();
-	}}
+	})}
 >
 	<div class=" space-y-3 overflow-y-scroll scrollbar-hidden h-full">
 		{#if config}
