@@ -13,7 +13,7 @@ export enum ButtonType {
  */
 const stateMap = {
 	'primary': {
-		'all': 'border-2 outline-offset-4 rounded-3xl',
+		'all': 'border-2 outline-offset-4 rounded-full',
 		'stateless': 'bg-blue-700 border-blue-700 text-white',
 		'hover': 'hover:bg-blue-400 hover:border-blue-400 hover:text-white',
 		'active': 'active:bg-blue-500 active:border-blue-500 active:text-white',
@@ -23,7 +23,7 @@ const stateMap = {
 		'disabled-pressed': 'bg-blue-800 border-blue-800 text-white cursor-default',
 	},
 	'secondary': {
-		'all': 'border-2 outline-offset-4',
+		'all': 'border-2 outline-offset-4 rounded-full',
 		'stateless': 'bg-transparent border-blue-700 text-blue-700',
 		'hover': 'hover:bg-blue-400 hover:border-blue-400 hover:text-white',
 		'active': 'active:bg-blue-500 active:border-blue-500 active:text-white',
@@ -33,7 +33,7 @@ const stateMap = {
 		'disabled-pressed': 'bg-blue-800 border-blue-800 text-white cursor-default',
 	},
 	'tertiary': {
-		'all': 'border-2 border-transparent text-blue-700 outline-offset-4 rounded-3xl',
+		'all': 'border-2 border-transparent text-blue-700 outline-offset-4 rounded-full',
 		'stateless': 'bg-transparent',
 		'hover': 'hover:bg-blue-300 hover:bg-opacity-20',
 		'active': 'active:bg-blue-300 active:bg-opacity-10',
@@ -43,7 +43,7 @@ const stateMap = {
 		'disabled-pressed': 'bg-blue-100 cursor-default',
 	},
 	'caution': {
-		'all': 'border-2 border-white text-red-500',
+		'all': 'border-2 border-white text-red-500 rounded-full',
 		'stateless': ' outline-offset-4',
 		'hover': 'hover:bg-red-200 hover:bg-opacity-50',
 		'active': 'active:bg-red-200 active:bg-opacity-65',
@@ -54,7 +54,7 @@ const stateMap = {
 	},
 	'special': {
 		// bg-ai-main-500 hover:bg-ai-main-700
-		'all': 'border-2 bg-purple-700 border-purple-700 text-white',
+		'all': 'border-2 bg-purple-700 border-purple-700 text-white rounded-full',
 		'stateless': 'outline-offset-4',
 		'hover': 'hover:bg-purple-600',
 		'active': 'hover:bg-purple-600',
