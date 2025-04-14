@@ -586,7 +586,7 @@ class SafeWebBaseLoader(WebBaseLoader):
         return [document async for document in self.alazy_load()]
 
 
-class SafeEmptyLoader(WebBaseLoader):
+class SafeEmptyLoader(BaseLoader):
     """
     Loader that does not load any data. Directly use snippets from the web search result.
     """
@@ -615,18 +615,6 @@ class SafeEmptyLoader(WebBaseLoader):
         for document in self.documents:
             yield document
 
-    async def alazy_load(self) -> AsyncIterator[Document]:
-        """Return an empty async iterator."""
-        for document in self.documents:
-            yield document
-
-    async def aload(self) -> list[Document]:
-        """Return a list of Document objects."""
-        return [document async for document in self.alazy_load()]
-
-    def load(self) -> list[Document]:
-        """Return a list of Document objects."""
-        return [document for document in self.lazy_load()]
 
 def get_web_loader(
     urls: Union[str, Sequence[str]],
