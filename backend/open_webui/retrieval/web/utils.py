@@ -591,8 +591,7 @@ class SafeEmptyLoader(BaseLoader):
     Loader that does not load any data. Directly use snippets from the web search result.
     """
 
-    def __init__(self, search_results: List[SearchResult], *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, search_results: List[SearchResult]):
         self.documents: List[Document] = []
         for result in search_results:
             if not isinstance(result, SearchResult):
@@ -623,6 +622,10 @@ def get_web_loader(
     trust_env: bool = False,
     search_results: Optional[List[SearchResult]] = None,
 ):
+    if BYPASS_WEB_LOADING_FOR_WEB_SEARCH.value:
+        # If web loading is bypassed, use SafeEmptyLoader
+        return SafeEmptyLoader(search_results=search_results)
+
     # Check if the URLs are valid
     safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
 
@@ -633,11 +636,6 @@ def get_web_loader(
         "continue_on_failure": True,
         "trust_env": trust_env,
     }
-
-    if BYPASS_WEB_LOADING_FOR_WEB_SEARCH.value:
-        # If web loading is bypassed, use SafeEmptyLoader
-        web_loader_args["search_results"] = search_results
-        return SafeEmptyLoader(**web_loader_args)
 
     if WEB_LOADER_ENGINE.value == "" or WEB_LOADER_ENGINE.value == "safe_web":
         WebLoaderClass = SafeWebBaseLoader
