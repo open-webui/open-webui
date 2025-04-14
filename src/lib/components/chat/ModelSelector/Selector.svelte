@@ -634,7 +634,7 @@
 						{/if}
 					</button>
 				{:else}
-					<div>
+					<div class="">
 						<div class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-100">
 							{$i18n.t('No results found')}
 						</div>
@@ -778,6 +778,8 @@
 						</div>
 					</button>
 				</div>
+			{:else if filteredItems.length === 0}
+				<div class="mb-3"></div>
 			{/if}
 
 			<div class="hidden w-[42rem]" />
