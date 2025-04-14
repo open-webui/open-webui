@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 
 from open_webui.models.auths import Auths
+from open_webui.models.groups import Groups
 from open_webui.models.chats import Chats
 from open_webui.models.users import (
     UserModel,
@@ -17,7 +18,10 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
+
 from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user
+from open_webui.utils.access_control import get_permissions
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -45,7 +49,7 @@ async def get_users(
 
 @router.get("/groups")
 async def get_user_groups(user=Depends(get_verified_user)):
-    return Users.get_user_groups(user.id)
+    return Groups.get_groups_by_member_id(user.id)
 
 
 ############################
@@ -54,8 +58,12 @@ async def get_user_groups(user=Depends(get_verified_user)):
 
 
 @router.get("/permissions")
-async def get_user_permissisions(user=Depends(get_verified_user)):
-    return Users.get_user_groups(user.id)
+async def get_user_permissisions(request: Request, user=Depends(get_verified_user)):
+    user_permissions = get_permissions(
+        user.id, request.app.state.config.USER_PERMISSIONS
+    )
+
+    return user_permissions
 
 
 ############################
@@ -68,15 +76,28 @@ class WorkspacePermissions(BaseModel):
     tools: bool = False
 
 
+class SharingPermissions(BaseModel):
+    public_models: bool = True
+    public_knowledge: bool = True
+    public_prompts: bool = True
+    public_tools: bool = True
+
+
 class ChatPermissions(BaseModel):
     controls: bool = True
     file_upload: bool = True
     delete: bool = True
     edit: bool = True
+    stt: bool = True
+    tts: bool = True
+    call: bool = True
+    multiple_models: bool = True
     temporary: bool = True
+    temporary_enforced: bool = False
 
 
 class FeaturesPermissions(BaseModel):
+    direct_tool_servers: bool = False
     web_search: bool = True
     image_generation: bool = True
     code_interpreter: bool = True
@@ -84,15 +105,19 @@ class FeaturesPermissions(BaseModel):
 
 class UserPermissions(BaseModel):
     workspace: WorkspacePermissions
+    sharing: SharingPermissions
     chat: ChatPermissions
     features: FeaturesPermissions
 
 
 @router.get("/default/permissions", response_model=UserPermissions)
-async def get_user_permissions(request: Request, user=Depends(get_admin_user)):
+async def get_default_user_permissions(request: Request, user=Depends(get_admin_user)):
     return {
         "workspace": WorkspacePermissions(
             **request.app.state.config.USER_PERMISSIONS.get("workspace", {})
+        ),
+        "sharing": SharingPermissions(
+            **request.app.state.config.USER_PERMISSIONS.get("sharing", {})
         ),
         "chat": ChatPermissions(
             **request.app.state.config.USER_PERMISSIONS.get("chat", {})
@@ -104,7 +129,7 @@ async def get_user_permissions(request: Request, user=Depends(get_admin_user)):
 
 
 @router.post("/default/permissions")
-async def update_user_permissions(
+async def update_default_user_permissions(
     request: Request, form_data: UserPermissions, user=Depends(get_admin_user)
 ):
     request.app.state.config.USER_PERMISSIONS = form_data.model_dump()

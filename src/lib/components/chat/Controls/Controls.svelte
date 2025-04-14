@@ -30,44 +30,44 @@
 		</button>
 	</div>
 
-	{#if $user.role === 'admin' || $user?.permissions.chat?.controls}
-		<div class=" dark:text-gray-200 text-sm font-primary py-0.5 px-0.5">
-			{#if chatFiles.length > 0}
-				<Collapsible title={$i18n.t('Files')} open={true} buttonClassName="w-full">
-					<div class="flex flex-col gap-1 mt-1.5" slot="content">
-						{#each chatFiles as file, fileIdx}
-							<FileItem
-								className="w-full"
-								item={file}
-								edit={true}
-								url={file?.url ? file.url : null}
-								name={file.name}
-								type={file.type}
-								size={file?.size}
-								dismissible={true}
-								on:dismiss={() => {
-									// Remove the file from the chatFiles array
+	<div class=" dark:text-gray-200 text-sm font-primary py-0.5 px-0.5">
+		{#if chatFiles.length > 0}
+			<Collapsible title={$i18n.t('Files')} open={true} buttonClassName="w-full">
+				<div class="flex flex-col gap-1 mt-1.5" slot="content">
+					{#each chatFiles as file, fileIdx}
+						<FileItem
+							className="w-full"
+							item={file}
+							edit={true}
+							url={file?.url ? file.url : null}
+							name={file.name}
+							type={file.type}
+							size={file?.size}
+							dismissible={true}
+							on:dismiss={() => {
+								// Remove the file from the chatFiles array
 
-									chatFiles.splice(fileIdx, 1);
-									chatFiles = chatFiles;
-								}}
-								on:click={() => {
-									console.log(file);
-								}}
-							/>
-						{/each}
-					</div>
-				</Collapsible>
-
-				<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
-			{/if}
-
-			<Collapsible bind:open={showValves} title={$i18n.t('Valves')} buttonClassName="w-full">
-				<div class="text-sm" slot="content">
-					<Valves show={showValves} />
+								chatFiles.splice(fileIdx, 1);
+								chatFiles = chatFiles;
+							}}
+							on:click={() => {
+								console.log(file);
+							}}
+						/>
+					{/each}
 				</div>
 			</Collapsible>
 
+			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
+		{/if}
+
+		<Collapsible bind:open={showValves} title={$i18n.t('Valves')} buttonClassName="w-full">
+			<div class="text-sm" slot="content">
+				<Valves show={showValves} />
+			</div>
+		</Collapsible>
+
+		{#if $user?.role === 'admin' || $user?.permissions.chat?.controls}
 			<hr class="my-2 border-gray-50 dark:border-gray-700/10" />
 
 			<Collapsible title={$i18n.t('System Prompt')} open={true} buttonClassName="w-full">
@@ -90,10 +90,6 @@
 					</div>
 				</div>
 			</Collapsible>
-		</div>
-	{:else}
-		<div class="text-sm dark:text-gray-300 text-center py-2 px-10">
-			{$i18n.t('You do not have permission to access this feature.')}
-		</div>
-	{/if}
+		{/if}
+	</div>
 </div>

@@ -27,6 +27,7 @@
 
 	export let siblings;
 
+	export let gotoMessage: Function;
 	export let showPreviousMessage: Function;
 	export let showNextMessage: Function;
 
@@ -37,6 +38,8 @@
 	export let readOnly: boolean;
 
 	let showDeleteConfirm = false;
+
+	let messageIndexEdit = false;
 
 	let edit = false;
 	let editedContent = '';
@@ -99,7 +102,7 @@
 
 <div class=" flex w-full user-message" dir={$settings.chatDirection} id="message-{message.id}">
 	{#if !($settings?.chatBubble ?? true)}
-		<div class={`shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
+		<div class={`shrink-0 ltr:mr-3 rtl:ml-3`}>
 			<ProfileImage
 				src={message.user
 					? ($models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ??
@@ -189,7 +192,7 @@
 							<div>
 								<button
 									id="save-edit-message-button"
-									class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+									class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 									on:click={() => {
 										editMessageConfirmHandler(false);
 									}}
@@ -267,11 +270,52 @@
 											</svg>
 										</button>
 
-										<div
-											class="text-sm tracking-widest font-semibold self-center dark:text-gray-100"
-										>
-											{siblings.indexOf(message.id) + 1}/{siblings.length}
-										</div>
+										{#if messageIndexEdit}
+											<div
+												class="text-sm flex justify-center font-semibold self-center dark:text-gray-100 min-w-fit"
+											>
+												<input
+													id="message-index-input-{message.id}"
+													type="number"
+													value={siblings.indexOf(message.id) + 1}
+													min="1"
+													max={siblings.length}
+													on:focus={(e) => {
+														e.target.select();
+													}}
+													on:blur={(e) => {
+														gotoMessage(message, e.target.value - 1);
+														messageIndexEdit = false;
+													}}
+													on:keydown={(e) => {
+														if (e.key === 'Enter') {
+															gotoMessage(message, e.target.value - 1);
+															messageIndexEdit = false;
+														}
+													}}
+													class="bg-transparent font-semibold self-center dark:text-gray-100 min-w-fit outline-hidden"
+												/>/{siblings.length}
+											</div>
+										{:else}
+											<!-- svelte-ignore a11y-no-static-element-interactions -->
+											<div
+												class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
+												on:dblclick={async () => {
+													messageIndexEdit = true;
+
+													await tick();
+													const input = document.getElementById(
+														`message-index-input-${message.id}`
+													);
+													if (input) {
+														input.focus();
+														input.select();
+													}
+												}}
+											>
+												{siblings.indexOf(message.id) + 1}/{siblings.length}
+											</div>
+										{/if}
 
 										<button
 											class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
@@ -347,7 +391,7 @@
 								</button>
 							</Tooltip>
 
-							{#if !isFirstMessage && !readOnly}
+							{#if !readOnly && (!isFirstMessage || siblings.length > 1)}
 								<Tooltip content={$i18n.t('Delete')} placement="bottom">
 									<button
 										class="invisible group-hover:visible p-1 rounded-sm dark:hover:text-white hover:text-black transition"
@@ -398,11 +442,52 @@
 											</svg>
 										</button>
 
-										<div
-											class="text-sm tracking-widest font-semibold self-center dark:text-gray-100"
-										>
-											{siblings.indexOf(message.id) + 1}/{siblings.length}
-										</div>
+										{#if messageIndexEdit}
+											<div
+												class="text-sm flex justify-center font-semibold self-center dark:text-gray-100 min-w-fit"
+											>
+												<input
+													id="message-index-input-{message.id}"
+													type="number"
+													value={siblings.indexOf(message.id) + 1}
+													min="1"
+													max={siblings.length}
+													on:focus={(e) => {
+														e.target.select();
+													}}
+													on:blur={(e) => {
+														gotoMessage(message, e.target.value - 1);
+														messageIndexEdit = false;
+													}}
+													on:keydown={(e) => {
+														if (e.key === 'Enter') {
+															gotoMessage(message, e.target.value - 1);
+															messageIndexEdit = false;
+														}
+													}}
+													class="bg-transparent font-semibold self-center dark:text-gray-100 min-w-fit outline-hidden"
+												/>/{siblings.length}
+											</div>
+										{:else}
+											<!-- svelte-ignore a11y-no-static-element-interactions -->
+											<div
+												class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
+												on:dblclick={async () => {
+													messageIndexEdit = true;
+
+													await tick();
+													const input = document.getElementById(
+														`message-index-input-${message.id}`
+													);
+													if (input) {
+														input.focus();
+														input.select();
+													}
+												}}
+											>
+												{siblings.indexOf(message.id) + 1}/{siblings.length}
+											</div>
+										{/if}
 
 										<button
 											class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
