@@ -50,6 +50,7 @@
 	interface I18n {
 		t: (key: string) => string;
 	}
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	const i18n = getContext<I18n>('i18n');
 	setContext('i18n', i18n);
@@ -281,18 +282,18 @@
 								Important Update<br /> Action Required for Chat Log Storage
 							</div>
 
-							<div class="mt-4 text-center text-sm dark:text-gray-200 w-full">
-								{i18n.t(
+							<div class=" mt-4 text-center text-sm dark:text-gray-200 w-full">
+								{$i18n.t(
 									"Saving chat logs directly to your browser's storage is no longer supported. Please take a moment to download and delete your chat logs by clicking the button below. Don't worry, you can easily re-import your chat logs to the backend through"
 								)}
 								<span class="font-semibold dark:text-white"
-									>{i18n.t('Settings')} > {i18n.t('Chats')} > {i18n.t('Import Chats')}</span
-								>. {i18n.t(
+									>{$i18n.t('Settings')} > {$i18n.t('Chats')} > {$i18n.t('Import Chats')}</span
+								>. {$i18n.t(
 									'This ensures that your valuable conversations are securely saved to your backend database. Thank you!'
 								)}
 							</div>
 
-							<div class="mt-6 mx-auto relative group w-fit">
+							<div class=" mt-6 mx-auto relative group w-fit">
 								<button
 									class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 transition font-medium text-sm"
 									on:click={async () => {

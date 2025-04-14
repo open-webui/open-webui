@@ -233,7 +233,7 @@
 	};
 
 	const startRecording = async () => {
-		startDurationCounter();
+		loading = true;
 
 		stream = await navigator.mediaDevices.getUserMedia({
 			audio: {
@@ -245,6 +245,9 @@
 		mediaRecorder = new MediaRecorder(stream);
 		mediaRecorder.onstart = () => {
 			console.log('Recording started');
+			loading = false;
+			startDurationCounter();
+
 			audioChunks = [];
 			analyseAudio(stream);
 		};
