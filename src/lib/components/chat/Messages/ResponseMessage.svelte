@@ -47,6 +47,7 @@
 	import CodeExecutions from './CodeExecutions.svelte';
 	import ContentRenderer from './ContentRenderer.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+	import FileItem from '$lib/components/common/FileItem.svelte';
 
 	interface MessageType {
 		id: string;
@@ -613,18 +614,6 @@
 			</Name>
 
 			<div>
-				{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
-					<div class="my-2.5 w-full flex overflow-x-auto gap-2 flex-wrap">
-						{#each message.files as file}
-							<div>
-								{#if file.type === 'image'}
-									<Image src={file.url} alt={message.content} />
-								{/if}
-							</div>
-						{/each}
-					</div>
-				{/if}
-
 				<div class="chat-{message.role} w-full min-w-full markdown-prose">
 					<div>
 						{#if (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length > 0}
@@ -701,6 +690,27 @@
 									{/if}
 								</div>
 							{/if}
+						{/if}
+
+						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
+							<div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
+								{#each message.files as file}
+									<div>
+										{#if file.type === 'image'}
+											<Image src={file.url} alt={message.content} />
+										{:else}
+											<FileItem
+												item={file}
+												url={file.url}
+												name={file.name}
+												type={file.type}
+												size={file?.size}
+												colorClassName="bg-white dark:bg-gray-850 "
+											/>
+										{/if}
+									</div>
+								{/each}
+							</div>
 						{/if}
 
 						{#if edit === true}

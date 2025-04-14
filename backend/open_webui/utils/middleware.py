@@ -537,8 +537,15 @@ async def chat_image_generation_handler(
         for image in images:
             await __event_emitter__(
                 {
-                    "type": "message",
-                    "data": {"content": f"![Generated Image]({image['url']})\n"},
+                    "type": "files",
+                    "data": {
+                        "files": [
+                            {
+                                "type": "image",
+                                "url": image["url"],
+                            }
+                        ]
+                    },
                 }
             )
 
