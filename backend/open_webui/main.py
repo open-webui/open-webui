@@ -1023,14 +1023,19 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
         if "pipeline" in model and model["pipeline"].get("type", None) == "filter":
             continue
 
-        model_tags = [
-            tag.get("name")
-            for tag in model.get("info", {}).get("meta", {}).get("tags", [])
-        ]
-        tags = [tag.get("name") for tag in model.get("tags", [])]
+        try:
+            model_tags = [
+                tag.get("name")
+                for tag in model.get("info", {}).get("meta", {}).get("tags", [])
+            ]
+            tags = [tag.get("name") for tag in model.get("tags", [])]
 
-        tags = list(set(model_tags + tags))
-        model["tags"] = [{"name": tag} for tag in tags]
+            tags = list(set(model_tags + tags))
+            model["tags"] = [{"name": tag} for tag in tags]
+        except Exception as e:
+            log.debug(f"Error processing model tags: {e}")
+            model["tags"] = []
+            pass
 
         models.append(model)
 
