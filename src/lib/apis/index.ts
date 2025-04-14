@@ -2,6 +2,7 @@ import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload } from '$lib/utils';
 import { getOpenAIModelsDirect } from './openai';
 
+import { parse } from 'yaml';
 import { toast } from 'svelte-sonner';
 
 export const getModels = async (
@@ -259,10 +260,10 @@ export const stopTask = async (token: string, id: string) => {
 	return res;
 };
 
-export const getToolServerData = async (token: string, url: string) => {
+export const getTaskIdsByChatId = async (token: string, chat_id: string) => {
 	let error = null;
 
-	const res = await fetch(`${url}/openapi.json`, {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/chat/${chat_id}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',
@@ -273,6 +274,45 @@ export const getToolServerData = async (token: string, url: string) => {
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
 			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getToolServerData = async (token: string, url: string) => {
+	let error = null;
+
+	const res = await fetch(`${url}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			// Check if URL ends with .yaml or .yml to determine format
+			if (url.toLowerCase().endsWith('.yaml') || url.toLowerCase().endsWith('.yml')) {
+				if (!res.ok) throw await res.text();
+				const text = await res.text();
+				return parse(text);
+			} else {
+				if (!res.ok) throw await res.json();
+				return res.json();
+			}
 		})
 		.catch((err) => {
 			console.log(err);
@@ -304,10 +344,13 @@ export const getToolServersData = async (i18n, servers: object[]) => {
 			servers
 				.filter((server) => server?.config?.enable)
 				.map(async (server) => {
-					const data = await getToolServerData(server?.key, server?.url).catch((err) => {
+					const data = await getToolServerData(
+						(server?.auth_type ?? 'bearer') === 'bearer' ? server?.key : localStorage.token,
+						server?.url + '/' + (server?.path ?? 'openapi.json')
+					).catch((err) => {
 						toast.error(
 							i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
-								URL: server?.url
+								URL: server?.url + '/' + (server?.path ?? 'openapi.json')
 							})
 						);
 						return null;

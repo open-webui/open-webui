@@ -221,53 +221,51 @@ async def chat_completion_tools_handler(
                 except Exception as e:
                     tool_result = str(e)
 
+                tool_result_files = []
+                if isinstance(tool_result, list):
+                    for item in tool_result:
+                        # check if string
+                        if isinstance(item, str) and item.startswith("data:"):
+                            tool_result_files.append(item)
+                            tool_result.remove(item)
+
                 if isinstance(tool_result, dict) or isinstance(tool_result, list):
                     tool_result = json.dumps(tool_result, indent=2)
 
                 if isinstance(tool_result, str):
                     tool = tools[tool_function_name]
-                    tool_id = tool.get("toolkit_id", "")
-                    if tool.get("citation", False) or tool.get("direct", False):
+                    tool_id = tool.get("tool_id", "")
 
+                    tool_name = (
+                        f"{tool_id}/{tool_function_name}"
+                        if tool_id
+                        else f"{tool_function_name}"
+                    )
+                    if tool.get("metadata", {}).get("citation", False) or tool.get(
+                        "direct", False
+                    ):
+                        # Citation is enabled for this tool
                         sources.append(
                             {
                                 "source": {
-                                    "name": (
-                                        f"TOOL:" + f"{tool_id}/{tool_function_name}"
-                                        if tool_id
-                                        else f"{tool_function_name}"
-                                    ),
+                                    "name": (f"TOOL:{tool_name}"),
                                 },
                                 "document": [tool_result],
-                                "metadata": [
-                                    {
-                                        "source": (
-                                            f"TOOL:" + f"{tool_id}/{tool_function_name}"
-                                            if tool_id
-                                            else f"{tool_function_name}"
-                                        )
-                                    }
-                                ],
+                                "metadata": [{"source": (f"TOOL:{tool_name}")}],
                             }
                         )
                     else:
-                        sources.append(
-                            {
-                                "source": {},
-                                "document": [tool_result],
-                                "metadata": [
-                                    {
-                                        "source": (
-                                            f"TOOL:" + f"{tool_id}/{tool_function_name}"
-                                            if tool_id
-                                            else f"{tool_function_name}"
-                                        )
-                                    }
-                                ],
-                            }
+                        # Citation is not enabled for this tool
+                        body["messages"] = add_or_update_user_message(
+                            f"\nTool `{tool_name}` Output: {tool_result}",
+                            body["messages"],
                         )
 
-                    if tools[tool_function_name].get("file_handler", False):
+                    if (
+                        tools[tool_function_name]
+                        .get("metadata", {})
+                        .get("file_handler", False)
+                    ):
                         skip_files = True
 
             # check if "tool_calls" in result
@@ -385,24 +383,44 @@ async def chat_web_search_handler(
                 all_results.append(results)
                 files = form_data.get("files", [])
 
-                if results.get("collection_name"):
-                    files.append(
-                        {
-                            "collection_name": results["collection_name"],
-                            "name": searchQuery,
-                            "type": "web_search",
-                            "urls": results["filenames"],
-                        }
-                    )
+                if results.get("collection_names"):
+                    for col_idx, collection_name in enumerate(
+                        results.get("collection_names")
+                    ):
+                        files.append(
+                            {
+                                "collection_name": collection_name,
+                                "name": searchQuery,
+                                "type": "web_search",
+                                "urls": [results["filenames"][col_idx]],
+                            }
+                        )
                 elif results.get("docs"):
-                    files.append(
-                        {
-                            "docs": results.get("docs", []),
-                            "name": searchQuery,
-                            "type": "web_search",
-                            "urls": results["filenames"],
-                        }
-                    )
+                    # Invoked when bypass embedding and retrieval is set to True
+                    docs = results["docs"]
+
+                    if len(docs) == len(results["filenames"]):
+                        # the number of docs and filenames (urls) should be the same
+                        for doc_idx, doc in enumerate(docs):
+                            files.append(
+                                {
+                                    "docs": [doc],
+                                    "name": searchQuery,
+                                    "type": "web_search",
+                                    "urls": [results["filenames"][doc_idx]],
+                                }
+                            )
+                    else:
+                        # edge case when the number of docs and filenames (urls) are not the same
+                        # this should not happen, but if it does, we will just append the docs
+                        files.append(
+                            {
+                                "docs": results.get("docs", []),
+                                "name": searchQuery,
+                                "type": "web_search",
+                                "urls": results["filenames"],
+                            }
+                        )
 
                 form_data["files"] = files
         except Exception as e:
@@ -516,13 +534,20 @@ async def chat_image_generation_handler(
             }
         )
 
-        for image in images:
-            await __event_emitter__(
-                {
-                    "type": "message",
-                    "data": {"content": f"![Generated Image]({image['url']})\n"},
-                }
-            )
+        await __event_emitter__(
+            {
+                "type": "files",
+                "data": {
+                    "files": [
+                        {
+                            "type": "image",
+                            "url": image["url"],
+                        }
+                        for image in images
+                    ]
+                },
+            }
+        )
 
         system_message_content = "<context>User is shown the generated image, tell the user that the image has been generated</context>"
     except Exception as e:
@@ -625,27 +650,28 @@ def apply_params_to_form_data(form_data, model):
         if "keep_alive" in params:
             form_data["keep_alive"] = params["keep_alive"]
     else:
-        if "seed" in params:
+        if "seed" in params and params["seed"] is not None:
             form_data["seed"] = params["seed"]
 
-        if "stop" in params:
+        if "stop" in params and params["stop"] is not None:
             form_data["stop"] = params["stop"]
 
-        if "temperature" in params:
+        if "temperature" in params and params["temperature"] is not None:
             form_data["temperature"] = params["temperature"]
 
-        if "max_tokens" in params:
+        if "max_tokens" in params and params["max_tokens"] is not None:
             form_data["max_tokens"] = params["max_tokens"]
 
-        if "top_p" in params:
+        if "top_p" in params and params["top_p"] is not None:
             form_data["top_p"] = params["top_p"]
 
-        if "frequency_penalty" in params:
+        if "frequency_penalty" in params and params["frequency_penalty"] is not None:
             form_data["frequency_penalty"] = params["frequency_penalty"]
 
-        if "reasoning_effort" in params:
+        if "reasoning_effort" in params and params["reasoning_effort"] is not None:
             form_data["reasoning_effort"] = params["reasoning_effort"]
-        if "logit_bias" in params:
+
+        if "logit_bias" in params and params["logit_bias"] is not None:
             try:
                 form_data["logit_bias"] = json.loads(
                     convert_logit_bias_input_to_json(params["logit_bias"])
@@ -862,10 +888,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # If context is not empty, insert it into the messages
     if len(sources) > 0:
         context_string = ""
-        for source_idx, source in enumerate(sources):
+        citated_file_idx = {}
+        for _, source in enumerate(sources, 1):
             if "document" in source:
-                for doc_idx, doc_context in enumerate(source["document"]):
-                    context_string += f"<source><source_id>{source_idx + 1}</source_id><source_context>{doc_context}</source_context></source>\n"
+                for doc_context, doc_meta in zip(
+                    source["document"], source["metadata"]
+                ):
+                    file_id = doc_meta.get("file_id")
+                    if file_id not in citated_file_idx:
+                        citated_file_idx[file_id] = len(citated_file_idx) + 1
+                    context_string += f'<source id="{citated_file_idx[file_id]}">{doc_context}</source>\n'
 
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])
@@ -1198,13 +1230,15 @@ async def process_chat_response(
                                 )
 
                                 tool_result = None
+                                tool_result_files = None
                                 for result in results:
                                     if tool_call_id == result.get("tool_call_id", ""):
                                         tool_result = result.get("content", None)
+                                        tool_result_files = result.get("files", None)
                                         break
 
                                 if tool_result:
-                                    tool_calls_display_content = f'{tool_calls_display_content}\n<details type="tool_calls" done="true" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}" result="{html.escape(json.dumps(tool_result))}">\n<summary>Tool Executed</summary>\n</details>'
+                                    tool_calls_display_content = f'{tool_calls_display_content}\n<details type="tool_calls" done="true" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}" result="{html.escape(json.dumps(tool_result))}" files="{html.escape(json.dumps(tool_result_files)) if tool_result_files else ""}">\n<summary>Tool Executed</summary>\n</details>\n'
                                 else:
                                     tool_calls_display_content = f'{tool_calls_display_content}\n<details type="tool_calls" done="false" id="{tool_call_id}" name="{tool_name}" arguments="{html.escape(json.dumps(tool_arguments))}">\n<summary>Executing...</summary>\n</details>'
 
@@ -1570,6 +1604,9 @@ async def process_chat_response(
                             )
 
                             if data:
+                                if "event" in data:
+                                    await event_emitter(data.get("event", {}))
+
                                 if "selected_model_id" in data:
                                     model_id = data["selected_model_id"]
                                     Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -1614,14 +1651,27 @@ async def process_chat_response(
                                             )
 
                                             if tool_call_index is not None:
-                                                if (
-                                                    len(response_tool_calls)
-                                                    <= tool_call_index
-                                                ):
+                                                # Check if the tool call already exists
+                                                current_response_tool_call = None
+                                                for (
+                                                    response_tool_call
+                                                ) in response_tool_calls:
+                                                    if (
+                                                        response_tool_call.get("index")
+                                                        == tool_call_index
+                                                    ):
+                                                        current_response_tool_call = (
+                                                            response_tool_call
+                                                        )
+                                                        break
+
+                                                if current_response_tool_call is None:
+                                                    # Add the new tool call
                                                     response_tool_calls.append(
                                                         delta_tool_call
                                                     )
                                                 else:
+                                                    # Update the existing tool call
                                                     delta_name = delta_tool_call.get(
                                                         "function", {}
                                                     ).get("name")
@@ -1632,16 +1682,14 @@ async def process_chat_response(
                                                     )
 
                                                     if delta_name:
-                                                        response_tool_calls[
-                                                            tool_call_index
-                                                        ]["function"][
-                                                            "name"
-                                                        ] += delta_name
+                                                        current_response_tool_call[
+                                                            "function"
+                                                        ]["name"] += delta_name
 
                                                     if delta_arguments:
-                                                        response_tool_calls[
-                                                            tool_call_index
-                                                        ]["function"][
+                                                        current_response_tool_call[
+                                                            "function"
+                                                        ][
                                                             "arguments"
                                                         ] += delta_arguments
 
@@ -1805,7 +1853,7 @@ async def process_chat_response(
 
                 await stream_body_handler(response)
 
-                MAX_TOOL_CALL_RETRIES = 5
+                MAX_TOOL_CALL_RETRIES = 10
                 tool_call_retries = 0
 
                 while len(tool_calls) > 0 and tool_call_retries < MAX_TOOL_CALL_RETRIES:
@@ -1898,6 +1946,14 @@ async def process_chat_response(
                             except Exception as e:
                                 tool_result = str(e)
 
+                        tool_result_files = []
+                        if isinstance(tool_result, list):
+                            for item in tool_result:
+                                # check if string
+                                if isinstance(item, str) and item.startswith("data:"):
+                                    tool_result_files.append(item)
+                                    tool_result.remove(item)
+
                         if isinstance(tool_result, dict) or isinstance(
                             tool_result, list
                         ):
@@ -1907,6 +1963,11 @@ async def process_chat_response(
                             {
                                 "tool_call_id": tool_call_id,
                                 "content": tool_result,
+                                **(
+                                    {"files": tool_result_files}
+                                    if tool_result_files
+                                    else {}
+                                ),
                             }
                         )
 
@@ -2191,7 +2252,9 @@ async def process_chat_response(
                 await response.background()
 
         # background_tasks.add_task(post_response_handler, response, events)
-        task_id, _ = create_task(post_response_handler(response, events))
+        task_id, _ = create_task(
+            post_response_handler(response, events), id=metadata["chat_id"]
+        )
         return {"status": True, "task_id": task_id}
 
     else:
