@@ -623,7 +623,7 @@
 										<div class="flex w-full justify-between items-center">
 											<div class="text-xs dark:text-customGray-300">{$i18n.t('Knowledge')}</div>
 										</div>
-										<button
+										<!-- <button
 											class="shrink-0 text-xs dark:text-customGray-200 flex rounded transition"
 											type="button"
 											on:click={() => {}}
@@ -639,7 +639,7 @@
 												/>
 											</svg>
 											{$i18n.t('Add')}
-										</button>
+										</button> -->
 									</div>
 									<Dropzone {uploadFileHandler} />
 									{#if files.length}
@@ -1110,10 +1110,10 @@
 					</div> -->
 
 							<!-- <hr class=" border-gray-50 dark:border-gray-850 my-1.5" /> -->
-
+<!-- 
 							<div class="my-2">
 								<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
-							</div>
+							</div> -->
 
 							<!-- <div class="my-2">
 						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
