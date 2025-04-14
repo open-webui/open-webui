@@ -286,6 +286,8 @@
 				)
 			};
 
+			files = model?.meta?.files ? model?.meta?.files : [];
+
 			console.log(model);
 		}
 
