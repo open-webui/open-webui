@@ -696,7 +696,7 @@
 													<Button
 														id="send-message-button"
 														name="send"
-														className="p-1.5"
+														iconOnly={true}
 														type={ButtonType.special}
 														disabled={prompt === ''}
 														label={$i18n.t('Send message')}
@@ -711,7 +711,7 @@
 													<Button
 														name="stop-responding"
 														on:click={stopResponse}
-														className="p-1.5"
+														iconOnly={true}
 														type={ButtonType.special}
 														label={$i18n.t('Stop')}
 													>
