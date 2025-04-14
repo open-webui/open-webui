@@ -2,7 +2,7 @@ import { get } from 'svelte/store';
 import { config } from '$lib/stores';
 import { userSignOut } from '$lib/apis/auths';
 
-export async function signout(response) {
+export async function signout() {
 	const signoutResponse = await userSignOut();
 
 	if (!signoutResponse?.status) {
