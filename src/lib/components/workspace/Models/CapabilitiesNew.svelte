@@ -62,7 +62,7 @@
                                 {#if capabilityIcons[capability]}
                                     <svelte:component
                                         this={capabilityIcons[capability]}
-                                        class="size-4 text-gray-500 dark:text-gray-300"
+                                        className="size-4"
                                     />
                                 {/if}
                                 <span class="capitalize">{capability.replace(/_/g, ' ')}</span>

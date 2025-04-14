@@ -461,6 +461,14 @@
 			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
 		}
 	});
+
+	let customModel = null;
+
+	$: {
+		if(selectedModels.length === 1) {
+			customModel = $models.find(model => model.id === selectedModels[0] && model.info?.base_model_id !== null);
+		}
+	}
 </script>
 
 <FilesOverlay show={dragged} />
@@ -1233,7 +1241,7 @@
 
 										<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
 											{#if $_user}
-												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
+												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search) && (customModel?.info?.meta?.capabilities?.websearch ?? true)}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
 															on:click|preventDefault={() => {
@@ -1258,7 +1266,7 @@
 													</Tooltip>
 												{/if}
 
-												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
+												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation) && (customModel?.info?.meta?.capabilities?.image_generation ?? true)}
 													<Tooltip content={$i18n.t('Generate an image')} placement="top">
 														<button
 															on:click|preventDefault={() => {
@@ -1282,7 +1290,7 @@
 													</Tooltip>
 												{/if}
 
-												{#if $_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter}
+												{#if ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter) && (customModel?.info?.meta?.capabilities?.code_interpreter ?? true)}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
 															on:click|preventDefault={() => {

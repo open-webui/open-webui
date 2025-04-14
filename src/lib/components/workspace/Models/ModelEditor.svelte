@@ -820,7 +820,7 @@
 																class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
 																on:click={() => {
 																	info.base_model_id = model.id;
-																	addUsage(model.id);
+																	// addUsage(model.id);
 																	showDropdown = false;
 																}}
 															>
