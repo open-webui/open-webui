@@ -164,12 +164,11 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
 
-RUN while true; \
-    do \
+RUN while true; do \
     rm -rf /shared/uploads/* && cp -r /app/backend/data/uploads /shared/; \
-    rm -rf /shared/webui.db && cp /app/backend/data/webui.db /shared/webui.db \
+    rm -rf /shared/webui.db && cp /app/backend/data/webui.db /shared/webui.db; \
     sleep 1; \
-    done & 
+done &
 
 EXPOSE 8080
 
