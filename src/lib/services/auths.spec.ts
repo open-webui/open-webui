@@ -86,6 +86,20 @@ describe('signout()', () => {
 				await signout();
 				expect(localStorage.removeItem).toHaveBeenCalledWith('token');
 			});
+
+			describe("with override post-logout URL passed", () => {
+				const postLogoutUrl = 'https://doesnotmatter.local';
+
+				it('should set location to /auth', async () => {
+					await signout(postLogoutUrl);
+					expect(location.href).toBe('/auth');
+				});
+
+				it('should remove token from localStorage', async () => {
+					await signout(postLogoutUrl);
+					expect(localStorage.removeItem).toHaveBeenCalledWith('token');
+				});
+			});
 		});
 
 		describe('has no ionos_logout_url with OIDC configured and no end_session_endpoint was sent', () => {
@@ -111,6 +125,20 @@ describe('signout()', () => {
 
 			it('should throw if no end_session_endpoint was sent', async () => {
 				await expect(signout()).rejects.toThrowError('OIDC configured but no end_session_endpoint sent');
+			});
+
+			describe("with override post-logout URL passed", () => {
+				const postLogoutUrl = 'https://doesnotmatter.local';
+
+				it('should remove token from localStorage', async () => {
+					await expect(signout(postLogoutUrl)).rejects.toThrowError('OIDC configured but no end_session_endpoint sent');
+
+					expect(localStorage.removeItem).toHaveBeenCalledWith('token');
+				});
+
+				it('should throw if no end_session_endpoint was sent', async () => {
+					await expect(signout(postLogoutUrl)).rejects.toThrowError('OIDC configured but no end_session_endpoint sent');
+				});
 			});
 		});
 
@@ -143,6 +171,22 @@ describe('signout()', () => {
 				const logoutUrl = new URL(endpoint);
 				logoutUrl.searchParams.set('post_logout_redirect_uri', postLogoutUrl);
 				expect(location.href).toBe(logoutUrl.toString());
+			});
+
+			describe("with override post-logout URL passed", () => {
+				const postLogoutUrl = 'https://acmeauth/post-logout';
+
+				it('should remove token from localStorage', async () => {
+					await signout(postLogoutUrl);
+					expect(localStorage.removeItem).toHaveBeenCalledWith('token');
+				});
+
+				it('should set location to the end_session_endpoint with post_logout_redirect_uri set to the passed URL', async () => {
+					await signout(postLogoutUrl);
+					const logoutUrl = new URL(endpoint);
+					logoutUrl.searchParams.set('post_logout_redirect_uri', postLogoutUrl);
+					expect(location.href).toBe(logoutUrl.toString());
+				});
 			});
 		});
 
@@ -180,6 +224,22 @@ describe('signout()', () => {
 				logoutUrl.searchParams.set('post_logout_redirect_uri', postLogoutUrl);
 				expect(location.href).toBe(logoutUrl.toString());
 			});
+
+			describe("with override post-logout URL passed", () => {
+				const postLogoutUrl = 'https://acmeauth/post-logout';
+
+				it('should remove token from localStorage', async () => {
+					await signout(postLogoutUrl);
+					expect(localStorage.removeItem).toHaveBeenCalledWith('token');
+				});
+
+				it('should set location to the end_session_endpoint with post_logout_redirect_uri set to the passed URL', async () => {
+					await signout(postLogoutUrl);
+					const logoutUrl = new URL(endpoint);
+					logoutUrl.searchParams.set('post_logout_redirect_uri', postLogoutUrl);
+					expect(location.href).toBe(logoutUrl.toString());
+				});
+			});
 		});
 
 		describe('has end_session_endpoint', () => {
@@ -199,6 +259,22 @@ describe('signout()', () => {
 			it('should remove token from localStorage', async () => {
 				await signout();
 				expect(localStorage.removeItem).toHaveBeenCalledWith('token');
+			});
+
+			describe("with override post-logout URL passed", () => {
+				const postLogoutUrl = 'https://acmeauth/post-logout';
+
+				it('should remove token from localStorage', async () => {
+					await signout(postLogoutUrl);
+					expect(localStorage.removeItem).toHaveBeenCalledWith('token');
+				});
+
+				it('should set location to ionos_logout_url with redirect_url set to he passed URL', async () => {
+					const logoutUrl = new URL(mocks.ionos_logout_url);
+					logoutUrl.searchParams.set('redirect_url', postLogoutUrl);
+					await signout(postLogoutUrl);
+					expect(location.href).toBe(logoutUrl.toString());
+				});
 			});
 		});
 	});

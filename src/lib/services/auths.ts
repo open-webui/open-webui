@@ -2,7 +2,7 @@ import { get } from 'svelte/store';
 import { config } from '$lib/stores';
 import { userSignOut } from '$lib/apis/auths';
 
-export async function signout() {
+export async function signout(postLogoutRedirectTargetOverride: string|null = null) {
 	const signoutResponse = await userSignOut();
 
 	if (!signoutResponse?.status) {
@@ -20,7 +20,11 @@ export async function signout() {
 	}
 
 	// The user should come back to the startpage (explore) after logout finished
-	const postLogoutRedirectTarget = new URL('/explore', location.href).toString();
+	let postLogoutRedirectTarget = new URL('/explore', location.href).toString();
+
+	if (postLogoutRedirectTargetOverride !== null && postLogoutRedirectTargetOverride !== '') {
+		postLogoutRedirectTarget = postLogoutRedirectTargetOverride;
+	}
 
 	if (logoutEndpoint !== null && logoutEndpoint !== '') {
 		const logoutEndpointUrl = new URL(logoutEndpoint);
