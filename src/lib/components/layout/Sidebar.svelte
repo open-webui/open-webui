@@ -459,7 +459,7 @@
 		? 'md:relative w-[260px] max-w-[260px]'
 		: '-translate-x-[260px] w-[0px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
+		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-gray-100 text-blue-800 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
         "
 	data-state={$showSidebar}
 >
@@ -497,7 +497,7 @@
 		<div class="px-1.5 flex justify-center text-gray-600 dark:text-gray-400">
 			<a
 				id="sidebar-new-chat-button"
-				class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
+				class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] bg-transparent text-blue-800 hover:bg-gray-200 dark:hover:bg-gray-900 transition no-drag-region"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -514,7 +514,7 @@
 				<div class="self-center">
 					<Plus />
 				</div>
-				<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
+				<div class=" self-center font-medium text-sm text-blue-800 dark:text-white font-primary">
 					{$i18n.t('New Chat')}
 				</div>
 			</a>
@@ -523,7 +523,7 @@
 		<div class="px-1.5 flex justify-center text-gray-600 dark:text-gray-400">
 			<a
 				id="sidebar-explore-button"
-				class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
+				class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] bg-transparent text-blue-800 hover:bg-gray-200 dark:hover:bg-gray-900 transition no-drag-region"
 				href="/explore"
 				draggable="false"
 				on:click={async () => { await goto('/explore'); }}
@@ -531,7 +531,7 @@
 				<div class="self-center">
 					<Robot className="h-4 w-4 inline-block" />
 				</div>
-				<div class=" self-center font-medium text-sm text-gray-850 dark:text-white font-primary">
+				<div class=" self-center font-medium text-sm text-blue-800 dark:text-white font-primary">
 					{$i18n.t('Explore', { ns: 'ionos' })}
 				</div>
 			</a>

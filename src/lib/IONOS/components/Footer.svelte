@@ -39,7 +39,7 @@
 	</p>
 
 	<div
-		class="flex-1 flex flex-row justify-end mt-5 mb-7 gap-3 text-sm justify-center {extraClasses}"
+		class="flex-1 flex flex-row justify-end mt-5 mb-7 gap-3 text-sm justify-center text-blue-700 {extraClasses}"
 	>
 		<span>
 			{$i18n.t('© 2025 IONOS SE', { ns: 'ionos' })}
