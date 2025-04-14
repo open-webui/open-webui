@@ -41,6 +41,7 @@ def upgrade() -> None:
         # Insert prompts into the database
         current_time = int(time.time())
         system_user_id = "system"  # Use a system user ID for prebuilt prompts
+        system_company_id = "system"
 
         for row in csv_reader:
             # Generate a command from the title (lowercase, replace spaces with underscores)
@@ -60,6 +61,7 @@ def upgrade() -> None:
             session.execute(insert_query, {
                 "command": f"/{command}",
                 "user_id": system_user_id,
+                "company_id": system_company_id,
                 "title": row['title'],
                 "content": row['content'],
                 "timestamp": current_time,

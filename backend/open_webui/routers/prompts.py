@@ -57,7 +57,7 @@ async def create_new_prompt(
 
     prompt = Prompts.get_prompt_by_command(form_data.command)
     if prompt is None:
-        prompt = Prompts.insert_new_prompt(user.id, form_data)
+        prompt = Prompts.insert_new_prompt(user.id, user.company_id, form_data)
 
         if prompt:
             return prompt
