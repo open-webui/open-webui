@@ -457,18 +457,18 @@
 	id="sidebar"
 	class="h-screen max-h-[100dvh] min-h-screen select-none {$showSidebar
 		? 'md:relative w-[260px] max-w-[260px]'
-		: '-translate-x-[260px] w-[0px]'} {$isApp
+		: 'w-[60px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
 		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-gray-100 text-blue-800 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
         "
 	data-state={$showSidebar}
 >
 	<div
-		class="py-2 my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[260px] overflow-x-hidden z-50 {$showSidebar
-			? ''
-			: 'invisible'}"
+		class="pt-10 pb-5 my-auto flex flex-col h-screen max-h-[100dvh] overflow-x-hidden z-50 gap-2.5 {$showSidebar
+			? 'justify-between w-[260px]'
+			: 'justify-start w-[60px] px-2.5'}"
 	>
-		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 mb-5">
+		<div class="{$showSidebar ? 'px-1.5' : 'self-center'} flex justify-between space-x-1 text-gray-600 dark:text-gray-400 mb-5 ">
 			<button
 				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				on:click={() => {
@@ -494,10 +494,10 @@
 			</button>
 		</div>
 
-		<div class="px-1.5 flex justify-center text-gray-600 dark:text-gray-400">
+		<div class="px-1.5 flex justify-center text-gray-600 dark:text-gray-400 {$showSidebar ? '' : 'content-center'}">
 			<a
 				id="sidebar-new-chat-button"
-				class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] bg-transparent text-blue-800 hover:bg-gray-200 dark:hover:bg-gray-900 transition no-drag-region"
+				class="{$showSidebar ? 'flex-grow' : ''} flex space-x-3 rounded p-2.5 bg-transparent text-blue-800 hover:bg-gray-200 dark:hover:bg-gray-900 transition no-drag-region"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -514,16 +514,18 @@
 				<div class="self-center">
 					<Plus />
 				</div>
-				<div class=" self-center font-medium text-sm text-blue-800 dark:text-white font-primary">
-					{$i18n.t('New Chat')}
-				</div>
+				{#if $showSidebar}
+					<div class=" self-center font-medium text-sm text-blue-800 dark:text-white font-primary">
+						{$i18n.t('New Chat')}
+					</div>
+				{/if}
 			</a>
 		</div>
 
 		<div class="px-1.5 flex justify-center text-gray-600 dark:text-gray-400">
 			<a
 				id="sidebar-explore-button"
-				class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] bg-transparent text-blue-800 hover:bg-gray-200 dark:hover:bg-gray-900 transition no-drag-region"
+				class="{$showSidebar ? 'flex-grow' : ''} flex space-x-3 rounded p-2.5 bg-transparent text-blue-800 hover:bg-gray-200 dark:hover:bg-gray-900 transition no-drag-region"
 				href="/explore"
 				draggable="false"
 				on:click={async () => { await goto('/explore'); }}
@@ -531,16 +533,18 @@
 				<div class="self-center">
 					<Robot className="h-4 w-4 inline-block" />
 				</div>
-				<div class=" self-center font-medium text-sm text-blue-800 dark:text-white font-primary">
-					{$i18n.t('Explore', { ns: 'ionos' })}
-				</div>
+				{#if $showSidebar}
+					<div class=" self-center font-medium text-sm text-blue-800 dark:text-white font-primary">
+						{$i18n.t('Explore', { ns: 'ionos' })}
+					</div>
+				{/if}
 			</a>
 		</div>
 
 		{#if $user?.role === 'admin'}
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200 outline-1 outline-amber-500 outline-dashed">
 				<a
-					class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					class="flex-grow flex space-x-3 rounded-lg p-2.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/workspace"
 					on:click={() => {
 						selectedChatId = null;
@@ -581,13 +585,39 @@
 				<div class="absolute z-40 w-full h-full flex justify-center"></div>
 			{/if}
 
+			{#if $showSidebar}
 			<SearchInput
 				bind:value={search}
 				on:input={searchDebounceHandler}
 				placeholder={$i18n.t('Search')}
 			/>
+			{:else}
+			<div class="self-center pl-3 py-2 rounded-l-xl bg-transparent"
+				on:click={() => {
+					if(!$showSidebar) {
+						// focus the search input
+						$showSidebar = true;
+					}
+
+				}}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="w-4 h-4"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</div>
+			{/if}
 		</div>
 
+		{#if $showSidebar}
 		<div
 			class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden {$temporaryChatEnabled
 				? 'opacity-20'
@@ -624,10 +654,6 @@
 				collapsible={!search}
 				className="px-2 mt-0.5"
 				name={$i18n.t('Chats')}
-				onAdd={() => {
-					createFolder();
-				}}
-				onAddLabel={$i18n.t('New Folder')}
 				on:import={(e) => {
 					importChatHandler(e.detail);
 				}}
@@ -854,6 +880,7 @@
 				</div>
 			</Folder>
 		</div>
+		{/if}
 	</div>
 </div>
 
