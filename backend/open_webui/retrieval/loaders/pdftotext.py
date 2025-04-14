@@ -1,11 +1,7 @@
 import logging
 import requests
-import httpx
 from open_webui.env import SRC_LOG_LEVELS
 import time
-
-import aiofiles
-import aiohttp
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -33,11 +29,11 @@ class PdftotextLoader:
         r = requests.post(
             url=self.url, headers=headers, files=files, data=data, timeout=240
         )
-        #log.info(r)
+        # log.info(r)
         response = r.json()
         txt = response.get("text", "")
 
-        #log.info(f"REQ_ID: %s Extracted text from pdf using OCR, {txt} -> %s ")
+        # log.info(f"REQ_ID: %s Extracted text from pdf using OCR, {txt} -> %s ")
 
         return txt
 
