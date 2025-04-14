@@ -166,6 +166,7 @@ from open_webui.config import (
     FIRECRAWL_API_KEY,
     WEB_LOADER_ENGINE,
     WHISPER_MODEL,
+    WHISPER_VAD_FILTER,
     DEEPGRAM_API_KEY,
     WHISPER_MODEL_AUTO_UPDATE,
     WHISPER_MODEL_DIR,
@@ -789,6 +790,7 @@ app.state.config.STT_ENGINE = AUDIO_STT_ENGINE
 app.state.config.STT_MODEL = AUDIO_STT_MODEL
 
 app.state.config.WHISPER_MODEL = WHISPER_MODEL
+app.state.config.WHISPER_VAD_FILTER = WHISPER_VAD_FILTER
 app.state.config.DEEPGRAM_API_KEY = DEEPGRAM_API_KEY
 
 app.state.config.AUDIO_STT_AZURE_API_KEY = AUDIO_STT_AZURE_API_KEY
@@ -1023,14 +1025,19 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
         if "pipeline" in model and model["pipeline"].get("type", None) == "filter":
             continue
 
-        model_tags = [
-            tag.get("name")
-            for tag in model.get("info", {}).get("meta", {}).get("tags", [])
-        ]
-        tags = [tag.get("name") for tag in model.get("tags", [])]
+        try:
+            model_tags = [
+                tag.get("name")
+                for tag in model.get("info", {}).get("meta", {}).get("tags", [])
+            ]
+            tags = [tag.get("name") for tag in model.get("tags", [])]
 
-        tags = list(set(model_tags + tags))
-        model["tags"] = [{"name": tag} for tag in tags]
+            tags = list(set(model_tags + tags))
+            model["tags"] = [{"name": tag} for tag in tags]
+        except Exception as e:
+            log.debug(f"Error processing model tags: {e}")
+            model["tags"] = []
+            pass
 
         models.append(model)
 

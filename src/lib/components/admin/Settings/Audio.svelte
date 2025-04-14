@@ -468,8 +468,7 @@
 										<option
 											value={voice.voiceURI}
 											class="bg-gray-100 dark:bg-gray-700"
-											selected={TTS_VOICE === voice.voiceURI}
-											>{voice.name.replace('+', ', ')}</option
+											selected={TTS_VOICE === voice.voiceURI}>{voice.name}</option
 										>
 									{/each}
 								</select>
