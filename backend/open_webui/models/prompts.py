@@ -18,7 +18,8 @@ class Prompt(Base):
     __tablename__ = "prompt"
 
     command = Column(String, primary_key=True)
-    user_id = Column(String)
+    user_id = Column(String, nullable=False)
+    company_id = Column(String, nullable=False)
     title = Column(Text)
     content = Column(Text)
     timestamp = Column(BigInteger)
@@ -57,6 +58,7 @@ class PromptMeta(BaseModel):
 class PromptModel(BaseModel):
     command: str
     user_id: str
+    company_id: str
     title: str
     content: str
     timestamp: int  # timestamp in epoch
@@ -88,11 +90,12 @@ class PromptForm(BaseModel):
 
 class PromptsTable:
     def insert_new_prompt(
-        self, user_id: str, form_data: PromptForm
+        self, user_id: str, company_id: str, form_data: PromptForm
     ) -> Optional[PromptModel]:
         prompt = PromptModel(
             **{
                 "user_id": user_id,
+                "company_id": company_id,
                 **form_data.model_dump(),
                 "timestamp": int(time.time()),
             }
@@ -147,6 +150,18 @@ class PromptsTable:
             if prompt.user_id == user_id
             or prompt.prebuilt
             or has_access(user_id, permission, prompt.access_control)
+        ]
+
+    def get_prompts_by_company_id(
+        self, company_id: str, permission: str = "write"
+    ) -> list[PromptUserResponse]:
+        prompts = self.get_prompts()
+
+        return [
+            prompt
+            for prompt in prompts
+            if prompt.company_id == company_id
+            or has_access(company_id, permission, prompt.access_control)
         ]
 
     def update_prompt_by_command(

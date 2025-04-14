@@ -78,6 +78,8 @@ class Model(Base):
 
     user_id = Column(Text, nullable=False)
 
+    company_id = Column(Text, nullable=False)
+
     access_control = Column(JSON, nullable=True)  # Controls data access levels.
     # Defines access control rules for this entry.
     # - `None`: Public access, available to all users with the "user" role.
@@ -116,6 +118,7 @@ class ModelModel(BaseModel):
     created_at: int  # timestamp in epoch
 
     user_id: str
+    company_id: str
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -143,11 +146,13 @@ class ModelForm(BaseModel):
 
 class ModelsTable:
     def insert_new_model(
-        self, form_data: ModelForm, user_id: str
+        self, form_data: ModelForm, user_id: str, company_id: str
     ) -> Optional[ModelModel]:
+
         model = ModelModel(
             **{
                 **form_data.model_dump(),
+                "company_id": company_id,
                 "user_id": user_id,
                 "created_at": int(time.time()),
                 "updated_at": int(time.time()),
@@ -203,6 +208,17 @@ class ModelsTable:
             for model in models
             if model.user_id == user_id
             or has_access(user_id, permission, model.access_control)
+        ]
+
+    def get_models_by_company_id(
+        self, company_id: str, permission: str = "write"
+    ) -> list[ModelUserResponse]:
+        models = self.get_models()
+        return [
+            model
+            for model in models
+            if model.company_id == company_id
+            or has_access(company_id, permission, model.access_control)
         ]
 
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
