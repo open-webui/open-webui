@@ -21,8 +21,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column('prompt', sa.Column('company_id', sa.String(), nullable=False))
-    op.add_column('model', sa.Column('company_id', sa.String(), nullable=False))
+    op.add_column('prompt', sa.Column('company_id', sa.String(), nullable=False,  server_default='system'))
+    op.add_column('model', sa.Column('company_id', sa.String(), nullable=False,  server_default='system'))
 
     # Add foreign key constraint if it doesn't exist
     conn = op.get_bind()
