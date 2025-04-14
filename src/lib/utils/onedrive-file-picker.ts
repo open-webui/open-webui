@@ -8,6 +8,7 @@ class OneDriveConfig {
 	private authorityType: 'personal' | 'organizations' = 'personal';
 	private sharepointUrl: string = '';
 	private msalInstance: PublicClientApplication | null = null;
+	private currentAuthorityType: 'personal' | 'organizations' = 'personal';
 
 	private constructor() {}
 
@@ -18,20 +19,35 @@ class OneDriveConfig {
 		return OneDriveConfig.instance;
 	}
 
-	public async initialize(selectedAuthorityType?: 'personal' | 'organizations'): Promise<void> {
-		await this.getCredentials(selectedAuthorityType);
+	public async initialize(authorityType?: 'personal' | 'organizations'): Promise<void> {
+		if (authorityType && this.currentAuthorityType !== authorityType) {
+			console.log('Authority type changed, resetting msalInstance');
+			this.currentAuthorityType = authorityType;
+			this.msalInstance = null;
+		}
+		await this.getCredentials();
 	}
 
-	public async ensureInitialized(selectedAuthorityType?: 'personal' | 'organizations'): Promise<void> {
-		await this.initialize(selectedAuthorityType);
+	public async ensureInitialized(authorityType?: 'personal' | 'organizations'): Promise<void> {
+		await this.initialize(authorityType);
 	}
 
 	private async getCredentials(selectedAuthorityType?: 'personal' | 'organizations'): Promise<void> {
 		let response;
+		const headers: HeadersInit = {
+			'Content-Type': 'application/json'
+		};
+
 		if(window.location.hostname === 'localhost') {
-			response = await fetch('http://localhost:8080/api/config');
+			response = await fetch('http://localhost:8080/api/config', { 
+				headers,
+				credentials: 'include'
+			});
 		} else {
-			response = await fetch('/api/config');
+			response = await fetch('/api/config', { 
+				headers,
+				credentials: 'include'
+			});
 		}
 		
 		if (!response.ok) {
@@ -46,25 +62,16 @@ class OneDriveConfig {
 		if (!newClientId) {
 			throw new Error('OneDrive configuration is incomplete');
 		}
-
-		// Reset MSAL instance if config changes
-		if (this.clientId && 
-			(this.clientId !== newClientId || 
-			 this.authorityType !== selectedAuthorityType || 
-			 this.sharepointUrl !== newSharepointUrl)) {
-			this.msalInstance = null;
-		}
-
+	
 		this.clientId = newClientId;
-		this.authorityType = selectedAuthorityType || 'personal';
 		this.sharepointUrl = newSharepointUrl;
 	}
 
-	public async getMsalInstance(): Promise<PublicClientApplication> {
-		await this.ensureInitialized();
+	public async getMsalInstance(authorityType?: 'personal' | 'organizations'): Promise<PublicClientApplication> {
+		await this.ensureInitialized(authorityType);
 		
 		if (!this.msalInstance) {
-			const authorityEndpoint = this.authorityType === 'organizations' ? 'common' : 'consumers';
+			const authorityEndpoint = this.currentAuthorityType === 'organizations' ? 'common' : 'consumers';
 			const msalParams = {
 				auth: {
 					authority: `https://login.microsoftonline.com/${authorityEndpoint}`,
@@ -82,7 +89,7 @@ class OneDriveConfig {
 	}
 
 	public getAuthorityType(): 'personal' | 'organizations' {
-		return this.authorityType;
+		return this.currentAuthorityType;
 	}
 
 	public getSharepointUrl(): string {
@@ -90,7 +97,7 @@ class OneDriveConfig {
 	}
 
 	public getBaseUrl(): string {
-		if (this.authorityType === 'organizations') {
+		if (this.currentAuthorityType === 'organizations') {
 			if (!this.sharepointUrl || this.sharepointUrl === '') {
 				throw new Error('Sharepoint URL not configured');
 			}
@@ -107,25 +114,27 @@ class OneDriveConfig {
 
 
 // Retrieve OneDrive access token
-async function getToken(resource?: string): Promise<string> {
+async function getToken(resource?: string, authorityType?: 'personal' | 'organizations'): Promise<string> {
 	const config = OneDriveConfig.getInstance();
-	await config.ensureInitialized();
+	await config.ensureInitialized(authorityType);
 	
-	const authorityType = config.getAuthorityType();
+	const currentAuthorityType = config.getAuthorityType();
 
-	const scopes = authorityType === 'organizations'
+	const scopes = currentAuthorityType === 'organizations'
 		? [`${resource || config.getBaseUrl()}/.default`]
 		: ['OneDrive.ReadWrite'];
+
+	console.log('scopes', scopes);
 	
 	const authParams: PopupRequest = { scopes };
 	let accessToken = '';
 
 	try {
-		const msalInstance = await config.getMsalInstance();
+		const msalInstance = await config.getMsalInstance(authorityType);
 		const resp = await msalInstance.acquireTokenSilent(authParams);
 		accessToken = resp.accessToken;
 	} catch (err) {
-		const msalInstance = await config.getMsalInstance();
+		const msalInstance = await config.getMsalInstance(authorityType);
 		try {
 			const resp = await msalInstance.loginPopup(authParams);
 			msalInstance.setActiveAccount(resp.account);
@@ -212,8 +221,8 @@ function getPickerParams(): {
 }
 
 // Download file from OneDrive
-async function downloadOneDriveFile(fileInfo: Record<string, any>): Promise<Blob> {
-	const accessToken = await getToken();
+async function downloadOneDriveFile(fileInfo: Record<string, any>, authorityType?: 'personal' | 'organizations'): Promise<Blob> {
+	const accessToken = await getToken(undefined, authorityType);
 	if (!accessToken) {
 		throw new Error('Unable to retrieve OneDrive access token.');
 	}
@@ -409,7 +418,8 @@ export async function openOneDrivePicker(): Promise<PickerResult | null> {
 }
 
 // Pick and download file from OneDrive
-export async function pickAndDownloadFile(authorityType: 'personal' | 'organizations' = 'personal'): Promise<{ blob: Blob; name: string } | null> {
+export async function pickAndDownloadFile(authorityType?: 'personal' | 'organizations'): Promise<{ blob: Blob; name: string } | null> {
+	// Force reinitialization with selected authority type
 	const config = OneDriveConfig.getInstance();
 	await config.initialize(authorityType);
 	
@@ -420,7 +430,7 @@ export async function pickAndDownloadFile(authorityType: 'personal' | 'organizat
 	}
 
 	const selectedFile = pickerResult.items[0];
-	const blob = await downloadOneDriveFile(selectedFile);
+	const blob = await downloadOneDriveFile(selectedFile, authorityType);
 
 	return { blob, name: selectedFile.name };
 }
