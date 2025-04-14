@@ -30,7 +30,8 @@
             "webRoot": "${workspaceFolder}",
             "sourceMaps": true,
             "preLaunchTask": "start-frontend",
-            "runtimeExecutable": "C:\\Users\\tomas\\scoop\\apps\\googlechrome\\134.0.6998.89\\chrome.exe"
+            "postDebugTask": "terminate-frontend",
+            
         },
         {
             "name": "Install (exe) Helper",

@@ -30,7 +30,7 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "Reset RAUX: Development",
+			"label": "Clean RAUX: Development",
 			"type": "shell",
 			"command": "rm",
 			"args": [
@@ -99,6 +99,20 @@
 				"kind": "build",
 				"isDefault": true
 			}
+		},
+		{
+			"label": "terminate-frontend",
+			"type": "shell",
+			"command": "echo ${input:terminateFrontend}",
+			"problemMatcher": []
+		}
+	],
+	"inputs": [
+		{
+			"id": "terminateFrontend",
+			"type": "command",
+			"command": "workbench.action.tasks.terminate",
+			"args": "start-frontend"
 		}
 	]
 }
