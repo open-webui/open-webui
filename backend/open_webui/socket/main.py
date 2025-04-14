@@ -3,16 +3,23 @@ import socketio
 import logging
 import sys
 import time
+from redis import asyncio as aioredis
 
 from open_webui.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
+from open_webui.utils.redis import (
+    get_sentinels_from_env,
+    get_sentinel_url_from_env,
+)
 
 from open_webui.env import (
     ENABLE_WEBSOCKET_SUPPORT,
     WEBSOCKET_MANAGER,
     WEBSOCKET_REDIS_URL,
     WEBSOCKET_REDIS_LOCK_TIMEOUT,
+    WEBSOCKET_SENTINEL_PORT,
+    WEBSOCKET_SENTINEL_HOSTS,
 )
 from open_webui.utils.auth import decode_token
 from open_webui.socket.utils import RedisDict, RedisLock
@@ -29,7 +36,14 @@ log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
 
 if WEBSOCKET_MANAGER == "redis":
-    mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
+    if WEBSOCKET_SENTINEL_HOSTS:
+        mgr = socketio.AsyncRedisManager(
+            get_sentinel_url_from_env(
+                WEBSOCKET_REDIS_URL, WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
+            )
+        )
+    else:
+        mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
     sio = socketio.AsyncServer(
         cors_allowed_origins=[],
         async_mode="asgi",
@@ -55,14 +69,30 @@ TIMEOUT_DURATION = 3
 
 if WEBSOCKET_MANAGER == "redis":
     log.debug("Using Redis to manage websockets.")
-    SESSION_POOL = RedisDict("open-webui:session_pool", redis_url=WEBSOCKET_REDIS_URL)
-    USER_POOL = RedisDict("open-webui:user_pool", redis_url=WEBSOCKET_REDIS_URL)
-    USAGE_POOL = RedisDict("open-webui:usage_pool", redis_url=WEBSOCKET_REDIS_URL)
+    redis_sentinels = get_sentinels_from_env(
+        WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
+    )
+    SESSION_POOL = RedisDict(
+        "open-webui:session_pool",
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_sentinels=redis_sentinels,
+    )
+    USER_POOL = RedisDict(
+        "open-webui:user_pool",
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_sentinels=redis_sentinels,
+    )
+    USAGE_POOL = RedisDict(
+        "open-webui:usage_pool",
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_sentinels=redis_sentinels,
+    )
 
     clean_up_lock = RedisLock(
         redis_url=WEBSOCKET_REDIS_URL,
         lock_name="usage_cleanup_lock",
         timeout_secs=WEBSOCKET_REDIS_LOCK_TIMEOUT,
+        redis_sentinels=redis_sentinels,
     )
     aquire_func = clean_up_lock.aquire_lock
     renew_func = clean_up_lock.renew_lock
@@ -269,11 +299,19 @@ async def disconnect(sid):
         # print(f"Unknown session ID {sid} disconnected")
 
 
-def get_event_emitter(request_info):
+def get_event_emitter(request_info, update_db=True):
     async def __event_emitter__(event_data):
         user_id = request_info["user_id"]
+
         session_ids = list(
-            set(USER_POOL.get(user_id, []) + [request_info["session_id"]])
+            set(
+                USER_POOL.get(user_id, [])
+                + (
+                    [request_info.get("session_id")]
+                    if request_info.get("session_id")
+                    else []
+                )
+            )
         )
 
         for session_id in session_ids:
@@ -287,40 +325,42 @@ def get_event_emitter(request_info):
                 to=session_id,
             )
 
-        if "type" in event_data and event_data["type"] == "status":
-            Chats.add_message_status_to_chat_by_id_and_message_id(
-                request_info["chat_id"],
-                request_info["message_id"],
-                event_data.get("data", {}),
-            )
+        if update_db:
+            if "type" in event_data and event_data["type"] == "status":
+                Chats.add_message_status_to_chat_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                    event_data.get("data", {}),
+                )
 
-        if "type" in event_data and event_data["type"] == "message":
-            message = Chats.get_message_by_id_and_message_id(
-                request_info["chat_id"],
-                request_info["message_id"],
-            )
+            if "type" in event_data and event_data["type"] == "message":
+                message = Chats.get_message_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                )
 
-            content = message.get("content", "")
-            content += event_data.get("data", {}).get("content", "")
+                if message:
+                    content = message.get("content", "")
+                    content += event_data.get("data", {}).get("content", "")
 
-            Chats.upsert_message_to_chat_by_id_and_message_id(
-                request_info["chat_id"],
-                request_info["message_id"],
-                {
-                    "content": content,
-                },
-            )
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        request_info["chat_id"],
+                        request_info["message_id"],
+                        {
+                            "content": content,
+                        },
+                    )
 
-        if "type" in event_data and event_data["type"] == "replace":
-            content = event_data.get("data", {}).get("content", "")
+            if "type" in event_data and event_data["type"] == "replace":
+                content = event_data.get("data", {}).get("content", "")
 
-            Chats.upsert_message_to_chat_by_id_and_message_id(
-                request_info["chat_id"],
-                request_info["message_id"],
-                {
-                    "content": content,
-                },
-            )
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    request_info["chat_id"],
+                    request_info["message_id"],
+                    {
+                        "content": content,
+                    },
+                )
 
     return __event_emitter__
 

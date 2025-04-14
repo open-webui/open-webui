@@ -83,6 +83,8 @@
 			currentChatPage.set(1);
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			await pinnedChats.set(await getPinnedChatList(localStorage.token));
+
+			dispatch('change');
 		}
 	};
 
@@ -198,6 +200,19 @@
 	});
 
 	let showDeleteConfirm = false;
+
+	const chatTitleInputKeydownHandler = (e) => {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			editChatTitle(id, chatTitle);
+			confirmEdit = false;
+			chatTitle = '';
+		} else if (e.key === 'Escape') {
+			e.preventDefault();
+			confirmEdit = false;
+			chatTitle = '';
+		}
+	};
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={id} />
@@ -246,6 +261,7 @@
 				bind:value={chatTitle}
 				id="chat-title-input-{id}"
 				class=" bg-transparent w-full outline-hidden mr-10"
+				on:keydown={chatTitleInputKeydownHandler}
 			/>
 		</div>
 	{:else}

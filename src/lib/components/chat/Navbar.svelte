@@ -4,7 +4,9 @@
 
 	import {
 		WEBUI_NAME,
+		banners,
 		chatId,
+		config,
 		mobile,
 		settings,
 		showArchivedChats,
@@ -27,6 +29,7 @@
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import DrawerOpen from '../icons/DrawerOpen.svelte';
+	import Banner from '../common/Banner.svelte';
 
 	const i18n = getContext<{
 		t: (key: string) => string;
@@ -40,6 +43,7 @@
 	export let chat: {
 		id?: string;
 	} | null = null;
+	export let history;
 	export let selectedModels: string[] = [];
 	export const showModelSelector = true;
 
@@ -49,10 +53,11 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 
-<nav class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center drag-region">
-	<div
-		class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
-	></div>
+<nav class="sticky top-0 z-30 w-full py-1.5 -mb-8 flex flex-col items-center drag-region">
+	<div class="flex items-center w-full px-1.5">
+		<div
+			class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
+		></div>
 
 	<div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
 		<div class="flex items-center w-full max-w-full">
@@ -75,15 +80,15 @@
 				</button>
 			</div>
 
-			<div
-				class="flex-1 overflow-hidden max-w-full py-0.5
+				<div
+					class="flex-1 overflow-hidden max-w-full py-0.5
 			{$showSidebar ? 'ml-1' : ''}
 			"
-			>
-				{#if showModelSelector}
-					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
-				{/if}
-			</div>
+				>
+					{#if showModelSelector}
+						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+					{/if}
+				</div>
 
 			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 				<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
@@ -170,10 +175,10 @@
 					</button>
 				</Tooltip>
 				<!-- 
-				{#if $user !== undefined}
+				{#if $user !== undefined && $user !== null}
 					<UserMenu
 						className="max-w-[200px]"
-						role={$user.role}
+						role={$user?.role}
 						on:show={(e) => {
 							if (e.detail === 'archived-chat') {
 								showArchivedChats.set(true);
@@ -186,7 +191,7 @@
 						>
 							<div class=" self-center">
 								<img
-									src={$user.profile_image_url}
+									src={$user?.profile_image_url}
 									class="size-6 object-cover rounded-full"
 									alt="User profile"
 									draggable="false"
