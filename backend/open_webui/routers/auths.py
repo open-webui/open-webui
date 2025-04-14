@@ -237,6 +237,8 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             email = email.lower()
         elif isinstance(email, list):
             email = email[0].lower()
+        else:
+            email = str(email).lower()
 
         cn = str(entry["cn"])
         user_dn = entry.entry_dn
