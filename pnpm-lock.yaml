@@ -72,7 +72,7 @@ importers:
         specifier: ^2.10.0
         version: 2.11.7(@tiptap/core@2.11.7(@tiptap/pm@2.11.7))
       '@tiptap/pm':
-        specifier: ^2.10.0
+        specifier: ^2.11.7
         version: 2.11.7
       '@tiptap/starter-kit':
         specifier: ^2.10.0
@@ -89,6 +89,9 @@ importers:
       codemirror:
         specifier: ^6.0.1
         version: 6.0.1
+      codemirror-lang-elixir:
+        specifier: ^4.0.0
+        version: 4.0.0
       codemirror-lang-hcl:
         specifier: ^0.0.0-beta.2
         version: 0.0.0-beta.2
@@ -218,6 +221,9 @@ importers:
       vite-plugin-static-copy:
         specifier: ^2.2.0
         version: 2.3.1(vite@5.4.18(@types/node@22.14.1)(lightningcss@1.29.2)(sass-embedded@1.86.3))
+      yaml:
+        specifier: ^2.7.1
+        version: 2.7.1
     devDependencies:
       '@sveltejs/adapter-auto':
         specifier: 3.2.2
@@ -1944,6 +1950,9 @@ packages:
   codedent@0.1.2:
     resolution: {integrity: sha512-qEqzcy5viM3UoCN0jYHZeXZoyd4NZQzYFg0kOBj8O1CgoGG9WYYTF+VeQRsN0OSKFjF3G1u4WDUOtOsWEx6N2w==}
 
+  codemirror-lang-elixir@4.0.0:
+    resolution: {integrity: sha512-mzFesxo/t6KOxwnkqVd34R/q7yk+sMtHh6vUKGAvjwHmpL7bERHB+vQAsmU/nqrndkwVeJEHWGw/z/ybfdiudA==}
+
   codemirror-lang-hcl@0.0.0-beta.2:
     resolution: {integrity: sha512-R3ew7Z2EYTdHTMXsWKBW9zxnLoLPYO+CrAa3dPZjXLrIR96Q3GR4cwJKF7zkSsujsnWgwRQZonyWpXYXfhQYuQ==}
 
@@ -2970,6 +2979,9 @@ packages:
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
     engines: {node: '>= 0.8.0'}
+
+  lezer-elixir@1.1.2:
+    resolution: {integrity: sha512-K3yPMJcNhqCL6ugr5NkgOC1g37rcOM38XZezO9lBXy0LwWFd8zdWXfmRbY829vZVk0OGCQoI02yDWp9FF2OWZA==}
 
   lightningcss-darwin-arm64@1.29.2:
     resolution: {integrity: sha512-cK/eMabSViKn/PG8U/a7aCorpeKLMlK0bQeNHmdb7qUnBkNPnL+oV5DjJUo0kqWsJUapZsM4jCfYItbqBDvlcA==}
@@ -4518,6 +4530,11 @@ packages:
   yaml@1.10.2:
     resolution: {integrity: sha512-r3vXyErRCYJ7wg28yvBY5VSoAF8ZvlcW9/BwUzEtUsjvX/DKs24dIkuwjtuprwJJHsbyUbLApepYTR1BN4uHrg==}
     engines: {node: '>= 6'}
+
+  yaml@2.7.1:
+    resolution: {integrity: sha512-10ULxpnOCQXxJvBgxsn9ptjq6uviG/htZKk9veJGhlqn3w/DxQ631zFF+nlQXLwmImeS5amR2dl2U8sg6U9jsQ==}
+    engines: {node: '>= 14'}
+    hasBin: true
 
   yauzl@2.10.0:
     resolution: {integrity: sha512-p4a9I6X6nu6IhoGmBqAcbJy1mlC4j27vEPZX9F4L4/vZT3Lyq1VkFHw/V/PUcB9Buo+DG3iHkT0x3Qya58zc3g==}
@@ -6224,6 +6241,11 @@ snapshots:
     dependencies:
       plain-tag: 0.1.3
 
+  codemirror-lang-elixir@4.0.0:
+    dependencies:
+      '@codemirror/language': 6.11.0
+      lezer-elixir: 1.1.2
+
   codemirror-lang-hcl@0.0.0-beta.2:
     dependencies:
       '@codemirror/language': 6.11.0
@@ -7427,6 +7449,11 @@ snapshots:
     dependencies:
       prelude-ls: 1.2.1
       type-check: 0.4.0
+
+  lezer-elixir@1.1.2:
+    dependencies:
+      '@lezer/highlight': 1.2.1
+      '@lezer/lr': 1.4.2
 
   lightningcss-darwin-arm64@1.29.2:
     optional: true
@@ -9073,6 +9100,8 @@ snapshots:
   yallist@5.0.0: {}
 
   yaml@1.10.2: {}
+
+  yaml@2.7.1: {}
 
   yauzl@2.10.0:
     dependencies:

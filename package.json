@@ -3,6 +3,7 @@
 	"version": "0.6.4",
 	"private": true,
 	"scripts": {
+		"install": "pnpm install --config.engine-strict=false",
 		"dev": "pnpm run pyodide:fetch && vite dev --host",
 		"dev:5050": "npm run pyodide:fetch && vite dev --port 5050",
 		"build": "pnpm run pyodide:fetch && vite build",
@@ -125,7 +126,7 @@
 		"yaml": "^2.7.1"
 	},
 	"engines": {
-		"node": ">=18.13.0 <=22.x.x",
+		"node": ">=18.13.0 <=23.x.x",
 		"npm": ">=6.0.0"
 	}
 }
