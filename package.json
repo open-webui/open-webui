@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.6.2",
+	"version": "0.6.4",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -66,13 +66,14 @@
 		"@tiptap/extension-highlight": "^2.10.0",
 		"@tiptap/extension-placeholder": "^2.10.0",
 		"@tiptap/extension-typography": "^2.10.0",
-		"@tiptap/pm": "^2.10.0",
+		"@tiptap/pm": "^2.11.7",
 		"@tiptap/starter-kit": "^2.10.0",
 		"@xyflow/svelte": "^0.1.19",
 		"async": "^3.2.5",
 		"bits-ui": "^0.19.7",
 		"codemirror": "^6.0.1",
 		"codemirror-lang-hcl": "^0.0.0-beta.2",
+		"codemirror-lang-elixir": "^4.0.0",
 		"crc-32": "^1.2.2",
 		"dayjs": "^1.11.10",
 		"dompurify": "^3.1.6",
@@ -112,7 +113,8 @@
 		"turndown": "^7.2.0",
 		"undici": "^7.3.0",
 		"uuid": "^9.0.1",
-		"vite-plugin-static-copy": "^2.2.0"
+		"vite-plugin-static-copy": "^2.2.0",
+		"yaml": "^2.7.1"
 	},
 	"engines": {
 		"node": ">=18.13.0 <=22.x.x",
