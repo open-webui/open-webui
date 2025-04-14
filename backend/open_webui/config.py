@@ -1693,6 +1693,7 @@ MILVUS_TOKEN = os.environ.get("MILVUS_TOKEN", None)
 # Qdrant
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
+QDRANT_ON_DISK = os.environ.get("QDRANT_ON_DISK", "false").lower() == "true"
 
 # OpenSearch
 OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
