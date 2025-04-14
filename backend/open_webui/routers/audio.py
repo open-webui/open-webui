@@ -497,7 +497,11 @@ def transcribe(request: Request, file_path):
             )
 
         model = request.app.state.faster_whisper_model
-        segments, info = model.transcribe(file_path, beam_size=5, vad_filter=True)
+        segments, info = model.transcribe(
+            file_path,
+            beam_size=5,
+            vad_filter=request.app.state.config.WHISPER_VAD_FILTER,
+        )
         log.info(
             "Detected language '%s' with probability %f"
             % (info.language, info.language_probability)
