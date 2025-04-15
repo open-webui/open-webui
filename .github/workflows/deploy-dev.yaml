@@ -13,6 +13,12 @@ permissions:
   contents: read
   packages: read
 
+env:
+  GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+  GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  WEBUI_SECRET_KEY_DEV: ${{ secrets.WEBUI_SECRET_KEY_DEV }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
