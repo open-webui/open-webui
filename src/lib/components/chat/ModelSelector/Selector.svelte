@@ -272,27 +272,27 @@
 	closeFocus={false}
 >
 	{#if !disabledSelect}
-	<DropdownMenu.Trigger
-		class="relative w-full flex"
-		aria-label={placeholder}
-		id="model-selector-{id}-button"
-	>
-		<div
-			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
+		<DropdownMenu.Trigger
+			class="relative w-full flex"
+			aria-label={placeholder}
+			id="model-selector-{id}-button"
 		>
-			{#if selectedModel}
-				<img
-					src={getModelIcon(selectedModel.label)}
-					alt="Model"
-					class="rounded-full size-4 self-center mr-2"
-				/>
-				{selectedModel.label}
-			{:else}
-				{placeholder}
-			{/if}
-			<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
-		</div>
-	</DropdownMenu.Trigger>
+			<div
+				class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
+			>
+				{#if selectedModel}
+					<img
+						src={getModelIcon(selectedModel.label)}
+						alt="Model"
+						class="rounded-full size-4 self-center mr-2"
+					/>
+					{selectedModel.label}
+				{:else}
+					{placeholder}
+				{/if}
+				<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
+			</div>
+		</DropdownMenu.Trigger>
 	{:else}
 		<div
 			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
@@ -537,34 +537,47 @@
 								<p class="text-2xs dark:text-white/50">{$i18n.t('Hosted In')}</p>
 							</div>
 						{/if}
-						{#if modelsInfo?.[hoveredItem?.label]?.context_window}
-							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
-								<p class="text-xs dark:text-white">
+
+						<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+							<p class="text-xs dark:text-white">
+								{#if modelsInfo?.[hoveredItem?.label]?.context_window}
 									{modelsInfo?.[hoveredItem?.label]?.context_window}
-								</p>
-								<p class="text-2xs dark:text-white/50">{$i18n.t('Context Window')}</p>
-							</div>
-						{/if}
-						{#if knowledgeCutoff}
-							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
-								<p class="text-xs dark:text-white">
+								{:else}
+									N/A
+								{/if}
+							</p>
+							<p class="text-2xs dark:text-white/50">{$i18n.t('Context Window')}</p>
+						</div>
+
+						<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+							<p class="text-xs dark:text-white">
+								{#if knowledgeCutoff}
 									{knowledgeCutoff}
-								</p>
-								<p class="text-2xs dark:text-white/50">{$i18n.t('Knowledge Cutoff')}</p>
-							</div>
-						{/if}
-						{#if modelsInfo?.[hoveredItem?.label]?.intelligence_score}
-							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+								{:else}
+									N/A
+								{/if}
+							</p>
+							<p class="text-2xs dark:text-white/50">{$i18n.t('Knowledge Cutoff')}</p>
+						</div>
+
+						<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+							{#if modelsInfo?.[hoveredItem?.label]?.intelligence_score}
 								<StarRating rating={modelsInfo?.[hoveredItem?.label]?.intelligence_score} />
-								<p class="text-2xs dark:text-white/50">{$i18n.t('Intelligence Score')}</p>
-							</div>
-						{/if}
-						{#if modelsInfo?.[hoveredItem?.label]?.speed}
-							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+							{:else}
+								N/A
+							{/if}
+							<p class="text-2xs dark:text-white/50">{$i18n.t('Intelligence Score')}</p>
+						</div>
+
+						<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+							{#if modelsInfo?.[hoveredItem?.label]?.speed}
 								<SpeedRating rating={modelsInfo?.[hoveredItem?.label]?.speed} />
-								<p class="text-2xs dark:text-white/50">{$i18n.t('Speed')}</p>
-							</div>
-						{/if}
+							{:else}
+								N/A
+							{/if}
+							<p class="text-2xs dark:text-white/50">{$i18n.t('Speed')}</p>
+						</div>
+
 						{#if modelsInfo?.[hoveredItem?.label]?.multimodal}
 							<div class="py-2.5 border-b dark:border-customGray-700 last:border-b-0">
 								<p class="text-xs dark:text-white">{$i18n.t('Multimodal')}</p>
