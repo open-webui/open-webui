@@ -182,8 +182,11 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
         try:
             files = Files.get_files_by_ids((knowledge_base.data or {}).get("file_ids", []))
 
+            reindexed_files = []
             failed_files = []
             for file in files:
+                if file.id in reindexed_files:
+                    continue  # file already reindexed in another knowledge
                 try:
                     if VECTOR_DB_CLIENT.has_collection(
                         collection_name=f"file-{file.id}"
@@ -201,6 +204,7 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
                         ProcessFileForm(file_id=file.id),
                         user=user,
                     )
+                    reindexed_files.append(file.id)
                 except Exception as e:
                     log.error(
                         f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
