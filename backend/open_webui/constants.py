@@ -104,6 +104,7 @@ class ERROR_MESSAGES(str, Enum):
     )
     FILE_NOT_PROCESSED = "Extracted content is not available for this file. Please ensure that the file is processed before proceeding."
 
+    DELETE_ROLE_ERROR = "Oops! Something went wrong. We encountered an issue while trying to delete the role. Please give it another shot."
 
 class TASKS(str, Enum):
     def __str__(self) -> str:
