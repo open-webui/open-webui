@@ -80,6 +80,13 @@
 			accessControl = prompt?.access_control ?? null;
 		}
 	});
+	onMount(() => {
+		const stored = localStorage.getItem('newPromptDraft');
+		if (stored) {
+			content = stored;
+			localStorage.removeItem('newPromptDraft'); 
+		}
+	});
 
 	$:console.log(command, 'command')
 </script>
