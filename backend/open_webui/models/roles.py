@@ -103,4 +103,16 @@ class RolesTable:
         except Exception:
             return False
 
+    def add_role_if_role_do_not_exists(self, role_name: str) -> Optional[RoleModel]:
+        # Check if role already exists
+        existing_role = self.get_role_by_name(role_name)
+        if existing_role:
+            return existing_role
+
+        # Role is allowed and doesn't exist, so create it
+        try:
+            return self.insert_new_role(name=role_name)
+        except Exception as e:
+            return None
+
 Roles = RolesTable()
