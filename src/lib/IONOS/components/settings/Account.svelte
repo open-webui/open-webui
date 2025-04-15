@@ -2,7 +2,6 @@
 	import type { Readable } from 'svelte/store';
 	import type { I18Next } from '$lib/IONOS/i18next.d.ts';
 	import { getContext } from 'svelte';
-	import Confirm from '$lib/IONOS/components/common/Confirm.svelte';
 	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte'
 	import { user } from '$lib/stores';
 	import { resetPassword } from '$lib/IONOS/services/account';

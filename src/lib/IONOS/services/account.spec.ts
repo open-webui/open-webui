@@ -3,6 +3,10 @@ import {
 	resetPassword,
 } from './account';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Config = Record<string, any>;
+type ConfigSubscriber = (config: Config) => void
+
 const mocks = vi.hoisted(() => {
 	return {
 		stores: {
