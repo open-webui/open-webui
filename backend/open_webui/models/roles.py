@@ -31,27 +31,29 @@ class RoleModel(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+####################
+# Forms
+####################
+
+class RoleAddForm(BaseModel):
+    role: str
+
 class RolesTable:
     def insert_new_role(
         self,
-        id: int,
         name: str,
     ) -> Optional[RoleModel]:
         with get_db() as db:
-            role = RoleModel(
-                **{
-                    "id": id,
-                    "name": name,
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
-                }
+            result = Role(
+                name=name,
+                created_at=int(time.time()),
+                updated_at=int(time.time())
             )
-            result = Role(**role.model_dump())
             db.add(result)
             db.commit()
             db.refresh(result)
             if result:
-                return role
+                return RoleModel.model_validate(result)
             else:
                 return None
 
@@ -59,6 +61,14 @@ class RolesTable:
         try:
             with get_db() as db:
                 role = db.query(Role).filter_by(id=id).first()
+                return RoleModel.model_validate(role)
+        except Exception:
+            return None
+
+    def get_role_by_name(self, name: str) -> Optional[RoleModel]:
+        try:
+            with get_db() as db:
+                role = db.query(Role).filter_by(name=name).first()
                 return RoleModel.model_validate(role)
         except Exception:
             return None

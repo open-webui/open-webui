@@ -6,7 +6,8 @@ from open_webui.models.groups import Groups
 from open_webui.models.chats import Chats
 from open_webui.models.roles import (
     RoleModel,
-    Roles
+    Roles,
+    RoleAddForm,
 )
 
 
@@ -39,21 +40,23 @@ async def get_roles(
     return Roles.get_roles(skip, limit)
 
 ############################
-# UpdateUserRole
+# AddRole
 ############################
 
 
-# @router.post("/", response_model=Optional[RoleModel])
-# async def update_user_role(form_data: UserRoleUpdateForm, user=Depends(get_admin_user)):
-#     if user.id != form_data.id and form_data.id != Users.get_first_user().id:
-#         return Users.update_user_role_by_id(form_data.id, form_data.role)
-#
-#     raise HTTPException(
-#         status_code=status.HTTP_403_FORBIDDEN,
-#         detail=ERROR_MESSAGES.ACTION_PROHIBITED,
-#     )
-#
-#
+@router.post("/", response_model=Optional[RoleModel])
+async def add_role(form_data: RoleAddForm, user=Depends(get_admin_user)):
+    # Check if role already exists
+    existing_role = Roles.get_role_by_name(name=form_data.role)
+    if existing_role:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Role with name '{form_data.role}' already exists"
+        )
+
+    return Roles.insert_new_role(name=form_data.role)
+
+
 # ############################
 # # DeleteUserById
 # ############################
