@@ -5,6 +5,8 @@
 	import { updateUserSettings } from '$lib/apis/users';
 	import { getModels as _getModels } from '$lib/apis';
 	import { goto } from '$app/navigation';
+	// Removed focus-trap import and related code
+	// import * as focusTrap from 'focus-trap';
 
 	import Modal from '../common/Modal.svelte';
 	import Account from './Settings/Account.svelte';
@@ -340,8 +342,8 @@
 	}
 </script>
 
-<Modal size="xl" bind:show>
-	<div class="text-gray-700 dark:text-gray-100">
+<Modal size="xl" bind:show returnFocusSelector="#user-menu">
+	<div id="settings-modal-wrapper" class="text-gray-700 dark:text-gray-100">
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
 			<h2 class=" text-lg font-medium self-center">{$i18n.t('Settings')}</h2>
 			<button

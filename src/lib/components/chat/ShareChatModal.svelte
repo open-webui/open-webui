@@ -76,7 +76,7 @@
 	}
 </script>
 
-<Modal bind:show size="md">
+<Modal bind:show size="md" returnFocusSelector="#chat-menu">
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
 			<h2 class=" text-lg font-medium self-center">{$i18n.t('Share Chat')}</h2>

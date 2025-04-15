@@ -41,6 +41,7 @@
 		>
 			<button
 				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				id="open-settings-button"
 				on:click={async () => {
 					await showSettings.set(true);
 					show = false;

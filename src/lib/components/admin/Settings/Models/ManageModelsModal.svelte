@@ -36,7 +36,7 @@
 	});
 </script>
 
-<Modal size="sm" bind:show>
+<Modal size="sm" bind:show returnfocusSelector="#manage-models">
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4">
 			<div class=" text-lg font-medium self-center font-primary">

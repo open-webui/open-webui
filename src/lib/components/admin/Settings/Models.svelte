@@ -142,6 +142,7 @@
 					<Tooltip content={$i18n.t('Manage Models')}>
 						<button
 							class=" p-1 rounded-full flex gap-1 items-center"
+							id="manage-models"
 							type="button"
 							on:click={() => {
 								showManageModal = true;
@@ -154,6 +155,7 @@
 					<Tooltip content={$i18n.t('Settings')}>
 						<button
 							class=" p-1 rounded-full flex gap-1 items-center"
+							id="config-models"
 							type="button"
 							on:click={() => {
 								showConfigModal = true;

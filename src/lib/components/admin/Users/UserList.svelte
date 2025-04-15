@@ -173,6 +173,7 @@
 			<div>
 				<Tooltip content={$i18n.t('Add User')}>
 					<button
+						id="add-user				"
 						class=" p-2 rounded-xl hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition font-medium text-sm flex items-center space-x-1"
 						on:click={() => {
 							showAddUserModal = !showAddUserModal;
@@ -416,6 +417,7 @@
 
 							<Tooltip content={$i18n.t('Edit User')}>
 								<button
+									id="edit-user"
 									class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 									on:click={async () => {
 										showEditUserModal = !showEditUserModal;

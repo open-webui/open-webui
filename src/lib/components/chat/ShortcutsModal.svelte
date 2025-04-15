@@ -7,7 +7,7 @@
 	export let show = false;
 </script>
 
-<Modal bind:show>
+<Modal bind:show returnFocusSelector="#help">
 	<div class="text-gray-700 dark:text-gray-100">
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4">
 			<h2 class=" text-lg font-medium self-center">{$i18n.t('Keyboard shortcuts')}</h2>
