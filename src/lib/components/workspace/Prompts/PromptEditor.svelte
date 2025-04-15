@@ -20,7 +20,11 @@
 	let command = '';
 	let content = '';
 
-	let accessControl = null;
+	let accessControl = {
+		read: { group_ids: [], user_ids: [] },
+		write: { group_ids: [], user_ids: [] }
+	};
+
 
 	let showAccessControlModal = false;
 
@@ -63,7 +67,11 @@
 			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
 			content = prompt.content;
 
-			accessControl = prompt?.access_control ?? null;
+			accessControl = prompt?.access_control ?? {
+				read: { group_ids: [], user_ids: [] },
+				write: { group_ids: [], user_ids: [] }
+			};
+
 		}
 	});
 </script>

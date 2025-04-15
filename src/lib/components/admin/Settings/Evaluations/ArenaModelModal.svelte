@@ -40,7 +40,11 @@
 	let modelIds = [];
 	let filterMode = 'include';
 
-	let accessControl = {};
+	let accessControl = {
+		read: { group_ids: [], user_ids: [] },
+		write: { group_ids: [], user_ids: [] }
+	};
+
 
 	let imageInputElement;
 	let loading = false;
