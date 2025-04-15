@@ -4,7 +4,9 @@ from typing import Optional
 from open_webui.internal.db import Base, JSONField, get_db
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, String, Integer
+
+from pprint import pprint
 
 ####################
 # Role DB Schema
@@ -14,23 +16,25 @@ from sqlalchemy import BigInteger, Column, String, Text
 class Role(Base):
     __tablename__ = "roles"
 
-    id = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True)
     name = Column(String)
 
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
 
 class RoleModel(BaseModel):
-    id: str
+    id: int
     name: str
 
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
+    model_config = ConfigDict(from_attributes=True)
+
 class RolesTable:
     def insert_new_role(
         self,
-        id: str,
+        id: int,
         name: str,
     ) -> Optional[RoleModel]:
         with get_db() as db:
@@ -64,7 +68,7 @@ class RolesTable:
     ) -> list[RoleModel]:
         with get_db() as db:
 
-            query = db.query(Role).order_by(Role.created_at.desc())
+            query = db.query(Role).order_by(Role.id)
 
             if skip:
                 query = query.offset(skip)
@@ -72,6 +76,8 @@ class RolesTable:
                 query = query.limit(limit)
 
             roles = query.all()
+
+            pprint(roles)
 
             return [RoleModel.model_validate(role) for role in roles]
 
