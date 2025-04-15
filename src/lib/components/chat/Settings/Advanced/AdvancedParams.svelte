@@ -208,7 +208,7 @@
 						max="1"
 						step="0.05"
 						bind:value={params.temperature}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-600 dark:bg-gray-500"
 					/>
 				</div>
 				<div>
@@ -306,7 +306,7 @@
 						max="2"
 						step="1"
 						bind:value={params.mirostat}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-600 dark:bg-gray-500"
 					/>
 				</div>
 				<div>
@@ -361,7 +361,7 @@
 						max="1"
 						step="0.05"
 						bind:value={params.mirostat_eta}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-600 dark:bg-gray-500"
 					/>
 				</div>
 				<div>
@@ -417,7 +417,7 @@
 						max="10"
 						step="0.5"
 						bind:value={params.mirostat_tau}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-600 dark:bg-gray-500"
 					/>
 				</div>
 				<div>
@@ -472,7 +472,7 @@
 						max="100"
 						step="0.5"
 						bind:value={params.top_k}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-600 dark:bg-gray-500"
 					/>
 				</div>
 				<div>
@@ -528,7 +528,7 @@
 						max="1"
 						step="0.05"
 						bind:value={params.top_p}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-600 dark:bg-gray-500"
 					/>
 				</div>
 				<div>
@@ -583,7 +583,7 @@
 						max="1"
 						step="0.05"
 						bind:value={params.min_p}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-600 dark:bg-gray-500"
 					/>
 				</div>
 				<div>
@@ -639,7 +639,7 @@
 						max="2"
 						step="0.05"
 						bind:value={params.frequency_penalty}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-600 dark:bg-gray-500"
 					/>
 				</div>
 				<div>
@@ -695,7 +695,7 @@
 						max="128"
 						step="1"
 						bind:value={params.repeat_last_n}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-600 dark:bg-gray-500"
 					/>
 				</div>
 				<div>
@@ -751,7 +751,7 @@
 						max="2"
 						step="0.05"
 						bind:value={params.tfs_z}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-600 dark:bg-gray-500"
 					/>
 				</div>
 				<div>
@@ -807,7 +807,7 @@
 						max="10240000"
 						step="1"
 						bind:value={params.num_ctx}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-600 dark:bg-gray-500"
 					/>
 				</div>
 				<div class="">
@@ -862,7 +862,7 @@
 						max="8192"
 						step="256"
 						bind:value={params.num_batch}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-600 dark:bg-gray-500"
 					/>
 				</div>
 				<div>
@@ -972,7 +972,7 @@
 						max="131072"
 						step="1"
 						bind:value={params.max_tokens}
-						class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+						class="w-full h-2 rounded-lg appearance-none cursor-pointer bg-gray-600 dark:bg-gray-500"
 					/>
 				</div>
 				<div>

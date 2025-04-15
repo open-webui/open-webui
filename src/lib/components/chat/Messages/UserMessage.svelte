@@ -170,7 +170,7 @@
 						<div>
 							<button
 								id="save-edit-message-button"
-								class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+								class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl focus:outline-2 focus:outline-black dark:focus:outline-white"
 								on:click={() => {
 									editMessageConfirmHandler(false);
 								}}
@@ -182,7 +182,7 @@
 						<div class="flex space-x-1.5">
 							<button
 								id="close-edit-message-button"
-								class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl"
+								class="px-4 py-2 bg-white dark:bg-gray-900 hover:bg-gray-100 text-gray-800 dark:text-gray-100 transition rounded-3xl focus:outline-2 focus:outline-black dark:focus:outline-white"
 								on:click={() => {
 									cancelEditMessage();
 								}}

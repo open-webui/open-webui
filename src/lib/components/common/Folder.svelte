@@ -124,7 +124,7 @@
 				class="w-full group rounded-md relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-400 transition"
 			>
 				<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-xs font-medium">
-					<div class="text-gray-700 dark:text-gray-400">
+					<div class="text-gray-900 dark:text-gray-100">
 						{#if open}
 							<ChevronDown className=" size-3" strokeWidth="2.5" />
 						{:else}
@@ -157,7 +157,7 @@
 								}}
 								aria-label={onAddLabel}
 							>
-								<Plus className=" size-3" strokeWidth="2.5" />
+								<Plus className=" size-3 text-gray-900 dark:text-gray-100" strokeWidth="2.5" />
 							</button>
 						</Tooltip>
 					</div>

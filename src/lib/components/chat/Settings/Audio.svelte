@@ -198,7 +198,7 @@
 					</div>
 				</div>
 				<div class="flex items-center justify-between my-1.5">
-					<div class="text-xs">
+					<div class="text-xs text-gray-800">
 						{$i18n.t('Allow non-local voices')}
 					</div>
 
