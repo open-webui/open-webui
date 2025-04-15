@@ -1,12 +1,12 @@
 import time
 from typing import Optional
 
+from pprint import pprint
+
 from open_webui.internal.db import Base, JSONField, get_db
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Integer
-
-from pprint import pprint
 
 ####################
 # Role DB Schema
@@ -87,13 +87,20 @@ class RolesTable:
 
             roles = query.all()
 
-            pprint(roles)
-
             return [RoleModel.model_validate(role) for role in roles]
 
     def get_num_roles(self) -> Optional[int]:
         with get_db() as db:
             return db.query(Role).count()
 
+    def delete_by_id(self, role_id: str) -> bool:
+        try:
+            with get_db() as db:
+                db.query(Role).filter_by(id=role_id).delete()
+                db.commit()
+
+            return True
+        except Exception:
+            return False
 
 Roles = RolesTable()
