@@ -358,8 +358,10 @@ def add_file_to_knowledge_by_id(
     if knowledge:
         data = knowledge.data or {}
         file_ids = data.get("file_ids", [])
+        files = Files.get_files_by_ids(file_ids)
+        file_hashes = {file.hash for file in files if file.hash}
 
-        if form_data.file_id not in file_ids:
+        if (form_data.file_id not in file_ids) and (file.hash not in file_hashes):
             file_ids.append(form_data.file_id)
             data["file_ids"] = file_ids
 
