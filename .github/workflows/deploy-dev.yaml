@@ -21,7 +21,7 @@ jobs:
       - name: Deploy to EC2 Dev
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: 51.94.9.62
+          host: dev.boti.deusto.es
           username: ubuntu
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY_DEV }}
           envs: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, OPENAI_API_KEY, WEBUI_SECRET_KEY_DEV
