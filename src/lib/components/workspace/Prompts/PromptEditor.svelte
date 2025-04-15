@@ -168,12 +168,12 @@
 				<div class="text-xs text-gray-400 dark:text-white/50">
 					ⓘ {$i18n.t('Format your variables using brackets like this:')}&nbsp;<span
 						class=" text-gray-600 dark:text-white/50 font-medium"
-						>{'{{'}{$i18n.t('variable')}{'}}'}</span
+						>{'['}{$i18n.t('variable')}{']'}</span
 					>.
 					{$i18n.t('Make sure to enclose them with')}
-					<span class=" text-gray-600 dark:text-white/50 font-medium">{'{{'}</span>
+					<span class=" text-gray-600 dark:text-white/50 font-medium">{"'['"}</span>
 					{$i18n.t('and')}
-					<span class=" text-gray-600 dark:text-white/50 font-medium">{'}}'}</span>.
+					<span class=" text-gray-600 dark:text-white/50 font-medium">{"']'"}</span>.
 				</div>
 
 				<div class="text-xs text-gray-400 dark:text-white/50">
