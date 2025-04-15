@@ -36,6 +36,7 @@
 	export let searchPlaceholder = $i18n.t('Search a model');
 
 	export let showTemporaryChatControl = false;
+	export let disabledSelect = false;
 
 	export let items: {
 		label: string;
@@ -270,6 +271,7 @@
 	}}
 	closeFocus={false}
 >
+	{#if !disabledSelect}
 	<DropdownMenu.Trigger
 		class="relative w-full flex"
 		aria-label={placeholder}
@@ -291,6 +293,22 @@
 			<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
 		</div>
 	</DropdownMenu.Trigger>
+	{:else}
+		<div
+			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
+		>
+			{#if selectedModel}
+				<img
+					src={getModelIcon(selectedModel.label)}
+					alt="Model"
+					class="rounded-full size-4 self-center mr-2"
+				/>
+				{selectedModel.label}
+			{:else}
+				{placeholder}
+			{/if}
+		</div>
+	{/if}
 
 	<DropdownMenu.Content
 		class=" z-40 {$mobile

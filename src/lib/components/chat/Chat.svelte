@@ -1993,7 +1993,7 @@
 
 						<div class=" pb-[1rem] max-w-[980px] mx-auto w-full">
 							<div class="px-3 mb-2.5 flex items-center justify-between">
-								<ModelSelector {initNewChatCompleted} bind:selectedModels showSetDefault={!history.currentId} />
+								<ModelSelector disabledSelect={true} {initNewChatCompleted} bind:selectedModels showSetDefault={!history.currentId} />
 								<div
 									class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-md dark:bg-customGray-800"
 								>
