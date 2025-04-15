@@ -16,6 +16,8 @@ from starlette.responses import RedirectResponse
 
 from open_webui.models.auths import Auths
 from open_webui.models.users import Users
+
+from open_webui.models.roles import Roles
 from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm, GroupForm
 from open_webui.config import (
     DEFAULT_USER_ROLE,
@@ -87,6 +89,17 @@ class OAuthManager:
     def get_client(self, provider_name):
         return self.oauth.create_client(provider_name)
 
+    def find_first_role_match(self, oauth_roles, allowed_roles):
+        # Convert to sets for more efficient lookup if lists are large
+        oauth_roles_set = set(oauth_roles)
+        allowed_roles_set = set(allowed_roles)
+
+        # Find the intersection of the two sets
+        matching_roles = oauth_roles_set.intersection(allowed_roles_set)
+
+        # Return the first matching role if any matches found
+        return next(iter(matching_roles), None)
+
     def get_user_role(self, user, user_data):
         if user and Users.get_num_users() == 1:
             # If the user is the only user, assign the role "admin" - actually repairs role for single user on login
@@ -125,8 +138,15 @@ class OAuthManager:
                 for allowed_role in oauth_allowed_roles:
                     # If the user has any of the allowed roles, assign the role "user"
                     if allowed_role in oauth_roles:
-                        log.debug("Assigned user the user role")
-                        role = "user"
+                        first_match = self.find_first_role_match(oauth_roles, oauth_allowed_roles)
+                        if first_match:
+                            Roles.add_role_if_role_do_not_exists(first_match)
+                            role = first_match
+                        else:
+                            # Fallback to role user.
+                            role = "user"
+
+                        log.debug(f"Assigned user the {role} role")
                         break
                 for admin_role in oauth_admin_roles:
                     # If the user has any of the admin roles, assign the role "admin"
