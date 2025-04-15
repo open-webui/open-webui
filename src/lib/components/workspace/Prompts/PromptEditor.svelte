@@ -164,20 +164,20 @@
 					{#if content}
 						<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Prompt Content')}</div>
 					{/if}
-				<Textarea
-					className={`px-2.5 py-2 text-sm ${content ? "mt-2" : "mt-0"} w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
-					placeholder={$i18n.t('Prompt Content')}
-					bind:value={content}
-					rows={4}
-					required
-				/>
-				{#if !content}
-					<span
-					class="absolute top-[26px] w-[180px] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
-					>
-						{$i18n.t('Write a summary that summarizes [topic or keyword].')}
-					</span>
-				{/if}
+					<Textarea
+						className={`px-2.5 py-2 text-sm ${content ? "mt-2" : "mt-0"} w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+						placeholder={$i18n.t('Prompt Content')}
+						bind:value={content}
+						rows={4}
+						required
+					/>
+					{#if !content}
+						<span
+						class="absolute top-[26px] w-[180px] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+						>
+							{$i18n.t('Write a summary that summarizes [topic or keyword].')}
+						</span>
+					{/if}
 				</div>
 			</div>
 			<div class="mb-2.5">

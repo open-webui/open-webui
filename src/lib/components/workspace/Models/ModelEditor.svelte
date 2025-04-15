@@ -560,9 +560,12 @@
 						<div class="w-full">
 							<div class="mt-2 my-2 flex flex-col">
 								<div class="flex-1 mb-1.5">
-									<div class="relative">
+									<div class="relative w-full dark:bg-customGray-900 rounded-md">
+										{#if name}
+											<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Name')}</div>
+										{/if}
 										<input
-											class="px-2.5 text-sm h-10 w-full dark:bg-customGray-900 dark:text-white dark:placeholder:text-customGray-100 rounded-md outline-none"
+											class={`px-2.5 text-sm ${name ? "mt-2" : "mt-0"} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 											placeholder={$i18n.t('Name')}
 											bind:value={name}
 											required
@@ -589,9 +592,12 @@
 							</div>
 						</div> -->
 								<div class="flex-1 mb-1.5">
-									<div class="relative">
+									<div class="relative w-full dark:bg-customGray-900 rounded-md">
+										{#if info.meta.description}
+											<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Description')}</div>
+										{/if}
 										<input
-											class="px-2.5 text-sm h-10 w-full dark:bg-customGray-900 dark:text-white dark:placeholder:text-customGray-100 rounded-md outline-none"
+											class={`px-2.5 text-sm ${info.meta.description ? "mt-2" : "mt-0"} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 											placeholder={$i18n.t('Description')}
 											bind:value={info.meta.description}
 										/>
@@ -605,9 +611,12 @@
 									</div>
 								</div>
 								<div class="mb-1.5">
-									<div class="relative">
+									<div class="relative w-full dark:bg-customGray-900 rounded-md">
+										{#if info.params.system}
+											<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('System Prompt')}</div>
+										{/if}
 										<Textarea
-											className="px-2.5 py-2.5 text-sm h-20 w-full dark:bg-customGray-900 dark:text-white dark:placeholder:text-customGray-100 rounded-md outline-none"
+											className={`px-2.5 py-2 text-sm ${info.params.system ? "mt-2" : "mt-0"} w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 											placeholder={$i18n.t('System Prompt')}
 											rows={4}
 											bind:value={info.params.system}
@@ -734,7 +743,7 @@
 											{#if info.meta.suggestion_prompts.length > 0}
 												{#each info.meta.suggestion_prompts as prompt, promptIdx}
 													<div class=" flex rounded-lg">
-														<div class="relative w-full">
+														<div class="relative w-full dark:bg-customGray-900 rounded-md">
 															<input
 																class="px-2.5 text-sm h-10 w-full dark:bg-customGray-900 dark:text-white dark:placeholder:text-customGray-100 rounded-md outline-none"
 																placeholder={$i18n.t('Prompt suggestion')}
