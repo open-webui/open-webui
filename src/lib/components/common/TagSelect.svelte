@@ -63,7 +63,7 @@
 >
 	<button
         type="button"
-		class={`${isFocused ? 'border' : ''} dark:border-customGray-700 w-full flex flex-wrap items-center gap-2 bg-white dark:bg-customGray-900 rounded-md px-2.5 pb-1.5 ${selected.length > 0 ? 'pt-7' : 'pt-1.5'}`}
+		class={`${isFocused ? 'border' : ''} dark:border-customGray-700 w-full flex flex-wrap items-center gap-2 bg-white dark:bg-customGray-900 rounded-md px-2.5 pb-1.5 ${selected.length > 0 ? 'pt-[22px]' : 'pt-1.5'}`}
 		on:click={() => {
             inputElement.focus();
             emptyInputPlaceholderVisible = false;
