@@ -494,7 +494,7 @@ def remove_file_from_knowledge_by_id(
     for knowledge_ in knowledges:
         if knowledge_.id == knowledge.id:
             continue  # skip the own knowledge base
-        files_ids = (knowledge_.data or {}).get("files_ids", [])
+        files_ids = (knowledge_.data or {}).get("file_ids", [])
         if form_data.file_id in files_ids:
             file_in_other_knowledges = True
             break
@@ -601,13 +601,13 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
                 Models.update_model_by_id(model.id, model_form)
 
     # Find files in other knowledges
-    if current_files_ids := set((knowledge.data or {}).get("files_ids", [])):
+    if current_files_ids := set((knowledge.data or {}).get("file_ids", [])):
         knowledges = Knowledges.get_knowledge_bases()
         other_file_ids = set()
         for knowledge_ in knowledges:
             if knowledge_.id == knowledge.id:
                 continue  # skip the current knowledge
-            other_file_ids.update(set((knowledge_.data or {}).get("files_ids", [])))
+            other_file_ids.update(set((knowledge_.data or {}).get("file_ids", [])))
 
         # Delete only the files which are not present in other knowledges
         files_ids_to_delete = current_files_ids.difference(other_file_ids)
@@ -656,13 +656,13 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         )
 
     # Find files in other knowledges
-    if current_files_ids := set((knowledge.data or {}).get("files_ids", [])):
+    if current_files_ids := set((knowledge.data or {}).get("file_ids", [])):
         knowledges = Knowledges.get_knowledge_bases()
         other_file_ids = set()
         for knowledge_ in knowledges:
             if knowledge_.id == knowledge.id:
                 continue  # skip the current knowledge
-            other_file_ids.update(set((knowledge_.data or {}).get("files_ids", [])))
+            other_file_ids.update(set((knowledge_.data or {}).get("file_ids", [])))
 
         # Delete only the files which are not present in other knowledges
         files_ids_to_delete = current_files_ids.difference(other_file_ids)
