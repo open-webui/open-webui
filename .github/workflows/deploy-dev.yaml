@@ -43,6 +43,8 @@ jobs:
             docker rm boti_openwebui || true
             
             docker run -d \
+              --restart always \
+              --network caddy-network \
               -p 3000:8080 \
               -v open-webui:/app/backend/data \
               --env-file ~/.env \
