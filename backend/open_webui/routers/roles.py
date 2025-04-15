@@ -1,6 +1,8 @@
 import logging
 from typing import Optional
 
+from pprint import pprint
+
 from open_webui.models.auths import Auths
 from open_webui.models.groups import Groups
 from open_webui.models.chats import Chats
@@ -57,25 +59,18 @@ async def add_role(form_data: RoleAddForm, user=Depends(get_admin_user)):
     return Roles.insert_new_role(name=form_data.role)
 
 
-# ############################
-# # DeleteUserById
-# ############################
-#
-#
-# @router.delete("/{user_id}", response_model=bool)
-# async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
-#     if user.id != user_id:
-#         result = Auths.delete_auth_by_id(user_id)
-#
-#         if result:
-#             return True
-#
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=ERROR_MESSAGES.DELETE_USER_ERROR,
-#         )
-#
-#     raise HTTPException(
-#         status_code=status.HTTP_403_FORBIDDEN,
-#         detail=ERROR_MESSAGES.ACTION_PROHIBITED,
-#     )
+############################
+# DeleteRoleById
+############################
+
+# TODO(jeskr): Check if role is used by any users before deleting it.
+@router.delete("/{role_id}", response_model=bool)
+async def delete_role_by_id(role_id: str, user=Depends(get_admin_user)):
+    result = Roles.delete_by_id(role_id)
+    if result:
+        return True
+
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=ERROR_MESSAGES.DELETE_ROLE_ERROR,
+    )
