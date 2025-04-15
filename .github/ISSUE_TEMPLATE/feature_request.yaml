@@ -1,64 +1,51 @@
 name: Feature Request
-description: Suggest an idea for this project
+description: Share your ideas to help make RAUX even better! 💡
 title: 'feat: '
-labels: ['triage']
+labels: ['triage', 'enhancement']
 body:
   - type: markdown
     attributes:
       value: |
-        ## Important Notes
-        ### Before submitting
-        Please check the [Issues](https://github.com/open-webui/open-webui/issues) or [Discussions](https://github.com/open-webui/open-webui/discussions) to see if a similar request has been posted.
-        It's likely we're already tracking it! If you’re unsure, start a discussion post first.
-        This will help us efficiently focus on improving the project.
+        # Welcome! 👋 
 
-        ### Collaborate respectfully
-        We value a **constructive attitude**, so please be mindful of your communication. If negativity is part of your approach, our capacity to engage may be limited. We're here to help if you're **open to learning** and **communicating positively**.
-
-        Remember:
-        - Open WebUI is a **volunteer-driven project**
-        - It's managed by a **single maintainer**
-        - It's supported by contributors who also have **full-time jobs**
-
-        We appreciate your time and ask that you **respect ours**.
-
-
-        ### Contributing
-        If you encounter an issue, we highly encourage you to submit a pull request or fork the project. We actively work to prevent contributor burnout to maintain the quality and continuity of Open WebUI.
-
-        ### Bug reproducibility
-        If a bug cannot be reproduced with a `:main` or `:dev` Docker setup, or a `pip install` with Python 3.11, it may require additional help from the community. In such cases, we will move it to the "[issues](https://github.com/open-webui/open-webui/discussions/categories/issues)" Discussions section due to our limited resources. We encourage the community to assist with these issues. Remember, it’s not that the issue doesn’t exist; we need your help!
+        Thanks for thinking about ways to improve RAUX! Your ideas help make this project better for everyone.
+        
+        Before sharing your idea, you might want to check our [Issues](https://github.com/amd/gaia/issues) to see if someone else has suggested something similar.
+        
+        We love hearing new ideas and appreciate constructive feedback! 🌟
 
   - type: checkboxes
     id: existing-issue
     attributes:
-      label: Check Existing Issues
-      description: Please confirm that you've checked for existing similar requests
+      label: Quick Check ✨
+      description: Let us know if you've had a chance to look around
       options:
-        - label: I have searched the existing issues and discussions.
-          required: true
+        - label: I've taken a look at existing feature requests
+          required: false
+
   - type: textarea
-    id: problem-description
+    id: feature-description
     attributes:
-      label: Problem Description
-      description: Is your feature request related to a problem? Please provide a clear and concise description of what the problem is.
-      placeholder: "Ex. I'm always frustrated when..."
+      label: What's on your mind?
+      description: |
+        Share what challenge you're facing and your proposed solution. For example:
+        - "It would be helpful if... because I often need to..."
+        - "I wish RAUX could... which would work by..."
+        - Feel free to include examples, similar features from other tools, or mockups
     validations:
-      required: true
-  - type: textarea
-    id: solution-description
+      required: false
+
+  - type: markdown
     attributes:
-      label: Desired Solution you'd like
-      description: Clearly describe what you want to happen.
-    validations:
-      required: true
-  - type: textarea
-    id: alternatives-considered
-    attributes:
-      label: Alternatives Considered
-      description: A clear and concise description of any alternative solutions or features you've considered.
-  - type: textarea
-    id: additional-context
-    attributes:
-      label: Additional Context
-      description: Add any other context or screenshots about the feature request here.
+      value: |
+        ## Thank You! 🙌
+        
+        We really appreciate you taking the time to share your ideas with us! Your feedback helps shape the future of RAUX.
+        
+        While we review all suggestions, please understand that we need to prioritize based on various factors and resources.
+        Feel free to:
+        - Add comments if you think of additional details
+        - Share more context or examples
+        - Help others by commenting on their ideas too
+        
+        Together, we can make RAUX even better! ✨
