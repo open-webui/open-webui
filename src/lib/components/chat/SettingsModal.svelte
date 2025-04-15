@@ -18,6 +18,9 @@
 	import User from '../icons/User.svelte';
 	import Personalization from './Settings/Personalization.svelte';
 	import Search from '../icons/Search.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	// import Connections from './Settings/Connections.svelte';
+	// import Tools from './Settings/Tools.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -374,12 +377,14 @@
 					<div class="self-center rounded-l-xl bg-transparent">
 						<Search className="size-3.5" />
 					</div>
-					<input
-						class="w-full py-1.5 text-sm bg-transparent dark:text-gray-300 outline-none"
-						bind:value={search}
-						on:input={searchDebounceHandler}
-						placeholder={$i18n.t('Search')}
-					/>
+					<Tooltip placement="top-start" content={$i18n.t('Search')}>
+						<input
+							class="w-full py-1.5 text-sm bg-transparent placeholder-[#5C6B8B] dark:text-gray-300 outline-none"
+							bind:value={search}
+							on:input={searchDebounceHandler}
+							placeholder={$i18n.t('Search')}
+						/>
+					</Tooltip>
 				</div>
 
 				{#if visibleTabs.length > 0}
@@ -388,8 +393,8 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'general'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? 'bg-gray-200 dark:bg-gray-800	'
+									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
 								on:click={() => {
 									selectedTab = 'general';
 								}}
@@ -414,8 +419,8 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'interface'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? 'bg-gray-200 dark:bg-gray-800	'
+									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
 								on:click={() => {
 									selectedTab = 'interface';
 								}}
@@ -455,8 +460,8 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'audio'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? 'bg-gray-200 dark:bg-gray-800	'
+									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
 								on:click={() => {
 									selectedTab = 'audio';
 								}}
@@ -482,8 +487,8 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'chats'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? 'bg-gray-200 dark:bg-gray-800	'
+									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
 								on:click={() => {
 									selectedTab = 'chats';
 								}}
@@ -508,8 +513,8 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'account'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? 'bg-gray-200 dark:bg-gray-800	'
+									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
 								on:click={() => {
 									selectedTab = 'account';
 								}}
@@ -534,8 +539,8 @@
 							<button
 								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'about'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? 'bg-gray-200 dark:bg-gray-800	'
+									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
 								on:click={() => {
 									selectedTab = 'about';
 								}}
@@ -561,8 +566,8 @@
 								<button
 									class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
 									'admin'
-										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+										? 'bg-gray-200 dark:bg-gray-800	'
+										: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
 									on:click={async () => {
 										await goto('/admin/settings');
 										show = false;

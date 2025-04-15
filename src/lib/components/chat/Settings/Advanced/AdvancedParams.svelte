@@ -113,14 +113,16 @@
 		{#if (params?.seed ?? null) !== null}
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
-					<input
-						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						type="number"
-						placeholder={$i18n.t('Enter Seed')}
-						bind:value={params.seed}
-						autocomplete="off"
-						min="0"
-					/>
+					<Tooltip content={$i18n.t('Enter Seed')} placement="top-start">
+						<input
+							class="w-full rounded-lg py-2 px-1 text-sm placeholder-[#5C6B8B] dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="number"
+							placeholder={$i18n.t('Enter Seed')}
+							bind:value={params.seed}
+							autocomplete="off"
+							min="0"
+						/>
+					</Tooltip>
 				</div>
 			</div>
 		{/if}
@@ -158,13 +160,15 @@
 		{#if (params?.stop ?? null) !== null}
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
-					<input
-						class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						type="text"
-						placeholder={$i18n.t('Enter stop sequence')}
-						bind:value={params.stop}
-						autocomplete="off"
-					/>
+					<Tooltip content={$i18n.t('Enter stop sequence')} placement="top-start">
+						<input
+							class="w-full rounded-lg py-2 px-1 text-sm placeholder-[#5C6B8B] dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="text"
+							placeholder={$i18n.t('Enter stop sequence')}
+							bind:value={params.stop}
+							autocomplete="off"
+						/>
+					</Tooltip>
 				</div>
 			</div>
 		{/if}
@@ -256,13 +260,15 @@
 		{#if (params?.reasoning_effort ?? null) !== null}
 			<div class="flex mt-0.5 space-x-2">
 				<div class=" flex-1">
-					<input
-						class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-						type="text"
-						placeholder={$i18n.t('Enter reasoning effort')}
-						bind:value={params.reasoning_effort}
-						autocomplete="off"
-					/>
+					<Tooltip content={$i18n.t('Enter reasoning effort')} placement="top-start">
+						<input
+							class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							type="text"
+							placeholder={$i18n.t('Enter reasoning effort')}
+							bind:value={params.reasoning_effort}
+							autocomplete="off"
+						/>
+					</Tooltip>
 				</div>
 			</div>
 		{/if}

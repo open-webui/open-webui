@@ -8,6 +8,7 @@
 	import Valves from '$lib/components/chat/Controls/Valves.svelte';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	import { user } from '$lib/stores';
 	export let models = [];
@@ -72,12 +73,14 @@
 
 			<Collapsible title={$i18n.t('System Prompt')} open={true} buttonClassName="w-full">
 				<div class="" slot="content">
-					<textarea
-						bind:value={params.system}
-						class="w-full text-xs py-1.5 bg-transparent outline-none resize-none"
-						rows="4"
-						placeholder={$i18n.t('Enter system prompt')}
-					/>
+					<Tooltip content={$i18n.t('Enter system prompt')} placement="top-start">
+						<textarea
+							bind:value={params.system}
+							class="w-full text-sm py-1.5 bg-transparent outline-none resize-none placeholder-[#5C6B8B]"
+							rows="4"
+							placeholder={$i18n.t('Enter system prompt')}
+						/>
+					</Tooltip>
 				</div>
 			</Collapsible>
 

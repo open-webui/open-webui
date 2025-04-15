@@ -87,29 +87,32 @@
 		</div>
 
 		<div class="flex flex-col w-full px-5 pb-4 dark:text-gray-200">
-			<div class=" flex w-full mt-2 space-x-2">
-				<div class="flex flex-1">
-					<div class=" self-center ml-1 mr-3">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
+			<Tooltip placement="top-start" content={$i18n.t('Search Chats')}>
+				<div class=" flex w-full mt-2 space-x-2">
+					<div class="flex flex-1">
+						<div class=" self-center ml-1 mr-3">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</div>
+
+						<input
+							class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent placeholder-[#5C6B8B]"
+							bind:value={searchValue}
+							placeholder={$i18n.t('Search Chats')}
+						/>
 					</div>
-					<input
-						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent"
-						bind:value={searchValue}
-						placeholder={$i18n.t('Search Chats')}
-					/>
 				</div>
-			</div>
+			</Tooltip>
 			<hr class=" dark:border-gray-850 my-2" />
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				{#if chats.length > 0}

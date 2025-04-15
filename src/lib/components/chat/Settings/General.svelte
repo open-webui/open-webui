@@ -9,6 +9,7 @@
 	const i18n = getContext('i18n');
 
 	import AdvancedParams from './Advanced/AdvancedParams.svelte';
+	import Tooltip from '../../common/Tooltip.svelte';
 
 	export let saveSettings: Function;
 	export let getModels: Function;
@@ -182,11 +183,13 @@
 
 			<div>
 				<h3 class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</h3>
-				<textarea
-					bind:value={system}
-					class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-					rows="4"
-				/>
+				<Tooltip content={$i18n.t('Enter system prompt here')} placement="top-start">
+					<textarea
+						bind:value={system}
+						class="w-full rounded-lg p-4 text-sm placeholder-[#5C6B8B] dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
+						rows="4"
+					/>
+				</Tooltip>
 			</div>
 
 			<div class="mt-2 space-y-3 pr-1.5">

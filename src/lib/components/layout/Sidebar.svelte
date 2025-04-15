@@ -588,11 +588,9 @@
 				<div class="absolute z-40 w-full h-full flex justify-center"></div>
 			{/if}
 
-			<SearchInput
-				bind:value={search}
-				on:input={searchDebounceHandler}
-				placeholder={$i18n.t('Search')}
-			/>
+			<Tooltip content={$i18n.t('Search')} placement="left">
+				<SearchInput bind:value={search} on:input={searchDebounceHandler} />
+			</Tooltip>
 		</div>
 
 		<div

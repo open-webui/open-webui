@@ -133,11 +133,11 @@
 					</div>
 
 					{#if name === 'Chats'}
-						<h2 class="translate-y-[0.5px]">
+						<h2 class="translate-y-[0.5px]pr-4 text-gray-900 dark:text-gray-100 font-semibold">
 							{name}
 						</h2>
 					{:else}
-						<h3 class="translate-y-[0.5px]">
+						<h3 class="translate-y-[0.5px] pr-4 text-gray-900 dark:text-gray-100 font-semibold">
 							{name}
 						</h3>
 					{/if}
