@@ -31,22 +31,15 @@ class OneDriveConfig {
 	}
 
 	private async getCredentials(): Promise<void> {
-		let response;
+		
 		const headers: HeadersInit = {
 			'Content-Type': 'application/json'
 		};
 
-		if(window.location.hostname === 'localhost') {
-			response = await fetch('http://localhost:8080/api/config', { 
-				headers,
-				credentials: 'include'
-			});
-		} else {
-			response = await fetch('/api/config', { 
-				headers,
-				credentials: 'include'
-			});
-		}
+		const response = await fetch('/api/config', { 
+			headers,
+			credentials: 'include'
+		});
 		
 		if (!response.ok) {
 			throw new Error('Failed to fetch OneDrive credentials');
