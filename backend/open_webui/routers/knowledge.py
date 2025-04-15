@@ -735,25 +735,31 @@ def add_files_to_knowledge_batch(
             )
         files.append(file)
 
-    # Process files
-    try:
-        result = process_files_batch(
-            request=request,
-            form_data=BatchProcessFilesForm(files=files, collection_name=id),
-            user=user,
-        )
-    except Exception as e:
-        log.error(
-            f"add_files_to_knowledge_batch: Exception occurred: {e}", exc_info=True
-        )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    successful_file_ids = []
+    errors = []
+    for file in files:
+        if not VECTOR_DB_CLIENT.has_collection(f"file-{file.id}"):
+            try:
+                process_file(
+                    request=request,
+                    form_data=ProcessFileForm(file_id=file.id),
+                    user=user
+                )
+                successful_file_ids.append(file.id)
+            except Exception as e:
+                errors.append({
+                    "file_id": file.id,
+                    "status": "error",
+                    "error": str(e)
+                })
+                log.exception(e)
+                log.info(f"Could not add file {file.id} to vector collection.")
 
     # Add successful files to knowledge base
     data = knowledge.data or {}
     existing_file_ids = data.get("file_ids", [])
 
     # Only add files that were successfully processed
-    successful_file_ids = [r.file_id for r in result.results if r.status == "completed"]
     for file_id in successful_file_ids:
         if file_id not in existing_file_ids:
             existing_file_ids.append(file_id)
@@ -762,8 +768,8 @@ def add_files_to_knowledge_batch(
     knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
 
     # If there were any errors, include them in the response
-    if result.errors:
-        error_details = [f"{err.file_id}: {err.error}" for err in result.errors]
+    if errors:
+        error_details = [f"{err['file_id']}: {err['error']}" for err in errors]
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
             files=Files.get_files_by_ids(existing_file_ids),
