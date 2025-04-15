@@ -180,28 +180,25 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
 
     for knowledge_base in knowledge_bases:
         try:
-            files = Files.get_files_by_ids(knowledge_base.data.get("file_ids", []))
-
-            try:
-                if VECTOR_DB_CLIENT.has_collection(collection_name=knowledge_base.id):
-                    VECTOR_DB_CLIENT.delete_collection(
-                        collection_name=knowledge_base.id
-                    )
-            except Exception as e:
-                log.error(f"Error deleting collection {knowledge_base.id}: {str(e)}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail=f"Error deleting vector DB collection",
-                )
+            files = Files.get_files_by_ids((knowledge_base.data or {}).get("file_ids", []))
 
             failed_files = []
             for file in files:
                 try:
+                    if VECTOR_DB_CLIENT.has_collection(
+                        collection_name=f"file-{file.id}"
+                    ):
+                        VECTOR_DB_CLIENT.delete_collection(
+                            collection_name=f"file-{file.id}"
+                        )
+                except Exception as e:
+                    log.error(f"Error deleting collection file-{file.id}: {str(e)}")
+                    failed_files.append({"file_id": file.id, "error": str(e)})
+
+                try:
                     process_file(
                         request,
-                        ProcessFileForm(
-                            file_id=file.id, collection_name=knowledge_base.id
-                        ),
+                        ProcessFileForm(file_id=file.id),
                         user=user,
                     )
                 except Exception as e:
@@ -354,7 +351,6 @@ def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
         )
 
-
     if knowledge:
         data = knowledge.data or {}
         file_ids = data.get("file_ids", [])
@@ -422,15 +418,16 @@ def update_file_from_knowledge_by_id(
         )
 
     # Remove content from the vector database
-    VECTOR_DB_CLIENT.delete(
-        collection_name=knowledge.id, filter={"file_id": form_data.file_id}
-    )
+    if VECTOR_DB_CLIENT.has_collection(collection_name=f"file-{file.id}"):
+        VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
+    else:
+        log.info(f"Tried to delete collection file-{file.id}, but it was not found")
 
     # Add content to the vector database
     try:
         process_file(
             request,
-            ProcessFileForm(file_id=form_data.file_id, collection_name=id),
+            ProcessFileForm(file_id=form_data.file_id),
             user=user,
         )
     except Exception as e:
@@ -491,28 +488,30 @@ def remove_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    # Remove content from the vector database
-    try:
-        VECTOR_DB_CLIENT.delete(
-            collection_name=knowledge.id, filter={"file_id": form_data.file_id}
-        )
-    except Exception as e:
-        log.debug("This was most likely caused by bypassing embedding processing")
-        log.debug(e)
-        pass
+    # Check if the file is already in other knowledge bases, do not delete then
+    file_in_other_knowledges = False
+    knowledges = Knowledges.get_knowledge_bases()
+    for knowledge_ in knowledges:
+        if knowledge_.id == knowledge.id:
+            continue  # skip the own knowledge base
+        files_ids = (knowledge_.data or {}).get("files_ids", [])
+        if form_data.file_id in files_ids:
+            file_in_other_knowledges = True
+            break
 
-    try:
-        # Remove the file's collection from vector database
-        file_collection = f"file-{form_data.file_id}"
-        if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-            VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
-    except Exception as e:
-        log.debug("This was most likely caused by bypassing embedding processing")
-        log.debug(e)
-        pass
+    if not file_in_other_knowledges:
+        try:
+            # Remove the file's collection from vector database
+            file_collection = f"file-{form_data.file_id}"
+            if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+                VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+        except Exception as e:
+            log.debug("This was most likely caused by bypassing embedding processing")
+            log.debug(e)
+            pass
 
-    # Delete file from database
-    Files.delete_file_by_id(form_data.file_id)
+        # Delete file from database
+        Files.delete_file_by_id(form_data.file_id)
 
     if knowledge:
         data = knowledge.data or {}
@@ -601,12 +600,33 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
                 )
                 Models.update_model_by_id(model.id, model_form)
 
-    # Clean up vector DB
-    try:
-        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
-    except Exception as e:
-        log.debug(e)
-        pass
+    # Find files in other knowledges
+    if current_files_ids := set((knowledge.data or {}).get("files_ids", [])):
+        knowledges = Knowledges.get_knowledge_bases()
+        other_file_ids = set()
+        for knowledge_ in knowledges:
+            if knowledge_.id == knowledge.id:
+                continue  # skip the current knowledge
+            other_file_ids.update(set((knowledge_.data or {}).get("files_ids", [])))
+
+        # Delete only the files which are not present in other knowledges
+        files_ids_to_delete = current_files_ids.difference(other_file_ids)
+
+        # Clean up vector DB
+        for file_id in files_ids_to_delete:
+            try:
+                # Remove the file's collection from vector database
+                file_collection = f"file-{file_id}"
+                if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+                    VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+            except Exception as e:
+                log.debug("This was most likely caused by bypassing embedding processing")
+                log.debug(e)
+                pass
+
+            # Delete file from database
+            Files.delete_file_by_id(file_id)
+
     result = Knowledges.delete_knowledge_by_id(id=id)
     return result
 
@@ -635,11 +655,32 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    try:
-        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
-    except Exception as e:
-        log.debug(e)
-        pass
+    # Find files in other knowledges
+    if current_files_ids := set((knowledge.data or {}).get("files_ids", [])):
+        knowledges = Knowledges.get_knowledge_bases()
+        other_file_ids = set()
+        for knowledge_ in knowledges:
+            if knowledge_.id == knowledge.id:
+                continue  # skip the current knowledge
+            other_file_ids.update(set((knowledge_.data or {}).get("files_ids", [])))
+
+        # Delete only the files which are not present in other knowledges
+        files_ids_to_delete = current_files_ids.difference(other_file_ids)
+
+        # Clean up vector DB
+        for file_id in files_ids_to_delete:
+            try:
+                # Remove the file's collection from vector database
+                file_collection = f"file-{file_id}"
+                if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+                    VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+            except Exception as e:
+                log.debug("This was most likely caused by bypassing embedding processing")
+                log.debug(e)
+                pass
+
+            # Delete file from database
+            Files.delete_file_by_id(file_id)
 
     knowledge = Knowledges.update_knowledge_data_by_id(id=id, data={"file_ids": []})
 
