@@ -154,7 +154,13 @@
 								on:click={(e) => {
 									e.stopPropagation();
 									onAdd();
+									open = true;
 								}}
+								on:keydown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') {
+										e.stopPropagation(); 
+									}
+								}}	
 								aria-label={onAddLabel}
 							>
 								<Plus className=" size-3 text-gray-900 dark:text-gray-100" strokeWidth="2.5" />

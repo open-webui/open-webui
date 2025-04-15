@@ -106,7 +106,6 @@
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
 		<div
 			class="{buttonClassName} cursor-pointer"
-			tabindex="0"
 			on:pointerup={() => {
 				if (!disabled) {
 					open = !open;
