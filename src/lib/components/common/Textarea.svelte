@@ -4,10 +4,8 @@
 	export let value = '';
 	export let placeholder = '';
 	export let className =
-		'w-full rounded-lg px-3 py-2 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none resize-none h-full';
-
+		'w-full rounded-lg px-3 py-2 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 focus:outline-1 focus:outline-black dark:focus:outline-white  h-full';
 	export let onKeydown: Function = () => {};
-
 	let textareaElement;
 
 	$: if (textareaElement) {

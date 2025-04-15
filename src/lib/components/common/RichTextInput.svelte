@@ -51,6 +51,7 @@
 
 	let element;
 	let editor;
+	let focusFlag = false;
 
 	const options = {
 		throwOnError: false
@@ -171,7 +172,11 @@
 				}),
 				Highlight,
 				Typography,
-				Placeholder.configure({ placeholder: placeholderText }),
+				Placeholder.configure({
+					placeholder,
+					emptyEditorClass:
+						'before:content-[attr(data-placeholder)] before:float-left before:text-[#5C6B8B] before:h-0 before:pointer-events-none'
+				}),
 				...(autocomplete
 					? [
 							AIAutocompletion.configure({
@@ -230,6 +235,12 @@
 				handleDOMEvents: {
 					focus: (view, event) => {
 						eventDispatch('focus', { event });
+						focusFlag = true;
+						return false;
+					},
+					blur: (view, event) => {
+						eventDispatch('blur', { event });
+						focusFlag = false;
 						return false;
 					},
 					keyup: (view, event) => {
@@ -381,9 +392,7 @@
 
 <div
 	bind:this={element}
-	class="relative w-full min-w-full h-full min-h-fit {className}"
-	data-placeholder={placeholderText}
-	aria-label={ariaLabel}
-	{title}
-	role="textbox"
+	class="relative w-full min-w-full {focusFlag
+		? 'outline-1 outline-black focus:outline-white'
+		: ''} h-full min-h-fit mb-1 {className}"
 />

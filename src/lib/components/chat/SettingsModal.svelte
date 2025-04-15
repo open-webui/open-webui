@@ -377,7 +377,7 @@
 					</div>
 					<Tooltip placement="top-start" content={$i18n.t('Search')}>
 						<input
-							class="w-full py-1.5 text-sm bg-transparent placeholder-[#5C6B8B] dark:text-gray-300 outline-none"
+							class="w-full py-1.5 mt-1 text-sm bg-transparent placeholder-[#5C6B8B] dark:text-gray-300 focus:outline-1 focus:outline-black dark:focus:outline-white"
 							bind:value={search}
 							on:input={searchDebounceHandler}
 							placeholder={$i18n.t('Search')}

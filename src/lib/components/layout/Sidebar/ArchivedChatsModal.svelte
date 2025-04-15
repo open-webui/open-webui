@@ -106,7 +106,7 @@
 						</div>
 
 						<input
-							class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-none bg-transparent placeholder-[#5C6B8B]"
+							class=" w-full text-sm pr-4 py-1 rounded-r-xl focus:outline-1 focus:outline-black dark:focus:outline-white bg-transparent placeholder-[#5C6B8B]"
 							bind:value={searchValue}
 							placeholder={$i18n.t('Search Chats')}
 						/>

@@ -681,17 +681,18 @@
 
 									{#if $settings?.richTextInput ?? true}
 										<div
-											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 py-2.5 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
+											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 w-full pt-3 py-2.5 px-1 rounded-xl resize-none h-fit max-h-80 overflow-auto"
 											id="chat-input-container"
 										>
-											<Tooltip content={$i18n.t('Send a Message')} placement="top-start">
+											<Tooltip
+												content={placeholder ? placeholder : $i18n.t('Send a Message')}
+												placement="top-start"
+											>
 												<RichTextInput
 													bind:this={chatInputElement}
 													bind:value={prompt}
 													id="chat-input"
-													aria-label={$i18n.t('Type your message here')}
-													title={$i18n.t('Type your message here')}
-													role="textbox"
+													placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 													messageInput={true}
 													shiftEnter={!$mobile ||
 														!(
@@ -699,7 +700,6 @@
 															navigator.maxTouchPoints > 0 ||
 															navigator.msMaxTouchPoints > 0
 														)}
-													placeholder={placeholderText}
 													largeTextAsFile={$settings?.largeTextAsFile ?? false}
 													autocomplete={true}
 													generateAutoCompletion={async (text) => {
@@ -891,15 +891,16 @@
 											</Tooltip>
 										</div>
 									{:else}
-										<Tooltip content={$i18n.t('Send a Message')} placement="top-start">
+										<Tooltip
+											content={placeholder ? placeholder : $i18n.t('Send a Message')}
+											placement="top-start"
+										>
 											<textarea
 												id="chat-input"
+												dir="auto"
 												bind:this={chatInputElement}
-												class="scrollbar-hidden bg-transparent placeholder-[#5C6B8B] dark:text-gray-100 outline-none w-full py-3 px-1 rounded-xl resize-none h-[48px]"
-												placeholder={placeholderText}
-												aria-label={$i18n.t('Type your message here')}
-												title={$i18n.t('Type your message here')}
-												role="textbox"
+												class="scrollbar-hidden bg-transparent placeholder-[#5C6B8B] dark:text-gray-100 focus:outline-1 focus:outline-black dark:focus:outline-white w-full pt-3 px-1 resize-none"
+												placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 												bind:value={prompt}
 												on:keypress={(e) => {
 													if (
@@ -923,6 +924,7 @@
 												}}
 												on:keydown={async (e) => {
 													const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+
 													const commandsContainerElement =
 														document.getElementById('commands-container');
 

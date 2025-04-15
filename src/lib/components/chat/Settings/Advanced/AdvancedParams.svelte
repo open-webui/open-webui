@@ -58,7 +58,7 @@
 					{$i18n.t('Stream Chat Response')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition"
+					class="p-1 px-3 text-xs flex rounded transition focus:outline-1 focus:outline-black dark:focus:outline-white"
 					on:click={() => {
 						params.stream_response =
 							(params?.stream_response ?? null) === null
@@ -95,7 +95,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 focus:outline-1 focus:outline-black dark:focus:outline-white"
 					type="button"
 					on:click={() => {
 						params.seed = (params?.seed ?? null) === null ? 0 : null;
@@ -115,7 +115,7 @@
 				<div class=" flex-1">
 					<Tooltip content={$i18n.t('Enter Seed')} placement="top-start">
 						<input
-							class="w-full rounded-lg py-2 px-1 text-sm placeholder-[#5C6B8B] dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-1 text-sm placeholder-[#5C6B8B] dark:text-gray-300 dark:bg-gray-850 focus:outline-1 focus:outline-black dark:focus:outline-white"
 							type="number"
 							placeholder={$i18n.t('Enter Seed')}
 							bind:value={params.seed}
@@ -142,7 +142,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 focus:outline-1 focus:outline-black dark:focus:outline-white"
 					type="button"
 					on:click={() => {
 						params.stop = (params?.stop ?? null) === null ? '' : null;
@@ -162,7 +162,7 @@
 				<div class=" flex-1">
 					<Tooltip content={$i18n.t('Enter stop sequence')} placement="top-start">
 						<input
-							class="w-full rounded-lg py-2 px-1 text-sm placeholder-[#5C6B8B] dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-1 text-sm placeholder-[#5C6B8B] dark:text-gray-300 dark:bg-gray-850 focus:outline-1 focus:outline-black dark:focus:outline-white"
 							type="text"
 							placeholder={$i18n.t('Enter stop sequence')}
 							bind:value={params.stop}
@@ -187,7 +187,7 @@
 					{$i18n.t('Temperature')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 focus:outline-1 focus:outline-black dark:focus:outline-white"
 					type="button"
 					on:click={() => {
 						params.temperature = (params?.temperature ?? null) === null ? 0.8 : null;
@@ -242,7 +242,7 @@
 					{$i18n.t('Reasoning Effort')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 focus:outline-1 focus:outline-black dark:focus:outline-white"
 					type="button"
 					on:click={() => {
 						params.reasoning_effort = (params?.reasoning_effort ?? null) === null ? 'medium' : null;
@@ -262,7 +262,7 @@
 				<div class=" flex-1">
 					<Tooltip content={$i18n.t('Enter reasoning effort')} placement="top-start">
 						<input
-							class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							class="w-full rounded-lg py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 focus:outline-1 focus:outline-black dark:focus:outline-white"
 							type="text"
 							placeholder={$i18n.t('Enter reasoning effort')}
 							bind:value={params.reasoning_effort}
@@ -287,7 +287,7 @@
 					{$i18n.t('Mirostat')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 focus:outline-1 focus:outline-black dark:focus:outline-white"
 					type="button"
 					on:click={() => {
 						params.mirostat = (params?.mirostat ?? null) === null ? 0 : null;
@@ -342,7 +342,7 @@
 					{$i18n.t('Mirostat Eta')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 focus:outline-1 focus:outline-black dark:focus:outline-white"
 					type="button"
 					on:click={() => {
 						params.mirostat_eta = (params?.mirostat_eta ?? null) === null ? 0.1 : null;
@@ -398,7 +398,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 focus:outline-1 focus:outline-black dark:focus:outline-white"
 					type="button"
 					on:click={() => {
 						params.mirostat_tau = (params?.mirostat_tau ?? null) === null ? 5.0 : null;
@@ -453,7 +453,7 @@
 					{$i18n.t('Top K')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 focus:outline-1 focus:outline-black dark:focus:outline-white"
 					type="button"
 					on:click={() => {
 						params.top_k = (params?.top_k ?? null) === null ? 40 : null;
@@ -509,7 +509,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 focus:outline-1 focus:outline-black dark:focus:outline-white"
 					type="button"
 					on:click={() => {
 						params.top_p = (params?.top_p ?? null) === null ? 0.9 : null;
@@ -564,7 +564,7 @@
 					{$i18n.t('Min P')}
 				</div>
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 focus:outline-1 focus:outline-black dark:focus:outline-white"
 					type="button"
 					on:click={() => {
 						params.min_p = (params?.min_p ?? null) === null ? 0.0 : null;
@@ -620,7 +620,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 focus:outline-1 focus:outline-black dark:focus:outline-white"
 					type="button"
 					on:click={() => {
 						params.frequency_penalty = (params?.frequency_penalty ?? null) === null ? 1.1 : null;
@@ -732,7 +732,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 focus:outline-1 focus:outline-black dark:focus:outline-white"
 					type="button"
 					on:click={() => {
 						params.tfs_z = (params?.tfs_z ?? null) === null ? 1 : null;
@@ -788,7 +788,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 focus:outline-1 focus:outline-black dark:focus:outline-white"
 					type="button"
 					on:click={() => {
 						params.num_ctx = (params?.num_ctx ?? null) === null ? 2048 : null;
@@ -843,7 +843,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 focus:outline-1 focus:outline-black dark:focus:outline-white"
 					type="button"
 					on:click={() => {
 						params.num_batch = (params?.num_batch ?? null) === null ? 512 : null;
@@ -953,7 +953,7 @@
 				</div>
 
 				<button
-					class="p-1 px-3 text-xs flex rounded transition flex-shrink-0 outline-none"
+					class="p-1 px-3 text-xs flex rounded-sm transition shrink-0 focus:outline-1 focus:outline-black dark:focus:outline-white"
 					type="button"
 					on:click={() => {
 						params.max_tokens = (params?.max_tokens ?? null) === null ? 128 : null;

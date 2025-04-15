@@ -620,14 +620,14 @@
 							<input
 								bind:value={imageCompressionSize.width}
 								type="number"
-								class="w-20 bg-transparent outline-none text-center"
+								class="w-20 bg-transparent focus:outline-1 focus:outline-black dark:focus:outline-white text-center"
 								min="0"
 								placeholder="Width"
 							/>x
 							<input
 								bind:value={imageCompressionSize.height}
 								type="number"
-								class="w-20 bg-transparent outline-none text-center"
+								class="w-20 bg-transparent focus:outline-1 focus:outline-black dark:focus:outline-white text-center"
 								min="0"
 								placeholder="Height"
 							/>
