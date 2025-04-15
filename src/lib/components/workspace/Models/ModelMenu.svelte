@@ -67,7 +67,7 @@
 					</a>
 				</DropdownMenu.Item>
 			{/if}
-			{#if $config?.features.enable_community_sharing}
+			<!-- {#if $config?.features.enable_community_sharing}
 				<DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950  rounded-md dark:hover:text-white"
 					on:click={() => {
@@ -77,7 +77,7 @@
 					<ShareIcon />
 					<div class="flex items-center ">{$i18n.t('Share')}</div>
 				</DropdownMenu.Item>
-			{/if}
+			{/if} -->
 
 			<!-- <DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
