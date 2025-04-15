@@ -52,4 +52,4 @@ jobs:
               --name boti_openwebui \
               ghcr.io/${{ github.repository }}:latest
 
-            rm ~/.env
+            
