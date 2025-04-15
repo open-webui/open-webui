@@ -36,6 +36,19 @@ def upgrade():
         ),
     )
 
+    # Insert default roles into the database.
+    connection = op.get_bind()
+    connection.execute(
+        sa.text(
+            """
+            INSERT INTO roles (name) VALUES
+            ('pending'),
+            ('admin'),
+            ('user')
+            """
+        )
+    )
+
 
 def downgrade():
     op.drop_table("roles")
