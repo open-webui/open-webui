@@ -490,7 +490,9 @@ def get_sources_from_files(
                 if file.get("legacy"):
                     collection_names = file.get("collection_names", [])
                 else:
-                    collection_names.append(file["id"])
+                    file_ids = file.get("data", []).get("file_ids", [])
+                    file_ids = [f"file-{file_id}" for file_id in file_ids]
+                    collection_names.extend(file_ids)
             elif file.get("collection_name"):
                 collection_names.append(file["collection_name"])
             elif file.get("id"):
