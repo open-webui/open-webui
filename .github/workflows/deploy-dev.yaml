@@ -36,6 +36,7 @@ jobs:
             ENABLE_OAUTH_SIGNUP=true
             GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
             GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+            WEBUI_URL=https://dev.boti.deusto.es
             EOF
             
             docker pull ghcr.io/${{ github.repository }}:latest
