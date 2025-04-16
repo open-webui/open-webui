@@ -16,18 +16,17 @@ class EmailService:
         template_dir = Path(__file__).parent.parent / 'templates' / 'email'
         self.jinja_env = Environment(loader=FileSystemLoader(template_dir))
     
-    def send_welcome_mail(self, to_email: EmailStr, username: str, password: str) -> bool:
+    def send_invite_mail(self, to_email: EmailStr, invite_token: str) -> bool:
         """Send a welcome email to newly registered users."""
         try:
             subject = "Willkommen bei Bchat!"
             sender = {"name": "Bchat", "email": os.getenv('SENDER_EMAIL', 'noreply@beyondtheloop.ai')}
-            to = [{"email": to_email, "name": username}]
+            to = [{"email": to_email}]
             
             # Load and render the template
-            template = self.jinja_env.get_template('welcome.html')
+            template = self.jinja_env.get_template('invitation-mail.html')
             html_content = template.render(
-                name=username,
-                password=password
+                activation_link=os.getenv('BACKEND_ADDRESS') + "/auth/" + invite_token,
             )
             
             send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(

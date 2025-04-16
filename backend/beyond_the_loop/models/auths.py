@@ -82,6 +82,11 @@ class UpdatePasswordForm(BaseModel):
     password: str
     new_password: str
 
+class CompleteInviteForm(BaseModel):
+    first_name: str
+    last_name: str
+    password: str
+    invite_token: str
 
 class SignupForm(BaseModel):
     name: str
@@ -130,6 +135,21 @@ class AuthsTable:
                 return user
             else:
                 return None
+
+    def insert_auth_for_existing_user(self, user_id: str, email: str, password: str):
+        with get_db() as db:
+            auth = AuthModel(
+                **{"id": user_id, "email": email, "password": password, "active": True}
+            )
+            result = Auth(**auth.model_dump())
+            db.add(result)
+            db.commit()
+            db.refresh(result)
+
+            if result:
+                return True
+            else:
+                return False
 
     def authenticate_user(self, email: str, password: str) -> Optional[UserModel]:
         log.info(f"authenticate_user: {email}")

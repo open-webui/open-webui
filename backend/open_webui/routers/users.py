@@ -1,7 +1,10 @@
+import hashlib
 import logging
+import uuid
 from typing import Optional
 
-from open_webui.models.auths import Auths
+from beyond_the_loop.models.users import UserInviteForm
+from beyond_the_loop.models.auths import Auths
 from open_webui.models.chats import Chats
 from beyond_the_loop.models.users import (
     UserModel,
@@ -18,11 +21,41 @@ from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user
+from open_webui.utils.misc import validate_email_format
+from beyond_the_loop.services.email_service import EmailService
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
+
+############################
+# Invite
+############################
+
+
+@router.post("/invite")
+async def invite_user(form_data: UserInviteForm, user=Depends(get_admin_user)):
+    if not validate_email_format(form_data.email.lower()):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
+        )
+
+    if Users.get_user_by_email(form_data.email.lower()):
+        raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
+
+    invite_token = hashlib.sha256(form_data.email.lower().encode()).hexdigest()
+
+    # Send welcome email with the generated password
+    email_service = EmailService()
+    email_service.send_invite_mail(
+        to_email=form_data.email.lower(),
+        invite_token=invite_token
+    )
+
+    return Users.insert_new_user(str(uuid.uuid4()), "INVITED", form_data.email.lower(), user.company_id, role=form_data.role,
+                          invite_token=invite_token)
+
 
 ############################
 # GetUsers

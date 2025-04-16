@@ -39,6 +39,8 @@ class User(Base):
 
     oauth_sub = Column(Text, unique=True)
 
+    invite_token = Column(Text, nullable=True)
+
     stripe_customer_id = Column(String, nullable=True)
 
     company_id = Column(String, ForeignKey("company.id", ondelete="CASCADE"), nullable=False)
@@ -55,7 +57,7 @@ class UserModel(BaseModel):
     id: str
     name: str
     email: str
-    role: str = "pending"
+    role: str
     profile_image_url: str
 
     last_active_at: int  # timestamp in epoch
@@ -71,6 +73,8 @@ class UserModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     company_id: str
+
+    invite_token: Optional[str] = None
 
     stripe_customer_id: Optional[str] = None
 
@@ -107,6 +111,11 @@ class UserUpdateForm(BaseModel):
     password: Optional[str] = None
 
 
+class UserInviteForm(BaseModel):
+    email: str
+    role: str
+
+
 class UsersTable:
     def insert_new_user(
         self,
@@ -116,7 +125,8 @@ class UsersTable:
         company_id: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
-        oauth_sub: Optional[str] = None
+        oauth_sub: Optional[str] = None,
+        invite_token: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
             user = UserModel(
@@ -130,7 +140,8 @@ class UsersTable:
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                     "oauth_sub": oauth_sub,
-                    "company_id": company_id
+                    "company_id": company_id,
+                    "invite_token": invite_token
                 }
             )
             result = User(**user.model_dump())
@@ -145,6 +156,24 @@ class UsersTable:
     def get_user_by_id(self, id: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
+                user = db.query(User).filter_by(id=id).first()
+                return UserModel.model_validate(user)
+        except Exception:
+            return None
+
+    def get_user_by_invite_token(self, invite_token: str) -> Optional[UserModel]:
+        try:
+            with get_db() as db:
+                user = db.query(User).filter_by(invite_token=invite_token).first()
+                return UserModel.model_validate(user)
+        except Exception:
+            return None
+
+    def complete_invite_by_id(self, id: str, name: str) -> Optional[UserModel]:
+        try:
+            with get_db() as db:
+                db.query(User).filter_by(id=id).update({"name": name, "invite_token": None})
+                db.commit()
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
         except Exception:

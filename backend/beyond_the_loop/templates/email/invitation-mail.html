@@ -18,9 +18,11 @@
 {% block header %}Willkommen bei Bchat!{% endblock %}
 
 {% block content %}
-<p>Hallo {{ name }},</p>
-<p>Du wurdest zu bChat eingeladen! Um loszulegen, logge dich mit deiner Email-Adresse und folgendem Passwort ein:</p>
-<div class="password">{{ password }}</div>
+<p>Hallo,</p>
+<p>Du wurdest zu bChat eingeladen! Um loszulegen, klicke bitte auf den folgenden Link, um deinen Account zu aktivieren:</p>
+
+<a href="{{ activation_link }}" class="button">Account aktivieren</a>
+
 <p>Viel Spaß beim Entdecken von bChat!</p>
 {% endblock %}
 
