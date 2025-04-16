@@ -53,7 +53,7 @@
 
 			<div>
 				<div class="flex flex-col items-center md:flex-row gap-1 justify-between w-full">
-					<div class=" flex flex-wrap text-sm gap-1 text-gray-500">
+					<div class=" flex flex-wrap text-sm gap-1 text-gray-600 dark:text-gray-400">
 						{#if item.size}
 							<div class="capitalize shrink-0">{formatFileSize(item.size)}</div>
 							•
