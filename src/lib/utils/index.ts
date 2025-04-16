@@ -1060,3 +1060,36 @@ export const getLineCount = (text) => {
 	console.log(typeof text);
 	return text ? text.split('\n').length : 0;
 };
+
+export function onClickOutside(node, callback) {
+	function handleClick(event) {
+		if (!node.contains(event.target)) {
+			callback();
+		}
+	}
+	document.addEventListener('click', handleClick, true);
+
+	return {
+		destroy() {
+			document.removeEventListener('click', handleClick, true);
+		}
+	};
+}
+
+export function getModelIcon(label: string): string {
+	const lower = label.toLowerCase();
+
+	if (lower.includes('perplexity')) {
+		return '/perplexity-ai-icon.svg';
+	} else if (lower.includes('gpt')) {
+		return '/chatgpt-icon.svg';
+	} else if (lower.includes('claude')) {
+		return '/claude-ai-icon.svg';
+	} else if (lower.includes('gemini')) {
+		return '/google-gemini-icon.svg';
+	} else if (lower.includes('mistral') || lower.includes('pixtral')) {
+		return '/mistral-color.svg';
+	} else {
+		return '/static/favicon.png';
+	}
+}

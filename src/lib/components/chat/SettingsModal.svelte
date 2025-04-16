@@ -201,28 +201,28 @@
 				'chatactivity'
 			]
 		},
-		{
-			id: 'account',
-			title: 'Account',
-			keywords: [
-				'account',
-				'profile',
-				'security',
-				'privacy',
-				'settings',
-				'login',
-				'useraccount',
-				'userdata',
-				'api',
-				'apikey',
-				'userprofile',
-				'profiledetails',
-				'accountsettings',
-				'accountpreferences',
-				'securitysettings',
-				'privacysettings'
-			]
-		},
+		// {
+		// 	id: 'account',
+		// 	title: 'Account',
+		// 	keywords: [
+		// 		'account',
+		// 		'profile',
+		// 		'security',
+		// 		'privacy',
+		// 		'settings',
+		// 		'login',
+		// 		'useraccount',
+		// 		'userdata',
+		// 		'api',
+		// 		'apikey',
+		// 		'userprofile',
+		// 		'profiledetails',
+		// 		'accountsettings',
+		// 		'accountpreferences',
+		// 		'securitysettings',
+		// 		'privacysettings'
+		// 	]
+		// },
 		{
 			id: 'admin',
 			title: 'Admin',

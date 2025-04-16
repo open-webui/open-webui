@@ -269,6 +269,13 @@
 			window.removeEventListener('resize', updateScrollHeight);
 		};
 	});
+	
+	let logoSrc = '/logo_light.png';
+	onMount(() => {
+		const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+		logoSrc = isDark ? '/logo_light.png' : '/logo_dark.png';
+	});
+
 	$: if (loaded) {
 		setTimeout(() => {
 			updateScrollHeight();
@@ -488,7 +495,7 @@
 									<img
 										src={!model?.meta?.profile_image_url ||
 										model?.meta?.profile_image_url === '/static/favicon.png'
-											? '/assistant-default.png'
+											? logoSrc
 											: model?.meta?.profile_image_url}
 										alt="modelfile profile"
 										class=" rounded-md w-full h-auto object-cover"
@@ -515,8 +522,6 @@
 										<div class="line-clamp-1 text-xs dark:text-customGray-100/50">
 											{#if (model?.meta?.description ?? '').trim()}
 												{model?.meta?.description}
-											{:else}
-												{model.id}
 											{/if}
 										</div>
 									</div>

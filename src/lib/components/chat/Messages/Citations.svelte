@@ -135,13 +135,14 @@
 				<div
 					class="flex items-center gap-2 text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition cursor-pointer"
 				>
-					<div class="flex-grow flex items-center gap-1 overflow-hidden">
+					<div class="flex flex-grow items-center justify-between gap-1 overflow-hidden">
+						<div>
 						<span class="whitespace-nowrap hidden sm:inline">{$i18n.t('References from')}</span>
 						<div class="flex items-center">
-							<div class="flex text-xs font-medium items-center">
+							<div class="text-xs font-medium items-center">
 								{#each citations.slice(0, 2) as citation, idx}
 									<button
-										class="no-toggle outline-none flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
+										class="no-toggle outline-none mb-1 flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
 										on:click={() => {
 											// In this case the citation comes from the LLM response
 											if (
@@ -172,6 +173,7 @@
 								{/each}
 							</div>
 						</div>
+						</div>
 						<div class="flex items-center gap-1 whitespace-nowrap">
 							<span class="hidden sm:inline">{$i18n.t('and')}</span>
 							{citations.length - 2}
@@ -187,10 +189,10 @@
 					</div>
 				</div>
 				<div slot="content">
-					<div class="flex text-xs font-medium">
-						{#each citations as citation, idx}
+					<div class="text-xs font-medium">
+						{#each citations.slice(2) as citation, idx}
 							<button
-								class="no-toggle outline-none flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
+								class="no-toggle mb-1 outline-none flex dark:text-gray-300 p-1 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-850 transition rounded-xl max-w-96"
 								on:click={() => {
 									// In this case the citation comes from the LLM response
 									if (
@@ -209,7 +211,7 @@
 							>
 								{#if citations.every((c) => c.distances !== undefined)}
 									<div class="bg-gray-50 dark:bg-gray-800 rounded-full size-4">
-										{idx + 1}
+										{idx + 3}
 									</div>
 								{/if}
 								<div class="flex-1 mx-1 line-clamp-1 truncate">

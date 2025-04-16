@@ -17,6 +17,8 @@
 	import MessageEditIcon from '$lib/components/icons/MessageEditIcon.svelte';
 	import CopyMessageIcon from '$lib/components/icons/CopyMessageIcon.svelte';
 	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
+	import CreatePromptIcon from '$lib/components/icons/CreatePromptIcon.svelte';
+	import { goto } from '$app/navigation';
 
 	const i18n = getContext('i18n');
 	dayjs.extend(localizedFormat);
@@ -298,7 +300,7 @@
 							</Tooltip>
 						{/if}
 
-						<Tooltip content={$i18n.t('Copy')} placement="bottom">
+						<!-- <Tooltip content={$i18n.t('Copy')} placement="bottom">
 							<button
 								class="invisible group-hover:visible p-1.5 hover:bg-black/5 rounded-lg dark:hover:text-white hover:text-black transition"
 								on:click={() => {
@@ -307,9 +309,20 @@
 							>
 								<CopyMessageIcon/>
 							</button>
+						</Tooltip> -->
+						<Tooltip content={$i18n.t('Save Prompt')} placement="bottom">
+							<button
+								class="invisible group-hover:visible p-1.5 hover:bg-black/5 rounded-lg dark:hover:text-white hover:text-black transition"
+								on:click={() => {
+									localStorage.setItem('newPromptDraft', message.content);
+									goto('/workspace/prompts/create');
+								}}
+							>
+								<CreatePromptIcon className="size-3.5"/>
+							</button>
 						</Tooltip>
 
-						{#if !isFirstMessage && !readOnly}
+						<!-- {#if !isFirstMessage && !readOnly}
 							<Tooltip content={$i18n.t('Delete')} placement="bottom">
 								<button
 									class="invisible group-hover:visible p-1 rounded dark:hover:text-white hover:text-black transition"
@@ -333,7 +346,7 @@
 									</svg>
 								</button>
 							</Tooltip>
-						{/if}
+						{/if} -->
 
 						{#if $settings?.chatBubble ?? true}
 							{#if siblings.length > 1}

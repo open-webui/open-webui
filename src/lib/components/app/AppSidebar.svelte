@@ -1,8 +1,15 @@
 <script lang="ts">
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
+	import { onMount } from 'svelte';
 
 	let selected = '';
+
+	let logoSrc = '/logo_light.png';
+	onMount(() => {
+		const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+		logoSrc = isDark ? '/logo_dark.png' : '/logo_light.png';
+	});
 </script>
 
 <div class="min-w-[4.5rem] bg-gray-50 dark:bg-gray-950 flex gap-2.5 flex-col pt-8">
@@ -25,8 +32,8 @@
 				}}
 			>
 				<img
-					src="/static/splash.png"
-					class="size-11 dark:invert p-0.5"
+					src={logoSrc}
+					class="size-11 p-0.5"
 					alt="logo"
 					draggable="false"
 				/>
@@ -49,7 +56,7 @@
 			}}
 		>
 			<img
-				src="/static/favicon.png"
+				src={logoSrc}
 				class="size-10 {selected === '' ? 'rounded-2xl' : 'rounded-full'}"
 				alt="logo"
 				draggable="false"
