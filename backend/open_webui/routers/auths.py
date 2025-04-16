@@ -665,6 +665,19 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
+        # OAuth settings
+        "ENABLE_OAUTH_SIGNUP": request.app.state.config.ENABLE_OAUTH_SIGNUP,
+        "OAUTH_MERGE_ACCOUNTS_BY_EMAIL": request.app.state.config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
+        "ENABLE_OAUTH_ROLE_MANAGEMENT": request.app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT,
+        "ENABLE_OAUTH_GROUP_MANAGEMENT": request.app.state.config.ENABLE_OAUTH_GROUP_MANAGEMENT,
+        "OAUTH_ROLES_CLAIM": request.app.state.config.OAUTH_ROLES_CLAIM,
+        "OAUTH_GROUPS_CLAIM": request.app.state.config.OAUTH_GROUPS_CLAIM,
+        "OAUTH_EMAIL_CLAIM": request.app.state.config.OAUTH_EMAIL_CLAIM,
+        "OAUTH_PICTURE_CLAIM": request.app.state.config.OAUTH_PICTURE_CLAIM,
+        "OAUTH_USERNAME_CLAIM": request.app.state.config.OAUTH_USERNAME_CLAIM,
+        "OAUTH_ALLOWED_ROLES": request.app.state.config.OAUTH_ALLOWED_ROLES,
+        "OAUTH_ADMIN_ROLES": request.app.state.config.OAUTH_ADMIN_ROLES,
+        "OAUTH_ALLOWED_DOMAINS": request.app.state.config.OAUTH_ALLOWED_DOMAINS,
     }
 
 
@@ -681,6 +694,18 @@ class AdminConfig(BaseModel):
     ENABLE_MESSAGE_RATING: bool
     ENABLE_CHANNELS: bool
     ENABLE_USER_WEBHOOKS: bool
+    ENABLE_OAUTH_SIGNUP: bool
+    OAUTH_MERGE_ACCOUNTS_BY_EMAIL: bool
+    ENABLE_OAUTH_ROLE_MANAGEMENT: bool
+    ENABLE_OAUTH_GROUP_MANAGEMENT: bool
+    OAUTH_ROLES_CLAIM: str
+    OAUTH_GROUPS_CLAIM: str
+    OAUTH_EMAIL_CLAIM: str
+    OAUTH_PICTURE_CLAIM: str
+    OAUTH_USERNAME_CLAIM: str
+    OAUTH_ALLOWED_ROLES: str
+    OAUTH_ADMIN_ROLES: str
+    OAUTH_ALLOWED_DOMAINS: str
 
 
 @router.post("/admin/config")
@@ -717,6 +742,20 @@ async def update_admin_config(
 
     request.app.state.config.ENABLE_USER_WEBHOOKS = form_data.ENABLE_USER_WEBHOOKS
 
+    # Update OAuth settings
+    request.app.state.config.ENABLE_OAUTH_SIGNUP = form_data.ENABLE_OAUTH_SIGNUP
+    request.app.state.config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL = form_data.OAUTH_MERGE_ACCOUNTS_BY_EMAIL
+    request.app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT = form_data.ENABLE_OAUTH_ROLE_MANAGEMENT
+    request.app.state.config.ENABLE_OAUTH_GROUP_MANAGEMENT = form_data.ENABLE_OAUTH_GROUP_MANAGEMENT
+    request.app.state.config.OAUTH_ROLES_CLAIM = form_data.OAUTH_ROLES_CLAIM
+    request.app.state.config.OAUTH_GROUPS_CLAIM = form_data.OAUTH_GROUPS_CLAIM
+    request.app.state.config.OAUTH_EMAIL_CLAIM = form_data.OAUTH_EMAIL_CLAIM
+    request.app.state.config.OAUTH_PICTURE_CLAIM = form_data.OAUTH_PICTURE_CLAIM
+    request.app.state.config.OAUTH_USERNAME_CLAIM = form_data.OAUTH_USERNAME_CLAIM
+    request.app.state.config.OAUTH_ALLOWED_ROLES = form_data.OAUTH_ALLOWED_ROLES
+    request.app.state.config.OAUTH_ADMIN_ROLES = form_data.OAUTH_ADMIN_ROLES
+    request.app.state.config.OAUTH_ALLOWED_DOMAINS = form_data.OAUTH_ALLOWED_DOMAINS
+
     return {
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
         "WEBUI_URL": request.app.state.config.WEBUI_URL,
@@ -730,6 +769,18 @@ async def update_admin_config(
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
+        "ENABLE_OAUTH_SIGNUP": request.app.state.config.ENABLE_OAUTH_SIGNUP,
+        "OAUTH_MERGE_ACCOUNTS_BY_EMAIL": request.app.state.config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
+        "ENABLE_OAUTH_ROLE_MANAGEMENT": request.app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT,
+        "ENABLE_OAUTH_GROUP_MANAGEMENT": request.app.state.config.ENABLE_OAUTH_GROUP_MANAGEMENT,
+        "OAUTH_ROLES_CLAIM": request.app.state.config.OAUTH_ROLES_CLAIM,
+        "OAUTH_GROUPS_CLAIM": request.app.state.config.OAUTH_GROUPS_CLAIM,
+        "OAUTH_EMAIL_CLAIM": request.app.state.config.OAUTH_EMAIL_CLAIM,
+        "OAUTH_PICTURE_CLAIM": request.app.state.config.OAUTH_PICTURE_CLAIM,
+        "OAUTH_USERNAME_CLAIM": request.app.state.config.OAUTH_USERNAME_CLAIM,
+        "OAUTH_ALLOWED_ROLES": request.app.state.config.OAUTH_ALLOWED_ROLES,
+        "OAUTH_ADMIN_ROLES": request.app.state.config.OAUTH_ADMIN_ROLES,
+        "OAUTH_ALLOWED_DOMAINS": request.app.state.config.OAUTH_ALLOWED_DOMAINS,
     }
 
 
