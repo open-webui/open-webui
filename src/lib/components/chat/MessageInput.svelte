@@ -602,55 +602,237 @@
 									</div>
 								{/if}
 
-								<div class="px-2.5">
-									{#if $settings?.richTextInput ?? true}
-										<div
-											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
-											id="chat-input-container"
-										>
-											<RichTextInput
-												bind:this={chatInputElement}
-												bind:value={prompt}
+								<div class=" flex justify-between mt-2.5 mb-2.5 mx-0.5 max-w-full" dir="ltr">
+									<div class="ml-1 self-end flex items-center flex-1 gap-0.5">
+										{#if $settings?.richTextInput ?? true}
+											<div
+												class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-hidden w-full px-1 resize-none h-fit max-h-80 overflow-auto"
+												id="chat-input-container"
+											>
+												<RichTextInput
+													bind:this={chatInputElement}
+													bind:value={prompt}
+													id="chat-input"
+													messageInput={true}
+													shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
+														(!$mobile ||
+															!(
+																'ontouchstart' in window ||
+																navigator.maxTouchPoints > 0 ||
+																navigator.msMaxTouchPoints > 0
+															))}
+													placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
+													largeTextAsFile={$settings?.largeTextAsFile ?? false}
+													autocomplete={$config?.features?.enable_autocomplete_generation &&
+														($settings?.promptAutocomplete ?? false)}
+													generateAutoCompletion={async (text) => {
+														if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
+															toast.error($i18n.t('Please select a model first.'));
+														}
+
+														const res = await generateAutoCompletion(
+															localStorage.token,
+															selectedModelIds.at(0),
+															text,
+															history?.currentId
+																? createMessagesList(history, history.currentId)
+																: null
+														).catch((error) => {
+															console.log(error);
+
+															return null;
+														});
+
+														console.log(res);
+														return res;
+													}}
+													oncompositionstart={() => (isComposing = true)}
+													oncompositionend={() => (isComposing = false)}
+													on:keydown={async (e) => {
+														e = e.detail.event;
+
+														const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+														const commandsContainerElement =
+															document.getElementById('commands-container');
+
+														if (e.key === 'Escape') {
+															stopResponse();
+														}
+
+														// Command/Ctrl + Shift + Enter to submit a message pair
+														if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
+															e.preventDefault();
+															createMessagePair(prompt);
+														}
+
+														// Check if Ctrl + R is pressed
+														if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
+															e.preventDefault();
+															console.log('regenerate');
+
+															const regenerateButton = [
+																...document.getElementsByClassName('regenerate-response-button')
+															]?.at(-1);
+
+															regenerateButton?.click();
+														}
+
+														if (prompt === '' && e.key == 'ArrowUp') {
+															e.preventDefault();
+
+															const userMessageElement = [
+																...document.getElementsByClassName('user-message')
+															]?.at(-1);
+
+															if (userMessageElement) {
+																userMessageElement.scrollIntoView({ block: 'center' });
+																const editButton = [
+																	...document.getElementsByClassName('edit-user-message-button')
+																]?.at(-1);
+
+																editButton?.click();
+															}
+														}
+
+														if (commandsContainerElement) {
+															if (commandsContainerElement && e.key === 'ArrowUp') {
+																e.preventDefault();
+																commandsElement.selectUp();
+
+																const commandOptionButton = [
+																	...document.getElementsByClassName('selected-command-option-button')
+																]?.at(-1);
+																commandOptionButton.scrollIntoView({ block: 'center' });
+															}
+
+															if (commandsContainerElement && e.key === 'ArrowDown') {
+																e.preventDefault();
+																commandsElement.selectDown();
+
+																const commandOptionButton = [
+																	...document.getElementsByClassName('selected-command-option-button')
+																]?.at(-1);
+																commandOptionButton.scrollIntoView({ block: 'center' });
+															}
+
+															if (commandsContainerElement && e.key === 'Tab') {
+																e.preventDefault();
+
+																const commandOptionButton = [
+																	...document.getElementsByClassName('selected-command-option-button')
+																]?.at(-1);
+
+																commandOptionButton?.click();
+															}
+
+															if (commandsContainerElement && e.key === 'Enter') {
+																e.preventDefault();
+
+																const commandOptionButton = [
+																	...document.getElementsByClassName('selected-command-option-button')
+																]?.at(-1);
+
+																if (commandOptionButton) {
+																	commandOptionButton?.click();
+																} else {
+																	document.getElementById('send-message-button')?.click();
+																}
+															}
+														} else {
+															if (
+																!$mobile ||
+																!(
+																	'ontouchstart' in window ||
+																	navigator.maxTouchPoints > 0 ||
+																	navigator.msMaxTouchPoints > 0
+																)
+															) {
+																if (isComposing) {
+																	return;
+																}
+
+																// Uses keyCode '13' for Enter key for chinese/japanese keyboards.
+																//
+																// Depending on the user's settings, it will send the message
+																// either when Enter is pressed or when Ctrl+Enter is pressed.
+																const enterPressed =
+																	($settings?.ctrlEnterToSend ?? false)
+																		? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
+																		: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
+
+																if (enterPressed) {
+																	e.preventDefault();
+																	if (prompt !== '' || files.length > 0) {
+																		dispatch('submit', prompt);
+																	}
+																}
+															}
+														}
+
+														if (e.key === 'Escape') {
+															console.log('Escape');
+															atSelectedModel = undefined;
+															selectedToolIds = [];
+															webSearchEnabled = false;
+															imageGenerationEnabled = false;
+														}
+													}}
+													on:paste={async (e) => {
+														e = e.detail.event;
+														console.log(e);
+
+														const clipboardData = e.clipboardData || window.clipboardData;
+
+														if (clipboardData && clipboardData.items) {
+															for (const item of clipboardData.items) {
+																if (item.type.indexOf('image') !== -1) {
+																	const blob = item.getAsFile();
+																	const reader = new FileReader();
+
+																	reader.onload = function (e) {
+																		files = [
+																			...files,
+																			{
+																				type: 'image',
+																				url: `${e.target.result}`
+																			}
+																		];
+																	};
+
+																	reader.readAsDataURL(blob);
+																} else if (item.type === 'text/plain') {
+																	if ($settings?.largeTextAsFile ?? false) {
+																		const text = clipboardData.getData('text/plain');
+
+																		if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
+																			e.preventDefault();
+																			const blob = new Blob([text], { type: 'text/plain' });
+																			const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
+																				type: 'text/plain'
+																			});
+
+																			await uploadFileHandler(file, true);
+																		}
+																	}
+																}
+															}
+														}
+													}}
+												/>
+											</div>
+										{:else}
+											<textarea
 												id="chat-input"
-												messageInput={true}
-												shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
-													(!$mobile ||
-														!(
-															'ontouchstart' in window ||
-															navigator.maxTouchPoints > 0 ||
-															navigator.msMaxTouchPoints > 0
-														))}
+												dir="auto"
+												bind:this={chatInputElement}
+												class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none"
 												placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
-												largeTextAsFile={$settings?.largeTextAsFile ?? false}
-												autocomplete={$config?.features?.enable_autocomplete_generation &&
-													($settings?.promptAutocomplete ?? false)}
-												generateAutoCompletion={async (text) => {
-													if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
-														toast.error($i18n.t('Please select a model first.'));
-													}
-
-													const res = await generateAutoCompletion(
-														localStorage.token,
-														selectedModelIds.at(0),
-														text,
-														history?.currentId
-															? createMessagesList(history, history.currentId)
-															: null
-													).catch((error) => {
-														console.log(error);
-
-														return null;
-													});
-
-													console.log(res);
-													return res;
-												}}
-												oncompositionstart={() => (isComposing = true)}
-												oncompositionend={() => (isComposing = false)}
+												bind:value={prompt}
+												on:compositionstart={() => (isComposing = true)}
+												on:compositionend={() => (isComposing = false)}
 												on:keydown={async (e) => {
-													e = e.detail.event;
-
 													const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
+
 													const commandsContainerElement =
 														document.getElementById('commands-container');
 
@@ -683,14 +865,14 @@
 															...document.getElementsByClassName('user-message')
 														]?.at(-1);
 
-														if (userMessageElement) {
-															userMessageElement.scrollIntoView({ block: 'center' });
-															const editButton = [
-																...document.getElementsByClassName('edit-user-message-button')
-															]?.at(-1);
+														const editButton = [
+															...document.getElementsByClassName('edit-user-message-button')
+														]?.at(-1);
 
-															editButton?.click();
-														}
+														console.log(userMessageElement);
+
+														userMessageElement.scrollIntoView({ block: 'center' });
+														editButton?.click();
 													}
 
 													if (commandsContainerElement) {
@@ -714,6 +896,22 @@
 															commandOptionButton.scrollIntoView({ block: 'center' });
 														}
 
+														if (commandsContainerElement && e.key === 'Enter') {
+															e.preventDefault();
+
+															const commandOptionButton = [
+																...document.getElementsByClassName('selected-command-option-button')
+															]?.at(-1);
+
+															if (e.shiftKey) {
+																prompt = `${prompt}\n`;
+															} else if (commandOptionButton) {
+																commandOptionButton?.click();
+															} else {
+																document.getElementById('send-message-button')?.click();
+															}
+														}
+
 														if (commandsContainerElement && e.key === 'Tab') {
 															e.preventDefault();
 
@@ -722,20 +920,6 @@
 															]?.at(-1);
 
 															commandOptionButton?.click();
-														}
-
-														if (commandsContainerElement && e.key === 'Enter') {
-															e.preventDefault();
-
-															const commandOptionButton = [
-																...document.getElementsByClassName('selected-command-option-button')
-															]?.at(-1);
-
-															if (commandOptionButton) {
-																commandOptionButton?.click();
-															} else {
-																document.getElementById('send-message-button')?.click();
-															}
 														}
 													} else {
 														if (
@@ -750,22 +934,46 @@
 																return;
 															}
 
-															// Uses keyCode '13' for Enter key for chinese/japanese keyboards.
-															//
-															// Depending on the user's settings, it will send the message
-															// either when Enter is pressed or when Ctrl+Enter is pressed.
+															// Prevent Enter key from creating a new line
+															const isCtrlPressed = e.ctrlKey || e.metaKey;
 															const enterPressed =
 																($settings?.ctrlEnterToSend ?? false)
 																	? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
 																	: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
 
+															console.log('Enter pressed:', enterPressed);
+
 															if (enterPressed) {
 																e.preventDefault();
-																if (prompt !== '' || files.length > 0) {
-																	dispatch('submit', prompt);
-																}
+															}
+
+															// Submit the prompt when Enter key is pressed
+															if ((prompt !== '' || files.length > 0) && enterPressed) {
+																dispatch('submit', prompt);
 															}
 														}
+													}
+
+													if (e.key === 'Tab') {
+														const words = extractCurlyBraceWords(prompt);
+
+														if (words.length > 0) {
+															const word = words.at(0);
+															const fullPrompt = prompt;
+
+															prompt = prompt.substring(0, word?.endIndex + 1);
+															await tick();
+
+															e.target.scrollTop = e.target.scrollHeight;
+															prompt = fullPrompt;
+															await tick();
+
+															e.preventDefault();
+															e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
+														}
+
+														e.target.style.height = '';
+														e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
 													}
 
 													if (e.key === 'Escape') {
@@ -776,10 +984,16 @@
 														imageGenerationEnabled = false;
 													}
 												}}
+												rows="1"
+												on:input={async (e) => {
+													e.target.style.height = '';
+													e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
+												}}
+												on:focus={async (e) => {
+													e.target.style.height = '';
+													e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
+												}}
 												on:paste={async (e) => {
-													e = e.detail.event;
-													console.log(e);
-
 													const clipboardData = e.clipboardData || window.clipboardData;
 
 													if (clipboardData && clipboardData.items) {
@@ -818,376 +1032,8 @@
 													}
 												}}
 											/>
-										</div>
-									{:else}
-										<textarea
-											id="chat-input"
-											dir="auto"
-											bind:this={chatInputElement}
-											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none"
-											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
-											bind:value={prompt}
-											on:compositionstart={() => (isComposing = true)}
-											on:compositionend={() => (isComposing = false)}
-											on:keydown={async (e) => {
-												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
-
-												const commandsContainerElement =
-													document.getElementById('commands-container');
-
-												if (e.key === 'Escape') {
-													stopResponse();
-												}
-
-												// Command/Ctrl + Shift + Enter to submit a message pair
-												if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
-													e.preventDefault();
-													createMessagePair(prompt);
-												}
-
-												// Check if Ctrl + R is pressed
-												if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
-													e.preventDefault();
-													console.log('regenerate');
-
-													const regenerateButton = [
-														...document.getElementsByClassName('regenerate-response-button')
-													]?.at(-1);
-
-													regenerateButton?.click();
-												}
-
-												if (prompt === '' && e.key == 'ArrowUp') {
-													e.preventDefault();
-
-													const userMessageElement = [
-														...document.getElementsByClassName('user-message')
-													]?.at(-1);
-
-													const editButton = [
-														...document.getElementsByClassName('edit-user-message-button')
-													]?.at(-1);
-
-													console.log(userMessageElement);
-
-													userMessageElement.scrollIntoView({ block: 'center' });
-													editButton?.click();
-												}
-
-												if (commandsContainerElement) {
-													if (commandsContainerElement && e.key === 'ArrowUp') {
-														e.preventDefault();
-														commandsElement.selectUp();
-
-														const commandOptionButton = [
-															...document.getElementsByClassName('selected-command-option-button')
-														]?.at(-1);
-														commandOptionButton.scrollIntoView({ block: 'center' });
-													}
-
-													if (commandsContainerElement && e.key === 'ArrowDown') {
-														e.preventDefault();
-														commandsElement.selectDown();
-
-														const commandOptionButton = [
-															...document.getElementsByClassName('selected-command-option-button')
-														]?.at(-1);
-														commandOptionButton.scrollIntoView({ block: 'center' });
-													}
-
-													if (commandsContainerElement && e.key === 'Enter') {
-														e.preventDefault();
-
-														const commandOptionButton = [
-															...document.getElementsByClassName('selected-command-option-button')
-														]?.at(-1);
-
-														if (e.shiftKey) {
-															prompt = `${prompt}\n`;
-														} else if (commandOptionButton) {
-															commandOptionButton?.click();
-														} else {
-															document.getElementById('send-message-button')?.click();
-														}
-													}
-
-													if (commandsContainerElement && e.key === 'Tab') {
-														e.preventDefault();
-
-														const commandOptionButton = [
-															...document.getElementsByClassName('selected-command-option-button')
-														]?.at(-1);
-
-														commandOptionButton?.click();
-													}
-												} else {
-													if (
-														!$mobile ||
-														!(
-															'ontouchstart' in window ||
-															navigator.maxTouchPoints > 0 ||
-															navigator.msMaxTouchPoints > 0
-														)
-													) {
-														if (isComposing) {
-															return;
-														}
-
-														// Prevent Enter key from creating a new line
-														const isCtrlPressed = e.ctrlKey || e.metaKey;
-														const enterPressed =
-															($settings?.ctrlEnterToSend ?? false)
-																? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
-																: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
-
-														console.log('Enter pressed:', enterPressed);
-
-														if (enterPressed) {
-															e.preventDefault();
-														}
-
-														// Submit the prompt when Enter key is pressed
-														if ((prompt !== '' || files.length > 0) && enterPressed) {
-															dispatch('submit', prompt);
-														}
-													}
-												}
-
-												if (e.key === 'Tab') {
-													const words = extractCurlyBraceWords(prompt);
-
-													if (words.length > 0) {
-														const word = words.at(0);
-														const fullPrompt = prompt;
-
-														prompt = prompt.substring(0, word?.endIndex + 1);
-														await tick();
-
-														e.target.scrollTop = e.target.scrollHeight;
-														prompt = fullPrompt;
-														await tick();
-
-														e.preventDefault();
-														e.target.setSelectionRange(word?.startIndex, word.endIndex + 1);
-													}
-
-													e.target.style.height = '';
-													e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
-												}
-
-												if (e.key === 'Escape') {
-													console.log('Escape');
-													atSelectedModel = undefined;
-													selectedToolIds = [];
-													webSearchEnabled = false;
-													imageGenerationEnabled = false;
-												}
-											}}
-											rows="1"
-											on:input={async (e) => {
-												e.target.style.height = '';
-												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
-											}}
-											on:focus={async (e) => {
-												e.target.style.height = '';
-												e.target.style.height = Math.min(e.target.scrollHeight, 320) + 'px';
-											}}
-											on:paste={async (e) => {
-												const clipboardData = e.clipboardData || window.clipboardData;
-
-												if (clipboardData && clipboardData.items) {
-													for (const item of clipboardData.items) {
-														if (item.type.indexOf('image') !== -1) {
-															const blob = item.getAsFile();
-															const reader = new FileReader();
-
-															reader.onload = function (e) {
-																files = [
-																	...files,
-																	{
-																		type: 'image',
-																		url: `${e.target.result}`
-																	}
-																];
-															};
-
-															reader.readAsDataURL(blob);
-														} else if (item.type === 'text/plain') {
-															if ($settings?.largeTextAsFile ?? false) {
-																const text = clipboardData.getData('text/plain');
-
-																if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
-																	e.preventDefault();
-																	const blob = new Blob([text], { type: 'text/plain' });
-																	const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
-																		type: 'text/plain'
-																	});
-
-																	await uploadFileHandler(file, true);
-																}
-															}
-														}
-													}
-												}
-											}}
-										/>
-									{/if}
-								</div>
-
-								<div class=" flex justify-between mt-1 mb-2.5 mx-0.5 max-w-full" dir="ltr">
-									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%] gap-0.5">
-										<InputMenu
-											bind:selectedToolIds
-											{screenCaptureHandler}
-											{inputFilesHandler}
-											uploadFilesHandler={() => {
-												filesInputElement.click();
-											}}
-											uploadGoogleDriveHandler={async () => {
-												try {
-													const fileData = await createPicker();
-													if (fileData) {
-														const file = new File([fileData.blob], fileData.name, {
-															type: fileData.blob.type
-														});
-														await uploadFileHandler(file);
-													} else {
-														console.log('No file was selected from Google Drive');
-													}
-												} catch (error) {
-													console.error('Google Drive Error:', error);
-													toast.error(
-														$i18n.t('Error accessing Google Drive: {{error}}', {
-															error: error.message
-														})
-													);
-												}
-											}}
-											uploadOneDriveHandler={async () => {
-												try {
-													const fileData = await pickAndDownloadFile();
-													if (fileData) {
-														const file = new File([fileData.blob], fileData.name, {
-															type: fileData.blob.type || 'application/octet-stream'
-														});
-														await uploadFileHandler(file);
-													} else {
-														console.log('No file was selected from OneDrive');
-													}
-												} catch (error) {
-													console.error('OneDrive Error:', error);
-												}
-											}}
-											onClose={async () => {
-												await tick();
-
-												const chatInput = document.getElementById('chat-input');
-												chatInput?.focus();
-											}}
-										>
-											<button
-												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
-												type="button"
-												aria-label="More"
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="size-5"
-												>
-													<path
-														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
-													/>
-												</svg>
-											</button>
-										</InputMenu>
-
-										<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
-											{#if toolServers.length + selectedToolIds.length > 0}
-												<Tooltip
-													content={$i18n.t('{{COUNT}} Available Tools', {
-														COUNT: toolServers.length + selectedToolIds.length
-													})}
-												>
-													<button
-														class="translate-y-[0.5px] flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg p-1 self-center transition"
-														aria-label="Available Tools"
-														type="button"
-														on:click={() => {
-															showTools = !showTools;
-														}}
-													>
-														<Wrench className="size-4" strokeWidth="1.75" />
-
-														<span class="text-sm font-medium text-gray-600 dark:text-gray-300">
-															{toolServers.length + selectedToolIds.length}
-														</span>
-													</button>
-												</Tooltip>
-											{/if}
-
-											{#if $_user}
-												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
-													<Tooltip content={$i18n.t('Search the internet')} placement="top">
-														<button
-															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
-															type="button"
-															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {webSearchEnabled ||
-															($settings?.webSearch ?? false) === 'always'
-																? 'bg-blue-100 dark:bg-blue-500/20 border-blue-400/20 text-blue-500 dark:text-blue-400'
-																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
-														>
-															<GlobeAlt className="size-5" strokeWidth="1.75" />
-															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
-																>{$i18n.t('Web Search')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
-
-												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
-													<Tooltip content={$i18n.t('Generate an image')} placement="top">
-														<button
-															on:click|preventDefault={() =>
-																(imageGenerationEnabled = !imageGenerationEnabled)}
-															type="button"
-															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {imageGenerationEnabled
-																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400'
-																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-100 dark:hover:bg-gray-800 '}"
-														>
-															<Photo className="size-5" strokeWidth="1.75" />
-															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
-																>{$i18n.t('Image')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
-
-												{#if $config?.features?.enable_code_interpreter && ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter)}
-													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
-														<button
-															on:click|preventDefault={() =>
-																(codeInterpreterEnabled = !codeInterpreterEnabled)}
-															type="button"
-															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {codeInterpreterEnabled
-																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100  dark:border-gray-700 text-gray-600 dark:text-gray-400  '
-																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-100 dark:hover:bg-gray-800 '}"
-														>
-															<CommandLine className="size-5" strokeWidth="1.75" />
-															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
-																>{$i18n.t('Code Interpreter')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
-											{/if}
-										</div>
+										{/if}
 									</div>
-
 									<div class="self-end flex space-x-1 mr-1 shrink-0">
 										{#if (!history?.currentId || history.messages[history.currentId]?.done == true) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
 											<Tooltip content={$i18n.t('Record voice')}>
