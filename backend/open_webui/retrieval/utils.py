@@ -1,42 +1,32 @@
-from langchain_core.documents import BaseDocumentCompressor, Document
-from langchain_core.callbacks import Callbacks
-from typing import Optional, Sequence
-import operator
-from langchain_core.retrievers import BaseRetriever
-from langchain_core.callbacks import CallbackManagerForRetrieverRun
-from typing import Any
+import hashlib
 import logging
+import operator
 import os
-from typing import Optional, Union
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Optional, Sequence, Union
 
 import requests
-import hashlib
-from concurrent.futures import ThreadPoolExecutor
-
 from huggingface_hub import snapshot_download
 from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
-from langchain_core.documents import Document
-
-from open_webui.config import VECTOR_DB
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
-
-from open_webui.models.users import UserModel
-from open_webui.models.files import Files
-
-from open_webui.retrieval.vector.main import GetResult
-
-
-from open_webui.env import (
-    SRC_LOG_LEVELS,
-    OFFLINE_MODE,
-    ENABLE_FORWARD_USER_INFO_HEADERS,
-)
+from langchain_core.callbacks import CallbackManagerForRetrieverRun, Callbacks
+from langchain_core.documents import BaseDocumentCompressor, Document
+from langchain_core.retrievers import BaseRetriever
 from open_webui.config import (
-    RAG_EMBEDDING_QUERY_PREFIX,
     RAG_EMBEDDING_CONTENT_PREFIX,
     RAG_EMBEDDING_PREFIX_FIELD_NAME,
+    RAG_EMBEDDING_QUERY_PREFIX,
+    VECTOR_DB,
 )
+from open_webui.env import (
+    ENABLE_FORWARD_USER_INFO_HEADERS,
+    OFFLINE_MODE,
+    SRC_LOG_LEVELS,
+)
+from open_webui.models.files import Files
+from open_webui.models.users import UserModel
+from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.main import GetResult
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -541,7 +531,6 @@ def get_sources_from_files(
             if collection_name not in collection_file_map:
                 collection_file_map[collection_name] = file
 
-    # Process all collections at once if we have any
     collection_names = list(collection_file_map.keys())
     if collection_names:
         if full_context:
@@ -641,7 +630,7 @@ def get_sources_from_files(
     sources = []
     for context in relevant_contexts:
         try:
-            if "documents" in context:
+            if "documents" in context and len(context["documents"][0]) > 0:
                 if "metadatas" in context:
                     source = {
                         "source": context["file"],
