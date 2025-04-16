@@ -454,61 +454,63 @@
 						</div>
 					{/if}
 
-					<div class=" mb-2.5 w-full justify-between">
-						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Email Claim')}</div>
+					{#if adminConfig?.ENABLE_OAUTH_SIGNUP}
+						<div class=" mb-2.5 w-full justify-between">
+							<div class="flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Email Claim')}</div>
+							</div>
+							<div class="flex mt-2 space-x-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									type="text"
+									placeholder={$i18n.t('e.g., email')}
+									bind:value={adminConfig.OAUTH_EMAIL_CLAIM}
+								/>
+							</div>
 						</div>
-						<div class="flex mt-2 space-x-2">
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								type="text"
-								placeholder={$i18n.t('e.g., email')}
-								bind:value={adminConfig.OAUTH_EMAIL_CLAIM}
-							/>
-						</div>
-					</div>
 
-					<div class=" mb-2.5 w-full justify-between">
-						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Username Claim')}</div>
+						<div class=" mb-2.5 w-full justify-between">
+							<div class="flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Username Claim')}</div>
+							</div>
+							<div class="flex mt-2 space-x-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									type="text"
+									placeholder={$i18n.t('e.g., name or preferred_username')}
+									bind:value={adminConfig.OAUTH_USERNAME_CLAIM}
+								/>
+							</div>
 						</div>
-						<div class="flex mt-2 space-x-2">
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								type="text"
-								placeholder={$i18n.t('e.g., name or preferred_username')}
-								bind:value={adminConfig.OAUTH_USERNAME_CLAIM}
-							/>
-						</div>
-					</div>
 
-					<div class=" mb-2.5 w-full justify-between">
-						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Picture Claim')}</div>
+						<div class=" mb-2.5 w-full justify-between">
+							<div class="flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Picture Claim')}</div>
+							</div>
+							<div class="flex mt-2 space-x-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									type="text"
+									placeholder={$i18n.t('e.g., picture')}
+									bind:value={adminConfig.OAUTH_PICTURE_CLAIM}
+								/>
+							</div>
 						</div>
-						<div class="flex mt-2 space-x-2">
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								type="text"
-								placeholder={$i18n.t('e.g., picture')}
-								bind:value={adminConfig.OAUTH_PICTURE_CLAIM}
-							/>
-						</div>
-					</div>
 
-					<div class=" mb-2.5 w-full justify-between">
-						<div class="flex w-full justify-between">
-							<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Allowed Domains')}</div>
+						<div class=" mb-2.5 w-full justify-between">
+							<div class="flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Allowed Domains')}</div>
+							</div>
+							<div class="flex mt-2 space-x-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									type="text"
+									placeholder={$i18n.t('Comma-separated list, e.g., example.com,another.org or * for all')}
+									bind:value={adminConfig.OAUTH_ALLOWED_DOMAINS}
+								/>
+							</div>
 						</div>
-						<div class="flex mt-2 space-x-2">
-							<input
-								class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								type="text"
-								placeholder={$i18n.t('Comma-separated list, e.g., example.com,another.org or * for all')}
-								bind:value={adminConfig.OAUTH_ALLOWED_DOMAINS}
-							/>
-						</div>
-					</div>
+					{/if}
 					<!-- END: Added OAuth Settings -->
 
 					<div class=" space-y-3">
