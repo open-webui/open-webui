@@ -45,7 +45,7 @@ jobs:
             WEBUI_URL=https://dev.boti.deusto.es
             EOF
             
-            docker pull ghcr.io/${{ github.repository }}:latest
+            docker pull ghcr.io/${{ github.repository }}:dev
             docker stop boti_openwebui || true
             docker rm boti_openwebui || true
             
