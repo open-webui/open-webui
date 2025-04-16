@@ -125,17 +125,11 @@
 		if (($config?.features.auth_trusted_header ?? false) || $config?.features.auth === false) {
 			await signInHandler();
 		} else {
-			//onboarding = $config?.onboarding ?? false;
-
-			onboarding = false;
+			onboarding = $config?.onboarding ?? false;
+			//onboarding = false;
 			//mode = $config?.features.enable_ldap ? 'ldap' : 'signup';
 
-			if ($config?.onboarding ?? false) {
-				mode='signup';
-			}else{
-				mode='signin';
-			}
-
+			
 			// if (onboarding===false){
 			// 	mode='singin';
 			// 	//mode = $config?.features.enable_ldap ? 'ldap' : 'signup';
@@ -145,8 +139,8 @@
 			// 	mode='signup';
 			// }
 
-			console.log('onMount - onboarding', onboarding);
-			console.log('onMount - mode', mode);
+			console.log('onboarding', onboarding);
+			console.log('mode', mode);
 		}
 	});
 </script>
@@ -162,9 +156,6 @@
 	getStartedHandler={() => {
 		onboarding = false;
 		mode = $config?.features.enable_ldap ? 'ldap' : 'signup';
-
-		console.log('onClick - onboarding', onboarding);
-		console.log('onClick - mode', mode);
 	}}
 />
 
