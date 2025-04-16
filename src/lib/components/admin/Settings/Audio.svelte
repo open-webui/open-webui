@@ -8,7 +8,8 @@
 		getAudioConfig,
 		updateAudioConfig,
 		getModels as _getModels,
-		getVoices as _getVoices
+		getVoices as _getVoices,
+
 	} from '$lib/apis/audio';
 	import { config, settings } from '$lib/stores';
 
@@ -26,6 +27,8 @@
 	// Audio
 	let TTS_OPENAI_API_BASE_URL = '';
 	let TTS_OPENAI_API_KEY = '';
+	let TTS_CUSTOM_OPEN_API_BASE_URL = '';
+	let TTS_CUSTOM_OPEN_API_KEY = '';
 	let TTS_API_KEY = '';
 	let TTS_ENGINE = '';
 	let TTS_MODEL = '';
@@ -97,6 +100,8 @@
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
+				CUSTOM_TTS_BASE_URL: TTS_CUSTOM_OPEN_API_BASE_URL,
+				CUSTOM_TTS_KEY: TTS_CUSTOM_OPEN_API_KEY,
 				API_KEY: TTS_API_KEY,
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
@@ -137,6 +142,10 @@
 			console.log(res);
 			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
 			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
+
+			TTS_CUSTOM_OPEN_API_BASE_URL = res.tts.CUSTOM_TTS_BASE_URL;
+			TTS_CUSTOM_OPEN_API_KEY = res.tts.CUSTOM_TTS_KEY
+
 			TTS_API_KEY = res.tts.API_KEY;
 
 			TTS_ENGINE = res.tts.ENGINE;
@@ -405,6 +414,7 @@
 							<option value="openai">{$i18n.t('OpenAI')}</option>
 							<option value="elevenlabs">{$i18n.t('ElevenLabs')}</option>
 							<option value="azure">{$i18n.t('Azure AI Speech')}</option>
+							<option value="customtts">{$i18n.t('Custom TTS')}</option>
 						</select>
 					</div>
 				</div>
@@ -423,6 +433,7 @@
 						</div>
 					</div>
 				{:else if TTS_ENGINE === 'elevenlabs'}
+				
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
 							<input
@@ -433,6 +444,21 @@
 							/>
 						</div>
 					</div>
+
+				{:else if TTS_ENGINE === 'customtts'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<input
+								class="flex-1 w-full bg-transparent outline-hidden"
+								placeholder={$i18n.t('API Base URL')}
+								bind:value={TTS_CUSTOM_OPEN_API_BASE_URL}
+								required
+							/>
+
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_CUSTOM_OPEN_API_KEY} />
+						</div>
+					</div>
+
 				{:else if TTS_ENGINE === 'azure'}
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
@@ -598,6 +624,50 @@
 							</div>
 						</div>
 					</div>
+				
+				
+				{:else if TTS_ENGINE === 'customtts'}
+					<div class=" flex gap-2">
+						<div class="w-full">
+							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('TTS Voice')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										list="voice-list"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={TTS_VOICE}
+										placeholder="Select a voice"
+									/>
+
+									<datalist id="voice-list">
+										{#each voices as voice}
+											<option value={voice.id}>{voice.name}</option>
+										{/each}
+									</datalist>
+								</div>
+							</div>
+						</div>
+						<div class="w-full">
+							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('TTS Model')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										list="tts-model-list"
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={TTS_MODEL}
+										placeholder="Select a model"
+									/>
+
+									<datalist id="tts-model-list">
+										{#each models as model}
+											<option value={model.id} class="bg-gray-50 dark:bg-gray-700" />
+										{/each}
+									</datalist>
+								</div>
+							</div>
+						</div>
+					</div>
+
 				{:else if TTS_ENGINE === 'azure'}
 					<div class=" flex gap-2">
 						<div class="w-full">
