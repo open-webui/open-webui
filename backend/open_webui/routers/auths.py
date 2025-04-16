@@ -678,6 +678,10 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "OAUTH_ALLOWED_ROLES": request.app.state.config.OAUTH_ALLOWED_ROLES,
         "OAUTH_ADMIN_ROLES": request.app.state.config.OAUTH_ADMIN_ROLES,
         "OAUTH_ALLOWED_DOMAINS": request.app.state.config.OAUTH_ALLOWED_DOMAINS,
+        "OAUTH_CLIENT_ID": request.app.state.config.OAUTH_CLIENT_ID,
+        "OAUTH_CLIENT_SECRET": request.app.state.config.OAUTH_CLIENT_SECRET,
+        "OAUTH_PROVIDER_NAME": request.app.state.config.OAUTH_PROVIDER_NAME,
+        "OPENID_PROVIDER_URL": request.app.state.config.OPENID_PROVIDER_URL,
     }
 
 

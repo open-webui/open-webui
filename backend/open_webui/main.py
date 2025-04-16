@@ -501,6 +501,17 @@ app.state.OPENAI_MODELS = {}
 
 ########################################
 #
+# OAuth
+#
+########################################
+
+app.state.config.OAUTH_CLIENT_ID = OAUTH_CLIENT_ID
+app.state.config.OAUTH_CLIENT_SECRET = OAUTH_CLIENT_SECRET
+app.state.config.OAUTH_PROVIDER_NAME = OAUTH_PROVIDER_NAME
+app.state.config.OPENID_PROVIDER_URL = OPENID_PROVIDER_URL
+
+########################################
+#
 # TOOL SERVERS
 #
 ########################################

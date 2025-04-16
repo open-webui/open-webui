@@ -273,6 +273,10 @@ class AppConfig:
         if isinstance(value, PersistentConfig):
             self._state[key] = value
         else:
+            if key not in self._state:
+                # Handle missing keys by creating a new PersistentConfig
+                # This ensures the key exists before we try to update its value
+                self._state[key] = PersistentConfig(key, f"oauth.{key.lower()}", value)
             self._state[key].value = value
             self._state[key].save()
 
@@ -342,6 +346,30 @@ ENABLE_OAUTH_SIGNUP = PersistentConfig(
     os.environ.get("ENABLE_OAUTH_SIGNUP", "False").lower() == "true",
 )
 
+# Initialize OAuth client config
+OAUTH_CLIENT_ID = PersistentConfig(
+    "OAUTH_CLIENT_ID",
+    "oauth.client_id",
+    os.environ.get("OAUTH_CLIENT_ID", ""),
+)
+
+OAUTH_CLIENT_SECRET = PersistentConfig(
+    "OAUTH_CLIENT_SECRET",
+    "oauth.client_secret",
+    os.environ.get("OAUTH_CLIENT_SECRET", ""),
+)
+
+OAUTH_PROVIDER_NAME = PersistentConfig(
+    "OAUTH_PROVIDER_NAME",
+    "oauth.provider_name",
+    os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
+)
+
+OPENID_PROVIDER_URL = PersistentConfig(
+    "OPENID_PROVIDER_URL",
+    "oauth.provider_url",
+    os.environ.get("OPENID_PROVIDER_URL", ""),
+)
 
 OAUTH_MERGE_ACCOUNTS_BY_EMAIL = PersistentConfig(
     "OAUTH_MERGE_ACCOUNTS_BY_EMAIL",
@@ -432,19 +460,19 @@ GITHUB_CLIENT_REDIRECT_URI = PersistentConfig(
 
 OAUTH_CLIENT_ID = PersistentConfig(
     "OAUTH_CLIENT_ID",
-    "oauth.oidc.client_id",
+    "oauth.client_id",
     os.environ.get("OAUTH_CLIENT_ID", ""),
 )
 
 OAUTH_CLIENT_SECRET = PersistentConfig(
     "OAUTH_CLIENT_SECRET",
-    "oauth.oidc.client_secret",
+    "oauth.client_secret",
     os.environ.get("OAUTH_CLIENT_SECRET", ""),
 )
 
 OPENID_PROVIDER_URL = PersistentConfig(
     "OPENID_PROVIDER_URL",
-    "oauth.oidc.provider_url",
+    "oauth.provider_url",
     os.environ.get("OPENID_PROVIDER_URL", ""),
 )
 
@@ -468,7 +496,7 @@ OAUTH_CODE_CHALLENGE_METHOD = PersistentConfig(
 
 OAUTH_PROVIDER_NAME = PersistentConfig(
     "OAUTH_PROVIDER_NAME",
-    "oauth.oidc.provider_name",
+    "oauth.provider_name",
     os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
 )
 
