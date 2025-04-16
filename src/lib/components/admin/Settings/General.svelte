@@ -369,7 +369,13 @@
 						</div>
 					</div>
 
-					<!-- START: Added OAuth Settings -->
+				</div>
+
+				<div class="mb-3">
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('OAuth / OIDC')}</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
 					<div class=" mb-2.5 flex w-full justify-between pr-2">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Enable OAuth Sign Up')}</div>
 						<Switch bind:state={adminConfig.ENABLE_OAUTH_SIGNUP} />
@@ -533,6 +539,7 @@
 							</div>
 							<div class="flex mt-2 space-x-2">
 								<SensitiveInput
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									placeholder={$i18n.t('e.g., your-client-secret')}
 									bind:value={adminConfig.OAUTH_CLIENT_SECRET}
 								/>
@@ -567,7 +574,6 @@
 							</div>
 						</div>
 					{/if}
-					<!-- END: Added OAuth Settings -->
 
 					<div class=" space-y-3">
 						<div class="mt-2 space-y-2 pr-1.5">
