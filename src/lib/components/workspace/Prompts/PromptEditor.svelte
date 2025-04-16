@@ -80,6 +80,13 @@
 			accessControl = prompt?.access_control ?? null;
 		}
 	});
+	onMount(() => {
+		const stored = localStorage.getItem('newPromptDraft');
+		if (stored) {
+			content = stored;
+			localStorage.removeItem('newPromptDraft'); 
+		}
+	});
 
 	$:console.log(command, 'command')
 </script>
@@ -103,9 +110,12 @@
 		>
 			<div class="flex flex-col w-full mb-1.5">
 				<div class="flex-1">
-					<div class="relative">
+					<div class="relative w-full dark:bg-customGray-900 rounded-md">
+						{#if title}
+							<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Title')}</div>
+						{/if}
 						<input
-							class="px-2.5 text-sm h-10 w-full dark:bg-customGray-900 dark:text-white dark:placeholder:text-customGray-100 rounded-md outline-none"
+							class={`px-2.5 text-sm ${title ? "mt-2" : "mt-0"} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 							placeholder={$i18n.t('Title')}
 							bind:value={title}
 							required
@@ -137,9 +147,12 @@
 			</div>
 
 			<div class="mb-1.5">
-				<div class="relative">
+				<div class="relative w-full dark:bg-customGray-900 rounded-md">
+					{#if description}
+						<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Description')}</div>
+					{/if}
 					<input
-						class="px-2.5 text-sm h-10 w-full dark:bg-customGray-900 dark:text-white dark:placeholder:text-customGray-100 rounded-md outline-none"
+						class={`px-2.5 text-sm ${description ? "mt-2" : "mt-0"} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 						placeholder={$i18n.t('Description')}
 						bind:value={description}
 						required
@@ -147,33 +160,36 @@
 				</div>
 			</div>
 			<div class="mb-1">
-				<div class="relative">
-				<Textarea
-					className="px-2.5 py-2.5 text-sm h-20 w-full dark:bg-customGray-900 dark:text-white dark:placeholder:text-customGray-100 rounded-md outline-none"
-					placeholder={$i18n.t('Prompt Content')}
-					bind:value={content}
-					rows={4}
-					required
-				/>
-				{#if !content}
-					<span
-					class="absolute top-[26px] w-[180px] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
-					>
-						{$i18n.t('Write a summary that summarizes [topic or keyword].')}
-					</span>
-				{/if}
+				<div class="relative w-full dark:bg-customGray-900 rounded-md">
+					{#if content}
+						<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Prompt Content')}</div>
+					{/if}
+					<Textarea
+						className={`px-2.5 py-2 text-sm ${content ? "mt-2" : "mt-0"} w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+						placeholder={$i18n.t('Prompt Content')}
+						bind:value={content}
+						rows={4}
+						required
+					/>
+					{#if !content}
+						<span
+						class="absolute top-[26px] w-[180px] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+						>
+							{$i18n.t('Write a summary that summarizes [topic or keyword].')}
+						</span>
+					{/if}
 				</div>
 			</div>
 			<div class="mb-2.5">
 				<div class="text-xs text-gray-400 dark:text-white/50">
 					ⓘ {$i18n.t('Format your variables using brackets like this:')}&nbsp;<span
 						class=" text-gray-600 dark:text-white/50 font-medium"
-						>{'{{'}{$i18n.t('variable')}{'}}'}</span
+						>{'['}{$i18n.t('variable')}{']'}</span
 					>.
 					{$i18n.t('Make sure to enclose them with')}
-					<span class=" text-gray-600 dark:text-white/50 font-medium">{'{{'}</span>
+					<span class=" text-gray-600 dark:text-white/50 font-medium">{"'['"}</span>
 					{$i18n.t('and')}
-					<span class=" text-gray-600 dark:text-white/50 font-medium">{'}}'}</span>.
+					<span class=" text-gray-600 dark:text-white/50 font-medium">{"']'"}</span>.
 				</div>
 
 				<div class="text-xs text-gray-400 dark:text-white/50">

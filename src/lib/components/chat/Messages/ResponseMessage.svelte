@@ -45,6 +45,7 @@
 	import ReadMessageIcon from '$lib/components/icons/ReadMessageIcon.svelte';
 	import MessageEditIcon from '$lib/components/icons/MessageEditIcon.svelte';
 	import RegenerateIcon from '$lib/components/icons/RegenerateIcon.svelte';
+	import { getModelIcon } from '$lib/utils';
 
 	interface MessageType {
 		id: string;
@@ -481,6 +482,22 @@
 
 		await tick();
 	});
+
+	let modelIconUrl = '';
+
+	$: {
+		if (!model?.info?.base_model_id) {
+			modelIconUrl = getModelIcon(model?.id);
+		} else if (
+			model?.info?.meta?.profile_image_url &&
+			model?.info?.meta?.profile_image_url !== '/static/favicon.png'
+		) {
+			modelIconUrl = model?.info?.meta?.profile_image_url;
+		} else {
+			modelIconUrl = '/logo_light.png';
+		}
+	}
+
 </script>
 
 {#key message.id}
@@ -490,10 +507,7 @@
 		dir={$settings.chatDirection}
 	>
 		<div class={`flex-shrink-0 ${($settings?.chatDirection ?? 'LTR') === 'LTR' ? 'mr-3' : 'ml-3'}`}>
-			<ProfileImage
-				src={model?.info?.meta?.profile_image_url === "/static/favicon.png" ? "/logo_light.png" : model?.info?.meta?.profile_image_url}
-				className={'size-5'}
-			/>
+			<ProfileImage src={modelIconUrl} />
 		</div>
 
 		<div class="flex-auto w-0 pl-1">
@@ -668,7 +682,10 @@
 								</div>
 							</div>
 						{:else}
-							<div class="w-full flex flex-col relative text-base leading-[1.8] dark:text-customGray-100" id="response-content-container">
+							<div
+								class="w-full flex flex-col relative text-base leading-[1.8] dark:text-customGray-100"
+								id="response-content-container"
+							>
 								{#if message.content === '' && !message.error}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
@@ -820,7 +837,7 @@
 											copyToClipboard(message.content);
 										}}
 									>
-										<CopyMessageIcon/>
+										<CopyMessageIcon />
 									</button>
 								</Tooltip>
 
@@ -884,7 +901,7 @@
 												/>
 											</svg>
 										{:else}
-											<ReadMessageIcon/>
+											<ReadMessageIcon />
 										{/if}
 									</button>
 								</Tooltip>
@@ -1110,7 +1127,7 @@
 											type="button"
 											class="{isLastMessage
 												? 'visible'
-												: 'invisible group-hover:visible'} p-1.5  rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
+												: 'invisible group-hover:visible'} p-1.5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 											on:click={() => {
 												showRateComment = false;
 												regenerateResponse(message);
@@ -1128,7 +1145,7 @@
 												});
 											}}
 										>
-											<RegenerateIcon/>
+											<RegenerateIcon />
 										</button>
 									</Tooltip>
 
