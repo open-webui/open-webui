@@ -1197,7 +1197,7 @@ class OpenAIChatMessageContent(BaseModel):
 
 class OpenAIChatMessage(BaseModel):
     role: str
-    content: Union[str, list[OpenAIChatMessageContent]]
+    content: Union[Optional[str], list[OpenAIChatMessageContent]]
 
     model_config = ConfigDict(extra="allow")
 
