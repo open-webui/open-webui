@@ -228,21 +228,20 @@
 	</DragGhost>
 {/if}
 
-<div bind:this={itemElement} class=" w-full {className} relative group" {draggable}>
+<div bind:this={itemElement} class="w-full {className} pr-1 relative group" {draggable}>
 	{#if confirmEdit}
 		<div
-			class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
-			confirmEdit
+			class="w-full flex justify-between rounded-lg px-2 py-2 {id === $chatId || confirmEdit
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
-					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'} whitespace-nowrap text-ellipsis"
 		>
 			<input
 				use:focusEdit
 				bind:value={chatTitle}
 				id="chat-title-input-{id}"
-				class=" bg-transparent w-full outline-none mr-10"
+				class="bg-transparent w-full outline-none mr-6 text-sm"
 				on:keydown={(e) => {
 					if (e.key === 'Enter') {
 						editChatTitle(id, chatTitle);
@@ -268,16 +267,14 @@
 			}}
 		>
 			<a
-				class=" w-full flex justify-between rounded-lg px-[11px] py-[6px] {id === $chatId ||
-				confirmEdit
+				class="w-full flex justify-between rounded-lg px-2 py-2 {id === $chatId || confirmEdit
 					? 'bg-gray-200 dark:bg-gray-900'
 					: selected
 						? 'bg-gray-100 dark:bg-gray-950'
-						: ' group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+						: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'} whitespace-nowrap text-ellipsis"
 				href="/c/{id}"
 				on:click={() => {
 					dispatch('select');
-
 					if ($mobile) {
 						showSidebar.set(false);
 					}
@@ -295,8 +292,12 @@
 				on:focus={(e) => {}}
 				draggable="false"
 			>
-				<div class=" flex self-center flex-1 w-full">
-					<h4 dir="auto" class="text-left self-center overflow-hidden w-full h-[20px]">
+				<div class="flex item-center flex-1 w-full">
+					<h4
+						dir="auto"
+						class="text-left self-center overflow-hidden h-[20px] text-sm"
+						style="max-width: calc(100% - 40px)"
+					>
 						{title}
 					</h4>
 				</div>
@@ -307,15 +308,8 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		id="chat-menu"
-		class="
-        {id === $chatId || confirmEdit
-			? 'from-gray-200 dark:from-gray-900'
-			: 'from-gray-100 dark:from-gray-950'}
-            absolute {className === 'pr-2'
-			? 'right-[8px]'
-			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-gradient-to-l from-80%
-
-              to-transparent"
+		class="absolute right-[8px] top-0 bottom-0 flex items-center pr-2 pl-3 bg-gradient-to-l from-80% to-transparent"
+		style="height: 100%;"
 		on:mouseenter={(e) => {
 			mouseOver = true;
 		}}
@@ -325,11 +319,11 @@
 	>
 		{#if confirmEdit}
 			<div
-				class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
+				class="flex self-center items-center space-x-1 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
 			>
 				<Tooltip content={$i18n.t('Confirm')}>
 					<button
-						class=" self-center dark:hover:text-white transition"
+						class="self-center dark:hover:text-white transition"
 						on:click={() => {
 							editChatTitle(id, chatTitle);
 							confirmEdit = false;
@@ -353,7 +347,7 @@
 				</Tooltip>
 			</div>
 		{:else if shiftKey && mouseOver}
-			<div class=" flex items-center self-center space-x-1.5">
+			<div class=" flex items-center space-x-1">
 				<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 					<button
 						class=" self-center dark:hover:text-white transition"
@@ -362,7 +356,7 @@
 						}}
 						type="button"
 					>
-						<ArchiveBox className="size-4  translate-y-[0.5px]" strokeWidth="2" />
+						<ArchiveBox className="size-3  translate-y-[0.5px]" strokeWidth="2" />
 					</button>
 				</Tooltip>
 
@@ -379,7 +373,7 @@
 				</Tooltip>
 			</div>
 		{:else}
-			<div class="flex self-center space-x-1 z-10">
+			<div class="flex item-center space-x-1 z-10">
 				<Tooltip content={$i18n.t('Chat Menu')}>
 					<ChatMenu
 						ariaLabel={$i18n.t('Chat Menu')}
@@ -425,7 +419,7 @@
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 16 16"
 								fill="currentColor"
-								class="w-4 h-4"
+								class="w-6 h-6"
 							>
 								<path
 									d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
@@ -447,7 +441,7 @@
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 16 16"
 							fill="currentColor"
-							class="w-4 h-4"
+							class="w-3 h-3"
 						>
 							<path
 								d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM6.5 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
