@@ -189,11 +189,11 @@ def rag_template(template: str, context: str, query: str):
 
 
 def title_generation_template(
-    template: str, messages: list[dict], user: Optional[dict] = None
+    template: str, gift_request_desc: str, user: Optional[dict] = None
 ) -> str:
-    prompt = get_last_user_message(messages)
+    prompt = gift_request_desc
     template = replace_prompt_variable(template, prompt)
-    template = replace_messages_variable(template, messages)
+    template = replace_messages_variable(template, [])
 
     template = prompt_template(
         template,
