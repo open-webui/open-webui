@@ -960,16 +960,6 @@
 		}
 	};
 
-	const getChatEventEmitter = async (modelId: string, chatId: string = '') => {
-		return setInterval(() => {
-			$socket?.emit('usage', {
-				action: 'chat',
-				model: modelId,
-				chat_id: chatId
-			});
-		}, 1000);
-	};
-
 	const createMessagePair = async (userPrompt) => {
 		prompt = '';
 		if (selectedModels.length === 0) {
@@ -1452,12 +1442,8 @@
 					}
 					responseMessage.userContext = userContext;
 
-					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
-
 					scrollToBottom();
 					await sendPromptSocket(model, responseMessageId, _chatId);
-
-					if (chatEventEmitter) clearInterval(chatEventEmitter);
 				} else {
 					toast.error($i18n.t(`Model {{modelId}} not found`, { modelId }));
 				}

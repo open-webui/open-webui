@@ -87,16 +87,6 @@
 				console.log('Additional details:', details);
 			}
 		});
-
-		_socket.on('user-list', (data) => {
-			console.log('user-list', data);
-			activeUserIds.set(data.user_ids);
-		});
-
-		_socket.on('usage', (data) => {
-			console.log('usage', data);
-			USAGE_POOL.set(data['models']);
-		});
 	};
 
 	const chatEventHandler = async (event) => {
@@ -281,9 +271,6 @@
 					});
 
 					if (sessionUser) {
-						// Save Session User to Store
-						$socket.emit('user-join', { auth: { token: sessionUser.token } });
-
 						$socket?.on('chat-events', chatEventHandler);
 						$socket?.on('channel-events', channelEventHandler);
 

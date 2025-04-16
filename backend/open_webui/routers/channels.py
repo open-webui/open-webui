@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status, Backgrou
 from pydantic import BaseModel
 
 
-from open_webui.socket.main import sio, get_user_ids_from_room
+from open_webui.socket.main import sio
 from open_webui.models.users import Users, UserNameResponse
 
 from open_webui.models.channels import Channels, ChannelModel, ChannelForm
@@ -298,14 +298,12 @@ async def post_new_message(
                         to=f"channel:{channel.id}",
                     )
 
-            active_user_ids = get_user_ids_from_room(f"channel:{channel.id}")
-
             background_tasks.add_task(
                 send_notification,
                 request.app.state.config.WEBUI_URL,
                 channel,
                 message,
-                active_user_ids,
+                [], # active users; functionality removed, value hardcoded
             )
 
         return MessageModel(**message.model_dump())

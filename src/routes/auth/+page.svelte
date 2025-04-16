@@ -39,7 +39,6 @@
 				localStorage.token = sessionUser.token;
 			}
 
-			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
 			goto('/');
