@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# transformers을 offline에서 사용하기 위한 환경변수 설정
+export TRANSFORMERS_OFFLINE=1
+export HF_DATASETS_OFFLINE=1
+export SENTENCE_TRANSFORMERS_HOME=/root/.cache/huggingface/hub/
+
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR" || exit
 
