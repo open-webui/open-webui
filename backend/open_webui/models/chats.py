@@ -115,7 +115,7 @@ class ChatTable:
                     "title": (
                         form_data.chat["title"]
                         if "title" in form_data.chat
-                        else "New Chat"
+                        else "New Gift Chat"
                     ),
                     "chat": form_data.chat,
                     "created_at": int(time.time()),
@@ -141,7 +141,7 @@ class ChatTable:
                     "title": (
                         form_data.chat["title"]
                         if "title" in form_data.chat
-                        else "New Chat"
+                        else "New Gift Chat"
                     ),
                     "chat": form_data.chat,
                     "meta": form_data.meta,
@@ -163,7 +163,7 @@ class ChatTable:
             with get_db() as db:
                 chat_item = db.get(Chat, id)
                 chat_item.chat = chat
-                chat_item.title = chat["title"] if "title" in chat else "New Chat"
+                chat_item.title = chat["title"] if "title" in chat else "New Gift Chat"
                 chat_item.updated_at = int(time.time())
                 db.commit()
                 db.refresh(chat_item)
@@ -207,7 +207,7 @@ class ChatTable:
         if chat is None:
             return None
 
-        return chat.chat.get("title", "New Chat")
+        return chat.chat.get("title", "New Gift Chat")
 
     def get_messages_by_chat_id(self, id: str) -> Optional[dict]:
         chat = self.get_chat_by_id(id)
@@ -273,7 +273,7 @@ class ChatTable:
             # Check if the chat is already shared
             if chat.share_id:
                 return self.get_chat_by_id_and_user_id(chat.share_id, "shared")
-            # Create a new chat with the same data, but with a new ID
+            # Create a new gift chat with the same data, but with a new ID
             shared_chat = ChatModel(
                 **{
                     "id": str(uuid.uuid4()),

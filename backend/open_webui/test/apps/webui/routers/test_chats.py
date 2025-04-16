@@ -35,7 +35,7 @@ class TestChats(AbstractPostgresTest):
         assert response.status_code == 200
         first_chat = response.json()[0]
         assert first_chat["id"] is not None
-        assert first_chat["title"] == "New Chat"
+        assert first_chat["title"] == "New Gift Chat"
         assert first_chat["created_at"] is not None
         assert first_chat["updated_at"] is not None
 
@@ -51,7 +51,7 @@ class TestChats(AbstractPostgresTest):
         assert response.status_code == 200
         first_chat = response.json()[0]
         assert first_chat["id"] is not None
-        assert first_chat["title"] == "New Chat"
+        assert first_chat["title"] == "New Gift Chat"
         assert first_chat["created_at"] is not None
         assert first_chat["updated_at"] is not None
 
@@ -78,7 +78,7 @@ class TestChats(AbstractPostgresTest):
         assert data["user_id"] == "2"
         assert data["id"] is not None
         assert data["share_id"] is None
-        assert data["title"] == "New Chat"
+        assert data["title"] == "New Gift Chat"
         assert data["updated_at"] is not None
         assert data["created_at"] is not None
         assert len(self.chats.get_chats()) == 2
@@ -96,7 +96,7 @@ class TestChats(AbstractPostgresTest):
         assert response.status_code == 200
         first_chat = response.json()[0]
         assert first_chat["id"] is not None
-        assert first_chat["title"] == "New Chat"
+        assert first_chat["title"] == "New Gift Chat"
         assert first_chat["created_at"] is not None
         assert first_chat["updated_at"] is not None
 
@@ -131,7 +131,7 @@ class TestChats(AbstractPostgresTest):
         }
         assert data["id"] == chat_id
         assert data["share_id"] == chat_id
-        assert data["title"] == "New Chat"
+        assert data["title"] == "New Gift Chat"
 
     def test_get_chat_by_id(self):
         chat_id = self.chats.get_chats()[0].id
@@ -147,7 +147,7 @@ class TestChats(AbstractPostgresTest):
             "history": {"currentId": "1", "messages": []},
         }
         assert data["share_id"] is None
-        assert data["title"] == "New Chat"
+        assert data["title"] == "New Gift Chat"
         assert data["user_id"] == "2"
 
     def test_update_chat_by_id(self):
@@ -200,10 +200,10 @@ class TestChats(AbstractPostgresTest):
             "name": "chat1",
             "originalChatId": chat_id,
             "tags": ["tag1", "tag2"],
-            "title": "Clone of New Chat",
+            "title": "Clone of New Gift Chat",
         }
         assert data["share_id"] is None
-        assert data["title"] == "Clone of New Chat"
+        assert data["title"] == "Clone of New Gift Chat"
         assert data["user_id"] == "2"
 
     def test_archive_chat_by_id(self):
