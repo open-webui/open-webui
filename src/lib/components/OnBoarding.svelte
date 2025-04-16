@@ -9,6 +9,8 @@
 	import ArrowRightCircle from './icons/ArrowRightCircle.svelte';
 
 	export let show = true;
+	//export let show = false;
+
 	export let getStartedHandler = () => {};
 </script>
 
@@ -75,4 +77,4 @@
 			<!-- <div class="absolute bottom-12 left-0 right-0 w-full"></div> -->
 		</div>
 	</div>
-{/if}
+{/if} 
