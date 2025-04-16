@@ -1,0 +1,146 @@
+---
+description: ALWAYS use when debugging Kubernetes problems to ensure proper context verification and systematic troubleshooting
+globs: **/*.{yaml,yml}
+alwaysApply: false
+---
+
+# Kubernetes Debugging Protocol
+
+## Context
+
+- Debugging Kubernetes-related issues
+- Diagnosing pod, deployment, service, and CRD problems
+- Investigating resource availability and version compatibility issues
+- Ensuring proper API versions for custom resources
+
+## Critical Rules
+
+### Initial Context Verification
+- Verify current Kubernetes context first:
+  ```bash
+  kubectl config current-context
+  kubectl cluster-info
+  ```
+- Check cluster connectivity status
+- Verify namespace and resource access:
+  ```bash
+  kubectl get namespaces
+  kubectl get nodes
+  ```
+
+### CRD Version Verification
+- ALWAYS check CRD versions before investigating issues:
+  ```bash
+  kubectl get crd <resource>.group | grep -i versions -A 5
+  ```
+- Verify if any versions are deprecated:
+  ```bash
+  kubectl explain <resource>.status.conditions
+  ```
+- Use `kubectl api-resources` to confirm current resource types
+- For cluster-specific resources, verify installed controller versions:
+  ```bash
+  kubectl get <controller> -n <namespace> -o jsonpath='{.spec.version}'
+  ```
+
+### Resource State Analysis
+- Gather complete resource state information:
+  ```bash
+  kubectl describe deployment ${name}
+  kubectl get events --sort-by='.lastTimestamp'
+  ```
+- Check CRD-specific conditions and status:
+  ```bash
+  kubectl get <resource> -o yaml
+  kubectl describe <resource>
+  ```
+- Follow systematic debugging approach
+- Document findings and resolution steps
+- Validate fixes with appropriate commands
+
+## Examples
+
+<example>
+# Debugging CRD-based Deployment Issues
+
+1. Verify Context and Versions:
+```bash
+# Context verification
+kubectl config current-context
+kubectl get namespaces
+
+# CRD version check
+kubectl get crd nodegroups.eks.amazonaws.com
+kubectl explain nodegroup.status.conditions
+```
+
+2. Check Resource State:
+```bash
+# Get resource details
+kubectl describe nodegroup my-nodegroup
+kubectl get events --sort-by='.lastTimestamp'
+
+# Analyze specific conditions
+kubectl get nodegroup my-nodegroup -o yaml
+```
+
+3. Analyze and Fix:
+- Review error events
+- Verify API version compatibility
+- Check controller version
+- Validate resource specifications
+</example>
+
+<example>
+# Correct Version-Aware Resource Debugging
+
+1. Check Current API Resources and Versions:
+```bash
+# Check available CRDs and versions
+kubectl get crd nodepools.karpenter.sh
+kubectl explain nodepool.spec
+
+# Verify controller version
+kubectl get deployment -n karpenter karpenter -o jsonpath='{.spec.template.spec.containers[0].image}'
+```
+
+2. Debug NodePool:
+```bash
+# Get NodePool status
+kubectl get nodepool default
+kubectl describe nodepool default
+
+# Check events
+kubectl get events --field-selector involvedObject.kind=NodePool
+```
+
+3. Analyze and Fix:
+- Review NodePool conditions
+- Verify capacity requirements
+- Check disruption settings
+</example>
+
+<example type="invalid">
+# Using Deprecated Resources
+
+1. Direct Provisioner Check (Deprecated):
+```bash
+# Wrong: Using deprecated Provisioner API
+kubectl get provisioner default
+kubectl describe provisioner default
+
+# Wrong: Using old events
+kubectl get events --field-selector involvedObject.kind=Provisioner
+```
+
+[Invalid: Using deprecated Provisioner API instead of NodePool, missing version verification]
+</example>
+
+## Version Migration Guidelines
+
+- Document version requirements in deployment manifests
+- Check official documentation for version migration guides
+- When updating CRDs, follow proper upgrade paths
+- Test changes in non-production environment first
+- Keep track of deprecated API versions
+- Plan for future version migrations

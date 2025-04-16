@@ -1,0 +1,59 @@
+---
+description:
+globs: **/*.md
+alwaysApply: false
+---
+
+# Markdown Documentation Standards
+
+## Context
+
+- When creating or modifying any Markdown documentation
+- When establishing documentation structure and style
+- When including diagrams, code blocks, or special elements in documentation
+
+## Critical Rules
+
+- Follow Markdown best practices for formatting
+- Maintain clear document structure with proper heading hierarchy
+- Use Mermaid UML diagrams for documenting complex sequences or architecture
+- Maximum heading depth: 4 levels
+- Indent content within XML tags by 2 spaces
+- Code Block need to indicate the language properly after the initial 3 backticks
+- Keep tables properly aligned
+
+## Examples
+
+<example>
+# Document Title
+
+## Section Heading
+
+Content with **bold text** and *italics*.
+
+```typescript
+function example(): void {
+  console.log('Hello, Universe!');
+}
+```
+
+| Name  | Type   | Description  |
+|:-----:|:------:|:------------:|
+| id    | number | Primary key  |
+| name  | string | User's name  |
+
+> 💡 **Tip:** Helpful suggestion.
+</example>
+
+<example type="invalid">
+#Incorrect Heading
+content without proper spacing
+
+```
+function withoutLanguageSpecified() {
+}
+```
+
+|No|proper|alignment|And|invalid|table
+| or | proper | formatting |||||
+</example>

@@ -1,0 +1,85 @@
+---
+description: Always follow this when the user requests that a rule be added or modified, or asks you to remember to always do something in the future
+globs:
+alwaysApply: false
+---
+# Cursor Rules Format
+
+## Template Structure for Rules Files
+
+```mdc
+---
+description: `Explicit concise description to ensure the agent knows when to apply the rule` OR blank
+globs: .cursor/rules/**/*.mdc OR blank
+alwaysApply: {true or false}
+---
+
+# Rule Title
+
+## Context
+
+- When to apply this rule
+- Prerequisites or conditions
+- Why the rule was added or is needed
+
+## Critical Rules
+
+- Concise, bulleted list of actionable rules the agent MUST follow
+
+## Examples
+
+<example>
+{valid rule application}
+</example>
+
+<example type="invalid">
+{invalid rule application}
+<example>
+```
+
+### Organizational Folders (Create if non existent)
+All rules files will be under an organizational folder:
+- .cursor/rules/core-rules - rules related to cursor agent behavior or rule generation specifically
+- .cursor/rules/my-rules - gitignore in a shared repo, rules specifically for ME only
+- .cursor/rules/global-rules - these will be rules that are ALWAYS applied to every chat and cmd/ctrl-k context
+- .cursor/rules/testing-rules - rules about testing
+- .cursor/rules/tool-rules - rules specific to different tools, such as git, linux commands, direction of usage of MCP tools
+- .cursor/rules/ts-rules - typescript language specific rules
+- .cursor/rules/py-rules - python specific rules
+- .cursor/rules/ui-rules - rules about html, css, react
+* create new folders under .cursor/rules/ as needed following similar grouping conventions,
+    - for example `.cursor/rules/cs-rules` if we started using c# in a project
+
+## Glob Pattern Examples
+Common glob patterns for different rule types:
+- Core standards: .cursor/rules/*.mdc
+- Language rules: *.cs, *.cpp
+- Testing standards: *.test.ts, *.test.js
+- React components: src/components/**/*.tsx
+- Documentation: docs/**/*.md
+- Configuration files: *.config.js
+- Build artifacts: dist/**/*
+- Multiple extensions: *.js, *.ts, *.tsx
+- Multiple patterns: dist/**/*.*, docs/**/*.md, *test*.*
+
+## Critical Rules
+  - Rule files will be located and named ALWAYS as: `.cursor/rules/{organizational-folder}/rule-name-{auto|agent|manual|always}.mdc`
+  - FrontMatter Rules Types:
+    - The front matter section must always start the file and include all 3 fields, even if the field value will be blank - the types are:
+      - Manual Rule: IF a Manual rule is requested - description and globs MUST be blank and alwaysApply: false and filename ends with -manual.mdc.
+      - Auto Rule: IF a rule is requested that should apply always to certain glob patterns (example all typescript files or all markdown files) - description must be blank, and alwaysApply: false and filename ends with -auto.mdc.
+      - Always Rule: Global Rule applies to every chat and cmd/ctrl-k - description and globs blank, and alwaysApply: true  and filename ends with -always.mdc.
+      - Agent Select Rule: The rule does not need to be loaded into every chat thread, it serves a specific purpose. The agent can see the descriptions, and choose to load the full rule in to context on its own - description is critical, globs blank, and alwaysApply:false and filename ends with -agent.mdc
+  - For the Rule Context and Bullets - do not repeat yourself and do not be overly explanatory
+  - When a rule will only be used sometimes (useAlways: false) it is CRITICAL that the description describes when the AI will load the full rule into its context
+  - Use Concise Markdown Tailored to Agent Context Window usage
+  - Always indent content within XML Example section with 2 spaces
+  - Emojis and Mermaid diagrams are allowed and encouraged if it is not redundant and better explains the rule for the AI comprehension.
+  - TRY to keep the total rule line count under 50 lines, better under 25 lines
+  - Always include a valid and invalid example
+  - NEVER use quotes around glob patterns, NEVER group glob extensions with `{}`
+  - If the request for a rule or a future behavior change includes context of a mistake is made, this would be great to use in the example for the rule
+  - After rule is created or updated, Respond with the following:
+    - AutoRuleGen Success: path/rule-name.mdc
+    - Rule Type: {Rule Type}
+    - Short summary of what the rule will do

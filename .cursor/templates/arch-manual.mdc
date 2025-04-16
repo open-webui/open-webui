@@ -1,0 +1,82 @@
+---
+description: ALWAYS use when creating or updating Architecture document to ensure consistent documentation of architectural decisions
+globs: **/arch*.md
+alwaysApply: false
+---
+
+# Architecture Standards
+
+## Context
+
+- Documenting system architecture
+- Recording technical decisions
+- Tracking architectural changes
+
+## Critical Rules
+
+- Clear documentation structure
+- Visual diagrams (Mermaid)
+- Technology stack details
+- Change tracking
+- Data model documentation
+
+### Required Sections
+
+1. Header & Status
+   - Title: Architecture for {project}
+   - Status: Draft/Approved/Complete
+
+2. Core Content
+   - Technical Summary
+   - Technology Stack Table
+   - Architecture Diagrams
+   - Data Models/Schemas
+   - Project Structure
+   - Change Log
+
+## Examples
+
+<example>
+# Architecture: Sensor Platform
+
+## Status: Approved
+
+## Tech Stack
+| Tech | Purpose |
+|------|---------|
+| K8s  | Orchestration |
+| Kafka| Streaming |
+| Go   | Services |
+
+## Diagram
+```mermaid
+graph TD
+    A[Gateway] -->|Data| B[Kafka]
+    B --> C[Processor]
+    C --> D[(Database)]
+```
+
+## Structure
+```
+/services
+  /gateway   # Ingestion
+  /processor # Processing
+/deploy
+  /k8s      # Manifests
+```
+
+## Changes
+| Change | Story | Notes |
+|--------|-------|-------|
+| Initial| S-1   | Setup |
+</example>
+
+<example type="invalid">
+# Basic Architecture
+
+Use a database
+Add some APIs
+Maybe cache stuff
+
+[Missing structure and details]
+</example>

@@ -1,0 +1,83 @@
+---
+description: ALWAYS use when working with existing projects to establish agile workflow and documentation
+globs: .ai/**/*.md
+alwaysApply: false
+---
+
+# Existing Project Integration
+
+## Context
+
+- Working with established codebases
+- Understanding and documenting existing projects
+- Transitioning to agile workflow
+
+## Critical Rules
+
+- Analyze codebase structure and history
+- Create comprehensive documentation
+- Establish agile workflow structure
+- Validate understanding with user
+- Maintain project memory
+
+### Required Steps
+
+1. Initial Analysis:
+   - Directory structure
+   - Git history
+   - Core components
+   - Dependencies
+
+2. Documentation Setup:
+   - Create `.ai` directory
+   - Generate PRD (Reverse Engineered)
+   - Document architecture
+   - Create Epic/Story structure
+
+3. Workflow Integration:
+   - Validate with user
+   - Update documentation
+   - Apply agile process
+
+## Examples
+
+<example>
+# Project Analysis
+
+## Structure Review
+```bash
+$ ls -la
+-rw-r--r-- README.md
+drwxr-xr-x src/
+drwxr-xr-x tests/
+-rw-r--r-- package.json
+```
+
+## Components Found
+1. Auth System
+2. Product Catalog
+3. Search
+4. Cart
+5. Checkout
+
+## Documentation
+```markdown
+# PRD.md
+Status: Reverse Engineered
+Purpose: E-commerce Platform
+Features:
+- User Authentication
+- Product Management
+- Order Processing
+```
+</example>
+
+<example type="invalid">
+# Quick Look
+
+It's a web app
+Uses JavaScript
+Has database
+
+[Missing proper analysis and documentation]
+</example>

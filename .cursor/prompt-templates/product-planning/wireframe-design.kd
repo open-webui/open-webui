@@ -1,0 +1,11 @@
+# UI/UX Mockup Request Prompt Template
+```
+Create wireframe descriptions for a [type of interface] that accomplishes the following user goals:
+[Insert user goals]
+Key requirements:
+- Target users: [Insert user personas]
+- Primary functions needed: [Insert key functions]
+- Brand guidelines to follow: [Insert relevant brand elements]
+- Technical constraints: [Insert any limitations]
+Please provide both a text description of the UI elements and their arrangement, as well as a visual representation if possible.
+```

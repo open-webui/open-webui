@@ -1,0 +1,45 @@
+---
+description:
+globs: docs/**/*.md, reports/**/*.md, .ai/**/*.md
+alwaysApply: false
+---
+
+# Documentation Timestamp Standards
+
+## Context
+
+- Standardize timestamp usage in documentation
+- Ensure consistent date formatting across all docs
+- Automate timestamp generation in filenames and content
+
+## Critical Rules
+
+- Use `date +%Y-%m-%d` command for all timestamp generation
+- Apply timestamp format YYYY-MM-DD for:
+  - File naming: `YYYY-MM-DD-document-name.md`
+  - Section headers: `## Created: YYYY-MM-DD`
+  - Date references in content
+- Never hardcode dates manually
+- Update timestamps when documents are modified
+- Include creation date in document metadata section
+
+## Examples
+
+<example>
+# Project Status Report
+
+## Metadata
+Created: $(date +%Y-%m-%d)
+Last Updated: $(date +%Y-%m-%d)
+
+## Sprint Review
+Date: $(date +%Y-%m-%d)
+</example>
+
+<example type="invalid">
+# Daily Report 03/21/2024
+
+Created on March 21st
+Last modified: 21-03-2024
+[Inconsistent date formats, manually typed]
+</example>

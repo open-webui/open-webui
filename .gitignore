@@ -311,3 +311,6 @@ cypress/screenshots
 # Miniconda3 installation in backend directory
 backend/miniconda3*
 
+
+# Private individual user cursor rules
+.cursor/rules/_*.mdc

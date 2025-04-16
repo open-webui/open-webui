@@ -1,0 +1,80 @@
+---
+description: ALWAYS use when creating or updating story files to ensure proper tracking and implementation
+globs: **/*.story.md
+alwaysApply: false
+---
+
+# Story Standards
+
+## Context
+
+- Creating implementation stories
+- Tracking development progress
+- Documenting technical decisions
+- Following TDD practices
+
+## Critical Rules
+
+- Follow standard structure
+- Include all required sections
+- Track progress accurately
+- Maintain implementation history
+- Organize under Epic directories
+
+### Required Structure
+
+1. Header
+   - Epic-{N}: {Title}
+   - Story-{M}: {Title}
+
+2. Core Content
+   - User Story Format
+   - Status (Draft/In Progress/Complete)
+   - Context & Background
+   - Story Points
+   - Task Breakdown
+   - Dev Notes
+   - Chat Log
+
+### File Location
+`.ai/epic-{n}/story-{m}.story.md`
+
+## Examples
+
+<example>
+# Epic-1: Chess Game
+# Story-2: Chessboard UI
+
+## Story
+**As a** player
+**I want** interactive board
+**so that** I can play chess
+
+## Status: In Progress
+
+## Tasks
+1. - [x] Grid Layout
+   1. - [x] 8x8 board
+   2. - [x] Tests
+2. - [ ] Pieces
+   1. - [ ] Components
+   2. - [ ] Tests
+
+## Notes
+- Using React
+- SVG pieces
+- Responsive design
+
+## Chat Log
+User: Start board UI
+AI: Using SVG pieces?
+User: Yes, proceed
+</example>
+
+<example type="invalid">
+Chess UI
+
+Make board
+Add pieces
+[Missing structure and tracking]
+</example>

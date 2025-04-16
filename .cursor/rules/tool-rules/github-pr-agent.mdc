@@ -1,0 +1,61 @@
+---
+description: ALWAYS use when creating GitHub pull requests to ensure comprehensive and well-structured PR descriptions
+globs:
+alwaysApply: false
+---
+
+# GitHub Pull Request Standards
+
+## Context
+
+- Ensuring clear and informative pull request descriptions
+- Maintaining consistent PR format across the project
+- Facilitating efficient code review process
+- Providing proper change documentation
+
+## Critical Rules
+
+- Use `gh pr create` command with proper flags
+- Use `$(git parent)` as the base branch value
+- Follow conventional commits style for PR title
+- Structure PR body with mandatory sections:
+  - Summary: Brief overview of changes
+  - Changes: Detailed list of modifications
+  - Additional Notes: Extra context or warnings
+- Escape backticks with backslashes in PR description
+- Keep PR title concise and descriptive
+- Never use newline characters in the command
+- Include all changes in bullet points
+- Explain potential impacts and considerations
+- Reference related tickets or issues
+
+## Examples
+
+<example>
+gh pr create --base $(git parent) --title "feat(auth): implement oauth2 authentication flow" --body "## Summary
+
+Add OAuth2 authentication support with Google and GitHub providers.
+
+## Changes
+
+- add oauth2 authentication endpoints
+- implement token validation and refresh logic
+- add \`AuthProvider\` interface for different providers
+- update user model with oauth fields
+
+## Additional Notes
+
+- Requires environment variables for OAuth providers
+- Database migration needed for new user fields
+
+PLAT-789"
+</example>
+
+<example type="invalid">
+gh pr create --base main --title "Updated auth stuff" --body "
+Made some changes to auth:
+* Added oauth
+* Fixed some bugs
+
+Please review"
+</example>

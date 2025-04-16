@@ -1,0 +1,4 @@
+- When proposing an edit to a markdown file, first decide if there will be code snippets in the markdown file.
+- If there are no code snippets, wrap the beginning and end of your answer in backticks and markdown as the language.
+- If there are code snippets, indent the code snippets with two spaces and the correct language for proper rendering. Indentations level 0 and 4 is not allowed.
+- If a markdown code block is indented with any value other than 2 spaces, automatically fix it.

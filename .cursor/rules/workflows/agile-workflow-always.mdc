@@ -1,0 +1,90 @@
+---
+description: Must ALWAYS follow the steps outlined in this workflow to complete the project or goals of the user
+globs: .ai/**/*.md
+alwaysApply: true
+---
+
+# Agile Workflow Protocol
+
+## Context
+
+- Managing project documentation and progress
+- Ensuring consistent development process
+- Maintaining project memory and history
+
+## Critical Rules
+
+- Use templates from `.cursor/templates/` for new documents
+- Verify/create `.ai/prd.md` using `prd-manual.mdc` template
+- Document architecture using `arch-manual.mdc` template
+- Create stories using `story-manual.mdc` template
+- Follow TDD with 80% test coverage
+- Track lessons learned
+- Update story files as work progresses
+
+### Required File Structure
+
+```
+.cursor/
+├── templates/           # Document Templates
+│   ├── arch-manual.mdc  # Architecture template
+│   ├── prd-manual.mdc   # PRD template
+│   └── story-manual.mdc # Story template
+.ai/
+├── prd.md              # Product Requirements
+├── arch.md             # Architecture
+├── arch/               # Architecture Decisions
+│   └── {n}-name.md
+├── epic-{n}/          # Epics
+│   └── story-{m}.md   # Stories
+└── lessons/           # Lessons Learned
+    └── YYYY-MM-DD-*.md
+```
+
+### Workflow Steps
+
+1. Verify/create PRD
+2. Create/update architecture docs
+3. Create story files
+4. Implement with TDD
+5. Document decisions/lessons
+6. Update progress regularly
+
+## Examples
+
+<example>
+# Project Initialization
+
+1. Create PRD:
+```markdown
+# Project Requirements
+
+## Purpose
+Develop inventory management system
+
+## Architecture
+[Diagram and patterns]
+
+## Technologies
+- Node.js v18
+- PostgreSQL
+- Redis
+```
+
+2. Create Story:
+```markdown
+# Story-1: Basic Setup
+
+## Tasks
+- [ ] Initialize project
+- [ ] Add dependencies
+- [ ] Create DB schema
+```
+</example>
+
+<example type="invalid">
+Started coding without PRD
+No tests written
+Missing documentation
+[Violates TDD and documentation requirements]
+</example>

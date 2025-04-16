@@ -1,0 +1,55 @@
+---
+description: ALWAYS update when encountering significant AI mistakes or learning moments to improve future interactions
+globs: .ai/lessons/*.md
+alwaysApply: true
+---
+
+# AI Lessons Learned Tracking
+
+## Context
+
+- Document significant learning moments from AI interactions
+- Track both mistakes and successful improvements
+- Maintain institutional knowledge for better AI interactions
+
+## Critical Rules
+
+- Create lesson files immediately after discovering issues
+- Use date-based naming: `.ai/lessons/YYYY-MM-DD-lesson-title.md`
+- Include required sections: Header, Context, Root Cause, Resolution, Prevention
+- Categorize lessons by type (Error, Improvement, Discovery)
+- Rate impact level (High, Medium, Low)
+- Focus on actionable prevention steps
+- Review and update related documentation
+
+## Examples
+
+<example>
+# 2024-03-15: Incorrect Package Version Management
+
+## Category: Error
+## Impact: High
+
+### Context
+Package.json update resulted in incompatible versions.
+
+### Root Cause
+Failed to verify dependency tree and constraints.
+
+### Resolution
+- Added version compatibility checks
+- Implemented package-lock.json review
+
+### Prevention
+- Verify existing package-lock.json
+- Check version compatibility
+- Run tests after updates
+</example>
+
+<example type="invalid">
+Bug found
+
+It didn't work right. Fixed it.
+
+Don't do it wrong next time.
+</example>

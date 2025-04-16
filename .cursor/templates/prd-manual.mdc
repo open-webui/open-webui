@@ -1,0 +1,73 @@
+---
+description: ALWAYS use when creating a new PRD or modifying an existing one to ensure consistent structure and completeness
+globs: **/prd.md
+alwaysApply: false
+---
+
+# PRD Standards
+
+## Context
+
+- Creating new product requirements
+- Modifying existing PRDs
+- Documenting project scope and goals
+
+## Critical Rules
+
+- Follow standardized structure
+- Include all required sections
+- Maintain proper hierarchy
+- Use consistent formatting
+
+### Required Sections
+
+1. Header & Status
+   - Title with project name
+   - Status (Draft/Approved)
+
+2. Core Content
+   - Introduction/Overview
+   - Goals/Objectives
+   - Features/Requirements
+   - Epic Structure
+   - Story List
+   - Future Enhancements
+
+### Epic Format
+- Epic-{N}: {Title} ({Status})
+- Status: Current/Future/Complete
+- Only one "Current" Epic
+
+## Examples
+
+<example>
+# PRD: Chess Platform
+
+## Status: Draft
+
+## Introduction
+Modern chess gaming platform with
+single/multiplayer support.
+
+## Goals
+- Engaging gameplay
+- Multiple modes
+- Fair play
+- Community building
+
+## Epic-1: Basic Game (Current)
+Story-1: Setup
+Story-2: UI
+Story-3: Rules
+
+## Epic-2: AI (Future)
+Story-4: Basic AI
+Story-5: Difficulty Levels
+</example>
+
+<example type="invalid">
+Chess Game
+- Make it work
+- Add stuff later
+[Missing structure and details]
+</example>

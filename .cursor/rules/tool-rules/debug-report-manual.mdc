@@ -1,0 +1,79 @@
+---
+description: ALWAYS use when asked to create a debugging session report to ensure comprehensive documentation of troubleshooting steps, findings, and resolutions
+globs: .ai/debug-reports/*.md
+alwaysApply: false
+---
+
+# Debug Report Generator
+
+## Context
+
+- Creating summaries of debugging sessions
+- Documenting troubleshooting steps and findings
+- Preserving debugging commands and outputs
+
+## Critical Rules
+
+- Store reports in `.ai/debug-reports/` with date prefix
+- Include environment information and problem statement
+- Document all critical commands and outputs
+- Provide clear root cause analysis
+- Detail resolution steps and verification
+- Add prevention measures for future reference
+
+### Required Sections
+
+1. Title and Date
+2. Environment Details
+3. Problem Statement
+4. Troubleshooting Steps
+5. Root Cause Analysis
+6. Resolution
+7. Verification
+8. Prevention
+
+## Examples
+
+<example>
+# Redis Connection Failures - 2024-03-15
+
+## Environment
+- Cluster: prod-east
+- App Version: v2.4.3
+- Redis: 6.2.5
+
+## Problem
+Redis connection timeouts causing service disruptions.
+
+## Troubleshooting
+
+1. Pod Status Check:
+```bash
+$ kubectl get pods -n app
+$ kubectl logs app-pod-123 -n app
+```
+
+2. Root Cause:
+- Memory limit reached
+- No eviction policy
+
+## Resolution
+1. Updated config:
+```bash
+kubectl edit configmap redis-config
+# Set volatile-lru policy
+```
+
+2. Verified:
+- No connection errors
+- Memory usage stable
+</example>
+
+<example type="invalid">
+# Redis Fixed
+
+Checked logs, found memory issue.
+Changed settings, works now.
+
+[Missing structure, details, and verification]
+</example>

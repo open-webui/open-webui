@@ -1,0 +1,52 @@
+---
+description: ALWAYS use when generating git commit messages to ensure consistent and informative commit history
+globs:
+alwaysApply: false
+---
+
+# Git Commit Message Standards
+
+## Context
+
+- Following Conventional Commits specification
+- Ensuring consistent and meaningful commit history
+- Supporting automated changelog generation
+- Maintaining traceability with JIRA tickets
+
+## Critical Rules
+
+- Use conventional commit types: feat, fix, build, chore, ci, docs, style, test, perf, refactor
+- Write everything in lowercase, including the first word
+- Keep the first line under 60 characters
+- Use present tense in both title and body
+- Format: type(optional-scope): description
+- Add detailed body after blank line if needed
+- Extract JIRA ticket number (PLAT-XXX) from branch name and add to footer
+- No period at end of subject line
+- Wrap body at 72 characters
+- Use body to explain what and why vs. how
+
+## Examples
+
+<example>
+feat(auth): implement two-factor authentication
+
+- add sms and email options for 2fa
+- update user model to support 2fa preferences
+- create new api endpoints for 2fa setup and verification
+
+PLAT-123
+</example>
+
+<example>
+fix: correct input validation in user registration
+
+PLAT-456
+</example>
+
+<example type="invalid">
+Fix: Added New Authentication System.
+
+Added some authentication stuff and fixed the login.
+Ticket: PLAT-789
+</example>
