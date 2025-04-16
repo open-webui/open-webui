@@ -511,6 +511,62 @@
 							</div>
 						</div>
 					{/if}
+
+					{#if adminConfig?.ENABLE_OAUTH_SIGNUP}
+						<div class=" mb-2.5 w-full justify-between">
+							<div class="flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Client ID')}</div>
+							</div>
+							<div class="flex mt-2 space-x-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									type="text"
+									placeholder={$i18n.t('e.g., your-client-id')}
+									bind:value={adminConfig.OAUTH_CLIENT_ID}
+								/>
+							</div>
+						</div>
+
+						<div class=" mb-2.5 w-full justify-between">
+							<div class="flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Client Secret')}</div>
+							</div>
+							<div class="flex mt-2 space-x-2">
+								<SensitiveInput
+									placeholder={$i18n.t('e.g., your-client-secret')}
+									bind:value={adminConfig.OAUTH_CLIENT_SECRET}
+								/>
+							</div>
+						</div>
+
+						<div class=" mb-2.5 w-full justify-between">
+							<div class="flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Provider Name')}</div>
+							</div>
+							<div class="flex mt-2 space-x-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									type="text"
+									placeholder={$i18n.t('e.g., SSO')}
+									bind:value={adminConfig.OAUTH_PROVIDER_NAME}
+								/>
+							</div>
+						</div>
+
+						<div class=" mb-2.5 w-full justify-between">
+							<div class="flex w-full justify-between">
+								<div class=" self-center text-xs font-medium">{$i18n.t('OpenID Provider URL')}</div>
+							</div>
+							<div class="flex mt-2 space-x-2">
+								<input
+									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+									type="text"
+									placeholder={$i18n.t('e.g., https://your-provider/.well-known/openid-configuration')}
+									bind:value={adminConfig.OPENID_PROVIDER_URL}
+								/>
+							</div>
+						</div>
+					{/if}
 					<!-- END: Added OAuth Settings -->
 
 					<div class=" space-y-3">
