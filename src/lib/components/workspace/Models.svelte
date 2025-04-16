@@ -522,8 +522,6 @@
 										<div class="line-clamp-1 text-xs dark:text-customGray-100/50">
 											{#if (model?.meta?.description ?? '').trim()}
 												{model?.meta?.description}
-											{:else}
-												{model.id}
 											{/if}
 										</div>
 									</div>
