@@ -108,7 +108,15 @@
 				toast.success($i18n.t('Model updated successfully'));
 			}
 		} else {
-			const res = await createNewModel(localStorage.token, model).catch((error) => {
+			const res = await createNewModel(localStorage.token, {
+				meta: {},
+				id: model.id,
+				name: model.name,
+				base_model_id: null,
+				params: {},
+				access_control: {},
+				...model
+			}).catch((error) => {
 				return null;
 			});
 
