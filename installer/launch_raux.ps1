@@ -30,6 +30,10 @@ $originalTreatControlCAsInput = [Console]::TreatControlCAsInput
 # Change the setting to capture Ctrl+C
 [Console]::TreatControlCAsInput = $true
 
+# Global variables to track server status
+$Global:lemonadeIsRunning = $false
+$Global:rauxIsRunning = $false
+
 # Function to check if a server is running
 function Test-ServerReady {
     param (
@@ -38,6 +42,14 @@ function Test-ServerReady {
     )
     
     try {
+        # If server is already confirmed running, don't check again
+        if ($ServerName -eq "Lemonade" -and $Global:lemonadeIsRunning) {
+            return $true
+        }
+        elseif ($ServerName -eq "RAUX" -and $Global:rauxIsRunning) {
+            return $true
+        }
+
         # Special handling for Lemonade health check
         if ($ServerName -eq "Lemonade") {
             try {
@@ -53,6 +65,7 @@ function Test-ServerReady {
                         # Check if status is "ok"
                         if ($jsonResponse.status -eq "ok") {
                             Write-Host "  Lemonade health check passed - status is 'ok'" -ForegroundColor DarkGray
+                            $Global:lemonadeIsRunning = $true
                             return $true
                         } else {
                             Write-Host "  Lemonade health check failed - status is not 'ok'" -ForegroundColor DarkGray
@@ -73,7 +86,11 @@ function Test-ServerReady {
         else {
             # Regular server check for RAUX
             $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 5 -ErrorAction Stop
-            return $response.StatusCode -eq 200
+            if ($response.StatusCode -eq 200) {
+                $Global:rauxIsRunning = $true
+                return $true
+            }
+            return $false
         }
     }
     catch {
@@ -322,7 +339,7 @@ if ($env:LAUNCH_LEMONADE -eq "true" -or $env:LAUNCH_LEMONADE -eq "TRUE") {
 
 $rauxProcessId = Start-RAUXServer
 
-# Keep the window running and monitor both servers
+# Keep the window running but don't poll servers
 Write-Host "`nPress Ctrl+C to stop the servers..." -ForegroundColor Cyan
 
 try {
@@ -338,15 +355,7 @@ try {
             }
         }
         
-        # Monitor servers
-        if ($lemonadeProcessId -and -not (Test-ServerReady -Url $lemonadeUrl -ServerName "Lemonade")) {
-            Write-Host "WARNING - Lemonade server appears to be down!" -ForegroundColor Red
-        }
-        if (-not (Test-ServerReady -Url $rauxUrl -ServerName "RAUX")) {
-            Write-Host "WARNING - RAUX server appears to be down!" -ForegroundColor Red
-        }
-        
-        Start-Sleep -Seconds 5  # Check server status every 5 seconds
+        Start-Sleep -Seconds 5  # Just sleep without polling
     }
 }
 finally {
