@@ -21,7 +21,7 @@
 			"command": "cmd",
 			"args": [
 				"/c",
-				"conda deactivate & rmdir /s /q \"%LOCALAPPDATA%\\RAUX\" & del /f /q \"%USERPROFILE%\\Desktop\\GAIA-RAUX-UI-BETA.lnk\" & conda env remove -n raux_env -y"
+				"conda deactivate & rmdir /s /q \"%LOCALAPPDATA%\\RAUX\" & del /f /q \"%USERPROFILE%\\Desktop\\GAIA-UI-BETA.lnk\" & conda env remove -n raux_env -y"
 			],
 			"presentation": {
 				"reveal": "silent",

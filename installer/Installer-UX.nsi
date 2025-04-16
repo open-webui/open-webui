@@ -282,7 +282,7 @@ Section "Install Main Components" SEC01
       File "/oname=${ICON_DEST}" "${ICON_FILE}"
       
       ; Create shortcut to the batch wrapper script (will appear as a standalone app)
-      CreateShortcut "$DESKTOP\GAIA-RAUX-UI-BETA.lnk" "$LOCALAPPDATA\RAUX\launch_raux.cmd" "" "${ICON_DEST}"
+      CreateShortcut "$DESKTOP\GAIA-UI-BETA.lnk" "$LOCALAPPDATA\RAUX\launch_raux.cmd" "" "${ICON_DEST}"
 
 SectionEnd
 
