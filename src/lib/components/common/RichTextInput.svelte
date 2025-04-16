@@ -224,6 +224,12 @@
 						}
 					}
 				}
+				requestAnimationFrame(() => {
+					const el = editor?.view?.dom;
+					if (el?.getAttribute('tabindex') === '-1') {
+						el.setAttribute('tabindex', 0);
+					}
+				});
 			},
 			editorProps: {
 				attributes: {
