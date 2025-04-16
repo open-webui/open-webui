@@ -706,6 +706,10 @@ class AdminConfig(BaseModel):
     OAUTH_ALLOWED_ROLES: Optional[str] = ""
     OAUTH_ADMIN_ROLES: Optional[str] = ""
     OAUTH_ALLOWED_DOMAINS: Optional[str] = ""
+    OAUTH_CLIENT_ID: Optional[str] = ""
+    OAUTH_CLIENT_SECRET: Optional[str] = ""
+    OAUTH_PROVIDER_NAME: Optional[str] = "SSO"
+    OPENID_PROVIDER_URL: Optional[str] = ""
 
 
 @router.post("/admin/config")
@@ -755,6 +759,10 @@ async def update_admin_config(
     request.app.state.config.OAUTH_ALLOWED_ROLES = form_data.OAUTH_ALLOWED_ROLES
     request.app.state.config.OAUTH_ADMIN_ROLES = form_data.OAUTH_ADMIN_ROLES
     request.app.state.config.OAUTH_ALLOWED_DOMAINS = form_data.OAUTH_ALLOWED_DOMAINS
+    request.app.state.config.OAUTH_CLIENT_ID = form_data.OAUTH_CLIENT_ID
+    request.app.state.config.OAUTH_CLIENT_SECRET = form_data.OAUTH_CLIENT_SECRET
+    request.app.state.config.OAUTH_PROVIDER_NAME = form_data.OAUTH_PROVIDER_NAME
+    request.app.state.config.OPENID_PROVIDER_URL = form_data.OPENID_PROVIDER_URL
 
     return {
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
@@ -781,6 +789,10 @@ async def update_admin_config(
         "OAUTH_ALLOWED_ROLES": request.app.state.config.OAUTH_ALLOWED_ROLES,
         "OAUTH_ADMIN_ROLES": request.app.state.config.OAUTH_ADMIN_ROLES,
         "OAUTH_ALLOWED_DOMAINS": request.app.state.config.OAUTH_ALLOWED_DOMAINS,
+        "OAUTH_CLIENT_ID": request.app.state.config.OAUTH_CLIENT_ID,
+        "OAUTH_CLIENT_SECRET": request.app.state.config.OAUTH_CLIENT_SECRET,
+        "OAUTH_PROVIDER_NAME": request.app.state.config.OAUTH_PROVIDER_NAME,
+        "OPENID_PROVIDER_URL": request.app.state.config.OPENID_PROVIDER_URL,
     }
 
 
