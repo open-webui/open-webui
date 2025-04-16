@@ -69,7 +69,20 @@
 						aria-label="Toggle Sidebar"
 					>
 						<div class=" m-auto self-center">
-							<MenuLines />
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+								stroke-width="2.5"
+								class="size-3.5"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="m8.25 4.5 7.5 7.5-7.5 7.5"
+								/>
+							</svg>
 						</div>
 					</button>
 				</div>
