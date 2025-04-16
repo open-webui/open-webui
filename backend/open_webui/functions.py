@@ -350,7 +350,7 @@ def get_all_parsers(request, active_only=True):
     return all_parsers
 
 
-def get_parsers_by_type(request, parser_type, active_only=True):
+def get_parsers_by_type(request, parser_type, file_id, active_only=True):
     parser_files = Functions.get_functions_by_type("parser", active_only)
     all_parsers = [get_function_module_by_id(request, pf.id) for pf in parser_files]
 
@@ -372,7 +372,11 @@ def get_parsers_by_type(request, parser_type, active_only=True):
 
         # 3. list of viable items is now looked at
         if parser_type in parser.parser_type:
-            relevant_parsers.append(parser)
+            print(f"viable parser {parser.name}")
+            # allow users to change if parser is applicable based on item type
+            if parser.is_applicable_to_item(file_id):
+                print(f"applicable parser {parser.name}")
+                relevant_parsers.append(parser)
 
     # need to have at least one parsing option every time
     if len(relevant_parsers) == 0:

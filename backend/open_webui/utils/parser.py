@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 from typing import Optional, Tuple, List
 from enum import Enum
+from abc import ABC, abstractmethod
 
 from fastapi import Request
 
@@ -30,7 +31,39 @@ class PARSER_TYPE(Enum):  # noqa
     WEB_SEARCH = 5
 
 
-class DefaultParser:
+class ParserInterface(ABC):
+    def is_applicable_to_item(self, item_id):
+        print(f"item id: {item_id}")
+        return True
+
+    @abstractmethod
+    def delete_doc(self, collection_name, file_id):
+        assert NotImplementedError
+
+    @abstractmethod
+    def delete_collection(self, file_collection):
+        assert NotImplementedError
+
+    @abstractmethod
+    def reset(self):
+        assert NotImplementedError
+
+    @abstractmethod
+    def parse(self,
+              request: Request,
+              docs,
+              metadata: Optional[dict] = None,
+              user=None,
+              **kwargs
+              ) -> dict:
+        assert NotImplementedError
+
+    @abstractmethod
+    def store(self, request, collection_name, texts, embeddings, metadatas, overwrite=False, add=True):
+        assert NotImplementedError
+
+
+class DefaultParser(ParserInterface):
     # Update valves/ environment variables based on your selected database
     def __init__(self, parser_type=PARSER_TYPE.ALL):
         self.name = "Default Parser"
@@ -52,12 +85,12 @@ class DefaultParser:
         VECTOR_DB_CLIENT.reset()
 
     def parse(self,
-               request: Request,
-               docs,
-               metadata: Optional[dict] = None,
-               user=None,
-               **kwargs
-               ) -> dict:
+              request: Request,
+              docs,
+              metadata: Optional[dict] = None,
+              user=None,
+              **kwargs
+              ) -> dict:
         docs = self.split(request, docs)
         texts = [doc.page_content for doc in docs]
         metadatas = self.metadata(request, docs, metadata)
@@ -173,7 +206,6 @@ class DefaultParser:
             ),
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
-
 
         embeddings = embedding_function(
             list(map(lambda x: x.replace("\n", " "), texts)), user=user

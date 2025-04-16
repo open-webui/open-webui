@@ -284,7 +284,7 @@ def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
         )
 
-    parsers = get_parsers_by_type(request, PARSER_TYPE.FILE)
+    parsers = get_parsers_by_type(request, PARSER_TYPE.FILE, file.filename)
     # content is the raw data and not to be used in collection
     content_keys = [k for k in file.data.keys() if k != 'content']
 

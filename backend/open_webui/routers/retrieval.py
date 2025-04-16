@@ -850,11 +850,12 @@ def process_file(
             },
         )
 
-        parsers = get_parsers_by_type(request, PARSER_TYPE.FILE)
+        parsers = get_parsers_by_type(request, PARSER_TYPE.FILE, file.filename)
 
         if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
             try:
                 for parser in parsers:
+                    parser.is_applicable_to_item(file.filename)
                     result_dict = parser.parse(
                         request,
                         docs=docs,
@@ -929,7 +930,7 @@ def process_text(
     text_content = form_data.content
     log.debug(f"text_content: {text_content}")
 
-    parsers = get_parsers_by_type(request, PARSER_TYPE.TEXT)
+    parsers = get_parsers_by_type(request, PARSER_TYPE.TEXT, None)
     results = [p.save_docs_to_vector_db(request, docs, collection_name, user=user) for p in parsers]
 
     if all(results):
@@ -964,7 +965,7 @@ def process_youtube_video(
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")
 
-        parsers = get_parsers_by_type(request, PARSER_TYPE.YOUTUBE)
+        parsers = get_parsers_by_type(request, PARSER_TYPE.YOUTUBE, form_data.url)
 
         for parser in parsers:
             result_dict = parser.parse(
@@ -1020,7 +1021,7 @@ def process_web(
         log.debug(f"text_content: {content}")
 
         if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
-            parsers = get_parsers_by_type(request, PARSER_TYPE.WEB_CONTENT)
+            parsers = get_parsers_by_type(request, PARSER_TYPE.WEB_CONTENT, form_data.url)
             for parser in parsers:
                 result_dict = parser.parse(
                     request,
@@ -1303,7 +1304,7 @@ async def process_web_search(
             }
         else:
             # TODO: ENABLE
-            parsers = get_parsers_by_type(request, PARSER_TYPE.WEB_SEARCH)
+            parsers = get_parsers_by_type(request, PARSER_TYPE.WEB_SEARCH, form_data.query)
             for parser in parsers:
 
                 # TODO: this was originally async here, does it need to be again?
@@ -1559,7 +1560,7 @@ def process_files_batch(
     # Save all documents in one batch
     if all_docs:
         try:
-            parsers = get_parsers_by_type(request, PARSER_TYPE.FILE)
+            parsers = get_parsers_by_type(request, PARSER_TYPE.FILE, form_data.files)
             for parser in parsers:
                 result_dict = parser.parse(
                     request,
