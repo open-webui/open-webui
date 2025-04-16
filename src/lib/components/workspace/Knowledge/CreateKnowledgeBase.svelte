@@ -7,12 +7,80 @@
 	import { toast } from 'svelte-sonner';
 	import { knowledge } from '$lib/stores';
 	import AccessControl from '../common/AccessControl.svelte';
+	import BackIcon from '$lib/components/icons/BackIcon.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
+	import AccessSelect from '$lib/components/common/AccessSelect.svelte';
+	import { transcribeAudio } from '$lib/apis/audio';
+	import { blobToFile } from '$lib/utils';
+	import { uploadFile } from '$lib/apis/files';
+	import { v4 as uuidv4 } from 'uuid';
+	import Dropzone from '../Models/Dropzone.svelte';
+	import DocumentIcon from '$lib/components/icons/DocumentIcon.svelte';
+	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
+	import { formatFileSize } from '$lib/utils';
+	import dayjs from 'dayjs';
 
 	let loading = false;
 
 	let name = '';
 	let description = '';
 	let accessControl = null;
+
+	let files = [];
+	
+	const uploadFileHandler = async (file) => {
+		console.log(file);
+
+		const tempItemId = uuidv4();
+		const fileItem = {
+			type: 'file',
+			file: '',
+			id: null,
+			url: '',
+			name: file.name,
+			size: file.size,
+			status: 'uploading',
+			error: '',
+			itemId: tempItemId
+		};
+
+		if (fileItem.size == 0) {
+			toast.error($i18n.t('You cannot upload an empty file.'));
+			return null;
+		}
+
+		// Check if the file is an audio file and transcribe/convert it to text file
+		if (['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a'].includes(file['type'])) {
+			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (res) {
+				console.log(res);
+				const blob = new Blob([res.text], { type: 'text/plain' });
+				file = blobToFile(blob, `${file.name}.txt`);
+			}
+		}
+
+		try {
+			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
+				toast.error(`${e}`);
+				return null;
+			});
+
+			if (uploadedFile) {
+				console.log(uploadedFile);
+				if (uploadedFile?.id) {
+					files = [...files, { id: uploadedFile.id, name: uploadedFile.meta?.name || file.name, size: uploadedFile.meta?.size, creeatedAt: uploadedFile.created_at }];
+				}
+			} else {
+				toast.error($i18n.t('Failed to upload file.'));
+			}
+		} catch (e) {
+			toast.error(`${e}`);
+		}
+	};
 
 	const submitHandler = async () => {
 		loading = true;
@@ -29,7 +97,8 @@
 			localStorage.token,
 			name,
 			description,
-			accessControl
+			accessControl,
+			files
 		).catch((e) => {
 			toast.error(`${e}`);
 		});
@@ -45,117 +114,145 @@
 </script>
 
 <div class="w-full max-h-full">
-	<button
-		class="flex space-x-1"
-		on:click={() => {
-			goto('/workspace/knowledge');
-		}}
-	>
-		<div class=" self-center">
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 20 20"
-				fill="currentColor"
-				class="w-4 h-4"
-			>
-				<path
-					fill-rule="evenodd"
-					d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
-					clip-rule="evenodd"
-				/>
-			</svg>
-		</div>
-		<div class=" self-center font-medium text-sm">{$i18n.t('Back')}</div>
-	</button>
-
-	<form
-		class="flex flex-col max-w-lg mx-auto mt-10 mb-10"
-		on:submit|preventDefault={() => {
-			submitHandler();
-		}}
-	>
-		<div class=" w-full flex flex-col justify-center">
-			<div class=" text-2xl font-medium font-primary mb-2.5">
-				{$i18n.t('Create a knowledge base')}
+	<div class="py-[22px] px-[15px] border-b border-customGray-700">
+		<button
+			class="flex items-center gap-1"
+			on:click={() => {
+				goto('/workspace/knowledge');
+			}}
+		>
+			<div class=" self-center">
+				<BackIcon />
 			</div>
-
-			<div class="w-full flex flex-col gap-2.5">
-				<div class="w-full">
-					<div class=" text-sm mb-2">{$i18n.t('What are you working on?')}</div>
-
-					<div class="w-full mt-1">
+			<div class=" self-center font-medium text-sm">{$i18n.t('Create Knowledge')}</div>
+		</button>
+	</div>
+	<div class="flex w-[34rem] py-3 px-4">
+		<form
+			class="w-full flex flex-col dark:bg-customGray-800 rounded-2xl pt-6 pb-3 px-3"
+			on:submit|preventDefault={() => {
+				submitHandler();
+			}}
+		>
+			<div class="flex flex-col w-full mb-1.5">
+				<div class="mb-1.5">
+					<div class="relative w-full dark:bg-customGray-900 rounded-md">
+						{#if name}
+							<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Name')}</div>
+						{/if}
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-							type="text"
+							class={`px-2.5 text-sm ${name ? "mt-2" : "mt-0"} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							placeholder={$i18n.t('Name')}
 							bind:value={name}
-							placeholder={$i18n.t('Name your knowledge base')}
 							required
 						/>
-					</div>
-				</div>
-
-				<div>
-					<div class="text-sm mb-2">{$i18n.t('What are you trying to achieve?')}</div>
-
-					<div class=" w-full mt-1">
-						<textarea
-							class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
-							rows="4"
-							bind:value={description}
-							placeholder={$i18n.t('Describe your knowledge base and objectives')}
-							required
-						/>
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<div class="mt-2">
-			<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-				<AccessControl bind:accessControl accessRoles={['read', 'write']} />
-			</div>
-		</div>
-
-		<div class="flex justify-end mt-2">
-			<div>
-				<button
-					class=" text-sm px-4 py-2 transition rounded-lg {loading
-						? ' cursor-not-allowed bg-gray-100 dark:bg-gray-800'
-						: ' bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800'} flex"
-					type="submit"
-					disabled={loading}
-				>
-					<div class=" self-center font-medium">{$i18n.t('Create Knowledge')}</div>
-
-					{#if loading}
-						<div class="ml-1.5 self-center">
-							<svg
-								class=" w-4 h-4"
-								viewBox="0 0 24 24"
-								fill="currentColor"
-								xmlns="http://www.w3.org/2000/svg"
-								><style>
-									.spinner_ajPY {
-										transform-origin: center;
-										animation: spinner_AtaB 0.75s infinite linear;
-									}
-									@keyframes spinner_AtaB {
-										100% {
-											transform: rotate(360deg);
-										}
-									}
-								</style><path
-									d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-									opacity=".25"
-								/><path
-									d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-									class="spinner_ajPY"
-								/></svg
+						{#if !name}
+							<span
+							class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
 							>
-						</div>
+							{$i18n.t('What are you working on')}
+							</span>
+						{/if}
+					</div>
+				</div>
+				<div class="mb-1">
+					<div class="relative w-full dark:bg-customGray-900 rounded-md">
+						{#if description}
+							<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Description')}</div>
+						{/if}
+						<Textarea
+							className={`px-2.5 py-2 text-sm ${description ? "mt-2" : "mt-0"} w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							placeholder={$i18n.t('Description')}
+							bind:value={description}
+							rows={4}
+							required
+						/>
+						{#if !description}
+							<span
+							class="absolute top-[26px] w-[180px] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+							>
+								{$i18n.t('Describe your knowledge base and objectives')}
+							</span>
+						{/if}
+					</div>
+				</div>
+				<div>
+					<div class="py-2.5 border-b border-customGray-700 mb-2.5">
+						<div class="text-xs dark:text-customGray-300">{$i18n.t('Knowledge base')}</div>
+					</div>
+					{#if files.length}
+						<ul class="mt-2.5 space-y-1 text-sm mb-5">
+							{#each files as file (file.id)}
+								<li
+									class="group flex justify-start items-center dark:text-customGray-100 cursor-pointer dark:hover:text-white"
+								>
+									<DocumentIcon />
+									<span class="truncate ml-2 mr-3.5">{file.name}</span>
+									<span class="mr-3">{formatFileSize(file.size)}</span>
+									<span class="mr-3">{dayjs(file.created_at).format('DD.MM.YYYY')}</span>
+									<button
+										class="opacity-0 group-hover:opacity-100"
+										on:click={() => {
+											files = files.filter((f) => f.id !== file.id);
+										}}
+									>
+										<DeleteIcon />
+									</button>
+								</li>
+							{/each}
+						</ul>
 					{/if}
-				</button>
+					<Dropzone {uploadFileHandler} />
+				</div>
+				<div>
+					<div class="py-2.5 border-b border-customGray-700 mb-2.5">
+						<div class="text-xs dark:text-customGray-300">{$i18n.t('Organization')}</div>
+					</div>
+					<AccessSelect bind:accessControl accessRoles={['read', 'write']} />
+				</div>
+			</div>			
+
+			<div class="flex justify-end mt-2">
+				<div>
+					<button
+						class=" text-xs w-[168px] h-10 px-3 py-2 transition rounded-lg {loading
+						? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
+						: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center"
+						type="submit"
+						disabled={loading}
+					>
+						<div class=" self-center font-medium">{$i18n.t('Save')}</div>
+
+						{#if loading}
+							<div class="ml-1.5 self-center">
+								<svg
+									class=" w-4 h-4"
+									viewBox="0 0 24 24"
+									fill="currentColor"
+									xmlns="http://www.w3.org/2000/svg"
+									><style>
+										.spinner_ajPY {
+											transform-origin: center;
+											animation: spinner_AtaB 0.75s infinite linear;
+										}
+										@keyframes spinner_AtaB {
+											100% {
+												transform: rotate(360deg);
+											}
+										}
+									</style><path
+										d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+										opacity=".25"
+									/><path
+										d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+										class="spinner_ajPY"
+									/></svg
+								>
+							</div>
+						{/if}
+					</button>
+				</div>
 			</div>
-		</div>
-	</form>
+		</form>
+	</div>
 </div>
