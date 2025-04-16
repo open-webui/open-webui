@@ -31,7 +31,12 @@ RUN npm ci
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
+# Increase Node.js memory limit for the build step
+# Adjust the value (e.g., 4096 or 8192) based on your system's available memory
+ENV NODE_OPTIONS=--max-old-space-size=4096
 RUN npm run build
+# Reset NODE_OPTIONS if necessary for subsequent stages, though it's not strictly needed here as this is the end of this stage
+# ENV NODE_OPTIONS=""
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
