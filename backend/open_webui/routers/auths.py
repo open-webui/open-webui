@@ -698,14 +698,14 @@ class AdminConfig(BaseModel):
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL: bool
     ENABLE_OAUTH_ROLE_MANAGEMENT: bool
     ENABLE_OAUTH_GROUP_MANAGEMENT: bool
-    OAUTH_ROLES_CLAIM: str
-    OAUTH_GROUPS_CLAIM: str
-    OAUTH_EMAIL_CLAIM: str
-    OAUTH_PICTURE_CLAIM: str
-    OAUTH_USERNAME_CLAIM: str
-    OAUTH_ALLOWED_ROLES: str
-    OAUTH_ADMIN_ROLES: str
-    OAUTH_ALLOWED_DOMAINS: str
+    OAUTH_ROLES_CLAIM: Optional[str] = ""
+    OAUTH_GROUPS_CLAIM: Optional[str] = ""
+    OAUTH_EMAIL_CLAIM: Optional[str] = ""
+    OAUTH_PICTURE_CLAIM: Optional[str] = ""
+    OAUTH_USERNAME_CLAIM: Optional[str] = ""
+    OAUTH_ALLOWED_ROLES: Optional[str] = ""
+    OAUTH_ADMIN_ROLES: Optional[str] = ""
+    OAUTH_ALLOWED_DOMAINS: Optional[str] = ""
 
 
 @router.post("/admin/config")

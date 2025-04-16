@@ -494,49 +494,43 @@ OAUTH_EMAIL_CLAIM = PersistentConfig(
 OAUTH_GROUPS_CLAIM = PersistentConfig(
     "OAUTH_GROUPS_CLAIM",
     "oauth.oidc.group_claim",
-    os.environ.get("OAUTH_GROUP_CLAIM", "groups"),
+    os.environ.get("OAUTH_GROUPS_CLAIM", "groups"),
 )
 
 ENABLE_OAUTH_ROLE_MANAGEMENT = PersistentConfig(
     "ENABLE_OAUTH_ROLE_MANAGEMENT",
-    "oauth.enable_role_mapping",
+    "oauth.enable_role_management",
     os.environ.get("ENABLE_OAUTH_ROLE_MANAGEMENT", "False").lower() == "true",
 )
 
 ENABLE_OAUTH_GROUP_MANAGEMENT = PersistentConfig(
     "ENABLE_OAUTH_GROUP_MANAGEMENT",
-    "oauth.enable_group_mapping",
+    "oauth.enable_group_management",
     os.environ.get("ENABLE_OAUTH_GROUP_MANAGEMENT", "False").lower() == "true",
 )
 
 OAUTH_ROLES_CLAIM = PersistentConfig(
     "OAUTH_ROLES_CLAIM",
     "oauth.roles_claim",
-    os.environ.get("OAUTH_ROLES_CLAIM", "roles"),
+    os.environ.get("OAUTH_ROLES_CLAIM", ""),
 )
 
 OAUTH_ALLOWED_ROLES = PersistentConfig(
     "OAUTH_ALLOWED_ROLES",
     "oauth.allowed_roles",
-    [
-        role.strip()
-        for role in os.environ.get("OAUTH_ALLOWED_ROLES", "user,admin").split(",")
-    ],
+    os.environ.get("OAUTH_ALLOWED_ROLES", ""),
 )
 
 OAUTH_ADMIN_ROLES = PersistentConfig(
     "OAUTH_ADMIN_ROLES",
     "oauth.admin_roles",
-    [role.strip() for role in os.environ.get("OAUTH_ADMIN_ROLES", "admin").split(",")],
+    os.environ.get("OAUTH_ADMIN_ROLES", ""),
 )
 
 OAUTH_ALLOWED_DOMAINS = PersistentConfig(
     "OAUTH_ALLOWED_DOMAINS",
     "oauth.allowed_domains",
-    [
-        domain.strip()
-        for domain in os.environ.get("OAUTH_ALLOWED_DOMAINS", "*").split(",")
-    ],
+    os.environ.get("OAUTH_ALLOWED_DOMAINS", ""),
 )
 
 
