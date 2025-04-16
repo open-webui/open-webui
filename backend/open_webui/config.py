@@ -860,6 +860,7 @@ ENABLE_OPENAI_API = PersistentConfig(
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_API_BASE_URL = os.environ.get("OPENAI_API_BASE_URL", "")
 
+
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_API_BASE_URL = os.environ.get("GEMINI_API_BASE_URL", "")
 
@@ -2570,6 +2571,20 @@ AUDIO_TTS_OPENAI_API_KEY = PersistentConfig(
     "AUDIO_TTS_OPENAI_API_KEY",
     "audio.tts.openai.api_key",
     os.getenv("AUDIO_TTS_OPENAI_API_KEY", OPENAI_API_KEY),
+)
+
+AUDIO_TTS_CUSTOM_TTS_OPEN_API_BASE_URL = os.environ.get("AUDIO_TTS_CUSTOM_TTS_OPEN_API_BASE_URL", "")
+AUDIO_TTS_CUSTOM_TTS_OPEN_API_KEY = os.environ.get("AUDIO_TTS_CUSTOM_TTS_OPEN_API_KEY", "")
+
+AUDIO_TTS_CUSTOM_TTS_OPEN_API_BASE_URL = PersistentConfig(
+    "AUDIO_TTS_CUSTOM_TTS_OPEN_API_BASE_URL",
+    "audio.tts.custom.api_base_url",
+    os.getenv("AUDIO_TTS_CUSTOM_TTS_OPEN_API_BASE_URL", AUDIO_TTS_CUSTOM_TTS_OPEN_API_BASE_URL),
+)
+AUDIO_TTS_CUSTOM_TTS_OPEN_API_KEY = PersistentConfig(
+    "AUDIO_TTS_CUSTOM_TTS_OPEN_API_KEY",
+    "audio.tts.custom.api_key",
+    os.getenv("AUDIO_TTS_CUSTOM_TTS_OPEN_API_KEY", AUDIO_TTS_CUSTOM_TTS_OPEN_API_KEY),
 )
 
 AUDIO_TTS_API_KEY = PersistentConfig(

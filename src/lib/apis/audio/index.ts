@@ -204,7 +204,7 @@ export const getVoices = async (token: string = '', engineType: string = '') => 
     let apiPath = '/voices'; // Default endpoint
 
     // *** The core logic change is here ***
-    if (engineType === 'CustomTTS') {
+    if (engineType === 'customtts') {
         apiPath = '/audio/voices'; // Use the custom endpoint path
         console.log(`API: Engine is CustomTTS, using path: ${apiPath}`);
     } else {
