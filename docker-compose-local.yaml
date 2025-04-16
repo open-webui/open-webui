@@ -25,6 +25,8 @@ services:
     environment:
       - OPENAI_API_BASE_URL=http://litellm:4000/v1
       - DATABASE_URL=sqlite:////app/backend/data/database.sqlite
+      - BACKEND_ADDRESS=http://localhost:8080
+
     volumes:
       - ./backend/data:/app/backend/data
     depends_on:

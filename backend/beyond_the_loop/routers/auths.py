@@ -7,7 +7,8 @@ import secrets
 import string
 from aiohttp import ClientSession
 
-from open_webui.models.auths import (
+from beyond_the_loop.models.auths import CompleteInviteForm
+from beyond_the_loop.models.auths import (
     AddUserForm,
     ApiKey,
     Auths,
@@ -51,7 +52,7 @@ from open_webui.utils.auth import (
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions
 
-from typing import Optional, List
+from typing import Optional
 
 from ssl import CERT_REQUIRED, PROTOCOL_TLS
 from ldap3 import Server, Connection, NONE, Tls
@@ -410,6 +411,81 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
 
 ############################
+# Complete Invite
+############################
+
+
+@router.post("/complete_invite", response_model=SigninResponse)
+async def complete_invite(request: Request, response: Response, form_data: CompleteInviteForm):
+    user = Users.get_user_by_invite_token(form_data.invite_token)
+
+    if not user:
+        raise HTTPException(404, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    try:
+        hashed_password = get_password_hash(form_data.password)
+
+        Auths.insert_auth_for_existing_user(user.id, user.email, hashed_password)
+
+        Users.complete_invite_by_id(user.id, form_data.first_name + " " + form_data.last_name)
+
+    except Exception as err:
+        raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
+
+    expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+    expires_at = None
+    if expires_delta:
+        expires_at = int(time.time()) + int(expires_delta.total_seconds())
+
+    token = create_token(
+        data={"id": user.id},
+        expires_delta=expires_delta,
+    )
+
+    datetime_expires_at = (
+        datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
+        if expires_at
+        else None
+    )
+
+    # Set the cookie token
+    response.set_cookie(
+        key="token",
+        value=token,
+        expires=datetime_expires_at,
+        httponly=True,  # Ensures the cookie is not accessible via JavaScript
+        samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+        secure=WEBUI_AUTH_COOKIE_SECURE,
+    )
+
+    if request.app.state.config.WEBHOOK_URL:
+        post_webhook(
+            request.app.state.config.WEBHOOK_URL,
+            WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+            {
+                "action": "signup",
+                "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                "user": user.model_dump_json(exclude_none=True),
+            },
+        )
+
+    user_permissions = get_permissions(
+        user.id, request.app.state.config.USER_PERMISSIONS
+    )
+
+    return {
+        "token": token,
+        "token_type": "Bearer",
+        "expires_at": expires_at,
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "role": user.role,
+        "profile_image_url": user.profile_image_url,
+        "permissions": user_permissions,
+    }
+
+############################
 # SignUp
 ############################
 
@@ -591,7 +667,7 @@ async def add_user(form_data: AddUserForm, admin_user: Users = Depends(get_admin
         # Generate a secure random password
         password = generate_secure_password()
         hashed = get_password_hash(password)
-        
+
         new_user = Auths.insert_new_auth(
             form_data.email.lower(),
             hashed,
@@ -604,7 +680,7 @@ async def add_user(form_data: AddUserForm, admin_user: Users = Depends(get_admin
         if new_user:
             # Send welcome email with the generated password
             email_service = EmailService()
-            email_service.send_welcome_mail(
+            email_service.send_invite_mail(
                 to_email=form_data.email.lower(),
                 username=form_data.name,
                 password=password

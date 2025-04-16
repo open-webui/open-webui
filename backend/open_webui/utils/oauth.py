@@ -12,7 +12,7 @@ from fastapi import (
 )
 from starlette.responses import RedirectResponse
 
-from open_webui.models.auths import Auths
+from beyond_the_loop.models.auths import Auths
 from beyond_the_loop.models.users import Users
 from beyond_the_loop.models.companies import NO_COMPANY
 from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm

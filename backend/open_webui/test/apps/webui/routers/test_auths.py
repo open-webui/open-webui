@@ -8,8 +8,8 @@ class TestAuths(AbstractPostgresTest):
 
     def setup_class(cls):
         super().setup_class()
-        from open_webui.models.auths import Auths
-        from open_webui.models.users import Users
+        from models.auths import Auths
+        from beyond_the_loop.models.users import Users
 
         cls.users = Users
         cls.auths = Auths
