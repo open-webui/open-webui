@@ -44,6 +44,7 @@ from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
 )
 
+import httpx
 from typing import List, Dict, Any
 
 router = APIRouter()
@@ -907,6 +908,58 @@ def get_available_models(request: Request) -> list[dict]:
                 available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
         else:
             available_models = [{"id": "tts-1"}, {"id": "tts-1-hd"}]
+    
+    elif request.app.state.config.TTS_ENGINE == "customtts":
+        log.debug("Fetching models for CustomTTS engine")
+        # Get the correct configuration variables
+        custom_tts_base_url = request.app.state.config.AUDIO_TTS_CUSTOM_TTS_OPEN_API_BASE_URL
+        custom_tts_key = request.app.state.config.AUDIO_TTS_CUSTOM_TTS_OPEN_API_KEY
+
+        if not custom_tts_base_url:
+            log.warning("Custom TTS Base URL not configured for fetching models.")
+        else:
+            # Construct the target URL based on the curl example (/models)
+            target_url = f"{custom_tts_base_url.rstrip('/')}/models"
+            headers = {
+                "Accept": "application/json",
+            }
+            # Add Authorization header if a key is provided (adjust type if needed, e.g., Bearer)
+            if custom_tts_key:
+                headers["Authorization"] = f"Bearer {custom_tts_key}" # Example: Bearer token
+
+            try:
+                log.info(f"Attempting to fetch models from custom URL: {target_url}")
+                response = requests.get(target_url, headers=headers, timeout=10)
+                response.raise_for_status() # Check for HTTP errors
+                external_data = response.json()
+
+                # Extract list from the 'data' key based on curl response
+                if isinstance(external_data, dict) and "data" in external_data:
+                    models_list = external_data["data"]
+                    if isinstance(models_list, list):
+                        # Transform list of dicts to ensure 'id' and 'name'
+                        transformed_models = []
+                        for model_data in models_list:
+                            if isinstance(model_data, dict) and "id" in model_data:
+                                model_id = model_data["id"]
+                                # Use 'name' if available, otherwise default to 'id'
+                                model_name = model_data.get("name", model_id)
+                                transformed_models.append({"id": model_id, "name": model_name})
+                        available_models = transformed_models
+                    else:
+                        log.warning(f"'data' key in response from {target_url} is not a list.")
+                else:
+                    log.warning(f"Unexpected response format from {target_url}. Expected dict with 'data' key.")
+
+            except requests.exceptions.RequestException as e:
+                log.error(f"Network error fetching models from custom TTS ({target_url}): {str(e)}")
+            except Exception as e: # Catch other errors like JSONDecodeError
+                 log.error(f"Unexpected error fetching models from custom TTS ({target_url}): {str(e)}")
+            # If any error occurs, available_models remains []
+
+    # --- END ADDED BLOCK ---
+
+
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         try:
             response = requests.get(
@@ -1039,113 +1092,76 @@ async def get_voices(request: Request, user=Depends(get_verified_user)):
         ]
     }
 
-async def get_available_custom_tts_voices(user_config: Dict[str, Any]) -> List[Dict[str, str]]:
+@router.get("/audio/voices")
+async def get_custom_voices_endpoint(request: Request, user=Depends(get_verified_user)):
     """
-    Fetches voices from the configured external custom TTS service
-    and transforms them into the expected format.
+    API endpoint to retrieve and transform the list of custom TTS voices
+    by querying the configured external service.
     """
-    custom_tts_base_url = user_config.get("CUSTOM_TTS_OPEN_API_BASE_URL")
-    custom_tts_key = user_config.get("CUSTOM_OPEN_API_TTS_KEY") # Get API key if needed
-
-    if not custom_tts_base_url:
-        print("Custom TTS Base URL not configured.")
-        return []
-
-    # Construct the target URL (assuming the endpoint is '/audio/voices' on the custom service)
-    # Adjust '/voices' if the external service uses a different path
-    target_url = f"{custom_tts_base_url.rstrip('/')}/audio/voices"
-
-    headers = {
-        "Accept": "application/json",
-        # Add Authorization header if an API key is configured and required
-        # The specific header (Bearer, X-API-Key, etc.) depends on the target service
-        # Example using a generic API key header:
-        # ** (custom_tts_key and {"X-API-Key": custom_tts_key})
-        # Example using Bearer token:
-        # ** (custom_tts_key and {"Authorization": f"Bearer {custom_tts_key}"})
-    }
-    if custom_tts_key:
-         # Example: headers["Authorization"] = f"Bearer {custom_tts_key}"
-         # Choose the correct header based on your custom service needs
-         pass # Add your specific header logic here if needed
-
+    custom_tts_base_url = None
+    custom_tts_key = None
+    formatted_voices = [] # Default to empty list
 
     try:
-        async with httpx.AsyncClient() as client:
-            print(f"Fetching custom voices from: {target_url}")
-            response = await client.get(target_url, headers=headers, timeout=10.0) # Add timeout
-            response.raise_for_status() # Raises HTTPStatusError for 4xx/5xx responses
+        # 1. Directly access app state config
+        tts_config = request.app.state.config
+        custom_tts_base_url = tts_config.AUDIO_TTS_CUSTOM_TTS_OPEN_API_BASE_URL
+        custom_tts_key = tts_config.AUDIO_TTS_CUSTOM_TTS_OPEN_API_KEY
 
+        # 2. Check if Base URL is configured
+        if not custom_tts_base_url:
+            log.warning("Custom TTS Base URL not configured.")
+            return {"voices": []}
+
+        # 3. Construct target URL and Headers
+        target_url = f"{custom_tts_base_url.rstrip('/')}/audio/voices"
+        headers = {"Accept": "application/json"}
+        if custom_tts_key:
+            # Adjust auth scheme if needed (e.g., X-API-Key)
+            headers["Authorization"] = f"Bearer {custom_tts_key}"
+
+        # 4. Make the external API call
+        async with httpx.AsyncClient() as client:
+            response = await client.get(target_url, headers=headers, timeout=10.0)
+            response.raise_for_status() # Raise HTTP errors (4xx, 5xx)
             external_data = response.json()
 
-            # --- Data Extraction and Transformation ---
+            # 5. Extract and Transform Data
             if isinstance(external_data, dict) and "voices" in external_data:
-                voice_list = external_data["voices"]
-                if isinstance(voice_list, list):
-                    # Transform list of strings into list of {"id": ..., "name": ...} dicts
+                voice_list_strings = external_data["voices"]
+                if isinstance(voice_list_strings, list):
                     formatted_voices = [
                         {"id": voice_name, "name": voice_name}
-                        for voice_name in voice_list if isinstance(voice_name, str)
+                        for voice_name in voice_list_strings if isinstance(voice_name, str)
                     ]
-                    return formatted_voices
                 else:
-                    print(f"Warning: 'voices' key in response from {target_url} is not a list.")
-                    return []
+                    log.warning(f"'voices' key in response from {target_url} is not a list.")
             else:
-                 print(f"Warning: Unexpected response format from {target_url}: {external_data}")
-                 return []
+                 log.warning(f"Unexpected response format from {target_url}. Expected dict with 'voices' key.")
 
+    except AttributeError as e:
+         # Error accessing config attributes
+         log.error(f"Failed to access custom TTS config from app state: {e}")
+         raise HTTPException(status_code=500, detail="Failed to access necessary configuration.")
     except httpx.HTTPStatusError as e:
         # Error response from the external service
-        print(f"Error fetching custom voices: Status {e.response.status_code} from {target_url}")
-        # Optionally log e.response.text for more details
-        # Re-raise as an HTTPException your frontend/client understands
+        log.error(f"Error fetching custom voices: Status {e.response.status_code} from {target_url}")
         raise HTTPException(
-            status_code=502, # Bad Gateway - indicates error from upstream server
+            status_code=502, # Bad Gateway
             detail=f"Failed to fetch voices from custom TTS service (status: {e.response.status_code})."
         )
     except httpx.RequestError as e:
         # Network error, timeout, DNS error, etc.
-        print(f"Network error fetching custom voices from {target_url}: {e}")
+        log.error(f"Network error fetching custom voices from {target_url}: {e}")
         raise HTTPException(
             status_code=503, # Service Unavailable
             detail=f"Could not connect to the custom TTS service."
         )
     except Exception as e:
-        # Catch other potential errors (like JSON decoding, etc.)
-        print(f"Unexpected error fetching custom voices: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="An internal error occurred while fetching custom voices."
-        )
+        # Catch other potential errors (config access, JSON decoding, etc.)
+        log.error(f"Unexpected error in /audio/voices endpoint: {e}")
+        # Raise 500 for unexpected issues
+        raise HTTPException(status_code=500, detail="An internal error occurred while fetching custom voices.")
 
-
-# --- Updated Backend Endpoint ---
-@router.get("/audio/voices")
-async def get_custom_voices_endpoint(request: Request, user=Depends(get_verified_user)):
-    """
-    API endpoint to retrieve the list of custom TTS voices by querying
-    the configured external service.
-    """
-    # 1. Get user-specific configuration (replace with your actual logic)
-    # This might involve querying DB based on 'user' or accessing request state
-    try:
-        # Example: Assume a function exists to get the relevant part of the config
-        user_config = await get_user_audio_config(user) # Or however you retrieve it
-        if not user_config or not user_config.get("tts"):
-             raise HTTPException(status_code=404, detail="Audio configuration not found for user.")
-        tts_config = user_config["tts"]
-
-    except Exception as e:
-         # Handle errors in getting the config itself
-         print(f"Error retrieving user config: {e}")
-         raise HTTPException(status_code=500, detail="Failed to retrieve user configuration.")
-
-    # 2. Call the helper function to fetch and transform voices
-    # The helper now handles the external call and errors related to it
-    transformed_voices = await get_available_custom_tts_voices(tts_config)
-
-    # 3. Return the data in the format expected by the frontend
-    return {
-        "voices": transformed_voices
-    }
+    # 6. Return the final structure
+    return {"voices": formatted_voices}

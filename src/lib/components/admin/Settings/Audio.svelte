@@ -27,8 +27,8 @@
 	// Audio
 	let TTS_OPENAI_API_BASE_URL = '';
 	let TTS_OPENAI_API_KEY = '';
-	let TTS_CUSTOM_OPEN_API_BASE_URL = '';
-	let TTS_CUSTOM_OPEN_API_KEY = '';
+	let AUDIO_TTS_CUSTOM_TTS_OPEN_API_BASE_URL = '';
+	let AUDIO_TTS_CUSTOM_TTS_OPEN_API_KEY = '';
 	let TTS_API_KEY = '';
 	let TTS_ENGINE = '';
 	let TTS_MODEL = '';
@@ -71,37 +71,131 @@
 		}
 	};
 
+	const getBrowserVoices = ($i18nInstance: i18nType) => {
+    return new Promise<SpeechSynthesisVoice[]>((resolve) => {
+        if (!('speechSynthesis' in window) || typeof speechSynthesis.getVoices !== 'function') {
+            console.warn("Browser Speech Synthesis not supported.");
+            resolve([]); return;
+        }
+        let browserVoices = speechSynthesis.getVoices();
+        if (browserVoices.length > 0) {
+             // Resolve unsorted, sort later
+            resolve(browserVoices); return;
+        }
+        // Polling/event listener logic...
+        let intervalId: ReturnType<typeof setInterval> | null = null;
+        const maxAttempts = 30; let attempts = 0;
+        const tryGetVoices = () => {
+            browserVoices = speechSynthesis.getVoices(); attempts++;
+            if (browserVoices.length > 0) {
+                if (intervalId) clearInterval(intervalId);
+                speechSynthesis.onvoiceschanged = null;
+                resolve(browserVoices); // Resolve unsorted
+            } else if (attempts >= maxAttempts && intervalId) {
+                clearInterval(intervalId); speechSynthesis.onvoiceschanged = null;
+                console.warn("Timed out waiting for browser voices.");
+                resolve([]);
+            }
+        };
+        speechSynthesis.onvoiceschanged = tryGetVoices;
+        intervalId = setInterval(tryGetVoices, 100);
+    });
+};
+
+
+// --- Corrected Component getVoices function ---
 	const getVoices = async () => {
-		if (TTS_ENGINE === '') {
-			const getVoicesLoop = setInterval(() => {
-				voices = speechSynthesis.getVoices();
+    	let loadedVoices: any[] = []; // Use temporary local variable
 
-				// do your loop
-				if (voices.length > 0) {
-					clearInterval(getVoicesLoop);
-					voices.sort((a, b) => a.name.localeCompare(b.name, $i18n.resolvedLanguage));
-				}
-			}, 100);
-		} else {
-			const res = await _getVoices(localStorage.token).catch((e) => {
-				toast.error(`${e}`);
-			});
+    // *** RESTORED IF BLOCK ***
+    	if (TTS_ENGINE === '') {
+        	console.log("[SVELTE DEBUG] Engine is empty, fetching browser voices...");
+        	try {
+            // Use the helper function
+            	loadedVoices = await getBrowserVoices($i18n);
+            	console.log("[SVELTE DEBUG] Browser voices fetched:", loadedVoices);
+        	} catch (err) {
+             	console.error("[SVELTE DEBUG] Error fetching browser voices:", err);
+             	toast.error(`Error fetching browser voices: ${err}`);
+             	loadedVoices = [];
+        	}
+    	}
+    // *** END OF IF BLOCK ***
 
-			if (res) {
-				console.log(res);
-				voices = res.voices;
-				voices.sort((a, b) => a.name.localeCompare(b.name, $i18n.resolvedLanguage));
-			}
-		}
+    // *** ELSE BLOCK WITH LOGGING ***
+    	else {
+        	const token = localStorage.token;
+        	const engine = TTS_ENGINE; // Capture engine *before* async call
+        	console.log(`[SVELTE DEBUG] Calling _getVoices for engine: ${engine}`);
+        	const res = await _getVoices(token, engine).catch((e) => {
+            	console.error(`[SVELTE DEBUG] Error fetching voices for ${engine}:`, e);
+            	toast.error(`${e}`);
+            	return null;
+        	});
+
+        // ---- START LOGGING ----
+        	console.log(`[SVELTE DEBUG] Raw 'res' object received for ${engine}:`, res);
+
+        	if (res && typeof res === 'object' && res !== null) {
+            	console.log(`[SVELTE DEBUG] Does 'res' have 'voices' key?`, 'voices' in res);
+            	console.log(`[SVELTE DEBUG] Is 'res.voices' an array?`, Array.isArray(res.voices));
+            	console.log(`[SVELTE DEBUG] Value of 'res.voices' for ${engine}:`, res.voices);
+
+            	if (Array.isArray(res.voices)) {
+                 	if(res.voices.length > 0) {
+                    	console.log(`[SVELTE DEBUG] First item in 'res.voices':`, res.voices[0]);
+                    	console.log(`[SVELTE DEBUG] Does first item have 'id'?`, 'id' in res.voices[0]);
+                    	console.log(`[SVELTE DEBUG] Does first item have 'name'?`, 'name' in res.voices[0]);
+                 	}
+
+                 	loadedVoices = res.voices; // Assign API voices to temp variable
+            	} else {
+                	console.warn(`[SVELTE DEBUG] 'res.voices' is not an array for ${engine}. Setting loadedVoices to empty.`);
+                	loadedVoices = [];
+            	}
+        	} else {
+             	console.warn(`[SVELTE DEBUG] Invalid 'res' object received for ${engine}. Setting loadedVoices to empty.`);
+             	loadedVoices = [];
+        }
+         // ---- END LOGGING ----
+    } // *** END OF ELSE BLOCK ***
+
+    // --- Common logic AFTER fetching (Sort and Assign) ---
+    	try {
+        	if (loadedVoices && loadedVoices.length > 0) {
+             	console.log(`[SVELTE DEBUG] Sorting ${loadedVoices.length} voices.`);
+             	// Ensure items have 'name' before sorting
+             	if (typeof loadedVoices[0]?.name === 'string') {
+                 	loadedVoices.sort((a, b) => a.name.localeCompare(b.name, $i18n.resolvedLanguage));
+             	} else {
+                 	console.warn("[SVELTE DEBUG] Cannot sort voices, 'name' property missing or not a string.");
+             	}
+        	} else {
+             	console.log("[SVELTE DEBUG] No voices loaded to sort.");
+        	}
+    	} catch (sortError) {
+         	console.error("[SVELTE DEBUG] Error during voice sorting:", sortError);
+         // Decide if you want to proceed with unsorted voices or clear them
+         // loadedVoices = []; // Option: Clear on sort error
+    	}
+
+
+    // Final assignment to the reactive state variable
+    	voices = loadedVoices;
+    	console.log(`[SVELTE DEBUG] Final component 'voices' state assigned:`, voices);
 	};
+
+
+	
+
 
 	const updateConfigHandler = async () => {
 		const res = await updateAudioConfig(localStorage.token, {
 			tts: {
 				OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
 				OPENAI_API_KEY: TTS_OPENAI_API_KEY,
-				CUSTOM_TTS_OPEN_API_BASE_URL: TTS_CUSTOM_OPEN_API_BASE_URL,
-				CUSTOM_TTS_OPEN_API_KEY: TTS_CUSTOM_OPEN_API_KEY,
+				CUSTOM_TTS_OPEN_API_BASE_URL: AUDIO_TTS_CUSTOM_TTS_OPEN_API_BASE_URL,
+				CUSTOM_TTS_OPEN_API_KEY: AUDIO_TTS_CUSTOM_TTS_OPEN_API_KEY,
 				API_KEY: TTS_API_KEY,
 				ENGINE: TTS_ENGINE,
 				MODEL: TTS_MODEL,
@@ -143,8 +237,8 @@
 			TTS_OPENAI_API_BASE_URL = res.tts.OPENAI_API_BASE_URL;
 			TTS_OPENAI_API_KEY = res.tts.OPENAI_API_KEY;
 
-			TTS_CUSTOM_OPEN_API_BASE_URL = res.tts.CUSTOM_TTS_OPEN_API_BASE_URL;
-			TTS_CUSTOM_OPEN_API_KEY = res.tts.CUSTOM_TTS_OPEN_API_KEY
+			AUDIO_TTS_CUSTOM_TTS_OPEN_API_BASE_URL = res.tts.CUSTOM_TTS_OPEN_API_BASE_URL;
+			AUDIO_TTS_CUSTOM_TTS_OPEN_API_KEY = res.tts.CUSTOM_TTS_OPEN_API_KEY;
 
 			TTS_API_KEY = res.tts.API_KEY;
 
@@ -451,11 +545,11 @@
 							<input
 								class="flex-1 w-full bg-transparent outline-hidden"
 								placeholder={$i18n.t('API Base URL')}
-								bind:value={TTS_CUSTOM_OPEN_API_BASE_URL}
+								bind:value={AUDIO_TTS_CUSTOM_TTS_OPEN_API_BASE_URL}
 								required
 							/>
 
-							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_CUSTOM_OPEN_API_KEY} />
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={AUDIO_TTS_CUSTOM_TTS_OPEN_API_KEY} />
 						</div>
 					</div>
 
@@ -632,18 +726,18 @@
 							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('TTS Voice')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
-									<input
-										list="voice-list"
+									<select
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										bind:value={TTS_VOICE}
-										placeholder="Select a voice"
-									/>
+										required={voices.length > 0}
+									>
+										<option value="" disabled selected={!TTS_VOICE}>{$i18n.t('Select a voice...')}
+										</option>
 
-									<datalist id="voice-list">
-										{#each voices as voice}
+										{#each voices as voice (voice.id)}
 											<option value={voice.id}>{voice.name}</option>
 										{/each}
-									</datalist>
+									</select>
 								</div>
 							</div>
 						</div>
@@ -651,18 +745,18 @@
 							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('TTS Model')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
-									<input
-										list="tts-model-list"
+									<select
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										bind:value={TTS_MODEL}
-										placeholder="Select a model"
-									/>
+										required={models.length > 0}
+									>
+										<option value="" disabled selected={!TTS_MODEL}>{$i18n.t('Select a model...')}
+										</option>
 
-									<datalist id="tts-model-list">
 										{#each models as model}
-											<option value={model.id} class="bg-gray-50 dark:bg-gray-700" />
+											<option value={model.id}>{model.name || model.id}</option>
 										{/each}
-									</datalist>
+									</select>
 								</div>
 							</div>
 						</div>
