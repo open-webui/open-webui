@@ -92,8 +92,8 @@ pydub
 duckduckgo-search~=7.2.1
 
 # Presidio PII Filter Dependencies
-presidio-analyzer==2.2.357
-presidio-anonymizer==2.2.357
+presidio-analyzer
+presidio-anonymizer
 
 ## Google Drive
 google-api-python-client
