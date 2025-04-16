@@ -20,9 +20,8 @@ if "%1"=="--mode" (
     goto parse
 )
 
-REM Set conda environment paths
+REM Set RAUX conda environment path
 set "RAUX_CONDA_ENV=%LOCALAPPDATA%\RAUX\raux_env"
-set "LEMONADE_CONDA_ENV=%LOCALAPPDATA%\lemonade_server\lemon_env"
 
 REM Check if mode is not GENERIC to determine if Lemonade should be launched
 if /I NOT "%mode%"=="GENERIC" (

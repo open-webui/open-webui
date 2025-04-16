@@ -1,5 +1,5 @@
 # PowerShell script to launch RAUX and Lemonade
-# This script activates the conda environments, runs both servers,
+# This script activates the conda environment for RAUX, runs both servers,
 # waits for them to be ready, and opens the browser
 
 # Clear the screen and set title
@@ -16,7 +16,6 @@ $version = " $($env:RAUX_VERSION)"
 
 # Parameters
 $condaEnvPath = $env:RAUX_CONDA_ENV
-$lemonadeEnvPath = $env:LEMONADE_CONDA_ENV
 $rauxUrl = "http://localhost:8080"
 $lemonadeUrl = "http://localhost:8000"
 $maxAttempts = 60  # Increased maximum attempts
@@ -118,16 +117,10 @@ function Stop-ProcessTree {
 
 # Function to launch and test Lemonade server
 function Start-LemonadeServer {
-    # Verify Lemonade environment exists
-    if (-not (Test-Path $lemonadeEnvPath)) {
-        Write-Host "ERROR: Lemonade conda environment not found at $lemonadeEnvPath" -ForegroundColor Red
-        return $null
-    }
-
     Write-Host "Starting Lemonade server..." -ForegroundColor Cyan
     $lemonadePinfo = New-Object System.Diagnostics.ProcessStartInfo
     $lemonadePinfo.FileName = "cmd.exe"
-    $lemonadePinfo.Arguments = "/C call conda activate $lemonadeEnvPath && lemonade serve"
+    $lemonadePinfo.Arguments = "/K lemonade-server serve"
     $lemonadePinfo.RedirectStandardError = $false
     $lemonadePinfo.RedirectStandardOutput = $false
     $lemonadePinfo.UseShellExecute = $true
@@ -381,8 +374,8 @@ finally {
             $wmiQuery = "SELECT CommandLine FROM Win32_Process WHERE ProcessId = '$($proc.Id)'"
             $commandLine = (Get-WmiObject -Query $wmiQuery -ErrorAction SilentlyContinue).CommandLine
             
-            # If the command line contains open-webui or lemonade, stop the process
-            if ($commandLine -and ($commandLine -like "*open-webui serve*" -or $commandLine -like "*lemonade serve*")) {
+            # If the command line contains open-webui or lemonade-server, stop the process
+            if ($commandLine -and ($commandLine -like "*open-webui serve*" -or $commandLine -like "*lemonade-server serve*")) {
                 Write-Host "  Stopping process - $($proc.Id)" -ForegroundColor Yellow
                 Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
             }
