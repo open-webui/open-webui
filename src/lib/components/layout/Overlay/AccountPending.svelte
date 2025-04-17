@@ -44,7 +44,7 @@
 					</a>
 					to say hello or send a mail to
 					<a href="mailto:support@rnd-solutions.net" class="text-blue-500 underline"
-						><br/> support@rnd-solutions.net</a
+						><br /> support@rnd-solutions.net</a
 					>
 				</div>
 
