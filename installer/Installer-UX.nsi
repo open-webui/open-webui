@@ -15,16 +15,17 @@ RequestExecutionLevel user
 !include "MUI2.nsh"
 
 ; Define constants - moved to the top so they're available throughout the script
-!define PRODUCT_NAME "RAUX"
-!define PRODUCT_NAME_CONCAT "raux"
-!define GITHUB_REPO "https://github.com/aigdat/open-webui.git"
-!define EMPTY_FILE_NAME "empty_file.txt"
-!define ICON_FILE "${__FILE__}\..\..\static\raux.ico"
-!define ICON_DEST "$LOCALAPPDATA\${PRODUCT_NAME}\raux.ico"
+!define /ifndef PRODUCT_NAME "RAUX"
+!define /ifndef PROJECT_NAME "RAUX"
+!define /ifndef PROJECT_NAME_CONCAT "raux"
+!define /ifndef GITHUB_REPO "https://github.com/aigdat/${PROJECT_NAME_CONCAT}.git"
+!define /ifndef EMPTY_FILE_NAME "empty_file.txt"
+!define /ifndef ICON_FILE "${__FILE__}\..\..\static\${PROJECT_NAME_CONCAT}.ico"
+!define /ifndef ICON_DEST "$LOCALAPPDATA\${PROJECT_NAME}\${PROJECT_NAME_CONCAT}.ico"
 
 ; This is a compile-time fix to make sure that our selfhost CI runner can successfully install,
 ; since LOCALAPPDATA points to C:\Windows for "system users"
-InstallDir "$LOCALAPPDATA\${PRODUCT_NAME}"
+InstallDir "$LOCALAPPDATA\${PROJECT_NAME}"
 
 ; Read version from version.py
 !tempfile TMPFILE
@@ -72,13 +73,13 @@ LangString MUI_TEXT_LICENSE_SUBTITLE ${LANG_ENGLISH} "Please review the license 
 
 Function .onInit
   ; Initialize variables
-  StrCpy $raux_CONDA_ENV "raux_env"
+  StrCpy $raux_CONDA_ENV "${PROJECT_NAME_CONCAT}_env"
   StrCpy $PythonVersion "3.11"
   ; Fix the log file path to avoid variable substitution issues
-  StrCpy $LogFilePath "$LOCALAPPDATA\${PRODUCT_NAME}\${PRODUCT_NAME_CONCAT}_install.log"
+  StrCpy $LogFilePath "$LOCALAPPDATA\${PROJECT_NAME}\${PROJECT_NAME_CONCAT}_install.log"
   
   ; Create the log directory if it doesn't exist
-  CreateDirectory "$LOCALAPPDATA\${PRODUCT_NAME}"
+  CreateDirectory "$LOCALAPPDATA\${PROJECT_NAME}"
 FunctionEnd
 
 ; Define a section for the installation
@@ -90,9 +91,9 @@ Section "Install Main Components" SEC01
   DetailPrint "------------------------"
 
   ; Check if directory exists before proceeding
-  IfFileExists "$LOCALAPPDATA\${PRODUCT_NAME}\*.*" 0 continue_install
+  IfFileExists "$LOCALAPPDATA\${PROJECT_NAME}\*.*" 0 continue_install
     ${IfNot} ${Silent}
-      MessageBox MB_YESNO "An existing ${PRODUCT_NAME} installation was found at $LOCALAPPDATA\${PRODUCT_NAME}.$\n$\nWould you like to remove it and continue with the installation?" IDYES remove_dir
+      MessageBox MB_YESNO "An existing ${PRODUCT_NAME} installation was found at $LOCALAPPDATA\${PROJECT_NAME}.$\n$\nWould you like to remove it and continue with the installation?" IDYES remove_dir
       ; If user selects No, show exit message and quit the installer
       MessageBox MB_OK "Installation cancelled. Exiting installer..."
       DetailPrint "Installation cancelled by user"
@@ -103,12 +104,12 @@ Section "Install Main Components" SEC01
 
   remove_dir:
     ; Attempt conda remove of the env, to help speed things up
-    ExecWait 'conda env remove -yp "$LOCALAPPDATA\${PRODUCT_NAME}\$raux_CONDA_ENV"'
+    ExecWait 'conda env remove -yp "$LOCALAPPDATA\${PROJECT_NAME}\$raux_CONDA_ENV"'
     ; Try to remove directory and verify it was successful
-    RMDir /r "$LOCALAPPDATA\${PRODUCT_NAME}"
+    RMDir /r "$LOCALAPPDATA\${PROJECT_NAME}"
     DetailPrint "- Deleted all contents of install dir"
 
-    IfFileExists "$LOCALAPPDATA\${PRODUCT_NAME}\*.*" 0 continue_install
+    IfFileExists "$LOCALAPPDATA\${PROJECT_NAME}\*.*" 0 continue_install
       ${IfNot} ${Silent}
         MessageBox MB_OK "Unable to remove existing installation. Please close any applications using ${PRODUCT_NAME} and try again."
       ${EndIf}
@@ -117,20 +118,20 @@ Section "Install Main Components" SEC01
 
   continue_install:
     ; Create fresh directory
-    CreateDirectory "$LOCALAPPDATA\${PRODUCT_NAME}"
+    CreateDirectory "$LOCALAPPDATA\${PROJECT_NAME}"
 
     ; Set the output path for future operations
-    SetOutPath "$LOCALAPPDATA\${PRODUCT_NAME}"
+    SetOutPath "$LOCALAPPDATA\${PROJECT_NAME}"
 
     DetailPrint "Starting '${PRODUCT_NAME}' Installation..."
     DetailPrint "Configuration:"
-    DetailPrint "  Install Dir: $LOCALAPPDATA\${PRODUCT_NAME}"
+    DetailPrint "  Install Dir: $LOCALAPPDATA\${PROJECT_NAME}"
     DetailPrint "-------------------------------------------"
 
     ; Pack into the installer
     ; Exclude hidden files (like .git, .gitignore) and the installation folder itself
     ; Include the installer script and LICENSE file
-    File "raux_installer.py"
+    File "${PROJECT_NAME_CONCAT}_installer.py"
     File "LICENSE"
     File ${ICON_FILE}
 
@@ -194,7 +195,7 @@ Section "Install Main Components" SEC01
       ; Initialize conda (needed for systems where conda was previously installed but not initialized)
       nsExec::ExecToLog '"$R1" init'
 
-      DetailPrint "- Creating a Python $PythonVersion environment named '$raux_CONDA_ENV' in the installation directory: $LOCALAPPDATA\${PRODUCT_NAME}..."
+      DetailPrint "- Creating a Python $PythonVersion environment named '$raux_CONDA_ENV' in the installation directory: $LOCALAPPDATA\${PROJECT_NAME}..."
       ExecWait '"$R1" create -n "$raux_CONDA_ENV" python=$PythonVersion -y' $R0
 
       ; Check if the environment creation was successful (exit code should be 0)
@@ -203,7 +204,7 @@ Section "Install Main Components" SEC01
     set_conda_env:
       DetailPrint "- Setting conda environment $raux_CONDA_ENV..."
       DetailPrint "- Changing to installation directory..."
-      SetOutPath "$LOCALAPPDATA\${PRODUCT_NAME}"
+      SetOutPath "$LOCALAPPDATA\${PROJECT_NAME}"
       
       DetailPrint "- Verifying conda environment..."
       ; Instead of trying to activate the environment (which doesn't work well in scripts),
@@ -222,42 +223,42 @@ Section "Install Main Components" SEC01
 
     install_app:
       DetailPrint "--------------------------"
-      DetailPrint "- ${PRODUCT_NAME} Installation -"
+      DetailPrint "- ${PROJECT_NAME} Installation -"
       DetailPrint "--------------------------"
 
-      DetailPrint "- Creating RAUX installation directory..."
-      CreateDirectory "$LOCALAPPDATA\RAUX"
+      DetailPrint "- Creating ${PROJECT_NAME} installation directory..."
+      CreateDirectory "$LOCALAPPDATA\${PROJECT_NAME}"
       
-      DetailPrint "- Creating temporary directory for RAUX installation..."
-      CreateDirectory "$LOCALAPPDATA\RAUX\raux_temp"
-      SetOutPath "$LOCALAPPDATA\RAUX\raux_temp"
+      DetailPrint "- Creating temporary directory for ${PROJECT_NAME} installation..."
+      CreateDirectory "$LOCALAPPDATA\${PROJECT_NAME}\${PROJECT_NAME_CONCAT}_temp"
+      SetOutPath "$LOCALAPPDATA\${PROJECT_NAME}\${PROJECT_NAME_CONCAT}_temp"
       
-      DetailPrint "- Preparing for RAUX installation..."
+      DetailPrint "- Preparing for ${PROJECT_NAME} installation..."
       
       ; Copy the Python installer script to the temp directory
-      File "${__FILE__}\..\raux_installer.py"
+      File "${__FILE__}\..\${PROJECT_NAME_CONCAT}_installer.py"
 
-      DetailPrint "- Using Python script: $LOCALAPPDATA\RAUX\raux_temp\raux_installer.py"
-      DetailPrint "- Installation directory: $LOCALAPPDATA\RAUX"
+      DetailPrint "- Using Python script: $LOCALAPPDATA\${PROJECT_NAME}\${PROJECT_NAME_CONCAT}_temp\${PROJECT_NAME_CONCAT}_installer.py"
+      DetailPrint "- Installation directory: $LOCALAPPDATA\${PROJECT_NAME}"
       DetailPrint "- Using system Python for the entire installation process"
       
       ; Execute the Python script with the required parameters using system Python
       ; Note: We're not passing the python-exe parameter, so it will use the system Python
-      ExecWait 'python "$LOCALAPPDATA\RAUX\raux_temp\raux_installer.py" --install-dir "$LOCALAPPDATA\RAUX" --debug' $R0
+      ExecWait 'python "$LOCALAPPDATA\${PROJECT_NAME}\${PROJECT_NAME_CONCAT}_temp\${PROJECT_NAME_CONCAT}_installer.py" --install-dir "$LOCALAPPDATA\${PROJECT_NAME}" --debug' $R0
 
-      DetailPrint "RAUX installation exit code: $R0"
+      DetailPrint "${PRODUCT_NAME} installation exit code: $R0"
       
       ; Check if installation was successful
       ${If} $R0 == 0
-        DetailPrint "*** RAUX INSTALLATION COMPLETED ***"
-        DetailPrint "- RAUX installation completed successfully"
+        DetailPrint "*** ${PRODUCT_NAME} INSTALLATION COMPLETED ***"
+        DetailPrint "- ${PRODUCT_NAME} installation completed successfully"
       ${Else}
-        DetailPrint "*** RAUX INSTALLATION FAILED ***"
+        DetailPrint "*** ${PRODUCT_NAME} INSTALLATION FAILED ***"
         DetailPrint "- For additional support, please contact support@amd.com and"
         DetailPrint "include the error details, or create an issue at"
         DetailPrint "https://github.com/aigdat/open-webui"
         ${IfNot} ${Silent}
-          MessageBox MB_OK "RAUX installation failed.$\n$\nPlease check the log file at $LOCALAPPDATA\RAUX\raux_Installer.log for detailed error information."
+          MessageBox MB_OK "${PRODUCT_NAME} installation failed.$\n$\nPlease check the log file at $LOCALAPPDATA\${PRODUCT_NAME}\${PROJECT_NAME_CONCAT}_Installer.log for detailed error information."
         ${EndIf}
       ${EndIf}
       
@@ -268,21 +269,21 @@ Section "Install Main Components" SEC01
       SetOutPath "$INSTDIR"
       
       ; Create RAUX shortcut - using the GAIA icon but pointing to RAUX installation
-      DetailPrint "- Creating RAUX desktop shortcut"
+      DetailPrint "- Creating ${PROJECT_NAME} desktop shortcut"
       
       ; Copy the launcher scripts to the RAUX installation directory if they exist
-      DetailPrint "- Copying RAUX launcher scripts"
+      DetailPrint "- Copying ${PROJECT_NAME} launcher scripts"
       
       ; Use /nonfatal flag to prevent build failure if files don't exist
-      File /nonfatal "/oname=$LOCALAPPDATA\RAUX\launch_raux.ps1" "${__FILE__}\..\launch_raux.ps1"
-      File /nonfatal "/oname=$LOCALAPPDATA\RAUX\launch_raux.cmd" "${__FILE__}\..\launch_raux.cmd"
+      File /nonfatal "/oname=$LOCALAPPDATA\${PROJECT_NAME}\launch_${PROJECT_NAME_CONCAT}.ps1" "${__FILE__}\..\launch_${PROJECT_NAME_CONCAT}.ps1"
+      File /nonfatal "/oname=$LOCALAPPDATA\${PROJECT_NAME}\launch_${PROJECT_NAME_CONCAT}.cmd" "${__FILE__}\..\launch_${PROJECT_NAME_CONCAT}.cmd"
       
       ; Copy the icon file to the RAUX installation directory
-      DetailPrint "- Copying RAUX icon file"
+      DetailPrint "- Copying ${PROJECT_NAME} icon file"
       File "/oname=${ICON_DEST}" "${ICON_FILE}"
       
       ; Create shortcut to the batch wrapper script (will appear as a standalone app)
-      CreateShortcut "$DESKTOP\GAIA-UI-BETA.lnk" "$LOCALAPPDATA\RAUX\launch_raux.cmd" "" "${ICON_DEST}"
+      CreateShortcut "$DESKTOP\GAIA-UI-BETA.lnk" "$LOCALAPPDATA\${PROJECT_NAME}\launch_${PROJECT_NAME_CONCAT}.cmd" "" "${ICON_DEST}"
 
 SectionEnd
 
