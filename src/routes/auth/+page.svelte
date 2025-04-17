@@ -16,6 +16,34 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 
+	import UserAgreementModal from '$lib/components/UserAgreementModal.svelte';
+
+	let showAgreementModal = false;
+	let agreementAccepted = false;
+
+	const submitHandler = async () => {
+		if (mode === 'signup' && !agreementAccepted) {
+			showAgreementModal = true;
+			return;
+		}
+
+		if (mode === 'ldap') {
+			await ldapSignInHandler();
+		} else if (mode === 'signin') {
+			await signInHandler();
+		} else {
+			await signUpHandler();
+		}
+	};
+
+	const handleAgreementAccept = () => {
+		agreementAccepted = true;
+		// Now proceed with the signup
+		if (mode === 'signup') {
+			signUpHandler();
+		}
+	};
+
 	const i18n = getContext('i18n');
 
 	let loaded = false;
@@ -77,16 +105,6 @@
 			return null;
 		});
 		await setSessionUser(sessionUser);
-	};
-
-	const submitHandler = async () => {
-		if (mode === 'ldap') {
-			await ldapSignInHandler();
-		} else if (mode === 'signin') {
-			await signInHandler();
-		} else {
-			await signUpHandler();
-		}
 	};
 
 	const checkOauthCallback = async () => {
@@ -248,7 +266,7 @@
 											<input
 												bind:value={name}
 												type="text"
-												class="my-0.5 w-full text-sm outline-hidden bg-transparent"
+												class="px-2 py-1 my-0.5 w-full text-sm outline-hidden bg-transparent"
 												autocomplete="name"
 												placeholder={$i18n.t('Enter Your Full Name')}
 												required
@@ -262,7 +280,7 @@
 											<input
 												bind:value={ldapUsername}
 												type="text"
-												class="my-0.5 w-full text-sm outline-hidden bg-transparent"
+												class="px-2 py-1 my-0.5 w-full text-sm outline-hidden bg-transparent"
 												autocomplete="username"
 												name="username"
 												placeholder={$i18n.t('Enter Your Username')}
@@ -275,7 +293,7 @@
 											<input
 												bind:value={email}
 												type="email"
-												class="my-0.5 w-full text-sm outline-hidden bg-transparent"
+												class="px-2 py-1 my-0.5 w-full text-sm outline-hidden bg-transparent"
 												autocomplete="email"
 												name="email"
 												placeholder={$i18n.t('Enter Your Email')}
@@ -290,7 +308,7 @@
 										<input
 											bind:value={password}
 											type="password"
-											class="my-0.5 w-full text-sm outline-hidden bg-transparent"
+											class="px-2 py-1 my-0.5 w-full text-sm outline-hidden bg-transparent"
 											placeholder={$i18n.t('Enter Your Password')}
 											autocomplete="current-password"
 											name="current-password"
@@ -299,6 +317,25 @@
 									</div>
 								</div>
 							{/if}
+							<div class="mt-4 flex items-start text-left">
+								<input
+									type="checkbox"
+									id="agreement-checkbox"
+									bind:checked={agreementAccepted}
+									class="mt-1 mr-2"
+									required
+								/>
+								<label for="agreement-checkbox" class="text-sm">
+									{$i18n.t('I have read and agree to the')}
+									<button
+										type="button"
+										class="underline font-bold text-left"
+										on:click={() => (showAgreementModal = true)}
+									>
+										{$i18n.t('User Agreement and Privacy Policy')}
+									</button>
+								</label>
+							</div>
 							<div class="mt-5">
 								{#if $config?.features.enable_login_form || $config?.features.enable_ldap}
 									{#if mode === 'ldap'}
@@ -481,4 +518,5 @@
 			</div>
 		</div>
 	{/if}
+	<UserAgreementModal bind:show={showAgreementModal} onAccept={handleAgreementAccept} />
 </div>
