@@ -14,6 +14,7 @@
 
 	export let buttonClass = '';
 	export let ariaLabel = '';
+	export let buttonID = '';
 
 	let show = false;
 </script>
@@ -27,6 +28,7 @@
 	}}
 	{buttonClass}
 	{ariaLabel}
+	{buttonID}
 >
 	<slot />
 
