@@ -524,7 +524,7 @@ def remove_file_from_knowledge_by_id(
         log.debug(e)
         pass
 
-     # Delete file from database and underlying file store
+    # Delete file from database and underlying file store
     result = Files.delete_file_by_id(id)
     if result and file.path:
         try:
