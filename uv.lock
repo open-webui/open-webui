@@ -2966,7 +2966,7 @@ requires-dist = [
     { name = "python-jose", specifier = "==3.3.0" },
     { name = "python-multipart", specifier = "==0.0.18" },
     { name = "python-pptx", specifier = "==1.0.0" },
-    { name = "python-socketio", specifier = "==5.11.3" },
+    { name = "python-socketio", specifier = "==5.13.0" },
     { name = "pytube", specifier = "==15.0.0" },
     { name = "pyxlsb", specifier = "==1.0.10" },
     { name = "qdrant-client", specifier = "~=1.12.0" },
@@ -4073,15 +4073,15 @@ wheels = [
 
 [[package]]
 name = "python-socketio"
-version = "5.11.3"
+version = "5.13.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "bidict" },
     { name = "python-engineio" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1e/74/b1e8787cea757e1f533a7878e94f929679ef7e07a2aaf44de6b71065b1f2/python_socketio-5.11.3.tar.gz", hash = "sha256:194af8cdbb7b0768c2e807ba76c7abc288eb5bb85559b7cddee51a6bc7a65737", size = 117702 }
+sdist = { url = "https://files.pythonhosted.org/packages/21/1a/396d50ccf06ee539fa758ce5623b59a9cb27637fc4b2dc07ed08bf495e77/python_socketio-5.13.0.tar.gz", hash = "sha256:ac4e19a0302ae812e23b712ec8b6427ca0521f7c582d6abb096e36e24a263029", size = 121125 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e9/59/5ee858d5736594d75385b9a8c0f65af6eca5da2b359ed3fb6a7486526399/python_socketio-5.11.3-py3-none-any.whl", hash = "sha256:2a923a831ff70664b7c502df093c423eb6aa93c1ce68b8319e840227a26d8b69", size = 76180 },
+    { url = "https://files.pythonhosted.org/packages/3c/32/b4fb8585d1be0f68bde7e110dffbcf354915f77ad8c778563f0ad9655c02/python_socketio-5.13.0-py3-none-any.whl", hash = "sha256:51f68d6499f2df8524668c24bcec13ba1414117cfb3a90115c559b601ab10caf", size = 77800 },
 ]
 
 [[package]]

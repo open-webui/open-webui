@@ -235,46 +235,30 @@ async def chat_completion_tools_handler(
                 if isinstance(tool_result, str):
                     tool = tools[tool_function_name]
                     tool_id = tool.get("tool_id", "")
+
+                    tool_name = (
+                        f"{tool_id}/{tool_function_name}"
+                        if tool_id
+                        else f"{tool_function_name}"
+                    )
                     if tool.get("metadata", {}).get("citation", False) or tool.get(
                         "direct", False
                     ):
-
+                        # Citation is enabled for this tool
                         sources.append(
                             {
                                 "source": {
-                                    "name": (
-                                        f"TOOL:" + f"{tool_id}/{tool_function_name}"
-                                        if tool_id
-                                        else f"{tool_function_name}"
-                                    ),
+                                    "name": (f"TOOL:{tool_name}"),
                                 },
-                                "document": [tool_result, *tool_result_files],
-                                "metadata": [
-                                    {
-                                        "source": (
-                                            f"TOOL:" + f"{tool_id}/{tool_function_name}"
-                                            if tool_id
-                                            else f"{tool_function_name}"
-                                        )
-                                    }
-                                ],
+                                "document": [tool_result],
+                                "metadata": [{"source": (f"TOOL:{tool_name}")}],
                             }
                         )
                     else:
-                        sources.append(
-                            {
-                                "source": {},
-                                "document": [tool_result, *tool_result_files],
-                                "metadata": [
-                                    {
-                                        "source": (
-                                            f"TOOL:" + f"{tool_id}/{tool_function_name}"
-                                            if tool_id
-                                            else f"{tool_function_name}"
-                                        )
-                                    }
-                                ],
-                            }
+                        # Citation is not enabled for this tool
+                        body["messages"] = add_or_update_user_message(
+                            f"\nTool `{tool_name}` Output: {tool_result}",
+                            body["messages"],
                         )
 
                     if (
@@ -550,13 +534,20 @@ async def chat_image_generation_handler(
             }
         )
 
-        for image in images:
-            await __event_emitter__(
-                {
-                    "type": "message",
-                    "data": {"content": f"![Generated Image]({image['url']})\n"},
-                }
-            )
+        await __event_emitter__(
+            {
+                "type": "files",
+                "data": {
+                    "files": [
+                        {
+                            "type": "image",
+                            "url": image["url"],
+                        }
+                        for image in images
+                    ]
+                },
+            }
+        )
 
         system_message_content = "<context>User is shown the generated image, tell the user that the image has been generated</context>"
     except Exception as e:
@@ -2261,7 +2252,9 @@ async def process_chat_response(
                 await response.background()
 
         # background_tasks.add_task(post_response_handler, response, events)
-        task_id, _ = create_task(post_response_handler(response, events))
+        task_id, _ = create_task(
+            post_response_handler(response, events), id=metadata["chat_id"]
+        )
         return {"status": True, "task_id": task_id}
 
     else:
