@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    app: gpt-portal
+  name: gpt-portal-pvc
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: aws-ebs-sc
+  resources:
+    requests:
+      storage: 2Gi

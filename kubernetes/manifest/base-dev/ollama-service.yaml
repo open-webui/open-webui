@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gpt-portal-ollama-service
+  labels:
+    app.kubernetes.io/name: ollama
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: gpt-portal
+spec:
+  selector:
+    app.kubernetes.io/name: ollama
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: gpt-portal
+  ports:
+  - protocol: TCP
+    port: 11434
+    targetPort: 11434

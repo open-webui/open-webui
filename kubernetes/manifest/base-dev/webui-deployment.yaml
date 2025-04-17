@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gpt-portal-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gpt-portal
+  template:
+    metadata:
+      labels:
+        app: gpt-portal
+    spec:
+      containers:
+      - name: gpt-portal
+        image: 654654365384.dkr.ecr.ap-southeast-1.amazonaws.com/gpt-portal:v1.0
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "500Mi"
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+        env:
+        - name: OLLAMA_BASE_URL
+          value: "http://gpt-portal-ollama-service.gpt-portal.svc.cluster.local:11434"
+        tty: true
+        volumeMounts:
+        - name: gpt-portal-volume
+          mountPath: /app/backend/data
+      # Add Tolerations and Node Affinity
+      tolerations:
+      - key: "karpenter.sh/capacity-type"
+        operator: "Exists"
+        effect: "NoSchedule"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - arm64
+      volumes:
+      - name: gpt-portal-volume
+        persistentVolumeClaim:
+          claimName: gpt-portal-pvc          

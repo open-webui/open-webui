@@ -1,0 +1,33 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gpt-portal-ingress
+  annotations:
+    # Annotations from example, adapted for AWS Load Balancer Controller
+    alb.ingress.kubernetes.io/actions.ssl-redirect: |
+      {"Type": "redirect", "RedirectConfig": {"Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    # IMPORTANT: Verify this Certificate ARN is valid for gptportal.dev.pressingly.net
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-southeast-1:654654365384:certificate/14e75e32-3158-43dc-b422-38eb2dfbc298
+    alb.ingress.kubernetes.io/group.name: pinet-core-alb
+    # alb.ingress.kubernetes.io/healthcheck-path: /healthz # Removed, ensure service handles root path check or configure TG manually
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=60,routing.http2.enabled=true
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/success-codes: 200-302
+    alb.ingress.kubernetes.io/target-type: ip
+spec:
+  # Set ingress class to alb
+  ingressClassName: alb
+  rules:
+  - host: gptportal.dev.pressingly.net
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: gpt-portal-service
+            port:
+              number: 8080
