@@ -11,7 +11,7 @@
 	import { page } from '$app/stores';
 	import { mobile, showSidebar, knowledge as _knowledge, config, user } from '$lib/stores';
 
-	import { updateFileDataContentById, uploadFile, deleteFileById } from '$lib/apis/files';
+	import { updateFileDataContentById, uploadFile, deleteFileById, getFileById } from '$lib/apis/files';
 	import {
 		addFileToKnowledgeById,
 		getKnowledgeById,
@@ -84,12 +84,12 @@
 
 	let selectedFile = null;
 	let selectedFileId = null;
+	let selectedFileContent = '';
 
 	$: if (selectedFileId) {
 		const file = (knowledge?.files ?? []).find((file) => file.id === selectedFileId);
 		if (file) {
-			file.data = file.data ?? { content: '' };
-			selectedFile = file;
+			handleFileClick(file);
 		} else {
 			selectedFile = null;
 		}
@@ -450,6 +450,20 @@
 		}
 	};
 
+	const handleFileClick = async (file) => {
+		try {
+			selectedFile = file;
+			const response = await getFileById(localStorage.token, file.id);
+			if (response) {
+				selectedFileContent = response.data.content;
+			} else {
+				toast.error($i18n.t('No content found in file.'));
+			}
+		} catch (e) {
+			toast.error($i18n.t('Failed to load file content.'));
+		}
+	};  
+
 	const onDragOver = (e) => {
 		e.preventDefault();
 
@@ -728,7 +742,7 @@
 								{#key selectedFile.id}
 									<RichTextInput
 										className="input-prose-sm"
-										bind:value={selectedFile.data.content}
+										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
 										preserveBreaks={true}
 									/>
@@ -786,7 +800,7 @@
 								{#key selectedFile.id}
 									<RichTextInput
 										className="input-prose-sm"
-										bind:value={selectedFile.data.content}
+										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
 										preserveBreaks={true}
 									/>

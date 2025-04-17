@@ -9,7 +9,7 @@ from open_webui.models.knowledge import (
     KnowledgeResponse,
     KnowledgeUserResponse,
 )
-from open_webui.models.files import Files, FileModel
+from open_webui.models.files import Files, FileModel, FileMetadataResponse
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
     process_file,
@@ -235,7 +235,7 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
 
 
 class KnowledgeFilesResponse(KnowledgeResponse):
-    files: list[FileModel]
+    files: list[FileMetadataResponse]
 
 
 @router.get("/{id}", response_model=Optional[KnowledgeFilesResponse])
@@ -251,7 +251,7 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         ):
 
             file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
-            files = Files.get_files_by_ids(file_ids)
+            files = Files.get_file_metadatas_by_ids(file_ids)
 
             return KnowledgeFilesResponse(
                 **knowledge.model_dump(),
