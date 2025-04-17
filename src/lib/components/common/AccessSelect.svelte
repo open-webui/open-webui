@@ -199,7 +199,7 @@
                             if (groupTriggerEl) {
                                 const rect = groupTriggerEl.getBoundingClientRect();
                                 submenuX = rect.right + 8;
-                                submenuY = rect.top;
+                                submenuY = rect.top - ((groups.length - 1) * 30);
                                 showSubmenu = true;
                             }
                         }}

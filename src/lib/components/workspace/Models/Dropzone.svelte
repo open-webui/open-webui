@@ -23,7 +23,7 @@
 </script>
 
 <div
-	class={`w-full border-2 dark:bg-customGray-900/50 border-dashed h-25 rounded-md px-4 py-8 text-center cursor-pointer transition ${
+	class={`w-full border-2 dark:bg-customGray-900/50 border-dashed h-[100px] rounded-md px-4 py-8 text-center cursor-pointer transition ${
 		isDragging
 			? 'border-customViolet-300 bg-blue-50 dark:bg-customGray-950'
 			: 'border-gray-300 dark:border-[#0F0F0F]'
@@ -41,6 +41,7 @@
 >
 	{#if uploading}
 		<div class="flex flex-col items-center text-xs text-gray-600 dark:text-customGray-100/50">
+			<div class="h-[16px]"></div>
 			{$i18n.t('Uploading...')}
 		</div>
 	{:else}

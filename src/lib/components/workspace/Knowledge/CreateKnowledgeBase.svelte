@@ -22,8 +22,6 @@
 	export let edit = false;
 	export let knowledge = null;
 
-	$: console.log(knowledge)
-
 	let loading = false;
 
 	let name = '';
@@ -41,9 +39,9 @@
 		description = knowledge.description;
 		accessControl = knowledge.access_control;
 		files = knowledge.files;
-	initialized = true;
-}
-	
+		initialized = true;
+	}
+
 	const uploadFileHandler = async (file) => {
 		console.log(file);
 
@@ -109,47 +107,40 @@
 			return;
 		}
 
-		if(!edit) {
+		if (!edit) {
 			const res = await createNewKnowledge(
-			localStorage.token,
-			name,
-			description,
-			accessControl,
-			files
-		).catch((e) => {
-			toast.error(`${e}`);
-		});
+				localStorage.token,
+				name,
+				description,
+				accessControl,
+				files
+			).catch((e) => {
+				toast.error(`${e}`);
+			});
 
-		if (res) {
-			toast.success($i18n.t('Knowledge created successfully.'));
-			// knowledge.set(await getKnowledgeBases(localStorage.token));
-			goto(`/workspace/knowledge`);
-		}
-
+			if (res) {
+				toast.success($i18n.t('Knowledge created successfully.'));
+				goto(`/workspace/knowledge`);
+			}
 		} else {
-			knowledge.data.file_ids = files?.map(item => item.id);
+			knowledge.data.file_ids = files?.map((item) => item.id);
 			knowledge.name = name;
 			knowledge.description = description;
 			knowledge.access_control = accessControl;
-			const res = await updateKnowledgeById(
-			localStorage.token,
-			id,
-			knowledge
-		).catch((e) => {
-			toast.error(`${e}`);
-		});
+			const res = await updateKnowledgeById(localStorage.token, id, knowledge).catch((e) => {
+				toast.error(`${e}`);
+			});
 
-		if (res) {
-			toast.success($i18n.t('Knowledge updated successfully.'));
-			// knowledge.set(await getKnowledgeBases(localStorage.token));
-			goto(`/workspace/knowledge`);
+			if (res) {
+				toast.success($i18n.t('Knowledge updated successfully.'));
+				goto(`/workspace/knowledge`);
+			}
 		}
 
-		}
-
-		
 		loading = false;
 	};
+
+	$: totalFileSize = files.reduce((sum, file) => sum + (file.meta?.size ?? 0), 0);
 </script>
 
 <div class="w-full max-h-full">
@@ -168,7 +159,6 @@
 			{:else}
 				<div class=" self-center font-medium text-sm">{$i18n.t('Create Knowledge')}</div>
 			{/if}
-			
 		</button>
 	</div>
 	<div class="flex w-[34rem] py-3 px-4">
@@ -182,19 +172,21 @@
 				<div class="mb-1.5">
 					<div class="relative w-full dark:bg-customGray-900 rounded-md">
 						{#if name}
-							<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Name')}</div>
+							<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+								{$i18n.t('Name')}
+							</div>
 						{/if}
 						<input
-							class={`px-2.5 text-sm ${name ? "mt-2" : "mt-0"} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							class={`px-2.5 text-sm ${name ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 							placeholder={$i18n.t('Name')}
 							bind:value={name}
 							required
 						/>
 						{#if !name}
 							<span
-							class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+								class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
 							>
-							{$i18n.t('What are you working on')}
+								{$i18n.t('What are you working on')}
 							</span>
 						{/if}
 					</div>
@@ -202,10 +194,12 @@
 				<div class="mb-1">
 					<div class="relative w-full dark:bg-customGray-900 rounded-md">
 						{#if description}
-							<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Description')}</div>
+							<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+								{$i18n.t('Description')}
+							</div>
 						{/if}
 						<Textarea
-							className={`px-2.5 py-2 text-sm ${description ? "mt-2" : "mt-0"} w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							className={`px-2.5 py-2.5 text-sm ${description ? 'mt-2' : 'mt-0'} w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 							placeholder={$i18n.t('Description')}
 							bind:value={description}
 							rows={4}
@@ -213,7 +207,7 @@
 						/>
 						{#if !description}
 							<span
-							class="absolute top-[26px] w-[180px] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+								class="absolute top-[26px] w-[180px] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
 							>
 								{$i18n.t('Describe your knowledge base and objectives')}
 							</span>
@@ -221,21 +215,32 @@
 					</div>
 				</div>
 				<div>
-					<div class="py-2.5 border-b border-customGray-700 mb-2.5">
-						<div class="text-xs dark:text-customGray-300">{$i18n.t('Knowledge base')}</div>
+					<div class="w-full flex py-2.5 border-b border-customGray-700 mb-2.5">
+						<div class="w-[280px] text-xs dark:text-customGray-300">
+							{$i18n.t('Knowledge base')}
+						</div>
+						{#if files.length > 0}
+							<div class="w-20 text-xs dark:text-customGray-300">{formatFileSize(totalFileSize)}</div>
+							<div class="w-20 text-xs dark:text-customGray-300">Added</div>
+						{/if}
 					</div>
-					{#if files.length}
+					{#if files.length > 0}
 						<ul class="mt-2.5 space-y-1 text-sm mb-5">
 							{#each files as file}
 								<li
 									class="group flex justify-start items-center dark:text-customGray-100 cursor-pointer dark:hover:text-white"
 								>
-									<DocumentIcon />
-									<span class="truncate ml-2 mr-3.5">{file.meta.name}</span>
-									<span class="mr-3">{formatFileSize(file.meta.size)}</span>
-									<span class="mr-3">{dayjs(file.created_at * 1000).format('DD.MM.YYYY')}</span>
+									<div class="flex items-center w-[280px]">
+										<DocumentIcon className="mr-2 size-4 shrink-0" />
+										<span class="truncate text-sm">{file.meta.name}</span>
+									</div>
+									<span class="w-20 text-xs">{formatFileSize(file.meta.size)}</span>
+									<span class="w-20 text-xs"
+										>{dayjs(file.created_at * 1000).format('DD.MM.YYYY')}</span
+									>
 									<button
-										class="opacity-0 group-hover:opacity-100"
+										class="opacity-0 group-hover:opacity-100 w-[40px] flex items-center justify-center"
+										type="button"
 										on:click={() => {
 											files = files.filter((f) => f.id !== file.id);
 										}}
@@ -254,14 +259,14 @@
 					</div>
 					<AccessSelect bind:accessControl accessRoles={['read', 'write']} />
 				</div>
-			</div>			
+			</div>
 
 			<div class="flex justify-end mt-2">
 				<div>
 					<button
 						class=" text-xs w-[168px] h-10 px-3 py-2 transition rounded-lg {loading
-						? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
-						: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center"
+							? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
+							: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center"
 						type="submit"
 						disabled={loading}
 					>
