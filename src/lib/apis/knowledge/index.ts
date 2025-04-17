@@ -20,7 +20,9 @@ export const createNewKnowledge = async (
 			name: name,
 			description: description,
 			access_control: accessControl,
-			files: files
+			data: {
+				file_ids: files.map((file: any) => file.id)
+			}
 		})
 	})
 		.then(async (res) => {

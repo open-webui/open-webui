@@ -72,7 +72,7 @@
 			if (uploadedFile) {
 				console.log(uploadedFile);
 				if (uploadedFile?.id) {
-					files = [...files, { id: uploadedFile.id, name: uploadedFile.meta?.name || file.name, size: uploadedFile.meta?.size, creeatedAt: uploadedFile.created_at }];
+					files = [...files, uploadedFile];
 				}
 			} else {
 				toast.error($i18n.t('Failed to upload file.'));
@@ -182,13 +182,13 @@
 					</div>
 					{#if files.length}
 						<ul class="mt-2.5 space-y-1 text-sm mb-5">
-							{#each files as file (file.id)}
+							{#each files as file}
 								<li
 									class="group flex justify-start items-center dark:text-customGray-100 cursor-pointer dark:hover:text-white"
 								>
 									<DocumentIcon />
-									<span class="truncate ml-2 mr-3.5">{file.name}</span>
-									<span class="mr-3">{formatFileSize(file.size)}</span>
+									<span class="truncate ml-2 mr-3.5">{file.meta.name}</span>
+									<span class="mr-3">{formatFileSize(file.meta.size)}</span>
 									<span class="mr-3">{dayjs(file.created_at).format('DD.MM.YYYY')}</span>
 									<button
 										class="opacity-0 group-hover:opacity-100"
