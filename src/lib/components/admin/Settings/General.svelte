@@ -451,7 +451,7 @@
 									class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 									type="text"
 									placeholder={$i18n.t('e.g., groups or resource_access.account.roles')}
-									bind:value={adminConfig.OAUTH_GROUPS_CLAIM}
+									bind:value={adminConfig.OAUTH_GROUP_CLAIM}
 								/>
 							</div>
 							<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">

@@ -24,7 +24,7 @@ from open_webui.config import (
     ENABLE_OAUTH_ROLE_MANAGEMENT,
     ENABLE_OAUTH_GROUP_MANAGEMENT,
     OAUTH_ROLES_CLAIM,
-    OAUTH_GROUPS_CLAIM,
+    OAUTH_GROUP_CLAIM,
     OAUTH_EMAIL_CLAIM,
     OAUTH_PICTURE_CLAIM,
     OAUTH_USERNAME_CLAIM,
@@ -62,7 +62,7 @@ auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL = OAUTH_MERGE_ACCOUNTS_BY_EMAI
 auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
 auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT = ENABLE_OAUTH_GROUP_MANAGEMENT
 auth_manager_config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
-auth_manager_config.OAUTH_GROUPS_CLAIM = OAUTH_GROUPS_CLAIM
+auth_manager_config.OAUTH_GROUP_CLAIM = OAUTH_GROUP_CLAIM
 auth_manager_config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
 auth_manager_config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 auth_manager_config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
@@ -146,7 +146,7 @@ class OAuthManager:
 
     def update_user_groups(self, user, user_data, default_permissions):
         log.debug("Running OAUTH Group management")
-        oauth_claim = auth_manager_config.OAUTH_GROUPS_CLAIM
+        oauth_claim = auth_manager_config.OAUTH_GROUP_CLAIM
 
         user_oauth_groups = []
         # Nested claim search for groups claim

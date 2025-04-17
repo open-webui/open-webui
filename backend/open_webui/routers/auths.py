@@ -672,7 +672,7 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_OAUTH_ROLE_MANAGEMENT": request.app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT,
         "ENABLE_OAUTH_GROUP_MANAGEMENT": request.app.state.config.ENABLE_OAUTH_GROUP_MANAGEMENT,
         "OAUTH_ROLES_CLAIM": request.app.state.config.OAUTH_ROLES_CLAIM,
-        "OAUTH_GROUPS_CLAIM": request.app.state.config.OAUTH_GROUPS_CLAIM,
+        "OAUTH_GROUP_CLAIM": request.app.state.config.OAUTH_GROUP_CLAIM,
         "OAUTH_EMAIL_CLAIM": request.app.state.config.OAUTH_EMAIL_CLAIM,
         "OAUTH_PICTURE_CLAIM": request.app.state.config.OAUTH_PICTURE_CLAIM,
         "OAUTH_USERNAME_CLAIM": request.app.state.config.OAUTH_USERNAME_CLAIM,
@@ -704,7 +704,7 @@ class AdminConfig(BaseModel):
     ENABLE_OAUTH_ROLE_MANAGEMENT: bool
     ENABLE_OAUTH_GROUP_MANAGEMENT: bool
     OAUTH_ROLES_CLAIM: Optional[str] = ""
-    OAUTH_GROUPS_CLAIM: Optional[str] = ""
+    OAUTH_GROUP_CLAIM: Optional[str] = ""
     OAUTH_EMAIL_CLAIM: Optional[str] = ""
     OAUTH_PICTURE_CLAIM: Optional[str] = ""
     OAUTH_USERNAME_CLAIM: Optional[str] = ""
@@ -722,21 +722,19 @@ async def update_admin_config(
     request: Request, form_data: AdminConfig, user=Depends(get_admin_user)
 ):
     # Define keys that belong under the 'oauth' nested structure based on PersistentConfig paths
-    # This mapping needs to be accurate and cover all providers managed here.
     oauth_mapping = {
         "ENABLE_OAUTH_SIGNUP": "enable_signup",
         "OAUTH_MERGE_ACCOUNTS_BY_EMAIL": "merge_accounts_by_email",
-        "ENABLE_OAUTH_ROLE_MANAGEMENT": "enable_role_management", # Assuming path from PersistentConfig
-        "ENABLE_OAUTH_GROUP_MANAGEMENT": "enable_group_management", # Assuming path from PersistentConfig
-        "OAUTH_ROLES_CLAIM": "roles_claim", # Assuming path from PersistentConfig
-        "OAUTH_GROUPS_CLAIM": "group_claim", # Path from PersistentConfig
-        "OAUTH_EMAIL_CLAIM": "email_claim", # Path from PersistentConfig
-        "OAUTH_PICTURE_CLAIM": "picture_claim", # Path from PersistentConfig
-        "OAUTH_USERNAME_CLAIM": "username_claim", # Path from PersistentConfig
-        "OAUTH_ALLOWED_ROLES": "allowed_roles", # Assuming path from PersistentConfig
-        "OAUTH_ADMIN_ROLES": "admin_roles", # Assuming path from PersistentConfig
-        "OAUTH_ALLOWED_DOMAINS": "allowed_domains", # Assuming path from PersistentConfig
-        # OIDC specific (assuming they map directly under 'oauth')
+        "ENABLE_OAUTH_ROLE_MANAGEMENT": "enable_role_management", 
+        "ENABLE_OAUTH_GROUP_MANAGEMENT": "enable_group_management", 
+        "OAUTH_ROLES_CLAIM": "roles_claim", 
+        "OAUTH_GROUP_CLAIM": "group_claim", 
+        "OAUTH_EMAIL_CLAIM": "email_claim", 
+        "OAUTH_PICTURE_CLAIM": "picture_claim", 
+        "OAUTH_USERNAME_CLAIM": "username_claim", 
+        "OAUTH_ALLOWED_ROLES": "allowed_roles", 
+        "OAUTH_ADMIN_ROLES": "admin_roles", 
+        "OAUTH_ALLOWED_DOMAINS": "allowed_domains", 
         "OAUTH_CLIENT_ID": "client_id",
         "OAUTH_CLIENT_SECRET": "client_secret",
         "OAUTH_PROVIDER_NAME": "provider_name",
@@ -744,18 +742,15 @@ async def update_admin_config(
         "OPENID_REDIRECT_URI": "redirect_uri",
         "OAUTH_SCOPES": "scopes",
         "OAUTH_CODE_CHALLENGE_METHOD": "code_challenge_method",
-        # Google specific (assuming they map under 'oauth.google') - requires deeper nesting logic
         "GOOGLE_CLIENT_ID": "google.client_id",
         "GOOGLE_CLIENT_SECRET": "google.client_secret",
         "GOOGLE_OAUTH_SCOPE": "google.scope",
         "GOOGLE_REDIRECT_URI": "google.redirect_uri",
-        # Microsoft specific (assuming they map under 'oauth.microsoft') - requires deeper nesting logic
         "MICROSOFT_CLIENT_ID": "microsoft.client_id",
         "MICROSOFT_CLIENT_SECRET": "microsoft.client_secret",
         "MICROSOFT_CLIENT_TENANT_ID": "microsoft.tenant_id",
         "MICROSOFT_OAUTH_SCOPE": "microsoft.scope",
         "MICROSOFT_REDIRECT_URI": "microsoft.redirect_uri",
-        # GitHub specific (assuming they map under 'oauth.github') - requires deeper nesting logic
         "GITHUB_CLIENT_ID": "github.client_id",
         "GITHUB_CLIENT_SECRET": "github.client_secret",
         "GITHUB_CLIENT_SCOPE": "github.scope",
