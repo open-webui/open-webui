@@ -170,38 +170,33 @@ CONFIG_DATA = get_config()
 
 
 def get_config_value(config_path: str):
-    path_parts = config_path.split(".")
-    cur_config = CONFIG_DATA
-    value = None
+    # Map of new paths to their old fallback paths
+    fallback_map = {
+        "oauth.client_id": "oauth.oidc.client_id",
+        "oauth.client_secret": "oauth.oidc.client_secret",
+        "oauth.provider_url": "oauth.oidc.provider_url",
+    }
 
-    # Try the primary path first
-    try:
-        temp_config = cur_config
-        for key in path_parts:
-            temp_config = temp_config[key]
-        value = temp_config
-    except KeyError:
-        # Primary path not found, check for OIDC fallbacks
-        fallback_map = {
-            "oauth.client_id": "oauth.oidc.client_id",
-            "oauth.client_secret": "oauth.oidc.client_secret",
-            "oauth.provider_url": "oauth.oidc.provider_url",
-            # Add other potential fallbacks here if needed in the future
-        }
+    def _traverse_path(path_str: str, config_data: dict):
+        try:
+            value = config_data
+            for key in path_str.split("."):
+                value = value[key]
+            return value
+        except (KeyError, TypeError): # Handles missing keys or non-dict intermediates
+            return None
 
-        if config_path in fallback_map:
-            fallback_path = fallback_map[config_path]
-            fallback_parts = fallback_path.split(".")
-            try:
-                temp_config = cur_config
-                for key in fallback_parts:
-                    temp_config = temp_config[key]
-                value = temp_config
-                # Optional: Log that a fallback is being used
-                # log.warning(f"Using fallback config path '{fallback_path}' for '{config_path}'")
-            except KeyError:
-                # Fallback path also not found, value remains None
-                pass
+    # Attempt to get value from the primary path
+    value = _traverse_path(config_path, CONFIG_DATA)
+
+    # If primary path fails and a fallback exists, try the fallback path
+    if value is None and config_path in fallback_map:
+        fallback_path = fallback_map[config_path]
+        value = _traverse_path(fallback_path, CONFIG_DATA)
+        # Optional: Log fallback usage if needed
+        # if value is not None:
+        #     log.warning(f"Using fallback config path '{fallback_path}' for '{config_path}'")
+
 
     return value
 
