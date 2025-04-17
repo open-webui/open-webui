@@ -297,7 +297,7 @@ class AppConfig:
             # Raise error if attempting to set a non-existent config key directly
             if key not in self._state:
                 raise AttributeError(f"Configuration key '{key}' does not exist. Cannot set value implicitly.")
-            
+
             # If key exists, update its value and save
             self._state[key].value = value
             self._state[key].save()
