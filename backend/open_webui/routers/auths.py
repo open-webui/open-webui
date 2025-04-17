@@ -29,9 +29,9 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SECURE,
     SRC_LOG_LEVELS,
 )
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Body
 from fastapi.responses import RedirectResponse, Response
-from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
+from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP
 from pydantic import BaseModel
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.auth import (
@@ -45,13 +45,14 @@ from open_webui.utils.auth import (
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions
 
-from typing import Optional, List
+from typing import Optional
 
 from ssl import CERT_REQUIRED, PROTOCOL_TLS
 
-if ENABLE_LDAP.value:
-    from ldap3 import Server, Connection, NONE, Tls
-    from ldap3.utils.conv import escape_filter_chars
+from ldap3 import Server, Connection, NONE, Tls
+from ldap3.core.exceptions import LDAPException, LDAPOperationResult
+from ldap3.utils.conv import escape_filter_chars
+from ldap3.utils.log import set_library_log_detail_level, set_library_log_activation_level, ERROR, PROTOCOL, EXTENDED
 
 router = APIRouter()
 
@@ -184,7 +185,17 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
     )
 
     if not ENABLE_LDAP:
-        raise HTTPException(400, detail="LDAP authentication is not enabled")
+        raise HTTPException(status.HTTP_410_GONE, detail="LDAP authentication is not enabled")
+
+    # The LDAP3 lib has... interesting... ideas about logging levels. Try to map them to standard logging levels.
+    # ref: https://ldap3.readthedocs.io/en/latest/logging.html
+    LDAP3_LOGGING_LEVEL_MAPPING = {
+        "ERROR": ERROR,
+        "INFO": PROTOCOL,
+        "DEBUG": EXTENDED,
+    }
+    set_library_log_detail_level(LDAP3_LOGGING_LEVEL_MAPPING.get(SRC_LOG_LEVELS["LDAP"], "INFO"))
+    set_library_log_activation_level(logging.DEBUG)
 
     try:
         tls = Tls(
@@ -194,8 +205,8 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             ciphers=LDAP_CIPHERS,
         )
     except Exception as e:
-        log.error(f"TLS configuration error: {str(e)}")
-        raise HTTPException(400, detail="Failed to configure TLS for LDAP connection.")
+        log.error(f"TLS configuration error", exc_info=True)
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to configure TLS for LDAP connection.")
 
     try:
         server = Server(
@@ -209,120 +220,103 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             server,
             LDAP_APP_DN,
             LDAP_APP_PASSWORD,
-            auto_bind="NONE",
+            raise_exceptions=True,
+            auto_bind=True,
             authentication="SIMPLE" if LDAP_APP_DN else "ANONYMOUS",
         )
-        if not connection_app.bind():
-            raise HTTPException(400, detail="Application account bind failed")
-
-        search_success = connection_app.search(
+        connection_app.search(
             search_base=LDAP_SEARCH_BASE,
-            search_filter=f"(&({LDAP_ATTRIBUTE_FOR_USERNAME}={escape_filter_chars(form_data.user.lower())}){LDAP_SEARCH_FILTERS})",
+            search_filter=LDAP_SEARCH_FILTERS % escape_filter_chars(form_data.user.lower()),
             attributes=[
-                f"{LDAP_ATTRIBUTE_FOR_USERNAME}",
-                f"{LDAP_ATTRIBUTE_FOR_MAIL}",
+                LDAP_ATTRIBUTE_FOR_USERNAME,
+                LDAP_ATTRIBUTE_FOR_MAIL,
                 "cn",
             ],
         )
-
-        if not search_success:
-            raise HTTPException(400, detail="User not found in the LDAP server")
-
-        entry = connection_app.entries[0]
-        username = str(entry[f"{LDAP_ATTRIBUTE_FOR_USERNAME}"]).lower()
-        email = entry[f"{LDAP_ATTRIBUTE_FOR_MAIL}"].value  # retrive the Attribute value
-        if not email:
-            raise HTTPException(400, "User does not have a valid email address.")
-        elif isinstance(email, str):
-            email = email.lower()
-        elif isinstance(email, list):
-            email = email[0].lower()
-        else:
-            email = str(email).lower()
-
-        cn = str(entry["cn"])
-        user_dn = entry.entry_dn
-
-        if username == form_data.user.lower():
-            connection_user = Connection(
-                server,
-                user_dn,
-                form_data.password,
-                auto_bind="NONE",
-                authentication="SIMPLE",
-            )
-            if not connection_user.bind():
-                raise HTTPException(400, "Authentication failed.")
-
-            user = Users.get_user_by_email(email)
-            if not user:
-                try:
-                    user_count = Users.get_num_users()
-
-                    role = (
-                        "admin"
-                        if user_count == 0
-                        else request.app.state.config.DEFAULT_USER_ROLE
-                    )
-
-                    user = Auths.insert_new_auth(
-                        email=email,
-                        password=str(uuid.uuid4()),
-                        name=cn,
-                        role=role,
-                    )
-
-                    if not user:
-                        raise HTTPException(
-                            500, detail=ERROR_MESSAGES.CREATE_USER_ERROR
-                        )
-
-                except HTTPException:
-                    raise
-                except Exception as err:
-                    log.error(f"LDAP user creation error: {str(err)}")
-                    raise HTTPException(
-                        500, detail="Internal error occurred during LDAP user creation."
-                    )
-
-            user = Auths.authenticate_user_by_trusted_header(email)
-
-            if user:
-                token = create_token(
-                    data={"id": user.id},
-                    expires_delta=parse_duration(
-                        request.app.state.config.JWT_EXPIRES_IN
-                    ),
-                )
-
-                # Set the cookie token
-                response.set_cookie(
-                    key="token",
-                    value=token,
-                    httponly=True,  # Ensures the cookie is not accessible via JavaScript
-                )
-
-                user_permissions = get_permissions(
-                    user.id, request.app.state.config.USER_PERMISSIONS
-                )
-
-                return {
-                    "token": token,
-                    "token_type": "Bearer",
-                    "id": user.id,
-                    "email": user.email,
-                    "name": user.name,
-                    "role": user.role,
-                    "profile_image_url": user.profile_image_url,
-                    "permissions": user_permissions,
-                }
-            else:
-                raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
-        else:
-            raise HTTPException(400, "User record mismatch.")
+    except LDAPOperationResult as e:
+        log.error("LDAP operation error", exc_info=True)
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=f"LDAP operation error: {e}")
     except Exception as e:
-        log.error(f"LDAP authentication error: {str(e)}")
-        raise HTTPException(400, detail="LDAP authentication failed.")
+        log.error(f"Error searching LDAP: {e}", exc_info=True)
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=f"Error searching LDAP: {e}")
+
+    entry = connection_app.entries[0]
+
+    email = entry[LDAP_ATTRIBUTE_FOR_MAIL].value  # retrive the Attribute value
+    if not email:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"The returned LDAP entry's {LDAP_ATTRIBUTE_FOR_MAIL} attribute was empty, expected an email address.")
+
+    if isinstance(email, str):
+        email = email.lower()
+    elif isinstance(email, list):
+        email = email[0].lower()
+    else:
+        email = str(email).lower()
+
+    username = entry[LDAP_ATTRIBUTE_FOR_USERNAME].value.lower()
+    if username != form_data.user.lower():
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"The submitted username {form_data.user.lower()} does not match the returned LDAP entry's {LDAP_ATTRIBUTE_FOR_USERNAME} attribute {username}.")
+
+    # Connect and bind with the user's credentials
+    try:
+        Connection(
+            server,
+            entry.entry_dn,
+            form_data.password,
+            raise_exceptions=True,
+            auto_bind=True,
+            authentication="SIMPLE",
+        )
+    except LDAPOperationResult as e:
+        log.error("User LDAP Authentication failed.", exc_info=True)
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Authentication failed: {e}")
+
+    if not Users.get_user_by_email(email):
+        # Grant the first user admin access
+        # and the rest a default role
+        role = (
+            "admin" if Users.get_num_users() == 0
+            else request.app.state.config.DEFAULT_USER_ROLE
+        )
+
+        if not Auths.insert_new_auth(
+            email=email,
+            password=str(uuid.uuid4()),
+            name=str(entry["cn"]),
+            role=role,
+        ):
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+
+    user = Auths.authenticate_user_by_trusted_header(email)
+    if not user:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.USER_NOT_FOUND)
+
+    token = create_token(
+        data={"id": user.id},
+        expires_delta=parse_duration(
+            request.app.state.config.JWT_EXPIRES_IN
+        ),
+    )
+
+    # Set the cookie token
+    response.set_cookie(
+        key="token",
+        value=token,
+        httponly=True,  # Ensures the cookie is not accessible via JavaScript
+    )
+
+    return {
+        "token": token,
+        "token_type": "Bearer",
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "role": user.role,
+        "profile_image_url": user.profile_image_url,
+        "permissions": get_permissions(
+            user.id, request.app.state.config.USER_PERMISSIONS
+        ),
+    }
 
 
 ############################
@@ -747,6 +741,43 @@ class LdapServerConfig(BaseModel):
     certificate_path: Optional[str] = None
     ciphers: Optional[str] = "ALL"
 
+@router.post("/admin/config/ldap/server/validate")
+async def validate_ldap_config(request: Request):
+    # The LDAP3 lib has... interesting... ideas about logging levels. Try to map them to standard logging levels.
+    # ref: https://ldap3.readthedocs.io/en/latest/logging.html
+    LDAP3_LOGGING_LEVEL_MAPPING = {
+        "ERROR": ERROR,
+        "INFO": PROTOCOL,
+        "DEBUG": EXTENDED,
+    }
+    set_library_log_detail_level(LDAP3_LOGGING_LEVEL_MAPPING.get(SRC_LOG_LEVELS["LDAP"], "INFO"))
+    set_library_log_activation_level(logging.DEBUG)
+
+    try:
+        server = Server(
+            host=request.app.state.config.LDAP_SERVER_HOST,
+            port=request.app.state.config.LDAP_SERVER_PORT,
+            get_info=NONE,
+            use_ssl=request.app.state.config.LDAP_USE_TLS,
+            tls=Tls(
+                validate=CERT_REQUIRED,
+                version=PROTOCOL_TLS,
+                ca_certs_file=request.app.state.config.LDAP_CA_CERT_FILE,
+                ciphers=request.app.state.config.LDAP_CIPHERS,
+            ),
+        )
+        connection = Connection(
+            server,
+            request.app.state.config.LDAP_APP_DN,
+            request.app.state.config.LDAP_APP_PASSWORD,
+            raise_exceptions=True,
+            auto_bind=True,
+            authentication="SIMPLE" if request.app.state.config.LDAP_APP_DN else "ANONYMOUS",
+        )
+
+    except Exception as e:
+        log.error(f"Error validating LDAP config: {e}", exc_info=True)
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=f"Error validating LDAP config: {e}")
 
 @router.get("/admin/config/ldap/server", response_model=LdapServerConfig)
 async def get_ldap_server(request: Request, user=Depends(get_admin_user)):
@@ -775,8 +806,6 @@ async def update_ldap_server(
         "host",
         "attribute_for_mail",
         "attribute_for_username",
-        "app_dn",
-        "app_dn_password",
         "search_base",
     ]
     for key in required_fields:
