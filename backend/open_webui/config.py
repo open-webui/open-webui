@@ -608,7 +608,7 @@ def load_oauth_providers():
         OAUTH_CLIENT_ID.value
         and OAUTH_CLIENT_SECRET.value
         and OPENID_PROVIDER_URL.value
-    ):
+    ) or (not OAUTH_CLIENT_SECRET.value and OAUTH_CODE_CHALLENGE_METHOD.value):
 
         def oidc_oauth_register(client):
             client_kwargs = {
