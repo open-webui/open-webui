@@ -518,7 +518,7 @@ ENABLE_OAUTH_GROUP_CREATION = PersistentConfig(
 OAUTH_GROUP_BLACKLIST = PersistentConfig(
     "OAUTH_GROUP_BLACKLIST",
     "oauth.group_blacklist",
-    os.environ.get("OAUTH_GROUP_BLACKLIST", []),
+    os.environ.get("OAUTH_GROUP_BLACKLIST", "[]"),
 )
 
 OAUTH_ROLES_CLAIM = PersistentConfig(

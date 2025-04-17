@@ -3,6 +3,7 @@ import logging
 import mimetypes
 import sys
 import uuid
+import json
 
 import aiohttp
 from authlib.integrations.starlette_client import OAuth
@@ -143,7 +144,12 @@ class OAuthManager:
     def update_user_groups(self, user, user_data, default_permissions):
         log.debug("Running OAUTH Group management")
         oauth_claim = auth_manager_config.OAUTH_GROUPS_CLAIM
-        black_listed_groups = auth_manager_config.OAUTH_GROUP_BLACKLIST
+
+        try:
+            black_listed_groups = json.loads(auth_manager_config.OAUTH_GROUP_BLACKLIST)
+        except Exception as e:
+            log.exception(f"Error loading OAUTH_GROUP_BLACKLIST: {e}")
+            black_listed_groups = []
 
         user_oauth_groups = []
         # Nested claim search for groups claim
