@@ -17,7 +17,7 @@ export const WEBUI_VERSION = APP_VERSION;
 export const WEBUI_BUILD_HASH = APP_BUILD_HASH;
 export const REQUIRED_OLLAMA_VERSION = '0.1.16';
 export const ENABLE_CHECK_FOR_NEW_VERSIONS = false;
-export const ENABLE_CHANGELOG_MODAL= false;
+export const ENABLE_CHANGELOG_MODAL = false;
 
 export const SUPPORTED_FILE_TYPE = [
 	'application/epub+zip',

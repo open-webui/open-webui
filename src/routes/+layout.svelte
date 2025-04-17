@@ -260,7 +260,8 @@
 
 				if (done) {
 					if ($isLastActiveTab) {
-						if ($settings?.notificationEnabled ?? false) {							new Notification(`${title} | ContextOps.AI`, {
+						if ($settings?.notificationEnabled ?? false) {
+							new Notification(`${title} | ContextOps.AI`, {
 								body: content,
 								icon: `${WEBUI_BASE_URL}/static/favicon.png`
 							});
