@@ -32,6 +32,8 @@ RUN npm ci
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
 RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build
+COPY .env .env
+
 
 ######## WebUI backend ########
 FROM python:3.11-slim-bookworm AS base
@@ -163,10 +165,9 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 # copy backend files
 COPY --chown=$UID:$GID ./backend .
 
-COPY sync.sh ./sync.sh
-RUN chmod +x ./sync.sh
+COPY sync.sh sync.sh
+RUN chmod +x sync.sh
 
-COPY .env .env
 
 
 
