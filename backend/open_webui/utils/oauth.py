@@ -24,6 +24,7 @@ from open_webui.config import (
     ENABLE_OAUTH_ROLE_MANAGEMENT,
     ENABLE_OAUTH_GROUP_MANAGEMENT,
     ENABLE_OAUTH_GROUP_CREATION,
+    OAUTH_GROUP_BLACKLIST,
     OAUTH_ROLES_CLAIM,
     OAUTH_GROUPS_CLAIM,
     OAUTH_EMAIL_CLAIM,
@@ -59,6 +60,7 @@ auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL = OAUTH_MERGE_ACCOUNTS_BY_EMAI
 auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
 auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT = ENABLE_OAUTH_GROUP_MANAGEMENT
 auth_manager_config.ENABLE_OAUTH_GROUP_CREATION = ENABLE_OAUTH_GROUP_CREATION
+auth_manager_config.OAUTH_GROUP_BLACKLIST = OAUTH_GROUP_BLACKLIST
 auth_manager_config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
 auth_manager_config.OAUTH_GROUPS_CLAIM = OAUTH_GROUPS_CLAIM
 auth_manager_config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
@@ -141,6 +143,7 @@ class OAuthManager:
     def update_user_groups(self, user, user_data, default_permissions):
         log.debug("Running OAUTH Group management")
         oauth_claim = auth_manager_config.OAUTH_GROUPS_CLAIM
+        black_listed_groups = auth_manager_config.OAUTH_GROUP_BLACKLIST
 
         user_oauth_groups = []
         # Nested claim search for groups claim
@@ -198,10 +201,13 @@ class OAuthManager:
         log.debug(
             f"All groups available in OpenWebUI: {[g.name for g in all_available_groups]}"
         )
+        log.debug(
+            f"Groups blacklisted from OAUTH management: {black_listed_groups}"
+        )
 
         # Remove groups that user is no longer a part of
         for group_model in user_current_groups:
-            if user_oauth_groups and group_model.name not in user_oauth_groups:
+            if user_oauth_groups and group_model.name not in user_oauth_groups and group_model.name not in black_listed_groups:
                 # Remove group from user
                 log.debug(
                     f"Removing user from group {group_model.name} as it is no longer in their oauth groups"
@@ -231,6 +237,7 @@ class OAuthManager:
                 user_oauth_groups
                 and group_model.name in user_oauth_groups
                 and not any(gm.name == group_model.name for gm in user_current_groups)
+                and group_model.name not in black_listed_groups
             ):
                 # Add user to group
                 log.debug(
