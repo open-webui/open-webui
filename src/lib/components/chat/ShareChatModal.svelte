@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import { models, config } from '$lib/stores';
+	import { models, config, returnFocusButtonID } from '$lib/stores';
 
 	import { toast } from '$lib/utils/toast';
 	import { deleteSharedChatById, getChatById, shareChatById } from '$lib/apis/chats';
@@ -76,7 +76,7 @@
 	}
 </script>
 
-<Modal bind:show size="md" returnFocusSelector="#chat-menu">
+<Modal bind:show size="md" returnFocusSelector={`#${$returnFocusButtonID}`}>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
 			<h2 class=" text-lg font-medium self-center">{$i18n.t('Share Chat')}</h2>

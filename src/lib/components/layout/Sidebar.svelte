@@ -858,7 +858,7 @@
 		</div>
 
 		<div class="px-2">
-			<div class="flex flex-col font-primary" id="user-menu">
+			<div class="flex flex-col font-primary">
 				{#if $user !== undefined && $user !== null}
 					<Tooltip
 						content={$user.name ? $user.name + ' ' + $i18n.t('User Menu') : $i18n.t('User Menu')}
@@ -868,6 +868,7 @@
 								? $user.name + ' ' + $i18n.t('User Menu')
 								: $i18n.t('User Menu')}
 							role={$user?.role}
+							buttonID="sidebar-user-menu"
 							buttonClass="select-none flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 							on:show={(e) => {
 								if (e.detail === 'archived-chat') {

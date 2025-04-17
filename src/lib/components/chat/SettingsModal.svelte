@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
 	import { toast } from '$lib/utils/toast';
-	import { models, settings, user } from '$lib/stores';
+	import { models, settings, user, returnFocusButtonID } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 	import { getModels as _getModels } from '$lib/apis';
 	import { goto } from '$app/navigation';
@@ -343,7 +343,7 @@
 	}
 </script>
 
-<Modal size="xl" bind:show returnFocusSelector="#user-menu">
+<Modal size="xl" bind:show returnFocusSelector={'#' + $returnFocusButtonID}>
 	<div id="settings-modal-wrapper" class="text-gray-700 dark:text-gray-100">
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
 			<h2 class=" text-lg font-medium self-center">{$i18n.t('Settings')}</h2>

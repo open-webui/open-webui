@@ -22,7 +22,7 @@
 		getChatPinnedStatusById,
 		toggleChatPinnedStatusById
 	} from '$lib/apis/chats';
-	import { chats } from '$lib/stores';
+	import { chats, returnFocusButtonID } from '$lib/stores';
 	import { createMessagesList } from '$lib/utils';
 	import { downloadChatAsPDF } from '$lib/apis/utils';
 	import Download from '$lib/components/icons/Download.svelte';
@@ -36,11 +36,11 @@
 	export let onClose: Function;
 	export let buttonClass = '';
 	export let ariaLabel = '';
-
 	export let chatId = '';
 
 	let show = false;
 	let pinned = false;
+	let buttonID = `chat-menu-${chatId}`;
 
 	const pinHandler = async () => {
 		await toggleChatPinnedStatusById(localStorage.token, chatId);
@@ -118,6 +118,7 @@
 	}}
 	{buttonClass}
 	{ariaLabel}
+	{buttonID}
 >
 	<slot />
 
