@@ -344,7 +344,7 @@
 										<div class="w-full max-w-md mx-auto">
 											<!-- Carousel container -->
 											<div
-												class="carousel relative min-h-[180px] sm:min-h-[250px] md:min-h-[300px]"
+												class="carousel relative min-h-[250px] sm:min-h-[300px] md:min-h-[350px] overflow-hidden"
 											>
 												{#each carouselItems as item, i}
 													{#if currentIndex === i}
@@ -364,7 +364,7 @@
 																</p>
 															</div>
 															<!-- Carousel image -->
-															<div class="w-full h-36 md:h-48 relative">
+															<div class="w-full h-44 sm:h-48 md:h-56 relative">
 																<img
 																	src={item.image}
 																	alt={$i18n.t(item.title)}
