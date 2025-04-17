@@ -48,6 +48,7 @@
 	import ContentRenderer from './ContentRenderer.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import FileItem from '$lib/components/common/FileItem.svelte';
+	import OptionGroup from '$lib/components/common/OptionGroup.svelte';
 
 	interface MessageType {
 		id: string;
@@ -153,6 +154,64 @@
 	let generatingImage = false;
 
 	let showRateComment = false;
+
+	const parseOptionsFromMessage = (message: string): { title: string; description: string, state: string}[] => {
+		const parsedMessage = JSON.parse(message);
+		const parsedOptions = parsedMessage.options;
+		return parsedOptions.map((option: { title: string; description: string, state: string}) => ({
+			title: option.title ?? '',
+			description: option.description ?? '',
+			state: option.state
+		}));
+	};
+
+	const parseContextFromMessage = (message: string): {header_message: string, footer_message: string} => {
+		const parsedMessage = JSON.parse(message);
+		const header_message = parsedMessage.header_message;
+		const footer_message = parsedMessage.footer_message;
+		return {header_message: header_message, footer_message: footer_message};
+	};
+
+	const parseProductListFromMessage = (message: string): string => {
+		const parsedMessage = JSON.parse(message);
+		return parsedMessage.product_list;
+	};
+
+	const updateMessage = async (message: MessageType, title: string) => {
+		const parsedMessage = JSON.parse(message.content);
+		// find option that has the same title as the one passed in and update its state = selected. For everything else, set state = disabled
+		const updatedOptions = parsedMessage.options.map((option: { title: string; description: string, state: string }) => {
+			if (option.title === title) {
+				return { ...option, state: 'selected' };
+			} else {
+				return { ...option, state: 'disabled' };
+			}
+		});
+
+		let header_message, footer_message, product_list;
+		if (parsedMessage.header_message) {
+			header_message = parsedMessage.header_message;
+		} else {
+			header_message = '';
+		}
+
+		if (parsedMessage.footer_message) {
+			footer_message = parsedMessage.footer_message;
+		} else {
+			footer_message = '';
+		}
+
+		if (parsedMessage.product_list) {
+			product_list = parsedMessage.product_list;
+			const updatedContent = JSON.stringify({header_message: header_message, footer_message: footer_message, options: updatedOptions, product_list: product_list}, null, 2);
+			saveMessage(message.id, {...message, content: updatedContent});
+		} else {
+			const updatedContent = JSON.stringify({header_message: header_message, footer_message: footer_message, options: updatedOptions}, null, 2);
+			saveMessage(message.id, {...message, content: updatedContent});
+		}
+		// Save updated message-content as JSON-string in history.
+		updateChat()
+	};
 
 	const copyToClipboard = async (text) => {
 		text = removeAllDetails(text);
@@ -779,7 +838,7 @@
 							<div class="w-full flex flex-col relative" id="response-content-container">
 								{#if message.content === '' && !message.error}
 									<Skeleton />
-								{:else if message.content && message.error !== true}
+								{:else if message.content && message.error !== true && !message.content.includes("\"options\":") && !message.content.includes("\"product_list\":")}
 									<!-- always show message contents even if there's an error -->
 									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 									<ContentRenderer
@@ -787,7 +846,7 @@
 										{history}
 										content={message.content}
 										sources={message.sources}
-										floatingButtons={message?.done && !readOnly}
+										floatingButtons={message?.done}
 										save={!readOnly}
 										{model}
 										onTaskClick={async (e) => {
@@ -796,9 +855,7 @@
 										onSourceClick={async (id, idx) => {
 											console.log(id, idx);
 											let sourceButton = document.getElementById(`source-${message.id}-${idx}`);
-											const sourcesCollapsible = document.getElementById(
-												`collapsible-${message.id}`
-											);
+											const sourcesCollapsible = document.getElementById(`collapsible-sources`);
 
 											if (sourceButton) {
 												sourceButton.click();
@@ -844,6 +901,36 @@
 												const input = e.detail?.input ?? '';
 												submitMessage(message.id, `\`\`\`\n${content}\n\`\`\`\n${input}`);
 											}
+										}}
+									/>
+								{:else if message.content && message.error !== true && message.content.includes("\"product_list\":")}
+									<!-- always show message contents even if there's an error -->
+									<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
+									<!-- Render Product List -->
+									<ContentRenderer
+										id={message.id}
+										{history}
+										content={parseProductListFromMessage(message.content)}
+										sources={message.sources}
+										floatingButtons={message?.done}
+										save={!readOnly}
+										{model}
+										onTaskClick={async (e) => {
+											console.log(e);
+										}}
+									/>
+									<br>
+									<OptionGroup options={parseOptionsFromMessage(message.content)} option_context={parseContextFromMessage(message.content)}
+										on:click={(e) => {const selectedOption = e.detail;
+										updateMessage(message, selectedOption.title);
+										submitMessage(message.id, `${selectedOption.title}: ${selectedOption.description}`);
+										}}
+									/>
+								{:else if message.content && message.error !== true && message.content.includes("\"options\":")}
+									<OptionGroup options={parseOptionsFromMessage(message.content)} option_context={parseContextFromMessage(message.content)}
+										on:click={(e) => {const selectedOption = e.detail;
+										updateMessage(message, selectedOption.title);
+										submitMessage(message.id, `${selectedOption.title}: ${selectedOption.description}`);
 										}}
 									/>
 								{/if}
