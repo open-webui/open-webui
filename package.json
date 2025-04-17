@@ -47,6 +47,7 @@
 		"tslib": "^2.4.1",
 		"typescript": "^5.5.4",
 		"vite": "^5.4.14",
+		"vite-plugin-compression": "^0.5.1",
 		"vitest": "^1.6.1"
 	},
 	"type": "module",
