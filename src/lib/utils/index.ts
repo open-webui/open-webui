@@ -15,6 +15,11 @@ dayjs.extend(localizedFormat);
 import { WEBUI_BASE_URL } from '$lib/constants';
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
+import { marked } from 'marked';
+import markedExtension from '$lib/utils/marked/extension';
+import markedKatexExtension from '$lib/utils/marked/katex-extension';
+import hljs from 'highlight.js';
+
 //////////////////////////
 // Helper functions
 //////////////////////////
@@ -63,8 +68,8 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 
 		if (Array.isArray(sourceIds)) {
 			sourceIds.forEach((sourceId, idx) => {
-				const regex = new RegExp(`\\[${idx}\\]`, 'g');
-				segment = segment.replace(regex, `<source_id data="${idx}" title="${sourceId}" />`);
+				const regex = new RegExp(`\\[${idx + 1}\\]`, 'g');
+				segment = segment.replace(regex, `<source_id data="${idx + 1}" title="${sourceId}" />`);
 			});
 		}
 
@@ -309,46 +314,129 @@ export const formatDate = (inputDate) => {
 	}
 };
 
-export const copyToClipboard = async (text) => {
-	let result = false;
-	if (!navigator.clipboard) {
-		const textArea = document.createElement('textarea');
-		textArea.value = text;
+export const copyToClipboard = async (text, formatted = false) => {
+	if (formatted) {
+		const options = {
+			throwOnError: false,
+			highlight: function (code, lang) {
+				const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+				return hljs.highlight(code, { language }).value;
+			}
+		};
+		marked.use(markedKatexExtension(options));
+		marked.use(markedExtension(options));
 
-		// Avoid scrolling to bottom
-		textArea.style.top = '0';
-		textArea.style.left = '0';
-		textArea.style.position = 'fixed';
+		const htmlContent = marked.parse(text);
 
-		document.body.appendChild(textArea);
-		textArea.focus();
-		textArea.select();
+		// Add basic styling to make the content look better when pasted
+		const styledHtml = `
+			<div>
+				<style>
+					pre {
+						background-color: #f6f8fa;
+						border-radius: 6px;
+						padding: 16px;
+						overflow: auto;
+					}
+					code {
+						font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+						font-size: 14px;
+					}
+					.hljs-keyword { color: #d73a49; }
+					.hljs-string { color: #032f62; }
+					.hljs-comment { color: #6a737d; }
+					.hljs-function { color: #6f42c1; }
+					.hljs-number { color: #005cc5; }
+					.hljs-operator { color: #d73a49; }
+					.hljs-class { color: #6f42c1; }
+					.hljs-title { color: #6f42c1; }
+					.hljs-params { color: #24292e; }
+					.hljs-built_in { color: #005cc5; }
+					blockquote {
+						border-left: 4px solid #dfe2e5;
+						padding-left: 16px;
+						color: #6a737d;
+						margin-left: 0;
+						margin-right: 0;
+					}
+					table {
+						border-collapse: collapse;
+						width: 100%;
+						margin-bottom: 16px;
+					}
+					table, th, td {
+						border: 1px solid #dfe2e5;
+					}
+					th, td {
+						padding: 8px 12px;
+					}
+					th {
+						background-color: #f6f8fa;
+					}
+				</style>
+				${htmlContent}
+			</div>
+		`;
+
+		// Create a blob with HTML content
+		const blob = new Blob([styledHtml], { type: 'text/html' });
 
 		try {
-			const successful = document.execCommand('copy');
-			const msg = successful ? 'successful' : 'unsuccessful';
-			console.log('Fallback: Copying text command was ' + msg);
-			result = true;
+			// Create a ClipboardItem with HTML content
+			const data = new ClipboardItem({
+				'text/html': blob,
+				'text/plain': new Blob([text], { type: 'text/plain' })
+			});
+
+			// Write to clipboard
+			await navigator.clipboard.write([data]);
+			return true;
 		} catch (err) {
-			console.error('Fallback: Oops, unable to copy', err);
+			console.error('Error copying formatted content:', err);
+			// Fallback to plain text
+			return await copyToClipboard(text);
+		}
+	} else {
+		let result = false;
+		if (!navigator.clipboard) {
+			const textArea = document.createElement('textarea');
+			textArea.value = text;
+
+			// Avoid scrolling to bottom
+			textArea.style.top = '0';
+			textArea.style.left = '0';
+			textArea.style.position = 'fixed';
+
+			document.body.appendChild(textArea);
+			textArea.focus();
+			textArea.select();
+
+			try {
+				const successful = document.execCommand('copy');
+				const msg = successful ? 'successful' : 'unsuccessful';
+				console.log('Fallback: Copying text command was ' + msg);
+				result = true;
+			} catch (err) {
+				console.error('Fallback: Oops, unable to copy', err);
+			}
+
+			document.body.removeChild(textArea);
+			return result;
 		}
 
-		document.body.removeChild(textArea);
+		result = await navigator.clipboard
+			.writeText(text)
+			.then(() => {
+				console.log('Async: Copying to clipboard was successful!');
+				return true;
+			})
+			.catch((error) => {
+				console.error('Async: Could not copy text: ', error);
+				return false;
+			});
+
 		return result;
 	}
-
-	result = await navigator.clipboard
-		.writeText(text)
-		.then(() => {
-			console.log('Async: Copying to clipboard was successful!');
-			return true;
-		})
-		.catch((error) => {
-			console.error('Async: Could not copy text: ', error);
-			return false;
-		});
-
-	return result;
 };
 
 export const compareVersion = (latest, current) => {
@@ -361,14 +449,14 @@ export const compareVersion = (latest, current) => {
 			}) < 0;
 };
 
-export const findWordIndices = (text) => {
-	const regex = /\[([^\]]+)\]/g;
+export const extractCurlyBraceWords = (text) => {
+	const regex = /\{\{([^}]+)\}\}/g;
 	const matches = [];
 	let match;
 
 	while ((match = regex.exec(text)) !== null) {
 		matches.push({
-			word: match[1],
+			word: match[1].trim(),
 			startIndex: match.index,
 			endIndex: regex.lastIndex - 1
 		});
@@ -608,7 +696,7 @@ export const convertOpenAIChats = (_chats) => {
 				user_id: '',
 				title: convo['title'],
 				chat: chat,
-				timestamp: convo['timestamp']
+				timestamp: convo['create_time']
 			});
 		} else {
 			failed++;
@@ -683,6 +771,36 @@ export const removeDetails = (content, types) => {
 	return content;
 };
 
+export const removeAllDetails = (content) => {
+	content = content.replace(/<details[^>]*>.*?<\/details>/gis, '');
+	return content;
+};
+
+export const processDetails = (content) => {
+	content = removeDetails(content, ['reasoning', 'code_interpreter']);
+
+	// This regex matches <details> tags with type="tool_calls" and captures their attributes to convert them to <tool_calls> tags
+	const detailsRegex = /<details\s+type="tool_calls"([^>]*)>([\s\S]*?)<\/details>/gis;
+	const matches = content.match(detailsRegex);
+	if (matches) {
+		for (const match of matches) {
+			const attributesRegex = /(\w+)="([^"]*)"/g;
+			const attributes = {};
+			let attributeMatch;
+			while ((attributeMatch = attributesRegex.exec(match)) !== null) {
+				attributes[attributeMatch[1]] = attributeMatch[2];
+			}
+
+			content = content.replace(
+				match,
+				`<tool_calls name="${attributes.name}" result="${attributes.result}"/>`
+			);
+		}
+	}
+
+	return content;
+};
+
 // This regular expression matches code blocks marked by triple backticks
 const codeBlockRegex = /```[\s\S]*?```/g;
 
@@ -752,7 +870,7 @@ export const extractSentencesForAudio = (text: string) => {
 };
 
 export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {
-	content = removeDetails(content, ['reasoning', 'code_interpreter']);
+	content = removeDetails(content, ['reasoning', 'code_interpreter', 'tool_calls']);
 	const messageContentParts: string[] = [];
 
 	switch (split_on) {
@@ -1069,4 +1187,114 @@ export const formatFileSize = (size) => {
 export const getLineCount = (text) => {
 	console.log(typeof text);
 	return text ? text.split('\n').length : 0;
+};
+
+// Helper function to recursively resolve OpenAPI schema into JSON schema format
+function resolveSchema(schemaRef, components, resolvedSchemas = new Set()) {
+	if (!schemaRef) return {};
+
+	if (schemaRef['$ref']) {
+		const refPath = schemaRef['$ref'];
+		const schemaName = refPath.split('/').pop();
+
+		if (resolvedSchemas.has(schemaName)) {
+			// Avoid infinite recursion on circular references
+			return {};
+		}
+		resolvedSchemas.add(schemaName);
+		const referencedSchema = components.schemas[schemaName];
+		return resolveSchema(referencedSchema, components, resolvedSchemas);
+	}
+
+	if (schemaRef.type) {
+		const schemaObj = { type: schemaRef.type };
+
+		if (schemaRef.description) {
+			schemaObj.description = schemaRef.description;
+		}
+
+		switch (schemaRef.type) {
+			case 'object':
+				schemaObj.properties = {};
+				schemaObj.required = schemaRef.required || [];
+				for (const [propName, propSchema] of Object.entries(schemaRef.properties || {})) {
+					schemaObj.properties[propName] = resolveSchema(propSchema, components);
+				}
+				break;
+
+			case 'array':
+				schemaObj.items = resolveSchema(schemaRef.items, components);
+				break;
+
+			default:
+				// for primitive types (string, integer, etc.), just use as is
+				break;
+		}
+		return schemaObj;
+	}
+
+	// fallback for schemas without explicit type
+	return {};
+}
+
+// Main conversion function
+export const convertOpenApiToToolPayload = (openApiSpec) => {
+	const toolPayload = [];
+
+	for (const [path, methods] of Object.entries(openApiSpec.paths)) {
+		for (const [method, operation] of Object.entries(methods)) {
+			const tool = {
+				type: 'function',
+				name: operation.operationId,
+				description: operation.description || operation.summary || 'No description available.',
+				parameters: {
+					type: 'object',
+					properties: {},
+					required: []
+				}
+			};
+
+			// Extract path and query parameters
+			if (operation.parameters) {
+				operation.parameters.forEach((param) => {
+					tool.parameters.properties[param.name] = {
+						type: param.schema.type,
+						description: param.schema.description || ''
+					};
+
+					if (param.required) {
+						tool.parameters.required.push(param.name);
+					}
+				});
+			}
+
+			// Extract and recursively resolve requestBody if available
+			if (operation.requestBody) {
+				const content = operation.requestBody.content;
+				if (content && content['application/json']) {
+					const requestSchema = content['application/json'].schema;
+					const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);
+
+					if (resolvedRequestSchema.properties) {
+						tool.parameters.properties = {
+							...tool.parameters.properties,
+							...resolvedRequestSchema.properties
+						};
+
+						if (resolvedRequestSchema.required) {
+							tool.parameters.required = [
+								...new Set([...tool.parameters.required, ...resolvedRequestSchema.required])
+							];
+						}
+					} else if (resolvedRequestSchema.type === 'array') {
+						tool.parameters = resolvedRequestSchema; // special case when root schema is an array
+					}
+				}
+			}
+
+			toolPayload.push(tool);
+		}
+	}
+
+	return toolPayload;
 };

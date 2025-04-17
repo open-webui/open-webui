@@ -56,8 +56,19 @@ async def update_config(
     }
 
 
+class FeedbackUserReponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    role: str = "pending"
+
+    last_active_at: int  # timestamp in epoch
+    updated_at: int  # timestamp in epoch
+    created_at: int  # timestamp in epoch
+
+
 class FeedbackUserResponse(FeedbackResponse):
-    user: Optional[UserModel] = None
+    user: Optional[FeedbackUserReponse] = None
 
 
 @router.get("/feedbacks/all", response_model=list[FeedbackUserResponse])
@@ -65,7 +76,10 @@ async def get_all_feedbacks(user=Depends(get_admin_user)):
     feedbacks = Feedbacks.get_all_feedbacks()
     return [
         FeedbackUserResponse(
-            **feedback.model_dump(), user=Users.get_user_by_id(feedback.user_id)
+            **feedback.model_dump(),
+            user=FeedbackUserReponse(
+                **Users.get_user_by_id(feedback.user_id).model_dump()
+            ),
         )
         for feedback in feedbacks
     ]

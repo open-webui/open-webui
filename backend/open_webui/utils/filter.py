@@ -12,9 +12,9 @@ log.setLevel(SRC_LOG_LEVELS["MAIN"])
 def get_sorted_filter_ids(model: dict):
     def get_priority(function_id):
         function = Functions.get_function_by_id(function_id)
-        if function is not None and hasattr(function, "valves"):
-            # TODO: Fix FunctionModel to include vavles
-            return (function.valves if function.valves else {}).get("priority", 0)
+        if function is not None:
+            valves = Functions.get_function_valves_by_id(function_id)
+            return valves.get("priority", 0) if valves else 0
         return 0
 
     filter_ids = [function.id for function in Functions.get_global_filter_functions()]
@@ -101,11 +101,12 @@ async def process_filter_functions(
                 form_data = handler(**params)
 
         except Exception as e:
-            log.exception(f"Error in {filter_type} handler {filter_id}: {e}")
+            log.debug(f"Error in {filter_type} handler {filter_id}: {e}")
             raise e
 
     # Handle file cleanup for inlet
     if skip_files and "files" in form_data.get("metadata", {}):
+        del form_data["files"]
         del form_data["metadata"]["files"]
 
     return form_data, {}
