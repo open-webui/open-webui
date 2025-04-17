@@ -1,32 +1,51 @@
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: gpt-portal-ingress
-  namespace: gpt-portal
-  annotations:
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
-    alb.ingress.kubernetes.io/actions.ssl-redirect: >
-      {"Type": "redirect", "RedirectConfig": {"Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-southeast-1:654654365384:certificate/14e75e32-3158-43dc-b422-38eb2dfbc298
-    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=60
-    alb.ingress.kubernetes.io/success-codes: "200-302"
-    alb.ingress.kubernetes.io/backend-protocol: HTTP
-    alb.ingress.kubernetes.io/healthcheck-path: "/"
-    alb.ingress.kubernetes.io/ssl-redirect: '443'
-    alb.ingress.kubernetes.io/group.name: pinet-core-alb
-    #external-dns.alpha.kubernetes.io/hostname: pinet-core.dev.pressingly.net
+  name: gpt-portal-deployment
 spec:
-  ingressClassName: alb
-  rules:
-    - host: gptportal.dev.pressingly.net
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: gpt-portal-service
-                port:
-                  number: 80
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gpt-portal
+  template:
+    metadata:
+      labels:
+        app: gpt-portal
+    spec:
+      containers:
+      - name: gpt-portal
+        image: 654654365384.dkr.ecr.ap-southeast-1.amazonaws.com/gpt-portal:v1.0
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "500Mi"
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+        env:
+        - name: OLLAMA_BASE_URL
+          value: "http://gpt-portal-ollama-service.gpt-portal.svc.cluster.local:11434"
+        tty: true
+        volumeMounts:
+        - name: gpt-portal-volume
+          mountPath: /app/backend/data
+      # Add Tolerations and Node Affinity
+      tolerations:
+      - key: "karpenter.sh/capacity-type"
+        operator: "Exists"
+        effect: "NoSchedule"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - arm64
+      volumes:
+      - name: gpt-portal-volume
+        persistentVolumeClaim:
+          claimName: gpt-portal-pvc          
