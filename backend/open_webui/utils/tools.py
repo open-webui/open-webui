@@ -384,9 +384,18 @@ def convert_openapi_to_tool_payload(openapi_spec):
             for param in operation.get("parameters", []):
                 param_name = param["name"]
                 param_schema = param.get("schema", {})
+                description = param_schema.get("description", "")
+                if not description:
+                    description = param.get("description") or ""
+                if param_schema.get("enum") and isinstance(
+                    param_schema.get("enum"), list
+                ):
+                    description += (
+                        f". Possible values: {', '.join(param_schema.get('enum'))}"
+                    )
                 tool["parameters"]["properties"][param_name] = {
                     "type": param_schema.get("type"),
-                    "description": param_schema.get("description", ""),
+                    "description": description,
                 }
                 if param.get("required"):
                     tool["parameters"]["required"].append(param_name)
