@@ -478,19 +478,19 @@ OPENID_PROVIDER_URL = PersistentConfig(
 
 OPENID_REDIRECT_URI = PersistentConfig(
     "OPENID_REDIRECT_URI",
-    "oauth.oidc.redirect_uri",
+    "oauth.redirect_uri",
     os.environ.get("OPENID_REDIRECT_URI", ""),
 )
 
 OAUTH_SCOPES = PersistentConfig(
     "OAUTH_SCOPES",
-    "oauth.oidc.scopes",
+    "oauth.scopes",
     os.environ.get("OAUTH_SCOPES", "openid email profile"),
 )
 
 OAUTH_CODE_CHALLENGE_METHOD = PersistentConfig(
     "OAUTH_CODE_CHALLENGE_METHOD",
-    "oauth.oidc.code_challenge_method",
+    "oauth.code_challenge_method",
     os.environ.get("OAUTH_CODE_CHALLENGE_METHOD", None),
 )
 
@@ -502,26 +502,26 @@ OAUTH_PROVIDER_NAME = PersistentConfig(
 
 OAUTH_USERNAME_CLAIM = PersistentConfig(
     "OAUTH_USERNAME_CLAIM",
-    "oauth.oidc.username_claim",
+    "oauth.username_claim",
     os.environ.get("OAUTH_USERNAME_CLAIM", "name"),
 )
 
 
 OAUTH_PICTURE_CLAIM = PersistentConfig(
     "OAUTH_PICTURE_CLAIM",
-    "oauth.oidc.avatar_claim",
+    "oauth.picture_claim",
     os.environ.get("OAUTH_PICTURE_CLAIM", "picture"),
 )
 
 OAUTH_EMAIL_CLAIM = PersistentConfig(
     "OAUTH_EMAIL_CLAIM",
-    "oauth.oidc.email_claim",
+    "oauth.email_claim",
     os.environ.get("OAUTH_EMAIL_CLAIM", "email"),
 )
 
 OAUTH_GROUPS_CLAIM = PersistentConfig(
     "OAUTH_GROUPS_CLAIM",
-    "oauth.oidc.group_claim",
+    "oauth.group_claim",
     os.environ.get("OAUTH_GROUPS_CLAIM", "groups"),
 )
 
