@@ -165,7 +165,7 @@ COPY --chown=$UID:$GID --from=build /app/package.json /app/package.json
 COPY --chown=$UID:$GID ./backend .
 
 COPY sync.sh ./sync.sh
-RUN chmod +x /sync.sh
+RUN chmod +x ./sync.sh
 
 
 EXPOSE 8080
