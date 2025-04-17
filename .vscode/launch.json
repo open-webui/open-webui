@@ -1,25 +1,28 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Python: Uvicorn",
-            "type": "python",
-            "request": "launch",
-            "module": "uvicorn",
-            "args": [
-                "open_webui.main:app",
-                "--port", "8080",
-                "--host", "0.0.0.0",
-                "--forwarded-allow-ips", "*",
-                "--reload"
-            ],
-            "jinja": true,
-            "justMyCode": false,
-            "env": {
-                "PYTHONPATH": "${workspaceFolder}/backend",
-                "PORT": "8080"
-            },
-            "console": "integratedTerminal"
-        }
-    ]
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Python: Uvicorn",
+			"type": "python",
+			"request": "launch",
+			"module": "uvicorn",
+			"args": [
+				"open_webui.main:app",
+				"--port",
+				"8080",
+				"--host",
+				"0.0.0.0",
+				"--forwarded-allow-ips",
+				"*",
+				"--reload"
+			],
+			"jinja": true,
+			"justMyCode": false,
+			"env": {
+				"PYTHONPATH": "${workspaceFolder}/backend",
+				"PORT": "8080"
+			},
+			"console": "integratedTerminal"
+		}
+	]
 }

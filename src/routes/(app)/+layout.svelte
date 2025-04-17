@@ -20,6 +20,7 @@
 	import { getUserSettings } from '$lib/apis/users';
 
 	import { WEBUI_VERSION } from '$lib/constants';
+	import { ENABLE_CHANGELOG_MODAL } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
 
 	import {
@@ -192,7 +193,7 @@
 				}
 			});
 
-			if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
+			if ($user?.role === 'admin' && ($settings?.showChangelog ?? true) && ENABLE_CHANGELOG_MODAL) {
 				showChangelog.set($settings?.version !== $config.version);
 			}
 

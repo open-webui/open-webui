@@ -50,8 +50,8 @@
 	};
 
 	const checkForVersionUpdates = async () => {
-		if(ENABLE_CHECK_FOR_NEW_VERSIONS === false) {
-			updateAvailable = false
+		if (ENABLE_CHECK_FOR_NEW_VERSIONS === false) {
+			updateAvailable = false;
 			return;
 		}
 
