@@ -34,7 +34,7 @@
 >
 	<div class="top-0 left-0 absolute w-full flex justify-center">
 		{#if _state === 'checked'}
-			<CheckmarkIcon className="size-4"/>
+			<CheckmarkIcon className="size-3.5"/>
 		{:else if indeterminate}
 			<svg
 				class="w-3 h-3.5 text-gray-800 dark:text-white"

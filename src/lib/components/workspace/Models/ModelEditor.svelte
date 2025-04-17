@@ -31,6 +31,7 @@
 	import Dropzone from './Dropzone.svelte';
 	import { v4 as uuidv4 } from 'uuid';
 	import DocumentIcon from '$lib/components/icons/DocumentIcon.svelte';
+	import AddKnowledgeModal from '../Knowledge/AddKnowledgeModal.svelte';
 	
 
 	const i18n = getContext('i18n');
@@ -374,6 +375,8 @@
 			toast.error(`${e}`);
 		}
 	};
+
+	let showAddKnowledge = false;
 </script>
 
 {#if loaded}
@@ -401,6 +404,7 @@
 			<div class=" self-center text-sm font-medium">{'Back'}</div>
 		</button>
 	{/if} -->
+	<AddKnowledgeModal bind:show={showAddKnowledge} bind:selectedKnowledge={knowledge} collections={$knowledgeCollections}/>
 	<div class="flex flex-col h-screen">
 		<div class="py-[22px] px-[15px] border-b border-customGray-700">
 			<button class="flex items-center gap-1" on:click={() => history.back()}>
@@ -635,8 +639,27 @@
 									<div
 										class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2"
 									>
-										<div class="flex w-full justify-between items-center">
-											<div class="text-xs dark:text-customGray-300">{$i18n.t('Knowledge')}</div>
+											<div class="flex w-full justify-between items-center">
+												<div class="text-xs dark:text-customGray-300">{$i18n.t('Knowledge')}</div>
+												<button
+													class="shrink-0 text-xs dark:text-customGray-200 flex rounded transition"
+													type="button"
+													on:click={() => {
+														showAddKnowledge = true;
+													}}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+													/>
+												</svg>
+												{$i18n.t('Add')}
+											</button>
 										</div>
 										<!-- <button
 											class="shrink-0 text-xs dark:text-customGray-200 flex rounded transition"
@@ -1138,8 +1161,8 @@
 					</div> -->
 
 							<!-- <hr class=" border-gray-50 dark:border-gray-850 my-1.5" /> -->
-<!-- 
-							<div class="my-2">
+
+							<!-- <div class="my-2">
 								<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
 							</div> -->
 
