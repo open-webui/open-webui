@@ -8,7 +8,7 @@
 	import { getBackendConfig } from '$lib/apis';
 	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
 
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL, TRIAL_USER_EMAIL, TRIAL_USER_PASSWORD } from '$lib/constants';
 	import { WEBUI_NAME, WEBUI_TAGLINE, config, user, socket } from '$lib/stores';
 
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
@@ -37,7 +37,6 @@
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
 			console.log(sessionUser);
-			toast.success($i18n.t(`You're now logged in.`));
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
 			}
@@ -45,7 +44,9 @@
 			$socket.emit('user-join', { auth: { token: sessionUser.token } });
 			await user.set(sessionUser);
 			await config.set(await getBackendConfig());
-
+			if ($user?.email !== TRIAL_USER_EMAIL) {
+				toast.success($i18n.t(`You're now logged in.`));
+			}
 			const redirectPath = querystringValue('redirect') || '/';
 			goto(redirectPath);
 		}
@@ -222,6 +223,21 @@
 								<div class=" text-lg font-medium font-sans" style="color: rgb(235, 83, 82)">
 									{$i18n.t(`{{WEBUI_TAGLINE}}`, { WEBUI_TAGLINE: $WEBUI_TAGLINE })}
 								</div>
+								<br>
+								<div class=" mt-4 text-sm text-center">
+									<button
+										class="bg-[#EB8486] hover:bg-[#EB5352] text-white/60 hover:text-white transition w-3/4 rounded-full font-medium text-base py-2.5"
+										on:click={() => {
+											email = TRIAL_USER_EMAIL;
+											password = TRIAL_USER_PASSWORD;
+											mode = 'signin';
+											submitHandler();
+										}}
+									>
+										{$i18n.t('Quick Trial: Find Gift Now!')}
+									</button>
+								</div>
+								<hr class="w-full h-px my-4 border-0 dark:bg-gray-100/10 bg-gray-700/10" />
 								{#if $config?.onboarding ?? false}
 									<div class=" mt-1 text-xs font-medium text-gray-500">
 										ⓘ {$WEBUI_NAME}

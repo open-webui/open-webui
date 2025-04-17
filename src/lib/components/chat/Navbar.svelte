@@ -15,6 +15,8 @@
 		temporaryChatEnabled,
 		user
 	} from '$lib/stores';
+	import {TRIAL_USER_EMAIL} from "$lib/constants";
+	import { userSignOut } from '$lib/apis/auths';
 
 	import { slide } from 'svelte/transition';
 	import { page } from '$app/stores';
@@ -55,45 +57,73 @@
 
 		<div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
 			<div class="flex items-center w-full max-w-full">
-				<div
-					class="{$showSidebar
-						? 'md:hidden'
-						: ''} mr-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
-				>
-					<button
-						id="sidebar-toggle-button"
-						class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-						on:click={() => {
-							showSidebar.set(!$showSidebar);
-						}}
-						aria-label="Toggle Sidebar"
+				{#if ($user?.email) !== TRIAL_USER_EMAIL}
+					<div
+						class="{$showSidebar
+							? 'md:hidden'
+							: ''} mr-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
 					>
-						<div class=" m-auto self-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-								stroke-width="2.5"
-								class="size-3.5"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="m8.25 4.5 7.5 7.5-7.5 7.5"
-								/>
-							</svg>
-						</div>
-					</button>
-				</div>
+						<button
+							id="sidebar-toggle-button"
+							class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							on:click={() => {
+								showSidebar.set(!$showSidebar);
+							}}
+							aria-label="Toggle Sidebar"
+						>
+							<div class=" m-auto self-center">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+									stroke-width="2.5"
+									class="size-3.5"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="m8.25 4.5 7.5 7.5-7.5 7.5"
+									/>
+								</svg>
+							</div>
+						</button>
+					</div>
+				{/if}
 
 				<div
 					class="flex-1 overflow-hidden max-w-full py-0.5
 			{$showSidebar ? 'ml-1' : ''}
 			"
 				>
-					{#if showModelSelector}
+					{#if showModelSelector && $user?.role === 'admin'}
 						<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
+					{/if}
+					{#if ($user?.email) === TRIAL_USER_EMAIL}
+						<div class="flex justify-center items-center text-lg w-full text-left font-sans" style="color:#EB5352">
+							<span class="px-1">
+								{#if $mobile}
+									&#8226; {$i18n.t('Limited experience. For more')}<br>
+								{:else}
+									&#8226; {$i18n.t('This is a limited version of the App. To experience full capability')}<br>
+								{/if}
+							</span>
+							<button
+								class="bg-[#EB8486] hover:bg-[#EB5352] text-white/60 hover:text-white transition w-max rounded-full font-medium text-sm py-1 px-4"
+								on:click={async () => {
+									await userSignOut();
+									user.set(null);
+									localStorage.removeItem('token');
+									location.href = '/auth';
+									show = false;
+								}}
+							>
+								{$i18n.t('Sign up')}
+							</button>
+							<!--					<span class="px-1">-->
+							<!--						{$i18n.t('It\'s free!')}<br>-->
+							<!--					</span>-->
+						</div>
 					{/if}
 				</div>
 
@@ -167,7 +197,7 @@
 						</button>
 					</Tooltip>
 
-					{#if $user !== undefined && $user !== null}
+					{#if $user !== undefined && $user !== null && $user.email !== TRIAL_USER_EMAIL}
 						<UserMenu
 							className="max-w-[200px]"
 							role={$user?.role}
