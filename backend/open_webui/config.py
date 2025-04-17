@@ -627,9 +627,9 @@ def load_oauth_providers():
         }
 
     if (
-        OAUTH_CLIENT_ID.value
-        and OAUTH_CLIENT_SECRET.value
-        and OPENID_PROVIDER_URL.value
+    	OAUTH_CLIENT_ID.value
+    	and OAUTH_CLIENT_SECRET.value
+    	and OPENID_PROVIDER_URL.value
     ):
 
         def oidc_oauth_register(client):
@@ -662,6 +662,7 @@ def load_oauth_providers():
             "redirect_uri": OPENID_REDIRECT_URI.value,
             "register": oidc_oauth_register,
         }
+    # Function modifies global OAUTH_PROVIDERS, no explicit return needed
 
 
 load_oauth_providers()
