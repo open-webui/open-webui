@@ -199,9 +199,9 @@
 
 <Header />
 <!-- Main container -->
-<div class="w-full h-screen max-h-[100dvh] text-white relative">
+<div class="w-full h-[100dvh] text-white overflow-auto">
 	<!-- Background -->
-	<div class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"></div>
+	<div class="w-full h-full fixed top-0 left-0 bg-white dark:bg-black -z-10"></div>
 
 	<!-- Drag region -->
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
@@ -209,204 +209,204 @@
 	{#if loaded}
 		<div class="fixed m-10 z-50">
 			<div class="flex space-x-2">
-				<div class=" self-center">
+				<div class="self-center">
 					<img
 						id="logo"
 						crossorigin="anonymous"
 						src="{WEBUI_BASE_URL}/static/splash.png"
-						class=" w-6 rounded-full"
+						class="w-6 rounded-full"
 						alt="logo"
 					/>
 				</div>
 			</div>
 		</div>
 
-		<div
-			class="fixed bg-transparent min-h-screen w-full flex justify-center font-primary z-50 text-black dark:text-white"
-		>
-			<div class="w-full px-10 min-h-screen flex flex-col text-center">
-				<div class="my-auto pb-10 w-full dark:text-gray-100">
-					{#if $config?.onboarding}
-						<form
-							class="w-full max-w-md mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden p-6"
-							on:submit={(e) => {
-								e.preventDefault();
-								submitHandler();
-							}}
-						>
-							<div class="text-center mb-6">
-								<h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-									{$i18n.t(`Create Admin Account`)}
-								</h1>
-								<p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
-									{$i18n.t('Please fill in the details below to create your admin account.')}
-								</p>
-							</div>
+		<div class="min-h-full w-full flex flex-col">
+			<div class="flex-1 flex items-center">
+				<div class="w-full flex justify-center font-primary text-black dark:text-white py-20">
+					<div class="w-full px-10 flex flex-col text-center">
+						<div class="w-full dark:text-gray-100">
+							{#if $config?.onboarding}
+								<form
+									class="w-full max-w-md mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden p-6"
+									on:submit={(e) => {
+										e.preventDefault();
+										submitHandler();
+									}}
+								>
+									<div class="text-center mb-6">
+										<h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+											{$i18n.t(`Create Admin Account`)}
+										</h1>
+										<p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+											{$i18n.t('Please fill in the details below to create your admin account.')}
+										</p>
+									</div>
 
-							<div class="flex flex-col space-y-4">
-								<div class="flex flex-col space-y-2">
-									<label
-										for="name"
-										class="text-left text-sm font-medium text-gray-700 dark:text-gray-300"
+									<div class="flex flex-col space-y-4">
+										<div class="flex flex-col space-y-2">
+											<label
+												for="name"
+												class="text-left text-sm font-medium text-gray-700 dark:text-gray-300"
+											>
+												{$i18n.t('Name')}
+											</label>
+											<input
+												id="name"
+												bind:value={name}
+												type="text"
+												class="px-3 text-left py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white"
+												autocomplete="name"
+												placeholder={$i18n.t('Enter Your Full Name')}
+												required
+											/>
+										</div>
+
+										<div class="flex flex-col space-y-2">
+											<label
+												for="email"
+												class="text-sm font-medium text-left text-gray-700 dark:text-gray-300"
+											>
+												{$i18n.t('Email')}
+											</label>
+											<input
+												id="email"
+												bind:value={email}
+												type="email"
+												class="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white"
+												autocomplete="email"
+												name="email"
+												placeholder={$i18n.t('Enter Your Email')}
+												required
+											/>
+										</div>
+
+										<div class="flex flex-col space-y-2">
+											<label
+												for="password"
+												class="text-sm font-medium text-left text-gray-700 dark:text-gray-300"
+											>
+												{$i18n.t('Password')}
+											</label>
+											<input
+												id="password"
+												bind:value={password}
+												type="password"
+												class="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white"
+												placeholder={$i18n.t('Choose a Strong Password')}
+												autocomplete="new-password"
+												name="new-password"
+												required
+											/>
+										</div>
+									</div>
+
+									<button
+										type="submit"
+										class="w-full mt-6 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white fr-background-action-high--blue-france focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
 									>
-										{$i18n.t('Name')}
-									</label>
-									<input
-										id="name"
-										bind:value={name}
-										type="text"
-										class="px-3 text-left py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white"
-										autocomplete="name"
-										placeholder={$i18n.t('Enter Your Full Name')}
-										required
-									/>
-								</div>
-
-								<div class="flex flex-col space-y-2">
-									<label
-										for="email"
-										class="text-sm font-medium text-left text-gray-700 dark:text-gray-300"
-									>
-										{$i18n.t('Email')}
-									</label>
-									<input
-										id="email"
-										bind:value={email}
-										type="email"
-										class="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white"
-										autocomplete="email"
-										name="email"
-										placeholder={$i18n.t('Enter Your Email')}
-										required
-									/>
-								</div>
-
-								<div class="flex flex-col space-y-2">
-									<label
-										for="password"
-										class="text-sm font-medium text-left text-gray-700 dark:text-gray-300"
-									>
-										{$i18n.t('Password')}
-									</label>
-									<input
-										id="password"
-										bind:value={password}
-										type="password"
-										class="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:text-white"
-										placeholder={$i18n.t('Choose a Strong Password')}
-										autocomplete="new-password"
-										name="new-password"
-										required
-									/>
-								</div>
-							</div>
-
-							<button
-								type="submit"
-								class="w-full mt-6 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white fr-background-action-high--blue-france focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-							>
-								{$i18n.t('Create Admin Account')}
-							</button>
-						</form>
-					{:else}
-						<div
-							class="flex flex-col md:flex-row w-full gap-8 md:gap-16 items-center justify-center"
-						>
-							<!-- Left column - Login content -->
-							<div class="flex flex-col w-full md:w-1/2 gap-4 items-center justify-center">
-								<!-- Title section -->
-								<div class="">
-									<div class="w-full max-w-md mx-auto">
-										<div class="pb-4 w-full dark:text-gray-100 text-center">
-											<div class="flex flex-col gap-3 items-center text-center">
-												<div
-													class="text-2xl sm:text-4xl md:text-5xl fr-text-default--grey font-bold text-center"
-												>
-													{$i18n.t("L'IA")}
-													<br />
-													{$i18n.t('au service')}
-													<br />
-													{$i18n.t('des agents.')}
+										{$i18n.t('Create Admin Account')}
+									</button>
+								</form>
+							{:else}
+								<div
+									class="flex flex-col md:flex-row w-full gap-8 md:gap-16 items-center justify-center"
+								>
+									<!-- Left column - Login content -->
+									<div class="flex flex-col w-full md:w-1/2 gap-4 items-center justify-center">
+										<!-- Title section -->
+										<div class="">
+											<div class="w-full max-w-md mx-auto">
+												<div class="pb-4 w-full dark:text-gray-100 text-center">
+													<div class="flex flex-col gap-3 items-center text-center">
+														<div
+															class="text-2xl sm:text-4xl md:text-5xl fr-text-default--grey font-bold text-center"
+														>
+															{$i18n.t("L'IA")}
+															<br />
+															{$i18n.t('au service')}
+															<br />
+															{$i18n.t('des agents.')}
+														</div>
+													</div>
 												</div>
+											</div>
+										</div>
+
+										<!-- Login button -->
+										<div class="w-full flex justify-center">
+											<ProconnectButton />
+										</div>
+									</div>
+
+									<!-- Right column - Carousel -->
+									<div class="w-full md:w-1/2">
+										<div class="w-full max-w-md mx-auto">
+											<!-- Carousel container -->
+											<div
+												class="carousel relative min-h-[180px] sm:min-h-[250px] md:min-h-[300px]"
+											>
+												{#each carouselItems as item, i}
+													{#if currentIndex === i}
+														<!-- Carousel item -->
+														<div
+															class="carousel-item flex flex-col gap-4 md:gap-6 absolute w-full"
+															in:fly={{ x: 200, duration: 1000, opacity: 1 }}
+															out:fly={{ x: -200, duration: 1000, opacity: 0 }}
+														>
+															<!-- Carousel text content -->
+															<div class="text-center">
+																<h2 class="text-xl md:text-2xl font-bold mb-2">
+																	{$i18n.t(item.title)}
+																</h2>
+																<p class="text-sm md:text-base text-gray-600 dark:text-gray-300">
+																	{$i18n.t(item.description)}
+																</p>
+															</div>
+															<!-- Carousel image -->
+															<div class="w-full h-36 md:h-48 relative">
+																<img
+																	src={item.image}
+																	alt={$i18n.t(item.title)}
+																	class="w-full h-full object-contain"
+																/>
+															</div>
+															<!-- Carousel navigation dots -->
+															<div class="flex justify-center gap-2 mt-2 md:mt-4">
+																{#each carouselItems as _, i}
+																	<button
+																		class="w-2 h-2 rounded-full transition-colors duration-200 {currentIndex ===
+																		i
+																			? 'bg-blue-500'
+																			: 'bg-gray-300 dark:bg-gray-600'}"
+																		on:click={() => (currentIndex = i)}
+																		aria-label={$i18n.t('Go to slide {{number}}', {
+																			number: i + 1
+																		})}
+																	/>
+																{/each}
+															</div>
+														</div>
+													{/if}
+												{/each}
 											</div>
 										</div>
 									</div>
 								</div>
-
-								<!-- Login button -->
-								<div class="w-full flex justify-center">
-									<ProconnectButton />
-								</div>
-							</div>
-
-							<!-- Right column - Carousel -->
-							<div class="w-full md:w-1/2">
-								<div class="w-full max-w-md mx-auto">
-									<!-- Carousel container -->
-									<div
-										class="carousel relative min-h-[180px] sm:min-h-[250px] md:min-h-[300px] mb-16 md:mb-0"
-									>
-										{#each carouselItems as item, i}
-											{#if currentIndex === i}
-												<!-- Carousel item -->
-												<div
-													class="carousel-item flex flex-col gap-4 md:gap-6 absolute w-full"
-													in:fly={{ x: 200, duration: 1000, opacity: 1 }}
-													out:fly={{ x: -200, duration: 1000, opacity: 0 }}
-												>
-													<!-- Carousel text content -->
-													<div class="text-center">
-														<h2 class="text-xl md:text-2xl font-bold mb-2">
-															{$i18n.t(item.title)}
-														</h2>
-														<p class="text-sm md:text-base text-gray-600 dark:text-gray-300">
-															{$i18n.t(item.description)}
-														</p>
-													</div>
-													<!-- Carousel image -->
-													<div class="w-full h-36 md:h-48 relative">
-														<img
-															src={item.image}
-															alt={$i18n.t(item.title)}
-															class="w-full h-full object-contain"
-														/>
-													</div>
-													<!-- Carousel navigation dots -->
-													<div class="flex justify-center gap-2 mt-2 md:mt-4">
-														{#each carouselItems as _, i}
-															<button
-																class="w-2 h-2 rounded-full transition-colors duration-200 {currentIndex ===
-																i
-																	? 'bg-blue-500'
-																	: 'bg-gray-300 dark:bg-gray-600'}"
-																on:click={() => (currentIndex = i)}
-																aria-label={$i18n.t('Go to slide {{number}}', {
-																	number: i + 1
-																})}
-															/>
-														{/each}
-													</div>
-												</div>
-											{/if}
-										{/each}
-									</div>
-								</div>
-							</div>
+							{/if}
 						</div>
-					{/if}
+					</div>
 				</div>
+			</div>
+
+			<!-- Footer -->
+			<div class="w-full fr-background-default--grey">
+				<Footer />
 			</div>
 		</div>
 	{:else}
-		<div
-			class="fixed bg-transparent min-h-screen w-full flex justify-center items-center font-primary z-10"
-		>
+		<div class="w-full h-full flex justify-center items-center font-primary">
 			<Spinner />
 		</div>
 	{/if}
-
-	<!-- Footer -->
-	<div class="w-full fixed bottom-0 left-0 right-0 fr-background-default--grey z-20">
-		<Footer />
-	</div>
 </div>
