@@ -36,11 +36,14 @@ export const getTotalUsers = async (token: string, domain?: string): Promise<num
 		});
 
 		if (!res.ok) {
+			if (res.status === 404) {
+				return 0;
+			}
 			const error = await res.json();
 			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get users'}`);
 		}
 		const data = await res.json();
-		return data.total_users;
+		return data.total_users || 0;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
@@ -60,11 +63,14 @@ export const getDailyUsers = async (token: string, domain?: string): Promise<num
 		});
 
 		if (!res.ok) {
+			if (res.status === 404) {
+				return 0;
+			}
 			const error = await res.json();
 			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get daily users'}`);
 		}
 		const data = await res.json();
-		return data.total_daily_users;
+		return data.total_daily_users || 0;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
@@ -84,11 +90,15 @@ export const getTotalPrompts = async (token: string, domain?: string): Promise<n
 		});
 
 		if (!res.ok) {
+			// Return 0 instead of throwing an error if we get a 404
+			if (res.status === 404) {
+				return 0;
+			}
 			const error = await res.json();
 			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get prompts'}`);
 		}
 		const data = await res.json();
-		return data.total_prompts;
+		return data.total_prompts || 0; // Ensure we return 0 if null/undefined
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
@@ -108,11 +118,14 @@ export const getDailyPrompts = async (token: string, domain?: string): Promise<n
 		});
 
 		if (!res.ok) {
+			if (res.status === 404) {
+				return 0;
+			}
 			const error = await res.json();
 			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get Users'}`);
 		}
 		const data = await res.json();
-		return data.total_daily_prompts;
+		return data.total_daily_prompts || 0;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
@@ -132,11 +145,14 @@ export const getTotalTokens = async (token: string, domain?: string): Promise<nu
 		});
 
 		if (!res.ok) {
+			if (res.status === 404) {
+				return 0;
+			}
 			const error = await res.json();
 			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get tokens'}`);
 		}
 		const data = await res.json();
-		return data.total_tokens;
+		return data.total_tokens || 0;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
@@ -156,11 +172,14 @@ export const getDailyTokens = async (token: string, domain?: string): Promise<nu
 		});
 
 		if (!res.ok) {
+			if (res.status === 404) {
+				return 0;
+			}
 			const error = await res.json();
 			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get daily tokens'}`);
 		}
 		const data = await res.json();
-		return data.total_daily_tokens;
+		return data.total_daily_tokens || 0;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}

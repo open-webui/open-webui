@@ -91,13 +91,8 @@ async def get_total_prompts(domain: str = None, user=Depends(get_verified_user))
         else MessageMetrics.get_messages_number()
     )
 
-    if not total_prompts:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No prompts found.",
-        )
-
-    return {"total_prompts": total_prompts}
+    # Return 0 instead of raising a 404 error
+    return {"total_prompts": total_prompts or 0}
 
 
 ############################

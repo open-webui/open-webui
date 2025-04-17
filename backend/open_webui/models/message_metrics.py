@@ -73,7 +73,7 @@ class MessageMetricsTable:
                 return query.count()
         except Exception as e:
             logger.error(f"Failed to get messages number: {e}")
-            return None
+            return 0  # Return 0 instead of None
 
     def get_daily_messages_number(
         self, days: int = 1, domain: Optional[str] = None
@@ -94,7 +94,7 @@ class MessageMetricsTable:
                 return query.count()
         except Exception as e:
             logger.error(f"Failed to get daily messages number: {e}")
-            return None
+            return 0  # Return 0 instead of None
 
     def get_message_tokens_sum(self, domain: Optional[str] = None) -> Optional[int]:
         try:
@@ -105,10 +105,10 @@ class MessageMetricsTable:
                 result = query.with_entities(
                     func.sum(MessageMetric.total_tokens),
                 ).first()
-                return round(result[0], 2) if result else 0
+                return round(result[0], 2) if result and result[0] else 0
         except Exception as e:
             logger.error(f"Failed to get message tokens number: {e}")
-            return None
+            return 0  # Return 0 instead of None
 
     def get_daily_message_tokens_sum(
         self, days: int = 1, domain: Optional[str] = None
@@ -127,10 +127,10 @@ class MessageMetricsTable:
                 result = query.with_entities(
                     func.sum(MessageMetric.total_tokens),
                 ).first()
-                return round(result[0], 2) if result else 0
+                return round(result[0], 2) if result and result[0] else 0
         except Exception as e:
             logger.error(f"Failed to get message tokens number: {e}")
-            return None
+            return 0  # Return 0 instead of None
 
 
 MessageMetrics = MessageMetricsTable()

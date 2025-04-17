@@ -189,10 +189,13 @@ class UsersTable:
             return [domain[0] for domain in db.query(User.domain).distinct().all()]
 
     def get_num_users(self, domain: Optional[str] = None) -> Optional[int]:
-        with get_db() as db:
-            if domain:
-                return db.query(User).filter_by(domain=domain).count()
-            return db.query(User).count()
+        try:
+            with get_db() as db:
+                if domain:
+                    return db.query(User).filter_by(domain=domain).count()
+                return db.query(User).count()
+        except Exception:
+            return 0  # Return 0 instead of None
 
     def get_first_user(self) -> UserModel:
         try:
@@ -269,7 +272,7 @@ class UsersTable:
 
                 return query.count()
         except Exception:
-            return None
+            return 0  # Return 0 instead of None
 
     def update_user_oauth_sub_by_id(
         self, id: str, oauth_sub: str
