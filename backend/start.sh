@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+/sync.sh &
+
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR" || exit
 
@@ -66,4 +68,3 @@ if [ -n "$SPACE_ID" ]; then
 fi
 
 WEBUI_SECRET_KEY="$WEBUI_SECRET_KEY" exec uvicorn open_webui.main:app --host "$HOST" --port "$PORT" --forwarded-allow-ips '*'
-
