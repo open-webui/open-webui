@@ -172,12 +172,38 @@ CONFIG_DATA = get_config()
 def get_config_value(config_path: str):
     path_parts = config_path.split(".")
     cur_config = CONFIG_DATA
-    for key in path_parts:
-        if key in cur_config:
-            cur_config = cur_config[key]
-        else:
-            return None
-    return cur_config
+    value = None
+
+    # Try the primary path first
+    try:
+        temp_config = cur_config
+        for key in path_parts:
+            temp_config = temp_config[key]
+        value = temp_config
+    except KeyError:
+        # Primary path not found, check for OIDC fallbacks
+        fallback_map = {
+            "oauth.client_id": "oauth.oidc.client_id",
+            "oauth.client_secret": "oauth.oidc.client_secret",
+            "oauth.provider_url": "oauth.oidc.provider_url",
+            # Add other potential fallbacks here if needed in the future
+        }
+
+        if config_path in fallback_map:
+            fallback_path = fallback_map[config_path]
+            fallback_parts = fallback_path.split(".")
+            try:
+                temp_config = cur_config
+                for key in fallback_parts:
+                    temp_config = temp_config[key]
+                value = temp_config
+                # Optional: Log that a fallback is being used
+                # log.warning(f"Using fallback config path '{fallback_path}' for '{config_path}'")
+            except KeyError:
+                # Fallback path also not found, value remains None
+                pass
+
+    return value
 
 
 PERSISTENT_CONFIG_REGISTRY = []
