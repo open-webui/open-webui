@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gpt-portal-deployment
+  namespace: gpt-portal
 spec:
   replicas: 1
   selector:
@@ -12,9 +13,11 @@ spec:
       labels:
         app: gpt-portal
     spec:
+      nodeSelector:
+        app: openwebui-arm64
       containers:
       - name: gpt-portal
-        image: 654654365384.dkr.ecr.ap-southeast-1.amazonaws.com/gpt-portal:v1.0
+        image: 654654365384.dkr.ecr.ap-southeast-1.amazonaws.com/gpt-portal:f0a14f3d84f339a3bed0c9f71b0140d79d77a037
         ports:
         - containerPort: 8080
         resources:
@@ -36,15 +39,6 @@ spec:
       - key: "karpenter.sh/capacity-type"
         operator: "Exists"
         effect: "NoSchedule"
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/arch
-                operator: In
-                values:
-                - arm64
       volumes:
       - name: gpt-portal-volume
         persistentVolumeClaim:

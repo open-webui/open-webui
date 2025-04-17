@@ -2,25 +2,25 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: gpt-portal-ollama
+  namespace: gpt-portal
   labels:
     app.kubernetes.io/name: ollama
     app.kubernetes.io/component: backend
     app.kubernetes.io/part-of: gpt-portal
 spec:
-  serviceName: "gpt-portal-ollama"
-  replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: ollama
-      app.kubernetes.io/component: backend
-      app.kubernetes.io/part-of: gpt-portal
+      app: gpt-portal
+  serviceName: gpt-portal-ollama-service
+  replicas: 1
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: ollama
-        app.kubernetes.io/component: backend
-        app.kubernetes.io/part-of: gpt-portal
+        app: gpt-portal
     spec:
+      nodeSelector:
+        topology.kubernetes.io/zone: ap-southeast-1c
+        app: openwebui-arm64
       containers:
       - name: ollama
         image: ollama/ollama:latest
@@ -41,15 +41,6 @@ spec:
       - key: "karpenter.sh/capacity-type"
         operator: "Exists"
         effect: "NoSchedule"
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/arch
-                operator: In
-                values:
-                - arm64
   volumeClaimTemplates:
   - metadata:
       name: gpt-portal-ollama-volume
