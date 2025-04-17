@@ -1,11 +1,10 @@
-<script>
+<script lang="ts">
 	import { goto } from '$app/navigation';
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { createNewKnowledge, getKnowledgeBases } from '$lib/apis/knowledge';
+	import { createNewKnowledge, getKnowledgeBases, updateKnowledgeById } from '$lib/apis/knowledge';
 	import { toast } from 'svelte-sonner';
-	import { knowledge } from '$lib/stores';
 	import AccessControl from '../common/AccessControl.svelte';
 	import BackIcon from '$lib/components/icons/BackIcon.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
@@ -20,13 +19,30 @@
 	import { formatFileSize } from '$lib/utils';
 	import dayjs from 'dayjs';
 
+	export let edit = false;
+	export let knowledge = null;
+
+	$: console.log(knowledge)
+
 	let loading = false;
 
 	let name = '';
 	let description = '';
-	let accessControl = null;
+	let accessControl = {};
+	let id = null;
 
 	let files = [];
+
+	let initialized = false;
+
+	$: if (knowledge && !initialized) {
+		id = knowledge.id;
+		name = knowledge.name;
+		description = knowledge.description;
+		accessControl = knowledge.access_control;
+		files = knowledge.files;
+	initialized = true;
+}
 	
 	const uploadFileHandler = async (file) => {
 		console.log(file);
@@ -93,7 +109,8 @@
 			return;
 		}
 
-		const res = await createNewKnowledge(
+		if(!edit) {
+			const res = await createNewKnowledge(
 			localStorage.token,
 			name,
 			description,
@@ -105,10 +122,32 @@
 
 		if (res) {
 			toast.success($i18n.t('Knowledge created successfully.'));
-			knowledge.set(await getKnowledgeBases(localStorage.token));
-			goto(`/workspace/knowledge/${res.id}`);
+			// knowledge.set(await getKnowledgeBases(localStorage.token));
+			goto(`/workspace/knowledge`);
 		}
 
+		} else {
+			knowledge.data.file_ids = files?.map(item => item.id);
+			knowledge.name = name;
+			knowledge.description = description;
+			knowledge.access_control = accessControl;
+			const res = await updateKnowledgeById(
+			localStorage.token,
+			id,
+			knowledge
+		).catch((e) => {
+			toast.error(`${e}`);
+		});
+
+		if (res) {
+			toast.success($i18n.t('Knowledge updated successfully.'));
+			// knowledge.set(await getKnowledgeBases(localStorage.token));
+			goto(`/workspace/knowledge`);
+		}
+
+		}
+
+		
 		loading = false;
 	};
 </script>
@@ -124,7 +163,12 @@
 			<div class=" self-center">
 				<BackIcon />
 			</div>
-			<div class=" self-center font-medium text-sm">{$i18n.t('Create Knowledge')}</div>
+			{#if edit}
+				<div class=" self-center font-medium text-sm">{$i18n.t('Edit Knowledge')}</div>
+			{:else}
+				<div class=" self-center font-medium text-sm">{$i18n.t('Create Knowledge')}</div>
+			{/if}
+			
 		</button>
 	</div>
 	<div class="flex w-[34rem] py-3 px-4">
@@ -189,7 +233,7 @@
 									<DocumentIcon />
 									<span class="truncate ml-2 mr-3.5">{file.meta.name}</span>
 									<span class="mr-3">{formatFileSize(file.meta.size)}</span>
-									<span class="mr-3">{dayjs(file.created_at).format('DD.MM.YYYY')}</span>
+									<span class="mr-3">{dayjs(file.created_at * 1000).format('DD.MM.YYYY')}</span>
 									<button
 										class="opacity-0 group-hover:opacity-100"
 										on:click={() => {
