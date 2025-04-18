@@ -1257,9 +1257,13 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 			// Extract path and query parameters
 			if (operation.parameters) {
 				operation.parameters.forEach((param) => {
+					let description = param.schema.description || param.description || '';
+					if (param.schema.enum && Array.isArray(param.schema.enum)) {
+						description += `. Possible values: ${param.schema.enum.join(', ')}`;
+					}
 					tool.parameters.properties[param.name] = {
 						type: param.schema.type,
-						description: param.schema.description || ''
+						description: description
 					};
 
 					if (param.required) {

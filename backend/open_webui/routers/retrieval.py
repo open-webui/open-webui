@@ -1477,8 +1477,11 @@ async def process_web_search(
         logging.info(
             f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.query}"
         )
-        web_results = search_web(
-            request, request.app.state.config.WEB_SEARCH_ENGINE, form_data.query
+        web_results = await run_in_threadpool(
+            search_web,
+            request,
+            request.app.state.config.WEB_SEARCH_ENGINE,
+            form_data.query,
         )
     except Exception as e:
         log.exception(e)
