@@ -40,7 +40,7 @@
 
 	import 'tippy.js/dist/tippy.css';
 
-	import { WEBUI_BASE_URL, WEBUI_HOSTNAME } from '$lib/constants';
+	import { WEBUI_BASE_URL, WEBUI_HOSTNAME, APP_TITLE } from '$lib/constants';
 	import i18n, { initI18n, getLanguages, changeLanguage } from '$lib/i18n';
 	import { bestMatchingLanguage } from '$lib/utils';
 	import { getAllTags, getChatList } from '$lib/apis/chats';
@@ -627,7 +627,7 @@
 </script>
 
 <svelte:head>
-	<title>{$WEBUI_NAME}</title>
+	<title>{APP_TITLE}</title>
 	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
 
 	<!-- rosepine themes have been disabled as it's not up to date with our latest version. -->
