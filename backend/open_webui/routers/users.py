@@ -298,8 +298,10 @@ async def update_user_by_id(
             )
     except Exception as e:
         log.error(f"Error checking primary admin status: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not verify primary admin status.")
-
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not verify primary admin status.",
+        )
 
     user = Users.get_user_by_id(user_id)
 
@@ -341,7 +343,6 @@ async def update_user_by_id(
     )
 
 
-
 ############################
 # DeleteUserById
 ############################
@@ -359,7 +360,10 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
             )
     except Exception as e:
         log.error(f"Error checking primary admin status: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not verify primary admin status.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not verify primary admin status.",
+        )
 
     if user.id != user_id:
         result = Auths.delete_auth_by_id(user_id)

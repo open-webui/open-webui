@@ -742,5 +742,6 @@ def add_files_to_knowledge_batch(
         )
 
     return KnowledgeFilesResponse(
-        **knowledge.model_dump(), files=Files.get_file_metadatas_by_ids(existing_file_ids)
+        **knowledge.model_dump(),
+        files=Files.get_file_metadatas_by_ids(existing_file_ids),
     )
