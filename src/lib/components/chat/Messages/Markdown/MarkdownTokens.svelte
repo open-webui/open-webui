@@ -1,6 +1,6 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import fileSaver from 'file-saver';
@@ -22,14 +22,15 @@
 	import Source from './Source.svelte';
 	import { settings } from '$lib/stores';
 
-	const dispatch = createEventDispatcher();
-
 	export let id: string;
 	export let tokens: Token[];
 	export let top = true;
 	export let attributes = {};
 
 	export let save = false;
+
+	export let onUpdate: Function = () => {};
+	export let onCode: Function = () => {};
 
 	export let onTaskClick: Function = () => {};
 	export let onSourceClick: Function = () => {};
@@ -93,11 +94,9 @@
 				code={token?.text ?? ''}
 				{attributes}
 				{save}
-				onCode={(value) => {
-					dispatch('code', value);
-				}}
+				{onCode}
 				onSave={(value) => {
-					dispatch('update', {
+					onUpdate({
 						raw: token.raw,
 						oldContent: token.text,
 						newContent: value

@@ -36,7 +36,10 @@ from langchain_core.utils.function_calling import (
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
 from open_webui.utils.plugin import load_tool_module_by_id
-from open_webui.env import AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA
+from open_webui.env import (
+    AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
+    AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+)
 
 import copy
 
@@ -384,9 +387,18 @@ def convert_openapi_to_tool_payload(openapi_spec):
             for param in operation.get("parameters", []):
                 param_name = param["name"]
                 param_schema = param.get("schema", {})
+                description = param_schema.get("description", "")
+                if not description:
+                    description = param.get("description") or ""
+                if param_schema.get("enum") and isinstance(
+                    param_schema.get("enum"), list
+                ):
+                    description += (
+                        f". Possible values: {', '.join(param_schema.get('enum'))}"
+                    )
                 tool["parameters"]["properties"][param_name] = {
                     "type": param_schema.get("type"),
-                    "description": param_schema.get("description", ""),
+                    "description": description,
                 }
                 if param.get("required"):
                     tool["parameters"]["required"].append(param_name)
@@ -431,8 +443,10 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
     error = None
     try:
         timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(url, headers=headers) as response:
+        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+            async with session.get(
+                url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+            ) as response:
                 if response.status != 200:
                     error_body = await response.json()
                     raise Exception(error_body)
@@ -573,19 +587,26 @@ async def execute_tool_server(
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(trust_env=True) as session:
             request_method = getattr(session, http_method.lower())
 
             if http_method in ["post", "put", "patch"]:
                 async with request_method(
-                    final_url, json=body_params, headers=headers
+                    final_url,
+                    json=body_params,
+                    headers=headers,
+                    ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
                 ) as response:
                     if response.status >= 400:
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")
                     return await response.json()
             else:
-                async with request_method(final_url, headers=headers) as response:
+                async with request_method(
+                    final_url,
+                    headers=headers,
+                    ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+                ) as response:
                     if response.status >= 400:
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")

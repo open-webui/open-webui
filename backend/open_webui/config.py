@@ -1693,6 +1693,9 @@ MILVUS_TOKEN = os.environ.get("MILVUS_TOKEN", None)
 # Qdrant
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
+QDRANT_ON_DISK = os.environ.get("QDRANT_ON_DISK", "false").lower() == "true"
+QDRANT_PREFER_GRPC = os.environ.get("QDRANT_PREFER_GRPC", "False").lower() == "true"
+QDRANT_GRPC_PORT = int(os.environ.get("QDRANT_GRPC_PORT", "6334"))
 
 # OpenSearch
 OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
@@ -1759,6 +1762,13 @@ ONEDRIVE_CLIENT_ID = PersistentConfig(
     "onedrive.client_id",
     os.environ.get("ONEDRIVE_CLIENT_ID", ""),
 )
+
+ONEDRIVE_SHAREPOINT_URL = PersistentConfig(
+    "ONEDRIVE_SHAREPOINT_URL",
+    "onedrive.sharepoint_url",
+    os.environ.get("ONEDRIVE_SHAREPOINT_URL", ""),
+)
+
 
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(
