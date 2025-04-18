@@ -1,4 +1,4 @@
-Copyright (c) 2023-2025 Timothy Jaeryang Baek
+Copyright (c) 2023-2025 Timothy Jaeryang Baek (Open WebUI)
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -14,6 +14,22 @@ modification, are permitted provided that the following conditions are met:
 3. Neither the name of the copyright holder nor the names of its
    contributors may be used to endorse or promote products derived from
    this software without specific prior written permission.
+
+4. Except as explicitly set forth herein, users are permitted broad latitude and flexibility under this license, including the rights to modify, use, and redistribute the software in accordance with the terms above. In particular, except as limited by subsequent clauses, users may engage in rebranding, modification, and redistribution for any purpose, subject to compliance with all other license terms.
+
+5. Notwithstanding the foregoing, and as a specific and material condition for the exercise of any rights granted under this license for deployments or distributions in which the *aggregate number of end users* (meaning natural persons who directly interact with the application, whether internally or externally) **exceeds fifty (50)** during any rolling thirty (30) day period, you shall neither remove nor obscure any "Open WebUI" branding, inclusive of, but not limited to, the name, logo, or any visual, textual, or symbolic assets that serve to brand the product or its interfaces.
+
+   a. For deployments or distributions with an aggregate user count of fifty (50) or fewer as defined above, this branding requirement does not apply and licensees retain rights to alter, remove, or replace such branding at their discretion, consistent with the above terms.
+
+   b. Any forks or derivative works created prior to the date on which this clause was first incorporated into this license are hereby exempted and "grandfathered" from this provision.
+
+   c. For deployments or distributions not meeting the above user threshold but who wish to exceed such limit while removing or altering "Open WebUI" branding, the following exceptions apply: (i) you must obtain an *enterprise license* from the copyright holder; or (ii) you must be an active contributor to the codebase with express written permission from the copyright holder. *If you have contributed to our codebase, it shall be presumed, subject to reasonable confirmation, that you possess such written permission to adjust branding; nonetheless, it remains your responsibility to double check and confirm such permission with the copyright holder prior to removal or alteration of any branding assets.* When in doubt as to your eligibility regarding branding modification rights as an enterprise user or contributor, you are encouraged to contact hello@openwebui.com for confirmation and guidance.
+
+   d. These requirements apply solely with respect to the preservation of "Open WebUI" branding as described above. For all other aspects, including but not limited to redistribution, modification, and non-endorsement, the terms of the existing license shall control.
+
+   e. If you do not alter, remove, or modify any "Open WebUI" branding, you may otherwise exercise all rights and privileges assigned under this license, irrespective of user count.
+
+   f. The copyright holder expressly reserves the right, in its sole and unfettered discretion, to revise or amend the branding clause set forth herein at any time, for any reason, with such amendments taking effect upon publication or notification as determined by the copyright holder.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
