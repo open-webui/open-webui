@@ -9,7 +9,6 @@
 		settings,
 		showArchivedChats,
 		showControls,
-		showSidebar,
 		temporaryChatEnabled,
 		user
 	} from '$lib/stores';
@@ -50,11 +49,7 @@
 
 	<div class=" flex max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
 		<div class="flex items-center w-full max-w-full">
-			<div
-				class="{$showSidebar
-					? 'md:hidden'
-					: ''} mr-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
-			>
+			<!-- <div class="mr-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 				<button
 					id="sidebar-toggle-button"
 					class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
@@ -67,13 +62,9 @@
 						<MenuLines />
 					</div>
 				</button>
-			</div>
+			</div> -->
 
-			<div
-				class="flex-1 overflow-hidden max-w-full py-0.5
-			{$showSidebar ? 'ml-1' : ''}
-			"
-			>
+			<div class="flex-1 overflow-hidden max-w-full py-0.5">
 				{#if showModelSelector}
 					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
 				{/if}
@@ -130,7 +121,7 @@
 					</Tooltip>
 				{/if}
 
-				{#if !$mobile && ($user.role === 'admin' || $user?.permissions?.chat?.controls)}
+				<!-- {#if !$mobile && ($user.role === 'admin' || $user?.permissions?.chat?.controls)}
 					<Tooltip content={$i18n.t('Controls')}>
 						<button
 							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
@@ -144,14 +135,12 @@
 							</div>
 						</button>
 					</Tooltip>
-				{/if}
+				{/if} -->
 
 				<Tooltip content={$i18n.t('New Chat')}>
 					<button
 						id="new-chat-button"
-						class=" flex {$showSidebar
-							? 'md:hidden'
-							: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+						class=" flex cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 						on:click={() => {
 							initNewChat();
 						}}
@@ -163,7 +152,7 @@
 					</button>
 				</Tooltip>
 
-				{#if $user !== undefined}
+				<!-- {#if $user !== undefined}
 					<UserMenu
 						className="max-w-[200px]"
 						role={$user.role}
@@ -187,7 +176,7 @@
 							</div>
 						</button>
 					</UserMenu>
-				{/if}
+				{/if} -->
 			</div>
 		</div>
 	</div>
