@@ -1,15 +1,38 @@
+from contextlib import asynccontextmanager
+from dotenv import load_dotenv, dotenv_values
+import os
+
+# Load environment variables from .env file
+# Ensure this is called before any imports that rely on .env variables
+load_dotenv()
+
+# --- Added for development debugging ---
+from open_webui.env import ENV  # Import ENV and BASE_DIR
+
+if ENV == "dev":
+    print("\\n--- .env variables ---")
+    # Construct the path to the .env file relative to BASE_DIR
+    env_path = ".env"
+    # Load variables specifically from the .env file
+    env_vars = dotenv_values(env_path)
+    if env_vars:
+        for key, value in env_vars.items():
+            print(f"{key}={os.getenv(key)}")
+    else:
+        print(f".env file not found or is empty at: {env_path}")
+    print("--- End .env variables ---\\n")
+# --- End added section ---
+
 import asyncio
 import inspect
 import json
 import logging
 import mimetypes
-import os
 import shutil
 import sys
 import time
 import random
 
-from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
 from pydantic import BaseModel
 from sqlalchemy import text
