@@ -1,12 +1,19 @@
 from typing import Optional
 import logging
+from urllib.parse import urlparse
 
 from qdrant_client import QdrantClient as Qclient
 from qdrant_client.http.models import PointStruct
 from qdrant_client.models import models
 
 from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
-from open_webui.config import QDRANT_URI, QDRANT_API_KEY, QDRANT_ON_DISK
+from open_webui.config import (
+    QDRANT_URI,
+    QDRANT_API_KEY,
+    QDRANT_ON_DISK,
+    QDRANT_GRPC_PORT,
+    QDRANT_PREFER_GRPC,
+)
 from open_webui.env import SRC_LOG_LEVELS
 
 NO_LIMIT = 999999999
@@ -21,11 +28,28 @@ class QdrantClient:
         self.QDRANT_URI = QDRANT_URI
         self.QDRANT_API_KEY = QDRANT_API_KEY
         self.QDRANT_ON_DISK = QDRANT_ON_DISK
-        self.client = (
-            Qclient(url=self.QDRANT_URI, api_key=self.QDRANT_API_KEY)
-            if self.QDRANT_URI
-            else None
-        )
+        self.PREFER_GRPC = QDRANT_PREFER_GRPC
+        self.GRPC_PORT = QDRANT_GRPC_PORT
+
+        if not self.QDRANT_URI:
+            self.client = None
+            return
+
+        # Unified handling for either scheme
+        parsed = urlparse(self.QDRANT_URI)
+        host = parsed.hostname or self.QDRANT_URI
+        http_port = parsed.port or 6333  # default REST port
+
+        if self.PREFER_GRPC:
+            self.client = Qclient(
+                host=host,
+                port=http_port,
+                grpc_port=self.GRPC_PORT,
+                prefer_grpc=self.PREFER_GRPC,
+                api_key=self.QDRANT_API_KEY,
+            )
+        else:
+            self.client = Qclient(url=self.QDRANT_URI, api_key=self.QDRANT_API_KEY)
 
     def _result_to_get_result(self, points) -> GetResult:
         ids = []
