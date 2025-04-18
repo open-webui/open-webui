@@ -20,6 +20,7 @@
 
 	let profileImageUrl = '';
 	let name = '';
+	let introduction = '';
 
 	let webhookUrl = '';
 	let showAPIKeys = false;
@@ -46,7 +47,7 @@
 			});
 		}
 
-		const updatedUser = await updateUserProfile(localStorage.token, name, profileImageUrl).catch(
+		const updatedUser = await updateUserProfile(localStorage.token, name, profileImageUrl, introduction).catch(
 			(error) => {
 				toast.error(`${error}`);
 			}
@@ -77,6 +78,7 @@
 	onMount(async () => {
 		name = $user?.name;
 		profileImageUrl = $user?.profile_image_url;
+		introduction = $user?.info?.introduction ?? '';
 		webhookUrl = $settings?.notifications?.webhook_url ?? '';
 
 		APIKey = await getAPIKey(localStorage.token).catch((error) => {
@@ -243,6 +245,18 @@
 							placeholder={$i18n.t('Enter your name')}
 						/>
 					</div>
+				</div>
+			</div>
+
+			<div class="pt-0.5">
+				<div class="flex flex-col w-full">
+					<div class="mb-1 text-xs font-medium">{$i18n.t('Introduction')}</div>
+					<textarea
+						class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden resize-none"
+						bind:value={introduction}
+						placeholder={$i18n.t('Enter a short introduction about yourself')}
+						rows="3"
+					></textarea>
 				</div>
 			</div>
 

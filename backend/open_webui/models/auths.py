@@ -53,6 +53,7 @@ class UserResponse(BaseModel):
     name: str
     role: str
     profile_image_url: str
+    info: Optional[dict] = None
 
 
 class SigninResponse(Token, UserResponse):
@@ -76,6 +77,7 @@ class ProfileImageUrlForm(BaseModel):
 class UpdateProfileForm(BaseModel):
     profile_image_url: str
     name: str
+    introduction: Optional[str] = None
 
 
 class UpdatePasswordForm(BaseModel):

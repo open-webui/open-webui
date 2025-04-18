@@ -112,6 +112,7 @@ async def get_session_user(
         "role": user.role,
         "profile_image_url": user.profile_image_url,
         "permissions": user_permissions,
+        "info": user.info,
     }
 
 
@@ -125,9 +126,14 @@ async def update_profile(
     form_data: UpdateProfileForm, session_user=Depends(get_verified_user)
 ):
     if session_user:
+        updates: dict = {"profile_image_url": form_data.profile_image_url, "name": form_data.name}
+        if form_data.introduction is not None:
+            existing_info = session_user.info or {}
+            existing_info["introduction"] = form_data.introduction
+            updates["info"] = existing_info
         user = Users.update_user_by_id(
             session_user.id,
-            {"profile_image_url": form_data.profile_image_url, "name": form_data.name},
+            updates,
         )
         if user:
             return user
@@ -315,6 +321,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     "role": user.role,
                     "profile_image_url": user.profile_image_url,
                     "permissions": user_permissions,
+                    "info": user.info,
                 }
             else:
                 raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
@@ -413,6 +420,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             "role": user.role,
             "profile_image_url": user.profile_image_url,
             "permissions": user_permissions,
+            "info": user.info,
         }
     else:
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
@@ -527,6 +535,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 "role": user.role,
                 "profile_image_url": user.profile_image_url,
                 "permissions": user_permissions,
+                "info": user.info,
             }
         else:
             raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
