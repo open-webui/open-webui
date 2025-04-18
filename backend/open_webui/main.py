@@ -11,8 +11,7 @@ import random
 
 from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
-import anyio
-import anyio.to_thread
+from anyio import to_thread
 from pydantic import BaseModel
 from sqlalchemy import text
 
@@ -440,7 +439,7 @@ async def lifespan(app: FastAPI):
 
     pool_size = THREAD_POOL_SIZE
     if pool_size and pool_size > 0:
-        anyio.to_thread.current_default_thread_limiter().total_tokens = pool_size
+        to_thread.current_default_thread_limiter().total_tokens = pool_size
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     yield
