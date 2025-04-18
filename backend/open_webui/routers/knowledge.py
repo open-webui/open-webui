@@ -379,7 +379,7 @@ def add_file_to_knowledge_by_id(
             knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
 
             if knowledge:
-                files = Files.get_files_by_ids(file_ids)
+                files = Files.get_file_metadatas_by_ids(file_ids)
 
                 return KnowledgeFilesResponse(
                     **knowledge.model_dump(),
@@ -456,7 +456,7 @@ def update_file_from_knowledge_by_id(
         data = knowledge.data or {}
         file_ids = data.get("file_ids", [])
 
-        files = Files.get_files_by_ids(file_ids)
+        files = Files.get_file_metadatas_by_ids(file_ids)
 
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
@@ -538,7 +538,7 @@ def remove_file_from_knowledge_by_id(
             knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
 
             if knowledge:
-                files = Files.get_files_by_ids(file_ids)
+                files = Files.get_file_metadatas_by_ids(file_ids)
 
                 return KnowledgeFilesResponse(
                     **knowledge.model_dump(),
@@ -734,7 +734,7 @@ def add_files_to_knowledge_batch(
         error_details = [f"{err.file_id}: {err.error}" for err in result.errors]
         return KnowledgeFilesResponse(
             **knowledge.model_dump(),
-            files=Files.get_files_by_ids(existing_file_ids),
+            files=Files.get_file_metadatas_by_ids(existing_file_ids),
             warnings={
                 "message": "Some files failed to process",
                 "errors": error_details,
@@ -742,5 +742,5 @@ def add_files_to_knowledge_batch(
         )
 
     return KnowledgeFilesResponse(
-        **knowledge.model_dump(), files=Files.get_files_by_ids(existing_file_ids)
+        **knowledge.model_dump(), files=Files.get_file_metadatas_by_ids(existing_file_ids)
     )

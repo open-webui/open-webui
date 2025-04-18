@@ -394,7 +394,7 @@
 
 	const updateFileContentHandler = async () => {
 		const fileId = selectedFile.id;
-		const content = selectedFile.data.content;
+		const content = selectedFileContent
 
 		const res = updateFileDataContentById(localStorage.token, fileId, content).catch((e) => {
 			toast.error(`${e}`);
