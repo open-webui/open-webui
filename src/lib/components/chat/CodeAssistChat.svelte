@@ -79,7 +79,7 @@
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
-	import Navbar from '$lib/components/chat/Navbar.svelte';
+	import Navbar from '$lib/components/chat/CodeAssistNavbar.svelte';
 	import ChatControls from './ChatControls.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
@@ -698,7 +698,7 @@
 		await showOverview.set(false);
 		await showArtifacts.set(false);
 
-		if ($page.url.pathname.includes('/c/')) {
+		if ($page.url.pathname.includes('/d/')) {
 			window.history.replaceState(history.state, '', `/`);
 		}
 
@@ -1840,7 +1840,7 @@
 			await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			currentChatPage.set(1);
 
-			window.history.replaceState(history.state, '', `/c/${_chatId}`);
+			window.history.replaceState(history.state, '', `/d/${_chatId}`);
 		} else {
 			_chatId = 'local';
 			await chatId.set('local');
@@ -1916,7 +1916,24 @@
 			/>
 		{/if}
 
-
+		<Navbar
+			bind:this={navbarElement}
+			chat={{
+				id: $chatId,
+				chat: {
+					title: $chatTitle,
+					models: selectedModels,
+					system: $settings.system ?? undefined,
+					params: params,
+					history: history,
+					timestamp: Date.now()
+				}
+			}}
+			title={$chatTitle}
+			bind:selectedModels
+			shareEnabled={!!history.currentId}
+			{initNewChat}
+		/>
 
 		<PaneGroup direction="horizontal" class="w-full h-full">
 			<Pane defaultSize={50} class="h-full flex w-full relative">

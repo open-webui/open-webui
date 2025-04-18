@@ -5,7 +5,7 @@
 
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
 	import { copyToClipboard } from '$lib/utils';
-
+	import { page } from '$app/stores';
 	import 'highlight.js/styles/github-dark.min.css';
 
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
@@ -27,7 +27,6 @@
 
 	export let save = false;
 	export let run = true;
-	export let collapsed = false;
 
 	export let token;
 	export let lang = '';
@@ -61,7 +60,9 @@
 	let result = null;
 	let files = null;
 
+	let collapsed = false;
 	let copied = false;
+	let copiedToPlugin = false;
 	let saved = false;
 
 	const collapseCodeBlock = () => {
@@ -85,6 +86,16 @@
 
 		setTimeout(() => {
 			copied = false;
+		}, 1000);
+	};
+
+	const copyCodeToPlugin = async () => {
+		copiedToPlugin = true;
+		debugger;
+		window.pasteIntoEditor(code);
+
+		setTimeout(() => {
+			copiedToPlugin = false;
 		}, 1000);
 	};
 
@@ -441,9 +452,7 @@
 
 					{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
 						{#if executing}
-							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">
-								{$i18n.t('Running')}
-							</div>
+							<div class="run-code-button bg-none border-none p-1 cursor-not-allowed">Running</div>
 						{:else if run}
 							<button
 								class="flex gap-1 items-center run-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
@@ -477,6 +486,14 @@
 						class="copy-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
 						on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
 					>
+
+					{#if !$page.url.pathname.startsWith('/d/')}
+						<button
+							class="copy-code-button bg-none border-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+							on:click={copyCodeToPlugin}
+							>{copiedToPlugin ? '플러그인으로 복사됨' : '플러그인으로 복사'}</button
+						>
+					{/if}
 				</div>
 			</div>
 
