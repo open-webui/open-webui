@@ -747,7 +747,7 @@
 				<Drawer
 					className="h-full"
 					show={selectedFileId !== null}
-					on:close={() => {
+					onClose={() => {
 						selectedFileId = null;
 					}}
 				>
