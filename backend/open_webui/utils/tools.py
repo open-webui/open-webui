@@ -587,7 +587,7 @@ async def execute_tool_server(
             else:
                 async with request_method(
                     final_url, headers=headers, ssl=False
-                ) as response:                    
+                ) as response:
                     if response.status >= 400:
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")
