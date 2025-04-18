@@ -154,10 +154,10 @@
 		}, [])}
 		{onSourceClick}
 		{onTaskClick}
-		on:update={(e) => {
+		onUpdate={(e) => {
 			dispatch('update', e.detail);
 		}}
-		on:code={(e) => {
+		onCode={(e) => {
 			const { lang, code } = e.detail;
 
 			if (
