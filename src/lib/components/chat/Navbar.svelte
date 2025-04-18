@@ -29,6 +29,7 @@
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Banner from '../common/Banner.svelte';
+	import KeplerWallet from '../wallet/KeplerWallet.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -151,6 +152,7 @@
 							</div>
 						</button>
 					</Tooltip>
+					<KeplerWallet />
 
 					{#if $user !== undefined && $user !== null}
 						<UserMenu
