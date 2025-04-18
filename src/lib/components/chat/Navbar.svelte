@@ -16,7 +16,7 @@
 		temporaryChatEnabled,
 		user
 	} from '$lib/stores';
-	import {TRIAL_USER_EMAIL} from "$lib/constants";
+	import { TRIAL_USER_EMAIL, WEBUI_BASE_URL } from '$lib/constants';
 	import { userSignOut } from '$lib/apis/auths';
 
 	import { slide } from 'svelte/transition';
@@ -32,6 +32,10 @@
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Banner from '../common/Banner.svelte';
+	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
+	import dayjs from 'dayjs';
+	import { formatDate } from '$lib/utils';
+	import Name from '$lib/components/chat/Messages/Name.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -126,17 +130,14 @@
 							<!--					</span>-->
 						</div>
 					{:else if (history.messages && Object.keys(history.messages).length > 0)}
-						<div class="flex flex-row justify-center items-center gap-4" in:fade={{ duration: 100 }}>
-							<div class="flex -space-x-4">
-								<img
-									crossorigin="anonymous"
-									src={`/static/favicon.png`}
-									class="size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
-									alt="logo"
-									draggable="false"
+						<div class="flex flex-row justify-center items-center gap-1" in:fade={{ duration: 100 }}>
+							<div class={`shrink-0`}>
+								<ProfileImage
+									src={`${WEBUI_BASE_URL}/static/favicon.png`}
+									className={'size-6'}
 								/>
 							</div>
-							<div class="flex text-3xl @sm:text-4xl line-clamp-1 font-primary">
+							<div class=" text-base @sm:text-base line-clamp-1 font-primary" in:fade={{ duration: 100 }}>
 								{$i18n.t($WEBUI_NAME)}
 							</div>
 						</div>
