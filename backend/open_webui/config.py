@@ -1204,7 +1204,7 @@ ENABLE_USER_WEBHOOKS = PersistentConfig(
 )
 
 # FastAPI / AnyIO settings
-THREAD_POOL_SIZE = int(os.getenv("THREAD_POOL_SIZE", "64"))
+THREAD_POOL_SIZE = int(os.getenv("THREAD_POOL_SIZE", "0"))
 
 
 def validate_cors_origins(origins):
