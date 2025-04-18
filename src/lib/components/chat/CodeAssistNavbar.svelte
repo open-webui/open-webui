@@ -64,15 +64,15 @@
 				</button>
 			</div> -->
 
-			<div class="flex-1 overflow-hidden max-w-full py-0.5">
+			<!-- <div class="flex-1 overflow-hidden max-w-full py-0.5">
 				{#if showModelSelector}
 					<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
 				{/if}
-			</div>
+			</div> -->
 
 			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
 				<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
-				{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
+				<!-- {#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
 					<Menu
 						{chat}
 						{shareEnabled}
@@ -119,7 +119,7 @@
 							</div>
 						</button>
 					</Tooltip>
-				{/if}
+				{/if} -->
 
 				<!-- {#if !$mobile && ($user.role === 'admin' || $user?.permissions?.chat?.controls)}
 					<Tooltip content={$i18n.t('Controls')}>

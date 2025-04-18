@@ -209,6 +209,8 @@
 		}
 
 		loaded = true;
+
+		debugger;
 	});
 
 	const checkForVersionUpdates = async () => {
@@ -297,7 +299,7 @@
 				</div>
 			{/if}
 
-			{#if !$page.url.pathname.startsWith('/d/') && !$page.url.pathname.startsWith('/codeassist/')}
+			{#if !$page.url.pathname.startsWith('/d') && !$page.url.pathname.startsWith('/codeassist')}
 				<Sidebar />
 			{/if}
 			<slot />
