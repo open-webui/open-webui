@@ -297,7 +297,9 @@
 				</div>
 			{/if}
 
-			<Sidebar />
+			{#if !$page.url.pathname.startsWith('/d/') && !$page.url.pathname.startsWith('/codeassist/')}
+				<Sidebar />
+			{/if}
 			<slot />
 		{/if}
 	</div>
