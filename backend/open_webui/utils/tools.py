@@ -432,7 +432,7 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
     try:
         timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
         async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(url, headers=headers) as response:
+            async with session.get(url, headers=headers, ssl=False) as response:
                 if response.status != 200:
                     error_body = await response.json()
                     raise Exception(error_body)
@@ -578,14 +578,14 @@ async def execute_tool_server(
 
             if http_method in ["post", "put", "patch"]:
                 async with request_method(
-                    final_url, json=body_params, headers=headers
+                    final_url, json=body_params, headers=headers, ssl=False
                 ) as response:
                     if response.status >= 400:
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")
                     return await response.json()
             else:
-                async with request_method(final_url, headers=headers) as response:
+                async with request_method(final_url, headers=headers, ssl=False) as response:
                     if response.status >= 400:
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")
