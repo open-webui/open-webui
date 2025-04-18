@@ -86,10 +86,13 @@
 	let selectedFileId = null;
 	let selectedFileContent = '';
 
+	// Add cache object
+	let fileContentCache = new Map();
+
 	$: if (selectedFileId) {
 		const file = (knowledge?.files ?? []).find((file) => file.id === selectedFileId);
 		if (file) {
-			handleFileClick(file);
+			fileSelectHandler(file);
 		} else {
 			selectedFile = null;
 		}
@@ -394,7 +397,10 @@
 
 	const updateFileContentHandler = async () => {
 		const fileId = selectedFile.id;
-		const content = selectedFileContent
+		const content = selectedFileContent;
+
+		// Clear the cache for this file since we're updating it
+		fileContentCache.delete(fileId);
 
 		const res = updateFileDataContentById(localStorage.token, fileId, content).catch((e) => {
 			toast.error(`${e}`);
@@ -450,12 +456,21 @@
 		}
 	};
 
-	const handleFileClick = async (file) => {
+	const fileSelectHandler = async (file) => {
 		try {
 			selectedFile = file;
+			
+			// Check cache first
+			if (fileContentCache.has(file.id)) {
+				selectedFileContent = fileContentCache.get(file.id);
+				return;
+			}
+
 			const response = await getFileById(localStorage.token, file.id);
 			if (response) {
 				selectedFileContent = response.data.content;
+				// Cache the content
+				fileContentCache.set(file.id, response.data.content);
 			} else {
 				toast.error($i18n.t('No content found in file.'));
 			}
