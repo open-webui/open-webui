@@ -107,8 +107,6 @@
 	let actionIds = [];
 
 	let accessControl = {};
-	$: console.log(info);
-	$: console.log(accessControl);
 
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
@@ -275,9 +273,6 @@
 				accessControl = {};
 			}
 
-			console.log(model?.access_control);
-			console.log(accessControl);
-
 			info = {
 				...info,
 				...JSON.parse(
@@ -294,7 +289,6 @@
 
 			files = model?.meta?.files ? model?.meta?.files : [];
 
-			console.log(model);
 		}
 
 		loaded = true;
@@ -319,8 +313,6 @@
 	)?.label;
 
 	let files: { id: string; name: string }[] = [];
-
-	$: console.log(files);
 
 	const uploadFileHandler = async (file) => {
 		console.log(file);
@@ -566,7 +558,7 @@
 								<div class="flex-1 mb-1.5">
 									<div class="relative w-full dark:bg-customGray-900 rounded-md">
 										{#if name}
-											<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Name')}</div>
+											<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">{$i18n.t('Name')}</div>
 										{/if}
 										<input
 											class={`px-2.5 text-sm ${name ? "mt-2" : "mt-0"} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
@@ -598,7 +590,7 @@
 								<div class="flex-1 mb-1.5">
 									<div class="relative w-full dark:bg-customGray-900 rounded-md">
 										{#if info.meta.description}
-											<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Description')}</div>
+											<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">{$i18n.t('Description')}</div>
 										{/if}
 										<input
 											class={`px-2.5 text-sm ${info.meta.description ? "mt-2" : "mt-0"} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
@@ -617,7 +609,7 @@
 								<div class="mb-1.5">
 									<div class="relative w-full dark:bg-customGray-900 rounded-md">
 										{#if info.params.system}
-											<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('System Prompt')}</div>
+											<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">{$i18n.t('System Prompt')}</div>
 										{/if}
 										<Textarea
 											className={`px-2.5 py-2 text-sm ${info.params.system ? "mt-2" : "mt-0"} w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
@@ -680,6 +672,24 @@
 										</button> -->
 									</div>
 									<Dropzone {uploadFileHandler} />
+									{#if  knowledge.length > 0}
+										{#each knowledge as item}
+										<div class="min-h-10 flex rounded-lg my-2">
+											<div class="relative w-full dark:bg-customGray-900 rounded-md px-2.5 py-2.5 text-sm dark:text-white leading-[1.2]">
+												<span>{item.name}</span>
+											</div>
+											<button
+												class="px-2 dark:text-customGray-300 dark:hover:text-white"
+												type="button"
+												on:click={() => {
+													knowledge = knowledge.filter((k) => k.id !== item.id);
+												}}
+											>
+												<DeleteIcon />
+											</button>
+										</div>
+										{/each}
+									{/if}
 									{#if files.length}
 										<ul class="mt-2.5 space-y-1 text-sm">
 											{#each files as file (file.id)}

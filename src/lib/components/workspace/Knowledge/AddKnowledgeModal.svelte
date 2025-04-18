@@ -24,8 +24,6 @@
 
 		const readGroups = model.access_control.read?.group_ids || [];
 		const writeGroups = model.access_control.write?.group_ids || [];
-		console.log(readGroups.length);
-		console.log(writeGroups.length);
 
 		return readGroups.length > 0 || writeGroups.length > 0;
 	}
