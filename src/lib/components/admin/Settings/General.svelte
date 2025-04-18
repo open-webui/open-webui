@@ -107,12 +107,12 @@
 </script>
 
 <form
-	class="flex flex-col h-full justify-between space-y-3 text-sm"
+	class="flex flex-col 95vh justify-between space-y-3 text-sm"
 	on:submit|preventDefault={async () => {
 		updateHandler();
 	}}
 >
-	<div class="mt-0.5 space-y-3 overflow-y-scroll scrollbar-hidden h-full">
+	<div class="mt-0.5 space-y-3 overflow-y-scroll scrollbar-hidden 95vh">
 		{#if adminConfig !== null}
 			<div class="">
 				
