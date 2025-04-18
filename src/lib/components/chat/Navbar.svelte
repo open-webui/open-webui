@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { fade } from 'svelte/transition';
 
 	import {
 		WEBUI_NAME,
@@ -123,6 +124,21 @@
 							<!--					<span class="px-1">-->
 							<!--						{$i18n.t('It\'s free!')}<br>-->
 							<!--					</span>-->
+						</div>
+					{:else if (history.messages && Object.keys(history.messages).length > 0)}
+						<div class="flex flex-row justify-center items-center gap-4" in:fade={{ duration: 100 }}>
+							<div class="flex -space-x-4">
+								<img
+									crossorigin="anonymous"
+									src={`/static/favicon.png`}
+									class="size-9 @sm:size-10 rounded-full border-[1px] border-gray-100 dark:border-none"
+									alt="logo"
+									draggable="false"
+								/>
+							</div>
+							<div class="flex text-3xl @sm:text-4xl line-clamp-1 font-primary">
+								{$i18n.t($WEBUI_NAME)}
+							</div>
 						</div>
 					{/if}
 				</div>
