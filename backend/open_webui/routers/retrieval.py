@@ -1894,7 +1894,7 @@ def process_files_batch(
                 collection_name=collection_name,
                 add=True,
                 user=user,
-                batch_size=50,  # Process in batches of 50 documents
+                batch_size=1,  # Process in batches (set to 1 for now. 1 thread for each)
             )
 
             # Update all files with collection name in parallel
