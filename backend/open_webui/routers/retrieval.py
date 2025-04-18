@@ -3,8 +3,10 @@ import logging
 import mimetypes
 import os
 import shutil
+import asyncio
 
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Union
@@ -801,6 +803,7 @@ def save_docs_to_vector_db(
     split: bool = True,
     add: bool = False,
     user=None,
+    batch_size: int = 50,  # Default batch size for processing documents
 ) -> bool:
     def _get_docs_info(docs: list[Document]) -> str:
         docs_info = set()
@@ -919,11 +922,29 @@ def save_docs_to_vector_db(
             request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
         )
 
-        embeddings = embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts)),
-            prefix=RAG_EMBEDDING_CONTENT_PREFIX,
-            user=user,
-        )
+        # Process documents in batches using multi-threading
+        if len(texts) > batch_size:
+            log.info(f"Processing {len(texts)} documents in batches of {batch_size}")
+            
+            # Process embeddings in batches
+            all_embeddings = []
+            for i in range(0, len(texts), batch_size):
+                batch_texts = list(map(lambda x: x.replace("\n", " "), texts[i:i+batch_size]))
+                batch_embeddings = embedding_function(
+                    batch_texts,
+                    prefix=RAG_EMBEDDING_CONTENT_PREFIX,
+                    user=user,
+                )
+                all_embeddings.extend(batch_embeddings)
+            
+            embeddings = all_embeddings
+        else:
+            # For small document sets, process normally
+            embeddings = embedding_function(
+                list(map(lambda x: x.replace("\n", " "), texts)),
+                prefix=RAG_EMBEDDING_CONTENT_PREFIX,
+                user=user,
+            )
 
         items = [
             {
@@ -935,10 +956,36 @@ def save_docs_to_vector_db(
             for idx, text in enumerate(texts)
         ]
 
-        VECTOR_DB_CLIENT.insert(
-            collection_name=collection_name,
-            items=items,
-        )
+        # Insert items in batches if there are many
+        if len(items) > batch_size:
+            with ThreadPoolExecutor() as executor:
+                # Split items into batches
+                batches = [items[i:i+batch_size] for i in range(0, len(items), batch_size)]
+                
+                # Define a function to insert a batch
+                def insert_batch(batch_items):
+                    try:
+                        VECTOR_DB_CLIENT.insert(
+                            collection_name=collection_name,
+                            items=batch_items,
+                        )
+                        return True
+                    except Exception as e:
+                        log.exception(f"Error inserting batch: {e}")
+                        return False
+                
+                # Execute batch insertions in parallel
+                results = list(executor.map(insert_batch, batches))
+                
+                # Check if all insertions were successful
+                if not all(results):
+                    raise Exception("Failed to insert all document batches")
+        else:
+            # For small sets, insert normally
+            VECTOR_DB_CLIENT.insert(
+                collection_name=collection_name,
+                items=items,
+            )
 
         return True
     except Exception as e:
@@ -1283,190 +1330,196 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
     Args:
         query (str): The query to search for
     """
+    # Define a function to handle each search engine
+    def get_search_function(engine_name):
+        if engine_name == "searxng":
+            if request.app.state.config.SEARXNG_QUERY_URL:
+                return lambda: search_searxng(
+                    request.app.state.config.SEARXNG_QUERY_URL,
+                    query,
+                    request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                    request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                )
+            else:
+                raise Exception("No SEARXNG_QUERY_URL found in environment variables")
+        elif engine_name == "google_pse":
+            if (
+                request.app.state.config.GOOGLE_PSE_API_KEY
+                and request.app.state.config.GOOGLE_PSE_ENGINE_ID
+            ):
+                return lambda: search_google_pse(
+                    request.app.state.config.GOOGLE_PSE_API_KEY,
+                    request.app.state.config.GOOGLE_PSE_ENGINE_ID,
+                    query,
+                    request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                    request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                )
+            else:
+                raise Exception(
+                    "No GOOGLE_PSE_API_KEY or GOOGLE_PSE_ENGINE_ID found in environment variables"
+                )
+        elif engine_name == "brave":
+            if request.app.state.config.BRAVE_SEARCH_API_KEY:
+                return lambda: search_brave(
+                    request.app.state.config.BRAVE_SEARCH_API_KEY,
+                    query,
+                    request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                    request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                )
+            else:
+                raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
+        elif engine_name == "kagi":
+            if request.app.state.config.KAGI_SEARCH_API_KEY:
+                return lambda: search_kagi(
+                    request.app.state.config.KAGI_SEARCH_API_KEY,
+                    query,
+                    request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                    request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                )
+            else:
+                raise Exception("No KAGI_SEARCH_API_KEY found in environment variables")
+        elif engine_name == "mojeek":
+            if request.app.state.config.MOJEEK_SEARCH_API_KEY:
+                return lambda: search_mojeek(
+                    request.app.state.config.MOJEEK_SEARCH_API_KEY,
+                    query,
+                    request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                    request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                )
+            else:
+                raise Exception("No MOJEEK_SEARCH_API_KEY found in environment variables")
+        elif engine_name == "bocha":
+            if request.app.state.config.BOCHA_SEARCH_API_KEY:
+                return lambda: search_bocha(
+                    request.app.state.config.BOCHA_SEARCH_API_KEY,
+                    query,
+                    request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                    request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                )
+            else:
+                raise Exception("No BOCHA_SEARCH_API_KEY found in environment variables")
+        elif engine_name == "serpstack":
+            if request.app.state.config.SERPSTACK_API_KEY:
+                return lambda: search_serpstack(
+                    request.app.state.config.SERPSTACK_API_KEY,
+                    query,
+                    request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                    request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                    https_enabled=request.app.state.config.SERPSTACK_HTTPS,
+                )
+            else:
+                raise Exception("No SERPSTACK_API_KEY found in environment variables")
+        elif engine_name == "serper":
+            if request.app.state.config.SERPER_API_KEY:
+                return lambda: search_serper(
+                    request.app.state.config.SERPER_API_KEY,
+                    query,
+                    request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                    request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                )
+            else:
+                raise Exception("No SERPER_API_KEY found in environment variables")
+        elif engine_name == "serply":
+            if request.app.state.config.SERPLY_API_KEY:
+                return lambda: search_serply(
+                    request.app.state.config.SERPLY_API_KEY,
+                    query,
+                    request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                    request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                )
+            else:
+                raise Exception("No SERPLY_API_KEY found in environment variables")
+        elif engine_name == "duckduckgo":
+            return lambda: search_duckduckgo(
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        elif engine_name == "tavily":
+            if request.app.state.config.TAVILY_API_KEY:
+                return lambda: search_tavily(
+                    request.app.state.config.TAVILY_API_KEY,
+                    query,
+                    request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                    request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                )
+            else:
+                raise Exception("No TAVILY_API_KEY found in environment variables")
+        elif engine_name == "searchapi":
+            if request.app.state.config.SEARCHAPI_API_KEY:
+                return lambda: search_searchapi(
+                    request.app.state.config.SEARCHAPI_API_KEY,
+                    request.app.state.config.SEARCHAPI_ENGINE,
+                    query,
+                    request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                    request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                )
+            else:
+                raise Exception("No SEARCHAPI_API_KEY found in environment variables")
+        elif engine_name == "serpapi":
+            if request.app.state.config.SERPAPI_API_KEY:
+                return lambda: search_serpapi(
+                    request.app.state.config.SERPAPI_API_KEY,
+                    request.app.state.config.SERPAPI_ENGINE,
+                    query,
+                    request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                    request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                )
+            else:
+                raise Exception("No SERPAPI_API_KEY found in environment variables")
+        elif engine_name == "jina":
+            return lambda: search_jina(
+                request.app.state.config.JINA_API_KEY,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            )
+        elif engine_name == "bing":
+            return lambda: search_bing(
+                request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
+                request.app.state.config.BING_SEARCH_V7_ENDPOINT,
+                str(DEFAULT_LOCALE),
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        elif engine_name == "exa":
+            return lambda: search_exa(
+                request.app.state.config.EXA_API_KEY,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        elif engine_name == "perplexity":
+            return lambda: search_perplexity(
+                request.app.state.config.PERPLEXITY_API_KEY,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        elif engine_name == "sougou":
+            if (
+                request.app.state.config.SOUGOU_API_SID
+                and request.app.state.config.SOUGOU_API_SK
+            ):
+                return lambda: search_sougou(
+                    request.app.state.config.SOUGOU_API_SID,
+                    request.app.state.config.SOUGOU_API_SK,
+                    query,
+                    request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                    request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+                )
+            else:
+                raise Exception(
+                    "No SOUGOU_API_SID or SOUGOU_API_SK found in environment variables"
+                )
+        else:
+            raise Exception(f"Unknown search engine: {engine_name}")
 
-    # TODO: add playwright to search the web
-    if engine == "searxng":
-        if request.app.state.config.SEARXNG_QUERY_URL:
-            return search_searxng(
-                request.app.state.config.SEARXNG_QUERY_URL,
-                query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception("No SEARXNG_QUERY_URL found in environment variables")
-    elif engine == "google_pse":
-        if (
-            request.app.state.config.GOOGLE_PSE_API_KEY
-            and request.app.state.config.GOOGLE_PSE_ENGINE_ID
-        ):
-            return search_google_pse(
-                request.app.state.config.GOOGLE_PSE_API_KEY,
-                request.app.state.config.GOOGLE_PSE_ENGINE_ID,
-                query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception(
-                "No GOOGLE_PSE_API_KEY or GOOGLE_PSE_ENGINE_ID found in environment variables"
-            )
-    elif engine == "brave":
-        if request.app.state.config.BRAVE_SEARCH_API_KEY:
-            return search_brave(
-                request.app.state.config.BRAVE_SEARCH_API_KEY,
-                query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
-    elif engine == "kagi":
-        if request.app.state.config.KAGI_SEARCH_API_KEY:
-            return search_kagi(
-                request.app.state.config.KAGI_SEARCH_API_KEY,
-                query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception("No KAGI_SEARCH_API_KEY found in environment variables")
-    elif engine == "mojeek":
-        if request.app.state.config.MOJEEK_SEARCH_API_KEY:
-            return search_mojeek(
-                request.app.state.config.MOJEEK_SEARCH_API_KEY,
-                query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception("No MOJEEK_SEARCH_API_KEY found in environment variables")
-    elif engine == "bocha":
-        if request.app.state.config.BOCHA_SEARCH_API_KEY:
-            return search_bocha(
-                request.app.state.config.BOCHA_SEARCH_API_KEY,
-                query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception("No BOCHA_SEARCH_API_KEY found in environment variables")
-    elif engine == "serpstack":
-        if request.app.state.config.SERPSTACK_API_KEY:
-            return search_serpstack(
-                request.app.state.config.SERPSTACK_API_KEY,
-                query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-                https_enabled=request.app.state.config.SERPSTACK_HTTPS,
-            )
-        else:
-            raise Exception("No SERPSTACK_API_KEY found in environment variables")
-    elif engine == "serper":
-        if request.app.state.config.SERPER_API_KEY:
-            return search_serper(
-                request.app.state.config.SERPER_API_KEY,
-                query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception("No SERPER_API_KEY found in environment variables")
-    elif engine == "serply":
-        if request.app.state.config.SERPLY_API_KEY:
-            return search_serply(
-                request.app.state.config.SERPLY_API_KEY,
-                query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception("No SERPLY_API_KEY found in environment variables")
-    elif engine == "duckduckgo":
-        return search_duckduckgo(
-            query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-        )
-    elif engine == "tavily":
-        if request.app.state.config.TAVILY_API_KEY:
-            return search_tavily(
-                request.app.state.config.TAVILY_API_KEY,
-                query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception("No TAVILY_API_KEY found in environment variables")
-    elif engine == "searchapi":
-        if request.app.state.config.SEARCHAPI_API_KEY:
-            return search_searchapi(
-                request.app.state.config.SEARCHAPI_API_KEY,
-                request.app.state.config.SEARCHAPI_ENGINE,
-                query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception("No SEARCHAPI_API_KEY found in environment variables")
-    elif engine == "serpapi":
-        if request.app.state.config.SERPAPI_API_KEY:
-            return search_serpapi(
-                request.app.state.config.SERPAPI_API_KEY,
-                request.app.state.config.SERPAPI_ENGINE,
-                query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception("No SERPAPI_API_KEY found in environment variables")
-    elif engine == "jina":
-        return search_jina(
-            request.app.state.config.JINA_API_KEY,
-            query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-        )
-    elif engine == "bing":
-        return search_bing(
-            request.app.state.config.BING_SEARCH_V7_SUBSCRIPTION_KEY,
-            request.app.state.config.BING_SEARCH_V7_ENDPOINT,
-            str(DEFAULT_LOCALE),
-            query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-        )
-    elif engine == "exa":
-        return search_exa(
-            request.app.state.config.EXA_API_KEY,
-            query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-        )
-    elif engine == "perplexity":
-        return search_perplexity(
-            request.app.state.config.PERPLEXITY_API_KEY,
-            query,
-            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-        )
-    elif engine == "sougou":
-        if (
-            request.app.state.config.SOUGOU_API_SID
-            and request.app.state.config.SOUGOU_API_SK
-        ):
-            return search_sougou(
-                request.app.state.config.SOUGOU_API_SID,
-                request.app.state.config.SOUGOU_API_SK,
-                query,
-                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
-                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
-            )
-        else:
-            raise Exception(
-                "No SOUGOU_API_SID or SOUGOU_API_SK found in environment variables"
-            )
-    else:
-        raise Exception("No search engine API key found in environment variables")
+    # Get the search function for the specified engine
+    search_func = get_search_function(engine)
+    
+    # Execute the search function
+    return search_func()
 
 
 @router.post("/process/web/search")
@@ -1521,22 +1574,38 @@ async def process_web_search(
                 "loaded_count": len(docs),
             }
         else:
+            # Process documents in parallel using ThreadPoolExecutor
             collection_names = []
+            valid_docs = []
+            valid_urls = []
+            
+            # Filter valid documents first
             for doc_idx, doc in enumerate(docs):
                 if doc and doc.page_content:
-                    collection_name = f"web-search-{calculate_sha256_string(form_data.query + '-' + urls[doc_idx])}"[
-                        :63
-                    ]
-
+                    collection_name = f"web-search-{calculate_sha256_string(form_data.query + '-' + urls[doc_idx])}"[:63]
                     collection_names.append(collection_name)
+                    valid_docs.append(doc)
+                    valid_urls.append(urls[doc_idx])
+            
+            # Define a function to save a document to the vector database
+            async def save_doc_to_db(idx):
+                try:
                     await run_in_threadpool(
                         save_docs_to_vector_db,
                         request,
-                        [doc],
-                        collection_name,
+                        [valid_docs[idx]],
+                        collection_names[idx],
                         overwrite=True,
                         user=user,
                     )
+                    return True
+                except Exception as e:
+                    log.exception(f"Error saving document to vector DB: {e}")
+                    return False
+            
+            # Use asyncio.gather to run multiple save operations concurrently
+            tasks = [save_doc_to_db(i) for i in range(len(valid_docs))]
+            await asyncio.gather(*tasks)
 
             return {
                 "status": True,
@@ -1753,61 +1822,105 @@ def process_files_batch(
     user=Depends(get_verified_user),
 ) -> BatchProcessFilesResponse:
     """
-    Process a batch of files and save them to the vector database.
+    Process a batch of files and save them to the vector database using multi-threading.
     """
     results: List[BatchProcessFilesResult] = []
     errors: List[BatchProcessFilesResult] = []
     collection_name = form_data.collection_name
-
-    # Prepare all documents first
-    all_docs: List[Document] = []
-    for file in form_data.files:
+    
+    # Function to process a single file
+    def process_file(file):
         try:
             text_content = file.data.get("content", "")
 
-            docs: List[Document] = [
-                Document(
-                    page_content=text_content.replace("<br/>", "\n"),
-                    metadata={
-                        **file.meta,
-                        "name": file.filename,
-                        "created_by": file.user_id,
-                        "file_id": file.id,
-                        "source": file.filename,
-                    },
-                )
-            ]
+            doc = Document(
+                page_content=text_content.replace("<br/>", "\n"),
+                metadata={
+                    **file.meta,
+                    "name": file.filename,
+                    "created_by": file.user_id,
+                    "file_id": file.id,
+                    "source": file.filename,
+                },
+            )
 
             hash = calculate_sha256_string(text_content)
             Files.update_file_hash_by_id(file.id, hash)
             Files.update_file_data_by_id(file.id, {"content": text_content})
 
-            all_docs.extend(docs)
-            results.append(BatchProcessFilesResult(file_id=file.id, status="prepared"))
-
+            return {
+                "doc": doc,
+                "file_id": file.id,
+                "status": "prepared",
+                "error": None
+            }
         except Exception as e:
             log.error(f"process_files_batch: Error processing file {file.id}: {str(e)}")
-            errors.append(
-                BatchProcessFilesResult(file_id=file.id, status="failed", error=str(e))
-            )
+            return {
+                "doc": None,
+                "file_id": file.id,
+                "status": "failed",
+                "error": str(e)
+            }
+
+    # Process files in parallel using ThreadPoolExecutor
+    all_docs: List[Document] = []
+    with ThreadPoolExecutor() as executor:
+        # Process all files in parallel
+        file_results = list(executor.map(process_file, form_data.files))
+        
+        # Collect results and errors
+        for result in file_results:
+            if result["status"] == "prepared":
+                all_docs.append(result["doc"])
+                results.append(BatchProcessFilesResult(
+                    file_id=result["file_id"],
+                    status=result["status"]
+                ))
+            else:
+                errors.append(BatchProcessFilesResult(
+                    file_id=result["file_id"],
+                    status=result["status"],
+                    error=result["error"]
+                ))
 
     # Save all documents in one batch
     if all_docs:
         try:
+            # Use the enhanced multi-threaded version of save_docs_to_vector_db
             save_docs_to_vector_db(
                 request=request,
                 docs=all_docs,
                 collection_name=collection_name,
                 add=True,
                 user=user,
+                batch_size=50,  # Process in batches of 50 documents
             )
 
-            # Update all files with collection name
-            for result in results:
-                Files.update_file_metadata_by_id(
-                    result.file_id, {"collection_name": collection_name}
-                )
-                result.status = "completed"
+            # Update all files with collection name in parallel
+            def update_file_metadata(result):
+                try:
+                    Files.update_file_metadata_by_id(
+                        result.file_id, {"collection_name": collection_name}
+                    )
+                    return {"file_id": result.file_id, "status": "completed"}
+                except Exception as e:
+                    return {"file_id": result.file_id, "status": "failed", "error": str(e)}
+            
+            with ThreadPoolExecutor() as executor:
+                update_results = list(executor.map(update_file_metadata, results))
+                
+                # Update result statuses
+                for update_result in update_results:
+                    for result in results:
+                        if result.file_id == update_result["file_id"]:
+                            result.status = update_result["status"]
+                            if update_result["status"] == "failed" and "error" in update_result:
+                                errors.append(BatchProcessFilesResult(
+                                    file_id=update_result["file_id"],
+                                    status="failed",
+                                    error=update_result["error"]
+                                ))
 
         except Exception as e:
             log.error(
