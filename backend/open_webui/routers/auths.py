@@ -28,6 +28,7 @@ from open_webui.env import (
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
     SRC_LOG_LEVELS,
+    AXLR_ENABLE_AUTO_LOGIN,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response
@@ -352,22 +353,42 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             )
         user = Auths.authenticate_user_by_trusted_header(trusted_email)
     elif WEBUI_AUTH == False:
-        admin_email = "admin@localhost"
-        admin_password = "admin"
 
-        if Users.get_user_by_email(admin_email.lower()):
+        if AXLR_ENABLE_AUTO_LOGIN:
+            # 사용자가 있을 경우에는 WEBUI_AUTH false값을 사용하지 못했으나, 우리는 ip로 계정을 자동생성+로그인하도록 수정함
+            client_ip = request.client.host.replace(".", "_")
+            admin_email = f"{client_ip}@axlrator.com"
+            admin_password = "1234"
+
+            if Users.get_user_by_email(admin_email.lower()):
+                pass
+            else:
+                await signup(
+                    request,
+                    response,
+                    SignupForm(email=admin_email, password=admin_password, name="User"),
+                )
+
             user = Auths.authenticate_user(admin_email.lower(), admin_password)
+
         else:
-            if Users.get_num_users() != 0:
-                raise HTTPException(400, detail=ERROR_MESSAGES.EXISTING_USERS)
+            admin_email = "admin@localhost"
+            admin_password = "admin"
 
-            await signup(
-                request,
-                response,
-                SignupForm(email=admin_email, password=admin_password, name="User"),
-            )
+            if Users.get_user_by_email(admin_email.lower()):
+                user = Auths.authenticate_user(admin_email.lower(), admin_password)
+            else:
+                if Users.get_num_users() != 0:
+                    raise HTTPException(400, detail=ERROR_MESSAGES.EXISTING_USERS)
 
-            user = Auths.authenticate_user(admin_email.lower(), admin_password)
+                await signup(
+                    request,
+                    response,
+                    SignupForm(email=admin_email, password=admin_password, name="User"),
+                )
+
+                user = Auths.authenticate_user(admin_email.lower(), admin_password)
+        
     else:
         user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
@@ -435,10 +456,12 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
             )
     else:
-        if Users.get_num_users() != 0:
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
-            )
+        print(f"### 사용자별로 자동로그인 처리를 위해 체크로직은 패스 시킨다 user={form_data.email}" )        
+        if not AXLR_ENABLE_AUTO_LOGIN:
+            if Users.get_num_users() != 0:
+                raise HTTPException(
+                    status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
+                )
 
     user_count = Users.get_num_users()
     if not validate_email_format(form_data.email.lower()):

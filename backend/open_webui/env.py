@@ -358,6 +358,12 @@ BYPASS_MODEL_ACCESS_CONTROL = (
 )
 
 ####################################
+# AXLR
+####################################
+AXLR_ENABLE_AUTO_LOGIN = os.environ.get("AXLR_ENABLE_AUTO_LOGIN", "True").lower() == "true"
+
+
+####################################
 # WEBUI_SECRET_KEY
 ####################################
 

@@ -31,6 +31,7 @@ services:
       # - 'OLLAMA_BASE_URL=http://ollama:11434'
       - 'OLLAMA_BASE_URL=http://host.docker.internal:11434'
       - 'WEBUI_SECRET_KEY='
+      - NO_AUTH=true
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
