@@ -191,7 +191,7 @@
 	};
 
 	onMount(async () => {
-		if ($user.role === 'admin') {
+		if ($user?.role === 'admin') {
 			let ollamaConfig = {};
 			let openaiConfig = {};
 			let aifredConfig = {};

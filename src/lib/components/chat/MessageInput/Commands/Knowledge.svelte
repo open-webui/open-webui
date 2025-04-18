@@ -154,6 +154,14 @@
 			keys: ['name', 'description']
 		});
 	});
+
+	const decodeString = (str: string) => {
+		try {
+			return decodeURIComponent(str);
+		} catch (e) {
+			return str;
+		}
+	};
 </script>
 
 {#if filteredItems.length > 0 || prompt.split(' ')?.at(0)?.substring(1).startsWith('http')}
@@ -210,7 +218,7 @@
 									{/if}
 
 									<div class="line-clamp-1">
-										{item?.name}
+										{decodeString(item?.name)}
 									</div>
 								</div>
 
