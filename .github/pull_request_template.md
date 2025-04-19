@@ -70,3 +70,7 @@
 ### Screenshots or Videos
 
 - [Attach any relevant screenshots or videos demonstrating the changes]
+
+### Contributor License Agreement
+
+By submitting this pull request, I confirm that I have read and fully agree to the [CONTRIBUTOR_LICENSE_AGREEMENT](CONTRIBUTOR_LICENSE_AGREEMENT), and I am providing my contributions under its terms.
