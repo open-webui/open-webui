@@ -19,7 +19,7 @@ from open_webui.models.auths import (
     UserResponse,
 )
 from open_webui.models.users import Users
-from open_webui.config import CONFIG_DATA, save_config # Import necessary items
+from open_webui.config import CONFIG_DATA, save_config
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (

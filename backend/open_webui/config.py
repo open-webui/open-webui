@@ -580,7 +580,7 @@ OAUTH_ADMIN_ROLES = PersistentConfig(
 OAUTH_ALLOWED_DOMAINS = PersistentConfig(
     "OAUTH_ALLOWED_DOMAINS",
     "oauth.allowed_domains",
-    os.environ.get("OAUTH_ALLOWED_DOMAINS", ""),
+    os.environ.get("OAUTH_ALLOWED_DOMAINS", "*"),
 )
 
 
