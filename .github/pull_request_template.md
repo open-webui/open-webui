@@ -70,3 +70,5 @@
 ### Screenshots or Videos
 
 - [Attach any relevant screenshots or videos demonstrating the changes]
+
+By submitting this pull request, you agree to our Contributor License Agreement as outlined in the CONTRIBUTOR_LICENSE_AGREEMENT.md file located in the root directory.
