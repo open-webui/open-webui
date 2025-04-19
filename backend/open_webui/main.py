@@ -52,6 +52,7 @@ from open_webui.utils.logger import start_logger
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
+    get_event_emitter,
 )
 from open_webui.routers import (
     audio,
@@ -387,6 +388,7 @@ from open_webui.tasks import (
     list_task_ids_by_chat_id,
     stop_task,
     list_tasks,
+    create_task,
 )  # Import from tasks.py
 
 from open_webui.utils.redis import get_sentinels_from_env
@@ -1147,10 +1149,6 @@ async def chat_completion(
         request.state.metadata = metadata
         form_data["metadata"] = metadata
 
-        form_data, metadata, events = await process_chat_payload(
-            request, form_data, user, metadata, model
-        )
-
     except Exception as e:
         log.debug(f"Error processing chat payload: {e}")
         if metadata.get("chat_id") and metadata.get("message_id"):
@@ -1168,16 +1166,61 @@ async def chat_completion(
             detail=str(e),
         )
 
-    try:
-        response = await chat_completion_handler(request, form_data, user)
+    async def process_chat_payload_and_response(
+        request, form_data, user, metadata, model, event_emitter=None
+    ):
+        try:
+            form_data, metadata, events = await process_chat_payload(
+                request, form_data, user, metadata, model
+            )
+            response = await chat_completion_handler(request, form_data, user)
+            return await process_chat_response(
+                request, response, form_data, user, metadata, model, events, tasks
+            )
+        except Exception as e:
+            if metadata.get("chat_id") and metadata.get("message_id"):
+                Chats.upsert_message_to_chat_by_id_and_message_id(
+                    metadata["chat_id"],
+                    metadata["message_id"],
+                    {
+                        "error": {"content": str(e)},
+                    },
+                )
+            if event_emitter is not None:
+                await event_emitter(
+                    {
+                        "type": "task-cancelled",
+                        "data": {
+                            "error": str(e),
+                        },
+                    }
+                )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
 
-        return await process_chat_response(
-            request, response, form_data, user, metadata, model, events, tasks
+    if (
+        "session_id" in metadata
+        and metadata["session_id"]
+        and "chat_id" in metadata
+        and metadata["chat_id"]
+        and "message_id" in metadata
+        and metadata["message_id"]
+    ):
+        # Asynchronous API call (Typically from UI)
+        event_emitter = get_event_emitter(metadata)
+        task_id, _ = create_task(
+            process_chat_payload_and_response(
+                request, form_data, user, metadata, model, event_emitter=event_emitter
+            ),
+            id=metadata["chat_id"],
         )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+        return {"status": True, "task_id": task_id}
+    else:
+        # Synchronous API call
+        return await process_chat_payload_and_response(
+            request, form_data, user, metadata, model
         )
 
 

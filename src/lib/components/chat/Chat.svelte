@@ -350,6 +350,19 @@
 					eventConfirmationMessage = data.message;
 					eventConfirmationInputPlaceholder = data.placeholder;
 					eventConfirmationInputValue = data?.value ?? '';
+				} else if (type === 'task-cancelled') {
+					const taskCancelledError = data?.error ?? '';
+					if (taskCancelledError) {
+						toast.error(taskCancelledError);
+						message.error = { content: taskCancelledError };
+					}
+					message.done = true;
+					const taskRes = await getTaskIdsByChatId(localStorage.token, $chatId).catch((error) => {
+						return null;
+					});
+					if (taskRes) {
+						taskIds = taskRes.task_ids;
+					}
 				} else {
 					console.log('Unknown message type', data);
 				}
