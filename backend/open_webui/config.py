@@ -509,6 +509,12 @@ ENABLE_OAUTH_GROUP_MANAGEMENT = PersistentConfig(
     os.environ.get("ENABLE_OAUTH_GROUP_MANAGEMENT", "False").lower() == "true",
 )
 
+ENABLE_OAUTH_GROUP_CREATION = PersistentConfig(
+    "ENABLE_OAUTH_GROUP_CREATION",
+    "oauth.enable_group_creation",
+    os.environ.get("ENABLE_OAUTH_GROUP_CREATION", "False").lower() == "true",
+)
+
 OAUTH_ROLES_CLAIM = PersistentConfig(
     "OAUTH_ROLES_CLAIM",
     "oauth.roles_claim",
