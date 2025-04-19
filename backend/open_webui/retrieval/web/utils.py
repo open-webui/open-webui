@@ -24,6 +24,7 @@ from langchain_community.document_loaders import PlaywrightURLLoader, WebBaseLoa
 from langchain_community.document_loaders.firecrawl import FireCrawlLoader
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
+from open_webui.retrieval.web.main import SearchResult
 from open_webui.retrieval.loaders.tavily import TavilyLoader
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
@@ -35,6 +36,7 @@ from open_webui.config import (
     FIRECRAWL_API_KEY,
     TAVILY_API_KEY,
     TAVILY_EXTRACT_DEPTH,
+    BYPASS_WEB_LOADING_FOR_WEB_SEARCH
 )
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -584,12 +586,46 @@ class SafeWebBaseLoader(WebBaseLoader):
         return [document async for document in self.alazy_load()]
 
 
+class SafeEmptyLoader(BaseLoader):
+    """
+    Loader that does not load any data. Directly use snippets from the web search result.
+    """
+
+    def __init__(self, search_results: List[SearchResult]):
+        self.documents: List[Document] = []
+        for result in search_results:
+            if not isinstance(result, SearchResult):
+                raise ValueError(
+                    "SafeEmptyLoader expects a list of SearchResult objects."
+                )
+            metadata = {
+                "title": result.title,
+                "link": result.link,
+                "snippet": result.snippet,
+                "source": result.link
+            }
+            # To accelerate the process, we can use the snippet directly as the page content, skip web loading
+            self.documents.append(
+                Document(page_content=result.snippet, metadata=metadata)
+            )
+
+    def lazy_load(self) -> Iterator[Document]:
+        """Return an empty iterator."""
+        for document in self.documents:
+            yield document
+
+
 def get_web_loader(
     urls: Union[str, Sequence[str]],
     verify_ssl: bool = True,
     requests_per_second: int = 2,
     trust_env: bool = False,
+    search_results: Optional[List[SearchResult]] = None,
 ):
+    if BYPASS_WEB_LOADING_FOR_WEB_SEARCH.value:
+        # If web loading is bypassed, use SafeEmptyLoader
+        return SafeEmptyLoader(search_results=search_results)
+
     # Check if the URLs are valid
     safe_urls = safe_validate_urls([urls] if isinstance(urls, str) else urls)
 
