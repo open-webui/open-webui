@@ -374,60 +374,64 @@ def convert_openapi_to_tool_payload(openapi_spec):
 
     for path, methods in openapi_spec.get("paths", {}).items():
         for method, operation in methods.items():
-            tool = {
-                "type": "function",
-                "name": operation.get("operationId"),
-                "description": operation.get(
-                    "description", operation.get("summary", "No description available.")
-                ),
-                "parameters": {"type": "object", "properties": {}, "required": []},
-            }
-
-            # Extract path and query parameters
-            for param in operation.get("parameters", []):
-                param_name = param["name"]
-                param_schema = param.get("schema", {})
-                description = param_schema.get("description", "")
-                if not description:
-                    description = param.get("description") or ""
-                if param_schema.get("enum") and isinstance(
-                    param_schema.get("enum"), list
-                ):
-                    description += (
-                        f". Possible values: {', '.join(param_schema.get('enum'))}"
-                    )
-                tool["parameters"]["properties"][param_name] = {
-                    "type": param_schema.get("type"),
-                    "description": description,
+            if operation.get("operationId"):
+                tool = {
+                    "type": "function",
+                    "name": operation.get("operationId"),
+                    "description": operation.get(
+                        "description",
+                        operation.get("summary", "No description available."),
+                    ),
+                    "parameters": {"type": "object", "properties": {}, "required": []},
                 }
-                if param.get("required"):
-                    tool["parameters"]["required"].append(param_name)
 
-            # Extract and resolve requestBody if available
-            request_body = operation.get("requestBody")
-            if request_body:
-                content = request_body.get("content", {})
-                json_schema = content.get("application/json", {}).get("schema")
-                if json_schema:
-                    resolved_schema = resolve_schema(
-                        json_schema, openapi_spec.get("components", {})
-                    )
-
-                    if resolved_schema.get("properties"):
-                        tool["parameters"]["properties"].update(
-                            resolved_schema["properties"]
+                # Extract path and query parameters
+                for param in operation.get("parameters", []):
+                    param_name = param["name"]
+                    param_schema = param.get("schema", {})
+                    description = param_schema.get("description", "")
+                    if not description:
+                        description = param.get("description") or ""
+                    if param_schema.get("enum") and isinstance(
+                        param_schema.get("enum"), list
+                    ):
+                        description += (
+                            f". Possible values: {', '.join(param_schema.get('enum'))}"
                         )
-                        if "required" in resolved_schema:
-                            tool["parameters"]["required"] = list(
-                                set(
-                                    tool["parameters"]["required"]
-                                    + resolved_schema["required"]
-                                )
-                            )
-                    elif resolved_schema.get("type") == "array":
-                        tool["parameters"] = resolved_schema  # special case for array
+                    tool["parameters"]["properties"][param_name] = {
+                        "type": param_schema.get("type"),
+                        "description": description,
+                    }
+                    if param.get("required"):
+                        tool["parameters"]["required"].append(param_name)
 
-            tool_payload.append(tool)
+                # Extract and resolve requestBody if available
+                request_body = operation.get("requestBody")
+                if request_body:
+                    content = request_body.get("content", {})
+                    json_schema = content.get("application/json", {}).get("schema")
+                    if json_schema:
+                        resolved_schema = resolve_schema(
+                            json_schema, openapi_spec.get("components", {})
+                        )
+
+                        if resolved_schema.get("properties"):
+                            tool["parameters"]["properties"].update(
+                                resolved_schema["properties"]
+                            )
+                            if "required" in resolved_schema:
+                                tool["parameters"]["required"] = list(
+                                    set(
+                                        tool["parameters"]["required"]
+                                        + resolved_schema["required"]
+                                    )
+                                )
+                        elif resolved_schema.get("type") == "array":
+                            tool["parameters"] = (
+                                resolved_schema  # special case for array
+                            )
+
+                tool_payload.append(tool)
 
     return tool_payload
 

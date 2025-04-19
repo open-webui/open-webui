@@ -1243,60 +1243,62 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 
 	for (const [path, methods] of Object.entries(openApiSpec.paths)) {
 		for (const [method, operation] of Object.entries(methods)) {
-			const tool = {
-				type: 'function',
-				name: operation.operationId,
-				description: operation.description || operation.summary || 'No description available.',
-				parameters: {
-					type: 'object',
-					properties: {},
-					required: []
-				}
-			};
-
-			// Extract path and query parameters
-			if (operation.parameters) {
-				operation.parameters.forEach((param) => {
-					let description = param.schema.description || param.description || '';
-					if (param.schema.enum && Array.isArray(param.schema.enum)) {
-						description += `. Possible values: ${param.schema.enum.join(', ')}`;
+			if (operation?.operationId) {
+				const tool = {
+					type: 'function',
+					name: operation.operationId,
+					description: operation.description || operation.summary || 'No description available.',
+					parameters: {
+						type: 'object',
+						properties: {},
+						required: []
 					}
-					tool.parameters.properties[param.name] = {
-						type: param.schema.type,
-						description: description
-					};
+				};
 
-					if (param.required) {
-						tool.parameters.required.push(param.name);
-					}
-				});
-			}
-
-			// Extract and recursively resolve requestBody if available
-			if (operation.requestBody) {
-				const content = operation.requestBody.content;
-				if (content && content['application/json']) {
-					const requestSchema = content['application/json'].schema;
-					const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);
-
-					if (resolvedRequestSchema.properties) {
-						tool.parameters.properties = {
-							...tool.parameters.properties,
-							...resolvedRequestSchema.properties
+				// Extract path and query parameters
+				if (operation.parameters) {
+					operation.parameters.forEach((param) => {
+						let description = param.schema.description || param.description || '';
+						if (param.schema.enum && Array.isArray(param.schema.enum)) {
+							description += `. Possible values: ${param.schema.enum.join(', ')}`;
+						}
+						tool.parameters.properties[param.name] = {
+							type: param.schema.type,
+							description: description
 						};
 
-						if (resolvedRequestSchema.required) {
-							tool.parameters.required = [
-								...new Set([...tool.parameters.required, ...resolvedRequestSchema.required])
-							];
+						if (param.required) {
+							tool.parameters.required.push(param.name);
 						}
-					} else if (resolvedRequestSchema.type === 'array') {
-						tool.parameters = resolvedRequestSchema; // special case when root schema is an array
+					});
+				}
+
+				// Extract and recursively resolve requestBody if available
+				if (operation.requestBody) {
+					const content = operation.requestBody.content;
+					if (content && content['application/json']) {
+						const requestSchema = content['application/json'].schema;
+						const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);
+
+						if (resolvedRequestSchema.properties) {
+							tool.parameters.properties = {
+								...tool.parameters.properties,
+								...resolvedRequestSchema.properties
+							};
+
+							if (resolvedRequestSchema.required) {
+								tool.parameters.required = [
+									...new Set([...tool.parameters.required, ...resolvedRequestSchema.required])
+								];
+							}
+						} else if (resolvedRequestSchema.type === 'array') {
+							tool.parameters = resolvedRequestSchema; // special case when root schema is an array
+						}
 					}
 				}
-			}
 
-			toolPayload.push(tool);
+				toolPayload.push(tool);
+			}
 		}
 	}
 
@@ -1304,15 +1306,17 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 };
 
 export const slugify = (str: string): string => {
-	return str
-		// 1. Normalize: separate accented letters into base + combining marks
-		.normalize("NFD")
-		// 2. Remove all combining marks (the accents)
-		.replace(/[\u0300-\u036f]/g, "")
-		// 3. Replace any sequence of whitespace with a single hyphen
-		.replace(/\s+/g, "-")
-		// 4. Remove all characters except alphanumeric characters and hyphens
-		.replace(/[^a-zA-Z0-9-]/g, "")
-		// 5. Convert to lowercase
-		.toLowerCase();
+	return (
+		str
+			// 1. Normalize: separate accented letters into base + combining marks
+			.normalize('NFD')
+			// 2. Remove all combining marks (the accents)
+			.replace(/[\u0300-\u036f]/g, '')
+			// 3. Replace any sequence of whitespace with a single hyphen
+			.replace(/\s+/g, '-')
+			// 4. Remove all characters except alphanumeric characters and hyphens
+			.replace(/[^a-zA-Z0-9-]/g, '')
+			// 5. Convert to lowercase
+			.toLowerCase()
+	);
 };
