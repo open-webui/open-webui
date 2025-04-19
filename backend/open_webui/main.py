@@ -52,6 +52,7 @@ from open_webui.utils.logger import start_logger
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
+    get_event_emitter,
 )
 from open_webui.routers import (
     audio,
@@ -1166,7 +1167,7 @@ async def chat_completion(
         )
 
     async def process_chat_payload_and_response(
-        request, form_data, user, metadata, model
+        request, form_data, user, metadata, model, event_emitter=None
     ):
         try:
             form_data, metadata, events = await process_chat_payload(
@@ -1183,6 +1184,15 @@ async def chat_completion(
                         "error": {"content": str(e)},
                     },
                 )
+            if event_emitter is not None:
+                await event_emitter(
+                    {
+                        "type": "task-cancelled",
+                        "data": {
+                            "error": str(e),
+                        },
+                    }
+                )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e),
@@ -1194,6 +1204,15 @@ async def chat_completion(
                 request, response, form_data, user, metadata, model, events, tasks
             )
         except Exception as e:
+            if event_emitter is not None:
+                await event_emitter(
+                    {
+                        "type": "task-cancelled",
+                        "data": {
+                            "error": str(e),
+                        },
+                    }
+                )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e),
@@ -1208,9 +1227,10 @@ async def chat_completion(
         and metadata["message_id"]
     ):
         # Asynchronous API call (Typically from UI)
+        event_emitter = get_event_emitter(metadata)
         task_id, _ = create_task(
             process_chat_payload_and_response(
-                request, form_data, user, metadata, model
+                request, form_data, user, metadata, model, event_emitter=event_emitter
             ),
             id=metadata["chat_id"],
         )
