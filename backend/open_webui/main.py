@@ -17,6 +17,7 @@ from sqlalchemy import text
 from typing import Optional
 from aiocache import cached
 import aiohttp
+import anyio.to_thread
 import requests
 
 
@@ -106,6 +107,8 @@ from open_webui.config import (
     OPENAI_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
+    # Thread pool size for FastAPI/AnyIO
+    THREAD_POOL_SIZE,
     # Tool Server Configs
     TOOL_SERVER_CONNECTIONS,
     # Code Execution
@@ -433,6 +436,11 @@ async def lifespan(app: FastAPI):
 
     if LICENSE_KEY:
         get_license_data(app, LICENSE_KEY)
+
+    pool_size = THREAD_POOL_SIZE
+    if pool_size and pool_size > 0:
+        limiter = anyio.to_thread.current_default_thread_limiter()
+        limiter.total_tokens = pool_size
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     yield
