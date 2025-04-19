@@ -27,7 +27,7 @@ from open_webui.env import (
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
     WEBUI_AUTH_COOKIE_SAME_SITE,
     WEBUI_AUTH_COOKIE_SECURE,
-    SIGNOUT_REDIRECT_URI,
+    WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
     SRC_LOG_LEVELS,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -567,10 +567,10 @@ async def signout(request: Request, response: Response):
                     detail="Failed to sign out from the OpenID provider.",
                 )
 
-    if SIGNOUT_REDIRECT_URI:
+    if WEBUI_AUTH_SIGNOUT_REDIRECT_URL:
         return RedirectResponse(
             headers=response.headers,
-            url=SIGNOUT_REDIRECT_URI,
+            url=WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
         )
 
     return {"status": True}
