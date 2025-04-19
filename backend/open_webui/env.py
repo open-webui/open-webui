@@ -354,6 +354,9 @@ BYPASS_MODEL_ACCESS_CONTROL = (
     os.environ.get("BYPASS_MODEL_ACCESS_CONTROL", "False").lower() == "true"
 )
 
+SIGNOUT_REDIRECT_URI = os.environ.get("SIGNOUT_REDIRECT_URI", None)
+
+
 ####################################
 # WEBUI_SECRET_KEY
 ####################################
