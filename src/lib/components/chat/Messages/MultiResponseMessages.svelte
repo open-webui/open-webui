@@ -200,9 +200,11 @@
 		await initHandler();
 		await tick();
 
-		const messageElement = document.getElementById(`message-${messageId}`);
-		if (messageElement) {
-			messageElement.scrollIntoView({ block: 'start' });
+		if ($settings?.scrollOnBranchChange ?? true) {
+			const messageElement = document.getElementById(`message-${messageId}`);
+			if (messageElement) {
+				messageElement.scrollIntoView({ block: 'start' });
+			}
 		}
 	});
 </script>
@@ -238,10 +240,9 @@
 									messageChildrenIds = history.messages[currentMessageId].childrenIds;
 								}
 								history.currentId = currentMessageId;
-
-								await tick();
-								await updateChat();
-								triggerScroll();
+								// await tick();
+								// await updateChat();
+								// triggerScroll();
 							}
 						}}
 					>

@@ -236,9 +236,11 @@
 		await tick();
 		await tick();
 
-		const messageElement = document.getElementById(`message-${message.id}`);
-		if (messageElement) {
-			messageElement.scrollIntoView({ behavior: 'smooth' });
+		if ($settings?.scrollOnBranchChange ?? true) {
+			const messageElement = document.getElementById(`message-${message.id}`);
+			if (messageElement) {
+				messageElement.scrollIntoView({ behavior: 'smooth' });
+			}
 		}
 
 		await tick();

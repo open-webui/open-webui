@@ -154,11 +154,11 @@
 		}, [])}
 		{onSourceClick}
 		{onTaskClick}
-		on:update={(e) => {
-			dispatch('update', e.detail);
+		onUpdate={(value) => {
+			dispatch('update', value);
 		}}
-		on:code={(e) => {
-			const { lang, code } = e.detail;
+		onCode={(value) => {
+			const { lang, code } = value;
 
 			if (
 				($settings?.detectArtifacts ?? true) &&
