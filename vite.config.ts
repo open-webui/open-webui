@@ -2,6 +2,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
 import { viteStaticCopy } from 'vite-plugin-static-copy';
+import viteCompression from 'vite-plugin-compression';
 
 // /** @type {import('vite').Plugin} */
 // const viteServerConfig = {
@@ -28,6 +29,11 @@ export default defineConfig({
 					dest: 'wasm'
 				}
 			]
+		}),
+		viteCompression({
+			algorithm: 'gzip',
+			verbose: true,
+			threshold: 10240 // compress files larger than 10KB
 		})
 	],
 	define: {
