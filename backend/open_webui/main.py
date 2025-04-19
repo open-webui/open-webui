@@ -1173,10 +1173,12 @@ async def chat_completion(
             form_data, metadata, events = await process_chat_payload(
                 request, form_data, user, metadata, model
             )
+            response = await chat_completion_handler(request, form_data, user)
+            return await process_chat_response(
+                request, response, form_data, user, metadata, model, events, tasks
+            )
         except Exception as e:
-            log.debug(f"Error processing chat payload: {e}")
             if metadata.get("chat_id") and metadata.get("message_id"):
-                # Update the chat message with the error
                 Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
                     metadata["message_id"],
@@ -1184,24 +1186,6 @@ async def chat_completion(
                         "error": {"content": str(e)},
                     },
                 )
-            if event_emitter is not None:
-                await event_emitter(
-                    {
-                        "type": "task-cancelled",
-                        "data": {"error": str(e)},
-                    }
-                )
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
-            )
-
-        try:
-            response = await chat_completion_handler(request, form_data, user)
-            return await process_chat_response(
-                request, response, form_data, user, metadata, model, events, tasks
-            )
-        except Exception as e:
             if event_emitter is not None:
                 await event_emitter(
                     {
