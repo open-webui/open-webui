@@ -1302,3 +1302,17 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 
 	return toolPayload;
 };
+
+export const slugify = (str: string): string => {
+	return str
+		// 1. Normalize: separate accented letters into base + combining marks
+		.normalize("NFD")
+		// 2. Remove all combining marks (the accents)
+		.replace(/[\u0300-\u036f]/g, "")
+		// 3. Replace any sequence of whitespace with a single hyphen
+		.replace(/\s+/g, "-")
+		// 4. Remove all characters except alphanumeric characters and hyphens
+		.replace(/[^a-zA-Z0-9-]/g, "")
+		// 5. Convert to lowercase
+		.toLowerCase();
+};
