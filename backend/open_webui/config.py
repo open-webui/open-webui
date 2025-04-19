@@ -2270,6 +2270,29 @@ FIRECRAWL_API_BASE_URL = PersistentConfig(
     os.environ.get("FIRECRAWL_API_BASE_URL", "https://api.firecrawl.dev"),
 )
 
+EXTERNAL_WEB_SEARCH_URL = PersistentConfig(
+    "EXTERNAL_WEB_SEARCH_URL",
+    "rag.web.search.external_web_search_url",
+    os.environ.get("EXTERNAL_WEB_SEARCH_URL", ""),
+)
+
+EXTERNAL_WEB_SEARCH_API_KEY = PersistentConfig(
+    "EXTERNAL_WEB_SEARCH_API_KEY",
+    "rag.web.search.external_web_search_api_key",
+    os.environ.get("EXTERNAL_WEB_SEARCH_API_KEY", ""),
+)
+
+EXTERNAL_WEB_LOADER_URL = PersistentConfig(
+    "EXTERNAL_WEB_LOADER_URL",
+    "rag.web.loader.external_web_loader_url",
+    os.environ.get("EXTERNAL_WEB_LOADER_URL", ""),
+)
+
+EXTERNAL_WEB_LOADER_API_KEY = PersistentConfig(
+    "EXTERNAL_WEB_LOADER_API_KEY",
+    "rag.web.loader.external_web_loader_api_key",
+    os.environ.get("EXTERNAL_WEB_LOADER_API_KEY", ""),
+)
 
 ####################################
 # Images
