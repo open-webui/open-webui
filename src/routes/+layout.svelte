@@ -639,4 +639,5 @@
 			: 'light'}
 	richColors
 	position="top-right"
+	closeButton
 />

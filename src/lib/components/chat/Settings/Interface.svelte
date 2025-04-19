@@ -855,7 +855,7 @@
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">
-						{$i18n.t('Scroll to bottom when switching between branches')}
+						{$i18n.t('Scroll On Branch Change')}
 					</div>
 
 					<button

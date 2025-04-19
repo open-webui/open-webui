@@ -65,10 +65,12 @@
 
 		await tick();
 
-		messageEditTextAreaElement.style.height = '';
-		messageEditTextAreaElement.style.height = `${messageEditTextAreaElement.scrollHeight}px`;
+		if (messageEditTextAreaElement) {
+			messageEditTextAreaElement.style.height = '';
+			messageEditTextAreaElement.style.height = `${messageEditTextAreaElement.scrollHeight}px`;
 
-		messageEditTextAreaElement?.focus();
+			messageEditTextAreaElement?.focus();
+		}
 	};
 
 	const editMessageConfirmHandler = async (submit = true) => {

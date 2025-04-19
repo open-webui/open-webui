@@ -354,6 +354,10 @@ BYPASS_MODEL_ACCESS_CONTROL = (
     os.environ.get("BYPASS_MODEL_ACCESS_CONTROL", "False").lower() == "true"
 )
 
+WEBUI_AUTH_SIGNOUT_REDIRECT_URL = os.environ.get(
+    "WEBUI_AUTH_SIGNOUT_REDIRECT_URL", None
+)
+
 ####################################
 # WEBUI_SECRET_KEY
 ####################################
@@ -409,6 +413,11 @@ else:
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT = 300
 
+
+AIOHTTP_CLIENT_SESSION_SSL = (
+    os.environ.get("AIOHTTP_CLIENT_SESSION_SSL", "True").lower() == "true"
+)
+
 AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST = os.environ.get(
     "AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST",
     os.environ.get("AIOHTTP_CLIENT_TIMEOUT_OPENAI_MODEL_LIST", "10"),
@@ -436,6 +445,11 @@ else:
         )
     except Exception:
         AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = 10
+
+
+AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL = (
+    os.environ.get("AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL", "True").lower() == "true"
+)
 
 ####################################
 # OFFLINE_MODE

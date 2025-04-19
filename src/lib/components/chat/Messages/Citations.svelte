@@ -83,6 +83,7 @@
 			});
 			return acc;
 		}, []);
+		console.log('citations', citations);
 
 		showRelevance = calculateShowRelevance(citations);
 		showPercentage = shouldShowPercentage(citations);

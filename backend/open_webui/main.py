@@ -17,6 +17,7 @@ from sqlalchemy import text
 from typing import Optional
 from aiocache import cached
 import aiohttp
+import anyio.to_thread
 import requests
 
 
@@ -100,11 +101,14 @@ from open_webui.config import (
     # OpenAI
     ENABLE_OPENAI_API,
     ONEDRIVE_CLIENT_ID,
+    ONEDRIVE_SHAREPOINT_URL,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
     # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
+    # Thread pool size for FastAPI/AnyIO
+    THREAD_POOL_SIZE,
     # Tool Server Configs
     TOOL_SERVER_CONNECTIONS,
     # Code Execution
@@ -240,12 +244,17 @@ from open_webui.config import (
     GOOGLE_DRIVE_CLIENT_ID,
     GOOGLE_DRIVE_API_KEY,
     ONEDRIVE_CLIENT_ID,
+    ONEDRIVE_SHAREPOINT_URL,
     ENABLE_RAG_HYBRID_SEARCH,
     ENABLE_RAG_LOCAL_WEB_FETCH,
     ENABLE_WEB_LOADER_SSL_VERIFICATION,
     ENABLE_GOOGLE_DRIVE_INTEGRATION,
     ENABLE_ONEDRIVE_INTEGRATION,
     UPLOAD_DIR,
+    EXTERNAL_WEB_SEARCH_URL,
+    EXTERNAL_WEB_SEARCH_API_KEY,
+    EXTERNAL_WEB_LOADER_URL,
+    EXTERNAL_WEB_LOADER_API_KEY,
     # WebUI
     WEBUI_AUTH,
     WEBUI_NAME,
@@ -341,6 +350,7 @@ from open_webui.env import (
     WEBUI_SESSION_COOKIE_SECURE,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
     WEBUI_AUTH_TRUSTED_NAME_HEADER,
+    WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
     ENABLE_WEBSOCKET_SUPPORT,
     BYPASS_MODEL_ACCESS_CONTROL,
     RESET_CONFIG_ON_START,
@@ -431,6 +441,11 @@ async def lifespan(app: FastAPI):
 
     if LICENSE_KEY:
         get_license_data(app, LICENSE_KEY)
+
+    pool_size = THREAD_POOL_SIZE
+    if pool_size and pool_size > 0:
+        limiter = anyio.to_thread.current_default_thread_limiter()
+        limiter.total_tokens = pool_size
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     yield
@@ -576,6 +591,7 @@ app.state.config.LDAP_CIPHERS = LDAP_CIPHERS
 
 app.state.AUTH_TRUSTED_EMAIL_HEADER = WEBUI_AUTH_TRUSTED_EMAIL_HEADER
 app.state.AUTH_TRUSTED_NAME_HEADER = WEBUI_AUTH_TRUSTED_NAME_HEADER
+app.state.WEBUI_AUTH_SIGNOUT_REDIRECT_URL = WEBUI_AUTH_SIGNOUT_REDIRECT_URL
 app.state.EXTERNAL_PWA_MANIFEST_URL = EXTERNAL_PWA_MANIFEST_URL
 
 app.state.USER_COUNT = None
@@ -668,6 +684,10 @@ app.state.config.EXA_API_KEY = EXA_API_KEY
 app.state.config.PERPLEXITY_API_KEY = PERPLEXITY_API_KEY
 app.state.config.SOUGOU_API_SID = SOUGOU_API_SID
 app.state.config.SOUGOU_API_SK = SOUGOU_API_SK
+app.state.config.EXTERNAL_WEB_SEARCH_URL = EXTERNAL_WEB_SEARCH_URL
+app.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY
+app.state.config.EXTERNAL_WEB_LOADER_URL = EXTERNAL_WEB_LOADER_URL
+app.state.config.EXTERNAL_WEB_LOADER_API_KEY = EXTERNAL_WEB_LOADER_API_KEY
 
 
 app.state.config.PLAYWRIGHT_WS_URL = PLAYWRIGHT_WS_URL
@@ -1327,7 +1347,10 @@ async def get_app_config(request: Request):
                     "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
                     "api_key": GOOGLE_DRIVE_API_KEY.value,
                 },
-                "onedrive": {"client_id": ONEDRIVE_CLIENT_ID.value},
+                "onedrive": {
+                    "client_id": ONEDRIVE_CLIENT_ID.value,
+                    "sharepoint_url": ONEDRIVE_SHAREPOINT_URL.value,
+                },
                 "license_metadata": app.state.LICENSE_METADATA,
                 **(
                     {
@@ -1439,7 +1462,7 @@ async def get_manifest_json():
             "start_url": "/",
             "display": "standalone",
             "background_color": "#343541",
-            "orientation": "natural",
+            "orientation": "any",
             "icons": [
                 {
                     "src": "/static/logo.png",

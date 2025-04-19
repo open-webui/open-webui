@@ -54,6 +54,7 @@ from open_webui.config import (
 from open_webui.env import (
     ENV,
     SRC_LOG_LEVELS,
+    AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     BYPASS_MODEL_ACCESS_CONTROL,
@@ -91,6 +92,7 @@ async def send_get_request(url, key=None, user: UserModel = None):
                         else {}
                     ),
                 },
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
                 return await response.json()
     except Exception as e:
@@ -141,6 +143,7 @@ async def send_post_request(
                     else {}
                 ),
             },
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
         r.raise_for_status()
 
@@ -234,6 +237,7 @@ async def verify_connection(
                         else {}
                     ),
                 },
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 if r.status != 200:
                     detail = f"HTTP Error: {r.status}"
@@ -1482,7 +1486,9 @@ async def download_file_stream(
     timeout = aiohttp.ClientTimeout(total=600)  # Set the timeout
 
     async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-        async with session.get(file_url, headers=headers) as response:
+        async with session.get(
+            file_url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL
+        ) as response:
             total_size = int(response.headers.get("content-length", 0)) + current_size
 
             with open(file_path, "ab+") as file:

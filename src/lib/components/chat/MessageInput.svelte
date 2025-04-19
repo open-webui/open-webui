@@ -1063,9 +1063,9 @@
 													);
 												}
 											}}
-											uploadOneDriveHandler={async () => {
+											uploadOneDriveHandler={async (authorityType) => {
 												try {
-													const fileData = await pickAndDownloadFile();
+													const fileData = await pickAndDownloadFile(authorityType);
 													if (fileData) {
 														const file = new File([fileData.blob], fileData.name, {
 															type: fileData.blob.type || 'application/octet-stream'

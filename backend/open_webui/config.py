@@ -509,6 +509,12 @@ ENABLE_OAUTH_GROUP_MANAGEMENT = PersistentConfig(
     os.environ.get("ENABLE_OAUTH_GROUP_MANAGEMENT", "False").lower() == "true",
 )
 
+ENABLE_OAUTH_GROUP_CREATION = PersistentConfig(
+    "ENABLE_OAUTH_GROUP_CREATION",
+    "oauth.enable_group_creation",
+    os.environ.get("ENABLE_OAUTH_GROUP_CREATION", "False").lower() == "true",
+)
+
 OAUTH_ROLES_CLAIM = PersistentConfig(
     "OAUTH_ROLES_CLAIM",
     "oauth.roles_claim",
@@ -1203,6 +1209,9 @@ ENABLE_USER_WEBHOOKS = PersistentConfig(
     os.environ.get("ENABLE_USER_WEBHOOKS", "True").lower() == "true",
 )
 
+# FastAPI / AnyIO settings
+THREAD_POOL_SIZE = int(os.getenv("THREAD_POOL_SIZE", "0"))
+
 
 def validate_cors_origins(origins):
     for origin in origins:
@@ -1693,6 +1702,9 @@ MILVUS_TOKEN = os.environ.get("MILVUS_TOKEN", None)
 # Qdrant
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
+QDRANT_ON_DISK = os.environ.get("QDRANT_ON_DISK", "false").lower() == "true"
+QDRANT_PREFER_GRPC = os.environ.get("QDRANT_PREFER_GRPC", "False").lower() == "true"
+QDRANT_GRPC_PORT = int(os.environ.get("QDRANT_GRPC_PORT", "6334"))
 
 # OpenSearch
 OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
@@ -1759,6 +1771,13 @@ ONEDRIVE_CLIENT_ID = PersistentConfig(
     "onedrive.client_id",
     os.environ.get("ONEDRIVE_CLIENT_ID", ""),
 )
+
+ONEDRIVE_SHAREPOINT_URL = PersistentConfig(
+    "ONEDRIVE_SHAREPOINT_URL",
+    "onedrive.sharepoint_url",
+    os.environ.get("ONEDRIVE_SHAREPOINT_URL", ""),
+)
+
 
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(
@@ -2251,6 +2270,29 @@ FIRECRAWL_API_BASE_URL = PersistentConfig(
     os.environ.get("FIRECRAWL_API_BASE_URL", "https://api.firecrawl.dev"),
 )
 
+EXTERNAL_WEB_SEARCH_URL = PersistentConfig(
+    "EXTERNAL_WEB_SEARCH_URL",
+    "rag.web.search.external_web_search_url",
+    os.environ.get("EXTERNAL_WEB_SEARCH_URL", ""),
+)
+
+EXTERNAL_WEB_SEARCH_API_KEY = PersistentConfig(
+    "EXTERNAL_WEB_SEARCH_API_KEY",
+    "rag.web.search.external_web_search_api_key",
+    os.environ.get("EXTERNAL_WEB_SEARCH_API_KEY", ""),
+)
+
+EXTERNAL_WEB_LOADER_URL = PersistentConfig(
+    "EXTERNAL_WEB_LOADER_URL",
+    "rag.web.loader.external_web_loader_url",
+    os.environ.get("EXTERNAL_WEB_LOADER_URL", ""),
+)
+
+EXTERNAL_WEB_LOADER_API_KEY = PersistentConfig(
+    "EXTERNAL_WEB_LOADER_API_KEY",
+    "rag.web.loader.external_web_loader_api_key",
+    os.environ.get("EXTERNAL_WEB_LOADER_API_KEY", ""),
+)
 
 ####################################
 # Images

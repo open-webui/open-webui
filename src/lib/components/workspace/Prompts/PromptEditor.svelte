@@ -8,6 +8,7 @@
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import { user } from '$lib/stores';
+	import { slugify } from '$lib/utils';
 
 	export let onSubmit: Function;
 	export let edit = false;
@@ -25,8 +26,15 @@
 
 	let showAccessControlModal = false;
 
-	$: if (!edit) {
-		command = title !== '' ? `${title.replace(/\s+/g, '-').toLowerCase()}` : '';
+	let hasManualEdit = false;
+
+	$: if (!edit && !hasManualEdit) {
+		command = title !== '' ? slugify(title) : '';
+	}
+
+	// Track manual edits
+	function handleCommandInput(e: Event) {
+		hasManualEdit = true;
 	}
 
 	const submitHandler = async () => {
@@ -64,7 +72,7 @@
 			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
 			content = prompt.content;
 
-			accessControl = prompt?.access_control ?? null;
+			accessControl = prompt?.access_control ?? {};
 		}
 	});
 </script>
@@ -125,6 +133,7 @@
 							class=" w-full bg-transparent outline-hidden"
 							placeholder={$i18n.t('Command')}
 							bind:value={command}
+							on:input={handleCommandInput}
 							required
 							disabled={edit}
 						/>

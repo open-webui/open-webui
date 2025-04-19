@@ -21,6 +21,7 @@ from open_webui.config import (
     CACHE_DIR,
 )
 from open_webui.env import (
+    AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     ENABLE_FORWARD_USER_INFO_HEADERS,
@@ -74,6 +75,7 @@ async def send_get_request(url, key=None, user: UserModel = None):
                         else {}
                     ),
                 },
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
                 return await response.json()
     except Exception as e:
@@ -481,6 +483,7 @@ async def get_models(
                             else {}
                         ),
                     },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
                     if r.status != 200:
                         # Extract response error details if available
@@ -561,6 +564,7 @@ async def verify_connection(
                         else {}
                     ),
                 },
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 if r.status != 200:
                     # Extract response error details if available
@@ -723,6 +727,7 @@ async def generate_chat_completion(
                     else {}
                 ),
             },
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
 
         # Check if response is SSE
@@ -802,6 +807,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                     else {}
                 ),
             },
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
         r.raise_for_status()
 

@@ -173,7 +173,8 @@ async def list_files(user=Depends(get_verified_user), content: bool = Query(True
 
     if not content:
         for file in files:
-            del file.data["content"]
+            if "content" in file.data:
+                del file.data["content"]
 
     return files
 
@@ -214,7 +215,8 @@ async def search_files(
 
     if not content:
         for file in matching_files:
-            del file.data["content"]
+            if "content" in file.data:
+                del file.data["content"]
 
     return matching_files
 

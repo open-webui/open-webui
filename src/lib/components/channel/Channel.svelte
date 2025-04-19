@@ -262,7 +262,7 @@
 			{#if threadId !== null}
 				<Drawer
 					show={threadId !== null}
-					on:close={() => {
+					onClose={() => {
 						threadId = null;
 					}}
 				>
