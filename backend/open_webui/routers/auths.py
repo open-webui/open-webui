@@ -703,6 +703,7 @@ class AdminConfig(BaseModel):
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL: bool
     ENABLE_OAUTH_ROLE_MANAGEMENT: bool
     ENABLE_OAUTH_GROUP_MANAGEMENT: bool
+    ENABLE_OAUTH_GROUP_CREATION: Optional[bool] = None # Added for group creation toggle
     OAUTH_ROLES_CLAIM: Optional[str] = ""
     OAUTH_GROUP_CLAIM: Optional[str] = ""
     OAUTH_EMAIL_CLAIM: Optional[str] = ""
@@ -727,6 +728,7 @@ async def update_admin_config(
         "OAUTH_MERGE_ACCOUNTS_BY_EMAIL": "merge_accounts_by_email",
         "ENABLE_OAUTH_ROLE_MANAGEMENT": "enable_role_management",
         "ENABLE_OAUTH_GROUP_MANAGEMENT": "enable_group_management",
+        "ENABLE_OAUTH_GROUP_CREATION": "enable_group_creation", # Added mapping
         "OAUTH_ROLES_CLAIM": "roles_claim",
         "OAUTH_GROUP_CLAIM": "group_claim",
         "OAUTH_EMAIL_CLAIM": "email_claim",

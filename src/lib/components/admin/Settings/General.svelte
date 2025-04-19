@@ -443,6 +443,11 @@
 						</div>
 
 						{#if adminConfig?.ENABLE_OAUTH_GROUP_MANAGEMENT}
+							<div class=" mb-2.5 flex w-full justify-between pr-2 pl-4">
+								<div class=" self-center text-xs font-medium">{$i18n.t('Enable OAuth Group Creation')}</div>
+								<Switch bind:state={adminConfig.ENABLE_OAUTH_GROUP_CREATION} />
+							</div>
+
 							<div class=" mb-2.5 w-full justify-between pl-4">
 								<div class="flex w-full justify-between">
 									<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Groups Claim')}</div>
