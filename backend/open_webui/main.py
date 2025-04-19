@@ -1188,9 +1188,7 @@ async def chat_completion(
                 await event_emitter(
                     {
                         "type": "task-cancelled",
-                        "data": {
-                            "error": str(e),
-                        },
+                        "data": {"error": str(e)},
                     }
                 )
             raise HTTPException(

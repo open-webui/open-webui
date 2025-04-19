@@ -2241,7 +2241,7 @@ async def process_chat_response(
             except asyncio.CancelledError:
                 log.warning("Task was cancelled!")
                 await event_emitter(
-                    {"type": "task-cancelled", "data": {"error": "Task was cancelled."}}
+                    {"type": "task-cancelled", "data": {"error": ""}},
                 )
 
                 if not ENABLE_REALTIME_CHAT_SAVE:

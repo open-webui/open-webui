@@ -357,7 +357,12 @@
 						message.error = { content: taskCancelledError };
 					}
 					message.done = true;
-					taskIds = null;
+					const taskRes = await getTaskIdsByChatId(localStorage.token, $chatId).catch((error) => {
+						return null;
+					});
+					if (taskRes) {
+						taskIds = taskRes.task_ids;
+					}
 				} else {
 					console.log('Unknown message type', data);
 				}
