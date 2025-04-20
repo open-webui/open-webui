@@ -230,12 +230,12 @@
 				showControls.set(false);
 			}}
 			collapsible={true}
-			class="z-10 max-w-[50%]"
+			class="z-10 max-w-[25%]"
 		>
 			{#if $showControls}
 				<div class="flex h-full">
 					<div
-						class="flex-1 max-w-[380px] h-full overflow-y-auto {($showOverview || $showArtifacts) && !$showCallOverlay
+						class="flex-1 {($showOverview || $showArtifacts) && !$showCallOverlay
 							? ' '
 							: 'px-3 py-3 bg-white dark:shadow-lg dark:bg-gray-850 border border-gray-100 dark:border-gray-850'} z-40 pointer-events-auto scrollbar-hidden"
 					>
