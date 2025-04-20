@@ -58,6 +58,7 @@ dependencies = [
     "opensearch-py==2.8.0",
     "playwright==1.49.1",
     "elasticsearch==8.17.1",
+    "pinecone==6.0.2",
 
     "transformers",
     "sentence-transformers==3.3.1",
