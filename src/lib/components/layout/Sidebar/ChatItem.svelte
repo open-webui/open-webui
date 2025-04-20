@@ -399,7 +399,7 @@
 						dispatch('change');
 					}}
 					on:tag={(e) => {
-						dispatch('tag', e.detail);
+						dispatch('tag', {...e.detail, chatId: id});
 					}}
 				>
 					<button

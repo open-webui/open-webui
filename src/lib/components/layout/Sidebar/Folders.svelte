@@ -31,5 +31,14 @@
 		on:change={(e) => {
 			dispatch('change', e.detail);
 		}}
+		on:select={(e) => {
+			dispatch('select', e.detail);
+		}}
+		on:unselect={(e) => {
+			dispatch('unselect');
+		}}
+		on:tag={(e) => {
+			dispatch('tag', e.detail);
+		}}
 	/>
 {/each}

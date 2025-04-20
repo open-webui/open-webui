@@ -781,8 +781,10 @@
 											initChatList();
 										}}
 										on:tag={(e) => {
-											const { type, name } = e.detail;
-											tagEventHandler(type, name, chat.id);
+											const { type, name, chatId } = e.detail;
+											if (chatId) {
+												tagEventHandler(type, name, chatId);
+											}
 										}}
 									/>
 								{/each}
@@ -803,6 +805,18 @@
 						}}
 						on:change={async () => {
 							initChatList();
+						}}
+						on:select={(e) => {
+							selectedChatId = e.detail;
+						}}
+						on:unselect={() => {
+							selectedChatId = null;
+						}}
+						on:tag={(e) => {
+							const { type, name, chatId } = e.detail;
+							if (chatId) {
+								tagEventHandler(type, name, chatId);
+							}
 						}}
 					/>
 				{/if}
@@ -856,8 +870,10 @@
 										initChatList();
 									}}
 									on:tag={(e) => {
-										const { type, name } = e.detail;
-										tagEventHandler(type, name, chat.id);
+										const { type, name, chatId } = e.detail;
+										if (chatId) {
+											tagEventHandler(type, name, chatId);
+										}
 									}}
 								/>
 							{/each}

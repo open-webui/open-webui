@@ -486,6 +486,15 @@
 								on:change={(e) => {
 									dispatch('change', e.detail);
 								}}
+								on:select={(e) => {
+									dispatch('select', e.detail);
+								}}
+								on:unselect={(e) => {
+									dispatch('unselect');
+								}}
+								on:tag={(e) => {
+									dispatch('tag', e.detail);
+								}}
 							/>
 						{/each}
 					{/if}
@@ -497,6 +506,15 @@
 								title={chat.title}
 								on:change={(e) => {
 									dispatch('change', e.detail);
+								}}
+								on:select={(e) => {
+									dispatch('select', chat.id);
+								}}
+								on:unselect={(e) => {
+									dispatch('unselect');
+								}}
+								on:tag={(e) => {
+									dispatch('tag', e.detail);
 								}}
 							/>
 						{/each}
