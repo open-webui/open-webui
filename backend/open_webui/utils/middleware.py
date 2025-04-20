@@ -1671,6 +1671,15 @@ async def process_chat_response(
 
                                                 if current_response_tool_call is None:
                                                     # Add the new tool call
+                                                    delta_tool_call.setdefault(
+                                                        "function", {}
+                                                    )
+                                                    delta_tool_call["function"].setdefault(
+                                                        "name", ""
+                                                    )
+                                                    delta_tool_call["function"].setdefault(
+                                                        "arguments", ""
+                                                    )
                                                     response_tool_calls.append(
                                                         delta_tool_call
                                                     )
