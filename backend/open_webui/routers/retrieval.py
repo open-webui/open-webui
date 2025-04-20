@@ -90,6 +90,10 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
     DEVICE_TYPE,
     DOCKER,
+    SENTENCE_TRANSFORMER_BACKEND,
+    SENTENCE_TRANSFORMER_KWARGS,
+    CROSS_ENCODER_BACKEND,
+    CROSS_ENCODER_KWARGS
 )
 from open_webui.constants import ERROR_MESSAGES
 
@@ -117,6 +121,8 @@ def get_ef(
                 get_model_path(embedding_model, auto_update),
                 device=DEVICE_TYPE,
                 trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
+                backend=SENTENCE_TRANSFORMER_BACKEND,
+                model_kwargs=SENTENCE_TRANSFORMER_KWARGS
             )
         except Exception as e:
             log.debug(f"Error loading SentenceTransformer: {e}")
@@ -150,6 +156,8 @@ def get_rf(
                     get_model_path(reranking_model, auto_update),
                     device=DEVICE_TYPE,
                     trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+                    backend=CROSS_ENCODER_BACKEND,
+                    model_kwargs=CROSS_ENCODER_KWARGS
                 )
             except Exception as e:
                 log.error(f"CrossEncoder: {e}")

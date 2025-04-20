@@ -496,3 +496,34 @@ PIP_PACKAGE_INDEX_OPTIONS = os.getenv("PIP_PACKAGE_INDEX_OPTIONS", "").split()
 ####################################
 
 EXTERNAL_PWA_MANIFEST_URL = os.environ.get("EXTERNAL_PWA_MANIFEST_URL")
+
+
+####################################
+# Sentence Transformers
+####################################
+
+SENTENCE_TRANSFORMER_BACKEND = os.environ.get("SENTENCE_TRANSFORMER_BACKEND", "")
+if SENTENCE_TRANSFORMER_BACKEND == "":
+    SENTENCE_TRANSFORMER_BACKEND = "torch"
+
+SENTENCE_TRANSFORMER_KWARGS = os.environ.get("SENTENCE_TRANSFORMER_KWARGS", "")
+if SENTENCE_TRANSFORMER_KWARGS == "":
+    SENTENCE_TRANSFORMER_KWARGS = None
+else:
+    try:
+        SENTENCE_TRANSFORMER_KWARGS = json.loags(SENTENCE_TRANSFORMER_KWARGS)
+    except Exception:
+        SENTENCE_TRANSFORMER_KWARGS = None
+
+CROSS_ENCODER_BACKEND = os.environ.get("CROSS_ENCODER_BACKEND", "")
+if CROSS_ENCODER_BACKEND == "":
+    CROSS_ENCODER_BACKEND = "torch"
+
+CROSS_ENCODER_KWARGS = os.environ.get("CROSS_ENCODER_KWARGS", "")
+if CROSS_ENCODER_KWARGS == "":
+    CROSS_ENCODER_KWARGS = None
+else:
+    try:
+        CROSS_ENCODER_KWARGS = json.loags(CROSS_ENCODER_KWARGS)
+    except Exception:
+        CROSS_ENCODER_KWARGS = None
