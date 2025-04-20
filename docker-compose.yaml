@@ -40,7 +40,7 @@ services:
     networks:
       - webui-network
     volumes:
-      - ./certbot/conf/live:/etc/nginx/ssl/live:ro
+      - ./certbot/conf/live:/etc/letsencrypt/live:ro 
 
 volumes:
   open-webui: {}
