@@ -21,6 +21,7 @@
 
 	import Source from './Source.svelte';
 	import { settings } from '$lib/stores';
+	import HtmlToken from './HTMLToken.svelte';
 
 	export let id: string;
 	export let tokens: Token[];
@@ -266,16 +267,7 @@
 			</div>
 		</Collapsible>
 	{:else if token.type === 'html'}
-		{@const html = DOMPurify.sanitize(token.text)}
-		{#if html && html.includes('<video')}
-			{@html html}
-		{:else if token.text.includes(`<iframe src="${WEBUI_BASE_URL}/api/v1/files/`)}
-			{@html `${token.text}`}
-		{:else if token.text.includes(`<source_id`)}
-			<Source {id} {token} onClick={onSourceClick} />
-		{:else}
-			{token.text}
-		{/if}
+		<HtmlToken {id} {token} {onSourceClick} />
 	{:else if token.type === 'iframe'}
 		<iframe
 			src="{WEBUI_BASE_URL}/api/v1/files/{token.fileId}/content"
