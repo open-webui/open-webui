@@ -139,7 +139,7 @@
 	let files = [];
 	let params = {};
 	let controlsActive = false;
-	// This will be bound from ChatControls
+	// Bound from ChatControls
 
 	$: if (chatIdProp) {
 		(async () => {
