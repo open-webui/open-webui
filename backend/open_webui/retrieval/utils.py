@@ -4,6 +4,7 @@ from typing import Optional, Union
 
 import requests
 import hashlib
+import torch
 from concurrent.futures import ThreadPoolExecutor
 
 from huggingface_hub import snapshot_download
@@ -356,9 +357,13 @@ def get_embedding_function(
     embedding_batch_size,
 ):
     if embedding_engine == "":
-        return lambda query, prefix=None, user=None: embedding_function.encode(
-            query, **({"prompt": prefix} if prefix else {})
-        ).tolist()
+        def _embed(query, prefix=None, user=None):
+            emb = embedding_function.encode(
+                query, **({"prompt": prefix} if prefix else {})
+            ).tolist()
+            torch.cuda.empty_cache()
+            return emb
+        return _embed
     elif embedding_engine in ["ollama", "openai"]:
         func = lambda query, prefix=None, user=None: generate_embeddings(
             engine=embedding_engine,
@@ -771,6 +776,7 @@ class RerankCompressor(BaseDocumentCompressor):
             scores = self.reranking_function.predict(
                 [(query, doc.page_content) for doc in documents]
             )
+            torch.cuda.empty_cache()
         else:
             from sentence_transformers import util
 
