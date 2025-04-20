@@ -85,21 +85,26 @@
 		// Select the container element you want to observe
 		const container = document.getElementById('chat-container');
 
-		// initialize the minSize based on the container width
-		minSize = Math.floor((350 / container.clientWidth) * 100);
+		// initialize the minSize based on the container width - make it smaller for better scaling
+		minSize = Math.floor((320 / container.clientWidth) * 100);
 
 		// Create a new ResizeObserver instance
 		const resizeObserver = new ResizeObserver((entries) => {
 			for (let entry of entries) {
 				const width = entry.contentRect.width;
-				// calculate the percentage of 200px
-				const percentage = (350 / width) * 100;
+				// calculate the percentage of 300px - smaller for better scaling
+				const percentage = Math.min((320 / width) * 100, 50); // Cap at 50% of screen width
 				// set the minSize to the percentage, must be an integer
 				minSize = Math.floor(percentage);
 
 				if ($showControls) {
-					if (pane && pane.isExpanded() && pane.getSize() < minSize) {
-						pane.resize(minSize);
+					if (pane && pane.isExpanded()) {
+						// If current size is larger than 50% of window, reduce it
+						if (pane.getSize() > 50) {
+							pane.resize(50);
+						} else if (pane.getSize() < minSize) {
+							pane.resize(minSize);
+						}
 					}
 				}
 			}
@@ -146,8 +151,8 @@
 			>
 				<div
 					class=" {$showCallOverlay || $showOverview || $showArtifacts
-						? ' h-screen  w-full'
-						: 'px-6 py-4'} h-full"
+						? ' h-screen w-full'
+						: ''} h-full"
 				>
 					{#if $showCallOverlay}
 						<div
@@ -223,14 +228,14 @@
 				showControls.set(false);
 			}}
 			collapsible={true}
-			class=" z-10 "
+			class="z-10 max-w-[50%]"
 		>
 			{#if $showControls}
 				<div class="flex max-h-full min-h-full">
 					<div
-						class="w-full {($showOverview || $showArtifacts) && !$showCallOverlay
+						class="max-w-[380px] {($showOverview || $showArtifacts) && !$showCallOverlay
 							? ' '
-							: 'px-4 py-4 bg-white dark:shadow-lg dark:bg-gray-850  border border-gray-100 dark:border-gray-850'} z-40 pointer-events-auto overflow-y-auto scrollbar-hidden"
+							: 'px-3 py-3 bg-white dark:shadow-lg dark:bg-gray-850 border border-gray-100 dark:border-gray-850'} z-40 pointer-events-auto overflow-y-auto scrollbar-hidden h-full"
 					>
 						{#if $showCallOverlay}
 							<div class="w-full h-full flex justify-center">
