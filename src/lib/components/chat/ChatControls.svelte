@@ -32,6 +32,7 @@
 
 	export let pane;
 
+	export let controlsActive = false; // Export this state
 	let mediaQuery;
 	let largeScreen = false;
 	let dragged = false;
@@ -190,6 +191,7 @@
 							{models}
 							bind:chatFiles
 							bind:params
+							bind:controlsActive
 						/>
 					{/if}
 				</div>
@@ -277,6 +279,7 @@
 								{models}
 								bind:chatFiles
 								bind:params
+								bind:controlsActive
 							/>
 						{/if}
 					</div>

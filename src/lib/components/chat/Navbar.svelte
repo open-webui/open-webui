@@ -40,6 +40,7 @@
 	export let history;
 	export let selectedModels;
 	export let showModelSelector = true;
+	export let controlsActive = false;
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
@@ -129,7 +130,10 @@
 							}}
 							aria-label="Controls"
 						>
-							<div class=" m-auto self-center">
+							<div class="relative m-auto self-center">
+								{#if controlsActive}
+									<div class="absolute -top-0.5 -right-0.5 size-2 bg-blue-500 rounded-full" />
+								{/if}
 								<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
 							</div>
 						</button>

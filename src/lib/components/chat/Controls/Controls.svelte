@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { createEventDispatcher, getContext } from 'svelte';
+	import type { Writable } from 'svelte/store';
 	const dispatch = createEventDispatcher();
-	const i18n = getContext('i18n');
+	const i18n = getContext<{ t: (key: string) => string }>('i18n');
 
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import AdvancedParams from '../Settings/Advanced/AdvancedParams.svelte';
@@ -10,9 +11,53 @@
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 
 	import { user } from '$lib/stores';
-	export let models = [];
-	export let chatFiles = [];
-	export let params = {};
+	
+	interface ChatFile {
+		name: string;
+		type: string;
+		size?: number;
+		url?: string;
+	}
+
+	interface ChatParams {
+		system: string;
+		stream_response: null;
+		function_calling: null;
+		seed: null;
+		stop: null;
+		temperature: null;
+		reasoning_effort: null;
+		logit_bias: null;
+		frequency_penalty: null;
+		repeat_last_n: null;
+		mirostat: null;
+		mirostat_eta: null;
+		mirostat_tau: null;
+		top_k: null;
+		top_p: null;
+		min_p: null;
+		tfs_z: null;
+		num_ctx: null;
+		num_batch: null;
+		num_keep: null;
+		max_tokens: null;
+		use_mmap: null;
+		use_mlock: null;
+		num_thread: null;
+		num_gpu: null;
+		template: null;
+	}
+
+	export let models: any[] = [];
+	export let chatFiles: ChatFile[] = [];
+	export let params: Partial<ChatParams> = {};
+
+	// Initialize params with default values if not set
+	$: {
+		if (params && Object.keys(params).length === 0) {
+			params = { ...DEFAULT_PARAMS };
+		}
+	}
 
 	let showValves = false;
 
@@ -47,7 +92,7 @@
 	};
 
 	// Reactive variable to track if any control differs from default
-	let controlsActive = false;
+	export let controlsActive = false; // Export the variable
 
 	$: {
 		controlsActive = false; // Reset before checking
@@ -81,10 +126,10 @@
 			</h2>
 			{#if controlsActive}
 				<span
-					class="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 text-xs font-medium rounded-full inline-flex items-center gap-1 transition-all duration-200"
+					class="ml-2 px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 text-xs font-small rounded-full inline-flex items-center gap-1 transition-all duration-200"
 				>
 					<span class="inline-block text-xs">✓</span>
-					<span>{$i18n.t('Custom Settings Applied')}</span>
+					<span>{$i18n.t('Changes Active')}</span>
 				</span>
 			{/if}
 		</div>

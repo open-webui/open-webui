@@ -138,6 +138,8 @@
 	let chatFiles = [];
 	let files = [];
 	let params = {};
+	let controlsActive = false;
+	// This will be bound from ChatControls
 
 	$: if (chatIdProp) {
 		(async () => {
@@ -1987,6 +1989,7 @@
 					bind:selectedModels
 					shareEnabled={!!history.currentId}
 					{initNewChat}
+					{controlsActive}
 				/>
 
 				<div class="flex flex-col flex-auto z-10 w-full @container">
@@ -2120,6 +2123,7 @@
 			<ChatControls
 				bind:this={controlPaneComponent}
 				bind:history
+				bind:controlsActive
 				bind:chatFiles
 				bind:params
 				bind:files
