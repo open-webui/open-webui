@@ -232,7 +232,7 @@
 		const lastOpenBetaShow = localStorage.getItem('lastOpenBetaShow');
 		const now = new Date();
 		
-		if (true || !lastOpenBetaShow || (now - new Date(Number(lastOpenBetaShow)) > 24 * 60 * 60 * 1000)) {
+		if (!lastOpenBetaShow || (now - new Date(Number(lastOpenBetaShow)) > 24 * 60 * 60 * 1000)) {
 			// It's been more than 24 hours since the last show or never shown
 			showOpenBeta.set(true);
 			localStorage.setItem('lastOpenBetaShow', now.getTime().toString());
