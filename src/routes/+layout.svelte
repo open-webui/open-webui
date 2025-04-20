@@ -26,7 +26,8 @@
 		isLastActiveTab,
 		isApp,
 		appInfo,
-		toolServers
+		toolServers,
+		playingNotificationSound
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -259,6 +260,16 @@
 				const { done, content, title } = data;
 
 				if (done) {
+					if ($settings?.notificationSoundAlways ?? false) {
+						playingNotificationSound.set(true);
+
+						const audio = new Audio(`/audio/notification.mp3`);
+						audio.play().finally(() => {
+							// Ensure the global state is reset after the sound finishes
+							playingNotificationSound.set(false);
+						});
+					}
+
 					if ($isLastActiveTab) {
 						if ($settings?.notificationEnabled ?? false) {
 							new Notification(`${title} | Open WebUI`, {
