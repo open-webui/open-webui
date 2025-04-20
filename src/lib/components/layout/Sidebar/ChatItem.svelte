@@ -47,21 +47,12 @@
 	export let selected = false;
 	export let shiftKey = false;
 
-	let chat = null;
+	// Only save the basic metadata of the chat, no longer store the complete content.
+	let chatMetadata = { id, title };
 
+	// Mark whether it is draggable, default is true, no need to wait for data loading
+	let draggable = true;
 	let mouseOver = false;
-	let draggable = false;
-	$: if (mouseOver) {
-		loadChat();
-	}
-
-	const loadChat = async () => {
-		if (!chat) {
-			draggable = false;
-			chat = await getChatById(localStorage.token, id);
-			draggable = true;
-		}
-	};
 
 	let showShareChatModal = false;
 	let confirmEdit = false;
@@ -147,23 +138,22 @@
 	dragImage.src =
 		'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
 
-	const onDragStart = (event) => {
+	const onDragStart = async (event) => {
 		event.stopPropagation();
-
 		event.dataTransfer.setDragImage(dragImage, 0, 0);
 
-		// Set the data to be transferred
+		// Only pass the necessary metadata, not the complete chat object.
 		event.dataTransfer.setData(
 			'text/plain',
 			JSON.stringify({
 				type: 'chat',
 				id: id,
-				item: chat
+				title: title
 			})
 		);
 
 		dragged = true;
-		itemElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
+		itemElement.style.opacity = '0.5'; // Visual cue to show it's being dragged
 	};
 
 	const onDrag = (event) => {
