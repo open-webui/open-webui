@@ -35,12 +35,14 @@
 		banners,
 		showSettings,
 		showChangelog,
-		temporaryChatEnabled
+		temporaryChatEnabled,
+		showOpenBeta
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
+	import OpenBetaModal from '$lib/components/OpenBetaModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 
@@ -208,6 +210,11 @@
 			await tick();
 		}
 
+		// Check if OpenBeta modal should be shown
+		if (['user', 'admin'].includes($user?.role || '')) {
+			checkOpenBetaModal();
+		}
+
 		loaded = true;
 	});
 
@@ -219,11 +226,24 @@
 			};
 		});
 	};
+
+	// Check if the OpenBeta modal should be shown (once per day)
+	const checkOpenBetaModal = () => {
+		const lastOpenBetaShow = localStorage.getItem('lastOpenBetaShow');
+		const now = new Date();
+		
+		if (!lastOpenBetaShow || (now - new Date(Number(lastOpenBetaShow)) > 24 * 60 * 60 * 1000)) {
+			// It's been more than 24 hours since the last show or never shown
+			showOpenBeta.set(true);
+			localStorage.setItem('lastOpenBetaShow', now.getTime().toString());
+		}
+	};
 </script>
 
 <SettingsModal bind:show={$showSettings} />
 <!-- 2025/Feb/22 업데이트 내역 알려주는 모달 안뜨도록 처리 -->
-<!-- <ChangelogModal bind:show={$showChangelog} /> -->
+<ChangelogModal bind:show={$showChangelog} />
+<OpenBetaModal bind:show={$showOpenBeta} />
 
 {#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}
 	<div class=" absolute bottom-8 right-8 z-50" in:fade={{ duration: 100 }}>
