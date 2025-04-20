@@ -5,6 +5,8 @@ import requests
 from open_webui.retrieval.web.main import SearchResult
 from open_webui.env import SRC_LOG_LEVELS
 
+import tavily
+
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
@@ -25,20 +27,14 @@ def search_tavily(
     Returns:
         list[SearchResult]: A list of search results
     """
-    url = "https://api.tavily.com/search"
-    data = {"query": query, "api_key": api_key}
-    response = requests.post(url, json=data)
-    response.raise_for_status()
-
-    json_response = response.json()
-
-    raw_search_results = json_response.get("results", [])
-
+    tavily_client = tavily.TavilyClient(api_key=api_key)
+    response = tavily_client.search(query, max_results=count)
+    results = response.get("results", [])
     return [
         SearchResult(
             link=result["url"],
-            title=result.get("title", ""),
-            snippet=result.get("content"),
+            title=result["title"],
+            snippet=result["content"],
         )
-        for result in raw_search_results[:count]
+        for result in results
     ]
