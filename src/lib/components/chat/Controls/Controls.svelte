@@ -114,7 +114,7 @@
 </script>
 
 <div
-	class="bg-white dark:bg-gray-850 rounded-lg shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col max-w-[380px]"
+	class="bg-white dark:bg-gray-850 rounded-lg shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col h-full"
 >
 	<!-- Header -->
 	<div

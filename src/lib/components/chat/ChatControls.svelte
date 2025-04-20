@@ -233,11 +233,11 @@
 			class="z-10 max-w-[50%]"
 		>
 			{#if $showControls}
-				<div class="flex max-h-full min-h-full">
+				<div class="flex h-full">
 					<div
-						class="max-w-[380px] {($showOverview || $showArtifacts) && !$showCallOverlay
+						class="flex-1 max-w-[380px] h-full overflow-y-auto {($showOverview || $showArtifacts) && !$showCallOverlay
 							? ' '
-							: 'px-3 py-3 bg-white dark:shadow-lg dark:bg-gray-850 border border-gray-100 dark:border-gray-850'} z-40 pointer-events-auto overflow-y-auto scrollbar-hidden h-full"
+							: 'px-3 py-3 bg-white dark:shadow-lg dark:bg-gray-850 border border-gray-100 dark:border-gray-850'} z-40 pointer-events-auto scrollbar-hidden"
 					>
 						{#if $showCallOverlay}
 							<div class="w-full h-full flex justify-center">
