@@ -86,14 +86,13 @@
 		// Select the container element you want to observe
 		const container = document.getElementById('chat-container');
 
-		// initialize the minSize based on the container width - make it smaller for better scaling
+		// initialize the minSize based on the container width
 		minSize = Math.floor((320 / container.clientWidth) * 100);
 
 		// Create a new ResizeObserver instance
 		const resizeObserver = new ResizeObserver((entries) => {
 			for (let entry of entries) {
 				const width = entry.contentRect.width;
-				// calculate the percentage of 300px - smaller for better scaling
 				const percentage = Math.min((320 / width) * 100, 50); // Cap at 50% of screen width
 				// set the minSize to the percentage, must be an integer
 				minSize = Math.floor(percentage);
