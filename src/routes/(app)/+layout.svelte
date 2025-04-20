@@ -242,7 +242,7 @@
 
 <SettingsModal bind:show={$showSettings} />
 <!-- 2025/Feb/22 업데이트 내역 알려주는 모달 안뜨도록 처리 -->
-<ChangelogModal bind:show={$showChangelog} />
+<!-- <ChangelogModal bind:show={$showChangelog} /> -->
 <OpenBetaModal bind:show={$showOpenBeta} />
 
 {#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}
