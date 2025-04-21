@@ -1246,6 +1246,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "50 शब्दों में एक सारांश लिखें जो [विषय या कीवर्ड] का सारांश प्रस्तुत करता हो।",
 	"Write something...": "",
 	"Write your model template content here": "",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "यहाँ अपने मॉडल सिस्टम प्रॉम्प्ट की सामग्री लिखें\nजैसे: आप सुपर मारियो ब्रदर्स के मारियो हैं, एक सहायक के रूप में कार्य कर रहे हैं।",
 	"Yesterday": "कल",
 	"You": "आप",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "",

@@ -1246,6 +1246,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "[Konuyu veya anahtar kelimeyi] özetleyen 50 kelimelik bir özet yazın.",
 	"Write something...": "Bir şeyler yazın...",
 	"Write your model template content here": "Model şablon içeriğinizi buraya yazın",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Model sistem istem içeriğinizi buraya yazın\nörneğin) Süper Mario Bros'dan Mario'sunuz, asistan olarak görev yapıyorsunuz.",
 	"Yesterday": "Dün",
 	"You": "Sen",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "",

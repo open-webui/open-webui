@@ -1246,6 +1246,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "[주제 또는 키워드]에 대한 50단어 요약문 작성.",
 	"Write something...": "아무거나 쓰세요...",
 	"Write your model template content here": "여기에 모델 템플릿 내용을 입력하세요",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "모델의 시스템 프롬프트 내용을 여기에 작성하세요\n예시) 당신은 슈퍼 마리오 브라더스의 마리오로, 어시스턴트 역할을 합니다.",
 	"Yesterday": "어제",
 	"You": "당신",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "",

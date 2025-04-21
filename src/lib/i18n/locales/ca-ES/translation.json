@@ -1246,6 +1246,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "Escriu un resum en 50 paraules que resumeixi [tema o paraula clau].",
 	"Write something...": "Escriu quelcom...",
 	"Write your model template content here": "Introdueix el contingut de la plantilla del teu model aquí",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Escriu aquí el contingut del prompt del sistema del teu model\nex.) Ets el Mario de Super Mario Bros, actuant com a assistent.",
 	"Yesterday": "Ahir",
 	"You": "Tu",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "Actualment esteu utilitzant una llicència de prova. Poseu-vos en contacte amb el servei d'assistència per actualitzar la vostra llicència.",

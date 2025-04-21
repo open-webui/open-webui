@@ -1246,6 +1246,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "[བརྗོད་གཞི་ཡང་ན་གནད་ཚིག] ཕྱོགས་སྡོམ་བྱེད་པའི་ཚིག་ ༥༠ ནང་གི་སྙིང་བསྡུས་ཤིག་འབྲི་བ།",
 	"Write something...": "ཅི་ཞིག་འབྲི་བ།...",
 	"Write your model template content here": "ཁྱེད་ཀྱི་དཔེ་དབྱིབས་མ་དཔེའི་ནང་དོན་འདིར་འབྲི་བ།",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "ཁྱེད་ཀྱི་མཐུན་སྒྲིག་སྐོར་གྱི་ནང་དོན་འདི་ལ་འབྲི་བ་གནང་རོགས།\nདཔེ་སྐོར། ཁྱེད་ནི Super Mario Bros གྱི Mario ཡིན་པས། རྩོམ་བཟོ་ཞུགས་སྐུར་དང་འབྲེལ་བ་བྱེད་པ་ཡིན།",
 	"Yesterday": "ཁ་ས།",
 	"You": "ཁྱེད།",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "ཁྱེད་ཀྱིས་ད་ལྟ་ཚོད་ལྟའི་ཆོག་མཆན་ཞིག་བེད་སྤྱོད་གཏོང་བཞིན་འདུག ཁྱེད་ཀྱི་ཆོག་མཆན་རིམ་སྤོར་བྱེད་པར་རོགས་སྐྱོར་དང་འབྲེལ་གཏུག་བྱེད་རོགས།",

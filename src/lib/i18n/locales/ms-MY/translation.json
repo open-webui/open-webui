@@ -1246,6 +1246,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "Tulis ringkasan dalam 50 patah perkataan yang meringkaskan [topik atau kata kunci].",
 	"Write something...": "",
 	"Write your model template content here": "",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Tulis kandungan arahan sistem model anda di sini\ncth.) Anda adalah Mario dari Super Mario Bros, bertindak sebagai pembantu.",
 	"Yesterday": "Semalam",
 	"You": "Anda",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "",

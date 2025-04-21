@@ -1246,6 +1246,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "Idatzi 50 hitzeko laburpen bat [gaia edo gako-hitza] laburbiltzen duena.",
 	"Write something...": "Idatzi zerbait...",
 	"Write your model template content here": "Idatzi hemen zure modelo txantiloi edukia",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Idatzi hemen zure modeloko sistema promptaren edukia\nadibidez: Super Mario Bros-eko Mario zara, laguntzaile gisa jokatzen.",
 	"Yesterday": "Atzo",
 	"You": "Zu",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "",

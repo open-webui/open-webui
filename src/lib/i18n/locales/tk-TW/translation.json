@@ -1246,6 +1246,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "",
 	"Write something...": "",
 	"Write your model template content here": "",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "請在此處撰寫您的模型系統提示內容\n例如：您是超級瑪利歐兄弟的瑪利歐，擔任助理角色。",
 	"Yesterday": "",
 	"You": "",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "",

@@ -1246,6 +1246,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "Напишіть стислий зміст у 50 слів, який узагальнює [тема або ключове слово].",
 	"Write something...": "Напишіть щось...",
 	"Write your model template content here": "Напишіть вміст шаблону моделі тут",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Напишіть тут вміст системного запиту вашої моделі\nнаприклад) Ви Маріо з Super Mario Bros, який виступає в ролі помічника.",
 	"Yesterday": "Вчора",
 	"You": "Ви",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "Ви наразі використовуєте пробну ліцензію. Будь ласка, зверніться до підтримки для оновлення вашої ліцензії.",

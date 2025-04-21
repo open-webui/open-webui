@@ -1246,6 +1246,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "Scrivi un riassunto in 50 parole che riassume [argomento o parola chiave].",
 	"Write something...": "",
 	"Write your model template content here": "",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Scrivi qui il contenuto del prompt di sistema del tuo modello\nes. ) Sei Mario di Super Mario Bros, che agisce come assistente.",
 	"Yesterday": "Ieri",
 	"You": "Tu",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "",

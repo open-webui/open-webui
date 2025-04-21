@@ -1246,6 +1246,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "用 50 个字写一个总结 [主题或关键词]。",
 	"Write something...": "单击以键入内容...",
 	"Write your model template content here": "在此写入模型模板内容",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "在此输入模型的系统提示词内容\n例如：你是超级马里奥兄弟中的马里奥，作为一个助手。",
 	"Yesterday": "昨天",
 	"You": "你",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "当前为试用许可证，请联系支持人员升级许可证。",

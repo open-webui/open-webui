@@ -1246,6 +1246,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "Írjon egy 50 szavas összefoglalót a [téma vagy kulcsszó]-ról.",
 	"Write something...": "Írjon valamit...",
 	"Write your model template content here": "Írja ide a modell sablon tartalmát",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Írja ide a modell rendszer prompt tartalmát\npl.: Ön Mario a Super Mario Bros-ból, aki asszisztensként működik.",
 	"Yesterday": "Tegnap",
 	"You": "Ön",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "Jelenleg próbaverziós licencet használ. Kérjük, lépjen kapcsolatba a támogatással a licenc frissítéséhez.",

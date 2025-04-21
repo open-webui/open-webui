@@ -1246,6 +1246,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "Skriv inn et sammendrag på 50 ord som oppsummerer [emne eller nøkkelord].",
 	"Write something...": "Skriv inn noe...",
 	"Write your model template content here": "Skriv inn modellens malinnhold her",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Skriv inn innholdet til systemprompten for modellen din her\nf.eks.) Du er Mario fra Super Mario Bros, som fungerer som assistent.",
 	"Yesterday": "I går",
 	"You": "Du",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "",

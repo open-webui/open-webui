@@ -1246,6 +1246,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "اكتب ملخصًا في 50 كلمة يلخص [الموضوع أو الكلمة الرئيسية]",
 	"Write something...": "",
 	"Write your model template content here": "",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "اكتب محتوى موجه نظام النموذج هنا\nمثال: أنت ماريو من لعبة سوبر ماريو بروس، تعمل كمساعد.",
 	"Yesterday": "أمس",
 	"You": "انت",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "",

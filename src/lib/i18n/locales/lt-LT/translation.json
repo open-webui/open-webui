@@ -1246,6 +1246,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "Parašyk santrumpą trumpesnę nei 50 žodžių šiam tekstui: [tekstas]",
 	"Write something...": "",
 	"Write your model template content here": "",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "Parašykite savo modelio sistemos užklausos turinį čia\npvz.: Jūs esate Mario iš Super Mario Bros, veikiantis kaip asistentas.",
 	"Yesterday": "Vakar",
 	"You": "Jūs",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "",

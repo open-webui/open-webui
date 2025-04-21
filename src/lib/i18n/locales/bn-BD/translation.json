@@ -1246,6 +1246,7 @@
 	"Write a summary in 50 words that summarizes [topic or keyword].": "৫০ শব্দের মধ্যে [topic or keyword] এর একটি সারসংক্ষেপ লিখুন।",
 	"Write something...": "",
 	"Write your model template content here": "",
+	"Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.": "আপনার মডেলের সিস্টেম প্রম্পট কন্টেন্ট এখানে লিখুন\nযেমন) আপনি সুপার মারিও ব্রোস থেকে মারিও, একজন সহকারী হিসেবে কাজ করছেন।",
 	"Yesterday": "আগামী",
 	"You": "আপনি",
 	"You are currently using a trial license. Please contact support to upgrade your license.": "",
