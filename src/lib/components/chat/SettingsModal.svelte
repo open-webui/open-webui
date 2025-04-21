@@ -201,28 +201,28 @@
 				'chatactivity'
 			]
 		},
-		// {
-		// 	id: 'account',
-		// 	title: 'Account',
-		// 	keywords: [
-		// 		'account',
-		// 		'profile',
-		// 		'security',
-		// 		'privacy',
-		// 		'settings',
-		// 		'login',
-		// 		'useraccount',
-		// 		'userdata',
-		// 		'api',
-		// 		'apikey',
-		// 		'userprofile',
-		// 		'profiledetails',
-		// 		'accountsettings',
-		// 		'accountpreferences',
-		// 		'securitysettings',
-		// 		'privacysettings'
-		// 	]
-		// },
+		{
+			id: 'account',
+			title: 'Account',
+			keywords: [
+				'account',
+				'profile',
+				'security',
+				'privacy',
+				'settings',
+				'login',
+				'useraccount',
+				'userdata',
+				'api',
+				'apikey',
+				'userprofile',
+				'profiledetails',
+				'accountsettings',
+				'accountpreferences',
+				'securitysettings',
+				'privacysettings'
+			]
+		},
 		{
 			id: 'admin',
 			title: 'Admin',
@@ -353,30 +353,32 @@
 	}
 </script>
 
-<Modal size="xl" bind:show>
+<Modal size="xl" bind:show className="dark:bg-customGray-800 rounded-2xl">
 	<div class="text-gray-700 dark:text-gray-100">
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Settings')}</div>
-			<button
-				class="self-center"
-				on:click={() => {
-					show = false;
-				}}
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
+		<div class="px-7">
+			<div class=" flex justify-between dark:text-white pt-5 pb-4 border-b dark:border-customGray-700">
+				<div class="self-center">{$i18n.t('Personal Settings')}</div>
+				<button
+					class="self-center"
+					on:click={() => {
+						show = false;
+					}}
 				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
-			</button>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="w-5 h-5"
+					>
+						<path
+							d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+						/>
+					</svg>
+				</button>
+			</div>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pt-1 pb-4 md:space-x-4">
+		<div class="flex flex-col md:flex-row w-full px-7 pt-1 pb-4 md:space-x-4">
 			<div
 				id="settings-tabs-container"
 				class="tabs flex flex-row overflow-x-auto gap-2.5 md:gap-1 md:flex-col flex-1 md:flex-none md:w-40 dark:text-gray-200 text-sm font-medium text-left mb-1 md:mb-0 -translate-y-1"

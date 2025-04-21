@@ -12,6 +12,8 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import CameraIcon from '$lib/components/icons/CameraIcon.svelte';
+	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -184,10 +186,15 @@
 				</div>
 
 				<div class="flex-1 flex flex-col self-center gap-0.5">
-					<div class=" mb-0.5 text-sm font-medium">{$i18n.t('Profile Image')}</div>
+					<div class=" mb-0.5 text-sm dark:text-customGray-100">{$i18n.t('Profile Picture')}</div>
+					<div class="text-xs dark:text-customGray-100/50 mb-2">{$i18n.t('We only support PNGs, JPEGs and GIFs under 10MB')}</div>
 
-					<div>
-						<button
+					<div class="flex items-center">
+						<button type="button" class="flex items-center font-medium text-xs dark:text-customGray-300 px-2 py-1 rounded-xl border border-customGray-700 dark:bg-customGray-900">
+							<CameraIcon className="size-4 mr-1"/>
+							{$i18n.t('Upload Image')}
+						</button>
+						<!-- <button
 							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850"
 							on:click={async () => {
 								if (canvasPixelTest()) {
@@ -203,22 +210,23 @@
 									);
 								}
 							}}>{$i18n.t('Use Initials')}</button
-						>
+						> -->
 
-						<button
+						<!-- <button
 							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850"
 							on:click={async () => {
 								const url = await getGravatarUrl($user.email);
 
 								profileImageUrl = url;
 							}}>{$i18n.t('Use Gravatar')}</button
-						>
+						> -->
 
 						<button
-							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg px-2 py-1"
+							class="flex items-center text-xs text-center text-gray-800 text-2xs dark:text-customGray-300 rounded-lg px-2 py-1"
 							on:click={async () => {
 								profileImageUrl = '/user.png';
-							}}>{$i18n.t('Remove')}</button
+							}}><DeleteIcon className="mr-1 size-4"/>
+							{$i18n.t('Remove')}</button
 						>
 					</div>
 				</div>
