@@ -439,14 +439,6 @@ async def add_user(form_data: AddUserForm, admin_user: Users = Depends(get_admin
         )
 
         if new_user:
-            # Send welcome email with the generated password
-            email_service = EmailService()
-            email_service.send_invite_mail(
-                to_email=form_data.email.lower(),
-                username=form_data.name,
-                password=password
-            )
-
             token = create_token(data={"id": new_user.id})
             return {
                 "token": token,
