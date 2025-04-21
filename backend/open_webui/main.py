@@ -52,6 +52,9 @@ from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
 )
+
+from open_webui.moneta.routers import hooks as moneta_hooks_router
+
 from open_webui.routers import (
     audio,
     images,
@@ -935,6 +938,7 @@ app.add_middleware(
 
 app.mount("/ws", socket_app)
 
+app.include_router(moneta_hooks_router.router, prefix="/moneta", tags=["moneta"])
 
 app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
 app.include_router(openai.router, prefix="/openai", tags=["openai"])

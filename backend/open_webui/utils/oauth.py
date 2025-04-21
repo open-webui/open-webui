@@ -386,8 +386,10 @@ class OAuthManager:
                     role=role,
                     oauth_sub=provider_sub,
                 )
+                # debugger
 
                 if auth_manager_config.WEBHOOK_URL:
+                    # debugger
                     post_webhook(
                         WEBUI_NAME,
                         auth_manager_config.WEBHOOK_URL,
@@ -398,11 +400,33 @@ class OAuthManager:
                             "user": user.model_dump_json(exclude_none=True),
                         },
                     )
+                    # debugger
+                    import pdb; pdb.set_trace()
             else:
                 raise HTTPException(
                     status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
                 )
 
+        #########################################################
+        # MONETA - new session created
+        # When a new session is created, we need to upsert the customer in Lago
+        #########################################################
+        # from open_webui.moneta.utils.lago import upsert_customer
+        # upsert_customer(user.id, user_data)
+        
+        #########################################################
+        # MONETA - setup storefront cookies
+        #########################################################
+        # from open_webui.moneta.utils.storefront import save_storefront_token_to_cookies
+        # storefront_payload = {
+        #     "user_id": user.id,
+        #     "name": user_data.get("name"),
+        #     "region": user_data.get("country"),
+        #     "currency": user_data.get("currency"),
+        #     "timezone": user_data.get("timezone"),
+        # }
+        # save_storefront_token_to_cookies(response, storefront_payload, request)
+        
         jwt_token = create_token(
             data={"id": user.id},
             expires_delta=parse_duration(auth_manager_config.JWT_EXPIRES_IN),
