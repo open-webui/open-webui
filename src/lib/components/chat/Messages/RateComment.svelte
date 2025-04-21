@@ -16,7 +16,7 @@
 		show?: boolean;
 	}
 
-	let { message, show = $bindable(false) }: Props = $props();
+	let { message = $bindable(null), show = $bindable(false) }: Props = $props();
 
 	let LIKE_REASONS = [
 		'accurate_information',
@@ -46,8 +46,6 @@
 
 	let detailedRating = $state(null);
 	let selectedModel = $state(null);
-
-
 
 	const init = () => {
 		if (!selectedReason) {

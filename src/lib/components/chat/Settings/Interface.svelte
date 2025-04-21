@@ -691,7 +691,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleCopyFormatted();
 						}}
 						type="button"
@@ -822,7 +822,7 @@
 
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
-						on:click={() => {
+						onclick={() => {
 							toggleSplitLargeChunks();
 						}}
 						type="button"
