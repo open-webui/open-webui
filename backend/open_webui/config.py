@@ -952,10 +952,13 @@ DEFAULT_MODELS = PersistentConfig(
     "DEFAULT_MODELS", "ui.default_models", os.environ.get("DEFAULT_MODELS", None)
 )
 
-DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
-    "DEFAULT_PROMPT_SUGGESTIONS",
-    "ui.prompt_suggestions",
-    [
+try:
+    default_prompt_suggestions = json.loads(os.environ.get("DEFAULT_PROMPT_SUGGESTIONS", "[]"))
+except Exception as e:
+    log.exception(f"Error loading DEFAULT_PROMPT_SUGGESTIONS: {e}")
+    default_prompt_suggestions = []
+if default_prompt_suggestions == []:
+    default_prompt_suggestions = [
         {
             "title": ["Help me study", "vocabulary for a college entrance exam"],
             "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
@@ -983,7 +986,11 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
             "title": ["Overcome procrastination", "give me tips"],
             "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
         },
-    ],
+    ]
+DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
+    "DEFAULT_PROMPT_SUGGESTIONS",
+    "ui.prompt_suggestions",
+    default_prompt_suggestions,
 )
 
 MODEL_ORDER_LIST = PersistentConfig(
