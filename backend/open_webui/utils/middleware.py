@@ -355,21 +355,20 @@ async def chat_web_search_handler(
 
     all_results = []
 
-    for searchQuery in queries:
-        await event_emitter(
-            {
-                "type": "status",
-                "data": {
-                    "action": "web_search",
-                    "description": 'Searching "{{searchQuery}}"',
-                    "query": searchQuery,
-                    "done": False,
-                },
-            }
-        )
+    await event_emitter(
+        {
+            "type": "status",
+            "data": {
+                "action": "web_search",
+                "description": "Searching the web",
+                "done": False,
+            },
+        }
+    )
 
-        try:
-            results = await process_web_search(
+    web_search_tasks = [
+        asyncio.create_task(
+            process_web_search(
                 request,
                 SearchForm(
                     **{
@@ -378,6 +377,15 @@ async def chat_web_search_handler(
                 ),
                 user=user,
             )
+        )
+        for searchQuery in queries
+    ]
+    gathered_results = await asyncio.gather(*web_search_tasks, return_exceptions=True)
+
+    for searchQuery, results in zip(queries, gathered_results):
+        try:
+            if isinstance(results, Exception):
+                raise Exception(f"Error searching {searchQuery}: {str(results)}")
 
             if results:
                 all_results.append(results)
