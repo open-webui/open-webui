@@ -154,6 +154,7 @@ def get_tools(
             for spec in tool.specs:
                 # TODO: Fix hack for OpenAI API
                 # Some times breaks OpenAI but others don't. Leaving the comment
+                log.debug(f"Providing tool spec {spec}")
                 for val in spec.get("parameters", {}).get("properties", {}).values():
                     if val["type"] == "str":
                         val["type"] = "string"
@@ -276,8 +277,8 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
 
     docstring = func.__doc__
 
-    description = parse_description(docstring)
-    function_descriptions = parse_docstring(docstring)
+    function_description = parse_description(docstring)
+    param_descriptions = parse_docstring(docstring)
 
     field_defs = {}
     for name, param in parameters.items():
@@ -285,7 +286,7 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
         type_hint = type_hints.get(name, Any)
         default_value = param.default if param.default is not param.empty else ...
 
-        description = function_descriptions.get(name, None)
+        description = param_descriptions.get(name, None)
 
         if description:
             field_defs[name] = type_hint, Field(default_value, description=description)
@@ -293,7 +294,7 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
             field_defs[name] = type_hint, default_value
 
     model = create_model(func.__name__, **field_defs)
-    model.__doc__ = description
+    model.__doc__ = function_description
 
     return model
 
