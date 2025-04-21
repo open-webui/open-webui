@@ -386,7 +386,7 @@ export const addUser = async (
 	return res;
 };
 
-export const updateUserProfile = async (token: string, name: string, profileImageUrl: string) => {
+export const updateUserProfile = async (token: string, name: string, profileImageUrl: string, lastName: string, email: string, password: string, newPassword: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/update/profile`, {
@@ -397,7 +397,11 @@ export const updateUserProfile = async (token: string, name: string, profileImag
 		},
 		body: JSON.stringify({
 			name: name,
-			profile_image_url: profileImageUrl
+			profile_image_url: profileImageUrl,
+			last_name: lastName,
+			email: email,
+			password: password,
+			new_password: newPassword
 		})
 	})
 		.then(async (res) => {
@@ -416,6 +420,36 @@ export const updateUserProfile = async (token: string, name: string, profileImag
 
 	return res;
 };
+
+export const deleteUserProfile = async (token: string, userId: string) => {
+	let error = null;
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/delete/profile`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			user_id: userId
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+
+}
 
 export const updateUserPassword = async (token: string, password: string, newPassword: string) => {
 	let error = null;

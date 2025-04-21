@@ -17,6 +17,9 @@
 	import Personalization from './Settings/Personalization.svelte';
 	import SearchInput from '../layout/Sidebar/SearchInput.svelte';
 	import Search from '../icons/Search.svelte';
+	import ProfileIcon from '../icons/ProfileIcon.svelte';
+	import PersonalizationIcon from '../icons/PersonalizationIcon.svelte';
+	import ChatIcon from '../icons/ChatIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -29,6 +32,62 @@
 	}
 
 	const searchData: SettingsTab[] = [
+		{
+			id: 'account',
+			title: 'Account',
+			keywords: [
+				'account',
+				'profile',
+				'security',
+				'privacy',
+				'settings',
+				'login',
+				'useraccount',
+				'userdata',
+				'api',
+				'apikey',
+				'userprofile',
+				'profiledetails',
+				'accountsettings',
+				'accountpreferences',
+				'securitysettings',
+				'privacysettings'
+			]
+		},
+		{
+			id: 'personalization',
+			title: 'Personalization',
+			keywords: [
+				'personalization',
+				'memory',
+				'personalize',
+				'preferences',
+				'profile',
+				'personalsettings',
+				'customsettings',
+				'userpreferences',
+				'accountpreferences'
+			]
+		},
+		{
+			id: 'chats',
+			title: 'Chats',
+			keywords: [
+				'chat',
+				'messages',
+				'conversations',
+				'chatsettings',
+				'history',
+				'chathistory',
+				'messagehistory',
+				'messagearchive',
+				'convo',
+				'chats',
+				'conversationhistory',
+				'exportmessages',
+				'chatactivity'
+			]
+		},
 		{
 			id: 'general',
 			title: 'General',
@@ -123,21 +182,6 @@
 			]
 		},
 		{
-			id: 'personalization',
-			title: 'Personalization',
-			keywords: [
-				'personalization',
-				'memory',
-				'personalize',
-				'preferences',
-				'profile',
-				'personalsettings',
-				'customsettings',
-				'userpreferences',
-				'accountpreferences'
-			]
-		},
-		{
 			id: 'audio',
 			title: 'Audio',
 			keywords: [
@@ -180,47 +224,6 @@
 				'audioinput',
 				'audiofeatures',
 				'voicemodes'
-			]
-		},
-		{
-			id: 'chats',
-			title: 'Chats',
-			keywords: [
-				'chat',
-				'messages',
-				'conversations',
-				'chatsettings',
-				'history',
-				'chathistory',
-				'messagehistory',
-				'messagearchive',
-				'convo',
-				'chats',
-				'conversationhistory',
-				'exportmessages',
-				'chatactivity'
-			]
-		},
-		{
-			id: 'account',
-			title: 'Account',
-			keywords: [
-				'account',
-				'profile',
-				'security',
-				'privacy',
-				'settings',
-				'login',
-				'useraccount',
-				'userdata',
-				'api',
-				'apikey',
-				'userprofile',
-				'profiledetails',
-				'accountsettings',
-				'accountpreferences',
-				'securitysettings',
-				'privacysettings'
 			]
 		},
 		{
@@ -319,7 +322,7 @@
 		return await _getModels(localStorage.token);
 	};
 
-	let selectedTab = 'general';
+	let selectedTab = 'account';
 
 	// Function to handle sideways scrolling
 	const scrollHandler = (event) => {
@@ -353,7 +356,7 @@
 	}
 </script>
 
-<Modal size="xl" bind:show className="dark:bg-customGray-800 rounded-2xl">
+<Modal size="md-plus" bind:show className="dark:bg-customGray-800 rounded-2xl" containerClassName="bg-[#1D1A1A]/50 backdrop-blur-[7.44px]">
 	<div class="text-gray-700 dark:text-gray-100">
 		<div class="px-7">
 			<div class=" flex justify-between dark:text-white pt-5 pb-4 border-b dark:border-customGray-700">
@@ -378,12 +381,12 @@
 			</div>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-7 pt-1 pb-4 md:space-x-4">
+		<div class="flex flex-col md:flex-row w-full pr-7 md:space-x-4">
 			<div
 				id="settings-tabs-container"
-				class="tabs flex flex-row overflow-x-auto gap-2.5 md:gap-1 md:flex-col flex-1 md:flex-none md:w-40 dark:text-gray-200 text-sm font-medium text-left mb-1 md:mb-0 -translate-y-1"
+				class="rounded-bl-lg pl-4 pt-5 pr-2 tabs flex flex-row dark:bg-customGray-900 gap-2.5 md:gap-1 md:flex-col flex-1 md:flex-none md:w-[290px] dark:text-gray-200 text-sm font-medium text-left mb-1 md:mb-0"
 			>
-				<div class="hidden md:flex w-full rounded-xl -mb-1 px-0.5 gap-2" id="settings-search">
+				<!-- <div class="hidden md:flex w-full rounded-xl -mb-1 px-0.5 gap-2" id="settings-search">
 					<div class="self-center rounded-l-xl bg-transparent">
 						<Search className="size-3.5" />
 					</div>
@@ -393,7 +396,7 @@
 						on:input={searchDebounceHandler}
 						placeholder={$i18n.t('Search')}
 					/>
-				</div>
+				</div> -->
 
 				{#if visibleTabs.length > 0}
 					{#each visibleTabs as tabId (tabId)}
@@ -451,18 +454,24 @@
 							</button>
 						{:else if tabId === 'personalization'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-								'personalization'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+							class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							'personalization'
+								? 'dark:bg-customGray-800'
+								: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'personalization';
 								}}
 							>
+							<div class="flex items-center mb-1">
 								<div class=" self-center mr-2">
-									<User />
+									<PersonalizationIcon/>
 								</div>
 								<div class=" self-center">{$i18n.t('Personalization')}</div>
+							</div>
+								<div class="{selectedTab ===
+								'personalization'
+									? ''
+									: 'invisible'} font-normal text-xs dark:text-white/50">{$i18n.t('Personalise the look and feel')}</div>
 							</button>
 						{:else if tabId === 'audio'}
 							<button
@@ -493,55 +502,45 @@
 							</button>
 						{:else if tabId === 'chats'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-								'chats'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+							class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							'chats'
+								? 'dark:bg-customGray-800'
+								: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'chats';
 								}}
 							>
+							<div class="flex items-center mb-1">
 								<div class=" self-center mr-2">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M8 2C4.262 2 1 4.57 1 8c0 1.86.98 3.486 2.455 4.566a3.472 3.472 0 0 1-.469 1.26.75.75 0 0 0 .713 1.14 6.961 6.961 0 0 0 3.06-1.06c.403.062.818.094 1.241.094 3.738 0 7-2.57 7-6s-3.262-6-7-6ZM5 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm7-1a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM8 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+									<ChatIcon/>
 								</div>
 								<div class=" self-center">{$i18n.t('Chats')}</div>
+							</div>
+							<div class="{selectedTab ===
+							'chats'
+								? ''
+								: 'invisible'} font-normal text-xs dark:text-white/50">{$i18n.t('Manage your personal details')}</div>
 							</button>
 						{:else if tabId === 'account'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+								class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 								'account'
-									? ''
+									? 'dark:bg-customGray-800'
 									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'account';
 								}}
 							>
-								<div class=" self-center mr-2">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M15 8A7 7 0 1 1 1 8a7 7 0 0 1 14 0Zm-5-2a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM8 9c-1.825 0-3.422.977-4.295 2.437A5.49 5.49 0 0 0 8 13.5a5.49 5.49 0 0 0 4.294-2.063A4.997 4.997 0 0 0 8 9Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+								<div class="flex items-center mb-1">
+									<div class=" self-center mr-2">
+										<ProfileIcon/>
+									</div>
+									<div class=" self-center">{$i18n.t('Profile')}</div>
 								</div>
-								<div class=" self-center">{$i18n.t('Account')}</div>
+								<div class="{selectedTab ===
+								'account'
+									? ''
+									: 'invisible'} font-normal text-xs dark:text-white/50">{$i18n.t('Manage your personal details')}</div>
 							</button>
 						{:else if tabId === 'about'}
 							<button
@@ -606,7 +605,7 @@
 					</div>
 				{/if}
 			</div>
-			<div class="flex-1 md:min-h-[32rem] max-h-[32rem]">
+			<div class="flex-1 md:min-h-[32rem]">
 				{#if selectedTab === 'general'}
 					<General
 						{getModels}
