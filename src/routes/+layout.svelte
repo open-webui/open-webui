@@ -211,9 +211,8 @@
 		console.log('executeTool', data, toolServer);
 
 		if (toolServer) {
-			console.log(toolServer);
 			const res = await executeToolServer(
-				(toolServer?.auth_type ?? 'bearer') === 'bearer' ? toolServer?.key : localStorage.token,
+				toolServer.key,
 				toolServer.url,
 				data?.name,
 				data?.params,
@@ -261,7 +260,7 @@
 				if (done) {
 					if ($isLastActiveTab) {
 						if ($settings?.notificationEnabled ?? false) {
-							new Notification(`${title} | Open WebUI`, {
+							new Notification(`${title} | HarkoAI`, {
 								body: content,
 								icon: `${WEBUI_BASE_URL}/static/favicon.png`
 							});
@@ -410,7 +409,7 @@
 			if (type === 'message') {
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
-						new Notification(`${data?.user?.name} (#${event?.channel?.name}) | Open WebUI`, {
+						new Notification(`${data?.user?.name} (#${event?.channel?.name}) | HarkoAI`, {
 							body: data?.content,
 							icon: data?.user?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`
 						});

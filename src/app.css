@@ -294,7 +294,7 @@ input[type='number'] {
 }
 
 .bg-gray-950-90 {
-	background-color: rgba(var(--color-gray-950, #0d0d0d), 0.9);
+	background-color: rgba(var(--color-gray-950, #252932), 0.9);
 }
 
 .ProseMirror {

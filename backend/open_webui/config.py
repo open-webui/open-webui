@@ -699,7 +699,7 @@ if CUSTOM_NAME:
         if r.ok:
             if "logo" in data:
                 WEBUI_FAVICON_URL = url = (
-                    f"https://api.openwebui.com{data['logo']}"
+                    f"../../static/favicon.ico"
                     if data["logo"][0] == "/"
                     else data["logo"]
                 )
