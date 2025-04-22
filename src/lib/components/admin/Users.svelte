@@ -13,6 +13,7 @@
 	const i18n = getContext('i18n');
 
 	let users = [];
+	let totalUsers = 0;
 
 	let selectedTab = 'overview';
 	let loaded = false;
@@ -30,6 +31,7 @@
 			await goto('/');
 		} else {
 			users = await getUsers(localStorage.token);
+			totalUsers = users.length;
 		}
 		loaded = true;
 
@@ -102,7 +104,7 @@
 
 	<div class="flex-1 mt-1 lg:mt-0 overflow-y-scroll">
 		{#if selectedTab === 'overview'}
-			<UserList {users} />
+			<UserList {totalUsers}/>
 		{:else if selectedTab === 'groups'}
 			<Groups {users} />
 		{/if}
