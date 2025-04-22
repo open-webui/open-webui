@@ -414,6 +414,47 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 # Complete Invite
 ############################
 
+@router.post("/add", response_model=SigninResponse)
+async def add_user(form_data: AddUserForm, admin_user: Users = Depends(get_admin_user)):
+    if not validate_email_format(form_data.email.lower()):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
+        )
+
+    if Users.get_user_by_email(form_data.email.lower()):
+        raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
+
+    try:
+        # Generate a secure random password
+        password = "test"
+        hashed = get_password_hash(password)
+
+        new_user = Auths.insert_new_auth(
+            form_data.email.lower(),
+            hashed,
+            form_data.name,
+            admin_user.company_id,
+            form_data.profile_image_url,
+            form_data.role,
+        )
+
+        if new_user:
+            token = create_token(data={"id": new_user.id})
+            return {
+                "token": token,
+                "token_type": "Bearer",
+                "id": new_user.id,
+                "email": new_user.email,
+                "name": new_user.name,
+                "role": new_user.role,
+                "company_id": new_user.company_id,
+                "profile_image_url": new_user.profile_image_url,
+            }
+        else:
+            raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+    except Exception as err:
+        raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
+
 
 @router.post("/complete_invite", response_model=SessionUserResponse)
 async def complete_invite(request: Request, response: Response, form_data: CompleteInviteForm):
