@@ -21,6 +21,7 @@
 	import EditUserModal from '$lib/components/admin/Users/UserList/EditUserModal.svelte';
 	import UserChatsModal from '$lib/components/admin/Users/UserList/UserChatsModal.svelte';
 	import AddUserModal from '$lib/components/admin/Users/UserList/AddUserModal.svelte';
+	import { getRoles } from '$lib/apis/roles';
 
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
@@ -105,6 +106,14 @@
 	$: if (query !== null && orderBy && direction) {
 		getUserList();
 	}
+
+	let roles = [];
+	onMount(async () => {
+		roles = await getRoles(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return [];
+		});
+	});
 </script>
 
 <ConfirmDialog
@@ -372,13 +381,12 @@
 						<button
 							class=" translate-y-0.5"
 							on:click={() => {
-								if (user.role === 'user') {
-									updateRoleHandler(user.id, 'admin');
-								} else if (user.role === 'pending') {
-									updateRoleHandler(user.id, 'user');
-								} else {
-									updateRoleHandler(user.id, 'pending');
-								}
+								// Find the current role index
+								const currentRoleIndex = roles.findIndex(r => r.name === user.role);
+								// Get the next role index (loop back to 0 if at end)
+								const nextRoleIndex = (currentRoleIndex + 1) % roles.length;
+								// Update to role
+								updateRoleHandler(user.id, roles[nextRoleIndex].name);
 							}}
 						>
 							<Badge

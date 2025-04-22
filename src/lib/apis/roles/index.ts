@@ -4,7 +4,7 @@ import { getUserPosition } from '$lib/utils';
 export const getRoles = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/roles`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/roles/`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -31,7 +31,7 @@ export const getRoles = async (token: string) => {
 export const addRole = async (token: string, role: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/roles`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/roles/`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
