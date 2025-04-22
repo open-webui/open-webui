@@ -29,11 +29,11 @@
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import About from '$lib/components/chat/Settings/About.svelte';
 	import Banner from '$lib/components/common/Banner.svelte';
-	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 
 	const i18n = getContext('i18n');
 
-	export let users = [];
+	export let totalUsers = 0;
+	let users = []
 
 	let search = '';
 	let selectedUser = null;
@@ -45,6 +45,15 @@
 
 	let showUserChatsModal = false;
 	let showEditUserModal = false;
+
+	const fetchUserPage = async () => {
+		try {
+			users = await getUsers(localStorage.token, page);
+		} catch (err) {
+			console.error("Error fetching users: " + err);
+		}
+	};
+	$: page, fetchUserPage();
 
 	const updateRoleHandler = async (id, role) => {
 		const res = await updateUserRole(localStorage.token, id, role).catch((error) => {
@@ -79,25 +88,26 @@
 		}
 	}
 
-	let filteredUsers;
+	const queryUser = async (q) => {
+		try {
+			const result = await getUsers(localStorage.token, undefined, 10, q);
+			filteredUsers = result.slice((page - 1) * 10, page * 10);
+		} catch (err) {
+			console.error(err);
+		}
+	};
 
-	$: filteredUsers = users
-		.filter((user) => {
-			if (search === '') {
-				return true;
-			} else {
-				let name = user.name.toLowerCase();
-				let email = user.email.toLowerCase();
-				const query = search.toLowerCase();
-				return name.includes(query) || email.includes(query);
-			}
-		})
-		.sort((a, b) => {
-			if (a[sortKey] < b[sortKey]) return sortOrder === 'asc' ? -1 : 1;
-			if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
-			return 0;
-		})
-		.slice((page - 1) * 20, page * 20);
+	let filteredUsers;
+	$: if (search.trim() === '') {
+		filteredUsers = users
+			.sort((a, b) => {
+				if (a[sortKey] < b[sortKey]) return sortOrder === 'asc' ? -1 : 1;
+				if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
+				return 0;
+			})
+	} else {
+		queryUser(search);
+	}
 </script>
 
 <ConfirmDialog
@@ -161,7 +171,7 @@
 				>
 			{/if}
 		{:else}
-			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{users.length}</span>
+			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{totalUsers}</span>
 		{/if}
 	</div>
 
@@ -486,28 +496,4 @@
 	ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
 </div>
 
-<Pagination bind:page count={users.length} />
-
-{#if !$config?.license_metadata}
-	{#if users.length > 50}
-		<div class="text-sm">
-			<Markdown
-				content={`
-> [!NOTE]
-> # **Hey there! 👋**
->
-> It looks like you have over 50 users — that usually falls under organizational usage.
-> 
-> Open WebUI is proudly open source and completely free, with no hidden limits — and we'd love to keep it that way. 🌱  
->
-> By supporting the project through sponsorship or an enterprise license, you’re not only helping us stay independent, you’re also helping us ship new features faster, improve stability, and grow the project for the long haul. With an *enterprise license*, you also get additional perks like dedicated support, customization options, and more — all at a fraction of what it would cost to build and maintain internally.  
-> 
-> Your support helps us stay independent and continue building great tools for everyone. 💛
-> 
-> - 👉 **[Click here to learn more about enterprise licensing](https://docs.openwebui.com/enterprise)**
-> - 👉 *[Click here to sponsor the project on GitHub](https://github.com/sponsors/tjbck)*
-`}
-			/>
-		</div>
-	{/if}
-{/if}
+<Pagination bind:page count={totalUsers} perPage={10}/>
