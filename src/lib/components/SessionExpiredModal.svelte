@@ -64,7 +64,6 @@
             <line x1="12" y1="17" x2="12.01" y2="17"></line>
           </svg>
         </div>
-        __{/* Beschreibungs-Text */}__
         <div id="dialog-description" class="text-sm text-muted-foreground mb-4">
            {$i18n.t('(Your session has expired. Please log in again to continue. You may want to copy any unsaved work before proceeding.)')}
               </div>
