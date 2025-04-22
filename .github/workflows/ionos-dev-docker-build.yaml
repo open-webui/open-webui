@@ -9,6 +9,8 @@ on:
       - 'tl/ci-test-**'
     tags:
       - 'ionos-**'
+      - 'snap-**'
+      - 'live-**'
 
 env:
   JOB_NAME: openwebui-build-push-image
@@ -88,7 +90,7 @@ jobs:
                   - --dockerfile=./Dockerfile
                   - --context=dir:///workspace
                   - --destination=${{ env.REGISTRY_URL }}:${{ github.run_id }}
-                  - --destination=${{ env.REGISTRY_URL }}:latest
+                  - --destination=${{ env.REGISTRY_URL }}:${ADDITIONAL_TAG}
                   - --build-arg=BUILD_HASH=${{ github.sha }}
                   - --git=recurse-submodules=true
                   - --skip-tls-verify
@@ -109,6 +111,7 @@ jobs:
           set -e
         env:
           TOKEN: ${{ secrets.GIT_TOKEN }}
+          ADDITIONAL_TAG: ${{ github.ref_name || github.sha }}
 
       - name: Monitor Job Status and Print Logs
         run: |
