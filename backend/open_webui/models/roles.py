@@ -1,8 +1,6 @@
 import time
 from typing import Optional
 
-from pprint import pprint
-
 from open_webui.internal.db import Base, JSONField, get_db
 
 from pydantic import BaseModel, ConfigDict
