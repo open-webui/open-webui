@@ -1,6 +1,25 @@
 version: '3.8'
 
 services:
+  traefik:
+    image: traefik:v2.11
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=thore@beyondtheloop.ai"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./traefik/traefik.yml:/traefik.yml:ro"
+      - "./traefik/acme.json:/letsencrypt/acme.json"
+    restart: always
+
   litellm:
     container_name: litellm
     image: ghcr.io/berriai/litellm:main-v1.61.7
@@ -17,6 +36,12 @@ services:
 
   beyond-the-loop:
     image: ghcr.io/philszalay/beyond-the-loop:production
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.btl.rule=Host(`v2.beyondtheloop.ai`)"
+      - "traefik.http.routers.btl.entrypoints=websecure"
+      - "traefik.http.routers.btl.tls.certresolver=myresolver"
+      - "traefik.http.services.btl.loadbalancer.server.port=8080"
     pull_policy: always
     container_name: beyond-the-loop
     env_file:
