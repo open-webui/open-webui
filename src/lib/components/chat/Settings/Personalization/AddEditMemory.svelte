@@ -4,6 +4,8 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import { addNewMemory, updateMemoryById } from '$lib/apis/memories';
 	import { toast } from 'svelte-sonner';
+	import SendIcon from '$lib/components/icons/SendIcon.svelte';
+	import StopIcon from '$lib/components/icons/StopIcon.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -23,6 +25,7 @@
     }
 
 	const submitHandler = async () => {
+		if(!content) return;
 		loading = true;
 
         let res;
@@ -42,7 +45,6 @@
         }
 
 		if (res) {
-			console.log(res);
             if(memory) {
                 toast.success($i18n.t('Memory updated successfully'));
             }else{
@@ -61,7 +63,7 @@
 
 
 	<div>
-		<div class="flex flex-col md:flex-row w-full px-5 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full pb-4 md:space-x-4 dark:text-gray-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
@@ -69,55 +71,28 @@
 						submitHandler();
 					}}
 				>
-					<div class="">
+					<div class="relative">
 						<textarea
 							bind:value={content}
-							class=" dark:bg-customGray-900 w-full text-sm resize-none rounded-3xl p-3"
-							rows="2"
+							class=" dark:bg-customGray-900 w-full text-sm resize-none rounded-3xl px-6 pt-6 pb-1 outline-none"
 							placeholder={$i18n.t('Enter a detail  about yourself for your LLMs to recall')}
+							rows="2"
 						/>
 
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-gray-500 dark:text-customGray-100">
 							ⓘ {$i18n.t('Refer to yourself as "User" (e.g., "User is learning Spanish")')}
 						</div>
-					</div>
-
-					<div class="flex justify-end pt-1 text-sm font-medium">
 						<button
-							class=" px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-gray-100 transition rounded-3xl flex flex-row space-x-1 items-center {loading
+							class="absolute right-6 top-6 text-customGray-900 transition flex flex-row items-center {loading
 								? ' cursor-not-allowed'
 								: ''}"
 							type="submit"
 							disabled={loading}
 						>
-							{$i18n.t('Add')}
-
 							{#if loading}
-								<div class="ml-2 self-center">
-									<svg
-										class=" w-4 h-4"
-										viewBox="0 0 24 24"
-										fill="currentColor"
-										xmlns="http://www.w3.org/2000/svg"
-										><style>
-											.spinner_ajPY {
-												transform-origin: center;
-												animation: spinner_AtaB 0.75s infinite linear;
-											}
-											@keyframes spinner_AtaB {
-												100% {
-													transform: rotate(360deg);
-												}
-											}
-										</style><path
-											d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-											opacity=".25"
-										/><path
-											d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-											class="spinner_ajPY"
-										/></svg
-									>
-								</div>
+								<StopIcon className="size-6"/>
+							{:else}
+								<SendIcon className="size-6"/>
 							{/if}
 						</button>
 					</div>
