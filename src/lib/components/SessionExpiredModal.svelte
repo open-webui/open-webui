@@ -3,21 +3,19 @@
     import { page } from '$app/stores';
     import { goto } from '$app/navigation';
     import { WEBUI_BASE_URL } from '$lib/constants';
-    import { getContext, onMount, onDestroy } from 'svelte'; // onMount/onDestroy hinzugefügt
-    import { fade } from 'svelte/transition'; // Importiere fade transition
+    import { getContext, onMount, onDestroy } from 'svelte';
+    import { fade } from 'svelte/transition';
 
     const i18n = getContext('i18n');
 
     let isOpen = false;
     const unsubscribe = sessionExpired.subscribe((value) => { // Store unsubscribe speichern
         isOpen = value;
-    // Body-Scroll sperren/entsperren wenn Modal gezeigt/versteckt wird
     if (typeof document !== 'undefined') {
       document.body.style.overflow = value ? 'hidden' : '';
     }
     });
 
-  // Beim Zerstören der Komponente den Store abmelden und Body-Scroll wiederherstellen
   onDestroy(() => {
     unsubscribe();
     if (typeof document !== 'undefined') {
@@ -26,7 +24,7 @@
   });
 
     function redirectToLogin() {
-        sessionExpired.set(false); // Setzt Modal zurück (obwohl Navigation ohnehin wirkt)
+        sessionExpired.set(false);
         const currentUrl = `${$page.url.pathname}${$page.url.search}`;
         const encodedUrl = encodeURIComponent(currentUrl);
         goto(`${WEBUI_BASE_URL}/auth?redirect=${encodedUrl}`, { replaceState: true });
@@ -35,29 +33,22 @@
 </script>
 
 {#if isOpen}
-  __{/* Beginn: Eigene Modal-Struktur */}__
     <div
-        class="fixed inset-0 z-[9999] flex items-center justify-center p-3" __<!-- Kein Klick-Handler hier -->__
-    transition:fade={{ duration: 150 }} __<!-- Sanfter Fade-in -->__
+        class="fixed inset-0 z-[9999] flex items-center justify-center p-3"
+    transition:fade={{ duration: 150 }}
     >
-    __{/* 1. Backdrop */}__
     <div class="absolute inset-0 bg-black/60"></div>
 
-    __{/* 2. Inhalts-Box (zentriert, feste Breite, kein Klick-Handler zum Schließen) */}__
         <div
-            class="relative z-10 w-full max-w-sm rounded-2xl bg-white p-5 dark:bg-gray-900 shadow-xl" __<!-- "sm" Breite ≈ 30rem, hier max-w-sm ≈ 24rem, anpassbar -->__
+            class="relative z-10 w-full max-w-sm rounded-2xl bg-white p-5 dark:bg-gray-900 shadow-xl"
         >
-      __{/* Header - Nur Titel */}__
-            <div class=" flex justify-center text-center mb-3"> __<!-- Zentriert statt justify-between -->__
+            <div class=" flex justify-center text-center mb-3">
                 <div class=" text-lg font-medium font-primary dark:text-gray-100">
                     {$i18n.t('(Session Expired)')}
                 </div>
-        __{/* Kein X-Button */}__
             </div>
 
-      __{/* Body - Icon und Text */}__
             <div class="text-center dark:text-gray-200">
-        __{/* Warn-Icon */}__
         <div class="flex justify-center mb-3">
            <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -79,10 +70,9 @@
               </div>
       </div>
 
-      __{/* Footer - Nur Button */}__
       <div class="flex justify-center">
         <button
-          class="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 transition rounded-full flex flex-row items-center" __<!-- Etwas mehr Padding -->__
+          class="px-4 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 transition rounded-full flex flex-row items-center"
           on:click={redirectToLogin}
         >
           {$i18n.t('(Log In Again)')}
@@ -90,12 +80,9 @@
       </div>
         </div>
     </div>
- __{/* Ende: Eigene Modal-Struktur */}__
 {/if}
 
 <style>
-/* Minimales globales CSS für den Scroll-Lock,
-   obwohl es auch direkt im Script gehandhabt wird */
 :global(body.modal-open) {
   overflow: hidden;
 }
