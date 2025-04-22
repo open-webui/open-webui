@@ -21,6 +21,7 @@
 	import EditUserModal from '$lib/components/admin/Users/UserList/EditUserModal.svelte';
 	import UserChatsModal from '$lib/components/admin/Users/UserList/UserChatsModal.svelte';
 	import AddUserModal from '$lib/components/admin/Users/UserList/AddUserModal.svelte';
+	import { getRoles } from '$lib/apis/roles';
 
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import RoleUpdateConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -124,6 +125,14 @@
 	$: if (query !== null && orderBy && direction) {
 		getUserList();
 	}
+
+	let roles = [];
+	onMount(async () => {
+		roles = await getRoles(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return [];
+		});
+	});
 </script>
 
 <ConfirmDialog
