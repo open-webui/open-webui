@@ -14,6 +14,10 @@ export default {
 			'2xs': '10px',
 			'xs-plus': '13px',
 			},
+			spacing: {
+				'6.5': '1.625rem',
+				'45': '11.25rem', 
+			},
 			colors: {
 				gray: {
 					50: '#f9f9f9',

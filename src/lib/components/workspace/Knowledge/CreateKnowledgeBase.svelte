@@ -141,7 +141,7 @@
 </script>
 
 <div class="w-full max-h-full">
-	<div class="py-[22px] px-[15px] border-b border-customGray-700">
+	<div class="py-5.5 px-4 border-b border-customGray-700">
 		<button
 			class="flex items-center gap-1"
 			on:click={() => {
@@ -204,7 +204,7 @@
 						/>
 						{#if !description}
 							<span
-								class="absolute top-[26px] w-[180px] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+								class="absolute top-6.5 w-45 text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
 							>
 								{$i18n.t('Describe your knowledge base and objectives')}
 							</span>
@@ -213,7 +213,7 @@
 				</div>
 				<div>
 					<div class="w-full flex py-2.5 border-b border-customGray-700 mb-2.5">
-						<div class="w-[280px] text-xs dark:text-customGray-300">
+						<div class="w-[17.5rem] text-xs dark:text-customGray-300">
 							{$i18n.t('Knowledge base')}
 						</div>
 						{#if files.length > 0}
@@ -227,7 +227,7 @@
 								<li
 									class="group flex justify-start items-center dark:text-customGray-100 cursor-pointer dark:hover:text-white"
 								>
-									<div class="flex items-center w-[280px]">
+									<div class="flex items-center w-[17.5rem]">
 										<DocumentIcon className="mr-2 size-4 shrink-0" />
 										<span class="truncate text-sm">{file.meta.name}</span>
 									</div>
@@ -261,7 +261,7 @@
 			<div class="flex justify-end mt-2">
 				<div>
 					<button
-						class=" text-xs w-[168px] h-10 px-3 py-2 transition rounded-lg {loading
+						class=" text-xs w-[10.5rem] h-10 px-3 py-2 transition rounded-lg {loading
 							? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
 							: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center"
 						type="submit"
