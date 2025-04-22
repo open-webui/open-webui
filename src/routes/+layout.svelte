@@ -48,6 +48,7 @@
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import { chatCompletion } from '$lib/apis/openai';
+	import SessionExpiredModal from '$lib/components/SessionExpiredModal.svelte';
 
 	setContext('i18n', i18n);
 
@@ -652,3 +653,5 @@
 	position="top-right"
 	closeButton
 />
+
+<SessionExpiredModal />
