@@ -9,7 +9,7 @@
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, knowledge } from '$lib/stores';
+	import { WEBUI_NAME, knowledge, showSidebar } from '$lib/stores';
 	import {
 		getKnowledgeBases,
 		deleteKnowledgeById,
@@ -26,6 +26,11 @@
 	import Spinner from '../common/Spinner.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
 	import Tooltip from '../common/Tooltip.svelte';
+	import ShowSidebarIcon from '../icons/ShowSidebarIcon.svelte';
+	import GroupIcon from '../icons/GroupIcon.svelte';
+	import PublicIcon from '../icons/PublicIcon.svelte';
+	import PrivateIcon from '../icons/PrivateIcon.svelte';
+	import { getGroups } from '$lib/apis/groups';
 
 	let loaded = false;
 
@@ -44,13 +49,28 @@
 		});
 	}
 
+	let showInput = false;
+
+	let accessFilter = 'all';
+	let groupsForKnowledge;
+
 	$: if (fuse) {
-		filteredItems = query
-			? fuse.search(query).map((e) => {
-					return e.item;
-				})
-			: knowledgeBases;
-	}
+	let result = query
+		? fuse.search(query).map((e) => e.item)
+		: knowledgeBases;
+
+	filteredItems = result.filter((m) => {
+		const isPublic = m.access_control === null;
+		const isPrivate = m.access_control !== null;
+
+		const accessMatch =
+			accessFilter === 'all' ||
+			(accessFilter === 'public' && isPublic) ||
+			(accessFilter === 'private' && isPrivate);
+
+		return accessMatch;
+	});
+}
 
 	const deleteHandler = async (item) => {
 		const res = await deleteKnowledgeById(localStorage.token, item.id).catch((e) => {
@@ -64,9 +84,46 @@
 		}
 	};
 
+	function getGroupNamesFromAccess(model) {
+		if (!model.access_control) return [];
+
+		const readGroups = model.access_control.read?.group_ids || [];
+		const writeGroups = model.access_control.write?.group_ids || [];
+
+		const allGroupIds = Array.from(new Set([...readGroups, ...writeGroups]));
+
+		const matchedGroups = allGroupIds
+			.map((id) => groupsForKnowledge.find((g) => g.id === id))
+			.filter(Boolean)
+			.map((g) => g.name);
+
+		return matchedGroups;
+	}
+
 	onMount(async () => {
 		knowledgeBases = await getKnowledgeBaseList(localStorage.token);
+		let groups = await getGroups(localStorage.token);
+		groupsForKnowledge = groups;
 		loaded = true;
+	});
+	
+	let scrollContainer;
+
+	function updateScrollHeight() {
+		const header = document.getElementById('assistants-header');
+		const filters = document.getElementById('assistants-filters');
+
+		if (header && filters && scrollContainer) {
+			const totalOffset = header.offsetHeight + filters.offsetHeight;
+			scrollContainer.style.height = `calc(100dvh - ${totalOffset}px)`;
+		}
+	}
+
+	onMount(() => {
+		window.addEventListener('resize', updateScrollHeight);
+		return () => {
+			window.removeEventListener('resize', updateScrollHeight);
+		};
 	});
 </script>
 
@@ -84,43 +141,185 @@
 		}}
 	/>
 
-	<div class="flex flex-col gap-1 my-1.5">
+	<div id="knowledge-header" class="pl-[22px] pr-[15px] py-2.5 border-b dark:border-customGray-700">
 		<div class="flex justify-between items-center">
-			<div class="flex md:self-center text-xl font-medium px-0.5 items-center">
+			<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
+				<button
+					id="sidebar-toggle-button"
+					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+					on:click={() => {
+						showSidebar.set(!$showSidebar);
+					}}
+					aria-label="Toggle Sidebar"
+				>
+					<div class=" m-auto self-center">
+						<ShowSidebarIcon />
+					</div>
+				</button>
+			</div>
+			<div class="flex items-center md:self-center text-base font-medium leading-none px-0.5">
 				{$i18n.t('Knowledge')}
-				<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-					>{filteredItems.length}</span
+			</div>
+			<div class="flex">
+				<div
+					class="flex flex-1 items-center p-2.5 rounded-lg mr-1 border dark:border-customGray-700 hover:bg-gray-100 dark:hover:bg-customGray-950 dark:hover:text-white transition"
+				>
+					<button
+						class=""
+						on:click={() => {
+							showInput = !showInput;
+							if (!showInput) query = '';
+						}}
+						aria-label="Toggle Search"
+					>
+						<Search className="size-3.5" />
+					</button>
+					<!-- </div> -->
+					{#if showInput}
+						<input
+							class=" w-full text-xs outline-none bg-transparent leading-none pl-2"
+							bind:value={query}
+							placeholder={$i18n.t('Search Models')}
+							autofocus
+							on:blur={() => {
+								if (query.trim() === '') showInput = false;
+							}}
+						/>
+					{/if}
+				</div>
+				<div>
+					<a
+						class=" px-2 py-2.5 w-[35px] sm:w-[220px] rounded-lg leading-none border border-customGray-700 hover:bg-gray-700/10 dark:hover:bg-customGray-950 dark:text-customGray-200 dark:hover:text-white transition font-medium text-xs flex items-center justify-center space-x-1"
+						href="/workspace/knowledge/create"
+					>
+						<Plus className="size-3.5" />
+						<span class="hidden sm:block">{$i18n.t('Create new')}</span>
+					</a>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="pl-[22px] pr-[15px]">
+		<div
+			id="knowledge-filters"
+			class="flex items-center justify-end py-5 pr-[22px] flex-col md:flex-row"
+		>
+			<div class="flex dark:bg-customGray-800 rounded-md flex-shrink-0">
+				<button
+					on:click={() => (accessFilter = 'all')}
+					class={`${accessFilter === 'all' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					>{$i18n.t('All')}</button
+				>
+				<button
+					on:click={() => (accessFilter = 'private')}
+					class={`${accessFilter === 'private' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					>{$i18n.t('Private')}</button
+				>
+				<button
+					on:click={() => (accessFilter = 'public')}
+					class={`${accessFilter === 'public' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					>{$i18n.t('Public')}</button
 				>
 			</div>
 		</div>
+		<div
+			id="knowledge-scroll-container"
+			bind:this={scrollContainer}
+			class="overflow-y-scroll pr-[3px]"
+		>
+			<div class="mb-2 gap-2 grid lg:grid-cols-2 xl:grid-cols-3" id="knowledge-list">
+				{#each filteredItems as item}
+					<button
+						class="group flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 dark:bg-customGray-800 dark:hover:bg-white/5 hover:bg-black/5 rounded-2xl transition"
+						on:click={() => {
+							if (item?.meta?.document) {
+								toast.error(
+									$i18n.t(
+										'Only collections can be edited, create a new knowledge base to edit/add documents.'
+									)
+								);
+							} else {
+								goto(`/workspace/knowledge/${item.id}`);
+							}
+						}}
+					>
+						<div class=" w-full">
+							<div class="flex items-start justify-between">
+								<div class="flex items-center">
+									<div class="flex items-center gap-1 flex-wrap">
+										{#if item.access_control == null}
+											<div
+												class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											>
+												<PublicIcon />
+												<span>{$i18n.t('Public')}</span>
+											</div>
+										{:else if getGroupNamesFromAccess(item).length < 1}
+											<div
+												class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											>
+												<PrivateIcon />
+												<span>{$i18n.t('Private')}</span>
+											</div>
+										{:else}
+											{#each getGroupNamesFromAccess(item) as groupName}
+												<div
+													class="flex items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+												>
+													<GroupIcon />
+													<span>{groupName}</span>
+												</div>
+											{/each}
+										{/if}
+									</div>
+								</div>
+								<div class="invisible group-hover:visible">
+									<ItemMenu
+										{item}
+										on:delete={() => {
+											selectedItem = item;
+											showDeleteConfirm = true;
+										}}
+									/>
+								</div>
+							</div>
 
-		<div class=" flex w-full space-x-2">
-			<div class="flex flex-1">
-				<div class=" self-center ml-1 mr-3">
-					<Search className="size-3.5" />
-				</div>
-				<input
-					class=" w-full text-sm py-1 rounded-r-xl outline-none bg-transparent"
-					bind:value={query}
-					placeholder={$i18n.t('Search Knowledge')}
-				/>
-			</div>
-
-			<div>
-				<button
-					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
-					aria-label={$i18n.t('Create Knowledge')}
-					on:click={() => {
-						goto('/workspace/knowledge/create');
-					}}
-				>
-					<Plus className="size-3.5" />
-				</button>
+							<div class="self-center flex-1 px-1 mb-1">
+								<div class="text-left line-clamp-2 h-fit text-base dark:text-customGray-100 leading-[1.2] mb-1.5">{item.name}</div>
+								<div class="mb-5 text-left overflow-hidden text-ellipsis line-clamp-1 text-xs dark:text-customGray-100/50">
+									{item.description}
+								</div>
+							</div>
+						</div>
+						<div class="flex justify-between mt-auto items-center px-0.5 pt-2.5 pb-[2px] border-t dark:border-customGray-700">
+							<div class="text-xs text-gray-500 dark:text-customGray-100 flex items-center">
+								{#if item?.user?.profile_image_url}
+									<img class="w-3 h-3 rounded-full mr-1" src={item?.user?.profile_image_url} alt={item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')}/>
+								{/if}
+								<Tooltip
+									content={item?.user?.email ?? $i18n.t('Deleted User')}
+									className="flex shrink-0"
+									placement="top-start"
+								>
+									{$i18n.t('{{name}}', {
+										name: capitalizeFirstLetter(
+											item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
+										)
+									})}
+								</Tooltip>
+							</div>
+							<div class=" text-xs text-gray-500 line-clamp-1 dark:text-customGray-100">
+								{$i18n.t('Updated')}
+								{dayjs(item.updated_at * 1000).fromNow()}
+							</div>
+						</div>
+					</button>
+				{/each}
 			</div>
 		</div>
 	</div>
 
+	<!-- 
 	<div class="mb-5 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2">
 		{#each filteredItems as item}
 			<button
@@ -189,7 +388,7 @@
 
 	<div class=" text-gray-500 text-xs mt-1 mb-2">
 		ⓘ {$i18n.t("Use '#' in the prompt input to load and include your knowledge.")}
-	</div>
+	</div>-->
 {:else}
 	<div class="w-full h-full flex justify-center items-center">
 		<Spinner />

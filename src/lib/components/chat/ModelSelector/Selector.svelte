@@ -36,7 +36,6 @@
 	export let searchPlaceholder = $i18n.t('Search a model');
 
 	export let showTemporaryChatControl = false;
-	export let disabledSelect = false;
 
 	export let items: {
 		label: string;
@@ -271,7 +270,7 @@
 	}}
 	closeFocus={false}
 >
-	{#if !disabledSelect}
+	{#if !selectedModel?.model?.info?.base_model_id}
 		<DropdownMenu.Trigger
 			class="relative w-full flex"
 			aria-label={placeholder}
@@ -299,11 +298,12 @@
 		>
 			{#if selectedModel}
 				<img
-					src={getModelIcon(selectedModel.label)}
+					src={selectedModel?.model?.info?.meta?.profile_image_url ? selectedModel?.model?.info?.meta?.profile_image_url : getModelIcon(selectedModel?.model?.info?.base_model_id)}
 					alt="Model"
 					class="rounded-full size-4 self-center mr-2"
 				/>
 				{selectedModel.label}
+				({selectedModel?.model?.info?.base_model_id})
 			{:else}
 				{placeholder}
 			{/if}

@@ -31,6 +31,8 @@
 	import Dropzone from './Dropzone.svelte';
 	import { v4 as uuidv4 } from 'uuid';
 	import DocumentIcon from '$lib/components/icons/DocumentIcon.svelte';
+	import AddKnowledgeModal from '../Knowledge/AddKnowledgeModal.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	
 
 	const i18n = getContext('i18n');
@@ -106,8 +108,6 @@
 	let actionIds = [];
 
 	let accessControl = {};
-	$: console.log(info);
-	$: console.log(accessControl);
 
 	const addUsage = (base_model_id) => {
 		const baseModel = $models.find((m) => m.id === base_model_id);
@@ -274,9 +274,6 @@
 				accessControl = {};
 			}
 
-			console.log(model?.access_control);
-			console.log(accessControl);
-
 			info = {
 				...info,
 				...JSON.parse(
@@ -293,7 +290,6 @@
 
 			files = model?.meta?.files ? model?.meta?.files : [];
 
-			console.log(model);
 		}
 
 		loaded = true;
@@ -318,8 +314,6 @@
 	)?.label;
 
 	let files: { id: string; name: string }[] = [];
-
-	$: console.log(files);
 
 	const uploadFileHandler = async (file) => {
 		console.log(file);
@@ -374,6 +368,8 @@
 			toast.error(`${e}`);
 		}
 	};
+
+	let showAddKnowledge = false;
 </script>
 
 {#if loaded}
@@ -401,6 +397,7 @@
 			<div class=" self-center text-sm font-medium">{'Back'}</div>
 		</button>
 	{/if} -->
+	<AddKnowledgeModal bind:show={showAddKnowledge} bind:selectedKnowledge={knowledge} collections={$knowledgeCollections}/>
 	<div class="flex flex-col h-screen">
 		<div class="py-[22px] px-[15px] border-b border-customGray-700">
 			<button class="flex items-center gap-1" on:click={() => history.back()}>
@@ -562,7 +559,7 @@
 								<div class="flex-1 mb-1.5">
 									<div class="relative w-full dark:bg-customGray-900 rounded-md">
 										{#if name}
-											<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Name')}</div>
+											<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">{$i18n.t('Name')}</div>
 										{/if}
 										<input
 											class={`px-2.5 text-sm ${name ? "mt-2" : "mt-0"} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
@@ -594,7 +591,7 @@
 								<div class="flex-1 mb-1.5">
 									<div class="relative w-full dark:bg-customGray-900 rounded-md">
 										{#if info.meta.description}
-											<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Description')}</div>
+											<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">{$i18n.t('Description')}</div>
 										{/if}
 										<input
 											class={`px-2.5 text-sm ${info.meta.description ? "mt-2" : "mt-0"} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
@@ -613,7 +610,7 @@
 								<div class="mb-1.5">
 									<div class="relative w-full dark:bg-customGray-900 rounded-md">
 										{#if info.params.system}
-											<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('System Prompt')}</div>
+											<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">{$i18n.t('System Prompt')}</div>
 										{/if}
 										<Textarea
 											className={`px-2.5 py-2 text-sm ${info.params.system ? "mt-2" : "mt-0"} w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
@@ -635,8 +632,50 @@
 									<div
 										class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2"
 									>
-										<div class="flex w-full justify-between items-center">
-											<div class="text-xs dark:text-customGray-300">{$i18n.t('Knowledge')}</div>
+											<div class="flex w-full justify-between items-center">
+												<div class="text-xs dark:text-customGray-300">{$i18n.t('Knowledge')}</div>
+												{#if $knowledgeCollections.length > 0}
+												<button
+													class="shrink-0 text-xs dark:text-customGray-200 flex rounded transition"
+													type="button"
+													on:click={() => {
+														showAddKnowledge = true;
+													}}
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+													/>
+												</svg>
+												{$i18n.t('Add')}
+											</button>
+											{:else}
+											<Tooltip content={$i18n.t('You don’t have a knowledge base yet — create one in the “Knowledge” tab or upload a document here.')}>
+												<button
+													class="shrink-0 text-xs dark:text-customGray-200 flex rounded transition"
+													type="button"
+													disabled
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 20 20"
+													fill="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+													/>
+												</svg>
+												{$i18n.t('Add')}
+											</button>
+											</Tooltip>
+
+											{/if}
 										</div>
 										<!-- <button
 											class="shrink-0 text-xs dark:text-customGray-200 flex rounded transition"
@@ -657,6 +696,24 @@
 										</button> -->
 									</div>
 									<Dropzone {uploadFileHandler} />
+									{#if  knowledge.length > 0}
+										{#each knowledge as item}
+										<div class="min-h-10 flex rounded-lg my-2">
+											<div class="relative w-full dark:bg-customGray-900 rounded-md px-2.5 py-2.5 text-sm dark:text-white leading-[1.2]">
+												<span>{item.name}</span>
+											</div>
+											<button
+												class="px-2 dark:text-customGray-300 dark:hover:text-white"
+												type="button"
+												on:click={() => {
+													knowledge = knowledge.filter((k) => k.id !== item.id);
+												}}
+											>
+												<DeleteIcon />
+											</button>
+										</div>
+										{/each}
+									{/if}
 									{#if files.length}
 										<ul class="mt-2.5 space-y-1 text-sm">
 											{#each files as file (file.id)}
@@ -1138,8 +1195,8 @@
 					</div> -->
 
 							<!-- <hr class=" border-gray-50 dark:border-gray-850 my-1.5" /> -->
-<!-- 
-							<div class="my-2">
+
+							<!-- <div class="my-2">
 								<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
 							</div> -->
 

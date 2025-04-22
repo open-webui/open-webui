@@ -10,7 +10,6 @@
 
 	export let selectedModels = [''];
 	export let disabled = false;
-	export let disabledSelect = false;
 
 	export let showSetDefault = true;
 	export let initNewChatCompleted;
@@ -52,7 +51,6 @@
 							? ($user?.permissions?.chat?.temporary ?? true)
 							: true}
 						bind:value={selectedModel}
-						disabledSelect={disabledSelect}
 					/>
 				</div>
 			</div>

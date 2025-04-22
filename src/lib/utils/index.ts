@@ -1093,3 +1093,4 @@ export function getModelIcon(label: string): string {
 		return '/static/favicon.png';
 	}
 }
+
