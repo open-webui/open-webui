@@ -40,6 +40,11 @@
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
+	const changeFocus = async (elementId) => {
+		setTimeout(() => {
+			document.getElementById(elementId)?.focus();
+		}, 110);
+	};
 
 	const handleNewChat = () => {
 		suggestionCycle.update((n) => n + 1);
@@ -65,8 +70,9 @@
 					<button
 						id="sidebar-toggle-button"
 						class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-						on:click={() => {
+						on:click={async () => {
 							showSidebar.set(!$showSidebar);
+							await changeFocus('hide-sidebar-button');
 						}}
 						aria-label="Show Sidebar"
 					>

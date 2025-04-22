@@ -347,6 +347,12 @@
 		selectedChatId = null;
 	};
 
+	const changeFocus = async (elementId) => {
+		setTimeout(() => {
+			document.getElementById(elementId)?.focus();
+		}, 110);
+	};
+
 	onMount(async () => {
 		showPinnedChat = localStorage?.showPinnedChat ? localStorage.showPinnedChat === 'true' : true;
 
@@ -480,13 +486,15 @@
 			: 'invisible'}"
 	>
 		<div class="px-1.5 flex justify-between space-x-1 text-gray-600 dark:text-gray-400">
-			<Tooltip content={$i18n.t('Hide sidebar')}>
+			<Tooltip content={$i18n.t('Hide Sidebar')}>
 				<button
 					class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
-					on:click={() => {
+					on:click={async () => {
 						showSidebar.set(!$showSidebar);
+						await changeFocus('sidebar-toggle-button');
 					}}
-					aria-label={$i18n.t('Hide sidebar')}
+					id="hide-sidebar-button"
+					aria-label={$i18n.t('Hide Sidebar')}
 				>
 					<div class=" m-auto self-center">
 						<svg
