@@ -392,7 +392,7 @@
 										{prompt.command}
 									</div> -->
 								</div>
-								<div class="text-xs line-clamp-1 dark:text-customGray-100/50">
+								<div class="text-xs line-clamp-1 dark:text-customGray-100/50 text-left">
 									{prompt.description}
 								</div>
 								{#if !prompt.prebuilt}
