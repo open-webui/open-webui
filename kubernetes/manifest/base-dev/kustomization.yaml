@@ -6,5 +6,6 @@ resources:
   - webui-service.yaml
   - webui-ingress.yaml
   - webui-pvc.yaml
+  - webui-secrets.yaml
 
 namespace: gpt-portal

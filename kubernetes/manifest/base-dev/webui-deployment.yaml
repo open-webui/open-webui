@@ -30,6 +30,9 @@ spec:
         env:
         - name: OLLAMA_BASE_URL
           value: "http://gpt-portal-ollama-service.gpt-portal.svc.cluster.local:11434"
+        envFrom:
+        - secretRef:
+            name: open-webui-secrets
         tty: true
         volumeMounts:
         - name: gpt-portal-volume
@@ -42,4 +45,4 @@ spec:
       volumes:
       - name: gpt-portal-volume
         persistentVolumeClaim:
-          claimName: gpt-portal-pvc          
+          claimName: gpt-portal-pvc
