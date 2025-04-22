@@ -2,8 +2,10 @@
 
 # 서버 정보
 SERVER_USER="mergefeat"
-SERVER_IP="10.89.211.27"
-CONTAINER_ID="effd9514273e"
+SERVER_IP="192.168.35.42"
+SSH_PORT="2222"
+# 대상 이미지 이름
+TARGET_IMAGE="ghcr.io/open-webui/open-webui:main"
 
 # 경로
 CONTAINER_DATA_PATH="/app/backend/data"
@@ -49,27 +51,43 @@ else
 fi
 
 echo "🚀 서버에서 도커 컨테이너 파일을 호스트로 복사 중..."
-ssh -t ${SERVER_USER}@${SERVER_IP} <<EOF
+ssh -p ${SSH_PORT} -t ${SERVER_USER}@${SERVER_IP} <<EOF
+  echo "🔍 ${TARGET_IMAGE} 이미지를 사용하는 컨테이너 ID 찾는 중..."
+  CONTAINER_ID=\$(sudo docker ps -q --filter "ancestor=${TARGET_IMAGE}")
+  
+  if [ -z "\$CONTAINER_ID" ]; then
+    echo "❌ ${TARGET_IMAGE} 이미지를 사용하는 실행 중인 컨테이너를 찾을 수 없습니다."
+    exit 1
+  fi
+  
+  echo "🔹 컨테이너 ID: \$CONTAINER_ID"
+  
   echo "🧼 임시 폴더 정리 중..."
   sudo mkdir -p ${HOST_TEMP_PATH}
   sudo rm -rf ${HOST_TEMP_PATH}/data ${HOST_TEMP_PATH}/open_webui_data
 
   if $ONLY_OPEN_WEBUI; then
     echo "📦 open_webui/data 가져오는 중..."
-    sudo docker cp ${CONTAINER_ID}:${CONTAINER_OPENWEBUI_DATA_PATH} ${HOST_TEMP_PATH}/open_webui_data
+    sudo docker cp \$CONTAINER_ID:${CONTAINER_OPENWEBUI_DATA_PATH} ${HOST_TEMP_PATH}/open_webui_data
   else
     echo "📦 전체 데이터 가져오는 중..."
-    sudo docker cp ${CONTAINER_ID}:${CONTAINER_DATA_PATH} ${HOST_TEMP_PATH}/data
-    sudo docker cp ${CONTAINER_ID}:${CONTAINER_OPENWEBUI_DATA_PATH} ${HOST_TEMP_PATH}/open_webui_data
+    sudo docker cp \$CONTAINER_ID:${CONTAINER_DATA_PATH} ${HOST_TEMP_PATH}/data
+    sudo docker cp \$CONTAINER_ID:${CONTAINER_OPENWEBUI_DATA_PATH} ${HOST_TEMP_PATH}/open_webui_data
   fi
 EOF
 
+# SSH 명령의 종료 상태 확인
+if [ $? -ne 0 ]; then
+  echo "❌ 서버에서 데이터 복사 중 오류가 발생했습니다."
+  exit 1
+fi
+
 echo "📥 로컬로 복사 중..."
 if $ONLY_OPEN_WEBUI; then
-  scp -r ${SERVER_USER}@${SERVER_IP}:${HOST_TEMP_PATH}/open_webui_data/* "$LOCAL_BASE_PATH/open_webui/data/"
+  scp -P ${SSH_PORT} -r ${SERVER_USER}@${SERVER_IP}:${HOST_TEMP_PATH}/open_webui_data/* "$LOCAL_BASE_PATH/open_webui/data/"
 else
-  scp -r ${SERVER_USER}@${SERVER_IP}:${HOST_TEMP_PATH}/data/* "$LOCAL_BASE_PATH/data/"
-  scp -r ${SERVER_USER}@${SERVER_IP}:${HOST_TEMP_PATH}/open_webui_data/* "$LOCAL_BASE_PATH/open_webui/data/"
+  scp -P ${SSH_PORT} -r ${SERVER_USER}@${SERVER_IP}:${HOST_TEMP_PATH}/data/* "$LOCAL_BASE_PATH/data/"
+  scp -P ${SSH_PORT} -r ${SERVER_USER}@${SERVER_IP}:${HOST_TEMP_PATH}/open_webui_data/* "$LOCAL_BASE_PATH/open_webui/data/"
 fi
 
 echo "✅ 데이터 동기화 완료!"
