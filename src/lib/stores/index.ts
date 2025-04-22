@@ -239,14 +239,20 @@ type SessionUser = {
 export function handleApiUnauthorized() {
   const currentUser = get(user);
   console.log('[handleApiUnauthorized] Start. currentUser:', currentUser);
+
   if (currentUser) {
-    console.warn('[handleApiUnauthorized] Current user exists. Setting user=undefined, sessionExpired=true.');
-    user.set(undefined);
-    console.log('[handleApiUnauthorized] user store set to undefined.');
-    sessionExpired.set(true);
-    console.log('[handleApiUnauthorized] sessionExpired store set to true.');
+    if (currentUser.role !== 'pending') {
+      console.warn('[handleApiUnauthorized] Current user exists and is not pending. Setting user=undefined, sessionExpired=true.');
+      user.set(undefined);
+      console.log('[handleApiUnauthorized] user store set to undefined.');
+      sessionExpired.set(true);
+      console.log('[handleApiUnauthorized] sessionExpired store set to true.');
+    } else {
+      console.log('[handleApiUnauthorized] 401 received, but currentUser role is pending. Ignoring session expired logic.');
+    }
+
   } else {
-    console.log('[handleApiUnauthorized] currentUser was already null/undefined. Setting sessionExpired=true.');
+    console.log('[handleApiUnauthorized] currentUser was already null/undefined. Setting sessionExpired=true (likely safe assumption here).');
     sessionExpired.set(true);
     console.log('[handleApiUnauthorized] sessionExpired store set to true (user was already undefined).');
   }
