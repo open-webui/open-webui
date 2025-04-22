@@ -10,7 +10,6 @@
         isOpen = value;
     });
 
-    // Function to simply close the modal
     function closeModal() {
         sessionExpired.set(false);
     }
@@ -22,9 +21,8 @@
     <div>
         <div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
             <div class=" text-lg font-medium self-center font-primary">
-                {$i18n.t('Session Expired')} {/* UPDATED i18n Key */}
+                {$i18n.t('Session Expired')}
             </div>
-            {/* No close button 'X' */}
         </div>
 
         <div class="flex flex-col w-full px-4 pb-4 dark:text-gray-200">
