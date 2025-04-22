@@ -45,7 +45,7 @@
       <button
         class="..."
         type="button"
-        on:click={triggerReLogin} // Call the renamed function
+        on:click={triggerReLogin}
       >
         {$i18n.t('sessionExpiredLoginButton')}
       </button>
