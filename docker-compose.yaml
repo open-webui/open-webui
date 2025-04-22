@@ -1,34 +1,42 @@
 services:
-  ollama:
+  traefik:
+    image: traefik:v2.9
+    container_name: traefik
+    ports:
+      - "80:80" # Porta HTTP
+      - "443:443" # Porta HTTPS
+    command:
+      - "--providers.docker=true" # Habilitar Docker como provider
+      - "--entrypoints.web.address=:80" # Configuração para entrada HTTP
+      - "--entrypoints.websecure.address=:443" # Configuração para entrada HTTPS
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=websecure" # Desafio HTTP para Let's Encrypt
+      - "--certificatesresolvers.letsencrypt.acme.email=mateus.caccelli@zencloud.com.br" # Substitua pelo seu email
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json" # Armazenamento de certificados
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
     volumes:
-      - ollama:/root/.ollama
-    container_name: ollama
-    pull_policy: always
-    tty: true
-    restart: unless-stopped
-    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+      - "/var/run/docker.sock:/var/run/docker.sock:ro" # Acesso ao Docker socket
+      - "./letsencrypt:/letsencrypt" # Volume para armazenar certificados
 
   open-webui:
     build:
       context: .
-      args:
-        OLLAMA_BASE_URL: '/ollama'
       dockerfile: Dockerfile
-    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
+    # image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
-    depends_on:
-      - ollama
     ports:
-      - ${OPEN_WEBUI_PORT-3000}:8080
+      - "8080:8080"
     environment:
-      - 'OLLAMA_BASE_URL=http://ollama:11434'
-      - 'WEBUI_SECRET_KEY='
-    extra_hosts:
-      - host.docker.internal:host-gateway
+      - 'WEBUI_SECRET_KEY=zJsRn6zPPAkXpzN0P/bXu0qmWioWLWOzHQGVVL7Dr2U='
+    # extra_hosts:
+    #   - host.docker.internal:host-gateway
     restart: unless-stopped
-
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.open-webui.rule=Host(`demo01.harko.ai`)" # Substitua pelo seu domínio real
+      - "traefik.http.routers.open-webui.entrypoints=websecure"
+      # - "traefik.http.routers.open-webui.tls.certresolver=letsencrypt"
+      - "traefik.http.services.open-webui.loadbalancer.server.port=8080"
 volumes:
-  ollama: {}
   open-webui: {}
