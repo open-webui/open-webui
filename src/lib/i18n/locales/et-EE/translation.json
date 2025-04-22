@@ -718,6 +718,7 @@
 	"Memory deleted successfully": "Mälu edukalt kustutatud",
 	"Memory updated successfully": "Mälu edukalt uuendatud",
 	"Merge Responses": "Ühenda vastused",
+	"Merged Response": "Kombineeritud vastus",
 	"Message rating should be enabled to use this feature": "Selle funktsiooni kasutamiseks peaks sõnumite hindamine olema lubatud",
 	"Messages you send after creating your link won't be shared. Users with the URL will be able to view the shared chat.": "Teie saadetud sõnumeid pärast lingi loomist ei jagata. Kasutajad, kellel on URL, saavad vaadata jagatud vestlust.",
 	"Min P": "Min P",

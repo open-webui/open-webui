@@ -718,6 +718,7 @@
 	"Memory deleted successfully": "성공적으로 메모리가 삭제되었습니다",
 	"Memory updated successfully": "성공적으로 메모리가 업데이트되었습니다",
 	"Merge Responses": "응답들 결합하기",
+	"Merged Response": "결합된 응답",
 	"Message rating should be enabled to use this feature": "이 기능을 사용하려면 메시지 평가가 활성화되어야합니다",
 	"Messages you send after creating your link won't be shared. Users with the URL will be able to view the shared chat.": "링크 생성 후에 보낸 메시지는 공유되지 않습니다. URL이 있는 사용자는 공유된 채팅을 볼 수 있습니다.",
 	"Min P": "최소 P",

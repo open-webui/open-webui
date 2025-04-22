@@ -718,6 +718,7 @@
 	"Memory deleted successfully": "记忆删除成功",
 	"Memory updated successfully": "记忆更新成功",
 	"Merge Responses": "合并回复",
+	"Merged Response": "合并的回复",
 	"Message rating should be enabled to use this feature": "要使用此功能，应先启用回复评价功能",
 	"Messages you send after creating your link won't be shared. Users with the URL will be able to view the shared chat.": "创建链接后发送的消息不会被共享。具有 URL 的用户将能够查看共享对话。",
 	"Min P": "Min P",

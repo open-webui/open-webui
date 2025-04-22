@@ -718,6 +718,7 @@
 	"Memory deleted successfully": "Паметта е изтрита успешно",
 	"Memory updated successfully": "Паметта е актуализирана успешно",
 	"Merge Responses": "Обединяване на отговори",
+	"Merged Response": "Обединен отговор",
 	"Message rating should be enabled to use this feature": "Оценяването на съобщения трябва да бъде активирано, за да използвате тази функция",
 	"Messages you send after creating your link won't be shared. Users with the URL will be able to view the shared chat.": "Съобщенията, които изпращате след създаването на връзката, няма да бъдат споделяни. Потребителите с URL адреса ще могат да видят споделения чат.",
 	"Min P": "Мин P",

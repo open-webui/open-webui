@@ -718,6 +718,7 @@
 	"Memory deleted successfully": "དྲན་ཤེས་ལེགས་པར་བསུབས་ཟིན།",
 	"Memory updated successfully": "དྲན་ཤེས་ལེགས་པར་གསར་སྒྱུར་བྱས་ཟིན།",
 	"Merge Responses": "ལན་ཟླ་སྒྲིལ།",
+	"Merged Response": "བསྡུར་མཐུན་གྱི་ལན་གསལ་གནས་ཡོད།",
 	"Message rating should be enabled to use this feature": "ཁྱད་ཆོས་འདི་བེད་སྤྱོད་གཏོང་བར་འཕྲིན་ལ་སྐར་མ་སྤྲོད་པ་སྒུལ་བསྐྱོད་བྱེད་དགོས།",
 	"Messages you send after creating your link won't be shared. Users with the URL will be able to view the shared chat.": "ཁྱེད་ཀྱི་སྦྲེལ་ཐག་བཟོས་རྗེས་ཁྱེད་ཀྱིས་བསྐུར་བའི་འཕྲིན་དག་མཉམ་སྤྱོད་བྱེད་མི་འགྱུར། URL ཡོད་པའི་བེད་སྤྱོད་མཁན་ཚོས་མཉམ་སྤྱོད་ཁ་བརྡ་ལྟ་ཐུབ་ངེས།",
 	"Min P": "P ཉུང་ཤོས།",

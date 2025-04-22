@@ -718,6 +718,7 @@
 	"Memory deleted successfully": "Bellek başarıyla silindi",
 	"Memory updated successfully": "Bellek başarıyla güncellendi",
 	"Merge Responses": "Yanıtları Birleştir",
+	"Merged Response": "Birleştirilmiş Yanıt",
 	"Message rating should be enabled to use this feature": "Bu özelliği kullanmak için mesaj derecelendirmesi etkinleştirilmelidir",
 	"Messages you send after creating your link won't be shared. Users with the URL will be able to view the shared chat.": "Bağlantınızı oluşturduktan sonra gönderdiğiniz mesajlar paylaşılmayacaktır. URL'ye sahip kullanıcılar paylaşılan sohbeti görüntüleyebilecektir.",
 	"Min P": "Min P",
