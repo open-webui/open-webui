@@ -647,6 +647,187 @@ async def generate_chat_completion(
     response = None
 
     try:
+        session = aiohttp.ClientSession(
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        )
+        log.info(f"Requesting to {url}/chat/completions with {user.ust_api_key}")
+        r = await session.request(
+            method="POST",
+            url=f"{url}/chat/completions?api-version=2024-10-21",
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "api-key": f"{user.ust_api_key}",
+                **(
+                    {
+                        "HTTP-Referer": "https://openwebui.com/",
+                        "X-Title": "Open WebUI",
+                    }
+                    if "openrouter.ai" in url
+                    else {}
+                ),
+                **(
+                    {
+                        "X-OpenWebUI-User-Name": user.name,
+                        "X-OpenWebUI-User-Id": user.id,
+                        "X-OpenWebUI-User-Email": user.email,
+                        "X-OpenWebUI-User-Role": user.role,
+                    }
+                    if ENABLE_FORWARD_USER_INFO_HEADERS
+                    else {}
+                ),
+            },
+        )
+
+        # Check if response is SSE
+        if "text/event-stream" in r.headers.get("Content-Type", ""):
+            streaming = True
+            return StreamingResponse(
+                r.content,
+                status_code=r.status,
+                headers=dict(r.headers),
+                background=BackgroundTask(
+                    cleanup_response, response=r, session=session
+                ),
+            )
+        else:
+            try:
+                response = await r.json()
+            except Exception as e:
+                log.error(e)
+                response = await r.text()
+
+            # Sentry capture message if the response is not ok
+            if not r.ok:
+                sentry_sdk.capture_message(
+                    f"OpenAI API Error: {response}",
+                    level="error",
+                )
+
+            r.raise_for_status()
+            return response
+    except Exception as e:
+        log.exception(e)
+
+        detail = None
+        if isinstance(response, dict):
+            if "error" in response:
+                detail = f"{response['error']['message'] if 'message' in response['error'] else response['error']}"
+        elif isinstance(response, str):
+            detail = response
+
+        raise HTTPException(
+            status_code=r.status if r else 500,
+            detail=detail if detail else "Open WebUI: Server Connection Error",
+        )
+    finally:
+        if not streaming and session:
+            if r:
+                r.close()
+            await session.close()
+
+
+async def generate_chat_completion_with_prelude(
+    request: Request,
+    form_data: dict,
+    user=Depends(get_verified_user),
+    bypass_filter: Optional[bool] = False,
+):
+    if BYPASS_MODEL_ACCESS_CONTROL:
+        bypass_filter = True
+
+    idx = 0
+
+    payload = {**form_data}
+    metadata = payload.pop("metadata", None)
+
+    model_id = form_data.get("model")
+    model_info = Models.get_model_by_id(model_id)
+
+    # Check model info and override the payload
+    if model_info:
+        if model_info.base_model_id:
+            payload["model"] = model_info.base_model_id
+            model_id = model_info.base_model_id
+
+        params = model_info.params.model_dump()
+        payload = apply_model_params_to_body_openai(params, payload)
+        payload = apply_model_system_prompt_to_body(params, payload, metadata, user)
+
+        # Check if user has access to the model
+        if not bypass_filter and user.role == "user":
+            if not (
+                user.id == model_info.user_id
+                or has_access(
+                    user.id, type="read", access_control=model_info.access_control
+                )
+            ):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Model not found",
+                )
+    elif not bypass_filter:
+        if user.role != "admin":
+            raise HTTPException(
+                status_code=403,
+                detail="Model not found",
+            )
+
+    await get_all_models(request)
+    model = request.app.state.OPENAI_MODELS.get(model_id)
+    if model:
+        idx = model["urlIdx"]
+    else:
+        raise HTTPException(
+            status_code=404,
+            detail="Model not found",
+        )
+
+    # Get the API config for the model
+    api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
+        str(idx),
+        request.app.state.config.OPENAI_API_CONFIGS.get(
+            request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
+        ),  # Legacy support
+    )
+
+    prefix_id = api_config.get("prefix_id", None)
+    if prefix_id:
+        payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
+
+    # Add user info to the payload if the model is a pipeline
+    if "pipeline" in model and model.get("pipeline"):
+        payload["user"] = {
+            "name": user.name,
+            "id": user.id,
+            "email": user.email,
+            "role": user.role,
+        }
+
+    url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
+
+    # Fix: o1,o3 does not support the "max_tokens" parameter, Modify "max_tokens" to "max_completion_tokens"
+    is_o1_o3 = payload["model"].lower().startswith(("o1", "o3-"))
+    if is_o1_o3:
+        payload = openai_o1_o3_handler(payload)
+    elif "api.openai.com" not in url:
+        # Remove "max_completion_tokens" from the payload for backward compatibility
+        if "max_completion_tokens" in payload:
+            payload["max_tokens"] = payload["max_completion_tokens"]
+            del payload["max_completion_tokens"]
+
+    if "max_tokens" in payload and "max_completion_tokens" in payload:
+        del payload["max_tokens"]
+
+    # Convert the modified body back to JSON
+    payload = json.dumps(payload)
+
+    r = None
+    session = None
+    streaming = False
+    response = None
+
+    try:
         headers = {
             "Content-Type": "application/json",
             "api-key": f"{user.ust_api_key}",
@@ -703,7 +884,7 @@ async def generate_chat_completion(
         if form_data.get("stream", False):
             streaming = True
             async def stream_with_prelude_and_upstream():
-                # 1) background로 upstream 요청 시작
+                # 1. Background request for llm
                 req_task = asyncio.create_task(
                     session.request(
                         method="POST",
@@ -713,73 +894,90 @@ async def generate_chat_completion(
                     )
                 )
 
-                # 2) 프리루드 한 글자씩 보내기
+                # 2. Yield prelude char by char (Randomly choose one prelude)
                 query = form_data["messages"][-1]["content"]
-                system_preludes = [
-                    (
-                        f'*Processing the input query "{{query}}" by extracting relevant core concepts and analyzing their relationships '
-                        f'within the internal knowledge base. Response generation will begin shortly after structural consistency and '
-                        f'semantic alignment are verified.*\n\n'
-                    ),
-                    (
-                        f'*To process "{{query}}", key terms are currently being identified and mapped to the closest semantic nodes in '
-                        f'the knowledge graph. Once association weights are computed, the system will proceed with formulating a '
-                        f'structured response.*\n\n'
-                    ),
-                    (
-                        f'*The query "{{query}}" is being parsed and classified. Contextual inference and relevance modeling are '
-                        f'underway to ensure the generated response is logically coherent and appropriately scoped.*\n\n'
-                    ),
-                    (
-                        f'*Initializing context stack for the query "{{query}}". Retrieving matching query patterns and associated '
-                        f'inference chains to ensure high-confidence generation of the upcoming response.*\n\n'
-                    ),
-                    (
-                        f'*Deconstructing the topic "{{query}}" into subcomponents, applying categorical mapping, and aligning context '
-                        f'frames. Response output will commence once all dependent modules have returned verified data.*\n\n'
-                    ),
+                access_phrases = [
+                    "According to internal records,",
+                    "Referencing previously indexed data,",
+                    "Based on archived information,",
+                    "From the knowledge repository,",
+                    "As documented in system memory,"
                 ]
-                prelude = random.choice(system_preludes).format(query=query)
+
+                query_links = [
+                    'the topic of "{query}"',
+                    '"{query}"',
+                    'the subject "{query}"',
+                    '"{query}" as a concept',
+                ]
+
+                retrieval_verbs = [
+                    "can be understood as",
+                    "is described as",
+                    "is categorized under",
+                    "is associated with",
+                    "has the following key points:"
+                ]
+
+                output_phrases = [
+                    "the following insights.",
+                    "a structured breakdown follows.",
+                    "a multi-layered explanation is provided.",
+                    "several established facts are presented.",
+                    "the summary is as follows.",
+                ]
+
+                def generate_kb_prelude(query: str) -> str:
+                    access = random.choice(access_phrases)
+                    link = random.choice(query_links).format(query=query)
+                    verb = random.choice(retrieval_verbs)
+                    output = random.choice(output_phrases)
+                    return f'*{access} {link} {verb}, {output}*\n\n'
+                
+                prelude = generate_kb_prelude(query)
+
                 for idx, ch in enumerate(prelude):
+                    # If the response is ready, print out leftover prelude instantly and start response
                     if req_task.done():
-                        # 요청이 준비된 시점에, 남은 프리루드를 지연 없이 바로 출력
                         for ch2 in prelude[idx:]:
                             event = {"choices": [{"delta": {"content": ch2}}]}
                             yield f"data: {json.dumps(event)}\n".encode("utf-8")
                         break
 
-                    # 여전히 요청 준비 전이라면 평상시대로 한 글자씩, 50ms 딜레이
+                    # Else print out prelude sequentially with delay
                     event = {"choices": [{"delta": {"content": ch}}]}
                     yield f"data: {json.dumps(event)}\n".encode("utf-8")
                     await asyncio.sleep(0.05)
 
-                # 3) upstream 응답 객체 확보
+                # 3. Get actual response
                 try:
-                    r = req_task.result()  # 이미 done() 이면 이걸로
+                    r = req_task.result()
                 except asyncio.InvalidStateError:
-                    r = await req_task       # 아직 pending 이면 대기
+                    r = await req_task
 
                 content_type = r.headers.get("Content-Type", "")
 
-                # 4) 실제 SSE 스트림을 그대로 이어서 전송
+                # 4. Yield stream response as chunk arrives
                 if "text/event-stream" in content_type:
                     async for chunk in r.content:  
                         yield chunk
                 else:
-                    # 만약 SSE가 아니면 단일 응답 처리
+                    # Exception handling for non-streaming response
                     body = await r.read()
                     yield body
 
-                # 5) 종료 후 cleanup
+                # 5. Clean Up the response before finishing
                 await cleanup_response(response=r, session=session)
 
+            # Asyncrhonous HTTP session closing
             async def close_session():
                 await session.close()
+
             return StreamingResponse(
                 stream_with_prelude_and_upstream(),
-                status_code=200,                # 클라이언트가 SSE로 인식하도록
+                status_code=200,                
                 media_type="text/event-stream",
-                headers={},                     # downstream headers는 필요시 가감
+                headers={},                     
                 background=BackgroundTask(close_session),
             )
         else:
