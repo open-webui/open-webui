@@ -238,11 +238,17 @@ type SessionUser = {
 
 export function handleApiUnauthorized() {
   const currentUser = get(user);
+  console.log('[handleApiUnauthorized] Start. currentUser:', currentUser);
   if (currentUser) {
-    console.warn('handleApiUnauthorized: Triggering session expired modal due to 401.');
+    console.warn('[handleApiUnauthorized] Current user exists. Setting user=undefined, sessionExpired=true.');
     user.set(undefined);
+    console.log('[handleApiUnauthorized] user store set to undefined.');
     sessionExpired.set(true);
+    console.log('[handleApiUnauthorized] sessionExpired store set to true.');
   } else {
-    console.log('handleApiUnauthorized: 401 detected, but user store was already empty.');
+    console.log('[handleApiUnauthorized] currentUser was already null/undefined. Setting sessionExpired=true.');
+    sessionExpired.set(true);
+    console.log('[handleApiUnauthorized] sessionExpired store set to true (user was already undefined).');
   }
+  console.log('[handleApiUnauthorized] End.');
 }
