@@ -17,7 +17,7 @@ spec:
         app: openwebui-arm64
       containers:
       - name: gpt-portal
-        image: 654654365384.dkr.ecr.ap-southeast-1.amazonaws.com/gpt-portal:f0a14f3d84f339a3bed0c9f71b0140d79d77a037
+        image: 767397923279.dkr.ecr.ap-southeast-1.amazonaws.com/gpt-portal:0a3776d9a326a24e6aa0fb5accd966675695b838
         ports:
         - containerPort: 8080
         resources:
