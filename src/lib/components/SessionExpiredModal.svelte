@@ -2,7 +2,6 @@
     import { sessionExpired } from '$lib/stores';
     import * as Dialog from '$lib/components/ui/dialog'; // Pfad ggf. anpassen, falls bits-ui anders eingebunden ist
     import { Button } from '$lib/components/ui/button'; // Für den Reload-Button, Pfad ggf. anpassen
-    import { AlertTriangle } from 'lucide-svelte'; // Icon für die Warnung
     import { page } from '$app/stores'; // Um die aktuelle URL für den Redirect zu bekommen
     import { goto } from '$app/navigation'; // Um zur Login-Seite zu navigieren
  import { WEBUI_BASE_URL } from '$lib/constants'; // Basis-URL für den Redirect
