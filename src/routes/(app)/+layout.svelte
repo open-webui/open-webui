@@ -36,8 +36,7 @@
 		showSettings,
 		showChangelog,
 		temporaryChatEnabled,
-		toolServers,
-		sessionExpired
+		toolServers
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -235,10 +234,6 @@
 			};
 		});
 	};
-
-$: {
-console.log('[App Layout Reactive Log] $user?.role:', $user?.role, '| $sessionExpired:', $sessionExpired, '| AccountPending condition met?:', (!['user', 'admin'].includes($user?.role) && !$sessionExpired) );
-}
 </script>
 
 <SettingsModal bind:show={$showSettings} />
@@ -260,7 +255,8 @@ console.log('[App Layout Reactive Log] $user?.role:', $user?.role, '| $sessionEx
 	<div
 		class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
 	>
-		{#if !['user', 'admin'].includes($user?.role) && !$sessionExpired}
+
+		{#if $user && !['user', 'admin'].includes($user.role)}
 			<AccountPending />
 		{:else if localDBChats.length > 0}
 			<div class="fixed w-full h-full flex z-50">
