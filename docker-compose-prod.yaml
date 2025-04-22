@@ -3,14 +3,6 @@ version: '3.8'
 services:
   traefik:
     image: traefik:v2.11
-    command:
-      - "--api.dashboard=true"
-      - "--providers.docker=true"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
-      - "--certificatesresolvers.myresolver.acme.email=thore@beyondtheloop.ai"
-      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
     ports:
       - "80:80"
       - "443:443"
@@ -54,8 +46,6 @@ services:
       - ./backend/data:/app/backend/data
     depends_on:
       - litellm
-    ports:
-      - "8080:8080"
     extra_hosts:
       - host.docker.internal:host-gateway
     restart: unless-stopped
