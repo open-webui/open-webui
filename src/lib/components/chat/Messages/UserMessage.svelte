@@ -97,7 +97,9 @@
 				<Name>
 					{#if message.user}
 						{$i18n.t('You')}
-						<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
+						<span class=" text-gray-600 dark:text-gray-300 text-sm font-medium"
+							>{message?.user ?? ''}</span
+						>
 					{:else if $settings.showUsername || $_user.name !== user.name}
 						{user.name}
 					{:else}
@@ -140,12 +142,12 @@
 			{/if}
 
 			{#if edit === true}
-				<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
-					<div class="max-h-96 overflow-auto">
+				<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl">
+					<div class="max-h-96 overflow-auto px-5 py-3 mb-2">
 						<textarea
 							id="message-edit-{message.id}"
 							bind:this={messageEditTextAreaElement}
-							class=" bg-transparent outline-none w-full resize-none"
+							class=" bg-transparent focus:outline-dark dark:focus:outline-white w-full resize-none"
 							bind:value={editedContent}
 							on:input={(e) => {
 								e.target.style.height = '';
