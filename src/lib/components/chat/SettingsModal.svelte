@@ -607,8 +607,14 @@
 			</div>
 			<div class="flex-1 md:min-h-[32rem]">
 				{#if selectedTab === 'general'}
-					<General
+					<!-- <General
 						{getModels}
+						{saveSettings}
+						on:save={() => {
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/> -->
+					<Personalization
 						{saveSettings}
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
@@ -622,7 +628,8 @@
 						}}
 					/>
 				{:else if selectedTab === 'personalization'}
-					<Personalization
+					<General
+						{getModels}
 						{saveSettings}
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
