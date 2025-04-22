@@ -51,6 +51,9 @@
 
 	let mouseOver = false;
 	let draggable = false;
+
+	let buttonID = `chat-menu-${id}`;
+
 	$: if (mouseOver) {
 		loadChat();
 	}
@@ -205,7 +208,8 @@
 
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}
-	title={$i18n.t('Delete chat?')}
+	returnFocusSelector={'#' + buttonID}
+	title={$i18n.t('Delete chat?') + buttonID}
 	on:confirm={() => {
 		deleteChatHandler(id);
 	}}
@@ -378,6 +382,7 @@
 					<ChatMenu
 						ariaLabel={$i18n.t('Chat Menu')}
 						chatId={id}
+						{buttonID}
 						cloneChatHandler={() => {
 							cloneChatHandler(id);
 						}}

@@ -5,6 +5,7 @@
 
 	import { fade } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
+	import * as focusTrap from 'focus-trap';
 
 	export let title = '';
 	export let message = '';
@@ -20,16 +21,16 @@
 
 	export let show = false;
 
-	let modalElement = null;
+	export let initialFocusSelector = '';
+	export let returnFocusSelector = '';
+
+	let modalElement: HTMLElement;
 	let mounted = false;
+	let trap: any = null;
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape') {
 			show = false;
-		}
-
-		if (event.key === 'Enter') {
-			confirmHandler();
 		}
 	};
 
@@ -59,6 +60,32 @@
 			document.body.style.overflow = 'unset';
 		}
 	}
+	$: if (show && modalElement && !trap) {
+		const config: any = {
+			clickOutsideDeactivates: true,
+			// This makes the trap record the active element automatically
+			returnFocusOnDeactivate: true,
+			// Use the provided initial focus selector if available
+			initialFocus: initialFocusSelector
+				? () => modalElement.querySelector(initialFocusSelector)
+				: undefined,
+			// Override onDeactivate if a custom return focus selector is provided:
+			onDeactivate: () => {
+				if (returnFocusSelector) {
+					const returnEl = document.querySelector(returnFocusSelector);
+					if (returnEl) {
+						returnEl.focus();
+						return;
+					}
+				}
+			}
+		};
+		trap = focusTrap.createFocusTrap(modalElement, config);
+		trap.activate();
+	} else if (!show && trap) {
+		trap.deactivate();
+		trap = null;
+	}
 </script>
 
 {#if show}
@@ -73,6 +100,7 @@
 		}}
 	>
 		<div
+			id="confirm-dialog-container-wrapper"
 			class=" m-auto rounded-2xl max-w-full w-[32rem] mx-2 bg-gray-50 dark:bg-gray-950 max-h-[100dvh] shadow-3xl"
 			in:flyAndScale
 			on:mousedown={(e) => {

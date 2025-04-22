@@ -37,10 +37,10 @@
 	export let buttonClass = '';
 	export let ariaLabel = '';
 	export let chatId = '';
+	export let buttonID = '';
 
 	let show = false;
 	let pinned = false;
-	let buttonID = `chat-menu-${chatId}`;
 
 	const pinHandler = async () => {
 		await toggleChatPinnedStatusById(localStorage.token, chatId);
