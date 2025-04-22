@@ -28,6 +28,9 @@
 
 	let ldapUsername = '';
 
+	let agreePrivacy = false;
+	let agreeTerms = false;
+
 	const querystringValue = (key) => {
 		const querystring = window.location.search;
 		const urlParams = new URLSearchParams(querystring);
@@ -61,6 +64,10 @@
 	};
 
 	const signUpHandler = async () => {
+		if (!agreePrivacy || !agreeTerms) {
+			toast.error($i18n.t('You must agree to the Privacy Policy and Terms & Conditions to sign up.'));
+			return;
+		}
 		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
 			(error) => {
 				toast.error(`${error}`);
@@ -297,6 +304,40 @@
 											required
 										/>
 									</div>
+									{#if mode === 'signup'}
+										<br />
+										<!-- Privacy Policy and Terms & Conditions checkboxes -->
+										<div class="mb-2 flex flex-col gap-1 text-xs text-left">
+											<label class="flex items-center gap-2">
+												<input
+													type="checkbox"
+													bind:checked={agreePrivacy}
+													class="accent-blue-600"
+													required
+												/>
+												<span>
+													{$i18n.t('I agree to the')}
+													<a href="https://blog.contextops.ai/privacy/" target="_blank" rel="noopener" class="underline hover:text-blue-600">
+														{$i18n.t('Privacy Policy')}
+													</a>
+												</span>
+											</label>
+											<label class="flex items-center gap-2">
+												<input
+													type="checkbox"
+													bind:checked={agreeTerms}
+													class="accent-blue-600"
+													required
+												/>
+												<span>
+													{$i18n.t('I agree to the')}
+													<a href="https://blog.contextops.ai/terms/" target="_blank" rel="noopener" class="underline hover:text-blue-600">
+														{$i18n.t('Terms & Conditions')}
+													</a>
+												</span>
+											</label>
+										</div>
+									{/if}
 								</div>
 							{/if}
 							<div class="mt-5">
@@ -312,6 +353,7 @@
 										<button
 											class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full font-medium text-sm py-2.5"
 											type="submit"
+											disabled={mode === 'signup' && (!agreePrivacy || !agreeTerms)}
 										>
 											{mode === 'signin'
 												? $i18n.t('Sign in')
