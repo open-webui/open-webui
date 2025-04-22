@@ -1,10 +1,8 @@
-// In src/lib/components/SessionExpiredModal.svelte
 <script lang="ts">
   import { sessionExpired } from '$lib/stores';
   import Modal from '$lib/components/common/Modal.svelte';
   import { getContext } from 'svelte';
   import { page } from '$app/stores';
-  // import { goto } from '$app/navigation'; // REMOVED goto import
   import { WEBUI_BASE_URL } from '$lib/constants';
 
   const i18n = getContext('i18n');
@@ -26,8 +24,6 @@
   }
 
 </script>
-
-<!-- Rest of the component remains the same -->
 
 <Modal size="sm" bind:show={isOpen}>
   {#if isOpen}
