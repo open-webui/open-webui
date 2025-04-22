@@ -1557,19 +1557,22 @@ async def process_web_search(
             collection_names = []
             for doc_idx, doc in enumerate(docs):
                 if doc and doc.page_content:
-                    collection_name = f"web-search-{calculate_sha256_string(form_data.query + '-' + urls[doc_idx])}"[
-                        :63
-                    ]
+                    try:
+                        collection_name = f"web-search-{calculate_sha256_string(form_data.query + '-' + urls[doc_idx])}"[
+                            :63
+                        ]
 
-                    collection_names.append(collection_name)
-                    await run_in_threadpool(
-                        save_docs_to_vector_db,
-                        request,
-                        [doc],
-                        collection_name,
-                        overwrite=True,
-                        user=user,
-                    )
+                        collection_names.append(collection_name)
+                        await run_in_threadpool(
+                            save_docs_to_vector_db,
+                            request,
+                            [doc],
+                            collection_name,
+                            overwrite=True,
+                            user=user,
+                        )
+                    except Exception as e:
+                        log.debug(f"error saving doc {doc_idx}: {e}")
 
             return {
                 "status": True,
