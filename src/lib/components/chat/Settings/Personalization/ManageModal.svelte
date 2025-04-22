@@ -12,6 +12,10 @@
 	import { error } from '@sveltejs/kit';
 	import EditMemoryModal from './EditMemoryModal.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
+	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import MemoriesMenu from './MemoriesMenu.svelte';
+	import AddEditMemory from './AddEditMemory.svelte';
+
 
 	const i18n = getContext('i18n');
 	dayjs.extend(localizedFormat);
@@ -34,37 +38,81 @@
 	}
 </script>
 
-<Modal size="xl" bind:show>
+<Modal size="md-plus" bind:show className="dark:bg-customGray-800 rounded-2xl">
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-1">
-			<div class=" text-lg font-medium self-center">{$i18n.t('Memory')}</div>
-			<button
-				class="self-center"
-				on:click={() => {
-					show = false;
-				}}
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="w-5 h-5"
+		<div class="px-7">
+			<div class=" flex justify-between dark:text-white pt-5 pb-4 border-b dark:border-customGray-700">
+				<div class="self-center">{$i18n.t('Memory')}</div>
+				<button
+					class="self-center"
+					on:click={() => {
+						show = false;
+					}}
 				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
-			</button>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="w-5 h-5"
+					>
+						<path
+							d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+						/>
+					</svg>
+				</button>
+			</div>
 		</div>
 
 		<div class="flex flex-col w-full px-5 pb-5 dark:text-gray-200">
 			<div
-				class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6 h-[28rem] max-h-screen outline outline-1 rounded-xl outline-gray-100 dark:outline-gray-800 mb-4 mt-1"
+				class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6 h-[20rem] max-h-screen mb-4 mt-1"
 			>
 				{#if memories.length > 0}
 					<div class="text-left text-sm w-full mb-4 overflow-y-scroll">
 						<div class="relative overflow-x-auto">
-							<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
+							{#each memories as memory}
+							<div 
+							id="memory-{memory.id}"
+							class="flex justify-between items-center group rounded-md w-full dark:hover:bg-customGray-900 py-2 px-3 cursor-pointer">
+								<div class="line-clamp-1 text-sm dark:text-customGray-100">
+									{memory.content}
+								</div>
+								<div class="invisible group-hover:visible">
+									<MemoriesMenu
+										editHandler={async () => {
+											selectedMemory = memory;
+											// showEditMemoryModal = true;
+										}}
+										deleteHandler={async () => {
+											const res = await deleteMemoryById(
+												localStorage.token,
+												memory.id
+											).catch((error) => {
+												toast.error(`${error}`);
+												return null;
+											});
+
+											if (res) {
+												toast.success($i18n.t('Memory deleted successfully'));
+												memories = await getMemories(localStorage.token);
+											}
+											
+										}}
+										onClose={() => {}}
+									>
+										<button
+											class="self-center w-fit text-sm px-0.5 h-[21px] dark:text-white dark:hover:text-white hover:bg-black/5 dark:hover:bg-customGray-900 rounded-md"
+											type="button"
+											on:click={(e) => {}}
+										>
+											<EllipsisHorizontal className="size-5" />
+										</button>
+									</MemoriesMenu>
+								</div>
+							</div>
+							{/each}
+							
+							<!-- <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
 								<thead
 									class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-800"
 								>
@@ -155,7 +203,7 @@
 										</tr>
 									{/each}
 								</tbody>
-							</table>
+							</table> -->
 						</div>
 					</div>
 				{:else}
@@ -166,13 +214,19 @@
 					</div>
 				{/if}
 			</div>
+			<AddEditMemory 
+			memory={selectedMemory}
+			on:save={async () => {
+				memories = await getMemories(localStorage.token);
+				selectedMemory = null;
+			}}/>
 			<div class="flex text-sm font-medium gap-1.5">
-				<button
+				<!-- <button
 					class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
 					on:click={() => {
 						showAddMemoryModal = true;
 					}}>{$i18n.t('Add Memory')}</button
-				>
+				> -->
 				<button
 					class=" px-3.5 py-1.5 font-medium text-red-500 hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-red-300 dark:outline-red-800 rounded-3xl"
 					on:click={async () => {
