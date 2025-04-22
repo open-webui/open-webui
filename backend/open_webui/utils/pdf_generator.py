@@ -125,6 +125,8 @@ class PDFGenerator:
                 ["NotoSansKR", "NotoSansJP", "NotoSansSC", "Twemoji"]
             )
 
+            pdf.set_compression(true)
+
             pdf.set_auto_page_break(auto=True, margin=15)
 
             # Build HTML messages
