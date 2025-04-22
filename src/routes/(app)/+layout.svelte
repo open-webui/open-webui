@@ -256,7 +256,7 @@
 	<div
 		class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
 	>
-$: {
+  {
     console.log('[App Layout Reactive Log] $user?.role:', $user?.role, '| $sessionExpired:', $sessionExpired, '| AccountPending condition met?:', (!['user', 'admin'].includes($user?.role) && !$sessionExpired) );
   }
 		{#if !['user', 'admin'].includes($user?.role) && !$sessionExpired}
