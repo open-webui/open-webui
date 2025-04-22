@@ -65,7 +65,9 @@
 
 	const signUpHandler = async () => {
 		if (!agreePrivacy || !agreeTerms) {
-			toast.error($i18n.t('You must agree to the Privacy Policy and Terms & Conditions to sign up.'));
+			toast.error(
+				$i18n.t('You must agree to the Privacy Policy and Terms & Conditions to sign up.')
+			);
 			return;
 		}
 		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
@@ -317,7 +319,12 @@
 												/>
 												<span>
 													{$i18n.t('I agree to the')}
-													<a href="https://blog.contextops.ai/privacy/" target="_blank" rel="noopener" class="underline hover:text-blue-600">
+													<a
+														href="https://blog.contextops.ai/privacy/"
+														target="_blank"
+														rel="noopener"
+														class="underline hover:text-blue-600"
+													>
 														{$i18n.t('Privacy Policy')}
 													</a>
 												</span>
@@ -331,7 +338,12 @@
 												/>
 												<span>
 													{$i18n.t('I agree to the')}
-													<a href="https://blog.contextops.ai/terms/" target="_blank" rel="noopener" class="underline hover:text-blue-600">
+													<a
+														href="https://blog.contextops.ai/terms/"
+														target="_blank"
+														rel="noopener"
+														class="underline hover:text-blue-600"
+													>
 														{$i18n.t('Terms & Conditions')}
 													</a>
 												</span>
