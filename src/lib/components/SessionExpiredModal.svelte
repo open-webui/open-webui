@@ -52,9 +52,9 @@
           <button
             class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full flex flex-row space-x-1 items-center"
             type="button"
-            on:click={closeModal} {/* Call closeModal */}
+            on:click={closeModal}
           >
-            {$i18n.t('Acknowledge')} {/* UPDATED Button Text & i18n Key */}
+            {$i18n.t('Acknowledge')}
           </button>
                 </div>
       </div>
