@@ -773,12 +773,14 @@ async def generate_chat_completion(
                 # 5) 종료 후 cleanup
                 await cleanup_response(response=r, session=session)
 
+            async def close_session():
+                await session.close()
             return StreamingResponse(
                 stream_with_prelude_and_upstream(),
                 status_code=200,                # 클라이언트가 SSE로 인식하도록
                 media_type="text/event-stream",
                 headers={},                     # downstream headers는 필요시 가감
-                background=BackgroundTask(lambda: session.close()),
+                background=BackgroundTask(close_session),
             )
         else:
             r = await session.request(
