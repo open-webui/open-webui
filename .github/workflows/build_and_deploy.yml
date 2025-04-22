@@ -14,12 +14,20 @@ jobs:
       IMAGE_TAG: ${{ github.sha }}
     outputs:
       commit_title: ${{ steps.get_head_commit_title.outputs.title }}
+      version: ${{ steps.generate_version.outputs.version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - id: get_head_commit_title
         run: echo "title=$(git log --format=%B -n 1 HEAD | head -n 1)" >> $GITHUB_OUTPUT
+
+      - id: generate_version
+        run: |
+          COMMIT_DATE=$(git log -1 --format=%cd --date=format:%y.%m)
+          COMMIT_NUMBER=$(git rev-list --count HEAD)
+          VERSION="${COMMIT_DATE}.${COMMIT_NUMBER}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -37,7 +45,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }},${{ env.IMAGE_NAME }}:latest,${{ env.IMAGE_NAME }}:25.04.0
+          tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }},${{ env.IMAGE_NAME }}:latest,${{ env.IMAGE_NAME }}:${{ steps.generate_version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
