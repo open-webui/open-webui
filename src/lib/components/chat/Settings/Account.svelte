@@ -24,7 +24,7 @@
 	export let saveSettings: Function;
 
 	let profileImageUrl = '';
-	let name = '';
+	let firstName = '';
 	let lastName = '';
 	let email = '';
 	let loading = false;
@@ -51,9 +51,9 @@
 
 	const submitHandler = async () => {
 		loading = true;
-		if (name !== $user.name) {
-			if (profileImageUrl === generateInitialsImage($user.name) || profileImageUrl === '') {
-				profileImageUrl = generateInitialsImage(name);
+		if (firstName !== $user.first_name) {
+			if (profileImageUrl === generateInitialsImage($user.first_name) || profileImageUrl === '') {
+				profileImageUrl = generateInitialsImage(firstName);
 			}
 		}
 		if (email !== $user.email) {
@@ -88,14 +88,15 @@
 		// 	});
 		// }
 
+		const password = newPassword ? newPassword : null;
+
 		const updatedUser = await updateUserProfile(
 			localStorage.token,
-			name,
+			firstName,
 			profileImageUrl,
 			lastName,
 			email,
-			currentPassword,
-			newPassword
+			password
 		).catch((error) => {
 			toast.error(`${error}`);
 		});
@@ -127,9 +128,9 @@
 	}
 
 	onMount(async () => {
-		name = $user.name;
+		firstName = $user?.first_name ? $user?.first_name : '';
 		email = $user?.email;
-		lastName = $user?.lastName ? $user?.lastName : '';
+		lastName = $user?.last_name ? $user?.last_name : '';
 		profileImageUrl = $user.profile_image_url;
 		// webhookUrl = $settings?.notifications?.webhook_url ?? '';
 
@@ -233,7 +234,7 @@
 							}}
 						>
 							<img
-								src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(name)}
+								src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(firstName)}
 								alt="profile"
 								class=" rounded-full size-16 object-cover"
 							/>
@@ -317,15 +318,15 @@
 			<div class="pt-0.5">
 				<div class="flex flex-col w-full mb-2.5">
 					<div class="relative w-full dark:bg-customGray-900 rounded-md">
-						{#if name}
+						{#if firstName}
 							<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
 								{$i18n.t('First Name')}
 							</div>
 						{/if}
 						<input
-							class={`px-2.5 text-sm ${name ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							class={`px-2.5 text-sm ${firstName ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 							placeholder={$i18n.t('First Name')}
-							bind:value={name}
+							bind:value={firstName}
 						/>
 					</div>
 				</div>
@@ -355,6 +356,7 @@
 							placeholder={$i18n.t('Primary Email Address')}
 							bind:value={email}
 							type="email"
+							disabled
 						/>
 					</div>
 				</div>
