@@ -118,8 +118,7 @@
 		{:else}{/if}
 
 		<div>
-			<pre
-				class="text-xs text-gray-400 dark:text-gray-500"> 	
+			<pre class="text-xs text-gray-400 dark:text-gray-500"> 	
 				Emoji graphics provided by Twemoji licensed under CC-BY 4.0
 				
 				Copyright (c) {new Date().getFullYear()} Timothy Jaeryang Baek  
