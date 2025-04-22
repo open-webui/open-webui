@@ -3,7 +3,7 @@
   import Modal from '$lib/components/common/Modal.svelte';
   import { getContext } from 'svelte';
   import { page } from '$app/stores';
-  import { goto } from '$app/navigation'; // RE-ADDED goto import
+  import { goto } from '$app/navigation';
 
   const i18n = getContext('i18n');
 
@@ -18,7 +18,7 @@
 
   function triggerReLogin() {
     sessionExpired.set(false);
-    localStorage.removeItem('token'); // Remove the (likely invalid) token
+    localStorage.removeItem('token');
     const currentUrl = `${$page.url.pathname}${$page.url.search}`;
     const encodedUrl = encodeURIComponent(currentUrl);
     goto(`/auth?redirect=${encodedUrl}`, { replaceState: true });
