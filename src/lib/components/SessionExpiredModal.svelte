@@ -1,10 +1,13 @@
 <script lang="ts">
     import { sessionExpired } from '$lib/stores';
-    import * as Dialog from '$lib/components/ui/dialog'; // Pfad ggf. anpassen, falls bits-ui anders eingebunden ist
-    import { Button } from '$lib/components/ui/button'; // Für den Reload-Button, Pfad ggf. anpassen
-    import { page } from '$app/stores'; // Um die aktuelle URL für den Redirect zu bekommen
-    import { goto } from '$app/navigation'; // Um zur Login-Seite zu navigieren
- import { WEBUI_BASE_URL } from '$lib/constants'; // Basis-URL für den Redirect
+    import Modal from '$lib/components/common/Modal.svelte'; // Verwende die allgemeine Modal-Komponente
+    import { page } from '$app/stores';
+    import { goto } from '$app/navigation';
+    import { WEBUI_BASE_URL } from '$lib/constants';
+  import { getContext, onMount } from 'svelte'; // Importiere getContext für i18n
+
+  // Hole i18n-Kontext (nötig, auch wenn wir Platzhalter verwenden, damit es konsistent ist)
+  const i18n = getContext('i18n');
 
     // Reagiere auf Änderungen im sessionExpired Store
     let isOpen = false;
@@ -13,71 +16,66 @@
     });
 
     // Funktion, um zur Login-Seite weiterzuleiten
-  function redirectToLogin() {
-    // Setze den Store zurück, falls der Benutzer auf "Erneut anmelden" klickt,
-    // obwohl ein Neuladen der Seite dies ohnehin tun würde. Sicher ist sicher.
-    sessionExpired.set(false);
+    function redirectToLogin() {
+        // Setze den Store zurück, falls der Benutzer auf "Erneut anmelden" klickt,
+        sessionExpired.set(false);
 
-    const currentUrl = `${$page.url.pathname}${$page.url.search}`;
-      const encodedUrl = encodeURIComponent(currentUrl);
+        const currentUrl = `${$page.url.pathname}${$page.url.search}`;
+        const encodedUrl = encodeURIComponent(currentUrl);
 
-    // Navigiere zur Auth-Seite mit Redirect-Parameter
-    // (Verwendet die Konstante WEBUI_BASE_URL, falls nötig, ansonsten reicht der Pfad)
-    goto(`${WEBUI_BASE_URL}/auth?redirect=${encodedUrl}`, { replaceState: true });
-  }
+        goto(`${WEBUI_BASE_URL}/auth?redirect=${encodedUrl}`, { replaceState: true });
+    }
 
 </script>
 
-{#if isOpen}
-    <Dialog.Root
-        open={isOpen}
-        preventScroll={true}
-        closeOnOutsideClick={false}  _<!-- Macht das Modal nicht durch Klick daneben schließbar -->_
-        closeOnEscape={false}       _<!-- Macht das Modal nicht durch ESC schließbar -->_
-    >
-        <Dialog.Portal>
-            <Dialog.Overlay class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
-            <Dialog.Content
-                class="fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 border bg-background p-6 shadow-lg sm:rounded-lg"
-                aria-describedby="dialog-description"
-            >
-                <Dialog.Header class="flex flex-col items-center text-center">
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        class="h-10 w-10 text-destructive mb-2" >
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                        <line x1="12" y1="9" x2="12" y2="13"></line>
-                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                    </svg>
-                    <Dialog.Title class="text-lg font-semibold">
-                        (Session Expired)
-                    </Dialog.Title>
-                </Dialog.Header>
-                <div id="dialog-description" class="text-sm text-muted-foreground text-center">
-          <!-- i18n Placeholder für Beschreibung -->
-                    (Your session has expired. Please log in again to continue. You may want to copy any unsaved work before proceeding.)
-                </div>
-                <Dialog.Footer class="flex justify-center mt-4">
-          <!-- Kein Schließen-Button, nur ein "Neu Anmelden"-Button -->
-                    <Button on:click={redirectToLogin} variant="destructive">
-            <!-- i18n Placeholder für Button -->
-            (Log In Again)
-          </Button>
-                </Dialog.Footer>
-            </Dialog.Content>
-        </Dialog.Portal>
-    </Dialog.Root>
-{/if}
+<Modal bind:show={isOpen} size="sm" nonClosable={true}>_<!-- `nonClosable` hinzugefügt-->_
+    <div>
+        <div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
+            <div class=" text-lg font-medium self-center font-primary">
+        {/* i18n Placeholder für Titel */}
+        {$i18n.t('(Session Expired)')}
+            </div>
 
-<style>
-/* Optional: Füge hier spezifische Styles hinzu, falls nötig.
-   Die Klassen oben (bg-background, text-destructive etc.) kommen wahrscheinlich von Tailwind/ShadCN.
-   Stelle sicher, dass die benötigten CSS-Klassen verfügbar sind.
-*/
-</style>
+      __{/* Kein Standard-Schließen-X-Button hier, da nonClosable=true */}__
+      __{/* Falls `nonClosable` nicht funktioniert, müssen wir den Button hier entfernen */}__
+
+        </div>
+
+        <div class=" px-4 pb-4 dark:text-gray-200 text-center">
+      __{/* Warn-Icon */}__
+      <div class="flex justify-center mb-3">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="h-10 w-10 text-destructive" __{/* mb-2 entfernt, da im div */}>__
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+      </div>
+
+      __{/* Beschreibungs-Text */}__
+      <div id="dialog-description" class="text-sm text-muted-foreground">
+         {/* i18n Placeholder für Beschreibung */}
+        {$i18n.t('(Your session has expired. Please log in again to continue. You may want to copy any unsaved work before proceeding.)')}
+            </div>
+        </div>
+
+    __{/* Footer mit Button */}__
+    <div class="flex justify-center px-4 pb-4 pt-2">
+      __{/* Verwende <button> mit Tailwind-Klassen, angepasst für einen "destructive" Look */}__
+      <button
+        class="px-3.5 py-1.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 transition rounded-full flex flex-row items-center"
+        on:click={redirectToLogin}
+      >
+        {/* i18n Placeholder für Button */}
+        {$i18n.t('(Log In Again)')}
+      </button>
+    </div>
+    </div>
+</Modal>
