@@ -7,7 +7,7 @@
 
 	const i18n = getContext<Readable<I18Next>>('i18n');
 
-	$: [before, joiner, after] = $i18n.t('IONOS GPT is based on the IONOS AI Model Hub, which provides the Llama model. By using it, you agree to the [modelLicenseLink] and [modelUsePolicyLink]', { ns: 'ionos' }).split(/\[[a-zA-Z]+\]/);
+	$: [before, joiner1, joiner2, after] = $i18n.t('IONOS GPT is based on the [modelHubInfoLink], which provides the Llama model. By using it, you agree to the [modelLicenseLink] and [modelUsePolicyLink]', { ns: 'ionos' }).split(/\[[a-zA-Z]+\]/);
 
 	export let extraClasses: string = '';
 </script>
@@ -17,11 +17,18 @@
 		{before}
 		<Link
 			passive={true}
+			href={$i18n.t('modelHubInfoLinkUrl', { ns: 'ionos' })}
+		>
+			{$i18n.t('modelHubInfoLinkText', { ns: 'ionos' })}
+		</Link>
+		{joiner1}
+		<Link
+			passive={true}
 			href={$i18n.t('modelLicenseLinkUrl', { ns: 'ionos' })}
 		>
 			{$i18n.t('modelLicenseLinkText', { ns: 'ionos' })}
 		</Link>
-		{joiner}
+		{joiner2}
 		<Link
 			passive={true}
 			href={$i18n.t('modelUsePolicyLinkUrl', { ns: 'ionos' })}
