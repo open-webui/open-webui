@@ -426,7 +426,7 @@ async def add_user(form_data: AddUserForm, admin_user: Users = Depends(get_admin
 
     try:
         # Generate a secure random password
-        password = "test"
+        password = "beyondtheloop"
         hashed = get_password_hash(password)
 
         new_user = Auths.insert_new_auth(
