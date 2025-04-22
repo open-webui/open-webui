@@ -10,6 +10,7 @@ import emojiShortCodes from '$lib/emoji-shortcodes.json';
 export const WEBUI_NAME = writable(APP_NAME);
 export const config: Writable<Config | undefined> = writable(undefined);
 export const user: Writable<SessionUser | undefined> = writable(undefined);
+export const sessionExpired = writable(false);
 
 // Electron App
 export const isApp = writable(false);
