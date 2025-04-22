@@ -107,3 +107,12 @@ else
   chmod 666 "$LOCAL_BASE_PATH/open_webui/data/webui.db"*
 fi
 echo "✅ 데이터베이스 파일 권한 설정 완료!"
+
+# 디렉토리 권한 설정
+echo "📁 디렉토리 권한 설정 중..."
+if $ONLY_OPEN_WEBUI; then
+  sudo chmod -R 755 "$LOCAL_BASE_PATH/open_webui/data"
+else
+  sudo chmod -R 755 "$LOCAL_BASE_PATH/data" "$LOCAL_BASE_PATH/open_webui/data"
+fi
+echo "✅ 디렉토리 권한 설정 완료!"
