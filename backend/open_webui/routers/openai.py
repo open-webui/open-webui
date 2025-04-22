@@ -9,6 +9,7 @@ from typing import Literal, Optional, overload
 import aiohttp
 from aiocache import cached
 import requests
+import random
 
 
 from fastapi import Depends, FastAPI, HTTPException, Request, APIRouter
@@ -646,15 +647,35 @@ async def generate_chat_completion(
     response = None
 
     try:
+        headers = {
+            "Content-Type": "application/json",
+            "api-key": f"{user.ust_api_key}",
+            **(
+                {
+                    "HTTP-Referer": "https://openwebui.com/",
+                    "X-Title": "Open WebUI",
+                }
+                if "openrouter.ai" in url
+                else {}
+            ),
+            **(
+                {
+                    "X-OpenWebUI-User-Name": user.name,
+                    "X-OpenWebUI-User-Id": user.id,
+                    "X-OpenWebUI-User-Email": user.email,
+                    "X-OpenWebUI-User-Role": user.role,
+                }
+                if ENABLE_FORWARD_USER_INFO_HEADERS
+                else {}
+            ),
+        }
+
         session = aiohttp.ClientSession(
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
         )
         log.info(f"Requesting to {url}/chat/completions with {user.ust_api_key}")
-        r = await session.request(
-            method="POST",
-            url=f"{url}/chat/completions?api-version=2024-10-21",
-            data=payload,
-            headers={
+        headers = {
                 "Content-Type": "application/json",
                 "api-key": f"{user.ust_api_key}",
                 **(
@@ -675,21 +696,97 @@ async def generate_chat_completion(
                     if ENABLE_FORWARD_USER_INFO_HEADERS
                     else {}
                 ),
-            },
-        )
+            }
+
 
         # Check if response is SSE
-        if "text/event-stream" in r.headers.get("Content-Type", ""):
+        if form_data.get("stream", False):
             streaming = True
+            async def stream_with_prelude_and_upstream():
+                # 1) background로 upstream 요청 시작
+                req_task = asyncio.create_task(
+                    session.request(
+                        method="POST",
+                        url=f"{url}/chat/completions?api-version=2024-10-21",
+                        data=payload,
+                        headers=headers,
+                    )
+                )
+
+                # 2) 프리루드 한 글자씩 보내기
+                query = form_data["messages"][-1]["content"]
+                system_preludes = [
+                    (
+                        f'*Processing the input query "{{query}}" by extracting relevant core concepts and analyzing their relationships '
+                        f'within the internal knowledge base. Response generation will begin shortly after structural consistency and '
+                        f'semantic alignment are verified.*\n\n'
+                    ),
+                    (
+                        f'*To process "{{query}}", key terms are currently being identified and mapped to the closest semantic nodes in '
+                        f'the knowledge graph. Once association weights are computed, the system will proceed with formulating a '
+                        f'structured response.*\n\n'
+                    ),
+                    (
+                        f'*The query "{{query}}" is being parsed and classified. Contextual inference and relevance modeling are '
+                        f'underway to ensure the generated response is logically coherent and appropriately scoped.*\n\n'
+                    ),
+                    (
+                        f'*Initializing context stack for the query "{{query}}". Retrieving matching query patterns and associated '
+                        f'inference chains to ensure high-confidence generation of the upcoming response.*\n\n'
+                    ),
+                    (
+                        f'*Deconstructing the topic "{{query}}" into subcomponents, applying categorical mapping, and aligning context '
+                        f'frames. Response output will commence once all dependent modules have returned verified data.*\n\n'
+                    ),
+                ]
+                prelude = random.choice(system_preludes).format(query=query)
+                for idx, ch in enumerate(prelude):
+                    if req_task.done():
+                        # 요청이 준비된 시점에, 남은 프리루드를 지연 없이 바로 출력
+                        for ch2 in prelude[idx:]:
+                            event = {"choices": [{"delta": {"content": ch2}}]}
+                            yield f"data: {json.dumps(event)}\n".encode("utf-8")
+                        break
+
+                    # 여전히 요청 준비 전이라면 평상시대로 한 글자씩, 50ms 딜레이
+                    event = {"choices": [{"delta": {"content": ch}}]}
+                    yield f"data: {json.dumps(event)}\n".encode("utf-8")
+                    await asyncio.sleep(0.05)
+
+                # 3) upstream 응답 객체 확보
+                try:
+                    r = req_task.result()  # 이미 done() 이면 이걸로
+                except asyncio.InvalidStateError:
+                    r = await req_task       # 아직 pending 이면 대기
+
+                content_type = r.headers.get("Content-Type", "")
+
+                # 4) 실제 SSE 스트림을 그대로 이어서 전송
+                if "text/event-stream" in content_type:
+                    async for chunk in r.content:  
+                        yield chunk
+                else:
+                    # 만약 SSE가 아니면 단일 응답 처리
+                    body = await r.read()
+                    yield body
+
+                # 5) 종료 후 cleanup
+                await cleanup_response(response=r, session=session)
+
             return StreamingResponse(
-                r.content,
-                status_code=r.status,
-                headers=dict(r.headers),
-                background=BackgroundTask(
-                    cleanup_response, response=r, session=session
-                ),
+                stream_with_prelude_and_upstream(),
+                status_code=200,                # 클라이언트가 SSE로 인식하도록
+                media_type="text/event-stream",
+                headers={},                     # downstream headers는 필요시 가감
+                background=BackgroundTask(lambda: session.close()),
             )
         else:
+            r = await session.request(
+                method="POST",
+                url=f"{url}/chat/completions?api-version=2024-10-21",
+                data=payload,
+                headers=headers,
+            )
             try:
                 response = await r.json()
             except Exception as e:

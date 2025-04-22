@@ -488,7 +488,6 @@ def get_sources_from_files(
                     sources.append(source)
         except Exception as e:
             log.exception(e)
-
     return sources
 
 
