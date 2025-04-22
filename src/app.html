@@ -104,6 +104,13 @@
 		<script type="module" src="/dsfr.module.min.js"></script>
 		<script type="text/javascript" nomodule src="/dsfr.nomodule.min.js"></script>
 
+		<style>
+			/* Le DSFR ajoute un underline sur tous les hrefs, ce qui n'est pas désirable dans notre cas*/
+			[href] {
+				background-image: none !important;
+			}
+		</style>
+
 		%sveltekit.head%
 	</head>
 
