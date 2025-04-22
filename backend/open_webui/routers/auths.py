@@ -48,6 +48,7 @@ from open_webui.utils.auth import (
 )
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions
+from open_webui.models.permissions import Permissions
 
 from typing import Optional, List
 
@@ -105,7 +106,7 @@ async def get_session_user(
     )
 
     user_permissions = get_permissions(
-        user.id, request.app.state.config.USER_PERMISSIONS
+        user.id, Permissions.get_permissions_by_category()
     )
 
     return {
@@ -321,7 +322,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 )
 
                 user_permissions = get_permissions(
-                    user.id, request.app.state.config.USER_PERMISSIONS
+                    user.id, Permissions.get_permissions_by_category()
                 )
 
                 return {
@@ -419,7 +420,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         )
 
         user_permissions = get_permissions(
-            user.id, request.app.state.config.USER_PERMISSIONS
+            user.id, Permissions.get_permissions_by_category()
         )
 
         return {
@@ -533,7 +534,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 )
 
             user_permissions = get_permissions(
-                user.id, request.app.state.config.USER_PERMISSIONS
+                user.id, Permissions.get_permissions_by_category()
             )
 
             return {
