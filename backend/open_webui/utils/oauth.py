@@ -292,7 +292,8 @@ class OAuthManager:
                     password=get_password_hash(
                         str(uuid.uuid4())
                     ),  # Random password, not used
-                    name=name,
+                    first_name=name,
+                    last_name=name,
                     company_id=NO_COMPANY,
                     profile_image_url=picture_url,
                     role=role,

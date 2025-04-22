@@ -1,7 +1,7 @@
 from logging.config import fileConfig
 
 from alembic import context
-from models.auths import Auth
+from beyond_the_loop.models.auths import Auth
 from open_webui.env import DATABASE_URL
 from sqlalchemy import engine_from_config, pool
 
