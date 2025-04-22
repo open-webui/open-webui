@@ -40,9 +40,7 @@ services:
     networks:
       - webui-network
     volumes:
-      # - ./certbot/conf/live:/etc/nginx/ssl/live:ro
-      # - ./certbot/www:/var/www/certbot
-      - ./certbot/conf/live:/etc/nginx/ssl/archive:ro
+      - ./certbot/conf:/etc/nginx/ssl:ro
       - ./certbot/www:/var/www/certbot
 
 volumes:
