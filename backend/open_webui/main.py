@@ -1042,7 +1042,6 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
-    start_time = time.time()
     if not request.app.state.MODELS:
         await get_all_models(request)
 
@@ -1097,11 +1096,9 @@ async def chat_completion(
         request.state.metadata = metadata
         form_data["metadata"] = metadata
 
-        log.info(f"Before Chat Payload Processing: {time.time() - start_time}")
         form_data, metadata, events = await process_chat_payload(
             request, form_data, metadata, user, model
         )
-        log.info(f"After Chat Payload Processing: {time.time() - start_time}")
 
     except Exception as e:
         log.debug(f"Error processing chat payload: {e}")
@@ -1111,9 +1108,7 @@ async def chat_completion(
         )
 
     try:
-        log.info(f"Before Chat Completion Handling: {time.time() - start_time}")
         response = await chat_completion_handler(request, form_data, user)
-        log.info(f"After Chat Completion Handling: {time.time() - start_time}")
 
         return await process_chat_response(
             request, response, form_data, user, events, metadata, tasks

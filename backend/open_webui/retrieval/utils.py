@@ -242,7 +242,6 @@ def query_collection(
     k: int,
     max_workers: int = 8,
 ) -> dict:
-    start_time = time.perf_counter()
     results = []
 
     # 1) 임베딩 병렬 처리
@@ -259,26 +258,21 @@ def query_collection(
             try:
                 emb = fut.result()
                 embeddings[q_idx] = (q_idx, emb)
-                log.info(f"[쿼리 {q_idx+1}/{len(queries)}] 임베딩 생성 완료")
             except Exception as e:
                 log.exception(f"임베딩 생성 에러 (쿼리 {q_idx}): {e}")
 
         # 2) 컬렉션 검색 병렬 처리
         def retrieve_job(q_idx, query_emb, c_idx, coll_name):
-            t0 = time.perf_counter()
             try:
                 res = query_doc(
                     collection_name=coll_name,
                     k=k,
                     query_embedding=query_emb,
                 )
-                elapsed = time.perf_counter() - t0
                 if res:
-                    log.info(f"[쿼리 {q_idx+1} | 컬렉션 {c_idx+1}/{len(collection_names)}] 검색 성공 ({elapsed:.3f}초)")
                     return res.model_dump()
             except Exception as e:
                 log.exception(f"[쿼리 {q_idx+1} | {coll_name}] 검색 에러: {e}")
-            log.info(f"[쿼리 {q_idx+1} | 컬렉션 {c_idx+1}] 검색 실패 ({elapsed:.3f}초)")
             return None
 
         retrieve_futures = []
@@ -298,14 +292,11 @@ def query_collection(
                 results.append(r)
 
     # 3) 결과 병합 및 정렬
-    merge_start = time.perf_counter()
     if VECTOR_DB == "chroma":
         merged = merge_and_sort_query_results(results, k=k, reverse=False)
     else:
         merged = merge_and_sort_query_results(results, k=k, reverse=True)
-    log.info(f"[정렬 단계] {time.perf_counter() - merge_start:.3f}초")
 
-    log.info(f"[총 처리 시간] {time.perf_counter() - start_time:.3f}초")
     return merged
 
 

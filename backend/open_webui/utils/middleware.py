@@ -618,7 +618,6 @@ def apply_params_to_form_data(form_data, model):
 
 
 async def process_chat_payload(request, form_data, metadata, user, model):
-    start_time = time.time()
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 
@@ -638,8 +637,6 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         "__request__": request,
         "__model__": model,
     }
-    log.info(f"Initializing time: {time.time() - start_time}")
-    start_time = time.time()
     # Initialize events to store additional event to be sent to the client
     # Initialize contexts and citation
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
@@ -655,8 +652,6 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         request.app.state.config.TASK_MODEL_EXTERNAL,
         models,
     )
-    log.info(f"Model setting time: {time.time() - start_time}")
-    start_time = time.time()
 
     events = []
     sources = []
@@ -703,8 +698,6 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         form_data["files"] = files
 
     variables = form_data.pop("variables", None)
-    log.info(f"Model Knowledge Processing Time: {time.time() - start_time}")
-    start_time = time.time()
     # Process the form_data through the pipeline
     try:
         form_data = await process_pipeline_inlet_filter(
@@ -723,8 +716,6 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         )
     except Exception as e:
         raise Exception(f"Error: {e}")
-    log.info(f"Form Data Filtering Time: {time.time() - start_time}")
-    start_time = time.time()
     
     features = form_data.pop("features", None)
     if features:
