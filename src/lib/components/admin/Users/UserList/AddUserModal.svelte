@@ -3,6 +3,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
 	import { addUser } from '$lib/apis/auths';
+	import { getRoles } from '$lib/apis/roles';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -32,6 +33,14 @@
 			role: 'user'
 		};
 	}
+
+	let roles = [];
+	onMount(async () => {
+		roles = await getRoles(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return [];
+		});
+	});
 
 	const submitHandler = async () => {
 		const stopLoading = () => {
@@ -76,7 +85,7 @@
 						if (idx > 0) {
 							if (
 								columns.length === 4 &&
-								['admin', 'user', 'pending'].includes(columns[3].toLowerCase())
+								roles.map(role => role.name).includes(columns[3].toLowerCase())
 							) {
 								const res = await addUser(
 									localStorage.token,
@@ -186,9 +195,10 @@
 										placeholder={$i18n.t('Enter Your Role')}
 										required
 									>
-										<option value="pending"> {$i18n.t('pending')} </option>
-										<option value="user"> {$i18n.t('user')} </option>
-										<option value="admin"> {$i18n.t('admin')} </option>
+										{#each roles as role}
+											<option value={role.name}>{$i18n.t(role.name)}</option>
+										{/each}
+
 									</select>
 								</div>
 							</div>
