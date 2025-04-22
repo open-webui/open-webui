@@ -6,7 +6,6 @@
     import { WEBUI_BASE_URL } from '$lib/constants';
   import { getContext, onMount } from 'svelte'; // Importiere getContext für i18n
 
-  // Hole i18n-Kontext (nötig, auch wenn wir Platzhalter verwenden, damit es konsistent ist)
   const i18n = getContext('i18n');
 
     // Reagiere auf Änderungen im sessionExpired Store
@@ -15,9 +14,7 @@
         isOpen = value;
     });
 
-    // Funktion, um zur Login-Seite weiterzuleiten
     function redirectToLogin() {
-        // Setze den Store zurück, falls der Benutzer auf "Erneut anmelden" klickt,
         sessionExpired.set(false);
 
         const currentUrl = `${$page.url.pathname}${$page.url.search}`;
@@ -35,9 +32,6 @@
         {/* i18n Placeholder für Titel */}
         {$i18n.t('(Session Expired)')}
             </div>
-
-      __{/* Kein Standard-Schließen-X-Button hier, da nonClosable=true */}__
-      __{/* Falls `nonClosable` nicht funktioniert, müssen wir den Button hier entfernen */}__
 
         </div>
 
@@ -59,16 +53,13 @@
         </svg>
       </div>
 
-      __{/* Beschreibungs-Text */}__
       <div id="dialog-description" class="text-sm text-muted-foreground">
          {/* i18n Placeholder für Beschreibung */}
         {$i18n.t('(Your session has expired. Please log in again to continue. You may want to copy any unsaved work before proceeding.)')}
             </div>
         </div>
 
-    __{/* Footer mit Button */}__
     <div class="flex justify-center px-4 pb-4 pt-2">
-      __{/* Verwende <button> mit Tailwind-Klassen, angepasst für einen "destructive" Look */}__
       <button
         class="px-3.5 py-1.5 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 transition rounded-full flex flex-row items-center"
         on:click={redirectToLogin}
