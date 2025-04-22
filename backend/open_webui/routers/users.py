@@ -53,7 +53,7 @@ async def invite_user(form_data: UserInviteForm, user=Depends(get_admin_user)):
         invite_token=invite_token
     )
 
-    return Users.insert_new_user(str(uuid.uuid4()), "INVITED", form_data.email.lower(), user.company_id, role=form_data.role,
+    return Users.insert_new_user(str(uuid.uuid4()), "INVITED", "INVITED", form_data.email.lower(), user.company_id, role=form_data.role,
                           invite_token=invite_token)
 
 

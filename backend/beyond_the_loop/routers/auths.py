@@ -113,7 +113,8 @@ async def get_session_user(
         "expires_at": expires_at,
         "id": user.id,
         "email": user.email,
-        "name": user.name,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
         "role": user.role,
         "profile_image_url": user.profile_image_url,
         "permissions": user_permissions,
@@ -132,8 +133,13 @@ async def update_profile(
     if session_user:
         user = Users.update_user_by_id(
             session_user.id,
-            {"profile_image_url": form_data.profile_image_url, "name": form_data.name},
+            {"profile_image_url": form_data.profile_image_url, "first_name": form_data.first_name, "last_name": form_data.last_name, },
         )
+
+        if form_data.password:
+            hashed = get_password_hash(form_data.password)
+            Auths.update_user_password_by_id(session_user.id, hashed)
+
         if user:
             return user
         else:
@@ -262,7 +268,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     )
 
                     user = Auths.insert_new_auth(
-                        email=mail, password=str(uuid.uuid4()), name=cn, company_id=NO_COMPANY, role=role
+                        email=mail, password=str(uuid.uuid4()), first_name=cn, last_name=cn, company_id=NO_COMPANY, role=role
                     )
 
                     if not user:
@@ -301,7 +307,8 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     "token_type": "Bearer",
                     "id": user.id,
                     "email": user.email,
-                    "name": user.name,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
                     "role": user.role,
                     "profile_image_url": user.profile_image_url,
                     "permissions": user_permissions,
@@ -401,7 +408,8 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             "expires_at": expires_at,
             "id": user.id,
             "email": user.email,
-            "name": user.name,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
             "role": user.role,
             "profile_image_url": user.profile_image_url,
             "permissions": user_permissions,
@@ -427,7 +435,7 @@ async def complete_invite(request: Request, response: Response, form_data: Compl
 
         Auths.insert_auth_for_existing_user(user.id, user.email, hashed_password)
 
-        Users.complete_invite_by_id(user.id, form_data.first_name + " " + form_data.last_name)
+        Users.complete_invite_by_id(user.id, form_data.first_name, form_data.last_name)
 
     except Exception as err:
         raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
@@ -479,7 +487,8 @@ async def complete_invite(request: Request, response: Response, form_data: Compl
         "expires_at": expires_at,
         "id": user.id,
         "email": user.email,
-        "name": user.name,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
         "role": user.role,
         "profile_image_url": user.profile_image_url,
         "permissions": user_permissions,
@@ -542,6 +551,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             form_data.email.lower(),
             hashed,
             form_data.name,
+            form_data.name,
             company_id,
             form_data.profile_image_url,
             role,
@@ -595,7 +605,8 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 "expires_at": expires_at,
                 "id": user.id,
                 "email": user.email,
-                "name": user.name,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
                 "role": user.role,
                 "profile_image_url": user.profile_image_url,
                 "permissions": user_permissions,
