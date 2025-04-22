@@ -259,7 +259,6 @@
 			knowledgeCutoff = formatted;
 		}
 	}
-	$: console.log(selectedModel, 'selected model')
 </script>
 
 <DropdownMenu.Root

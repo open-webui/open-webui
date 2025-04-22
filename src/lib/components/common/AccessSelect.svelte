@@ -92,7 +92,6 @@
 	let submenuY = 0;
 	let groupTriggerEl: HTMLElement;
 
-	$: console.log(groups);
 </script>
 
 <div>

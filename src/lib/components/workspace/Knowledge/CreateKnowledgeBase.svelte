@@ -43,7 +43,6 @@
 	}
 
 	const uploadFileHandler = async (file) => {
-		console.log(file);
 
 		const tempItemId = uuidv4();
 		const fileItem = {
@@ -71,7 +70,6 @@
 			});
 
 			if (res) {
-				console.log(res);
 				const blob = new Blob([res.text], { type: 'text/plain' });
 				file = blobToFile(blob, `${file.name}.txt`);
 			}
@@ -84,7 +82,6 @@
 			});
 
 			if (uploadedFile) {
-				console.log(uploadedFile);
 				if (uploadedFile?.id) {
 					files = [...files, uploadedFile];
 				}
