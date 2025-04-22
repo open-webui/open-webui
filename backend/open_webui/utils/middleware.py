@@ -517,6 +517,7 @@ async def chat_completion_files_handler(
 ) -> tuple[dict, dict[str, list]]:
     sources = []
 
+
     if files := body.get("metadata", {}).get("files", None):
         try:
             queries_response = await generate_queries(
@@ -553,9 +554,10 @@ async def chat_completion_files_handler(
             # Offload get_sources_from_files to a separate thread
             loop = asyncio.get_running_loop()
             # Retrieve per-model custom top-k if available
-            rag_top_k = metadata["model"]["params"].get('rag_top_k') \
-            if metadata["model"]["params"].get('rag_top_k') \
-            else request.app.state.config.TOP_K
+            rag_top_k = (
+                metadata.get("model", {}).get("params", {}).get("rag_top_k")
+                or request.app.state.config.TOP_K
+            )
             with ThreadPoolExecutor() as executor:
                 sources = await loop.run_in_executor(
                     executor,
@@ -616,7 +618,6 @@ def apply_params_to_form_data(form_data, model):
 
 
 async def process_chat_payload(request, form_data, metadata, user, model):
-
     form_data = apply_params_to_form_data(form_data, model)
     log.debug(f"form_data: {form_data}")
 
@@ -636,7 +637,6 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         "__request__": request,
         "__model__": model,
     }
-
     # Initialize events to store additional event to be sent to the client
     # Initialize contexts and citation
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
@@ -698,7 +698,6 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         form_data["files"] = files
 
     variables = form_data.pop("variables", None)
-
     # Process the form_data through the pipeline
     try:
         form_data = await process_pipeline_inlet_filter(
@@ -717,7 +716,7 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         )
     except Exception as e:
         raise Exception(f"Error: {e}")
-
+    
     features = form_data.pop("features", None)
     if features:
         if "web_search" in features and features["web_search"]:
@@ -819,9 +818,10 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             )
         
         # Apply Per Model RAG Template if applicable
-        custom_rag_template = metadata["model"]["params"].get('rag_template') \
-        if metadata["model"]["params"].get('rag_template') \
-        else request.app.state.config.RAG_TEMPLATE
+        custom_rag_template = (
+            metadata.get("model", {}).get("params", {}).get("rag_template")
+            or request.app.state.config.RAG_TEMPLATE
+        )
 
         # Workaround for Ollama 2.0+ system prompt issue
         # TODO: replace with add_or_update_system_message

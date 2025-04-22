@@ -6,6 +6,7 @@ from typing import Optional, Union
 
 import asyncio
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from huggingface_hub import snapshot_download
 from langchain.retrievers import ContextualCompressionRetriever, EnsembleRetriever
@@ -233,36 +234,70 @@ def get_all_items_from_collections(collection_names: list[str]) -> dict:
     return merge_get_results(results)
 
 
+
 def query_collection(
     collection_names: list[str],
     queries: list[str],
     embedding_function,
     k: int,
+    max_workers: int = 8,
 ) -> dict:
     results = []
-    for query in queries:
-        query_embedding = embedding_function(query)
-        for collection_name in collection_names:
-            if collection_name:
-                try:
-                    result = query_doc(
-                        collection_name=collection_name,
-                        k=k,
-                        query_embedding=query_embedding,
-                    )
-                    if result is not None:
-                        results.append(result.model_dump())
-                except Exception as e:
-                    log.exception(f"Error when querying the collection: {e}")
-            else:
-                pass
 
+    # 1) 임베딩 병렬 처리
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # 쿼리별 임베딩 future 생성
+        embed_futures = {
+            executor.submit(embedding_function, query): (q_idx, query)
+            for q_idx, query in enumerate(queries)
+        }
+
+        embeddings: list[tuple[int, any]] = [None] * len(queries)
+        for fut in as_completed(embed_futures):
+            q_idx, query = embed_futures[fut]
+            try:
+                emb = fut.result()
+                embeddings[q_idx] = (q_idx, emb)
+            except Exception as e:
+                log.exception(f"임베딩 생성 에러 (쿼리 {q_idx}): {e}")
+
+        # 2) 컬렉션 검색 병렬 처리
+        def retrieve_job(q_idx, query_emb, c_idx, coll_name):
+            try:
+                res = query_doc(
+                    collection_name=coll_name,
+                    k=k,
+                    query_embedding=query_emb,
+                )
+                if res:
+                    return res.model_dump()
+            except Exception as e:
+                log.exception(f"[쿼리 {q_idx+1} | {coll_name}] 검색 에러: {e}")
+            return None
+
+        retrieve_futures = []
+        for q_idx, emb in embeddings:
+            if emb is None:
+                continue
+            for c_idx, coll in enumerate(collection_names):
+                if not coll:
+                    continue
+                retrieve_futures.append(
+                    executor.submit(retrieve_job, q_idx, emb, c_idx, coll)
+                )
+
+        for fut in as_completed(retrieve_futures):
+            r = fut.result()
+            if r is not None:
+                results.append(r)
+
+    # 3) 결과 병합 및 정렬
     if VECTOR_DB == "chroma":
-        # Chroma uses unconventional cosine similarity, so we don't need to reverse the results
-        # https://docs.trychroma.com/docs/collections/configure#configuring-chroma-collections
-        return merge_and_sort_query_results(results, k=k, reverse=False)
+        merged = merge_and_sort_query_results(results, k=k, reverse=False)
     else:
-        return merge_and_sort_query_results(results, k=k, reverse=True)
+        merged = merge_and_sort_query_results(results, k=k, reverse=True)
+
+    return merged
 
 
 def query_collection_with_hybrid_search(
@@ -453,7 +488,6 @@ def get_sources_from_files(
                     sources.append(source)
         except Exception as e:
             log.exception(e)
-
     return sources
 
 
