@@ -23,6 +23,8 @@ from pydantic import BaseModel
 from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user
 from open_webui.utils.access_control import get_permissions, has_permission
 
+from open_webui.utils.access_control import get_permissions
+from open_webui.models.permissions import Permissions
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -86,7 +88,7 @@ async def get_user_groups(user=Depends(get_verified_user)):
 @router.get("/permissions")
 async def get_user_permissisions(request: Request, user=Depends(get_verified_user)):
     user_permissions = get_permissions(
-        user.id, request.app.state.config.USER_PERMISSIONS
+        user.id, Permissions.get_permissions_by_category()
     )
 
     return user_permissions
@@ -138,25 +140,13 @@ class UserPermissions(BaseModel):
     chat: ChatPermissions
     features: FeaturesPermissions
 
-
+# TODO: Fix the response model.
 @router.get("/default/permissions", response_model=UserPermissions)
 async def get_default_user_permissions(request: Request, user=Depends(get_admin_user)):
-    return {
-        "workspace": WorkspacePermissions(
-            **request.app.state.config.USER_PERMISSIONS.get("workspace", {})
-        ),
-        "sharing": SharingPermissions(
-            **request.app.state.config.USER_PERMISSIONS.get("sharing", {})
-        ),
-        "chat": ChatPermissions(
-            **request.app.state.config.USER_PERMISSIONS.get("chat", {})
-        ),
-        "features": FeaturesPermissions(
-            **request.app.state.config.USER_PERMISSIONS.get("features", {})
-        ),
-    }
+    return Permissions.get_permissions_by_category()
 
-
+# TODO: Change to use database.
+# TODO: Get config.USER_PERMISSIONS merged into database permissions.
 @router.post("/default/permissions")
 async def update_default_user_permissions(
     request: Request, form_data: UserPermissions, user=Depends(get_admin_user)
