@@ -3,6 +3,7 @@ import { type Writable, writable } from 'svelte/store';
 import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
+import { get } from 'svelte/store';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
 
@@ -234,3 +235,14 @@ type SessionUser = {
 	role: string;
 	profile_image_url: string;
 };
+
+export function handleApiUnauthorized() {
+  const currentUser = get(user);
+  if (currentUser) {
+    console.warn('handleApiUnauthorized: Triggering session expired modal due to 401.');
+    user.set(undefined);
+    sessionExpired.set(true);
+  } else {
+    console.log('handleApiUnauthorized: 401 detected, but user store was already empty.');
+  }
+}
