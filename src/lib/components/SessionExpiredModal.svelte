@@ -16,7 +16,7 @@
     sessionExpired.set(false);
   }
 
-  function triggerReLogin() { // RENAMED for clarity
+  function triggerReLogin() {
     sessionExpired.set(false);
     localStorage.removeItem('token'); // Remove the (likely invalid) token
     const currentUrl = `${$page.url.pathname}${$page.url.search}`;
