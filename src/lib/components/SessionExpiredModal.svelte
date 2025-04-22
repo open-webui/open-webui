@@ -18,7 +18,7 @@
 
   function triggerReLogin() {
     sessionExpired.set(false);
-    localStorage.removeItem('token'); // Remove the (likely invalid) token
+    localStorage.removeItem('token');
     const currentUrl = `${$page.url.pathname}${$page.url.search}`;
     const encodedUrl = encodeURIComponent(currentUrl);
     goto(`/auth?redirect=${encodedUrl}`, { replaceState: true });
