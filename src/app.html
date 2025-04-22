@@ -7,7 +7,7 @@
 		<link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
 		<meta name="apple-mobile-web-app-title" content="Albert" />
 		<link rel="manifest" href="/favicon/manifest.webmanifest" />
-		
+
 		<meta
 			name="viewport"
 			content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
@@ -99,6 +99,10 @@
 		<link rel="stylesheet" href="/utility/utility.min.css" />
 
 		<title>Albert</title>
+
+		<!-- Script en version es6 module et nomodule pour les navigateurs le ne supportant pas -->
+		<script type="module" src="/dsfr.module.min.js"></script>
+		<script type="text/javascript" nomodule src="/dsfr.nomodule.min.js"></script>
 
 		%sveltekit.head%
 	</head>
@@ -248,5 +252,11 @@
 
 	.animate-pulse-fast {
 		animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	}
+
+	.hide-external::after {
+		content: none;
+		display: none; /* This line is ignored by browsers for pseudo-elements */
+		visibility: hidden;
 	}
 </style>
