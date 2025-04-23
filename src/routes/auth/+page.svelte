@@ -139,6 +139,7 @@
 	}
 
 	onMount(async () => {
+		console.log("Welcome to mcv")
 		if ($user !== undefined) {
 			const redirectPath = querystringValue('redirect') || '/';
 			goto(redirectPath);
