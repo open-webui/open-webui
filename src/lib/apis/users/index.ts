@@ -1,6 +1,6 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { getUserPosition } from '$lib/utils';
-import { handleApiUnauthorized } from '$lib/stores'; // ADDED IMPORT
+import { handleApiUnauthorized } from '$lib/utils/auth'; // Assuming location
 
 export const getUserGroups = async (token: string) => {
     let error = null;
@@ -12,26 +12,21 @@ export const getUserGroups = async (token: string) => {
             Authorization: `Bearer ${token}`
         }
     })
-        .then(async (response) => { // Renamed param
-            if (!response.ok) {
-                if (response.status === 401) { // ADDED CHECK
-                    handleApiUnauthorized();
-                    const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                    throw errorBody;
-                }
-                throw await response.json();
-            }
-            return response.json();
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
         })
         .catch((err) => {
-            console.error(`Error fetching user groups:`, err); // Keep console for debugging
-            error = err.detail ?? 'Failed to fetch user groups';
+            console.log(err);
+            error = err.detail;
             return null;
         });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -45,26 +40,21 @@ export const getUserDefaultPermissions = async (token: string) => {
             Authorization: `Bearer ${token}`
         }
     })
-        .then(async (response) => { // Renamed param
-            if (!response.ok) {
-                if (response.status === 401) { // ADDED CHECK
-                    handleApiUnauthorized();
-                    const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                    throw errorBody;
-                }
-                throw await response.json();
-            }
-            return response.json();
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
         })
         .catch((err) => {
-            console.error(`Error fetching user default permissions:`, err);
-            error = err.detail ?? 'Failed to fetch user default permissions';
+            console.log(err);
+            error = err.detail;
             return null;
         });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -81,26 +71,21 @@ export const updateUserDefaultPermissions = async (token: string, permissions: o
             ...permissions
         })
     })
-        .then(async (response) => { // Renamed param
-            if (!response.ok) {
-                if (response.status === 401) { // ADDED CHECK
-                    handleApiUnauthorized();
-                    const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                    throw errorBody;
-                }
-                throw await response.json();
-            }
-            return response.json();
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
         })
         .catch((err) => {
-            console.error(`Error updating user default permissions:`, err);
-            error = err.detail ?? 'Failed to update user default permissions';
+            console.log(err);
+            error = err.detail;
             return null;
         });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -118,92 +103,74 @@ export const updateUserRole = async (token: string, id: string, role: string) =>
             role: role
         })
     })
-        .then(async (response) => { // Renamed param
-            if (!response.ok) {
-                if (response.status === 401) { // ADDED CHECK
-                    handleApiUnauthorized();
-                    const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                    throw errorBody;
-                }
-                throw await response.json();
-            }
-            return response.json();
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
         })
         .catch((err) => {
-            console.error(`Error updating user role:`, err);
-            error = err.detail ?? 'Failed to update user role';
+            console.log(err);
+            error = err.detail;
             return null;
         });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
 export const getUsers = async (token: string) => {
     let error = null;
 
-    const res = await fetch(`${WEBUI_API_BASE_URL}/users/`, { // Assuming API path is `/users/`
+    const res = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
         }
     })
-        .then(async (response) => { // Renamed param
-            if (!response.ok) {
-                if (response.status === 401) { // ADDED CHECK
-                    handleApiUnauthorized();
-                    const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                    throw errorBody;
-                }
-                throw await response.json();
-            }
-            return response.json();
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
         })
         .catch((err) => {
-            console.error(`Error fetching users:`, err);
-            error = err.detail ?? 'Failed to fetch users';
+            console.log(err);
+            error = err.detail;
             return null;
         });
 
-    if (error && res === null) {
-        // Allow returning empty array on error based on original logic `res ? res : []`
-        return [];
+    if (error) {
+        throw error;
     }
-    // Original logic: return empty array if res is null or undefined
+
     return res ? res : [];
 };
 
 export const getUserSettings = async (token: string) => {
     let error = null;
-    const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/settings`, { // Corrected path based on logs
+    const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/settings`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
         }
     })
-        .then(async (response) => { // Renamed param
-            if (!response.ok) {
-                if (response.status === 401) { // ADDED CHECK
-                    handleApiUnauthorized();
-                    const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                    throw errorBody;
-                }
-                throw await response.json();
-            }
-            return response.json();
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
         })
         .catch((err) => {
-            console.error(`Error fetching user settings:`, err);
-            error = err.detail ?? 'Failed to fetch user settings';
+            console.log(err);
+            error = err.detail;
             return null;
         });
 
-    if (error && res === null) {
-        throw error; // Re-throw error if fetch failed and res is null
+    if (error) {
+        throw error;
     }
 
     return res;
@@ -212,7 +179,7 @@ export const getUserSettings = async (token: string) => {
 export const updateUserSettings = async (token: string, settings: object) => {
     let error = null;
 
-    const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/settings/update`, { // Corrected path
+    const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/settings/update`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -222,98 +189,83 @@ export const updateUserSettings = async (token: string, settings: object) => {
             ...settings
         })
     })
-        .then(async (response) => { // Renamed param
-            if (!response.ok) {
-                if (response.status === 401) { // ADDED CHECK
-                    handleApiUnauthorized();
-                    const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                    throw errorBody;
-                }
-                throw await response.json();
-            }
-            return response.json();
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
         })
         .catch((err) => {
-            console.error(`Error updating user settings:`, err);
-            error = err.detail ?? 'Failed to update user settings';
+            console.log(err);
+            error = err.detail;
             return null;
         });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
 export const getUserById = async (token: string, userId: string) => {
     let error = null;
 
-    const res = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}`, { // Corrected path
+    const res = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
         }
     })
-        .then(async (response) => { // Renamed param
-            if (!response.ok) {
-                if (response.status === 401) { // ADDED CHECK
-                    handleApiUnauthorized();
-                    const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                    throw errorBody;
-                }
-                throw await response.json();
-            }
-            return response.json();
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
         })
         .catch((err) => {
-            console.error(`Error fetching user by ID:`, err);
-            error = err.detail ?? 'Failed to fetch user by ID';
+            console.log(err);
+            error = err.detail;
             return null;
         });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
 export const getUserInfo = async (token: string) => {
     let error = null;
-    const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/info`, { // Corrected path
+    const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/info`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
         }
     })
-        .then(async (response) => { // Renamed param
-            if (!response.ok) {
-                if (response.status === 401) { // ADDED CHECK
-                    handleApiUnauthorized();
-                    const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                    throw errorBody;
-                }
-                throw await response.json();
-            }
-            return response.json();
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
         })
         .catch((err) => {
-            console.error(`Error fetching user info:`, err);
-            error = err.detail ?? 'Failed to fetch user info';
+            console.log(err);
+            error = err.detail;
             return null;
         });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
 export const updateUserInfo = async (token: string, info: object) => {
     let error = null;
 
-    const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/info/update`, { // Corrected path
+    const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/info/update`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -323,30 +275,25 @@ export const updateUserInfo = async (token: string, info: object) => {
             ...info
         })
     })
-        .then(async (response) => { // Renamed param
-            if (!response.ok) {
-                if (response.status === 401) { // ADDED CHECK
-                    handleApiUnauthorized();
-                    const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                    throw errorBody;
-                }
-                throw await response.json();
-            }
-            return response.json();
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
         })
         .catch((err) => {
-            console.error(`Error updating user info:`, err);
-            error = err.detail ?? 'Failed to update user info';
+            console.log(err);
+            error = err.detail;
             return null;
         });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
-// getAndUpdateUserLocation indirectly calls updateUserInfo which is now handled
+// No direct fetch call here that needs the check; it calls updateUserInfo which has the check.
 export const getAndUpdateUserLocation = async (token: string) => {
     const location = await getUserPosition().catch((err) => {
         console.log(err);
@@ -354,7 +301,7 @@ export const getAndUpdateUserLocation = async (token: string) => {
     });
 
     if (location) {
-        // updateUserInfo will handle its own potential 401
+        // updateUserInfo already handles potential 401
         await updateUserInfo(token, { location: location });
         return location;
     } else {
@@ -366,85 +313,68 @@ export const getAndUpdateUserLocation = async (token: string) => {
 export const deleteUserById = async (token: string, userId: string) => {
     let error = null;
 
-    const res = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}`, { // Corrected path
+    const res = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
         }
     })
-        .then(async (response) => { // Renamed param
-            if (!response.ok) {
-                if (response.status === 401) { // ADDED CHECK
-                    handleApiUnauthorized();
-                    const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                    throw errorBody;
-                }
-                throw await response.json();
-            }
-            return response.json();
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
         })
         .catch((err) => {
-            console.error(`Error deleting user by ID:`, err);
-            error = err.detail ?? 'Failed to delete user';
+            console.log(err);
+            error = err.detail;
             return null;
         });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
-// Define the type if not already defined somewhere accessible
 type UserUpdateForm = {
     profile_image_url: string;
     email: string;
     name: string;
-    password?: string; // Make password optional as it might not always be updated
+    password: string;
 };
 
 export const updateUserById = async (token: string, userId: string, user: UserUpdateForm) => {
     let error = null;
 
-    // Construct body, omitting password if empty string
-    const body: Partial<UserUpdateForm> & { password?: string } = {
-            profile_image_url: user.profile_image_url,
-            email: user.email,
-            name: user.name
-    };
-    if (user.password && user.password !== '') {
-        body.password = user.password;
-    }
-
-
-    const res = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}/update`, { // Corrected path
+    const res = await fetch(`${WEBUI_API_BASE_URL}/users/${userId}/update`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify({
+            profile_image_url: user.profile_image_url,
+            email: user.email,
+            name: user.name,
+            password: user.password !== '' ? user.password : undefined
+        })
     })
-        .then(async (response) => { // Renamed param
-            if (!response.ok) {
-                if (response.status === 401) { // ADDED CHECK
-                    handleApiUnauthorized();
-                    const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                    throw errorBody;
-                }
-                throw await response.json();
-            }
-            return response.json();
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
         })
         .catch((err) => {
-            console.error(`Error updating user by ID:`, err);
-            error = err.detail ?? 'Failed to update user';
+            console.log(err);
+            error = err.detail;
             return null;
         });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
