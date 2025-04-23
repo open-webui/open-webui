@@ -1,6 +1,6 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
-import { t } from 'i18next'; // Assuming t is used elsewhere or intended; keeping it.
-import { handleApiUnauthorized } from '$lib/utils/auth'; // Assuming location
+import { t } from 'i18next';
+import { handleApiUnauthorized } from '$lib/stores';
 
 type ChannelForm = {
     name: string;
