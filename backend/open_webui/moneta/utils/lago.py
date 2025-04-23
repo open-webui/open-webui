@@ -33,14 +33,13 @@ def upsert_customer(user_external_id, user_data):
             "pinet_id_token": user_data.get("pinet_id_token_normal"),
             "moneta_id_token": user_data.get("moneta_id_token_normal"),
             "currency": user_data.get("currency", "USD"),  # Default currency if not provided
-            "timezone": user_data.get("timezone", "UTC"),
-            "country": user_data.get("region", "US"),
+            "timezone": user_data.get("timezone", None),
+            "region": user_data.get("region", "US"),
         }
     }
 
     # Remove keys with None values as Lago might not accept them
-    payload["customer"] = {k: v for k, v in payload["customer"].items() if v is not None}
-    import pdb; pdb.set_trace()
+    # payload["customer"] = {k: v for k, v in payload["customer"].items() if v is not None}
 
     try:
         response = requests.post(api_endpoint, headers=headers, json=payload, timeout=10)

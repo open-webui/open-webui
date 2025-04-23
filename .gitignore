@@ -314,3 +314,5 @@ backend/miniconda3*
 
 # Private individual user cursor rules
 .cursor/rules/_*.mdc
+*/vector_db/*
+*/vector_db/.DS_Store

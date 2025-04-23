@@ -59,12 +59,6 @@ async def moneta_webhook(payload: WebhookPayload, request: Request):
     Receives webhook events from OpenWebUI.
     Currently processes 'signup' events for Lago integration.
     """
-    # debugger
-    print("--------------------------------")
-    print("----webhook received----")
-    print(payload)
-    print("--------------------------------")
-    import pdb; pdb.set_trace()
     log.info(f"Received webhook event. Action: {payload.action}, User Email: {payload.user.email}")
 
     if payload.action == "signup":
