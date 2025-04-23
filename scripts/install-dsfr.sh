@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # Copy DSFR files to static
 mkdir -p static/utility

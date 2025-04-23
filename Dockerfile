@@ -29,6 +29,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY scripts ./scripts/
 RUN chmod +x ./scripts/install-dsfr.sh
+# Create a symlink to ensure the script can be found both ways
+RUN ln -sf ./scripts/install-dsfr.sh scripts/install-dsfr.sh
 RUN rm -f package-lock.json && npm install && npm cache clean --force
 
 
