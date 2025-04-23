@@ -6,7 +6,12 @@ from qdrant_client import QdrantClient as Qclient
 from qdrant_client.http.models import PointStruct
 from qdrant_client.models import models
 
-from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
+from open_webui.retrieval.vector.main import (
+    VectorDBBase,
+    VectorItem,
+    SearchResult,
+    GetResult,
+)
 from open_webui.config import (
     QDRANT_URI,
     QDRANT_API_KEY,
@@ -22,7 +27,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-class QdrantClient:
+class QdrantClient(VectorDBBase):
     def __init__(self):
         self.collection_prefix = "open-webui"
         self.QDRANT_URI = QDRANT_URI
