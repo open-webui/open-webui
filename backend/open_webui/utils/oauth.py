@@ -417,9 +417,9 @@ class OAuthManager:
         storefront_payload = {
             "user_id": user.id,
             "name": user_data.get("name"),
-            "region": user_data.get("country"),
+            "region": user_data.get("region", "US"),
             "currency": user_data.get("currency"),
-            "timezone": user_data.get("timezone"),
+            "timezone": user_data.get("timezone", None),
         }
         save_storefront_token_to_cookies(response, storefront_payload, request)
         

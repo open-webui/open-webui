@@ -106,22 +106,8 @@ def save_storefront_token_to_cookies(response, user_data: dict, request):
         print("Warning: STOREFRONT_SECRET is not set. Cannot create storefront cookie.")
         return
 
-    storefront_payload = {
-        # Map keys from your user_data to expected storefront keys
-        "user_id": user_data.get("uid") or user_data.get("id"), # Adapt based on your user model
-        "name": user_data.get("name", "Unknown User"),
-        "region": user_data.get("region", "US"),
-        "currency": user_data.get("currency", "USD"),
-        "timezone": user_data.get("timezone", "America/Los_Angeles"),
-        # Add any other necessary fields
-    }
-
-    # Filter out None values, storefront might not expect nulls
-    storefront_payload = {k: v for k, v in storefront_payload.items() if v is not None}
-
-
     try:
-        storefront_jwe = _encode_jwe(storefront_payload, STOREFRONT_SECRET)
+        storefront_jwe = _encode_jwe(user_data, STOREFRONT_SECRET)
     except ValueError as e:
         print(f"Error encoding JWE token: {e}")
         # Handle error appropriately, maybe log it
