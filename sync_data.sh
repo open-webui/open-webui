@@ -2,7 +2,7 @@
 
 # 서버 정보
 SERVER_USER="mergefeat"
-SERVER_IP="192.168.35.42"
+SERVER_IP="211.243.34.108"
 SSH_PORT="2222"
 # 대상 이미지 이름
 TARGET_IMAGE="ghcr.io/open-webui/open-webui:main"
