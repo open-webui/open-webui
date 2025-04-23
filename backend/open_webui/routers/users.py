@@ -24,7 +24,7 @@ from open_webui.utils.auth import get_admin_user, get_password_hash, get_verifie
 from open_webui.utils.access_control import get_permissions, has_permission
 
 from open_webui.utils.access_control import get_permissions
-from open_webui.models.permissions import Permissions
+from open_webui.models.permissions import Permissions, PermissionCategory, PermissionModel
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -141,17 +141,17 @@ class UserPermissions(BaseModel):
     features: FeaturesPermissions
 
 # TODO: Fix the response model.
-@router.get("/default/permissions", response_model=UserPermissions)
+@router.get("/default/permissions", response_model=dict[PermissionCategory, dict[str, bool]])
 async def get_default_user_permissions(request: Request, user=Depends(get_admin_user)):
     return Permissions.get_permissions_by_category()
 
 # TODO: Change to use database.
 @router.post("/default/permissions")
 async def update_default_user_permissions(
-    request: Request, form_data: UserPermissions, user=Depends(get_admin_user)
+    request: Request, form_data: PermissionModel, user=Depends(get_admin_user)
 ):
-    request.app.state.config.USER_PERMISSIONS = form_data.model_dump()
-    return request.app.state.config.USER_PERMISSIONS
+
+    return Permissions.new_permission(form_data.model_dump())
 
 
 ############################
