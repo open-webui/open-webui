@@ -184,3 +184,126 @@ export const getDailyTokens = async (token: string, domain?: string): Promise<nu
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
 };
+
+export const getHistoricalUsers = async (
+	token: string,
+	days: number = 7,
+	domain?: string
+): Promise<any[]> => {
+	try {
+		// Build URL with proper domain handling
+		let url = `${WEBUI_API_BASE_URL}/metrics/historical/users?days=${days}`;
+
+		// Only add domain parameter if it's not null or undefined
+		if (domain !== null && domain !== undefined) {
+			url += `&domain=${encodeURIComponent(domain)}`;
+		}
+
+		const res = await fetch(url, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			if (res.status === 404) {
+				return generateFallbackDates(days);
+			}
+			const error = await res.json();
+			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get historical users'}`);
+		}
+		const data = await res.json();
+		return data.historical_users || [];
+	} catch (err) {
+		console.error('Error fetching historical users:', err);
+		return generateFallbackDates(days);
+	}
+};
+
+export const getHistoricalPrompts = async (
+	token: string,
+	days: number = 7,
+	domain?: string
+): Promise<any[]> => {
+	try {
+		// Build URL with proper domain handling
+		let url = `${WEBUI_API_BASE_URL}/metrics/historical/prompts?days=${days}`;
+
+		// Only add domain parameter if it's not null or undefined
+		if (domain !== null && domain !== undefined) {
+			url += `&domain=${encodeURIComponent(domain)}`;
+		}
+
+		const res = await fetch(url, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			if (res.status === 404) {
+				return generateFallbackDates(days);
+			}
+			const error = await res.json();
+			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get historical prompts'}`);
+		}
+		const data = await res.json();
+		return data.historical_prompts || [];
+	} catch (err) {
+		console.error('Error fetching historical prompts:', err);
+		return generateFallbackDates(days);
+	}
+};
+
+export const getHistoricalTokens = async (
+	token: string,
+	days: number = 7,
+	domain?: string
+): Promise<any[]> => {
+	try {
+		// Build URL with proper domain handling
+		let url = `${WEBUI_API_BASE_URL}/metrics/historical/tokens?days=${days}`;
+
+		// Only add domain parameter if it's not null or undefined
+		if (domain !== null && domain !== undefined) {
+			url += `&domain=${encodeURIComponent(domain)}`;
+		}
+
+		const res = await fetch(url, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			if (res.status === 404) {
+				return generateFallbackDates(days);
+			}
+			const error = await res.json();
+			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get historical tokens'}`);
+		}
+		const data = await res.json();
+		return data.historical_tokens || [];
+	} catch (err) {
+		console.error('Error fetching historical tokens:', err);
+		return generateFallbackDates(days);
+	}
+};
+
+// Helper to generate fallback dates when API fails
+function generateFallbackDates(days: number = 7): Array<{ date: string; count: number }> {
+	return Array.from({ length: days }, (_, i) => {
+		const date = new Date();
+		date.setDate(date.getDate() - (days - 1) + i);
+		return {
+			date: date.toISOString().split('T')[0],
+			count: 0
+		};
+	});
+}

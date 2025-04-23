@@ -157,3 +157,75 @@ async def get_daily_tokens(domain: str = None, user=Depends(get_verified_user)):
         else MessageMetrics.get_daily_message_tokens_sum()
     )
     return {"total_daily_tokens": total_daily_tokens}
+
+
+############################
+# GetHistoricalUsers
+############################
+
+
+@router.get("/historical/users")
+async def get_historical_users(
+    days: int = 7, domain: str = None, user=Depends(get_verified_user)
+):
+    if not user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    # Handle both None and empty string for domain
+    if domain == "":
+        domain = None
+
+    historical_data = Users.get_historical_users_data(days, domain)
+
+    return {"historical_users": historical_data}
+
+
+############################
+# GetHistoricalPrompts
+############################
+
+
+@router.get("/historical/prompts")
+async def get_historical_prompts(
+    days: int = 7, domain: str = None, user=Depends(get_verified_user)
+):
+    if not user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    # Handle both None and empty string for domain
+    if domain == "":
+        domain = None
+
+    historical_data = MessageMetrics.get_historical_messages_data(days, domain)
+
+    return {"historical_prompts": historical_data}
+
+
+############################
+# GetHistoricalTokens
+############################
+
+
+@router.get("/historical/tokens")
+async def get_historical_tokens(
+    days: int = 7, domain: str = None, user=Depends(get_verified_user)
+):
+    if not user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    # Handle both None and empty string for domain
+    if domain == "":
+        domain = None
+
+    historical_data = MessageMetrics.get_historical_tokens_data(days, domain)
+
+    return {"historical_tokens": historical_data}

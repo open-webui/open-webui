@@ -1,17 +1,43 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
-	// import Chart from 'chart.js/auto';
+	import { getContext, onMount, onDestroy } from 'svelte';
+	import { Chart } from 'chart.js';
+	import {
+		CategoryScale,
+		LinearScale,
+		PointElement,
+		LineElement,
+		LineController,
+		Title,
+		Tooltip,
+		Legend
+	} from 'chart.js';
 	import {
 		getDailyPrompts,
 		getDailyTokens,
 		getDailyUsers,
 		getDomains,
+		getHistoricalPrompts,
+		getHistoricalTokens,
+		getHistoricalUsers,
 		getTotalPrompts,
 		getTotalTokens,
 		getTotalUsers
 	} from '$lib/apis/metrics';
 
+	// Register the Chart.js components
+	Chart.register(
+		CategoryScale,
+		LinearScale,
+		PointElement,
+		LineElement,
+		LineController,
+		Title,
+		Tooltip,
+		Legend
+	);
+
 	const i18n = getContext('i18n');
+	let unsubscribe: () => void;
 
 	let domains: string[] = [];
 	let totalUsers: number = 0,
@@ -21,77 +47,261 @@
 		dailyPrompts: number = 0,
 		dailyTokens: number = 0;
 	let selectedDomain: string | null = null; // Allow null for "no domain"
-	// let dailyActiveUsersChart, dailyPromptsChart, dailyTokensChart;
 
-	// let dailyActiveUsersData = {}; // Replace with actual data
-	// let dailyPromptsData = {}; // Replace with actual data
-	// let dailyTokensData = {}; // Replace with actual data
+	// Chart objects
+	let dailyActiveUsersChart: any, dailyPromptsChart: any, dailyTokensChart: any;
+
+	// Chart data
+	let dailyActiveUsersData: any[] = [];
+	let dailyPromptsData: any[] = [];
+	let dailyTokensData: any[] = [];
+
+	// For chart options
+	const chartOptions = {
+		responsive: true,
+		maintainAspectRatio: false,
+		plugins: {
+			legend: {
+				display: true,
+				labels: {
+					color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937'
+				},
+				onClick: null, // Disable the default click behavior
+				onHover: null // Also disable hover state changes
+			},
+			tooltip: {
+				mode: 'index',
+				intersect: false
+			}
+		},
+		scales: {
+			x: {
+				ticks: {
+					color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937'
+				},
+				grid: {
+					color: document.documentElement.classList.contains('dark')
+						? 'rgba(255, 255, 255, 0.1)'
+						: 'rgba(0, 0, 0, 0.1)'
+				}
+			},
+			y: {
+				beginAtZero: true,
+				ticks: {
+					color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937'
+				},
+				grid: {
+					color: document.documentElement.classList.contains('dark')
+						? 'rgba(255, 255, 255, 0.1)'
+						: 'rgba(0, 0, 0, 0.1)'
+				}
+			}
+		}
+	};
 
 	async function updateCharts(selectedDomain: string | null) {
-		let updatedDomains = selectedDomain ?? undefined;
-		totalUsers = await getTotalUsers(localStorage.token, updatedDomains);
-		totalPrompts = await getTotalPrompts(localStorage.token, updatedDomains);
-		dailyUsers = await getDailyUsers(localStorage.token, updatedDomains);
-		totalTokens = await getTotalTokens(localStorage.token, updatedDomains);
-		dailyPrompts = await getDailyPrompts(localStorage.token, updatedDomains);
-		dailyTokens = await getDailyTokens(localStorage.token, updatedDomains);
-		// dailyActiveUsersData = await getDailyActiveUsersData(localStorage.token, updatedDomains);
-		// dailyPromptsData = await getDailyPromptsData(localStorage.token, updatedDomains);
-		// dailyTokensData = await getdailyTokensData(localStorage.token, updatedDomains);
+		try {
+			let updatedDomains = selectedDomain ?? undefined;
+
+			// Reset all data to ensure no stale values
+			totalUsers = 0;
+			totalPrompts = 0;
+			totalTokens = 0;
+			dailyUsers = 0;
+			dailyPrompts = 0;
+			dailyTokens = 0;
+
+			// Fetch simple metrics
+			try {
+				totalUsers = await getTotalUsers(localStorage.token, updatedDomains);
+				totalPrompts = await getTotalPrompts(localStorage.token, updatedDomains);
+				dailyUsers = await getDailyUsers(localStorage.token, updatedDomains);
+				totalTokens = await getTotalTokens(localStorage.token, updatedDomains);
+				dailyPrompts = await getDailyPrompts(localStorage.token, updatedDomains);
+				dailyTokens = await getDailyTokens(localStorage.token, updatedDomains);
+			} catch (metricsError) {
+				console.error('Error fetching basic metrics:', metricsError);
+			}
+
+			// Set default empty data
+			const datesArray = Array.from({ length: 7 }, (_, i) => {
+				const date = new Date();
+				date.setDate(date.getDate() - (6 - i));
+				return date.toISOString().split('T')[0];
+			});
+
+			// Set default empty data
+			dailyActiveUsersData = datesArray.map((date) => ({ date, count: 0 }));
+			dailyPromptsData = datesArray.map((date) => ({ date, count: 0 }));
+			dailyTokensData = datesArray.map((date) => ({ date, count: 0 }));
+
+			try {
+				// Try to fetch historical data, but the API client will provide fallbacks if needed
+				dailyActiveUsersData = await getHistoricalUsers(localStorage.token, 7, updatedDomains);
+				dailyPromptsData = await getHistoricalPrompts(localStorage.token, 7, updatedDomains);
+				dailyTokensData = await getHistoricalTokens(localStorage.token, 7, updatedDomains);
+			} catch (histError) {
+				console.error('Error fetching historical data:', histError);
+				// Fallback data is already set above
+			}
+
+			// Reinitialize charts completely rather than updating
+			initializeCharts();
+		} catch (error) {
+			console.error('Error updating charts:', error);
+		}
+	}
+
+	// Ensure charts are properly initialized after data is loaded
+	function initializeCharts() {
+		// Initialize charts
+		const isDarkMode = document.documentElement.classList.contains('dark');
+		const lineColor = isDarkMode ? '#e5e7eb' : '#1f2937';
+
+		// Initialize User Chart
+		const ctx1 = document.getElementById('dailyActiveUsersChart')?.getContext('2d');
+		if (ctx1) {
+			// Always destroy existing chart before creating a new one
+			if (dailyActiveUsersChart) {
+				dailyActiveUsersChart.destroy();
+			}
+
+			dailyActiveUsersChart = new Chart(ctx1, {
+				type: 'line',
+				data: {
+					labels: dailyActiveUsersData.map((item) => item.date),
+					datasets: [
+						{
+							label: $i18n.t('Daily Active Users'),
+							data: dailyActiveUsersData.map((item) => item.count),
+							borderColor: 'rgb(59, 130, 246)',
+							backgroundColor: 'rgba(59, 130, 246, 0.2)',
+							borderWidth: 2,
+							pointBackgroundColor: 'rgb(59, 130, 246)',
+							pointBorderColor: '#fff',
+							pointHoverBackgroundColor: '#fff',
+							pointHoverBorderColor: 'rgb(59, 130, 246)',
+							tension: 0.1
+						}
+					]
+				},
+				options: chartOptions
+			});
+		}
+
+		// Initialize Prompts Chart
+		const ctx2 = document.getElementById('dailyPromptsChart')?.getContext('2d');
+		if (ctx2) {
+			// Always destroy existing chart before creating a new one
+			if (dailyPromptsChart) {
+				dailyPromptsChart.destroy();
+			}
+
+			dailyPromptsChart = new Chart(ctx2, {
+				type: 'line',
+				data: {
+					labels: dailyPromptsData.map((item) => item.date),
+					datasets: [
+						{
+							label: $i18n.t('Daily Prompts'),
+							data: dailyPromptsData.map((item) => item.count),
+							borderColor: 'rgb(34, 197, 94)',
+							backgroundColor: 'rgba(34, 197, 94, 0.2)',
+							borderWidth: 2,
+							pointBackgroundColor: 'rgb(34, 197, 94)',
+							pointBorderColor: '#fff',
+							pointHoverBackgroundColor: '#fff',
+							pointHoverBorderColor: 'rgb(34, 197, 94)',
+							tension: 0.1
+						}
+					]
+				},
+				options: chartOptions
+			});
+		}
+
+		// Initialize Tokens Chart
+		const ctx3 = document.getElementById('dailyTokensChart')?.getContext('2d');
+		if (ctx3) {
+			// Always destroy existing chart before creating a new one
+			if (dailyTokensChart) {
+				dailyTokensChart.destroy();
+			}
+
+			dailyTokensChart = new Chart(ctx3, {
+				type: 'line',
+				data: {
+					labels: dailyTokensData.map((item) => item.date),
+					datasets: [
+						{
+							label: $i18n.t('Daily Tokens'),
+							data: dailyTokensData.map((item) => item.count),
+							borderColor: 'rgb(239, 68, 68)',
+							backgroundColor: 'rgba(239, 68, 68, 0.2)',
+							borderWidth: 2,
+							pointBackgroundColor: 'rgb(239, 68, 68)',
+							pointBorderColor: '#fff',
+							pointHoverBackgroundColor: '#fff',
+							pointHoverBorderColor: 'rgb(239, 68, 68)',
+							tension: 0.1
+						}
+					]
+				},
+				options: chartOptions
+			});
+		}
+	}
+
+	// Function to update chart labels when language changes
+	function updateChartLabels() {
+		if (dailyActiveUsersChart) {
+			dailyActiveUsersChart.data.datasets[0].label = $i18n.t('Daily Active Users');
+			dailyActiveUsersChart.update();
+		}
+
+		if (dailyPromptsChart) {
+			dailyPromptsChart.data.datasets[0].label = $i18n.t('Daily Prompts');
+			dailyPromptsChart.update();
+		}
+
+		if (dailyTokensChart) {
+			dailyTokensChart.data.datasets[0].label = $i18n.t('Daily Tokens');
+			dailyTokensChart.update();
+		}
 	}
 
 	onMount(async () => {
-		domains = await getDomains(localStorage.token);
-		updateCharts(selectedDomain);
+		try {
+			// Subscribe to language changes
+			unsubscribe = i18n.subscribe(() => {
+				updateChartLabels();
+			});
 
-		// 	const ctx1 = document.getElementById('dailyActiveUsersChart').getContext('2d');
-		// 	dailyActiveUsersChart = new Chart(ctx1, {
-		// 		type: 'line',
-		// 		data: {
-		// 			labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'], // Updated to 7 days
-		// 			datasets: [
-		// 				{
-		// 					label: 'Daily Active Users',
-		// 					data: dailyActiveUsersData[selectedDomain] || [],
-		// 					borderColor: 'blue',
-		// 					borderWidth: 1
-		// 				}
-		// 			]
-		// 		}
-		// 	});
-
-		// 	const ctx2 = document.getElementById('dailyPromptsChart').getContext('2d');
-		// 	dailyPromptsChart = new Chart(ctx2, {
-		// 		type: 'line',
-		// 		data: {
-		// 			labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'], // Updated to 7 days
-		// 			datasets: [
-		// 				{
-		// 					label: 'Daily Prompts Sent',
-		// 					data: dailyPromptsData[selectedDomain] || [],
-		// 					borderColor: 'green',
-		// 					borderWidth: 1
-		// 				}
-		// 			]
-		// 		}
-		// 	});
-
-		// 	const ctx3 = document.getElementById('dailyTokensChart').getContext('2d');
-		// 	dailyTokensChart = new Chart(ctx3, {
-		// 		type: 'line',
-		// 		data: {
-		// 			labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'], // Updated to 7 days
-		// 			datasets: [
-		// 				{
-		// 					label: 'Daily Costs',
-		// 					data: dailyTokensData[selectedDomain] || [],
-		// 					borderColor: 'red',
-		// 					borderWidth: 1
-		// 				}
-		// 			]
-		// 		}
-		// 	});
+			domains = await getDomains(localStorage.token);
+			await updateCharts(selectedDomain);
+		} catch (error) {
+			console.error('Error initializing charts:', error);
+		}
 	});
+
+	onDestroy(() => {
+		// Clean up subscription when component is destroyed
+		if (unsubscribe) {
+			unsubscribe();
+		}
+
+		// Clean up charts
+		if (dailyActiveUsersChart) dailyActiveUsersChart.destroy();
+		if (dailyPromptsChart) dailyPromptsChart.destroy();
+		if (dailyTokensChart) dailyTokensChart.destroy();
+	});
+
+	// Update domain change handler to simplify
+	function handleDomainChange(event) {
+		const newDomain = event.target.value || null;
+		selectedDomain = newDomain;
+		updateCharts(newDomain);
+	}
 </script>
 
 <div class="container mx-auto p-6">
@@ -108,7 +318,7 @@
 			<select
 				id="domain-select"
 				bind:value={selectedDomain}
-				on:change={(event) => updateCharts(event.target.value || null)}
+				on:change={handleDomainChange}
 				class="block w-48 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
 			>
 				<option value={null}>{$i18n.t('All')}</option>
@@ -163,29 +373,32 @@
 		</div>
 	</div>
 
-	<!-- <hr class="border-gray-400 dark:border-gray-600 my-8" />
+	<hr class="border-gray-400 dark:border-gray-600 my-8" />
 
 	<div class="space-y-8">
 		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
 			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-				Daily Active Users
-				<span class="text-sm font-medium text-green-600 dark:text-green-400 ml-2">+5%</span>
+				{$i18n.t('Daily Active Users')}
 			</h5>
-			<canvas id="dailyActiveUsersChart" height="50"></canvas>
+			<div class="h-64">
+				<canvas id="dailyActiveUsersChart"></canvas>
+			</div>
 		</div>
 		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
 			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-				Daily Prompts Sent
-				<span class="text-sm font-medium text-red-600 dark:text-red-400 ml-2">-3%</span>
+				{$i18n.t('Daily Prompts Sent')}
 			</h5>
-			<canvas id="dailyPromptsChart" height="50"></canvas>
+			<div class="h-64">
+				<canvas id="dailyPromptsChart"></canvas>
+			</div>
 		</div>
 		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
 			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-				Daily Tokens Used
-				<span class="text-sm font-medium text-green-600 dark:text-green-400 ml-2">+2%</span>
+				{$i18n.t('Daily Tokens Used')}
 			</h5>
-			<canvas id="dailyTokensChart" height="50"></canvas>
+			<div class="h-64">
+				<canvas id="dailyTokensChart"></canvas>
+			</div>
 		</div>
-	</div> -->
+	</div>
 </div>
