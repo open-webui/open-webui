@@ -29,6 +29,12 @@
 	import Wrench from '$lib/components/icons/Wrench.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
 	import ManageModelsModal from './Models/ManageModelsModal.svelte';
+	import ModelMenu from '$lib/components/admin/Settings/Models/ModelMenu.svelte';
+	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
+	import Eye from '$lib/components/icons/Eye.svelte';
+
+	let shiftKey = false;
 
 	let importFiles;
 	let modelsImportInputElement: HTMLInputElement;
@@ -102,7 +108,15 @@
 				toast.success($i18n.t('Model updated successfully'));
 			}
 		} else {
-			const res = await createNewModel(localStorage.token, model).catch((error) => {
+			const res = await createNewModel(localStorage.token, {
+				meta: {},
+				id: model.id,
+				name: model.name,
+				base_model_id: null,
+				params: {},
+				access_control: {},
+				...model
+			}).catch((error) => {
 				return null;
 			});
 
@@ -146,8 +160,62 @@
 		);
 	};
 
+	const hideModelHandler = async (model) => {
+		model.meta = {
+			...model.meta,
+			hidden: !(model?.meta?.hidden ?? false)
+		};
+
+		console.log(model);
+
+		toast.success(
+			model.meta.hidden
+				? $i18n.t(`Model {{name}} is now hidden`, {
+						name: model.id
+					})
+				: $i18n.t(`Model {{name}} is now visible`, {
+						name: model.id
+					})
+		);
+
+		upsertModelHandler(model);
+	};
+
+	const exportModelHandler = async (model) => {
+		let blob = new Blob([JSON.stringify([model])], {
+			type: 'application/json'
+		});
+		saveAs(blob, `${model.id}-${Date.now()}.json`);
+	};
+
 	onMount(async () => {
-		init();
+		await init();
+
+		const onKeyDown = (event) => {
+			if (event.key === 'Shift') {
+				shiftKey = true;
+			}
+		};
+
+		const onKeyUp = (event) => {
+			if (event.key === 'Shift') {
+				shiftKey = false;
+			}
+		};
+
+		const onBlur = () => {
+			shiftKey = false;
+		};
+
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
+		window.addEventListener('blur-sm', onBlur);
+
+		return () => {
+			window.removeEventListener('keydown', onKeyDown);
+			window.removeEventListener('keyup', onKeyUp);
+			window.removeEventListener('blur-sm', onBlur);
+		};
 	});
 </script>
 
@@ -211,7 +279,10 @@
 			{#if models.length > 0}
 				{#each filteredModels as model, modelIdx (model.id)}
 					<div
-						class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-lg transition"
+						class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-lg transition {model
+							?.meta?.hidden
+							? 'opacity-50 dark:opacity-50'
+							: ''}"
 						id="model-item-{model.id}"
 					>
 						<button
@@ -261,41 +332,78 @@
 							</div>
 						</button>
 						<div class="flex flex-row gap-0.5 items-center self-center">
-							<button
-								class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-								type="button"
-								on:click={() => {
-									selectedModelId = model.id;
-								}}
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke-width="1.5"
-									stroke="currentColor"
-									class="w-4 h-4"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
-									/>
-								</svg>
-							</button>
-
-							<div class="ml-1">
-								<Tooltip
-									content={(model?.is_active ?? true) ? $i18n.t('Enabled') : $i18n.t('Disabled')}
-								>
-									<Switch
-										bind:state={model.is_active}
-										on:change={async () => {
-											toggleModelHandler(model);
+							{#if shiftKey}
+								<Tooltip content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}>
+									<button
+										class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										type="button"
+										on:click={() => {
+											hideModelHandler(model);
 										}}
-									/>
+									>
+										{#if model?.meta?.hidden}
+											<EyeSlash />
+										{:else}
+											<Eye />
+										{/if}
+									</button>
 								</Tooltip>
-							</div>
+							{:else}
+								<button
+									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+									type="button"
+									on:click={() => {
+										selectedModelId = model.id;
+									}}
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+										class="w-4 h-4"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
+										/>
+									</svg>
+								</button>
+
+								<ModelMenu
+									user={$user}
+									{model}
+									exportHandler={() => {
+										exportModelHandler(model);
+									}}
+									hideHandler={() => {
+										hideModelHandler(model);
+									}}
+									onClose={() => {}}
+								>
+									<button
+										class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										type="button"
+									>
+										<EllipsisHorizontal className="size-5" />
+									</button>
+								</ModelMenu>
+
+								<div class="ml-1">
+									<Tooltip
+										content={(model?.is_active ?? true) ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+									>
+										<Switch
+											bind:state={model.is_active}
+											on:change={async () => {
+												toggleModelHandler(model);
+											}}
+										/>
+									</Tooltip>
+								</div>
+							{/if}
 						</div>
 					</div>
 				{/each}

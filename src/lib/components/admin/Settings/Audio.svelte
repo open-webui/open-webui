@@ -39,6 +39,9 @@
 	let STT_ENGINE = '';
 	let STT_MODEL = '';
 	let STT_WHISPER_MODEL = '';
+	let STT_AZURE_API_KEY = '';
+	let STT_AZURE_REGION = '';
+	let STT_AZURE_LOCALES = '';
 	let STT_DEEPGRAM_API_KEY = '';
 
 	let STT_WHISPER_MODEL_LOADING = false;
@@ -108,7 +111,10 @@
 				ENGINE: STT_ENGINE,
 				MODEL: STT_MODEL,
 				WHISPER_MODEL: STT_WHISPER_MODEL,
-				DEEPGRAM_API_KEY: STT_DEEPGRAM_API_KEY
+				DEEPGRAM_API_KEY: STT_DEEPGRAM_API_KEY,
+				AZURE_API_KEY: STT_AZURE_API_KEY,
+				AZURE_REGION: STT_AZURE_REGION,
+				AZURE_LOCALES: STT_AZURE_LOCALES
 			}
 		});
 
@@ -148,6 +154,9 @@
 			STT_ENGINE = res.stt.ENGINE;
 			STT_MODEL = res.stt.MODEL;
 			STT_WHISPER_MODEL = res.stt.WHISPER_MODEL;
+			STT_AZURE_API_KEY = res.stt.AZURE_API_KEY;
+			STT_AZURE_REGION = res.stt.AZURE_REGION;
+			STT_AZURE_LOCALES = res.stt.AZURE_LOCALES;
 			STT_DEEPGRAM_API_KEY = res.stt.DEEPGRAM_API_KEY;
 		}
 
@@ -180,6 +189,7 @@
 							<option value="openai">OpenAI</option>
 							<option value="web">{$i18n.t('Web API')}</option>
 							<option value="deepgram">Deepgram</option>
+							<option value="azure">Azure AI Speech</option>
 						</select>
 					</div>
 				</div>
@@ -246,6 +256,37 @@
 							>
 								{$i18n.t('Click here to see available models.')}
 							</a>
+						</div>
+					</div>
+				{:else if STT_ENGINE === 'azure'}
+					<div>
+						<div class="mt-1 flex gap-2 mb-1">
+							<SensitiveInput
+								placeholder={$i18n.t('API Key')}
+								bind:value={STT_AZURE_API_KEY}
+								required
+							/>
+							<input
+								class="flex-1 w-full rounded-lg py-2 pl-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+								placeholder={$i18n.t('Azure Region')}
+								bind:value={STT_AZURE_REGION}
+								required
+							/>
+						</div>
+
+						<hr class="border-gray-100 dark:border-gray-850 my-2" />
+
+						<div>
+							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Language Locales')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={STT_AZURE_LOCALES}
+										placeholder={$i18n.t('e.g., en-US,ja-JP (leave blank for auto-detect)')}
+									/>
+								</div>
+							</div>
 						</div>
 					</div>
 				{:else if STT_ENGINE === ''}
@@ -427,8 +468,7 @@
 										<option
 											value={voice.voiceURI}
 											class="bg-gray-100 dark:bg-gray-700"
-											selected={TTS_VOICE === voice.voiceURI}
-											>{voice.name.replace('+', ', ')}</option
+											selected={TTS_VOICE === voice.voiceURI}>{voice.name}</option
 										>
 									{/each}
 								</select>

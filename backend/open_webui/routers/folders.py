@@ -20,11 +20,13 @@ from open_webui.env import SRC_LOG_LEVELS
 from open_webui.constants import ERROR_MESSAGES
 
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Request
 from fastapi.responses import FileResponse, StreamingResponse
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_permission
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -228,7 +230,19 @@ async def update_folder_is_expanded_by_id(
 
 
 @router.delete("/{id}")
-async def delete_folder_by_id(id: str, user=Depends(get_verified_user)):
+async def delete_folder_by_id(
+    request: Request, id: str, user=Depends(get_verified_user)
+):
+    chat_delete_permission = has_permission(
+        user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
+    )
+
+    if user.role != "admin" and not chat_delete_permission:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     folder = Folders.get_folder_by_id_and_user_id(id, user.id)
     if folder:
         try:

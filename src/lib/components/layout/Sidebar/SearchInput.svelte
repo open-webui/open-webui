@@ -3,12 +3,14 @@
 	import { tags } from '$lib/stores';
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 	import { fade } from 'svelte/transition';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 
 	export let placeholder = '';
 	export let value = '';
+	export let showClearButton = false;
 
 	let selectedIdx = 0;
 
@@ -59,6 +61,11 @@
 		loading = false;
 	};
 
+	const clearSearchInput = () => {
+		value = '';
+		dispatch('input');
+	};
+
 	const documentClickHandler = (e) => {
 		const searchContainer = document.getElementById('search-container');
 		const chatSearch = document.getElementById('chat-search');
@@ -98,7 +105,7 @@
 		</div>
 
 		<input
-			class="w-full rounded-r-xl py-1.5 pl-2.5 pr-4 text-sm bg-transparent dark:text-gray-300 outline-hidden"
+			class="w-full rounded-r-xl py-1.5 pl-2.5 text-sm bg-transparent dark:text-gray-300 outline-hidden"
 			placeholder={placeholder ? placeholder : $i18n.t('Search')}
 			bind:value
 			on:input={() => {
@@ -140,12 +147,23 @@
 				}
 			}}
 		/>
+
+		{#if showClearButton && value}
+			<div class="self-center pr-2 pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+				<button
+					class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+					on:click={clearSearchInput}
+				>
+					<XMark className="size-3" strokeWidth="2" />
+				</button>
+			</div>
+		{/if}
 	</div>
 
 	{#if focused && (filteredOptions.length > 0 || filteredTags.length > 0)}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
-			class="absolute top-0 mt-8 left-0 right-1 border dark:border-gray-900 bg-gray-50 dark:bg-gray-950 rounded-lg z-10 shadow-lg"
+			class="absolute top-0 mt-8 left-0 right-1 border border-gray-100 dark:border-gray-900 bg-gray-50 dark:bg-gray-950 rounded-lg z-10 shadow-lg"
 			in:fade={{ duration: 50 }}
 			on:mouseenter={() => {
 				selectedIdx = null;
