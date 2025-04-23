@@ -34,14 +34,17 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse, Response
 from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
 from pydantic import BaseModel
+
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.auth import (
+    decode_token,
     create_api_key,
     create_token,
     get_admin_user,
     get_verified_user,
     get_current_user,
     get_password_hash,
+    get_http_authorization_cred,
 )
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions
@@ -73,31 +76,13 @@ class SessionUserResponse(Token, UserResponse):
 async def get_session_user(
     request: Request, response: Response, user=Depends(get_current_user)
 ):
-    expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
-    expires_at = None
-    if expires_delta:
-        expires_at = int(time.time()) + int(expires_delta.total_seconds())
 
-    token = create_token(
-        data={"id": user.id},
-        expires_delta=expires_delta,
-    )
+    auth_header = request.headers.get("Authorization")
+    auth_token = get_http_authorization_cred(auth_header)
+    token = auth_token.credentials
 
-    datetime_expires_at = (
-        datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
-        if expires_at
-        else None
-    )
-
-    # Set the cookie token
-    response.set_cookie(
-        key="token",
-        value=token,
-        expires=datetime_expires_at,
-        httponly=True,  # Ensures the cookie is not accessible via JavaScript
-        samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-        secure=WEBUI_AUTH_COOKIE_SECURE,
-    )
+    data = decode_token(token)
+    expires_at = data.get("exp")
 
     user_permissions = get_permissions(
         user.id, request.app.state.config.USER_PERMISSIONS
@@ -289,11 +274,14 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             user = Auths.authenticate_user_by_trusted_header(email)
 
             if user:
+                expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+                expires_at = None
+                if expires_delta:
+                    expires_at = int(time.time()) + int(expires_delta.total_seconds())
+
                 token = create_token(
                     data={"id": user.id},
-                    expires_delta=parse_duration(
-                        request.app.state.config.JWT_EXPIRES_IN
-                    ),
+                    expires_delta=expires_delta,
                 )
 
                 # Set the cookie token
@@ -301,6 +289,8 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     key="token",
                     value=token,
                     httponly=True,  # Ensures the cookie is not accessible via JavaScript
+                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                    secure=WEBUI_AUTH_COOKIE_SECURE,
                 )
 
                 user_permissions = get_permissions(
@@ -310,6 +300,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 return {
                     "token": token,
                     "token_type": "Bearer",
+                    "expires_at": expires_at,
                     "id": user.id,
                     "email": user.email,
                     "name": user.name,
