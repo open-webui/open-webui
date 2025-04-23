@@ -477,7 +477,7 @@
 	data-state={$showSidebar}
 >
 	<div
-		class="py-2 my-auto flex flex-col justify-between h-[95vh] w-[285px] overflow-x-hidden z-50 {$showSidebar
+		class="py-2 my-auto flex flex-col justify-between h-[95vh] w-[285px] overflow-x-hidden z-50 gap-2 {$showSidebar
 			? ''
 			: 'invisible'}"
 	>
@@ -535,10 +535,9 @@
 			</div>
 		{/if}
 		<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
-			<a
+			<button
 				id="sidebar-new-chat-button"
 				class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
-				href="/"
 				draggable="false"
 				on:click={async (e) => {
 					e.preventDefault();
@@ -561,7 +560,7 @@
 				<div class="flex self-center">
 					<div class="self-center font-medium text-sm font-primary">{$i18n.t('New Chat')}</div>
 				</div>
-			</a>
+			</button>
 		</div>
 
 		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">

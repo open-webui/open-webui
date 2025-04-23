@@ -2,20 +2,12 @@
 <html lang="fr">
 	<head>
 		<meta charset="utf-8" />
-		<link rel="icon" type="image/png" href="/static/favicon.png" />
-		<!-- <link
-			rel="icon"
-			type="image/svg+xml"
-			href="../node_modules/@gouvfr/dsfr/dist/favicon/favicon.svg"
-		/> -->
-		<link rel="shortcut icon" href="../node_modules/@gouvfr/dsfr/dist/favicon/favicon.ico" />
-		<link
-			rel="apple-touch-icon"
-			sizes="180x180"
-			href="../node_modules/@gouvfr/dsfr/dist/favicon/apple-touch-icon.png"
-		/>
+		<link rel="icon" type="image/png" href="/favicon/favicon.png" />
+		<link rel="shortcut icon" href="/favicon/favicon.ico" />
+		<link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
 		<meta name="apple-mobile-web-app-title" content="Albert" />
-		<link rel="manifest" href="../node_modules/@gouvfr/dsfr/dist/favicon/manifest.webmanifest" />
+		<link rel="manifest" href="/favicon/manifest.webmanifest" />
+
 		<meta
 			name="viewport"
 			content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
@@ -103,7 +95,21 @@
 			})();
 		</script>
 
+		<link rel="stylesheet" href="/dsfr.min.css" />
+		<link rel="stylesheet" href="/utility/utility.min.css" />
+
 		<title>Albert</title>
+
+		<!-- Script en version es6 module et nomodule pour les navigateurs le ne supportant pas -->
+		<script type="module" src="/dsfr.module.min.js"></script>
+		<script type="text/javascript" nomodule src="/dsfr.nomodule.min.js"></script>
+
+		<style>
+			/* Le DSFR ajoute un underline sur tous les hrefs, ce qui n'est pas désirable dans notre cas*/
+			[href] {
+				background-image: none !important;
+			}
+		</style>
 
 		%sveltekit.head%
 	</head>
@@ -253,5 +259,11 @@
 
 	.animate-pulse-fast {
 		animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	}
+
+	.hide-external::after {
+		content: none;
+		display: none; /* This line is ignored by browsers for pseudo-elements */
+		visibility: hidden;
 	}
 </style>
