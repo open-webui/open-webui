@@ -99,7 +99,8 @@ class SignupForm(BaseModel):
 
 
 class AddUserForm(BaseModel):
-    name: str
+    first_name: str
+    last_name: str
     email: str
     profile_image_url: Optional[str] = "/user.png"
     role: Optional[str] = "pending"
