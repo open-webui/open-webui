@@ -18,14 +18,16 @@
 	let inputFiles;
 
 	let _user = {
-		name: '',
+		first_name: '',
+		last_name: '',
 		email: '',
 		role: 'user'
 	};
 
 	$: if (show) {
 		_user = {
-			name: '',
+			first_name: '',
+			last_name: '',
 			email: '',
 			role: 'user'
 		};
@@ -40,7 +42,7 @@
 		if (tab === '') {
 			loading = true;
 
-			const res = await addUser(localStorage.token, _user.name, _user.email, _user.role).catch(
+			const res = await addUser(localStorage.token, _user.first_name, _user.last_name, _user.email, _user.role).catch(
 				(error) => {
 					toast.error(`${error}`);
 				}
@@ -69,14 +71,15 @@
 
 						if (idx > 0) {
 							if (
-								columns.length === 3 &&
-								['admin', 'user', 'pending'].includes(columns[2].toLowerCase())
+								columns.length === 4 &&
+								['admin', 'user', 'pending'].includes(columns[3].toLowerCase())
 							) {
 								const res = await addUser(
 									localStorage.token,
-									columns[0], // name
-									columns[1], // email
-									columns[2].toLowerCase() // role
+									columns[0], // first name
+									columns[1], // last name
+									columns[2], // email
+									columns[3].toLowerCase() // role
 								).catch((error) => {
 									toast.error(`Row ${idx + 1}: ${error}`);
 									return null;
@@ -187,14 +190,28 @@
 							</div>
 
 							<div class="flex flex-col w-full mt-1">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('First Name')}</div>
 
 								<div class="flex-1">
 									<input
 										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
 										type="text"
-										bind:value={_user.name}
-										placeholder={$i18n.t('Enter Full Name')}
+										bind:value={_user.first_name}
+										placeholder={$i18n.t('Enter First Name')}
+										autocomplete="off"
+										required
+									/>
+								</div>
+							</div>
+							<div class="flex flex-col w-full mt-1">
+								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Last Name')}</div>
+
+								<div class="flex-1">
+									<input
+										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-none"
+										type="text"
+										bind:value={_user.last_name}
+										placeholder={$i18n.t('Enter Last Name')}
 										autocomplete="off"
 										required
 									/>

@@ -325,7 +325,8 @@ export const deleteUserById = async (token: string, userId: string) => {
 type UserUpdateForm = {
 	profile_image_url: string;
 	email: string;
-	name: string;
+	first_name: string;
+	last_name: string;
 	password: string;
 };
 
@@ -341,7 +342,8 @@ export const updateUserById = async (token: string, userId: string, user: UserUp
 		body: JSON.stringify({
 			profile_image_url: user.profile_image_url,
 			email: user.email,
-			name: user.name,
+			first_name: user.first_name,
+			last_name: user.last_name,
 			password: user.password !== '' ? user.password : undefined
 		})
 	})

@@ -357,7 +357,7 @@
 						{#if typingUsers.length > 0}
 							<div class=" text-xs px-4 mb-1">
 								<span class=" font-normal text-black dark:text-white">
-									{typingUsers.map((user) => user.name).join(', ')}
+									{typingUsers.map((user) => `${user.first_name} ${user.last_name}`).join(', ')}
 								</span>
 								{$i18n.t('is typing...')}
 							</div>

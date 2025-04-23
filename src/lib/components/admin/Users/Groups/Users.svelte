@@ -24,7 +24,8 @@
 			}
 
 			return (
-				user.name.toLowerCase().includes(query.toLowerCase()) ||
+				user.first_name.toLowerCase().includes(query.toLowerCase()) ||
+				user.last_name.toLowerCase().includes(query.toLowerCase()) ||
 				user.email.toLowerCase().includes(query.toLowerCase())
 			);
 		})
@@ -102,7 +103,7 @@
 										alt="user"
 									/>
 
-									<div class=" font-medium self-center">{user.name}</div>
+									<div class=" font-medium self-center">{user.first_name} {user.last_name}</div>
 								</div>
 							</Tooltip>
 

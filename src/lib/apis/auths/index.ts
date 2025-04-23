@@ -351,7 +351,8 @@ export const userSignOut = async () => {
 
 export const addUser = async (
 	token: string,
-	name: string,
+	first_name: string,
+	last_name: string,
 	email: string,
 	role: string = 'pending'
 ) => {
@@ -364,7 +365,8 @@ export const addUser = async (
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			name: name,
+			first_name: first_name,
+			last_name: last_name,
 			email: email,
 			role: role
 		})

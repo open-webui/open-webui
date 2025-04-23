@@ -85,7 +85,7 @@
 					{#if models[selectedModelIdx]?.name}
 						{models[selectedModelIdx]?.name}
 					{:else}
-						{$i18n.t('Hello, {{name}}', { name: $user.name })}
+						{$i18n.t('Hello, {{name}}', { name: `${$user.first_name} ${$user.last_name}` })}
 					{/if}
 				</div>
 
@@ -105,12 +105,12 @@
 									<a
 										href="https://openwebui.com/m/{models[selectedModelIdx]?.info?.meta?.user
 											.username}"
-										>{models[selectedModelIdx]?.info?.meta?.user.name
-											? models[selectedModelIdx]?.info?.meta?.user.name
+										>{models[selectedModelIdx]?.info?.meta?.user.first_name
+											? models[selectedModelIdx]?.info?.meta?.user.first_name
 											: `@${models[selectedModelIdx]?.info?.meta?.user.username}`}</a
 									>
 								{:else}
-									{models[selectedModelIdx]?.info?.meta?.user.name}
+									{models[selectedModelIdx]?.info?.meta?.user.first_name}
 								{/if}
 							</div>
 						{/if}
