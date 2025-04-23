@@ -853,7 +853,24 @@
 								{/if}
 
 								{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
-									<Citations id={message?.id} sources={message?.sources ?? message?.citations} />
+									<Citations
+										id={message?.id}
+										sources={message?.sources ?? message?.citations}
+										on:addMessage={(event) => {
+											console.log('--- ON addMessage', event);
+											// Add the rejection message
+											const userMessage = event.detail;
+											addMessages({
+												modelId: message.model,
+												parentId: message.id,
+												messages: [userMessage]
+											});
+
+											// Remove the sources from the current message
+											message.sources = [];
+											saveMessage(message.id, message);
+										}}
+									/>
 								{/if}
 
 								{#if message.code_executions}

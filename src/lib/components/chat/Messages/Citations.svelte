@@ -4,21 +4,52 @@
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
+	import CitationResponse from './CitationResponse.svelte';
+	import type { Writable } from 'svelte/store';
 
-	const i18n = getContext('i18n');
+	interface I18n {
+		t: (key: string) => string;
+	}
+
+	interface Source {
+		source: {
+			name: string;
+			id?: string;
+			url?: string;
+		};
+		document: string[];
+		metadata?: any[];
+		distances?: number[];
+	}
+
+	interface Citation {
+		id: string;
+		source: {
+			name: string;
+			id?: string;
+			url?: string;
+		};
+		document: string[];
+		metadata: any[];
+		distances?: number[];
+	}
+
+	const i18n = getContext<Writable<I18n>>('i18n');
+	const CYBERLINK_TOOLS = ['TOOL:tool_create_cyberlink_post', 'TOOL:tool_create_cyberlinks_post'];
 
 	export let id = '';
-	export let sources = [];
+	export let sources: Source[] = [];
 
-	let citations = [];
+	let citations: Citation[] = [];
+	let cyberlink_tools: Source[] = [];
 	let showPercentage = false;
 	let showRelevance = true;
 
 	let showCitationModal = false;
-	let selectedCitation: any = null;
+	let selectedCitation: Citation | null = null;
 	let isCollapsibleOpen = false;
 
-	function calculateShowRelevance(sources: any[]) {
+	function calculateShowRelevance(sources: Citation[]): boolean {
 		const distances = sources.flatMap((citation) => citation.distances ?? []);
 		const inRange = distances.filter((d) => d !== undefined && d >= -1 && d <= 1).length;
 		const outOfRange = distances.filter((d) => d !== undefined && (d < -1 || d > 1)).length;
@@ -37,14 +68,18 @@
 		return true;
 	}
 
-	function shouldShowPercentage(sources: any[]) {
+	function shouldShowPercentage(sources: Citation[]): boolean {
 		const distances = sources.flatMap((citation) => citation.distances ?? []);
 		return distances.every((d) => d !== undefined && d >= -1 && d <= 1);
 	}
 
 	$: {
-		console.log('sources', sources);
-		citations = sources.reduce((acc, source) => {
+		cyberlink_tools = sources.filter((source) => CYBERLINK_TOOLS.includes(source.source.name));
+		const non_cyberlink_tools = sources.filter(
+			(source) => !CYBERLINK_TOOLS.includes(source.source.name)
+		);
+		console.log('-----sources', cyberlink_tools, non_cyberlink_tools);
+		citations = non_cyberlink_tools.reduce<Citation[]>((acc, source) => {
 			if (Object.keys(source).length === 0) {
 				return acc;
 			}
@@ -70,7 +105,12 @@
 				if (existingSource) {
 					existingSource.document.push(document);
 					existingSource.metadata.push(metadata);
-					if (distance !== undefined) existingSource.distances.push(distance);
+					if (distance !== undefined) {
+						if (!existingSource.distances) {
+							existingSource.distances = [];
+						}
+						existingSource.distances.push(distance);
+					}
 				} else {
 					acc.push({
 						id: id,
@@ -103,7 +143,13 @@
 	{showPercentage}
 	{showRelevance}
 />
-
+{#if cyberlink_tools.length > 0}
+	<div class=" py-0.5 -mx-0.5 w-full flex gap-1 items-center flex-wrap">
+		{#each cyberlink_tools as citation, idx}
+			<CitationResponse {citation} on:addMessage />
+		{/each}
+	</div>
+{/if}
 {#if citations.length > 0}
 	<div class=" py-0.5 -mx-0.5 w-full flex gap-1 items-center flex-wrap">
 		{#if citations.length <= 3}
