@@ -47,7 +47,7 @@
 				data-id={id}
 				class="flex justify-items-center items-center bg-white rounded-md h-20 mx-2 last:m-0 px-6 py-4 cursor-pointer"
 			>
-				<span class="w-full text-sm text-wrap">{ text } →</span>
+				<span class="w-full text-xs text-wrap text-blue-800 font-['OpenSans']">{ text } →</span>
 			</button>
 		{/each}
 		{#each items as { id, text }}
@@ -56,7 +56,7 @@
 				data-id={id}
 				class="flex justify-items-center items-center bg-white rounded-md h-20 mx-2 last:m-0 px-6 py-4 cursor-pointer"
 			>
-				<span class="w-full text-sm text-wrap">{ text } →</span>
+				<span class="w-full text-xs text-wrap text-blue-800 font-['OpenSans']">{ text } →</span>
 			</button>
 		{/each}
 	</div>
