@@ -10,6 +10,9 @@
 	import { getVoices as _getVoices } from '$lib/apis/audio';
 	import ManageModal from './Personalization/ManageModal.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import SystemIcon from '$lib/components/icons/SystemIcon.svelte';
+	import DarkIcon from '$lib/components/icons/DarkIcon.svelte';
+	import LightIcon from '$lib/components/icons/LightIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -421,14 +424,26 @@
 			</div>
 
 			<div class="flex gap-x-2.5">
-				<div on:click={() => themeChangeHandler('system')} class="rounded-lg {selectedTheme === "system" ? "border-2 border-[#305BE4]" : ""}">
-					<img class="rounded-lg max-w-full" src="/system_theme.png" alt="system theme"/>
+				<div on:click={() => themeChangeHandler('system')} class="relative rounded-lg {selectedTheme === "system" ? "border-2 border-[#305BE4]" : ""}">
+					<img class="rounded-lg max-w-full" src="/system.png" alt="system theme"/>
+					<div class="flex items-center pl-2.5 absolute bottom-[0.625rem] text-customGray-550 text-xs">
+						<SystemIcon className="size-3.5 mr-1"/>
+						{$i18n.t('System (Default)')}
+					</div>
 				</div>
-				<div on:click={() => themeChangeHandler('light')}  class="rounded-lg {selectedTheme === "light" ? "border-2 border-[#305BE4]" : ""}">
-					<img class="rounded-lg max-w-full" src="/light_theme.png" alt="light theme"/>
+				<div on:click={() => themeChangeHandler('light')}  class="relative rounded-lg {selectedTheme === "light" ? "border-2 border-[#305BE4]" : ""}">
+					<img class="rounded-lg max-w-full" src="/light.png" alt="light theme"/>
+					<div class="flex items-center pl-2.5 absolute bottom-[0.625rem] text-customGray-550 text-xs">
+						<LightIcon className="size-3.5 mr-1"/>
+						{$i18n.t('Light')}
+					</div>
 				</div>
-				<div on:click={() => themeChangeHandler('dark')} class="rounded-lg {selectedTheme === "dark" ? "border-2 border-[#305BE4]" : ""}">
-					<img class="rounded-lg max-w-full" src="/dark_theme.png" alt="dark theme"/>
+				<div on:click={() => themeChangeHandler('dark')} class="relative rounded-lg {selectedTheme === "dark" ? "border-2 border-[#305BE4]" : ""}">
+					<img class="rounded-lg max-w-full" src="/dark.png" alt="dark theme"/>
+					<div class="flex items-center pl-2.5 absolute bottom-[0.625rem] text-customGray-550 text-xs">
+						<DarkIcon className="size-3.5 mr-1"/>
+						{$i18n.t('Dark')}
+					</div>
 				</div>
 			</div>
 
@@ -502,6 +517,13 @@
 					class="px-2.5 py-2 text-sm {system ? "mt-2" : "mt-0"} w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none"
 					rows="4"
 				/>
+				{#if !system}
+					<span
+						class="absolute top-[1.625rem] w-[18rem] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+					>
+						{$i18n.t('Adding a system prompt shapes LLM responses to better fit specific objectives.')}
+					</span>
+				{/if}
 			</div>
 
 			
