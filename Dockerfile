@@ -28,11 +28,14 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 COPY scripts ./scripts/
+# Create the install-dsfr.sh script directly in the container
+RUN echo '#!/bin/sh\n\n# Copy DSFR files to static\nmkdir -p static/utility\ncp -R \\\n  node_modules/@gouvfr/dsfr/dist/dsfr.min.css \\\n  node_modules/@gouvfr/dsfr/dist/dsfr.module.min.js \\\n  node_modules/@gouvfr/dsfr/dist/dsfr.module.min.js.map \\\n  node_modules/@gouvfr/dsfr/dist/dsfr.nomodule.min.js \\\n  node_modules/@gouvfr/dsfr/dist/dsfr.nomodule.min.js.map \\\n  node_modules/@gouvfr/dsfr/dist/favicon \\\n  node_modules/@gouvfr/dsfr/dist/fonts \\\n  node_modules/@gouvfr/dsfr/dist/icons \\\n  static/\ncp -R \\\n  node_modules/@gouvfr/dsfr/dist/utility/utility.min.css \\\n  static/utility/' > ./scripts/install-dsfr.sh
 RUN chmod +x ./scripts/install-dsfr.sh
-# Create a symlink to ensure the script can be found both ways
-RUN ln -sf ./scripts/install-dsfr.sh scripts/install-dsfr.sh
+# Create static directory in advance
+RUN mkdir -p static/utility
 RUN rm -f package-lock.json && npm install && npm cache clean --force
-
+# Run DSFR install script manually
+RUN sh ./scripts/install-dsfr.sh
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
