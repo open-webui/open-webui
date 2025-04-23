@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>Iframe Session Example</title>
+		<style>
+			iframe {
+				width: 100%;
+				height: 800px;
+				border: none;
+			}
+		</style>
+	</head>
+	<body>
+		<iframe
+            id = "appFrame"
+			src="http://localhost:5173"
+			style="width: 100%; height: 90vh"
+		></iframe>
+
+		<script>
+			console.log('example to connect with iframe');
+			const exampleSession = {
+				id: '216034ec-99dc-483f-bdfe-68add3d9dc7e',
+				email: 'romtham.thang@gmail.com',
+				name: 'romtham.thang@gmail.com',
+				role: 'admin',
+				profile_image_url: '/user.png',
+				token:
+					'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjIxNjAzNGVjLTk5ZGMtNDgzZi1iZGZlLTY4YWRkM2Q5ZGM3ZSJ9.x-OOAuOEX_X_dsvPwCTvLVTbivdbn56DAsfz-KYe3Ko',
+				token_type: 'Bearer',
+				expires_at: null,
+				permissions: {
+					workspace: {
+						models: false,
+						knowledge: false,
+						prompts: false,
+						tools: false
+					},
+					sharing: {
+						public_models: false,
+						public_knowledge: false,
+						public_prompts: false,
+						public_tools: false
+					},
+					chat: {
+						controls: true,
+						file_upload: true,
+						delete: true,
+						edit: true,
+						stt: true,
+						tts: true,
+						call: true,
+						multiple_models: true,
+						temporary: true,
+						temporary_enforced: false
+					},
+					features: {
+						direct_tool_servers: false,
+						web_search: true,
+						image_generation: true,
+						code_interpreter: true
+					}
+				}
+			};
+
+			const encodedSession = encodeURIComponent(JSON.stringify(exampleSession));
+			const iframeUrl = `http://localhost:5173/?session=${encodedSession}`;
+
+			const iframe = document.getElementById('appFrame');
+            const currentUrl = new URL(iframe.src);
+
+            if (!currentUrl.search && currentUrl.pathname === '/') {
+                iframe.src = iframeUrl;
+            }
+
+		</script>
+	</body>
+</html>

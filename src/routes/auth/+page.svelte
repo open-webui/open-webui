@@ -143,6 +143,23 @@
 			const redirectPath = querystringValue('redirect') || '/';
 			goto(redirectPath);
 		}
+		const rawSession = querystringValue('session');
+
+		// console.log("raw session = " , rawSession)
+
+		// console.log("url = " , location.href)
+
+		if (rawSession && $user === undefined) {
+			try {
+				const decoded = decodeURIComponent(rawSession);
+				const sessionUser = JSON.parse(decoded);
+				// console.log("Parsed sessionUser = ", sessionUser);
+				await setSessionUser(sessionUser);
+				return;
+			} catch (err) {
+				// console.error("Failed to decode or parse session", err);
+			}
+		}
 		await checkOauthCallback();
 
 		loaded = true;

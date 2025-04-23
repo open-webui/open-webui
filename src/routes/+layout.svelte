@@ -557,8 +557,16 @@
 				} else {
 					// Don't redirect if we're already on the auth page
 					// Needed because we pass in tokens from OAuth logins via URL fragments
+					const urlParams = new URLSearchParams(window.location.search);
+					const sessionParam = urlParams.get('session');
+					const encodedUrl = encodeURIComponent(currentUrl);
+					let redirect_url = `/auth?redirect=${encodedUrl}`;
+					if (sessionParam) {
+						const sessionData = encodeURIComponent(sessionParam)
+						redirect_url = `/auth?redirect=${encodedUrl}&session=${sessionData}`
+					}
 					if ($page.url.pathname !== '/auth') {
-						await goto(`/auth?redirect=${encodedUrl}`);
+						await goto(redirect_url);
 					}
 				}
 			}
