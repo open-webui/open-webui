@@ -170,7 +170,7 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
         continue_on_failure: bool = True,
         api_key: Optional[str] = None,
         api_url: Optional[str] = None,
-        mode: Literal["crawl", "scrape", "map"] = "crawl",
+        mode: Literal["crawl", "scrape", "map"] = "scrape",
         proxy: Optional[Dict[str, str]] = None,
         params: Optional[Dict] = None,
     ):
