@@ -1,6 +1,6 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { getUserPosition } from '$lib/utils';
-import { handleApiUnauthorized } from '$lib/utils/auth'; // Assuming location
+import { handleApiUnauthorized } from '$lib/stores'; // ADDED IMPORT
 
 export const getUserGroups = async (token: string) => {
     let error = null;
