@@ -10,6 +10,13 @@
 	export let placeholder = '';
 	export let value = '';
 
+	export const focus = () => {
+		inputEl?.focus();
+		focused = true;
+	}
+
+	let inputEl: HTMLInputElement;
+
 	let selectedIdx = 0;
 
 	let lastWord = '';
@@ -97,6 +104,7 @@
 			class="w-full rounded py-1.5 pl-2.5 pr-4 text-sm bg-transparent placeholder:text-blue-800 text-blue-800 hover:bg-gray-200 dark:text-gray-300 outline-none"
 			placeholder={placeholder ? placeholder : $i18n.t('Search')}
 			bind:value
+			bind:this={inputEl}
 			on:input={() => {
 				dispatch('input');
 			}}

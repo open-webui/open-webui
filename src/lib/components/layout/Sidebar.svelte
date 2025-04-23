@@ -78,6 +78,8 @@
 
 	let folders = {};
 
+	let searchInput: SearchInput;
+
 	const initFolders = async () => {
 		const folderList = await getFolders(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
@@ -588,15 +590,18 @@
 			{#if $showSidebar}
 			<SearchInput
 				bind:value={search}
+				bind:this={searchInput}
 				on:input={searchDebounceHandler}
 				placeholder={$i18n.t('Search')}
 			/>
 			{:else}
 			<div class="self-center pl-3 py-2 rounded-l-xl bg-transparent"
-				on:click={() => {
+				on:click={async () => {
 					if(!$showSidebar) {
 						// focus the search input
 						$showSidebar = true;
+						await tick();
+						searchInput?.focus();
 					}
 
 				}}
