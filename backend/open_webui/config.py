@@ -1544,8 +1544,8 @@ PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
 
 
 # Weaviate
-WEAVIATE_HTTP_HOST = os.environ.get("WEAVIATE_HTTP_HOST", "54.226.0.173")
-WEAVIATE_HTTP_PORT = 8080
+WEAVIATE_HTTP_HOST = os.environ.get("WEAVIATE_HTTP_HOST", "localhost")
+WEAVIATE_HTTP_PORT = os.environ.get("WEAVIATE_HTTP_PORT", 8080)
 WEAVIATE_GRPC_HOST = WEAVIATE_HTTP_HOST
 WEAVIATE_GRPC_PORT = 50051
 WEAVIATE_API_KEY = os.environ.get("WEAVIATE_API_KEY", "")
@@ -1585,7 +1585,8 @@ CONTENT_EXTRACTION_ENGINE = PersistentConfig(
 TIKA_SERVER_URL = PersistentConfig(
     "TIKA_SERVER_URL",
     "rag.tika_server_url",
-    os.getenv("TIKA_SERVER_URL", "http://tika:9998"),  # Default for sidecar deployment
+    # Default for sidecar deployment
+    os.getenv("TIKA_SERVER_URL", "http://tika:9998"),
 )
 
 PDFTOTEXT_SERVER_URL = PersistentConfig(

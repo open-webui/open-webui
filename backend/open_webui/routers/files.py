@@ -129,8 +129,8 @@ async def process_tasks(request, background_tasks, form_data, user, task_id):
         task = tasks_cache.get(task_id, {})
 
     task["status"] = "Processing PDF..."
-    text = await process_file_async(request, background_tasks, form_data, task_id, user)
-    task["text"] = text
+    content = process_file_async(request, background_tasks, form_data, task_id, user)
+    task["text"] = content.get('content')
     task["status"] = "Processing Completed"
 
 

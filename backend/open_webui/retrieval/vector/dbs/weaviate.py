@@ -63,7 +63,6 @@ def build_filter(filter_dict, operator="Equal"):
     return filters
 
 
-
 class WeaviateClient:
     def __init__(self):
         self.client = weaviate.connect_to_custom(
@@ -84,9 +83,9 @@ class WeaviateClient:
         and ensuring it starts with 'C' for consistency.
         """
         collection_name = re.sub(r"[^a-zA-Z0-9]", "", collection_name)
-        if not (collection_name.startswith('c') or collection_name.startswith('C')):
-            collection_name = f'c{collection_name}'
-        
+        if not (collection_name.startswith("c") or collection_name.startswith("C")):
+            collection_name = f"c{collection_name}"
+
         return collection_name.capitalize()
 
     def has_collection(self, collection_name: str) -> bool:
@@ -167,7 +166,7 @@ class WeaviateClient:
             {
                 "file_id": item["id"],  # Identificador único
                 "documents": item["text"],  # Conteúdo textual
-                "hash" : item["metadata"]["hash"],
+                "hash": item["metadata"]["hash"],
                 "metadata": item["metadata"],  # Metadados (JSON)
             }
             for item in items
@@ -217,15 +216,14 @@ class WeaviateClient:
         """
         collection_name = self.transform_collection_name(collection_name)
         collection = self.client.collections.get(collection_name)
-        
+
         filter_condition = build_filter(filter)
 
         try:
             if collection:
-                
+
                 results = collection.query.fetch_objects(
-                    filters=filter_condition,
-                    limit=limit  # Número máximo de resultados
+                    filters=filter_condition, limit=limit  # Número máximo de resultados
                 )
                 items = [
                     r for r in results.objects
@@ -273,19 +271,15 @@ class WeaviateClient:
         all_dists = []
 
         # Realiza consulta por similaridade usando o vetor
-        
-        
+
         response = collection.query.near_text(
-            query=query,
-            limit=limit,
-            return_metadata=MetadataQuery(distance=True)
+            query=query, limit=limit, return_metadata=MetadataQuery(distance=True)
         )
-        
-        
+
         # response = collection.query.hybrid(
         #     query=query,
         #     alpha=0.75,
-        #     max_vector_distance=0.4, 
+        #     max_vector_distance=0.4,
         #     return_metadata=MetadataQuery(score=True, explain_score=True),
         #     limit=limit,
         # )
@@ -294,7 +288,6 @@ class WeaviateClient:
         distances = []
         documents = []
         metadatas = []
-
 
         if not response:
             return SearchResult(
@@ -309,9 +302,7 @@ class WeaviateClient:
         docs = [obj.properties.get("documents", "") for obj in items]
         meta = [obj.properties.get("metadata", {}) for obj in items]
         # Supõe que a distância esteja disponível em _additional.distance
-        dists = [
-            obj.metadata.distance for obj in items
-        ]
+        dists = [obj.metadata.distance for obj in items]
         all_ids.append(ids)
         all_docs.append(docs)
         all_meta.append(meta)
@@ -338,10 +329,10 @@ class WeaviateClient:
         all_dists = []
 
         # Performs similarity query using vector
-        
+
         response = collection.query.hybrid(
             query=query,
-            alpha=0.5, 
+            alpha=0.5,
             return_metadata=MetadataQuery(score=True, explain_score=True),
             limit=limit,
         )
@@ -350,7 +341,6 @@ class WeaviateClient:
         distances = []
         documents = []
         metadatas = []
-
 
         if not response:
             return SearchResult(
@@ -365,9 +355,7 @@ class WeaviateClient:
         docs = [obj.properties.get("documents", "") for obj in items]
         meta = [obj.properties.get("metadata", {}) for obj in items]
         # Assumes distance is available in metadata.score
-        dists = [
-            obj.metadata.score for obj in items
-        ]
+        dists = [obj.metadata.score for obj in items]
         all_ids.append(ids)
         all_docs.append(docs)
         all_meta.append(meta)
@@ -385,10 +373,10 @@ class WeaviateClient:
         filter: Optional[dict] = None,
     ):
         """
-        Removes objects from the collection based on a list of ids or using a filter. 
+        Removes objects from the collection based on a list of ids or using a filter.
         If a filter is provided, performs the query to obtain the corresponding ids and deletes them.
         """
-        collection_name = self.transform_collection_name(collection_name)   
+        collection_name = self.transform_collection_name(collection_name)
         collection = self.client.collections.get(collection_name)
 
         if ids:
@@ -403,7 +391,7 @@ class WeaviateClient:
 
     def reset(self):
         """
-        Removes all collections from Weaviate. 
+        Removes all collections from Weaviate.
         CAUTION: This operation deletes ALL data.
         """
 
