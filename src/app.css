@@ -46,6 +46,14 @@ math {
 	@apply rounded-lg;
 }
 
+input::placeholder {
+	direction: auto;
+}
+
+textarea::placeholder {
+	direction: auto;
+}
+
 .input-prose {
 	@apply prose dark:prose-invert prose-headings:font-semibold prose-hr:my-4 prose-hr:border-gray-100 prose-hr:dark:border-gray-800 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
@@ -83,10 +91,6 @@ math {
 	-webkit-app-region: no-drag;
 }
 
-iframe {
-	@apply rounded-lg;
-}
-
 li p {
 	display: inline;
 }
@@ -106,7 +110,7 @@ li p {
 }
 
 ::-webkit-scrollbar {
-	height: 0.4rem;
+	height: 0.8rem;
 	width: 0.4rem;
 }
 
@@ -212,6 +216,28 @@ input::-webkit-inner-spin-button {
 
 input[type='number'] {
 	-moz-appearance: textfield; /* Firefox */
+}
+
+.katex-display {
+	@apply overflow-y-hidden overflow-x-auto max-w-full;
+}
+
+.katex-display::-webkit-scrollbar {
+	height: 0.4rem;
+	width: 0.4rem;
+}
+
+.katex-display:active::-webkit-scrollbar-thumb,
+.katex-display:focus::-webkit-scrollbar-thumb,
+.katex-display:hover::-webkit-scrollbar-thumb {
+	visibility: visible;
+}
+.katex-display::-webkit-scrollbar-thumb {
+	visibility: hidden;
+}
+
+.katex-display::-webkit-scrollbar-corner {
+	display: none;
 }
 
 .cm-editor {

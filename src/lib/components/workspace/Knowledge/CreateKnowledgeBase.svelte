@@ -5,14 +5,14 @@
 
 	import { createNewKnowledge, getKnowledgeBases } from '$lib/apis/knowledge';
 	import { toast } from 'svelte-sonner';
-	import { knowledge } from '$lib/stores';
+	import { knowledge, user } from '$lib/stores';
 	import AccessControl from '../common/AccessControl.svelte';
 
 	let loading = false;
 
 	let name = '';
 	let description = '';
-	let accessControl = null;
+	let accessControl = {};
 
 	const submitHandler = async () => {
 		loading = true;
@@ -112,7 +112,11 @@
 
 		<div class="mt-2">
 			<div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-				<AccessControl bind:accessControl accessRoles={['read', 'write']} />
+				<AccessControl
+					bind:accessControl
+					accessRoles={['read', 'write']}
+					allowPublic={$user?.permissions?.sharing?.public_knowledge || $user?.role === 'admin'}
+				/>
 			</div>
 		</div>
 
