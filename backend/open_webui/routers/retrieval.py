@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Union
 import asyncio
+import re
 
 from fastapi import (
     Depends,
@@ -35,9 +36,8 @@ from langchain_core.documents import Document
 from open_webui.models.files import FileModel, Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
-
-
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.config import VECTOR_DB
 
 # Document loaders
 from open_webui.retrieval.loaders.main import Loader
@@ -103,7 +103,6 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 #
 ##########################################
 
-
 def get_ef(
     engine: str,
     embedding_model: str,
@@ -156,7 +155,6 @@ def get_rf(
                 log.error("CrossEncoder error")
                 raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
     return rf
-
 
 ##########################################
 #
@@ -830,36 +828,47 @@ def save_docs_to_vector_db(
                 return True
 
         log.info(f"adding to collection {collection_name}")
-        embedding_function = get_embedding_function(
-            request.app.state.config.RAG_EMBEDDING_ENGINE,
-            request.app.state.config.RAG_EMBEDDING_MODEL,
-            request.app.state.ef,
-            (
-                request.app.state.config.RAG_OPENAI_API_BASE_URL
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                else request.app.state.config.RAG_OLLAMA_BASE_URL
-            ),
-            (
-                request.app.state.config.RAG_OPENAI_API_KEY
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                else request.app.state.config.RAG_OLLAMA_API_KEY
-            ),
-            request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-        )
+        
+        if VECTOR_DB != 'weaviate':
+            embedding_function = get_embedding_function(
+                request.app.state.config.RAG_EMBEDDING_ENGINE,
+                request.app.state.config.RAG_EMBEDDING_MODEL,
+                request.app.state.ef,
+                (
+                    request.app.state.config.RAG_OPENAI_API_BASE_URL
+                    if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                    else request.app.state.config.RAG_OLLAMA_BASE_URL
+                ),
+                (
+                    request.app.state.config.RAG_OPENAI_API_KEY
+                    if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                    else request.app.state.config.RAG_OLLAMA_API_KEY
+                ),
+                request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+            )
 
-        embeddings = embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts)), user=user
-        )
+            embeddings = embedding_function(
+                list(map(lambda x: x.replace("\n", " "), texts)), user=user
+            )
 
-        items = [
-            {
-                "id": str(uuid.uuid4()),
-                "text": text,
-                "vector": embeddings[idx],
-                "metadata": metadatas[idx],
-            }
-            for idx, text in enumerate(texts)
-        ]
+            items = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "text": text,
+                    "vector": embeddings[idx],
+                    "metadata": metadatas[idx],
+                }
+                for idx, text in enumerate(texts)
+            ]
+        else:
+            items = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "text": text,
+                    "metadata": metadatas[idx],
+                }
+                for idx, text in enumerate(texts)
+            ]
 
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
@@ -917,9 +926,14 @@ def process_file(
             # Check if the file has already been processed and save the content
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
-            result = VECTOR_DB_CLIENT.query(
-                collection_name=f"file-{file.id}", filter={"file_id": file.id}
-            )
+            if VECTOR_DB_CLIENT == 'weaviate':
+                result = VECTOR_DB_CLIENT.query(
+                    collection_name=f"file-{file.id}", filter={"file_id": file.id}
+                )
+            else:
+                result = VECTOR_DB_CLIENT.query(
+                    collection_name=f"file-{file.id}", filter={"file_id": file.id}
+                )
 
             if result is not None and len(result.ids[0]) > 0:
                 docs = [
@@ -947,7 +961,6 @@ def process_file(
         else:
             # Process the file and save the content
             # Usage: /files/
-            is_pdf2text = engine == "pdftotext" and file.meta.get("content_type") == "application/pdf"
             file_path = file.path
             if file_path:
                 file_path = Storage.get_file(file_path)
@@ -1042,12 +1055,13 @@ def process_file(
                 detail=str(e),
             )
 
+
 @router.post("/process/file_async")
 def process_file_async(
     request: Request,
     background_tasks: BackgroundTasks,
     form_data: ProcessFileForm,
-    task_id : str,
+    task_id: str,
     user=Depends(get_verified_user),
 ):
     try:
@@ -1055,7 +1069,9 @@ def process_file_async(
 
         collection_name = form_data.collection_name
         engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE
-        is_pdf2text = engine == "pdftotext" and file.meta.get("content_type") == "application/pdf"
+        is_pdf2text = (
+            engine == "pdftotext" and file.meta.get("content_type") == "application/pdf"
+        )
 
         if collection_name is None:
             collection_name = f"file-{file.id}"
@@ -1063,6 +1079,7 @@ def process_file_async(
         # Process the file and save the content
         # Usage: /files/
         file_path = file.path
+        text_content = ""
         if file_path:
             file_path = Storage.get_file(file_path)
             loader = Loader(
@@ -1073,19 +1090,26 @@ def process_file_async(
                 MAXPAGES_PDFTOTEXT=request.app.state.config.MAXPAGES_PDFTOTEXT,
             )
             if is_pdf2text:
-                task_id = loader.load(file.filename, file.meta.get("content_type"), file_path, isasync=True)
+                task_id = loader.load(
+                    file.filename,
+                    file.meta.get("content_type"),
+                    file_path,
+                    isasync=True,
+                )
 
                 text_content = loader.loader.get_text(task_id)
 
-                docs = [Document(
-                    page_content=text_content,
-                    metadata={
-                        "name": file.filename,
-                        "created_by": file.user_id,
-                        "file_id": file.id,
-                        "source": file.filename,
-                    },
-                )]
+                docs = [
+                    Document(
+                        page_content=text_content,
+                        metadata={
+                            "name": file.filename,
+                            "created_by": file.user_id,
+                            "file_id": file.id,
+                            "source": file.filename,
+                        },
+                    )
+                ]
 
                 log.info(f"OCR Task {task_id} created successfully.")
 
@@ -1122,7 +1146,6 @@ def process_file_async(
 
         if not is_pdf2text:
             text_content = " ".join([doc.page_content for doc in docs])
-
 
         Files.update_file_data_by_id(
             file.id,
@@ -1163,7 +1186,6 @@ def process_file_async(
         except Exception as e:
             raise e
 
-
     except Exception as e:
         log.exception(e)
         if "No pandoc was found" in str(e):
@@ -1176,6 +1198,7 @@ def process_file_async(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e),
             )
+
 
 class ProcessTextForm(BaseModel):
     name: str

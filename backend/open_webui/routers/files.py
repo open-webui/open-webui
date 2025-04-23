@@ -6,7 +6,16 @@ from pathlib import Path
 from typing import Optional, Dict
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status, BackgroundTasks, Form
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+    status,
+    BackgroundTasks,
+)
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
@@ -16,7 +25,11 @@ from open_webui.models.files import (
     FileModelResponse,
     Files,
 )
-from open_webui.routers.retrieval import ProcessFileForm, process_file, process_file_async
+from open_webui.routers.retrieval import (
+    ProcessFileForm,
+    process_file,
+    process_file_async,
+)
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
@@ -35,11 +48,9 @@ from threading import Lock
 import asyncio
 
 
-
 @router.post("/", response_model=FileModelResponse)
 def upload_file(
-    request: Request,
-    file: UploadFile = File(...),
+    request: Request, file: UploadFile = File(...), 
     user=Depends(get_verified_user),
     file_metadata: dict = {},
 ):
@@ -99,6 +110,7 @@ def upload_file(
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
 
+
 ############################
 # Async Files routes
 ############################
@@ -117,11 +129,10 @@ def process_tasks(request, background_tasks, form_data, user, task_id):
     with cache_lock:
         task = tasks_cache.get(task_id, {})
 
-    task['status'] = "Processing PDF..."
-    text = process_file_async(request, background_tasks, form_data, task_id, user)
-    task['text'] = text
-    task['status'] = "Processing Completed"
-
+    task["status"] = "Processing PDF..."
+    content = process_file_async(request, background_tasks, form_data, task_id, user)
+    task["text"] = content.get('content')
+    task["status"] = "Processing Completed"
 
 
 @router.post("/async")
@@ -129,8 +140,7 @@ async def upload_file_async(
     request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    file_metadata: Optional[str] = Form(""),
-    user=Depends(get_verified_user)
+    user=Depends(get_verified_user),
 ):
     global tasks_cache
     log.info(f"file.content_type: {file.content_type}")
@@ -142,43 +152,39 @@ async def upload_file_async(
         if file_metadata:
             file_metadata = json.loads(file_metadata) 
 
-        # replace filename with uuid
-        task_id = str(uuid.uuid4())
-        with cache_lock:
-            tasks_cache[task_id] = {
-                "status": "queued",
-                "result": None,
-                "error": None
-            }
-        name = filename
-        filename = f"{id}_{filename}"
-        contents, file_path = Storage.upload_file(file.file, filename)
+    # replace filename with uuid
+    task_id = str(uuid.uuid4())
+    with cache_lock:
+        tasks_cache[task_id] = {"status": "queued", "result": None, "error": None}
+    name = filename
+    filename = f"{id}_{filename}"
+    contents, file_path = Storage.upload_file(file.file, filename)
 
-        _ = Files.insert_new_file(
-            user.id,
-            FileForm(
-                **{
-                    "id": task_id,
-                    "filename": name,
-                    "path": file_path,
-                    "meta": {
-                        "name": name,
-                        "content_type": file.content_type,
-                        "size": len(contents),
-                        "data": file_metadata,
-                    },
-                }
-            ),
-        )
-        background_tasks.add_task(
-            process_tasks,
-            request,
-            background_tasks,
-            ProcessFileForm(file_id=task_id),
-            user,
-            task_id,
-        )
-        #file_item = Files.get_file_by_id(id=id)
+    _ = Files.insert_new_file(
+        user.id,
+        FileForm(
+            **{
+                "id": task_id,
+                "filename": name,
+                "path": file_path,
+                "meta": {
+                    "name": name,
+                    "content_type": file.content_type,
+                    "size": len(contents),
+                },
+            }
+        ),
+    )
+
+    background_tasks.add_task(
+        process_tasks,
+        request,
+        background_tasks,
+        ProcessFileForm(file_id=task_id),
+        user,
+        task_id,
+    )
+    # file_item = Files.get_file_by_id(id=id)
 
         return {"task_id": task_id}
     except Exception as e:
@@ -196,6 +202,7 @@ async def upload_file_async(
 # Get task_status
 ############################
 
+
 # Rota opcional para verificar status da task
 @router.get("/task_status/{task_id}")
 async def get_task_status(task_id: str):
@@ -210,11 +217,13 @@ async def get_task_status(task_id: str):
         "task": task,
     }
 
+
 @router.get("/get_tasks")
 async def get_task_status():
     if tasks_cache:
         return {"task_ids": list(tasks_cache.keys())}  # Retorna apenas os task_ids
     return {"message": "No tasks found"}
+
 
 ############################
 # List Files

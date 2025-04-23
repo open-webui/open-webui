@@ -1,22 +1,19 @@
-
 import logging
 import requests
-import httpx
 from open_webui.env import SRC_LOG_LEVELS
 import time
-
-import aiofiles
-import aiohttp
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
-class PdftotextLoader():
+
+class PdftotextLoader:
     def __init__(self, pdf_path: str, url: str, max_pages: int):
         self.pdf_path = pdf_path
-        url+="/api-ds-ocr/text_extract"
+        url += "/api-ds-ocr/text_extract"
         self.url = url
         self.max_pages = max_pages
+
     def load(self):
         with open(self.pdf_path, "rb") as f:
             pdf = f.read()
@@ -26,27 +23,22 @@ class PdftotextLoader():
         headers = {
             "accept": "application/json",
         }
-        files = {
-            "pdf_upload": pdf
-        }
-        data = {
-            'max_pages' : self.max_pages,
-            'header_footer': True
-        }
+        files = {"pdf_upload": pdf}
+        data = {"max_pages": self.max_pages, "header_footer": True}
 
-        r = requests.post(url=self.url, headers=headers, files=files, data=data, timeout=240)
-        log.info(r)
+        r = requests.post(
+            url=self.url, headers=headers, files=files, data=data, timeout=240
+        )
+        # log.info(r)
         response = r.json()
         txt = response.get("text", "")
 
-        log.info(
-            "REQ_ID: %s Extracted text from pdf using OCR, len(txt) -> %s "
-        )
+        # log.info(f"REQ_ID: %s Extracted text from pdf using OCR, {txt} -> %s ")
 
         return txt
 
 
-class PdftotextLoaderAsync():
+class PdftotextLoaderAsync:
     def __init__(self, pdf_path: str, url: str, max_pages: int):
         self.pdf_path = pdf_path
         self.base_url = url + "/api-ds-ocr"
@@ -54,35 +46,25 @@ class PdftotextLoaderAsync():
         self.max_pages = max_pages
 
     def load(self):
-        log.info(self.max_pages)
-        
         with open(self.pdf_path, "rb") as f:
             pdf = f.read()
-        
+
         headers = {
             "accept": "application/json",
         }
-        
-        files = {
-            "pdf_upload": pdf
-        }
-        
-        data = {
-            'max_pages': self.max_pages,
-            'header_footer': True
-        }
-        
-        r = requests.post(url=self.url, headers=headers, files=files, data=data, timeout=30)
+
+        files = {"pdf_upload": pdf}
+
+        data = {"header_footer": True}
+
+        r = requests.post(url=self.url, headers=headers, files=files, data=data)
         log.info(r)
         response = r.json()
         task_id = response.get("task_id", "")
 
-        log.info(
-            f"Extracted text from pdf using OCR, task_id -> {task_id} "
-        )
+        log.info(f"Extracted text from pdf using OCR, task_id -> {task_id} ")
 
         return task_id
-                
 
     def check_status(self, task_id):
         """
@@ -94,10 +76,9 @@ class PdftotextLoaderAsync():
 
         response = r.json()
 
-        #self.task_cache[task_id] = response.get("status", "unknown")
+        # self.task_cache[task_id] = response.get("status", "unknown")
 
         return response
-        
 
     def get_text(self, task_id):
         """
@@ -109,6 +90,8 @@ class PdftotextLoaderAsync():
             status_response = self.check_status(task_id)
             if status_response and status_response.get("status") == "completed":
                 return status_response.get("result").get("text")
-            time.sleep(time_to_sleep)  # Avoids CPU overload by waiting before rechecking
+            time.sleep(
+                time_to_sleep
+            )  # Avoids CPU overload by waiting before rechecking
             if time_to_sleep < linear_theshold:
-                time_to_sleep*=2
+                time_to_sleep *= 2
