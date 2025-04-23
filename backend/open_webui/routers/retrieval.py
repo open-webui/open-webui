@@ -1536,8 +1536,8 @@ async def process_web_search(
         )
         docs = await loader.aload()
         urls = [
-            doc.metadata["source"] for doc in docs
-        ]  # only keep URLs which could be retrieved
+            doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
+        ]  # only keep URLs
 
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {

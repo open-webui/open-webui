@@ -1068,6 +1068,14 @@ USER_PERMISSIONS_CHAT_EDIT = (
     os.environ.get("USER_PERMISSIONS_CHAT_EDIT", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_SHARE = (
+    os.environ.get("USER_PERMISSIONS_CHAT_SHARE", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_EXPORT = (
+    os.environ.get("USER_PERMISSIONS_CHAT_EXPORT", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_STT = (
     os.environ.get("USER_PERMISSIONS_CHAT_STT", "True").lower() == "true"
 )
@@ -1132,6 +1140,8 @@ DEFAULT_USER_PERMISSIONS = {
         "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "edit": USER_PERMISSIONS_CHAT_EDIT,
+        "share": USER_PERMISSIONS_CHAT_SHARE,
+        "export": USER_PERMISSIONS_CHAT_EXPORT,
         "stt": USER_PERMISSIONS_CHAT_STT,
         "tts": USER_PERMISSIONS_CHAT_TTS,
         "call": USER_PERMISSIONS_CHAT_CALL,

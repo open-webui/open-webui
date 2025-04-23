@@ -1674,12 +1674,12 @@ async def process_chat_response(
                                                     delta_tool_call.setdefault(
                                                         "function", {}
                                                     )
-                                                    delta_tool_call["function"].setdefault(
-                                                        "name", ""
-                                                    )
-                                                    delta_tool_call["function"].setdefault(
-                                                        "arguments", ""
-                                                    )
+                                                    delta_tool_call[
+                                                        "function"
+                                                    ].setdefault("name", "")
+                                                    delta_tool_call[
+                                                        "function"
+                                                    ].setdefault("arguments", "")
                                                     response_tool_calls.append(
                                                         delta_tool_call
                                                     )

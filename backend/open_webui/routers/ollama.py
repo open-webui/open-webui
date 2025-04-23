@@ -1503,7 +1503,8 @@ async def download_file_stream(
 
                 if done:
                     file.seek(0)
-                    hashed = calculate_sha256(file)
+                    chunk_size = 1024 * 1024 * 2
+                    hashed = calculate_sha256(file, chunk_size)
                     file.seek(0)
 
                     url = f"{ollama_url}/api/blobs/sha256:{hashed}"

@@ -166,23 +166,31 @@ class OAuthManager:
 
             for group_name in user_oauth_groups:
                 if group_name not in all_group_names:
-                    log.info(f"Group '{group_name}' not found via OAuth claim. Creating group...")
+                    log.info(
+                        f"Group '{group_name}' not found via OAuth claim. Creating group..."
+                    )
                     try:
                         new_group_form = GroupForm(
                             name=group_name,
                             description=f"Group '{group_name}' created automatically via OAuth.",
-                            permissions=default_permissions, # Use default permissions from function args
-                            user_ids=[], # Start with no users, user will be added later by subsequent logic
+                            permissions=default_permissions,  # Use default permissions from function args
+                            user_ids=[],  # Start with no users, user will be added later by subsequent logic
                         )
                         # Use determined creator ID (admin or fallback to current user)
-                        created_group = Groups.insert_new_group(creator_id, new_group_form)
+                        created_group = Groups.insert_new_group(
+                            creator_id, new_group_form
+                        )
                         if created_group:
-                            log.info(f"Successfully created group '{group_name}' with ID {created_group.id} using creator ID {creator_id}")
+                            log.info(
+                                f"Successfully created group '{group_name}' with ID {created_group.id} using creator ID {creator_id}"
+                            )
                             groups_created = True
                             # Add to local set to prevent duplicate creation attempts in this run
                             all_group_names.add(group_name)
                         else:
-                             log.error(f"Failed to create group '{group_name}' via OAuth.")
+                            log.error(
+                                f"Failed to create group '{group_name}' via OAuth."
+                            )
                     except Exception as e:
                         log.error(f"Error creating group '{group_name}' via OAuth: {e}")
 
@@ -190,7 +198,6 @@ class OAuthManager:
             if groups_created:
                 all_available_groups = Groups.get_groups()
                 log.debug("Refreshed list of all available groups after creation.")
-
 
         log.debug(f"Oauth Groups claim: {oauth_claim}")
         log.debug(f"User oauth groups: {user_oauth_groups}")

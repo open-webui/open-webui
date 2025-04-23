@@ -2,7 +2,12 @@ from typing import Optional, List, Dict, Any, Union
 import logging
 from pinecone import Pinecone, ServerlessSpec
 
-from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
+from open_webui.retrieval.vector.main import (
+    VectorDBBase,
+    VectorItem,
+    SearchResult,
+    GetResult,
+)
 from open_webui.config import (
     PINECONE_API_KEY,
     PINECONE_ENVIRONMENT,
@@ -20,7 +25,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-class PineconeClient:
+class PineconeClient(VectorDBBase):
     def __init__(self):
         self.collection_prefix = "open-webui"
 
