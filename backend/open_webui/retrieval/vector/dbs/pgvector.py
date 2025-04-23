@@ -22,7 +22,12 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy.ext.mutable import MutableDict
 from sqlalchemy.exc import NoSuchTableError
 
-from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
+from open_webui.retrieval.vector.main import (
+    VectorDBBase,
+    VectorItem,
+    SearchResult,
+    GetResult,
+)
 from open_webui.config import PGVECTOR_DB_URL, PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH
 
 from open_webui.env import SRC_LOG_LEVELS
@@ -44,7 +49,7 @@ class DocumentChunk(Base):
     vmetadata = Column(MutableDict.as_mutable(JSONB), nullable=True)
 
 
-class PgvectorClient:
+class PgvectorClient(VectorDBBase):
     def __init__(self) -> None:
 
         # if no pgvector uri, use the existing database connection

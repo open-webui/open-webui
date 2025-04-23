@@ -88,6 +88,8 @@ class ChatPermissions(BaseModel):
     file_upload: bool = True
     delete: bool = True
     edit: bool = True
+    share: bool = True
+    export: bool = True
     stt: bool = True
     tts: bool = True
     call: bool = True
@@ -288,6 +290,21 @@ async def update_user_by_id(
     form_data: UserUpdateForm,
     session_user=Depends(get_admin_user),
 ):
+    # Prevent modification of the primary admin user by other admins
+    try:
+        first_user = Users.get_first_user()
+        if first_user and user_id == first_user.id and session_user.id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+            )
+    except Exception as e:
+        log.error(f"Error checking primary admin status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not verify primary admin status.",
+        )
+
     user = Users.get_user_by_id(user_id)
 
     if user:
@@ -335,6 +352,21 @@ async def update_user_by_id(
 
 @router.delete("/{user_id}", response_model=bool)
 async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
+    # Prevent deletion of the primary admin user
+    try:
+        first_user = Users.get_first_user()
+        if first_user and user_id == first_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+            )
+    except Exception as e:
+        log.error(f"Error checking primary admin status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not verify primary admin status.",
+        )
+
     if user.id != user_id:
         result = Auths.delete_auth_by_id(user_id)
 
@@ -346,6 +378,7 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
             detail=ERROR_MESSAGES.DELETE_USER_ERROR,
         )
 
+    # Prevent self-deletion
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail=ERROR_MESSAGES.ACTION_PROHIBITED,
