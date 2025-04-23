@@ -29,7 +29,7 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="w-full {className} text-sm rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary"
+			class="w-full {className} text-sm rounded-2xl p-2.5 pr-3.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary"
 			sideOffset={8}
 			side="bottom"
 			align="start"
@@ -37,7 +37,7 @@
 		>
 			{#if page.url.pathname !== '/explore'}
 				<button
-					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					class="flex rounded-md p-2.5 w-full text-blue-800 hover:bg-gray-200 dark:hover:bg-gray-800 transition"
 					on:click={async () => {
 						await showSettings.set(true);
 						show = false;
@@ -74,7 +74,7 @@
 
 			{#if page.url.pathname !== '/explore'}
 				<button
-					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					class="flex rounded-md p-2.5 w-full text-blue-800 hover:bg-gray-200 dark:hover:bg-gray-800 transition"
 					on:click={() => {
 						showKnowlegeManager(true);
 					}}
@@ -148,10 +148,8 @@
 				</a>
 			{/if}
 
-			<hr class=" border-gray-50 dark:border-gray-850 my-1 p-0" />
-
 			<button
-				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md p-2.5 w-full text-blue-800 hover:bg-gray-200 dark:hover:bg-gray-800 transition"
 				on:click={() => { signout(); show = false; }}
 			>
 				<div class=" self-center mr-3">
