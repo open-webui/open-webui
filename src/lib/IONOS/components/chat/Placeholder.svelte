@@ -11,7 +11,6 @@
 
 	import MessageInput from '$lib/IONOS/components/chat/MessageInput.svelte';
 	import SmallAgentSelector from '$lib/IONOS/components/SmallAgentSelector.svelte';
-	import TextWithGradient from '$lib/IONOS/components/TextWithGradient.svelte';
 
 	const i18n = getContext<Readable<I18Next>>('i18n');
 
@@ -55,13 +54,11 @@
 	<div class="w-full text-3xl text-gray-800 dark:text-gray-100 font-medium text-center flex items-center gap-4 font-primary">
 		<div class="w-full flex flex-col justify-center items-center">
 			<div class="flex flex-row justify-center gap-3 sm:gap-3.5 w-fit px-5">
-				<div class="mb-32 text-3xl sm:text-4xl">
+				<div class="mb-32 text-3xl sm:text-5xl leading-[56px] font-['Overpass_Regular'] text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-700">
 					{#if agentName}
-						<TextWithGradient>
 							{$i18n.t("I'm {{agentName}},", { agentName, ns: 'ionos' })}
 							<br>
 							{$i18n.t("What can I help with?", { ns: 'ionos' })}
-						</TextWithGradient>
 					{/if}
 				</div>
 			</div>
