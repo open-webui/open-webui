@@ -1,5 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
-import { handleApiUnauthorized } from '$lib/utils/auth'; // Assuming location
+import { handleApiUnauthorized } from '$lib/stores';
 
 export const createNewFolder = async (token: string, name: string) => {
     let error = null;
