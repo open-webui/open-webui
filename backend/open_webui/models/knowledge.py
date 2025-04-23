@@ -217,5 +217,13 @@ class KnowledgeTable:
             except Exception:
                 return False
 
+    def get_all_knowledge(self) -> list[KnowledgeModel]:
+        with get_db() as db:
+            try:
+                all_knowledge = db.query(Knowledge).all()
+                return [KnowledgeModel.model_validate(knowledge) for knowledge in all_knowledge]
+            except Exception:
+                return None
+
 
 Knowledges = KnowledgeTable()

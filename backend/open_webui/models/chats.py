@@ -908,5 +908,12 @@ class ChatTable:
         except Exception:
             return False
 
+    def get_all_chat_models(self) -> list[ChatModel]:
+        with get_db() as db:
+            all_chats = (
+                db.query(Chat).all()
+            )
+            return [ChatModel.model_validate(chat) for chat in all_chats]
+
 
 Chats = ChatTable()

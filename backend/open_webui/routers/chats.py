@@ -804,3 +804,18 @@ async def delete_all_tags_by_id(id: str, user=Depends(get_verified_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
+
+########################
+# DeleteUnusedChatData
+########################
+
+from open_webui.utils.misc import delete_unused_chat_data
+from fastapi import Query
+
+@router.delete("/unused/chat/data", response_model=dict)
+async def del_unused_chat_data(
+    user=Depends(get_admin_user),
+    simulate: bool = Query(True),
+    verbose: bool = Query(True)
+):
+    return delete_unused_chat_data(simulate, verbose)

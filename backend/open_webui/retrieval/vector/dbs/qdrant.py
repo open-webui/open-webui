@@ -188,3 +188,15 @@ class QdrantClient:
         for collection_name in collection_names:
             if collection_name.name.startswith(self.collection_prefix):
                 self.client.delete_collection(collection_name=collection_name.name)
+
+    def get_all_collection_names(self) -> list[str]:
+        # Get all collection names
+        names = []
+
+        collection_names = self.client.get_collections().collections
+        for collection_name in collection_names:
+            if collection_name.name.startswith(self.collection_prefix):
+                # Remove the prefix + "_" because otherwise delete_collection will not work
+                names.append(collection_name.name[(len(self.collection_prefix) + 1):])
+
+        return names

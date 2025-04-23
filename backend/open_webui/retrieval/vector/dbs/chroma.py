@@ -189,3 +189,6 @@ class ChromaClient:
     def reset(self):
         # Resets the database. This will delete all collections and item entries.
         return self.client.reset()
+
+    def get_all_collection_names(self) -> list[str]:
+        return self.client.list_collections()

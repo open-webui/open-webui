@@ -463,3 +463,208 @@ def convert_logit_bias_input_to_json(user_input):
         bias = 100 if bias > 100 else -100 if bias < -100 else bias
         logit_bias_json[token] = bias
     return json.dumps(logit_bias_json)
+
+
+from collections import defaultdict
+from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.models.files import Files
+from open_webui.models.chats import Chats
+from open_webui.models.knowledge import Knowledges
+from open_webui.models.memories import Memories
+from open_webui.storage.provider import Storage
+
+log_debug = True
+
+"""
+Data to check: files in upload folder and collections
+
+Where are files and collections created / used?
+
+chats:
+    generated images: file
+        messages = chat_model.chat["history"]["messages"]
+        message["role"] == "assistant"
+        for file in message["files"]:
+            if file["type"] == "image":
+                # format: "/api/v1/files/48d21b41-6685-4e2e-8d88-ff3a7b928884/content"
+                # id is required for file
+
+    uploaded documents and data from url
+        if "files" in chat_model.chat:
+            for file in chat_model.chat["files"]:
+                if file["type"] == "file":
+                    save file["id"] for file and collection
+                elif file["type"] == "doc":
+                    save file["collection_name"] for collection
+knowledge:
+    save knowledge.id for collection
+    save knowledge.data["file_ids"] for files and collections
+
+memory:
+    save memory.user_id as key for collections and beware of collection names / prefix
+
+files
+    need to be deleted in database and on storage
+    sometimes have additional files (e.g. .json for uploaded audio)
+
+HINT:   transient chats are not stored in the database. So the clean up should happen
+        when ideally no such chats are unfinished (e.g. during the weekend)
+"""
+
+def delete_unused_chat_data(simulate: bool, verbose: bool) -> dict:
+    chat_models = Chats.get_all_chat_models()
+
+    image_ids = []
+    file_ids = []
+    doc_ids = []
+    chats_of_ids = defaultdict(set)
+
+    # Collect files, images and docs of chats
+    for chat_model in chat_models:
+        # collect generated images
+        messages = chat_model.chat["history"]["messages"]
+
+        for m_id in messages:
+            message = messages[m_id]
+
+            if not message["role"]:
+                print("ERROR delete_pending_chat_data: no 'role' in message: ", message)
+
+            elif message["role"] == "assistant":
+                if "files" in message:
+                    for file in message["files"]:
+                        if file["type"] == "image":
+                            # format: "/api/v1/files/48d21b41-6685-4e2e-8d88-ff3a7b928884/content"
+                            chunks = file["url"].split("/")
+                            i_id = chunks[len(chunks) - 2]
+                            image_ids.append(i_id)
+                            chats_of_ids[i_id].add(chat_model.title)
+
+        # collect uploaded files and upserted urls
+        if "files" in chat_model.chat:
+            for file in chat_model.chat["files"]:
+                if file["type"] == "file":
+                    f_id = file["id"]
+                    file_ids.append(f_id)
+                    chats_of_ids[f_id].add(chat_model.title)
+                elif file["type"] == "doc":
+                    d_id = file["collection_name"]
+                    doc_ids.append(d_id)
+                    chats_of_ids[d_id].add(chat_model.title)
+
+    if log_debug:
+        print("collected images: ", image_ids)
+        print("collected files: ", file_ids)
+        print("collected docs: ", doc_ids, flush=True)
+
+    # One knowledge has multiple files and collection
+    knowledges = Knowledges.get_all_knowledge()
+
+    # knowledges will be used directly due to many file_ids
+    if log_debug: print("Knowledges: ", knowledges, flush=True)
+
+    # Has only collections
+    memories = Memories.get_memories()
+
+    if log_debug: print("Memories: ", memories, flush=True)
+
+    if simulate:
+        action = "would be"
+    else:
+        action = "was"
+
+    # First delete unused files
+    files = Files.get_files()
+
+    num_files_deletes = 0
+
+    for file in files:
+        f_id = file.id
+
+        used = False
+
+        if f_id in file_ids + image_ids:
+            if verbose: print(f"USED file '{file.path}' by chat {chats_of_ids[f_id]}", flush=True)
+            used = True
+
+        else:
+            for knowledge in knowledges:
+                if knowledge.data != None and f_id in knowledge.data["file_ids"]:
+                    if verbose: print(f"USED file '{file.path}' by knowledge '{knowledge.name}'", flush=True)
+                    used = True
+
+        if not used:
+            num_files_deletes += 1
+
+            try:
+                if not simulate:
+                    # Delete from database
+                    Files.delete_file_by_id(f_id)
+
+                    # Delete from storage
+                    Storage.delete_file(file.path)
+
+                # Print after potential exeption
+                if verbose: print(f"UNUSED file '{file.path}' -> {action} DELETED", flush=True)
+
+            except Exception as e:
+                print(f"Delete file '{file.path}' failed: ", str(e))
+
+    # Next check for unused collections
+    collections = VECTOR_DB_CLIENT.get_all_collection_names()
+
+    num_collections_deletes = 0
+
+    for collection in collections:
+        used = False
+
+        # Check if collection is used by chat
+        for f_id in file_ids + doc_ids:
+            if collection.find(f_id) != -1:
+                if verbose: print(f"USED collection '{collection}' by chat {chats_of_ids[f_id]}", flush=True)
+                used = True
+                break
+
+        # Check if collection is used by knowledge
+        if not used:
+            # Check collection for knowledge
+            for knowledge in knowledges:
+                if collection.find(knowledge.id) != -1:
+                    if verbose: print(f"USED collection '{collection}' by knowledge '{knowledge.name}'", flush=True)
+                    used = True
+                    break
+
+            # Also check collection for files of knowledge
+            if not used:
+                for knowledge in knowledges:
+                    if knowledge.data != None:
+                        for file_id in knowledge.data["file_ids"]:
+                            if collection.find(file_id) != -1:
+                                if verbose: print(f"USED collection '{collection}' by file of knowledge '{knowledge.name}'", flush=True)
+                                used = True
+                                break
+
+        # Check if collection is used by memories
+        if not used:
+            for memory in memories:
+                if collection.find(memory.user_id) != -1:
+                    if verbose: print(f"USED collection '{collection}' by memory user '{memory.user_id}'", flush=True)
+                    used = True
+                    break
+
+        if not used:
+            num_collections_deletes += 1
+
+            try:
+                if not simulate: VECTOR_DB_CLIENT.delete_collection(collection)
+
+                if verbose: print(f"UNUSED collection '{collection}' -> {action} DELETED", flush=True)
+            except Exception as e:
+                print(f"Delete collection '{collection}' failed: ", str(e))
+
+    ret = {
+        "files": str(num_files_deletes) + " / " + str(len(files)),
+        "collections": str(num_collections_deletes) + " / " + str(len(collections))
+    }
+
+    return ret
