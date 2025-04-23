@@ -27,6 +27,8 @@ ARG BUILD_HASH
 WORKDIR /app
 
 COPY package.json package-lock.json ./
+COPY scripts ./scripts/
+RUN chmod +x ./scripts/install-dsfr.sh
 RUN rm -f package-lock.json && npm install && npm cache clean --force
 
 
