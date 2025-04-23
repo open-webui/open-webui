@@ -146,7 +146,6 @@ async def get_default_user_permissions(request: Request, user=Depends(get_admin_
     return Permissions.get_permissions_by_category()
 
 # TODO: Change to use database.
-# TODO: Get config.USER_PERMISSIONS merged into database permissions.
 @router.post("/default/permissions")
 async def update_default_user_permissions(
     request: Request, form_data: UserPermissions, user=Depends(get_admin_user)
