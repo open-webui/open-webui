@@ -1,5 +1,5 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
-import { handleApiUnauthorized } from '$lib/stores';
+import { handleApiUnauthorized } from '$lib/utils/auth'; // Assuming location
 
 export const getAdminDetails = async (token: string) => {
     let error = null;
@@ -11,26 +11,21 @@ export const getAdminDetails = async (token: string) => {
             Authorization: `Bearer ${token}`
         }
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error fetching admin details:`, err);
-        error = err.detail ?? 'Failed to fetch admin details';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -44,26 +39,21 @@ export const getAdminConfig = async (token: string) => {
             Authorization: `Bearer ${token}`
         }
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error fetching admin config:`, err);
-        error = err.detail ?? 'Failed to fetch admin config';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -78,26 +68,21 @@ export const updateAdminConfig = async (token: string, body: object) => {
         },
         body: JSON.stringify(body)
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error updating admin config:`, err);
-        error = err.detail ?? 'Failed to update admin config';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -112,29 +97,25 @@ export const getSessionUser = async (token: string) => {
         },
         credentials: 'include'
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error fetching session user:`, err);
-        error = err.detail ?? 'Failed to fetch session user';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
+// No 401 check needed here - this is an authentication attempt
 export const ldapUserSignIn = async (user: string, password: string) => {
     let error = null;
 
@@ -149,16 +130,15 @@ export const ldapUserSignIn = async (user: string, password: string) => {
             password: password
         })
     })
-    .then(async (res) => {
-        if (!res.ok) throw await res.json();
-        return res.json();
-    })
-    .catch((err) => {
-        console.log(err);
-
-        error = err.detail;
-        return null;
-    });
+        .then(async (res) => {
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
     if (error) {
         throw error;
@@ -177,26 +157,21 @@ export const getLdapConfig = async (token: string = '') => {
             ...(token && { authorization: `Bearer ${token}` })
         }
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (token && response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error fetching ldap config:`, err);
-        error = err.detail ?? 'Failed to fetch ldap config';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401 && token) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -213,26 +188,21 @@ export const updateLdapConfig = async (token: string = '', enable_ldap: boolean)
             enable_ldap: enable_ldap
         })
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (token && response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error updating ldap config:`, err);
-        error = err.detail ?? 'Failed to update ldap config';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401 && token) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -246,26 +216,21 @@ export const getLdapServer = async (token: string = '') => {
             ...(token && { authorization: `Bearer ${token}` })
         }
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (token && response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error fetching ldap server config:`, err);
-        error = err.detail ?? 'Failed to fetch ldap server config';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401 && token) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -280,29 +245,25 @@ export const updateLdapServer = async (token: string = '', body: object) => {
         },
         body: JSON.stringify(body)
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (token && response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error updating ldap server config:`, err);
-        error = err.detail ?? 'Failed to update ldap server config';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401 && token) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
+// No 401 check needed here - this is an authentication attempt
 export const userSignIn = async (email: string, password: string) => {
     let error = null;
 
@@ -317,22 +278,24 @@ export const userSignIn = async (email: string, password: string) => {
             password: password
         })
     })
-    .then(async (res) => {
-        if (!res.ok) throw await res.json();
-        return res.json();
-    })
-    .catch((err) => {
-        console.log(err);
-        error = err.detail;
-        return null;
-    });
+        .then(async (res) => {
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
     if (error) {
         throw error;
     }
+
     return res;
 };
 
+// No 401 check needed here - this is an authentication attempt
 export const userSignUp = async (
     name: string,
     email: string,
@@ -354,22 +317,24 @@ export const userSignUp = async (
             profile_image_url: profile_image_url
         })
     })
-    .then(async (res) => {
-        if (!res.ok) throw await res.json();
-        return res.json();
-    })
-    .catch((err) => {
-        console.log(err);
-        error = err.detail;
-        return null;
-    });
+        .then(async (res) => {
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
     if (error) {
         throw error;
     }
+
     return res;
 };
 
+// No 401 check needed here - sign out does not depend on the token
 export const userSignOut = async () => {
     let error = null;
 
@@ -380,15 +345,15 @@ export const userSignOut = async () => {
         },
         credentials: 'include'
     })
-    .then(async (res) => {
-        if (!res.ok) throw await res.json();
-        return res;
-    })
-    .catch((err) => {
-        console.log(err);
-        error = err.detail;
-        return null;
-    });
+        .then(async (res) => {
+            if (!res.ok) throw await res.json();
+            return res;
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
     if (error) {
         throw error;
@@ -417,26 +382,21 @@ export const addUser = async (
             role: role
         })
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (token && response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error adding user:`, err);
-        error = err.detail ?? 'Failed to add user';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401 && token) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -454,26 +414,21 @@ export const updateUserProfile = async (token: string, name: string, profileImag
             profile_image_url: profileImageUrl
         })
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (token && response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error updating user profile:`, err);
-        error = err.detail ?? 'Failed to update profile';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401 && token) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -491,26 +446,21 @@ export const updateUserPassword = async (token: string, password: string, newPas
             new_password: newPassword
         })
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (token && response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error updating user password:`, err);
-        error = err.detail ?? 'Failed to update password';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401 && token) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -524,26 +474,21 @@ export const getSignUpEnabledStatus = async (token: string) => {
             Authorization: `Bearer ${token}`
         }
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error fetching signup enabled status:`, err);
-        error = err.detail ?? 'Failed to fetch signup status';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -557,26 +502,21 @@ export const getDefaultUserRole = async (token: string) => {
             Authorization: `Bearer ${token}`
         }
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error fetching default user role:`, err);
-        error = err.detail ?? 'Failed to fetch default role';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -593,26 +533,21 @@ export const updateDefaultUserRole = async (token: string, role: string) => {
             role: role
         })
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error updating default user role:`, err);
-        error = err.detail ?? 'Failed to update default role';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -626,26 +561,21 @@ export const toggleSignUpEnabledStatus = async (token: string) => {
             Authorization: `Bearer ${token}`
         }
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error toggling signup status:`, err);
-        error = err.detail ?? 'Failed to toggle signup status';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -659,26 +589,21 @@ export const getJWTExpiresDuration = async (token: string) => {
             Authorization: `Bearer ${token}`
         }
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error fetching JWT expires duration:`, err);
-        error = err.detail ?? 'Failed to fetch JWT duration';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -695,26 +620,21 @@ export const updateJWTExpiresDuration = async (token: string, duration: string) 
             duration: duration
         })
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error updating JWT expires duration:`, err);
-        error = err.detail ?? 'Failed to update JWT duration';
-        return null;
-    });
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
 
-    if (error && res === null) {
+    if (error) {
         throw error;
     }
+
     return res;
 };
 
@@ -728,28 +648,20 @@ export const createAPIKey = async (token: string) => {
             Authorization: `Bearer ${token}`
         }
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error creating API key:`, err);
-        error = err.detail ?? 'Failed to create API key';
-        return null;
-    });
-    if (error && res === null) {
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
+    if (error) {
         throw error;
     }
-    // Original code returned res.api_key directly on success
-  // Ensure res is not null before accessing api_key
-    return res ? res.api_key : undefined;
+    return res.api_key;
 };
 
 export const getAPIKey = async (token: string) => {
@@ -762,27 +674,20 @@ export const getAPIKey = async (token: string) => {
             Authorization: `Bearer ${token}`
         }
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error fetching API key:`, err);
-        error = err.detail ?? 'Failed to fetch API key';
-        return null;
-    });
-    if (error && res === null) {
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
+    if (error) {
         throw error;
     }
-  // Original code returned res.api_key directly on success
-    return res ? res.api_key : undefined;
+    return res?.api_key ?? null; // Ensure return value is consistent on error
 };
 
 export const deleteAPIKey = async (token: string) => {
@@ -795,23 +700,17 @@ export const deleteAPIKey = async (token: string) => {
             Authorization: `Bearer ${token}`
         }
     })
-    .then(async (response) => {
-        if (!response.ok) {
-            if (response.status === 401) {
-                handleApiUnauthorized();
-                const errorBody = await response.json().catch(() => ({ detail: 'Unauthorized' }));
-                throw errorBody;
-            }
-            throw await response.json();
-        }
-        return response.json();
-    })
-    .catch((err) => {
-        console.error(`Error deleting API key:`, err);
-        error = err.detail ?? 'Failed to delete API key';
-        return null;
-    });
-    if (error && res === null) {
+        .then(async (res) => {
+            if (res.status === 401) { handleApiUnauthorized(); }
+            if (!res.ok) throw await res.json();
+            return res.json();
+        })
+        .catch((err) => {
+            console.log(err);
+            error = err.detail;
+            return null;
+        });
+    if (error) {
         throw error;
     }
     return res;
