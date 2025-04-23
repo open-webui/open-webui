@@ -1,86 +1,86 @@
 [
     {
         "id": 0,
-        "promptDisplayName": "Erzähl mir, wie Crypto funktioniert",
-        "prompt": "Erzähl mir, wie Crypto funktioniert",
+        "promptDisplayName": "Erzähl mir, wie Crypto funktioniert.",
+        "prompt": "Erzähl mir, wie Crypto funktioniert.",
         "agentId": "greta"
     },
     {
         "id": 1,
-        "promptDisplayName": "Empfehl mir ein Reiseziele für meinen kommenden Urlaub am Meer",
-        "prompt": "Empfehl mir ein Reiseziele für meinen kommenden Urlaub am Meer",
+        "promptDisplayName": "Empfehle mir ein Reiseziele für meinen kommenden Urlaub am Meer.",
+        "prompt": "Empfehle mir ein Reiseziele für meinen kommenden Urlaub am Meer.",
         "agentId": "greta"
     },
     {
         "id": 2,
-        "promptDisplayName": "Sammle Ideen als Ice Breaker für unser nächstes Team Meeting",
-        "prompt": "Sammle Ideen als Ice Breaker für unser nächstes Team Meeting",
+        "promptDisplayName": "Sammle Ideen als Ice Breaker für unser nächstes Team Meeting.",
+        "prompt": "Sammle Ideen als Ice Breaker für unser nächstes Team Meeting.",
         "agentId": "greta"
     },
     {
         "id": 3,
-        "promptDisplayName": "Hilf mir, meine Gedanken für einen Artikel zu strukturieren",
-        "prompt": "Hilf mir, meine Gedanken für einen Artikel zu strukturieren",
+        "promptDisplayName": "Hilf mir, meine Gedanken für einen Artikel zu strukturieren.",
+        "prompt": "Hilf mir, meine Gedanken für einen Artikel zu strukturieren.",
         "agentId": "greta"
     },
     {
         "id": 4,
-        "promptDisplayName": "Hilf mir, einen Messestand für eine lokale Messe zu organisieren",
-        "prompt": "Hilf mir, einen Messestand für eine lokale Messe zu organisieren",
+        "promptDisplayName": "Hilf mir, einen Messestand für eine lokale Messe zu organisieren.",
+        "prompt": "Hilf mir, einen Messestand für eine lokale Messe zu organisieren.",
         "agentId": "greta"
     },
     {
         "id": 5,
-        "promptDisplayName": "Erstelle einen Content Kalender für meinen Social Media Account",
-        "prompt": "Erstelle einen Content Kalender für meinen Social Media Account",
+        "promptDisplayName": "Erstelle einen Content Kalender für meinen Social Media Account.",
+        "prompt": "Erstelle einen Content Kalender für meinen Social Media Account.",
         "agentId": "greta"
     },
     {
         "id": 6,
-        "promptDisplayName": "Gib mir Tipps zur Führung eines schwierigen Mitarbeitergesprächs",
-        "prompt": "Gib mir Tipps zur Führung eines schwierigen Mitarbeitergesprächs",
+        "promptDisplayName": "Gib mir Tipps zur Führung eines schwierigen Mitarbeitergesprächs.",
+        "prompt": "Gib mir Tipps zur Führung eines schwierigen Mitarbeitergesprächs.",
         "agentId": "greta"
     },
     {
         "id": 7,
-        "promptDisplayName": "Erstelle mir einen Reiseplan für den Schwarzwald mit einer schönen Wanderroute",
-        "prompt": "Erstelle mir einen Reiseplan für den Schwarzwald mit einer schönen Wanderroute",
+        "promptDisplayName": "Erstelle mir einen Reiseplan für den Schwarzwald mit einer schönen Wanderroute.",
+        "prompt": "Erstelle mir einen Reiseplan für den Schwarzwald mit einer schönen Wanderroute.",
         "agentId": "greta"
     },
     {
         "id": 8,
-        "promptDisplayName": "Entwickle ein Programmierspiel, das Programmier-Basics erklärt",
-        "prompt": "Entwickle ein Programmierspiel, das Programmier-Basics erklärt",
+        "promptDisplayName": "Entwickle ein Programmierspiel, das Programmier-Basics erklärt.",
+        "prompt": "Entwickle ein Programmierspiel, das Programmier-Basics erklärt.",
         "agentId": "dora"
     },
     {
         "id": 9,
-        "promptDisplayName": "Schreib ein Python-Skript, um den Versand täglicher E-Mail-Berichte zu automatisieren",
-        "prompt": "Schreib ein Python-Skript, um den Versand täglicher E-Mail-Berichte zu automatisieren",
+        "promptDisplayName": "Schreibe ein Python-Skript, um den Versand täglicher E-Mail-Berichte zu automatisieren.",
+        "prompt": "Schreibe ein Python-Skript, um den Versand täglicher E-Mail-Berichte zu automatisieren.",
         "agentId": "dora"
     },
     {
         "id": 10,
-        "promptDisplayName": "Repariere mir diesen Code, damit er der Clean-Code-Infrastruktur entspricht",
-        "prompt": "Repariere mir diesen Code, damit er der Clean-Code-Infrastruktur entspricht",
+        "promptDisplayName": "Repariere mir diesen Code, damit er der Clean-Code-Infrastruktur entspricht.",
+        "prompt": "Repariere mir diesen Code, damit er der Clean-Code-Infrastruktur entspricht.",
         "agentId": "dora"
     },
     {
         "id": 11,
-        "promptDisplayName": "Debugge diesen Code und erkläre mir, was ich tun muss",
-        "prompt": "Debugge diesen Code und erkläre mir, was ich tun muss",
+        "promptDisplayName": "Debugge diesen Code und erkläre mir, was ich tun muss.",
+        "prompt": "Debugge diesen Code und erkläre mir, was ich tun muss.",
         "agentId": "dora"
     },
     {
         "id": 12,
-        "promptDisplayName": "Erstelle HTML-Code für eine Shopping-Webseite mit Startseite, Produktseite, Shopseite und Navigationsmenü",
-        "prompt": "Erstelle HTML-Code für eine Shopping-Webseite mit Startseite, Produktseite, Shopseite und Navigationsmenü",
+        "promptDisplayName": "Erstelle HTML-Code für eine Shopping-Webseite mit Startseite, Produktseite, Shopseite und Navigationsmenü.",
+        "prompt": "Erstelle HTML-Code für eine Shopping-Webseite mit Startseite, Produktseite, Shopseite und Navigationsmenü.",
         "agentId": "dora"
     },
     {
         "id": 13,
-        "promptDisplayName": "Erstelle mir ein Bild für ....",
-        "prompt": "Erstelle mir ein Bild für ....",
+        "promptDisplayName": "Erstelle mir ein Bild für ...",
+        "prompt": "Erstelle mir ein Bild für ...",
         "agentId": "derek"
     },
     {
@@ -91,74 +91,74 @@
     },
     {
         "id": 15,
-        "promptDisplayName": "Illustration, Comic, Vektorgrafik, Icon,",
-        "prompt": "Illustration, Comic, Vektorgrafik, Icon,",
+        "promptDisplayName": "Illustration, Comic, Vektorgrafik, Icon.",
+        "prompt": "Illustration, Comic, Vektorgrafik, Icon.",
         "agentId": "derek"
     },
     {
         "id": 16,
-        "promptDisplayName": "Erstelle mir ein Logo für meinen Friseurladen",
-        "prompt": "Erstelle mir ein Logo für meinen Friseurladen",
+        "promptDisplayName": "Erstelle mir ein Logo für meinen Friseurladen.",
+        "prompt": "Erstelle mir ein Logo für meinen Friseurladen.",
         "agentId": "derek"
     },
     {
         "id": 17,
-        "promptDisplayName": "Generiere ein Bild für unsere Webseite",
-        "prompt": "Generiere ein Bild für unsere Webseite",
+        "promptDisplayName": "Generiere ein Bild für unsere Webseite.",
+        "prompt": "Generiere ein Bild für unsere Webseite.",
         "agentId": "derek"
     },
     {
         "id": 18,
-        "promptDisplayName": "Schreibe eine Kündigung, um mein Bahncard zu kündigen",
-        "prompt": "Schreibe eine Kündigung, um mein Bahncard zu kündigen",
+        "promptDisplayName": "Schreibe eine Kündigung, um mein Bahncard zu kündigen.",
+        "prompt": "Schreibe eine Kündigung, um mein Bahncard zu kündigen.",
         "agentId": "cedric"
     },
     {
         "id": 19,
-        "promptDisplayName": "Schreibe einen Brief mit dem Hinweis, dass sich meine Büroadresse ändert",
-        "prompt": "Schreibe einen Brief mit dem Hinweis, dass sich meine Büroadresse ändert",
+        "promptDisplayName": "Schreibe einen Brief mit dem Hinweis, dass sich meine Büroadresse ändert.",
+        "prompt": "Schreibe einen Brief mit dem Hinweis, dass sich meine Büroadresse ändert.",
         "agentId": "cedric"
     },
     {
         "id": 20,
-        "promptDisplayName": "Erstelle mir einen LinkedIn-Beitrag zum fünfjährigen Firmenjubiläum",
-        "prompt": "Erstelle mir einen LinkedIn-Beitrag zum fünfjährigen Firmenjubiläum",
+        "promptDisplayName": "Erstelle mir einen LinkedIn-Beitrag zum fünfjährigen Firmenjubiläum.",
+        "prompt": "Erstelle mir einen LinkedIn-Beitrag zum fünfjährigen Firmenjubiläum.",
         "agentId": "cedric"
     },
     {
         "id": 21,
-        "promptDisplayName": "Erstelle eine Caption mit Hashtags für meinen Instagram Post/Reel",
-        "prompt": "Erstelle eine Caption mit Hashtags für meinen Instagram Post/Reel",
+        "promptDisplayName": "Erstelle eine Caption mit Hashtags für meinen Instagram Post/Reel.",
+        "prompt": "Erstelle eine Caption mit Hashtags für meinen Instagram Post/Reel.",
         "agentId": "cedric"
     },
     {
         "id": 22,
-        "promptDisplayName": "Schreibe einen SEO-optimierten Blogartikel zur aktuellen Zinsentwicklung",
-        "prompt": "Schreibe einen SEO-optimierten Blogartikel zur aktuellen Zinsentwicklung",
+        "promptDisplayName": "Schreibe einen SEO-optimierten Blogartikel zur aktuellen Zinsentwicklung.",
+        "prompt": "Schreibe einen SEO-optimierten Blogartikel zur aktuellen Zinsentwicklung.",
         "agentId": "cedric"
     },
     {
         "id": 23,
-        "promptDisplayName": "Produktbeschreibung für mein regionales Familiengeschäft mit lokalen Lieferanten",
-        "prompt": "Produktbeschreibung für mein regionales Familiengeschäft mit lokalen Lieferanten",
+        "promptDisplayName": "Produktbeschreibung für mein regionales Familiengeschäft mit lokalen Lieferanten.",
+        "prompt": "Produktbeschreibung für mein regionales Familiengeschäft mit lokalen Lieferanten.",
         "agentId": "cedric"
     },
     {
         "id": 24,
-        "promptDisplayName": "Schreibe einen Sales Pitch für die neue AI Zahnbürste",
-        "prompt": "Schreibe einen Sales Pitch für die neue AI Zahnbürste",
+        "promptDisplayName": "Schreibe einen Sales Pitch für die neue AI Zahnbürste.",
+        "prompt": "Schreibe einen Sales Pitch für die neue AI Zahnbürste.",
         "agentId": "cedric"
     },
     {
         "id": 25,
-        "promptDisplayName": "Erstelle eine Stellenausschreibung für einen Online Marketer:in",
-        "prompt": "Erstelle eine Stellenausschreibung für einen Online Marketer:in",
+        "promptDisplayName": "Erstelle eine Stellenausschreibung für einen Online Marketer:in.",
+        "prompt": "Erstelle eine Stellenausschreibung für einen Online Marketer:in.",
         "agentId": "cedric"
     },
     {
         "id": 26,
-        "promptDisplayName": "Erstelle eine E-Mail, um einem Lieferanten freundlich abzusagen",
-        "prompt": "Erstelle eine E-Mail, um einem Lieferanten freundlich abzusagen",
+        "promptDisplayName": "Erstelle eine E-Mail, um einem Lieferanten freundlich abzusagen.",
+        "prompt": "Erstelle eine E-Mail, um einem Lieferanten freundlich abzusagen.",
         "agentId": "cedric"
     }
 ]
