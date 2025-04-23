@@ -61,7 +61,7 @@ dependencies = [
     "pinecone==6.0.2",
 
     "transformers",
-    "sentence-transformers==3.3.1",
+    "sentence-transformers==4.1.0",
     "accelerate",
     "colbert-ai==0.2.21",
     "einops==0.8.1",
