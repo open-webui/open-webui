@@ -1,5 +1,5 @@
 import { AUDIO_API_BASE_URL } from '$lib/constants';
-import { handleApiUnauthorized } from '$lib/stores'; // ADDED IMPORT
+import { handleApiUnauthorized } from '$lib/stores';
 
 export const getAudioConfig = async (token: string) => {
     let error = null;
