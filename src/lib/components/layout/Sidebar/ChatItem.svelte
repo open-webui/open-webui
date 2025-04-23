@@ -244,7 +244,7 @@
 
 <div
 	bind:this={itemElement}
-	class=" w-full {className} relative group"
+	class=" w-full {className} relative group px-1.5"
 	draggable={draggable && !confirmEdit}
 >
 	{#if confirmEdit}
@@ -271,7 +271,7 @@
 				? 'bg-[var(--background-contrast-grey)]'
 				: selected
 					? 'bg-[var(--background-contrast-grey)]'
-					: 'hover:bg-[var(--background-contrast-grey)] group-hover:bg-[var(--background-contrast-grey)]'}  whitespace-nowrap text-ellipsis"
+					: ''} hover:!bg-[var(--background-contrast-grey)] whitespace-nowrap text-ellipsis"
 			href="/c/{id}"
 			on:click={() => {
 				dispatch('select');
@@ -311,7 +311,7 @@
 				: 'invisible group-hover:visible from-[var(--background-contrast-grey)]'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
-			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
+			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-2 pl-5 bg-linear-to-l from-80%
 
               to-transparent"
 		on:mouseenter={(e) => {
