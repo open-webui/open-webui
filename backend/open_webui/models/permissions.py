@@ -3,7 +3,7 @@ from typing import Dict, Any
 
 from open_webui.internal.db import Base, JSONField, get_db
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import Boolean, Column, String, Integer, Enum as SQLAlchemyEnum
 
 ####################
@@ -27,8 +27,8 @@ class Permission(Base):
     default_value = Column(Boolean, default=False)
 
 
-class PermissionsModel(BaseModel):
-    id: int
+class PermissionModel(BaseModel):
+    id: int = Field(default=None, exclude=True)
     name: str
     category: PermissionCategory
     description: str | None
@@ -57,6 +57,7 @@ class PermissionsTable:
 
             return permissions
 
+    # TODO: if config is not persistent enabled, just return default permissions
     def get_or_create_permissions(self, default_permissions: dict[PermissionCategory, dict[str, bool]]) -> dict[PermissionCategory, dict[str, bool]]:
         with get_db() as db:
             # Check if any permissions exist
@@ -89,6 +90,22 @@ class PermissionsTable:
             # Return current permissions structure
             return self.get_permissions_by_category()
 
-
+    def new_permission(self, permission: PermissionModel) -> PermissionModel | None:
+        from pprint import pprint
+        pprint(permission)
+        with get_db() as db:
+            result = Permission(
+                name=permission['name'],
+                category=permission['category'],
+                description=permission['description'],
+                default_value=permission['default_value']
+            )
+            db.add(result)
+            db.commit()
+            db.refresh(result)
+            if result:
+                return PermissionModel.model_validate(result)
+            else:
+                return None
 
 Permissions = PermissionsTable()
