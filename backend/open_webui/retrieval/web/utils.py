@@ -228,7 +228,10 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                     mode=self.mode,
                     params=self.params,
                 )
-                yield from loader.lazy_load()
+                for document in loader.lazy_load():
+                    if not document.metadata.get("source"):
+                        document.metadata["source"] = document.metadata.get("sourceURL")
+                    yield document
             except Exception as e:
                 if self.continue_on_failure:
                     log.exception(f"Error loading {url}: {e}")
@@ -248,6 +251,8 @@ class SafeFireCrawlLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                     params=self.params,
                 )
                 async for document in loader.alazy_load():
+                    if not document.metadata.get("source"):
+                        document.metadata["source"] = document.metadata.get("sourceURL")
                     yield document
             except Exception as e:
                 if self.continue_on_failure:
