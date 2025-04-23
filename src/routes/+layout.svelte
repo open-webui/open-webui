@@ -34,7 +34,7 @@
 	import { Toaster, toast } from 'svelte-sonner';
 
 	import { executeToolServer, getBackendConfig } from '$lib/apis';
-	import { getSessionUser } from '$lib/apis/auths';
+	import { getSessionUser, userSignOut } from '$lib/apis/auths';
 
 	import '../tailwind.css';
 	import '../app.css';
@@ -444,7 +444,7 @@
 		}
 	};
 
-	const checkTokenExpiry = () => {
+	const checkTokenExpiry = async () => {
 		const exp = $user?.expires_at; // token expiry time in unix timestamp
 		const now = Math.floor(Date.now() / 1000); // current time in unix timestamp
 
@@ -454,11 +454,11 @@
 		}
 
 		if (now >= exp) {
+			await userSignOut();
+			user.set(null);
+
 			localStorage.removeItem('token');
-			// redirect to auth page
-			if ($page.url.pathname !== '/auth') {
-				goto(`/auth`);
-			}
+			location.href = '/auth';
 		}
 	};
 
