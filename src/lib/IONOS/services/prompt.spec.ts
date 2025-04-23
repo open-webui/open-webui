@@ -4,6 +4,7 @@ import type { Prompt } from '$lib/IONOS/stores/prompts';
 import {
 	LOCALSTORAGE_START_PROMPT_KEY,
 	selectPrompt,
+	hasPrompt,
 	getAndForgetPrompt,
 } from './prompt';
 
@@ -120,4 +121,29 @@ describe('prompt', () => {
 			expect(getAndForgetPrompt()).toBe('');
 		});
 	});
+
+	describe('hasPrompt()', () => {
+		const mockValue = 'foo-prompt';
+
+		beforeEach(() => {
+			vi.mocked(localStorage.getItem).mockImplementation((key: string): string|null => {
+				if (key === LOCALSTORAGE_START_PROMPT_KEY) {
+					return mockValue;
+				}
+				return null;
+			});
+		});
+
+		it('should return true if the prompt is in storage', () => {
+			expect(hasPrompt()).toBe(true);
+		});
+
+		it('should return false if the prompt is not found in storage', () => {
+			vi.mocked(localStorage.getItem).mockImplementation((): string|null => {
+				return null;
+			});
+			expect(hasPrompt()).toBe(false);
+		});
+	});
+
 });

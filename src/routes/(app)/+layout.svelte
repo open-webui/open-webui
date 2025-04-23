@@ -9,7 +9,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { fade } from 'svelte/transition';
-
+	import { getChatList } from '$lib/apis/chats';
 	import { getKnowledgeBases } from '$lib/apis/knowledge';
 	import { getFunctions } from '$lib/apis/functions';
 	import { getModels, getVersionUpdates } from '$lib/apis';
@@ -21,6 +21,8 @@
 
 	import { WEBUI_VERSION } from '$lib/constants';
 	import { compareVersion } from '$lib/utils';
+	import { hasStoredState } from '$lib/IONOS/services/startup';
+	import { hasChats } from '$lib/IONOS/services/chats';
 
 	import {
 		config,
@@ -54,6 +56,9 @@
 	onMount(async () => {
 		if ($user === undefined) {
 			await goto('/auth');
+		} else if (!await hasChats() && !hasStoredState()) {
+			await goto('/explore');
+			return;
 		} else if (['user', 'admin'].includes($user.role)) {
 			try {
 				// Check if IndexedDB exists

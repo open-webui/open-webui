@@ -12,6 +12,11 @@ export const getAndForgetAgent = (): string => {
 	return agent;
 }
 
+export const hasAgent = (): boolean => {
+	const agent = localStorage.getItem(LOCALSTORAGE_START_MODEL_KEY) ?? '';
+	return agent !== '';
+}
+
 export const selectAgent = async (id: string): Promise<void> => {
 	console.log('Store agent', id);
 	localStorage.setItem(LOCALSTORAGE_START_MODEL_KEY, id);

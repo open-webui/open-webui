@@ -22,3 +22,8 @@ export const getAndForgetPrompt = (): string => {
 	localStorage.removeItem(LOCALSTORAGE_START_PROMPT_KEY);
 	return prompt;
 }
+
+export const hasPrompt = (): boolean => {
+	const prompt = localStorage.getItem(LOCALSTORAGE_START_PROMPT_KEY) ?? '';
+	return prompt !== '';
+}

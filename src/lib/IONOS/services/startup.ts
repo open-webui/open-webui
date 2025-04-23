@@ -1,12 +1,22 @@
 import {
 	updateSettings
 } from './settings';
-import { getAndForgetAgent } from './agent';
-import { getAndForgetPrompt } from './prompt';
+import {
+	getAndForgetAgent,
+	hasAgent,
+} from './agent';
+import {
+	getAndForgetPrompt,
+	hasPrompt,
+} from './prompt';
 
 export type StartupInfo = {
 	agent: string,
 	prompt: string,
+}
+
+export const hasStoredState = (): boolean => {
+	return hasAgent() || hasPrompt();
 }
 
 export const startup = async (): Promise<StartupInfo> => {

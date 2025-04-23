@@ -1,6 +1,7 @@
 import { describe, beforeEach, expect, it, vi } from 'vitest';
 import {
 	startup,
+	hasStoredState,
 } from './startup';
 
 const mocks = vi.hoisted(() => {
@@ -8,9 +9,11 @@ const mocks = vi.hoisted(() => {
 		services: {
 			agent: {
 				getAndForgetAgent: vi.fn(),
+				hasAgent: vi.fn(),
 			},
 			prompt: {
 				getAndForgetPrompt: vi.fn(),
+				hasPrompt: vi.fn(),
 			},
 			settings: {
 				updateSettings: vi.fn(),
@@ -86,6 +89,36 @@ describe('startup', () => {
 
 		it('should return both agent and prompt if both are stored', async () => {
 			expect(await startup()).toEqual({ agent: mockAgent, prompt: mockPrompt });
+		});
+	});
+
+	describe('hasStoredState()', () => {
+		let hasAgent = false;
+		let hasPrompt = false;
+
+		beforeEach(() => {
+			mocks.services.agent.hasAgent.mockImplementation(() => {
+				return hasAgent;
+			});
+
+			mocks.services.prompt.hasPrompt.mockImplementation(() => {
+				return hasPrompt;
+			});
+		});
+
+		it('return true only if either agent or prompt is stored', () => {
+			expect(hasStoredState()).toBe(false);
+
+			hasAgent = true;
+			expect(hasStoredState()).toBe(true);
+
+			hasAgent = false;
+			hasPrompt = true;
+			expect(hasStoredState()).toBe(true);
+
+			hasAgent = true;
+			hasPrompt = true;
+			expect(hasStoredState()).toBe(true);
 		});
 	});
 });

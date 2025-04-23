@@ -5,6 +5,7 @@ import {
 	LOCALSTORAGE_START_MODEL_KEY,
 	getAndForgetAgent,
 	selectAgent,
+	hasAgent,
 } from './agent';
 
 const mocks = vi.hoisted(() => {
@@ -78,6 +79,30 @@ describe('agent', () => {
 				return null;
 			});
 			expect(getAndForgetAgent()).toBe('');
+		});
+	});
+
+	describe('hasAgent()', () => {
+		const mockValue = 'mock-agent-id';
+
+		beforeEach(() => {
+			vi.mocked(localStorage.getItem).mockImplementation((key: string): string|null => {
+				if (key === LOCALSTORAGE_START_MODEL_KEY) {
+					return mockValue;
+				}
+				return null;
+			});
+		});
+
+		it('should return true if the agent is in storage', () => {
+			expect(hasAgent()).toBe(true);
+		});
+
+		it('should return false if the agent is not found in storage', () => {
+			vi.mocked(localStorage.getItem).mockImplementation((): string|null => {
+				return null;
+			});
+			expect(hasAgent()).toBe(false);
 		});
 	});
 
