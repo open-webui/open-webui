@@ -1,6 +1,6 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { getTimeRange } from '$lib/utils';
-import { handleApiUnauthorized } from '$lib/utils/auth'; // Assuming location
+import { handleApiUnauthorized } from '$lib/stores';
 
 export const createNewChat = async (token: string, chat: object) => {
     let error = null;
