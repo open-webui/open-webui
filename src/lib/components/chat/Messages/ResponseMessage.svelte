@@ -285,7 +285,7 @@
 		editedContent = message.content;
 
 		await tick();
-
+		toast.announce($i18n.t('Message editing started.'));
 		editTextAreaElement.style.height = '';
 		editTextAreaElement.style.height = `${editTextAreaElement.scrollHeight}px`;
 	};
@@ -297,6 +297,7 @@
 		editedContent = '';
 
 		await tick();
+		toast.success($i18n.t('Message editing confirmed.'));
 	};
 
 	const saveAsCopyHandler = async () => {
@@ -306,12 +307,14 @@
 		editedContent = '';
 
 		await tick();
+		toast.announce($i18n.t('Message saved as copy. You are now in copied message chain.'));
 	};
 
 	const cancelEditMessage = async () => {
 		edit = false;
 		editedContent = '';
 		await tick();
+		toast.announce($i18n.t('Message editing cancelled.'));
 	};
 
 	const generateImage = async (message: MessageType) => {

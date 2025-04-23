@@ -6,6 +6,7 @@
 	import { fade } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import * as focusTrap from 'focus-trap';
+	import { toast } from '$lib/utils/toast';
 
 	export let title = '';
 	export let message = '';
@@ -53,11 +54,13 @@
 
 			window.addEventListener('keydown', handleKeyDown);
 			document.body.style.overflow = 'hidden';
+			toast.announce($i18n.t('dialogOpened', { title: title }));
 		} else if (modalElement) {
 			window.removeEventListener('keydown', handleKeyDown);
 			document.body.removeChild(modalElement);
 
 			document.body.style.overflow = 'unset';
+			toast.announce($i18n.t('dialogClosed', { title: title }));
 		}
 	}
 	$: if (show && modalElement && !trap) {

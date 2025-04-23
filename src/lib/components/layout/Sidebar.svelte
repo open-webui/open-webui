@@ -228,7 +228,7 @@
 					.join(' ');
 
 				await chats.set(await getChatListBySearchText(localStorage.token, normalizedSearch));
-
+				toast.announce($chats.length + $i18n.t(' chat found'));
 				if ($chats.length === 0) {
 					tags.set(await getAllTags(localStorage.token));
 				}
@@ -491,6 +491,7 @@
 					class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					on:click={async () => {
 						showSidebar.set(!$showSidebar);
+						toast.announce($i18n.t('Sidebar collapsed.'));
 						await changeFocus('sidebar-toggle-button');
 					}}
 					id="hide-sidebar-button"
@@ -530,6 +531,7 @@
 							showSidebar.set(false);
 						}
 					}, 0);
+					toast.announce($i18n.t('You are now in the new chat.'));
 				}}
 			>
 				<div class="flex items-center">

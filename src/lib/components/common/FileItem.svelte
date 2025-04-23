@@ -6,6 +6,7 @@
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import Spinner from './Spinner.svelte';
 	import Tooltip from './Tooltip.svelte';
+	import { toast } from '$lib/utils/toast';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -127,6 +128,7 @@
 					type="button"
 					on:click|stopPropagation={() => {
 						dispatch('dismiss');
+						toast.announce($i18n.t('File removed'));
 					}}
 				>
 					<svg

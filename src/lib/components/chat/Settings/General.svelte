@@ -200,6 +200,11 @@
 						type="button"
 						on:click={() => {
 							showAdvanced = !showAdvanced;
+							toast.announce(
+								showAdvanced
+									? $i18n.t('Showing advanced parameters below')
+									: $i18n.t('Hiding advanced parameters')
+							);
 						}}>{showAdvanced ? $i18n.t('Hide') : $i18n.t('Show')}</button
 					>
 				</div>

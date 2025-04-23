@@ -155,6 +155,7 @@
 							on:click={async () => {
 								if (canvasPixelTest()) {
 									profileImageUrl = generateInitialsImage(name);
+									toast.announce($i18n.t('Profile image changed to using initials'));
 								} else {
 									toast.info(
 										$i18n.t(
@@ -181,6 +182,9 @@
 							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg px-2 py-1"
 							on:click={async () => {
 								profileImageUrl = '/user.png';
+								toast.announce(
+									$i18n.t('Removing changes to profile image and using default profile image')
+								);
 							}}>{$i18n.t('Remove')}</button
 						>
 					</div>

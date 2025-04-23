@@ -267,6 +267,7 @@
 	const confirmRecording = async () => {
 		loading = true;
 		confirmed = true;
+		toast.announce($i18n.t('Voice recording transcription started'));
 
 		if (recording && mediaRecorder) {
 			await mediaRecorder.stop();

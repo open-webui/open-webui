@@ -76,7 +76,12 @@
 	}
 </script>
 
-<Modal bind:show size="md" returnFocusSelector={`#${$returnFocusButtonID}`}>
+<Modal
+	bind:show
+	size="md"
+	title={$i18n.t('Share Chat')}
+	returnFocusSelector={`#${$returnFocusButtonID}`}
+>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-5 pt-4 pb-0.5">
 			<h2 class=" text-lg font-medium self-center">{$i18n.t('Share Chat')}</h2>

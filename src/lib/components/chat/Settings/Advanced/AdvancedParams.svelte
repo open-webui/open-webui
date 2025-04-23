@@ -2,6 +2,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { getContext, createEventDispatcher } from 'svelte';
+	import { toast } from '$lib/utils/toast';
 
 	const dispatch = createEventDispatcher();
 
@@ -38,6 +39,21 @@
 
 	let customFieldName = '';
 	let customFieldValue = '';
+
+	const announceCustomField = (value: any) => {
+		toast.announce(
+			(value ?? null) === null
+				? $i18n.t('Default mode enabled. Custom Input field removed')
+				: $i18n.t('Custom mode enabled. Custom Input field available')
+		);
+	};
+	const announceCustomFieldAndSlider = (value: any) => {
+		toast.announce(
+			(value ?? null) === null
+				? $i18n.t('Default mode enabled. Custom Input field removed')
+				: $i18n.t('Custom mode enabled. Slider and Input field removed')
+		);
+	};
 
 	$: if (params) {
 		dispatch('change', params);
@@ -99,6 +115,7 @@
 					type="button"
 					on:click={() => {
 						params.seed = (params?.seed ?? null) === null ? 0 : null;
+						announceCustomField(params.seed);
 					}}
 				>
 					{#if (params?.seed ?? null) === null}
@@ -146,6 +163,7 @@
 					type="button"
 					on:click={() => {
 						params.stop = (params?.stop ?? null) === null ? '' : null;
+						announceCustomField(params.stop);
 					}}
 				>
 					{#if (params?.stop ?? null) === null}
@@ -191,6 +209,7 @@
 					type="button"
 					on:click={() => {
 						params.temperature = (params?.temperature ?? null) === null ? 0.8 : null;
+						announceCustomFieldAndSlider(params.temperature);
 					}}
 				>
 					{#if (params?.temperature ?? null) === null}
@@ -246,6 +265,7 @@
 					type="button"
 					on:click={() => {
 						params.reasoning_effort = (params?.reasoning_effort ?? null) === null ? 'medium' : null;
+						announceCustomField(params.reasoning_effort);
 					}}
 				>
 					{#if (params?.reasoning_effort ?? null) === null}
@@ -291,6 +311,7 @@
 					type="button"
 					on:click={() => {
 						params.mirostat = (params?.mirostat ?? null) === null ? 0 : null;
+						announceCustomFieldAndSlider(params.mirostat);
 					}}
 				>
 					{#if (params?.mirostat ?? null) === null}
@@ -346,6 +367,7 @@
 					type="button"
 					on:click={() => {
 						params.mirostat_eta = (params?.mirostat_eta ?? null) === null ? 0.1 : null;
+						announceCustomFieldAndSlider(params.mirostat_eta);
 					}}
 				>
 					{#if (params?.mirostat_eta ?? null) === null}
@@ -402,6 +424,7 @@
 					type="button"
 					on:click={() => {
 						params.mirostat_tau = (params?.mirostat_tau ?? null) === null ? 5.0 : null;
+						announceCustomFieldAndSlider(params.mirostat_tau);
 					}}
 				>
 					{#if (params?.mirostat_tau ?? null) === null}
@@ -457,6 +480,7 @@
 					type="button"
 					on:click={() => {
 						params.top_k = (params?.top_k ?? null) === null ? 40 : null;
+						announceCustomFieldAndSlider(params.top_k);
 					}}
 				>
 					{#if (params?.top_k ?? null) === null}
@@ -513,6 +537,7 @@
 					type="button"
 					on:click={() => {
 						params.top_p = (params?.top_p ?? null) === null ? 0.9 : null;
+						announceCustomFieldAndSlider(params.top_p);
 					}}
 				>
 					{#if (params?.top_p ?? null) === null}
@@ -568,6 +593,7 @@
 					type="button"
 					on:click={() => {
 						params.min_p = (params?.min_p ?? null) === null ? 0.0 : null;
+						announceCustomFieldAndSlider(params.min_p);
 					}}
 				>
 					{#if (params?.min_p ?? null) === null}
@@ -624,6 +650,7 @@
 					type="button"
 					on:click={() => {
 						params.frequency_penalty = (params?.frequency_penalty ?? null) === null ? 1.1 : null;
+						announceCustomFieldAndSlider(params.frequency_penalty);
 					}}
 				>
 					{#if (params?.frequency_penalty ?? null) === null}
@@ -680,6 +707,7 @@
 					type="button"
 					on:click={() => {
 						params.repeat_last_n = (params?.repeat_last_n ?? null) === null ? 64 : null;
+						announceCustomFieldAndSlider(params.repeat_last_n);
 					}}
 				>
 					{#if (params?.repeat_last_n ?? null) === null}
@@ -736,6 +764,7 @@
 					type="button"
 					on:click={() => {
 						params.tfs_z = (params?.tfs_z ?? null) === null ? 1 : null;
+						announceCustomFieldAndSlider(params.tfs_z);
 					}}
 				>
 					{#if (params?.tfs_z ?? null) === null}
@@ -792,6 +821,7 @@
 					type="button"
 					on:click={() => {
 						params.num_ctx = (params?.num_ctx ?? null) === null ? 2048 : null;
+						announceCustomFieldAndSlider(params.num_ctx);
 					}}
 				>
 					{#if (params?.num_ctx ?? null) === null}
@@ -847,6 +877,7 @@
 					type="button"
 					on:click={() => {
 						params.num_batch = (params?.num_batch ?? null) === null ? 512 : null;
+						announceCustomFieldAndSlider(params.num_batch);
 					}}
 				>
 					{#if (params?.num_batch ?? null) === null}
@@ -957,6 +988,7 @@
 					type="button"
 					on:click={() => {
 						params.max_tokens = (params?.max_tokens ?? null) === null ? 128 : null;
+						announceCustomFieldAndSlider(params.max_tokens);
 					}}
 				>
 					{#if (params?.max_tokens ?? null) === null}

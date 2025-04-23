@@ -23,6 +23,7 @@
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		scrollPaginationEnabled.set(true);
+		toast.success($i18n.t('Archiving all chats'));
 	};
 
 	const deleteAllChatsHandler = async () => {
@@ -34,6 +35,11 @@
 		currentChatPage.set(1);
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		scrollPaginationEnabled.set(true);
+		toast.success($i18n.t('Deleting all chats'));
+	};
+
+	const announceConfirmation = () => {
+		toast.announce($i18n.t('Are you sure? Please confirm or cancel'));
 	};
 </script>
 
@@ -84,6 +90,7 @@
 							class="hover:text-white transition"
 							on:click={() => {
 								showArchiveConfirm = false;
+								toast.announce($i18n.t('Cancel archive all chats'));
 							}}
 						>
 							<svg
@@ -104,6 +111,7 @@
 					class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
 					on:click={() => {
 						showArchiveConfirm = true;
+						announceConfirmation();
 					}}
 				>
 					<div class=" self-center mr-3">
@@ -171,6 +179,7 @@
 							class="hover:text-white transition"
 							on:click={() => {
 								showDeleteConfirm = false;
+								toast.announce($i18n.t('Cancel delete all chats'));
 							}}
 						>
 							<svg
@@ -191,6 +200,7 @@
 					class=" flex rounded-md py-2 px-3.5 w-full hover:bg-gray-200 dark:hover:bg-gray-800 transition"
 					on:click={() => {
 						showDeleteConfirm = true;
+						announceConfirmation();
 					}}
 				>
 					<div class=" self-center mr-3">

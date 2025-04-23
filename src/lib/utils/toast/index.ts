@@ -6,7 +6,7 @@ class ToastService {
         ariaMessage.set('');
         setTimeout(() => {
             ariaMessage.set(message);
-        }, 100);
+        }, 0);
     } 
     
     success = (message) => {

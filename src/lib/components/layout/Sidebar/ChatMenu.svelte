@@ -26,6 +26,7 @@
 	import { createMessagesList } from '$lib/utils';
 	import { downloadChatAsPDF } from '$lib/apis/utils';
 	import Download from '$lib/components/icons/Download.svelte';
+	import { toast } from '$lib/utils/toast';
 
 	const i18n = getContext('i18n');
 
@@ -45,6 +46,11 @@
 	const pinHandler = async () => {
 		await toggleChatPinnedStatusById(localStorage.token, chatId);
 		dispatch('change');
+		if (pinned) {
+			toast.success($i18n.t('Chat unpinned. It will now appear in the regular list.'));
+		} else {
+			toast.success($i18n.t('Chat pinned. You can find it at the top section of your chat list.'));
+		}
 	};
 
 	const checkPinned = async () => {

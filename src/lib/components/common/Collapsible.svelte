@@ -32,6 +32,7 @@
 	import ChevronUp from '../icons/ChevronUp.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import Spinner from './Spinner.svelte';
+	import { toast } from '$lib/utils/toast';
 
 	export let open = false;
 	export let className = '';
@@ -44,6 +45,16 @@
 
 	export let disabled = false;
 	export let hide = false;
+
+	let initialized = false;
+
+	const announceAction = (open: boolean) => {
+		if (open) {
+			toast.announce($i18n.t('expanded'));
+		} else {
+			toast.announce($i18n.t('collapsed'));
+		}
+	};
 </script>
 
 <div class={className}>
@@ -56,12 +67,14 @@
 			on:pointerup={() => {
 				if (!disabled) {
 					open = !open;
+					announceAction(open);
 				}
 			}}
 			on:keydown={(e) => {
 				if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
 					e.preventDefault();
 					open = !open;
+					announceAction(open);
 				}
 			}}
 		>
@@ -109,12 +122,14 @@
 			on:pointerup={() => {
 				if (!disabled) {
 					open = !open;
+					announceAction(open);
 				}
 			}}
 			on:keydown={(e) => {
 				if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
 					e.preventDefault();
 					open = !open;
+					announceAction(open);
 				}
 			}}
 		>
@@ -145,4 +160,3 @@
 		{/if}
 	{/if}
 </div>
-

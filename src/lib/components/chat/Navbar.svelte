@@ -72,6 +72,7 @@
 						class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 						on:click={async () => {
 							showSidebar.set(!$showSidebar);
+							toast.announce($i18n.t('Sidebar expanded.'));
 							await changeFocus('hide-sidebar-button');
 						}}
 						aria-label="Show Sidebar"

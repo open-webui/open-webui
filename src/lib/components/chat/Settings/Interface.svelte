@@ -253,6 +253,11 @@
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleChatBubble();
+							toast.announce(
+								chatBubble
+									? $i18n.t('Display username option hidden below')
+									: $i18n.t('Display username option visible below')
+							);
 						}}
 						type="button"
 					>

@@ -1,15 +1,18 @@
 <script lang="ts">
-	import { onDestroy, onMount } from 'svelte';
+	import { onDestroy, onMount, getContext } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import * as focusTrap from 'focus-trap';
+	import { toast } from '$lib/utils/toast';
+
+	const i18n = getContext('i18n');
 
 	export let show = true;
 	export let size = 'md';
-
 	export let containerClassName = 'p-3';
-	export let className = 'bg-gray-50 dark:bg-gray-900 rounded-2xl';
+	export let className = 'bg-white dark:bg-gray-900 rounded-2xl';
 	export let disableClose = false;
+	export let title = '';
 
 	// New props for custom focus behavior:
 	export let initialFocusSelector = ''; // e.g. '#first-input'
@@ -47,10 +50,12 @@
 		document.body.appendChild(modalElement);
 		window.addEventListener('keydown', handleKeyDown);
 		document.body.style.overflow = 'hidden';
+		toast.announce($i18n.t('modalOpened', { title: title }));
 	} else if (modalElement) {
 		window.removeEventListener('keydown', handleKeyDown);
 		document.body.removeChild(modalElement);
 		document.body.style.overflow = 'unset';
+		toast.announce($i18n.t('modalClosed', { title: title }));
 	}
 
 	// Set up the focus trap using custom selectors if provided.
