@@ -10,11 +10,13 @@
 
 Translations are a five step process:
 
-1. Parse source code for keys
-2. Commit `ionos.json`s to Git with a message like "regenerate locales" and how it was regenerated in the commit message body
-3. Upload `src/lib/i18n/locales/en-US/ionos.json` to translation management
-4. Have translators translate/update texts
-5. Download `src/lib/i18n/locales/{en-US,de-DE}/ionos.json` from  translation management
+1. Option A: Generate key from source or
+   1. Parse source code for keys
+   2. Commit `ionos.json`s to Git with a message like "regenerate locales" and how it was regenerated in the commit message body
+   3. Upload `src/lib/i18n/locales/en-US/ionos.json` to translation management
+2. Option B: Enter keys manually to the translation tool
+3. Have translators translate/update texts
+4. Download `src/lib/i18n/locales/{en-US,de-DE}/ionos.json` from  translation management
 
 ### Parse
 
@@ -31,3 +33,5 @@ The `ionos.json` can directly be uploaded. Use the file type "i18next".
 ### Download from translation management
 
 Place the "en" and "de" downloads as `ionos.json` in the respective locale folders `en-US` and `de-DE`.
+
+Uncheck **nested keys**.
