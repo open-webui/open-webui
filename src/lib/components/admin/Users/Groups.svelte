@@ -63,6 +63,8 @@
 			file_upload: true,
 			delete: true,
 			edit: true,
+			share: true,
+			export: true,
 			stt: true,
 			tts: true,
 			call: true,

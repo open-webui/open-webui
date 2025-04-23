@@ -18,7 +18,8 @@
 		showArtifacts,
 		mobile,
 		temporaryChatEnabled,
-		theme
+		theme,
+		user
 	} from '$lib/stores';
 	import { flyAndScale } from '$lib/utils/transitions';
 
@@ -212,7 +213,7 @@
 				</DropdownMenu.Item>
 			{/if}
 
-			{#if !$temporaryChatEnabled}
+			{#if !$temporaryChatEnabled && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
 				<DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 					id="chat-share-button"
@@ -288,14 +289,16 @@
 					transition={flyAndScale}
 					sideOffset={8}
 				>
-					<DropdownMenu.Item
-						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
-						on:click={() => {
-							downloadJSONExport();
-						}}
-					>
-						<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
-					</DropdownMenu.Item>
+					{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
+						<DropdownMenu.Item
+							class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+							on:click={() => {
+								downloadJSONExport();
+							}}
+						>
+							<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
+						</DropdownMenu.Item>
+					{/if}
 					<DropdownMenu.Item
 						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
