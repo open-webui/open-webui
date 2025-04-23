@@ -39,7 +39,7 @@
 			align="start"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
-			{#if role === 'admin'}
+			<!-- {#if role === 'admin'} -->
 			<button
 				class="flex rounded-md text-sm text-customGray-100 py-2 px-3 w-full hover:bg-gray-50 dark:hover:text-white dark:hover:bg-customGray-950 transition"
 				on:click={async () => {
@@ -56,7 +56,7 @@
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
 			</button>
-			{/if}
+			<!-- {/if} -->
 
 			<!-- <button
 				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
