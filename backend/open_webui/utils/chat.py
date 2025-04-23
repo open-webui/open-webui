@@ -25,6 +25,7 @@ from open_webui.functions import generate_function_chat_completion
 
 from open_webui.routers.openai import (
     generate_chat_completion as generate_openai_chat_completion,
+    generate_chat_completion_with_prelude as generate_openai_chat_completion_with_prelude,
 )
 
 from open_webui.routers.ollama import (
@@ -272,12 +273,21 @@ async def generate_chat_completion(
             else:
                 return convert_response_ollama_to_openai(response)
         else:
-            return await generate_openai_chat_completion(
-                request=request,
-                form_data=form_data,
-                user=user,
-                bypass_filter=bypass_filter,
-            )
+            model_knowledge = model.get("info", {}).get("meta", {}).get("knowledge", False)
+            if model_knowledge:
+                return await generate_openai_chat_completion_with_prelude(
+                    request=request,
+                    form_data=form_data,
+                    user=user,
+                    bypass_filter=bypass_filter,
+                )
+            else:
+                return await generate_openai_chat_completion(
+                    request=request,
+                    form_data=form_data,
+                    user=user,
+                    bypass_filter=bypass_filter,
+                )
 
 
 chat_completion = generate_chat_completion
