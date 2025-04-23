@@ -20,9 +20,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade():
-    # Create the enum type first
-    #op.execute("CREATE TYPE permissioncategory AS ENUM ('workspace', 'sharing', 'chat', 'features')")
-
     # Create a permissions table.
     op.create_table(
         'permissions',
