@@ -1,5 +1,5 @@
 import { IMAGES_API_BASE_URL } from '$lib/constants';
-import { handleApiUnauthorized } from '$lib/utils/auth'; // Assuming location
+import { handleApiUnauthorized } from '$lib/stores';
 
 export const getConfig = async (token: string = '') => {
     let error = null;
