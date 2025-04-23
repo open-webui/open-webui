@@ -22,6 +22,14 @@
 	src: url(/assets/fonts/OpenSans-Bold-webfont.woff2) format("woff2");
 }
 
+@font-face {
+	font-family: "Overpass Regular";
+	font-style: normal;
+	font-weight: normal;
+	font-display: swap;
+	src: url(/assets/fonts/Overpass-Regular.woff2) format("woff2");
+}
+
 html {
 	word-break: break-word;
 }
