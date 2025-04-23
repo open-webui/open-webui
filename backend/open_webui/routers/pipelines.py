@@ -53,7 +53,7 @@ def get_sorted_filters(model_id, models):
 
 
 def process_pipeline_inlet_filter(request, payload, user, models):
-    user = {"id": user.id, "email": user.email, "name": user.name, "role": user.role}
+    user = {"id": user.id, "email": user.email, "first_name": user.first_name, "last_name": user.last_name, "role": user.role}
     model_id = payload["model"]
 
     sorted_filters = get_sorted_filters(model_id, models)
@@ -98,7 +98,7 @@ def process_pipeline_inlet_filter(request, payload, user, models):
 
 
 def process_pipeline_outlet_filter(request, payload, user, models):
-    user = {"id": user.id, "email": user.email, "name": user.name, "role": user.role}
+    user = {"id": user.id, "email": user.email, "first_name": user.first_name, "last_name": user.last_name, "role": user.role}
     model_id = payload["model"]
 
     sorted_filters = get_sorted_filters(model_id, models)

@@ -305,7 +305,7 @@ async def customer_billing_page(user=Depends(get_verified_user)):
         if not user.stripe_customer_id:
             test_string += "did not had strip customer id\n"
             data = stripe.Customer.create(
-                name=user.name,
+                name=user.first_name + " " + user.last_name,
                 email=user.email,
             )
             user = Users.update_user_by_id(user.id, {"stripe_customer_id": data['id']})

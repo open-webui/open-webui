@@ -196,7 +196,7 @@ def title_generation_template(
     template = prompt_template(
         template,
         **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
+            {"user_name": user.get("first_name") + " " + user.get("last_name"), "user_location": user.get("location")}
             if user
             else {}
         ),
@@ -215,7 +215,7 @@ def tags_generation_template(
     template = prompt_template(
         template,
         **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
+            {"user_name": user.get("first_name") + " " + user.get("last_name"), "user_location": user.get("location")}
             if user
             else {}
         ),
@@ -233,7 +233,7 @@ def image_prompt_generation_template(
     template = prompt_template(
         template,
         **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
+            {"user_name": user.get("first_name") + " " + user.get("last_name"), "user_location": user.get("location")}
             if user
             else {}
         ),
@@ -248,7 +248,7 @@ def emoji_generation_template(
     template = prompt_template(
         template,
         **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
+            {"user_name": user.get("first_name") + " " + user.get("last_name"), "user_location": user.get("location")}
             if user
             else {}
         ),
@@ -271,7 +271,7 @@ def autocomplete_generation_template(
     template = prompt_template(
         template,
         **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
+            {"user_name": user.get("first_name") + " " + user.get("last_name"), "user_location": user.get("location")}
             if user
             else {}
         ),
@@ -289,7 +289,7 @@ def query_generation_template(
     template = prompt_template(
         template,
         **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
+            {"user_name": user.get("first_name") + " " + user.get("last_name"), "user_location": user.get("location")}
             if user
             else {}
         ),

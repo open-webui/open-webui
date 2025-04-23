@@ -273,7 +273,8 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
     if user:
         return UserResponse(
             **{
-                "name": user.name,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
                 "profile_image_url": user.profile_image_url,
                 "active": get_active_status_by_user_id(user_id),
             }

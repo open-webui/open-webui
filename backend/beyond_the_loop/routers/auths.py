@@ -469,10 +469,10 @@ async def complete_invite(request: Request, response: Response, form_data: Compl
     if request.app.state.config.WEBHOOK_URL:
         post_webhook(
             request.app.state.config.WEBHOOK_URL,
-            WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+            WEBHOOK_MESSAGES.USER_SIGNUP(user.first_name + " " + user.last_name),
             {
                 "action": "signup",
-                "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.first_name + " " + user.last_name),
                 "user": user.model_dump_json(exclude_none=True),
             },
         )
@@ -538,7 +538,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             company = Companies.create_company({
                 "id": company_id,
                 "name": f"{form_data.name}'s Company",
-                "credit_balance": 10000  # Initial credit balance
+                "credit_balance": 10000000  # Initial credit balance
             })
             if not company:
                 raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_COMPANY_ERROR)
@@ -587,10 +587,10 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             if request.app.state.config.WEBHOOK_URL:
                 post_webhook(
                     request.app.state.config.WEBHOOK_URL,
-                    WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                    WEBHOOK_MESSAGES.USER_SIGNUP(user.first_name + " " + user.last_name),
                     {
                         "action": "signup",
-                        "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                        "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.first_name + " " + user.last_name),
                         "user": user.model_dump_json(exclude_none=True),
                     },
                 )

@@ -100,7 +100,8 @@ async def get_top_users(
             top_users = db.query(
                 Completion.user_id,
                 func.sum(Completion.credits_used).label("total_credits"),
-                User.name,
+                User.first_name,
+                User.last_name,
                 User.email,
                 User.profile_image_url
             ).join(
@@ -109,7 +110,7 @@ async def get_top_users(
                 Completion.created_at >= start_timestamp,
                 Completion.created_at <= end_timestamp,
             ).group_by(
-                Completion.user_id, User.name, User.email, User.profile_image_url
+                Completion.user_id, User.first_name, User.last_name, User.email, User.profile_image_url
             ).order_by(
                 func.sum(Completion.credits_used).desc()
             ).limit(3).all()
