@@ -9,7 +9,7 @@ from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-import open_webui.internal.db
+from sqlalchemy import Enum
 
 
 # revision identifiers, used by Alembic.
@@ -20,55 +20,20 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade():
+    # Create the enum type first
+    #op.execute("CREATE TYPE permissioncategory AS ENUM ('workspace', 'sharing', 'chat', 'features')")
+
     # Create a permissions table.
-    permissions_table = op.create_table(
+    op.create_table(
         'permissions',
-        sa.Column('id', sa.Integer(), primary_key=True),
+        sa.Column('id', sa.Integer(), primary_key=True,  autoincrement=True),
         sa.Column('name', sa.String(), nullable=False),
-        sa.Column('category', sa.String(), nullable=False),
+        sa.Column('category', Enum('workspace', 'sharing', 'chat', 'features', name='permissioncategory'), nullable=False),
         sa.Column('description', sa.String()),
         sa.Column('default_value', sa.Boolean(), default=False),
     )
 
-    # Insert default permissions
-    default_permissions = [
-        # Workspace permissions
-        {'category': 'workspace', 'name': 'models', 'default_value': False},
-        {'category': 'workspace', 'name': 'knowledge', 'default_value': False},
-        {'category': 'workspace', 'name': 'prompts', 'default_value': False},
-        {'category': 'workspace', 'name': 'tools', 'default_value': False},
-        # Sharing permissions
-        {'category': 'sharing', 'name': 'public_models', 'default_value': True},
-        {'category': 'sharing', 'name': 'public_knowledge', 'default_value': True},
-        {'category': 'sharing', 'name': 'public_prompts', 'default_value': True},
-        {'category': 'sharing', 'name': 'public_tools', 'default_value': True},
-        # Chat permissions.
-        {'category': 'chat', 'name': 'controls', 'default_value': True},
-        {'category': 'chat', 'name': 'file_upload', 'default_value': True},
-        {'category': 'chat', 'name': 'delete', 'default_value': True},
-        {'category': 'chat', 'name': 'edit', 'default_value': True},
-        {'category': 'chat', 'name': 'stt', 'default_value': True},
-        {'category': 'chat', 'name': 'tts', 'default_value': True},
-        {'category': 'chat', 'name': 'call', 'default_value': True},
-        {'category': 'chat', 'name': 'multiple_models', 'default_value': True},
-        {'category': 'chat', 'name': 'temporary', 'default_value': True},
-        {'category': 'chat', 'name': 'temporary_enforced', 'default_value': True},
-        # Features permissions.
-        {'category': 'features', 'name': 'direct_tool_servers', 'default_value': False},
-        {'category': 'features', 'name': 'web_search', 'default_value': True},
-        {'category': 'features', 'name': 'image_generation', 'default_value': True},
-        {'category': 'features', 'name': 'code_interpreter', 'default_value': True},
-    ]
-
-    for perm in default_permissions:
-        op.execute(
-            permissions_table.insert().values(
-                name=perm['name'],
-                category=perm['category'],
-                default_value=perm['default_value']
-            )
-        )
-
-
 def downgrade():
     op.drop_table('permissions')
+    # Drop the enum type
+    op.execute("DROP TYPE permissioncategory")

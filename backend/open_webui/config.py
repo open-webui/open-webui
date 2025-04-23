@@ -31,7 +31,7 @@ from open_webui.env import (
 )
 from open_webui.internal.db import Base, get_db
 from open_webui.utils.redis import get_redis_connection
-
+from open_webui.models.permissions import Permissions
 
 class EndpointFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
@@ -1130,7 +1130,6 @@ USER_PERMISSIONS_FEATURES_NOTES = (
     os.environ.get("USER_PERMISSIONS_FEATURES_NOTES", "True").lower() == "true"
 )
 
-
 DEFAULT_USER_PERMISSIONS = {
     "workspace": {
         "models": USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS,
@@ -1167,11 +1166,7 @@ DEFAULT_USER_PERMISSIONS = {
     },
 }
 
-USER_PERMISSIONS = PersistentConfig(
-    "USER_PERMISSIONS",
-    "user.permissions",
-    DEFAULT_USER_PERMISSIONS,
-)
+USER_PERMISSIONS = Permissions.get_or_create_permissions(DEFAULT_USER_PERMISSIONS)
 
 ENABLE_CHANNELS = PersistentConfig(
     "ENABLE_CHANNELS",
