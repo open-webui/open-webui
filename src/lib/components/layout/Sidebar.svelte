@@ -64,6 +64,7 @@
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import ShowSidebarIcon from '../icons/ShowSidebarIcon.svelte';
 	import AddNewFolderDialog from '../common/ConfirmDialog.svelte';
+	import { sidebarKey } from '$lib/stores';
 
 	const BREAKPOINT = 768;
 
@@ -427,6 +428,18 @@
 	});
 
 	let showCreateFolder = false;
+
+	let unsubscribe;
+	
+	onMount(() => {
+		unsubscribe = sidebarKey.subscribe(() => {
+		initChatList();
+		});
+	});
+
+	onDestroy(() => {
+		if (unsubscribe) unsubscribe();
+	});
 </script>
 
 <ArchivedChatsModal
