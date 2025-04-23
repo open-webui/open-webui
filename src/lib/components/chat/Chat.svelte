@@ -670,17 +670,20 @@
 				selectedModels = urlModels;
 			}
 		} else {
-			if (sessionStorage.selectedModels) {
-				selectedModels = JSON.parse(sessionStorage.selectedModels);
-				sessionStorage.removeItem('selectedModels');
-			} else {
+			
+			// if (sessionStorage.selectedModels) {
+			// 	selectedModels = JSON.parse(sessionStorage.selectedModels);
+			// 	sessionStorage.removeItem('selectedModels');
+			// } else {
 				if ($settings?.models) {
 					selectedModels = $settings?.models;
 				} else if ($config?.default_models) {
 					console.log($config?.default_models.split(',') ?? '');
 					selectedModels = $config?.default_models.split(',');
+				} else {
+					selectedModels = [''];
 				}
-			}
+			//}
 		}
 
 		selectedModels = selectedModels.filter((modelId) => $models.map((m) => m.id).includes(modelId));

@@ -141,7 +141,7 @@
 </script>
 
 <div class="w-full max-h-full">
-	<div class="py-5.5 px-4 border-b border-customGray-700">
+	<div class="py-5 px-4 border-b border-customGray-700">
 		<button
 			class="flex items-center gap-1"
 			on:click={() => {
