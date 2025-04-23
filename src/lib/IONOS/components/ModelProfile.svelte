@@ -26,14 +26,14 @@
 	placement="left"
 	tippyOptions={tippyOptions}
 	allowHTML={true}
-	content={`<div class="flex flex-row">
+	content={`<div class="flex flex-row rounded-2xl px-px py-[5px] text-blue-800">
 				<div class="flex-shrink-0 pr-4">
 					<img class="w-24 h-24 object-cover rounded-full" src=${model?.info?.meta?.profile_image_url} alt="Model avatar image">
 				</div>
 				<div>
-					<h1 class="text-base font-bold">${model?.name ?? ""}</h1>
-					<h2 class="text-base mb-2">${subtitle}</h2>
-					<p class="text-sm">${description}</p>
+					<h1 class="text-base font-semibold">${model?.name ?? ""}</h1>
+					<h2 class="text-xs mb-2">${subtitle}</h2>
+					<p class="text-xs">${description}</p>
 				</div>
 			</div>`}
 >
@@ -58,7 +58,7 @@
 
 		background-color: #fff;
 		color: #000;
-		box-shadow: 0 0 5px #ccc, 5px 5px 20px #ccc;
+		box-shadow: 5px 5px 15px 2px #0000001A;
 	}
 </style>
 
