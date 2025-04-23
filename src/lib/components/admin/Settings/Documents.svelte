@@ -18,11 +18,12 @@
 	} from '$lib/apis/retrieval';
 
 	import { reindexKnowledgeFiles } from '$lib/apis/knowledge';
-	import { deleteAllFiles } from '$lib/apis/files';
+	import { deleteAllFiles, reindexFiles, countFiles } from '$lib/apis/files';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ReindexKnowledgeFilesConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import ReindexFilesConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -37,6 +38,8 @@
 	let showResetConfirm = false;
 	let showResetUploadDirConfirm = false;
 	let showReindexConfirm = false;
+	let showFilesReindexConfirm = false;
+	let filesCountMessage = '';
 
 	let embeddingEngine = '';
 	let embeddingModel = '';
@@ -214,6 +217,31 @@
 		}
 	};
 
+	const openReindexDialog = async () => {
+        const token = localStorage.token;
+        if (!token) {
+            toast.error($i18n.t('No token found'));
+            return;
+        }
+
+        // Start by setting a loading message while we fetch the count
+        filesCountMessage = $i18n.t('Loading file count...');
+
+        // Fetch the file count
+        try {
+            const fileCount = await countFiles(token);
+            if (fileCount > 0) {
+                filesCountMessage = $i18n.t('You are about to reindex') + ` ${fileCount} ` + $i18n.t('files. This could take a while. Do you want to proceed?');
+            } else {
+                filesCountMessage = $i18n.t('No files to reindex2.');
+            }
+            showFilesReindexConfirm = true;  // Show the dialog once the message is updated
+        } catch (error) {
+            filesCountMessage = $i18n.t('Error fetching file count');
+            toast.error(`${error}`);
+        }
+    };
+
 	onMount(async () => {
 		await setEmbeddingConfig();
 		await setRerankingConfig();
@@ -254,6 +282,21 @@
 	bind:show={showReindexConfirm}
 	on:confirm={async () => {
 		const res = await reindexKnowledgeFiles(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Success'));
+		}
+	}}
+/>
+
+<ReindexFilesConfirmDialog
+	bind:show={showFilesReindexConfirm}
+	message={filesCountMessage}
+	on:confirm={async () => {
+		const res = await reindexFiles(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
@@ -898,6 +941,21 @@
 								class="text-xs"
 								on:click={() => {
 									showReindexConfirm = true;
+								}}
+							>
+								{$i18n.t('Reindex')}
+							</button>
+						</div>
+					</div>
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Reindex all Files Vectors')}
+						</div>
+						<div class="flex items-center relative">
+							<button
+								class="text-xs"
+								on:click={() => {
+									openReindexDialog();
 								}}
 							>
 								{$i18n.t('Reindex')}

@@ -27,6 +27,7 @@ from open_webui.models.files import (
 )
 from open_webui.models.knowledge import Knowledges
 
+from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.routers.knowledge import get_knowledge, get_knowledge_list
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.routers.audio import transcribe
@@ -219,6 +220,39 @@ async def search_files(
                 del file.data["content"]
 
     return matching_files
+
+
+############################
+# Reindex All Files
+############################
+
+
+@router.post('/reindex', response_model=bool)
+async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
+    files = Files.get_files()
+
+    log.info(f"Starting reindexing for {len(files)} files")
+    for file in files:
+        try:
+            if VECTOR_DB_CLIENT.has_collection(collection_name=f"file-{file.id}"):
+                VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
+        except Exception as e:
+            log.error(f"Error deleting file 'file-{file.id}': {str(e)}")
+        finally:
+            try:
+                process_file(
+                    request,
+                    ProcessFileForm(
+                        file_id=file.id
+                    ),
+                    user=user
+            )
+            except Exception as e:
+                log.error(
+                        f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
+                    )
+    log.info("Reindexing files completed sucessfully.")
+    return True
 
 
 ############################
