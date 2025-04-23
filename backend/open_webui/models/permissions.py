@@ -1,10 +1,10 @@
 from enum import Enum
-from typing import Optional
+from typing import Dict, Any
 
 from open_webui.internal.db import Base, JSONField, get_db
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import Boolean, Column, String, JSON, Enum as SQLAlchemyEnum
+from sqlalchemy import Boolean, Column, String, Integer, Enum as SQLAlchemyEnum
 
 ####################
 # Role DB Schema
@@ -19,7 +19,7 @@ class PermissionCategory(str, Enum):
 class Permission(Base):
     __tablename__ = "permissions"
 
-    id = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True,  autoincrement=True)
     name = Column(String, nullable=False)
     # workspace, sharing, chat, features
     category = Column(SQLAlchemyEnum(PermissionCategory), nullable=False)
@@ -41,7 +41,7 @@ class PermissionsModel(BaseModel):
 ####################
 
 class PermissionsTable:
-    def get_permissions_by_category(self) -> dict[PermissionCategory, list[PermissionsModel]]:
+    def get_permissions_by_category(self) -> dict[PermissionCategory, dict[str, bool]]:
         with get_db() as db:
 
             query = db.query(Permission).order_by(Permission.id)
@@ -50,11 +50,45 @@ class PermissionsTable:
             # Group permissions by category
             permissions = {}
             for perm in all_permissions:
-                if perm.category not in permissions:
-                    permissions[perm.category] = {}
+                if perm.category.value not in permissions:
+                    permissions[perm.category.value] = {}
 
-                permissions[perm.category][perm.name] = perm.default_value
+                permissions[perm.category.value][perm.name] = perm.default_value
 
             return permissions
+
+    def get_or_create_permissions(self, default_permissions: dict[PermissionCategory, dict[str, bool]]) -> dict[PermissionCategory, dict[str, bool]]:
+        with get_db() as db:
+            # Check if any permissions exist
+            existing_count = db.query(Permission).count()
+
+            if existing_count == 0:
+                # No permissions exist, initialize with defaults
+                for category_str, perms in default_permissions.items():
+                    # Convert string category to enum
+                    try:
+                        category = PermissionCategory(category_str)
+                    except ValueError:
+                        continue  # Skip invalid categories
+
+                    for perm_name, default_value in perms.items():
+                        new_permission = Permission(
+                            name=perm_name,
+                            category=category,
+                            default_value=default_value,
+                            description=f"Default {category.value} permission for {perm_name}"
+                        )
+                        db.add(new_permission)
+
+                try:
+                    db.commit()
+                except Exception as e:
+                    db.rollback()
+                    raise e
+
+            # Return current permissions structure
+            return self.get_permissions_by_category()
+
+
 
 Permissions = PermissionsTable()
