@@ -22,6 +22,8 @@ RequestExecutionLevel user
 !define /ifndef EMPTY_FILE_NAME "empty_file.txt"
 !define /ifndef ICON_FILE "${__FILE__}\..\..\static\${PROJECT_NAME_CONCAT}.ico"
 !define /ifndef ICON_DEST "$LOCALAPPDATA\${PROJECT_NAME}\${PROJECT_NAME_CONCAT}.ico"
+!define PYTHON_EMBED_URL "https://www.python.org/ftp/python/3.10.9/python-3.10.9-embed-amd64.zip"
+!define GET_PIP_URL "https://bootstrap.pypa.io/get-pip.py"
 
 ; This is a compile-time fix to make sure that our selfhost CI runner can successfully install,
 ; since LOCALAPPDATA points to C:\Windows for "system users"
@@ -34,8 +36,6 @@ InstallDir "$LOCALAPPDATA\${PROJECT_NAME}"
 !delfile "${TMPFILE}"
 
 ; Define variables
-Var raux_CONDA_ENV
-Var PythonVersion
 Var LogFilePath
 
 ; Finish Page settings
@@ -73,8 +73,6 @@ LangString MUI_TEXT_LICENSE_SUBTITLE ${LANG_ENGLISH} "Please review the license 
 
 Function .onInit
   ; Initialize variables
-  StrCpy $raux_CONDA_ENV "${PROJECT_NAME_CONCAT}_env"
-  StrCpy $PythonVersion "3.11"
   ; Fix the log file path to avoid variable substitution issues
   StrCpy $LogFilePath "$LOCALAPPDATA\${PROJECT_NAME}\${PROJECT_NAME_CONCAT}_install.log"
   
@@ -103,8 +101,6 @@ Section "Install Main Components" SEC01
     ${EndIf}
 
   remove_dir:
-    ; Attempt conda remove of the env, to help speed things up
-    ExecWait 'conda env remove -yp "$LOCALAPPDATA\${PROJECT_NAME}\$raux_CONDA_ENV"'
     ; Try to remove directory and verify it was successful
     RMDir /r "$LOCALAPPDATA\${PROJECT_NAME}"
     DetailPrint "- Deleted all contents of install dir"
@@ -135,158 +131,89 @@ Section "Install Main Components" SEC01
     File "LICENSE"
     File ${ICON_FILE}
 
-    ; Check if conda is available
-    ExecWait 'where conda' $2
-    DetailPrint "- Checked if conda is available"
+    DetailPrint "Set up Python"
+    CreateDirectory "$LOCALAPPDATA\${PROJECT_NAME}\python"
+    DetailPrint "- Downloading Python embedded distribution..."
+    ExecWait 'curl -s -o "$LOCALAPPDATA\${PROJECT_NAME}\python\python.zip" "${PYTHON_EMBED_URL}"'
+    DetailPrint "- Extracting Python..."
+    ExecWait 'tar -xf "$LOCALAPPDATA\${PROJECT_NAME}\python\python.zip" -C "$LOCALAPPDATA\${PROJECT_NAME}\python"'
+    Delete "$LOCALAPPDATA\${PROJECT_NAME}\python\python.zip"
+    
+    DetailPrint "- Installing pip..."
+    ExecWait 'curl -sSL ${GET_PIP_URL} -o "$LOCALAPPDATA\${PROJECT_NAME}\python\get-pip.py"'
+    ExecWait '"$LOCALAPPDATA\${PROJECT_NAME}\python\python.exe" "$LOCALAPPDATA\${PROJECT_NAME}\python\get-pip.py" --no-warn-script-location'
+    Delete "$LOCALAPPDATA\${PROJECT_NAME}\python\get-pip.py"
+    
+    DetailPrint "- Configuring Python paths..."
+    FileOpen $2 "$LOCALAPPDATA\${PROJECT_NAME}\python\python310._pth" a
+    FileSeek $2 0 END
+    FileWrite $2 "$\r$\nLib$\r$\n"
+    FileWrite $2 "$\r$\nLib\site-packages$\r$\n"
+    FileClose $2
 
-    ; If conda is not found, show a message and exit
-    ; Otherwise, continue with the installation
-    StrCmp $2 "0" create_env conda_not_available
+    DetailPrint "--------------------------"
+    DetailPrint "- ${PROJECT_NAME} Installation -"
+    DetailPrint "--------------------------"
 
-    conda_not_available:
-      DetailPrint "- Conda not installed."
+    DetailPrint "- Creating ${PROJECT_NAME} installation directory..."
+    CreateDirectory "$LOCALAPPDATA\${PROJECT_NAME}"
+    
+    DetailPrint "- Creating temporary directory for ${PROJECT_NAME} installation..."
+    CreateDirectory "$LOCALAPPDATA\${PROJECT_NAME}\${PROJECT_NAME_CONCAT}_temp"
+    SetOutPath "$LOCALAPPDATA\${PROJECT_NAME}\${PROJECT_NAME_CONCAT}_temp"
+    
+    DetailPrint "- Preparing for ${PROJECT_NAME} installation..."
+    
+    ; Copy the Python installer script to the temp directory
+    File "${__FILE__}\..\${PROJECT_NAME_CONCAT}_installer.py"
+
+    DetailPrint "- Using Python script: $LOCALAPPDATA\${PROJECT_NAME}\${PROJECT_NAME_CONCAT}_temp\${PROJECT_NAME_CONCAT}_installer.py"
+    DetailPrint "- Installation directory: $LOCALAPPDATA\${PROJECT_NAME}"
+    DetailPrint "- Using embedded Python for the installation process"
+    
+    ; Execute the Python script with the embedded Python
+    ExecWait '"$LOCALAPPDATA\${PROJECT_NAME}\python\python.exe" "$LOCALAPPDATA\${PROJECT_NAME}\${PROJECT_NAME_CONCAT}_temp\${PROJECT_NAME_CONCAT}_installer.py" --install-dir "$LOCALAPPDATA\${PROJECT_NAME}" --debug' $R0
+
+    DetailPrint "${PRODUCT_NAME} installation exit code: $R0"
+      
+    ; Check if installation was successful
+    ${If} $R0 == 0
+      DetailPrint "*** ${PRODUCT_NAME} INSTALLATION COMPLETED ***"
+      DetailPrint "- ${PRODUCT_NAME} installation completed successfully"
+    ${Else}
+      DetailPrint "*** ${PRODUCT_NAME} INSTALLATION FAILED ***"
+      DetailPrint "- For additional support, please contact support@amd.com and"
+      DetailPrint "include the error details, or create an issue at"
+      DetailPrint "https://github.com/aigdat/open-webui"
       ${IfNot} ${Silent}
-        MessageBox MB_YESNO "Conda is not installed. Would you like to install Miniconda?" IDYES install_miniconda IDNO exit_installer
-      ${Else}
-        GoTo install_miniconda
+        MessageBox MB_OK "${PRODUCT_NAME} installation failed.$\n$\nPlease check the log file at $LOCALAPPDATA\${PRODUCT_NAME}\${PROJECT_NAME_CONCAT}_Installer.log for detailed error information."
       ${EndIf}
-
-    exit_installer:
-      DetailPrint "- Something went wrong. Exiting installer"
-      Quit
-
-    install_miniconda:
-      DetailPrint "-------------"
-      DetailPrint "- Miniconda -"
-      DetailPrint "-------------"
-      DetailPrint "- Downloading Miniconda installer..."
-      ExecWait 'curl -s -o "$TEMP\Miniconda3-latest-Windows-x86_64.exe" "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe"'
-
-      ; Install Miniconda silently
-      ExecWait '"$TEMP\Miniconda3-latest-Windows-x86_64.exe" /InstallationType=JustMe /AddToPath=1 /RegisterPython=0 /S /D=$PROFILE\miniconda3' $2
-      ; Check if Miniconda installation was successful
-      ${If} $2 == 0
-        DetailPrint "- Miniconda installation successful"
-        ${IfNot} ${Silent}
-          MessageBox MB_OK "Miniconda has been successfully installed."
-        ${EndIf}
-
-        StrCpy $R1 "$PROFILE\miniconda3\Scripts\conda.exe"
-        GoTo create_env
-
-      ${Else}
-        DetailPrint "- Miniconda installation failed"
-        ${IfNot} ${Silent}
-          MessageBox MB_OK "Error: Miniconda installation failed. Installation will be aborted."
-        ${EndIf}
-        GoTo exit_installer
-      ${EndIf}
-
-    create_env:
-      DetailPrint "---------------------"
-      DetailPrint "- Conda Environment -"
-      DetailPrint "---------------------"
-
-      DetailPrint "- Initializing conda..."
-      ; Use the appropriate conda executable
-      ${If} $R1 == ""
-        StrCpy $R1 "conda"
-      ${EndIf}
-      ; Initialize conda (needed for systems where conda was previously installed but not initialized)
-      nsExec::ExecToLog '"$R1" init'
-
-      DetailPrint "- Creating a Python $PythonVersion environment named '$raux_CONDA_ENV' in the installation directory: $LOCALAPPDATA\${PROJECT_NAME}..."
-      ExecWait '"$R1" create -n "$raux_CONDA_ENV" python=$PythonVersion -y' $R0
-
-      ; Check if the environment creation was successful (exit code should be 0)
-      StrCmp $R0 0 set_conda_env env_creation_failed
-
-    set_conda_env:
-      DetailPrint "- Setting conda environment $raux_CONDA_ENV..."
-      DetailPrint "- Changing to installation directory..."
-      SetOutPath "$LOCALAPPDATA\${PROJECT_NAME}"
-      
-      DetailPrint "- Verifying conda environment..."
-      ; Instead of trying to activate the environment (which doesn't work well in scripts),
-      ; we'll just verify that the environment exists and is ready to use
-      ExecWait '"$R1" list -n "$raux_CONDA_ENV"' $R0
-
-      StrCmp $R0 0 install_app env_creation_failed
-
-    env_creation_failed:
-      DetailPrint "- ERROR: Environment creation failed"
-      ; Display an error message and exit
-      ${IfNot} ${Silent}
-        MessageBox MB_OK "ERROR: Failed to create the Python environment. Installation will be aborted."
-      ${EndIf}
-      Quit
-
-    install_app:
-      DetailPrint "--------------------------"
-      DetailPrint "- ${PROJECT_NAME} Installation -"
-      DetailPrint "--------------------------"
-
-      DetailPrint "- Creating ${PROJECT_NAME} installation directory..."
-      CreateDirectory "$LOCALAPPDATA\${PROJECT_NAME}"
-      
-      DetailPrint "- Creating temporary directory for ${PROJECT_NAME} installation..."
-      CreateDirectory "$LOCALAPPDATA\${PROJECT_NAME}\${PROJECT_NAME_CONCAT}_temp"
-      SetOutPath "$LOCALAPPDATA\${PROJECT_NAME}\${PROJECT_NAME_CONCAT}_temp"
-      
-      DetailPrint "- Preparing for ${PROJECT_NAME} installation..."
-      
-      ; Copy the Python installer script to the temp directory
-      File "${__FILE__}\..\${PROJECT_NAME_CONCAT}_installer.py"
-
-      DetailPrint "- Using Python script: $LOCALAPPDATA\${PROJECT_NAME}\${PROJECT_NAME_CONCAT}_temp\${PROJECT_NAME_CONCAT}_installer.py"
-      DetailPrint "- Installation directory: $LOCALAPPDATA\${PROJECT_NAME}"
-      DetailPrint "- Using system Python for the entire installation process"
-      
-      ; Execute the Python script with the required parameters using system Python
-      ; Note: We're not passing the python-exe parameter, so it will use the system Python
-      ExecWait 'python "$LOCALAPPDATA\${PROJECT_NAME}\${PROJECT_NAME_CONCAT}_temp\${PROJECT_NAME_CONCAT}_installer.py" --install-dir "$LOCALAPPDATA\${PROJECT_NAME}" --debug' $R0
-
-      DetailPrint "${PRODUCT_NAME} installation exit code: $R0"
-      
-      ; Check if installation was successful
-      ${If} $R0 == 0
-        DetailPrint "*** ${PRODUCT_NAME} INSTALLATION COMPLETED ***"
-        DetailPrint "- ${PRODUCT_NAME} installation completed successfully"
-      ${Else}
-        DetailPrint "*** ${PRODUCT_NAME} INSTALLATION FAILED ***"
-        DetailPrint "- For additional support, please contact support@amd.com and"
-        DetailPrint "include the error details, or create an issue at"
-        DetailPrint "https://github.com/aigdat/open-webui"
-        ${IfNot} ${Silent}
-          MessageBox MB_OK "${PRODUCT_NAME} installation failed.$\n$\nPlease check the log file at $LOCALAPPDATA\${PRODUCT_NAME}\${PROJECT_NAME_CONCAT}_Installer.log for detailed error information."
-        ${EndIf}
-      ${EndIf}
-      
-      ; IMPORTANT: Do NOT attempt to clean up the temporary directory
-      ; This is intentional to prevent file-in-use errors
-      ; The directory will be left for the system to clean up later
-      DetailPrint "- Intentionally NOT cleaning up temporary directory to prevent file-in-use errors"
-      SetOutPath "$INSTDIR"
-      
-      ; Create RAUX shortcut - using the GAIA icon but pointing to RAUX installation
-      DetailPrint "- Creating ${PROJECT_NAME} desktop shortcut"
-      
-      ; Copy the launcher scripts to the RAUX installation directory if they exist
-      DetailPrint "- Copying ${PROJECT_NAME} launcher scripts"
-      
-      ; Use /nonfatal flag to prevent build failure if files don't exist
-      File /nonfatal "/oname=$LOCALAPPDATA\${PROJECT_NAME}\launch_${PROJECT_NAME_CONCAT}.ps1" "${__FILE__}\..\launch_${PROJECT_NAME_CONCAT}.ps1"
-      File /nonfatal "/oname=$LOCALAPPDATA\${PROJECT_NAME}\launch_${PROJECT_NAME_CONCAT}.cmd" "${__FILE__}\..\launch_${PROJECT_NAME_CONCAT}.cmd"
-      
-      ; Copy the icon file to the RAUX installation directory
-      DetailPrint "- Copying ${PROJECT_NAME} icon file"
-      File "/oname=${ICON_DEST}" "${ICON_FILE}"
-      
-      ; Create shortcut to the batch wrapper script (will appear as a standalone app)
-      CreateShortcut "$DESKTOP\GAIA-UI-BETA.lnk" "$LOCALAPPDATA\${PROJECT_NAME}\launch_${PROJECT_NAME_CONCAT}.cmd" "" "${ICON_DEST}"
+    ${EndIf}
+    
+    ; IMPORTANT: Do NOT attempt to clean up the temporary directory
+    ; This is intentional to prevent file-in-use errors
+    ; The directory will be left for the system to clean up later
+    DetailPrint "- Intentionally NOT cleaning up temporary directory to prevent file-in-use errors"
+    SetOutPath "$INSTDIR"
+    
+    ; Create RAUX shortcut - using the GAIA icon but pointing to RAUX installation
+    DetailPrint "- Creating ${PROJECT_NAME} desktop shortcut"
+    
+    ; Copy the launcher scripts to the RAUX installation directory if they exist
+    DetailPrint "- Copying ${PROJECT_NAME} launcher scripts"
+    
+    ; Use /nonfatal flag to prevent build failure if files don't exist
+    File /nonfatal "/oname=$LOCALAPPDATA\${PROJECT_NAME}\launch_${PROJECT_NAME_CONCAT}.ps1" "${__FILE__}\..\launch_${PROJECT_NAME_CONCAT}.ps1"
+    File /nonfatal "/oname=$LOCALAPPDATA\${PROJECT_NAME}\launch_${PROJECT_NAME_CONCAT}.cmd" "${__FILE__}\..\launch_${PROJECT_NAME_CONCAT}.cmd"
+    
+    ; Copy the icon file to the RAUX installation directory
+    DetailPrint "- Copying ${PROJECT_NAME} icon file"
+    File "/oname=${ICON_DEST}" "${ICON_FILE}"
+    
+    ; Create shortcut to the batch wrapper script (will appear as a standalone app)
+    CreateShortcut "$DESKTOP\GAIA-UI-BETA.lnk" "$LOCALAPPDATA\${PROJECT_NAME}\launch_${PROJECT_NAME_CONCAT}.cmd" "" "${ICON_DEST}"
 
 SectionEnd
-
 
 Function RunAmdOpenWebUI
   ExecShell "open" "http://localhost:8080/"
