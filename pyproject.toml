@@ -130,6 +130,8 @@ dependencies = [
 
     "moto[s3]>=5.0.26",
 
+    "jwcrypto==1.5.6",
+
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.13.0a1"
