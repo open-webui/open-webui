@@ -64,19 +64,32 @@ class MessageMetricsTable:
             db.commit()
             db.refresh(result)
 
-    def get_messages_number(self, domain: Optional[str] = None) -> Optional[int]:
+    def get_used_models(self) -> list[str]:
+        try:
+            with get_db() as db:
+                models = db.query(MessageMetric.model).distinct().all()
+                return [model[0] for model in models if model[0]]
+        except Exception as e:
+            logger.error(f"Failed to get used models: {e}")
+            return []
+
+    def get_messages_number(
+        self, domain: Optional[str] = None, model: Optional[str] = None
+    ) -> Optional[int]:
         try:
             with get_db() as db:
                 query = db.query(MessageMetric)
                 if domain:
                     query = query.filter(MessageMetric.user_domain == domain)
+                if model:
+                    query = query.filter(MessageMetric.model == model)
                 return query.count()
         except Exception as e:
             logger.error(f"Failed to get messages number: {e}")
-            return 0  # Return 0 instead of None
+            return 0
 
     def get_daily_messages_number(
-        self, days: int = 1, domain: Optional[str] = None
+        self, days: int = 1, domain: Optional[str] = None, model: Optional[str] = None
     ) -> Optional[int]:
         try:
             with get_db() as db:
@@ -97,11 +110,13 @@ class MessageMetricsTable:
 
                 if domain:
                     query = query.filter(MessageMetric.user_domain == domain)
+                if model:
+                    query = query.filter(MessageMetric.model == model)
 
                 return query.count()
         except Exception as e:
             logger.error(f"Failed to get daily messages number: {e}")
-            return 0  # Return 0 instead of None
+            return 0
 
     def get_message_tokens_sum(self, domain: Optional[str] = None) -> Optional[int]:
         try:
@@ -149,7 +164,7 @@ class MessageMetricsTable:
             return 0  # Return 0 instead of None
 
     def get_historical_messages_data(
-        self, days: int = 7, domain: Optional[str] = None
+        self, days: int = 7, domain: Optional[str] = None, model: Optional[str] = None
     ) -> list[dict]:
         try:
             result = []
@@ -196,6 +211,8 @@ class MessageMetricsTable:
 
                     if domain:
                         query = query.filter(MessageMetric.user_domain == domain)
+                    if model:
+                        query = query.filter(MessageMetric.model == model)
 
                     count = query.count()
 

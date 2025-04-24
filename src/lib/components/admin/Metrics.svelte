@@ -21,7 +21,11 @@
 		getHistoricalUsers,
 		getTotalPrompts,
 		getTotalTokens,
-		getTotalUsers
+		getTotalUsers,
+		getModels,
+		getModelPrompts,
+		getModelDailyPrompts,
+		getModelHistoricalPrompts
 	} from '$lib/apis/metrics';
 
 	// Register the Chart.js components
@@ -40,6 +44,7 @@
 	let unsubscribe: () => void;
 
 	let domains: string[] = [];
+	let models: string[] = [];
 	let totalUsers: number = 0,
 		totalPrompts: number = 0,
 		totalTokens: number = 0,
@@ -47,14 +52,21 @@
 		dailyPrompts: number = 0,
 		dailyTokens: number = 0;
 	let selectedDomain: string | null = null; // Allow null for "no domain"
+	let selectedModel: string | null = null; // Allow null for "no model"
+
+	// Model specific metrics
+	let modelPrompts: number = 0,
+		modelDailyPrompts: number = 0;
 
 	// Chart objects
 	let dailyActiveUsersChart: any, dailyPromptsChart: any, dailyTokensChart: any;
+	let modelPromptsChart: any;
 
 	// Chart data
 	let dailyActiveUsersData: any[] = [];
 	let dailyPromptsData: any[] = [];
 	let dailyTokensData: any[] = [];
+	let modelPromptsData: any[] = [];
 
 	// For chart options
 	const chartOptions = {
@@ -99,9 +111,10 @@
 		}
 	};
 
-	async function updateCharts(selectedDomain: string | null) {
+	async function updateCharts(selectedDomain: string | null, selectedModel: string | null) {
 		try {
-			let updatedDomains = selectedDomain ?? undefined;
+			let updatedDomain = selectedDomain ?? undefined;
+			let updatedModel = selectedModel ?? undefined;
 
 			// Reset all data to ensure no stale values
 			totalUsers = 0;
@@ -110,15 +123,27 @@
 			dailyUsers = 0;
 			dailyPrompts = 0;
 			dailyTokens = 0;
+			modelPrompts = 0;
+			modelDailyPrompts = 0;
 
 			// Fetch simple metrics
 			try {
-				totalUsers = await getTotalUsers(localStorage.token, updatedDomains);
-				totalPrompts = await getTotalPrompts(localStorage.token, updatedDomains);
-				dailyUsers = await getDailyUsers(localStorage.token, updatedDomains);
-				totalTokens = await getTotalTokens(localStorage.token, updatedDomains);
-				dailyPrompts = await getDailyPrompts(localStorage.token, updatedDomains);
-				dailyTokens = await getDailyTokens(localStorage.token, updatedDomains);
+				totalUsers = await getTotalUsers(localStorage.token, updatedDomain);
+				totalPrompts = await getTotalPrompts(localStorage.token, updatedDomain);
+				dailyUsers = await getDailyUsers(localStorage.token, updatedDomain);
+				totalTokens = await getTotalTokens(localStorage.token, updatedDomain);
+				dailyPrompts = await getDailyPrompts(localStorage.token, updatedDomain);
+				dailyTokens = await getDailyTokens(localStorage.token, updatedDomain);
+
+				// Only fetch model metrics if a model is selected
+				if (updatedModel) {
+					modelPrompts = await getModelPrompts(localStorage.token, updatedModel, updatedDomain);
+					modelDailyPrompts = await getModelDailyPrompts(
+						localStorage.token,
+						updatedModel,
+						updatedDomain
+					);
+				}
 			} catch (metricsError) {
 				console.error('Error fetching basic metrics:', metricsError);
 			}
@@ -134,12 +159,23 @@
 			dailyActiveUsersData = datesArray.map((date) => ({ date, count: 0 }));
 			dailyPromptsData = datesArray.map((date) => ({ date, count: 0 }));
 			dailyTokensData = datesArray.map((date) => ({ date, count: 0 }));
+			modelPromptsData = datesArray.map((date) => ({ date, count: 0 }));
 
 			try {
 				// Try to fetch historical data, but the API client will provide fallbacks if needed
-				dailyActiveUsersData = await getHistoricalUsers(localStorage.token, 7, updatedDomains);
-				dailyPromptsData = await getHistoricalPrompts(localStorage.token, 7, updatedDomains);
-				dailyTokensData = await getHistoricalTokens(localStorage.token, 7, updatedDomains);
+				dailyActiveUsersData = await getHistoricalUsers(localStorage.token, 7, updatedDomain);
+				dailyPromptsData = await getHistoricalPrompts(localStorage.token, 7, updatedDomain);
+				dailyTokensData = await getHistoricalTokens(localStorage.token, 7, updatedDomain);
+
+				// Only fetch model historical data if a model is selected
+				if (updatedModel) {
+					modelPromptsData = await getModelHistoricalPrompts(
+						localStorage.token,
+						7,
+						updatedModel,
+						updatedDomain
+					);
+				}
 			} catch (histError) {
 				console.error('Error fetching historical data:', histError);
 				// Fallback data is already set above
@@ -250,6 +286,39 @@
 				options: chartOptions
 			});
 		}
+
+		// Initialize Model Prompts Chart (only if a model is selected)
+		if (selectedModel) {
+			const ctx4 = document.getElementById('modelPromptsChart')?.getContext('2d');
+			if (ctx4) {
+				// Always destroy existing chart before creating a new one
+				if (modelPromptsChart) {
+					modelPromptsChart.destroy();
+				}
+
+				modelPromptsChart = new Chart(ctx4, {
+					type: 'line',
+					data: {
+						labels: modelPromptsData.map((item) => item.date),
+						datasets: [
+							{
+								label: $i18n.t('Model Prompts'),
+								data: modelPromptsData.map((item) => item.count),
+								borderColor: 'rgb(147, 51, 234)', // Purple for model data
+								backgroundColor: 'rgba(147, 51, 234, 0.2)',
+								borderWidth: 2,
+								pointBackgroundColor: 'rgb(147, 51, 234)',
+								pointBorderColor: '#fff',
+								pointHoverBackgroundColor: '#fff',
+								pointHoverBorderColor: 'rgb(147, 51, 234)',
+								tension: 0.1
+							}
+						]
+					},
+					options: chartOptions
+				});
+			}
+		}
 	}
 
 	// Function to update chart labels when language changes
@@ -268,6 +337,11 @@
 			dailyTokensChart.data.datasets[0].label = $i18n.t('Daily Tokens');
 			dailyTokensChart.update();
 		}
+
+		if (modelPromptsChart) {
+			modelPromptsChart.data.datasets[0].label = $i18n.t('Model Prompts');
+			modelPromptsChart.update();
+		}
 	}
 
 	onMount(async () => {
@@ -278,7 +352,8 @@
 			});
 
 			domains = await getDomains(localStorage.token);
-			await updateCharts(selectedDomain);
+			models = await getModels(localStorage.token);
+			await updateCharts(selectedDomain, selectedModel);
 		} catch (error) {
 			console.error('Error initializing charts:', error);
 		}
@@ -294,13 +369,21 @@
 		if (dailyActiveUsersChart) dailyActiveUsersChart.destroy();
 		if (dailyPromptsChart) dailyPromptsChart.destroy();
 		if (dailyTokensChart) dailyTokensChart.destroy();
+		if (modelPromptsChart) modelPromptsChart.destroy();
 	});
 
 	// Update domain change handler to simplify
 	function handleDomainChange(event) {
 		const newDomain = event.target.value || null;
 		selectedDomain = newDomain;
-		updateCharts(newDomain);
+		updateCharts(selectedDomain, selectedModel);
+	}
+
+	// Handler for model selection changes
+	function handleModelChange(event) {
+		const newModel = event.target.value || null;
+		selectedModel = newModel;
+		updateCharts(selectedDomain, selectedModel);
 	}
 </script>
 
@@ -309,23 +392,43 @@
 		<h2 class="text-3xl font-extrabold text-gray-900 dark:text-gray-100">
 			{$i18n.t('Metrics Dashboard')}
 		</h2>
-		<div>
-			<label
-				for="domain-select"
-				class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
-				>{$i18n.t('Select Domain:')}</label
-			>
-			<select
-				id="domain-select"
-				bind:value={selectedDomain}
-				on:change={handleDomainChange}
-				class="block w-48 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-			>
-				<option value={null}>{$i18n.t('All')}</option>
-				{#each domains as domain}
-					<option value={domain}>{domain}</option>
-				{/each}
-			</select>
+		<div class="flex items-center space-x-4">
+			<div>
+				<label
+					for="domain-select"
+					class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
+					>{$i18n.t('Select Domain:')}</label
+				>
+				<select
+					id="domain-select"
+					bind:value={selectedDomain}
+					on:change={handleDomainChange}
+					class="block w-48 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+				>
+					<option value={null}>{$i18n.t('All')}</option>
+					{#each domains as domain}
+						<option value={domain}>{domain}</option>
+					{/each}
+				</select>
+			</div>
+			<div>
+				<label
+					for="model-select"
+					class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
+					>{$i18n.t('Select Model:')}</label
+				>
+				<select
+					id="model-select"
+					bind:value={selectedModel}
+					on:change={handleModelChange}
+					class="block w-48 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+				>
+					<option value={null}>{$i18n.t('All')}</option>
+					{#each models as model}
+						<option value={model}>{model}</option>
+					{/each}
+				</select>
+			</div>
 		</div>
 	</div>
 
@@ -372,6 +475,39 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- Model usage section (only shown when a model is selected) -->
+	{#if selectedModel}
+		<hr class="border-gray-400 dark:border-gray-600 my-8" />
+
+		<h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
+			{$i18n.t('Model Usage')} - {selectedModel}
+		</h3>
+
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+			<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
+				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+					{$i18n.t('Total Model Prompts')}
+				</h5>
+				<h4 class="text-3xl font-bold text-purple-700 dark:text-purple-400">{modelPrompts}</h4>
+			</div>
+			<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
+				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+					{$i18n.t('Daily Model Prompts')}
+				</h5>
+				<h4 class="text-3xl font-bold text-purple-700 dark:text-purple-400">{modelDailyPrompts}</h4>
+			</div>
+		</div>
+
+		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800 mb-8">
+			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+				{$i18n.t('Daily Model Prompts')}
+			</h5>
+			<div class="h-64">
+				<canvas id="modelPromptsChart"></canvas>
+			</div>
+		</div>
+	{/if}
 
 	<hr class="border-gray-400 dark:border-gray-600 my-8" />
 

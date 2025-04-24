@@ -307,3 +307,154 @@ function generateFallbackDates(days: number = 7): Array<{ date: string; count: n
 		};
 	});
 }
+
+export const getModels = async (token: string): Promise<string[]> => {
+	try {
+		const res = await fetch(`${WEBUI_API_BASE_URL}/metrics/models`, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			const error = await res.json();
+			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get models'}`);
+		}
+		const data = await res.json();
+		return data.models;
+	} catch (err) {
+		throw new Error(err.message || 'An unexpected error occurred');
+	}
+};
+
+export const getModelPrompts = async (
+	token: string,
+	model?: string,
+	domain?: string
+): Promise<number> => {
+	try {
+		let url = `${WEBUI_API_BASE_URL}/metrics/models/prompts`;
+		const params = new URLSearchParams();
+
+		if (model !== null && model !== undefined) {
+			params.append('model', model);
+		}
+
+		if (domain !== null && domain !== undefined) {
+			params.append('domain', domain);
+		}
+
+		if (params.toString()) {
+			url += `?${params.toString()}`;
+		}
+
+		const res = await fetch(url, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			if (res.status === 404) {
+				return 0;
+			}
+			const error = await res.json();
+			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get model prompts'}`);
+		}
+		const data = await res.json();
+		return data.total_prompts || 0;
+	} catch (err) {
+		throw new Error(err.message || 'An unexpected error occurred');
+	}
+};
+
+export const getModelDailyPrompts = async (
+	token: string,
+	model?: string,
+	domain?: string
+): Promise<number> => {
+	try {
+		let url = `${WEBUI_API_BASE_URL}/metrics/models/daily/prompts`;
+		const params = new URLSearchParams();
+
+		if (model !== null && model !== undefined) {
+			params.append('model', model);
+		}
+
+		if (domain !== null && domain !== undefined) {
+			params.append('domain', domain);
+		}
+
+		if (params.toString()) {
+			url += `?${params.toString()}`;
+		}
+
+		const res = await fetch(url, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			if (res.status === 404) {
+				return 0;
+			}
+			const error = await res.json();
+			throw new Error(
+				`Error ${res.status}: ${error.detail || 'Failed to get model daily prompts'}`
+			);
+		}
+		const data = await res.json();
+		return data.total_daily_prompts || 0;
+	} catch (err) {
+		throw new Error(err.message || 'An unexpected error occurred');
+	}
+};
+
+export const getModelHistoricalPrompts = async (
+	token: string,
+	days: number = 7,
+	model?: string,
+	domain?: string
+): Promise<any[]> => {
+	try {
+		let url = `${WEBUI_API_BASE_URL}/metrics/models/historical/prompts?days=${days}`;
+
+		if (model !== null && model !== undefined) {
+			url += `&model=${encodeURIComponent(model)}`;
+		}
+
+		if (domain !== null && domain !== undefined) {
+			url += `&domain=${encodeURIComponent(domain)}`;
+		}
+
+		const res = await fetch(url, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			if (res.status === 404) {
+				return generateFallbackDates(days);
+			}
+			const error = await res.json();
+			throw new Error(
+				`Error ${res.status}: ${error.detail || 'Failed to get model historical prompts'}`
+			);
+		}
+		const data = await res.json();
+		return data.historical_prompts || [];
+	} catch (err) {
+		console.error('Error fetching model historical prompts:', err);
+		return generateFallbackDates(days);
+	}
+};

@@ -229,3 +229,89 @@ async def get_historical_tokens(
     historical_data = MessageMetrics.get_historical_tokens_data(days, domain)
 
     return {"historical_tokens": historical_data}
+
+
+############################
+# GetModels
+############################
+
+
+@router.get("/models")
+async def get_models(user=Depends(get_verified_user)):
+    if user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    models = MessageMetrics.get_used_models() or []
+    return {"models": models}
+
+
+############################
+# GetModelPrompts
+############################
+
+
+@router.get("/models/prompts")
+async def get_model_prompts(
+    model: str = None, domain: str = None, user=Depends(get_verified_user)
+):
+    if not user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    total_prompts = MessageMetrics.get_messages_number(domain, model)
+    return {"total_prompts": total_prompts or 0}
+
+
+############################
+# GetModelDailyPrompts
+############################
+
+
+@router.get("/models/daily/prompts")
+async def get_model_daily_prompts(
+    model: str = None, domain: str = None, user=Depends(get_verified_user)
+):
+    if not user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    total_daily_prompts = MessageMetrics.get_daily_messages_number(
+        domain=domain, model=model
+    )
+    return {"total_daily_prompts": total_daily_prompts}
+
+
+############################
+# GetModelHistoricalPrompts
+############################
+
+
+@router.get("/models/historical/prompts")
+async def get_model_historical_prompts(
+    days: int = 7,
+    model: str = None,
+    domain: str = None,
+    user=Depends(get_verified_user),
+):
+    if not user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    # Handle both None and empty string
+    if domain == "":
+        domain = None
+    if model == "":
+        model = None
+
+    historical_data = MessageMetrics.get_historical_messages_data(days, domain, model)
+
+    return {"historical_prompts": historical_data}
