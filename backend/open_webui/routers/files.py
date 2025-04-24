@@ -34,6 +34,7 @@ from open_webui.routers.audio import transcribe
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
+from asyncio import sleep
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -226,33 +227,54 @@ async def search_files(
 # Reindex All Files
 ############################
 
+# use a list for sharing the file progress with the /stream endpoint below
+# mutating a list element allows for shared variable
+file_progress = [0]
+
 
 @router.post('/reindex', response_model=bool)
 async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
     files = Files.get_files()
+    total_files = len(files)
 
     log.info(f"Starting reindexing for {len(files)} files")
-    for file in files:
+    for i, file in enumerate(files, start=1):
         try:
             if VECTOR_DB_CLIENT.has_collection(collection_name=f"file-{file.id}"):
                 VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
         except Exception as e:
-            log.error(f"Error deleting file 'file-{file.id}': {str(e)}")
-        finally:
-            try:
-                process_file(
-                    request,
-                    ProcessFileForm(
-                        file_id=file.id
-                    ),
-                    user=user
+            log.error(f"Error deleting file 'file-{file.id}' from vector store: {str(e)}")
+        try:
+            process_file(
+                request,
+                ProcessFileForm(
+                    file_id=file.id
+                ),
+                user=user
             )
-            except Exception as e:
-                log.error(
-                        f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
-                    )
+            file_progress[0] = int(i/total_files*100)
+            await sleep(0.1)
+        except Exception as e:
+            log.error(
+                    f"Error processing file {file.filename} (ID: {file.id}): {str(e)}"
+                )
     log.info("Reindexing files completed sucessfully.")
     return True
+
+
+# This function is just used to get a progress bar about the re-indexing to the UI
+@router.get("/reindex/stream")
+async def stream_progress():
+    async def event_generator():
+        while True:
+            progress = file_progress[0]
+            log.info(f"GET Progress: {progress}")
+            yield f"data: {progress}\n\n"
+            if progress >= 100:
+                break
+            await sleep(1)  # stream every two second
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 ############################

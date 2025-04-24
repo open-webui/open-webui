@@ -18,7 +18,7 @@
 	} from '$lib/apis/retrieval';
 
 	import { reindexKnowledgeFiles } from '$lib/apis/knowledge';
-	import { deleteAllFiles, reindexFiles, countFiles } from '$lib/apis/files';
+	import { deleteAllFiles, reindexFiles, countFiles, listenToReindexProgress } from '$lib/apis/files';
 
 	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -40,6 +40,8 @@
 	let showReindexConfirm = false;
 	let showFilesReindexConfirm = false;
 	let filesCountMessage = '';
+	let fileProgress = 0;
+	let isReindexing = false;
 
 	let embeddingEngine = '';
 	let embeddingModel = '';
@@ -224,16 +226,13 @@
             return;
         }
 
-        // Start by setting a loading message while we fetch the count
-        filesCountMessage = $i18n.t('Loading file count...');
-
         // Fetch the file count
         try {
             const fileCount = await countFiles(token);
             if (fileCount > 0) {
                 filesCountMessage = $i18n.t('You are about to reindex') + ` ${fileCount} ` + $i18n.t('files. This could take a while. Do you want to proceed?');
             } else {
-                filesCountMessage = $i18n.t('No files to reindex2.');
+                filesCountMessage = $i18n.t('No files to reindex.');
             }
             showFilesReindexConfirm = true;  // Show the dialog once the message is updated
         } catch (error) {
@@ -241,6 +240,26 @@
             toast.error(`${error}`);
         }
     };
+
+	const startReindexing = async () => {
+		isReindexing = true;
+		fileProgress = 0;
+
+		listenToReindexProgress((p) => {
+			fileProgress = p;
+			if (p >= 100) isReindexing = false;
+		});
+
+		const res = await reindexFiles(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			isReindexing = false;
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Success'));
+		}
+	};
 
 	onMount(async () => {
 		await setEmbeddingConfig();
@@ -295,16 +314,7 @@
 <ReindexFilesConfirmDialog
 	bind:show={showFilesReindexConfirm}
 	message={filesCountMessage}
-	on:confirm={async () => {
-		const res = await reindexFiles(localStorage.token).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (res) {
-			toast.success($i18n.t('Success'));
-		}
-	}}
+	on:confirm={startReindexing}
 />
 
 <form
@@ -962,6 +972,16 @@
 							</button>
 						</div>
 					</div>
+					{#if isReindexing}
+						<div class="w-full bg-gray-200 rounded-full h-3 mt-4">
+							<div class="bg-blue-600 h-3 rounded-full" style="width: {fileProgress}%"></div>
+						</div>
+						<!-- <p class="text-sm mt-2 text-gray-600">'Reindexing... {fileProgress}%' -->
+						<p class="text-sm mt-2 text-gray-600">{$i18n.t('Reindexing... {{progress}}%', { progress: fileProgress })}
+							
+						</p>
+					{/if}
+
 				</div>
 			</div>
 		</div>
