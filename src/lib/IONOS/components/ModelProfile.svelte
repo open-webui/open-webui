@@ -58,7 +58,7 @@
 
 		background-color: #fff;
 		color: #000;
-		box-shadow: 5px 5px 15px 2px #0000001A;
+
+		box-shadow: 5px 5px 15px 2px rgba(0, 0, 0, 0.1);
 	}
 </style>
-

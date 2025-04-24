@@ -79,6 +79,11 @@ export default {
 					700: '#003D4B'
 				},
 			},
+			boxShadow: {
+				'l': '5px 5px 15px 2px rgba(0, 0, 0, 0.1)',
+				'lg': '5px 5px 15px 2px rgba(0, 0, 0, 0.1)',
+				'xl': '5px 5px 15px 2px rgba(0, 0, 0, 0.1)',
+			},
 			typography: {
 				DEFAULT: {
 					css: {
