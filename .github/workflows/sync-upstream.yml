@@ -44,7 +44,7 @@ jobs:
           git rebase upstream/main || true
           
           # Set default repo for gh commands
-          gh repo set-default kaytwo/open-webui
+          gh repo set-default chrysapp/open-webui
           
           # Check if PR already exists or no changes
           if gh pr list --state open --search "Include Upstream Changes in:title" | grep -q "Include Upstream Changes" || git diff --quiet origin/main; then
