@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
+	import type ScrollerItem from './scrollerItem.d.ts';
 
 	const dispatcher = createEventDispatcher();
 
 	// Pixels per second
-	const speed = 25;
+	const speed: number = 25;
 
 	export let direction = 'left';
-	export let items;
+	export let items: ScrollerItem[] = [];
 
 	let el: HTMLElement|null = null;
 
@@ -17,9 +18,9 @@
 		}
 	}
 
-	let scrollWidth;
-	let fullWidth;
-	let duration;
+	let scrollWidth: number;
+	let fullWidth: number;
+	let duration: number;
 
 	$: {
 		scrollWidth = items.length > 0 ? el?.scrollWidth ?? 0 : 0;
