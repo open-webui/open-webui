@@ -15,6 +15,7 @@ export default {
 			'xs-plus': '13px',
 			},
 			spacing: {
+				'2.5': '0.625rem',
 				'6.5': '1.625rem',
 				'45': '11.25rem', 
 			},
