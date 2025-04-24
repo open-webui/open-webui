@@ -423,7 +423,7 @@
 					on:change={handleModelChange}
 					class="block w-48 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
 				>
-					<option value={null}>{$i18n.t('All')}</option>
+					<option value={null}>{$i18n.t('None')}</option>
 					{#each models as model}
 						<option value={model}>{model}</option>
 					{/each}
@@ -476,6 +476,35 @@
 		</div>
 	</div>
 
+	<hr class="border-gray-400 dark:border-gray-600 my-8" />
+
+	<div class="space-y-8">
+		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
+			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+				{$i18n.t('Daily Active Users')}
+			</h5>
+			<div class="h-64">
+				<canvas id="dailyActiveUsersChart"></canvas>
+			</div>
+		</div>
+		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
+			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+				{$i18n.t('Daily Prompts Sent')}
+			</h5>
+			<div class="h-64">
+				<canvas id="dailyPromptsChart"></canvas>
+			</div>
+		</div>
+		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
+			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+				{$i18n.t('Daily Tokens Used')}
+			</h5>
+			<div class="h-64">
+				<canvas id="dailyTokensChart"></canvas>
+			</div>
+		</div>
+	</div>
+
 	<!-- Model usage section (only shown when a model is selected) -->
 	{#if selectedModel}
 		<hr class="border-gray-400 dark:border-gray-600 my-8" />
@@ -508,33 +537,4 @@
 			</div>
 		</div>
 	{/if}
-
-	<hr class="border-gray-400 dark:border-gray-600 my-8" />
-
-	<div class="space-y-8">
-		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-				{$i18n.t('Daily Active Users')}
-			</h5>
-			<div class="h-64">
-				<canvas id="dailyActiveUsersChart"></canvas>
-			</div>
-		</div>
-		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-				{$i18n.t('Daily Prompts Sent')}
-			</h5>
-			<div class="h-64">
-				<canvas id="dailyPromptsChart"></canvas>
-			</div>
-		</div>
-		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-				{$i18n.t('Daily Tokens Used')}
-			</h5>
-			<div class="h-64">
-				<canvas id="dailyTokensChart"></canvas>
-			</div>
-		</div>
-	</div>
 </div>
