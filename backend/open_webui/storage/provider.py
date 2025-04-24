@@ -138,7 +138,7 @@ class S3StorageProvider(StorageProvider):
         try:
             s3_key = os.path.join(self.key_prefix, filename)
             self.s3_client.upload_file(file_path, self.bucket_name, s3_key)
-            print("UPLOADED FILE TO S3")
+            log.info("UPLOADED FILE TO S3")
             return (
                 open(file_path, "rb").read(),
                 "s3://" + self.bucket_name + "/" + s3_key,
