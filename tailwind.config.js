@@ -1,4 +1,5 @@
 import typography from '@tailwindcss/typography';
+const defaultTheme = require('tailwindcss/defaultTheme')
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -84,6 +85,10 @@ export default {
 				'lg': '5px 5px 15px 2px rgba(0, 0, 0, 0.1)',
 				'xl': '5px 5px 15px 2px rgba(0, 0, 0, 0.1)',
 			},
+			fontFamily: {
+        'sans': ['"OpenSans"', ...defaultTheme.fontFamily.sans],
+        'overpass': ['"Overpass"', '"OpenSans"', ...defaultTheme.fontFamily.sans],
+      },
 			typography: {
 				DEFAULT: {
 					css: {
