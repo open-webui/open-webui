@@ -213,7 +213,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 data=body,
                 headers={
                     "Content-Type": "application/json",
-                    "Authorization": f"Bearer {request.app.state.config.OPENAI_API_KEYS[idx]}",
+                    "Authorization": f"Bearer {user.api_key}",
                     **(
                         {
                             "HTTP-Referer": "https://openwebui.com/",
@@ -263,7 +263,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
             raise HTTPException(
                 status_code=r.status_code if r else 500,
-                detail=detail if detail else "Open WebUI: Server Connection Error",
+                detail=detail if detail else "Server Connection Error",
             )
 
     except ValueError:
@@ -295,7 +295,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
             request_tasks.append(
                 send_get_request(
                     f"{url}/models",
-                    request.app.state.config.OPENAI_API_KEYS[idx],
+                    user.api_key,
                     user=user,
                 )
             )
@@ -315,7 +315,7 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                     request_tasks.append(
                         send_get_request(
                             f"{url}/models",
-                            request.app.state.config.OPENAI_API_KEYS[idx],
+                            user.api_key,
                             user=user,
                         )
                     )
@@ -458,7 +458,7 @@ async def get_models(
         models = await get_all_models(request, user=user)
     else:
         url = request.app.state.config.OPENAI_API_BASE_URLS[url_idx]
-        key = request.app.state.config.OPENAI_API_KEYS[url_idx]
+        key = user.api_key
 
         r = None
         async with aiohttp.ClientSession(
@@ -516,7 +516,7 @@ async def get_models(
                 # ClientError covers all aiohttp requests issues
                 log.exception(f"Client error: {str(e)}")
                 raise HTTPException(
-                    status_code=500, detail="Open WebUI: Server Connection Error"
+                    status_code=500, detail="Server Connection Error"
                 )
             except Exception as e:
                 log.exception(f"Unexpected error: {e}")
@@ -548,7 +548,7 @@ async def verify_connection(
             async with session.get(
                 f"{url}/models",
                 headers={
-                    "Authorization": f"Bearer {key}",
+                    "Authorization": f"Bearer {user.api_key}",
                     "Content-Type": "application/json",
                     **(
                         {
@@ -577,7 +577,7 @@ async def verify_connection(
             # ClientError covers all aiohttp requests issues
             log.exception(f"Client error: {str(e)}")
             raise HTTPException(
-                status_code=500, detail="Open WebUI: Server Connection Error"
+                status_code=500, detail="Server Connection Error"
             )
         except Exception as e:
             log.exception(f"Unexpected error: {e}")
@@ -665,6 +665,7 @@ async def generate_chat_completion(
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
+    key = user.api_key
 
     # Fix: o1,o3 does not support the "max_tokens" parameter, Modify "max_tokens" to "max_completion_tokens"
     is_o1_o3 = payload["model"].lower().startswith(("o1", "o3-"))
@@ -757,7 +758,7 @@ async def generate_chat_completion(
 
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail=detail if detail else "Open WebUI: Server Connection Error",
+            detail=detail if detail else "Server Connection Error",
         )
     finally:
         if not streaming and session:
@@ -777,7 +778,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
     idx = 0
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
     key = request.app.state.config.OPENAI_API_KEYS[idx]
-
+    key = user.api_key
     r = None
     session = None
     streaming = False
@@ -834,7 +835,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                 detail = f"External: {e}"
         raise HTTPException(
             status_code=r.status if r else 500,
-            detail=detail if detail else "Open WebUI: Server Connection Error",
+            detail=detail if detail else "Server Connection Error",
         )
     finally:
         if not streaming and session:
