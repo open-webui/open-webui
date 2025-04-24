@@ -55,7 +55,6 @@
 			align="start"
 			transition={flyAndScale}
 		>
-			{#if user?.role === 'admin' || model.user_id === user?.id || model.access_control.write.group_ids.some( (wg) => group_ids.includes(wg) )}
 				<DropdownMenu.Item>
 					<a
 						class="flex w-full items-center gap-2 self-center text-xs dark:text-cusromGray-100 px-3 py-2 dark:text-gray-300 dark:hover:bg-customGray-950 dark:hover:text-white hover:bg-black/5 rounded-md"
@@ -66,7 +65,7 @@
 						<div class="flex items-center">{$i18n.t('Edit')}</div>
 					</a>
 				</DropdownMenu.Item>
-			{/if}
+			
 			<!-- {#if $config?.features.enable_community_sharing}
 				<DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950  rounded-md dark:hover:text-white"
@@ -102,16 +101,16 @@
 			</DropdownMenu.Item>
 
 			<hr class="border-gray-100 dark:border-gray-800 my-1" /> -->
-
-			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
-				on:click={() => {
-					deleteHandler();
-				}}
-			>
-				<DeleteIcon />
-				<div class="flex items-center">{$i18n.t('Delete')}</div>
-			</DropdownMenu.Item>
+			
+				<DropdownMenu.Item
+					class="flex  gap-2  items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
+					on:click={() => {
+						deleteHandler();
+					}}
+				>
+					<DeleteIcon />
+					<div class="flex items-center">{$i18n.t('Delete')}</div>
+				</DropdownMenu.Item>
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>

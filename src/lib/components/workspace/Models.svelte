@@ -450,6 +450,7 @@
 									{/each}
 								</div>
 							</div>
+							{#if $user?.role === 'admin' || model.user_id === $user?.id || model?.access_control?.write.group_ids?.some( (wg) => group_ids.includes(wg) )}
 							<div class="invisible group-hover:visible">
 								<ModelMenu
 									user={$user}
@@ -480,6 +481,7 @@
 									</button>
 								</ModelMenu>
 							</div>
+							{/if}
 						</div>
 						<div class="flex gap-4 mb-2.5">
 							<div class=" w-[56px]">
