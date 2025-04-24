@@ -55,7 +55,7 @@
 	import ChannelModal from './Sidebar/ChannelModal.svelte';
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
-	import Robot from '../icons/Robot.svelte';
+	import Sparkles from '$lib/IONOS/components/icons/Sparkles.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -533,7 +533,7 @@
 				on:click={async () => { await goto('/explore'); }}
 			>
 				<div class="self-center">
-					<Robot className="h-4 w-4 inline-block" />
+					<Sparkles filled={false} className="h-4 w-4 inline-block" />
 				</div>
 				{#if $showSidebar}
 					<div class=" self-center font-medium text-sm text-blue-800 dark:text-white font-primary">

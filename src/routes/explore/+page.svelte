@@ -6,6 +6,7 @@
 	import LoginRegisterOverlay from '$lib/IONOS/components/explore/LoginRegisterOverlay.svelte';
 	import Robot from '$lib/components/icons/Robot.svelte'
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte'
+	import Sparkles from '$lib/IONOS/components/icons/Sparkles.svelte';
 	import { user } from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { init as initAgentsStore } from '$lib/IONOS/stores/agents';
@@ -94,7 +95,7 @@
 	</div>
 
 	<div class="my-20">
-		<Robot />
+		<Sparkles />
 	</div>
 </content>
 
