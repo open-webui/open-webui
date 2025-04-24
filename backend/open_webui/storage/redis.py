@@ -17,8 +17,19 @@ class RedisSessionMiddleware(SessionMiddleware):
         """Initialize the Redis Session Middleware."""
         self.redis = redis_client
         self.serializer = URLSafeSerializer(secret_key)
-        super().__init__(app, secret_key, session_cookie, max_age)
+        
+        try:
+            if isinstance(max_age, str) and max_age.isdigit():
+                max_age = int(max_age)
+            elif isinstance(max_age, str):
+                max_age = 43200
+                log.warning(f"Invalid max_age value: {max_age}, defaulting to 43200 seconds (12 hours)")
+        except Exception as e:
+            max_age = 43200
+            log.error(f"Error converting max_age: {str(e)}, defaulting to 43200 seconds (12 hours)")
+            
         log.debug(f"Initialized RedisSessionMiddleware with max_age: {max_age}")
+        super().__init__(app, secret_key, session_cookie, max_age)
 
     def get_session_id(self, scope: dict, receive) -> str:
         """Retrieve session id from cookies."""

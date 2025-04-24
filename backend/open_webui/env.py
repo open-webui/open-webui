@@ -363,7 +363,7 @@ PROCONNECT_BASE_URL = os.environ.get("PROCONNECT_BASE_URL", "changeme")
 PROCONNECT_CLIENT_ID = os.environ.get("PROCONNECT_CLIENT_ID", "changeme")
 PROCONNECT_CLIENT_SECRET = os.environ.get("PROCONNECT_CLIENT_SECRET", "changeme")
 SERVER_METADATA_URL = os.environ.get("SERVER_METADATA_URL", "changeme")
-PROCONNECT_SESSION_DURATION = os.environ.get("PROCONNECT_SESSION_DURATION", "changeme")
+PROCONNECT_SESSION_DURATION = os.environ.get("PROCONNECT_SESSION_DURATION", 43200)
 
 ####################################
 # REDIS
