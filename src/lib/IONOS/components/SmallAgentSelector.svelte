@@ -33,7 +33,7 @@
 		<Button
 			name={id}
 			on:click={() => select(id)}
-			className="px-4 py-1"
+			className="px-4 py-1 font-semibold text-sm font-sans"
 			type={ButtonType.secondary}
 			pressable={true}
 			pressed={id === selectedModels[0]}
