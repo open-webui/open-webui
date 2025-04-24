@@ -1166,7 +1166,7 @@ DEFAULT_USER_PERMISSIONS = {
     },
 }
 
-USER_PERMISSIONS = Permissions.get_or_create_permissions(DEFAULT_USER_PERMISSIONS)
+USER_PERMISSIONS = Permissions.get_or_create(DEFAULT_USER_PERMISSIONS)
 
 ENABLE_CHANNELS = PersistentConfig(
     "ENABLE_CHANNELS",

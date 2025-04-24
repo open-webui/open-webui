@@ -41,7 +41,7 @@ class PermissionModel(BaseModel):
 ####################
 
 class PermissionsTable:
-    def get_permissions_by_category(self) -> dict[PermissionCategory, dict[str, bool]]:
+    def get_by_category(self) -> dict[PermissionCategory, dict[str, bool]]:
         with get_db() as db:
 
             query = db.query(Permission).order_by(Permission.id)
@@ -58,7 +58,7 @@ class PermissionsTable:
             return permissions
 
     # TODO: if config is not persistent enabled, just return default permissions
-    def get_or_create_permissions(self, default_permissions: dict[PermissionCategory, dict[str, bool]]) -> dict[PermissionCategory, dict[str, bool]]:
+    def get_or_create(self, default_permissions: dict[PermissionCategory, dict[str, bool]]) -> dict[PermissionCategory, dict[str, bool]]:
         with get_db() as db:
             # Check if any permissions exist
             existing_count = db.query(Permission).count()
@@ -88,9 +88,9 @@ class PermissionsTable:
                     raise e
 
             # Return current permissions structure
-            return self.get_permissions_by_category()
+            return self.get_by_category()
 
-    def new_permission(self, permission: PermissionModel) -> PermissionModel | None:
+    def add(self, permission: PermissionModel) -> PermissionModel | None:
         from pprint import pprint
         pprint(permission)
         with get_db() as db:
@@ -107,5 +107,34 @@ class PermissionsTable:
                 return PermissionModel.model_validate(result)
             else:
                 return None
+
+    def update(self, permission: PermissionModel) -> PermissionModel | None:
+        with get_db() as db:
+            try:
+                db_permission = db.query(Permission).filter_by(
+                    name=permission['name'],
+                    category=permission['category']
+                ).first()
+
+                if not db_permission:
+                    return None
+
+                db_permission.default_value = permission['default_value']
+                if 'description' in permission:
+                    db_permission.description = permission['description']
+
+                db.commit()
+                db.refresh(db_permission)
+
+                return PermissionModel.model_validate(db_permission)
+
+            except Exception:
+                    db.rollback()
+                    return None
+
+    def exists(self, permission: PermissionModel) -> bool:
+        with get_db() as db:
+            result = db.query(Permission).filter_by(name=permission['name'], category=permission['category']).first()
+            return result is not None
 
 Permissions = PermissionsTable()
