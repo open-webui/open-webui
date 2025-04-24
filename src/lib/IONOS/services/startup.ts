@@ -1,22 +1,8 @@
-import { get } from 'svelte/store';
-import { settings } from '$lib/stores';
-import { updateUserSettings } from '$lib/apis/users';
+import {
+	updateSettings
+} from './settings';
 import { getAndForgetAgent } from './agent';
 import { getAndForgetPrompt } from './prompt';
-
-export const storeAgent = async (id: string): Promise<void> => {
-	if (!id) {
-		throw new Error('Agent ID must not be falsy');
-	}
-
-	const updatedSettings = {
-		...get(settings),
-		models: [id]
-	};
-
-	settings.set(updatedSettings);
-	await updateUserSettings(localStorage.token, { ui: updatedSettings });
-}
 
 export type StartupInfo = {
 	agent: string,
@@ -34,7 +20,9 @@ export const startup = async (): Promise<StartupInfo> => {
 		return { agent: '', prompt: '' };
 	}
 
-	await storeAgent(agent);
+	await updateSettings({
+		models: [agent]
+	});
 
 	const prompt = getAndForgetPrompt();
 
