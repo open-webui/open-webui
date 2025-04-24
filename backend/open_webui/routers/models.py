@@ -26,7 +26,7 @@ async def get_models(user=Depends(get_verified_user)):
     if user.role == "admin":
         return Models.get_models()
     else:
-        return Models.get_models_by_user_id(user.id)
+        return Models.get_models_by_user_id_and_company_id(user.id)
 
 
 ###########################

@@ -199,15 +199,15 @@ class ModelsTable:
                 for model in db.query(Model).filter(Model.base_model_id == None).all()
             ]
 
-    def get_models_by_user_id(
-        self, user_id: str, permission: str = "write"
+    def get_models_by_user_id_and_company_id(
+        self, user_id: str, company_id: str, permission: str = "write"
     ) -> list[ModelUserResponse]:
         models = self.get_models()
         return [
             model
             for model in models
             if model.user_id == user_id
-            or has_access(user_id, permission, model.access_control)
+            or (model.company_id == company_id and has_access(user_id, permission, model.access_control))
         ]
 
     def get_models_by_company_id(
