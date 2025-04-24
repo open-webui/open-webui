@@ -38,13 +38,17 @@ describe('settings', () => {
 	});
 
 	describe('updateSettings()', async () => {
-		it('should update the settings store with the existing settings extended by the new settings', async () => {
-			mocks.stores.settings.set({
-				chatDirection: 'LTR' as const,
-				conversationMode: true,
-				speechAutoSend: true,
-			});
+		const initialSettings: Settings = {
+			chatDirection: 'LTR' as const,
+			conversationMode: true,
+			speechAutoSend: true,
+		};
 
+		beforeEach(() => {
+			mocks.stores.settings.set(initialSettings);
+		});
+
+		it('should update the settings store with the existing settings extended by the new settings', async () => {
 			await updateSettings({
 				speechAutoSend: false,
 				responseAutoPlayback: false,
@@ -63,6 +67,31 @@ describe('settings', () => {
 					ui: expectedNewSettings
 				}
 			);
+		});
+
+		describe('if updateUserSettings() fails', () => {
+			it('should not update the settings store', async () => {
+				mocks.api.users.updateUserSettings.mockImplementation(() => Promise.reject(new Error('Some error')));
+
+				try {
+					await updateSettings({
+						speechAutoSend: false,
+						responseAutoPlayback: false,
+					});
+				} catch { /* not relevant for this test */ }
+
+				expect(get(mocks.stores.settings)).toEqual(initialSettings);
+			});
+			it('should not update the settings store', async () => {
+				mocks.api.users.updateUserSettings.mockImplementation(() => Promise.reject(new Error('Some error')));
+
+				const newSettings: Partial<Settings> = {
+					speechAutoSend: false,
+					responseAutoPlayback: false,
+				};
+
+				expect(() => updateSettings(newSettings)).rejects.toThrowError(new Error('Some error'));
+			});
 		});
 	});
 });

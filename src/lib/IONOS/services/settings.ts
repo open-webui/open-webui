@@ -9,7 +9,7 @@ export const updateSettings = async (newSettings: Partial<Settings>): Promise<vo
 		...newSettings,
 	};
 
-	settings.set(updatedSettings);
-
 	await updateUserSettings(localStorage.token, { ui: updatedSettings });
+
+	settings.set(updatedSettings);
 };
