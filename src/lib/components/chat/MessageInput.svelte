@@ -731,10 +731,10 @@
 														}
 
 														// Command/Ctrl + Shift + Enter to submit a message pair
-														if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
-															e.preventDefault();
-															createMessagePair(prompt);
-														}
+														// if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
+														// 	e.preventDefault();
+														// 	createMessagePair(prompt);
+														// }
 
 														// Check if Ctrl + R is pressed
 														if (prompt === '' && isCtrlPressed && e.key.toLowerCase() === 'r') {
@@ -1193,6 +1193,7 @@
 													<Tooltip content={$i18n.t('Send message')}>
 														<button
 															id="send-message-button"
+															aria-label={$i18n.t('Send message')}
 															class="{prompt !== ''
 																? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
 																: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center"
