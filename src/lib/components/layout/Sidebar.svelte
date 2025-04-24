@@ -23,6 +23,7 @@
 		isApp
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
+	import { page } from '$app/stores';
 
 	const i18n = getContext('i18n');
 
@@ -574,7 +575,7 @@
 		<div class="px-2">
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
 				<div
-					class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition"
+					class="{$page.url.pathname.startsWith('/workspace/models') ? 'dark:bg-customGray-900' : ''} flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition"
 				>
 					<Assistans />
 					<a
@@ -595,7 +596,7 @@
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
 				<div
-					class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition"
+					class="{$page.url.pathname.startsWith('/workspace/knowledge') ? 'dark:bg-customGray-900' : ''} flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition"
 				>
 					<Knowledge />
 					<a
@@ -618,7 +619,7 @@
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
 				<div
-					class="flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition"
+					class="{$page.url.pathname.startsWith('/workspace/prompts') ? 'dark:bg-customGray-900' : ''} flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition"
 				>
 					<Prompts />
 					<a

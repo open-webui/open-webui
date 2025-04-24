@@ -422,8 +422,6 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 # Complete Invite
 ############################
 
-<<<<<<< Updated upstream
-=======
 @router.post("/add", response_model=SigninResponse)
 async def add_user(form_data: AddUserForm, admin_user: Users = Depends(get_admin_user)):
     if not validate_email_format(form_data.email.lower()):
@@ -467,7 +465,6 @@ async def add_user(form_data: AddUserForm, admin_user: Users = Depends(get_admin
     except Exception as err:
         raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
 
->>>>>>> Stashed changes
 
 @router.post("/complete_invite", response_model=SessionUserResponse)
 async def complete_invite(request: Request, response: Response, form_data: CompleteInviteForm):

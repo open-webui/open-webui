@@ -92,7 +92,6 @@
 	let submenuY = 0;
 	let groupTriggerEl: HTMLElement;
 
-	$: console.log(groups);
 </script>
 
 <div>
@@ -199,7 +198,7 @@
                             if (groupTriggerEl) {
                                 const rect = groupTriggerEl.getBoundingClientRect();
                                 submenuX = rect.right + 8;
-                                submenuY = rect.top;
+                                submenuY = rect.top - ((groups.length - 1) * 30);
                                 showSubmenu = true;
                             }
                         }}

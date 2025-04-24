@@ -15,10 +15,14 @@
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
 	import ArrowUpCircle from '$lib/components/icons/ArrowUpCircle.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
+	import MessageEditIcon from '$lib/components/icons/MessageEditIcon.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let onClose: Function = () => {};
+
+	export let item;
 
 	let show = false;
 </script>
@@ -35,8 +39,8 @@
 	<Tooltip content={$i18n.t('More')}>
 		<slot
 			><button
-				class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-				type="button"
+				class="self-center w-fit text-sm px-0.5 h-[21px] dark:text-white dark:hover:text-white hover:bg-black/5 dark:hover:bg-customGray-900 rounded-md"
+										type="button"
 				on:click={(e) => {
 					e.stopPropagation();
 					show = true;
@@ -54,14 +58,24 @@
 			side="bottom"
 			align="end"
 			transition={flyAndScale}
-		>
+		>	
+			<DropdownMenu.Item>
+				<a
+					class="flex w-full items-center gap-2 self-center text-xs dark:text-cusromGray-100 px-3 py-2 dark:text-gray-300 dark:hover:bg-customGray-950 dark:hover:text-white hover:bg-black/5 rounded-md"
+					type="button"
+					href={`/workspace/knowledge/${item.id}`}
+				>
+					<MessageEditIcon width={14} height={13}/>
+					<div class="flex items-center">{$i18n.t('Edit')}</div>
+				</a>
+			</DropdownMenu.Item>
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				class="flex  gap-2  items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
 				on:click={() => {
 					dispatch('delete');
 				}}
 			>
-				<GarbageBin strokeWidth="2" />
+				<DeleteIcon />
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</DropdownMenu.Item>
 		</DropdownMenu.Content>

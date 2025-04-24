@@ -1,0 +1,22 @@
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    exposedByDefault: false
+
+api:
+  dashboard: false
+
+certificatesResolvers:
+  myresolver:
+    acme:
+      email: thore@beyondtheloop.ai
+      storage: /letsencrypt/acme.json
+      tlsChallenge: true
+
+log:
+  level: INFO

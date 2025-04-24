@@ -93,8 +93,6 @@
 
 			return nameMatch && tagsMatch && accessMatch;
 		});
-
-		console.log(filteredModels, 'filtered models');
 	}
 
 	let searchValue = '';
@@ -162,8 +160,6 @@
 			...info.meta,
 			hidden: !(info?.meta?.hidden ?? false)
 		};
-
-		console.log(info);
 
 		const res = await updateModelById(localStorage.token, info.id, info);
 
