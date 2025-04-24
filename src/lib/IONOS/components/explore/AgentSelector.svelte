@@ -14,23 +14,24 @@
 	{#each $agents as { id, name, subtitle, description }}
 		<div class="min-h-96 flex items-center">
 			<div
-				class="flex-0 group w-56 pb-4 mx-6 bg-white text-left rounded-3xl shadow-xl cursor-pointer transition group"
+				class="flex-0 group w-56 hover:pb-0 duration-[500ms] transition-[padding] pb-4 mx-6 bg-white text-blue-800 text-left rounded-2xl shadow-xl transition group cursor-pointer"
 				data-id={id}
 				tabindex="0"
 				role="button"
+				on:click={() => dispatch('select', id)}
 			>
-				<div class="overflow-hidden transition-[width,height] duration-[500ms] h-36 rounded-t-3xl">
+				<div class="overflow-hidden transition-[width,height] duration-[500ms] h-36 rounded-t-2xl">
 					<img
-						class="h-full w-full object-cover rounded-3xl rounded-b-none"
+						class="h-full w-full object-cover rounded-2xl rounded-b-none"
 						src={`/avatars/${id}.jpg`}
 						alt="Model Avatar"
 					/>
 				</div>
-				<div class="px-4 cursor-default overflow-hidden">
+				<div class="px-4 overflow-hidden">
 					<h1 class="text-sm font-semibold mt-2">
 						{name}
 					</h1>
-					<h2 class="text-sm">
+					<h2 class="text-xs">
 						{subtitle}
 					</h2>
 					<div class="mt-0 overflow-hidden duration-[500ms] transition-[height,margin-top] h-0 group-hover:h-40 group-hover:mt-4 group-focus:h-40 group-focus:mt-4 focus-within:h-40 focus-within:mt-4 max-xs:h-40 max-xs:mt-4 max-xs:h-40 max-xs:mt-4">
@@ -44,7 +45,7 @@
 								className="px-4 py-1"
 								type={ButtonType.special}
 							>
-								<span class="pr-1">
+								<span class="pr-1 text-sm font-semibold">
 									{$i18n.t('Chat now', { ns: 'ionos' })}
 								</span>
 								<Sparkles className="w-4 h-4 inline" />
