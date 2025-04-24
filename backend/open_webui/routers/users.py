@@ -88,7 +88,7 @@ async def get_user_groups(user=Depends(get_verified_user)):
 @router.get("/permissions")
 async def get_user_permissisions(request: Request, user=Depends(get_verified_user)):
     user_permissions = get_permissions(
-        user.id, Permissions.get_permissions_by_category()
+        user.id, Permissions.get_by_category()
     )
 
     return user_permissions
@@ -143,15 +143,39 @@ class UserPermissions(BaseModel):
 # TODO: Fix the response model.
 @router.get("/default/permissions", response_model=dict[PermissionCategory, dict[str, bool]])
 async def get_default_user_permissions(request: Request, user=Depends(get_admin_user)):
-    return Permissions.get_permissions_by_category()
+    return Permissions.get_by_category()
 
-# TODO: Change to use database.
 @router.post("/default/permissions")
 async def update_default_user_permissions(
-    request: Request, form_data: PermissionModel, user=Depends(get_admin_user)
+    request: Request, form_data: UserPermissions, user=Depends(get_admin_user)
 ):
+    updated_permissions = []
+    permissions_dict = form_data.model_dump()
 
-    return Permissions.new_permission(form_data.model_dump())
+    for category_str, permissions in permissions_dict.items():
+        try:
+            category = PermissionCategory(category_str)
+
+            for permission_name, value in permissions.items():
+                permission_data = {
+                    'name': permission_name,
+                    'category': category,
+                    'default_value': value,
+                    'description': f"Default {category.value} permission for {permission_name}"
+                }
+
+                if Permissions.exists(permission_data):
+                    Permissions.update(permission_data)
+                else:
+                    new_permission = Permissions.add(permission_data)
+                    if new_permission:
+                        updated_permissions.append(new_permission)
+
+        except ValueError:
+            # Skip invalid categories
+            continue
+
+    return updated_permissions
 
 
 ############################
