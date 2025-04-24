@@ -140,7 +140,6 @@ class UserPermissions(BaseModel):
     chat: ChatPermissions
     features: FeaturesPermissions
 
-# TODO: Fix the response model.
 @router.get("/default/permissions", response_model=dict[PermissionCategory, dict[str, bool]])
 async def get_default_user_permissions(request: Request, user=Depends(get_admin_user)):
     return Permissions.get_by_category()
@@ -160,7 +159,7 @@ async def update_default_user_permissions(
                 permission_data = {
                     'name': permission_name,
                     'category': category,
-                    'default_value': value,
+                    'value': value,
                     'description': f"Default {category.value} permission for {permission_name}"
                 }
 
