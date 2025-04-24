@@ -63,8 +63,6 @@
 	let id = '';
 	let name = '';
 
-	let enableDescription = true;
-
 	$: if (!edit) {
 		if (name) {
 			id = name
@@ -148,11 +146,7 @@
 		info.meta.capabilities = capabilities;
 		info.meta.files = files;
 
-		if (enableDescription) {
-			info.meta.description = info.meta.description.trim() === '' ? null : info.meta.description;
-		} else {
-			info.meta.description = null;
-		}
+		info.meta.description = info.meta.description.trim() === '' ? null : info.meta.description;
 
 		if (knowledge.length > 0) {
 			info.meta.knowledge = knowledge;
@@ -219,8 +213,6 @@
 			await tick();
 
 			id = model.id;
-
-			enableDescription = model?.meta?.description !== null;
 
 			if (model.base_model_id) {
 				const base_model = $models

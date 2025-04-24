@@ -534,12 +534,21 @@
 									className="flex shrink-0"
 									placement="top-start"
 								>
+									{#if model?.user?.profile_image_url}
+										<img
+											class="w-3 h-3 rounded-full mr-1"
+											src={model?.user?.profile_image_url}
+											alt={model?.user?.first_name ?? model?.user?.email ?? $i18n.t('Deleted User')}
+										/>
+									{/if}
 									<div class="shrink-0 text-customGray-100">
-										{$i18n.t('By {{name}}', {
-											name: capitalizeFirstLetter(
-												model?.user?.name ?? model?.user?.email ?? $i18n.t('Deleted User')
-											)
-										})}
+										{#if (model?.user?.first_name && model?.user?.last_name)}
+											{model?.user?.first_name} {model?.user?.last_name}
+										{:else if (model?.user?.email)}
+											{model?.user?.email}
+										{:else}
+											{$i18n.t('Deleted User')}
+										{/if}
 									</div>
 								</Tooltip>
 							</div>

@@ -294,18 +294,20 @@
 						<div class="flex justify-between mt-auto items-center px-0.5 pt-2.5 pb-[2px] border-t dark:border-customGray-700">
 							<div class="text-xs text-gray-500 dark:text-customGray-100 flex items-center">
 								{#if item?.user?.profile_image_url}
-									<img class="w-3 h-3 rounded-full mr-1" src={item?.user?.profile_image_url} alt={item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')}/>
+									<img class="w-3 h-3 rounded-full mr-1" src={item?.user?.profile_image_url} alt={item?.user?.first_name ?? item?.user?.email ?? $i18n.t('Deleted User')}/>
 								{/if}
 								<Tooltip
 									content={item?.user?.email ?? $i18n.t('Deleted User')}
 									className="flex shrink-0"
 									placement="top-start"
 								>
-									{$i18n.t('{{name}}', {
-										name: capitalizeFirstLetter(
-											item?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')
-										)
-									})}
+								{#if (item?.user?.first_name && item?.user?.last_name)}
+									{item?.user?.first_name} {item?.user?.last_name}
+								{:else if (item?.user?.email)}
+									{item?.user?.email}
+								{:else}
+									{$i18n.t('Deleted User')}
+								{/if}
 								</Tooltip>
 							</div>
 							<div class=" text-xs text-gray-500 line-clamp-1 dark:text-customGray-100">
