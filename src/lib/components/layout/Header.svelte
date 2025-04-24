@@ -33,17 +33,18 @@
 >
 	<div class=" h-full mx-auto flex items-center px-4 w-full">
 		<div class="flex items-center flex-1">
-			<div class="flex items-center gap-3">
+			<button
+				on:click={handleHomeClick}
+				class="flex items-center gap-3 p-1.5 rounded-xl"
+			>
 				<img src="/static/favicon.png" alt="Logo" class="h-8 w-8 rounded-full" />
-				<button on:click={handleHomeClick} class="text-2xl font-bold fr-text-title--blue-france"
-					>Albert</button
-				>
+				<div class="text-2xl font-bold fr-text-title--blue-france">Albert</div>
 				<div
 					class="px-2 py-0.5 text-xs rounded-full fr-background-action-low--blue-france fr-text-label--blue-cumulus font-bold flex items-center"
 				>
 					ALPHA
 				</div>
-			</div>
+			</button>
 		</div>
 
 		<div class="flex items-center gap-2">
