@@ -43,7 +43,7 @@
 		<div>
 			<ul>
 				{#each collections as knowledge}
-					<li class="grid grid-cols-[40px_80px_380px_1fr_1fr] gap-4 py-2.5 border-b dark:border-customGray-700">
+					<li class="grid grid-cols-[40px_80px_340px_1fr_1fr] gap-4 py-2.5 border-b dark:border-customGray-700">
 						<div class="flex items-start justify-center">
 							<Checkbox
 								state={selectedKnowledge.find((k) => k.id === knowledge.id)
@@ -100,18 +100,18 @@
 						</div>
 
 						<div class="flex items-center">
-							<div class="text-xs text-gray-500 dark:text-customGray-100 flex items-center">
+							<div class="whitespace-nowrap text-xs text-gray-500 dark:text-customGray-100 flex items-center">
 								{#if knowledge?.user?.profile_image_url}
 									<img
 										class="w-3 h-3 rounded-full mr-1"
 										src={knowledge?.user?.profile_image_url}
-										alt={knowledge?.user?.name ?? item?.user?.email ?? $i18n.t('Deleted User')}
+										alt={knowledge?.user?.first_name ?? knowledge?.user?.email ?? $i18n.t('Deleted User')}
 									/>
 								{/if}
 
 								{$i18n.t('{{name}}', {
 									name: capitalizeFirstLetter(
-										knowledge?.user?.name ?? knowledge?.user?.email ?? $i18n.t('Deleted User')
+										(knowledge?.user?.first_name && knowledge?.user?.last_name) ? `${knowledge?.user?.first_name} ${knowledge?.user?.last_name}` : knowledge?.user?.email ?  knowledge?.user?.email : $i18n.t('Deleted User')
 									)
 								})}
 							</div>

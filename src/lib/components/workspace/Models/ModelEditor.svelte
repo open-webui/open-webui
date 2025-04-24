@@ -220,7 +220,7 @@
 
 			id = model.id;
 
-			enableDescription = model?.meta?.description !== null;
+			// enableDescription = model?.meta?.description !== null;
 
 			if (model.base_model_id) {
 				const base_model = $models
