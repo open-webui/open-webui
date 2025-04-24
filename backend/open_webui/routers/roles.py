@@ -39,7 +39,7 @@ async def get_roles(
 
 @router.post("/", response_model=Optional[RoleModel])
 async def add_role(form_data: RoleAddForm, user=Depends(get_admin_user)):
-    # Check if role already exists
+    # Check if the role already exists
     existing_role = Roles.get_role_by_name(name=form_data.role)
     if existing_role:
         raise HTTPException(
@@ -65,3 +65,5 @@ async def delete_role_by_id(role_id: str, user=Depends(get_admin_user)):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail=ERROR_MESSAGES.DELETE_ROLE_ERROR,
     )
+
+# TODO: Added end-point to update/add permissions on a given role.
