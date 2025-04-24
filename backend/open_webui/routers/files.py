@@ -17,6 +17,7 @@ from fastapi import (
     Query,
 )
 from fastapi.responses import FileResponse, StreamingResponse
+from open_webui.config import STORAGE_PROVIDER
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.files import (
@@ -96,7 +97,7 @@ def upload_file(
         name = filename
         filename = f"{id}_{filename}"
         contents, file_path = Storage.upload_file(file.file, filename)
-
+        print("UPLOADED FILE TO STORAGE: ", STORAGE_PROVIDER)
         file_item = Files.insert_new_file(
             user.id,
             FileForm(
