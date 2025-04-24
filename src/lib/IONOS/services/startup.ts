@@ -1,8 +1,8 @@
 import { get } from 'svelte/store';
 import { settings } from '$lib/stores';
 import { updateUserSettings } from '$lib/apis/users';
-import { getAgent } from './agent';
-import { getPrompt } from './prompt';
+import { getAndForgetAgent } from './agent';
+import { getAndForgetPrompt } from './prompt';
 
 export const storeAgent = async (id: string): Promise<void> => {
 	if (!id) {
@@ -26,7 +26,7 @@ export type StartupInfo = {
 export const startup = async (): Promise<StartupInfo> => {
 	console.log('*** IONOS GPT startup ***');
 
-	const agent = getAgent();
+	const agent = getAndForgetAgent();
 	console.log('Stored agent in settings/store:', agent);
 
 	if (!agent) {
@@ -36,7 +36,7 @@ export const startup = async (): Promise<StartupInfo> => {
 
 	await storeAgent(agent);
 
-	const prompt = getPrompt();
+	const prompt = getAndForgetPrompt();
 
 	if (!prompt) {
 		console.log('No start prompt stored');

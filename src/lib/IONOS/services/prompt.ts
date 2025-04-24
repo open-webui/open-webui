@@ -17,7 +17,7 @@ export const selectPrompt = async (promptId: number): Promise<void> => {
 	selectAgent(promptConfig.agentId);
 }
 
-export const getPrompt = (): string => {
+export const getAndForgetPrompt = (): string => {
 	const prompt = localStorage.getItem(LOCALSTORAGE_START_PROMPT_KEY) ?? '';
 	localStorage.removeItem(LOCALSTORAGE_START_PROMPT_KEY);
 	return prompt;

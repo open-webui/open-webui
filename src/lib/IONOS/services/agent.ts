@@ -6,7 +6,7 @@ export const LOCALSTORAGE_START_MODEL_KEY = 'ionosgptStartWithModel';
 
 const isUserAuthenticated = () => !!get(user);
 
-export const getAgent = (): string => {
+export const getAndForgetAgent = (): string => {
 	const agent = localStorage.getItem(LOCALSTORAGE_START_MODEL_KEY) ?? '';
 	localStorage.removeItem(LOCALSTORAGE_START_MODEL_KEY);
 	return agent;
