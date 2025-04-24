@@ -23,7 +23,7 @@
 	show={show}
 >
 
-	<div class="flex flex-row gap-4 py-5 px-2 min-h-[350px] min-w-[700px] max-w-[700px]">
+	<div class="flex flex-row gap-4 py-5 px-2 min-h-[350px] min-w-[700px] max-w-[700px] text-blue-800">
 		<nav class="w-48 flex-shrink-0">
 			<ul class="flex flex-col">
 				<li class="mb-3">

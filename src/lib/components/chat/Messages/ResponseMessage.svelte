@@ -1178,7 +1178,7 @@
 															/>
 														</div>
 													{:else}
-														<Sparkles strokeWidth="2.1" className="size-4" />
+														<Sparkles strokeWidth="2.1" className="size-4 text-purple-300" />
 													{/if}
 												</button>
 											</Tooltip>

@@ -48,7 +48,7 @@
 								<span class="pr-1 text-sm font-semibold">
 									{$i18n.t('Chat now', { ns: 'ionos' })}
 								</span>
-								<Sparkles className="w-4 h-4 inline" />
+								<Sparkles className="w-4 h-4 inline text-purple-300" />
 							</Button>
 						</div>
 					</div>

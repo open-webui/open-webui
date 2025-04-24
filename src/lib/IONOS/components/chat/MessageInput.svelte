@@ -702,7 +702,7 @@
 														disabled={prompt === ''}
 														label={$i18n.t('Send message')}
 													>
-														<Sparkles />
+														<Sparkles className="w-4 h-4 fill-purple-300" />
 													</Button>
 												</Tooltip>
 											</div>
@@ -716,7 +716,7 @@
 														type={ButtonType.special}
 														label={$i18n.t('Stop')}
 													>
-														<Stop />
+														<Stop className="w-4 h-4 fill-gray-500" />
 													</Button>
 												</Tooltip>
 											</div>
