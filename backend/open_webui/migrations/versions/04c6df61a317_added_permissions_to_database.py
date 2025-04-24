@@ -27,7 +27,7 @@ def upgrade():
         sa.Column('name', sa.String(), nullable=False),
         sa.Column('category', Enum('workspace', 'sharing', 'chat', 'features', name='permissioncategory'), nullable=False),
         sa.Column('description', sa.String()),
-        sa.Column('default_value', sa.Boolean(), default=False),
+        sa.Column('value', sa.Boolean(), default=False),
     )
 
 def downgrade():
