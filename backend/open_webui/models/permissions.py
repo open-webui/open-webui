@@ -24,7 +24,7 @@ class Permission(Base):
     # workspace, sharing, chat, features
     category = Column(SQLAlchemyEnum(PermissionCategory), nullable=False)
     description = Column(String)
-    default_value = Column(Boolean, default=False)
+    value = Column(Boolean, default=False)
 
 
 class PermissionModel(BaseModel):
@@ -32,7 +32,7 @@ class PermissionModel(BaseModel):
     name: str
     category: PermissionCategory
     description: str | None
-    default_value: bool
+    value: bool
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -53,7 +53,7 @@ class PermissionsTable:
                 if perm.category.value not in permissions:
                     permissions[perm.category.value] = {}
 
-                permissions[perm.category.value][perm.name] = perm.default_value
+                permissions[perm.category.value][perm.name] = perm.value
 
             return permissions
 
@@ -72,11 +72,11 @@ class PermissionsTable:
                     except ValueError:
                         continue  # Skip invalid categories
 
-                    for perm_name, default_value in perms.items():
+                    for perm_name, value in perms.items():
                         new_permission = Permission(
                             name=perm_name,
                             category=category,
-                            default_value=default_value,
+                            value=value,
                             description=f"Default {category.value} permission for {perm_name}"
                         )
                         db.add(new_permission)
@@ -98,7 +98,7 @@ class PermissionsTable:
                 name=permission['name'],
                 category=permission['category'],
                 description=permission['description'],
-                default_value=permission['default_value']
+                value=permission['value']
             )
             db.add(result)
             db.commit()
@@ -119,7 +119,7 @@ class PermissionsTable:
                 if not db_permission:
                     return None
 
-                db_permission.default_value = permission['default_value']
+                db_permission.value = permission['value']
                 if 'description' in permission:
                     db_permission.description = permission['description']
 
