@@ -65,6 +65,7 @@
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import ShowSidebarIcon from '../icons/ShowSidebarIcon.svelte';
 	import AddNewFolderDialog from '../common/ConfirmDialog.svelte';
+	import { sidebarKey } from '$lib/stores';
 
 	const BREAKPOINT = 768;
 
@@ -428,6 +429,18 @@
 	});
 
 	let showCreateFolder = false;
+
+	let unsubscribe;
+	
+	onMount(() => {
+		unsubscribe = sidebarKey.subscribe(() => {
+		initChatList();
+		});
+	});
+
+	onDestroy(() => {
+		if (unsubscribe) unsubscribe();
+	});
 </script>
 
 <ArchivedChatsModal
@@ -529,7 +542,7 @@
 									alt="User profile"
 								/>
 							</div>
-							<div class=" self-center font-medium text-sm mr-1">{$user.name}</div>
+							<div class=" self-center font-medium text-sm mr-1">{$user.first_name} {$user.last_name}</div>
 							<ChevronDown className=" size-3" strokeWidth="2.5" />
 						</button>
 					</UserMenu>

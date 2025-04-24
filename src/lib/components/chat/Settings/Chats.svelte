@@ -16,6 +16,10 @@
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
+	import { getAllArchivedChats, archiveChatById, deleteChatById } from '$lib/apis/chats';
+	import ArchivedChatsMenu from './ArchivedChatsMenu.svelte';
+	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import { sidebarKey } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -95,10 +99,113 @@
 		await chats.set(await getChatList(localStorage.token, $currentChatPage));
 		scrollPaginationEnabled.set(true);
 	};
+
+	let archivedChats = [];
+
+	const unarchiveAllHandler = async () => {
+		await Promise.all(
+		archivedChats.map((chat) =>
+			archiveChatById(localStorage.token, chat.id)
+		)
+	);
+		archivedChats = [];
+		sidebarKey.update((n) => n + 1);
+	};
+
+	const deleteAllArchivedHandler = async () => {
+		await Promise.all(
+		archivedChats.map((chat) =>
+			deleteChatById(localStorage.token, chat.id)
+		)
+	);
+		archivedChats = [];
+	};
+
+	onMount(async () => {
+	const res = await getAllArchivedChats(localStorage.token).catch((e) => {
+			toast.error(`${e}`);
+		});
+
+		if (res) {
+			console.log(res);
+			archivedChats = res;
+		};
+	})
 </script>
 
 <div class="flex flex-col h-full justify-between space-y-3 text-sm">
-	<div class=" space-y-2 overflow-y-scroll max-h-[28rem] lg:max-h-full">
+	<div
+		class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700"
+	>
+		<div class="flex w-full justify-between items-center">
+			<div class="text-xs dark:text-customGray-300">{$i18n.t('Archived Chats')}</div>
+		</div>
+	</div>
+	<div class="flex flex-col w-full dark:text-gray-200">
+		<div
+			class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6 h-[28rem] max-h-screen"
+		>
+			{#if archivedChats.length > 0}
+				<div class="text-left text-sm w-full mb-4 overflow-y-scroll">
+					<div class="relative overflow-x-auto">
+						{#each archivedChats as chat}
+							<div
+								id="memory-{chat.id}"
+								class="flex justify-between items-center group rounded-md w-full dark:hover:bg-customGray-900 py-2 px-3 cursor-pointer"
+							>
+								<div class="line-clamp-1 text-sm dark:text-customGray-100">
+									{chat.title}
+								</div>
+								<div class="invisible group-hover:visible">
+									<ArchivedChatsMenu
+										unarchiveHandler={async () => {
+											await archiveChatById(localStorage.token, chat.id);
+											archivedChats = await getAllArchivedChats(localStorage.token);
+											sidebarKey.update(n => n + 1);	
+										}}
+										deleteHandler={async () => {
+											await deleteChatById(localStorage.token, chat.id);
+											archivedChats = await getAllArchivedChats(localStorage.token);
+										}}
+										onClose={() => {}}
+									>
+										<button
+											class="self-center w-fit text-sm px-0.5 h-[21px] dark:text-white dark:hover:text-white hover:bg-black/5 dark:hover:bg-customGray-900 rounded-md"
+											type="button"
+											on:click={(e) => {}}
+										>
+											<EllipsisHorizontal className="size-5" />
+										</button>
+									</ArchivedChatsMenu>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{:else}
+				<div class="text-center flex h-full text-sm w-full">
+					<div class=" my-auto pb-10 px-4 w-full text-gray-500">
+						{$i18n.t('No archived chats.')}
+					</div>
+				</div>
+			{/if}
+		</div>
+		<div class="flex justify-end text-sm font-medium border-t border-customGray-700 pt-5 pb-5">
+			<button
+				class=" text-xs h-10 px-4 py-2 transition rounded-lg bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center"
+				on:click={async () => {
+					unarchiveAllHandler();
+				}}>{$i18n.t('Unarchive All Chats')}</button
+			>
+			<button
+				class=" text-xs h-10 px-4 py-2 transition rounded-lg bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center ml-1"
+				on:click={async () => {
+					deleteAllArchivedHandler();
+				}}>{$i18n.t('Delete All Conversations')}</button
+			>
+		</div>
+	</div>
+	<!-- <div class=" space-y-2 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div class="flex flex-col">
 			<input
 				id="chat-import-input"
@@ -328,5 +435,5 @@
 				</button>
 			{/if}
 		</div>
-	</div>
+	</div> -->
 </div>

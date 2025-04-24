@@ -255,7 +255,8 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
                 __user__ = {
                     "id": user.id,
                     "email": user.email,
-                    "name": user.name,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
                     "role": user.role,
                 }
 
@@ -356,7 +357,8 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
                 __user__ = {
                     "id": user.id,
                     "email": user.email,
-                    "name": user.name,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
                     "role": user.role,
                 }
 

@@ -77,6 +77,8 @@ export const currentChatPage = writable(1);
 export const isLastActiveTab = writable(true);
 export const playingNotificationSound = writable(false);
 
+export const sidebarKey = writable(0);
+
 export type Model = OpenAIModel | OllamaModel;
 
 type BaseModel = {
@@ -222,7 +224,8 @@ type PromptSuggestion = {
 type SessionUser = {
 	id: string;
 	email: string;
-	name: string;
+	first_name: string;
+	last_name: string;
 	role: string;
 	profile_image_url: string;
 };

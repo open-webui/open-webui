@@ -38,9 +38,9 @@
 		if (search === '') {
 			return true;
 		} else {
-			let name = user.name.toLowerCase();
+			let fullName = `${user.first_name.toLowerCase()} ${user.last_name.toLowerCase()}`;
 			const query = search.toLowerCase();
-			return name.includes(query);
+			return fullName?.includes(query);
 		}
 	});
 

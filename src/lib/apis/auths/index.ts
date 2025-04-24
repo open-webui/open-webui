@@ -351,7 +351,8 @@ export const userSignOut = async () => {
 
 export const addUser = async (
 	token: string,
-	name: string,
+	first_name: string,
+	last_name: string,
 	email: string,
 	role: string = 'pending'
 ) => {
@@ -364,7 +365,8 @@ export const addUser = async (
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			name: name,
+			first_name: first_name,
+			last_name: last_name,
 			email: email,
 			role: role
 		})
@@ -386,7 +388,7 @@ export const addUser = async (
 	return res;
 };
 
-export const updateUserProfile = async (token: string, name: string, profileImageUrl: string) => {
+export const updateUserProfile = async (token: string, firstName: string, profileImageUrl: string, lastName: string, email: string, password: string | null) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/update/profile`, {
@@ -396,8 +398,11 @@ export const updateUserProfile = async (token: string, name: string, profileImag
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			name: name,
-			profile_image_url: profileImageUrl
+			first_name: firstName,
+			profile_image_url: profileImageUrl,
+			last_name: lastName,
+			email: email,
+			password: password,
 		})
 	})
 		.then(async (res) => {
@@ -416,6 +421,36 @@ export const updateUserProfile = async (token: string, name: string, profileImag
 
 	return res;
 };
+
+export const deleteUserProfile = async (token: string, userId: string) => {
+	let error = null;
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/delete/profile`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			user_id: userId
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+
+}
 
 export const updateUserPassword = async (token: string, password: string, newPassword: string) => {
 	let error = null;

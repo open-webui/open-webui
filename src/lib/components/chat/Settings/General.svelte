@@ -4,7 +4,15 @@
 	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { models, settings, theme, user } from '$lib/stores';
+	import { models, settings, theme, user, config } from '$lib/stores';
+	import { onClickOutside } from '$lib/utils';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import { getVoices as _getVoices } from '$lib/apis/audio';
+	import ManageModal from './Personalization/ManageModal.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
+	import SystemIcon from '$lib/components/icons/SystemIcon.svelte';
+	import DarkIcon from '$lib/components/icons/DarkIcon.svelte';
+	import LightIcon from '$lib/components/icons/LightIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -21,6 +29,7 @@
 	let lang = $i18n.language;
 	let notificationEnabled = false;
 	let system = '';
+
 
 	let showAdvanced = false;
 
@@ -154,35 +163,241 @@
 			document.documentElement.classList.add('dark');
 		}
 		applyTheme(_theme);
+		selectedTheme = _theme;
 	};
+	let showLanguageDropdown = false;
+	let languageDropdownRef;
+
+	$: selectedLanguage = languages?.find(item => item.code === lang);
+
+	// Audio
+	let conversationMode = false;
+	let speechAutoSend = false;
+	let responseAutoPlayback = false;
+	let nonLocalVoices = false;
+
+	let STTEngine = '';
+
+	let voices = [];
+	let voice = '';
+
+	// Audio speed control
+	let playbackRate = 1;
+
+	const getVoices = async () => {
+		if ($config.audio.tts.engine === '') {
+			const getVoicesLoop = setInterval(async () => {
+				voices = await speechSynthesis.getVoices();
+
+				// do your loop
+				if (voices.length > 0) {
+					clearInterval(getVoicesLoop);
+				}
+			}, 100);
+		} else {
+			const res = await _getVoices(localStorage.token).catch((e) => {
+				toast.error(`${e}`);
+			});
+
+			if (res) {
+				console.log(res);
+				voices = res.voices;
+			}
+		}
+	};
+	
+
+	onMount(async () => {
+		playbackRate = $settings.audio?.tts?.playbackRate ?? 1;
+		conversationMode = $settings.conversationMode ?? false;
+		speechAutoSend = $settings.speechAutoSend ?? false;
+		responseAutoPlayback = $settings.responseAutoPlayback ?? false;
+
+		STTEngine = $settings?.audio?.stt?.engine ?? '';
+
+		if ($settings?.audio?.tts?.defaultVoice === $config.audio.tts.voice) {
+			voice = $settings?.audio?.tts?.voice ?? $config.audio.tts.voice ?? '';
+		} else {
+			voice = $config.audio.tts.voice ?? '';
+		}
+
+		nonLocalVoices = $settings.audio?.tts?.nonLocalVoices ?? false;
+
+		await getVoices();
+	});
+
+	let showVoiceDropdown = false;
+	let voiceDropdownRef;
+
+	let showManageModal = false;
+
+	// Addons
+	let enableMemory = false;
+
+	onMount(async () => {
+		enableMemory = $settings?.memory ?? false;
+	});
+
 </script>
 
-<div class="flex flex-col h-full justify-between text-sm">
-	<div class="  overflow-y-scroll max-h-[28rem] lg:max-h-full">
-		<div class="">
-			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Settings')}</div>
+<ManageModal bind:show={showManageModal} />
 
-			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
-				<div class="flex items-center relative">
-					<select
-						class=" dark:bg-gray-900 w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
-						bind:value={selectedTheme}
-						placeholder="Select a theme"
-						on:change={() => themeChangeHandler(selectedTheme)}
+<div class="flex flex-col h-full justify-between text-sm pt-5 pb-5">
+	<div class="">
+		<div class="">
+			<div class="my-1" use:onClickOutside={() => (showLanguageDropdown = false)}>
+				<div class="relative" bind:this={languageDropdownRef}>
+					<button
+						type="button"
+						class={`flex items-center justify-between w-full text-sm h-10 px-3 py-2 ${
+							showLanguageDropdown ? 'border' : ''
+						} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer`}
+						on:click={() => {
+							showLanguageDropdown = !showLanguageDropdown
+							}}
 					>
-						<option value="system">⚙️ {$i18n.t('System')}</option>
-						<option value="dark">🌑 {$i18n.t('Dark')}</option>
-						<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
-						<option value="light">☀️ {$i18n.t('Light')}</option>
-						<option value="her">🌷 Her</option>
-						<!-- <option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
-						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option> -->
-					</select>
+						<span class="text-gray-500 dark:text-customGray-100"
+							>{$i18n.t('Language')}</span
+						>
+						<div class="flex items-center gap-2 text-xs dark:text-customGray-100/50">
+							{selectedLanguage?.['title']}
+							<ChevronDown className="size-3" />
+						</div>
+					</button>
+
+					{#if showLanguageDropdown}
+						<div
+							class="max-h-40 overflow-y-auto absolute z-50 w-full -mt-1 bg-white pb-1 dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
+						>
+							<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
+							<div class="px-1">
+								{#each languages as language}
+									<button
+										class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
+										on:click={() => {
+											$i18n.changeLanguage(language['code']);
+											showLanguageDropdown = false;
+										}}
+									>
+										{language['title']}
+									</button>
+								{/each}
+							</div>
+						</div>
+					{/if}
 				</div>
 			</div>
+			<div>
+				<div class="my-1" use:onClickOutside={() => (showVoiceDropdown = false)}>
+					<div class="relative" bind:this={voiceDropdownRef}>
+						<button
+							type="button"
+							class={`flex items-center justify-between w-full text-sm h-10 px-3 py-2 ${
+								showVoiceDropdown ? 'border' : ''
+							} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer`}
+							on:click={() => {
+								showVoiceDropdown = !showVoiceDropdown
+								}}
+						>
+							<span class="text-gray-500 dark:text-customGray-100"
+								>{$i18n.t('Voice for audio output')}</span
+							>
+							<div class="flex items-center gap-2 text-xs dark:text-customGray-100/50">
+								{#if (!voice || voice === 'alloy')}
+									{$i18n.t('default')}
+								{:else}
+									{voice}
+								{/if}
+								<ChevronDown className="size-3" />
+							</div>
+						</button>
+	
+						{#if showVoiceDropdown}
+							<div
+								class="max-h-40 overflow-y-auto absolute z-50 w-full -mt-1 bg-white pb-1 dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
+							>
+								<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
+								<div class="px-1">
+									<button
+											class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
+											on:click={() => {
+												voice = "";
+												saveSettings({
+													audio: {
+														stt: {
+															engine: STTEngine !== '' ? STTEngine : undefined
+														},
+														tts: {
+															playbackRate: playbackRate,
+															voice: undefined,
+															defaultVoice: $config?.audio?.tts?.voice ?? '',
+															nonLocalVoices: $config.audio.tts.engine === '' ? nonLocalVoices : undefined
+														}
+													}
+												});												
+												showVoiceDropdown = false;
+											}}
+										>	
+											{$i18n.t('Default')}
+										</button>
+									{#each voices.filter((v) => nonLocalVoices || v.localService === true) as _voice}
+										<button
+											class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
+											on:click={() => {
+												voice = _voice.name;
+												saveSettings({
+													audio: {
+														stt: {
+															engine: STTEngine !== '' ? STTEngine : undefined
+														},
+														tts: {
+															playbackRate: playbackRate,
+															voice: _voice.name !== '' ? _voice.name : undefined,
+															defaultVoice: $config?.audio?.tts?.voice ?? '',
+															nonLocalVoices: $config.audio.tts.engine === '' ? nonLocalVoices : undefined
+														}
+													}
+												});												
+												showVoiceDropdown = false;
+											}}
+										>
+											{_voice.name}
+										</button>
+									{/each}
+								</div>
+							</div>
+						{/if}
+					</div>
+				</div>
+				<!-- <div class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</div>
+				<div class="flex w-full">
+					<div class="flex-1">
+						<select
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
+							bind:value={voice}
+						>
+							<option value="" selected={voice !== ''}>{$i18n.t('Default')}</option>
+							{#each voices.filter((v) => nonLocalVoices || v.localService === true) as _voice}
+								<option
+									value={_voice.name}
+									class="bg-gray-100 dark:bg-gray-700"
+									selected={voice === _voice.name}>{_voice.name}</option
+								>
+							{/each}
+						</select>
+					</div>
+				</div> -->
+				<!-- <div class="flex items-center justify-between my-1.5">
+					<div class="text-xs">
+						{$i18n.t('Allow non-local voices')}
+					</div>
 
-			<div class=" flex w-full justify-between">
+					<div class="mt-1">
+						<Switch bind:state={nonLocalVoices} />
+					</div>
+				</div> -->
+			</div>
+			<!-- <div class=" flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
 				<div class="flex items-center relative">
 					<select
@@ -198,8 +413,58 @@
 						{/each}
 					</select>
 				</div>
+			</div> -->
+
+			<div
+				class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2"
+			>
+				<div class="flex w-full justify-between items-center">
+					<div class="text-xs dark:text-customGray-300">{$i18n.t('Theme')}</div>
+				</div>
 			</div>
-			{#if $i18n.language === 'en-US'}
+
+			<div class="flex gap-x-2.5">
+				<div on:click={() => themeChangeHandler('system')} class="relative rounded-lg {selectedTheme === "system" ? "border-2 border-[#305BE4]" : ""}">
+					<img class="rounded-lg max-w-full" src="/system.png" alt="system theme"/>
+					<div class="flex items-center pl-2.5 absolute bottom-[0.625rem] text-customGray-550 text-xs">
+						<SystemIcon className="size-3.5 mr-1"/>
+						{$i18n.t('System (Default)')}
+					</div>
+				</div>
+				<div on:click={() => themeChangeHandler('light')}  class="relative rounded-lg {selectedTheme === "light" ? "border-2 border-[#305BE4]" : ""}">
+					<img class="rounded-lg max-w-full" src="/light.png" alt="light theme"/>
+					<div class="flex items-center pl-2.5 absolute bottom-[0.625rem] text-customGray-550 text-xs">
+						<LightIcon className="size-3.5 mr-1"/>
+						{$i18n.t('Light')}
+					</div>
+				</div>
+				<div on:click={() => themeChangeHandler('dark')} class="relative rounded-lg {selectedTheme === "dark" ? "border-2 border-[#305BE4]" : ""}">
+					<img class="rounded-lg max-w-full" src="/dark.png" alt="dark theme"/>
+					<div class="flex items-center pl-2.5 absolute bottom-[0.625rem] text-customGray-550 text-xs">
+						<DarkIcon className="size-3.5 mr-1"/>
+						{$i18n.t('Dark')}
+					</div>
+				</div>
+			</div>
+
+			<!-- <div class="flex w-full justify-between">
+				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
+				<div class="flex items-center relative">
+					<select
+						class=" dark:bg-gray-900 w-fit pr-8 rounded py-2 px-2 text-xs bg-transparent outline-none text-right"
+						bind:value={selectedTheme}
+						placeholder="Select a theme"
+						on:change={() => themeChangeHandler(selectedTheme)}
+					>
+						<option value="system">⚙️ {$i18n.t('System')}</option>
+						<option value="dark">🌑 {$i18n.t('Dark')}</option>
+						<option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option>
+						<option value="light">☀️ {$i18n.t('Light')}</option>
+						<option value="her">🌷 Her</option>
+					</select>
+				</div>
+			</div> -->
+			<!-- {#if $i18n.language === 'en-US'}
 				<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
 					Couldn't find your language?
 					<a
@@ -210,9 +475,9 @@
 						Help us translate Open WebUI!
 					</a>
 				</div>
-			{/if}
+			{/if} -->
 
-			<div>
+			<!-- <div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs font-medium">{$i18n.t('Notifications')}</div>
 
@@ -230,22 +495,78 @@
 						{/if}
 					</button>
 				</div>
-			</div>
+			</div> -->
 		</div>
 
-		{#if $user.role === 'admin' || $user?.permissions.chat?.controls}
-			<hr class=" dark:border-gray-850 my-3" />
-
-			<div>
-				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
-				<textarea
-					bind:value={system}
-					class="w-full rounded-lg p-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none resize-none"
-					rows="4"
-				/>
+		 {#if $user.role === 'admin' || $user?.permissions.chat?.controls}
+			<div
+				class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2"
+			>
+				<div class="flex w-full justify-between items-center">
+					<div class="text-xs dark:text-customGray-300">{$i18n.t('Custom Instructions')}</div>
+				</div>
 			</div>
 
-			<div class="mt-2 space-y-3 pr-1.5">
+			<div class="relative w-full dark:bg-customGray-900 rounded-md">
+				{#if system}
+					<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('System Prompt')}</div>
+				{/if}
+				<textarea
+					bind:value={system}
+					placeholder={$i18n.t('System Prompt')}
+					class="px-2.5 py-2 text-sm {system ? "mt-2" : "mt-0"} w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none"
+					rows="4"
+				/>
+				{#if !system}
+					<span
+						class="absolute top-[1.625rem] w-[18rem] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+					>
+						{$i18n.t('Adding a system prompt shapes LLM responses to better fit specific objectives.')}
+					</span>
+				{/if}
+			</div>
+
+			
+			<div class="mt-2.5">
+				<div class="flex items-center justify-between mb-1 w-full dark:bg-customGray-900 rounded-md h-10 px-2.5 py-2">
+					
+						<div class="text-sm dark:text-customGray-100">
+							{$i18n.t('Memory')}
+						</div>
+	
+					<div class="">
+						<Switch
+							bind:state={enableMemory}
+							on:change={async () => {
+								saveSettings({ memory: enableMemory });
+							}}
+						/>
+					</div>
+				</div>
+			</div>
+		
+			<div class="text-xs text-gray-600 dark:text-customGray-100/50">
+				<div>
+					{$i18n.t(
+						"You can personalize your interactions with LLMs by adding memories through the 'Manage' button below, making them more helpful and tailored to you."
+					)}
+				</div>
+			</div>
+		
+			<div class="mt-3 mb-1 ml-1">
+				<button
+					type="button"
+					class=" text-xs w-[132px] h-10 px-3 py-2 transition rounded-lg bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center"
+					on:click={() => {
+						showManageModal = true;
+					}}
+				>
+					{$i18n.t('Manage')}
+				</button>
+			</div>
+			
+
+			<!-- <div class="mt-2 space-y-3 pr-1.5">
 				<div class="flex justify-between items-center text-sm">
 					<div class="  font-medium">{$i18n.t('Advanced Parameters')}</div>
 					<button
@@ -305,57 +626,23 @@
 								{#if requestFormat === ''}
 									<span class="ml-2 self-center"> {$i18n.t('Default')} </span>
 								{:else if requestFormat === 'json'}
-									<!-- <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                            class="w-4 h-4 self-center"
-                        >
-                            <path
-                                d="M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 5.404a.75.75 0 10-1.06-1.06l-1.061 1.06a.75.75 0 001.06 1.06l1.06-1.06zM6.464 14.596a.75.75 0 10-1.06-1.06l-1.06 1.06a.75.75 0 001.06 1.06l1.06-1.06zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 15.657a.75.75 0 001.06-1.06l-1.06-1.061a.75.75 0 10-1.06 1.06l1.06 1.06zM5.404 6.464a.75.75 0 001.06-1.06l-1.06-1.06a.75.75 0 10-1.061 1.06l1.06 1.06z"
-                            />
-                        </svg> -->
 									<span class="ml-2 self-center"> {$i18n.t('JSON')} </span>
 								{/if}
 							</button>
 						</div>
 					</div>
 				{/if}
-			</div>
-		{/if}
+			</div> -->
+		{/if} 
 	</div>
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+		class=" text-xs w-[168px] h-10 px-3 py-2 transition rounded-lg bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center"
+		type="submit"
 			on:click={() => {
 				saveSettings({
-					system: system !== '' ? system : undefined,
-					params: {
-						stream_response: params.stream_response !== null ? params.stream_response : undefined,
-						seed: (params.seed !== null ? params.seed : undefined) ?? undefined,
-						stop: params.stop ? params.stop.split(',').filter((e) => e) : undefined,
-						temperature: params.temperature !== null ? params.temperature : undefined,
-						frequency_penalty:
-							params.frequency_penalty !== null ? params.frequency_penalty : undefined,
-						repeat_last_n: params.repeat_last_n !== null ? params.repeat_last_n : undefined,
-						mirostat: params.mirostat !== null ? params.mirostat : undefined,
-						mirostat_eta: params.mirostat_eta !== null ? params.mirostat_eta : undefined,
-						mirostat_tau: params.mirostat_tau !== null ? params.mirostat_tau : undefined,
-						top_k: params.top_k !== null ? params.top_k : undefined,
-						top_p: params.top_p !== null ? params.top_p : undefined,
-						min_p: params.min_p !== null ? params.min_p : undefined,
-						tfs_z: params.tfs_z !== null ? params.tfs_z : undefined,
-						num_ctx: params.num_ctx !== null ? params.num_ctx : undefined,
-						num_batch: params.num_batch !== null ? params.num_batch : undefined,
-						num_keep: params.num_keep !== null ? params.num_keep : undefined,
-						max_tokens: params.max_tokens !== null ? params.max_tokens : undefined,
-						use_mmap: params.use_mmap !== null ? params.use_mmap : undefined,
-						use_mlock: params.use_mlock !== null ? params.use_mlock : undefined,
-						num_thread: params.num_thread !== null ? params.num_thread : undefined,
-						num_gpu: params.num_gpu !== null ? params.num_gpu : undefined
-					},
-					keepAlive: keepAlive ? (isNaN(keepAlive) ? keepAlive : parseInt(keepAlive)) : undefined
+					system: system !== '' ? system : undefined
 				});
 				dispatch('save');
 			}}

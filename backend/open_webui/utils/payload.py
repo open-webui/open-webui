@@ -17,7 +17,7 @@ def apply_model_system_prompt_to_body(
     # Legacy (API Usage)
     if user:
         template_params = {
-            "user_name": user.name,
+            "user_name": user.first_name + " " + user.last_name,
             "user_location": user.info.get("location") if user.info else None,
         }
     else:

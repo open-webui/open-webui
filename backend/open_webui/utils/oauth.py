@@ -292,7 +292,8 @@ class OAuthManager:
                     password=get_password_hash(
                         str(uuid.uuid4())
                     ),  # Random password, not used
-                    name=name,
+                    first_name=name,
+                    last_name=name,
                     company_id=NO_COMPANY,
                     profile_image_url=picture_url,
                     role=role,
@@ -302,10 +303,10 @@ class OAuthManager:
                 if auth_manager_config.WEBHOOK_URL:
                     post_webhook(
                         auth_manager_config.WEBHOOK_URL,
-                        WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                        WEBHOOK_MESSAGES.USER_SIGNUP(user.first_name + " " + user.last_name),
                         {
                             "action": "signup",
-                            "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                            "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.first_name + " " + user.last_name),
                             "user": user.model_dump_json(exclude_none=True),
                         },
                     )

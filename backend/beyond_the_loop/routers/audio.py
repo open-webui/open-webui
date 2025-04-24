@@ -270,7 +270,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         "Authorization": f"Bearer {request.app.state.config.TTS_OPENAI_API_KEY}",
                         **(
                             {
-                                "X-OpenWebUI-User-Name": user.name,
+                                "X-OpenWebUI-User-Name": user.first_name + " " + user.last_name,
                                 "X-OpenWebUI-User-Id": user.id,
                                 "X-OpenWebUI-User-Email": user.email,
                                 "X-OpenWebUI-User-Role": user.role,

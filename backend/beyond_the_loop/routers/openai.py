@@ -209,7 +209,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     ),
                     **(
                         {
-                            "X-OpenWebUI-User-Name": user.name,
+                            "X-OpenWebUI-User-Name": user.first_name + " " + user.last_name,
                             "X-OpenWebUI-User-Id": user.id,
                             "X-OpenWebUI-User-Email": user.email,
                             "X-OpenWebUI-User-Role": user.role,
@@ -445,7 +445,7 @@ async def get_models(
                         "Content-Type": "application/json",
                         **(
                             {
-                                "X-OpenWebUI-User-Name": user.name,
+                                "X-OpenWebUI-User-Name": user.first_name + " " + user.last_name,
                                 "X-OpenWebUI-User-Id": user.id,
                                 "X-OpenWebUI-User-Email": user.email,
                                 "X-OpenWebUI-User-Role": user.role,
@@ -587,7 +587,7 @@ async def generate_chat_completion(
         # Check if company has sufficient credits
         if current_balance < model_message_credit_cost:
             email_service = EmailService()
-            email_service.send_budget_mail_100(to_email=user.email, recipient_name=user.name)
+            email_service.send_budget_mail_100(to_email=user.email, recipient_name=user.first_name + " " + user.last_name)
 
             raise HTTPException(
                 status_code=402,  # 402 Payment Required
@@ -612,7 +612,7 @@ async def generate_chat_completion(
                     print(f"Unexpected error during auto-recharge: {str(e)}")
 
             if should_send_budget_email_80:
-                email_service.send_budget_mail_80(to_email=user.email, recipient_name=user.name)
+                email_service.send_budget_mail_80(to_email=user.email, recipient_name=user.first_name + " " + user.last_name)
 
         # Subtract credits from balance
         Companies.subtract_credit_balance(user.company_id, model_message_credit_cost)
@@ -670,7 +670,8 @@ async def generate_chat_completion(
     # Add user info to the payload if the model is a pipeline
     if "pipeline" in model and model.get("pipeline"):
         payload["user"] = {
-            "name": user.name,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
             "id": user.id,
             "email": user.email,
             "role": user.role,
@@ -727,7 +728,7 @@ async def generate_chat_completion(
                 ),
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
+                        "X-OpenWebUI-User-Name": user.first_name + " " + user.last_name,
                         "X-OpenWebUI-User-Id": user.id,
                         "X-OpenWebUI-User-Email": user.email,
                         "X-OpenWebUI-User-Role": user.role,
@@ -866,7 +867,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                 "Content-Type": "application/json",
                 **(
                     {
-                        "X-OpenWebUI-User-Name": user.name,
+                        "X-OpenWebUI-User-Name": user.first_name + " " + user.last_name,
                         "X-OpenWebUI-User-Id": user.id,
                         "X-OpenWebUI-User-Email": user.email,
                         "X-OpenWebUI-User-Role": user.role,

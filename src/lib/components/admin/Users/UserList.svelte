@@ -84,9 +84,9 @@
 			if (search === '') {
 				return true;
 			} else {
-				let name = user.name.toLowerCase();
+				let fullName = `${user.first_name.toLowerCase()} ${user.last_name.toLowerCase()}`;
 				const query = search.toLowerCase();
-				return name.includes(query);
+				return fullName?.includes(query);
 			}
 		})
 		.sort((a, b) => {
@@ -356,7 +356,7 @@
 								alt="user"
 							/>
 
-							<div class=" font-medium self-center">{user.name}</div>
+							<div class=" font-medium self-center">{user.first_name} {user.last_name}</div>
 						</div>
 					</td>
 					<td class=" px-3 py-1"> {user.email} </td>

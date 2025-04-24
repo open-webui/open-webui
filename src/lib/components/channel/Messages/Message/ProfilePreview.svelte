@@ -48,7 +48,7 @@
 
 					<div class=" flex flex-col pt-4 pb-2.5 px-4">
 						<div class=" -mb-1">
-							<span class="font-medium text-sm line-clamp-1"> {user.name} </span>
+							<span class="font-medium text-sm line-clamp-1"> {user.first_name} {user.last_name}</span>
 						</div>
 
 						<div class=" flex items-center gap-2">

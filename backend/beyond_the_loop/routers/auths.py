@@ -113,7 +113,8 @@ async def get_session_user(
         "expires_at": expires_at,
         "id": user.id,
         "email": user.email,
-        "name": user.name,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
         "role": user.role,
         "profile_image_url": user.profile_image_url,
         "permissions": user_permissions,
@@ -132,8 +133,13 @@ async def update_profile(
     if session_user:
         user = Users.update_user_by_id(
             session_user.id,
-            {"profile_image_url": form_data.profile_image_url, "name": form_data.name},
+            {"profile_image_url": form_data.profile_image_url, "first_name": form_data.first_name, "last_name": form_data.last_name, },
         )
+
+        if form_data.password:
+            hashed = get_password_hash(form_data.password)
+            Auths.update_user_password_by_id(session_user.id, hashed)
+
         if user:
             return user
         else:
@@ -262,7 +268,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     )
 
                     user = Auths.insert_new_auth(
-                        email=mail, password=str(uuid.uuid4()), name=cn, company_id=NO_COMPANY, role=role
+                        email=mail, password=str(uuid.uuid4()), first_name=cn, last_name=cn, company_id=NO_COMPANY, role=role
                     )
 
                     if not user:
@@ -301,7 +307,8 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                     "token_type": "Bearer",
                     "id": user.id,
                     "email": user.email,
-                    "name": user.name,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
                     "role": user.role,
                     "profile_image_url": user.profile_image_url,
                     "permissions": user_permissions,
@@ -401,7 +408,8 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             "expires_at": expires_at,
             "id": user.id,
             "email": user.email,
-            "name": user.name,
+            "first_name": user.first_name,
+            "last_name": user.last_name,
             "role": user.role,
             "profile_image_url": user.profile_image_url,
             "permissions": user_permissions,
@@ -432,7 +440,8 @@ async def add_user(form_data: AddUserForm, admin_user: Users = Depends(get_admin
         new_user = Auths.insert_new_auth(
             form_data.email.lower(),
             hashed,
-            form_data.name,
+            form_data.first_name,
+            form_data.last_name,
             admin_user.company_id,
             form_data.profile_image_url,
             form_data.role,
@@ -445,7 +454,8 @@ async def add_user(form_data: AddUserForm, admin_user: Users = Depends(get_admin
                 "token_type": "Bearer",
                 "id": new_user.id,
                 "email": new_user.email,
-                "name": new_user.name,
+                "first_name": new_user.first_name,
+                "last_name": new_user.last_name,
                 "role": new_user.role,
                 "company_id": new_user.company_id,
                 "profile_image_url": new_user.profile_image_url,
@@ -468,7 +478,7 @@ async def complete_invite(request: Request, response: Response, form_data: Compl
 
         Auths.insert_auth_for_existing_user(user.id, user.email, hashed_password)
 
-        Users.complete_invite_by_id(user.id, form_data.first_name + " " + form_data.last_name)
+        Users.complete_invite_by_id(user.id, form_data.first_name, form_data.last_name)
 
     except Exception as err:
         raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
@@ -502,10 +512,10 @@ async def complete_invite(request: Request, response: Response, form_data: Compl
     if request.app.state.config.WEBHOOK_URL:
         post_webhook(
             request.app.state.config.WEBHOOK_URL,
-            WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+            WEBHOOK_MESSAGES.USER_SIGNUP(user.first_name + " " + user.last_name),
             {
                 "action": "signup",
-                "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.first_name + " " + user.last_name),
                 "user": user.model_dump_json(exclude_none=True),
             },
         )
@@ -520,7 +530,8 @@ async def complete_invite(request: Request, response: Response, form_data: Compl
         "expires_at": expires_at,
         "id": user.id,
         "email": user.email,
-        "name": user.name,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
         "role": user.role,
         "profile_image_url": user.profile_image_url,
         "permissions": user_permissions,
@@ -570,7 +581,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             company = Companies.create_company({
                 "id": company_id,
                 "name": f"{form_data.name}'s Company",
-                "credit_balance": 10000  # Initial credit balance
+                "credit_balance": 10000000  # Initial credit balance
             })
             if not company:
                 raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_COMPANY_ERROR)
@@ -582,6 +593,7 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         user = Auths.insert_new_auth(
             form_data.email.lower(),
             hashed,
+            form_data.name,
             form_data.name,
             company_id,
             form_data.profile_image_url,
@@ -618,10 +630,10 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             if request.app.state.config.WEBHOOK_URL:
                 post_webhook(
                     request.app.state.config.WEBHOOK_URL,
-                    WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                    WEBHOOK_MESSAGES.USER_SIGNUP(user.first_name + " " + user.last_name),
                     {
                         "action": "signup",
-                        "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.name),
+                        "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.first_name + " " + user.last_name),
                         "user": user.model_dump_json(exclude_none=True),
                     },
                 )
@@ -636,7 +648,8 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 "expires_at": expires_at,
                 "id": user.id,
                 "email": user.email,
-                "name": user.name,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
                 "role": user.role,
                 "profile_image_url": user.profile_image_url,
                 "permissions": user_permissions,

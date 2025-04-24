@@ -50,7 +50,8 @@ class ApiKey(BaseModel):
 class UserResponse(BaseModel):
     id: str
     email: str
-    name: str
+    first_name: str
+    last_name: str
     role: str
     profile_image_url: str
 
@@ -75,7 +76,9 @@ class ProfileImageUrlForm(BaseModel):
 
 class UpdateProfileForm(BaseModel):
     profile_image_url: str
-    name: str
+    first_name: str
+    last_name: str
+    password: Optional[str] = None
 
 
 class UpdatePasswordForm(BaseModel):
@@ -96,7 +99,8 @@ class SignupForm(BaseModel):
 
 
 class AddUserForm(BaseModel):
-    name: str
+    first_name: str
+    last_name: str
     email: str
     profile_image_url: Optional[str] = "/user.png"
     role: Optional[str] = "pending"
@@ -107,7 +111,8 @@ class AuthsTable:
         self,
         email: str,
         password: str,
-        name: str,
+        first_name: str,
+        last_name: str,
         company_id: str,
         profile_image_url: str = "/user.png",
         role: str = "pending",
@@ -125,7 +130,7 @@ class AuthsTable:
             db.add(result)
 
             user = Users.insert_new_user(
-                id, name, email, company_id, profile_image_url, role, oauth_sub
+                id, first_name, last_name, email, company_id, profile_image_url, role, oauth_sub
             )
 
             db.commit()

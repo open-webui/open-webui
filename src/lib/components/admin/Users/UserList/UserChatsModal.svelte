@@ -53,7 +53,7 @@
 <Modal size="lg" bind:show>
 	<div class=" flex justify-between dark:text-gray-300 px-5 pt-4">
 		<div class=" text-lg font-medium self-center capitalize">
-			{$i18n.t("{{user}}'s Chats", { user: user.name })}
+			{$i18n.t("{{user}}'s Chats", { user: `${user.first_name} ${user.last_name}` })}
 		</div>
 		<button
 			class="self-center"
@@ -176,7 +176,7 @@
 					</div>
 				{:else}
 					<div class="text-left text-sm w-full mb-8">
-						{user.name}
+						{user.first_name} {user.last_name}
 						{$i18n.t('has no conversations.')}
 					</div>
 				{/if}

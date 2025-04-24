@@ -101,7 +101,8 @@
 								: [
 										{
 											id: event.user.id,
-											name: event.user.name
+											first_name: event.user.first_name,
+											last_name: event.user.last_name
 										}
 									])
 						]

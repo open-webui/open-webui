@@ -3,7 +3,7 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { user, config, settings } from '$lib/stores';
-	import { updateUserProfile, createAPIKey, getAPIKey } from '$lib/apis/auths';
+	import { updateUserProfile, createAPIKey, getAPIKey, deleteUserProfile } from '$lib/apis/auths';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
 	import { getGravatarUrl } from '$lib/apis/utils';
@@ -12,6 +12,11 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
+	import CameraIcon from '$lib/components/icons/CameraIcon.svelte';
+	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
+	import { updateUserPassword } from '$lib/apis/auths';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import DOMPurify from 'dompurify';
 
 	const i18n = getContext('i18n');
 
@@ -19,7 +24,10 @@
 	export let saveSettings: Function;
 
 	let profileImageUrl = '';
-	let name = '';
+	let firstName = '';
+	let lastName = '';
+	let email = '';
+	let loading = false;
 
 	let webhookUrl = '';
 	let showAPIKeys = false;
@@ -30,29 +38,75 @@
 	let APIKeyCopied = false;
 	let profileImageInputElement: HTMLInputElement;
 
+	let currentPassword = '';
+	let newPassword = '';
+	let newPasswordConfirm = '';
+
+	let showDeleteConfirm = false;
+
+	function isValidEmail(email: string): boolean {
+		const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		return regex.test(email);
+	}
+
 	const submitHandler = async () => {
-		if (name !== $user.name) {
-			if (profileImageUrl === generateInitialsImage($user.name) || profileImageUrl === '') {
-				profileImageUrl = generateInitialsImage(name);
+		loading = true;
+		if (firstName !== $user.first_name) {
+			if (profileImageUrl === generateInitialsImage($user.first_name) || profileImageUrl === '') {
+				profileImageUrl = generateInitialsImage(firstName);
+			}
+		}
+		if (email !== $user.email) {
+			if (!isValidEmail(email)) {
+				toast.error($i18n.t('Please enter valid email.'));
+				return;
+			}
+		}
+		if (currentPassword) {
+			if(!newPassword) {
+				toast.error(
+					`Please enter new password.`
+				);
+				return;
+			}
+			if (newPassword !== newPasswordConfirm) {
+				toast.error(
+					`The passwords you entered don't quite match. Please double-check and try again.`
+				);
+				newPassword = '';
+				newPasswordConfirm = '';
+				return;
 			}
 		}
 
-		if (webhookUrl !== $settings?.notifications?.webhook_url) {
-			saveSettings({
-				notifications: {
-					...$settings.notifications,
-					webhook_url: webhookUrl
-				}
-			});
-		}
+		// if (webhookUrl !== $settings?.notifications?.webhook_url) {
+		// 	saveSettings({
+		// 		notifications: {
+		// 			...$settings.notifications,
+		// 			webhook_url: webhookUrl
+		// 		}
+		// 	});
+		// }
 
-		const updatedUser = await updateUserProfile(localStorage.token, name, profileImageUrl).catch(
-			(error) => {
-				toast.error(`${error}`);
-			}
-		);
+		const password = newPassword ? newPassword : null;
+
+		const updatedUser = await updateUserProfile(
+			localStorage.token,
+			firstName,
+			profileImageUrl,
+			lastName,
+			email,
+			password
+		).catch((error) => {
+			toast.error(`${error}`);
+		});
+
+		loading = false;
 
 		if (updatedUser) {
+			currentPassword = '';
+			newPassword = '';
+			newPasswordConfirm = '';
 			await user.set(updatedUser);
 			return true;
 		}
@@ -68,20 +122,42 @@
 		}
 	};
 
-	onMount(async () => {
-		name = $user.name;
-		profileImageUrl = $user.profile_image_url;
-		webhookUrl = $settings?.notifications?.webhook_url ?? '';
+	const deleteUserHandler = async () => {
+		const userId = $user.id;
+		await deleteUserProfile(localStorage.token, userId);
+	}
 
-		APIKey = await getAPIKey(localStorage.token).catch((error) => {
-			console.log(error);
-			return '';
-		});
+	onMount(async () => {
+		firstName = $user?.first_name ? $user?.first_name : '';
+		email = $user?.email;
+		lastName = $user?.last_name ? $user?.last_name : '';
+		profileImageUrl = $user.profile_image_url;
+		// webhookUrl = $settings?.notifications?.webhook_url ?? '';
+
+		// APIKey = await getAPIKey(localStorage.token).catch((error) => {
+		// 	console.log(error);
+		// 	return '';
+		// });
 	});
 </script>
 
-<div class="flex flex-col h-full justify-between text-sm">
-	<div class=" space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full">
+<!-- space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full -->
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Are you sure you want to delete account?')}
+	on:confirm={() => {
+		deleteUserHandler();
+	}}
+	confirmLabel={$i18n.t('Delete Account')}
+	>
+	<div class=" text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3">
+		{@html DOMPurify.sanitize(
+			$i18n.t('This action is permanent and cannot be undone. All your data will be lost.')
+		)}
+	</div>
+</DeleteConfirmDialog>
+<div class="flex flex-col justify-between text-sm pt-5">
+	<div class=" ">
 		<input
 			id="profile-image-input"
 			bind:this={profileImageInputElement}
@@ -144,7 +220,7 @@
 			}}
 		/>
 
-		<div class="space-y-1">
+		<div class="mb-14">
 			<!-- <div class=" text-sm font-medium">{$i18n.t('Account')}</div> -->
 
 			<div class="flex space-x-5">
@@ -158,7 +234,7 @@
 							}}
 						>
 							<img
-								src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(name)}
+								src={profileImageUrl !== '' ? profileImageUrl : generateInitialsImage(firstName)}
 								alt="profile"
 								class=" rounded-full size-16 object-cover"
 							/>
@@ -183,11 +259,24 @@
 					</div>
 				</div>
 
-				<div class="flex-1 flex flex-col self-center gap-0.5">
-					<div class=" mb-0.5 text-sm font-medium">{$i18n.t('Profile Image')}</div>
+				<div class="flex-1 flex flex-col self-center gap-0.5 mb-5">
+					<div class=" mb-0.5 text-sm dark:text-customGray-100">{$i18n.t('Profile Picture')}</div>
+					<div class="text-xs dark:text-customGray-100/50 mb-2">
+						{$i18n.t('We only support PNGs, JPEGs and GIFs under 10MB')}
+					</div>
 
-					<div>
+					<div class="flex items-center">
 						<button
+							type="button"
+							on:click={() => {
+								profileImageInputElement.click();
+							}}
+							class="flex items-center font-medium text-xs dark:text-customGray-300 px-2 py-1 rounded-xl border border-customGray-700 dark:bg-customGray-900"
+						>
+							<CameraIcon className="size-4 mr-1" />
+							{$i18n.t('Upload Image')}
+						</button>
+						<!-- <button
 							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850"
 							on:click={async () => {
 								if (canvasPixelTest()) {
@@ -203,43 +292,77 @@
 									);
 								}
 							}}>{$i18n.t('Use Initials')}</button
-						>
+						> -->
 
-						<button
+						<!-- <button
 							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-full px-4 py-0.5 bg-gray-100 dark:bg-gray-850"
 							on:click={async () => {
 								const url = await getGravatarUrl($user.email);
 
 								profileImageUrl = url;
 							}}>{$i18n.t('Use Gravatar')}</button
-						>
+						> -->
 
 						<button
-							class=" text-xs text-center text-gray-800 dark:text-gray-400 rounded-lg px-2 py-1"
+							class="flex items-center text-xs text-center text-gray-800 text-2xs dark:text-customGray-300 rounded-lg px-2 py-1"
 							on:click={async () => {
 								profileImageUrl = '/user.png';
-							}}>{$i18n.t('Remove')}</button
+							}}
+							><DeleteIcon className="mr-1 size-4" />
+							{$i18n.t('Remove')}</button
 						>
 					</div>
 				</div>
 			</div>
 
 			<div class="pt-0.5">
-				<div class="flex flex-col w-full">
-					<div class=" mb-1 text-xs font-medium">{$i18n.t('Name')}</div>
-
-					<div class="flex-1">
+				<div class="flex flex-col w-full mb-2.5">
+					<div class="relative w-full dark:bg-customGray-900 rounded-md">
+						{#if firstName}
+							<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+								{$i18n.t('First Name')}
+							</div>
+						{/if}
 						<input
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-none"
-							type="text"
-							bind:value={name}
-							required
+							class={`px-2.5 text-sm ${firstName ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							placeholder={$i18n.t('First Name')}
+							bind:value={firstName}
+						/>
+					</div>
+				</div>
+				<div class="flex flex-col w-full mb-2.5">
+					<div class="relative w-full dark:bg-customGray-900 rounded-md">
+						{#if lastName}
+							<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+								{$i18n.t('Last Name')}
+							</div>
+						{/if}
+						<input
+							class={`px-2.5 text-sm ${lastName ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							placeholder={$i18n.t('Last Name')}
+							bind:value={lastName}
+						/>
+					</div>
+				</div>
+				<div class="flex flex-col w-full">
+					<div class="relative w-full dark:bg-customGray-900 rounded-md">
+						{#if email}
+							<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+								{$i18n.t('Primary Email Address')}
+							</div>
+						{/if}
+						<input
+							class={`px-2.5 text-sm ${email ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							placeholder={$i18n.t('Primary Email Address')}
+							bind:value={email}
+							type="email"
+							disabled
 						/>
 					</div>
 				</div>
 			</div>
 
-			<div class="pt-2">
+			<!-- <div class="pt-2">
 				<div class="flex flex-col w-full">
 					<div class=" mb-1 text-xs font-medium">{$i18n.t('Notification Webhook')}</div>
 
@@ -253,16 +376,76 @@
 						/>
 					</div>
 				</div>
+			</div> -->
+		</div>
+
+		<div>
+			<div
+				class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2"
+			>
+				<div class="flex w-full justify-between items-center">
+					<div class="text-xs dark:text-customGray-300">{$i18n.t('Change password')}</div>
+				</div>
 			</div>
+			<div class="flex flex-col w-full mb-2.5">
+				<div class="relative w-full dark:bg-customGray-900 rounded-md">
+					{#if currentPassword}
+						<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+							{$i18n.t('Current password')}
+						</div>
+					{/if}
+					<input
+						class={`px-2.5 text-sm ${currentPassword ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+						type="password"
+						bind:value={currentPassword}
+						placeholder={$i18n.t('Current password')}
+						autocomplete="current-password"
+						required
+					/>
+				</div>
+			</div>
+
+			<div class="flex flex-col w-full mb-2.5">
+				<div class="relative w-full dark:bg-customGray-900 rounded-md">
+					{#if newPassword}
+						<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+							{$i18n.t('New password')}
+						</div>
+					{/if}
+					<input
+						class={`px-2.5 text-sm ${newPassword ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+						type="password"
+						bind:value={newPassword}
+						placeholder={$i18n.t('Enter your new password')}
+						autocomplete="new-password"
+						required
+					/>
+				</div>
+			</div>
+
+			<div class="flex flex-col w-full">
+				<div class="relative w-full dark:bg-customGray-900 rounded-md">
+					{#if newPasswordConfirm}
+						<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+							{$i18n.t('Confirm password')}
+						</div>
+					{/if}
+					<input
+						class={`px-2.5 text-sm ${newPasswordConfirm ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+						type="password"
+						bind:value={newPasswordConfirm}
+						placeholder={$i18n.t('Confirm password')}
+						autocomplete="off"
+						required
+					/>
+				</div>
+			</div>
+			<!-- <UpdatePassword /> -->
 		</div>
 
-		<div class="py-0.5">
-			<UpdatePassword />
-		</div>
+		<!-- <hr class=" dark:border-gray-850 my-4" /> -->
 
-		<hr class=" dark:border-gray-850 my-4" />
-
-		<div class="flex justify-between items-center text-sm">
+		<!-- <div class="flex justify-between items-center text-sm">
 			<div class="  font-medium">{$i18n.t('API keys')}</div>
 			<button
 				class=" text-xs font-medium text-gray-500"
@@ -271,9 +454,9 @@
 					showAPIKeys = !showAPIKeys;
 				}}>{showAPIKeys ? $i18n.t('Hide') : $i18n.t('Show')}</button
 			>
-		</div>
+		</div> -->
 
-		{#if showAPIKeys}
+		<!-- {#if showAPIKeys}
 			<div class="flex flex-col gap-4">
 				<div class="justify-between w-full">
 					<div class="flex justify-between w-full">
@@ -420,12 +603,16 @@
 					</div>
 				{/if}
 			</div>
-		{/if}
+		{/if} -->
 	</div>
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-			class="px-3.5 py-1.5 text-sm font-medium bg-black hover:bg-gray-900 text-white dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full"
+			class=" text-xs w-[168px] h-10 px-3 py-2 transition rounded-lg {loading
+				? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
+				: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center items-center"
+			type="submit"
+			disabled={loading}
 			on:click={async () => {
 				const res = await submitHandler();
 
@@ -436,5 +623,21 @@
 		>
 			{$i18n.t('Save')}
 		</button>
+	</div>
+	<div class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2">
+		<div class="flex w-full justify-between items-center">
+			<div class="text-xs dark:text-customGray-300">{$i18n.t('Delete account')}</div>
+		</div>
+	</div>
+	<div class="flex justify-between items-start pt-3 pb-5">
+		<button type="button" class="flex items-center text-xs text-[#F65351]" on:click={() => {
+			showDeleteConfirm = true;
+		}}>
+			<DeleteIcon className="mr-1 size-4" />
+			{$i18n.t('Delete account')}
+		</button>
+		<div class="shrink-0 w-[218px] dark:text-customGray-100/50 text-xs">
+			{$i18n.t('This action is not reversible, so please continue with caution.')}
+		</div>
 	</div>
 </div>

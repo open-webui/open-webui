@@ -19,7 +19,8 @@
 
 	let _user = {
 		profile_image_url: '',
-		name: '',
+		first_name: '',
+		last_name: '',
 		email: '',
 		password: ''
 	};
@@ -85,7 +86,7 @@
 						</div>
 
 						<div>
-							<div class=" self-center capitalize font-semibold">{selectedUser.name}</div>
+							<div class=" self-center capitalize font-semibold">{selectedUser.first_name} {selectedUser.last_name}</div>
 
 							<div class="text-xs text-gray-500">
 								{$i18n.t('Created at')}
@@ -113,13 +114,26 @@
 						</div>
 
 						<div class="flex flex-col w-full">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('First Name')}</div>
 
 							<div class="flex-1">
 								<input
 									class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
 									type="text"
-									bind:value={_user.name}
+									bind:value={_user.first_name}
+									autocomplete="off"
+									required
+								/>
+							</div>
+						</div>
+						<div class="flex flex-col w-full">
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Last Name')}</div>
+
+							<div class="flex-1">
+								<input
+									class="w-full rounded py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+									type="text"
+									bind:value={_user.last_name}
 									autocomplete="off"
 									required
 								/>

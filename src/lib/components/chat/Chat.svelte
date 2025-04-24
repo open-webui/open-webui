@@ -1505,7 +1505,7 @@
 						role: 'system',
 						content: `${promptTemplate(
 							params?.system ?? $settings?.system ?? '',
-							$user.name,
+							`${$user.first_name} ${$user.last_name}`,
 							$settings?.userLocation
 								? await getAndUpdateUserLocation(localStorage.token)
 								: undefined
@@ -1588,7 +1588,7 @@
 				},
 				variables: {
 					...getPromptVariables(
-						$user.name,
+						`${$user.first_name} ${$user.last_name}`,
 						$settings?.userLocation ? await getAndUpdateUserLocation(localStorage.token) : undefined
 					)
 				},

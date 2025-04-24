@@ -53,7 +53,7 @@ async def invite_user(form_data: UserInviteForm, user=Depends(get_admin_user)):
         invite_token=invite_token
     )
 
-    return Users.insert_new_user(str(uuid.uuid4()), "INVITED", form_data.email.lower(), user.company_id, role=form_data.role,
+    return Users.insert_new_user(str(uuid.uuid4()), "INVITED", "INVITED", form_data.email.lower(), user.company_id, role=form_data.role,
                           invite_token=invite_token)
 
 
@@ -273,7 +273,8 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
     if user:
         return UserResponse(
             **{
-                "name": user.name,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
                 "profile_image_url": user.profile_image_url,
                 "active": get_active_status_by_user_id(user_id),
             }
