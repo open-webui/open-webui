@@ -1,11 +1,12 @@
 name: Release to PyPI
 
 on:
-  push:
-    branches:
-      - main # or whatever branch you want to use
-      - pypi-release
-
+  # Commenting this out since it's not needed for now and fails everytime
+#  push:
+#    branches:
+#      - main # or whatever branch you want to use
+#      - pypi-release
+  workflow_dispatch:
 jobs:
   release:
     runs-on: ubuntu-latest
