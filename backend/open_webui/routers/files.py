@@ -97,7 +97,8 @@ def upload_file(
         name = filename
         filename = f"{id}_{filename}"
         contents, file_path = Storage.upload_file(file.file, filename)
-        log.info("UPLOADED FILE TO STORAGE: ", STORAGE_PROVIDER)
+        log.info(f"STORAGE_PROVIDER loaded from: {STORAGE_PROVIDER}")
+     
         file_item = Files.insert_new_file(
             user.id,
             FileForm(
