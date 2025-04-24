@@ -5,6 +5,7 @@ import {
 	EXPORT_FILENAME_PREFIX,
 	deleteAll,
 	exportAll,
+	hasChats,
 } from './chats';
 
 const mocks = vi.hoisted(() => {
@@ -177,6 +178,31 @@ describe('chats', () => {
 				const [, filename] = mocks.fileSaver.mock.calls[0];
 				expect(filename).toEqual(`${EXPORT_FILENAME_PREFIX}-1970-01-01--00-00.json`);
 			});
+		});
+	});
+
+	describe('hasChats()', () => {
+		it("should call getChatList() with token, 1", async () => {
+			await hasChats();
+			expect(mocks.api.chats.getChatList).toHaveBeenCalledWith(mockToken, 1);
+		});
+
+		it('should return false if the user has no chats', async () => {
+			mocks.api.chats.getChatList.mockImplementation(() => Promise.resolve([]));
+			expect(await hasChats()).toBe(false);
+		});
+
+		it('should return true if the user has one or more chats', async () => {
+			mocks.api.chats.getChatList.mockImplementation(() => Promise.resolve([
+				{ id: 'foo' },
+			]));
+			expect(await hasChats()).toBe(true);
+
+			mocks.api.chats.getChatList.mockImplementation(() => Promise.resolve([
+				{ id: 'foo' },
+				{ id: 'bar' },
+			]));
+			expect(await hasChats()).toBe(true);
 		});
 	});
 });

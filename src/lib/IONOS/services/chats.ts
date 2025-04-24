@@ -29,3 +29,8 @@ export const exportAll = async (): Promise<void> => {
 
 	saveAs(blob, `${EXPORT_FILENAME_PREFIX}-${timestamp}.json`);
 };
+
+export async function hasChats(): Promise<boolean> {
+	const chats = await getChatList(localStorage.token, 1);
+	return chats.length > 0;
+};
