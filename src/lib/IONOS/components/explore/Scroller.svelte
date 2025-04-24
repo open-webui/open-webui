@@ -17,9 +17,15 @@
 		}
 	}
 
-	$: scrollWidth = el?.scrollWidth ?? 0;
-	$: fullWidth = scrollWidth / 2;
-	$: duration = fullWidth / speed;
+	let scrollWidth;
+	let fullWidth;
+	let duration;
+
+	$: {
+		scrollWidth = items.length > 0 ? el?.scrollWidth ?? 0 : 0;
+		fullWidth = scrollWidth / 2;
+		duration = fullWidth / speed;
+	}
 </script>
 
 <div
