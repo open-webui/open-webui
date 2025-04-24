@@ -12,7 +12,7 @@
 		<div class="fr-footer__header">
 			<div class="fr-footer__brand">
 				<a href="/" title="Retour à l'accueil du site" class="logo-link">
-					<p class="fr-logo">DINUM</p>
+					<p class="fr-logo">Gouvernement</p>
 				</a>
 			</div>
 			<button

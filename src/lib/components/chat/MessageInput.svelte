@@ -1262,7 +1262,7 @@
 													</button>
 												</Tooltip>
 											</div>
-										<!-- {:else if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
+											<!-- {:else if prompt === '' && files.length === 0 && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.call ?? true))}
 											<div class=" flex items-center">
 												<Tooltip content={$i18n.t('Call')}>
 													<button
@@ -1329,9 +1329,7 @@
 												<Tooltip content={$i18n.t('Send message')}>
 													<button
 														id="send-message-button"
-														class="{!(prompt === '' && files.length === 0)
-															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 self-center fr-background-action-high--blue-france"
+														class="fr-btn transition rounded-full self-center !rounded-full !p-2 !min-h-0 !w-10 !h-10 flex items-center justify-center"
 														type="submit"
 														disabled={prompt === '' && files.length === 0}
 													>
