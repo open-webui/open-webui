@@ -422,14 +422,14 @@
 					/>
 
 					<form
-						class="w-full flex gap-1.5"
+						class="w-full flex gap-1.5 justify-center"
 						on:submit|preventDefault={() => {
 							// check if selectedModels support image input
 							dispatch('submit', prompt);
 						}}
 					>
 						<div
-							class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-100 dark:bg-gray-400/5 dark:text-gray-100"
+							class="flex-1 flex flex-col relative w-full rounded-2xl max-w-3xl bg-gray-100 dark:bg-gray-400/5 dark:text-gray-100"
 							dir={$settings?.chatDirection ?? 'LTR'}
 						>
 							<div class="flex flex-col">
