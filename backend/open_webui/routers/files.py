@@ -268,7 +268,6 @@ async def stream_progress():
     async def event_generator():
         while True:
             progress = file_progress[0]
-            log.info(f"GET Progress: {progress}")
             yield f"data: {progress}\n\n"
             if progress >= 100:
                 break
