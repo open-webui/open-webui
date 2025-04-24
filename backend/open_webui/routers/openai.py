@@ -30,7 +30,8 @@ from open_webui.models.users import UserModel
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENV, SRC_LOG_LEVELS
-
+from open_webui.internal.db import get_db
+from open_webui.config import Config
 
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
@@ -125,12 +126,20 @@ router = APIRouter()
 
 @router.get("/config")
 async def get_config(request: Request, user=Depends(get_admin_user)):
-    return {
-        "ENABLE_OPENAI_API": request.app.state.config.ENABLE_OPENAI_API,
-        "OPENAI_API_BASE_URLS": request.app.state.config.OPENAI_API_BASE_URLS,
-        "OPENAI_API_KEYS": request.app.state.config.OPENAI_API_KEYS,
-        "OPENAI_API_CONFIGS": request.app.state.config.OPENAI_API_CONFIGS,
-    }
+    
+    with get_db() as db:
+        config_entry = db.query(Config).order_by(Config.id.desc()).first()
+        config_data = config_entry.data if config_entry else {}
+        
+        # Extraire les données OpenAI spécifiques
+        openai_config = config_data.get("openai", {})
+        
+        return {
+            "ENABLE_OPENAI_API": openai_config.get("enable", False),
+            "OPENAI_API_BASE_URLS": openai_config.get("api_base_urls", []),
+            "OPENAI_API_KEYS": openai_config.get("api_keys", []),
+            "OPENAI_API_CONFIGS": openai_config.get("api_configs", {})
+        }
 
 
 class OpenAIConfigForm(BaseModel):
@@ -147,7 +156,7 @@ async def update_config(
     request.app.state.config.ENABLE_OPENAI_API = form_data.ENABLE_OPENAI_API
     request.app.state.config.OPENAI_API_BASE_URLS = form_data.OPENAI_API_BASE_URLS
     request.app.state.config.OPENAI_API_KEYS = form_data.OPENAI_API_KEYS
-
+    
     # Check if API KEYS length is same than API URLS length
     if len(request.app.state.config.OPENAI_API_KEYS) != len(
         request.app.state.config.OPENAI_API_BASE_URLS
@@ -175,6 +184,26 @@ async def update_config(
         for key, value in request.app.state.config.OPENAI_API_CONFIGS.items()
         if key in keys
     }
+    
+    with get_db() as db:
+        config_entry = db.query(Config).order_by(Config.id.desc()).first()
+        
+        if not config_entry:
+            # Créer une nouvelle entrée si aucune n'existe
+            config_entry = Config(data={"version": 0}, version=0)
+            db.add(config_entry)
+        
+        config_data = config_entry.data
+        config_data.setdefault("openai", {})
+        
+        config_data["openai"]["enable"] = form_data.ENABLE_OPENAI_API
+        config_data["openai"]["api_base_urls"] = form_data.OPENAI_API_BASE_URLS
+        config_data["openai"]["api_keys"] = form_data.OPENAI_API_KEYS
+        config_data["openai"]["api_configs"] = form_data.OPENAI_API_CONFIGS
+        
+        config_entry.data = config_data
+        
+        db.commit()
 
     return {
         "ENABLE_OPENAI_API": request.app.state.config.ENABLE_OPENAI_API,
