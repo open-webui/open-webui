@@ -33,7 +33,7 @@ RUN echo '#!/bin/sh\n\n# Copy DSFR files to static\nmkdir -p static/utility\ncp 
 RUN chmod +x ./scripts/install-dsfr.sh
 # Create static directory in advance
 RUN mkdir -p static/utility
-RUN rm -f package-lock.json && npm install && npm cache clean --force
+RUN rm -f package-lock.json && npm install --ignore-scripts --unsafe-perm && npm cache clean --force
 # Run DSFR install script manually
 RUN sh ./scripts/install-dsfr.sh
 

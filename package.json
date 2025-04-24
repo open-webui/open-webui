@@ -19,7 +19,7 @@
 		"cy:open": "cypress open",
 		"test:frontend": "vitest --passWithNoTests",
 		"pyodide:fetch": "node scripts/prepare-pyodide.js",
-		"dsfr:install": "./scripts/install-dsfr.sh"
+		"postinstall": "./scripts/install-dsfr.sh"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "3.2.2",
