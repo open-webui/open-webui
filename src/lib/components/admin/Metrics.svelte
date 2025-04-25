@@ -111,6 +111,17 @@
 		}
 	};
 
+	// Add tab state management
+	let activeTab = 'overview'; // Default tab
+
+	function setActiveTab(tab: string) {
+		activeTab = tab;
+		// Slight delay to ensure DOM is updated before initializing charts
+		setTimeout(() => {
+			initializeCharts();
+		}, 100); // Increased delay for better reliability
+	}
+
 	async function updateCharts(selectedDomain: string | null, selectedModel: string | null) {
 		try {
 			let updatedDomain = selectedDomain ?? undefined;
@@ -182,7 +193,9 @@
 			}
 
 			// Reinitialize charts completely rather than updating
-			initializeCharts();
+			setTimeout(() => {
+				initializeCharts();
+			}, 50);
 		} catch (error) {
 			console.error('Error updating charts:', error);
 		}
@@ -190,112 +203,120 @@
 
 	// Ensure charts are properly initialized after data is loaded
 	function initializeCharts() {
-		// Initialize charts
-		const isDarkMode = document.documentElement.classList.contains('dark');
-		const lineColor = isDarkMode ? '#e5e7eb' : '#1f2937';
+		// Only initialize charts if their canvas elements exist (are visible in the current tab)
 
-		// Initialize User Chart
-		const ctx1 = document.getElementById('dailyActiveUsersChart')?.getContext('2d');
-		if (ctx1) {
-			// Always destroy existing chart before creating a new one
-			if (dailyActiveUsersChart) {
-				dailyActiveUsersChart.destroy();
+		// Users chart - check both overview and users tabs
+		if (activeTab === 'users' || activeTab === 'overview') {
+			const canvas = document.getElementById(
+				activeTab === 'overview' ? 'dailyActiveUsersChart' : 'usersOverTimeChart'
+			);
+			const ctx1 = canvas?.getContext('2d');
+			if (ctx1) {
+				if (dailyActiveUsersChart) {
+					dailyActiveUsersChart.destroy();
+				}
+				dailyActiveUsersChart = new Chart(ctx1, {
+					type: 'line',
+					data: {
+						labels: dailyActiveUsersData.map((item) => item.date),
+						datasets: [
+							{
+								label: $i18n.t('Daily Active Users'),
+								data: dailyActiveUsersData.map((item) => item.count),
+								borderColor: 'rgb(59, 130, 246)',
+								backgroundColor: 'rgba(59, 130, 246, 0.2)',
+								borderWidth: 2,
+								pointBackgroundColor: 'rgb(59, 130, 246)',
+								pointBorderColor: '#fff',
+								pointHoverBackgroundColor: '#fff',
+								pointHoverBorderColor: 'rgb(59, 130, 246)',
+								tension: 0.1
+							}
+						]
+					},
+					options: chartOptions
+				});
 			}
-
-			dailyActiveUsersChart = new Chart(ctx1, {
-				type: 'line',
-				data: {
-					labels: dailyActiveUsersData.map((item) => item.date),
-					datasets: [
-						{
-							label: $i18n.t('Daily Active Users'),
-							data: dailyActiveUsersData.map((item) => item.count),
-							borderColor: 'rgb(59, 130, 246)',
-							backgroundColor: 'rgba(59, 130, 246, 0.2)',
-							borderWidth: 2,
-							pointBackgroundColor: 'rgb(59, 130, 246)',
-							pointBorderColor: '#fff',
-							pointHoverBackgroundColor: '#fff',
-							pointHoverBorderColor: 'rgb(59, 130, 246)',
-							tension: 0.1
-						}
-					]
-				},
-				options: chartOptions
-			});
 		}
 
-		// Initialize Prompts Chart
-		const ctx2 = document.getElementById('dailyPromptsChart')?.getContext('2d');
-		if (ctx2) {
-			// Always destroy existing chart before creating a new one
-			if (dailyPromptsChart) {
-				dailyPromptsChart.destroy();
+		// Prompts chart - check both overview and prompts tabs
+		if (activeTab === 'prompts' || activeTab === 'overview') {
+			const canvas = document.getElementById(
+				activeTab === 'overview' ? 'dailyPromptsChart' : 'promptsOverTimeChart'
+			);
+			const ctx2 = canvas?.getContext('2d');
+			if (ctx2) {
+				if (dailyPromptsChart) {
+					dailyPromptsChart.destroy();
+				}
+				dailyPromptsChart = new Chart(ctx2, {
+					type: 'line',
+					data: {
+						labels: dailyPromptsData.map((item) => item.date),
+						datasets: [
+							{
+								label: $i18n.t('Daily Prompts'),
+								data: dailyPromptsData.map((item) => item.count),
+								borderColor: 'rgb(34, 197, 94)',
+								backgroundColor: 'rgba(34, 197, 94, 0.2)',
+								borderWidth: 2,
+								pointBackgroundColor: 'rgb(34, 197, 94)',
+								pointBorderColor: '#fff',
+								pointHoverBackgroundColor: '#fff',
+								pointHoverBorderColor: 'rgb(34, 197, 94)',
+								tension: 0.1
+							}
+						]
+					},
+					options: chartOptions
+				});
 			}
-
-			dailyPromptsChart = new Chart(ctx2, {
-				type: 'line',
-				data: {
-					labels: dailyPromptsData.map((item) => item.date),
-					datasets: [
-						{
-							label: $i18n.t('Daily Prompts'),
-							data: dailyPromptsData.map((item) => item.count),
-							borderColor: 'rgb(34, 197, 94)',
-							backgroundColor: 'rgba(34, 197, 94, 0.2)',
-							borderWidth: 2,
-							pointBackgroundColor: 'rgb(34, 197, 94)',
-							pointBorderColor: '#fff',
-							pointHoverBackgroundColor: '#fff',
-							pointHoverBorderColor: 'rgb(34, 197, 94)',
-							tension: 0.1
-						}
-					]
-				},
-				options: chartOptions
-			});
 		}
 
-		// Initialize Tokens Chart
-		const ctx3 = document.getElementById('dailyTokensChart')?.getContext('2d');
-		if (ctx3) {
-			// Always destroy existing chart before creating a new one
-			if (dailyTokensChart) {
-				dailyTokensChart.destroy();
+		// Tokens chart - check both overview and tokens tabs
+		if (activeTab === 'tokens' || activeTab === 'overview') {
+			const canvas = document.getElementById(
+				activeTab === 'overview' ? 'dailyTokensChart' : 'tokensOverTimeChart'
+			);
+			const ctx3 = canvas?.getContext('2d');
+			if (ctx3) {
+				if (dailyTokensChart) {
+					dailyTokensChart.destroy();
+				}
+				dailyTokensChart = new Chart(ctx3, {
+					type: 'line',
+					data: {
+						labels: dailyTokensData.map((item) => item.date),
+						datasets: [
+							{
+								label: $i18n.t('Daily Tokens'),
+								data: dailyTokensData.map((item) => item.count),
+								borderColor: 'rgb(239, 68, 68)',
+								backgroundColor: 'rgba(239, 68, 68, 0.2)',
+								borderWidth: 2,
+								pointBackgroundColor: 'rgb(239, 68, 68)',
+								pointBorderColor: '#fff',
+								pointHoverBackgroundColor: '#fff',
+								pointHoverBorderColor: 'rgb(239, 68, 68)',
+								tension: 0.1
+							}
+						]
+					},
+					options: chartOptions
+				});
 			}
-
-			dailyTokensChart = new Chart(ctx3, {
-				type: 'line',
-				data: {
-					labels: dailyTokensData.map((item) => item.date),
-					datasets: [
-						{
-							label: $i18n.t('Daily Tokens'),
-							data: dailyTokensData.map((item) => item.count),
-							borderColor: 'rgb(239, 68, 68)',
-							backgroundColor: 'rgba(239, 68, 68, 0.2)',
-							borderWidth: 2,
-							pointBackgroundColor: 'rgb(239, 68, 68)',
-							pointBorderColor: '#fff',
-							pointHoverBackgroundColor: '#fff',
-							pointHoverBorderColor: 'rgb(239, 68, 68)',
-							tension: 0.1
-						}
-					]
-				},
-				options: chartOptions
-			});
 		}
 
-		// Initialize Model Prompts Chart (only if a model is selected)
-		if (selectedModel) {
-			const ctx4 = document.getElementById('modelPromptsChart')?.getContext('2d');
+		// Model chart - only if a model is selected and we're in the models tab
+		if (selectedModel && (activeTab === 'models' || activeTab === 'overview')) {
+			const canvas = document.getElementById(
+				activeTab === 'overview' ? 'modelPromptsChart' : 'modelOverTimeChart'
+			);
+			const ctx4 = canvas?.getContext('2d');
 			if (ctx4) {
-				// Always destroy existing chart before creating a new one
 				if (modelPromptsChart) {
 					modelPromptsChart.destroy();
 				}
-
 				modelPromptsChart = new Chart(ctx4, {
 					type: 'line',
 					data: {
@@ -432,109 +453,365 @@
 		</div>
 	</div>
 
-	<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
-		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-				{$i18n.t('Total Users')}
-			</h5>
-			<h4 class="text-3xl font-bold text-blue-700 dark:text-blue-400">{totalUsers}</h4>
+	<!-- Tab Navigation -->
+	<div class="border-b border-gray-300 dark:border-gray-700 mb-6">
+		<ul
+			class="flex flex-wrap -mb-px text-sm font-medium text-center text-gray-700 dark:text-gray-300"
+		>
+			<li class="mr-2">
+				<button
+					class={`inline-block p-4 rounded-t-lg border-b-2 ${
+						activeTab === 'overview'
+							? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
+							: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
+					}`}
+					on:click={() => setActiveTab('overview')}>{$i18n.t('Overview')}</button
+				>
+			</li>
+			<li class="mr-2">
+				<button
+					class={`inline-block p-4 rounded-t-lg border-b-2 ${
+						activeTab === 'users'
+							? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
+							: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
+					}`}
+					on:click={() => setActiveTab('users')}>{$i18n.t('Users')}</button
+				>
+			</li>
+			<li class="mr-2">
+				<button
+					class={`inline-block p-4 rounded-t-lg border-b-2 ${
+						activeTab === 'prompts'
+							? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
+							: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
+					}`}
+					on:click={() => setActiveTab('prompts')}>{$i18n.t('Prompts')}</button
+				>
+			</li>
+			<li class="mr-2">
+				<button
+					class={`inline-block p-4 rounded-t-lg border-b-2 ${
+						activeTab === 'tokens'
+							? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
+							: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
+					}`}
+					on:click={() => setActiveTab('tokens')}>{$i18n.t('Tokens')}</button
+				>
+			</li>
+			{#if selectedModel}
+				<li class="mr-2">
+					<button
+						class={`inline-block p-4 rounded-t-lg border-b-2 ${
+							activeTab === 'models'
+								? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
+								: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
+						}`}
+						on:click={() => setActiveTab('models')}>{$i18n.t('Model Analysis')}</button
+					>
+				</li>
+			{/if}
+		</ul>
+	</div>
+
+	<!-- Tab Content - Overview -->
+	<div
+		class={`${activeTab === 'overview' ? 'block' : 'hidden'} h-[calc(100vh-210px)] overflow-auto px-1`}
+	>
+		<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+			<!-- Users Summary Card -->
+			<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800 flex flex-col">
+				<div class="flex justify-between items-center mb-4">
+					<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
+						{$i18n.t('Users')}
+					</h5>
+					<button
+						class="text-blue-600 dark:text-blue-400 text-sm hover:underline"
+						on:click={() => setActiveTab('users')}
+					>
+						{$i18n.t('View Details')}
+					</button>
+				</div>
+				<div class="flex-1">
+					<div class="grid grid-cols-2 gap-3">
+						<div>
+							<p class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Total')}</p>
+							<p class="text-2xl font-bold text-blue-700 dark:text-blue-400">{totalUsers}</p>
+						</div>
+						<div>
+							<p class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Daily')}</p>
+							<p class="text-2xl font-bold text-blue-700 dark:text-blue-400">{dailyUsers}</p>
+						</div>
+					</div>
+
+					<!-- Mini chart - just tall enough to be visible but not take much space -->
+					<div class="h-32 mt-3">
+						<canvas id="dailyActiveUsersChart"></canvas>
+					</div>
+				</div>
+			</div>
+
+			<!-- Prompts Summary Card -->
+			<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800 flex flex-col">
+				<div class="flex justify-between items-center mb-4">
+					<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
+						{$i18n.t('Prompts')}
+					</h5>
+					<button
+						class="text-green-600 dark:text-green-400 text-sm hover:underline"
+						on:click={() => setActiveTab('prompts')}
+					>
+						{$i18n.t('View Details')}
+					</button>
+				</div>
+				<div class="flex-1">
+					<div class="grid grid-cols-2 gap-3">
+						<div>
+							<p class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Total')}</p>
+							<p class="text-2xl font-bold text-green-700 dark:text-green-400">{totalPrompts}</p>
+						</div>
+						<div>
+							<p class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Daily')}</p>
+							<p class="text-2xl font-bold text-green-700 dark:text-green-400">{dailyPrompts}</p>
+						</div>
+					</div>
+
+					<!-- Mini chart -->
+					<div class="h-32 mt-3">
+						<canvas id="dailyPromptsChart"></canvas>
+					</div>
+				</div>
+			</div>
+
+			<!-- Tokens Summary Card -->
+			<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800 flex flex-col">
+				<div class="flex justify-between items-center mb-4">
+					<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
+						{$i18n.t('Tokens')}
+					</h5>
+					<button
+						class="text-red-600 dark:text-red-400 text-sm hover:underline"
+						on:click={() => setActiveTab('tokens')}
+					>
+						{$i18n.t('View Details')}
+					</button>
+				</div>
+				<div class="flex-1">
+					<div class="grid grid-cols-2 gap-3">
+						<div>
+							<p class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Total')}</p>
+							<p class="text-2xl font-bold text-red-700 dark:text-red-400">{totalTokens}</p>
+						</div>
+						<div>
+							<p class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Daily')}</p>
+							<p class="text-2xl font-bold text-red-700 dark:text-red-400">{dailyTokens}</p>
+						</div>
+					</div>
+
+					<!-- Mini chart -->
+					<div class="h-32 mt-3">
+						<canvas id="dailyTokensChart"></canvas>
+					</div>
+				</div>
+			</div>
 		</div>
-		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-				{$i18n.t('Total Prompts')}
-			</h5>
-			<h4 class="text-3xl font-bold text-green-700 dark:text-green-400">{totalPrompts}</h4>
+
+		<!-- Model Summary (if selected) -->
+		{#if selectedModel}
+			<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800 mb-6">
+				<div class="flex justify-between items-center mb-4">
+					<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
+						{$i18n.t('Model Usage')} - {selectedModel}
+					</h5>
+					<button
+						class="text-purple-600 dark:text-purple-400 text-sm hover:underline"
+						on:click={() => setActiveTab('models')}
+					>
+						{$i18n.t('View Details')}
+					</button>
+				</div>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<div>
+						<div class="grid grid-cols-2 gap-3 mb-3">
+							<div>
+								<p class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Total Prompts')}</p>
+								<p class="text-2xl font-bold text-purple-700 dark:text-purple-400">
+									{modelPrompts}
+								</p>
+							</div>
+							<div>
+								<p class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Daily Prompts')}</p>
+								<p class="text-2xl font-bold text-purple-700 dark:text-purple-400">
+									{modelDailyPrompts}
+								</p>
+							</div>
+						</div>
+					</div>
+					<div class="h-48">
+						<canvas id="modelPromptsChart"></canvas>
+					</div>
+				</div>
+			</div>
+		{/if}
+	</div>
+
+	<!-- Tab Content - Users -->
+	<div
+		class={`${activeTab === 'users' ? 'block' : 'hidden'} h-[calc(100vh-210px)] overflow-auto px-1`}
+	>
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+			<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800">
+				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+					{$i18n.t('Total Users')}
+				</h5>
+				<h4 class="text-3xl font-bold text-blue-700 dark:text-blue-400">{totalUsers}</h4>
+				<p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+					{$i18n.t('Total number of registered users')}
+				</p>
+			</div>
+
+			<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800">
+				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+					{$i18n.t('Daily Active Users')}
+				</h5>
+				<h4 class="text-3xl font-bold text-blue-700 dark:text-blue-400">{dailyUsers}</h4>
+				<p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+					{$i18n.t('Number of users active in the last 24 hours')}
+				</p>
+			</div>
 		</div>
-		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-				{$i18n.t('Total Tokens')}
+
+		<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800">
+			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+				{$i18n.t('Daily Active Users Over Time')}
 			</h5>
-			<h4 class="text-3xl font-bold text-red-700 dark:text-red-400">{totalTokens}</h4>
+			<div class="h-80">
+				<canvas id="usersOverTimeChart"></canvas>
+			</div>
 		</div>
 	</div>
 
-	<div class="mb-10">
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
-			<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
+	<!-- Tab Content - Prompts -->
+	<div
+		class={`${activeTab === 'prompts' ? 'block' : 'hidden'} h-[calc(100vh-210px)] overflow-auto px-1`}
+	>
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+			<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800">
 				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-					{$i18n.t('Daily Users')}
+					{$i18n.t('Total Prompts')}
 				</h5>
-				<h4 class="text-3xl font-bold text-blue-700 dark:text-blue-400">{dailyUsers}</h4>
+				<h4 class="text-3xl font-bold text-green-700 dark:text-green-400">{totalPrompts}</h4>
+				<p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+					{$i18n.t('Total number of prompts submitted')}
+				</p>
 			</div>
-			<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
+
+			<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800">
 				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
 					{$i18n.t('Daily Prompts')}
 				</h5>
 				<h4 class="text-3xl font-bold text-green-700 dark:text-green-400">{dailyPrompts}</h4>
+				<p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+					{$i18n.t('Number of prompts sent in the last 24 hours')}
+				</p>
 			</div>
-			<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
+		</div>
+
+		<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800">
+			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+				{$i18n.t('Daily Prompts Over Time')}
+			</h5>
+			<div class="h-80">
+				<canvas id="promptsOverTimeChart"></canvas>
+			</div>
+		</div>
+	</div>
+
+	<!-- Tab Content - Tokens -->
+	<div
+		class={`${activeTab === 'tokens' ? 'block' : 'hidden'} h-[calc(100vh-210px)] overflow-auto px-1`}
+	>
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+			<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800">
+				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+					{$i18n.t('Total Tokens')}
+				</h5>
+				<h4 class="text-3xl font-bold text-red-700 dark:text-red-400">{totalTokens}</h4>
+				<p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+					{$i18n.t('Total number of tokens used')}
+				</p>
+			</div>
+
+			<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800">
 				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
 					{$i18n.t('Daily Tokens')}
 				</h5>
 				<h4 class="text-3xl font-bold text-red-700 dark:text-red-400">{dailyTokens}</h4>
+				<p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+					{$i18n.t('Number of tokens used in the last 24 hours')}
+				</p>
+			</div>
+		</div>
+
+		<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800">
+			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+				{$i18n.t('Daily Token Usage Over Time')}
+			</h5>
+			<div class="h-80">
+				<canvas id="tokensOverTimeChart"></canvas>
 			</div>
 		</div>
 	</div>
 
-	<hr class="border-gray-400 dark:border-gray-600 my-8" />
+	<!-- Tab Content - Model Analysis -->
+	<div
+		class={`${activeTab === 'models' ? 'block' : 'hidden'} h-[calc(100vh-210px)] overflow-auto px-1`}
+	>
+		{#if selectedModel}
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+				<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800">
+					<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+						{$i18n.t('Total Model Prompts')}
+					</h5>
+					<h4 class="text-3xl font-bold text-purple-700 dark:text-purple-400">{modelPrompts}</h4>
+					<p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+						{$i18n.t('Total prompts processed by this model')}
+					</p>
+				</div>
 
-	<div class="space-y-8">
-		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-				{$i18n.t('Daily Active Users')}
-			</h5>
-			<div class="h-64">
-				<canvas id="dailyActiveUsersChart"></canvas>
+				<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800">
+					<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+						{$i18n.t('Daily Model Prompts')}
+					</h5>
+					<h4 class="text-3xl font-bold text-purple-700 dark:text-purple-400">
+						{modelDailyPrompts}
+					</h4>
+					<p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
+						{$i18n.t('Prompts processed by this model in the last 24 hours')}
+					</p>
+				</div>
 			</div>
-		</div>
-		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-				{$i18n.t('Daily Prompts Sent')}
-			</h5>
-			<div class="h-64">
-				<canvas id="dailyPromptsChart"></canvas>
+
+			<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800">
+				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+					{$i18n.t('Daily Model Usage')} - {selectedModel}
+				</h5>
+				<div class="h-80">
+					<canvas id="modelOverTimeChart"></canvas>
+				</div>
 			</div>
-		</div>
-		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-				{$i18n.t('Daily Tokens Used')}
-			</h5>
-			<div class="h-64">
-				<canvas id="dailyTokensChart"></canvas>
+		{:else}
+			<div
+				class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800 flex items-center justify-center h-64"
+			>
+				<div class="text-center">
+					<p class="text-xl text-gray-500 dark:text-gray-400 mb-4">
+						{$i18n.t('No model selected')}
+					</p>
+					<p class="text-gray-600 dark:text-gray-400">
+						{$i18n.t('Please select a model from the dropdown to view model-specific metrics')}
+					</p>
+				</div>
 			</div>
-		</div>
+		{/if}
 	</div>
-
-	<!-- Model usage section (only shown when a model is selected) -->
-	{#if selectedModel}
-		<hr class="border-gray-400 dark:border-gray-600 my-8" />
-
-		<h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
-			{$i18n.t('Model Usage')} - {selectedModel}
-		</h3>
-
-		<div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-			<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-					{$i18n.t('Total Model Prompts')}
-				</h5>
-				<h4 class="text-3xl font-bold text-purple-700 dark:text-purple-400">{modelPrompts}</h4>
-			</div>
-			<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800">
-				<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-					{$i18n.t('Daily Model Prompts')}
-				</h5>
-				<h4 class="text-3xl font-bold text-purple-700 dark:text-purple-400">{modelDailyPrompts}</h4>
-			</div>
-		</div>
-
-		<div class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800 mb-8">
-			<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-				{$i18n.t('Daily Model Prompts')}
-			</h5>
-			<div class="h-64">
-				<canvas id="modelPromptsChart"></canvas>
-			</div>
-		</div>
-	{/if}
 </div>
