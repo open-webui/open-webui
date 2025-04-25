@@ -245,14 +245,30 @@ async def reindex_all_files(request: Request, user=Depends(get_admin_user)):
         except Exception as e:
             log.error(f"Error deleting file 'file-{file.id}' from vector store: {str(e)}")
         try:
-            process_file(
-                request,
-                ProcessFileForm(
-                    file_id=file.id
-                ),
-                user=user
-            )
+            if file.meta['content_type'] in [
+                    "audio/mpeg",
+                    "audio/wav",
+                    "audio/ogg",
+                    "audio/x-m4a",
+                    ]:
+
+                process_file(
+                    request,
+                    ProcessFileForm(
+                        file_id=file.id,
+                        content=file.data['content']),
+                    user=user,
+                )
+            else:
+                process_file(
+                    request,
+                    ProcessFileForm(
+                        file_id=file.id
+                    ),
+                    user=user
+                )
             file_progress[0] = int(i/total_files*100)
+            # this line un-blocks the API for the GET progress bar call
             await sleep(0.1)
         except Exception as e:
             log.error(
