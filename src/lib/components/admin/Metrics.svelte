@@ -112,7 +112,7 @@
 	};
 
 	// Add tab state management
-	let activeTab = 'overview'; // Default tab
+	let activeTab = 'users'; // Default tab
 
 	function setActiveTab(tab: string) {
 		activeTab = tab;
@@ -374,6 +374,12 @@
 
 			domains = await getDomains(localStorage.token);
 			models = await getModels(localStorage.token);
+
+			// Set the first model as the selected model if available
+			if (models.length > 0) {
+				selectedModel = models[0];
+			}
+
 			await updateCharts(selectedDomain, selectedModel);
 		} catch (error) {
 			console.error('Error initializing charts:', error);
@@ -432,24 +438,26 @@
 					{/each}
 				</select>
 			</div>
-			<div>
-				<label
-					for="model-select"
-					class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
-					>{$i18n.t('Select Model:')}</label
-				>
-				<select
-					id="model-select"
-					bind:value={selectedModel}
-					on:change={handleModelChange}
-					class="block w-48 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-				>
-					<option value={null}>{$i18n.t('None')}</option>
-					{#each models as model}
-						<option value={model}>{model}</option>
-					{/each}
-				</select>
-			</div>
+
+			{#if activeTab === 'models'}
+				<div>
+					<label
+						for="model-select"
+						class="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-2"
+						>{$i18n.t('Select Model:')}</label
+					>
+					<select
+						id="model-select"
+						bind:value={selectedModel}
+						on:change={handleModelChange}
+						class="block w-48 p-2 text-sm border border-gray-400 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
+					>
+						{#each models as model}
+							<option value={model}>{model}</option>
+						{/each}
+					</select>
+				</div>
+			{/if}
 		</div>
 	</div>
 
@@ -458,16 +466,6 @@
 		<ul
 			class="flex flex-wrap -mb-px text-sm font-medium text-center text-gray-700 dark:text-gray-300"
 		>
-			<li class="mr-2">
-				<button
-					class={`inline-block p-4 rounded-t-lg border-b-2 ${
-						activeTab === 'overview'
-							? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
-							: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
-					}`}
-					on:click={() => setActiveTab('overview')}>{$i18n.t('Overview')}</button
-				>
-			</li>
 			<li class="mr-2">
 				<button
 					class={`inline-block p-4 rounded-t-lg border-b-2 ${
@@ -498,160 +496,17 @@
 					on:click={() => setActiveTab('tokens')}>{$i18n.t('Tokens')}</button
 				>
 			</li>
-			{#if selectedModel}
-				<li class="mr-2">
-					<button
-						class={`inline-block p-4 rounded-t-lg border-b-2 ${
-							activeTab === 'models'
-								? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
-								: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
-						}`}
-						on:click={() => setActiveTab('models')}>{$i18n.t('Model Analysis')}</button
-					>
-				</li>
-			{/if}
+			<li class="mr-2">
+				<button
+					class={`inline-block p-4 rounded-t-lg border-b-2 ${
+						activeTab === 'models'
+							? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-500'
+							: 'border-transparent hover:text-gray-900 hover:border-gray-300 dark:hover:text-gray-100'
+					}`}
+					on:click={() => setActiveTab('models')}>{$i18n.t('Model Analysis')}</button
+				>
+			</li>
 		</ul>
-	</div>
-
-	<!-- Tab Content - Overview -->
-	<div
-		class={`${activeTab === 'overview' ? 'block' : 'hidden'} h-[calc(100vh-210px)] overflow-auto px-1`}
-	>
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-			<!-- Users Summary Card -->
-			<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800 flex flex-col">
-				<div class="flex justify-between items-center mb-4">
-					<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
-						{$i18n.t('Users')}
-					</h5>
-					<button
-						class="text-blue-600 dark:text-blue-400 text-sm hover:underline"
-						on:click={() => setActiveTab('users')}
-					>
-						{$i18n.t('View Details')}
-					</button>
-				</div>
-				<div class="flex-1">
-					<div class="grid grid-cols-2 gap-3">
-						<div>
-							<p class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Total')}</p>
-							<p class="text-2xl font-bold text-blue-700 dark:text-blue-400">{totalUsers}</p>
-						</div>
-						<div>
-							<p class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Daily')}</p>
-							<p class="text-2xl font-bold text-blue-700 dark:text-blue-400">{dailyUsers}</p>
-						</div>
-					</div>
-
-					<!-- Mini chart - just tall enough to be visible but not take much space -->
-					<div class="h-32 mt-3">
-						<canvas id="dailyActiveUsersChart"></canvas>
-					</div>
-				</div>
-			</div>
-
-			<!-- Prompts Summary Card -->
-			<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800 flex flex-col">
-				<div class="flex justify-between items-center mb-4">
-					<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
-						{$i18n.t('Prompts')}
-					</h5>
-					<button
-						class="text-green-600 dark:text-green-400 text-sm hover:underline"
-						on:click={() => setActiveTab('prompts')}
-					>
-						{$i18n.t('View Details')}
-					</button>
-				</div>
-				<div class="flex-1">
-					<div class="grid grid-cols-2 gap-3">
-						<div>
-							<p class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Total')}</p>
-							<p class="text-2xl font-bold text-green-700 dark:text-green-400">{totalPrompts}</p>
-						</div>
-						<div>
-							<p class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Daily')}</p>
-							<p class="text-2xl font-bold text-green-700 dark:text-green-400">{dailyPrompts}</p>
-						</div>
-					</div>
-
-					<!-- Mini chart -->
-					<div class="h-32 mt-3">
-						<canvas id="dailyPromptsChart"></canvas>
-					</div>
-				</div>
-			</div>
-
-			<!-- Tokens Summary Card -->
-			<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800 flex flex-col">
-				<div class="flex justify-between items-center mb-4">
-					<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
-						{$i18n.t('Tokens')}
-					</h5>
-					<button
-						class="text-red-600 dark:text-red-400 text-sm hover:underline"
-						on:click={() => setActiveTab('tokens')}
-					>
-						{$i18n.t('View Details')}
-					</button>
-				</div>
-				<div class="flex-1">
-					<div class="grid grid-cols-2 gap-3">
-						<div>
-							<p class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Total')}</p>
-							<p class="text-2xl font-bold text-red-700 dark:text-red-400">{totalTokens}</p>
-						</div>
-						<div>
-							<p class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Daily')}</p>
-							<p class="text-2xl font-bold text-red-700 dark:text-red-400">{dailyTokens}</p>
-						</div>
-					</div>
-
-					<!-- Mini chart -->
-					<div class="h-32 mt-3">
-						<canvas id="dailyTokensChart"></canvas>
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<!-- Model Summary (if selected) -->
-		{#if selectedModel}
-			<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800 mb-6">
-				<div class="flex justify-between items-center mb-4">
-					<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200">
-						{$i18n.t('Model Usage')} - {selectedModel}
-					</h5>
-					<button
-						class="text-purple-600 dark:text-purple-400 text-sm hover:underline"
-						on:click={() => setActiveTab('models')}
-					>
-						{$i18n.t('View Details')}
-					</button>
-				</div>
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-					<div>
-						<div class="grid grid-cols-2 gap-3 mb-3">
-							<div>
-								<p class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Total Prompts')}</p>
-								<p class="text-2xl font-bold text-purple-700 dark:text-purple-400">
-									{modelPrompts}
-								</p>
-							</div>
-							<div>
-								<p class="text-sm text-gray-600 dark:text-gray-400">{$i18n.t('Daily Prompts')}</p>
-								<p class="text-2xl font-bold text-purple-700 dark:text-purple-400">
-									{modelDailyPrompts}
-								</p>
-							</div>
-						</div>
-					</div>
-					<div class="h-48">
-						<canvas id="modelPromptsChart"></canvas>
-					</div>
-				</div>
-			</div>
-		{/if}
 	</div>
 
 	<!-- Tab Content - Users -->
@@ -766,6 +621,7 @@
 	<div
 		class={`${activeTab === 'models' ? 'block' : 'hidden'} h-[calc(100vh-210px)] overflow-auto px-1`}
 	>
+		<!-- Remove the dropdown here since we now have it in the header -->
 		{#if selectedModel}
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 				<div class="bg-white shadow-lg rounded-lg p-5 dark:bg-gray-800">
