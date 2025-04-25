@@ -31,6 +31,7 @@
 	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte';
 	import Sparkles from '$lib/IONOS/components/icons/Sparkles.svelte';
 	import Stop from '$lib/IONOS/components/icons/Stop.svelte';
+	import Attachement from '../icons/Attachement.svelte';
 
 	const i18n = getContext<Readable<I18Next>>('i18n');
 
@@ -668,16 +669,7 @@
 												type="button"
 												aria-label="More"
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="size-5"
-												>
-													<path
-														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
-													/>
-												</svg>
+												<Attachement className="size-5" />
 											</button>
 										</InputMenu>
 									</div>

@@ -95,7 +95,7 @@
 	</div>
 
 	<div class="my-20">
-		<Sparkles />
+		<Sparkles  filled={false}/>
 	</div>
 </content>
 
