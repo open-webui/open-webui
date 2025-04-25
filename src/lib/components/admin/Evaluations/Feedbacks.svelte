@@ -168,11 +168,11 @@
 					<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
 						<td class=" py-0.5 text-right font-semibold">
 							<div class="flex justify-center">
-								<Tooltip content={feedback?.user?.name}>
+								<Tooltip content={`${feedback?.user?.first_name} ${feedback?.user?.last_name}`}>
 									<div class="flex-shrink-0">
 										<img
 											src={feedback?.user?.profile_image_url ?? '/user.png'}
-											alt={feedback?.user?.name}
+											alt={`${feedback?.user?.first_name} ${feedback?.user?.last_name}`}
 											class="size-5 rounded-full object-cover shrink-0"
 										/>
 									</div>
