@@ -4,7 +4,7 @@
 	import { createEventDispatcher } from 'svelte';
 	// import { updateChatById, getChatList } from '$lib/apis/chats';
 	import { addReaction, deleteMessage, removeReaction, updateMessage } from '$lib/apis/channels';
-	import { keplerWallet } from '$lib/contexts/KeplerWalletContext';
+	import { keplerWallet } from '$lib/contexts/kepler/KeplerWalletContext';
 
 	import { chats, currentChatPage } from '$lib/stores';
 
@@ -50,11 +50,21 @@
 
 			const result = await keplerWallet.executeContract(parsedDoc);
 			const txHash = result.transactionHash;
+			const txStatus = await keplerWallet.getTx(txHash);
 			console.log('Transaction:', result);
+
+			let statusStr = `Transaction ${txStatus?.status}`;
+
+			if (txStatus?.result && Object.keys(txStatus?.result).length > 0) {
+				const resultStr = Object.entries(txStatus?.result || {})
+					.map(([key, value]) => `${key}: ${value}`)
+					.join(', ');
+				statusStr += `: ${resultStr}`;
+			}
 
 			dispatch('addMessage', {
 				role: 'assistant',
-				content: `Transaction successful!\r\nTx hash: ${txHash}`,
+				content: statusStr,
 				pending: false
 			});
 		} catch (error: any) {

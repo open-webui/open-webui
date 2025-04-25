@@ -1,10 +1,10 @@
 import { writable, type Writable } from 'svelte/store';
 import { browser } from '$app/environment';
-// TODO: Install @cosmjs/cosmwasm-stargate package:
-// npm install @cosmjs/cosmwasm-stargate
-import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
+import { SigningCosmWasmClient, CosmWasmClient } from '@cosmjs/cosmwasm-stargate';
 import type { ExecuteResult } from '@cosmjs/cosmwasm-stargate';
 import { GasPrice } from '@cosmjs/stargate';
+import type { TxStatusResponse } from './types';
+import { parseTxStatus } from './utils';
 
 // Chain Configuration
 const CHAIN_CONFIG = {
@@ -38,8 +38,10 @@ interface KeplerWalletContext {
 	disconnect: () => Promise<void>;
 	signTransaction: (signDoc: SignDoc) => Promise<ExecuteResult>;
 	executeContract: (contractMsg: Record<string, unknown>) => Promise<ExecuteResult>;
+	getTx: (transactionHash: string) => Promise<TxStatusResponse | null>;
 	state: Writable<KeplerWalletState>;
 	config: typeof CHAIN_CONFIG;
+	client: CosmWasmClient | null;
 }
 
 const STORAGE_KEY = 'kepler_wallet_state';
@@ -51,12 +53,20 @@ function createKeplerWalletContext(): KeplerWalletContext {
 		: { isConnected: false, address: null };
 
 	const state = writable<KeplerWalletState>(initialState);
+	let cosmWasmClient: CosmWasmClient | null = null;
 
 	// Subscribe to state changes and save to localStorage
 	if (browser) {
 		state.subscribe((value) => {
 			localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
 		});
+
+		// Initialize CosmWasmClient immediately
+		CosmWasmClient.connect(CHAIN_CONFIG.NODE_URL)
+			.then((client) => {
+				cosmWasmClient = client;
+			})
+			.catch(console.error);
 	}
 
 	const connect = async () => {
@@ -108,6 +118,41 @@ function createKeplerWalletContext(): KeplerWalletContext {
 		}
 	};
 
+	const getTx = async (transactionHash: string): Promise<TxStatusResponse | null> => {
+		if (!cosmWasmClient) {
+			throw new Error('CosmWasm client not initialized');
+		}
+		const tx = await cosmWasmClient.getTx(transactionHash);
+
+		if (!tx) {
+			return null;
+		}
+
+		return parseTxStatus(tx || {});
+	};
+
+	const waitForTransaction = async (
+		txHash: string,
+		timeoutMs: number = 30000,
+		pollIntervalMs: number = 1000
+	) => {
+		const startTime = Date.now();
+
+		while (Date.now() - startTime < timeoutMs) {
+			try {
+				const result = await getTx(txHash);
+
+				return result;
+			} catch (error) {
+				console.error(`Error while polling transaction ${txHash}:`, error);
+				// Continue polling if transaction not found
+			}
+			await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+		}
+
+		throw new Error(`Transaction confirmation timed out after ${timeoutMs}ms`);
+	};
+
 	const executeContract = async (contractMsg: Record<string, unknown>) => {
 		try {
 			if (!window.keplr) {
@@ -147,11 +192,15 @@ function createKeplerWalletContext(): KeplerWalletContext {
 		disconnect,
 		signTransaction,
 		executeContract,
+		getTx: waitForTransaction,
 		state: {
 			...state,
 			subscribe: state.subscribe
 		},
-		config: CHAIN_CONFIG
+		config: CHAIN_CONFIG,
+		get client() {
+			return cosmWasmClient;
+		}
 	};
 }
 
