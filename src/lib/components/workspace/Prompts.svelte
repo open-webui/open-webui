@@ -403,11 +403,13 @@
 											placement="top-start"
 										>
 											<div class="shrink-0 text-gray-500">
-												{$i18n.t('By {{name}}', {
-													name: capitalizeFirstLetter(
-														prompt?.user?.first_name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
-													)
-												})}
+												{#if (prompt?.user?.first_name && prompt?.user?.last_name)}
+													{prompt?.user?.first_name} {prompt?.user?.last_name}
+												{:else if (prompt?.user?.email)}
+													{prompt?.user?.email}
+												{:else}
+													{$i18n.t('Deleted User')}
+												{/if}
 											</div>
 										</Tooltip>
 									</div>
