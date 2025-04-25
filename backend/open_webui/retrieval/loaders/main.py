@@ -19,6 +19,7 @@ from langchain_community.document_loaders import (
     UnstructuredXMLLoader,
     YoutubeLoader,
 )
+from icd_loader import ICDLoader
 from langchain_core.documents import Document
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
@@ -201,6 +202,8 @@ class Loader:
                 file_path=file_path,
                 mime_type=file_content_type,
             )
+        elif self.engine == "icdloader":
+            loader = ICDLoader(file_path)
         elif (
             self.engine == "document_intelligence"
             and self.kwargs.get("DOCUMENT_INTELLIGENCE_ENDPOINT") != ""
