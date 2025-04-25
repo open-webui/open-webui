@@ -398,7 +398,11 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
         valves = Functions.get_function_valves_by_id(action_id)
         model_valves = (
-          model.get("info", {}).get("meta", {}).get("valves", {}).get("functions", {}).get(action_id, {})
+            model.get("info", {})
+            .get("meta", {})
+            .get("valves", {})
+            .get("functions", {})
+            .get(action_id, {})
         )
         base_v = valves if valves else {}
         override_v = model_valves if model_valves else {}
