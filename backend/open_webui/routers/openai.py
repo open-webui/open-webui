@@ -134,6 +134,8 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
         # Extraire les données OpenAI spécifiques
         openai_config = config_data.get("openai", {})
         
+        log.info(f"OpenAI config retrieved: {openai_config}")
+        
         return {
             "ENABLE_OPENAI_API": openai_config.get("enable", False),
             "OPENAI_API_BASE_URLS": openai_config.get("api_base_urls", []),
@@ -204,6 +206,7 @@ async def update_config(
         config_entry.data = config_data
         
         db.commit()
+        log.info("OpenAI config updated and saved")
 
     return {
         "ENABLE_OPENAI_API": request.app.state.config.ENABLE_OPENAI_API,
