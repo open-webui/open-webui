@@ -4,7 +4,6 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
-
 	import Modal from './Modal.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import Info from '../icons/Info.svelte';
@@ -16,6 +15,9 @@
 	export let edit = false;
 
 	let enableFullContent = false;
+	let pdfObjectUrl = '';
+	let pdfLoading = false;
+	let errorMessage = '';
 	$: isPDF =
 		item?.meta?.content_type === 'application/pdf' ||
 		(item?.name && item?.name.toLowerCase().endsWith('.pdf'));
@@ -25,7 +27,66 @@
 		if (item?.context === 'full') {
 			enableFullContent = true;
 		}
+
+		if (isPDF && item?.id) {
+			loadFileContent();
+		}
+
+		return () => {
+			if (pdfObjectUrl) {
+				URL.revokeObjectURL(pdfObjectUrl);
+			}
+		};
 	});
+
+	const loadFileContent = async () => {
+		if (!isPDF || !item?.id) return;
+
+		try {
+			pdfLoading = true;
+			errorMessage = '';
+
+			const token = localStorage.getItem('token');
+
+			if (!token) {
+				errorMessage = 'No authentication token found. Please log in again.';
+				console.error('No token found in localStorage');
+				return;
+			}
+
+			const response = await fetch(`${WEBUI_API_BASE_URL}/files/${item.id}/content`, {
+				method: 'GET',
+				headers: {
+					Accept: 'application/pdf',
+					Authorization: `Bearer ${token}`
+				}
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				errorMessage = errorData.detail || 'Failed to load PDF';
+				console.error('Error loading PDF:', errorData);
+				return;
+			}
+
+			const blob = await response.blob();
+
+			if (pdfObjectUrl) {
+				URL.revokeObjectURL(pdfObjectUrl); // Nettoyer l'ancien URL
+			}
+			pdfObjectUrl = URL.createObjectURL(blob);
+		} catch (error) {
+			console.error('Error loading file content:', error);
+			errorMessage =
+				error instanceof Error ? error.message : 'An error occurred while loading the PDF';
+		} finally {
+			pdfLoading = false;
+		}
+	};
+
+	$: if (item?.id && isPDF) {
+		loadFileContent();
+	}
 </script>
 
 <Modal bind:show size="lg">
@@ -116,11 +177,34 @@
 
 		<div class="max-h-[75vh] overflow-auto">
 			{#if isPDF}
-				<iframe
-					title={item?.name}
-					src={`${WEBUI_API_BASE_URL}/files/${item.id}/content`}
-					class="w-full h-[70vh] border-0 rounded-lg mt-4"
-				/>
+				{#if pdfLoading}
+					<div class="flex justify-center items-center h-[70vh]">
+						<div class="text-center">
+							<div
+								class="inline-block animate-spin h-8 w-8 border-4 border-gray-300 border-t-blue-600 rounded-full"
+							></div>
+							<p class="mt-2">Loading PDF...</p>
+						</div>
+					</div>
+				{:else if errorMessage}
+					<div class="flex justify-center items-center h-[70vh]">
+						<div class="text-center text-red-500">
+							<p>Error: {errorMessage}</p>
+							<button
+								class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+								on:click={loadFileContent}
+							>
+								Retry
+							</button>
+						</div>
+					</div>
+				{:else if pdfObjectUrl}
+					<iframe
+						title={item?.name}
+						src={pdfObjectUrl}
+						class="w-full h-[70vh] border-0 rounded-lg mt-4"
+					/>
+				{/if}
 			{:else}
 				<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
 					{item?.file?.data?.content ?? 'No content'}
