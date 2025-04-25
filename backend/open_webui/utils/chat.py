@@ -398,11 +398,13 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
     if hasattr(function_module, "valves") and hasattr(function_module, "Valves"):
         valves = Functions.get_function_valves_by_id(action_id)
         model_valves = (
-            model.get("info", {}).get("meta", {}).get("valves", {}).get(action_id, {})
+          model.get("info", {}).get("meta", {}).get("valves", {}).get("functions", {}).get(action_id, {})
         )
-        function_module.valves = function_module.Valves(
-            **(valves if valves else {}), **model_valves
-        )
+        base_v = valves if valves else {}
+        override_v = model_valves if model_valves else {}
+        merged_valves = base_v | override_v
+
+        function_module.valves = function_module.Valves(**merged_valves)
 
     if hasattr(function_module, "action"):
         try:

@@ -983,6 +983,14 @@ async def process_chat_response(
             messages = get_message_list(message_map, message.get("id"))
 
             if tasks and messages:
+                # make task calls using an admin user
+                admin_email = request.app.state.config.ADMIN_EMAIL
+
+                if admin_email:
+                    admin = Users.get_user_by_email(admin_email)
+                else:
+                    admin = Users.get_first_user()
+
                 if TASKS.TITLE_GENERATION in tasks:
                     if tasks[TASKS.TITLE_GENERATION]:
                         res = await generate_title(
@@ -992,7 +1000,7 @@ async def process_chat_response(
                                 "messages": messages,
                                 "chat_id": metadata["chat_id"],
                             },
-                            user,
+                            admin,
                         )
 
                         if res and isinstance(res, dict):
@@ -1047,7 +1055,7 @@ async def process_chat_response(
                             "messages": messages,
                             "chat_id": metadata["chat_id"],
                         },
-                        user,
+                        admin,
                     )
 
                     if res and isinstance(res, dict):
