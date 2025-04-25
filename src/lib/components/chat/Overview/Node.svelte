@@ -27,7 +27,7 @@
 				<div class="ml-2">
 					<div class=" flex justify-between items-center">
 						<div class="text-xs text-black dark:text-white font-medium line-clamp-1">
-							{data?.user?.name ?? 'User'}
+							{data?.user?.first_name ? `${data?.user?.first_name} ${data?.user?.last_name}` : 'User'}
 						</div>
 					</div>
 
