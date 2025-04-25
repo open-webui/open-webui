@@ -48,6 +48,7 @@
 	import ContentRenderer from './ContentRenderer.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import FileItem from '$lib/components/common/FileItem.svelte';
+	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 
 	interface MessageType {
 		id: string;
@@ -856,15 +857,11 @@
 									<Citations
 										id={message?.id}
 										sources={message?.sources ?? message?.citations}
-										on:addMessage={(event) => {
-											console.log('--- ON addMessage', event);
-											// Add the rejection message
+										on:addMessage
+										on:addMessage={async (event) => {
 											const userMessage = event.detail;
-											addMessages({
-												modelId: message.model,
-												parentId: message.id,
-												messages: [userMessage]
-											});
+
+											submitMessage(message.id, userMessage.content);
 
 											// Remove the sources from the current message
 											message.sources = [];
