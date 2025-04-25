@@ -533,7 +533,7 @@
 				on:click={async () => { await goto('/explore'); }}
 			>
 				<div class="self-center">
-					<Sparkles filled={false} className="h-4 w-4 inline-block" />
+					<Sparkles filled={false} className="size-5 inline-block" />
 				</div>
 				{#if $showSidebar}
 					<div class=" self-center font-medium text-sm text-blue-800 dark:text-white font-primary">

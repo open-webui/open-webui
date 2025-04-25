@@ -1,5 +1,5 @@
 <script lang="ts">
-	export let className = 'w-4 h-4';
+	export let className = 'size-5';
 </script>
 
 <!--

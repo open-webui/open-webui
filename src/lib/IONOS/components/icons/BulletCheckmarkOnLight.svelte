@@ -1,5 +1,5 @@
 <script lang="ts">
-	export let className = 'w-4 h-4';
+	export let className = 'size-5';
 	export let bgFillColor = 'fill-blue-200';
 	export let contentFillColor = 'fill-blue-600'
 </script>
