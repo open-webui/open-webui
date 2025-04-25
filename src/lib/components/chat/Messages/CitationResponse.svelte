@@ -11,34 +11,29 @@
 	const dispatch = createEventDispatcher();
 	const i18n = getContext('i18n');
 	export let citation: { document: string[] };
+	let isExecuting = false;
+	let parsedDoc: any = null;
+	let isValidJson = false;
 
-	function renderItem(item: Array<string> | string | object | null): string {
+	// Try to parse the document on component initialization
+	$: {
 		try {
-			if (typeof item === 'string') {
-				return `<div>${item}</div>`;
-			} else if (Array.isArray(item)) {
-				return item.map(renderItem).join('');
-			} else if (typeof item === 'object' && item !== null) {
-				return Object.entries(item)
-					.map(([key, value]): string => {
-						if (typeof value === 'object') {
-							return `<div>${key}:</div>${renderItem(value)}`;
-						}
-						return `<div>${key}: ${value}</div>`;
-					})
-					.join('');
-			} else {
-				return `<div>${String(item)}</div>`;
-			}
+			parsedDoc = citation.document[0] ? JSON.parse(citation.document[0]) : null;
+			isValidJson = true;
 		} catch (error) {
-			console.error('Error rendering item:', error);
-			return '<div>Error rendering content</div>';
+			parsedDoc = citation.document[0] || null;
+			isValidJson = false;
 		}
 	}
 
-	function handleReject() {
-		console.log('--- handleReject!!!');
+	function formatValue(value: any): string {
+		if (typeof value === 'object' && value !== null) {
+			return JSON.stringify(value, null, 2);
+		}
+		return String(value);
+	}
 
+	function handleReject() {
 		dispatch('addMessage', {
 			role: 'assistant',
 			content: 'Transaction rejected',
@@ -47,15 +42,8 @@
 	}
 
 	async function handleAccept() {
-		console.log('--- handleAccept!!!');
 		try {
-			let parsedDoc;
-			try {
-				parsedDoc = citation.document[0] ? JSON.parse(citation.document[0]) : null;
-			} catch (error) {
-				throw new Error('Invalid transaction data');
-			}
-
+			isExecuting = true;
 			if (!parsedDoc) {
 				throw new Error('No transaction data available');
 			}
@@ -76,42 +64,52 @@
 				content: `Transaction failed: ${error.message}`,
 				pending: false
 			});
+		} finally {
+			isExecuting = false;
 		}
 	}
-
-	// $: documentContent = (() => {
-	// 	try {
-	// 		if (!citation?.document?.[0]) return [];
-	// 		const parsed = JSON.parse(citation.document[0]);
-	// 		return Array.isArray(parsed) ? parsed : [parsed];
-	// 	} catch (error) {
-	// 		console.error('Error parsing document:', error);
-	// 		return [];
-	// 	}
-	// })();
 </script>
 
-<div class="flex flex-col gap-2">
-	<!-- <div class="flex-col text-xs font-medium flex-wrap">
-		<div class="flex flex-col gap-1">RESPONSE:</div>
-		{#if documentContent.length > 0}
-			{@html documentContent.map(renderItem).join('')}
-		{:else}
-			<div>No content available</div>
-		{/if}
-	</div> -->
+<div class="flex flex-col gap-4">
+	{#if parsedDoc}
+		<div class="bg-gray-50 rounded-lg p-4 font-mono text-sm overflow-x-auto">
+			{#if isValidJson}
+				<div class="space-y-2">
+					{#each Object.entries(parsedDoc) as [key, value]}
+						<div>
+							<span class="text-purple-600">{key}:</span>
+							<span class="text-gray-800 whitespace-pre-wrap">{formatValue(value)}</span>
+						</div>
+					{/each}
+				</div>
+			{:else}
+				<div class="text-red-600">
+					Invalid JSON format. Preview of raw content:
+					<div class="mt-2 text-gray-800 whitespace-pre-wrap">{parsedDoc}</div>
+				</div>
+			{/if}
+		</div>
+	{/if}
+
 	<div class="flex gap-2">
-		<button
-			class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-md text-sm"
-			on:click={handleAccept}
-		>
-			Accept
-		</button>
-		<button
-			class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm"
-			on:click={handleReject}
-		>
-			Reject
-		</button>
+		{#if isExecuting}
+			<div class="flex items-center justify-center">
+				<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
+				<span class="ml-2 text-sm text-gray-600">Executing transaction...</span>
+			</div>
+		{:else if isValidJson && parsedDoc}
+			<button
+				class="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-md text-sm"
+				on:click={handleAccept}
+			>
+				Accept
+			</button>
+			<button
+				class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm"
+				on:click={handleReject}
+			>
+				Reject
+			</button>
+		{/if}
 	</div>
 </div>
