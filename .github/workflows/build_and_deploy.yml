@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build-and-push:
@@ -45,7 +46,10 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }},${{ env.IMAGE_NAME }}:latest,${{ env.IMAGE_NAME }}:${{ steps.generate_version.outputs.version }}
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ steps.generate_version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -63,7 +67,7 @@ jobs:
             --form token=${{ secrets.GITLAB_CI_TOKEN }} \
             --form ref=main \
             --form 'variables[pipeline_name]=${{ github.event.repository.name }} - ${{ needs.build-and-push.outputs.commit_title }}' \
-            --form 'variables[docker_image_tag]=latest' \
+            --form 'variables[docker_image_tag]=${{ needs.build-and-push.outputs.version }}' \
             --form 'variables[application_to_deploy]=${{ github.event.repository.name }}' \
             --form 'variables[deployment_environment]=dev' \
             'https://gitlab.com/api/v4/projects/58117805/trigger/pipeline')"
