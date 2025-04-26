@@ -79,6 +79,22 @@ export const playingNotificationSound = writable(false);
 
 export const sidebarKey = writable(0);
 
+
+export const toastVisible = writable(false);
+export const toastMessage = writable('');
+export const toastType = writable<'success' | 'error'>('success');
+
+export function showToast(type: 'success' | 'error', message: string, duration = 3000) {
+  toastType.set(type);
+  toastMessage.set(message);
+  toastVisible.set(true);
+
+  setTimeout(() => {
+    toastVisible.set(false);
+  }, duration);
+}
+
+
 export type Model = OpenAIModel | OllamaModel;
 
 type BaseModel = {

@@ -144,7 +144,7 @@
 				on:click={async () => {
 					await userSignOut();
 					localStorage.removeItem('token');
-					location.href = '/auth';
+					location.href = '/login';
 					show = false;
 				}}
 			>

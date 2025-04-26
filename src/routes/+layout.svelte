@@ -410,7 +410,7 @@
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
-						await goto('/auth');
+						await goto('/login');
 					}
 				} else {
 					// Don't redirect if we're already on the auth page

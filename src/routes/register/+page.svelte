@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext } from 'svelte';
@@ -6,18 +6,15 @@
 	import { page } from '$app/stores';
 
 	import { getBackendConfig } from '$lib/apis';
-	import { ldapUserSignIn, getSessionUser, userSignIn, userSignUp } from '$lib/apis/auths';
+	import { completeInvite } from '$lib/apis/auths';
 
-	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
+	import { WEBUI_NAME, config, user, socket, toastVisible, toastMessage, toastType, showToast } from '$lib/stores';
 
-	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
-
-	import Spinner from '$lib/components/common/Spinner.svelte';
-	import OnBoarding from '$lib/components/OnBoarding.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import UserIcon from '$lib/components/icons/UserIcon.svelte';
 	import ShowPassIcon from '$lib/components/icons/ShowPassIcon.svelte';
+	import CustomToast from '$lib/components/common/CustomToast.svelte';
+	import LoaderIcon from '$lib/components/icons/LoaderIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -28,16 +25,24 @@
 	let confirmPassword = '';
 	let showConfirmPassword = '';
 
+	let inviteToken = '';
+
 	let profileImageUrl = '';
 
 	let profileImageInputElement;
 
 	let loading = false;
 
+	onMount(() => {
+		if ($page.url.searchParams.get('inviteToken')) {
+			inviteToken = $page.url.searchParams.get('inviteToken')
+		}
+	})
+
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
 			console.log(sessionUser);
-			toast.success($i18n.t(`You're now logged in.`));
+			showToast('success', `You're now logged in.`);
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
 			}
@@ -49,16 +54,27 @@
 		}
 	};
 
-	const signUpHandler = async () => {
-		const sessionUser = await userSignUp(name, email, password, generateInitialsImage(name)).catch(
+	const completeInviteHandler = async () => {
+		if (password !== confirmPassword) {
+			showToast('error', `The passwords you entered don't quite match. Please double-check and try again.`);
+			return;
+		}
+		const strongPasswordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+
+		if (!strongPasswordRegex.test(password)) {
+			showToast('error', "Password must be 8+ characters, with a number, capital letter, and symbol.");
+			return;
+		}
+		loading = true;
+		const sessionUser = await completeInvite(firstName, lastName, password, inviteToken).catch(
 			(error) => {
 				toast.error(`${error}`);
 				return null;
 			}
 		);
-
 		await setSessionUser(sessionUser);
-	};
+		loading = false;
+	}
 
 	onMount(async () => {});
 	let logoSrc = '/logo_light.png';
@@ -77,6 +93,7 @@
 	</title>
 </svelte:head>
 
+<CustomToast message={$toastMessage} type={$toastType} visible={$toastVisible} />
 <div
 	class="flex flex-col justify-between w-full h-screen max-h-[100dvh] text-white relative dark:bg-customGray-900"
 >
@@ -88,6 +105,10 @@
 	</div>
 	<form
 		class="flex flex-col self-center dark:bg-customGray-800 rounded-2xl w-[31rem] pt-8 px-24 pb-16"
+		on:submit={(e) => {
+			e.preventDefault();
+			completeInviteHandler();
+		}}
 	>
 		<input
 			id="profile-image-input"
@@ -296,6 +317,11 @@
 			disabled={loading}
 		>
 			{$i18n.t('Register')}
+			{#if loading}
+				<div class="ml-1.5 self-center">
+					<LoaderIcon/>
+				</div>
+			{/if}
 		</button>
 	</form>
     <div class="self-center text-xs dark:text-customGray-100 pb-5">By using this service, you agree to our <a href="/">Terms</a> and <a href="/">Conditions</a>.</div>

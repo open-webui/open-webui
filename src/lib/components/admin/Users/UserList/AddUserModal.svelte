@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
-	import { addUser } from '$lib/apis/auths';
+	import { addUser, inviteUser } from '$lib/apis/auths';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -18,16 +18,16 @@
 	let inputFiles;
 
 	let _user = {
-		first_name: '',
-		last_name: '',
+		// first_name: '',
+		// last_name: '',
 		email: '',
 		role: 'user'
 	};
 
 	$: if (show) {
 		_user = {
-			first_name: '',
-			last_name: '',
+			// first_name: '',
+			// last_name: '',
 			email: '',
 			role: 'user'
 		};
@@ -42,7 +42,12 @@
 		if (tab === '') {
 			loading = true;
 
-			const res = await addUser(localStorage.token, _user.first_name, _user.last_name, _user.email, _user.role).catch(
+			// const res = await addUser(localStorage.token, _user.first_name, _user.last_name, _user.email, _user.role).catch(
+			// 	(error) => {
+			// 		toast.error(`${error}`);
+			// 	}
+			// );
+			const res = await inviteUser(localStorage.token, _user.email, _user.role).catch(
 				(error) => {
 					toast.error(`${error}`);
 				}
@@ -189,7 +194,7 @@
 								</div>
 							</div>
 
-							<div class="flex flex-col w-full mt-1">
+							<!-- <div class="flex flex-col w-full mt-1">
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('First Name')}</div>
 
 								<div class="flex-1">
@@ -216,7 +221,7 @@
 										required
 									/>
 								</div>
-							</div>
+							</div> -->
 
 							<hr class=" border-gray-50 dark:border-gray-850 my-2.5 w-full" />
 
