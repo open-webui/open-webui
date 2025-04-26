@@ -23,7 +23,7 @@
 	</DropdownMenu.Trigger>
 
 	<slot name="content">
-		<DropdownMenu.Content
+		<!-- <DropdownMenu.Content
 			class="w-full {className} text-sm rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary"
 			sideOffset={8}
 			side="top"
@@ -36,6 +36,6 @@
 			>
 				<div class=" self-center truncate">{$i18n.t('Purchase API Credit')}</div>
 			</button>
-		</DropdownMenu.Content>
+		</DropdownMenu.Content> -->
 	</slot>
 </DropdownMenu.Root>

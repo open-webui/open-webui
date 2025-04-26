@@ -304,7 +304,7 @@
 												required
 											/>
 										</div>
-										<div>
+										<!-- <div>
 											<div class="text-sm font-medium text-left mb-1 cursor-pointer hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full py-1.5 px-1.5" on:click={() => {showHkustApiHelp.set(!$showHkustApiHelp)}}>HKUST Open API Key(<span style="color: blue">?</span>)</div>
 											<input
 												bind:value={apikey}
@@ -315,7 +315,7 @@
 												name="current-apikey"
 												required
 											/>
-										</div>
+										</div> -->
 									{/if}
 								</div>
 							{/if}

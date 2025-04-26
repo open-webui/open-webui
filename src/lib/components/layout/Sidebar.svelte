@@ -893,16 +893,16 @@
 			<div class="flex flex-col font-primary">
 				{#if $user !== undefined}
 					<CreditMenu>
-						<button
+						<!-- <button
 							class="flex items-center rounded-xl border-t border-l border-r border-gray-200 py-4.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 dark:border-gray-800 transition"
 							on:click={() => {
 								showCreditDropdown = !showCreditDropdown;
 							}}
 						>
 							<div class="self-center font-semibold">Credit: HK$ {$credit}</div>
-						</button>
+						</button>	 -->
 						<button 
-							class="flex items-center rounded-xl border-l border-r border-gray-200 py-4.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 dark:border-gray-800 transition"
+							class="flex items-center rounded-xl border-l border-r border-t border-gray-200 py-4.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 dark:border-gray-800 transition"
 							on:click={() => {
 							const googleFormUrl = "https://forms.gle/5yQMVApkrjKgY5868";
 							window.open(googleFormUrl, "_blank"); // Opens in a new tab
@@ -920,7 +920,7 @@
 						}}
 					>
 						<button
-							class="flex items-center rounded-xl border-b border-l border-r border-gray-200 py-4.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 dark:border-gray-800 transition"
+							class="flex items-center rounded-xl border-l border-r border-t border-gray-200 py-4.5 px-3.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 dark:border-gray-800 transition"
 							on:click={() => {
 								showDropdown = !showDropdown;
 							}}
