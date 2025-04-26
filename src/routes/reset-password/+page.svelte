@@ -1,0 +1,107 @@
+<script lang="ts">
+	import { toast } from 'svelte-sonner';
+
+	import { onMount, getContext } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+
+	import { getBackendConfig } from '$lib/apis';
+	import { completeInvite } from '$lib/apis/auths';
+    
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+
+	import { WEBUI_NAME, config, user, socket, toastVisible, toastMessage, toastType, showToast } from '$lib/stores';
+    import { getSessionUser, userSignIn } from '$lib/apis/auths';
+
+	import Plus from '$lib/components/icons/Plus.svelte';
+	import UserIcon from '$lib/components/icons/UserIcon.svelte';
+	import ShowPassIcon from '$lib/components/icons/ShowPassIcon.svelte';
+	import CustomToast from '$lib/components/common/CustomToast.svelte';
+	import LoaderIcon from '$lib/components/icons/LoaderIcon.svelte';
+
+	const i18n = getContext('i18n');
+
+	let email = '';
+	let loading = false;
+
+
+
+	const resetPassword = async () => {
+        loading = true;
+		showToast('success', 'If the email exists, a reset link has been sent.')
+        loading = false;
+	};
+
+
+
+	let logoSrc = '/logo_light.png';
+
+	onMount(() => {
+		const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+		logoSrc = isDark ? '/logo_dark_transparent.png' : '/logo_dark.png';
+	});
+
+	$: console.log($config?.oauth?.providers?.google);
+</script>
+
+<svelte:head>
+	<title>
+		{`${$WEBUI_NAME}`}
+	</title>
+</svelte:head>
+
+<CustomToast message={$toastMessage} type={$toastType} visible={$toastVisible} />
+<div
+	class="flex flex-col justify-between w-full h-screen max-h-[100dvh] text-white relative dark:bg-customGray-900"
+>
+    <div></div>
+	<form
+		class="flex flex-col self-center dark:bg-customGray-800 rounded-2xl w-[31rem] pt-7 px-24 pb-4"
+		on:submit={(e) => {
+			e.preventDefault();
+			resetPassword();
+		}}
+	>	
+        <div class="self-center flex flex-col items-center mb-5">
+            <div>
+                <img crossorigin="anonymous" src="/logo_dark_transparent.png" class=" w-10 mb-5" alt="logo" />
+            </div>
+            <div class="mb-2.5">{$i18n.t('Reset password')}</div>
+            <div class="text-center text-xs dark:text-customGray-300">{$i18n.t('Enter your email to get a reset link')}</div>
+        </div>
+		<div class="flex-1 mb-2.5">
+			<div class="relative w-full dark:bg-customGray-900 rounded-md">
+				{#if email}
+					<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+						{$i18n.t('Email address')}
+					</div>
+				{/if}
+				<input
+					class={`px-2.5 text-sm ${email ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+					placeholder={$i18n.t('Email address')}
+					bind:value={email}
+                    type="email"
+                    autocomplete="email"
+					name="email"
+					required
+				/>
+			</div>
+		</div>	
+        <button
+			class=" text-xs w-full h-10 px-3 py-2 transition rounded-lg {loading
+				? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
+				: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center items-center"
+			type="submit"
+			disabled={loading}
+		>
+			{$i18n.t('Send')}
+			{#if loading}
+				<div class="ml-1.5 self-center">
+					<LoaderIcon/>
+				</div>
+			{/if}
+		</button> 
+	</form>
+    
+    <div class="self-center text-xs dark:text-customGray-100 pb-5">By using this service, you agree to our <a href="/">Terms</a> and <a href="/">Conditions</a>.</div>
+</div>
