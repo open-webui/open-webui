@@ -2087,6 +2087,12 @@ SEARXNG_QUERY_URL = PersistentConfig(
     os.getenv("SEARXNG_QUERY_URL", ""),
 )
 
+YACY_QUERY_URL = PersistentConfig(
+    "YACY_QUERY_URL",
+    "rag.web.search.yacy_query_url",
+    os.getenv("YACY_QUERY_URL", ""),
+)
+
 GOOGLE_PSE_API_KEY = PersistentConfig(
     "GOOGLE_PSE_API_KEY",
     "rag.web.search.google_pse_api_key",
