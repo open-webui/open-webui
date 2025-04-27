@@ -17,23 +17,18 @@ def search_yacy(
     query: str,
     count: int,
     filter_list: Optional[list[str]] = None,
-    **kwargs,
 ) -> list[SearchResult]:
     """
     Search a Yacy instance for a given query and return the results as a list of SearchResult objects.
 
-    The function allows passing additional parameters such as language or time_range to tailor the search result.
+    The function accepts username and password for authenticating to Yacy.
 
     Args:
         query_url (str): The base URL of the Yacy server.
+        username (str): Optional YaCy username.
+        password (str): Optional YaCy password.
         query (str): The search term or question to find in the Yacy database.
         count (int): The maximum number of results to retrieve from the search.
-
-    Keyword Args:
-        language (str): Language filter for the search results; e.g., "en-US". Defaults to an empty string.
-        safesearch (int): Safe search filter for safer web results; 0 = off, 1 = moderate, 2 = strict. Defaults to 1 (moderate).
-        time_range (str): Time range for filtering results by date; e.g., "2023-04-05..today" or "all-time". Defaults to ''.
-        categories: (Optional[list[str]]): Specific categories within which the search should be performed, defaulting to an empty string if not provided.
 
     Returns:
         list[SearchResult]: A list of SearchResults sorted by relevance score in descending order.
@@ -41,12 +36,6 @@ def search_yacy(
     Raise:
         requests.exceptions.RequestException: If a request error occurs during the search process.
     """
-
-    # Default values for optional parameters are provided as empty strings or None when not specified.
-    language = kwargs.get("language", "en-US")
-    safesearch = kwargs.get("safesearch", "1")
-    time_range = kwargs.get("time_range", "")
-    categories = "".join(kwargs.get("categories", []))
 
     # Use authentication if either username or password is set
     yacy_auth = None
@@ -59,14 +48,6 @@ def search_yacy(
         "resource": "global",
         "maximumRecords": count,
         "nav": "none",
-        # "format": "json",
-        # "pageno": 1,
-        # "safesearch": safesearch,
-        # "language": language,
-        # "time_range": time_range,
-        # "categories": categories,
-        # "theme": "simple",
-        # "image_proxy": 0,
     }
 
     # Check if provided a json API URL
