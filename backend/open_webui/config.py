@@ -1850,6 +1850,12 @@ RAG_FILE_MAX_SIZE = PersistentConfig(
     ),
 )
 
+RAG_RERANKING_COHERE_API_KEY = PersistentConfig(
+    "RAG_RERANKING_COHERE_API_KEY",
+    "rag.reranking_cohere_api_key",
+    os.environ.get("RAG_RERANKING_COHERE_API_KEY", ""),
+)
+
 RAG_EMBEDDING_ENGINE = PersistentConfig(
     "RAG_EMBEDDING_ENGINE",
     "rag.embedding_engine",

@@ -79,6 +79,7 @@ from open_webui.config import (
     ENV,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
+    RAG_RERANKING_COHERE_API_KEY,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     UPLOAD_DIR,
@@ -141,6 +142,16 @@ def get_rf(
 
             except Exception as e:
                 log.error(f"ColBERT: {e}")
+                raise Exception(ERROR_MESSAGES.DEFAULT(e))
+        elif any(model in reranking_model for model in ["cohere"]):
+            try:
+                from open_webui.retrieval.models.cohere import CohereReranking
+
+                rf = CohereReranking(
+                    api_key=RAG_RERANKING_COHERE_API_KEY,
+                )
+            except Exception as e:
+                log.error(f"CohereReranking: {e}")
                 raise Exception(ERROR_MESSAGES.DEFAULT(e))
         else:
             import sentence_transformers
