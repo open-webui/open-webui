@@ -56,7 +56,8 @@ def search_yacy(
     params = {
         "query": query,
         "resource": "global",
-        "nav": "all",
+        "maximumRecords": count,
+        "nav": "none",
         # "format": "json",
         # "pageno": 1,
         # "safesearch": safesearch,
