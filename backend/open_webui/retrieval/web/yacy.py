@@ -12,6 +12,8 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 def search_yacy(
     query_url: str,
+    username: Optional[str],
+    password: Optional[str],
     query: str,
     count: int,
     filter_list: Optional[list[str]] = None,
@@ -46,6 +48,11 @@ def search_yacy(
     time_range = kwargs.get("time_range", "")
     categories = "".join(kwargs.get("categories", []))
 
+    # Use authentication if either username or password is set
+    yacy_auth = None
+    if username or password:
+        yacy_auth = HTTPDigestAuth(username, password)
+
     params = {
         "query": query,
         "resource": "global",
@@ -60,16 +67,16 @@ def search_yacy(
         # "image_proxy": 0,
     }
 
-    # Legacy query format
-    if "<query>" in query_url:
+    # Check if provided a json API URL
+    if not query_url.endswith("yacysearch.json"):
         # Strip all query parameters from the URL
-        query_url = query_url.split("?")[0]
+        query_url = query_url.rstrip('/') + "/yacysearch.json"
 
     log.debug(f"searching {query_url}")
 
     response = requests.get(
         query_url,
-        auth=HTTPDigestAuth('admin', 'yacy'),
+        auth=yacy_auth,
         headers={
             "User-Agent": "Open WebUI (https://github.com/open-webui/open-webui) RAG Bot",
             "Accept": "text/html",

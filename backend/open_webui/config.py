@@ -2093,6 +2093,18 @@ YACY_QUERY_URL = PersistentConfig(
     os.getenv("YACY_QUERY_URL", ""),
 )
 
+YACY_USERNAME = PersistentConfig(
+    "YACY_USERNAME",
+    "rag.web.search.yacy_username",
+    os.getenv("YACY_USERNAME", ""),
+)
+
+YACY_PASSWORD = PersistentConfig(
+    "YACY_PASSWORD",
+    "rag.web.search.yacy_password",
+    os.getenv("YACY_PASSWORD", ""),
+)
+
 GOOGLE_PSE_API_KEY = PersistentConfig(
     "GOOGLE_PSE_API_KEY",
     "rag.web.search.google_pse_api_key",
