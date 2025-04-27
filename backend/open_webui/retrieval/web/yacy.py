@@ -55,6 +55,7 @@ def search_yacy(
 
     params = {
         "query": query,
+        "contentdom": "text",
         "resource": "global",
         "maximumRecords": count,
         "nav": "none",
