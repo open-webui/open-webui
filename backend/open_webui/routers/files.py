@@ -129,7 +129,15 @@ def upload_file(
                         ProcessFileForm(file_id=id, content=result.get("text", "")),
                         user=user,
                     )
-                elif file.content_type not in ["image/png", "image/jpeg", "image/gif", "video/mp4", "video/ogg", "video/quicktime", "video/webm"]:
+                elif file.content_type not in [
+                    "image/png",
+                    "image/jpeg",
+                    "image/gif",
+                    "video/mp4",
+                    "video/ogg",
+                    "video/quicktime",
+                    "video/webm",
+                ]:
                     process_file(request, ProcessFileForm(file_id=id), user=user)
 
                 file_item = Files.get_file_by_id(id=id)
