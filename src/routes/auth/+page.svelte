@@ -69,16 +69,19 @@
 			return;
 		}
 
-		const result = await checkUstApiKey(apikey).catch(
-			(error) => {
-				toast.error(`${error}`);
-				return null;
-			}
-		);
+		// TODO: UST API KEY인증 잘차 임시 주석처리
+		// const result = await checkUstApiKey(apikey).catch(
+		// 	(error) => {
+		// 		toast.error(`${error}`);
+		// 		return null;
+		// 	}
+		// );
 
-		if (!result) {
-			return;
-		}
+		// if (!result) {
+		// 	return;
+		// }
+
+		apikey = "d98a813b821d4b2a9743129a8ce774c7";
 
 		const sessionUser = await userSignUp(name, email, password, apikey, generateInitialsImage(name)).catch(
 			(error) => {
@@ -304,7 +307,7 @@
 												required
 											/>
 										</div>
-										<div>
+										<!-- <div>
 											<div class="text-sm font-medium text-left mb-1 cursor-pointer hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition w-full rounded-full py-1.5 px-1.5" on:click={() => {showHkustApiHelp.set(!$showHkustApiHelp)}}>HKUST Open API Key(<span style="color: blue">?</span>)</div>
 											<input
 												bind:value={apikey}
@@ -315,7 +318,7 @@
 												name="current-apikey"
 												required
 											/>
-										</div>
+										</div> -->
 									{/if}
 								</div>
 							{/if}

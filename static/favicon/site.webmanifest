@@ -1,6 +1,6 @@
 {
-  "name": "Open WebUI",
-  "short_name": "WebUI",
+  "name": "HKUST Open WebUI",
+  "short_name": "HKUST WebUI",
   "icons": [
     {
       "src": "/favicon/web-app-manifest-192x192.png",
