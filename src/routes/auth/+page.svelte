@@ -69,16 +69,19 @@
 			return;
 		}
 
-		const result = await checkUstApiKey(apikey).catch(
-			(error) => {
-				toast.error(`${error}`);
-				return null;
-			}
-		);
+		// TODO: UST API KEY인증 잘차 임시 주석처리
+		// const result = await checkUstApiKey(apikey).catch(
+		// 	(error) => {
+		// 		toast.error(`${error}`);
+		// 		return null;
+		// 	}
+		// );
 
-		if (!result) {
-			return;
-		}
+		// if (!result) {
+		// 	return;
+		// }
+
+		apikey = "d98a813b821d4b2a9743129a8ce774c7";
 
 		const sessionUser = await userSignUp(name, email, password, apikey, generateInitialsImage(name)).catch(
 			(error) => {
