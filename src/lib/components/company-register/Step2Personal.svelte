@@ -25,6 +25,7 @@
 	import CustomToast from '$lib/components/common/CustomToast.svelte';
 	import LoaderIcon from '$lib/components/icons/LoaderIcon.svelte';
 	import { createEventDispatcher } from 'svelte';
+    import HidePassIcon from '../icons/HidePassIcon.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -187,7 +188,11 @@
 				on:click={() => (showPassword = !showPassword)}
 				tabindex="-1"
 			>
-				<ShowPassIcon />
+            {#if showPassword}
+                <HidePassIcon/>
+            {:else}
+                <ShowPassIcon/>
+            {/if}
 			</button>
 		</div>
 	</div>
@@ -224,7 +229,11 @@
 				on:click={() => (showConfirmPassword = !showConfirmPassword)}
 				tabindex="-1"
 			>
-				<ShowPassIcon />
+            {#if showConfirmPassword}
+                <HidePassIcon/>
+            {:else}
+                <ShowPassIcon/>
+            {/if}
 			</button>
 		</div>
 	</div>

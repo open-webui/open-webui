@@ -18,6 +18,7 @@
 	import ShowPassIcon from '$lib/components/icons/ShowPassIcon.svelte';
 	import CustomToast from '$lib/components/common/CustomToast.svelte';
 	import LoaderIcon from '$lib/components/icons/LoaderIcon.svelte';
+	import HidePassIcon from '$lib/components/icons/HidePassIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -177,7 +178,11 @@
 					on:click={() => (showPassword = !showPassword)}
 					tabindex="-1"
 				>
+				{#if showPassword}
+					<HidePassIcon/>
+				{:else}
 					<ShowPassIcon/>
+				{/if}
 				</button>
 			</div>
 		</div>

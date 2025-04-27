@@ -5,7 +5,7 @@
 	import Step3Company from '$lib/components/company-register/Step3Company.svelte';
 	import Step4Invite from '$lib/components/company-register/Step4Invite.svelte';
 
-	let step = 4;
+	let step = 2;
 
 	const goNext = () => {
 		if (step < 4) step += 1;
