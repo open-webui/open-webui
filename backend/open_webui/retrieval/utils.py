@@ -795,7 +795,10 @@ class RerankCompressor(BaseDocumentCompressor):
             )
             scores = util.cos_sim(query_embedding, document_embedding)[0]
 
-        docs_with_scores = list(zip(documents, scores.tolist()))
+        if not isinstance(scores, list):
+            scores = scores.tolist()
+
+        docs_with_scores = list(zip(documents, scores))
         if self.r_score:
             docs_with_scores = [
                 (d, s) for d, s in docs_with_scores if s >= self.r_score

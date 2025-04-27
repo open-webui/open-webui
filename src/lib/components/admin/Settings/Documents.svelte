@@ -705,6 +705,28 @@
 								</div>
 							{/if}
 
+							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+								<div class="  mb-2.5 flex flex-col w-full justify-between">
+									<div class=" flex w-full justify-between">
+										<div class="flex-1 self-center text-xs font-medium">
+											{$i18n.t('Cohere API Key')}
+										</div>
+										<div class="flex flex-1 items-center relative">
+											<SensitiveInput
+												class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+												placeholder={$i18n.t('Enter Cohere API Key')}
+												bind:value={RAGConfig.RAG_RERANKING_COHERE_API_KEY}
+											/>
+										</div>
+									</div>
+									<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+										{$i18n.t(
+											'Set Reranking Model to "cohere" to use this API key for reranking.'
+										)}
+									</div>
+								</div>
+							{/if}
+
 							<div class="  mb-2.5 flex w-full justify-between">
 								<div class=" self-center text-xs font-medium">{$i18n.t('Top K')}</div>
 								<div class="flex items-center relative">

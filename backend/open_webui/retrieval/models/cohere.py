@@ -45,7 +45,8 @@ class CohereReranking:
             
             if "results" in data:
                 log.debug(f"CohereReranking:predict:results {data['results']}")
-                return [result["relevance_score"] for result in data["results"]]
+                index_sorted_results = sorted(data["results"], key=lambda x: x["index"])
+                return [result["relevance_score"] for result in index_sorted_results]
             else:
                 log.error("No results found in Cohere reranking response")
                 return None

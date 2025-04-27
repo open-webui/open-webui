@@ -380,6 +380,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
+        "RAG_RERANKING_COHERE_API_KEY": request.app.state.config.RAG_RERANKING_COHERE_API_KEY,
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
@@ -490,6 +491,7 @@ class ConfigForm(BaseModel):
     ENABLE_RAG_HYBRID_SEARCH: Optional[bool] = None
     TOP_K_RERANKER: Optional[int] = None
     RELEVANCE_THRESHOLD: Optional[float] = None
+    RAG_RERANKING_COHERE_API_KEY: Optional[str] = None
 
     # Content extraction settings
     CONTENT_EXTRACTION_ENGINE: Optional[str] = None
@@ -562,6 +564,11 @@ async def update_rag_config(
         form_data.RELEVANCE_THRESHOLD
         if form_data.RELEVANCE_THRESHOLD is not None
         else request.app.state.config.RELEVANCE_THRESHOLD
+    )
+    request.app.state.config.RAG_RERANKING_COHERE_API_KEY = (
+        form_data.RAG_RERANKING_COHERE_API_KEY
+        if form_data.RAG_RERANKING_COHERE_API_KEY is not None
+        else request.app.state.config.RAG_RERANKING_COHERE_API_KEY
     )
 
     # Content extraction settings
@@ -732,6 +739,7 @@ async def update_rag_config(
         "ENABLE_RAG_HYBRID_SEARCH": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
         "TOP_K_RERANKER": request.app.state.config.TOP_K_RERANKER,
         "RELEVANCE_THRESHOLD": request.app.state.config.RELEVANCE_THRESHOLD,
+        "RAG_RERANKING_COHERE_API_KEY": request.app.state.config.RAG_RERANKING_COHERE_API_KEY,
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
