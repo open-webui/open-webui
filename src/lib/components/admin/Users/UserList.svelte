@@ -33,7 +33,8 @@
 
 	const i18n = getContext('i18n');
 
-	export let users = [];
+	export let totalUsers = 0;
+	let users = []
 
 	let search = '';
 	let selectedUser = null;
@@ -67,6 +68,13 @@
 		}
 	};
 
+	const fetchUserPage = async () => {
+		try {
+			users = await getUsers(localStorage.token, page);
+		} catch (err) {
+			console.error("Error fetching users: " + err);
+		}
+	};
 	let sortKey = 'created_at'; // default sort key
 	let sortOrder = 'asc'; // default sort order
 
@@ -79,25 +87,26 @@
 		}
 	}
 
-	let filteredUsers;
+	const queryUser = async (q) => {
+		try {
+			const result = await getUsers(localStorage.token, undefined, 10, q);
+			filteredUsers = result.slice((page - 1) * 10, page * 10);
+		} catch (err) {
+			console.error(err);
+		}
+	};
 
-	$: filteredUsers = users
-		.filter((user) => {
-			if (search === '') {
-				return true;
-			} else {
-				let name = user.name.toLowerCase();
-				let email = user.email.toLowerCase();
-				const query = search.toLowerCase();
-				return name.includes(query) || email.includes(query);
-			}
-		})
-		.sort((a, b) => {
-			if (a[sortKey] < b[sortKey]) return sortOrder === 'asc' ? -1 : 1;
-			if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
-			return 0;
-		})
-		.slice((page - 1) * 20, page * 20);
+	let filteredUsers;
+	$: if (search.trim() === '') {
+		filteredUsers = users
+			.sort((a, b) => {
+				if (a[sortKey] < b[sortKey]) return sortOrder === 'asc' ? -1 : 1;
+				if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
+				return 0;
+			})
+	} else {
+		queryUser(search);
+	}
 </script>
 
 <ConfirmDialog
@@ -486,10 +495,10 @@
 	ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
 </div>
 
-<Pagination bind:page count={users.length} />
+<Pagination bind:page count={totalUsers} perPage={10}/>
 
 {#if !$config?.license_metadata}
-	{#if users.length > 50}
+	{#if totalUsers > 50}
 		<div class="text-sm">
 			<Markdown
 				content={`

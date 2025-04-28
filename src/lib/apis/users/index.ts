@@ -116,30 +116,64 @@ export const updateUserRole = async (token: string, id: string, role: string) =>
 	return res;
 };
 
-export const getUsers = async (token: string) => {
+export const getUsers = async (token: string, page?: number, limit: number = 10, q?: string) => {
 	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+	let res = null;
+	if (q !== undefined) {
+		res = await fetch(`${WEBUI_API_BASE_URL}/users/?q=${q}`, {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			}
 		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
+			.then(async (res) => {
+				if (!res.ok) throw await res.json();
+				return res.json();
+			})
+			.catch((err) => {
+				console.log(err);
+				error = err.detail;
+				return null;
+			});
+		} else if (page !== undefined) {
+		res = await fetch(`${WEBUI_API_BASE_URL}/users/?page=${page}&limit=${limit}`, {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			}
+		})
+			.then(async (res) => {
+				if (!res.ok) throw await res.json();
+				return res.json();
+			})
+			.catch((err) => {
+				console.log(err);
+				error = err.detail;
+				return null;
+			});
+	} else {
+		res = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			}
+		})
+			.then(async (res) => {
+				if (!res.ok) throw await res.json();
+				return res.json();
+			})
+			.catch((err) => {
+				console.log(err);
+				error = err.detail;
+				return null;
+			});
+	}
 	if (error) {
 		throw error;
 	}
-
 	return res ? res : [];
 };
 

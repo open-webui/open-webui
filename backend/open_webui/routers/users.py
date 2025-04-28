@@ -35,11 +35,21 @@ router = APIRouter()
 
 @router.get("/", response_model=list[UserModel])
 async def get_users(
-    skip: Optional[int] = None,
+    page: Optional[int] = None,
     limit: Optional[int] = None,
+    q: Optional[str] = None,
     user=Depends(get_admin_user),
 ):
-    return Users.get_users(skip, limit)
+    if q:
+        skip: Optional[int] = None
+        if page:
+            skip = (page - 1) * limit
+        return Users.get_users(skip=skip, limit=limit, query_key=q)
+    else:
+        skip: Optional[int] = None
+        if page:
+            skip = (page - 1) * limit
+        return Users.get_users(skip=skip, limit=limit)
 
 
 ############################
