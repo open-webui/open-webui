@@ -314,16 +314,18 @@ def get_event_emitter(request_info, update_db=True):
             )
         )
 
-        for session_id in session_ids:
-            await sio.emit(
-                "chat-events",
-                {
-                    "chat_id": request_info.get("chat_id", None),
-                    "message_id": request_info.get("message_id", None),
-                    "data": event_data,
-                },
-                to=session_id,
-            )
+        emit_tasks = [sio.emit(
+            "chat-events",
+            {
+                "chat_id": request_info.get("chat_id", None),
+                "message_id": request_info.get("message_id", None),
+                "data": event_data,
+            },
+            to=session_id,
+        )
+        for session_id in session_ids]
+
+        await asyncio.gather(*emit_tasks)
 
         if update_db:
             if "type" in event_data and event_data["type"] == "status":
