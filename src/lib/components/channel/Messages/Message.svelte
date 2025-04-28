@@ -167,7 +167,7 @@
 				{#if showUserProfile}
 					<Name>
 						<div class=" self-end text-base shrink-0 font-medium truncate">
-							{message?.user?.name}
+							{`${message?.user?.first_name} ${message?.user?.last_name}`}
 						</div>
 
 						{#if message.created_at}

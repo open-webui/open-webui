@@ -52,7 +52,7 @@
 			// Process citations before passing to marked lexer
 			const processedContent = sources ? linkifyCitations(content, sources) : content;
 			tokens = marked.lexer(
-				replaceTokens(processResponseContent(processedContent), sourceIds, model?.name, $user?.name)
+				replaceTokens(processResponseContent(processedContent), sourceIds, model?.name, `${$user?.first_name} ${$user?.last_name}`)
 			);
 		}
 	})();

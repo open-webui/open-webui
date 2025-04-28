@@ -146,7 +146,7 @@
 		info.meta.capabilities = capabilities;
 		info.meta.files = files;
 
-		info.meta.description = info.meta.description.trim() === '' ? null : info.meta.description;
+		info.meta.description = info?.meta?.description?.trim() === '' ? null : info?.meta?.description;
 
 		if (knowledge.length > 0) {
 			info.meta.knowledge = knowledge;

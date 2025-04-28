@@ -791,7 +791,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
 
             model_info = Models.get_model_by_id(model["id"])
             if model_info:
-                if has_access(
+                if model_info.user_id == user.id or has_access(
                     user.id, type="read", access_control=model_info.access_control
                 ):
                     filtered_models.append(model)
@@ -816,7 +816,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
         )
 
     # Filter out models that the user does not have access to
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    if not BYPASS_MODEL_ACCESS_CONTROL:
         models = get_filtered_models(models, user)
 
     log.debug(
