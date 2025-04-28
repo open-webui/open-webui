@@ -789,17 +789,12 @@ async def process_chat_payload(request, form_data, metadata, user, model):
             except Exception as e:
                 log.exception(e)
 
-    # try:
-    #     form_data, flags = await chat_completion_files_handler(request, form_data, user)
-    #     sources.extend(flags.get("sources", []))
-    # except Exception as e:
-    #     log.exception(e)
-    # In the process_chat_payload function
-    # model_id = form_data.get("model", "")
     if not model["id"].startswith("customrag"):
-    # if True:
+        # if True:
         try:
-            form_data, flags = await chat_completion_files_handler(request, form_data, user)
+            form_data, flags = await chat_completion_files_handler(
+                request, form_data, user
+            )
             sources.extend(flags.get("sources", []))
             s1 = f"{model}"
             log.info(f"Working within inbuilt RAG: {s1}")
