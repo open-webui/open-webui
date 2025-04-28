@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { getBackendConfig } from '$lib/apis';
-	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { config, models, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
