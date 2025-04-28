@@ -20,9 +20,9 @@ from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
-from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user
 from open_webui.utils.access_control import get_permissions, has_permission
 
+from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user, get_current_user
 from open_webui.utils.access_control import get_permissions
 from open_webui.models.permissions import Permissions, PermissionCategory, PermissionModel
 
@@ -88,7 +88,7 @@ async def get_user_groups(user=Depends(get_verified_user)):
 @router.get("/permissions")
 async def get_user_permissisions(request: Request, user=Depends(get_verified_user)):
     user_permissions = get_permissions(
-        user.id, Permissions.get_by_category()
+        user.id, Permissions.get_ordre_by_category(user.role)
     )
 
     return user_permissions
@@ -142,13 +142,10 @@ class UserPermissions(BaseModel):
 
 @router.get("/default/permissions", response_model=dict[PermissionCategory, dict[str, bool]])
 async def get_default_user_permissions(request: Request, user=Depends(get_admin_user)):
-    return Permissions.get_by_category()
+    return Permissions.get_ordre_by_category()
 
 @router.post("/default/permissions")
-async def update_default_user_permissions(
-    request: Request, form_data: UserPermissions, user=Depends(get_admin_user)
-):
-    updated_permissions = []
+async def update_default_user_permissions(form_data: UserPermissions, user=Depends(get_admin_user)):
     permissions_dict = form_data.model_dump()
 
     for category_str, permissions in permissions_dict.items():
@@ -164,17 +161,17 @@ async def update_default_user_permissions(
                 }
 
                 if Permissions.exists(permission_data):
+                    print(f"Updating existing permission: {permission_data}")
                     Permissions.update(permission_data)
                 else:
-                    new_permission = Permissions.add(permission_data)
-                    if new_permission:
-                        updated_permissions.append(new_permission)
+                    print(f"Adding new permission: {permission_data}")
+                    Permissions.add(permission_data)
 
         except ValueError:
             # Skip invalid categories
             continue
 
-    return updated_permissions
+    return Permissions.get_ordre_by_category()
 
 
 ############################
