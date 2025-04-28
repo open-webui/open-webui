@@ -26,10 +26,10 @@
 </script>
 
 {#if prompts.length > 0}
-	<div class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-600 dark:text-gray-500">
+	<h2 class="mb-1 flex gap-1 text-xs font-medium items-center text-gray-600 dark:text-gray-500">
 		<Bolt />
 		{$i18n.t('Suggested')}
-	</div>
+	</h2>
 {/if}
 
 <div class=" h-40 max-h-full overflow-auto scrollbar-none {className}">
@@ -43,24 +43,24 @@
 			>
 				<div class="flex flex-col text-left">
 					{#if prompt.title && prompt.title[0] !== ''}
-						<div
+						<h3
 							class="  font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
 						>
 							{prompt.title[0]}
-						</div>
+						</h3>
 						<div class="text-xs text-gray-700 dark:text-gray-400 font-normal line-clamp-1">
 							{prompt.title[1]}
 						</div>
 					{:else}
-						<div
+						<h3
 							class="  font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
 						>
 							{prompt.content}
-						</div>
+						</h3>
 
-						<div class="text-xs text-gray-700 dark:text-gray-400 font-normal line-clamp-1">
+						<h3 class="text-xs text-gray-700 dark:text-gray-400 font-normal line-clamp-1">
 							Prompt
-						</div>
+						</h3>
 					{/if}
 				</div>
 			</button>
