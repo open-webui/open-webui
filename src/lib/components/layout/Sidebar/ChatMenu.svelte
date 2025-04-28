@@ -146,7 +146,7 @@
 				}}
 			>
 				{#if pinned}
-					<BookmarkSlash strokeWidth="2" />
+					<Bookmark strokeWidth="2" />
 					<div class="flex items-center">{$i18n.t('Unpin')}</div>
 				{:else}
 					<Bookmark strokeWidth="2" />
