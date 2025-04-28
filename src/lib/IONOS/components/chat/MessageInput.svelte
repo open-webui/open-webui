@@ -630,10 +630,8 @@
 								<div class="flex flex-row">
 									<div class="ml-1 self-end mb-1.5 flex space-x-1">
 										<InputMenu
-											bind:imageGenerationEnabled
 											bind:webSearchEnabled
 											bind:selectedToolIds
-											{screenCaptureHandler}
 											uploadFilesHandler={() => {
 												filesInputElement.click();
 											}}
