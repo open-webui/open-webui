@@ -50,10 +50,10 @@ qdrant-client~=1.12.0
 opensearch-py==2.8.0
 playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
 elasticsearch==8.17.1
-
+pinecone==6.0.2
 
 transformers
-sentence-transformers==3.3.1
+sentence-transformers==4.1.0
 accelerate
 colbert-ai==0.2.21
 einops==0.8.1

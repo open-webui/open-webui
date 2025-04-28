@@ -61,6 +61,7 @@ from open_webui.retrieval.web.bing import search_bing
 from open_webui.retrieval.web.exa import search_exa
 from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.sougou import search_sougou
+from open_webui.retrieval.web.external import search_external
 
 from open_webui.retrieval.utils import (
     get_embedding_function,
@@ -90,7 +91,12 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
     DEVICE_TYPE,
     DOCKER,
+    SENTENCE_TRANSFORMERS_BACKEND,
+    SENTENCE_TRANSFORMERS_MODEL_KWARGS,
+    SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
+    SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
 )
+
 from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
@@ -117,6 +123,8 @@ def get_ef(
                 get_model_path(embedding_model, auto_update),
                 device=DEVICE_TYPE,
                 trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
+                backend=SENTENCE_TRANSFORMERS_BACKEND,
+                model_kwargs=SENTENCE_TRANSFORMERS_MODEL_KWARGS,
             )
         except Exception as e:
             log.debug(f"Error loading SentenceTransformer: {e}")
@@ -150,6 +158,8 @@ def get_rf(
                     get_model_path(reranking_model, auto_update),
                     device=DEVICE_TYPE,
                     trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+                    backend=SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
+                    model_kwargs=SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
                 )
             except Exception as e:
                 log.error(f"CrossEncoder: {e}")
@@ -418,6 +428,10 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             "FIRECRAWL_API_KEY": request.app.state.config.FIRECRAWL_API_KEY,
             "FIRECRAWL_API_BASE_URL": request.app.state.config.FIRECRAWL_API_BASE_URL,
             "TAVILY_EXTRACT_DEPTH": request.app.state.config.TAVILY_EXTRACT_DEPTH,
+            "EXTERNAL_WEB_SEARCH_URL": request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
+            "EXTERNAL_WEB_SEARCH_API_KEY": request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
+            "EXTERNAL_WEB_LOADER_URL": request.app.state.config.EXTERNAL_WEB_LOADER_URL,
+            "EXTERNAL_WEB_LOADER_API_KEY": request.app.state.config.EXTERNAL_WEB_LOADER_API_KEY,
             "YOUTUBE_LOADER_LANGUAGE": request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
             "YOUTUBE_LOADER_PROXY_URL": request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
             "YOUTUBE_LOADER_TRANSLATION": request.app.state.YOUTUBE_LOADER_TRANSLATION,
@@ -463,6 +477,10 @@ class WebConfig(BaseModel):
     FIRECRAWL_API_KEY: Optional[str] = None
     FIRECRAWL_API_BASE_URL: Optional[str] = None
     TAVILY_EXTRACT_DEPTH: Optional[str] = None
+    EXTERNAL_WEB_SEARCH_URL: Optional[str] = None
+    EXTERNAL_WEB_SEARCH_API_KEY: Optional[str] = None
+    EXTERNAL_WEB_LOADER_URL: Optional[str] = None
+    EXTERNAL_WEB_LOADER_API_KEY: Optional[str] = None
     YOUTUBE_LOADER_LANGUAGE: Optional[List[str]] = None
     YOUTUBE_LOADER_PROXY_URL: Optional[str] = None
     YOUTUBE_LOADER_TRANSLATION: Optional[str] = None
@@ -697,6 +715,18 @@ async def update_rag_config(
         request.app.state.config.FIRECRAWL_API_BASE_URL = (
             form_data.web.FIRECRAWL_API_BASE_URL
         )
+        request.app.state.config.EXTERNAL_WEB_SEARCH_URL = (
+            form_data.web.EXTERNAL_WEB_SEARCH_URL
+        )
+        request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY = (
+            form_data.web.EXTERNAL_WEB_SEARCH_API_KEY
+        )
+        request.app.state.config.EXTERNAL_WEB_LOADER_URL = (
+            form_data.web.EXTERNAL_WEB_LOADER_URL
+        )
+        request.app.state.config.EXTERNAL_WEB_LOADER_API_KEY = (
+            form_data.web.EXTERNAL_WEB_LOADER_API_KEY
+        )
         request.app.state.config.TAVILY_EXTRACT_DEPTH = (
             form_data.web.TAVILY_EXTRACT_DEPTH
         )
@@ -778,6 +808,10 @@ async def update_rag_config(
             "FIRECRAWL_API_KEY": request.app.state.config.FIRECRAWL_API_KEY,
             "FIRECRAWL_API_BASE_URL": request.app.state.config.FIRECRAWL_API_BASE_URL,
             "TAVILY_EXTRACT_DEPTH": request.app.state.config.TAVILY_EXTRACT_DEPTH,
+            "EXTERNAL_WEB_SEARCH_URL": request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
+            "EXTERNAL_WEB_SEARCH_API_KEY": request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
+            "EXTERNAL_WEB_LOADER_URL": request.app.state.config.EXTERNAL_WEB_LOADER_URL,
+            "EXTERNAL_WEB_LOADER_API_KEY": request.app.state.config.EXTERNAL_WEB_LOADER_API_KEY,
             "YOUTUBE_LOADER_LANGUAGE": request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
             "YOUTUBE_LOADER_PROXY_URL": request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
             "YOUTUBE_LOADER_TRANSLATION": request.app.state.YOUTUBE_LOADER_TRANSLATION,
@@ -1465,6 +1499,14 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             raise Exception(
                 "No SOUGOU_API_SID or SOUGOU_API_SK found in environment variables"
             )
+    elif engine == "external":
+        return search_external(
+            request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
+            request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
+            query,
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
     else:
         raise Exception("No search engine API key found in environment variables")
 
@@ -1477,8 +1519,11 @@ async def process_web_search(
         logging.info(
             f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.query}"
         )
-        web_results = search_web(
-            request, request.app.state.config.WEB_SEARCH_ENGINE, form_data.query
+        web_results = await run_in_threadpool(
+            search_web,
+            request,
+            request.app.state.config.WEB_SEARCH_ENGINE,
+            form_data.query,
         )
     except Exception as e:
         log.exception(e)
@@ -1500,8 +1545,8 @@ async def process_web_search(
         )
         docs = await loader.aload()
         urls = [
-            doc.metadata["source"] for doc in docs
-        ]  # only keep URLs which could be retrieved
+            doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
+        ]  # only keep URLs
 
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
@@ -1521,19 +1566,22 @@ async def process_web_search(
             collection_names = []
             for doc_idx, doc in enumerate(docs):
                 if doc and doc.page_content:
-                    collection_name = f"web-search-{calculate_sha256_string(form_data.query + '-' + urls[doc_idx])}"[
-                        :63
-                    ]
+                    try:
+                        collection_name = f"web-search-{calculate_sha256_string(form_data.query + '-' + urls[doc_idx])}"[
+                            :63
+                        ]
 
-                    collection_names.append(collection_name)
-                    await run_in_threadpool(
-                        save_docs_to_vector_db,
-                        request,
-                        [doc],
-                        collection_name,
-                        overwrite=True,
-                        user=user,
-                    )
+                        collection_names.append(collection_name)
+                        await run_in_threadpool(
+                            save_docs_to_vector_db,
+                            request,
+                            [doc],
+                            collection_name,
+                            overwrite=True,
+                            user=user,
+                        )
+                    except Exception as e:
+                        log.debug(f"error saving doc {doc_idx}: {e}")
 
             return {
                 "status": True,
