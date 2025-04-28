@@ -959,7 +959,9 @@ DEFAULT_MODELS = PersistentConfig(
 )
 
 try:
-    default_prompt_suggestions = json.loads(os.environ.get("DEFAULT_PROMPT_SUGGESTIONS", "[]"))
+    default_prompt_suggestions = json.loads(
+        os.environ.get("DEFAULT_PROMPT_SUGGESTIONS", "[]")
+    )
 except Exception as e:
     log.exception(f"Error loading DEFAULT_PROMPT_SUGGESTIONS: {e}")
     default_prompt_suggestions = []

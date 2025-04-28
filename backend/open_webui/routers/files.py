@@ -83,9 +83,10 @@ def upload_file(
     request: Request,
     file: UploadFile = File(...),
     user=Depends(get_verified_user),
-    file_metadata: dict = {},
+    file_metadata: dict = None,
     process: bool = Query(True),
 ):
+    file_metadata = file_metadata or {}
     log.info(f"file.content_type: {file.content_type}")
     try:
         unsanitized_filename = file.filename
