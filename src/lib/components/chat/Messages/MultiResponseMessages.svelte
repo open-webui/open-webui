@@ -58,6 +58,35 @@
 		}
 	}
 
+	const gotoMessage = async (modelIdx, messageIdx) => {
+		// Clamp messageIdx to ensure it's within valid range
+		groupedMessageIdsIdx[modelIdx] = Math.max(
+			0,
+			Math.min(messageIdx, groupedMessageIds[modelIdx].messageIds.length - 1)
+		);
+
+		// Get the messageId at the specified index
+		let messageId = groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]];
+		console.log(messageId);
+
+		// Traverse the branch to find the deepest child message
+		let messageChildrenIds = history.messages[messageId].childrenIds;
+		while (messageChildrenIds.length !== 0) {
+			messageId = messageChildrenIds.at(-1);
+			messageChildrenIds = history.messages[messageId].childrenIds;
+		}
+
+		// Update the current message ID in history
+		history.currentId = messageId;
+
+		// Await UI updates
+		await tick();
+		await updateChat();
+
+		// Trigger scrolling after navigation
+		triggerScroll();
+	};
+
 	const showPreviousMessage = async (modelIdx) => {
 		groupedMessageIdsIdx[modelIdx] = Math.max(0, groupedMessageIdsIdx[modelIdx] - 1);
 
@@ -224,6 +253,7 @@
 									messageId={_messageId}
 									isLastMessage={true}
 									siblings={groupedMessageIds[modelIdx].messageIds}
+									gotoMessage={(message, messageIdx) => gotoMessage(modelIdx, messageIdx)}
 									showPreviousMessage={() => showPreviousMessage(modelIdx)}
 									showNextMessage={() => showNextMessage(modelIdx)}
 									{updateChat}

@@ -9,6 +9,8 @@ from open_webui.models.chats import Chats
 from open_webui.env import SRC_LOG_LEVELS
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, Text, JSON, Boolean
+from open_webui.utils.access_control import get_permissions
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -234,15 +236,18 @@ class FolderTable:
             log.error(f"update_folder: {e}")
             return
 
-    def delete_folder_by_id_and_user_id(self, id: str, user_id: str) -> bool:
+    def delete_folder_by_id_and_user_id(
+        self, id: str, user_id: str, delete_chats=True
+    ) -> bool:
         try:
             with get_db() as db:
                 folder = db.query(Folder).filter_by(id=id, user_id=user_id).first()
                 if not folder:
                     return False
 
-                # Delete all chats in the folder
-                Chats.delete_chats_by_user_id_and_folder_id(user_id, folder.id)
+                if delete_chats:
+                    # Delete all chats in the folder
+                    Chats.delete_chats_by_user_id_and_folder_id(user_id, folder.id)
 
                 # Delete all children folders
                 def delete_children(folder):
@@ -250,9 +255,11 @@ class FolderTable:
                         folder.id, user_id
                     )
                     for folder_child in folder_children:
-                        Chats.delete_chats_by_user_id_and_folder_id(
-                            user_id, folder_child.id
-                        )
+                        if delete_chats:
+                            Chats.delete_chats_by_user_id_and_folder_id(
+                                user_id, folder_child.id
+                            )
+
                         delete_children(folder_child)
 
                         folder = db.query(Folder).filter_by(id=folder_child.id).first()
