@@ -109,7 +109,7 @@
 					stopLoading();
 				};
 
-				reader.readAsText(file);
+				reader.readAsText(file, 'utf-8');
 			} else {
 				toast.error($i18n.t('File not found.'));
 			}
