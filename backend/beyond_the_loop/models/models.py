@@ -210,6 +210,10 @@ class ModelsTable:
             or (model.company_id == company_id and has_access(user_id, permission, model.access_control))
         ]
 
+    def get_models_by_company_id(self, company_id: str) -> list[ModelModel]:
+        models = self.get_models()
+        return [model for model in models if model.company_id == company_id]
+
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
         try:
             with get_db() as db:
