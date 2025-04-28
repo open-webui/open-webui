@@ -1010,7 +1010,7 @@ class GenerateCompletionForm(BaseModel):
     prompt: str
     suffix: Optional[str] = None
     images: Optional[list[str]] = None
-    format: Optional[str] = None
+    format: Optional[Union[dict, str]] = None
     options: Optional[dict] = None
     system: Optional[str] = None
     template: Optional[str] = None
