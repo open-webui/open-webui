@@ -272,7 +272,7 @@
 		</div>
 
 		{#if ($config?.features?.enable_api_key ?? true) || $user?.role === 'admin'}
-			<div class="flex justify-between items-center text-sm">
+			<div class="flex justify-between items-center text-sm mb-2">
 				<div class="  font-medium">{$i18n.t('API keys')}</div>
 				<button
 					class=" text-xs font-medium text-gray-500"
@@ -288,10 +288,10 @@
 					{#if $user?.role === 'admin'}
 						<div class="justify-between w-full">
 							<div class="flex justify-between w-full">
-								<div class="self-center text-xs font-medium">{$i18n.t('JWT Token')}</div>
+								<div class="self-center text-xs font-medium mb-1">{$i18n.t('JWT Token')}</div>
 							</div>
 
-							<div class="flex mt-2">
+							<div class="flex">
 								<SensitiveInput value={localStorage.token} readOnly={true} />
 
 								<button
@@ -345,10 +345,10 @@
 						<div class="justify-between w-full">
 							{#if $user?.role === 'admin'}
 								<div class="flex justify-between w-full">
-									<div class="self-center text-xs font-medium">{$i18n.t('API Key')}</div>
+									<div class="self-center text-xs font-medium mb-1">{$i18n.t('API Key')}</div>
 								</div>
 							{/if}
-							<div class="flex mt-2">
+							<div class="flex">
 								{#if APIKey}
 									<SensitiveInput value={APIKey} readOnly={true} />
 
