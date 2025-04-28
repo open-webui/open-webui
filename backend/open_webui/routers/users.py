@@ -248,7 +248,8 @@ async def update_user_info_by_session_user(
 
 
 class UserResponse(BaseModel):
-    name: str
+    first_name: str
+    last_name: str
     profile_image_url: str
     active: Optional[bool] = None
 
