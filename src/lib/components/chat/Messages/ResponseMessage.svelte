@@ -140,6 +140,18 @@
 
 	let showRateComment = false;
 
+	enum MessageInteractions {
+		EDIT = 'edit',
+		COPY = 'copy',
+		READOUT = 'readout',
+		CREATE_IMAGE = 'create_image',
+		GOOD = 'good',
+		BAD = 'bad',
+		CONTINUE = 'continue',
+		REGENERATE = 'regenerate',
+	}
+	let ionosAllowedReactions: MessageInteractions[] = [MessageInteractions.COPY, MessageInteractions.READOUT, MessageInteractions.GOOD, MessageInteractions.BAD, MessageInteractions.REGENERATE ]
+
 	const copyToClipboard = async (text) => {
 		const res = await _copyToClipboard(text);
 		if (res) {
@@ -764,7 +776,7 @@
 							{/if}
 
 							{#if message.done}
-								{#if !readOnly}
+								{#if ionosAllowedReactions.includes(MessageInteractions.EDIT)}
 									{#if $user.role === 'user' ? ($user?.permissions?.chat?.edit ?? true) : true}
 										<Tooltip content={$i18n.t('Edit')} placement="bottom">
 											<button
@@ -898,7 +910,7 @@
 									</button>
 								</Tooltip>
 
-								{#if $config?.features.enable_image_generation && ($user.role === 'admin' || $user?.permissions?.features?.image_generation) && !readOnly}
+								{#if $config?.features.enable_image_generation && ($user.role === 'admin' || $user?.permissions?.features?.image_generation) && ionosAllowedReactions.includes(MessageInteractions.CREATE_IMAGE)}
 									<Tooltip content={$i18n.t('Generate Image')} placement="bottom">
 										<button
 											class="{isLastMessage
@@ -1079,7 +1091,7 @@
 										</Tooltip>
 									{/if}
 
-									{#if isLastMessage}
+									{#if isLastMessage && ionosAllowedReactions.includes(MessageInteractions.CONTINUE)}
 										<Tooltip content={$i18n.t('Continue Response')} placement="bottom">
 											<button
 												type="button"
