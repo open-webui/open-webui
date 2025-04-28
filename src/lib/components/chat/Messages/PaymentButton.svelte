@@ -22,8 +22,8 @@
 					],
 					{
 						total: {
-							label: 'Credit Pack',
-							amount: { currency: 'USD', value: '4.99' }
+							label: '5 USD Credit',
+							amount: { currency: 'USD', value: '5.35' }
 						}
 					}
 				);
