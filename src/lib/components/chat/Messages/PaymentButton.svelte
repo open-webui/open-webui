@@ -10,13 +10,8 @@
 			// Check if Digital Goods API is available
 			if (navigator.digitalGoods && navigator.digitalGoods.getService) {
 				const digitalGoods = await navigator.digitalGoods.getService('play');
-				const items = await digitalGoods.listPurchasableItems();
-				const sku = items[0]?.itemId;
 
-				if (!sku) {
-					alert('No in-app products available.');
-					return;
-				}
+				const sku = 'credit_5usd';
 
 				const paymentRequest = new PaymentRequest(
 					[
@@ -39,7 +34,7 @@
 				alert('Payment successful via Google Play! 🎉');
 				location.reload();
 			} else {
-				// Fallback for regular web users
+				// Fallback for web users (redirect to manual payment page)
 				window.location.href = webPaymentUrl;
 			}
 		} catch (err) {
