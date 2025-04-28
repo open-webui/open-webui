@@ -23,10 +23,7 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ModelUserResponse])
 async def get_models(user=Depends(get_verified_user)):
-    if user.role == "admin":
-        return Models.get_models_by_company_id(user.company_id)
-    else:
-        return Models.get_models_by_user_id_and_company_id(user.id, user.company_id)
+    return Models.get_models_by_user_id_and_company_id(user.id, user.company_id)
 
 
 ###########################
