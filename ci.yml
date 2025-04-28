@@ -1,0 +1,72 @@
+schemaVersion: v0.2
+prepare:
+  steps:
+    - name: Install Ollama
+      command: nix-env -iA nixpkgs.ollama
+    - name: Download llms
+      command: nohup ollama serve & sleep 5 && ollama pull llama3.2
+    - name: Install codesphere API dependencies
+      command: cd codesphere-API && npm i
+    - name: Create Env Vars
+      command: cd codesphere-API && node createEnvVars.js
+    - name: Install uv and create Python venv
+      command: cd backend && if [ ! -d ".venv" ]; then nix-env -iA nixpkgs.uv && uv
+        venv --python 3.11; fi;
+    - name: Install Python dependencies
+      command: cd backend && uv pip install -r requirements.txt
+    - name: Update node
+      command: sudo n 22.10
+    - name: Install node dependencies
+      command: npm i
+    - name: Build frontend
+      command: true || (export NODE_OPTIONS="--max-old-space-size=4096" && npm run
+        build)
+test:
+  steps: []
+run:
+  frontend:
+    steps:
+      - name: update node
+        command: sudo n 22.10 && node --version
+      - name: Start frontend
+        command: export NODE_OPTIONS="--max-old-space-size=4096" && npm run preview --
+          --host 0.0.0.0 --port 3000
+    plan: 22
+    replicas: 1
+    isPublic: true
+    network:
+      path: /
+      stripPath: false
+  backend:
+    steps:
+      - name: Start Backend
+        command: npx serve & cd backend &&  source .venv/bin/activate && ./start.sh
+    plan: 22
+    replicas: 1
+    isPublic: true
+    network:
+      ports:
+        - port: 3000
+          isPublic: true
+        - port: 8080
+          isPublic: true
+      paths:
+        - port: 8080
+          path: /api
+          stripPath: false
+        - port: 8080
+          path: /ws
+          stripPath: false
+        - port: 8080
+          path: /ollama
+          stripPath: false
+        - port: 8080
+          path: /openai
+          stripPath: false
+  ollama:
+    steps:
+      - name: Run ollama
+        command: ollama serve
+    plan: 22
+    replicas: 1
+    isPublic: false
