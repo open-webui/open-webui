@@ -1,33 +1,55 @@
 import time
+
 from typing import Optional
-
-from open_webui.internal.db import Base, JSONField, get_db
-
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Integer
+from sqlalchemy import Boolean, BigInteger, Column, String, Integer, ForeignKey
+from sqlalchemy.orm import relationship
+
+from open_webui.internal.db import Base, get_db
+
+
+####################
+# Association table for the many-to-many relationship (role <-> permission) with value
+####################
+class RolePermission(Base):
+    __tablename__ = 'role_permissions'
+
+    role_id = Column(Integer, ForeignKey('roles.id'), primary_key=True)
+    permission_id = Column(Integer, ForeignKey('permissions.id'), primary_key=True)
+    value = Column(Boolean, default=False)
+
+    # Add relationships to both sides
+    role = relationship("Role", back_populates="permission_associations")
+    permission = relationship("Permission", back_populates="role_associations")
+
 
 ####################
 # Role DB Schema
 ####################
-
 
 class Role(Base):
     __tablename__ = "roles"
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
+
+    permission_associations = relationship("RolePermission", back_populates="role")
+
+    @property
+    def permissions(self):
+        return [assoc.permission for assoc in self.permission_associations]
+
 
 class RoleModel(BaseModel):
     id: int
     name: str
-
-    updated_at: int  # timestamp in epoch
-    created_at: int  # timestamp in epoch
+    updated_at: int
+    created_at: int
 
     model_config = ConfigDict(from_attributes=True)
+
 
 ####################
 # Forms
@@ -36,10 +58,11 @@ class RoleModel(BaseModel):
 class RoleAddForm(BaseModel):
     role: str
 
+
 class RolesTable:
     def insert_new_role(
-        self,
-        name: str,
+            self,
+            name: str,
     ) -> Optional[RoleModel]:
         with get_db() as db:
             result = Role(
@@ -52,8 +75,8 @@ class RolesTable:
             db.refresh(result)
             if result:
                 return RoleModel.model_validate(result)
-            else:
-                return None
+
+            return None
 
     def get_role_by_id(self, id: str) -> Optional[RoleModel]:
         try:
@@ -71,9 +94,7 @@ class RolesTable:
         except Exception:
             return None
 
-    def get_roles(
-        self, skip: Optional[int] = None, limit: Optional[int] = None
-    ) -> list[RoleModel]:
+    def get_roles(self, skip: Optional[int] = None, limit: Optional[int] = None) -> list[RoleModel]:
         with get_db() as db:
 
             query = db.query(Role).order_by(Role.id)
@@ -110,7 +131,11 @@ class RolesTable:
         # Role is allowed and doesn't exist, so create it
         try:
             return self.insert_new_role(name=role_name)
-        except Exception as e:
+        except Exception:
             return None
+
+    def exists(self, role_name: str) -> bool:
+        return self.get_role_by_name(role_name) is not None
+
 
 Roles = RolesTable()
