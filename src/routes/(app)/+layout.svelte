@@ -44,6 +44,7 @@
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
+	import KnowledgeManager from '$lib/IONOS/components/knowledge/KnowledgeManager.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -220,6 +221,7 @@
 	};
 </script>
 
+<KnowledgeManager />
 <SettingsOverlay bind:show={$showSettings} />
 <ChangelogModal bind:show={$showChangelog} />
 
