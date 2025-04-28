@@ -39,7 +39,7 @@
 
 	let showDeleteConfirm = false;
 
-	export let userPermissions = {
+	let userPermissions = {
 		websearch: false,
 		image_generation: false,
 		code_interpreter: false,
@@ -52,9 +52,23 @@
 		code_interpreter: CodeInterpreterIcon,
 	};
 
+	const userPermissionsText = {
+		websearch: "Web Search",
+		image_generation: "Image Gen",
+		code_interpreter: "Code Interpreter",
+		audio: "Audio In and Out"
+	}
+
 	let showUserPermissionsDropdown = false;
 	let userPermissionsRef;
 
+	let showChatLifetimeDropdown = false;
+	let chatLifetimeDropdownRef;
+
+	const chatLifetimeOptions = ['3 months', '6 months', '9 months'];
+	let chatLifetime = chatLifetimeOptions[0];
+
+	let userNotice = 'LLMs can make mistakes. Check our AI Policy before using';
 	
 
 	const submitHandler = async () => {
@@ -152,7 +166,7 @@
 			}}
 		/>
 
-		<div class="mb-14">
+		<div class="mb-5">
 			<!-- <div class=" text-sm font-medium">{$i18n.t('Account')}</div> -->
 
 			<div class="flex space-x-5">
@@ -230,13 +244,13 @@
 							</div>
 						{/if}
 						<input
-							class={`px-2.5 text-sm ${companyName ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							class={`px-2.5 text-sm ${companyName ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-customGray-100 dark:placeholder:text-customGray-100 outline-none`}
 							placeholder={$i18n.t(' Name')}
 							bind:value={companyName}
 						/>
 					</div>
 				</div>
-				<div class="mt-2.5">
+				<div class="mb-2.5">
 					<div class="flex items-center justify-between mb-1 w-full dark:bg-customGray-900 rounded-md h-10 px-2.5 py-2">
 						
 							<div class="text-sm dark:text-customGray-100">
@@ -249,30 +263,35 @@
 							/>
 						</div>
 					</div>
-					<span class="text-xs dark:text-customGray-100/50">{$i18n.t('Hide the model logo in chat responses and show workspace logo instead')}</span>
 				</div>	
+				<span class="text-xs dark:text-customGray-100/50">{$i18n.t('Hide the model logo in chat responses and show workspace logo instead')}</span>
 			</div>	
 		</div>
 		
 		<div>
 			<div
-				class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2"
+				class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5"
 			>
 				<div class="flex w-full justify-between items-center">
 					<div class="text-xs dark:text-customGray-300">{$i18n.t('User permissions')}</div>
 				</div>
 			</div>
-			<div class="my-1" use:onClickOutside={() => (showUserPermissionsDropdown = false)}>
+			<div class="mb-2.5" use:onClickOutside={() => (showUserPermissionsDropdown = false)}>
 				<div class="relative" bind:this={userPermissionsRef}>
 					<button
 						type="button"
-						class={`flex items-center justify-between w-full text-sm h-10 px-3 py-2 ${
+						class="flex items-center justify-between w-full text-sm {Object.keys(userPermissions)?.filter(item => userPermissions?.[item])?.length > 0 ? 'h-12' : 'h-10'} px-3 py-2 {
 							showUserPermissionsDropdown ? 'border' : ''
-						} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer`}
+						} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer"
 						on:click={() => (showUserPermissionsDropdown = !showUserPermissionsDropdown)}
 					>
 						<span class="text-gray-500 dark:text-customGray-100">{$i18n.t('User Permissions')}</span>
-						<ChevronDown className="size-3" />
+						<div class="flex items-center">
+							<div class="text-xs dark:text-customGray-100/50 max-w-[15rem] text-left">
+								{Object.keys(userPermissions)?.filter(item => userPermissions?.[item]).map(el => userPermissionsText[el]).join(', ')}
+							</div>
+						<ChevronDown className="size-3 ml-1" />
+						</div>
 					</button>
 			
 					{#if showUserPermissionsDropdown}
@@ -297,7 +316,7 @@
 											<span class="capitalize">{permission.replace(/_/g, ' ')}</span>
 										</div>
 										<Checkbox
-											state={userPermissions[permission] ? 'checked' : 'unchecked'}
+											state={userPermissions?.[permission] ? 'checked' : 'unchecked'}
 											on:change={(e) => {
 												e.stopPropagation();
 												userPermissions[permission] = e.detail === 'checked';
@@ -314,12 +333,73 @@
 
 		<div>
 			<div
-				class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2"
+				class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5"
 			>
 				<div class="flex w-full justify-between items-center">
 					<div class="text-xs dark:text-customGray-300">{$i18n.t('Safety & Compliance')}</div>
 				</div>
 			</div>
+			<div class="mb-2.5" use:onClickOutside={() => (showChatLifetimeDropdown = false)}>
+				<div class="relative" bind:this={chatLifetimeDropdownRef}>
+					<button
+						type="button"
+						class={`flex items-center justify-between w-full text-sm h-10 px-3 py-2 ${
+							showChatLifetimeDropdown ? 'border' : ''
+						} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer`}
+						on:click={() => {
+							showChatLifetimeDropdown = !showChatLifetimeDropdown
+							}}
+					>
+						<span class="text-gray-500 dark:text-customGray-100"
+							>{$i18n.t('How long should chats be saved')}</span
+						>
+						
+						<div class="flex items-center gap-2 text-xs dark:text-customGray-100/50">
+							{chatLifetime}
+							<ChevronDown className="size-3" />
+						</div>
+						
+					</button>
+
+					{#if showChatLifetimeDropdown}
+						<div
+							class="max-h-40 overflow-y-auto absolute z-50 w-full -mt-1 bg-white pb-1 dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
+						>
+							<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
+							<div class="px-1">
+								{#each chatLifetimeOptions as option}
+									<button
+										class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
+										on:click={() => {
+											chatLifetime = option;
+											showChatLifetimeDropdown = false;
+										}}
+									>
+										{option}
+									</button>
+								{/each}
+							</div>
+						</div>
+					{/if}
+				</div>
+			</div>
+			<div class="flex flex-col w-full mb-2.5">
+				<div class="relative w-full dark:bg-customGray-900 rounded-md">
+					{#if userNotice}
+						<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+							{$i18n.t('User notice')}
+						</div>
+					{/if}
+					<input
+						class={`px-2.5 text-sm ${userNotice ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-customGray-100 dark:placeholder:text-customGray-100 outline-none`}
+						placeholder={$i18n.t('User notice')}
+						bind:value={userNotice}
+					/>
+				</div>
+			</div>
+			<span class="text-xs dark:text-customGray-100/50">
+				{$i18n.t('The disclaimer is displayed at the bottom of the user interface')}
+			</span>
 		</div>
 	</div>
 
