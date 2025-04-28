@@ -26,7 +26,7 @@ class EmailService:
             # Load and render the template
             template = self.jinja_env.get_template('invitation-mail.html')
             html_content = template.render(
-                activation_link=os.getenv('BACKEND_ADDRESS') + "/auth/" + invite_token,
+                activation_link=os.getenv('BACKEND_ADDRESS') + "/register?inviteToken=" + invite_token,
             )
             
             send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(

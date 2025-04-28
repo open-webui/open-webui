@@ -63,6 +63,26 @@ router = APIRouter()
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
+
+def validate_password(password: str) -> bool:
+    """
+    Validates that a password meets the security requirements:
+    - At least 8 characters
+    - At least one uppercase letter
+    - At least one digit
+    - At least one special character
+    
+    Args:
+        password: The password to validate
+        
+    Returns:
+        bool: True if password meets requirements, False otherwise
+    """
+    # Same regex as used in frontend
+    strong_password_regex = r"^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?]).{8,}$"
+    return bool(re.match(strong_password_regex, password))
+
+
 ############################
 # GetSessionUser
 ############################
@@ -137,6 +157,11 @@ async def update_profile(
         )
 
         if form_data.password:
+            if not validate_password(form_data.password):
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Password must be 8+ characters, with a number, capital letter, and symbol."
+                )
             hashed = get_password_hash(form_data.password)
             Auths.update_user_password_by_id(session_user.id, hashed)
 
@@ -157,18 +182,22 @@ async def update_profile(
 async def update_password(
     form_data: UpdatePasswordForm, session_user=Depends(get_current_user)
 ):
-    if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
-        raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
-    if session_user:
+    try:
         user = Auths.authenticate_user(session_user.email, form_data.password)
-
         if user:
+            # Validate the new password
+            if not validate_password(form_data.new_password):
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Password must be 8+ characters, with a number, capital letter, and symbol."
+                )
+            
             hashed = get_password_hash(form_data.new_password)
             return Auths.update_user_password_by_id(user.id, hashed)
         else:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_PASSWORD)
-    else:
-        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+    except Exception as e:
+        raise HTTPException(400, detail=str(e))
 
 
 ############################
@@ -422,50 +451,6 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 # Complete Invite
 ############################
 
-@router.post("/add", response_model=SigninResponse)
-async def add_user(form_data: AddUserForm, admin_user: Users = Depends(get_admin_user)):
-    if not validate_email_format(form_data.email.lower()):
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
-        )
-
-    if Users.get_user_by_email(form_data.email.lower()):
-        raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
-
-    try:
-        # Generate a secure random password
-        password = "beyondtheloop"
-        hashed = get_password_hash(password)
-
-        new_user = Auths.insert_new_auth(
-            form_data.email.lower(),
-            hashed,
-            form_data.first_name,
-            form_data.last_name,
-            admin_user.company_id,
-            form_data.profile_image_url,
-            form_data.role,
-        )
-
-        if new_user:
-            token = create_token(data={"id": new_user.id})
-            return {
-                "token": token,
-                "token_type": "Bearer",
-                "id": new_user.id,
-                "email": new_user.email,
-                "first_name": new_user.first_name,
-                "last_name": new_user.last_name,
-                "role": new_user.role,
-                "company_id": new_user.company_id,
-                "profile_image_url": new_user.profile_image_url,
-            }
-        else:
-            raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
-    except Exception as err:
-        raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
-
-
 @router.post("/complete_invite", response_model=SessionUserResponse)
 async def complete_invite(request: Request, response: Response, form_data: CompleteInviteForm):
     user = Users.get_user_by_invite_token(form_data.invite_token)
@@ -474,11 +459,18 @@ async def complete_invite(request: Request, response: Response, form_data: Compl
         raise HTTPException(404, detail=ERROR_MESSAGES.NOT_FOUND)
 
     try:
+        # Validate the password
+        if not validate_password(form_data.password):
+            raise HTTPException(
+                status_code=400, 
+                detail="Password must be 8+ characters, with a number, capital letter, and symbol."
+            )
+
         hashed_password = get_password_hash(form_data.password)
 
         Auths.insert_auth_for_existing_user(user.id, user.email, hashed_password)
 
-        Users.complete_invite_by_id(user.id, form_data.first_name, form_data.last_name)
+        user = Users.complete_invite_by_id(user.id, form_data.first_name, form_data.last_name)
 
     except Exception as err:
         raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
@@ -567,6 +559,13 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     try:
+        # Validate the password
+        if not validate_password(form_data.password):
+            raise HTTPException(
+                status_code=400, 
+                detail="Password must be 8+ characters, with a number, capital letter, and symbol."
+            )
+
         role = (
             "admin"
             if Users.get_num_users() == 0
@@ -691,15 +690,17 @@ async def signout(request: Request, response: Response):
 
 def generate_secure_password(length=12):
     """Generate a secure random password."""
-    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*()"
     while True:
         password = ''.join(secrets.choice(alphabet) for _ in range(length))
         # Check if password has at least one of each: uppercase, lowercase, digit, special char
         if (any(c.isupper() for c in password)
             and any(c.islower() for c in password)
             and any(c.isdigit() for c in password)
-            and any(c in "!@#$%^&*" for c in password)):
-            return password
+            and any(c in "!@#$%^&*()" for c in password)):
+            # Validate with the same function used for user-provided passwords
+            if validate_password(password):
+                return password
 
 
 ############################
