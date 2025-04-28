@@ -27,10 +27,21 @@ def upgrade():
         sa.Column('name', sa.String(), nullable=False),
         sa.Column('category', Enum('workspace', 'sharing', 'chat', 'features', name='permissioncategory'), nullable=False),
         sa.Column('description', sa.String()),
-        sa.Column('value', sa.Boolean(), default=False),
     )
 
+    # Create a role_permissions join table to allow many-to-many relationships between roles and permissions.
+    op.create_table(
+        'role_permissions',
+        sa.Column('role_id', sa.Integer(), nullable=False),
+        sa.Column('permission_id', sa.Integer(), nullable=False),
+        sa.Column('value', sa.Boolean(), default=False),  # Added value column here
+        sa.ForeignKeyConstraint(['role_id'], ['roles.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['permission_id'], ['permissions.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('role_id', 'permission_id')
+    )
+
+
 def downgrade():
+    op.drop_table('role_permissions')
     op.drop_table('permissions')
-    # Drop the enum type
     op.execute("DROP TYPE permissioncategory")
