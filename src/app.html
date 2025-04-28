@@ -103,6 +103,18 @@
 		<!-- Script en version es6 module et nomodule pour les navigateurs le ne supportant pas -->
 		<script type="module" src="/dsfr.module.min.js"></script>
 		<script type="text/javascript" nomodule src="/dsfr.nomodule.min.js"></script>
+		<!-- Matomo Tag Manager -->
+		<script>
+			if (window.location.hostname === 'albert.numerique.gouv.fr') {
+				var _mtm = window._mtm = window._mtm || [];
+				_mtm.push({'mtm.startTime': (new Date().getTime()), 'event': 'mtm.Start'});
+				(function() {
+					var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
+					g.async=true; g.src='https://stats.data.gouv.fr/js/container_V0sgBJJX.js'; s.parentNode.insertBefore(g,s);
+				})();
+			}
+		</script>
+		<!-- End Matomo Tag Manager -->
 
 		<style>
 			/* Le DSFR ajoute un underline sur tous les hrefs, ce qui n'est pas désirable dans notre cas*/
