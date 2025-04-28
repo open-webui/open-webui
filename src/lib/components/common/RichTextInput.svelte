@@ -389,37 +389,11 @@
 
 <div
 	bind:this={element}
-	class="relative w-full min-w-full h-full min-h-fit outline-none focus:outline-none focus:ring-0 rich-text-input no-focus-outline {className}"
+	class="relative w-full min-w-full h-full min-h-fit rich-text-input {className}"
 />
 
 <style>
-	:global(.rich-text-input),
-	:global(.rich-text-input *),
-	:global(.ProseMirror),
-	:global(.ProseMirror:focus),
-	:global(.ProseMirror:focus-visible),
-	:global(.ProseMirror *),
-	:global(.ProseMirror *:focus),
-	:global(.ProseMirror *:focus-visible) {
+	:global(.rich-text-input *) {
 		outline: none !important;
-		box-shadow: none !important;
-		-webkit-box-shadow: none !important;
-		-moz-box-shadow: none !important;
-		border-color: transparent !important;
-	}
-
-	.rich-text-input {
-		outline: none !important;
-		border: none !important;
-		background-image: none !important;
-	}
-
-	.no-focus-outline:focus,
-	.no-focus-outline:focus-visible {
-		outline: none !important;
-		box-shadow: none !important;
-		-webkit-box-shadow: none !important;
-		-moz-box-shadow: none !important;
-		border-color: transparent !important;
 	}
 </style>
