@@ -226,7 +226,12 @@
 			id="knowledge-scroll-container"
 			bind:this={scrollContainer}
 			class="overflow-y-scroll pr-[3px]"
-		>
+		>	
+			{#if knowledgeBases?.length < 1}
+				<div class="flex h-[calc(100dvh-200px)] w-full justify-center items-center">
+					<div class="text-sm dark:text-customGray-100/50">{$i18n.t('No knowledge added yet')}</div>
+				</div>
+			{/if}
 			<div class="mb-2 gap-2 grid lg:grid-cols-2 xl:grid-cols-3" id="knowledge-list">
 				{#each filteredItems as item}
 					<button
