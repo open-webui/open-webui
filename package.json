@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.5.7-ccv2-1.2.0",
+	"version": "0.5.7-ccv2-1.2.1",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -69,7 +69,7 @@
 		"@xyflow/svelte": "^0.1.19",
 		"async": "^3.2.5",
 		"bits-ui": "^0.19.7",
-		"chart.js": "^4.4.8",
+		"chart.js": "^4.4.9",
 		"codemirror": "^6.0.1",
 		"codemirror-lang-hcl": "^0.0.0-beta.2",
 		"crc-32": "^1.2.2",
