@@ -55,7 +55,7 @@ class RoleModel(BaseModel):
 # Forms
 ####################
 
-class RoleAddForm(BaseModel):
+class RoleForm(BaseModel):
     role: str
 
 
@@ -93,6 +93,14 @@ class RolesTable:
                 return RoleModel.model_validate(role)
         except Exception:
             return None
+
+    def update_name_by_id(self, role_id: str, name: str) -> Optional[RoleModel]:
+        with get_db() as db:
+            db.query(Role).filter_by(id=role_id).update(
+                {"name": name, "updated_at": int(time.time())}
+            )
+            db.commit()
+            return self.get_role_by_id(role_id)
 
     def get_roles(self, skip: Optional[int] = None, limit: Optional[int] = None) -> list[RoleModel]:
         with get_db() as db:

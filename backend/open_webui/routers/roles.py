@@ -8,7 +8,7 @@ from open_webui.utils.auth import get_admin_user
 from open_webui.models.roles import (
     RoleModel,
     Roles,
-    RoleAddForm
+    RoleForm
 )
 from open_webui.models.permissions import (
     Permissions,
@@ -40,7 +40,7 @@ async def get_roles(skip: Optional[int] = None, limit: Optional[int] = None, use
 
 
 @router.post("/", response_model=Optional[RoleModel])
-async def add_role(form_data: RoleAddForm, user=Depends(get_admin_user)):
+async def add_role(form_data: RoleForm, user=Depends(get_admin_user)):
     # Check if the role already exists
     existing_role = Roles.get_role_by_name(name=form_data.role)
     if existing_role:
@@ -51,6 +51,22 @@ async def add_role(form_data: RoleAddForm, user=Depends(get_admin_user)):
 
     return Roles.insert_new_role(name=form_data.role)
 
+
+############################
+# UpdateRoleById
+############################
+
+@router.post("/{role_id}", response_model=Optional[RoleModel])
+async def update_role_name(role_id: int, form_data: RoleForm, user=Depends(get_admin_user)):
+    # Check if the role already exists
+    existing_role = Roles.get_role_by_id(role_id)
+    if not existing_role:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Role with name '{form_data.role}' do not exists"
+        )
+
+    return Roles.update_name_by_id(role_id, form_data.role)
 
 ############################
 # DeleteRoleById
