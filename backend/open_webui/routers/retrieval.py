@@ -62,6 +62,7 @@ from open_webui.retrieval.web.bing import search_bing
 from open_webui.retrieval.web.exa import search_exa
 from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.sougou import search_sougou
+from open_webui.retrieval.web.firecrawl import search_firecrawl
 from open_webui.retrieval.web.external import search_external
 
 from open_webui.retrieval.utils import (
@@ -1525,6 +1526,14 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             raise Exception(
                 "No SOUGOU_API_SID or SOUGOU_API_SK found in environment variables"
             )
+    elif engine == "firecrawl":
+        return search_firecrawl(
+            request.app.state.config.FIRECRAWL_API_BASE_URL,
+            request.app.state.config.FIRECRAWL_API_KEY,
+            query,
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
     elif engine == "external":
         return search_external(
             request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
