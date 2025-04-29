@@ -90,6 +90,7 @@ class CompleteInviteForm(BaseModel):
     last_name: str
     password: str
     invite_token: str
+    profile_image_url: Optional[str] = "/user.png"
 
 class SignupForm(BaseModel):
     name: str

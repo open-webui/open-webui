@@ -175,10 +175,15 @@ class UsersTable:
         except Exception:
             return None
 
-    def complete_invite_by_id(self, id: str, first_name: str, last_name: str) -> Optional[UserModel]:
+    def complete_invite_by_id(self, id: str, first_name: str, last_name: str, profile_image_url: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
-                db.query(User).filter_by(id=id).update({"first_name": first_name, "last_name": last_name, "invite_token": None})
+                update_data = {"first_name": first_name, "last_name": last_name, "invite_token": None}
+
+                if profile_image_url is not None:
+                    update_data["profile_image_url"] = profile_image_url
+
+                db.query(User).filter_by(id=id).update(update_data)
                 db.commit()
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)

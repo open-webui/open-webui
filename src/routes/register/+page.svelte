@@ -67,7 +67,7 @@
 			return;
 		}
 		loading = true;
-		const sessionUser = await completeInvite(firstName, lastName, password, inviteToken).catch(
+		const sessionUser = await completeInvite(firstName, lastName, password, inviteToken, profileImageUrl).catch(
 			(error) => {
 				toast.error(`${error}`);
 				return null;

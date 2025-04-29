@@ -328,7 +328,8 @@ export const completeInvite = async (
 	firstName: string,
 	lastName: string,
 	password: string,
-	inviteToken: string
+	inviteToken: string,
+	profileImageUrl: string
 ) => {
 	let error = null;
 
@@ -342,7 +343,8 @@ export const completeInvite = async (
 			first_name: firstName,
 			last_name: lastName,
 			password: password,
-			invite_token: inviteToken
+			invite_token: inviteToken,
+			profile_image_url: profileImageUrl.length ? profileImageUrl : null
 		})
 	})
 		.then(async (res) => {

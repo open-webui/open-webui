@@ -470,7 +470,7 @@ async def complete_invite(request: Request, response: Response, form_data: Compl
 
         Auths.insert_auth_for_existing_user(user.id, user.email, hashed_password)
 
-        user = Users.complete_invite_by_id(user.id, form_data.first_name, form_data.last_name)
+        user = Users.complete_invite_by_id(user.id, form_data.first_name, form_data.last_name, form_data.profile_image_url)
 
     except Exception as err:
         raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
