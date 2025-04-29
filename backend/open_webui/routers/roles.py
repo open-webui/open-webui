@@ -58,9 +58,16 @@ async def add_role(form_data: RoleAddForm, user=Depends(get_admin_user)):
 
 
 # TODO(jeskr): Check if role is used by any users before deleting it.
-@router.delete("/{role_id}", response_model=bool)
-async def delete_role_by_id(role_id: str, user=Depends(get_admin_user)):
-    result = Roles.delete_by_id(role_id)
+@router.delete("/{role_name}", response_model=bool)
+async def delete_role_by_id(role_name: str, user=Depends(get_admin_user)):
+    role = Roles.get_role_by_name(role_name)
+    if not role:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Role with name '{role_name}' not found.",
+        )
+
+    result = Roles.delete_by_id(role.id)
     if result:
         return True
 
@@ -142,9 +149,21 @@ async def link_default_permission_to_role(role_name: str, form_data: PermissionR
     )
 
 
-@router.delete("/{role_id}/permission/{permission_category}/{permission_name}")
-async def unlink_default_permission_from_role(role_id: int, permission_name: str, category: PermissionCategory,
-                                              user=Depends(get_admin_user)):
+@router.delete("/{role_name}/permission/{permission_category}/{permission_name}")
+async def unlink_default_permission_from_role(
+        role_name: str,
+        permission_name: str,
+        category: PermissionCategory,
+        user=Depends(get_admin_user)
+    ):
+
+    role = Roles.get_role_by_name(role_name)
+    if not role:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Role with name '{role_name}' not found.",
+        )
+
     permission = Permissions.get(permission_name, category)
     if not permission:
         raise HTTPException(
@@ -152,7 +171,7 @@ async def unlink_default_permission_from_role(role_id: int, permission_name: str
             detail=f"Permission with name '{permission_name}' and category '{category}' not found.",
         )
 
-    result = Permissions.unlink(permission_id=permission.id, role_id=role_id)
+    result = Permissions.unlink(permission_id=permission.id, role_id=role.id)
     if result:
         return True
 
