@@ -38,6 +38,7 @@ class User(Base):
     oauth_sub = Column(Text, unique=True)
 
     invite_token = Column(Text, nullable=True)
+    registration_code = Column(Text, nullable=True)
 
     password_reset_token = Column(Text, nullable=True)
     password_reset_token_expires_at = Column(BigInteger, nullable=True)
@@ -77,6 +78,7 @@ class UserModel(BaseModel):
     company_id: str
 
     invite_token: Optional[str] = None
+    registration_code: Optional[str] = None
 
     password_reset_token: Optional[str] = None
     password_reset_token_expires_at: Optional[int] = None
@@ -123,6 +125,10 @@ class UserInviteForm(BaseModel):
     role: str
 
 
+class UserCreateForm(BaseModel):
+    email: str
+
+
 class UsersTable:
     def insert_new_user(
         self,
@@ -135,6 +141,7 @@ class UsersTable:
         role: str = "pending",
         oauth_sub: Optional[str] = None,
         invite_token: Optional[str] = None,
+        registration_code: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
             user = UserModel(
@@ -150,7 +157,8 @@ class UsersTable:
                     "updated_at": int(time.time()),
                     "oauth_sub": oauth_sub,
                     "company_id": company_id,
-                    "invite_token": invite_token
+                    "invite_token": invite_token,
+                    "registration_code": registration_code,
                 }
             )
             result = User(**user.model_dump())
@@ -178,13 +186,24 @@ class UsersTable:
         except Exception:
             return None
 
-    def complete_invite_by_id(self, id: str, first_name: str, last_name: str, profile_image_url: str) -> Optional[UserModel]:
+    def get_user_by_registration_code(self, registration_code: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
-                update_data = {"first_name": first_name, "last_name": last_name, "invite_token": None}
+                user = db.query(User).filter_by(registration_code=registration_code).first()
+                return UserModel.model_validate(user)
+        except Exception:
+            return None
+
+    def complete_by_id(self, id: str, first_name: str, last_name: str, profile_image_url: Optional[str] = None, company_id: Optional[str] = None) -> Optional[UserModel]:
+        try:
+            with get_db() as db:
+                update_data = {"first_name": first_name, "last_name": last_name, "invite_token": None, "registration_code": None}
 
                 if profile_image_url is not None:
                     update_data["profile_image_url"] = profile_image_url
+
+                if company_id is not None:
+                    update_data["company_id"] = company_id
 
                 db.query(User).filter_by(id=id).update(update_data)
                 db.commit()

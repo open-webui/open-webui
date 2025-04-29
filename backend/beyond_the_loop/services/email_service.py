@@ -150,6 +150,24 @@ class EmailService:
         except Exception as e:
             return False
 
+    def send_registration_email(self, to_email: EmailStr, registration_code: str) -> bool:
+        try:
+            subject = "Willkommen bei Bchat!"
+
+            # Load and render the template
+            template = self.jinja_env.get_template('registration-mail.html')
+            html_content = template.render(
+                registration_code=registration_code,
+            )
+
+            return self._send_email(
+                to_email=to_email,
+                subject=subject,
+                html_content=html_content
+            )
+        except Exception as e:
+            return False
+
     def _send_email(self, to_email: EmailStr, subject: str, html_content: str) -> bool:
         try:
             sender = {"name": "Beyond The Loop", "email": os.getenv('SENDER_EMAIL', 'noreply@beyondtheloop.ai')}

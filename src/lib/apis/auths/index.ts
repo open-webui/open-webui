@@ -333,7 +333,7 @@ export const completeInvite = async (
 ) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/complete_invite`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/completeInvite`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'

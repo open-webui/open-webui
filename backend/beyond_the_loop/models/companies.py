@@ -26,6 +26,9 @@ class Company(Base):
     credit_balance = Column(Integer, default=0)
     auto_recharge = Column(Boolean, default=False)
     credit_card_number = Column(String, nullable=True)
+    size = Column(Integer, nullable=True)
+    industry = Column(String, nullable=True)
+    team_function = Column(String, nullable=True)
 
     users = relationship("User", back_populates="company", cascade="all, delete-orphan")
 
@@ -38,6 +41,9 @@ class CompanyModel(BaseModel):
     credit_balance: Optional[int] = 0
     auto_recharge: Optional[bool] = False
     credit_card_number: Optional[str] = None
+    size: Optional[int] = None
+    industry: Optional[str] = None
+    team_function: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

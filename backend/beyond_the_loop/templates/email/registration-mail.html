@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Passwort zurücksetzen{% endblock %}
+
+{% block header %}Passwort zurücksetzen{% endblock %}
+
+{% block content %}
+<p>Hallo,</p>
+<p>Um deinen Account zu aktivieren, nutze butte folgenden Code:</p>
+
+<p>{{ registration_code }}</p>
+{% endblock %}
+
+{% block footer %}
+<p>Diese E-Mail wurde automatisch generiert. Bitte antworte nicht direkt darauf. Bei Fragen wende dich an unseren <a href="mailto:support@beyondtheloop.ai">Support</a>.</p>
+{% endblock %}
