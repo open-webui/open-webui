@@ -9,49 +9,36 @@ model_list:
       model: "azure/gpt-4o"
       api_base: os.environ/AZURE_OPENAI_API_BASE_URL
       api_key: os.environ/AZURE_OPENAI_API_KEY
-      max_tokens: 800
   - model_name: "GPT 4o-mini"
     litellm_params:
       model: "azure/gpt-4o-mini"
       api_base: os.environ/AZURE_OPENAI_API_BASE_URL
       api_key: os.environ/AZURE_OPENAI_API_KEY
-      max_tokens: 800
   - model_name: "GPT o3-mini"
     litellm_params:
       model: "azure/o3-mini"
       api_base: os.environ/AZURE_OPENAI_API_BASE_URL
       api_key: os.environ/AZURE_OPENAI_API_KEY
       api_version: "2024-12-01-preview"
-      max_tokens: 1000
   - model_name: "GPT o1"
     litellm_params:
       model: "azure/o1"
       api_base: os.environ/AZURE_OPENAI_API_BASE_URL
       api_key: os.environ/AZURE_OPENAI_API_KEY
       api_version: "2024-12-01-preview"
-      max_tokens: 1000
   - model_name: 'Mistral Large 2'
     litellm_params:
       model: 'vertex_ai/mistral-large-2411@001'
       vertex_project: 'beyond-chat-1111'
       vertex_location: 'europe-west4'
-      max_tokens: 800
   - model_name: 'Gemini 2.0 Flash'
     litellm_params:
       model: 'gemini-2.0-flash-001'
       vertex_project: 'beyond-chat-1111'
       vertex_location: 'europe-west4'
-      max_tokens: 800
   - model_name: 'Llama 3.1'
     litellm_params:
       model: 'vertex_ai/meta/llama-3.1-405b-instruct-maas'
-      vertex_project: 'beyond-chat-1111'
-      vertex_location: 'us-central1'
-      max_tokens: 800
-  - model_name: 'Gemini 2.0 Flash Thinking'
-    litellm_params:
-      max_tokens: 1000
-      model: 'gemini-2.0-flash-thinking-exp-01-21'
       vertex_project: 'beyond-chat-1111'
       vertex_location: 'us-central1'
   - model_name: 'Claude 3.5 Haiku'
@@ -59,42 +46,34 @@ model_list:
       model: 'vertex_ai/claude-3-5-haiku@20241022'
       vertex_project: 'beyond-chat-1111'
       vertex_location: 'us-east5'
-      max_tokens: 800
   - model_name: 'Claude 3.5 Sonnet'
     litellm_params:
       model: 'vertex_ai/claude-3-5-sonnet-v2@20241022'
       vertex_project: 'beyond-chat-1111'
       vertex_location: 'europe-west1'
-      max_tokens: 800
   - model_name: 'Claude 3.7 Sonnet'
     litellm_params:
       model: 'anthropic/claude-3-7-sonnet-20250219'
       api_key: os.environ/ANTHROPIC_API_KEY
-      max_tokens: 800
   - model_name: 'Pixtral Large'
     litellm_params:
       model: 'mistral/pixtral-large-2411'
       api_key: os.environ/MISTRAL_API_KEY
-      max_tokens: 800
   - model_name: 'Perplexity Sonar'
     litellm_params:
       model: 'perplexity/sonar'
       api_key: os.environ/PERPLEXITYAI_API_KEY
-      max_tokens: 800
   - model_name: 'Perplexity Sonar Pro'
     litellm_params:
       model: 'perplexity/sonar-pro'
       api_key: os.environ/PERPLEXITYAI_API_KEY
-      max_tokens: 800
   - model_name: 'Perplexity Sonar Reasoning Pro'
     litellm_params:
       model: 'perplexity/sonar-reasoning-pro'
       api_key: os.environ/PERPLEXITYAI_API_KEY
-      max_tokens: 1000
   - model_name: 'Perplexity Sonar Deep Research'
     litellm_params:
       model: 'perplexity/sonar-deep-research'
       api_key: os.environ/PERPLEXITYAI_API_KEY
-      max_tokens: 2000
 
 general_settings: {}
