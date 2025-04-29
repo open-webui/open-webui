@@ -13,6 +13,10 @@ import requests
 from pydantic import BaseModel
 from sqlalchemy import JSON, Column, DateTime, Integer, func, Any, String
 from sqlalchemy.orm.attributes import flag_modified
+from open_webui.models.groups import (
+    Groups)
+from open_webui.models.users import (
+    Users)
 
 from open_webui.env import (
     DATA_DIR,
@@ -251,38 +255,84 @@ class UserScopedConfig:
         self.config_path = config_path
         self.default = default
 
+    # def get(self, email: str) -> Any:
+    #     with get_db() as db:
+    #         entry = db.query(Config).filter_by(email=email).first()
+    #         if entry and isinstance(entry.data, dict):
+    #             data = entry.data
+    #             for part in self.config_path.split("."):
+    #                 if isinstance(data, dict) and part in data:
+    #                     data = data[part]
+    #                 else:
+    #                     return self.default
+    #             return data
+        
+    # # Step 2: If not found, try group creator lookup
+    #         user_id = Users.get_user_by_email(email)
+    #         user_groups = []
+    #         user_groups = Groups.get_groups_by_member_id(user_id)
+    #         for group in user_groups:
+    #             group_creator_email = group.created_by  
+    #             if group_creator_email:
+    #                 creator_entry = db.query(Config).filter_by(email=group_creator_email).first()
+    #                 if creator_entry and isinstance(creator_entry.data, dict):
+    #                     data = creator_entry.data
+    #                     for part in self.config_path.split("."):
+    #                         if isinstance(data, dict) and part in data:
+    #                             data = data[part]
+    #                         else:
+    #                             return self.default
+    #                     return data
+
+    #         # Step 3: If still nothing, return default
+    #     return self.default
+        
     def get(self, email: str) -> Any:
         with get_db() as db:
+            # Step 1: Check user-specific config
             entry = db.query(Config).filter_by(email=email).first()
             if entry and isinstance(entry.data, dict):
                 data = entry.data
+                final_value = self.default
                 for part in self.config_path.split("."):
                     if isinstance(data, dict) and part in data:
                         data = data[part]
+                        final_value = data
                     else:
-                        return self.default
-                return data
+                        final_value = self.default
+                        break
+                if final_value != self.default:
+                    print(f"User {email} has personal config for {self.config_path}: {final_value}")
+                return final_value
+
+            # Step 2: Check group creator's config
+            user = Users.get_user_by_email(email)
+            print(f"User {email} maps to user_id={user.id}")
+            user_groups = Groups.get_groups_by_member_id(user.id)
+            print(f"User {email} is part of groups: {user_groups}")
+            
+            for group in user_groups:
+                group_creator_email = group.created_by
+                print(f"Group created by {group_creator_email}")
+                if group_creator_email:
+                    creator_entry = db.query(Config).filter_by(email=group_creator_email).first()
+                    if creator_entry and isinstance(creator_entry.data, dict):
+                        data = creator_entry.data
+                        final_value = self.default
+                        for part in self.config_path.split("."):
+                            if isinstance(data, dict) and part in data:
+                                data = data[part]
+                                final_value = data
+                            else:
+                                final_value = self.default
+                                break
+                        if final_value != self.default:
+                            print(f"Group admin {group_creator_email} has config for {self.config_path}: {final_value}")
+                        return final_value
+
+            # Step 3: Fallback
+            print(f"Using default for {email} for {self.config_path}")
             return self.default
-
-    # def set(self, email: str, value: Any):
-    #     with get_db() as db:
-    #         entry = db.query(Config).filter_by(email=email).first()
-    #         if not entry:
-    #             entry = Config(email=email, data={})
-    #             db.add(entry)
-
-    #         data = entry.data or {}
-    #         current = data
-    #         parts = self.config_path.split(".")
-    #         for part in parts[:-1]:
-    #             if part not in current or not isinstance(current[part], dict):
-    #                 current[part] = {}
-    #             current = current[part]
-    #         current[parts[-1]] = value
-
-    #         entry.data = data
-    #         entry.updated_at = datetime.now()
-    #         db.commit()
 
     def set(self, email: str, value: Any):
         with get_db() as db:

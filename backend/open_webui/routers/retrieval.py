@@ -179,9 +179,16 @@ class SearchForm(CollectionNameForm):
 
 
 @router.get("/")
-async def get_status(request: Request, user=Depends(get_admin_user)):
+async def get_status(request: Request, user=Depends(get_verified_user)):
+    chunk_size = request.app.state.config.CHUNK_SIZE.get(user.email)
+    chunk_overlap = request.app.state.config.CHUNK_OVERLAP.get(user.email)
+    template = request.app.state.config.RAG_TEMPLATE.get(user.email)
+
+    log.info(f"[get_status] user={user.email} | chunk_size={chunk_size} | chunk_overlap={chunk_overlap} | template={template}")
+
     return {
         "status": True,
+        
         "chunk_size": request.app.state.config.CHUNK_SIZE.get(user.email),
         "chunk_overlap": request.app.state.config.CHUNK_OVERLAP.get(user.email),
         "template": request.app.state.config.RAG_TEMPLATE.get(user.email),
@@ -193,7 +200,7 @@ async def get_status(request: Request, user=Depends(get_admin_user)):
 
 
 @router.get("/embedding")
-async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
+async def get_embedding_config(request: Request, user=Depends(get_verified_user)):
     return {
         "status": True,
         "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
@@ -211,7 +218,7 @@ async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
 
 
 @router.get("/reranking")
-async def get_reraanking_config(request: Request, user=Depends(get_admin_user)):
+async def get_reraanking_config(request: Request, user=Depends(get_verified_user)):
     return {
         "status": True,
         "reranking_model": request.app.state.config.RAG_RERANKING_MODEL,
@@ -238,7 +245,7 @@ class EmbeddingModelUpdateForm(BaseModel):
 
 @router.post("/embedding/update")
 async def update_embedding_config(
-    request: Request, form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
+    request: Request, form_data: EmbeddingModelUpdateForm, user=Depends(get_verified_user)
 ):
     log.info(
         f"Updating embedding model: {request.app.state.config.RAG_EMBEDDING_MODEL} to {form_data.embedding_model}"
@@ -354,7 +361,7 @@ async def update_reranking_config(
 
 
 @router.get("/config")
-async def get_rag_config(request: Request, user=Depends(get_admin_user)):
+async def get_rag_config(request: Request, user=Depends(get_verified_user)):
     return {
         "status": True,
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
@@ -709,7 +716,7 @@ async def get_rag_template(request: Request, user=Depends(get_verified_user)):
 
 
 @router.get("/query/settings")
-async def get_query_settings(request: Request, user=Depends(get_admin_user)):
+async def get_query_settings(request: Request, user=Depends(get_verified_user)):
     return {
         "status": True,
         "template": request.app.state.config.RAG_TEMPLATE.get(user.email),
@@ -800,6 +807,11 @@ def save_docs_to_vector_db(
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
+        chunk_size = request.app.state.config.CHUNK_SIZE.get(user.email)
+        chunk_overlap = request.app.state.config.CHUNK_OVERLAP.get(user.email)
+        log.info(f"[Splitting] user={user.email} | chunk_size={chunk_size} | chunk_overlap={chunk_overlap}")
+
+
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=request.app.state.config.CHUNK_SIZE.get(user.email),
@@ -1025,6 +1037,9 @@ def save_docs_to_multiple_collections(
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
+        chunk_size = request.app.state.config.CHUNK_SIZE.get(user.email)
+        chunk_overlap = request.app.state.config.CHUNK_OVERLAP.get(user.email)
+        log.info(f"[Splitting] user={user.email} | chunk_size={chunk_size} | chunk_overlap={chunk_overlap}")
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=request.app.state.config.CHUNK_SIZE.get(user.email),
