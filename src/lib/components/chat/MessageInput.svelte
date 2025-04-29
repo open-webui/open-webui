@@ -116,6 +116,11 @@
 		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
 	);
 
+	let fileUploadSupportedModels = [];
+	$: fileUploadSupportedModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
+		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.fileUploadSupported ?? true
+	);
+
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
 		element.scrollTo({
@@ -1036,7 +1041,8 @@
 
 								<div class=" flex justify-between mt-1 mb-2.5 mx-0.5 max-w-full" dir="ltr">
 									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%] gap-0.5">
-										<InputMenu
+										{#if atSelectedModel ? fileUploadSupportedModels.length > 0 : selectedModels.length == fileUploadSupportedModels.length}
+											<InputMenu
 											bind:selectedToolIds
 											{screenCaptureHandler}
 											{inputFilesHandler}
@@ -1085,10 +1091,11 @@
 												chatInput?.focus();
 											}}
 										>
-											<button
-												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
-												type="button"
-												aria-label="More"
+											
+												<button
+													class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-1.5 outline-hidden focus:outline-hidden"
+													type="button"
+													aria-label="More"
 											>
 												<svg
 													xmlns="http://www.w3.org/2000/svg"
@@ -1100,8 +1107,10 @@
 														d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
 													/>
 												</svg>
-											</button>
+												</button>
+											
 										</InputMenu>
+										{/if}
 
 										<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
 											{#if toolServers.length + selectedToolIds.length > 0}
