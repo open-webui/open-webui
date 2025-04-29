@@ -230,6 +230,7 @@
 					<div class=" self-center text-xs">{$i18n.t('Landing Page Mode')}</div>
 
 					<button
+						id="landing-page-mode"
 						class="p-1 px-3 text-xs flex rounded transition"
 						on:click={() => {
 							toggleLandingPageMode();

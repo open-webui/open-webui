@@ -409,8 +409,10 @@
 								'general'
 									? 'bg-gray-200 dark:bg-gray-800	'
 									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
-								on:click={() => {
+								on:click={async () => {
 									selectedTab = 'general';
+									await tick();
+									document.getElementById('theme-selection')?.focus();
 								}}
 							>
 								<div class=" self-center mr-2">
@@ -435,8 +437,10 @@
 								'interface'
 									? 'bg-gray-200 dark:bg-gray-800	'
 									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
-								on:click={() => {
+								on:click={async () => {
 									selectedTab = 'interface';
+									await tick();
+									document.getElementById('landing-page-mode')?.focus();
 								}}
 							>
 								<div class=" self-center mr-2">
@@ -476,8 +480,10 @@
 								'audio'
 									? 'bg-gray-200 dark:bg-gray-800	'
 									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
-								on:click={() => {
+								on:click={async () => {
 									selectedTab = 'audio';
+									await tick();
+									document.getElementById('stt-engine')?.focus();
 								}}
 							>
 								<div class=" self-center mr-2">
@@ -503,8 +509,10 @@
 								'chats'
 									? 'bg-gray-200 dark:bg-gray-800	'
 									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
-								on:click={() => {
+								on:click={async () => {
 									selectedTab = 'chats';
+									await tick();
+									document.getElementById('archive-all-chats')?.focus();
 								}}
 							>
 								<div class=" self-center mr-2">
@@ -529,8 +537,10 @@
 								'account'
 									? 'bg-gray-200 dark:bg-gray-800	'
 									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
-								on:click={() => {
+								on:click={async () => {
 									selectedTab = 'account';
+									await tick();
+									document.getElementById('profile-image')?.focus();
 								}}
 							>
 								<div class=" self-center mr-2">
@@ -555,8 +565,10 @@
 								'about'
 									? 'bg-gray-200 dark:bg-gray-800	'
 									: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
-								on:click={() => {
+								on:click={async () => {
 									selectedTab = 'about';
+									await tick();
+									document.getElementById('about-link')?.focus();
 								}}
 							>
 								<div class=" self-center mr-2">
