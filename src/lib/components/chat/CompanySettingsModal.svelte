@@ -20,6 +20,8 @@
 	import PersonalizationIcon from '../icons/PersonalizationIcon.svelte';
 	import ChatIcon from '../icons/ChatIcon.svelte';
     import GeneralSettings from '$lib/components/chat/Settings/CompanySettings/General.svelte';
+	import GroupIcon from '../icons/GroupIcon.svelte';
+	import UserManagement from './Settings/CompanySettings/UserManagement.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -35,23 +37,13 @@
 		{
 			id: 'general-settings',
 			title: 'General Settings',
-			keywords: [
-				'account',
-				'profile',
-				'security',
-				'privacy',
-				'settings',
-				'login',
-				'useraccount',
-				'userdata',
-				'api',
-				'apikey',
-				'userprofile',
-				'profiledetails',
-				'accountsettings',
-				'accountpreferences',
-				'securitysettings',
-				'privacysettings'
+			keywords: [	
+			]
+		},
+		{
+			id: 'user-management',
+			title: 'User Management',
+			keywords: [	
 			]
 		},
 		
@@ -188,6 +180,24 @@
                             <div class=" self-center">{$i18n.t('General Settings')}</div>
                         </div>
                     </button>
+					{:else if tabId === 'user-management'}
+					<button
+                        class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+                        'user-management'
+                            ? 'dark:bg-customGray-800'
+                            : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+                        on:click={() => {
+                            selectedTab = 'user-management';
+                        }}
+                    >
+                        <div class="flex items-center mb-1">
+                            <div class=" self-center mr-2">
+                                <GroupIcon/>
+                            </div>
+                            <div class=" self-center">{$i18n.t('User management')}</div>
+                        </div>
+                    </button>
+
                     {/if}
 
 						<!-- {#if tabId === 'general'}
@@ -427,9 +437,8 @@
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
-				{:else if selectedTab === 'audio'}
-					<Audio
-						{saveSettings}
+				{:else if selectedTab === 'user-management'}
+					<UserManagement
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
