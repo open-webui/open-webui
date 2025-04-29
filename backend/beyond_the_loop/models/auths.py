@@ -106,7 +106,7 @@ class CompleteRegistrationForm(BaseModel):
     registration_code: str
     profile_image_url: Optional[str] = "/user.png"
     company_name: str
-    company_size: int
+    company_size: str
     company_industry: str
     company_team_function: str
 

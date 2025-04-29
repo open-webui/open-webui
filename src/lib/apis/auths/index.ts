@@ -859,3 +859,51 @@ export const confirmPasswordReset = async (resetToken: string, newPassword: stri
 
 	return res;
 };
+
+export const completeRegistration = async (
+	first_name: string,
+	last_name: string,
+	registration_code: string,
+	password: string,
+	profile_image_url: string,
+	company_name:string,
+	company_size: string,
+	company_industry: string,
+	company_team_function: string
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/completeRegistration`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		credentials: 'include',
+		body: JSON.stringify({
+			first_name,
+			last_name,
+			password,
+			registration_code,
+			profile_image_url: profile_image_url?.length ? profile_image_url : null,
+			company_name,
+			company_size,
+			company_industry,
+			company_team_function
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+}

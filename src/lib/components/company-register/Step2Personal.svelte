@@ -31,31 +31,18 @@
 
 	const i18n = getContext('i18n');
 
-	let email = '';
-	let code = '';
-	let password = '';
+	export let email = '';
+	export let first_name = '';
+	export let last_name = '';
+	export let registration_code = '';
+	export let password = '';
 	let showPassword = false;
 	let confirmPassword = '';
-	let showConfirmPassword = '';
+	let showConfirmPassword = false;
 
 	let inviteToken = '';
 
 	let loading = false;
-
-	const setSessionUser = async (sessionUser) => {
-		if (sessionUser) {
-			console.log(sessionUser);
-			showToast('success', `You're now logged in.`);
-			if (sessionUser.token) {
-				localStorage.token = sessionUser.token;
-			}
-
-			$socket.emit('user-join', { auth: { token: sessionUser.token } });
-			await user.set(sessionUser);
-			await config.set(await getBackendConfig());
-			goto('/');
-		}
-	};
 
 	const confirmHandler = async () => {
 		if (password !== confirmPassword) {
@@ -131,7 +118,7 @@
 			<button
 				type="button"
 				class="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-customBlue-500"
-				on:click={() => {}}
+				on:click={() => {dispatch('back')}}
 				tabindex="-1"
 			>
 				Edit
@@ -141,15 +128,47 @@
 
 	<div class="flex-1 mb-2.5">
 		<div class="relative w-full dark:bg-customGray-900 rounded-md">
-			{#if code}
+			{#if registration_code}
 				<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
 					{$i18n.t('Enter the code')}
 				</div>
 			{/if}
 			<input
-				class={`px-2.5 text-sm ${code ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+				class={`px-2.5 text-sm ${registration_code ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 				placeholder={$i18n.t('Enter the code')}
-				bind:value={code}
+				bind:value={registration_code}
+				required
+			/>
+		</div>
+	</div>
+
+	<div class="flex-1 mb-2.5">
+		<div class="relative w-full dark:bg-customGray-900 rounded-md">
+			{#if first_name}
+				<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+					{$i18n.t('First Name')}
+				</div>
+			{/if}
+			<input
+				class={`px-2.5 text-sm ${first_name ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+				placeholder={$i18n.t('First Name')}
+				bind:value={first_name}
+				required
+			/>
+		</div>
+	</div>
+
+	<div class="flex-1 mb-2.5">
+		<div class="relative w-full dark:bg-customGray-900 rounded-md">
+			{#if last_name}
+				<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+					{$i18n.t('Last Name')}
+				</div>
+			{/if}
+			<input
+				class={`px-2.5 text-sm ${last_name ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+				placeholder={$i18n.t('Last Name')}
+				bind:value={last_name}
 				required
 			/>
 		</div>

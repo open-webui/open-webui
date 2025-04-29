@@ -28,18 +28,24 @@
 	import CustomToast from '$lib/components/common/CustomToast.svelte';
 	import LoaderIcon from '$lib/components/icons/LoaderIcon.svelte';
 	import { createEventDispatcher } from 'svelte';
+	import { createUser } from '$lib/apis/users';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
 
-	let email = '';
+	export let email = '';
 	let loading = false;
 
-	function registerEmail() {
-		dispatch('next');
+	async function registerEmail() {
+		const user = await createUser(email).catch(error => {
+			showToast('error', error);
+		});
+		dispatch('next', { email: user.email });
 	}
 </script>
 
+
+<CustomToast message={$toastMessage} type={$toastType} visible={$toastVisible} />
 <form
 	class="flex flex-col self-center dark:bg-customGray-800 rounded-2xl w-[31rem] pt-7 px-24 pb-4"
 	on:submit={(e) => {

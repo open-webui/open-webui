@@ -27,12 +27,18 @@
 	import { createEventDispatcher } from 'svelte';
     import { onClickOutside } from '$lib/utils';
     import ChevronDown from '../icons/ChevronDown.svelte';
+    import { COMPANY_SIZE_OPTIONS, INDUSTRY_OPTIONS, TEAM_FUNCTION_OPTIONS } from '$lib/constants';
 
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
 
-	let companyName = '';
+   
+	export let company_name = '';
+    export let profile_image_url = '';
+    export let company_size = '';
+    export let company_industry = '';
+	export let company_team_function = '';
     
 	let loading = false;
 
@@ -52,41 +58,16 @@
 
     let companySizeDropdown = false;
     let companySizeDropdownRef;
-    let companySizeOptions = [{id: '1', label: '1-10'}, {id: '2', label: '11-20'}, {id: '3', label: '21-30'}]
+ 
     
-    let companySize = companySizeOptions[0];
 
     let industryDropdown = false;
     let industryDropdownRef;
-    let industryOptions = [{ id: '1', label: 'Technology' },
-	{ id: '2', label: 'Healthcare' },
-	{ id: '3', label: 'Finance' },
-	{ id: '4', label: 'Education' },
-	{ id: '5', label: 'Retail' },
-	{ id: '6', label: 'Manufacturing' },
-	{ id: '7', label: 'Real Estate' },
-	{ id: '8', label: 'Transportation' },
-	{ id: '9', label: 'Marketing & Advertising' },
-	{ id: '10', label: 'Legal' }]
-
-    let industry = industryOptions[0];
+    
 
     let teamDropdown = false;
     let teamDropdownRef;
-    let teamOptions = [
-        { id: '1', label: 'Sales' },
-        { id: '2', label: 'Marketing' },
-        { id: '3', label: 'Customer Support' },
-        { id: '4', label: 'Product Management' },
-        { id: '5', label: 'Engineering' },
-        { id: '6', label: 'Design' },
-        { id: '7', label: 'Human Resources' },
-        { id: '8', label: 'Operations' },
-        { id: '9', label: 'Finance' },
-        { id: '10', label: 'Legal' }
-    ];
-    let team = teamOptions[0];
-
+    
 </script>
 
 <svelte:head>
@@ -116,15 +97,15 @@
 
 	<div class="flex-1 mb-2.5">
 		<div class="relative w-full dark:bg-customGray-900 rounded-md">
-			{#if companyName}
+			{#if company_name}
 				<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
 					{$i18n.t('Name')}
 				</div>
 			{/if}
 			<input
-				class={`px-2.5 text-sm ${companyName ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+				class={`px-2.5 text-sm ${company_name ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 				placeholder={$i18n.t('Name')}
-				bind:value={companyName}
+				bind:value={company_name}
 				required
 			/>
 		</div>
@@ -145,7 +126,7 @@
                 >
                
                 <div class="flex items-center gap-2 text-xs dark:text-customGray-100/50">
-                    { companySize?.label}
+                    { company_size}
                     <ChevronDown className="size-3" />
                 </div>
                
@@ -157,15 +138,15 @@
                 >
                     <hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
                     <div class="px-1">
-                        {#each companySizeOptions as option}
+                        {#each COMPANY_SIZE_OPTIONS as option}
                             <button
                                 class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
                                 on:click={() => {
-                                    companySize = option;
+                                    company_size = option;
                                     companySizeDropdown = false;
                                 }}
                             >
-                                {option.label}
+                                {option}
                             </button>
                         {/each}
                     </div>
@@ -189,7 +170,7 @@
                 >
                
                 <div class="flex items-center gap-2 text-xs dark:text-customGray-100/50">
-                    { industry?.label}
+                    { company_industry}
                     <ChevronDown className="size-3" />
                 </div>
                
@@ -201,15 +182,15 @@
                 >
                     <hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
                     <div class="px-1">
-                        {#each industryOptions as option}
+                        {#each INDUSTRY_OPTIONS as option}
                             <button
                                 class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
                                 on:click={() => {
-                                    industry = option;
+                                    company_industry = option;
                                     industryDropdown = false;
                                 }}
                             >
-                                {option.label}
+                                {option}
                             </button>
                         {/each}
                     </div>
@@ -234,7 +215,7 @@
                 >
                
                 <div class="flex items-center gap-2 text-xs dark:text-customGray-100/50">
-                    {team?.label}
+                    {company_team_function}
                     <ChevronDown className="size-3" />
                 </div>
                
@@ -246,15 +227,15 @@
                 >
                     <hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
                     <div class="px-1">
-                        {#each teamOptions as option}
+                        {#each TEAM_FUNCTION_OPTIONS as option}
                             <button
                                 class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
                                 on:click={() => {
-                                    team = option;
+                                    company_team_function = option;
                                     teamDropdown = false;
                                 }}
                             >
-                                {option.label}
+                                {option}
                             </button>
                         {/each}
                     </div>
