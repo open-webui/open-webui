@@ -84,7 +84,7 @@ async def get_session_user(
     data = decode_token(token)
     expires_at = data.get("exp")
 
-    if int(time.time()) > expires_at:
+    if (expires_at is not None) and int(time.time()) > expires_at:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.INVALID_TOKEN,
