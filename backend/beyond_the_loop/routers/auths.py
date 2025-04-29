@@ -9,17 +9,17 @@ from aiohttp import ClientSession
 
 from beyond_the_loop.models.auths import CompleteInviteForm
 from beyond_the_loop.models.auths import (
-    AddUserForm,
     ApiKey,
     Auths,
     Token,
     LdapForm,
     SigninForm,
-    SigninResponse,
     SignupForm,
     UpdatePasswordForm,
     UpdateProfileForm,
     UserResponse,
+    ResetPasswordRequestForm,
+    ResetPasswordForm,
 )
 from beyond_the_loop.models.users import Users
 from beyond_the_loop.models.companies import Companies, NO_COMPANY
@@ -927,7 +927,7 @@ async def update_ldap_config(
 
 
 # create api key
-@router.post("/api_key", response_model=ApiKey)
+@router.post("/api-key", response_model=ApiKey)
 async def generate_api_key(request: Request, user=Depends(get_current_user)):
     if not request.app.state.config.ENABLE_API_KEY:
         raise HTTPException(
@@ -947,14 +947,14 @@ async def generate_api_key(request: Request, user=Depends(get_current_user)):
 
 
 # delete api key
-@router.delete("/api_key", response_model=bool)
+@router.delete("/api-key", response_model=bool)
 async def delete_api_key(user=Depends(get_current_user)):
     success = Users.update_user_api_key_by_id(user.id, None)
     return success
 
 
 # get api key
-@router.get("/api_key", response_model=ApiKey)
+@router.get("/api-key", response_model=ApiKey)
 async def get_api_key(user=Depends(get_current_user)):
     api_key = Users.get_user_api_key_by_id(user.id)
     if api_key:
@@ -963,3 +963,99 @@ async def get_api_key(user=Depends(get_current_user)):
         }
     else:
         raise HTTPException(404, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+
+
+############################
+# Password Reset
+############################
+
+@router.post("/reset-password/request", response_model=bool)
+async def request_password_reset(form_data: ResetPasswordRequestForm):
+    """
+    Request a password reset link to be sent to the user's email.
+    
+    This endpoint will:
+    1. Check if the email exists
+    2. Generate a reset token
+    3. Store the token and its expiration time
+    4. Send a reset email
+    
+    For security reasons, this endpoint always returns true, even if the email doesn't exist.
+    """
+    try:
+        # Check if user exists
+        user = Users.get_user_by_email(form_data.email)
+        
+        if user:
+            # Generate a secure token
+            reset_token = secrets.token_urlsafe(32)
+            
+            # Set expiration time (1 hour from now)
+            expires_at = int(time.time()) + 3600
+            
+            # Store the token in the database
+            Users.set_password_reset_token(form_data.email, reset_token, expires_at)
+            
+            # Send reset email
+            email_service = EmailService()
+            email_service.send_password_reset_email(
+                form_data.email, 
+                reset_token,
+                f"{user.first_name} {user.last_name}"
+            )
+        
+        # Always return true for security (don't reveal if email exists)
+        return True
+    except Exception as e:
+        log.error(f"Error requesting password reset: {str(e)}")
+        # Still return true for security reasons
+        return True
+
+
+@router.post("/reset-password/confirm", response_model=bool)
+async def confirm_password_reset(form_data: ResetPasswordForm):
+    """
+    Confirm a password reset using the token sent to the user's email.
+    
+    This endpoint will:
+    1. Validate the token
+    2. Check if the token is expired
+    3. Update the user's password
+    4. Clear the reset token
+    """
+    try:
+        # Find user by reset token
+        user = Users.get_user_by_password_reset_token(form_data.reset_token)
+        
+        if not user:
+            raise HTTPException(400, detail="Invalid or expired reset token")
+        
+        # Check if token is expired
+        current_time = int(time.time())
+        if user.password_reset_token_expires_at < current_time:
+            # Clear the expired token
+            Users.clear_password_reset_token(user.id)
+            raise HTTPException(400, detail="Reset token has expired")
+        
+        # Validate the new password
+        if not validate_password(form_data.new_password):
+            raise HTTPException(
+                status_code=400, 
+                detail="Password must be 8+ characters, with a number, capital letter, and symbol."
+            )
+        
+        # Update the password
+        hashed = get_password_hash(form_data.new_password)
+        result = Auths.update_user_password_by_id(user.id, hashed)
+        
+        if result:
+            # Clear the reset token
+            Users.clear_password_reset_token(user.id)
+            return True
+        else:
+            raise HTTPException(500, detail="Failed to update password")
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error confirming password reset: {str(e)}")
+        raise HTTPException(500, detail="An error occurred during password reset")

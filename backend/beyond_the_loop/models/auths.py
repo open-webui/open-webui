@@ -85,6 +85,13 @@ class UpdatePasswordForm(BaseModel):
     password: str
     new_password: str
 
+class ResetPasswordRequestForm(BaseModel):
+    email: str
+
+class ResetPasswordForm(BaseModel):
+    reset_token: str
+    new_password: str
+
 class CompleteInviteForm(BaseModel):
     first_name: str
     last_name: str
@@ -97,14 +104,6 @@ class SignupForm(BaseModel):
     email: str
     password: str
     profile_image_url: Optional[str] = "/user.png"
-
-
-class AddUserForm(BaseModel):
-    first_name: str
-    last_name: str
-    email: str
-    profile_image_url: Optional[str] = "/user.png"
-    role: Optional[str] = "pending"
 
 
 class AuthsTable:

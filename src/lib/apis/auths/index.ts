@@ -729,7 +729,7 @@ export const updateJWTExpiresDuration = async (token: string, duration: string) 
 export const createAPIKey = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_key`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api-key`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -754,7 +754,7 @@ export const createAPIKey = async (token: string) => {
 export const getAPIKey = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_key`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api-key`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -779,7 +779,7 @@ export const getAPIKey = async (token: string) => {
 export const deleteAPIKey = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_key`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api-key`, {
 		method: 'DELETE',
 		headers: {
 			'Content-Type': 'application/json',
@@ -798,5 +798,64 @@ export const deleteAPIKey = async (token: string) => {
 	if (error) {
 		throw error;
 	}
+	return res;
+};
+
+export const requestPasswordReset = async (email: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/reset-password/request`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			email: email
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const confirmPasswordReset = async (resetToken: string, newPassword: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/reset-password/confirm`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			reset_token: resetToken,
+			new_password: newPassword
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
 	return res;
 };

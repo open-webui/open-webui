@@ -11,7 +11,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
 	import { WEBUI_NAME, config, user, socket, toastVisible, toastMessage, toastType, showToast } from '$lib/stores';
-    import { getSessionUser, userSignIn } from '$lib/apis/auths';
+    import { getSessionUser, userSignIn, requestPasswordReset } from '$lib/apis/auths';
 
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import UserIcon from '$lib/components/icons/UserIcon.svelte';
@@ -28,8 +28,15 @@
 
 	const resetPassword = async () => {
         loading = true;
-		showToast('success', 'If the email exists, a reset link has been sent.')
-        loading = false;
+        try {
+            await requestPasswordReset(email);
+		    showToast('success', 'If the email exists, a reset link has been sent.');
+        } catch (error) {
+            console.error('Error requesting password reset:', error);
+            showToast('error', 'An error occurred. Please try again later.');
+        } finally {
+            loading = false;
+        }
 	};
 
 
