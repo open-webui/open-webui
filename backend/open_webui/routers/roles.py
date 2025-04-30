@@ -136,7 +136,7 @@ async def add_new_default_permission_with_role(role_name: str, form_data: Permis
 
 
 ############################
-# DeletePermissionFromRole
+# LinkPermissionToRole
 ###########################
 
 @router.post("/{role_name}/permission/link")
@@ -164,6 +164,9 @@ async def link_default_permission_to_role(role_name: str, form_data: PermissionR
         detail='Something went wrong. Please try again.',
     )
 
+############################
+# UnlinkPermissionToRole
+###########################
 
 @router.delete("/{role_name}/permission/{permission_category}/{permission_name}")
 async def unlink_default_permission_from_role(
