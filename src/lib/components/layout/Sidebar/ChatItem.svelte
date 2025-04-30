@@ -17,6 +17,8 @@
 		getPinnedChatList,
 		updateChatById
 	} from '$lib/apis/chats';
+	import { generateTitle } from '$lib/apis';
+	import { createMessagesList } from '$lib/utils';
 	import {
 		chatId,
 		chatTitle as _chatTitle,
@@ -85,6 +87,56 @@
 			await pinnedChats.set(await getPinnedChatList(localStorage.token));
 
 			dispatch('change');
+		}
+	};
+
+	const regenerateTitleHandler = async () => {
+		const generatingToast = toast.loading($i18n.t('Generating new title...'));
+
+		try {
+			if (!chat) {
+				chat = await getChatById(localStorage.token, id);
+			}
+
+			if (!chat || !chat.chat || !chat.chat.history) {
+				throw new Error($i18n.t('Could not load chat history.'));
+			}
+
+			const history = chat.chat.history;
+			const messages = createMessagesList(history, history.currentId);
+
+			const messageContents: string[] = messages.map((msg: Message) => msg.content);
+
+			const model = chat.chat.models?.[0] ?? chat.models?.[0] ?? ''; 
+			if (!model) {
+				console.warn('Could not determine model for title generation, attempting without it.');
+			}
+
+			const newTitle = await generateTitle(localStorage.token, model, messages, id);
+
+			if (newTitle && newTitle !== 'New Chat') {
+				await updateChatById(localStorage.token, id, {
+					title: newTitle
+				});
+
+				if (id === $chatId) {
+					_chatTitle.set(newTitle);
+				}
+
+				currentChatPage.set(1);
+				await chats.set(await getChatList(localStorage.token, $currentChatPage));
+				await pinnedChats.set(await getPinnedChatList(localStorage.token));
+
+				dispatch('change');
+				toast.success($i18n.t('Title regenerated successfully!'));
+			} else {
+				throw new Error($i18n.t('Failed to generate a valid title.'));
+			}
+		} catch (error) {
+			console.error('Error regenerating title:', error);
+			toast.error(`${$i18n.t('Error regenerating title')}: ${error.message}`);
+		} finally {
+			toast.dismiss(generatingToast);
 		}
 	};
 
@@ -398,6 +450,9 @@
 						if (input) {
 							input.focus();
 						}
+					}}
+					regenerateTitleHandler={() => {
+						regenerateTitleHandler();
 					}}
 					deleteHandler={() => {
 						showDeleteConfirm = true;

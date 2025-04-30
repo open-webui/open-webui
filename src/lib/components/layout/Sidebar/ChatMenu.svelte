@@ -21,6 +21,7 @@
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Bookmark from '$lib/components/icons/Bookmark.svelte';
 	import BookmarkSlash from '$lib/components/icons/BookmarkSlash.svelte';
+	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import {
 		getChatById,
 		getChatPinnedStatusById,
@@ -37,6 +38,7 @@
 	export let cloneChatHandler: Function;
 	export let archiveChatHandler: Function;
 	export let renameHandler: Function;
+	export let regenerateTitleHandler: Function;
 	export let deleteHandler: Function;
 	export let onClose: Function;
 
@@ -211,6 +213,16 @@
 			>
 				<Pencil strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('Rename')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				on:click={() => {
+					regenerateTitleHandler();
+				}}
+			>
+				<Sparkles strokeWidth="2" />
+				<div class="flex items-center">{$i18n.t('Regenerate Title')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item

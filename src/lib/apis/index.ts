@@ -539,7 +539,7 @@ export const updateTaskConfig = async (token: string, config: object) => {
 export const generateTitle = async (
 	token: string = '',
 	model: string,
-	messages: string[],
+	messages: object[],
 	chat_id?: string
 ) => {
 	let error = null;
@@ -573,7 +573,43 @@ export const generateTitle = async (
 		throw error;
 	}
 
-	return res?.choices[0]?.message?.content.replace(/["']/g, '') ?? 'New Chat';
+	const content = res?.choices[0]?.message?.content;
+
+	if (content) {
+		try {
+			let potentialJson = content.trim();
+			if (potentialJson.startsWith('```json')) {
+				potentialJson = potentialJson.substring(7);
+			}
+			if (potentialJson.endsWith('```')) {
+				potentialJson = potentialJson.substring(0, potentialJson.length - 3);
+			}
+			potentialJson = potentialJson.trim(); 
+
+			const jsonStartIndex = potentialJson.indexOf('{');
+			const jsonEndIndex = potentialJson.lastIndexOf('}');
+
+			if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+				let jsonString = potentialJson.substring(jsonStartIndex, jsonEndIndex + 1);
+				jsonString = jsonString.replace(/\'/g, '"'); 
+				jsonString = jsonString.replace(/([\{\s,])'/g, '$1"'); 
+				jsonString = jsonString.replace( /'([\}\s,])/g, '"$1'); 
+
+				jsonString = jsonString.replace(/([{,])\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+
+				const parsed = JSON.parse(jsonString);
+				if (parsed && typeof parsed.title === 'string') {
+					return parsed.title.trim(); 
+				}
+			}
+		} catch (e) {
+			console.error('Failed to parse title JSON from response:', content, e);
+			return 'New Chat'; 
+		}
+	}
+
+	return 'New Chat';
+
 };
 
 export const generateTags = async (
