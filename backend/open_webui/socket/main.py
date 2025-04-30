@@ -192,6 +192,9 @@ async def connect(sid, environ, auth):
             # print(f"user {user.name}({user.id}) connected with session ID {sid}")
             await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
             await sio.emit("usage", {"models": get_models_in_use()})
+            return True
+    
+    return False
 
 
 @sio.on("user-join")
