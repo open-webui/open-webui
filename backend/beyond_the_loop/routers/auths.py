@@ -539,7 +539,7 @@ async def complete_registration(request: Request, response: Response, form_data:
         user = Users.complete_by_id(user.id, form_data.first_name, form_data.last_name, form_data.profile_image_url, new_company_id)
 
         Companies.create_company({
-                "id": new_company_id, "name": form_data.company_name, "credit_balance": 0, "size": form_data.company_size, "industry": form_data.company_industry, "team_function": form_data.company_team_function})
+                "id": new_company_id, "name": form_data.company_name, "credit_balance": 0, "size": form_data.company_size, "industry": form_data.company_industry, "team_function": form_data.company_team_function, "profile_image_url": form_data.company_profile_image_url})
 
     except Exception as err:
         raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))

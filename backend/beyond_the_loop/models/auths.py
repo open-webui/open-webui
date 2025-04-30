@@ -109,6 +109,7 @@ class CompleteRegistrationForm(BaseModel):
     company_size: str
     company_industry: str
     company_team_function: str
+    company_profile_image_url: str
 
 class SignupForm(BaseModel):
     name: str
