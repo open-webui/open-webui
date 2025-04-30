@@ -4,6 +4,7 @@
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import Source from './Source.svelte';
+	import { settings } from '$lib/stores';
 
 	export let id: string;
 	export let token: Token;
@@ -39,8 +40,24 @@
 			>
 			</iframe>
 		{/if}
-	{:else if token.text.includes(`<iframe src="${WEBUI_BASE_URL}/api/v1/files/`)}
-		{@html `${token.text}`}
+	{:else if token.text.includes(`<file type="html"`)}
+		{@const match = token.text.match(/<file type="html" id="([^"]+)"/)}
+		{@const fileId = match && match[1]}
+		{#if fileId}
+			<iframe
+				class="w-full my-2"
+				src={`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content/html`}
+				title="Content"
+				frameborder="0"
+				sandbox="allow-scripts{($settings?.iframeSandboxAllowForms ?? false)
+					? ' allow-forms'
+					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
+				referrerpolicy="strict-origin-when-cross-origin"
+				allowfullscreen
+				width="100%"
+				onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
+			></iframe>
+		{/if}
 	{:else if token.text.includes(`<source_id`)}
 		<Source {id} {token} onClick={onSourceClick} />
 	{:else}
