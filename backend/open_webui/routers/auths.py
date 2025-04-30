@@ -464,6 +464,11 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 # OAuth2 Callback
 ############################
 
+def is_valid_siret(siret):
+    VALID_SIRETS = [
+        "13002526500013", # DINUM
+    ]
+    return siret in VALID_SIRETS
 
 @router.get("/callback")
 async def auth_callback(request: Request, response: Response):
@@ -556,12 +561,12 @@ async def auth_callback(request: Request, response: Response):
         # Check if user exists in database
         db_user = Users.get_user_by_email(email)
         if not db_user:
-            # If no users exist yet, assign 'admin'; otherwise, use default role
-            role = (
-                "admin"
-                if Users.get_num_users() == 0
-                else request.app.state.config.DEFAULT_USER_ROLE
-            )
+            role = "user" if siret and is_valid_siret(siret) else request.app.state.config.DEFAULT_USER_ROLE
+            
+            # Si aucun utilisateur n'existe, attribuer le rôle 'admin'
+            if Users.get_num_users() == 0:
+                role = "admin"
+                
             db_user = Auths.insert_new_auth(
                 email=email,
                 password=secrets.token_urlsafe(32),  # Random password since we use OAuth
