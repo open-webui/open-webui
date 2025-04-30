@@ -497,22 +497,20 @@
 					id="hide-sidebar-button"
 					aria-label={$i18n.t('Hide Sidebar')}
 				>
-					<div class=" m-auto self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="size-5"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
-							/>
-						</svg>
-					</div>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="2"
+						stroke="currentColor"
+						class="size-5 m-auto self-center"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12"
+						/>
+					</svg>
 				</button>
 			</Tooltip>
 
@@ -886,14 +884,11 @@
 								}
 							}}
 						>
-							<div class="self-center mr-3">
-								<img
-									src={$user.profile_image_url}
-									class="max-w-[28px] object-cover rounded-full"
-									alt="User profile"
-									draggable="false"
-								/>
-							</div>
+							<img
+								src={$user?.profile_image_url}
+								class=" max-w-[30px] object-cover rounded-full self-center mr-3"
+								alt="User profile"
+							/>
 							<div class=" self-center font-medium">{$user?.name}</div>
 						</UserMenu>
 					</Tooltip>
