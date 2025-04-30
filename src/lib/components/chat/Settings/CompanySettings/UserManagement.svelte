@@ -44,9 +44,9 @@
    
     <div>
         {#if activeTab === 'users'}
-            <UsersTab users={users}/>
+            <UsersTab {users}/>
          {:else if activeTab === 'groups'}
-            <GroupsTabs/>
+            <GroupsTabs {users}/>
         {/if}
     </div>
 </div>

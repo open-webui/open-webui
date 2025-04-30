@@ -14,7 +14,7 @@
 	let inputElement;
 
     let isFocused = false;
-    $: emptyInputPlaceholderVisible = !isFocused && selected.length < 1;
+    $: emptyInputPlaceholderVisible = !isFocused && selected?.length < 1;
 
 
 	const tagColors = ['#272A6A', '#044B49', '#2F074F', '#27456A', '#0C2E18', '#47074F', '#6A2738'];
@@ -48,8 +48,8 @@
 			e.preventDefault();
 			addTag(input);
 			inputElement?.blur();
-		} else if (e.key === 'Backspace' && input === '' && selected.length > 0) {
-			selected = selected.slice(0, -1);
+		} else if (e.key === 'Backspace' && input === '' && selected?.length > 0) {
+			selected = selected?.slice(0, -1);
 		}
 	}
 </script>
@@ -63,13 +63,13 @@
 >
 	<button
         type="button"
-		class={`${isFocused ? 'border' : ''} dark:border-customGray-700 w-full flex flex-wrap items-center gap-2 bg-white dark:bg-customGray-900 rounded-md px-2.5 pb-1.5 ${selected.length > 0 ? 'pt-[22px]' : 'pt-1.5'}`}
+		class={`${isFocused ? 'border' : ''} dark:border-customGray-700 w-full flex flex-wrap items-center gap-2 bg-white dark:bg-customGray-900 rounded-md px-2.5 pb-1.5 ${selected?.length > 0 ? 'pt-[22px]' : 'pt-1.5'}`}
 		on:click={() => {
             inputElement.focus();
             emptyInputPlaceholderVisible = false;
         }}
 	>
-        {#if selected.length > 0}
+        {#if selected?.length > 0}
         <div class="absolute top-1 text-xs text-customGray-100/50">{$i18n.t('Category')}</div>
         {/if}
         {#if emptyInputPlaceholderVisible}
@@ -78,21 +78,23 @@
             <p class="text-xs dark:text-customGray-100/50">{$i18n.t('E.g. Finance or Marketing or Name of project')}</p>
         </div>
         {/if}
-		{#each selected as tag, i}
-			<span
-				style="background-color: {getTagColor(tag.name)}"
-				class="px-2 py-1 rounded-lg text-sm leading-none text-customGray-100 flex items-center"
-			>
-				{tag.name}
-				<button
-					type="button"
-					class="ml-1 hover:text-white"
-					on:click={() => (selected = selected.filter((_, idx) => idx !== i))}
+		{#if selected}
+			{#each selected as tag, i}
+				<span
+					style="background-color: {getTagColor(tag.name)}"
+					class="px-2 py-1 rounded-lg text-sm leading-none text-customGray-100 flex items-center"
 				>
-                <CloseTagIcon/>
-				</button>
-			</span>
-		{/each}
+					{tag.name}
+					<button
+						type="button"
+						class="ml-1 hover:text-white"
+						on:click={() => (selected = selected.filter((_, idx) => idx !== i))}
+					>
+					<CloseTagIcon/>
+					</button>
+				</span>
+			{/each}
+		{/if}
 
 		<input
 			bind:this={inputElement}
@@ -103,7 +105,7 @@
                 isFocused = true;
             }}
 		    on:blur={() => {
-                if(selected.length < 1) {
+                if(selected?.length < 1) {
                     setTimeout(() => {
                     isFocused = false;
                 }, 200)
@@ -116,7 +118,7 @@
 		/>
         </button>
 
-	{#if showDropdown && (available.length > 0 || input)}
+	{#if showDropdown && (available?.length > 0 || input)}
 		<div
 			class="max-h-60 overflow-y-auto absolute left-0 right-0 -mt-1 bg-white dark:bg-customGray-900 px-1 py-2 border-l border-b border-r border-gray-300 dark:border-customGray-700 rounded-b-lg shadow z-10"
 		>

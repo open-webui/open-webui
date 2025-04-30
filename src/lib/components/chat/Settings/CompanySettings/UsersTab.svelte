@@ -80,7 +80,7 @@
 	};
 </script>
 
-<div>
+<div class="pb-24">
 	<div
 		class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5"
 	>
@@ -285,7 +285,8 @@
 			</div>
 			{#if (user?.first_name === 'INVITED')}
 				<div class="invisible group-hover:visible h-4">
-					<InviteMenu
+					<InviteMenu {user}/>
+					<!-- <InviteMenu
 						editHandler={async () => {
 						}}
 						deleteHandler={async () => {
@@ -300,7 +301,7 @@
 						>
 							<EllipsisHorizontal className="size-5" />
 						</button>
-					</InviteMenu>
+					</InviteMenu> -->
 				</div>
 			{:else}
 				<div></div>
