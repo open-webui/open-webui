@@ -116,65 +116,54 @@ export const updateUserRole = async (token: string, id: string, role: string) =>
 	return res;
 };
 
-export const getUsers = async (token: string, page?: number, limit: number = 10, q?: string) => {
+export const getUsers = async (
+	token: string,
+	query?: string,
+	orderBy?: string,
+	direction?: string,
+	page = 1
+) => {
 	let error = null;
 	let res = null;
-	if (q !== undefined) {
-		res = await fetch(`${WEBUI_API_BASE_URL}/users/?q=${q}`, {
-			method: 'GET',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${token}`
-			}
-		})
-			.then(async (res) => {
-				if (!res.ok) throw await res.json();
-				return res.json();
-			})
-			.catch((err) => {
-				console.log(err);
-				error = err.detail;
-				return null;
-			});
-		} else if (page !== undefined) {
-		res = await fetch(`${WEBUI_API_BASE_URL}/users/?page=${page}&limit=${limit}`, {
-			method: 'GET',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${token}`
-			}
-		})
-			.then(async (res) => {
-				if (!res.ok) throw await res.json();
-				return res.json();
-			})
-			.catch((err) => {
-				console.log(err);
-				error = err.detail;
-				return null;
-			});
-	} else {
-		res = await fetch(`${WEBUI_API_BASE_URL}/users/`, {
-			method: 'GET',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${token}`
-			}
-		})
-			.then(async (res) => {
-				if (!res.ok) throw await res.json();
-				return res.json();
-			})
-			.catch((err) => {
-				console.log(err);
-				error = err.detail;
-				return null;
-			});
+
+	let searchParams = new URLSearchParams();
+
+	searchParams.set('page', `${page}`);
+
+	if (query) {
+		searchParams.set('query', query);
 	}
+
+	if (orderBy) {
+		searchParams.set('order_by', orderBy);
+	}
+
+	if (direction) {
+		searchParams.set('direction', direction);
+	}
+
+	res = await fetch(`${WEBUI_API_BASE_URL}/users/?${searchParams.toString()}`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
 	if (error) {
 		throw error;
 	}
-	return res ? res : [];
+
+	return res;
 };
 
 export const getUserSettings = async (token: string) => {

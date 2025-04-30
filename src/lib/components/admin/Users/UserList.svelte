@@ -33,13 +33,16 @@
 
 	const i18n = getContext('i18n');
 
-	export let totalUsers = 0;
-	let users = []
-
-	let search = '';
-	let selectedUser = null;
-
 	let page = 1;
+
+	let users = [];
+	let total = 0;
+
+	let query = '';
+	let orderBy = 'created_at'; // default sort key
+	let direction = 'asc'; // default sort order
+
+	let selectedUser = null;
 
 	let showDeleteConfirmDialog = false;
 	let showAddUserModal = false;
@@ -54,7 +57,7 @@
 		});
 
 		if (res) {
-			users = await getUsers(localStorage.token);
+			getUserList();
 		}
 	};
 
@@ -64,48 +67,43 @@
 			return null;
 		});
 		if (res) {
-			users = await getUsers(localStorage.token);
+			getUserList();
 		}
 	};
 
-	const fetchUserPage = async () => {
-		try {
-			users = await getUsers(localStorage.token, page);
-		} catch (err) {
-			console.error("Error fetching users: " + err);
-		}
-	};
-	let sortKey = 'created_at'; // default sort key
-	let sortOrder = 'asc'; // default sort order
-
-	function setSortKey(key) {
-		if (sortKey === key) {
-			sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+	const setSortKey = (key) => {
+		if (orderBy === key) {
+			direction = direction === 'asc' ? 'desc' : 'asc';
 		} else {
-			sortKey = key;
-			sortOrder = 'asc';
+			orderBy = key;
+			direction = 'asc';
 		}
-	}
+	};
 
-	const queryUser = async (q) => {
+	const getUserList = async () => {
 		try {
-			const result = await getUsers(localStorage.token, undefined, 10, q);
-			filteredUsers = result.slice((page - 1) * 10, page * 10);
+			const res = await getUsers(localStorage.token, query, orderBy, direction, page).catch(
+				(error) => {
+					toast.error(`${error}`);
+					return null;
+				}
+			);
+
+			if (res) {
+				users = res.users;
+				total = res.total;
+			}
 		} catch (err) {
 			console.error(err);
 		}
 	};
 
-	let filteredUsers;
-	$: if (search.trim() === '') {
-		filteredUsers = users
-			.sort((a, b) => {
-				if (a[sortKey] < b[sortKey]) return sortOrder === 'asc' ? -1 : 1;
-				if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
-				return 0;
-			})
-	} else {
-		queryUser(search);
+	$: if (page) {
+		getUserList();
+	}
+
+	$: if (query !== null && orderBy && direction) {
+		getUserList();
 	}
 </script>
 
@@ -122,7 +120,7 @@
 		{selectedUser}
 		sessionUser={$user}
 		on:save={async () => {
-			users = await getUsers(localStorage.token);
+			getUserList();
 		}}
 	/>
 {/key}
@@ -130,7 +128,7 @@
 <AddUserModal
 	bind:show={showAddUserModal}
 	on:save={async () => {
-		users = await getUsers(localStorage.token);
+		getUserList();
 	}}
 />
 <UserChatsModal bind:show={showUserChatsModal} user={selectedUser} />
@@ -193,7 +191,7 @@
 				</div>
 				<input
 					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-					bind:value={search}
+					bind:value={query}
 					placeholder={$i18n.t('Search')}
 				/>
 			</div>
@@ -232,9 +230,9 @@
 					<div class="flex gap-1.5 items-center">
 						{$i18n.t('Role')}
 
-						{#if sortKey === 'role'}
+						{#if orderBy === 'role'}
 							<span class="font-normal"
-								>{#if sortOrder === 'asc'}
+								>{#if direction === 'asc'}
 									<ChevronUp className="size-2" />
 								{:else}
 									<ChevronDown className="size-2" />
@@ -255,9 +253,9 @@
 					<div class="flex gap-1.5 items-center">
 						{$i18n.t('Name')}
 
-						{#if sortKey === 'name'}
+						{#if orderBy === 'name'}
 							<span class="font-normal"
-								>{#if sortOrder === 'asc'}
+								>{#if direction === 'asc'}
 									<ChevronUp className="size-2" />
 								{:else}
 									<ChevronDown className="size-2" />
@@ -278,9 +276,9 @@
 					<div class="flex gap-1.5 items-center">
 						{$i18n.t('Email')}
 
-						{#if sortKey === 'email'}
+						{#if orderBy === 'email'}
 							<span class="font-normal"
-								>{#if sortOrder === 'asc'}
+								>{#if direction === 'asc'}
 									<ChevronUp className="size-2" />
 								{:else}
 									<ChevronDown className="size-2" />
@@ -302,9 +300,9 @@
 					<div class="flex gap-1.5 items-center">
 						{$i18n.t('Last Active')}
 
-						{#if sortKey === 'last_active_at'}
+						{#if orderBy === 'last_active_at'}
 							<span class="font-normal"
-								>{#if sortOrder === 'asc'}
+								>{#if direction === 'asc'}
 									<ChevronUp className="size-2" />
 								{:else}
 									<ChevronDown className="size-2" />
@@ -324,9 +322,9 @@
 				>
 					<div class="flex gap-1.5 items-center">
 						{$i18n.t('Created at')}
-						{#if sortKey === 'created_at'}
+						{#if orderBy === 'created_at'}
 							<span class="font-normal"
-								>{#if sortOrder === 'asc'}
+								>{#if direction === 'asc'}
 									<ChevronUp className="size-2" />
 								{:else}
 									<ChevronDown className="size-2" />
@@ -348,9 +346,9 @@
 					<div class="flex gap-1.5 items-center">
 						{$i18n.t('OAuth ID')}
 
-						{#if sortKey === 'oauth_sub'}
+						{#if orderBy === 'oauth_sub'}
 							<span class="font-normal"
-								>{#if sortOrder === 'asc'}
+								>{#if direction === 'asc'}
 									<ChevronUp className="size-2" />
 								{:else}
 									<ChevronDown className="size-2" />
@@ -368,7 +366,7 @@
 			</tr>
 		</thead>
 		<tbody class="">
-			{#each filteredUsers as user, userIdx}
+			{#each users as user, userIdx}
 				<tr class="bg-white dark:bg-gray-900 dark:border-gray-850 text-xs">
 					<td class="px-3 py-1 min-w-[7rem] w-28">
 						<button
@@ -495,10 +493,10 @@
 	ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
 </div>
 
-<Pagination bind:page count={totalUsers} perPage={10}/>
+<Pagination bind:page count={total} perPage={10} />
 
 {#if !$config?.license_metadata}
-	{#if totalUsers > 50}
+	{#if total > 50}
 		<div class="text-sm">
 			<Markdown
 				content={`

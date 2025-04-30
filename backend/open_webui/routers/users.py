@@ -6,6 +6,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.chats import Chats
 from open_webui.models.users import (
     UserModel,
+    UserListResponse,
     UserRoleUpdateForm,
     Users,
     UserSettings,
@@ -33,23 +34,38 @@ router = APIRouter()
 ############################
 
 
-@router.get("/", response_model=list[UserModel])
+PAGE_ITEM_COUNT = 10
+
+
+@router.get("/", response_model=UserListResponse)
 async def get_users(
-    page: Optional[int] = None,
-    limit: Optional[int] = None,
-    q: Optional[str] = None,
+    query: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    page: Optional[int] = 1,
     user=Depends(get_admin_user),
 ):
-    if q:
-        skip: Optional[int] = None
-        if page:
-            skip = (page - 1) * limit
-        return Users.get_users(skip=skip, limit=limit, query_key=q)
-    else:
-        skip: Optional[int] = None
-        if page:
-            skip = (page - 1) * limit
-        return Users.get_users(skip=skip, limit=limit)
+    limit = PAGE_ITEM_COUNT
+
+    page = max(1, page)
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter["query"] = query
+    if order_by:
+        filter["order_by"] = order_by
+    if direction:
+        filter["direction"] = direction
+
+    return Users.get_users(filter=filter, skip=skip, limit=limit)
+
+
+@router.get("/all", response_model=UserListResponse)
+async def get_all_users(
+    user=Depends(get_admin_user),
+):
+    return Users.get_users()
 
 
 ############################
