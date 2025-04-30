@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher } from 'svelte';
 	import { onMount, getContext } from 'svelte';
-	import { addUser, inviteUser } from '$lib/apis/auths';
+	import { addUser, inviteUsers } from '$lib/apis/auths';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -47,7 +47,7 @@
 			// 		toast.error(`${error}`);
 			// 	}
 			// );
-			const res = await inviteUser(localStorage.token, _user.email, _user.role).catch(
+			const res = await inviteUsers(localStorage.token, _user.email, _user.role).catch(
 				(error) => {
 					toast.error(`${error}`);
 				}

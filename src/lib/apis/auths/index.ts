@@ -428,10 +428,9 @@ export const addUser = async (
 	return res;
 };
 
-export const inviteUser = async (
+export const inviteUsers = async (
 	token: string,
-	email: string,
-	role: string = 'pending'
+	invitees: { email: string; role: string }[]
 ) => {
 	let error = null;
 
@@ -442,8 +441,7 @@ export const inviteUser = async (
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			email: email,
-			role: role
+			invitees
 		})
 	})
 		.then(async (res) => {
