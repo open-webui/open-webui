@@ -23,13 +23,18 @@
 	import GroupItem from './Groups/GroupItem.svelte';
 	import AddGroupModal from './Groups/AddGroupModal.svelte';
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
-	import { getUserDefaultPermissions, updateUserDefaultPermissions } from '$lib/apis/users';
+	import {
+		getUserDefaultPermissions,
+		getAllUsers,
+		updateUserDefaultPermissions
+	} from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
 	let loaded = false;
 
-	export let users = [];
+	let users = [];
+	let total = 0;
 
 	let groups = [];
 	let filteredGroups;
@@ -118,10 +123,22 @@
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
 			await goto('/');
-		} else {
-			await setGroups();
-			defaultPermissions = await getUserDefaultPermissions(localStorage.token);
+			return;
 		}
+
+		const res = await getAllUsers(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			users = res.users;
+			total = res.total;
+		}
+
+		await setGroups();
+		defaultPermissions = await getUserDefaultPermissions(localStorage.token);
+
 		loaded = true;
 	});
 </script>
