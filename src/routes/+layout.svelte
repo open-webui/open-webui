@@ -50,6 +50,8 @@
 
 	setContext('i18n', i18n);
 
+	// hello world
+	// this is testing only not effect on the code
 	const bc = new BroadcastChannel('active-tab-channel');
 
 	let loaded = false;
