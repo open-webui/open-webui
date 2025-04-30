@@ -34,7 +34,7 @@
 
 	let detectArtifacts = true;
 
-	let richTextInput = true;
+	let richTextInput = false;
 	let promptAutocomplete = false;
 
 	let largeTextAsFile = false;
@@ -283,7 +283,7 @@
 		showEmojiInCall = $settings.showEmojiInCall ?? false;
 		voiceInterruption = $settings.voiceInterruption ?? false;
 
-		richTextInput = $settings.richTextInput ?? true;
+		richTextInput = $settings.richTextInput ?? false;
 		promptAutocomplete = $settings.promptAutocomplete ?? false;
 		largeTextAsFile = $settings.largeTextAsFile ?? false;
 		copyFormatted = $settings.copyFormatted ?? false;
