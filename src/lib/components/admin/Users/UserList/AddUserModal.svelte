@@ -47,7 +47,7 @@
 			// 		toast.error(`${error}`);
 			// 	}
 			// );
-			const res = await inviteUsers(localStorage.token, _user.email, _user.role).catch(
+			const res = await inviteUsers(localStorage.token, [{email: _user.email, role: _user.role}]).catch(
 				(error) => {
 					toast.error(`${error}`);
 				}
