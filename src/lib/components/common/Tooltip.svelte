@@ -51,6 +51,10 @@
 				trigger: 'mouseenter focus focusin',
 				interactive: true,
 				placement: placement,
+				aria: {
+					content: 'auto',
+					expanded: false
+				},
 				allowHTML: allowHTML,
 				touch: touch,
 				...(theme !== '' ? { theme } : { theme: 'dark' }),
