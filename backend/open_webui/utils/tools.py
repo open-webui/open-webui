@@ -279,8 +279,8 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
 
     docstring = func.__doc__
 
-    description = parse_description(docstring)
-    function_descriptions = parse_docstring(docstring)
+    function_description = parse_description(docstring)
+    function_param_descriptions = parse_docstring(docstring)
 
     field_defs = {}
     for name, param in parameters.items():
@@ -288,15 +288,15 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
         type_hint = type_hints.get(name, Any)
         default_value = param.default if param.default is not param.empty else ...
 
-        description = function_descriptions.get(name, None)
+        param_description = function_param_descriptions.get(name, None)
 
-        if description:
-            field_defs[name] = type_hint, Field(default_value, description=description)
+        if param_description:
+            field_defs[name] = type_hint, Field(default_value, description=param_description)
         else:
             field_defs[name] = type_hint, default_value
 
     model = create_model(func.__name__, **field_defs)
-    model.__doc__ = description
+    model.__doc__ = function_description
 
     return model
 
