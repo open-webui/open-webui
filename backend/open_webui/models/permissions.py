@@ -70,7 +70,46 @@ class PermissionRoleForm(BaseModel):
 
 class PermissionsTable:
 
-    # TODO: if config is not persistent enabled, just return default permissions
+    def get_default(self) -> dict[PermissionCategory, dict[str, bool]]:
+        with get_db() as db:
+            result = {}
+
+            # First, get the user role permissions as defaults if requesting permissions for a different role
+            user_role = db.query(Role).filter_by(name="user").first()
+            if user_role:
+                # Query the RolePermission association objects for the user role
+                user_role_permissions = db.query(RolePermission).filter_by(role_id=user_role.id).all()
+
+                # Create a mapping of permission_id to value for user role
+                user_permission_values = {rp.permission_id: rp.value for rp in user_role_permissions}
+
+                # Get all permissions associated with user role
+                user_permissions = db.query(Permission).filter(
+                    Permission.id.in_([rp.permission_id for rp in user_role_permissions])
+                ).all()
+
+                # Build default permissions dictionary
+                for perm in user_permissions:
+                    category = perm.category.value
+                    if category not in result:
+                        result[category] = {}
+
+                    result[category][perm.name] = user_permission_values[perm.id]
+
+            # Add all permissions from the permission table that are missing in the result
+            # with a default value of False
+            all_permissions = db.query(Permission).all()
+            for perm in all_permissions:
+                category = perm.category.value
+                if category not in result:
+                    result[category] = {}
+
+                # Only add if not already in result
+                if perm.name not in result[category]:
+                    result[category][perm.name] = False
+
+            return result
+
     def get_ordre_by_category(self, role_name: str = "user") -> dict[PermissionCategory, dict[str, bool]]:
         with get_db() as db:
             result = {}
@@ -119,8 +158,21 @@ class PermissionsTable:
                 # Override default with target role's value
                 result[category][perm.name] = target_permission_values[perm.id]
 
+            # Add all permissions from the permission table that are missing in the result
+            # with a default value of False
+            all_permissions = db.query(Permission).all()
+            for perm in all_permissions:
+                category = perm.category.value
+                if category not in result:
+                    result[category] = {}
+
+                # Only add if not already in result
+                if perm.name not in result[category]:
+                    result[category][perm.name] = False
+
             return result
 
+    # TODO: if config is not persistent enabled, just override permissions given
     def set_initial_permissions(self, default_permissions: dict[PermissionCategory, dict[str, bool]],
                                 role_name: str = "user") -> dict[PermissionCategory, dict[str, bool]]:
         with get_db() as db:
