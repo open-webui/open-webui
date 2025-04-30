@@ -159,7 +159,7 @@ async def get_all_models(request):
                     "object": "model",
                     "created": custom_model.created_at,
                     "owned_by": owned_by,
-                    "info": custom_model.model_dump(),
+                    "info": {**custom_model.model_dump(), "params": None},
                     "preset": True,
                     **({"pipe": pipe} if pipe is not None else {}),
                     "action_ids": action_ids,
