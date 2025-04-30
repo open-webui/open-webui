@@ -869,7 +869,8 @@ export const completeRegistration = async (
 	company_name:string,
 	company_size: string,
 	company_industry: string,
-	company_team_function: string
+	company_team_function: string,
+	company_profile_image_url: string
 ) => {
 	let error = null;
 
@@ -878,7 +879,7 @@ export const completeRegistration = async (
 		headers: {
 			'Content-Type': 'application/json'
 		},
-		credentials: 'include',
+		// credentials: 'include',
 		body: JSON.stringify({
 			first_name,
 			last_name,
@@ -888,7 +889,8 @@ export const completeRegistration = async (
 			company_name,
 			company_size,
 			company_industry,
-			company_team_function
+			company_team_function,
+			company_profile_image_url
 		})
 	})
 		.then(async (res) => {

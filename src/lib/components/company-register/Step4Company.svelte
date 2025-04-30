@@ -32,7 +32,7 @@
 
    
 	export let company_name = '';
-    export let company_logo_url = '';
+    export let company_profile_image_url = '';
     export let company_size = '';
     export let company_industry = '';
 	export let company_team_function = '';
@@ -140,7 +140,7 @@
 						const compressedSrc = canvas.toDataURL('image/jpeg');
 
 						// Display the compressed image
-						company_logo_url = compressedSrc;
+						company_profile_image_url = compressedSrc;
 
 						logoImageInputElement.files = null;
 					};
@@ -163,9 +163,9 @@
                     logoImageInputElement.click();
                 }}
             >
-                {#if company_logo_url}
+                {#if company_profile_image_url}
                     <img
-                        src={company_logo_url}
+                        src={company_profile_image_url}
                         alt="model profile"
                         class="rounded-lg size-16 object-cover shrink-0"
                     />

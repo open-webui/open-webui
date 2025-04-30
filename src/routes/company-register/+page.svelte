@@ -33,7 +33,7 @@
 	let company_size = COMPANY_SIZE_OPTIONS[0];
 	let company_industry = INDUSTRY_OPTIONS[0];
 	let company_team_function = TEAM_FUNCTION_OPTIONS[0];
-	let company_logo_url = '';
+	let company_profile_image_url = '';
 
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
@@ -61,7 +61,8 @@
 				company_name,
 				company_size,
 				company_industry,
-				company_team_function
+				company_team_function,
+				company_profile_image_url ? company_profile_image_url : generateInitialsImage(company_name)
 			);
 			await setSessionUser(user);
 		}
@@ -94,7 +95,7 @@
 		<Step4Company
 			on:next={goNext}
 			on:back={goBack}
-			bind:company_logo_url
+			bind:company_profile_image_url
 			bind:company_name
 			bind:company_size
 			bind:company_industry
