@@ -614,6 +614,7 @@
 									<div>
 										<button
 											id="save-new-message-button"
+											aria-label={$i18n.t('Save as Copy')}
 											class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl focus:outline-2 focus:outline-black dark:focus:outline-white"
 											on:click={() => {
 												saveAsCopyHandler();
@@ -719,27 +720,30 @@
 						>
 							{#if siblings.length > 1}
 								<div class="flex self-center min-w-fit">
-									<button
-										class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
-										on:click={() => {
-											showPreviousMessage(message);
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke="currentColor"
-											stroke-width="2.5"
-											class="size-3.5"
+									<Tooltip content={$i18n.t('Previous Response')} placement="bottom">
+										<button
+											aria-label={$i18n.t('Previous Response')}
+											class="self-center p-1 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-white hover:text-black rounded-md transition"
+											on:click={() => {
+												showPreviousMessage(message);
+											}}
 										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												d="M15.75 19.5 8.25 12l7.5-7.5"
-											/>
-										</svg>
-									</button>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke="currentColor"
+												stroke-width="2.5"
+												class="size-3.5"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													d="M15.75 19.5 8.25 12l7.5-7.5"
+												/>
+											</svg>
+										</button>
+									</Tooltip>
 
 									<div
 										class="text-sm tracking-widest font-semibold self-center dark:text-gray-100 min-w-fit"
@@ -802,6 +806,7 @@
 
 								<Tooltip content={$i18n.t('Copy')} placement="bottom">
 									<button
+										aria-label={$i18n.t('Copy')}
 										class=" p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition copy-response-button"
 										on:click={() => {
 											copyToClipboard(message.content);
@@ -827,6 +832,7 @@
 								<Tooltip content={$i18n.t('Read Aloud')} placement="bottom">
 									<button
 										id="speak-button-{message.id}"
+										aria-label={$i18n.t('Read Aloud')}
 										class=" p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
 										on:click={() => {
 											if (!loadingSpeech) {
@@ -1078,6 +1084,7 @@
 										<Tooltip content={$i18n.t('Continue Response')} placement="bottom">
 											<button
 												type="button"
+												aria-label={$i18n.t('Continue Response')}
 												id="continue-response-button"
 												class=" p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 												on:click={() => {
@@ -1110,6 +1117,7 @@
 									<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
 										<button
 											type="button"
+											aria-label={$i18n.t('Regenerate')}
 											class="p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition regenerate-response-button"
 											on:click={() => {
 												showRateComment = false;
