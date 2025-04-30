@@ -30,32 +30,41 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
 
-############################
-# Invite
-############################
-
 
 @router.post("/invite")
 async def invite_user(form_data: UserInviteForm, user=Depends(get_admin_user)):
-    if not validate_email_format(form_data.email.lower()):
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
+    invited_users = []
+    
+    for invitee in form_data.invitees:
+        if not validate_email_format(invitee.email.lower()):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
+            )
+
+        if Users.get_user_by_email(invitee.email.lower()):
+            raise HTTPException(400, detail=f"Email {invitee.email} is already taken")
+
+        invite_token = hashlib.sha256(invitee.email.lower().encode()).hexdigest()
+
+        # Send welcome email with the generated password
+        email_service = EmailService()
+        email_service.send_invite_mail(
+            to_email=invitee.email.lower(),
+            invite_token=invite_token
         )
 
-    if Users.get_user_by_email(form_data.email.lower()):
-        raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
+        new_user = Users.insert_new_user(
+            str(uuid.uuid4()), 
+            "INVITED", 
+            "INVITED", 
+            invitee.email.lower(), 
+            user.company_id, 
+            role=invitee.role,
+            invite_token=invite_token
+        )
+        invited_users.append(new_user)
 
-    invite_token = hashlib.sha256(form_data.email.lower().encode()).hexdigest()
-
-    # Send welcome email with the generated password
-    email_service = EmailService()
-    email_service.send_invite_mail(
-        to_email=form_data.email.lower(),
-        invite_token=invite_token
-    )
-
-    return Users.insert_new_user(str(uuid.uuid4()), "INVITED", "INVITED", form_data.email.lower(), user.company_id, role=form_data.role,
-                          invite_token=invite_token)
+    return invited_users
 
 
 ############################

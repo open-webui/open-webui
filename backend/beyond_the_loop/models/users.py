@@ -120,9 +120,13 @@ class UserUpdateForm(BaseModel):
     password: Optional[str] = None
 
 
-class UserInviteForm(BaseModel):
+class InviteeData(BaseModel):
     email: str
     role: str
+
+
+class UserInviteForm(BaseModel):
+    invitees: list[InviteeData]
 
 
 class UserCreateForm(BaseModel):
