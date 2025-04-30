@@ -5,6 +5,7 @@
 	const steps = [
 		'Account creation',
 		'Verify mail',
+		'Personal information',
 		'Create company profile',
 		'Invite team members'
 	];

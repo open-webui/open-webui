@@ -5,9 +5,6 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
-	import { getBackendConfig } from '$lib/apis';
-	import { completeInvite } from '$lib/apis/auths';
-
 	import {
 		WEBUI_NAME,
 		config,
@@ -35,7 +32,7 @@
 
    
 	export let company_name = '';
-    export let profile_image_url = '';
+    export let company_logo_url = '';
     export let company_size = '';
     export let company_industry = '';
 	export let company_team_function = '';
@@ -67,6 +64,8 @@
 
     let teamDropdown = false;
     let teamDropdownRef;
+
+    let logoImageInputElement;
     
 </script>
 
@@ -94,6 +93,102 @@
 			{$i18n.t('Let’s go to know your company ant team')}
 		</div>
 	</div>
+    <input
+			id="profile-image-input"
+			bind:this={logoImageInputElement}
+			type="file"
+			hidden
+			accept="image/*"
+			on:change={(e) => {
+				const files = logoImageInputElement.files ?? [];
+				let reader = new FileReader();
+				reader.onload = (event) => {
+					let originalImageUrl = `${event.target.result}`;
+
+					const img = new Image();
+					img.src = originalImageUrl;
+
+					img.onload = function () {
+						const canvas = document.createElement('canvas');
+						const ctx = canvas.getContext('2d');
+
+						// Calculate the aspect ratio of the image
+						const aspectRatio = img.width / img.height;
+
+						// Calculate the new width and height to fit within 250x250
+						let newWidth, newHeight;
+						if (aspectRatio > 1) {
+							newWidth = 250 * aspectRatio;
+							newHeight = 250;
+						} else {
+							newWidth = 250;
+							newHeight = 250 / aspectRatio;
+						}
+
+						// Set the canvas size
+						canvas.width = 250;
+						canvas.height = 250;
+
+						// Calculate the position to center the image
+						const offsetX = (250 - newWidth) / 2;
+						const offsetY = (250 - newHeight) / 2;
+
+						// Draw the image on the canvas
+						ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
+
+						// Get the base64 representation of the compressed image
+						const compressedSrc = canvas.toDataURL('image/jpeg');
+
+						// Display the compressed image
+						company_logo_url = compressedSrc;
+
+						logoImageInputElement.files = null;
+					};
+				};
+
+				if (
+					files.length > 0 &&
+					['image/gif', 'image/webp', 'image/jpeg', 'image/png'].includes(files[0]['type'])
+				) {
+					reader.readAsDataURL(files[0]);
+				}
+			}}
+		/>
+    <div class="self-center flex justify-center flex-shrink-0">
+        <div class="self-center">
+            <button
+                class="rounded-xl flex flex-shrink-0 items-center shadow-xl group relative"
+                type="button"
+                on:click={() => {
+                    logoImageInputElement.click();
+                }}
+            >
+                {#if company_logo_url}
+                    <img
+                        src={company_logo_url}
+                        alt="model profile"
+                        class="rounded-lg size-16 object-cover shrink-0"
+                    />
+                {:else}
+                    <div class="rounded-lg size-16 shrink-0 bg-customGray-900 dark:text-customGray-800">
+                        <UserIcon className="size-16"/>
+                    </div>
+                {/if}
+
+                <div class="absolute bottom-0 right-0 z-10">
+                    <div class="-m-2">
+                        <div
+                            class="p-1 rounded-lg border border-white dark:bg-customGray-900 bg-gray-800 text-white transition dark:border-customGray-700 dark:text-white"
+                        >
+                            <Plus className="size-3" />
+                        </div>
+                    </div>
+                    <div class="text-xs -top-1 left-5 dark:text-customGray-200 absolute whitespace-nowrap">{$i18n.t('Add company logo')}</div>  
+                </div>
+            </button>
+        </div>
+    </div>
+    <div class="text-xs dark:text-customGray-100/50 mb-2.5 mt-5">{$i18n.t('We only support PNGs, JPEGs and GIFs under 10MB')}</div>
 
 	<div class="flex-1 mb-2.5">
 		<div class="relative w-full dark:bg-customGray-900 rounded-md">

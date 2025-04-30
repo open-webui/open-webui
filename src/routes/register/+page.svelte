@@ -16,6 +16,8 @@
 	import CustomToast from '$lib/components/common/CustomToast.svelte';
 	import LoaderIcon from '$lib/components/icons/LoaderIcon.svelte';
 	import HidePassIcon from '$lib/components/icons/HidePassIcon.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import InfoIcon from '$lib/components/icons/InfoIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -37,6 +39,8 @@
 	onMount(() => {
 		if ($page.url.searchParams.get('inviteToken')) {
 			inviteToken = $page.url.searchParams.get('inviteToken')
+		}else{
+			goto('/company-register')
 		}
 	})
 
@@ -201,6 +205,7 @@
 								<Plus className="size-3" />
 							</div>
 						</div>
+						<div class="text-xs -top-1 left-5 dark:text-customGray-200 absolute whitespace-nowrap">{$i18n.t('Add a photo')}</div>
 					</div>
 				</button>
 			</div>
@@ -236,7 +241,7 @@
 				/>
 			</div>
 		</div>
-		<div class="flex flex-col w-full mb-2.5">
+		<div class="relative flex flex-col w-full mb-2.5">
 			<div class="relative w-full dark:bg-customGray-900 rounded-md">
 				{#if password}
 					<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
@@ -276,6 +281,11 @@
 					{/if}
 				</button>
 			</div>
+			<Tooltip className="absolute -right-6 top-3 cursor-pointer" content={$i18n.t('Password must be 8+ characters, with a number, capital letter, and symbol.')}>
+				<div class="flex justify-center items-center w-[18px] h-[18px] rounded-full dark:bg-customGray-700">
+					<InfoIcon className="size-6"/>
+				</div>
+			</Tooltip> 
 		</div>
 		<div class="flex flex-col w-full mb-2.5">
 			<div class="relative w-full dark:bg-customGray-900 rounded-md">

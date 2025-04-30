@@ -111,7 +111,7 @@
 >
     <div></div>
 	<form
-		class="flex flex-col self-center dark:bg-customGray-800 rounded-2xl w-[31rem] pt-7 px-24 pb-4"
+		class="flex flex-col self-center dark:bg-customGray-800 rounded-2xl w-[31rem] py-7 px-24"
 		on:submit={(e) => {
 			e.preventDefault();
 			signInHandler();
@@ -203,7 +203,7 @@
 				</div>
 			{/if}
 		</button>
-        <hr class=" border-gray-50 dark:border-customGray-700 mb-2 mt-6" />
+        <!-- <hr class=" border-gray-50 dark:border-customGray-700 mb-2 mt-6" />
         <div class="text-xs dark:text-customGray-300 text-center font-medium mb-2.5">Or</div>
         <div class="flex flex-col space-y-2">
             {#if $config?.oauth?.providers?.google}
@@ -256,6 +256,7 @@
                     <span>{$i18n.t('Continue with {{provider}}', { provider: 'Microsoft' })}</span>
                 </button>
             {/if}
+		</div> -->
 	</form>
     
     <div class="self-center text-xs dark:text-customGray-100 pb-5">By using this service, you agree to our <a href="/">Terms</a> and <a href="/">Conditions</a>.</div>

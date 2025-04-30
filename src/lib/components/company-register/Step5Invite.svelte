@@ -35,6 +35,7 @@
 
 	let input = '';
 	let inputRef: HTMLInputElement;
+	let emailFocused = false;
 
 	const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
@@ -84,7 +85,19 @@
 			{$i18n.t('Invite your team to join your workspace')}
 		</div>
 	</div>
-    <div class="bg-white dark:bg-customGray-900 rounded-md" style="min-height: 100px;">
+    <div class="bg-white dark:bg-customGray-900 rounded-md relative" style="min-height: 100px;">
+		{#if invitedEmails?.length < 1 && !emailFocused}
+				<div
+					class="absolute left-2.5 text-sm top-2.5 dark:text-customGray-100 dark:bg-customGray-900 pointer-events-none w-[100px] h-6"
+				>
+					{$i18n.t('Emails')}
+				</div>
+				<span
+					class="absolute top-[26px] w-[12rem] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+				>
+					{$i18n.t('Add Team member mails (separated by comma)')}
+				</span>
+			{/if}
         <div
             
             class="flex flex-wrap gap-1 items-start p-3 "
@@ -98,7 +111,7 @@
                     {email}
                     <button
                         type="button"
-                        class="ml-1 text-xs font-bold hover:text-red-500"
+                        class="ml-1 text-xs font-bold"
                         on:click={() => removeEmail(email)}
                     >
                         ×
@@ -112,7 +125,11 @@
                 placeholder="Enter email..."
                 class="text-xs bg-transparent outline-none px-1 h-6 w-auto max-w-[150px]"
                 on:keydown={handleKeydown}
-                on:blur={addEmail}
+                on:blur={() => {
+					addEmail()
+					emailFocused = false
+					}}
+				on:focus={() => (emailFocused = true)}
             />
         </div>
     </div>

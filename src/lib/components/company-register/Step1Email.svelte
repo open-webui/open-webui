@@ -47,7 +47,7 @@
 
 <CustomToast message={$toastMessage} type={$toastType} visible={$toastVisible} />
 <form
-	class="flex flex-col self-center dark:bg-customGray-800 rounded-2xl w-[31rem] pt-7 px-24 pb-4"
+	class="flex flex-col self-center dark:bg-customGray-800 rounded-2xl w-[31rem] py-7 px-24"
 	on:submit={(e) => {
 		e.preventDefault();
 		registerEmail();
@@ -98,7 +98,7 @@
 		{$i18n.t('Already have an account?')}
 		<a href="/login" class="text-customBlue-500">{$i18n.t('Log in')}</a>
 	</div>
-	<hr class=" border-gray-50 dark:border-customGray-700 mb-2 mt-6" />
+	<!-- <hr class=" border-gray-50 dark:border-customGray-700 mb-2 mt-6" />
 	<div class="text-xs dark:text-customGray-300 text-center font-medium mb-2.5">Or</div>
 	<div class="flex flex-col space-y-2">
 		{#if $config?.oauth?.providers?.google}
@@ -151,5 +151,5 @@
 				<span>{$i18n.t('Continue with {{provider}}', { provider: 'Microsoft' })}</span>
 			</button>
 		{/if}
-	</div>
+	</div> -->
 </form>

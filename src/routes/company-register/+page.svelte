@@ -1,9 +1,10 @@
 <script lang="ts">
 	import ProgressIndicator from '$lib/components/company-register/ProgressIndicator.svelte';
 	import Step1Email from '$lib/components/company-register/Step1Email.svelte';
-	import Step2Personal from '$lib/components/company-register/Step2Personal.svelte';
-	import Step3Company from '$lib/components/company-register/Step3Company.svelte';
-	import Step4Invite from '$lib/components/company-register/Step4Invite.svelte';
+	import Step2Verify from '$lib/components/company-register/Step2Verify.svelte';
+	import Step3Personal from '$lib/components/company-register/Step3Personal.svelte';
+	import Step4Company from '$lib/components/company-register/Step4Company.svelte';
+	import Step5Invite from '$lib/components/company-register/Step5Invite.svelte';
 	import { completeRegistration } from '$lib/apis/auths';
 	import { COMPANY_SIZE_OPTIONS, INDUSTRY_OPTIONS, TEAM_FUNCTION_OPTIONS } from '$lib/constants';
 	import {
@@ -18,6 +19,7 @@
 	} from '$lib/stores';
 	import { getSessionUser, userSignIn } from '$lib/apis/auths';
 	import { getBackendConfig } from '$lib/apis';
+	import { generateInitialsImage } from '$lib/utils';
 
 	let step = 1;
 
@@ -31,8 +33,7 @@
 	let company_size = COMPANY_SIZE_OPTIONS[0];
 	let company_industry = INDUSTRY_OPTIONS[0];
 	let company_team_function = TEAM_FUNCTION_OPTIONS[0];
-
-	$:console.log(first_name, last_name, registration_code, password, profile_image_url, company_name, company_size, company_industry, company_team_function)
+	let company_logo_url = '';
 
 	const setSessionUser = async (sessionUser) => {
 		if (sessionUser) {
@@ -46,17 +47,17 @@
 		}
 	};
 
-	async function goNext (event) {
+	async function goNext(event) {
 		if (step === 1) {
 			email = event.detail.email;
 		}
-		if (step === 3) {
+		if (step === 4) {
 			const user = await completeRegistration(
 				first_name,
 				last_name,
 				registration_code,
 				password,
-				profile_image_url,
+				profile_image_url ? profile_image_url : generateInitialsImage(first_name),
 				company_name,
 				company_size,
 				company_industry,
@@ -64,9 +65,8 @@
 			);
 			await setSessionUser(user);
 		}
-		if (step < 4) step += 1;
-		
-	};
+		if (step < 5) step += 1;
+	}
 
 	const goBack = () => {
 		if (step > 1) step -= 1;
@@ -78,29 +78,30 @@
 >
 	<div></div>
 	{#if step === 1}
-		<Step1Email on:next={goNext} {email} />
+		<Step1Email on:next={goNext} bind:email />
 	{:else if step === 2}
-		<Step2Personal
-			on:next={goNext}
-			on:back={goBack}
-			{email}
-			bind:first_name
-			bind:last_name
-			bind:registration_code
-			bind:password
-		/>
+		<Step2Verify {email} on:next={goNext} on:back={goBack} bind:registration_code/>
 	{:else if step === 3}
-		<Step3Company
+		<Step3Personal
 			on:next={goNext}
 			on:back={goBack}
 			bind:profile_image_url
+			bind:first_name
+			bind:last_name
+			bind:password
+		/>
+	{:else if step === 4}
+		<Step4Company
+			on:next={goNext}
+			on:back={goBack}
+			bind:company_logo_url
 			bind:company_name
 			bind:company_size
 			bind:company_industry
 			bind:company_team_function
 		/>
-	{:else if step === 4}
-		<Step4Invite on:back={goBack} />
+	{:else if step === 5}
+		<Step5Invite on:back={goBack} />
 	{/if}
 
 	<ProgressIndicator {step} />

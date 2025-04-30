@@ -75,7 +75,7 @@ async def create_user(form_data: UserCreateForm):
 
     registration_code = str(random.randint(10**8, 10**9 - 1))
 
-    user = Users.insert_new_user(str(uuid.uuid4()), "NEW", "NEW", form_data.email.lower(), "NEW", role="ADMIN", registration_code=registration_code)
+    user = Users.insert_new_user(str(uuid.uuid4()), "NEW", "NEW", form_data.email.lower(), "NEW", role="admin", registration_code=registration_code)
 
     # Send welcome email with the generated password
     email_service = EmailService()
