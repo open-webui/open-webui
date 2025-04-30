@@ -142,7 +142,7 @@ class UserPermissions(BaseModel):
 
 @router.get("/default/permissions", response_model=dict[PermissionCategory, dict[str, bool]])
 async def get_default_user_permissions(request: Request, user=Depends(get_admin_user)):
-    return Permissions.get_ordre_by_category()
+    return Permissions.get_default()
 
 @router.post("/default/permissions")
 async def update_default_user_permissions(form_data: UserPermissions, user=Depends(get_admin_user)):
