@@ -80,8 +80,8 @@ async def get_session_user(
     auth_header = request.headers.get("Authorization")
     auth_token = get_http_authorization_cred(auth_header)
     token = auth_token.credentials
-
     data = decode_token(token)
+
     expires_at = data.get("exp")
 
     if (expires_at is not None) and int(time.time()) > expires_at:
