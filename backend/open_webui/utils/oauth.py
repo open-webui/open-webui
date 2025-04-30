@@ -25,7 +25,7 @@ from open_webui.config import (
     ENABLE_OAUTH_GROUP_MANAGEMENT,
     ENABLE_OAUTH_GROUP_CREATION,
     OAUTH_ROLES_CLAIM,
-    OAUTH_GROUPS_CLAIM,
+    OAUTH_GROUP_CLAIM,
     OAUTH_EMAIL_CLAIM,
     OAUTH_PICTURE_CLAIM,
     OAUTH_USERNAME_CLAIM,
@@ -34,6 +34,10 @@ from open_webui.config import (
     OAUTH_ALLOWED_DOMAINS,
     WEBHOOK_URL,
     JWT_EXPIRES_IN,
+    OAUTH_CLIENT_ID,
+    OAUTH_CLIENT_SECRET,
+    OAUTH_PROVIDER_NAME,
+    OPENID_PROVIDER_URL,
     AppConfig,
 )
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
@@ -60,7 +64,7 @@ auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
 auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT = ENABLE_OAUTH_GROUP_MANAGEMENT
 auth_manager_config.ENABLE_OAUTH_GROUP_CREATION = ENABLE_OAUTH_GROUP_CREATION
 auth_manager_config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
-auth_manager_config.OAUTH_GROUPS_CLAIM = OAUTH_GROUPS_CLAIM
+auth_manager_config.OAUTH_GROUP_CLAIM = OAUTH_GROUP_CLAIM
 auth_manager_config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
 auth_manager_config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 auth_manager_config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
@@ -69,6 +73,10 @@ auth_manager_config.OAUTH_ADMIN_ROLES = OAUTH_ADMIN_ROLES
 auth_manager_config.OAUTH_ALLOWED_DOMAINS = OAUTH_ALLOWED_DOMAINS
 auth_manager_config.WEBHOOK_URL = WEBHOOK_URL
 auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
+auth_manager_config.OAUTH_CLIENT_ID = OAUTH_CLIENT_ID
+auth_manager_config.OAUTH_CLIENT_SECRET = OAUTH_CLIENT_SECRET
+auth_manager_config.OAUTH_PROVIDER_NAME = OAUTH_PROVIDER_NAME
+auth_manager_config.OPENID_PROVIDER_URL = OPENID_PROVIDER_URL
 
 
 class OAuthManager:
@@ -140,7 +148,7 @@ class OAuthManager:
 
     def update_user_groups(self, user, user_data, default_permissions):
         log.debug("Running OAUTH Group management")
-        oauth_claim = auth_manager_config.OAUTH_GROUPS_CLAIM
+        oauth_claim = auth_manager_config.OAUTH_GROUP_CLAIM
 
         user_oauth_groups = []
         # Nested claim search for groups claim
