@@ -588,25 +588,28 @@
 														{/if}
 													</div>
 													<div class=" absolute -top-1 -right-1">
-														<button
-															class=" bg-gray-400 text-white border border-white rounded-full group-hover:visible invisible transition"
-															type="button"
-															on:click={() => {
-																files.splice(fileIdx, 1);
-																files = files;
-															}}
-														>
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																viewBox="0 0 20 20"
-																fill="currentColor"
-																class="w-4 h-4"
+														<Tooltip content={$i18n.t('Remove File')}>
+															<button
+																class="bg-black text-white border border-white rounded-full visible transition focus:outline-blue-600"
+																aria-label={$i18n.t('Remove File')}
+																type="button"
+																on:click={() => {
+																	files.splice(fileIdx, 1);
+																	files = files;
+																}}
 															>
-																<path
-																	d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-																/>
-															</svg>
-														</button>
+																<svg
+																	xmlns="http://www.w3.org/2000/svg"
+																	viewBox="0 0 20 20"
+																	fill="currentColor"
+																	class="size-4"
+																>
+																	<path
+																		d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+																	/>
+																</svg>
+															</button>
+														</Tooltip>
 													</div>
 												</div>
 											{:else}

@@ -124,7 +124,8 @@
 			<Tooltip content={$i18n.t('Remove File')}>
 				<button
 					tabindex="0"
-					class=" bg-gray-400 text-white border border-white rounded-full transition"
+					class="bg-black text-white border border-white rounded-full transition focus:outline-blue-600"
+					aria-label="{$i18n.t('Remove File')}"
 					type="button"
 					on:click|stopPropagation={() => {
 						dispatch('dismiss');
