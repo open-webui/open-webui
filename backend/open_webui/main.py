@@ -383,6 +383,7 @@ from open_webui.utils.auth import (
     get_admin_user,
     get_verified_user,
 )
+from open_webui.utils.plugin import install_admin_tool_and_function_dependencies
 from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
@@ -451,6 +452,12 @@ async def lifespan(app: FastAPI):
         limiter.total_tokens = pool_size
 
     asyncio.create_task(periodic_usage_pool_cleanup())
+
+    # This should be blocking (sync) so functions are not deactivated on first /get_models calls
+    # when the first user lands on the / route.
+    log.info("Installing external dependencies of functions and tools...")
+    install_admin_tool_and_function_dependencies()
+
     yield
 
 
@@ -895,7 +902,8 @@ class RedirectMiddleware(BaseHTTPMiddleware):
 
             # Check for the specific watch path and the presence of 'v' parameter
             if path.endswith("/watch") and "v" in query_params:
-                video_id = query_params["v"][0]  # Extract the first 'v' parameter
+                # Extract the first 'v' parameter
+                video_id = query_params["v"][0]
                 encoded_video_id = urlencode({"youtube": video_id})
                 redirect_url = f"/?{encoded_video_id}"
                 return RedirectResponse(url=redirect_url)
