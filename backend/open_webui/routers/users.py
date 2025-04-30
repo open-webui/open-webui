@@ -106,7 +106,7 @@ async def get_users(
     limit: Optional[int] = None,
     user=Depends(get_admin_user),
 ):
-    return Users.get_users(skip, limit)
+    return Users.get_users_by_company_id(user.company_id, skip, limit)
 
 
 ############################
@@ -398,3 +398,81 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
         status_code=status.HTTP_403_FORBIDDEN,
         detail=ERROR_MESSAGES.ACTION_PROHIBITED,
     )
+
+
+############################
+# ReinviteUser
+############################
+
+
+@router.post("/reinvite")
+async def reinvite_user(email: str, user=Depends(get_admin_user)):
+    if not validate_email_format(email.lower()):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
+        )
+
+    existing_user = Users.get_user_by_email(email.lower())
+    if not existing_user:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.USER_NOT_FOUND
+        )
+
+    # Generate a new invite token
+    invite_token = hashlib.sha256(email.lower().encode()).hexdigest()
+
+    # Update the user with the new invite token
+    updated_user = Users.update_user_by_id(existing_user.id, {"invite_token": invite_token})
+
+    if not updated_user:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update user"
+        )
+
+    # Send the invitation email
+    email_service = EmailService()
+    email_sent = email_service.send_invite_mail(
+        to_email=email.lower(),
+        invite_token=invite_token
+    )
+
+    if not email_sent:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to send invitation email"
+        )
+
+    return {"message": "User reinvited successfully", "user_id": existing_user.id}
+
+
+############################
+# RevokeInvite
+############################
+
+
+@router.post("/revoke-invite")
+async def revoke_user_invite(email: str, user=Depends(get_admin_user)):
+    if not validate_email_format(email.lower()):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
+        )
+
+    existing_user = Users.get_user_by_email(email.lower())
+    if not existing_user:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.USER_NOT_FOUND
+        )
+
+    # Check if the user has an invite token
+    if not existing_user.invite_token:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, detail="User does not have an active invitation"
+        )
+
+    # Delete the user from the database
+    success = Users.delete_user_by_email(email.lower())
+    if not success:
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete user"
+        )
+
+    return {"message": "User invitation revoked and user deleted successfully", "user_id": existing_user.id}

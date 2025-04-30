@@ -246,6 +246,22 @@ class UsersTable:
             user = db.query(User).filter(User.stripe_customer_id == stripe_customer_id).first()
             return user
 
+    def get_users_by_company_id(
+        self, company_id: str, skip: Optional[int] = None, limit: Optional[int] = None
+    ) -> list[UserModel]:
+        with get_db() as db:
+
+            query = db.query(User).filter(User.company_id == company_id).order_by(User.created_at.desc())
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            users = query.all()
+
+            return [UserModel.model_validate(user) for user in users]
+
     def get_users(
         self, skip: Optional[int] = None, limit: Optional[int] = None
     ) -> list[UserModel]:
@@ -354,7 +370,6 @@ class UsersTable:
 
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
-                # return UserModel(**user.dict())
         except Exception:
             return None
 
@@ -373,6 +388,26 @@ class UsersTable:
 
                 return True
             else:
+                return False
+        except Exception:
+            return False
+
+    def delete_user_by_email(self, email: str) -> bool:
+        """Delete a user by their email address.
+        
+        Args:
+            email: The email address of the user to delete
+            
+        Returns:
+            bool: True if user was successfully deleted, False otherwise
+        """
+        try:
+            with get_db() as db:
+                user = db.query(User).filter_by(email=email).first()
+                if user:
+                    db.delete(user)
+                    db.commit()
+                    return True
                 return False
         except Exception:
             return False
