@@ -440,7 +440,7 @@
 								on:click={async () => {
 									selectedTab = 'interface';
 									await tick();
-									document.getElementById('landing-page-mode')?.focus();
+									document.getElementById('landing-page-mode-button')?.focus();
 								}}
 							>
 								<div class=" self-center mr-2">
