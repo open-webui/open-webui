@@ -160,11 +160,26 @@ class UsersTable:
             return None
 
     def get_users(
-        self, skip: Optional[int] = None, limit: Optional[int] = None
+        self,
+        skip: Optional[int] = None,
+        limit: Optional[int] = None,
+        query_key: Optional[int] = None
     ) -> list[UserModel]:
         with get_db() as db:
 
-            query = db.query(User).order_by(User.created_at.desc())
+            if not query_key:
+                query = db.query(User).order_by(User.created_at.desc())
+            else:
+                query = (
+                    db.query(User)
+                    .filter(
+                        or_(
+                            User.name.ilike(f'%{query_key}%'),
+                            User.email.ilike(f'%{query_key}%')
+                        )
+                    )
+                    .order_by(User.created_at.desc())
+                )
 
             if skip:
                 query = query.offset(skip)
