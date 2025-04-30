@@ -5,11 +5,14 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { updateRole, getRolePermissions, linkRoleToPermissions } from '$lib/apis/roles';
+    import { getUserDefaultPermissions } from '$lib/apis/users'
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import Permissions from "$lib/components/common/Permissions.svelte";
 	import WrenchSolid from "$lib/components/icons/WrenchSolid.svelte";
+	import Plus from "$lib/components/icons/Plus.svelte";
+	import AddPermission from "$lib/components/admin/Users/Roles/AddPermission.svelte";
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -17,10 +20,11 @@
 
 	export let show = false;
 	export let selectedRole;
-	export let tabs = ['general', 'permissions'];
+	export let tabs = ['general', 'permissions', 'new'];
 	export let lockedRoles = ['pending', 'user', 'admin']
 
 	let selectedTab = 'general';
+	let defaultPermissions = {};
 	let permissions = {};
 	let _role = {
 		id: '',
@@ -51,6 +55,11 @@
 	onMount(async () => {
 		if (selectedRole) {
 			_role = selectedRole;
+
+			defaultPermissions = await getUserDefaultPermissions(localStorage.token).catch((error) => {
+				toast.error(`${error}`);
+				return [];
+			});
 
 			permissions = await getRolePermissions(localStorage.token, _role.name).catch((error) => {
 				toast.error(`${error}`);
@@ -141,7 +150,25 @@
 									<div class=" self-center mr-2">
 										<WrenchSolid />
 									</div>
-									<div class=" self-center">{$i18n.t('Permissions')}</div>
+									<div class="self-center">{$i18n.t('Permissions')}</div>
+								</button>
+							{/if}
+
+							{#if tabs.includes('new')}
+								<button
+									class="px-0.5 py-1 max-w-fit w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
+									'news'
+										? ''
+										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									on:click={() => {
+										selectedTab = 'new';
+									}}
+									type="button"
+								>
+									<div class=" self-center mr-2">
+										<Plus />
+									</div>
+									<div class="self-center">{$i18n.t('Add permissions')}</div>
 								</button>
 							{/if}
 						</div>
@@ -166,7 +193,9 @@
 									</div>
 								</div>
 							{:else if selectedTab === 'permissions'}
-								<Permissions bind:permissions/>
+								<Permissions bind:permissions bind:defaultPermissions />
+							{:else if selectedTab === 'new'}
+								<AddPermission />
 							{/if}
 						</div>
 					</div>
