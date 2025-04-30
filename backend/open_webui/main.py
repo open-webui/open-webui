@@ -383,7 +383,7 @@ from open_webui.utils.auth import (
     get_admin_user,
     get_verified_user,
 )
-from open_webui.utils.plugin import install_admin_tool_and_function_dependencies
+from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 
@@ -446,17 +446,17 @@ async def lifespan(app: FastAPI):
     if LICENSE_KEY:
         get_license_data(app, LICENSE_KEY)
 
+    # This should be blocking (sync) so functions are not deactivated on first /get_models calls
+    # when the first user lands on the / route.
+    log.info("Installing external dependencies of functions and tools...")
+    install_tool_and_function_dependencies()
+
     pool_size = THREAD_POOL_SIZE
     if pool_size and pool_size > 0:
         limiter = anyio.to_thread.current_default_thread_limiter()
         limiter.total_tokens = pool_size
 
     asyncio.create_task(periodic_usage_pool_cleanup())
-
-    # This should be blocking (sync) so functions are not deactivated on first /get_models calls
-    # when the first user lands on the / route.
-    log.info("Installing external dependencies of functions and tools...")
-    install_admin_tool_and_function_dependencies()
 
     yield
 

@@ -185,7 +185,7 @@ def install_frontmatter_requirements(requirements: str):
         log.info("No requirements found in frontmatter.")
 
 
-def install_admin_tool_and_function_dependencies():
+def install_tool_and_function_dependencies():
     """
     Install all dependencies for all admin tools and active functions.
 
