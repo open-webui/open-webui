@@ -236,9 +236,11 @@ if [[ $choice == "" || $choice == "y" ]]; then
     # Wait for the command to finish
     wait $PID
 
+    run_compose_status=$?
+
     echo
     # Check exit status
-    if [ $? -eq 0 ]; then
+    if [ $run_compose_status -eq 0 ]; then
         echo -e "${GREEN}${BOLD}Compose project started successfully.${NC}"
     else
         echo -e "${RED}${BOLD}There was an error starting the compose project.${NC}"
