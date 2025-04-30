@@ -141,9 +141,8 @@ class PgvectorClient(VectorDBBase):
             # Pad the vector with zeros
             vector += [0.0] * (VECTOR_LENGTH - current_length)
         elif current_length > VECTOR_LENGTH:
-            raise Exception(
-                f"Vector length {current_length} not supported. Max length must be <= {VECTOR_LENGTH}"
-            )
+            # Truncate the vector to VECTOR_LENGTH
+            vector = vector[:VECTOR_LENGTH]
         return vector
 
     def insert(self, collection_name: str, items: List[VectorItem]) -> None:
