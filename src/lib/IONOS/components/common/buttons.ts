@@ -28,7 +28,7 @@ const stateMap = {
 		'hover': 'hover:bg-blue-400 hover:border-blue-400 hover:text-white',
 		'active': 'active:bg-blue-500 active:border-blue-500 active:text-white',
 		'focus': 'focus:outline-blue-400',
-		'pressed': 'bg-blue-700 border-blue-700 text-white',
+		'pressed': 'bg-blue-500 border-blue-500 text-white',
 		'disabled': 'bg-white border-gray-500 text-gray-500 cursor-default',
 		'disabled-pressed': 'bg-blue-800 border-blue-800 text-white cursor-default',
 	},
