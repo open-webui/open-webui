@@ -1178,6 +1178,11 @@ ENABLE_CHANNELS = PersistentConfig(
     os.environ.get("ENABLE_CHANNELS", "False").lower() == "true",
 )
 
+ENABLE_NOTES = PersistentConfig(
+    "ENABLE_NOTES",
+    "notes.enable",
+    os.environ.get("ENABLE_NOTES", "True").lower() == "true",
+)
 
 ENABLE_EVALUATION_ARENA_MODELS = PersistentConfig(
     "ENABLE_EVALUATION_ARENA_MODELS",

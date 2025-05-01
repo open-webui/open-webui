@@ -156,7 +156,7 @@ from open_webui.config import (
     AUDIO_STT_AZURE_REGION,
     AUDIO_STT_AZURE_LOCALES,
     AUDIO_STT_AZURE_BASE_URL,
-    AUDIO_STT_AZURE_MAX_SPEAKERS,    
+    AUDIO_STT_AZURE_MAX_SPEAKERS,
     AUDIO_TTS_API_KEY,
     AUDIO_TTS_ENGINE,
     AUDIO_TTS_MODEL,
@@ -274,6 +274,7 @@ from open_webui.config import (
     ENABLE_API_KEY_ENDPOINT_RESTRICTIONS,
     API_KEY_ALLOWED_ENDPOINTS,
     ENABLE_CHANNELS,
+    ENABLE_NOTES,
     ENABLE_COMMUNITY_SHARING,
     ENABLE_MESSAGE_RATING,
     ENABLE_USER_WEBHOOKS,
@@ -570,6 +571,7 @@ app.state.config.MODEL_ORDER_LIST = MODEL_ORDER_LIST
 
 
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
+app.state.config.ENABLE_NOTES = ENABLE_NOTES
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
 app.state.config.ENABLE_USER_WEBHOOKS = ENABLE_USER_WEBHOOKS
@@ -1321,6 +1323,7 @@ async def get_app_config(request: Request):
                 {
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
                     "enable_channels": app.state.config.ENABLE_CHANNELS,
+                    "enable_notes": app.state.config.ENABLE_NOTES,
                     "enable_web_search": app.state.config.ENABLE_WEB_SEARCH,
                     "enable_code_execution": app.state.config.ENABLE_CODE_EXECUTION,
                     "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,

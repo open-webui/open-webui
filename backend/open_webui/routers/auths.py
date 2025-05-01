@@ -689,6 +689,7 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
+        "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
     }
 
@@ -705,6 +706,7 @@ class AdminConfig(BaseModel):
     ENABLE_COMMUNITY_SHARING: bool
     ENABLE_MESSAGE_RATING: bool
     ENABLE_CHANNELS: bool
+    ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
 
 
@@ -725,6 +727,7 @@ async def update_admin_config(
     )
 
     request.app.state.config.ENABLE_CHANNELS = form_data.ENABLE_CHANNELS
+    request.app.state.config.ENABLE_NOTES = form_data.ENABLE_NOTES
 
     if form_data.DEFAULT_USER_ROLE in ["pending", "user", "admin"]:
         request.app.state.config.DEFAULT_USER_ROLE = form_data.DEFAULT_USER_ROLE
@@ -749,11 +752,12 @@ async def update_admin_config(
         "ENABLE_API_KEY": request.app.state.config.ENABLE_API_KEY,
         "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS,
         "API_KEY_ALLOWED_ENDPOINTS": request.app.state.config.API_KEY_ALLOWED_ENDPOINTS,
-        "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
         "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
+        "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
+        "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
     }
 
