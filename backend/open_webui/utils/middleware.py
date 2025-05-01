@@ -929,6 +929,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 form_data["messages"],
             )
 
+    context_chunks_with_source = [
+        {"source": meta.get("name"), "chunk": doc}
+        for source in sources
+        if "document" in source
+        for doc, meta in zip(source["document"], source["metadata"])
+    ]
+
     # If there are citations, add them to the data_items
     sources = [source for source in sources if source.get("source", {}).get("name", "")]
 
@@ -948,7 +955,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             }
         )
 
-    return form_data, metadata, events
+    return form_data, metadata, events, context_chunks_with_source
 
 
 async def process_chat_response(

@@ -1127,7 +1127,7 @@ async def chat_completion(
         request.state.metadata = metadata
         form_data["metadata"] = metadata
 
-        form_data, metadata, events = await process_chat_payload(
+        form_data, metadata, events, context_chunks_with_source = await process_chat_payload(
             request, form_data, user, metadata, model
         )
 
@@ -1150,6 +1150,9 @@ async def chat_completion(
 
     try:
         response = await chat_completion_handler(request, form_data, user)
+
+        if isinstance(response, dict):
+            response["context_chunks_with_source"] = context_chunks_with_source
 
         return await process_chat_response(
             request, response, form_data, user, metadata, model, events, tasks
