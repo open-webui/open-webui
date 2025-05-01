@@ -80,7 +80,7 @@
 	};
 </script>
 
-<div class="pb-24">
+<div class="pb-24 min-h-[500px]">
 	<div
 		class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5"
 	>

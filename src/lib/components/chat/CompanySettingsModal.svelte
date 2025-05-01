@@ -22,6 +22,8 @@
     import GeneralSettings from '$lib/components/chat/Settings/CompanySettings/General.svelte';
 	import GroupIcon from '../icons/GroupIcon.svelte';
 	import UserManagement from './Settings/CompanySettings/UserManagement.svelte';
+	import ModelControlIcon from '../icons/ModelControlIcon.svelte';
+	import ModelControl from './Settings/CompanySettings/ModelControl.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -43,6 +45,12 @@
 		{
 			id: 'user-management',
 			title: 'User Management',
+			keywords: [	
+			]
+		},
+		{
+			id: 'model-control',
+			title: 'Model Control',
 			keywords: [	
 			]
 		},
@@ -197,6 +205,23 @@
                             <div class=" self-center">{$i18n.t('User management')}</div>
                         </div>
                     </button>
+					{:else if tabId === 'model-control'}
+					<button
+						class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+						'model-control'
+							? 'dark:bg-customGray-800'
+							: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+						on:click={() => {
+							selectedTab = 'model-control';
+						}}
+					>
+						<div class="flex items-center mb-1">
+							<div class=" self-center mr-2">
+								<ModelControlIcon/>
+							</div>
+							<div class=" self-center">{$i18n.t('Model Control')}</div>
+						</div>
+					</button>
 
                     {/if}
 
@@ -414,44 +439,15 @@
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
                     />
-					<!-- <General
-						{getModels}
-						{saveSettings}
-						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/> -->
 					
-				{:else if selectedTab === 'interface'}
-					<Interface
-						{saveSettings}
-						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
-				{:else if selectedTab === 'personalization'}
-					<General
-						{getModels}
-						{saveSettings}
-						on:save={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
 				{:else if selectedTab === 'user-management'}
 					<UserManagement
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
 					/>
-				{:else if selectedTab === 'chats'}
-					<Chats {saveSettings} />
-				{:else if selectedTab === 'account'}
-					<Account
-						{saveSettings}
-						saveHandler={() => {
-							toast.success($i18n.t('Settings saved successfully!'));
-						}}
-					/>
+				{:else if selectedTab === 'model-control'}
+					<ModelControl/>
 				{:else if selectedTab === 'about'}
 					<About />
 				{/if}

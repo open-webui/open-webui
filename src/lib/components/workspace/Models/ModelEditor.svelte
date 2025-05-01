@@ -136,11 +136,11 @@
 			return;
 		}
 
-		if (!info.base_model_id) {
-			toast.error('Base Model is required.');
-			loading = false;
-			return;
-		}
+		// if (!info.base_model_id) {
+		// 	toast.error('Base Model is required.');
+		// 	loading = false;
+		// 	return;
+		// }
 		
 		info.access_control = accessControl;
 		info.meta.capabilities = capabilities;
