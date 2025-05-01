@@ -57,34 +57,18 @@ class AbstractIntegrationTest:
 class AbstractDBTest(AbstractIntegrationTest, ABC):
     fast_api_client: TestClient # to be set in subclass' setup_class()
     
-    @abstractmethod
-    def execute_truncate_table(self, Session, table): ...
-
     def setup_method(self):
         super().setup_method()
         self._check_db_connection()
 
     def teardown_method(self):
-        from open_webui.internal.db import Session
+        from open_webui.internal.db import get_db, metadata_obj
 
-        # rollback everything not yet committed
-        Session.commit()
-
-        # truncate all tables
-        tables = [
-            "auth",
-            "chat",
-            "chatidtag",
-            "document",
-            "memory",
-            "model",
-            "prompt",
-            "tag",
-            '"user"',
-        ]
-        for table in tables:
-            self.execute_truncate_table(Session, table)
-        Session.commit()
+        # truncate all tables in reverse foreign key dependency order
+        with get_db() as db:
+            for table in reversed(metadata_obj.sorted_tables):
+                db.execute(table.delete())
+            db.commit()
 
     def _check_db_connection(self):
         from open_webui.internal.db import Session
@@ -103,9 +87,6 @@ class AbstractDBTest(AbstractIntegrationTest, ABC):
 
 
 class AbstractSQLiteTest(AbstractDBTest):
-    def execute_truncate_table(self, Session, table):
-        Session.execute(text(f"DELETE FROM {table}"))
-
     @classmethod
     def setup_class(cls):
         cls.fast_api_client = get_fast_api_client()
@@ -113,9 +94,6 @@ class AbstractSQLiteTest(AbstractDBTest):
 class AbstractPostgresTest(AbstractDBTest):
     DOCKER_CONTAINER_NAME = "postgres-test-container-will-get-deleted"
     docker_client: DockerClient
-    
-    def execute_truncate_table(self, Session, table):
-        Session.execute(text(f"TRUNCATE {table}"))
 
     @classmethod
     def _create_db_url(cls, env_vars_postgres: dict) -> str:
