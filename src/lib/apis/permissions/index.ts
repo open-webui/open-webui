@@ -27,10 +27,10 @@ export const getPermissions = async (token: string) => {
 	return res;
 };
 
-export const addPermission = async (token: string, name: string, category: string, description: string) => {
+export const addPermission = async (token: string, category: string, name: string, label: string, description: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/permission/`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/permissions/`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -38,6 +38,7 @@ export const addPermission = async (token: string, name: string, category: strin
 		},
 		body: JSON.stringify({
 			name: name,
+			label: label,
 			category: category,
 			description: description
 		})
@@ -62,7 +63,7 @@ export const addPermission = async (token: string, name: string, category: strin
 export const updatePermission = async (token: string, permissionId: number, permissionName: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/permission/${permissionId}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/permissions/${permissionId}`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -92,7 +93,7 @@ export const updatePermission = async (token: string, permissionId: number, perm
 export const deletePermission = async (token: string, permissionId: number) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/permission/${permissionId}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/permissions/${permissionId}`, {
 		method: 'DELETE',
 		headers: {
 			'Content-Type': 'application/json',
