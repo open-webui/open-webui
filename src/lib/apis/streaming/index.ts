@@ -4,11 +4,9 @@ import type { ParsedEvent } from 'eventsource-parser';
 type TextStreamUpdate = {
 	done: boolean;
 	value: string;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	sources?: any;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	selectedModelId?: any;
-	error?: any;
+	sources?: unknown;
+	selectedModelId?: unknown;
+	error?: unknown;
 	usage?: ResponseUsage;
 };
 

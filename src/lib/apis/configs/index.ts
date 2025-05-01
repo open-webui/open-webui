@@ -1,404 +1,94 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { webuiApiClient } from '../clients';
 import type { Banner } from '$lib/types';
 
-export const importConfig = async (token: string, config) => {
-	let error = null;
+// Interfaces
+export interface DirectConnectionsConfig extends Record<string, unknown> {}
+export interface ToolServerConnection extends Record<string, unknown> {}
+export interface CodeExecutionConfig extends Record<string, unknown> {}
+export interface ModelsConfig extends Record<string, unknown> {}
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/import`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			config: config
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
+// Import/Export Config
+export const importConfig = async (token: string, config: Record<string, unknown>) =>
+	webuiApiClient.post('/configs/import', { config }, { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to import configuration';
+	});
+
+export const exportConfig = async (token: string) =>
+	webuiApiClient.get('/configs/export', { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to export configuration';
+	});
+
+// Direct Connections Config
+export const getDirectConnectionsConfig = async (token: string): Promise<DirectConnectionsConfig> =>
+	webuiApiClient
+		.get<DirectConnectionsConfig>('/configs/direct_connections', { token })
+		.catch((error) => {
+			throw error instanceof Error
+				? error.message
+				: 'Failed to get direct connections configuration';
 		});
 
-	if (error) {
-		throw error;
-	}
+export const setDirectConnectionsConfig = async (token: string, config: DirectConnectionsConfig) =>
+	webuiApiClient.post('/configs/direct_connections', config, { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to set direct connections configuration';
+	});
 
-	return res;
-};
+// Tool Server Connections
+export const getToolServerConnections = async (token: string): Promise<ToolServerConnection[]> =>
+	webuiApiClient.get<ToolServerConnection[]>('/configs/tool_servers', { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to get tool server connections';
+	});
 
-export const exportConfig = async (token: string) => {
-	let error = null;
+export const setToolServerConnections = async (
+	token: string,
+	connections: ToolServerConnection[]
+) =>
+	webuiApiClient.post('/configs/tool_servers', connections, { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to set tool server connections';
+	});
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/export`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
+export const verifyToolServerConnection = async (token: string, connection: ToolServerConnection) =>
+	webuiApiClient.post('/configs/tool_servers/verify', connection, { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to verify tool server connection';
+	});
+
+// Code Execution Config
+export const getCodeExecutionConfig = async (token: string): Promise<CodeExecutionConfig> =>
+	webuiApiClient.get<CodeExecutionConfig>('/configs/code_execution', { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to get code execution configuration';
+	});
+
+export const setCodeExecutionConfig = async (token: string, config: CodeExecutionConfig) =>
+	webuiApiClient.post('/configs/code_execution', config, { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to set code execution configuration';
+	});
+
+// Models Config
+export const getModelsConfig = async (token: string): Promise<ModelsConfig> =>
+	webuiApiClient.get<ModelsConfig>('/configs/models', { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to get models configuration';
+	});
+
+export const setModelsConfig = async (token: string, config: ModelsConfig) =>
+	webuiApiClient.post('/configs/models', config, { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to set models configuration';
+	});
+
+// Prompt Suggestions
+export const setDefaultPromptSuggestions = async (token: string, promptSuggestions: string) =>
+	webuiApiClient
+		.post('/configs/prompt_suggestions', { promptSuggestions }, { token })
+		.catch((error) => {
+			throw error instanceof Error ? error.message : 'Failed to set default prompt suggestions';
 		});
 
-	if (error) {
-		throw error;
-	}
+// Banners
+export const getBanners = async (token: string): Promise<Banner[]> =>
+	webuiApiClient.get<Banner[]>('/configs/banners', { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to get banners';
+	});
 
-	return res;
-};
-
-export const getDirectConnectionsConfig = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/direct_connections`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const setDirectConnectionsConfig = async (token: string, config: object) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/direct_connections`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...config
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getToolServerConnections = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/tool_servers`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const setToolServerConnections = async (token: string, connections: object) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/tool_servers`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...connections
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const verifyToolServerConnection = async (token: string, connection: object) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/tool_servers/verify`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...connection
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getCodeExecutionConfig = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/code_execution`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const setCodeExecutionConfig = async (token: string, config: object) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/code_execution`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...config
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getModelsConfig = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/models`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const setModelsConfig = async (token: string, config: object) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/models`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...config
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const setDefaultPromptSuggestions = async (token: string, promptSuggestions: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/suggestions`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			suggestions: promptSuggestions
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getBanners = async (token: string): Promise<Banner[]> => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/banners`, {
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const setBanners = async (token: string, banners: Banner[]) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/banners`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			banners: banners
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			error = err.detail;
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const setBanners = async (token: string, banners: Banner[]) =>
+	webuiApiClient.post('/configs/banners', { banners }, { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to set banners';
+	});

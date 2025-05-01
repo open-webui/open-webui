@@ -1,162 +1,33 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { webuiApiClient } from '../clients';
 
-export const createNewGroup = async (token: string, group: object) => {
-	let error = null;
+// Interfaces
+export interface Group extends Record<string, unknown> {
+	id?: string;
+	name: string;
+}
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/create`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...group
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-			return null;
-		});
+// Group Operations
+export const createNewGroup = async (token: string, group: Group) =>
+	webuiApiClient.post('/groups/create', group, { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to create new group';
+	});
 
-	if (error) {
-		throw error;
-	}
+export const getGroups = async (token = '') =>
+	webuiApiClient.get<Group[]>('/groups/', { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to get groups';
+	});
 
-	return res;
-};
+export const getGroupById = async (token: string, id: string) =>
+	webuiApiClient.get<Group>(`/groups/id/${id}`, { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to get group';
+	});
 
-export const getGroups = async (token: string = '') => {
-	let error = null;
+export const updateGroupById = async (token: string, id: string, group: Group) =>
+	webuiApiClient.post(`/groups/id/${id}/update`, group, { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to update group';
+	});
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getGroupById = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/id/${id}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateGroupById = async (token: string, id: string, group: object) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/id/${id}/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			...group
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const deleteGroupById = async (token: string, id: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/groups/id/${id}/delete`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const deleteGroupById = async (token: string, id: string) =>
+	webuiApiClient.del(`/groups/id/${id}/delete`, undefined, { token }).catch((error) => {
+		throw error instanceof Error ? error.message : 'Failed to delete group';
+	});

@@ -1,265 +1,30 @@
-import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { webuiApiClient } from '../clients';
 
-export const getModels = async (token: string = '') => {
-	let error = null;
+interface Model {
+	id: string;
+	[key: string]: unknown;
+}
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err;
-			console.log(err);
-			return null;
-		});
+export const getModels = async (token: string = '') =>
+	webuiApiClient.get<Model[]>('/models/', { token });
 
-	if (error) {
-		throw error;
-	}
+export const getBaseModels = async (token: string = '') =>
+	webuiApiClient.get<Model[]>('/models/base', { token });
 
-	return res;
-};
+export const createNewModel = async (token: string, model: Record<string, unknown>) =>
+	webuiApiClient.post('/models/create', model, { token });
 
-export const getBaseModels = async (token: string = '') => {
-	let error = null;
+export const getModelById = async (token: string, id: string) =>
+	webuiApiClient.get(`/models/model?${new URLSearchParams({ id })}`, { token });
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/base`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err;
-			console.log(err);
-			return null;
-		});
+export const toggleModelById = async (token: string, id: string) =>
+	webuiApiClient.post(`/models/model/toggle?${new URLSearchParams({ id })}`, {}, { token });
 
-	if (error) {
-		throw error;
-	}
+export const updateModelById = async (token: string, id: string, model: Record<string, unknown>) =>
+	webuiApiClient.post(`/models/model/update?${new URLSearchParams({ id })}`, model, { token });
 
-	return res;
-};
+export const deleteModelById = async (token: string, id: string) =>
+	webuiApiClient.del(`/models/model/delete?${new URLSearchParams({ id })}`, null, { token });
 
-export const createNewModel = async (token: string, model: object) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/create`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify(model)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			error = err.detail;
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getModelById = async (token: string, id: string) => {
-	let error = null;
-
-	const searchParams = new URLSearchParams();
-	searchParams.append('id', id);
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model?${searchParams.toString()}`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err;
-
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const toggleModelById = async (token: string, id: string) => {
-	let error = null;
-
-	const searchParams = new URLSearchParams();
-	searchParams.append('id', id);
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model/toggle?${searchParams.toString()}`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err;
-
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateModelById = async (token: string, id: string, model: object) => {
-	let error = null;
-
-	const searchParams = new URLSearchParams();
-	searchParams.append('id', id);
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model/update?${searchParams.toString()}`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify(model)
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err;
-
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const deleteModelById = async (token: string, id: string) => {
-	let error = null;
-
-	const searchParams = new URLSearchParams();
-	searchParams.append('id', id);
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/model/delete?${searchParams.toString()}`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err.detail;
-
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const deleteAllModels = async (token: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/models/delete/all`, {
-		method: 'DELETE',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			authorization: `Bearer ${token}`
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.then((json) => {
-			return json;
-		})
-		.catch((err) => {
-			error = err;
-
-			console.log(err);
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const deleteAllModels = async (token: string) =>
+	webuiApiClient.del('/models/delete/all', null, { token });

@@ -1,232 +1,62 @@
-import { IMAGES_API_BASE_URL } from '$lib/constants';
+import { imagesApiClient } from '../clients';
 
-export const getConfig = async (token: string = '') => {
-	let error = null;
+interface ImageConfig {
+	[key: string]: unknown;
+}
 
-	const res = await fetch(`${IMAGES_API_BASE_URL}/config`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
-			return null;
+interface ImageGenerationConfig {
+	[key: string]: unknown;
+}
+
+interface ImageModel {
+	id: string;
+	name: string;
+	[key: string]: unknown;
+}
+
+export const getConfig = async (token: string = '') =>
+	imagesApiClient.get<ImageConfig>('/config', { token }).catch((error) => {
+		console.error('Failed to get image config:', error);
+		throw error instanceof Error ? error.message : 'Server connection failed';
+	});
+
+export const updateConfig = async (token: string = '', config: Record<string, unknown>) =>
+	imagesApiClient.post<ImageConfig>('/config/update', config, { token }).catch((error) => {
+		console.error('Failed to update image config:', error);
+		throw error instanceof Error ? error.message : 'Server connection failed';
+	});
+
+export const verifyConfigUrl = async (token: string = '') =>
+	imagesApiClient.get('/config/url/verify', { token }).catch((error) => {
+		console.error('Failed to verify config URL:', error);
+		throw error instanceof Error ? error.message : 'Server connection failed';
+	});
+
+export const getImageGenerationConfig = async (token: string = '') =>
+	imagesApiClient.get<ImageGenerationConfig>('/image/config', { token }).catch((error) => {
+		console.error('Failed to get image generation config:', error);
+		throw error instanceof Error ? error.message : 'Server connection failed';
+	});
+
+export const updateImageGenerationConfig = async (
+	token: string = '',
+	config: Record<string, unknown>
+) =>
+	imagesApiClient
+		.post<ImageGenerationConfig>('/image/config/update', config, { token })
+		.catch((error) => {
+			console.error('Failed to update image generation config:', error);
+			throw error instanceof Error ? error.message : 'Server connection failed';
 		});
 
-	if (error) {
-		throw error;
-	}
+export const getImageGenerationModels = async (token: string = '') =>
+	imagesApiClient.get<ImageModel[]>('/models', { token }).catch((error) => {
+		console.error('Failed to get image generation models:', error);
+		throw error instanceof Error ? error.message : 'Server connection failed';
+	});
 
-	return res;
-};
-
-export const updateConfig = async (token: string = '', config: object) => {
-	let error = null;
-
-	const res = await fetch(`${IMAGES_API_BASE_URL}/config/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		},
-		body: JSON.stringify({
-			...config
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const verifyConfigUrl = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${IMAGES_API_BASE_URL}/config/url/verify`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getImageGenerationConfig = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${IMAGES_API_BASE_URL}/image/config`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updateImageGenerationConfig = async (token: string = '', config: object) => {
-	let error = null;
-
-	const res = await fetch(`${IMAGES_API_BASE_URL}/image/config/update`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		},
-		body: JSON.stringify({ ...config })
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const getImageGenerationModels = async (token: string = '') => {
-	let error = null;
-
-	const res = await fetch(`${IMAGES_API_BASE_URL}/models`, {
-		method: 'GET',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		}
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const imageGenerations = async (token: string = '', prompt: string) => {
-	let error = null;
-
-	const res = await fetch(`${IMAGES_API_BASE_URL}/generations`, {
-		method: 'POST',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json',
-			...(token && { authorization: `Bearer ${token}` })
-		},
-		body: JSON.stringify({
-			prompt: prompt
-		})
-	})
-		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
-		})
-		.catch((err) => {
-			console.log(err);
-			if ('detail' in err) {
-				error = err.detail;
-			} else {
-				error = 'Server connection failed';
-			}
-			return null;
-		});
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
+export const imageGenerations = async (token: string = '', prompt: string) =>
+	imagesApiClient.post('/generations', { prompt }, { token }).catch((error) => {
+		console.error('Failed to generate image:', error);
+		throw error instanceof Error ? error.message : 'Server connection failed';
+	});
