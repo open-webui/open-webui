@@ -28,7 +28,6 @@ export const createAxiosInstance = (baseURL: string): AxiosInstance => {
 	// Add a response interceptor to handle errors and unwrap data
 	instance.interceptors.response.use(
 		(response: AxiosResponse) => {
-			console.log(response);
 			return response;
 		},
 		(error) => {
