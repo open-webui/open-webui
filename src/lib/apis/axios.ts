@@ -40,13 +40,18 @@ export const createAxiosInstance = (baseURL: string): AxiosInstance => {
 				data: error.response?.data
 			});
 
-			// If we have a response with data, reject with that data
-			if (error.response?.data) {
-				return Promise.reject(error.response.data);
+			let errorMessage = 'Server connection failed';
+
+			// If we have a response with data containing detail
+			if (error.response?.data?.detail) {
+				errorMessage = error.response.data.detail;
+			}
+			// If we have other response data
+			else if (error.response?.data) {
+				errorMessage = error.response.data;
 			}
 
-			// Otherwise reject with the error itself
-			return Promise.reject(error);
+			return Promise.reject(errorMessage);
 		}
 	);
 

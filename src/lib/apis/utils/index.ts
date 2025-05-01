@@ -33,6 +33,7 @@ export const downloadDatabase = async (token: string) => {
 	document.body.appendChild(a);
 	a.click();
 	window.URL.revokeObjectURL(url);
+	document.body.removeChild(a);
 };
 
 export const downloadLiteLLMConfig = async (token: string) => {
@@ -45,4 +46,5 @@ export const downloadLiteLLMConfig = async (token: string) => {
 	document.body.appendChild(a);
 	a.click();
 	window.URL.revokeObjectURL(url);
+	document.body.removeChild(a);
 };
