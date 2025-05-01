@@ -14,6 +14,7 @@
 	let mergedDocuments = [];
 
 	function calculatePercentage(distance: number) {
+		if (typeof distance !== 'number') return null;
 		if (distance < 0) return 0;
 		if (distance > 1) return 100;
 		return Math.round(distance * 10000) / 100;
@@ -44,6 +45,14 @@
 			);
 		}
 	}
+
+	const decodeString = (str: string) => {
+		try {
+			return decodeURIComponent(str);
+		} catch (e) {
+			return str;
+		}
+	};
 </script>
 
 <Modal size="lg" bind:show>
@@ -98,7 +107,7 @@
 												: `#`}
 										target="_blank"
 									>
-										{document?.metadata?.name ?? document.source.name}
+										{decodeString(document?.metadata?.name ?? document.source.name)}
 									</a>
 									{#if document?.metadata?.page}
 										<span class="text-xs text-gray-500 dark:text-gray-400">
@@ -122,17 +131,20 @@
 										<div class="text-sm my-1 dark:text-gray-400 flex items-center gap-2 w-fit">
 											{#if showPercentage}
 												{@const percentage = calculatePercentage(document.distance)}
-												<span
-													class={`px-1 rounded-sm font-medium ${getRelevanceColor(percentage)}`}
-												>
-													{percentage.toFixed(2)}%
-												</span>
+
+												{#if typeof percentage === 'number'}
+													<span
+														class={`px-1 rounded-sm font-medium ${getRelevanceColor(percentage)}`}
+													>
+														{percentage.toFixed(2)}%
+													</span>
+												{/if}
 												<span class="text-gray-500 dark:text-gray-500">
-													({document.distance.toFixed(4)})
+													({(document?.distance ?? 0).toFixed(4)})
 												</span>
 											{:else}
 												<span class="text-gray-500 dark:text-gray-500">
-													{document.distance.toFixed(4)}
+													{(document?.distance ?? 0).toFixed(4)}
 												</span>
 											{/if}
 										</div>

@@ -49,6 +49,7 @@ async def get_all_base_models(request: Request, user: UserModel = None):
                 "created": int(time.time()),
                 "owned_by": "ollama",
                 "ollama": model,
+                "tags": model.get("tags", []),
             }
             for model in ollama_models["models"]
         ]
@@ -113,9 +114,12 @@ async def get_all_models(request, user: UserModel = None):
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
             for model in models:
-                if (
-                    custom_model.id == model["id"]
-                    or custom_model.id == model["id"].split(":")[0]
+                if custom_model.id == model["id"] or (
+                    model.get("owned_by") == "ollama"
+                    and custom_model.id
+                    == model["id"].split(":")[
+                        0
+                    ]  # Ollama may return model ids in different formats (e.g., 'llama3' vs. 'llama3:7b')
                 ):
                     if custom_model.is_active:
                         model["name"] = custom_model.name
