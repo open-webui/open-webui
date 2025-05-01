@@ -22,6 +22,7 @@ def upgrade():
     op.create_table(
         "config",
         sa.Column("id", sa.Integer, primary_key=True),
+        sa.Column("email", sa.String,  nullable=False, server_default='system@default'),
         sa.Column("data", sa.JSON(), nullable=False),
         sa.Column("version", sa.Integer, nullable=False),
         sa.Column(
