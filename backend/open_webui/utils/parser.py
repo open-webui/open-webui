@@ -91,7 +91,8 @@ class DefaultParser(ParserInterface):
               user=None,
               **kwargs
               ) -> dict:
-        docs = self.split(request, docs)
+        print(">>> READY TO SPLIT")
+        docs = self.split(request, docs, **kwargs)
         texts = [doc.page_content for doc in docs]
         metadatas = self.metadata(request, docs, metadata)
 
@@ -132,7 +133,7 @@ class DefaultParser(ParserInterface):
             f"{self.name}: save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
         )
 
-    def split(self, request, docs) -> Tuple[List[Document]]:
+    def split(self, request, docs, **kwargs) -> Tuple[List[Document]]:
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=request.app.state.config.CHUNK_SIZE,
