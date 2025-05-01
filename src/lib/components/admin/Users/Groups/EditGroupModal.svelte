@@ -5,7 +5,7 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Display from './Display.svelte';
-	import Permissions from './Permissions.svelte';
+	import Permissions from '$lib/components/common/Permissions.svelte';
 	import Users from './Users.svelte';
 	import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';

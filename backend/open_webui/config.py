@@ -1166,7 +1166,42 @@ DEFAULT_USER_PERMISSIONS = {
     },
 }
 
-USER_PERMISSIONS = Permissions.set_initial_permissions(DEFAULT_USER_PERMISSIONS)
+DEFAULT_USER_PERMISSIONS_LABELS = {
+    "workspace": {
+        "models": "Models Access",
+        "knowledge": "Knowledge Access",
+        "prompts": "Prompts Access",
+        "tools": "Tools Access",
+    },
+    "sharing": {
+        "public_models": "Models Public Sharing",
+        "public_knowledge": "Knowledge Public Sharing",
+        "public_prompts": "Prompts Public Sharing",
+        "public_tools": "Tools Public Sharing",
+    },
+    "chat": {
+        "controls": "Allow Chat Controls",
+        "file_upload": "Allow File Upload",
+        "delete": "Allow Chat Delete",
+        "edit": "Allow Chat Edit",
+        "share": "Allow Chat Share",
+        "export": "Allow Chat Export",
+        "stt": "Allow Speech to Text",
+        "tts": "Allow Text to Speech",
+        "call": "Allow Call",
+        "multiple_models": "Allow Multiple Models in Chat",
+        "temporary": "Allow Temporary Chat",
+        "temporary_enforced": "Enforce Temporary Chat",
+    },
+    "features": {
+        "direct_tool_servers": "Direct Tool Servers",
+        "web_search": "Web Search",
+        "image_generation": "Image Generation",
+        "code_interpreter": "Code Interpreter",
+    },
+}
+
+USER_PERMISSIONS = Permissions.set_initial_permissions(DEFAULT_USER_PERMISSIONS, DEFAULT_USER_PERMISSIONS_LABELS)
 
 ENABLE_CHANNELS = PersistentConfig(
     "ENABLE_CHANNELS",
