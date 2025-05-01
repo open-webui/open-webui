@@ -25,6 +25,7 @@
     import { onClickOutside } from '$lib/utils';
     import ChevronDown from '../icons/ChevronDown.svelte';
     import { COMPANY_SIZE_OPTIONS, INDUSTRY_OPTIONS, TEAM_FUNCTION_OPTIONS } from '$lib/constants';
+    import CompanyIcon from '../icons/CompanyIcon.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -88,9 +89,9 @@
 		<div>
 			<img crossorigin="anonymous" src="/logo_dark_transparent.png" class=" w-10 mb-5" alt="logo" />
 		</div>
-		<div class="mb-2.5">{$i18n.t('Company and Team Information')}</div>
+		<div class="mb-2.5">{$i18n.t('Company & Team Information')}</div>
 		<div class="text-center text-xs dark:text-customGray-300">
-			{$i18n.t('Let’s go to know your company ant team')}
+			{$i18n.t('Let’s get to know your company and team.')}
 		</div>
 	</div>
     <input
@@ -170,8 +171,8 @@
                         class="rounded-lg size-16 object-cover shrink-0"
                     />
                 {:else}
-                    <div class="rounded-lg size-16 shrink-0 bg-customGray-900 dark:text-customGray-800">
-                        <UserIcon className="size-16"/>
+                    <div class="rounded-lg flex justify-center size-16 shrink-0 bg-customGray-900 dark:text-customGray-800">
+                        <CompanyIcon className="self-center size-12"/>
                     </div>
                 {/if}
 

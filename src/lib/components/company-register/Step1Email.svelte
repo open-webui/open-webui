@@ -59,7 +59,7 @@
 		</div>
 		<div class="mb-2.5">{$i18n.t('Create Your Account')}</div>
 		<div class="text-center text-xs dark:text-customGray-300">
-			{$i18n.t('Sign Up to Beyond the Loop to continue  Beyond the Loop')}
+			{$i18n.t('Sign up to Beyond the Loop to continue.')}
 		</div>
 	</div>
 	<div class="flex-1 mb-2.5">

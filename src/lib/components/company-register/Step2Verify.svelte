@@ -69,7 +69,7 @@
 		<div>
 			<img crossorigin="anonymous" src="/logo_dark_transparent.png" class=" w-10 mb-5" alt="logo" />
 		</div>
-		<div class="mb-2.5">{$i18n.t('Verify Your identity')}</div>
+		<div class="mb-2.5">{$i18n.t('Verify Your Identity')}</div>
 		<div class="text-center text-xs dark:text-customGray-300">
 			{$i18n.t('We’ve sent an email with your code to {{email}}', { email: email })}
 		</div>

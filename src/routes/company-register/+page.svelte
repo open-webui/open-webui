@@ -20,6 +20,7 @@
 	import { getSessionUser, userSignIn } from '$lib/apis/auths';
 	import { getBackendConfig } from '$lib/apis';
 	import { generateInitialsImage } from '$lib/utils';
+	import CustomToast from '$lib/components/common/CustomToast.svelte';
 
 	let step = 1;
 
@@ -30,9 +31,9 @@
 	let password = '';
 	let profile_image_url = '';
 	let company_name = '';
-	let company_size = COMPANY_SIZE_OPTIONS[0];
-	let company_industry = INDUSTRY_OPTIONS[0];
-	let company_team_function = TEAM_FUNCTION_OPTIONS[0];
+	let company_size = '';
+	let company_industry = '';
+	let company_team_function = '';
 	let company_profile_image_url = '';
 
 	const setSessionUser = async (sessionUser) => {
@@ -51,7 +52,12 @@
 		if (step === 1) {
 			email = event.detail.email;
 		}
+		
 		if (step === 4) {
+			if(!company_name || !company_size || !company_industry || !company_team_function || !company_profile_image_url) {
+				showToast('error', "To continue, please provide full information about your company and team.")
+				return;
+			}
 			const user = await completeRegistration(
 				first_name,
 				last_name,
@@ -63,10 +69,14 @@
 				company_industry,
 				company_team_function,
 				company_profile_image_url ? company_profile_image_url : generateInitialsImage(company_name)
-			);
-			await setSessionUser(user);
+			).catch(error => showToast('error', error));
+			console.log(user)
+			if(user) {
+				await setSessionUser(user);
+				step = step + 1;
+			}
 		}
-		if (step < 5) step += 1;
+		if (step < 4) step += 1;	
 	}
 
 	const goBack = () => {
@@ -74,6 +84,7 @@
 	};
 </script>
 
+<CustomToast message={$toastMessage} type={$toastType} visible={$toastVisible} />
 <div
 	class="flex flex-col justify-between w-full h-screen max-h-[100dvh] text-white relative dark:bg-customGray-900"
 >
