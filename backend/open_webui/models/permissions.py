@@ -82,6 +82,7 @@ class PermissionRoleForm(BaseModel):
 
 class PermissionAddForm(BaseModel):
     name: str
+    label: str
     category: PermissionCategory
     description: str | None = None
 

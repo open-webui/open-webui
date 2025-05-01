@@ -6,8 +6,10 @@
 	import { user } from '$lib/stores';
 
 	import UserList from './Users/UserList.svelte';
-	import Roles from './Users/RoleList.svelte';
 	import Groups from './Users/Groups.svelte';
+	import Roles from './Users/RoleList.svelte';
+	import PermissionList from './Users/PermissionList.svelte';
+	import Wrench from "$lib/components/icons/Wrench.svelte";
 
 	const i18n = getContext('i18n');
 
@@ -110,6 +112,21 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Roles')}</div>
 		</button>
+
+		<button
+			class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex text-right transition {selectedTab ===
+			'permissions'
+				? ''
+				: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+			on:click={() => {
+				selectedTab = 'permissions';
+			}}
+		>
+			<div class=" self-center mr-2">
+				<Wrench />
+			</div>
+			<div class=" self-center">{$i18n.t('Permissions')}</div>
+		</button>
 	</div>
 
 	<div class="flex-1 mt-1 lg:mt-0 overflow-y-scroll">
@@ -119,6 +136,8 @@
 			<Groups {users} />
 		{:else if selectedTab === 'roles'}
 			<Roles />
+		{:else if selectedTab === 'permissions'}
+			<PermissionList />
 		{/if}
 	</div>
 </div>
