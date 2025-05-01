@@ -207,7 +207,7 @@ def merge_and_sort_query_results(query_results: list[dict], k: int) -> dict:
 
         for distance, document, metadata in zip(distances, documents, metadatas):
             if isinstance(document, str):
-                doc_hash = hashlib.md5(
+                doc_hash = hashlib.sha256(
                     document.encode()
                 ).hexdigest()  # Compute a hash for uniqueness
 
