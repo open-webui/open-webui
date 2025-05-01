@@ -1,5 +1,4 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
-import { getUserPosition } from '$lib/utils';
 
 export const getRoles = async (token: string) => {
 	let error = null;
@@ -124,38 +123,6 @@ export const getRolePermissions = async (token: string, roleName: string ) => {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		}
-	})
-    .then(async (res) => {
-        if (!res.ok) throw await res.json();
-        return res.json();
-    })
-    .catch((err) => {
-        console.log(err);
-        error = err.detail;
-        return null;
-    });
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const addNewPermission = async (token: string, roleName: string, permissionName: string, categoryName: string, description: string, value: boolean ) => {
-	let error = null;
-	const res = await fetch(`${WEBUI_API_BASE_URL}/roles/${roleName}/permission`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			name: permissionName,
-			category: categoryName,
-			description: description,
-			value: value
-		})
 	})
     .then(async (res) => {
         if (!res.ok) throw await res.json();
