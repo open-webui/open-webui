@@ -2510,11 +2510,7 @@ WHISPER_VAD_FILTER = PersistentConfig(
     os.getenv("WHISPER_VAD_FILTER", "False").lower() == "true",
 )
 
-WHISPER_LANGUAGE = PersistentConfig(
-    "WHISPER_LANGUAGE",
-    "audio.stt.whisper_language",
-    os.getenv("WHISPER_LANGUAGE", None).lower(),
-)
+WHISPER_LANGUAGE = os.getenv("WHISPER_LANGUAGE", None).lower()
 
 # Add Deepgram configuration
 DEEPGRAM_API_KEY = PersistentConfig(
