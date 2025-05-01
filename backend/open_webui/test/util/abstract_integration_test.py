@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 
 def get_fast_api_client():
-    from main import app
+    from open_webui.main import app
 
     with TestClient(app) as c:
         return c
