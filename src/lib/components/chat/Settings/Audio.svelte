@@ -179,7 +179,7 @@
 
 		{#if $config.audio.tts.engine === ''}
 			<div>
-				<h3 class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</h3>
+				<h3 id="set-voice" class=" mb-2.5 text-sm font-medium">{$i18n.t('Set Voice')}</h3>
 				<div class="flex w-full">
 					<div class="flex-1">
 						<select
