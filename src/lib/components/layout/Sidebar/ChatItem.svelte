@@ -313,7 +313,6 @@
 
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
-		id="chat-menu"
 		class="absolute right-[8px] top-0 bottom-0 flex items-center pr-2 pl-3 bg-gradient-to-l from-80% to-transparent"
 		style="height: 100%;"
 		on:mouseenter={(e) => {

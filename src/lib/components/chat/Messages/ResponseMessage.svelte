@@ -648,7 +648,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="w-full flex flex-col relative" id="response-content-container">
+							<div class="w-full flex flex-col relative">
 								{#if message.content === '' && !message.error}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
