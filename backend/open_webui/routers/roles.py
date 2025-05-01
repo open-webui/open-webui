@@ -116,25 +116,6 @@ async def get_default_permissions_by_role_name(role_name: str, user=Depends(get_
         detail='Permissions fetch failed. Please try again later.',
     )
 
-
-############################
-# AddNewPermissionToRole
-############################
-
-@router.post("/{role_name}/permission")
-async def add_new_default_permission_with_role(role_name: str, form_data: PermissionModel,
-                                               user=Depends(get_admin_user)):
-    perm = Permissions.add(permission=form_data, role_name=role_name)
-
-    if perm:
-        return True
-
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail='Something went wrong. Please try again.',
-    )
-
-
 ############################
 # LinkPermissionToRole
 ###########################
