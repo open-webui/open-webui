@@ -361,6 +361,7 @@ from open_webui.env import (
     ENABLE_OTEL,
     EXTERNAL_PWA_MANIFEST_URL,
 )
+from open_webui.data_cleanup_task import DATA_CLEANUP_ENABLED, setup_data_cleanup_schedule
 
 
 from open_webui.utils.models import (
@@ -455,6 +456,9 @@ async def lifespan(app: FastAPI):
     if pool_size and pool_size > 0:
         limiter = anyio.to_thread.current_default_thread_limiter()
         limiter.total_tokens = pool_size
+
+    if DATA_CLEANUP_ENABLED:
+        await setup_data_cleanup_schedule()
 
     asyncio.create_task(periodic_usage_pool_cleanup())
 
