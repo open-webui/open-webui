@@ -192,6 +192,9 @@ async def connect(sid, environ, auth):
             # print(f"user {user.name}({user.id}) connected with session ID {sid}")
             await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
             await sio.emit("usage", {"models": get_models_in_use()})
+            return True
+    
+    return False
 
 
 @sio.on("user-join")
@@ -314,16 +317,18 @@ def get_event_emitter(request_info, update_db=True):
             )
         )
 
-        for session_id in session_ids:
-            await sio.emit(
-                "chat-events",
-                {
-                    "chat_id": request_info.get("chat_id", None),
-                    "message_id": request_info.get("message_id", None),
-                    "data": event_data,
-                },
-                to=session_id,
-            )
+        emit_tasks = [sio.emit(
+            "chat-events",
+            {
+                "chat_id": request_info.get("chat_id", None),
+                "message_id": request_info.get("message_id", None),
+                "data": event_data,
+            },
+            to=session_id,
+        )
+        for session_id in session_ids]
+
+        await asyncio.gather(*emit_tasks)
 
         if update_db:
             if "type" in event_data and event_data["type"] == "status":
