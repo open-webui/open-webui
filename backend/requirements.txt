@@ -40,8 +40,8 @@ anthropic
 google-generativeai==0.8.4
 tiktoken
 
-langchain==0.3.19
-langchain-community==0.3.18
+langchain==0.3.24
+langchain-community==0.3.23
 
 fake-useragent==2.1.0
 chromadb==0.6.3
