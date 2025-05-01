@@ -32,6 +32,7 @@ class Permission(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String, nullable=False)
+    label = Column(String, nullable=False)
     category = Column(SQLAlchemyEnum(PermissionCategory), nullable=False)
     description = Column(String)
 
@@ -44,14 +45,31 @@ class Permission(Base):
 
 
 class PermissionModel(BaseModel):
-    id: int = Field(default=None, exclude=True)
+    id: int = Field(default=None)
     name: str
+    label: str
     category: PermissionCategory
     description: str | None
     value: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
+class PermissionEmptyModel(BaseModel):
+    id: int = Field(default=None)
+    name: str
+    label: str
+    category: PermissionCategory
+    description: str | None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class PermissionCreateModel(BaseModel):
+    name: str
+    label: str
+    category: PermissionCategory
+    description: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 ####################
 # Forms
@@ -62,6 +80,10 @@ class PermissionRoleForm(BaseModel):
     category: PermissionCategory
     value: bool = False
 
+class PermissionAddForm(BaseModel):
+    name: str
+    category: PermissionCategory
+    description: str | None = None
 
 ####################
 # Database operations
@@ -133,8 +155,11 @@ class PermissionsTable:
             return result
 
     # TODO: if config is not persistent enabled, just override permissions given
-    def set_initial_permissions(self, default_permissions: dict[PermissionCategory, dict[str, bool]],
-                                role_name: str = "user") -> dict[PermissionCategory, dict[str, bool]]:
+    def set_initial_permissions(self,
+        default_permissions: dict[PermissionCategory, dict[str, bool]],
+        default_labels: dict[PermissionCategory, dict[str, str]],
+        role_name: str = "user"
+    ) -> dict[PermissionCategory, dict[str, bool]]:
         with get_db() as db:
             # Check if any permissions exist
             existing_count = db.query(Permission).count()
@@ -154,6 +179,7 @@ class PermissionsTable:
                         new_permission = Permission(
                             name=perm_name,
                             category=category,
+                            label=default_labels[category_str][perm_name],
                             description=f"Default {category.value} permission for {perm_name}"
                         )
                         db.add(new_permission)
@@ -192,6 +218,7 @@ class PermissionsTable:
                 return PermissionModel(
                     id=db_permission.id,
                     name=db_permission.name,
+                    label=db_permission.label,
                     category=db_permission.category,
                     description=db_permission.description,
                     # Default value to False as we don't have a role context
@@ -203,7 +230,7 @@ class PermissionsTable:
                 return None
 
 
-    def get_all(self) -> list[PermissionModel]:
+    def get_all(self) -> list[PermissionEmptyModel]:
         with get_db() as db:
             try:
                 # Query all permissions from the database
@@ -211,13 +238,12 @@ class PermissionsTable:
 
                 # Convert database objects to PermissionModel instances
                 permissions = [
-                    PermissionModel(
+                    PermissionEmptyModel(
                         id=p.id,
                         name=p.name,
+                        label=p.label,
                         category=p.category,
                         description=p.description,
-                        # Default value to False as we don't have a role context
-                        value=False
                     ) for p in db_permissions
                 ]
 
@@ -228,49 +254,36 @@ class PermissionsTable:
                 return []
 
 
-    def add(self, permission: PermissionModel, role_name: str = "user") -> PermissionModel | None:
+    def add(self, permission: PermissionCreateModel) -> PermissionEmptyModel | None:
         with get_db() as db:
             try:
-                role = db.query(Role).filter_by(name=role_name).order_by(Role.id).first()
-                if not role:
-                    return None
-
                 existing_permission = db.query(Permission).filter_by(
                     name=permission.name,
                     category=permission.category
                 ).first()
 
                 if existing_permission:
-                    # Permission exists. Fail, as one should use the `add_default_permission_to_role` end-point.
+                    # Permission exists.
                     return None
 
                 new_permission = Permission(
                     name=permission.name,
+                    label=permission.label,
                     category=permission.category,
                     description=permission.description,
                 )
                 db.add(new_permission)
-                db.flush()
-
-                # Create the association with the value
-                role_permission = RolePermission(
-                    role_id=role.id,
-                    permission_id=new_permission.id,
-                    value=permission.value
-                )
-                db.add(role_permission)
-
                 db.commit()
                 db.refresh(new_permission)
 
-                return PermissionModel.model_validate(new_permission)
+                return PermissionEmptyModel.model_validate(new_permission)
 
             except Exception as e:
                 print(f"Error adding permission: {e}")
                 db.rollback()
                 return None
 
-    def update(self, permission: PermissionModel, role_name: str = "user") -> PermissionModel | None:
+    def update(self, permission: PermissionEmptyModel) -> PermissionEmptyModel | None:
         with get_db() as db:
             try:
                 db_permission = db.query(Permission).filter_by(
@@ -281,28 +294,13 @@ class PermissionsTable:
                 if not db_permission:
                     return None
 
-                role = db.query(Role).filter_by(name=role_name).first()
-                if not role:
-                    return None
-
-                association = db.query(RolePermission).filter_by(
-                    role_id=role.id,
-                    permission_id=db_permission.id
-                ).first()
-                association.value = permission['value']
-
                 if 'description' in permission:
                     db_permission.description = permission['description']
 
                 db.commit()
+                db.refresh(db_permission)
 
-                return PermissionModel(
-                    id=db_permission.id,
-                    name=db_permission.name,
-                    category=db_permission.category,
-                    description=db_permission.description,
-                    value=association.value
-                )
+                return PermissionEmptyModel.model_validate(db_permission)
 
             except Exception as e:
                 print(f"Error updating permission: {e}")
