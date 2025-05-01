@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
+	import { toast } from '$lib/utils/toast';
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { goto } from '$app/navigation';
@@ -41,6 +42,8 @@
 	onOpenChange={(state) => {
 		dispatch('change', state);
 		changeFocus(buttonID);
+		toast.announce(`${$i18n.t('Active Users')}: ${$activeUserIds?.length}`)
+
 	}}
 >
 	<DropdownMenu.Trigger class={buttonClass} aria-label={ariaLabel} id={buttonID}>
