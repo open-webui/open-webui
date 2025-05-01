@@ -252,7 +252,7 @@
 
 	const nameUpdateHandler = async () => {
 		if (name === '') {
-			toast.error($i18n.t('Folder name cannot be empty'));
+			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
 		}
 
