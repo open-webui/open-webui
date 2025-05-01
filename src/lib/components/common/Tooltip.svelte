@@ -16,6 +16,7 @@
 	export let allowHTML = true;
 	export let popperOptions = {};
 	export let tippyOptions = {};
+	export let tooltipID = '';
 
 	let tooltipElement;
 	let tooltipInstance;
@@ -83,6 +84,7 @@
 	role="tooltip"
 	aria-label={DOMPurify.sanitize(content)}
 	class={className}
+	id={tooltipID}
 >
 	<slot />
 </div>
