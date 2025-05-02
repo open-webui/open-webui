@@ -85,25 +85,38 @@ class UpdatePasswordForm(BaseModel):
     password: str
     new_password: str
 
+class ResetPasswordRequestForm(BaseModel):
+    email: str
+
+class ResetPasswordForm(BaseModel):
+    reset_token: str
+    new_password: str
+
 class CompleteInviteForm(BaseModel):
     first_name: str
     last_name: str
     password: str
     invite_token: str
+    profile_image_url: Optional[str] = "/user.png"
+
+class CompleteRegistrationForm(BaseModel):
+    first_name: str
+    last_name: str
+    password: str
+    registration_code: str
+    profile_image_url: Optional[str] = "/user.png"
+    company_name: str
+    company_size: str
+    company_industry: str
+    company_team_function: str
+    company_profile_image_url: Optional[str] = "/user.png"
 
 class SignupForm(BaseModel):
     name: str
     email: str
     password: str
+    company_name: str
     profile_image_url: Optional[str] = "/user.png"
-
-
-class AddUserForm(BaseModel):
-    first_name: str
-    last_name: str
-    email: str
-    profile_image_url: Optional[str] = "/user.png"
-    role: Optional[str] = "pending"
 
 
 class AuthsTable:

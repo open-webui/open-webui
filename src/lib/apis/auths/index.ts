@@ -324,6 +324,46 @@ export const userSignUp = async (
 	return res;
 };
 
+export const completeInvite = async (
+	firstName: string,
+	lastName: string,
+	password: string,
+	inviteToken: string,
+	profileImageUrl: string
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/completeInvite`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		credentials: 'include',
+		body: JSON.stringify({
+			first_name: firstName,
+			last_name: lastName,
+			password: password,
+			invite_token: inviteToken,
+			profile_image_url: profileImageUrl.length ? profileImageUrl : null
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+}
+
 export const userSignOut = async () => {
 	let error = null;
 
@@ -369,6 +409,39 @@ export const addUser = async (
 			last_name: last_name,
 			email: email,
 			role: role
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const inviteUsers = async (
+	token: string,
+	invitees: { email: string; role: string }[]
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/invite`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			invitees
 		})
 	})
 		.then(async (res) => {
@@ -654,7 +727,7 @@ export const updateJWTExpiresDuration = async (token: string, duration: string) 
 export const createAPIKey = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_key`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api-key`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -679,7 +752,7 @@ export const createAPIKey = async (token: string) => {
 export const getAPIKey = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_key`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api-key`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -704,7 +777,7 @@ export const getAPIKey = async (token: string) => {
 export const deleteAPIKey = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api_key`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/api-key`, {
 		method: 'DELETE',
 		headers: {
 			'Content-Type': 'application/json',
@@ -725,3 +798,112 @@ export const deleteAPIKey = async (token: string) => {
 	}
 	return res;
 };
+
+export const requestPasswordReset = async (email: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/reset-password/request`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			email: email
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const confirmPasswordReset = async (resetToken: string, newPassword: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/reset-password/confirm`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			reset_token: resetToken,
+			new_password: newPassword
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const completeRegistration = async (
+	first_name: string,
+	last_name: string,
+	registration_code: string,
+	password: string,
+	profile_image_url: string,
+	company_name:string,
+	company_size: string,
+	company_industry: string,
+	company_team_function: string,
+	company_profile_image_url: string
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/completeRegistration`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json'
+		},
+		// credentials: 'include',
+		body: JSON.stringify({
+			first_name,
+			last_name,
+			password,
+			registration_code,
+			profile_image_url: profile_image_url?.length ? profile_image_url : null,
+			company_name,
+			company_size,
+			company_industry,
+			company_team_function,
+			company_profile_image_url
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+}

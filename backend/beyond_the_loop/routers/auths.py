@@ -7,19 +7,19 @@ import secrets
 import string
 from aiohttp import ClientSession
 
-from beyond_the_loop.models.auths import CompleteInviteForm
+from beyond_the_loop.models.auths import CompleteInviteForm, CompleteRegistrationForm
 from beyond_the_loop.models.auths import (
-    AddUserForm,
     ApiKey,
     Auths,
     Token,
     LdapForm,
     SigninForm,
-    SigninResponse,
     SignupForm,
     UpdatePasswordForm,
     UpdateProfileForm,
     UserResponse,
+    ResetPasswordRequestForm,
+    ResetPasswordForm,
 )
 from beyond_the_loop.models.users import Users
 from beyond_the_loop.models.companies import Companies, NO_COMPANY
@@ -62,6 +62,26 @@ router = APIRouter()
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+
+def validate_password(password: str) -> bool:
+    """
+    Validates that a password meets the security requirements:
+    - At least 8 characters
+    - At least one uppercase letter
+    - At least one digit
+    - At least one special character
+    
+    Args:
+        password: The password to validate
+        
+    Returns:
+        bool: True if password meets requirements, False otherwise
+    """
+    # Same regex as used in frontend
+    strong_password_regex = r"^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?]).{8,}$"
+    return bool(re.match(strong_password_regex, password))
+
 
 ############################
 # GetSessionUser
@@ -137,6 +157,11 @@ async def update_profile(
         )
 
         if form_data.password:
+            if not validate_password(form_data.password):
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Password must be 8+ characters, with a number, capital letter, and symbol."
+                )
             hashed = get_password_hash(form_data.password)
             Auths.update_user_password_by_id(session_user.id, hashed)
 
@@ -157,18 +182,22 @@ async def update_profile(
 async def update_password(
     form_data: UpdatePasswordForm, session_user=Depends(get_current_user)
 ):
-    if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
-        raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
-    if session_user:
+    try:
         user = Auths.authenticate_user(session_user.email, form_data.password)
-
         if user:
+            # Validate the new password
+            if not validate_password(form_data.new_password):
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Password must be 8+ characters, with a number, capital letter, and symbol."
+                )
+            
             hashed = get_password_hash(form_data.new_password)
             return Auths.update_user_password_by_id(user.id, hashed)
         else:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_PASSWORD)
-    else:
-        raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
+    except Exception as e:
+        raise HTTPException(400, detail=str(e))
 
 
 ############################
@@ -341,14 +370,6 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
             trusted_name = request.headers.get(
                 WEBUI_AUTH_TRUSTED_NAME_HEADER, trusted_email
             )
-        if not Users.get_user_by_email(trusted_email.lower()):
-            await signup(
-                request,
-                response,
-                SignupForm(
-                    email=trusted_email, password=str(uuid.uuid4()), name=trusted_name
-                ),
-            )
         user = Auths.authenticate_user_by_trusted_header(trusted_email)
     elif WEBUI_AUTH == False:
         admin_email = "admin@localhost"
@@ -359,12 +380,6 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         else:
             if Users.get_num_users() != 0:
                 raise HTTPException(400, detail=ERROR_MESSAGES.EXISTING_USERS)
-
-            await signup(
-                request,
-                response,
-                SignupForm(email=admin_email, password=admin_password, name="User"),
-            )
 
             user = Auths.authenticate_user(admin_email.lower(), admin_password)
     else:
@@ -422,51 +437,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 # Complete Invite
 ############################
 
-@router.post("/add", response_model=SigninResponse)
-async def add_user(form_data: AddUserForm, admin_user: Users = Depends(get_admin_user)):
-    if not validate_email_format(form_data.email.lower()):
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
-        )
-
-    if Users.get_user_by_email(form_data.email.lower()):
-        raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
-
-    try:
-        # Generate a secure random password
-        password = "beyondtheloop"
-        hashed = get_password_hash(password)
-
-        new_user = Auths.insert_new_auth(
-            form_data.email.lower(),
-            hashed,
-            form_data.first_name,
-            form_data.last_name,
-            admin_user.company_id,
-            form_data.profile_image_url,
-            form_data.role,
-        )
-
-        if new_user:
-            token = create_token(data={"id": new_user.id})
-            return {
-                "token": token,
-                "token_type": "Bearer",
-                "id": new_user.id,
-                "email": new_user.email,
-                "first_name": new_user.first_name,
-                "last_name": new_user.last_name,
-                "role": new_user.role,
-                "company_id": new_user.company_id,
-                "profile_image_url": new_user.profile_image_url,
-            }
-        else:
-            raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
-    except Exception as err:
-        raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
-
-
-@router.post("/complete_invite", response_model=SessionUserResponse)
+@router.post("/completeInvite", response_model=SessionUserResponse)
 async def complete_invite(request: Request, response: Response, form_data: CompleteInviteForm):
     user = Users.get_user_by_invite_token(form_data.invite_token)
 
@@ -474,11 +445,18 @@ async def complete_invite(request: Request, response: Response, form_data: Compl
         raise HTTPException(404, detail=ERROR_MESSAGES.NOT_FOUND)
 
     try:
+        # Validate the password
+        if not validate_password(form_data.password):
+            raise HTTPException(
+                status_code=400, 
+                detail="Password must be 8+ characters, with a number, capital letter, and symbol."
+            )
+
         hashed_password = get_password_hash(form_data.password)
 
         Auths.insert_auth_for_existing_user(user.id, user.email, hashed_password)
 
-        Users.complete_invite_by_id(user.id, form_data.first_name, form_data.last_name)
+        user = Users.complete_by_id(user.id, form_data.first_name, form_data.last_name, form_data.profile_image_url)
 
     except Exception as err:
         raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
@@ -537,128 +515,88 @@ async def complete_invite(request: Request, response: Response, form_data: Compl
         "permissions": user_permissions,
     }
 
-############################
-# SignUp
-############################
+@router.post("/completeRegistration", response_model=SessionUserResponse)
+async def complete_registration(request: Request, response: Response, form_data: CompleteRegistrationForm):
+    user = Users.get_user_by_registration_code(form_data.registration_code)
 
-
-@router.post("/signup", response_model=SessionUserResponse)
-async def signup(request: Request, response: Response, form_data: SignupForm):
-    if WEBUI_AUTH:
-        if (
-            not request.app.state.config.ENABLE_SIGNUP
-            or not request.app.state.config.ENABLE_LOGIN_FORM
-        ):
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
-            )
-    else:
-        if Users.get_num_users() != 0:
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED
-            )
-
-    if not validate_email_format(form_data.email.lower()):
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
-        )
-
-    if Users.get_user_by_email(form_data.email.lower()):
-        raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
+    if not user:
+        raise HTTPException(404, detail=ERROR_MESSAGES.NOT_FOUND)
 
     try:
-        role = (
-            "admin"
-            if Users.get_num_users() == 0
-            else request.app.state.config.DEFAULT_USER_ROLE
-        )
-
-        if Users.get_num_users() == 0:
-            # Disable signup after the first user is created
-            request.app.state.config.ENABLE_SIGNUP = False
-            # Create a new company for the first user
-            company_id = str(uuid.uuid4())
-            company = Companies.create_company({
-                "id": company_id,
-                "name": f"{form_data.name}'s Company",
-                "credit_balance": 10000000  # Initial credit balance
-            })
-            if not company:
-                raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_COMPANY_ERROR)
-        else:
-            company_id = NO_COMPANY
-
-        hashed = get_password_hash(form_data.password)
-
-        user = Auths.insert_new_auth(
-            form_data.email.lower(),
-            hashed,
-            form_data.name,
-            form_data.name,
-            company_id,
-            form_data.profile_image_url,
-            role,
-        )
-
-        if user:
-            expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
-            expires_at = None
-            if expires_delta:
-                expires_at = int(time.time()) + int(expires_delta.total_seconds())
-
-            token = create_token(
-                data={"id": user.id},
-                expires_delta=expires_delta,
+        # Validate the password
+        if not validate_password(form_data.password):
+            raise HTTPException(
+                status_code=400,
+                detail="Password must be 8+ characters, with a number, capital letter, and symbol."
             )
 
-            datetime_expires_at = (
-                datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
-                if expires_at
-                else None
-            )
+        hashed_password = get_password_hash(form_data.password)
 
-            # Set the cookie token
-            response.set_cookie(
-                key="token",
-                value=token,
-                expires=datetime_expires_at,
-                httponly=True,  # Ensures the cookie is not accessible via JavaScript
-                samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-                secure=WEBUI_AUTH_COOKIE_SECURE,
-            )
+        Auths.insert_auth_for_existing_user(user.id, user.email, hashed_password)
 
-            if request.app.state.config.WEBHOOK_URL:
-                post_webhook(
-                    request.app.state.config.WEBHOOK_URL,
-                    WEBHOOK_MESSAGES.USER_SIGNUP(user.first_name + " " + user.last_name),
-                    {
-                        "action": "signup",
-                        "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.first_name + " " + user.last_name),
-                        "user": user.model_dump_json(exclude_none=True),
-                    },
-                )
+        new_company_id = str(uuid.uuid4())
 
-            user_permissions = get_permissions(
-                user.id, request.app.state.config.USER_PERMISSIONS
-            )
+        user = Users.complete_by_id(user.id, form_data.first_name, form_data.last_name, form_data.profile_image_url, new_company_id)
 
-            return {
-                "token": token,
-                "token_type": "Bearer",
-                "expires_at": expires_at,
-                "id": user.id,
-                "email": user.email,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "role": user.role,
-                "profile_image_url": user.profile_image_url,
-                "permissions": user_permissions,
-            }
-        else:
-            raise HTTPException(500, detail=ERROR_MESSAGES.CREATE_USER_ERROR)
+        Companies.create_company({
+                "id": new_company_id, "name": form_data.company_name, "credit_balance": 0, "size": form_data.company_size, "industry": form_data.company_industry, "team_function": form_data.company_team_function, "profile_image_url": form_data.company_profile_image_url})
+
     except Exception as err:
         raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))
 
+    expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+    expires_at = None
+    if expires_delta:
+        expires_at = int(time.time()) + int(expires_delta.total_seconds())
+
+    token = create_token(
+        data={"id": user.id},
+        expires_delta=expires_delta,
+    )
+
+    datetime_expires_at = (
+        datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
+        if expires_at
+        else None
+    )
+
+    # Set the cookie token
+    response.set_cookie(
+        key="token",
+        value=token,
+        expires=datetime_expires_at,
+        httponly=True,  # Ensures the cookie is not accessible via JavaScript
+        samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+        secure=WEBUI_AUTH_COOKIE_SECURE,
+    )
+
+    if request.app.state.config.WEBHOOK_URL:
+        post_webhook(
+            request.app.state.config.WEBHOOK_URL,
+            WEBHOOK_MESSAGES.USER_SIGNUP(user.first_name + " " + user.last_name),
+            {
+                "action": "signup",
+                "message": WEBHOOK_MESSAGES.USER_SIGNUP(user.first_name + " " + user.last_name),
+                "user": user.model_dump_json(exclude_none=True),
+            },
+        )
+
+    user_permissions = get_permissions(
+        user.id, request.app.state.config.USER_PERMISSIONS
+    )
+
+    return {
+        "token": token,
+        "token_type": "Bearer",
+        "expires_at": expires_at,
+        "id": user.id,
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "role": user.role,
+        "profile_image_url": user.profile_image_url,
+        "permissions": user_permissions,
+    }
 
 @router.get("/signout")
 async def signout(request: Request, response: Response):
@@ -691,15 +629,17 @@ async def signout(request: Request, response: Response):
 
 def generate_secure_password(length=12):
     """Generate a secure random password."""
-    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*()"
     while True:
         password = ''.join(secrets.choice(alphabet) for _ in range(length))
         # Check if password has at least one of each: uppercase, lowercase, digit, special char
         if (any(c.isupper() for c in password)
             and any(c.islower() for c in password)
             and any(c.isdigit() for c in password)
-            and any(c in "!@#$%^&*" for c in password)):
-            return password
+            and any(c in "!@#$%^&*()" for c in password)):
+            # Validate with the same function used for user-provided passwords
+            if validate_password(password):
+                return password
 
 
 ############################
@@ -926,7 +866,7 @@ async def update_ldap_config(
 
 
 # create api key
-@router.post("/api_key", response_model=ApiKey)
+@router.post("/api-key", response_model=ApiKey)
 async def generate_api_key(request: Request, user=Depends(get_current_user)):
     if not request.app.state.config.ENABLE_API_KEY:
         raise HTTPException(
@@ -946,14 +886,14 @@ async def generate_api_key(request: Request, user=Depends(get_current_user)):
 
 
 # delete api key
-@router.delete("/api_key", response_model=bool)
+@router.delete("/api-key", response_model=bool)
 async def delete_api_key(user=Depends(get_current_user)):
     success = Users.update_user_api_key_by_id(user.id, None)
     return success
 
 
 # get api key
-@router.get("/api_key", response_model=ApiKey)
+@router.get("/api-key", response_model=ApiKey)
 async def get_api_key(user=Depends(get_current_user)):
     api_key = Users.get_user_api_key_by_id(user.id)
     if api_key:
@@ -962,3 +902,99 @@ async def get_api_key(user=Depends(get_current_user)):
         }
     else:
         raise HTTPException(404, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
+
+
+############################
+# Password Reset
+############################
+
+@router.post("/reset-password/request", response_model=bool)
+async def request_password_reset(form_data: ResetPasswordRequestForm):
+    """
+    Request a password reset link to be sent to the user's email.
+    
+    This endpoint will:
+    1. Check if the email exists
+    2. Generate a reset token
+    3. Store the token and its expiration time
+    4. Send a reset email
+    
+    For security reasons, this endpoint always returns true, even if the email doesn't exist.
+    """
+    try:
+        # Check if user exists
+        user = Users.get_user_by_email(form_data.email)
+        
+        if user:
+            # Generate a secure token
+            reset_token = secrets.token_urlsafe(32)
+            
+            # Set expiration time (1 hour from now)
+            expires_at = int(time.time()) + 3600
+            
+            # Store the token in the database
+            Users.set_password_reset_token(form_data.email, reset_token, expires_at)
+            
+            # Send reset email
+            email_service = EmailService()
+            email_service.send_password_reset_email(
+                form_data.email, 
+                reset_token,
+                f"{user.first_name} {user.last_name}"
+            )
+        
+        # Always return true for security (don't reveal if email exists)
+        return True
+    except Exception as e:
+        log.error(f"Error requesting password reset: {str(e)}")
+        # Still return true for security reasons
+        return True
+
+
+@router.post("/reset-password/confirm", response_model=bool)
+async def confirm_password_reset(form_data: ResetPasswordForm):
+    """
+    Confirm a password reset using the token sent to the user's email.
+    
+    This endpoint will:
+    1. Validate the token
+    2. Check if the token is expired
+    3. Update the user's password
+    4. Clear the reset token
+    """
+    try:
+        # Find user by reset token
+        user = Users.get_user_by_password_reset_token(form_data.reset_token)
+        
+        if not user:
+            raise HTTPException(400, detail="Invalid or expired reset token")
+        
+        # Check if token is expired
+        current_time = int(time.time())
+        if user.password_reset_token_expires_at < current_time:
+            # Clear the expired token
+            Users.clear_password_reset_token(user.id)
+            raise HTTPException(400, detail="Reset token has expired")
+        
+        # Validate the new password
+        if not validate_password(form_data.new_password):
+            raise HTTPException(
+                status_code=400, 
+                detail="Password must be 8+ characters, with a number, capital letter, and symbol."
+            )
+        
+        # Update the password
+        hashed = get_password_hash(form_data.new_password)
+        result = Auths.update_user_password_by_id(user.id, hashed)
+        
+        if result:
+            # Clear the reset token
+            Users.clear_password_reset_token(user.id)
+            return True
+        else:
+            raise HTTPException(500, detail="Failed to update password")
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error confirming password reset: {str(e)}")
+        raise HTTPException(500, detail="An error occurred during password reset")

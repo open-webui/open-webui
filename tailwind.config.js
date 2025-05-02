@@ -15,6 +15,7 @@ export default {
 			'xs-plus': '13px',
 			},
 			spacing: {
+				'2.5': '0.625rem',
 				'6.5': '1.625rem',
 				'45': '11.25rem', 
 			},
@@ -47,6 +48,7 @@ export default {
 					950: '#181818'
 				},
 				customBlue: {
+					500: '#007FFF',
 					600: '#305BE4',
 					700: '#272D98',
 					800: '#272A6A'

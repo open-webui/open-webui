@@ -11,9 +11,6 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, ForeignKey
 from sqlalchemy.orm import relationship
 
-# TODO: I think this can be removed after we use companies somewhere else in the code
-from .companies import Company
-
 
 ####################
 # User DB Schema
@@ -41,6 +38,10 @@ class User(Base):
     oauth_sub = Column(Text, unique=True)
 
     invite_token = Column(Text, nullable=True)
+    registration_code = Column(Text, nullable=True)
+
+    password_reset_token = Column(Text, nullable=True)
+    password_reset_token_expires_at = Column(BigInteger, nullable=True)
 
     stripe_customer_id = Column(String, nullable=True)
 
@@ -77,6 +78,10 @@ class UserModel(BaseModel):
     company_id: str
 
     invite_token: Optional[str] = None
+    registration_code: Optional[str] = None
+
+    password_reset_token: Optional[str] = None
+    password_reset_token_expires_at: Optional[int] = None
 
     stripe_customer_id: Optional[str] = None
 
@@ -115,9 +120,17 @@ class UserUpdateForm(BaseModel):
     password: Optional[str] = None
 
 
-class UserInviteForm(BaseModel):
+class InviteeData(BaseModel):
     email: str
     role: str
+
+
+class UserInviteForm(BaseModel):
+    invitees: list[InviteeData]
+
+
+class UserCreateForm(BaseModel):
+    email: str
 
 
 class UsersTable:
@@ -132,6 +145,7 @@ class UsersTable:
         role: str = "pending",
         oauth_sub: Optional[str] = None,
         invite_token: Optional[str] = None,
+        registration_code: Optional[str] = None,
     ) -> Optional[UserModel]:
         with get_db() as db:
             user = UserModel(
@@ -147,7 +161,8 @@ class UsersTable:
                     "updated_at": int(time.time()),
                     "oauth_sub": oauth_sub,
                     "company_id": company_id,
-                    "invite_token": invite_token
+                    "invite_token": invite_token,
+                    "registration_code": registration_code,
                 }
             )
             result = User(**user.model_dump())
@@ -175,10 +190,26 @@ class UsersTable:
         except Exception:
             return None
 
-    def complete_invite_by_id(self, id: str, first_name: str, last_name: str) -> Optional[UserModel]:
+    def get_user_by_registration_code(self, registration_code: str) -> Optional[UserModel]:
         try:
             with get_db() as db:
-                db.query(User).filter_by(id=id).update({"first_name": first_name, "last_name": last_name, "invite_token": None})
+                user = db.query(User).filter_by(registration_code=registration_code).first()
+                return UserModel.model_validate(user)
+        except Exception:
+            return None
+
+    def complete_by_id(self, id: str, first_name: str, last_name: str, profile_image_url: Optional[str] = None, company_id: Optional[str] = None) -> Optional[UserModel]:
+        try:
+            with get_db() as db:
+                update_data = {"first_name": first_name, "last_name": last_name, "invite_token": None, "registration_code": None}
+
+                if profile_image_url is not None:
+                    update_data["profile_image_url"] = profile_image_url
+
+                if company_id is not None:
+                    update_data["company_id"] = company_id
+
+                db.query(User).filter_by(id=id).update(update_data)
                 db.commit()
                 user = db.query(User).filter_by(id=id).first()
                 return UserModel.model_validate(user)
@@ -367,6 +398,67 @@ class UsersTable:
         with get_db() as db:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [user.id for user in users]
+
+    def set_password_reset_token(self, email: str, reset_token: str, expires_at: int) -> bool:
+        """
+        Set a password reset token for a user by their email.
+        
+        Args:
+            email: The user's email
+            reset_token: The generated reset token
+            expires_at: Timestamp when the token expires
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            with get_db() as db:
+                result = db.query(User).filter_by(email=email).update({
+                    "password_reset_token": reset_token,
+                    "password_reset_token_expires_at": expires_at
+                })
+                db.commit()
+                return True if result == 1 else False
+        except Exception:
+            return False
+            
+    def get_user_by_password_reset_token(self, reset_token: str) -> Optional[UserModel]:
+        """
+        Get a user by their reset token.
+        
+        Args:
+            reset_token: The reset token to look up
+            
+        Returns:
+            Optional[UserModel]: The user if found, None otherwise
+        """
+        try:
+            with get_db() as db:
+                user = db.query(User).filter_by(password_reset_token=reset_token).first()
+                return UserModel.model_validate(user) if user else None
+        except Exception:
+            return None
+            
+    def clear_password_reset_token(self, id: str) -> bool:
+        """
+        Clear the reset token for a user after password reset.
+        
+        Args:
+            id: The user ID
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            with get_db() as db:
+                db.query(User).filter_by(id=id).update({
+                    "password_reset_token": None,
+                    "password_reset_token_expires_at": None
+                })
+                db.commit()
+                return True
+        except Exception:
+            return False
 
 
 Users = UsersTable()

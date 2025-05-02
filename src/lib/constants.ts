@@ -97,6 +97,34 @@ export const SUPPORTED_FILE_EXTENSIONS = [
 
 export const PASTED_TEXT_CHARACTER_LIMIT = 1000;
 
+export const INDUSTRY_OPTIONS = [
+	'Technology',
+	'Healthcare',
+	'Finance',
+	'Education',
+	'Retail',
+	'Manufacturing',
+	'Real Estate',
+	'Transportation',
+	'Marketing & Advertising',
+	'Legal'
+];
+
+export const TEAM_FUNCTION_OPTIONS = [
+	'Sales',
+	'Marketing',
+	'Customer Support',
+	'Product Management',
+	'Engineering',
+	'Design',
+	'Human Resources',
+	'Operations',
+	'Finance',
+	'Legal'
+];
+
+export const COMPANY_SIZE_OPTIONS = ['1-10', '11–50', '51–200', '201–500', '501–1,000', '1,001–5,000', '5,001–10,000', '10,000+'];
+
 // Source: https://kit.svelte.dev/docs/modules#$env-static-public
 // This feature, akin to $env/static/private, exclusively incorporates environment variables
 // that are prefixed with config.kit.env.publicPrefix (usually set to PUBLIC_).

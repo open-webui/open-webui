@@ -1,9 +1,10 @@
 import hashlib
 import logging
+import random
 import uuid
 from typing import Optional
 
-from beyond_the_loop.models.users import UserInviteForm
+from beyond_the_loop.models.users import UserInviteForm, UserCreateForm
 from beyond_the_loop.models.auths import Auths
 from open_webui.models.chats import Chats
 from beyond_the_loop.models.users import (
@@ -29,13 +30,50 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
 
-############################
-# Invite
-############################
-
 
 @router.post("/invite")
 async def invite_user(form_data: UserInviteForm, user=Depends(get_admin_user)):
+    invited_users = []
+    
+    for invitee in form_data.invitees:
+        if not validate_email_format(invitee.email.lower()):
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
+            )
+
+        if Users.get_user_by_email(invitee.email.lower()):
+            raise HTTPException(400, detail=f"Email {invitee.email} is already taken")
+
+        invite_token = hashlib.sha256(invitee.email.lower().encode()).hexdigest()
+
+        # Send welcome email with the generated password
+        email_service = EmailService()
+        email_service.send_invite_mail(
+            to_email=invitee.email.lower(),
+            invite_token=invite_token
+        )
+
+        new_user = Users.insert_new_user(
+            str(uuid.uuid4()), 
+            "INVITED", 
+            "INVITED", 
+            invitee.email.lower(), 
+            user.company_id, 
+            role=invitee.role,
+            invite_token=invite_token
+        )
+        invited_users.append(new_user)
+
+    return invited_users
+
+
+############################
+# Create
+############################
+
+
+@router.post("/create")
+async def create_user(form_data: UserCreateForm):
     if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
@@ -44,18 +82,18 @@ async def invite_user(form_data: UserInviteForm, user=Depends(get_admin_user)):
     if Users.get_user_by_email(form_data.email.lower()):
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
-    invite_token = hashlib.sha256(form_data.email.lower().encode()).hexdigest()
+    registration_code = str(random.randint(10**8, 10**9 - 1))
+
+    user = Users.insert_new_user(str(uuid.uuid4()), "NEW", "NEW", form_data.email.lower(), "NEW", role="admin", registration_code=registration_code)
 
     # Send welcome email with the generated password
     email_service = EmailService()
-    email_service.send_invite_mail(
-        to_email=form_data.email.lower(),
-        invite_token=invite_token
+    email_service.send_registration_email(
+        to_email=user.email,
+        registration_code=registration_code,
     )
 
-    return Users.insert_new_user(str(uuid.uuid4()), "INVITED", "INVITED", form_data.email.lower(), user.company_id, role=form_data.role,
-                          invite_token=invite_token)
-
+    return user
 
 ############################
 # GetUsers
