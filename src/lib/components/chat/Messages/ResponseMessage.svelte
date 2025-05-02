@@ -683,6 +683,8 @@
 													{$i18n.t('No search query generated')}
 												{:else if status?.description === 'Generating search query'}
 													{$i18n.t('Generating search query')}
+												{:else if status?.description === 'Searching the web'}
+													{$i18n.t('Searching the web')}
 												{:else}
 													{status?.description}
 												{/if}
