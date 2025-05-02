@@ -6,7 +6,7 @@ from typing import Optional
 from pydantic import BaseModel
 import mimetypes
 from urllib.parse import quote
-
+from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.storage.provider import Storage
 
 from open_webui.models.files import (
@@ -120,23 +120,24 @@ async def list_files(user=Depends(get_verified_user)):
 
 @router.delete("/all")
 async def delete_all_files(user=Depends(get_admin_user)):
-    result = Files.delete_all_files()
-    if result:
+    files = Files.get_files()
+    for file in files:
         try:
-            Storage.delete_all_files()
+            Storage.delete_file(file.path)
+            VECTOR_DB_CLIENT.delete_collection(f"file-{file.id}")
+            result = Files.delete_file_by_id(file.id)
+            if not result:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(f"Error deleting file {file.id}"),
+                )
         except Exception as e:
-            log.exception(e)
-            log.error(f"Error deleting files")
+            log.exception(f"Error deleting file {file.id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
+                detail=ERROR_MESSAGES.DEFAULT(f"Error deleting file {file.id}"),
             )
-        return {"message": "All files deleted successfully"}
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
-        )
+    return {"message": "All files deleted successfully"}
 
 
 ############################
@@ -345,24 +346,23 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
 async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
     file = Files.get_file_by_id(id)
     if file and (file.user_id == user.id or user.role == "admin"):
-        # We should add Chroma cleanup here
+        try:
+            Storage.delete_file(file.path)
+            VECTOR_DB_CLIENT.delete_collection(f"file-{file.id}")
 
-        result = Files.delete_file_by_id(id)
-        if result:
-            try:
-                Storage.delete_file(file.path)
-            except Exception as e:
-                log.exception(e)
-                log.error(f"Error deleting files")
+            result = Files.delete_file_by_id(id)
+            if result:
+               return {"message": "File deleted successfully"}
+            else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
+                    detail=ERROR_MESSAGES.DEFAULT("Error deleting file"),
                 )
-            return {"message": "File deleted successfully"}
-        else:
+        except Exception as e:
+            log.exception(f"Error deleting file {file.id}: {e}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Error deleting file"),
+                detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
             )
     else:
         raise HTTPException(

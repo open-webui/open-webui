@@ -12,6 +12,7 @@ from open_webui.models.chats import (
 from open_webui.models.tags import TagModel, Tags
 from open_webui.models.folders import Folders
 
+from open_webui.routers.files import delete_file_by_id
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
@@ -62,8 +63,15 @@ async def delete_all_user_chats(request: Request, user=Depends(get_verified_user
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    result = Chats.delete_chats_by_user_id(user.id)
-    return result
+    chats = Chats.get_chat_list_by_user_id(user.id)
+    for chat in chats:
+        result = await delete_chat_by_id(request,chat.id, user)
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ERROR_MESSAGES.DEFAULT(),
+            )
+    return True
 
 
 ############################
@@ -379,32 +387,34 @@ async def update_chat_by_id(
 
 @router.delete("/{id}", response_model=bool)
 async def delete_chat_by_id(request: Request, id: str, user=Depends(get_verified_user)):
-    if user.role == "admin":
-        chat = Chats.get_chat_by_id(id)
+    if user.role == "admin" or has_permission(user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS):
+
+        chat = Chats.get_chat_by_id(id) if user.role == "admin" else Chats.get_chat_by_id_and_user_id(id, user.id)
+        if not chat:
+            return True
+
+        for file in chat.chat.get("files", []):
+            file_id = file.get("id", None)
+            collection = file.get("collection",None)
+            if file_id and not collection:
+                result = await delete_file_by_id(file_id,user)
+                if not result:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=ERROR_MESSAGES.DELETE_FILE_ERROR,
+                    )
+
         for tag in chat.meta.get("tags", []):
             if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
                 Tags.delete_tag_by_name_and_user_id(tag, user.id)
 
         result = Chats.delete_chat_by_id(id)
-
         return result
     else:
-        if not has_permission(
-            user.id, "chat.delete", request.app.state.config.USER_PERMISSIONS
-        ):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-            )
-
-        chat = Chats.get_chat_by_id(id)
-        for tag in chat.meta.get("tags", []):
-            if Chats.count_chats_by_tag_name_and_user_id(tag, user.id) == 1:
-                Tags.delete_tag_by_name_and_user_id(tag, user.id)
-
-        result = Chats.delete_chat_by_id_and_user_id(id, user.id)
-        return result
-
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
 
 ############################
 # GetPinnedStatusById

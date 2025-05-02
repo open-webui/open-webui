@@ -15,6 +15,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS, IONOS_ACCOUNT_DELETION_ALLOWED, IONOS_ACCOUNT_DELETE_ALLOW_LIST
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
+from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user, get_current_user
 from open_webui.utils.webhook import post_webhook
 
@@ -359,6 +360,44 @@ async def delete_self(request: Request, user=Depends(get_current_user)):
 @router.delete("/{user_id}", response_model=bool)
 async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
     if user.id != user_id:
+
+        files = Files.get_files_by_user_id(user_id)
+        for file in files:
+            try:
+                Storage.delete_file(file.path)
+                VECTOR_DB_CLIENT.delete_collection(f"file-{file.id}")
+
+                result = Files.delete_file_by_id(file.id)
+                if not result:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=ERROR_MESSAGES.DELETE_FILE_ERROR,
+                    )
+            except Exception as e:
+                log.error(f"Error deleting file: {e}")
+                raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=ERROR_MESSAGES.DELETE_FILE_ERROR,
+                        )
+
+        knowledges = Knowledges.get_knowledge_bases_by_user_id(user_id)
+        for knowledge in knowledges:
+            VECTOR_DB_CLIENT.delete_collection(knowledge.id)
+            result = Knowledges.delete_knowledge_by_id(knowledge.id)
+            if not result:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=ERROR_MESSAGES.DELETE_KNOWLEDGE_ERROR,
+                )
+
+        result = Chats.delete_chats_by_user_id(user_id)
+
+        if not result:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=ERROR_MESSAGES.DELETE_CHAT_ERROR,
+            )
+
         result = Auths.delete_auth_by_id(user_id)
 
         if result:

@@ -8,6 +8,7 @@ from open_webui.models.knowledge import (
     KnowledgeForm,
     KnowledgeResponse,
     KnowledgeUserResponse,
+    KnowledgeModel,
 )
 from open_webui.models.files import Files, FileModel
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
@@ -178,7 +179,7 @@ class KnowledgeFilesResponse(KnowledgeResponse):
 
 @router.get("/{id}", response_model=Optional[KnowledgeFilesResponse])
 async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    knowledge = get_knowledge_by_id_or_raise(id)
 
     if knowledge:
 
@@ -213,12 +214,7 @@ async def update_knowledge_by_id(
     form_data: KnowledgeForm,
     user=Depends(get_verified_user),
 ):
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
-    if not knowledge:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    knowledge = get_knowledge_by_id_or_raise(id)
     # Is the user the original creator, in a group with write access, or an admin
     if (
         knowledge.user_id != user.id
@@ -268,26 +264,10 @@ def add_file_to_knowledge_by_id(
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
 ):
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
+    knowledge = get_knowledge_by_id_or_raise(id)
+    enforce_ownership_or_admin(user, knowledge.user_id)
 
-    if not knowledge:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    if knowledge.user_id != user.id and user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-
-    file = Files.get_file_by_id(form_data.file_id)
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    file = get_file_by_id_or_raise(form_data.file_id)
     if not file.data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -347,26 +327,9 @@ def update_file_from_knowledge_by_id(
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
 ):
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
-    if not knowledge:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    if knowledge.user_id != user.id and user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-
-    file = Files.get_file_by_id(form_data.file_id)
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
+    knowledge = get_knowledge_by_id_or_raise(id)
+    enforce_ownership_or_admin(user, knowledge.user_id)
+    file = get_file_by_id_or_raise(form_data.file_id)
     # Remove content from the vector database
     VECTOR_DB_CLIENT.delete(
         collection_name=knowledge.id, filter={"file_id": form_data.file_id}
@@ -411,51 +374,31 @@ def remove_file_from_knowledge_by_id(
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
 ):
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
-    if not knowledge:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    if knowledge.user_id != user.id and user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-
-    file = Files.get_file_by_id(form_data.file_id)
-    if not file:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    # Remove content from the vector database
-    VECTOR_DB_CLIENT.delete(
-        collection_name=knowledge.id, filter={"file_id": form_data.file_id}
-    )
-
-    # Remove the file's collection from vector database
-    file_collection = f"file-{form_data.file_id}"
-    if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-        VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
-
-    # Delete physical file
-    if file.path:
-        Storage.delete_file(file.path)
-
-    # Delete file from database
-    Files.delete_file_by_id(form_data.file_id)
+    knowledge = get_knowledge_by_id_or_raise(id)
+    enforce_ownership_or_admin(user, knowledge.user_id)
 
     if knowledge:
         data = knowledge.data or {}
+        # Get the list of file IDs from the knowledge base
         file_ids = data.get("file_ids", [])
 
         if form_data.file_id in file_ids:
+            file = get_file_by_id_or_raise(form_data.file_id)
+
+            success = clean_up_file(file.id, file.path)
+            if not success:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=ERROR_MESSAGES.DEFAULT("Error deleting file"),
+                )
+
+            # Remove content from the vector database
+            VECTOR_DB_CLIENT.delete(
+                collection_name=knowledge.id, filter={"file_id": form_data.file_id}
+            )
+
             file_ids.remove(form_data.file_id)
             data["file_ids"] = file_ids
-
             knowledge = Knowledges.update_knowledge_data_by_id(id=id, data=data)
 
             if knowledge:
@@ -472,7 +415,7 @@ def remove_file_from_knowledge_by_id(
                 )
         else:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status.HTTP_404_NOT_FOUND,
                 detail=ERROR_MESSAGES.DEFAULT("file_id"),
             )
     else:
@@ -489,21 +432,17 @@ def remove_file_from_knowledge_by_id(
 
 @router.delete("/{id}/delete", response_model=bool)
 async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
-    if not knowledge:
+    knowledge = get_knowledge_by_id_or_raise(id)
+    enforce_ownership_or_admin(user, knowledge.user_id)
+
+    # Get all Files for this knowledge base
+    file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
+    success = clean_up_files(file_ids)
+    if not success:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
         )
-
-    if knowledge.user_id != user.id and user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
-
-    log.info(f"Deleting knowledge base: {id} (name: {knowledge.name})")
-
     # Get all models
     models = Models.get_all_models()
     log.info(f"Found {len(models)} models to check for knowledge base {id}")
@@ -535,7 +474,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     try:
         VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:
-        log.debug(e)
+        log.warning(e)
         pass
     result = Knowledges.delete_knowledge_by_id(id=id)
     return result
@@ -548,19 +487,18 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/{id}/reset", response_model=Optional[KnowledgeResponse])
 async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
-    if not knowledge:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
 
-    if knowledge.user_id != user.id and user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+    knowledge = get_knowledge_by_id_or_raise(id)
+    enforce_ownership_or_admin(user, knowledge.user_id)
 
+    # Get all Files for this knowledge base
+    file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
+    success = clean_up_files(file_ids)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT("Error deleting files"),
+        )
     try:
         VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:
@@ -587,29 +525,14 @@ def add_files_to_knowledge_batch(
     """
     Add multiple files to a knowledge base
     """
-    knowledge = Knowledges.get_knowledge_by_id(id=id)
-    if not knowledge:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    if knowledge.user_id != user.id and user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
-        )
+    knowledge = get_knowledge_by_id_or_raise(id)
+    enforce_ownership_or_admin(user, knowledge.user_id)
 
     # Get files content
-    print(f"files/batch/add - {len(form_data)} files")
+    log.debug(f"Processing batch of {len(form_data)} files")
     files: List[FileModel] = []
     for form in form_data:
-        file = Files.get_file_by_id(form.file_id)
-        if not file:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"File {form.file_id} not found",
-            )
+        file = get_file_by_id_or_raise(form.file_id)
         files.append(file)
 
     # Process files
@@ -653,3 +576,55 @@ def add_files_to_knowledge_batch(
     return KnowledgeFilesResponse(
         **knowledge.model_dump(), files=Files.get_files_by_ids(existing_file_ids)
     )
+
+
+def get_file_by_id_or_raise(id: str) -> Optional[FileModel]:
+    file = Files.get_file_by_id(id)
+    if not file:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+    return file
+
+def get_knowledge_by_id_or_raise(id: str) -> Optional[KnowledgeModel]:
+    knowledge = Knowledges.get_knowledge_by_id(id)
+    if not knowledge:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+    return knowledge
+
+def enforce_ownership_or_admin(user, owner_id):
+    if user.role != "admin" and user.id != owner_id:
+        raise HTTPException(status_code=HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+
+
+def clean_up_files(file_ids: List[str]) -> bool:
+    for file_id in file_ids:
+        file = Files.get_file_by_id(file_id)
+        if not file:
+            continue
+        success = clean_up_file(file_id, file.path)
+        if not success:
+            return False
+    return True
+
+
+def clean_up_file(file_id: str, file_path: str) -> bool:
+    file_collection = f"file-{file_id}"
+    if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+        try:
+            VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+        except Exception:
+            return False
+    if file_path:
+        try:
+            Storage.delete_file(file_path)
+        except Exception:
+            return False
+    success = Files.delete_file_by_id(file_id)
+    if not success:
+        return False
+    return True
