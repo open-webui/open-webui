@@ -378,6 +378,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
         "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
         "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
+        "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
+        "DOCLING_OCR_LANG": request.app.state.config.DOCLING_OCR_LANG,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
@@ -511,6 +513,8 @@ class ConfigForm(BaseModel):
     PDF_EXTRACT_IMAGES: Optional[bool] = None
     TIKA_SERVER_URL: Optional[str] = None
     DOCLING_SERVER_URL: Optional[str] = None
+    DOCLING_OCR_ENGINE: Optional[str] = None
+    DOCLING_OCR_LANG: Optional[str] = None
     DOCUMENT_INTELLIGENCE_ENDPOINT: Optional[str] = None
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
     MISTRAL_OCR_API_KEY: Optional[str] = None
@@ -599,6 +603,16 @@ async def update_rag_config(
         form_data.DOCLING_SERVER_URL
         if form_data.DOCLING_SERVER_URL is not None
         else request.app.state.config.DOCLING_SERVER_URL
+    )
+    request.app.state.config.DOCLING_OCR_ENGINE = (
+        form_data.DOCLING_OCR_ENGINE
+        if form_data.DOCLING_OCR_ENGINE is not None
+        else request.app.state.config.DOCLING_OCR_ENGINE
+    )
+    request.app.state.config.DOCLING_OCR_LANG = (
+        form_data.DOCLING_OCR_LANG
+        if form_data.DOCLING_OCR_LANG is not None
+        else request.app.state.config.DOCLING_OCR_LANG
     )
     request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT = (
         form_data.DOCUMENT_INTELLIGENCE_ENDPOINT
@@ -767,6 +781,8 @@ async def update_rag_config(
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
         "TIKA_SERVER_URL": request.app.state.config.TIKA_SERVER_URL,
         "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
+        "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
+        "DOCLING_OCR_LANG": request.app.state.config.DOCLING_OCR_LANG,
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
@@ -1080,6 +1096,8 @@ def process_file(
                     engine=request.app.state.config.CONTENT_EXTRACTION_ENGINE,
                     TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
                     DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
+                    DOCLING_OCR_ENGINE=request.app.state.config.DOCLING_OCR_ENGINE,
+                    DOCLING_OCR_LANG=request.app.state.config.DOCLING_OCR_LANG,
                     PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
                     DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                     DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
