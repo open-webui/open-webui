@@ -9,6 +9,7 @@
 	import InviteMenu from './InviteMenu.svelte';
 	import { toast } from 'svelte-sonner';
 	import { inviteUsers } from '$lib/apis/auths';
+	import ChevronUpDown from '$lib/components/icons/ChevronUpDown.svelte';
 	
 
 	const i18n = getContext('i18n');
@@ -72,6 +73,7 @@
 	let usersRoleRef;
 	let roles = ['user', 'admin'];
 	let selectedRole = roles[0];
+	let openDropdownIdx = null;
 
 	const updateRoleHandler = async (id, role) => {
 		const res = await updateUserRole(localStorage.token, id, role).catch((error) => {
@@ -94,7 +96,7 @@
 	}
 </script>
 
-<div class="pb-24 min-h-[500px]">
+<div class="pb-24 min-h-[32rem]">
 	<div
 		class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5"
 	>
@@ -120,9 +122,9 @@
 					{$i18n.t('Send invites to')}
 				</div>
 				<span
-					class="absolute top-[26px] w-[14rem] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+					class="absolute top-[26px] w-[12rem] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
 				>
-					example@email.com, example@email, comexample@email.com
+					Add Team member mails (separated by comma)
 				</span>
 			{/if}
 			<div class="flex flex-wrap gap-1 items-start p-3" on:click={() => inputRef.focus()}>
@@ -187,10 +189,9 @@
 
 					{#if showUsersRoleDropdown}
 						<div
-							class="max-h-60 pb-1 overflow-y-auto absolute z-50 w-full -mt-1 bg-white dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
+							class="max-h-60 overflow-y-auto absolute top-10 right-4 z-50 bg-white dark:bg-customGray-900 border border-gray-300 dark:border-customGray-700 rounded-md shadow"
 						>
-							<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
-							<div class="px-1">
+							<div class="px-[6px] py-1">
 								{#each roles as role}
 									<div
 										role="button"
@@ -199,9 +200,9 @@
 											selectedRole = role;
 											showUsersRoleDropdown = false;
 										}}
-										class="flex items-center rounded-xl w-full justify-between px-3 py-2 hover:bg-gray-100 dark:hover:bg-customGray-950 cursor-pointer text-sm dark:text-customGray-100"
+										class="flex items-center justify-end rounded-xl w-full py-1 cursor-pointer text-sm dark:text-customGray-100"
 									>
-										<div class="flex items-center gap-2">
+										<div class="flex items-center">
 											{#if role === "user"}
 												<span class="bg-[#024D15] rounded-lg text-xs text-[#0F8C18] px-2 w-fit">{$i18n.t('User')}</span>
 											{:else}
@@ -258,7 +259,7 @@
 	</div>
 	
 	{#each filteredUsers as user, userIdx}
-		<div class="grid grid-cols-[55%_60px_1fr_26px] gap-x-2 mb-[14px] group cursor-pointer">
+		<div class="grid grid-cols-[52%_70px_1fr_26px] gap-x-2 mb-[14px] group cursor-pointer">
 			<div class="flex items-center">
 				<img
 					class=" rounded-full w-3 h-3 object-cover mr-2.5"
@@ -274,8 +275,41 @@
 				{/if}
 				<div class="text-xs dark:text-customGray-590 mr-1 whitespace-nowrap">{user.email}</div>
 			</div>
-			<div>
-				<button
+			<div class="flex items-center">
+				<div class="relative flex items-start">
+					<button
+						type="button"
+						class="px-2 text-xs rounded-lg {user.role === 'user' ? 'bg-[#024D15] text-[#0F8C18]' : 'bg-[#33176E] text-[#7147CD]'}"
+						on:click={() => openDropdownIdx = openDropdownIdx === userIdx ? null : userIdx}
+					>
+						{$i18n.t(user.role === 'user' ? 'User' : 'Admin')}
+					</button>
+			
+					{#if openDropdownIdx === userIdx}
+						<div  use:onClickOutside={() => (openDropdownIdx = null)} class="absolute top-5 z-10 py-1 bg-white dark:bg-customGray-900 rounded-md shadow-lg border dark:border-customGray-700">
+							<button
+								class="flex justify-end w-full whitespace-nowrap text-left pl-2 pr-[6px] py-1 text-xs"
+								on:click={() => {
+									updateRoleHandler(user.id, 'user');
+									openDropdownIdx = null;
+								}}
+							>
+								<span class="bg-[#024D15] rounded-lg text-xs text-[#0F8C18] px-2 w-fit">{$i18n.t('User')}</span>
+							</button>
+							<button
+								class="flex justify-end w-full whitespace-nowrap text-left pl-2 pr-[6px] py-1 text-xs"
+								on:click={() => {
+									updateRoleHandler(user.id, 'admin');
+									openDropdownIdx = null;
+								}}
+							>
+								<span class="bg-[#33176E] rounded-lg text-xs text-[#7147CD] px-2 w-fit">{$i18n.t('Admin')}</span>
+							</button>
+						</div>
+					{/if}
+				</div>
+				<ChevronDown className="size-2 ml-[3px]"/>
+				<!-- <button
 					class="flex"
 					on:click={() => {
 						if (user.role === 'user') {
@@ -290,7 +324,7 @@
 					{:else}
 						<span class="bg-[#33176E] rounded-lg text-xs text-[#7147CD] px-2 w-fit">{$i18n.t('Admin')}</span>
 					{/if}
-				</button>
+				</button> -->
 			</div>
 			<div>
 				{#if (user?.first_name === 'INVITED')}
@@ -298,8 +332,16 @@
 				{/if}
 			</div>
 			{#if (user?.first_name === 'INVITED')}
-				<div class="invisible group-hover:visible h-4">
-					<InviteMenu {user}/>
+				<div class=" h-4">
+					<InviteMenu {user} {getUsersHandler}>
+						<button
+							type="button"
+							class="dark:text-white flex justify-between items-center rounded-md cursor-pointer invisible group-hover:visible"
+							
+						>
+							<EllipsisHorizontal className="size-5" />
+						</button>
+					</InviteMenu>
 					<!-- <InviteMenu
 						editHandler={async () => {
 						}}

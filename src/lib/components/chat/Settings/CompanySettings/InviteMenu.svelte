@@ -23,6 +23,8 @@
 	const i18n = getContext('i18n');
 	export let user = null;
 
+	export let getUsersHandler: Function;
+
 	// export let editHandler: Function;
 	// export let deleteHandler: Function;
 	// export let onClose: Function;
@@ -67,9 +69,8 @@
 			toast.error(`${error}`);
 			return null;
 		});
-		console.log(res);
-
-		toast.success($i18n.t('Successfully resend invite'));
+		getUsersHandler();
+		toast.success($i18n.t('Invite revoked successfuly'));
 	}
 	async function copyInviteLink(token) {
 		const origin = window.location.origin;
@@ -77,21 +78,20 @@
 		await copyToClipboard(link);
 		toast.success($i18n.t('Copied'));
 	}
+
+	$: console.log(showDropdown, 'show dropdown')
 </script>
 
 <div>
 	<div bind:this={root} class="relative w-full" use:onClickOutside={() => (showDropdown = false)}>
-		<button
-			type="button"
-			class="dark:text-white flex justify-between items-center rounded-md cursor-pointer"
-			on:click={() => (showDropdown = !showDropdown)}
-		>
-			<EllipsisHorizontal className="size-5" />
-		</button>
-
+		<div
+		on:click={() => (showDropdown = !showDropdown)}
+	>
+		<slot/>
+	</div>
 		{#if showDropdown}
 			<div
-				class="w-[10rem] flex flex-col absolute left-0 right-0 -mt-1 bg-white dark:bg-customGray-900 px-1 py-2 border border-gray-300 dark:border-customGray-700 rounded-lg z-10"
+				class="w-[10rem] flex flex-col absolute left-0 right-0 bg-white dark:bg-customGray-900 px-1 py-2 border border-gray-300 dark:border-customGray-700 rounded-lg z-10"
 			>
 				<button
 					type="button"
@@ -121,7 +121,12 @@
 						hoveringGroup = true;
 						if (groupTriggerEl) {
 							const rect = groupTriggerEl.getBoundingClientRect();
-							submenuX = rect.right + 8;
+							const screenWidth = window.innerWidth;
+							if (screenWidth < 1290) {
+								submenuX = rect.left - 178;
+							} else {
+								submenuX = rect.right + 8;
+							}
 							submenuY = rect.top - 40;
 							showSubmenu = true;
 						}
@@ -155,6 +160,11 @@
 					</button>
 					<div
 						class="absolute left-full top-0 w-4 h-full z-10"
+						on:mouseenter={() => (hoveringSubmenu = true)}
+						on:mouseleave={() => (hoveringSubmenu = false)}
+					></div>
+					<div
+						class="absolute -left-4 top-0 w-4 h-full z-10"
 						on:mouseenter={() => (hoveringSubmenu = true)}
 						on:mouseleave={() => (hoveringSubmenu = false)}
 					></div>

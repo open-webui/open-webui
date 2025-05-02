@@ -127,7 +127,7 @@
 	}
 </script>
 
-<Modal size="md-plus" bind:show className="dark:bg-customGray-800 rounded-2xl" containerClassName="bg-[#1D1A1A]/50 backdrop-blur-[7.44px]">
+<Modal size="md-plus" bind:show blockBackdropClick={true} className="dark:bg-customGray-800 rounded-2xl" containerClassName="bg-[#1D1A1A]/50 backdrop-blur-[7.44px]">
 	<div class="text-gray-700 dark:text-gray-100">
 		<div class="px-7">
 			<div class=" flex justify-between dark:text-white pt-5 pb-4 border-b dark:border-customGray-700">

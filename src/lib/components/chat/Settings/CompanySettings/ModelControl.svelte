@@ -6,10 +6,11 @@
 	import { getModelIcon } from '$lib/utils';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import { onClickOutside } from '$lib/utils';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	const i18n = getContext('i18n');
 
-	let models = [];
+	let models = null;
 
 	let selectedModelId = '';
 	let defaultModelIds = [];
@@ -58,7 +59,7 @@
 	$: console.log(models, 'models');
 </script>
 
-<div class="min-h-[500px] pb-4">
+<div class="min-h-[40rem] pb-4">
 	<div
 		class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5"
 	>
@@ -166,6 +167,7 @@
 			{/if}
 		</div>
 	</div>
+	{#if models !== null}
 	<div>
 		{#each Object.keys(organizations) as organization (organization)}
 			<div class="mb-5">
@@ -190,4 +192,9 @@
 			</div>
 		{/each}
 	</div>
+	{:else}
+	<div class="h-[20rem] w-full flex justify-center items-center">
+		<Spinner />
+	</div>
+{/if}
 </div>
