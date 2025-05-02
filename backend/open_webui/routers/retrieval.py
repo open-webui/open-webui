@@ -179,12 +179,19 @@ class SearchForm(CollectionNameForm):
 
 
 @router.get("/")
-async def get_status(request: Request):
+async def get_status(request: Request, user=Depends(get_verified_user)):
+    chunk_size = request.app.state.config.CHUNK_SIZE.get(user.email)
+    chunk_overlap = request.app.state.config.CHUNK_OVERLAP.get(user.email)
+    template = request.app.state.config.RAG_TEMPLATE.get(user.email)
+
+    log.info(f"[get_status] user={user.email} | chunk_size={chunk_size} | chunk_overlap={chunk_overlap} | template={template}")
+
     return {
         "status": True,
-        "chunk_size": request.app.state.config.CHUNK_SIZE,
-        "chunk_overlap": request.app.state.config.CHUNK_OVERLAP,
-        "template": request.app.state.config.RAG_TEMPLATE,
+        
+        "chunk_size": request.app.state.config.CHUNK_SIZE.get(user.email),
+        "chunk_overlap": request.app.state.config.CHUNK_OVERLAP.get(user.email),
+        "template": request.app.state.config.RAG_TEMPLATE.get(user.email),
         "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
         "embedding_model": request.app.state.config.RAG_EMBEDDING_MODEL,
         "reranking_model": request.app.state.config.RAG_RERANKING_MODEL,
@@ -193,7 +200,7 @@ async def get_status(request: Request):
 
 
 @router.get("/embedding")
-async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
+async def get_embedding_config(request: Request, user=Depends(get_verified_user)):
     return {
         "status": True,
         "embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
@@ -211,7 +218,7 @@ async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
 
 
 @router.get("/reranking")
-async def get_reraanking_config(request: Request, user=Depends(get_admin_user)):
+async def get_reraanking_config(request: Request, user=Depends(get_verified_user)):
     return {
         "status": True,
         "reranking_model": request.app.state.config.RAG_RERANKING_MODEL,
@@ -238,7 +245,7 @@ class EmbeddingModelUpdateForm(BaseModel):
 
 @router.post("/embedding/update")
 async def update_embedding_config(
-    request: Request, form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
+    request: Request, form_data: EmbeddingModelUpdateForm, user=Depends(get_verified_user)
 ):
     log.info(
         f"Updating embedding model: {request.app.state.config.RAG_EMBEDDING_MODEL} to {form_data.embedding_model}"
@@ -354,11 +361,11 @@ async def update_reranking_config(
 
 
 @router.get("/config")
-async def get_rag_config(request: Request, user=Depends(get_admin_user)):
+async def get_rag_config(request: Request, user=Depends(get_verified_user)):
     return {
         "status": True,
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
-        "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
+        "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT.get(user.email),
         "BYPASS_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         "enable_google_drive_integration": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "enable_onedrive_integration": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
@@ -372,8 +379,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
-            "chunk_size": request.app.state.config.CHUNK_SIZE,
-            "chunk_overlap": request.app.state.config.CHUNK_OVERLAP,
+            "chunk_size": request.app.state.config.CHUNK_SIZE.get(user.email),
+            "chunk_overlap": request.app.state.config.CHUNK_OVERLAP.get(user.email),
         },
         "file": {
             "max_size": request.app.state.config.FILE_MAX_SIZE,
@@ -507,11 +514,12 @@ async def update_rag_config(
         else request.app.state.config.PDF_EXTRACT_IMAGES
     )
 
-    request.app.state.config.RAG_FULL_CONTEXT = (
-        form_data.RAG_FULL_CONTEXT
-        if form_data.RAG_FULL_CONTEXT is not None
-        else request.app.state.config.RAG_FULL_CONTEXT
-    )
+    
+    if form_data.RAG_FULL_CONTEXT is not None:
+        request.app.state.config.RAG_FULL_CONTEXT.set(user.email,form_data.RAG_FULL_CONTEXT)
+    else:
+        request.app.state.config.RAG_FULL_CONTEXT.get(user.email)
+    
 
     request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL = (
         form_data.BYPASS_EMBEDDING_AND_RETRIEVAL
@@ -555,8 +563,8 @@ async def update_rag_config(
 
     if form_data.chunk is not None:
         request.app.state.config.TEXT_SPLITTER = form_data.chunk.text_splitter
-        request.app.state.config.CHUNK_SIZE = form_data.chunk.chunk_size
-        request.app.state.config.CHUNK_OVERLAP = form_data.chunk.chunk_overlap
+        request.app.state.config.CHUNK_SIZE.set(user.email,form_data.chunk.chunk_size)
+        request.app.state.config.CHUNK_OVERLAP.set(user.email,form_data.chunk.chunk_overlap)
 
     if form_data.youtube is not None:
         request.app.state.config.YOUTUBE_LOADER_LANGUAGE = form_data.youtube.language
@@ -640,7 +648,7 @@ async def update_rag_config(
     return {
         "status": True,
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
-        "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
+        "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT.get(user.email),
         "BYPASS_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL,
         "file": {
             "max_size": request.app.state.config.FILE_MAX_SIZE,
@@ -656,8 +664,8 @@ async def update_rag_config(
         },
         "chunk": {
             "text_splitter": request.app.state.config.TEXT_SPLITTER,
-            "chunk_size": request.app.state.config.CHUNK_SIZE,
-            "chunk_overlap": request.app.state.config.CHUNK_OVERLAP,
+            "chunk_size": request.app.state.config.CHUNK_SIZE.get(user.email),
+            "chunk_overlap": request.app.state.config.CHUNK_OVERLAP.get(user.email),
         },
         "youtube": {
             "language": request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
@@ -703,18 +711,18 @@ async def update_rag_config(
 async def get_rag_template(request: Request, user=Depends(get_verified_user)):
     return {
         "status": True,
-        "template": request.app.state.config.RAG_TEMPLATE,
+        "template": request.app.state.config.RAG_TEMPLATE.get(user.email),
     }
 
 
 @router.get("/query/settings")
-async def get_query_settings(request: Request, user=Depends(get_admin_user)):
+async def get_query_settings(request: Request, user=Depends(get_verified_user)):
     return {
         "status": True,
-        "template": request.app.state.config.RAG_TEMPLATE,
-        "k": request.app.state.config.TOP_K,
+        "template": request.app.state.config.RAG_TEMPLATE.get(user.email),
+        "k": request.app.state.config.TOP_K.get(user.email),
         "r": request.app.state.config.RELEVANCE_THRESHOLD,
-        "hybrid": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+        "hybrid": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH.get(user.email),
     }
 
 
@@ -729,20 +737,22 @@ class QuerySettingsForm(BaseModel):
 async def update_query_settings(
     request: Request, form_data: QuerySettingsForm, user=Depends(get_admin_user)
 ):
-    request.app.state.config.RAG_TEMPLATE = form_data.template
-    request.app.state.config.TOP_K = form_data.k if form_data.k else 4
-    request.app.state.config.RELEVANCE_THRESHOLD = form_data.r if form_data.r else 0.0
+    request.app.state.config.RAG_TEMPLATE.set(user.email,form_data.template)
+    request.app.state.config.TOP_K.set(user.email, form_data.k) if form_data.k else 4
+    request.app.state.config.RELEVANCE_THRESHOLD = form_data.r if form_data.r else 1
 
-    request.app.state.config.ENABLE_RAG_HYBRID_SEARCH = (
-        form_data.hybrid if form_data.hybrid else False
-    )
+    if form_data.hybrid is not None:
+        request.app.state.config.ENABLE_RAG_HYBRID_SEARCH.set(user.email, form_data.hybrid)
+    else:
+        request.app.state.config.ENABLE_RAG_HYBRID_SEARCH.set(user.email,False)
+
 
     return {
         "status": True,
-        "template": request.app.state.config.RAG_TEMPLATE,
-        "k": request.app.state.config.TOP_K,
+        "template": request.app.state.config.RAG_TEMPLATE.get(user.email),
+        "k": request.app.state.config.TOP_K.get(user.email),
         "r": request.app.state.config.RELEVANCE_THRESHOLD,
-        "hybrid": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+        "hybrid": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH.get(user.email),
     }
 
 
@@ -797,10 +807,15 @@ def save_docs_to_vector_db(
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
+        chunk_size = request.app.state.config.CHUNK_SIZE.get(user.email)
+        chunk_overlap = request.app.state.config.CHUNK_OVERLAP.get(user.email)
+        log.info(f"[Splitting] user={user.email} | chunk_size={chunk_size} | chunk_overlap={chunk_overlap}")
+
+
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                chunk_size=request.app.state.config.CHUNK_SIZE.get(user.email),
+                chunk_overlap=request.app.state.config.CHUNK_OVERLAP.get(user.email),
                 add_start_index=True,
             )
         elif request.app.state.config.TEXT_SPLITTER == "token":
@@ -811,8 +826,8 @@ def save_docs_to_vector_db(
             tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
             text_splitter = TokenTextSplitter(
                 encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                chunk_size=request.app.state.config.CHUNK_SIZE.get(user.email),
+                chunk_overlap=request.app.state.config.CHUNK_OVERLAP.get(user.email),
                 add_start_index=True,
             )
         else:
@@ -1022,10 +1037,13 @@ def save_docs_to_multiple_collections(
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
+        chunk_size = request.app.state.config.CHUNK_SIZE.get(user.email)
+        chunk_overlap = request.app.state.config.CHUNK_OVERLAP.get(user.email)
+        log.info(f"[Splitting] user={user.email} | chunk_size={chunk_size} | chunk_overlap={chunk_overlap}")
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                chunk_size=request.app.state.config.CHUNK_SIZE.get(user.email),
+                chunk_overlap=request.app.state.config.CHUNK_OVERLAP.get(user.email),
                 add_start_index=True,
             )
         elif request.app.state.config.TEXT_SPLITTER == "token":
@@ -1036,8 +1054,8 @@ def save_docs_to_multiple_collections(
             tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
             text_splitter = TokenTextSplitter(
                 encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
-                chunk_size=request.app.state.config.CHUNK_SIZE,
-                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                chunk_size=request.app.state.config.CHUNK_SIZE.get(user.email),
+                chunk_overlap=request.app.state.config.CHUNK_OVERLAP.get(user.email),
                 add_start_index=True,
             )
         else:
@@ -1751,14 +1769,14 @@ def query_doc_handler(
     user=Depends(get_verified_user),
 ):
     try:
-        if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+        if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH.get(user.email):
             return query_doc_with_hybrid_search(
                 collection_name=form_data.collection_name,
                 query=form_data.query,
                 embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
                     query, user=user
                 ),
-                k=form_data.k if form_data.k else request.app.state.config.TOP_K,
+                k=form_data.k if form_data.k else request.app.state.config.TOP_K.get(user.email),
                 reranking_function=request.app.state.rf,
                 r=(
                     form_data.r
@@ -1773,7 +1791,7 @@ def query_doc_handler(
                 query_embedding=request.app.state.EMBEDDING_FUNCTION(
                     form_data.query, user=user
                 ),
-                k=form_data.k if form_data.k else request.app.state.config.TOP_K,
+                k=form_data.k if form_data.k else request.app.state.config.TOP_K.get(user.email),
                 user=user,
             )
     except Exception as e:
@@ -1799,14 +1817,14 @@ def query_collection_handler(
     user=Depends(get_verified_user),
 ):
     try:
-        if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
+        if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH.get(user.email):
             return query_collection_with_hybrid_search(
                 collection_names=form_data.collection_names,
                 queries=[form_data.query],
                 embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
                     query, user=user
                 ),
-                k=form_data.k if form_data.k else request.app.state.config.TOP_K,
+                k=form_data.k if form_data.k else request.app.state.config.TOP_K.get(user.email),
                 reranking_function=request.app.state.rf,
                 r=(
                     form_data.r
@@ -1821,7 +1839,7 @@ def query_collection_handler(
                 embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
                     query, user=user
                 ),
-                k=form_data.k if form_data.k else request.app.state.config.TOP_K,
+                k=form_data.k if form_data.k else request.app.state.config.TOP_K.get(user.email),
             )
 
     except Exception as e:

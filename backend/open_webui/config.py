@@ -11,7 +11,12 @@ from urllib.parse import urlparse
 
 import requests
 from pydantic import BaseModel
-from sqlalchemy import JSON, Column, DateTime, Integer, func
+from sqlalchemy import JSON, Column, DateTime, Integer, func, Any, String
+from sqlalchemy.orm.attributes import flag_modified
+from open_webui.models.groups import (
+    Groups)
+from open_webui.models.users import (
+    Users)
 
 from open_webui.env import (
     DATA_DIR,
@@ -26,7 +31,6 @@ from open_webui.env import (
     log,
 )
 from open_webui.internal.db import Base, get_db
-
 
 class EndpointFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
@@ -66,6 +70,7 @@ class Config(Base):
     __tablename__ = "config"
 
     id = Column(Integer, primary_key=True)
+    email = Column(String, nullable=False, index=True, default="system")
     data = Column(JSON, nullable=False)
     version = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
@@ -245,22 +250,159 @@ class PersistentConfig(Generic[T]):
         save_to_db(CONFIG_DATA)
         self.config_value = self.value
 
+class UserScopedConfig:
+    def __init__(self, config_path: str, default: Any):
+        self.config_path = config_path
+        self.default = default
+
+    # def get(self, email: str) -> Any:
+    #     with get_db() as db:
+    #         entry = db.query(Config).filter_by(email=email).first()
+    #         if entry and isinstance(entry.data, dict):
+    #             data = entry.data
+    #             for part in self.config_path.split("."):
+    #                 if isinstance(data, dict) and part in data:
+    #                     data = data[part]
+    #                 else:
+    #                     return self.default
+    #             return data
+        
+    # # Step 2: If not found, try group creator lookup
+    #         user_id = Users.get_user_by_email(email)
+    #         user_groups = []
+    #         user_groups = Groups.get_groups_by_member_id(user_id)
+    #         for group in user_groups:
+    #             group_creator_email = group.created_by  
+    #             if group_creator_email:
+    #                 creator_entry = db.query(Config).filter_by(email=group_creator_email).first()
+    #                 if creator_entry and isinstance(creator_entry.data, dict):
+    #                     data = creator_entry.data
+    #                     for part in self.config_path.split("."):
+    #                         if isinstance(data, dict) and part in data:
+    #                             data = data[part]
+    #                         else:
+    #                             return self.default
+    #                     return data
+
+    #         # Step 3: If still nothing, return default
+    #     return self.default
+        
+    def get(self, email: str) -> Any:
+        with get_db() as db:
+            # Step 1: Check user-specific config
+            entry = db.query(Config).filter_by(email=email).first()
+            if entry and isinstance(entry.data, dict):
+                data = entry.data
+                final_value = self.default
+                for part in self.config_path.split("."):
+                    if isinstance(data, dict) and part in data:
+                        data = data[part]
+                        final_value = data
+                    else:
+                        final_value = self.default
+                        break
+                if final_value != self.default:
+                    print(f"User {email} has personal config for {self.config_path}: {final_value}")
+                return final_value
+
+            # Step 2: Check group creator's config
+            user = Users.get_user_by_email(email)
+            print(f"User {email} maps to user_id={user.id}")
+            user_groups = Groups.get_groups_by_member_id(user.id)
+            print(f"User {email} is part of groups: {user_groups}")
+            
+            for group in user_groups:
+                group_creator_email = group.created_by
+                print(f"Group created by {group_creator_email}")
+                if group_creator_email:
+                    creator_entry = db.query(Config).filter_by(email=group_creator_email).first()
+                    if creator_entry and isinstance(creator_entry.data, dict):
+                        data = creator_entry.data
+                        final_value = self.default
+                        for part in self.config_path.split("."):
+                            if isinstance(data, dict) and part in data:
+                                data = data[part]
+                                final_value = data
+                            else:
+                                final_value = self.default
+                                break
+                        if final_value != self.default:
+                            print(f"Group admin {group_creator_email} has config for {self.config_path}: {final_value}")
+                        return final_value
+
+            # Step 3: Fallback
+            print(f"Using default for {email} for {self.config_path}")
+            return self.default
+
+    def set(self, email: str, value: Any):
+        with get_db() as db:
+            entry = db.query(Config).filter_by(email=email).first()
+            if not entry:
+                entry = Config(email=email, data={})
+                db.add(entry)
+
+            data = entry.data or {}
+            current = data
+            parts = self.config_path.split(".")
+            for part in parts[:-1]:
+                if part not in current or not isinstance(current[part], dict):
+                    current[part] = {}
+                current = current[part]
+            current[parts[-1]] = value
+
+            entry.data = data
+            entry.updated_at = datetime.now()
+            flag_modified(entry, "data")  
+            db.commit()
+
+
 
 class AppConfig:
-    _state: dict[str, PersistentConfig]
+    _state: dict[str, PersistentConfig | UserScopedConfig ]
 
     def __init__(self):
         super().__setattr__("_state", {})
 
     def __setattr__(self, key, value):
-        if isinstance(value, PersistentConfig):
+        # Support PersistentConfig and UserScopedConfig both
+        if isinstance(value, (PersistentConfig, UserScopedConfig)):
             self._state[key] = value
         else:
-            self._state[key].value = value
-            self._state[key].save()
-
+            # Update the config's internal value and persist it
+            if isinstance(self._state[key], PersistentConfig):
+                self._state[key].value = value
+                self._state[key].save()
+            elif isinstance(self._state[key], UserScopedConfig):
+                raise TypeError("Use .set(email, value) to update UserScopedConfig.")
+            
     def __getattr__(self, key):
-        return self._state[key].value
+        config_obj = self._state[key]
+        if isinstance(config_obj, PersistentConfig):
+            return config_obj.value
+        return config_obj
+
+    # def __getattr__(self, key):
+    #     return self._state[key]  # return the whole config object (not just .value)
+
+
+
+
+
+# class AppConfig:
+#     _state: dict[str, PersistentConfig]
+
+#     def __init__(self):
+#         super().__setattr__("_state", {})
+
+#     def __setattr__(self, key, value):
+#         if isinstance(value, PersistentConfig):
+#             self._state[key] = value
+#         else:
+#             self._state[key].value = value
+#             self._state[key].save()
+
+#     def __getattr__(self, key):
+#         return self._state[key]
 
 
 ####################################
@@ -1658,28 +1800,32 @@ BYPASS_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
     "rag.bypass_embedding_and_retrieval",
     os.environ.get("BYPASS_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
 )
+RAG_TOP_K = UserScopedConfig( "rag.top_k", int(os.environ.get("RAG_TOP_K", "4")))
 
-
-RAG_TOP_K = PersistentConfig(
-    "RAG_TOP_K", "rag.top_k", int(os.environ.get("RAG_TOP_K", "3"))
-)
+# RAG_TOP_K = PersistentConfig(
+#     "RAG_TOP_K", "rag.top_k", int(os.environ.get("RAG_TOP_K", "3"))
+#)
 RAG_RELEVANCE_THRESHOLD = PersistentConfig(
     "RAG_RELEVANCE_THRESHOLD",
     "rag.relevance_threshold",
-    float(os.environ.get("RAG_RELEVANCE_THRESHOLD", "0.0")),
+    float(os.environ.get("RAG_RELEVANCE_THRESHOLD", "1")),
 )
 
-ENABLE_RAG_HYBRID_SEARCH = PersistentConfig(
-    "ENABLE_RAG_HYBRID_SEARCH",
-    "rag.enable_hybrid_search",
-    os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true",
-)
+ENABLE_RAG_HYBRID_SEARCH = UserScopedConfig("rag.enable_hybrid_search",os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true" )
+#     "ENABLE_RAG_HYBRID_SEARCH",
+#     "rag.enable_hybrid_search",
+#     os.environ.get("ENABLE_RAG_HYBRID_SEARCH", "").lower() == "true",
+# )
 
-RAG_FULL_CONTEXT = PersistentConfig(
-    "RAG_FULL_CONTEXT",
+# RAG_FULL_CONTEXT = PersistentConfig(
+#     "RAG_FULL_CONTEXT",
+#     "rag.full_context",
+#     os.getenv("RAG_FULL_CONTEXT", "False").lower() == "true",
+# )
+
+RAG_FULL_CONTEXT = UserScopedConfig(
     "rag.full_context",
-    os.getenv("RAG_FULL_CONTEXT", "False").lower() == "true",
-)
+    os.getenv("RAG_FULL_CONTEXT", "False").lower() == "true")
 
 RAG_FILE_MAX_COUNT = PersistentConfig(
     "RAG_FILE_MAX_COUNT",
@@ -1749,6 +1895,7 @@ RAG_RERANKING_MODEL = PersistentConfig(
     "rag.reranking_model",
     os.environ.get("RAG_RERANKING_MODEL", ""),
 )
+
 if RAG_RERANKING_MODEL.value != "":
     log.info(f"Reranking model set: {RAG_RERANKING_MODEL.value}")
 
@@ -1776,15 +1923,22 @@ TIKTOKEN_ENCODING_NAME = PersistentConfig(
     os.environ.get("TIKTOKEN_ENCODING_NAME", "cl100k_base"),
 )
 
+CHUNK_SIZE = UserScopedConfig("rag.chunk_size", int(os.environ.get("CHUNK_SIZE", "1000")))
+# CHUNK_SIZE = PersistentConfig(
+#     "CHUNK_SIZE", "rag.chunk_size", int(os.environ.get("CHUNK_SIZE", "1000"))
+# )
 
-CHUNK_SIZE = PersistentConfig(
-    "CHUNK_SIZE", "rag.chunk_size", int(os.environ.get("CHUNK_SIZE", "1000"))
-)
-CHUNK_OVERLAP = PersistentConfig(
-    "CHUNK_OVERLAP",
+CHUNK_OVERLAP = UserScopedConfig(
     "rag.chunk_overlap",
     int(os.environ.get("CHUNK_OVERLAP", "100")),
 )
+
+# CHUNK_OVERLAP = PersistentConfig(
+#     "CHUNK_OVERLAP",
+#     "rag.chunk_overlap",
+#     int(os.environ.get("CHUNK_OVERLAP", "100")),
+# )
+
 
 DEFAULT_RAG_TEMPLATE = """### Task:
 Respond to the user query using the provided context, incorporating inline citations in the format [source_id] **only when the <source_id> tag is explicitly provided** in the context.
@@ -1817,11 +1971,13 @@ Provide a clear and direct response to the user's query, including inline citati
 </user_query>
 """
 
-RAG_TEMPLATE = PersistentConfig(
-    "RAG_TEMPLATE",
-    "rag.template",
-    os.environ.get("RAG_TEMPLATE", DEFAULT_RAG_TEMPLATE),
-)
+# RAG_TEMPLATE = PersistentConfig(
+#     "RAG_TEMPLATE",
+#     "rag.template",
+#     os.environ.get("RAG_TEMPLATE", DEFAULT_RAG_TEMPLATE),
+# )
+
+RAG_TEMPLATE = UserScopedConfig("rag.template", DEFAULT_RAG_TEMPLATE)
 
 RAG_OPENAI_API_BASE_URL = PersistentConfig(
     "RAG_OPENAI_API_BASE_URL",

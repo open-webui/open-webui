@@ -564,11 +564,11 @@ async def chat_completion_files_handler(
                         embedding_function=lambda query: request.app.state.EMBEDDING_FUNCTION(
                             query, user=user
                         ),
-                        k=request.app.state.config.TOP_K,
+                        k=request.app.state.config.TOP_K.get(user.email),
                         reranking_function=request.app.state.rf,
                         r=request.app.state.config.RELEVANCE_THRESHOLD,
-                        hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-                        full_context=request.app.state.config.RAG_FULL_CONTEXT,
+                        hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH.get(user.email),
+                        full_context=request.app.state.config.RAG_FULL_CONTEXT.get(user.email),
                     ),
                 )
         except Exception as e:
@@ -830,14 +830,14 @@ async def process_chat_payload(request, form_data, metadata, user, model):
         if model.get("owned_by") == "ollama":
             form_data["messages"] = prepend_to_first_user_message_content(
                 rag_template(
-                    request.app.state.config.RAG_TEMPLATE, context_string, prompt
+                    request.app.state.config.RAG_TEMPLATE.get(user.email), context_string, prompt
                 ),
                 form_data["messages"],
             )
         else:
             form_data["messages"] = add_or_update_system_message(
                 rag_template(
-                    request.app.state.config.RAG_TEMPLATE, context_string, prompt
+                    request.app.state.config.RAG_TEMPLATE.get(user.email), context_string, prompt
                 ),
                 form_data["messages"],
             )

@@ -123,6 +123,7 @@
 
 		updateEmbeddingModelLoading = true;
 		const res = await updateEmbeddingConfig(localStorage.token, {
+			email: $user.email,
 			embedding_engine: embeddingEngine,
 			embedding_model: embeddingModel,
 			embedding_batch_size: embeddingBatchSize,
@@ -156,6 +157,7 @@
 
 		updateRerankingModelLoading = true;
 		const res = await updateRerankingConfig(localStorage.token, {
+			email: $user.email,
 			reranking_model: rerankingModel
 		}).catch(async (error) => {
 			toast.error(`${error}`);
@@ -202,6 +204,7 @@
 		}
 
 		const res = await updateRAGConfig(localStorage.token, {
+			email: $user.email,
 			pdf_extract_images: pdfExtractImages,
 			enable_google_drive_integration: enableGoogleDriveIntegration,
 			enable_onedrive_integration: enableOneDriveIntegration,
@@ -226,7 +229,7 @@
 			}
 		});
 
-		await updateQuerySettings(localStorage.token, querySettings);
+		await updateQuerySettings(localStorage.token, {email: $user.email, ...querySettings});
 
 		if (fileMaxSize === '' || fileMaxSize === null) {
 			fileMaxSize = 5;
@@ -239,7 +242,7 @@
 	};
 
 	const setEmbeddingConfig = async () => {
-		const embeddingConfig = await getEmbeddingConfig(localStorage.token);
+		const embeddingConfig = await getEmbeddingConfig(localStorage.token, $user.email);
 
 		if (embeddingConfig) {
 			embeddingEngine = embeddingConfig.embedding_engine;
@@ -255,7 +258,7 @@
 	};
 
 	const setRerankingConfig = async () => {
-		const rerankingConfig = await getRerankingConfig(localStorage.token);
+		const rerankingConfig = await getRerankingConfig(localStorage.token, $user.email);
 
 		if (rerankingConfig) {
 			rerankingModel = rerankingConfig.reranking_model;
@@ -270,9 +273,9 @@
 		await setEmbeddingConfig();
 		await setRerankingConfig();
 
-		querySettings = await getQuerySettings(localStorage.token);
+		querySettings = await getQuerySettings(localStorage.token, $user.email);
 
-		const res = await getRAGConfig(localStorage.token);
+		const res = await getRAGConfig(localStorage.token, $user.email);
 
 		if (res) {
 			pdfExtractImages = res.pdf_extract_images;
