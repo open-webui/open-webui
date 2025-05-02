@@ -510,7 +510,7 @@
 							}}
 						>
 							<div
-								class="flex-1 flex flex-col relative w-full rounded-3xl px-1 fr-background-contrast--grey dark:text-gray-100 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-blue-500"
+								class="flex-1 flex flex-col relative w-full rounded-3xl px-1 fr-background-contrast--grey dark:text-gray-100 focus-within:outline-2  focus-within:outline-blue-500 z-50"
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
 								{#if files.length > 0}
