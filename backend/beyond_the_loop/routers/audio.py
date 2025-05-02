@@ -634,12 +634,8 @@ def get_available_voices(request) -> dict:
     available_voices = {}
     if request.app.state.config.TTS_ENGINE == "openai":
         available_voices = {
-            "alloy": "alloy",
-            "echo": "echo",
-            "fable": "fable",
-            "onyx": "onyx",
-            "nova": "nova",
-            "shimmer": "shimmer",
+            "ash": "ash",
+            "coral": "coral",
         }
     elif request.app.state.config.TTS_ENGINE == "elevenlabs":
         try:
