@@ -99,20 +99,24 @@ class KnowledgeForm(BaseModel):
     access_control: Optional[dict] = None
 
 
+class RAGConfigForm(BaseModel):
+    rag_config: Optional[dict] = None
+
+
 class KnowledgeTable:
     def insert_new_knowledge(
-        self, user_id: str, form_data: KnowledgeForm
+        self, user_id: str, form_data: KnowledgeForm, rag_data: RAGConfigForm
     ) -> Optional[KnowledgeModel]:
         with get_db() as db:
-            knowledge = KnowledgeModel(
-                **{
-                    **form_data.model_dump(),
-                    "id": str(uuid.uuid4()),
-                    "user_id": user_id,
-                    "created_at": int(time.time()),
-                    "updated_at": int(time.time()),
-                }
-            )
+            knowledge_data = {
+                **form_data.model_dump(),
+                "data": {"rag_config": rag_data.rag_config},
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "created_at": int(time.time()),
+                "updated_at": int(time.time()),
+            }
+            knowledge = KnowledgeModel(**knowledge_data)
 
             try:
                 result = Knowledge(**knowledge.model_dump())
@@ -217,5 +221,12 @@ class KnowledgeTable:
             except Exception:
                 return False
 
+    def get_knowledge_by_collection_name(self, name: str) -> Optional[KnowledgeModel]:
+        try:
+            with get_db() as db:
+                knowledge = db.query(Knowledge).filter_by(name=name).first()
+                return KnowledgeModel.model_validate(knowledge) if knowledge else None
+        except Exception:
+            return None
 
 Knowledges = KnowledgeTable()
