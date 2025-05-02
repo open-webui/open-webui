@@ -99,6 +99,9 @@ class TikaLoader:
         else:
             headers = {}
 
+        if self.kwargs.get("PDF_EXTRACT_IMAGES") == True:
+            headers['X-Tika-PDFextractInlineImages'] = 'true'
+
         endpoint = self.url
         if not endpoint.endswith("/"):
             endpoint += "/"
