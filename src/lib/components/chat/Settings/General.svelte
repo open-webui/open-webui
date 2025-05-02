@@ -221,7 +221,10 @@
 			voice = $config.audio.tts.voice ?? '';
 		}
 
-		nonLocalVoices = $settings.audio?.tts?.nonLocalVoices ?? false;
+		// nonLocalVoices = $settings.audio?.tts?.nonLocalVoices ?? false;
+
+		// Set this to true for now, because I'm not sure where it is set in the backend
+		nonLocalVoices = true;
 
 		await getVoices();
 	});
@@ -300,49 +303,23 @@
 								}}
 						>
 							<span class="text-gray-500 dark:text-customGray-100"
-								>{$i18n.t('Voice for audio output')}</span
-							>
+								>{$i18n.t('Voice for audio output')}</span>
 							<div class="flex items-center gap-2 text-xs dark:text-customGray-100/50">
-								{#if (!voice || voice === 'alloy')}
-									{$i18n.t('default')}
-								{:else}
+								<div class="flex items-center gap-2 text-xs dark:text-customGray-100/50 capitalize">
 									{voice}
-								{/if}
 								<ChevronDown className="size-3" />
 							</div>
 						</button>
-	
+
 						{#if showVoiceDropdown}
 							<div
 								class="max-h-40 overflow-y-auto absolute z-50 w-full -mt-1 bg-white pb-1 dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
 							>
 								<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
 								<div class="px-1">
-									<button
-											class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
-											on:click={() => {
-												voice = "";
-												saveSettings({
-													audio: {
-														stt: {
-															engine: STTEngine !== '' ? STTEngine : undefined
-														},
-														tts: {
-															playbackRate: playbackRate,
-															voice: undefined,
-															defaultVoice: $config?.audio?.tts?.voice ?? '',
-															nonLocalVoices: $config.audio.tts.engine === '' ? nonLocalVoices : undefined
-														}
-													}
-												});												
-												showVoiceDropdown = false;
-											}}
-										>	
-											{$i18n.t('Default')}
-										</button>
 									{#each voices.filter((v) => nonLocalVoices || v.localService === true) as _voice}
 										<button
-											class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
+											class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer capitalize text-gray-900"
 											on:click={() => {
 												voice = _voice.name;
 												saveSettings({
