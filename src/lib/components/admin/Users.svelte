@@ -133,7 +133,7 @@
 		{#if selectedTab === 'overview'}
 			<UserList />
 		{:else if selectedTab === 'groups'}
-			<Groups {users} />
+			<Groups />
 		{:else if selectedTab === 'roles'}
 			<Roles />
 		{:else if selectedTab === 'permissions'}
