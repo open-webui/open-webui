@@ -4,7 +4,8 @@ export const createNewKnowledge = async (
 	token: string,
 	name: string,
 	description: string,
-	accessControl: null | object
+	accessControl: null | object,
+	rag_config: null | object
 ) => {
 	let error = null;
 
@@ -16,9 +17,10 @@ export const createNewKnowledge = async (
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			name: name,
+			form_data: {name: name,
 			description: description,
-			access_control: accessControl
+			access_control: accessControl},
+			rag_data: rag_config
 		})
 	})
 		.then(async (res) => {
