@@ -330,7 +330,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 detail = f"External: {e}"
 
             raise HTTPException(
-                status_code=getattr(r, "status", 500),
+                status_code=getattr(r, "status", 500) if r else 500,
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 
@@ -384,7 +384,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 detail = f"External: {e}"
 
             raise HTTPException(
-                status_code=getattr(r, "status", 500),
+                status_code=getattr(r, "status", 500) if r else 500,
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 
@@ -440,7 +440,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 detail = f"External: {e}"
 
             raise HTTPException(
-                status_code=getattr(r, "status", 500),
+                status_code=getattr(r, "status", 500) if r else 500,
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 
@@ -497,7 +497,11 @@ def transcribe(request: Request, file_path):
             )
 
         model = request.app.state.faster_whisper_model
-        segments, info = model.transcribe(file_path, beam_size=5)
+        segments, info = model.transcribe(
+            file_path,
+            beam_size=5,
+            vad_filter=request.app.state.config.WHISPER_VAD_FILTER,
+        )
         log.info(
             "Detected language '%s' with probability %f"
             % (info.language, info.language_probability)
@@ -624,10 +628,7 @@ def transcribe(request: Request, file_path):
     elif request.app.state.config.STT_ENGINE == "azure":
         # Check file exists and size
         if not os.path.exists(file_path):
-            raise HTTPException(
-                status_code=400,
-                detail="Audio file not found"
-            )
+            raise HTTPException(status_code=400, detail="Audio file not found")
 
         # Check file size (Azure has a larger limit of 200MB)
         file_size = os.path.getsize(file_path)
@@ -643,11 +644,22 @@ def transcribe(request: Request, file_path):
 
         # IF NO LOCALES, USE DEFAULTS
         if len(locales) < 2:
-            locales = ['en-US', 'es-ES', 'es-MX', 'fr-FR', 'hi-IN', 
-                       'it-IT','de-DE', 'en-GB', 'en-IN', 'ja-JP', 
-                       'ko-KR', 'pt-BR', 'zh-CN']
-            locales = ','.join(locales)
-
+            locales = [
+                "en-US",
+                "es-ES",
+                "es-MX",
+                "fr-FR",
+                "hi-IN",
+                "it-IT",
+                "de-DE",
+                "en-GB",
+                "en-IN",
+                "ja-JP",
+                "ko-KR",
+                "pt-BR",
+                "zh-CN",
+            ]
+            locales = ",".join(locales)
 
         if not api_key or not region:
             raise HTTPException(
@@ -658,22 +670,26 @@ def transcribe(request: Request, file_path):
         r = None
         try:
             # Prepare the request
-            data = {'definition': json.dumps({
-                                                "locales": locales.split(','),
-                                                "diarization": {"maxSpeakers": 3,"enabled": True}
-                                              } if locales else {}
-                                              )
+            data = {
+                "definition": json.dumps(
+                    {
+                        "locales": locales.split(","),
+                        "diarization": {"maxSpeakers": 3, "enabled": True},
+                    }
+                    if locales
+                    else {}
+                )
             }
             url = f"https://{region}.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version=2024-11-15"
-            
+
             # Use context manager to ensure file is properly closed
-            with open(file_path, 'rb') as audio_file:
+            with open(file_path, "rb") as audio_file:
                 r = requests.post(
                     url=url,
-                    files={'audio': audio_file},
+                    files={"audio": audio_file},
                     data=data,
                     headers={
-                        'Ocp-Apim-Subscription-Key': api_key,
+                        "Ocp-Apim-Subscription-Key": api_key,
                     },
                 )
 
@@ -681,11 +697,11 @@ def transcribe(request: Request, file_path):
             response = r.json()
 
             # Extract transcript from response
-            if not response.get('combinedPhrases'):
+            if not response.get("combinedPhrases"):
                 raise ValueError("No transcription found in response")
 
             # Get the full transcript from combinedPhrases
-            transcript = response['combinedPhrases'][0].get('text', '').strip()
+            transcript = response["combinedPhrases"][0].get("text", "").strip()
             if not transcript:
                 raise ValueError("Empty transcript in response")
 
@@ -718,7 +734,7 @@ def transcribe(request: Request, file_path):
                 detail = f"External: {e}"
 
             raise HTTPException(
-                status_code=getattr(r, 'status_code', 500) if r else 500,
+                status_code=getattr(r, "status_code", 500) if r else 500,
                 detail=detail if detail else "Open WebUI: Server Connection Error",
             )
 

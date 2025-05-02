@@ -346,7 +346,6 @@ export const deleteKnowledgeById = async (token: string, id: string) => {
 	return res;
 };
 
-
 export const reindexKnowledgeFiles = async (token: string) => {
 	let error = null;
 

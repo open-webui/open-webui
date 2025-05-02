@@ -218,6 +218,28 @@ input[type='number'] {
 	-moz-appearance: textfield; /* Firefox */
 }
 
+.katex-display {
+	@apply overflow-y-hidden overflow-x-auto max-w-full;
+}
+
+.katex-display::-webkit-scrollbar {
+	height: 0.4rem;
+	width: 0.4rem;
+}
+
+.katex-display:active::-webkit-scrollbar-thumb,
+.katex-display:focus::-webkit-scrollbar-thumb,
+.katex-display:hover::-webkit-scrollbar-thumb {
+	visibility: visible;
+}
+.katex-display::-webkit-scrollbar-thumb {
+	visibility: hidden;
+}
+
+.katex-display::-webkit-scrollbar-corner {
+	display: none;
+}
+
 .cm-editor {
 	height: 100%;
 	width: 100%;
