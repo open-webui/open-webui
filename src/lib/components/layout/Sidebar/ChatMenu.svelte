@@ -45,7 +45,7 @@
 
 	const pinHandler = async () => {
 		await toggleChatPinnedStatusById(localStorage.token, chatId);
-		dispatch('change');
+		dispatch('change', { buttonID });
 		if (pinned) {
 			toast.success($i18n.t('Chat unpinned. It will now appear in the regular list.'));
 		} else {

@@ -51,12 +51,12 @@
 
 	let mouseOver = false;
 	let draggable = false;
-
-	let buttonID = `chat-menu-${id}`;
+	let buttonID = '';
 
 	$: if (mouseOver) {
 		loadChat();
 	}
+	$: buttonID = `chat-menu-${id}`;
 
 	const loadChat = async () => {
 		if (!chat) {
@@ -412,8 +412,8 @@
 						onClose={() => {
 							dispatch('unselect');
 						}}
-						on:change={async () => {
-							dispatch('change');
+						on:change={async (e) => {
+							dispatch('change', e.detail);
 						}}
 						on:tag={(e) => {
 							dispatch('tag', e.detail);

@@ -348,9 +348,12 @@
 	};
 
 	const changeFocus = async (elementId) => {
-		setTimeout(() => {
-			document.getElementById(elementId)?.focus();
-		}, 110);
+		requestAnimationFrame(() => {
+			const element = document.getElementById(elementId);
+			if (element) {
+				element.focus();
+			}
+		});
 	};
 
 	onMount(async () => {
@@ -753,8 +756,11 @@
 										on:unselect={() => {
 											selectedChatId = null;
 										}}
-										on:change={async () => {
-											initChatList();
+										on:change={async (e) => {
+											const { buttonID } = e.detail;
+											await initChatList();
+											await tick();
+											changeFocus(buttonID);
 										}}
 										on:tag={(e) => {
 											const { type, name } = e.detail;
@@ -765,22 +771,6 @@
 							</div>
 						</Folder>
 					</div>
-				{/if}
-
-				{#if !search && folders}
-					<Folders
-						{folders}
-						on:import={(e) => {
-							const { folderId, items } = e.detail;
-							importChatHandler(items, false, folderId);
-						}}
-						on:update={async (e) => {
-							initChatList();
-						}}
-						on:change={async () => {
-							initChatList();
-						}}
-					/>
 				{/if}
 
 				<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
@@ -828,8 +818,12 @@
 									on:unselect={() => {
 										selectedChatId = null;
 									}}
-									on:change={async () => {
+									on:change={async (e) => {
+										const { buttonID } = e.detail;
 										initChatList();
+										await initChatList();
+										await tick();
+										changeFocus(buttonID);
 									}}
 									on:tag={(e) => {
 										const { type, name } = e.detail;
