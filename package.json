@@ -28,7 +28,7 @@
 		"@tailwindcss/container-queries": "^0.1.1",
 		"@tailwindcss/postcss": "^4.0.0",
 		"@tailwindcss/typography": "^0.5.13",
-		"@typescript-eslint/eslint-plugin": "^6.17.0",
+		"@typescript-eslint/eslint-plugin": "^8.31.1",
 		"@typescript-eslint/parser": "^8.31.1",
 		"cypress": "^13.15.0",
 		"eslint": "^8.56.0",
