@@ -18,6 +18,7 @@
 	import ImageGenerateIcon from '$lib/components/icons/ImageGenerateIcon.svelte';
 	import CodeInterpreterIcon from '$lib/components/icons/CodeInterpreterIcon.svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
+	import { copyToClipboard } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 	export let user = null;
@@ -70,6 +71,12 @@
 
 		toast.success($i18n.t('Successfully resend invite'));
 	}
+	async function copyInviteLink(token) {
+		const origin = window.location.origin;
+		const link = `${origin}/register?inviteToken=${token}`
+		await copyToClipboard(link);
+		toast.success($i18n.t('Copied'));
+	}
 </script>
 
 <div>
@@ -98,7 +105,7 @@
 				<button
 					type="button"
 					on:click={() => {
-						console.log(user?.email);
+						copyInviteLink(user.invite_token)
 					}}
 					class="flex gap-2 items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
 				>

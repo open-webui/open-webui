@@ -8,10 +8,15 @@
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import InviteMenu from './InviteMenu.svelte';
 	import { toast } from 'svelte-sonner';
+	import { inviteUsers } from '$lib/apis/auths';
+	
 
 	const i18n = getContext('i18n');
 
+	$: console.log(WEBUI_BASE_URL)
+
 	export let users = [];
+	export let getUsersHandler: Function;
 	let page = 1;
 
 	$: console.log(users, 'users');
@@ -78,6 +83,15 @@
 			users = await getUsers(localStorage.token);
 		}
 	};
+
+	const inviteUsersHandler = async () => {
+		const invitees = invitedEmails.map(item => ({email: item, role: selectedRole}));
+		const res = await inviteUsers(localStorage.token, invitees).catch(error => toast.error(`${error}`));
+		console.log(res)
+		getUsersHandler();
+		invitedEmails = [];
+
+	}
 </script>
 
 <div class="pb-24 min-h-[500px]">
@@ -203,7 +217,7 @@
 			</div>
 			<button
 				class="bg-gray-900 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 text-gray-100 dark:text-customGray-200 py-2.5 px-4 h-12 rounded-lg transition"
-				on:click={() => {}}
+				on:click={() => {inviteUsersHandler()}}
 				type="button"
 			>
 				{$i18n.t('Send invites')}

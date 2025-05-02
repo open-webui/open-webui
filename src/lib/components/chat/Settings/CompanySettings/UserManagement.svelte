@@ -27,6 +27,7 @@
 		}
 	});
 
+
 </script>
 <div class="flex flex-col pt-5">
     <div class="w-fit flex dark:bg-customGray-900 rounded-md mx-auto">
@@ -44,7 +45,7 @@
    
     <div>
         {#if activeTab === 'users'}
-            <UsersTab {users}/>
+            <UsersTab {users} {getUsersHandler}/>
          {:else if activeTab === 'groups'}
             <GroupsTabs {users}/>
         {/if}
