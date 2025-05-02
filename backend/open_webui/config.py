@@ -515,6 +515,13 @@ ENABLE_OAUTH_GROUP_CREATION = PersistentConfig(
     os.environ.get("ENABLE_OAUTH_GROUP_CREATION", "False").lower() == "true",
 )
 
+
+OAUTH_BLOCKED_GROUPS = PersistentConfig(
+    "OAUTH_BLOCKED_GROUPS",
+    "oauth.blocked_groups",
+    os.environ.get("OAUTH_BLOCKED_GROUPS", "[]"),
+)
+
 OAUTH_ROLES_CLAIM = PersistentConfig(
     "OAUTH_ROLES_CLAIM",
     "oauth.roles_claim",
