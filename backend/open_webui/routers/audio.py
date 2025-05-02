@@ -33,6 +33,7 @@ from open_webui.config import (
     WHISPER_MODEL_AUTO_UPDATE,
     WHISPER_MODEL_DIR,
     CACHE_DIR,
+    WHISPER_LANGUAGE
 )
 
 from open_webui.constants import ERROR_MESSAGES
@@ -508,6 +509,7 @@ def transcribe(request: Request, file_path):
             file_path,
             beam_size=5,
             vad_filter=request.app.state.config.WHISPER_VAD_FILTER,
+            language=WHISPER_LANGUAGE
         )
         log.info(
             "Detected language '%s' with probability %f"
