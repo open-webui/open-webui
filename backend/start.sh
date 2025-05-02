@@ -4,8 +4,8 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 cd "$SCRIPT_DIR" || exit
 
 # Add conditional Playwright browser installation
-if [[ "${RAG_WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
-    if [[ -z "${PLAYWRIGHT_WS_URI}" ]]; then
+if [[ "${WEB_LOADER_ENGINE,,}" == "playwright" ]]; then
+    if [[ -z "${PLAYWRIGHT_WS_URL}" ]]; then
         echo "Installing Playwright browsers..."
         playwright install chromium
         playwright install-deps chromium
