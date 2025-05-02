@@ -3,6 +3,19 @@ from typing import Optional
 
 from open_webui.models.auths import Auths
 from open_webui.models.chats import Chats
+from open_webui.models.knowledge import (
+    Knowledges,
+    KnowledgeForm,
+    KnowledgeResponse,
+    KnowledgeUserResponse,
+)
+from open_webui.storage.provider import Storage
+from open_webui.models.files import (
+    FileForm,
+    FileModel,
+    FileModelResponse,
+    Files,
+)
 from open_webui.models.users import (
     UserModel,
     UserRoleUpdateForm,
