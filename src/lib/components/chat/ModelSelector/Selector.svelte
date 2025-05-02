@@ -299,7 +299,7 @@
 			if (ps) {
 				const newLoadedModels = new Set<string>();
 				Object.values(ps).forEach((endpoint) => {
-					endpoint.models?.forEach((model) => {
+					endpoint?.models?.forEach((model) => {
 						if (new Date(model.expires_at) > new Date()) {
 							newLoadedModels.add(model.name);
 						}
