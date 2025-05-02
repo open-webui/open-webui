@@ -1,14 +1,17 @@
 import { RETRIEVAL_API_BASE_URL } from '$lib/constants';
 
-export const getRAGConfig = async (token: string) => {
+export const getRAGConfig = async (token: string,  collectionForm?: CollectionNameForm) => {
 	let error = null;
 
 	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/config`, {
-		method: 'GET',
+		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
-		}
+		},
+		body: JSON.stringify(
+			collectionForm ? {collectionForm: collectionForm} : {}
+		)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -59,7 +62,11 @@ type RAGConfigForm = {
 	youtube?: YoutubeConfigForm;
 };
 
-export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => {
+type CollectionNameForm = {
+	collection_name: string;
+};
+
+export const updateRAGConfig = async (token: string, payload: RAGConfigForm, collectionForm?: CollectionNameForm) => {
 	let error = null;
 
 	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/config/update`, {
@@ -69,7 +76,8 @@ export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => 
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			...payload
+			...payload,
+			...(collectionForm ? { collectionForm: collectionForm } : {})
 		})
 	})
 		.then(async (res) => {
@@ -152,15 +160,18 @@ export const updateQuerySettings = async (token: string, settings: QuerySettings
 	return res;
 };
 
-export const getEmbeddingConfig = async (token: string) => {
+export const getEmbeddingConfig = async (token: string, collectionForm?: CollectionNameForm) => {
 	let error = null;
 
 	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/embedding`, {
-		method: 'GET',
+		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
-		}
+		},
+		body: JSON.stringify(
+			collectionForm ? {collectionForm: collectionForm} : {}
+		)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -221,15 +232,18 @@ export const updateEmbeddingConfig = async (token: string, payload: EmbeddingMod
 	return res;
 };
 
-export const getRerankingConfig = async (token: string) => {
+export const getRerankingConfig = async (token: string, collectionForm?: CollectionNameForm) => {
 	let error = null;
 
 	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/reranking`, {
-		method: 'GET',
+		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
-		}
+		},
+		body: JSON.stringify(
+			collectionForm ? {collectionForm: collectionForm} : {}
+		)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
