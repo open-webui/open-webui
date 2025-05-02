@@ -912,20 +912,24 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 f"With a 0 relevancy threshold for RAG, the context cannot be empty"
             )
 
+        # Adjusted RAG template step to use knowledge-base-specific configuration
+        rag_template_config = request.app.state.config.RAG_TEMPLATE
+
+        if model_knowledge and not model_knowledge.data.get("DEFAULT_RAG_SETTINGS", True):
+            rag_template_config = model_knowledge.data.get("rag_config", {}).get(
+                "template", request.app.state.config.RAG_TEMPLATE
+            )
+
         # Workaround for Ollama 2.0+ system prompt issue
         # TODO: replace with add_or_update_system_message
         if model.get("owned_by") == "ollama":
             form_data["messages"] = prepend_to_first_user_message_content(
-                rag_template(
-                    request.app.state.config.RAG_TEMPLATE, context_string, prompt
-                ),
+                rag_template(rag_template_config, context_string, prompt),
                 form_data["messages"],
             )
         else:
             form_data["messages"] = add_or_update_system_message(
-                rag_template(
-                    request.app.state.config.RAG_TEMPLATE, context_string, prompt
-                ),
+                rag_template(rag_template_config, context_string, prompt),
                 form_data["messages"],
             )
 
