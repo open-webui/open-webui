@@ -21,6 +21,7 @@
 		label: '',
 		description: ''
 	};
+	const _categories = ['workspace', 'sharing', 'chat', 'features'];
 
 	const submitHandler = async () => {
 		const stopLoading = () => {
@@ -73,16 +74,17 @@
 					}}>
 
 					<div class="flex flex-col w-full mt-1">
-						<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Category')}</div>
-
+						<div class="mb-1 text-xs text-gray-500">{$i18n.t('Category')}</div>
 						<div class="flex-1">
-							<input
-								class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
-								type="text"
-								bind:value={_permission.category}
-								autocomplete="off"
-								required
-							/>
+							<select
+									class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+									bind:value={_permission.category}
+									required
+							>
+								{#each _categories as category}
+									<option value={category}>{category}</option>
+								{/each}
+							</select>
 						</div>
 					</div>
 
