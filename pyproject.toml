@@ -129,6 +129,7 @@ dependencies = [
     "gcp-storage-emulator>=2024.8.3",
 
     "moto[s3]>=5.0.26",
+    "huggingface_hub[hf_xet]>=0.30.2",
 
 ]
 readme = "README.md"
