@@ -26,7 +26,7 @@ def upgrade() -> None:
     existing_tables = set(get_existing_tables())
 
     tables_to_drop = [
-        "function", "model", "tool"
+        "function", "model", "tool", "config"
     ]
 
     for table in tables_to_drop:

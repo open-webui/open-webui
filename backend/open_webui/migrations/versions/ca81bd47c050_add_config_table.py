@@ -10,6 +10,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from open_webui.migrations.util import get_existing_tables
 
 # revision identifiers, used by Alembic.
 revision: str = "ca81bd47c050"
@@ -19,6 +20,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade():
+    existing_tables = set(get_existing_tables())
+
+    tables_to_drop = ["config"]
+
+    for table in tables_to_drop:
+        if table in existing_tables:
+            op.drop_table(table)
+    
     op.create_table(
         "config",
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
