@@ -23,6 +23,9 @@ export const updateUserRole = async (token: string, id: string, role: string) =>
 export const getUsers = async (token: string) =>
 	webuiApiClient.get('/users/', { token }).then((response) => response || []);
 
+export const getAllUsers = async (token: string) =>
+	webuiApiClient.get('/users/all', { token }).then((response) => response || []);
+
 export const getUserSettings = async (token: string) =>
 	webuiApiClient.get('/users/user/settings', { token });
 
