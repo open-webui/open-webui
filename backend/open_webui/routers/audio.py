@@ -150,7 +150,8 @@ class STTConfigForm(BaseModel):
     AZURE_API_KEY: str
     AZURE_REGION: str
     AZURE_LOCALES: str
-
+    AZURE_BASE_URL: str
+    AZURE_MAX_SPEAKERS: str
 
 class AudioConfigUpdateForm(BaseModel):
     tts: TTSConfigForm
@@ -181,6 +182,8 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "AZURE_API_KEY": request.app.state.config.AUDIO_STT_AZURE_API_KEY,
             "AZURE_REGION": request.app.state.config.AUDIO_STT_AZURE_REGION,
             "AZURE_LOCALES": request.app.state.config.AUDIO_STT_AZURE_LOCALES,
+            "AZURE_BASE_URL": request.app.state.config.AUDIO_STT_AZURE_BASE_URL,
+            "AZURE_MAX_SPEAKERS": request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS,            
         },
     }
 
@@ -210,6 +213,8 @@ async def update_audio_config(
     request.app.state.config.AUDIO_STT_AZURE_API_KEY = form_data.stt.AZURE_API_KEY
     request.app.state.config.AUDIO_STT_AZURE_REGION = form_data.stt.AZURE_REGION
     request.app.state.config.AUDIO_STT_AZURE_LOCALES = form_data.stt.AZURE_LOCALES
+    request.app.state.config.AUDIO_STT_AZURE_BASE_URL = form_data.stt.AZURE_BASE_URL
+    request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS = form_data.stt.AZURE_MAX_SPEAKERS
 
     if request.app.state.config.STT_ENGINE == "":
         request.app.state.faster_whisper_model = set_faster_whisper_model(
@@ -238,6 +243,8 @@ async def update_audio_config(
             "AZURE_API_KEY": request.app.state.config.AUDIO_STT_AZURE_API_KEY,
             "AZURE_REGION": request.app.state.config.AUDIO_STT_AZURE_REGION,
             "AZURE_LOCALES": request.app.state.config.AUDIO_STT_AZURE_LOCALES,
+            "AZURE_BASE_URL": request.app.state.config.AUDIO_STT_AZURE_BASE_URL,
+            "AZURE_MAX_SPEAKERS": request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS,    
         },
     }
 
@@ -641,6 +648,8 @@ def transcribe(request: Request, file_path):
         api_key = request.app.state.config.AUDIO_STT_AZURE_API_KEY
         region = request.app.state.config.AUDIO_STT_AZURE_REGION
         locales = request.app.state.config.AUDIO_STT_AZURE_LOCALES
+        base_url = request.app.state.config.AUDIO_STT_AZURE_BASE_URL
+        max_speakers = request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS
 
         # IF NO LOCALES, USE DEFAULTS
         if len(locales) < 2:
@@ -664,7 +673,13 @@ def transcribe(request: Request, file_path):
         if not api_key or not region:
             raise HTTPException(
                 status_code=400,
-                detail="Azure API key and region are required for Azure STT",
+                detail="Azure API key is required for Azure STT",
+            )
+
+        if not base_url and not region:
+            raise HTTPException(
+                status_code=400,
+                detail="Azure region or base url is required for Azure STT",
             )
 
         r = None
@@ -674,13 +689,14 @@ def transcribe(request: Request, file_path):
                 "definition": json.dumps(
                     {
                         "locales": locales.split(","),
-                        "diarization": {"maxSpeakers": 3, "enabled": True},
+                        "diarization": {"maxSpeakers": max_speakers, "enabled": True},
                     }
                     if locales
                     else {}
                 )
             }
-            url = f"https://{region}.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version=2024-11-15"
+
+            url = base_url or f"https://{region}.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version=2024-11-15"
 
             # Use context manager to ensure file is properly closed
             with open(file_path, "rb") as audio_file:

@@ -53,6 +53,7 @@ from open_webui.retrieval.web.jina_search import search_jina
 from open_webui.retrieval.web.searchapi import search_searchapi
 from open_webui.retrieval.web.serpapi import search_serpapi
 from open_webui.retrieval.web.searxng import search_searxng
+from open_webui.retrieval.web.yacy import search_yacy
 from open_webui.retrieval.web.serper import search_serper
 from open_webui.retrieval.web.serply import search_serply
 from open_webui.retrieval.web.serpstack import search_serpstack
@@ -61,6 +62,8 @@ from open_webui.retrieval.web.bing import search_bing
 from open_webui.retrieval.web.exa import search_exa
 from open_webui.retrieval.web.perplexity import search_perplexity
 from open_webui.retrieval.web.sougou import search_sougou
+from open_webui.retrieval.web.firecrawl import search_firecrawl
+from open_webui.retrieval.web.external import search_external
 
 from open_webui.retrieval.utils import (
     get_embedding_function,
@@ -90,7 +93,12 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
     DEVICE_TYPE,
     DOCKER,
+    SENTENCE_TRANSFORMERS_BACKEND,
+    SENTENCE_TRANSFORMERS_MODEL_KWARGS,
+    SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
+    SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
 )
+
 from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
@@ -117,6 +125,8 @@ def get_ef(
                 get_model_path(embedding_model, auto_update),
                 device=DEVICE_TYPE,
                 trust_remote_code=RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
+                backend=SENTENCE_TRANSFORMERS_BACKEND,
+                model_kwargs=SENTENCE_TRANSFORMERS_MODEL_KWARGS,
             )
         except Exception as e:
             log.debug(f"Error loading SentenceTransformer: {e}")
@@ -150,6 +160,8 @@ def get_rf(
                     get_model_path(reranking_model, auto_update),
                     device=DEVICE_TYPE,
                     trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+                    backend=SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
+                    model_kwargs=SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
                 )
             except Exception as e:
                 log.error(f"CrossEncoder: {e}")
@@ -460,6 +472,9 @@ async def get_rag_config(request: Request, collectionForm: CollectionNameForm, u
                 "WEB_SEARCH_DOMAIN_FILTER_LIST": rag_config.get("web_search_domain_filter_list", request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST),
                 "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": rag_config.get("bypass_web_search_embedding_and_retrieval", request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL),
                 "SEARXNG_QUERY_URL": rag_config.get("searxng_query_url", request.app.state.config.SEARXNG_QUERY_URL),
+                "YACY_QUERY_URL": rag_config.get("yacy_query_url", request.app.state.config.YACY_QUERY_URL),
+                "YACY_USERNAME": rag_config.get("yacy_query_username",request.app.state.config.YACY_USERNAME),
+                "YACY_PASSWORD": rag_config.get("yacy_query_password",request.app.state.config.YACY_PASSWORD),
                 "GOOGLE_PSE_API_KEY": rag_config.get("google_pse_api_key", request.app.state.config.GOOGLE_PSE_API_KEY),
                 "GOOGLE_PSE_ENGINE_ID": rag_config.get("google_pse_engine_id", request.app.state.config.GOOGLE_PSE_ENGINE_ID),
                 "BRAVE_SEARCH_API_KEY": rag_config.get("brave_search_api_key", request.app.state.config.BRAVE_SEARCH_API_KEY),
@@ -489,6 +504,10 @@ async def get_rag_config(request: Request, collectionForm: CollectionNameForm, u
                 "FIRECRAWL_API_KEY": rag_config.get("firecrawl_api_key", request.app.state.config.FIRECRAWL_API_KEY),
                 "FIRECRAWL_API_BASE_URL": rag_config.get("firecrawl_api_base_url", request.app.state.config.FIRECRAWL_API_BASE_URL),
                 "TAVILY_EXTRACT_DEPTH": rag_config.get("tavily_extract_depth", request.app.state.config.TAVILY_EXTRACT_DEPTH),
+                "EXTERNAL_WEB_SEARCH_URL": rag_config.get("web_search_url", request.app.state.config.EXTERNAL_WEB_SEARCH_URL),
+                "EXTERNAL_WEB_SEARCH_API_KEY": rag_config.get("web_search_key", request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY),
+                "EXTERNAL_WEB_LOADER_URL": rag_config.get("web_loader_url", request.app.state.config.EXTERNAL_WEB_LOADER_URL),
+                "EXTERNAL_WEB_LOADER_API_KEY": rag_config.get("web_loader_key", request.app.state.config.EXTERNAL_WEB_LOADER_API_KEY),
                 "YOUTUBE_LOADER_LANGUAGE": rag_config.get("youtube_loader_language", request.app.state.config.YOUTUBE_LOADER_LANGUAGE),
                 "YOUTUBE_LOADER_PROXY_URL": rag_config.get("youtube_loader_proxy_url", request.app.state.config.YOUTUBE_LOADER_PROXY_URL),
                 "YOUTUBE_LOADER_TRANSLATION": rag_config.get("youtube_loader_translation", request.app.state.config.YOUTUBE_LOADER_TRANSLATION),
@@ -535,6 +554,9 @@ async def get_rag_config(request: Request, collectionForm: CollectionNameForm, u
                 "WEB_SEARCH_DOMAIN_FILTER_LIST": request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
                 "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
                 "SEARXNG_QUERY_URL": request.app.state.config.SEARXNG_QUERY_URL,
+                "YACY_QUERY_URL": request.app.state.config.YACY_QUERY_URL,
+                "YACY_USERNAME": request.app.state.config.YACY_USERNAME,
+                "YACY_PASSWORD": request.app.state.config.YACY_PASSWORD,
                 "GOOGLE_PSE_API_KEY": request.app.state.config.GOOGLE_PSE_API_KEY,
                 "GOOGLE_PSE_ENGINE_ID": request.app.state.config.GOOGLE_PSE_ENGINE_ID,
                 "BRAVE_SEARCH_API_KEY": request.app.state.config.BRAVE_SEARCH_API_KEY,
@@ -564,6 +586,10 @@ async def get_rag_config(request: Request, collectionForm: CollectionNameForm, u
                 "FIRECRAWL_API_KEY": request.app.state.config.FIRECRAWL_API_KEY,
                 "FIRECRAWL_API_BASE_URL": request.app.state.config.FIRECRAWL_API_BASE_URL,
                 "TAVILY_EXTRACT_DEPTH": request.app.state.config.TAVILY_EXTRACT_DEPTH,
+                "EXTERNAL_WEB_SEARCH_URL": request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
+                "EXTERNAL_WEB_SEARCH_API_KEY": request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
+                "EXTERNAL_WEB_LOADER_URL": request.app.state.config.EXTERNAL_WEB_LOADER_URL,
+                "EXTERNAL_WEB_LOADER_API_KEY": request.app.state.config.EXTERNAL_WEB_LOADER_API_KEY,
                 "YOUTUBE_LOADER_LANGUAGE": request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
                 "YOUTUBE_LOADER_PROXY_URL": request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
                 "YOUTUBE_LOADER_TRANSLATION": request.app.state.YOUTUBE_LOADER_TRANSLATION,
@@ -580,6 +606,9 @@ class WebConfig(BaseModel):
     WEB_SEARCH_DOMAIN_FILTER_LIST: Optional[List[str]] = []
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: Optional[bool] = None
     SEARXNG_QUERY_URL: Optional[str] = None
+    YACY_QUERY_URL: Optional[str] = None
+    YACY_USERNAME: Optional[str] = None
+    YACY_PASSWORD: Optional[str] = None
     GOOGLE_PSE_API_KEY: Optional[str] = None
     GOOGLE_PSE_ENGINE_ID: Optional[str] = None
     BRAVE_SEARCH_API_KEY: Optional[str] = None
@@ -609,6 +638,10 @@ class WebConfig(BaseModel):
     FIRECRAWL_API_KEY: Optional[str] = None
     FIRECRAWL_API_BASE_URL: Optional[str] = None
     TAVILY_EXTRACT_DEPTH: Optional[str] = None
+    EXTERNAL_WEB_SEARCH_URL: Optional[str] = None
+    EXTERNAL_WEB_SEARCH_API_KEY: Optional[str] = None
+    EXTERNAL_WEB_LOADER_URL: Optional[str] = None
+    EXTERNAL_WEB_LOADER_API_KEY: Optional[str] = None
     YOUTUBE_LOADER_LANGUAGE: Optional[List[str]] = None
     YOUTUBE_LOADER_PROXY_URL: Optional[str] = None
     YOUTUBE_LOADER_TRANSLATION: Optional[str] = None
@@ -668,9 +701,9 @@ async def update_rag_config(
         rag_config = knowledge_base.data.get("rag_config", {})
 
         # Update only the provided fields in the rag_config
-        for field, value in form_data.dict(exclude_unset=True).items():
+        for field, value in form_data.model_dump(exclude_unset=True).items():
             if field == "web" and value is not None:
-                rag_config["web"] = {**rag_config.get("web", {}), **value.dict(exclude_unset=True)}
+                rag_config["web"] = {**rag_config.get("web", {}), **value.model_dump(exclude_unset=True)}
             else:
                 rag_config[field] = value
 
@@ -709,6 +742,7 @@ async def update_rag_config(
             if form_data.ENABLE_RAG_HYBRID_SEARCH is not None
             else request.app.state.config.ENABLE_RAG_HYBRID_SEARCH
         )
+        # Free up memory if hybrid search is disabled
         if not request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
             request.app.state.rf = None
 
@@ -821,6 +855,9 @@ async def update_rag_config(
                 form_data.web.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
             )
             request.app.state.config.SEARXNG_QUERY_URL = form_data.web.SEARXNG_QUERY_URL
+            request.app.state.config.YACY_QUERY_URL = form_data.web.YACY_QUERY_URL
+            request.app.state.config.YACY_USERNAME = form_data.web.YACY_USERNAME
+            request.app.state.config.YACY_PASSWORD = form_data.web.YACY_PASSWORD
             request.app.state.config.GOOGLE_PSE_API_KEY = form_data.web.GOOGLE_PSE_API_KEY
             request.app.state.config.GOOGLE_PSE_ENGINE_ID = (
                 form_data.web.GOOGLE_PSE_ENGINE_ID
@@ -866,6 +903,18 @@ async def update_rag_config(
             request.app.state.config.FIRECRAWL_API_KEY = form_data.web.FIRECRAWL_API_KEY
             request.app.state.config.FIRECRAWL_API_BASE_URL = (
                 form_data.web.FIRECRAWL_API_BASE_URL
+            )
+            request.app.state.config.EXTERNAL_WEB_SEARCH_URL = (
+                form_data.web.EXTERNAL_WEB_SEARCH_URL
+            )
+            request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY = (
+                form_data.web.EXTERNAL_WEB_SEARCH_API_KEY
+            )
+            request.app.state.config.EXTERNAL_WEB_LOADER_URL = (
+                form_data.web.EXTERNAL_WEB_LOADER_URL
+            )
+            request.app.state.config.EXTERNAL_WEB_LOADER_API_KEY = (
+                form_data.web.EXTERNAL_WEB_LOADER_API_KEY
             )
             request.app.state.config.TAVILY_EXTRACT_DEPTH = (
                 form_data.web.TAVILY_EXTRACT_DEPTH
@@ -919,7 +968,10 @@ async def update_rag_config(
                 "WEB_SEARCH_DOMAIN_FILTER_LIST": request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
                 "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL": request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
                 "SEARXNG_QUERY_URL": request.app.state.config.SEARXNG_QUERY_URL,
-                "GOOGLE_PSE_API_KEY": request.app.state.config.GOOGLE_PSE_API_KEY,
+                "YACY_QUERY_URL": request.app.state.config.YACY_QUERY_URL,
+            "YACY_USERNAME": request.app.state.config.YACY_USERNAME,
+            "YACY_PASSWORD": request.app.state.config.YACY_PASSWORD,
+            "GOOGLE_PSE_API_KEY": request.app.state.config.GOOGLE_PSE_API_KEY,
                 "GOOGLE_PSE_ENGINE_ID": request.app.state.config.GOOGLE_PSE_ENGINE_ID,
                 "BRAVE_SEARCH_API_KEY": request.app.state.config.BRAVE_SEARCH_API_KEY,
                 "KAGI_SEARCH_API_KEY": request.app.state.config.KAGI_SEARCH_API_KEY,
@@ -948,7 +1000,11 @@ async def update_rag_config(
                 "FIRECRAWL_API_KEY": request.app.state.config.FIRECRAWL_API_KEY,
                 "FIRECRAWL_API_BASE_URL": request.app.state.config.FIRECRAWL_API_BASE_URL,
                 "TAVILY_EXTRACT_DEPTH": request.app.state.config.TAVILY_EXTRACT_DEPTH,
-                "YOUTUBE_LOADER_LANGUAGE": request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
+                "EXTERNAL_WEB_SEARCH_URL": request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
+            "EXTERNAL_WEB_SEARCH_API_KEY": request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
+            "EXTERNAL_WEB_LOADER_URL": request.app.state.config.EXTERNAL_WEB_LOADER_URL,
+            "EXTERNAL_WEB_LOADER_API_KEY": request.app.state.config.EXTERNAL_WEB_LOADER_API_KEY,
+            "YOUTUBE_LOADER_LANGUAGE": request.app.state.config.YOUTUBE_LOADER_LANGUAGE,
                 "YOUTUBE_LOADER_PROXY_URL": request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
                 "YOUTUBE_LOADER_TRANSLATION": request.app.state.YOUTUBE_LOADER_TRANSLATION,
             },
@@ -1491,6 +1547,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
     """Search the web using a search engine and return the results as a list of SearchResult objects.
     Will look for a search engine API key in environment variables in the following order:
     - SEARXNG_QUERY_URL
+    - YACY_QUERY_URL + YACY_USERNAME + YACY_PASSWORD
     - GOOGLE_PSE_API_KEY + GOOGLE_PSE_ENGINE_ID
     - BRAVE_SEARCH_API_KEY
     - KAGI_SEARCH_API_KEY
@@ -1520,6 +1577,18 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             )
         else:
             raise Exception("No SEARXNG_QUERY_URL found in environment variables")
+    elif engine == "yacy":
+        if request.app.state.config.YACY_QUERY_URL:
+            return search_yacy(
+                request.app.state.config.YACY_QUERY_URL,
+                request.app.state.config.YACY_USERNAME,
+                request.app.state.config.YACY_PASSWORD,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+                request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            )
+        else:
+            raise Exception("No YACY_QUERY_URL found in environment variables")
     elif engine == "google_pse":
         if (
             request.app.state.config.GOOGLE_PSE_API_KEY
@@ -1690,6 +1759,22 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             raise Exception(
                 "No SOUGOU_API_SID or SOUGOU_API_SK found in environment variables"
             )
+    elif engine == "firecrawl":
+        return search_firecrawl(
+            request.app.state.config.FIRECRAWL_API_BASE_URL,
+            request.app.state.config.FIRECRAWL_API_KEY,
+            query,
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
+    elif engine == "external":
+        return search_external(
+            request.app.state.config.EXTERNAL_WEB_SEARCH_URL,
+            request.app.state.config.EXTERNAL_WEB_SEARCH_API_KEY,
+            query,
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+        )
     else:
         raise Exception("No search engine API key found in environment variables")
 
@@ -1702,8 +1787,11 @@ async def process_web_search(
         logging.info(
             f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.query}"
         )
-        web_results = search_web(
-            request, request.app.state.config.WEB_SEARCH_ENGINE, form_data.query
+        web_results = await run_in_threadpool(
+            search_web,
+            request,
+            request.app.state.config.WEB_SEARCH_ENGINE,
+            form_data.query,
         )
     except Exception as e:
         log.exception(e)
@@ -1725,8 +1813,8 @@ async def process_web_search(
         )
         docs = await loader.aload()
         urls = [
-            doc.metadata["source"] for doc in docs
-        ]  # only keep URLs which could be retrieved
+            doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
+        ]  # only keep URLs
 
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
@@ -1746,19 +1834,22 @@ async def process_web_search(
             collection_names = []
             for doc_idx, doc in enumerate(docs):
                 if doc and doc.page_content:
-                    collection_name = f"web-search-{calculate_sha256_string(form_data.query + '-' + urls[doc_idx])}"[
-                        :63
-                    ]
+                    try:
+                        collection_name = f"web-search-{calculate_sha256_string(form_data.query + '-' + urls[doc_idx])}"[
+                            :63
+                        ]
 
-                    collection_names.append(collection_name)
-                    await run_in_threadpool(
-                        save_docs_to_vector_db,
-                        request,
-                        [doc],
-                        collection_name,
-                        overwrite=True,
-                        user=user,
-                    )
+                        collection_names.append(collection_name)
+                        await run_in_threadpool(
+                            save_docs_to_vector_db,
+                            request,
+                            [doc],
+                            collection_name,
+                            overwrite=True,
+                            user=user,
+                        )
+                    except Exception as e:
+                        log.debug(f"error saving doc {doc_idx}: {e}")
 
             return {
                 "status": True,
