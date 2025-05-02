@@ -2013,6 +2013,11 @@ YOUTUBE_LOADER_PROXY_URL = PersistentConfig(
     os.getenv("YOUTUBE_LOADER_PROXY_URL", ""),
 )
 
+DEFAULT_RAG_SETTINGS = PersistentConfig(
+    "DEFAULT_RAG_SETTINGS",
+    "rag.default_settings",
+    os.getenv("DEFAULT_RAG_SETTINGS", "True").lower() == "true",
+)
 
 ####################################
 # Web Search (RAG)
