@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
+
+	
 	import { marked } from 'marked';
 	import Fuse from 'fuse.js';
 
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
+	import { writable } from 'svelte/store';
 
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
@@ -30,8 +33,15 @@
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 	import { goto } from '$app/navigation';
 
+	import { getOllamaPs } from '$lib/apis/ollama';
+
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
+
+	const loadedModels = writable(new Set<string>());
+
+	// the frequency of checking if the model is loaded (in milliseconds)
+	export let modelCheckInterval = 3000;
 
 	export let id = '';
 	export let value = '';
@@ -45,6 +55,7 @@
 		label: string;
 		value: string;
 		model: Model;
+		loaded: boolean;
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		[key: string]: any;
 	}[] = [];
@@ -283,6 +294,21 @@
 	onMount(async () => {
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => false);
 
+		const interval = setInterval(async () => {
+			const ps = await getOllamaPs(localStorage.token);
+			if (ps) {
+				const newLoadedModels = new Set<string>();
+				Object.values(ps).forEach((endpoint) => {
+					endpoint.models?.forEach((model) => {
+						if (new Date(model.expires_at) > new Date()) {
+							newLoadedModels.add(model.name);
+						}
+					});
+				});
+				loadedModels.set(newLoadedModels);
+			}
+		}, modelCheckInterval);
+
 		if (items) {
 			tags = items
 				.filter((item) => !(item.model?.info?.meta?.hidden ?? false))
@@ -292,6 +318,10 @@
 			// Remove duplicates and sort
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
 		}
+
+		return () => {
+			clearInterval(interval);
+		};
 	});
 
 	const cancelModelPullHandler = async (model: string) => {
@@ -624,6 +654,10 @@
 										{/each}
 									</div>
 								{/if}
+
+								{#if $loadedModels.has(item.value)}
+									<div class="ml-1 text-green-500">●</div>
+								{/if}
 							</div>
 						</div>
 
@@ -632,6 +666,7 @@
 								<Check />
 							</div>
 						{/if}
+
 					</button>
 				{:else}
 					<div>
