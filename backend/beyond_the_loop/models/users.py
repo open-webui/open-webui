@@ -133,6 +133,13 @@ class UserCreateForm(BaseModel):
     email: str
 
 
+class UserReinviteForm(BaseModel):
+    email: str
+
+class UserRevokeInviteForm(BaseModel):
+    email: str
+
+
 class UsersTable:
     def insert_new_user(
         self,

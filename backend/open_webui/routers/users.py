@@ -13,6 +13,8 @@ from beyond_the_loop.models.users import (
     Users,
     UserSettings,
     UserUpdateForm,
+    UserReinviteForm,
+    UserRevokeInviteForm
 )
 
 
@@ -406,20 +408,20 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
 
 
 @router.post("/reinvite")
-async def reinvite_user(email: str, user=Depends(get_admin_user)):
-    if not validate_email_format(email.lower()):
+async def reinvite_user(form_data: UserReinviteForm, user=Depends(get_admin_user)):
+    if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
         )
 
-    existing_user = Users.get_user_by_email(email.lower())
+    existing_user = Users.get_user_by_email(form_data.email.lower())
     if not existing_user:
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.USER_NOT_FOUND
         )
 
     # Generate a new invite token
-    invite_token = hashlib.sha256(email.lower().encode()).hexdigest()
+    invite_token = hashlib.sha256(form_data.email.lower().encode()).hexdigest()
 
     # Update the user with the new invite token
     updated_user = Users.update_user_by_id(existing_user.id, {"invite_token": invite_token})
@@ -432,7 +434,7 @@ async def reinvite_user(email: str, user=Depends(get_admin_user)):
     # Send the invitation email
     email_service = EmailService()
     email_sent = email_service.send_invite_mail(
-        to_email=email.lower(),
+        to_email=form_data.email.lower(),
         invite_token=invite_token
     )
 
@@ -450,13 +452,13 @@ async def reinvite_user(email: str, user=Depends(get_admin_user)):
 
 
 @router.post("/revoke-invite")
-async def revoke_user_invite(email: str, user=Depends(get_admin_user)):
-    if not validate_email_format(email.lower()):
+async def revoke_user_invite(form_data: UserRevokeInviteForm, user=Depends(get_admin_user)):
+    if not validate_email_format(form_data.email.lower()):
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
         )
 
-    existing_user = Users.get_user_by_email(email.lower())
+    existing_user = Users.get_user_by_email(form_data.email.lower())
     if not existing_user:
         raise HTTPException(
             status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.USER_NOT_FOUND
@@ -469,7 +471,7 @@ async def revoke_user_invite(email: str, user=Depends(get_admin_user)):
         )
 
     # Delete the user from the database
-    success = Users.delete_user_by_email(email.lower())
+    success = Users.delete_user_by_email(form_data.email.lower())
     if not success:
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete user"

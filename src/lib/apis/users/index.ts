@@ -367,13 +367,15 @@ export const updateUserById = async (token: string, userId: string, user: UserUp
 export const reinviteUser = async (token: string, email: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/users/reinvite/${email}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/reinvite`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
-		// body: JSON.stringify({email})
+		body: JSON.stringify({
+			email: email
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -401,7 +403,9 @@ export const revokeInvite = async (token: string, email: string) => {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
 		},
-		body: JSON.stringify({email})
+		body: JSON.stringify({
+			email: email
+		})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
