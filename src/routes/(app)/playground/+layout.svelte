@@ -13,12 +13,12 @@
             hasAccess = (currentUser?.role === 'admin') || (currentUser?.permissions?.features?.playground_access ?? false);
             accessChecked = true;
             if (!hasAccess) {
-                goto('/'); // Umleiten, wenn kein Zugriff
+                goto('/');
             }
         } else if (currentUser === null) {
              accessChecked = true;
              hasAccess = false;
-             goto('/auth'); // Umleiten, wenn ausgeloggt
+             goto('/auth');
         }
     });
 
