@@ -10,6 +10,8 @@
 
 	export let recording = false;
 	export let transcribe = true;
+	export let displayMedia = false;
+
 	export let className = ' p-2.5 w-full max-w-full';
 
 	export let onCancel = () => {};
@@ -175,13 +177,34 @@
 	const startRecording = async () => {
 		loading = true;
 
-		stream = await navigator.mediaDevices.getUserMedia({
-			audio: {
-				echoCancellation: true,
-				noiseSuppression: true,
-				autoGainControl: true
+		try {
+			if (displayMedia) {
+				stream = await navigator.mediaDevices.getDisplayMedia({
+					video: {
+						mediaSource: 'screen'
+					},
+					audio: {
+						echoCancellation: true,
+						noiseSuppression: true,
+						autoGainControl: true
+					}
+				});
+			} else {
+				stream = await navigator.mediaDevices.getUserMedia({
+					audio: {
+						echoCancellation: true,
+						noiseSuppression: true,
+						autoGainControl: true
+					}
+				});
 			}
-		});
+		} catch (err) {
+			console.error('Error accessing media devices.', err);
+			toast.error($i18n.t('Error accessing media devices.'));
+			loading = false;
+			recording = false;
+			return;
+		}
 
 		mediaRecorder = new MediaRecorder(stream);
 		mediaRecorder.onstart = () => {

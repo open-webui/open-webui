@@ -38,7 +38,7 @@
 
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import Mic from '../icons/Mic.svelte';
+	import MicSolid from '../icons/MicSolid.svelte';
 	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 
@@ -49,6 +49,7 @@
 	import Image from '../common/Image.svelte';
 	import FileItem from '../common/FileItem.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
+	import RecordMenu from './RecordMenu.svelte';
 
 	export let id: null | string = null;
 
@@ -67,7 +68,8 @@
 	};
 
 	let files = [];
-	let voiceInput = false;
+	let recording = false;
+	let displayMediaRecord = false;
 
 	let dragged = false;
 	let loading = false;
@@ -380,64 +382,71 @@
 
 <div class="absolute bottom-0 right-0 p-5 max-w-full flex justify-end">
 	<div
-		class="flex gap-0.5 justify-end w-full {$showSidebar && voiceInput
+		class="flex gap-0.5 justify-end w-full {$showSidebar && recording
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''} max-w-full"
 	>
-		{#if voiceInput}
+		{#if recording}
 			<div class="flex-1 w-full">
 				<VoiceRecording
-					bind:recording={voiceInput}
+					bind:recording
 					className="p-1 w-full max-w-full"
 					transcribe={false}
+					displayMedia={displayMediaRecord}
 					onCancel={() => {
-						voiceInput = false;
+						recording = false;
+						displayMediaRecord = false;
 					}}
 					onConfirm={(data) => {
 						if (data?.file) {
 							uploadFileHandler(data?.file);
 						}
+
+						recording = false;
+						displayMediaRecord = false;
 					}}
 				/>
 			</div>
 		{:else}
-			<Tooltip content={$i18n.t('Record')}>
+			<RecordMenu
+				onRecord={async () => {
+					displayMediaRecord = false;
+
+					try {
+						let stream = await navigator.mediaDevices
+							.getUserMedia({ audio: true })
+							.catch(function (err) {
+								toast.error(
+									$i18n.t(`Permission denied when accessing microphone: {{error}}`, {
+										error: err
+									})
+								);
+								return null;
+							});
+
+						if (stream) {
+							recording = true;
+							const tracks = stream.getTracks();
+							tracks.forEach((track) => track.stop());
+						}
+						stream = null;
+					} catch {
+						toast.error($i18n.t('Permission denied when accessing microphone'));
+					}
+				}}
+				onCaptureAudio={async () => {
+					displayMediaRecord = true;
+
+					recording = true;
+				}}
+			>
 				<button
 					class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
 					type="button"
-					on:click={async () => {
-						try {
-							let stream = await navigator.mediaDevices
-								.getUserMedia({ audio: true })
-								.catch(function (err) {
-									toast.error(
-										$i18n.t(`Permission denied when accessing microphone: {{error}}`, {
-											error: err
-										})
-									);
-									return null;
-								});
-
-							if (stream) {
-								voiceInput = true;
-								const tracks = stream.getTracks();
-								tracks.forEach((track) => track.stop());
-							}
-							stream = null;
-						} catch {
-							toast.error($i18n.t('Permission denied when accessing microphone'));
-						}
-					}}
 				>
-					<Mic className="size-4.5" />
+					<MicSolid className="size-4.5" />
 				</button>
-			</Tooltip>
+			</RecordMenu>
 		{/if}
-
-		<!-- <button
-            class="cursor-pointer p-2.5 flex rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition shadow-xl"
-        >
-            <SparklesSolid className="size-4" />
-        </button> -->
 	</div>
 </div>
