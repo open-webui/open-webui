@@ -3,39 +3,25 @@
     import { WEBUI_NAME, showSidebar, functions, user } from '$lib/stores';
     import MenuLines from '$lib/components/icons/MenuLines.svelte';
     import { page } from '$app/stores';
-    import { goto } from '$app/navigation'; // goto importiert
-    import Spinner from '$lib/components/common/Spinner.svelte'; // Spinner importiert
+    import { goto } from '$app/navigation';
 
     const i18n = getContext('i18n');
 
-    let accessChecked = false;
-    let hasAccess = false;
+    let loaded = false;
 
-    user.subscribe(currentUser => {
-        if (currentUser !== null && currentUser !== undefined) {
-            hasAccess = (currentUser?.role === 'admin') || (currentUser?.permissions?.features?.playground_access ?? false);
-            accessChecked = true;
-            if (!hasAccess) {
-                goto('/'); // Umleiten, wenn kein Zugriff
-            }
-        } else if (currentUser === null) {
-             accessChecked = true;
-             hasAccess = false;
-             goto('/auth'); // Umleiten, wenn ausgeloggt
+    onMount(() => {
+        if (!$user) {
+            goto('/auth');
+            return;
+        }
+
+        if (!$user?.role === 'admin' && !$user?.permissions?.features?.playground_access) {
+            goto('/');
+        } else {
+            loaded = true;
         }
     });
 
-    onMount(() => {
-         if (!accessChecked && $user !== null && $user !== undefined) {
-             hasAccess = ($user?.role === 'admin') || ($user?.permissions?.features?.playground_access ?? false);
-             accessChecked = true;
-             if (!hasAccess) {
-                 goto('/');
-             }
-         } else if ($user === null) {
-             goto('/auth');
-         }
-    });
 </script>
 
 <svelte:head>
@@ -44,11 +30,7 @@
     </title>
 </svelte:head>
 
-{#if !accessChecked}
-    <div class="flex h-full w-full items-center justify-center">
-        <Spinner />
-    </div>
-{:else if hasAccess}
+{#if loaded}
     <div
         class=" flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
             ? 'md:max-w-[calc(100%-260px)]'
@@ -108,8 +90,6 @@
             <slot />
         </div>
     </div>
- {:else}
-     <div class="flex h-full w-full items-center justify-center">
-        <p>Access Denied.</p>
-     </div>
+{:else}
+    <div class="flex h-full w-full items-center justify-center"><Spinner /></div>
 {/if}
