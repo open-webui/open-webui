@@ -155,8 +155,8 @@ from open_webui.config import (
     AUDIO_STT_AZURE_API_KEY,
     AUDIO_STT_AZURE_REGION,
     AUDIO_STT_AZURE_LOCALES,
-    AUDIO_STT_AZURE_BASE_URL,
-    AUDIO_STT_AZURE_MAX_SPEAKERS,    
+    AUDIO_STT_AZURE_ENDPOINT,
+    AUDIO_STT_AZURE_MAX_SPEAKERS,
     AUDIO_TTS_API_KEY,
     AUDIO_TTS_ENGINE,
     AUDIO_TTS_MODEL,
@@ -165,6 +165,7 @@ from open_webui.config import (
     AUDIO_TTS_SPLIT_ON,
     AUDIO_TTS_VOICE,
     AUDIO_TTS_AZURE_SPEECH_REGION,
+    AUDIO_TTS_AZURE_SPEECH_ENDPOINT,
     AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT,
     PLAYWRIGHT_WS_URL,
     PLAYWRIGHT_TIMEOUT,
@@ -274,6 +275,7 @@ from open_webui.config import (
     ENABLE_API_KEY_ENDPOINT_RESTRICTIONS,
     API_KEY_ALLOWED_ENDPOINTS,
     ENABLE_CHANNELS,
+    ENABLE_NOTES,
     ENABLE_COMMUNITY_SHARING,
     ENABLE_MESSAGE_RATING,
     ENABLE_USER_WEBHOOKS,
@@ -570,6 +572,7 @@ app.state.config.MODEL_ORDER_LIST = MODEL_ORDER_LIST
 
 
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
+app.state.config.ENABLE_NOTES = ENABLE_NOTES
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
 app.state.config.ENABLE_USER_WEBHOOKS = ENABLE_USER_WEBHOOKS
@@ -831,7 +834,7 @@ app.state.config.DEEPGRAM_API_KEY = DEEPGRAM_API_KEY
 app.state.config.AUDIO_STT_AZURE_API_KEY = AUDIO_STT_AZURE_API_KEY
 app.state.config.AUDIO_STT_AZURE_REGION = AUDIO_STT_AZURE_REGION
 app.state.config.AUDIO_STT_AZURE_LOCALES = AUDIO_STT_AZURE_LOCALES
-app.state.config.AUDIO_STT_AZURE_BASE_URL = AUDIO_STT_AZURE_BASE_URL
+app.state.config.AUDIO_STT_AZURE_ENDPOINT = AUDIO_STT_AZURE_ENDPOINT
 app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS = AUDIO_STT_AZURE_MAX_SPEAKERS
 
 app.state.config.TTS_OPENAI_API_BASE_URL = AUDIO_TTS_OPENAI_API_BASE_URL
@@ -842,10 +845,9 @@ app.state.config.TTS_VOICE = AUDIO_TTS_VOICE
 app.state.config.TTS_API_KEY = AUDIO_TTS_API_KEY
 app.state.config.TTS_SPLIT_ON = AUDIO_TTS_SPLIT_ON
 
-
 app.state.config.TTS_AZURE_SPEECH_REGION = AUDIO_TTS_AZURE_SPEECH_REGION
+app.state.config.TTS_AZURE_SPEECH_ENDPOINT = AUDIO_TTS_AZURE_SPEECH_ENDPOINT
 app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT
-
 
 app.state.faster_whisper_model = None
 app.state.speech_synthesiser = None
@@ -1321,6 +1323,7 @@ async def get_app_config(request: Request):
                 {
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
                     "enable_channels": app.state.config.ENABLE_CHANNELS,
+                    "enable_notes": app.state.config.ENABLE_NOTES,
                     "enable_web_search": app.state.config.ENABLE_WEB_SEARCH,
                     "enable_code_execution": app.state.config.ENABLE_CODE_EXECUTION,
                     "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,

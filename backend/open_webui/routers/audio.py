@@ -137,6 +137,7 @@ class TTSConfigForm(BaseModel):
     VOICE: str
     SPLIT_ON: str
     AZURE_SPEECH_REGION: str
+    AZURE_SPEECH_ENDPOINT: str
     AZURE_SPEECH_OUTPUT_FORMAT: str
 
 
@@ -150,7 +151,7 @@ class STTConfigForm(BaseModel):
     AZURE_API_KEY: str
     AZURE_REGION: str
     AZURE_LOCALES: str
-    AZURE_BASE_URL: str
+    AZURE_ENDPOINT: str
     AZURE_MAX_SPEAKERS: str
 
 class AudioConfigUpdateForm(BaseModel):
@@ -170,6 +171,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "VOICE": request.app.state.config.TTS_VOICE,
             "SPLIT_ON": request.app.state.config.TTS_SPLIT_ON,
             "AZURE_SPEECH_REGION": request.app.state.config.TTS_AZURE_SPEECH_REGION,
+            "AZURE_SPEECH_ENDPOINT": request.app.state.config.TTS_AZURE_SPEECH_ENDPOINT,
             "AZURE_SPEECH_OUTPUT_FORMAT": request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
         },
         "stt": {
@@ -182,7 +184,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "AZURE_API_KEY": request.app.state.config.AUDIO_STT_AZURE_API_KEY,
             "AZURE_REGION": request.app.state.config.AUDIO_STT_AZURE_REGION,
             "AZURE_LOCALES": request.app.state.config.AUDIO_STT_AZURE_LOCALES,
-            "AZURE_BASE_URL": request.app.state.config.AUDIO_STT_AZURE_BASE_URL,
+            "AZURE_ENDPOINT": request.app.state.config.AUDIO_STT_AZURE_ENDPOINT,
             "AZURE_MAX_SPEAKERS": request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS,            
         },
     }
@@ -200,6 +202,7 @@ async def update_audio_config(
     request.app.state.config.TTS_VOICE = form_data.tts.VOICE
     request.app.state.config.TTS_SPLIT_ON = form_data.tts.SPLIT_ON
     request.app.state.config.TTS_AZURE_SPEECH_REGION = form_data.tts.AZURE_SPEECH_REGION
+    request.app.state.config.TTS_AZURE_SPEECH_ENDPOINT = form_data.tts.AZURE_SPEECH_ENDPOINT
     request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT = (
         form_data.tts.AZURE_SPEECH_OUTPUT_FORMAT
     )
@@ -213,7 +216,7 @@ async def update_audio_config(
     request.app.state.config.AUDIO_STT_AZURE_API_KEY = form_data.stt.AZURE_API_KEY
     request.app.state.config.AUDIO_STT_AZURE_REGION = form_data.stt.AZURE_REGION
     request.app.state.config.AUDIO_STT_AZURE_LOCALES = form_data.stt.AZURE_LOCALES
-    request.app.state.config.AUDIO_STT_AZURE_BASE_URL = form_data.stt.AZURE_BASE_URL
+    request.app.state.config.AUDIO_STT_AZURE_ENDPOINT = form_data.stt.AZURE_ENDPOINT
     request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS = form_data.stt.AZURE_MAX_SPEAKERS
 
     if request.app.state.config.STT_ENGINE == "":
@@ -231,6 +234,7 @@ async def update_audio_config(
             "VOICE": request.app.state.config.TTS_VOICE,
             "SPLIT_ON": request.app.state.config.TTS_SPLIT_ON,
             "AZURE_SPEECH_REGION": request.app.state.config.TTS_AZURE_SPEECH_REGION,
+            "AZURE_SPEECH_ENDPOINT": request.app.state.config.TTS_AZURE_SPEECH_ENDPOINT,
             "AZURE_SPEECH_OUTPUT_FORMAT": request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT,
         },
         "stt": {
@@ -243,7 +247,7 @@ async def update_audio_config(
             "AZURE_API_KEY": request.app.state.config.AUDIO_STT_AZURE_API_KEY,
             "AZURE_REGION": request.app.state.config.AUDIO_STT_AZURE_REGION,
             "AZURE_LOCALES": request.app.state.config.AUDIO_STT_AZURE_LOCALES,
-            "AZURE_BASE_URL": request.app.state.config.AUDIO_STT_AZURE_BASE_URL,
+            "AZURE_ENDPOINT": request.app.state.config.AUDIO_STT_AZURE_ENDPOINT,
             "AZURE_MAX_SPEAKERS": request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS,    
         },
     }
@@ -402,7 +406,8 @@ async def speech(request: Request, user=Depends(get_verified_user)):
             log.exception(e)
             raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
-        region = request.app.state.config.TTS_AZURE_SPEECH_REGION
+        region = request.app.state.config.TTS_AZURE_SPEECH_REGION or "eastus"
+        endpoint = request.app.state.config.TTS_AZURE_SPEECH_ENDPOINT
         language = request.app.state.config.TTS_VOICE
         locale = "-".join(request.app.state.config.TTS_VOICE.split("-")[:1])
         output_format = request.app.state.config.TTS_AZURE_SPEECH_OUTPUT_FORMAT
@@ -416,7 +421,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 timeout=timeout, trust_env=True
             ) as session:
                 async with session.post(
-                    f"https://{region}.tts.speech.microsoft.com/cognitiveservices/v1",
+                    (endpoint or f"https://{region}.tts.speech.microsoft.com") + "/cognitiveservices/v1",
                     headers={
                         "Ocp-Apim-Subscription-Key": request.app.state.config.TTS_API_KEY,
                         "Content-Type": "application/ssml+xml",
@@ -646,10 +651,10 @@ def transcribe(request: Request, file_path):
             )
 
         api_key = request.app.state.config.AUDIO_STT_AZURE_API_KEY
-        region = request.app.state.config.AUDIO_STT_AZURE_REGION
+        region = request.app.state.config.AUDIO_STT_AZURE_REGION or "eastus"
         locales = request.app.state.config.AUDIO_STT_AZURE_LOCALES
-        base_url = request.app.state.config.AUDIO_STT_AZURE_BASE_URL
-        max_speakers = request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS
+        endpoint = request.app.state.config.AUDIO_STT_AZURE_ENDPOINT
+        max_speakers = request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS or 3
 
         # IF NO LOCALES, USE DEFAULTS
         if len(locales) < 2:
@@ -676,12 +681,6 @@ def transcribe(request: Request, file_path):
                 detail="Azure API key is required for Azure STT",
             )
 
-        if not base_url and not region:
-            raise HTTPException(
-                status_code=400,
-                detail="Azure region or base url is required for Azure STT",
-            )
-
         r = None
         try:
             # Prepare the request
@@ -696,7 +695,7 @@ def transcribe(request: Request, file_path):
                 )
             }
 
-            url = base_url or f"https://{region}.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version=2024-11-15"
+            url = (endpoint or f"https://{region}.api.cognitive.microsoft.com") + "/speechtotext/transcriptions:transcribe?api-version=2024-11-15"
 
             # Use context manager to ensure file is properly closed
             with open(file_path, "rb") as audio_file:
@@ -925,7 +924,8 @@ def get_available_voices(request) -> dict:
     elif request.app.state.config.TTS_ENGINE == "azure":
         try:
             region = request.app.state.config.TTS_AZURE_SPEECH_REGION
-            url = f"https://{region}.tts.speech.microsoft.com/cognitiveservices/voices/list"
+            endpoint = request.app.state.config.TTS_AZURE_SPEECH_ENDPOINT
+            url = (endpoint or f"https://{region}.tts.speech.microsoft.com") + "/cognitiveservices/voices/list"
             headers = {
                 "Ocp-Apim-Subscription-Key": request.app.state.config.TTS_API_KEY
             }
