@@ -99,14 +99,14 @@
 		</div>
 	</DeleteConfirmDialog>
 
-	<div class="px-4.5 @container h-full">
+	<div class="px-4.5 @container h-full pt-2">
 		{#if Object.keys(notes).length > 0}
 			{#each Object.keys(notes) as timeRange}
-				<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2">
+				<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2.5">
 					{$i18n.t(timeRange)}
 				</div>
 
-				<div class="mb-5 gap-2 grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4">
+				<div class="mb-5 gap-2.5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
 					{#each notes[timeRange] as note, idx (note.id)}
 						<div
 							class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 bg-gray-50 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
