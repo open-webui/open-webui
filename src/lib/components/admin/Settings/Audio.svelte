@@ -43,7 +43,7 @@
 	let STT_AZURE_REGION = '';
 	let STT_AZURE_LOCALES = '';
 	let STT_AZURE_BASE_URL = '';
-	let STT_AZURE_MAX_SPEAKERS = '';    
+	let STT_AZURE_MAX_SPEAKERS = '';
 	let STT_DEEPGRAM_API_KEY = '';
 
 	let STT_WHISPER_MODEL_LOADING = false;
@@ -293,9 +293,9 @@
 									/>
 								</div>
 							</div>
-						</div> 
-                        
-                        <div>
+						</div>
+
+						<div>
 							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Base URL')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
@@ -307,8 +307,8 @@
 								</div>
 							</div>
 						</div>
-                        
-                        <div>
+
+						<div>
 							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Max Speakers')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
