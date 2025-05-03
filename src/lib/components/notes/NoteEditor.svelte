@@ -331,9 +331,9 @@
 			</div>
 
 			<div class=" flex-1 w-full h-full overflow-auto px-4 pb-5">
-				{#if note.data?.files}
+				{#if files}
 					<div class="mb-3.5 mt-1.5 w-full flex gap-1 flex-wrap z-40">
-						{#each note.data.files as file, fileIdx}
+						{#each files as file, fileIdx}
 							<div class="w-fit">
 								{#if file.type === 'image'}
 									<Image
@@ -353,6 +353,7 @@
 										name={file.name}
 										type={file.type}
 										size={file?.size}
+										loading={file.status === 'uploading'}
 										colorClassName="bg-white dark:bg-gray-850 "
 										on:dismiss={() => {
 											files = files.filter((item) => item?.id !== file.id);
