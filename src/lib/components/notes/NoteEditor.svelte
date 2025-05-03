@@ -1,11 +1,15 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onDestroy, onMount, tick } from 'svelte';
+	import { v4 as uuidv4 } from 'uuid';
+
 	const i18n = getContext('i18n');
 
 	import { toast } from 'svelte-sonner';
 
-	import { showSidebar } from '$lib/stores';
+	import { config, settings, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
+
+	import { compressImage } from '$lib/utils';
 
 	import dayjs from '$lib/dayjs';
 	import calendar from 'dayjs/plugin/calendar';
@@ -40,6 +44,10 @@
 
 	import Calendar from '../icons/Calendar.svelte';
 	import Users from '../icons/Users.svelte';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { uploadFile } from '$lib/apis/files';
+	import Image from '../common/Image.svelte';
+	import FileItem from '../common/FileItem.svelte';
 
 	export let id: null | string = null;
 
@@ -50,13 +58,17 @@
 				json: null,
 				html: '',
 				md: ''
-			}
+			},
+			files: null
 		},
 		meta: null,
 		access_control: null
 	};
 
+	let files = [];
 	let voiceInput = false;
+
+	let dragged = false;
 	let loading = false;
 
 	const init = async () => {
@@ -68,6 +80,7 @@
 
 		if (res) {
 			note = res;
+			files = res.data.files || [];
 		} else {
 			toast.error($i18n.t('Note not found'));
 			goto('/notes');
@@ -102,9 +115,180 @@
 	$: if (id) {
 		init();
 	}
+
+	const uploadFileHandler = async (file) => {
+		const tempItemId = uuidv4();
+		const fileItem = {
+			type: 'file',
+			file: '',
+			id: null,
+			url: '',
+			name: file.name,
+			collection_name: '',
+			status: 'uploading',
+			size: file.size,
+			error: '',
+			itemId: tempItemId
+		};
+
+		if (fileItem.size == 0) {
+			toast.error($i18n.t('You cannot upload an empty file.'));
+			return null;
+		}
+
+		files = [...files, fileItem];
+
+		try {
+			// During the file upload, file content is automatically extracted.
+			const uploadedFile = await uploadFile(localStorage.token, file);
+
+			if (uploadedFile) {
+				console.log('File upload completed:', {
+					id: uploadedFile.id,
+					name: fileItem.name,
+					collection: uploadedFile?.meta?.collection_name
+				});
+
+				if (uploadedFile.error) {
+					console.warn('File upload warning:', uploadedFile.error);
+					toast.warning(uploadedFile.error);
+				}
+
+				fileItem.status = 'uploaded';
+				fileItem.file = uploadedFile;
+				fileItem.id = uploadedFile.id;
+				fileItem.collection_name =
+					uploadedFile?.meta?.collection_name || uploadedFile?.collection_name;
+
+				fileItem.url = `${WEBUI_API_BASE_URL}/files/${uploadedFile.id}`;
+
+				files = files;
+			} else {
+				files = files.filter((item) => item?.itemId !== tempItemId);
+			}
+		} catch (e) {
+			toast.error(`${e}`);
+			files = files.filter((item) => item?.itemId !== tempItemId);
+		}
+
+		if (files.length > 0) {
+			note.data.files = files;
+		} else {
+			note.data.files = null;
+		}
+	};
+
+	const inputFilesHandler = async (inputFiles) => {
+		console.log('Input files handler called with:', inputFiles);
+		inputFiles.forEach((file) => {
+			console.log('Processing file:', {
+				name: file.name,
+				type: file.type,
+				size: file.size,
+				extension: file.name.split('.').at(-1)
+			});
+
+			if (
+				($config?.file?.max_size ?? null) !== null &&
+				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+			) {
+				console.log('File exceeds max size limit:', {
+					fileSize: file.size,
+					maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
+				});
+				toast.error(
+					$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
+						maxSize: $config?.file?.max_size
+					})
+				);
+				return;
+			}
+
+			if (
+				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
+			) {
+				let reader = new FileReader();
+				reader.onload = async (event) => {
+					let imageUrl = event.target.result;
+
+					if ($settings?.imageCompression ?? false) {
+						const width = $settings?.imageCompressionSize?.width ?? null;
+						const height = $settings?.imageCompressionSize?.height ?? null;
+
+						if (width || height) {
+							imageUrl = await compressImage(imageUrl, width, height);
+						}
+					}
+
+					files = [
+						...files,
+						{
+							type: 'image',
+							url: `${imageUrl}`
+						}
+					];
+					note.data.files = files;
+				};
+				reader.readAsDataURL(file);
+			} else {
+				uploadFileHandler(file);
+			}
+		});
+	};
+
+	const onDragOver = (e) => {
+		e.preventDefault();
+
+		// Check if a file is being dragged.
+		if (e.dataTransfer?.types?.includes('Files')) {
+			dragged = true;
+		} else {
+			dragged = false;
+		}
+	};
+
+	const onDragLeave = () => {
+		dragged = false;
+	};
+
+	const onDrop = async (e) => {
+		e.preventDefault();
+		console.log(e);
+
+		if (e.dataTransfer?.files) {
+			const inputFiles = Array.from(e.dataTransfer?.files);
+			if (inputFiles && inputFiles.length > 0) {
+				console.log(inputFiles);
+				inputFilesHandler(inputFiles);
+			}
+		}
+
+		dragged = false;
+	};
+
+	onMount(async () => {
+		await tick();
+
+		const dropzoneElement = document.getElementById('note-editor');
+
+		dropzoneElement?.addEventListener('dragover', onDragOver);
+		dropzoneElement?.addEventListener('drop', onDrop);
+		dropzoneElement?.addEventListener('dragleave', onDragLeave);
+	});
+
+	onDestroy(() => {
+		console.log('destroy');
+		const dropzoneElement = document.getElementById('note-editor');
+
+		if (dropzoneElement) {
+			dropzoneElement?.removeEventListener('dragover', onDragOver);
+			dropzoneElement?.removeEventListener('drop', onDrop);
+			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
+		}
+	});
 </script>
 
-<div class="relative flex-1 w-full h-full flex justify-center">
+<div class="relative flex-1 w-full h-full flex justify-center" id="note-editor">
 	{#if loading}
 		<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
 			<div class="m-auto">
@@ -125,20 +309,54 @@
 				</div>
 			</div>
 
-			<div
-				class="flex gap-1 px-3.5 items-center text-xs font-medium text-gray-500 dark:text-gray-500 mb-4"
-			>
-				<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
-					<Calendar className="size-3.5" strokeWidth="2" />
+			<div class=" mb-3.5 px-3.5">
+				<div class="flex gap-1 items-center text-xs font-medium text-gray-500 dark:text-gray-500">
+					<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
+						<Calendar className="size-3.5" strokeWidth="2" />
 
-					<span>{dayjs(note.created_at / 1000000).calendar()}</span>
-				</button>
+						<span>{dayjs(note.created_at / 1000000).calendar()}</span>
+					</button>
 
-				<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
-					<Users className="size-3.5" strokeWidth="2" />
+					<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
+						<Users className="size-3.5" strokeWidth="2" />
 
-					<span> You </span>
-				</button>
+						<span> You </span>
+					</button>
+				</div>
+
+				{#if note.data?.files}
+					<div class="pt-2.5 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap z-40">
+						{#each note.data.files as file}
+							<div>
+								{#if file.type === 'image'}
+									<Image
+										src={file.url}
+										imageClassName=" max-h-96 rounded-lg"
+										dismissible={true}
+										onDismiss={() => {
+											files = files.filter((item) => item?.id !== file.id);
+											note.data.files = files.length > 0 ? files : null;
+										}}
+									/>
+								{:else}
+									<FileItem
+										item={file}
+										dismissible={true}
+										url={file.url}
+										name={file.name}
+										type={file.type}
+										size={file?.size}
+										colorClassName="bg-white dark:bg-gray-850 "
+										on:dismiss={() => {
+											files = files.filter((item) => item?.id !== file.id);
+											note.data.files = files.length > 0 ? files : null;
+										}}
+									/>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				{/if}
 			</div>
 
 			<div class=" flex-1 w-full h-full overflow-auto px-4.5 pb-5">
@@ -173,7 +391,9 @@
 						voiceInput = false;
 					}}
 					onConfirm={(data) => {
-						console.log(data);
+						if (data?.file) {
+							uploadFileHandler(data?.file);
+						}
 					}}
 				/>
 			</div>
