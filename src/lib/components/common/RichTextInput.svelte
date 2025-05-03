@@ -387,9 +387,33 @@
 				selectTemplate();
 			}
 		} else {
-			if (value !== editor.getHTML()) {
-				editor.commands.setContent(value);
-				selectTemplate();
+			if (raw) {
+				if (value !== editor.getHTML()) {
+					editor.commands.setContent(value);
+					selectTemplate();
+				}
+			} else {
+				if (
+					value !==
+					turndownService
+						.turndown(
+							(preserveBreaks
+								? editor.getHTML().replace(/<p><\/p>/g, '<br/>')
+								: editor.getHTML()
+							).replace(/ {2,}/g, (m) => m.replace(/ /g, '\u00a0'))
+						)
+						.replace(/\u00a0/g, ' ')
+				) {
+					preserveBreaks
+						? editor.commands.setContent(value)
+						: editor.commands.setContent(
+								marked.parse(value.replaceAll(`\n<br/>`, `<br/>`), {
+									breaks: false
+								})
+							); // Update editor content
+
+					selectTemplate();
+				}
 			}
 		}
 	};
