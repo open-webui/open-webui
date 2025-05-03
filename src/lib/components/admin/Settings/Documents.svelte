@@ -163,7 +163,7 @@
 		}
 		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
-			(RAGConfig.DOCLING_OCR_ENGINE === '' || RAGConfig.DOCLING_OCR_LANG === '')
+			(RAGConfig.DOCLING_OCR_ENGINE !== '' || RAGConfig.DOCLING_OCR_LANG !== '')
 		) {
 			toast.error($i18n.t('Docling OCR Engine and Language(s) required.'));
 			return;
