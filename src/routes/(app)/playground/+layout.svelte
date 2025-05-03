@@ -90,5 +90,4 @@
             <slot />
         </div>
     </div>
-{:else}
 {/if}
