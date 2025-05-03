@@ -8,31 +8,31 @@
 
 	onMount(async () => {});
 
-    user.subscribe(currentUser => {
-        if (currentUser !== null && currentUser !== undefined) {
-            hasAccess = (currentUser?.role === 'admin') || (currentUser?.permissions?.features?.playground_access ?? false);
-            accessChecked = true;
-            if (!hasAccess) {
-                goto('/');
-            }
-        } else if (currentUser === null) {
-             accessChecked = true;
-             hasAccess = false;
-             goto('/auth');
-        }
-    });
+        user.subscribe(currentUser => {
+	    if (currentUser !== null && currentUser !== undefined) {
+	        hasAccess = (currentUser?.role === 'admin') || (currentUser?.permissions?.features?.playground_access ?? false);
+	        accessChecked = true;
+	        if (!hasAccess) {
+		    goto('/');
+	        }
+	    } else if (currentUser === null) {
+	         accessChecked = true;
+	         hasAccess = false;
+	         goto('/auth');
+	    }
+        });
 
-    onMount(() => {
-         if (!accessChecked && $user !== null && $user !== undefined) {
-             hasAccess = ($user?.role === 'admin') || ($user?.permissions?.features?.playground_access ?? false);
-             accessChecked = true;
-             if (!hasAccess) {
-                 goto('/');
-             }
-         } else if ($user === null) {
-             goto('/auth');
-         }
-    });
+        onMount(() => {
+	     if (!accessChecked && $user !== null && $user !== undefined) {
+	         hasAccess = ($user?.role === 'admin') || ($user?.permissions?.features?.playground_access ?? false);
+	         accessChecked = true;
+	         if (!hasAccess) {
+	    	     goto('/');
+	         }
+	     } else if ($user === null) {
+	         goto('/auth');
+	     }
+        });
 </script>
 
 <svelte:head>
