@@ -886,6 +886,7 @@
 	"Pipelines Valves": "Вентили конвейеров",
 	"Plain text (.txt)": "Текст в формате .txt",
 	"Playground": "Песочница",
+	"Playground Access": "",
 	"Playwright Timeout (ms)": "Таймаут Playwright (мс)",
 	"Playwright WebSocket URL": "",
 	"Please carefully review the following warnings:": "Пожалуйста, внимательно ознакомьтесь со следующими предупреждениями:",
