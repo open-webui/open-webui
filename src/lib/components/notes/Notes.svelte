@@ -58,7 +58,11 @@
 		const res = await createNewNote(localStorage.token, {
 			title: $i18n.t('New Note'),
 			data: {
-				content: ''
+				content: {
+					json: null,
+					html: '',
+					md: ''
+				}
 			},
 			meta: null,
 			access_control: null
@@ -95,30 +99,37 @@
 		</div>
 	</DeleteConfirmDialog>
 
-	<div class="px-4.5">
+	<div class="px-4.5 @container h-full">
 		{#if Object.keys(notes).length > 0}
 			{#each Object.keys(notes) as timeRange}
 				<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2">
 					{$i18n.t(timeRange)}
 				</div>
 
-				<div class="mb-5 gap-2 grid @lg:grid-cols-2 @2xl:grid-cols-3">
+				<div class="mb-5 gap-2 grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4">
 					{#each notes[timeRange] as note, idx (note.id)}
 						<div
-							class=" flex space-x-4 cursor-pointer w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+							class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 bg-gray-50 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
 						>
 							<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-								<a href={`/notes/${note.id}`} class="w-full -translate-y-0.5">
-									<div class=" flex-1 flex items-center gap-2 self-center">
-										<div class=" font-semibold line-clamp-1 capitalize">{note.title}</div>
-									</div>
+								<a
+									href={`/notes/${note.id}`}
+									class="w-full -translate-y-0.5 flex flex-col justify-between"
+								>
+									<div class="flex-1">
+										<div class="  flex items-center gap-2 self-center mb-1">
+											<div class=" font-semibold line-clamp-1 capitalize">{note.title}</div>
+										</div>
 
-									<div class=" text-xs text-gray-500 dark:text-gray-500 line-clamp-2 pb-2">
-										{#if note.data?.content}
-											{note.data?.content}
-										{:else}
-											{$i18n.t('No content')}
-										{/if}
+										<div
+											class=" text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-5 min-h-18"
+										>
+											{#if note.data?.md}
+												{note.data?.md}
+											{:else}
+												{$i18n.t('No content')}
+											{/if}
+										</div>
 									</div>
 
 									<div class=" text-xs px-0.5 w-full flex justify-between items-center">

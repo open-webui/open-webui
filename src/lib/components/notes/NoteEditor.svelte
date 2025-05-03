@@ -3,26 +3,58 @@
 	const i18n = getContext('i18n');
 
 	import { toast } from 'svelte-sonner';
-	import { getNoteById } from '$lib/apis/notes';
+
+	import { showSidebar } from '$lib/stores';
+	import { goto } from '$app/navigation';
+
+	import dayjs from '$lib/dayjs';
+	import calendar from 'dayjs/plugin/calendar';
+	import duration from 'dayjs/plugin/duration';
+	import relativeTime from 'dayjs/plugin/relativeTime';
+
+	dayjs.extend(calendar);
+	dayjs.extend(duration);
+	dayjs.extend(relativeTime);
+
+	async function loadLocale(locales) {
+		for (const locale of locales) {
+			try {
+				dayjs.locale(locale);
+				break; // Stop after successfully loading the first available locale
+			} catch (error) {
+				console.error(`Could not load locale '${locale}':`, error);
+			}
+		}
+	}
+
+	// Assuming $i18n.languages is an array of language codes
+	$: loadLocale($i18n.languages);
+
+	import { getNoteById, updateNoteById } from '$lib/apis/notes';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import Sparkles from '../icons/Sparkles.svelte';
-	import SparklesSolid from '../icons/SparklesSolid.svelte';
 	import Mic from '../icons/Mic.svelte';
 	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-	import { showSidebar } from '$lib/stores';
+
+	import Calendar from '../icons/Calendar.svelte';
+	import Users from '../icons/Users.svelte';
 
 	export let id: null | string = null;
 
-	let title = '';
-	let data = {
-		content: '',
-		files: []
+	let note = {
+		title: '',
+		data: {
+			content: {
+				json: null,
+				html: '',
+				md: ''
+			}
+		},
+		meta: null,
+		access_control: null
 	};
-	let meta = null;
-	let accessControl = null;
 
 	let voiceInput = false;
 	let loading = false;
@@ -35,14 +67,37 @@
 		});
 
 		if (res) {
-			title = res.title;
-			data = res.data;
-			meta = res.meta;
-			accessControl = res.access_control;
+			note = res;
+		} else {
+			toast.error($i18n.t('Note not found'));
+			goto('/notes');
+			return;
 		}
 
 		loading = false;
 	};
+
+	let debounceTimeout: NodeJS.Timeout | null = null;
+
+	const changeDebounceHandler = () => {
+		console.log('debounce');
+		if (debounceTimeout) {
+			clearTimeout(debounceTimeout);
+		}
+
+		debounceTimeout = setTimeout(async () => {
+			const res = await updateNoteById(localStorage.token, id, {
+				...note,
+				title: note.title === '' ? $i18n.t('Untitled') : note.title
+			}).catch((e) => {
+				toast.error(`${e}`);
+			});
+		}, 200);
+	};
+
+	$: if (note) {
+		changeDebounceHandler();
+	}
 
 	$: if (id) {
 		init();
@@ -56,35 +111,55 @@
 				<Spinner />
 			</div>
 		</div>
-	{/if}
+	{:else}
+		<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
+			<div class="shrink-0 w-full flex justify-between items-center px-4.5 mb-1">
+				<div class="w-full">
+					<input
+						class="w-full text-2xl font-medium bg-transparent outline-hidden"
+						type="text"
+						bind:value={note.title}
+						placeholder={$i18n.t('Title')}
+						required
+					/>
+				</div>
+			</div>
 
-	<div class=" w-full flex flex-col gap-2 {loading ? 'opacity-20' : ''}">
-		<div class="shrink-0 w-full flex justify-between items-center px-4.5">
-			<div class="w-full">
-				<input
-					class="w-full text-2xl font-medium bg-transparent outline-hidden"
-					type="text"
-					bind:value={title}
-					placeholder={$i18n.t('Title')}
-					required
+			<div
+				class="flex gap-1 px-3.5 items-center text-xs font-medium text-gray-500 dark:text-gray-500 mb-4"
+			>
+				<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
+					<Calendar className="size-3.5" strokeWidth="2" />
+
+					<span>{dayjs(note.created_at / 1000000).calendar()}</span>
+				</button>
+
+				<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
+					<Users className="size-3.5" strokeWidth="2" />
+
+					<span> You </span>
+				</button>
+			</div>
+
+			<div class=" flex-1 w-full h-full overflow-auto px-4.5 pb-5">
+				<RichTextInput
+					className="input-prose-sm"
+					bind:value={note.data.content.json}
+					placeholder={$i18n.t('Write something...')}
+					json={true}
+					onChange={(content) => {
+						note.data.html = content.html;
+						note.data.md = content.md;
+					}}
 				/>
 			</div>
 		</div>
-
-		<div class=" flex-1 w-full h-full overflow-auto px-4.5">
-			<RichTextInput
-				className="input-prose-sm"
-				bind:value={data.content}
-				placeholder={$i18n.t('Write something...')}
-				preserveBreaks={true}
-			/>
-		</div>
-	</div>
+	{/if}
 </div>
 
-<div class="absolute bottom-0 left-0 right-0 p-5 max-w-full flex justify-end">
+<div class="absolute bottom-0 right-0 p-5 max-w-full flex justify-end">
 	<div
-		class="flex gap-0.5 justify-end w-full {$showSidebar
+		class="flex gap-0.5 justify-end w-full {$showSidebar && voiceInput
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''} max-w-full"
 	>
@@ -93,24 +168,12 @@
 				<VoiceRecording
 					bind:recording={voiceInput}
 					className="p-1 w-full max-w-full"
-					on:cancel={() => {
+					transcribe={false}
+					onCancel={() => {
 						voiceInput = false;
 					}}
-					on:confirm={(e) => {
-						const { text, filename } = e.detail;
-
-						// url is hostname + /cache/audio/transcription/ + filename
-						const url = `${window.location.origin}/cache/audio/transcription/${filename}`;
-
-						// Open in new tab
-
-						if (content.trim() !== '') {
-							content = `${content}\n\n${text}\n\nRecording: ${url}\n\n`;
-						} else {
-							content = `${content}${text}\n\nRecording: ${url}\n\n`;
-						}
-
-						voiceInput = false;
+					onConfirm={(data) => {
+						console.log(data);
 					}}
 				/>
 			</div>

@@ -85,11 +85,11 @@
 							<VoiceRecording
 								bind:recording={voiceInput}
 								className="p-1"
-								on:cancel={() => {
+								onCancel={() => {
 									voiceInput = false;
 								}}
-								on:confirm={(e) => {
-									const { text, filename } = e.detail;
+								onConfirm={(data) => {
+									const { text, filename } = data;
 									content = `${content}${text} `;
 
 									voiceInput = false;
