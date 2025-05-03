@@ -5,7 +5,7 @@
     import { flyAndScale } from '$lib/utils/transitions';
     import { goto } from '$app/navigation';
     import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
-    import { showSettings, activeUserIds, USAGE_POOL, mobile, showSidebar, user } from '$lib/stores'; // Kein userPermissions Import mehr nötig
+    import { showSettings, activeUserIds, USAGE_POOL, mobile, showSidebar, user } from '$lib/stores';
     import { fade, slide } from 'svelte/transition';
     import Tooltip from '$lib/components/common/Tooltip.svelte';
     import { userSignOut } from '$lib/apis/auths';
@@ -88,7 +88,7 @@
                 <div class=" self-center truncate">{$i18n.t('Archived Chats')}</div>
             </button>
 
-            {#if $user?.permissions?.features?.playground_access}
+            {#if $user?.role === 'admin' || $user?.permissions?.features?.playground_access}
                 <a
                     class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
                     href="/playground"
@@ -158,7 +158,7 @@
                 class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
                 on:click={async () => {
                     await userSignOut();
-                    user.set(null); // Berechtigungen werden implizit zurückgesetzt, da $user null ist
+                    user.set(null);
 
                     localStorage.removeItem('token');
                     location.href = '/auth';
