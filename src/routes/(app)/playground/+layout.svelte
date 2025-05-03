@@ -91,5 +91,4 @@
         </div>
     </div>
 {:else}
-    <div class="flex h-full w-full items-center justify-center"><Spinner /></div>
 {/if}
