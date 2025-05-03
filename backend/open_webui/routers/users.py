@@ -1,3 +1,5 @@
+# backend/open_webui/routers/users.py
+
 import logging
 from typing import Optional
 
@@ -129,6 +131,7 @@ class FeaturesPermissions(BaseModel):
     web_search: bool = True
     image_generation: bool = True
     code_interpreter: bool = True
+    playground_access: bool = False
 
 
 class UserPermissions(BaseModel):
@@ -275,8 +278,6 @@ class UserResponse(BaseModel):
 
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
-    # Check if user_id is a shared chat
-    # If it is, get the user_id from the chat
     if user_id.startswith("shared-"):
         chat_id = user_id.replace("shared-", "")
         chat = Chats.get_chat_by_id(chat_id)
@@ -316,7 +317,6 @@ async def update_user_by_id(
     form_data: UserUpdateForm,
     session_user=Depends(get_admin_user),
 ):
-    # Prevent modification of the primary admin user by other admins
     try:
         first_user = Users.get_first_user()
         if first_user and user_id == first_user.id and session_user.id != user_id:
@@ -378,7 +378,6 @@ async def update_user_by_id(
 
 @router.delete("/{user_id}", response_model=bool)
 async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
-    # Prevent deletion of the primary admin user
     try:
         first_user = Users.get_first_user()
         if first_user and user_id == first_user.id:
@@ -404,7 +403,6 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
             detail=ERROR_MESSAGES.DELETE_USER_ERROR,
         )
 
-    # Prevent self-deletion
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail=ERROR_MESSAGES.ACTION_PROHIBITED,
