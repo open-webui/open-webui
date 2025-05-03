@@ -15,10 +15,10 @@
             return;
         }
 
-        if (!$user?.role === 'admin' && !$user?.permissions?.features?.playground_access) {
-            goto('/');
+        if ($user?.role === 'admin' || $user?.permissions?.features?.playground_access) {
+            loaded = true;            
         } else {
-            loaded = true;
+            goto('/');
         }
     });
 
