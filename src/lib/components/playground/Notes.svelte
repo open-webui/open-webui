@@ -57,11 +57,11 @@
 					<VoiceRecording
 						bind:recording={voiceInput}
 						className="p-1 w-full max-w-full"
-						on:cancel={() => {
+						onCancel={() => {
 							voiceInput = false;
 						}}
-						on:confirm={(e) => {
-							const { text, filename } = e.detail;
+						onConfirm={(data) => {
+							const { text, filename } = data;
 
 							// url is hostname + /cache/audio/transcription/ + filename
 							const url = `${window.location.origin}/cache/audio/transcription/${filename}`;
