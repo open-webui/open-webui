@@ -48,6 +48,7 @@
 	import { uploadFile } from '$lib/apis/files';
 	import Image from '../common/Image.svelte';
 	import FileItem from '../common/FileItem.svelte';
+	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 
 	export let id: null | string = null;
 
@@ -288,6 +289,8 @@
 	});
 </script>
 
+<FilesOverlay show={dragged} />
+
 <div class="relative flex-1 w-full h-full flex justify-center" id="note-editor">
 	{#if loading}
 		<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
@@ -297,7 +300,7 @@
 		</div>
 	{:else}
 		<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
-			<div class="shrink-0 w-full flex justify-between items-center px-4.5 mb-1">
+			<div class="shrink-0 w-full flex justify-between items-center px-4.5 pt-1 mb-1.5">
 				<div class="w-full">
 					<input
 						class="w-full text-2xl font-medium bg-transparent outline-hidden"
@@ -309,7 +312,7 @@
 				</div>
 			</div>
 
-			<div class=" mb-3.5 px-3.5">
+			<div class=" mb-2.5 px-3.5">
 				<div class="flex gap-1 items-center text-xs font-medium text-gray-500 dark:text-gray-500">
 					<button class=" flex items-center gap-1 w-fit py-1 px-1.5 rounded-lg">
 						<Calendar className="size-3.5" strokeWidth="2" />
@@ -323,18 +326,20 @@
 						<span> You </span>
 					</button>
 				</div>
+			</div>
 
+			<div class=" flex-1 w-full h-full overflow-auto px-4 pb-5">
 				{#if note.data?.files}
-					<div class="pt-2.5 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap z-40">
-						{#each note.data.files as file}
-							<div>
+					<div class="mb-3.5 mt-1.5 w-full flex gap-1 flex-wrap z-40">
+						{#each note.data.files as file, fileIdx}
+							<div class="w-fit">
 								{#if file.type === 'image'}
 									<Image
 										src={file.url}
 										imageClassName=" max-h-96 rounded-lg"
 										dismissible={true}
 										onDismiss={() => {
-											files = files.filter((item) => item?.id !== file.id);
+											files = files.filter((item, idx) => idx !== fileIdx);
 											note.data.files = files.length > 0 ? files : null;
 										}}
 									/>
@@ -357,11 +362,9 @@
 						{/each}
 					</div>
 				{/if}
-			</div>
 
-			<div class=" flex-1 w-full h-full overflow-auto px-4.5 pb-5">
 				<RichTextInput
-					className="input-prose-sm"
+					className="input-prose-sm px-0.5"
 					bind:value={note.data.content.json}
 					placeholder={$i18n.t('Write something...')}
 					json={true}
