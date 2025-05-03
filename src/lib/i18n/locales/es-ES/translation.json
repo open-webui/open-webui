@@ -886,6 +886,7 @@
 	"Pipelines Valves": "Válvulas de Tuberías",
 	"Plain text (.txt)": "Texto plano (.txt)",
 	"Playground": "Zona de Pruebas",
+	"Playground Access": "",
 	"Playwright Timeout (ms)": "Tiempo Límite de Espera (ms) de Playwright",
 	"Playwright WebSocket URL": "URL de WebSocket de Playwright",
 	"Please carefully review the following warnings:": "Por favor revisar cuidadosamente los siguientes avisos:",
