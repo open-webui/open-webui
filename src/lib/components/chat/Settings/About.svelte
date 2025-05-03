@@ -70,6 +70,7 @@
 						</a>
 					</div>
 
+					<!--
 					<button
 						class=" underline flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500"
 						on:click={() => {
@@ -78,6 +79,7 @@
 					>
 						<div>{$i18n.t("See what's new")}</div>
 					</button>
+					-->
 				</div>
 
 				<button
@@ -108,7 +110,7 @@
 
 		{#if $config?.license_metadata}
 			<div class="mb-2 text-xs">
-				{#if !$WEBUI_NAME.includes('Open WebUI')}
+				{#if !$WEBUI_NAME.includes('VaultBot')}
 					<span class=" text-gray-500 dark:text-gray-300 font-medium">{$WEBUI_NAME}</span> -
 				{/if}
 
@@ -151,7 +153,7 @@
 				class="text-xs text-gray-400 dark:text-gray-500">Copyright (c) {new Date().getFullYear()} <a
 					href="https://openwebui.com"
 					target="_blank"
-					class="underline">Open WebUI (Timothy Jaeryang Baek)</a
+					class="underline">VaultBot (Timothy Jaeryang Baek)</a
 				>
 All rights reserved.
 

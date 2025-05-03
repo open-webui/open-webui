@@ -57,7 +57,8 @@
 		<SlideShow duration={5000} />
 
 		<div
-			class="w-full h-full absolute top-0 left-0 bg-linear-to-t from-20% from-black to-transparent"
+			class="w-full h-full absolute top-0 left-0"
+			style="background: linear-gradient(to top, #14b8a6 20%, transparent 100%);"
 		></div>
 
 		<div class="w-full h-full absolute top-0 left-0 backdrop-blur-xs bg-black/50"></div>
@@ -68,16 +69,16 @@
 					<Marquee
 						duration={5000}
 						words={[
-							$i18n.t('Explore the cosmos'),
-							$i18n.t('Unlock mysteries'),
-							$i18n.t('Chart new frontiers'),
-							$i18n.t('Dive into knowledge'),
-							$i18n.t('Discover wonders'),
-							$i18n.t('Ignite curiosity'),
-							$i18n.t('Forge new paths'),
-							$i18n.t('Unravel secrets'),
-							$i18n.t('Pioneer insights'),
-							$i18n.t('Embark on adventures')
+							$i18n.t('Get instant banking answers'),
+							$i18n.t('Experience secure support'),
+							$i18n.t('Unlock smarter customer service'),
+							$i18n.t('Manage your accounts with ease'),
+							$i18n.t('Discover real-time assistance'),
+							$i18n.t('Enhance your banking journey'),
+							$i18n.t('Resolve issues in seconds'),
+							$i18n.t('Bank with confidence'),
+							$i18n.t('Access 24/7 intelligent help'),
+							$i18n.t('Simplify your financial life')
 						]}
 					/>
 
