@@ -515,6 +515,13 @@ ENABLE_OAUTH_GROUP_CREATION = PersistentConfig(
     os.environ.get("ENABLE_OAUTH_GROUP_CREATION", "False").lower() == "true",
 )
 
+
+OAUTH_BLOCKED_GROUPS = PersistentConfig(
+    "OAUTH_BLOCKED_GROUPS",
+    "oauth.blocked_groups",
+    os.environ.get("OAUTH_BLOCKED_GROUPS", "[]"),
+)
+
 OAUTH_ROLES_CLAIM = PersistentConfig(
     "OAUTH_ROLES_CLAIM",
     "oauth.roles_claim",
@@ -1832,6 +1839,18 @@ DOCLING_SERVER_URL = PersistentConfig(
     os.getenv("DOCLING_SERVER_URL", "http://docling:5001"),
 )
 
+DOCLING_OCR_ENGINE = PersistentConfig(
+    "DOCLING_OCR_ENGINE",
+    "rag.docling_ocr_engine",
+    os.getenv("DOCLING_OCR_ENGINE", "tesseract"),
+)
+
+DOCLING_OCR_LANG = PersistentConfig(
+    "DOCLING_OCR_LANG",
+    "rag.docling_ocr_lang",
+    os.getenv("DOCLING_OCR_LANG", "eng,fra,deu,spa"),
+)
+
 DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_ENDPOINT",
     "rag.document_intelligence_endpoint",
@@ -2604,6 +2623,7 @@ WHISPER_VAD_FILTER = PersistentConfig(
     os.getenv("WHISPER_VAD_FILTER", "False").lower() == "true",
 )
 
+WHISPER_LANGUAGE = os.getenv("WHISPER_LANGUAGE", "").lower() or None
 
 # Add Deepgram configuration
 DEEPGRAM_API_KEY = PersistentConfig(

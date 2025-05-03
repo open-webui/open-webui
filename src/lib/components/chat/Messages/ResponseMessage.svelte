@@ -623,12 +623,6 @@
 							).at(-1)}
 							{#if !status?.hidden}
 								<div class="status-description flex items-center gap-2 py-0.5">
-									{#if status?.done === false}
-										<div class="">
-											<Spinner className="size-4" />
-										</div>
-									{/if}
-
 									{#if status?.action === 'web_search' && status?.urls}
 										<WebSearchResults {status}>
 											<div class="flex flex-col justify-center -space-y-0.5">
@@ -683,6 +677,8 @@
 													{$i18n.t('No search query generated')}
 												{:else if status?.description === 'Generating search query'}
 													{$i18n.t('Generating search query')}
+												{:else if status?.description === 'Searching the web'}
+													{$i18n.t('Searching the web...')}
 												{:else}
 													{status?.description}
 												{/if}
@@ -777,7 +773,7 @@
 							</div>
 						{:else}
 							<div class="w-full flex flex-col relative" id="response-content-container">
-								{#if message.content === '' && !message.error}
+								{#if message.content === '' && !message.error && (message?.statusHistory ?? [...(message?.status ? [message?.status] : [])]).length === 0}
 									<Skeleton />
 								{:else if message.content && message.error !== true}
 									<!-- always show message contents even if there's an error -->

@@ -146,7 +146,7 @@
 			{/if}
 
 			<Tooltip
-				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files') : ''}
+				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files.') : ''}
 				className="w-full"
 			>
 				<DropdownMenu.Item
@@ -173,7 +173,7 @@
 			</Tooltip>
 
 			<Tooltip
-				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files') : ''}
+				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files.') : ''}
 				className="w-full"
 			>
 				<DropdownMenu.Item
