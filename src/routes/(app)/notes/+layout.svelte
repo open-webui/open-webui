@@ -46,9 +46,9 @@
 			<div class="ml-2 py-0.5 self-center flex items-center justify-between w-full">
 				<div class="">
 					<div
-						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium rounded-full bg-transparent py-1 touch-auto pointer-events-auto"
+						class="flex gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-medium bg-transparent py-1 touch-auto pointer-events-auto"
 					>
-						<a class="min-w-fit rounded-full transition" href="/notes">
+						<a class="min-w-fit transition" href="/notes">
 							{$i18n.t('Notes')}
 						</a>
 					</div>

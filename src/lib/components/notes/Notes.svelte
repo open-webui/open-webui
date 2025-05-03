@@ -101,8 +101,8 @@
 				{$i18n.t(timeRange)}
 			</div>
 
-			{#each notes[timeRange] as note, idx (note.id)}
-				<div class="mb-5 gap-2 grid @lg:grid-cols-2 @2xl:grid-cols-3">
+			<div class="mb-5 gap-2 grid @lg:grid-cols-2 @2xl:grid-cols-3">
+				{#each notes[timeRange] as note, idx (note.id)}
 					<div
 						class=" flex space-x-4 cursor-pointer w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
 					>
@@ -141,8 +141,8 @@
 							</a>
 						</div>
 					</div>
-				</div>
-			{/each}
+				{/each}
+			</div>
 		{/each}
 	{:else}
 		<div class="w-full h-full flex flex-col items-center justify-center">
