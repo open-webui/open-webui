@@ -886,6 +886,7 @@
 	"Pipelines Valves": "Vannes de pipelines",
 	"Plain text (.txt)": "Texte (.txt)",
 	"Playground": "Playground",
+	"Playground Access": "",
 	"Playwright Timeout (ms)": "Délai d'attente Playwright (ms)",
 	"Playwright WebSocket URL": "URL du websocket Playwright",
 	"Please carefully review the following warnings:": "Veuillez lire attentivement les avertissements suivants :",
