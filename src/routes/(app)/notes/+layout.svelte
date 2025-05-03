@@ -85,7 +85,7 @@
 		</div>
 	</nav>
 
-	<div class=" pb-1 px-[18px] flex-1 max-h-full overflow-y-auto @container">
+	<div class=" pb-1 flex-1 max-h-full overflow-y-auto @container">
 		<slot />
 	</div>
 </div>
