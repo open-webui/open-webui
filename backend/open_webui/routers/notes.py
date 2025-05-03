@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from pydantic import BaseModel
 
-from open_webui.models.users import Users, UserNameResponse
+from open_webui.models.users import Users, UserResponse
 from open_webui.models.notes import Notes, NoteModel, NoteForm, NoteUserResponse
 
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
@@ -33,9 +33,7 @@ async def get_notes(user=Depends(get_verified_user)):
         NoteUserResponse(
             **{
                 **note.model_dump(),
-                "user": UserNameResponse(
-                    **Users.get_user_by_id(note.user_id).model_dump()
-                ),
+                "user": UserResponse(**Users.get_user_by_id(note.user_id).model_dump()),
             }
         )
         for note in Notes.get_notes_by_user_id(user.id, "write")
@@ -50,9 +48,7 @@ async def get_note_list(user=Depends(get_verified_user)):
         NoteUserResponse(
             **{
                 **note.model_dump(),
-                "user": UserNameResponse(
-                    **Users.get_user_by_id(note.user_id).model_dump()
-                ),
+                "user": UserResponse(**Users.get_user_by_id(note.user_id).model_dump()),
             }
         )
         for note in Notes.get_notes_by_user_id(user.id, "read")

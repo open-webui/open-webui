@@ -1,8 +1,10 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { getTimeRange } from '$lib/utils';
 
 type NoteItem = {
 	title: string;
-	content: string;
+	data: object;
+	meta?: null | object;
 	access_control?: null | object;
 };
 
@@ -65,7 +67,24 @@ export const getNotes = async (token: string = '') => {
 		throw error;
 	}
 
-	return res;
+	if (!Array.isArray(res)) {
+		return {}; // or throw new Error("Notes response is not an array")
+	}
+
+	// Build the grouped object
+	const grouped: Record<string, any[]> = {};
+	for (const note of res) {
+		const timeRange = getTimeRange(note.updated_at / 1000000000);
+		if (!grouped[timeRange]) {
+			grouped[timeRange] = [];
+		}
+		grouped[timeRange].push({
+			...note,
+			timeRange
+		});
+	}
+
+	return grouped;
 };
 
 export const getNoteById = async (token: string, id: string) => {

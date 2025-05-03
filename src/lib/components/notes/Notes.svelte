@@ -3,11 +3,32 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
+	import dayjs from '$lib/dayjs';
+	import duration from 'dayjs/plugin/duration';
+	import relativeTime from 'dayjs/plugin/relativeTime';
+
+	dayjs.extend(duration);
+	dayjs.extend(relativeTime);
+
+	async function loadLocale(locales) {
+		for (const locale of locales) {
+			try {
+				dayjs.locale(locale);
+				break; // Stop after successfully loading the first available locale
+			} catch (error) {
+				console.error(`Could not load locale '${locale}':`, error);
+			}
+		}
+	}
+
+	// Assuming $i18n.languages is an array of language codes
+	$: loadLocale($i18n.languages);
+
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 
-	import { getNotes } from '$lib/apis/notes';
+	import { createNewNote, getNotes } from '$lib/apis/notes';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -31,8 +52,24 @@
 
 	const init = async () => {
 		notes = await getNotes(localStorage.token);
+	};
 
-		console.log(notes);
+	const createNoteHandler = async () => {
+		const res = await createNewNote(localStorage.token, {
+			title: $i18n.t('New Note'),
+			data: {
+				content: ''
+			},
+			meta: null,
+			access_control: null
+		}).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			goto(`/notes/${res.id}`);
+		}
 	};
 
 	onMount(async () => {
@@ -58,61 +95,55 @@
 		</div>
 	</DeleteConfirmDialog>
 
-	{#if notes.length > 0}
-		<div class="flex flex-col gap-1 my-1.5">
-			<!-- <div class="flex justify-between items-center">
-			<div class="flex md:self-center text-xl font-medium px-0.5 items-center">
-				{$i18n.t('Notes')}
-				<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
-				<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{notes.length}</span>
+	{#if Object.keys(notes).length > 0}
+		{#each Object.keys(notes) as timeRange}
+			<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2">
+				{$i18n.t(timeRange)}
 			</div>
-		</div> -->
 
-			<div class=" flex w-full space-x-2">
-				<div class="flex flex-1">
-					<div class=" self-center ml-1 mr-3">
-						<Search className="size-3.5" />
-					</div>
-					<input
-						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-						bind:value={query}
-						placeholder={$i18n.t('Search Notes')}
-					/>
-				</div>
-			</div>
-		</div>
+			{#each notes[timeRange] as note, idx (note.id)}
+				<div class="mb-5 gap-2 grid @lg:grid-cols-2 @2xl:grid-cols-3">
+					<div
+						class=" flex space-x-4 cursor-pointer w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+					>
+						<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
+							<a href={`/notes/${note.id}`} class="w-full -translate-y-0.5">
+								<div class=" flex-1 flex items-center gap-2 self-center">
+									<div class=" font-semibold line-clamp-1 capitalize">{note.title}</div>
+								</div>
 
-		<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
-			{#each notes as note}
-				<div
-					class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
-				>
-					<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-						<a href={`/notes/${note.id}`}>
-							<div class=" flex-1 flex items-center gap-2 self-center">
-								<div class=" font-semibold line-clamp-1 capitalize">{note.title}</div>
-							</div>
+								<div class=" text-xs text-gray-500 dark:text-gray-500 line-clamp-2 pb-2">
+									{#if note.data?.content}
+										{note.data?.content}
+									{:else}
+										{$i18n.t('No content')}
+									{/if}
+								</div>
 
-							<div class=" text-xs px-0.5">
-								<Tooltip
-									content={note?.user?.email ?? $i18n.t('Deleted User')}
-									className="flex shrink-0"
-									placement="top-start"
-								>
-									<div class="shrink-0 text-gray-500">
-										{$i18n.t('By {{name}}', {
-											name: capitalizeFirstLetter(
-												note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
-											)
-										})}
+								<div class=" text-xs px-0.5 w-full flex justify-between items-center">
+									<div>
+										{dayjs(note.updated_at / 1000000).fromNow()}
 									</div>
-								</Tooltip>
-							</div>
-						</a>
+									<Tooltip
+										content={note?.user?.email ?? $i18n.t('Deleted User')}
+										className="flex shrink-0"
+										placement="top-start"
+									>
+										<div class="shrink-0 text-gray-500">
+											{$i18n.t('By {{name}}', {
+												name: capitalizeFirstLetter(
+													note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
+												)
+											})}
+										</div>
+									</Tooltip>
+								</div>
+							</a>
+						</div>
 					</div>
 				</div>
 			{/each}
-		</div>
+		{/each}
 	{:else}
 		<div class="w-full h-full flex flex-col items-center justify-center">
 			<div class="pb-20 text-center">
@@ -133,7 +164,9 @@
 				<button
 					class="cursor-pointer p-2.5 flex rounded-full bg-gray-50 dark:bg-gray-850 hover:bg-gray-100 dark:hover:bg-gray-800 transition shadow-xl"
 					type="button"
-					on:click={async () => {}}
+					on:click={async () => {
+						createNoteHandler();
+					}}
 				>
 					<Plus className="size-4.5" strokeWidth="2.5" />
 				</button>
