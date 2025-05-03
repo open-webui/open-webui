@@ -1,4 +1,3 @@
-<!-- src/lib/components/layout/Sidebar/UserMenu.svelte -->
 <script lang="ts">
     import { DropdownMenu } from 'bits-ui';
     import { createEventDispatcher, getContext, onMount } from 'svelte';
