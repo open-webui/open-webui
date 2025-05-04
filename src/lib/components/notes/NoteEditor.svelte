@@ -360,7 +360,6 @@
 										type={file.type}
 										size={file?.size}
 										loading={file.status === 'uploading'}
-										colorClassName="bg-white dark:bg-gray-850 "
 										on:dismiss={() => {
 											files = files.filter((item) => item?.id !== file.id);
 											note.data.files = files.length > 0 ? files : null;
