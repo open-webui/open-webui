@@ -53,7 +53,7 @@ def search_yacy(
     # Check if provided a json API URL
     if not query_url.endswith("yacysearch.json"):
         # Strip all query parameters from the URL
-        query_url = query_url.rstrip('/') + "/yacysearch.json"
+        query_url = query_url.rstrip("/") + "/yacysearch.json"
 
     log.debug(f"searching {query_url}")
 
@@ -79,7 +79,9 @@ def search_yacy(
         sorted_results = get_filtered_results(sorted_results, filter_list)
     return [
         SearchResult(
-            link=result["link"], title=result.get("title"), snippet=result.get("description")
+            link=result["link"],
+            title=result.get("title"),
+            snippet=result.get("description"),
         )
         for result in sorted_results[:count]
     ]

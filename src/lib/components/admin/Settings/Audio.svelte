@@ -317,7 +317,7 @@
 								</div>
 							</div>
 						</div>
-                        
+
 						<div>
 							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Max Speakers')}</div>
 							<div class="flex w-full">

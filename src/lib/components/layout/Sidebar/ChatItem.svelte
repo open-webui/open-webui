@@ -38,6 +38,7 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Document from '$lib/components/icons/Document.svelte';
+	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 
 	export let className = '';
 
@@ -65,6 +66,7 @@
 
 	let showShareChatModal = false;
 	let confirmEdit = false;
+	let editInputFocused = false;
 
 	let chatTitle = title;
 
@@ -131,10 +133,6 @@
 	const archiveChatHandler = async (id) => {
 		await archiveChatById(localStorage.token, id);
 		dispatch('change');
-	};
-
-	const focusEdit = async (node: HTMLInputElement) => {
-		node.focus();
 	};
 
 	let itemElement;
@@ -213,6 +211,20 @@
 			chatTitle = '';
 		}
 	};
+
+	const focusEditInput = async () => {
+		console.log('focusEditInput');
+		await tick();
+
+		const input = document.getElementById(`chat-title-input-${id}`);
+		if (input) {
+			input.focus();
+		}
+	};
+
+	$: if (confirmEdit) {
+		focusEditInput();
+	}
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={id} />
@@ -257,11 +269,23 @@
 					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
 		>
 			<input
-				use:focusEdit
-				bind:value={chatTitle}
 				id="chat-title-input-{id}"
+				bind:value={chatTitle}
 				class=" bg-transparent w-full outline-hidden mr-10"
 				on:keydown={chatTitleInputKeydownHandler}
+				on:focus={() => {
+					editInputFocused = true;
+				}}
+				on:blur={() => {
+					if (editInputFocused) {
+						if (chatTitle !== title) {
+							editChatTitle(id, chatTitle);
+						}
+
+						confirmEdit = false;
+						chatTitle = '';
+					}
+				}}
 			/>
 		</div>
 	{:else}
@@ -311,7 +335,7 @@
 				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
-			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
+			: 'right-1'} top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-linear-to-l from-80%
 
               to-transparent"
 		on:mouseenter={(e) => {
@@ -325,28 +349,9 @@
 			<div
 				class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
 			>
-				<Tooltip content={$i18n.t('Confirm')}>
-					<button
-						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
-							editChatTitle(id, chatTitle);
-							confirmEdit = false;
-							chatTitle = '';
-						}}
-					>
-						<Check className=" size-3.5" strokeWidth="2.5" />
-					</button>
-				</Tooltip>
-
-				<Tooltip content={$i18n.t('Cancel')}>
-					<button
-						class=" self-center dark:hover:text-white transition"
-						on:click={() => {
-							confirmEdit = false;
-							chatTitle = '';
-						}}
-					>
-						<XMark strokeWidth="2.5" />
+				<Tooltip content={$i18n.t('Generate')}>
+					<button class=" self-center dark:hover:text-white transition" on:click={() => {}}>
+						<Sparkles strokeWidth="2" />
 					</button>
 				</Tooltip>
 			</div>
@@ -377,7 +382,7 @@
 				</Tooltip>
 			</div>
 		{:else}
-			<div class="flex self-center space-x-1 z-10">
+			<div class="flex self-center z-10 items-end">
 				<ChatMenu
 					chatId={id}
 					cloneChatHandler={() => {
@@ -414,7 +419,7 @@
 				>
 					<button
 						aria-label="Chat Menu"
-						class=" self-center dark:hover:text-white transition"
+						class=" self-center dark:hover:text-white transition m-0"
 						on:click={() => {
 							dispatch('select');
 						}}

@@ -161,10 +161,14 @@
 			toast.error($i18n.t('Docling Server URL required.'));
 			return;
 		}
-		if (RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
+		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling' &&
 			((RAGConfig.DOCLING_OCR_ENGINE === '' && RAGConfig.DOCLING_OCR_LANG !== '') ||
-			(RAGConfig.DOCLING_OCR_ENGINE !== '' && RAGConfig.DOCLING_OCR_LANG === ''))) {
-			toast.error($i18n.t('Both Docling OCR Engine and Language(s) must be provided or both left empty.'));
+				(RAGConfig.DOCLING_OCR_ENGINE !== '' && RAGConfig.DOCLING_OCR_LANG === ''))
+		) {
+			toast.error(
+				$i18n.t('Both Docling OCR Engine and Language(s) must be provided or both left empty.')
+			);
 			return;
 		}
 
