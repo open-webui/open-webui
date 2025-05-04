@@ -337,7 +337,7 @@
 			</div>
 
 			<div class=" flex-1 w-full h-full overflow-auto px-4 pb-5">
-				{#if files}
+				{#if files && files.length > 0}
 					<div class="mb-3.5 mt-1.5 w-full flex gap-1 flex-wrap z-40">
 						{#each files as file, fileIdx}
 							<div class="w-fit">
