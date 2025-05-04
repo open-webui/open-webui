@@ -166,6 +166,9 @@
 	}
 
 	async function aiEnhanceContent(content) {
+		// fake delay
+		await new Promise((resolve) => setTimeout(resolve, 2000));
+
 		const md = content.md + '_ai';
 		const html = marked.parse(md);
 
@@ -612,7 +615,13 @@
 				</div>
 			</div>
 
-			<div class=" flex-1 w-full h-full overflow-auto px-4 pb-14">
+			<div class=" flex-1 w-full h-full overflow-auto px-4 pb-14 relative">
+				{#if enhancing}
+					<div
+						class="w-full h-full absolute top-0 left-0 backdrop-blur-xs bg-white/10 dark:bg-gray-900/10 flex items-center justify-center z-10"
+					></div>
+				{/if}
+
 				{#if files && files.length > 0}
 					<div class="mb-3.5 mt-1.5 w-full flex gap-1 flex-wrap z-40">
 						{#each files as file, fileIdx}
@@ -653,7 +662,7 @@
 					placeholder={$i18n.t('Write something...')}
 					html={note.data?.content?.html}
 					json={true}
-					editable={versionIdx === null}
+					editable={versionIdx === null && !enhancing}
 					onChange={(content) => {
 						note.data.content.html = content.html;
 						note.data.content.md = content.md;
@@ -665,7 +674,7 @@
 </div>
 
 <div
-	class="absolute bottom-0 right-0 p-5 max-w-full {$showSidebar
+	class="absolute z-30 bottom-0 right-0 p-5 max-w-full {$showSidebar
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''} w-full flex justify-end"
 >
@@ -769,13 +778,20 @@
 
 				<Tooltip content={$i18n.t('Enhance')} placement="top">
 					<button
-						class="p-2.5 flex justify-center items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition shrink-0"
+						class="{enhancing
+							? 'p-2'
+							: 'p-2.5'} flex justify-center items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition shrink-0"
 						on:click={() => {
 							enhanceNoteHandler();
 						}}
+						disabled={enhancing}
 						type="button"
 					>
-						<SparklesSolid />
+						{#if enhancing}
+							<Spinner className="size-5" />
+						{:else}
+							<SparklesSolid />
+						{/if}
 					</button>
 				</Tooltip>
 			</div>
