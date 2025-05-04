@@ -28,7 +28,7 @@
 	$: loadLocale($i18n.languages);
 
 	import { goto } from '$app/navigation';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, onDestroy } from 'svelte';
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 
 	import { createNewNote, deleteNoteById, getNotes } from '$lib/apis/notes';
@@ -42,6 +42,8 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
+	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
+	import { marked } from 'marked';
 
 	const i18n = getContext('i18n');
 	let loaded = false;
@@ -166,9 +168,103 @@
 		}
 	};
 
+	const inputFilesHandler = async (inputFiles) => {
+		// Check if all the file is a markdown file and extract name and content
+
+		for (const file of inputFiles) {
+			if (file.type !== 'text/markdown') {
+				toast.error($i18n.t('Only markdown files are allowed'));
+				return;
+			}
+
+			const reader = new FileReader();
+			reader.onload = async (event) => {
+				const content = event.target.result;
+				let name = file.name.replace(/\.md$/, '');
+
+				if (typeof content !== 'string') {
+					toast.error($i18n.t('Invalid file content'));
+					return;
+				}
+
+				// Create a new note with the content
+				const res = await createNewNote(localStorage.token, {
+					title: name,
+					data: {
+						content: {
+							json: null,
+							html: marked.parse(content ?? ''),
+							md: content
+						}
+					},
+					meta: null,
+					access_control: null
+				}).catch((error) => {
+					toast.error(`${error}`);
+					return null;
+				});
+
+				if (res) {
+					init();
+				}
+			};
+
+			reader.readAsText(file);
+		}
+	};
+
+	let dragged = false;
+
+	const onDragOver = (e) => {
+		e.preventDefault();
+
+		// Check if a file is being dragged.
+		if (e.dataTransfer?.types?.includes('Files')) {
+			dragged = true;
+		} else {
+			dragged = false;
+		}
+	};
+
+	const onDragLeave = () => {
+		dragged = false;
+	};
+
+	const onDrop = async (e) => {
+		e.preventDefault();
+		console.log(e);
+
+		if (e.dataTransfer?.files) {
+			const inputFiles = Array.from(e.dataTransfer?.files);
+			if (inputFiles && inputFiles.length > 0) {
+				console.log(inputFiles);
+				inputFilesHandler(inputFiles);
+			}
+		}
+
+		dragged = false;
+	};
+
+	onDestroy(() => {
+		console.log('destroy');
+		const dropzoneElement = document.getElementById('notes-container');
+
+		if (dropzoneElement) {
+			dropzoneElement?.removeEventListener('dragover', onDragOver);
+			dropzoneElement?.removeEventListener('drop', onDrop);
+			dropzoneElement?.removeEventListener('dragleave', onDragLeave);
+		}
+	});
+
 	onMount(async () => {
 		await init();
 		loaded = true;
+
+		const dropzoneElement = document.getElementById('notes-container');
+
+		dropzoneElement?.addEventListener('dragover', onDragOver);
+		dropzoneElement?.addEventListener('drop', onDrop);
+		dropzoneElement?.addEventListener('dragleave', onDragLeave);
 	});
 </script>
 
@@ -178,136 +274,139 @@
 	</title>
 </svelte:head>
 
-{#if loaded}
-	<DeleteConfirmDialog
-		bind:show={showDeleteConfirm}
-		title={$i18n.t('Delete note?')}
-		on:confirm={() => {
-			deleteNoteHandler(selectedNote.id);
-			showDeleteConfirm = false;
-		}}
-	>
-		<div class=" text-sm text-gray-500">
-			{$i18n.t('This will delete')} <span class="  font-semibold">{selectedNote.title}</span>.
-		</div>
-	</DeleteConfirmDialog>
+<FilesOverlay show={dragged} />
 
-	<div class="px-4.5 @container h-full pt-2">
-		{#if Object.keys(notes).length > 0}
-			{#each Object.keys(notes) as timeRange}
-				<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2.5">
-					{$i18n.t(timeRange)}
-				</div>
-
-				<div class="mb-5 gap-2.5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-					{#each notes[timeRange] as note, idx (note.id)}
-						<div
-							class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 bg-gray-50 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
-						>
-							<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-								<a
-									href={`/notes/${note.id}`}
-									class="w-full -translate-y-0.5 flex flex-col justify-between"
-								>
-									<div class="flex-1">
-										<div class="  flex items-center gap-2 self-center mb-1 justify-between">
-											<div class=" font-semibold line-clamp-1 capitalize">{note.title}</div>
-
-											<div>
-												<NoteMenu
-													onDownload={(type) => {
-														selectedNote = note;
-
-														downloadHandler(type);
-													}}
-													onDelete={() => {
-														selectedNote = note;
-														showDeleteConfirm = true;
-													}}
-												>
-													<button
-														class="self-center w-fit text-sm p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-														type="button"
-													>
-														<EllipsisHorizontal className="size-5" />
-													</button>
-												</NoteMenu>
-											</div>
-										</div>
-
-										<div
-											class=" text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-5 min-h-18"
-										>
-											{#if note.data?.content?.md}
-												{note.data?.content?.md}
-											{:else}
-												{$i18n.t('No content')}
-											{/if}
-										</div>
-									</div>
-
-									<div class=" text-xs px-0.5 w-full flex justify-between items-center">
-										<div>
-											{dayjs(note.updated_at / 1000000).fromNow()}
-										</div>
-										<Tooltip
-											content={note?.user?.email ?? $i18n.t('Deleted User')}
-											className="flex shrink-0"
-											placement="top-start"
-										>
-											<div class="shrink-0 text-gray-500">
-												{$i18n.t('By {{name}}', {
-													name: capitalizeFirstLetter(
-														note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
-													)
-												})}
-											</div>
-										</Tooltip>
-									</div>
-								</a>
-							</div>
-						</div>
-					{/each}
-				</div>
-			{/each}
-		{:else}
-			<div class="w-full h-full flex flex-col items-center justify-center">
-				<div class="pb-20 text-center">
-					<div class=" text-xl font-medium text-gray-400 dark:text-gray-600">
-						{$i18n.t('No Notes')}
-					</div>
-
-					<div class="mt-1 text-sm text-gray-300 dark:text-gray-700">
-						{$i18n.t('Create your first note by clicking on the plus button below.')}
-					</div>
-				</div>
+<div id="notes-container" class="w-full h-full">
+	{#if loaded}
+		<DeleteConfirmDialog
+			bind:show={showDeleteConfirm}
+			title={$i18n.t('Delete note?')}
+			on:confirm={() => {
+				deleteNoteHandler(selectedNote.id);
+				showDeleteConfirm = false;
+			}}
+		>
+			<div class=" text-sm text-gray-500">
+				{$i18n.t('This will delete')} <span class="  font-semibold">{selectedNote.title}</span>.
 			</div>
-		{/if}
-	</div>
+		</DeleteConfirmDialog>
 
-	<div class="absolute bottom-0 left-0 right-0 p-5 max-w-full flex justify-end">
-		<div class="flex gap-0.5 justify-end w-full">
-			<Tooltip content={$i18n.t('Create Note')}>
-				<button
-					class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
-					type="button"
-					on:click={async () => {
-						createNoteHandler();
-					}}
-				>
-					<Plus className="size-4.5" strokeWidth="2.5" />
-				</button>
-			</Tooltip>
+		<div class="px-4.5 @container h-full pt-2">
+			{#if Object.keys(notes).length > 0}
+				{#each Object.keys(notes) as timeRange}
+					<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2.5">
+						{$i18n.t(timeRange)}
+					</div>
 
-			<!-- <button
+					<div class="mb-5 gap-2.5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+						{#each notes[timeRange] as note, idx (note.id)}
+							<div
+								class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 bg-gray-50 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+							>
+								<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
+									<a
+										href={`/notes/${note.id}`}
+										class="w-full -translate-y-0.5 flex flex-col justify-between"
+									>
+										<div class="flex-1">
+											<div class="  flex items-center gap-2 self-center mb-1 justify-between">
+												<div class=" font-semibold line-clamp-1 capitalize">{note.title}</div>
+
+												<div>
+													<NoteMenu
+														onDownload={(type) => {
+															selectedNote = note;
+
+															downloadHandler(type);
+														}}
+														onDelete={() => {
+															selectedNote = note;
+															showDeleteConfirm = true;
+														}}
+													>
+														<button
+															class="self-center w-fit text-sm p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+															type="button"
+														>
+															<EllipsisHorizontal className="size-5" />
+														</button>
+													</NoteMenu>
+												</div>
+											</div>
+
+											<div
+												class=" text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-5 min-h-18"
+											>
+												{#if note.data?.content?.md}
+													{note.data?.content?.md}
+												{:else}
+													{$i18n.t('No content')}
+												{/if}
+											</div>
+										</div>
+
+										<div class=" text-xs px-0.5 w-full flex justify-between items-center">
+											<div>
+												{dayjs(note.updated_at / 1000000).fromNow()}
+											</div>
+											<Tooltip
+												content={note?.user?.email ?? $i18n.t('Deleted User')}
+												className="flex shrink-0"
+												placement="top-start"
+											>
+												<div class="shrink-0 text-gray-500">
+													{$i18n.t('By {{name}}', {
+														name: capitalizeFirstLetter(
+															note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
+														)
+													})}
+												</div>
+											</Tooltip>
+										</div>
+									</a>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{/each}
+			{:else}
+				<div class="w-full h-full flex flex-col items-center justify-center">
+					<div class="pb-20 text-center">
+						<div class=" text-xl font-medium text-gray-400 dark:text-gray-600">
+							{$i18n.t('No Notes')}
+						</div>
+
+						<div class="mt-1 text-sm text-gray-300 dark:text-gray-700">
+							{$i18n.t('Create your first note by clicking on the plus button below.')}
+						</div>
+					</div>
+				</div>
+			{/if}
+		</div>
+
+		<div class="absolute bottom-0 left-0 right-0 p-5 max-w-full flex justify-end">
+			<div class="flex gap-0.5 justify-end w-full">
+				<Tooltip content={$i18n.t('Create Note')}>
+					<button
+						class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
+						type="button"
+						on:click={async () => {
+							createNoteHandler();
+						}}
+					>
+						<Plus className="size-4.5" strokeWidth="2.5" />
+					</button>
+				</Tooltip>
+
+				<!-- <button
 				class="cursor-pointer p-2.5 flex rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition shadow-xl"
 			>
 				<SparklesSolid className="size-4" />
 			</button> -->
+			</div>
 		</div>
-	</div>
 
-	<!-- {#if $user?.role === 'admin'}
+		<!-- {#if $user?.role === 'admin'}
 		<div class=" flex justify-end w-full mb-3">
 			<div class="flex space-x-2">
 				<input
@@ -357,8 +456,9 @@
 			</div>
 		</div>
 	{/if} -->
-{:else}
-	<div class="w-full h-full flex justify-center items-center">
-		<Spinner />
-	</div>
-{/if}
+	{:else}
+		<div class="w-full h-full flex justify-center items-center">
+			<Spinner />
+		</div>
+	{/if}
+</div>

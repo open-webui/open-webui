@@ -504,6 +504,7 @@
 					className="input-prose-sm px-0.5"
 					bind:value={note.data.content.json}
 					placeholder={$i18n.t('Write something...')}
+					html={note.data?.content?.html}
 					json={true}
 					onChange={(content) => {
 						note.data.content.html = content.html;

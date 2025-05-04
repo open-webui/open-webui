@@ -165,6 +165,10 @@
 				// Usage example
 				content = await tryParse(value);
 			}
+		} else {
+			if (html && !content) {
+				content = html;
+			}
 		}
 
 		console.log('content', content);
