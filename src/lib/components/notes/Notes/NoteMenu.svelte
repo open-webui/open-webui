@@ -11,14 +11,17 @@
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
 	import Download from '$lib/components/icons/Download.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
+	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
+	import Share from '$lib/components/icons/Share.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let show = false;
-	export let className = 'max-w-[160px]';
+	export let className = 'max-w-[180px]';
 
 	export let onDownload = (type) => {};
 	export let onDelete = () => {};
+	export let onCopyToClipboard = () => {};
 
 	export let onChange = () => {};
 </script>
@@ -73,6 +76,32 @@
 					</DropdownMenu.Item>
 				</DropdownMenu.SubContent>
 			</DropdownMenu.Sub>
+
+			<DropdownMenu.Sub>
+				<DropdownMenu.SubTrigger
+					class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				>
+					<Share strokeWidth="2" />
+
+					<div class="flex items-center">{$i18n.t('Share')}</div>
+				</DropdownMenu.SubTrigger>
+				<DropdownMenu.SubContent
+					class="w-full rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+					transition={flyAndScale}
+					sideOffset={8}
+				>
+					<DropdownMenu.Item
+						class="flex gap-2 items-center px-3 py-2 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+						on:click={() => {
+							onCopyToClipboard();
+						}}
+					>
+						<DocumentDuplicate strokeWidth="2" />
+						<div class="flex items-center">{$i18n.t('Copy to clipboard')}</div>
+					</DropdownMenu.Item>
+				</DropdownMenu.SubContent>
+			</DropdownMenu.Sub>
+
 			<DropdownMenu.Item
 				class="flex  gap-2  items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {

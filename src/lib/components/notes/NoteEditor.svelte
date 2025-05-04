@@ -14,7 +14,7 @@
 	import { config, settings, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
 
-	import { compressImage } from '$lib/utils';
+	import { compressImage, copyToClipboard } from '$lib/utils';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { uploadFile } from '$lib/apis/files';
 
@@ -58,6 +58,10 @@
 	import RecordMenu from './RecordMenu.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
+	import Sparkles from '../icons/Sparkles.svelte';
+	import SparklesSolid from '../icons/SparklesSolid.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
+	import Bars3BottomLeft from '../icons/Bars3BottomLeft.svelte';
 
 	export let id: null | string = null;
 
@@ -78,6 +82,8 @@
 	};
 
 	let files = [];
+
+	let selectedVersion = 'note';
 
 	let recording = false;
 	let displayMediaRecord = false;
@@ -134,6 +140,8 @@
 	$: if (id) {
 		init();
 	}
+
+	const versionToggleHandler = () => {};
 
 	const uploadFileHandler = async (file) => {
 		const tempItemId = uuidv4();
@@ -434,6 +442,16 @@
 							onDownload={(type) => {
 								downloadHandler(type);
 							}}
+							onCopyToClipboard={async () => {
+								const res = await copyToClipboard(note.data.content.md).catch((error) => {
+									toast.error(`${error}`);
+									return null;
+								});
+
+								if (res) {
+									toast.success($i18n.t('Copied to clipboard'));
+								}
+							}}
 							onDelete={() => {
 								showDeleteConfirm = true;
 							}}
@@ -465,7 +483,7 @@
 				</div>
 			</div>
 
-			<div class=" flex-1 w-full h-full overflow-auto px-4 pb-5">
+			<div class=" flex-1 w-full h-full overflow-auto px-4 pb-14">
 				{#if files && files.length > 0}
 					<div class="mb-3.5 mt-1.5 w-full flex gap-1 flex-wrap z-40">
 						{#each files as file, fileIdx}
@@ -516,12 +534,12 @@
 	{/if}
 </div>
 
-<div class="absolute bottom-0 right-0 p-5 max-w-full flex justify-end">
-	<div
-		class="flex gap-0.5 justify-end w-full {$showSidebar && recording
-			? 'md:max-w-[calc(100%-260px)]'
-			: ''} max-w-full"
-	>
+<div
+	class="absolute bottom-0 right-0 p-5 max-w-full {$showSidebar
+		? 'md:max-w-[calc(100%-260px)]'
+		: ''} w-full flex justify-end"
+>
+	<div class="flex gap-1 justify-between w-full max-w-full">
 		{#if recording}
 			<div class="flex-1 w-full">
 				<VoiceRecording
@@ -592,12 +610,46 @@
 				}}
 			>
 				<button
-					class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
+					class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
 					type="button"
 				>
 					<MicSolid className="size-4.5" />
 				</button>
 			</RecordMenu>
+
+			<div
+				class="cursor-pointer p-0.5 flex gap-0.5 rounded-full border border-gray-50 dark:border-gray-850 dark:bg-gray-850 transition shadow-xl"
+			>
+				<Tooltip content={$i18n.t('My Notes')} placement="top">
+					<button
+						class="p-2 size-8.5 flex justify-center items-center {selectedVersion === 'note'
+							? 'bg-gray-100 dark:bg-gray-800 '
+							: ' hover:bg-gray-50 dark:hover:bg-gray-800'}  rounded-full transition shrink-0"
+						type="button"
+						on:click={() => {
+							selectedVersion = 'note';
+							versionToggleHandler();
+						}}
+					>
+						<Bars3BottomLeft />
+					</button>
+				</Tooltip>
+
+				<Tooltip content={$i18n.t('Enhance Notes')} placement="top">
+					<button
+						class="p-2 size-8.5 flex justify-center items-center {selectedVersion === 'ai'
+							? 'bg-gray-100 dark:bg-gray-800 '
+							: ' hover:bg-gray-50 dark:hover:bg-gray-800'} rounded-full transition shrink-0"
+						on:click={() => {
+							selectedVersion = 'ai';
+							versionToggleHandler();
+						}}
+						type="button"
+					>
+						<SparklesSolid />
+					</button>
+				</Tooltip>
+			</div>
 		{/if}
 	</div>
 </div>
