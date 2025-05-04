@@ -276,7 +276,7 @@
 
 <FilesOverlay show={dragged} />
 
-<div id="notes-container" class="w-full h-full">
+<div id="notes-container" class="w-full min-h-full">
 	{#if loaded}
 		<DeleteConfirmDialog
 			bind:show={showDeleteConfirm}
@@ -293,82 +293,86 @@
 
 		<div class="px-4.5 @container h-full pt-2">
 			{#if Object.keys(notes).length > 0}
-				{#each Object.keys(notes) as timeRange}
-					<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2.5">
-						{$i18n.t(timeRange)}
-					</div>
+				<div class="pb-10">
+					{#each Object.keys(notes) as timeRange}
+						<div class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium pb-2.5">
+							{$i18n.t(timeRange)}
+						</div>
 
-					<div class="mb-5 gap-2.5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-						{#each notes[timeRange] as note, idx (note.id)}
-							<div
-								class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 bg-gray-50 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
-							>
-								<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-									<a
-										href={`/notes/${note.id}`}
-										class="w-full -translate-y-0.5 flex flex-col justify-between"
-									>
-										<div class="flex-1">
-											<div class="  flex items-center gap-2 self-center mb-1 justify-between">
-												<div class=" font-semibold line-clamp-1 capitalize">{note.title}</div>
+						<div
+							class="mb-5 gap-2.5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+						>
+							{#each notes[timeRange] as note, idx (note.id)}
+								<div
+									class=" flex space-x-4 cursor-pointer w-full px-4.5 py-4 bg-gray-50 dark:bg-gray-850 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+								>
+									<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
+										<a
+											href={`/notes/${note.id}`}
+											class="w-full -translate-y-0.5 flex flex-col justify-between"
+										>
+											<div class="flex-1">
+												<div class="  flex items-center gap-2 self-center mb-1 justify-between">
+													<div class=" font-semibold line-clamp-1 capitalize">{note.title}</div>
 
-												<div>
-													<NoteMenu
-														onDownload={(type) => {
-															selectedNote = note;
+													<div>
+														<NoteMenu
+															onDownload={(type) => {
+																selectedNote = note;
 
-															downloadHandler(type);
-														}}
-														onDelete={() => {
-															selectedNote = note;
-															showDeleteConfirm = true;
-														}}
-													>
-														<button
-															class="self-center w-fit text-sm p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-															type="button"
+																downloadHandler(type);
+															}}
+															onDelete={() => {
+																selectedNote = note;
+																showDeleteConfirm = true;
+															}}
 														>
-															<EllipsisHorizontal className="size-5" />
-														</button>
-													</NoteMenu>
+															<button
+																class="self-center w-fit text-sm p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																type="button"
+															>
+																<EllipsisHorizontal className="size-5" />
+															</button>
+														</NoteMenu>
+													</div>
+												</div>
+
+												<div
+													class=" text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-5 min-h-18"
+												>
+													{#if note.data?.content?.md}
+														{note.data?.content?.md}
+													{:else}
+														{$i18n.t('No content')}
+													{/if}
 												</div>
 											</div>
 
-											<div
-												class=" text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-5 min-h-18"
-											>
-												{#if note.data?.content?.md}
-													{note.data?.content?.md}
-												{:else}
-													{$i18n.t('No content')}
-												{/if}
-											</div>
-										</div>
-
-										<div class=" text-xs px-0.5 w-full flex justify-between items-center">
-											<div>
-												{dayjs(note.updated_at / 1000000).fromNow()}
-											</div>
-											<Tooltip
-												content={note?.user?.email ?? $i18n.t('Deleted User')}
-												className="flex shrink-0"
-												placement="top-start"
-											>
-												<div class="shrink-0 text-gray-500">
-													{$i18n.t('By {{name}}', {
-														name: capitalizeFirstLetter(
-															note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
-														)
-													})}
+											<div class=" text-xs px-0.5 w-full flex justify-between items-center">
+												<div>
+													{dayjs(note.updated_at / 1000000).fromNow()}
 												</div>
-											</Tooltip>
-										</div>
-									</a>
+												<Tooltip
+													content={note?.user?.email ?? $i18n.t('Deleted User')}
+													className="flex shrink-0"
+													placement="top-start"
+												>
+													<div class="shrink-0 text-gray-500">
+														{$i18n.t('By {{name}}', {
+															name: capitalizeFirstLetter(
+																note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
+															)
+														})}
+													</div>
+												</Tooltip>
+											</div>
+										</a>
+									</div>
 								</div>
-							</div>
-						{/each}
-					</div>
-				{/each}
+							{/each}
+						</div>
+					{/each}
+				</div>
 			{:else}
 				<div class="w-full h-full flex flex-col items-center justify-center">
 					<div class="pb-20 text-center">
