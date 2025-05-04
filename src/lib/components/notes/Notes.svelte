@@ -3,6 +3,9 @@
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
+	import jsPDF from 'jspdf';
+	import html2canvas from 'html2canvas-pro';
+
 	import dayjs from '$lib/dayjs';
 	import duration from 'dayjs/plugin/duration';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -29,6 +32,7 @@
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 
 	import { createNewNote, getNotes } from '$lib/apis/notes';
+	import { capitalizeFirstLetter } from '$lib/utils';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -37,7 +41,7 @@
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-	import { capitalizeFirstLetter } from '$lib/utils';
+	import NoteMenu from './Notes/NoteMenu.svelte';
 
 	const i18n = getContext('i18n');
 	let loaded = false;
@@ -73,6 +77,62 @@
 
 		if (res) {
 			goto(`/notes/${res.id}`);
+		}
+	};
+
+	const downloadHandler = async (type) => {
+		console.log('downloadHandler', type);
+		console.log('selectedNote', selectedNote);
+		if (type === 'md') {
+			const blob = new Blob([selectedNote.data.content.md], { type: 'text/markdown' });
+			saveAs(blob, `${selectedNote.title}.md`);
+		} else if (type === 'pdf') {
+			await downloadPdf(selectedNote);
+		}
+	};
+
+	const downloadPdf = async (note) => {
+		try {
+			// Define a fixed virtual screen size
+			const virtualWidth = 1024; // Fixed width (adjust as needed)
+			const virtualHeight = 1400; // Fixed height (adjust as needed)
+
+			// Render to canvas with predefined width
+			const canvas = await html2canvas(note.data.content.html, {
+				useCORS: true,
+				scale: 2, // Keep at 1x to avoid unexpected enlargements
+				width: virtualWidth, // Set fixed virtual screen width
+				windowWidth: virtualWidth, // Ensure consistent rendering
+				windowHeight: virtualHeight
+			});
+
+			const imgData = canvas.toDataURL('image/png');
+
+			// A4 page settings
+			const pdf = new jsPDF('p', 'mm', 'a4');
+			const imgWidth = 210; // A4 width in mm
+			const pageHeight = 297; // A4 height in mm
+
+			// Maintain aspect ratio
+			const imgHeight = (canvas.height * imgWidth) / canvas.width;
+			let heightLeft = imgHeight;
+			let position = 0;
+
+			pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+			heightLeft -= pageHeight;
+
+			// Handle additional pages
+			while (heightLeft > 0) {
+				position -= pageHeight;
+				pdf.addPage();
+
+				pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+				heightLeft -= pageHeight;
+			}
+
+			pdf.save(`${note.title}.pdf`);
+		} catch (error) {
+			console.error('Error generating PDF', error);
 		}
 	};
 
@@ -117,15 +177,36 @@
 									class="w-full -translate-y-0.5 flex flex-col justify-between"
 								>
 									<div class="flex-1">
-										<div class="  flex items-center gap-2 self-center mb-1">
+										<div class="  flex items-center gap-2 self-center mb-1 justify-between">
 											<div class=" font-semibold line-clamp-1 capitalize">{note.title}</div>
+
+											<div>
+												<NoteMenu
+													onDownload={(type) => {
+														selectedNote = note;
+
+														downloadHandler(type);
+													}}
+													onDelete={() => {
+														selectedNote = note;
+														showDeleteConfirm = true;
+													}}
+												>
+													<button
+														class="self-center w-fit text-sm p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+														type="button"
+													>
+														<EllipsisHorizontal className="size-5" />
+													</button>
+												</NoteMenu>
+											</div>
 										</div>
 
 										<div
 											class=" text-xs text-gray-500 dark:text-gray-500 mb-3 line-clamp-5 min-h-18"
 										>
-											{#if note.data?.md}
-												{note.data?.md}
+											{#if note.data?.content?.md}
+												{note.data?.content?.md}
 											{:else}
 												{$i18n.t('No content')}
 											{/if}

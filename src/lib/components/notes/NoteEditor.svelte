@@ -371,8 +371,8 @@
 					placeholder={$i18n.t('Write something...')}
 					json={true}
 					onChange={(content) => {
-						note.data.html = content.html;
-						note.data.md = content.md;
+						note.data.content.html = content.html;
+						note.data.content.md = content.md;
 					}}
 				/>
 			</div>
