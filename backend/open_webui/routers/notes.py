@@ -15,7 +15,7 @@ from open_webui.env import SRC_LOG_LEVELS
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_access
+from open_webui.utils.access_control import has_permission
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -28,7 +28,16 @@ router = APIRouter()
 
 
 @router.get("/", response_model=list[NoteUserResponse])
-async def get_notes(user=Depends(get_verified_user)):
+async def get_notes(request: Request, user=Depends(get_verified_user)):
+
+    if user.role != "admin" and not has_permission(
+        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
     notes = [
         NoteUserResponse(
             **{
@@ -43,7 +52,16 @@ async def get_notes(user=Depends(get_verified_user)):
 
 
 @router.get("/list", response_model=list[NoteUserResponse])
-async def get_note_list(user=Depends(get_verified_user)):
+async def get_note_list(request: Request, user=Depends(get_verified_user)):
+
+    if user.role != "admin" and not has_permission(
+        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
     notes = [
         NoteUserResponse(
             **{
@@ -63,7 +81,18 @@ async def get_note_list(user=Depends(get_verified_user)):
 
 
 @router.post("/create", response_model=Optional[NoteModel])
-async def create_new_note(form_data: NoteForm, user=Depends(get_admin_user)):
+async def create_new_note(
+    request: Request, form_data: NoteForm, user=Depends(get_verified_user)
+):
+
+    if user.role != "admin" and not has_permission(
+        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
     try:
         note = Notes.insert_new_note(form_data, user.id)
         return note
@@ -80,7 +109,15 @@ async def create_new_note(form_data: NoteForm, user=Depends(get_admin_user)):
 
 
 @router.get("/{id}", response_model=Optional[NoteModel])
-async def get_note_by_id(id: str, user=Depends(get_verified_user)):
+async def get_note_by_id(request: Request, id: str, user=Depends(get_verified_user)):
+    if user.role != "admin" and not has_permission(
+        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
     note = Notes.get_note_by_id(id)
     if not note:
         raise HTTPException(
@@ -104,8 +141,16 @@ async def get_note_by_id(id: str, user=Depends(get_verified_user)):
 
 @router.post("/{id}/update", response_model=Optional[NoteModel])
 async def update_note_by_id(
-    id: str, form_data: NoteForm, user=Depends(get_verified_user)
+    request: Request, id: str, form_data: NoteForm, user=Depends(get_verified_user)
 ):
+    if user.role != "admin" and not has_permission(
+        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
     note = Notes.get_note_by_id(id)
     if not note:
         raise HTTPException(
@@ -135,7 +180,15 @@ async def update_note_by_id(
 
 
 @router.delete("/{id}/delete", response_model=bool)
-async def delete_note_by_id(id: str, user=Depends(get_verified_user)):
+async def delete_note_by_id(request: Request, id: str, user=Depends(get_verified_user)):
+    if user.role != "admin" and not has_permission(
+        user.id, "features.notes", request.app.state.config.USER_PERMISSIONS
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.UNAUTHORIZED,
+        )
+
     note = Notes.get_note_by_id(id)
     if not note:
         raise HTTPException(

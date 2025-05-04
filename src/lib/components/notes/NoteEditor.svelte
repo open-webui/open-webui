@@ -53,7 +53,9 @@
 
 	export let id: null | string = null;
 
-	let note = {
+	let note = null;
+
+	const newNote = {
 		title: '',
 		data: {
 			content: {
@@ -85,8 +87,7 @@
 			note = res;
 			files = res.data.files || [];
 		} else {
-			toast.error($i18n.t('Note not found'));
-			goto('/notes');
+			goto('/');
 			return;
 		}
 
@@ -101,6 +102,12 @@
 		}
 
 		debounceTimeout = setTimeout(async () => {
+			if (!note) {
+				return;
+			}
+
+			console.log('Saving note:', note);
+
 			const res = await updateNoteById(localStorage.token, id, {
 				...note,
 				title: note.title === '' ? $i18n.t('Untitled') : note.title
