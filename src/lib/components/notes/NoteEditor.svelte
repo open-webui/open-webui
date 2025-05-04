@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import { v4 as uuidv4 } from 'uuid';
+	import fileSaver from 'file-saver';
+	const { saveAs } = fileSaver;
+
+	import jsPDF from 'jspdf';
+	import html2canvas from 'html2canvas-pro';
 
 	const i18n = getContext('i18n');
 
@@ -10,6 +15,8 @@
 	import { goto } from '$app/navigation';
 
 	import { compressImage } from '$lib/utils';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { uploadFile } from '$lib/apis/files';
 
 	import dayjs from '$lib/dayjs';
 	import calendar from 'dayjs/plugin/calendar';
@@ -34,22 +41,23 @@
 	// Assuming $i18n.languages is an array of language codes
 	$: loadLocale($i18n.languages);
 
-	import { getNoteById, updateNoteById } from '$lib/apis/notes';
+	import { deleteNoteById, getNoteById, updateNoteById } from '$lib/apis/notes';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import MicSolid from '../icons/MicSolid.svelte';
 	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
-	import Tooltip from '../common/Tooltip.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	import Calendar from '../icons/Calendar.svelte';
 	import Users from '../icons/Users.svelte';
-	import { WEBUI_API_BASE_URL } from '$lib/constants';
-	import { uploadFile } from '$lib/apis/files';
+
 	import Image from '../common/Image.svelte';
 	import FileItem from '../common/FileItem.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import RecordMenu from './RecordMenu.svelte';
+	import NoteMenu from './Notes/NoteMenu.svelte';
+	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 
 	export let id: null | string = null;
 
@@ -70,9 +78,11 @@
 	};
 
 	let files = [];
+
 	let recording = false;
 	let displayMediaRecord = false;
 
+	let showDeleteConfirm = false;
 	let dragged = false;
 	let loading = false;
 
@@ -245,6 +255,94 @@
 		});
 	};
 
+	const downloadHandler = async (type) => {
+		console.log('downloadHandler', type);
+		if (type === 'md') {
+			const blob = new Blob([note.data.content.md], { type: 'text/markdown' });
+			saveAs(blob, `${note.title}.md`);
+		} else if (type === 'pdf') {
+			await downloadPdf(note);
+		}
+	};
+
+	const downloadPdf = async (note) => {
+		try {
+			// Define a fixed virtual screen size
+			const virtualWidth = 1024; // Fixed width (adjust as needed)
+			const virtualHeight = 1400; // Fixed height (adjust as needed)
+
+			// STEP 1. Get a DOM node to render
+			const html = note.data?.content?.html ?? '';
+			let node;
+			if (html instanceof HTMLElement) {
+				node = html;
+			} else {
+				// If it's HTML string, render to a temporary hidden element
+				node = document.createElement('div');
+				node.innerHTML = html;
+				document.body.appendChild(node);
+			}
+
+			// Render to canvas with predefined width
+			const canvas = await html2canvas(node, {
+				useCORS: true,
+				scale: 2, // Keep at 1x to avoid unexpected enlargements
+				width: virtualWidth, // Set fixed virtual screen width
+				windowWidth: virtualWidth, // Ensure consistent rendering
+				windowHeight: virtualHeight
+			});
+
+			// Remove hidden node if needed
+			if (!(html instanceof HTMLElement)) {
+				document.body.removeChild(node);
+			}
+
+			const imgData = canvas.toDataURL('image/png');
+
+			// A4 page settings
+			const pdf = new jsPDF('p', 'mm', 'a4');
+			const imgWidth = 210; // A4 width in mm
+			const pageHeight = 297; // A4 height in mm
+
+			// Maintain aspect ratio
+			const imgHeight = (canvas.height * imgWidth) / canvas.width;
+			let heightLeft = imgHeight;
+			let position = 0;
+
+			pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+			heightLeft -= pageHeight;
+
+			// Handle additional pages
+			while (heightLeft > 0) {
+				position -= pageHeight;
+				pdf.addPage();
+
+				pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+				heightLeft -= pageHeight;
+			}
+
+			pdf.save(`${note.title}.pdf`);
+		} catch (error) {
+			console.error('Error generating PDF', error);
+
+			toast.error(`${error}`);
+		}
+	};
+
+	const deleteNoteHandler = async (id) => {
+		const res = await deleteNoteById(localStorage.token, id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Note deleted successfully'));
+			goto('/notes');
+		} else {
+			toast.error($i18n.t('Failed to delete note'));
+		}
+	};
+
 	const onDragOver = (e) => {
 		e.preventDefault();
 
@@ -299,6 +397,19 @@
 
 <FilesOverlay show={dragged} />
 
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete note?')}
+	on:confirm={() => {
+		deleteNoteHandler(note.id);
+		showDeleteConfirm = false;
+	}}
+>
+	<div class=" text-sm text-gray-500">
+		{$i18n.t('This will delete')} <span class="  font-semibold">{note.title}</span>.
+	</div>
+</DeleteConfirmDialog>
+
 <div class="relative flex-1 w-full h-full flex justify-center" id="note-editor">
 	{#if loading}
 		<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
@@ -309,7 +420,7 @@
 	{:else}
 		<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
 			<div class="shrink-0 w-full flex justify-between items-center px-4.5 pt-1 mb-1.5">
-				<div class="w-full">
+				<div class="w-full flex">
 					<input
 						class="w-full text-2xl font-medium bg-transparent outline-hidden"
 						type="text"
@@ -317,6 +428,24 @@
 						placeholder={$i18n.t('Title')}
 						required
 					/>
+
+					<div>
+						<NoteMenu
+							onDownload={(type) => {
+								downloadHandler(type);
+							}}
+							onDelete={() => {
+								showDeleteConfirm = true;
+							}}
+						>
+							<button
+								class="self-center w-fit text-sm p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+								type="button"
+							>
+								<EllipsisHorizontal className="size-5" />
+							</button>
+						</NoteMenu>
+					</div>
 				</div>
 			</div>
 
