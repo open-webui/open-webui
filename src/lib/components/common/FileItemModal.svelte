@@ -29,7 +29,8 @@
 		(item?.name && item?.name.toLowerCase().endsWith('.mp3')) ||
 		(item?.name && item?.name.toLowerCase().endsWith('.wav')) ||
 		(item?.name && item?.name.toLowerCase().endsWith('.ogg')) ||
-		(item?.name && item?.name.toLowerCase().endsWith('.m4a'));
+		(item?.name && item?.name.toLowerCase().endsWith('.m4a')) ||
+		(item?.name && item?.name.toLowerCase().endsWith('.webm'));
 
 	onMount(() => {
 		console.log(item);
