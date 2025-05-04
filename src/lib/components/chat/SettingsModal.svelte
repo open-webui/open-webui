@@ -295,16 +295,43 @@
 	];
 
 	let search = '';
-	let visibleTabs = searchData.map((tab) => tab.id);
+	let visibleTabs = searchData
+		.filter(tab => {
+			// Filter based on permissions
+			if (tab.id === 'connections' && !($user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections))) {
+				return false;
+			}
+			if (tab.id === 'tools' && !($user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers))) {
+				return false;
+			}
+			if (tab.id === 'admin' && $user?.role !== 'admin') {
+				return false;
+			}
+			return true;
+		})
+		.map((tab) => tab.id);
 	let searchDebounceTimeout;
 
 	const searchSettings = (query: string): string[] => {
 		const lowerCaseQuery = query.toLowerCase().trim();
 		return searchData
 			.filter(
-				(tab) =>
-					tab.title.toLowerCase().includes(lowerCaseQuery) ||
-					tab.keywords.some((keyword) => keyword.includes(lowerCaseQuery))
+				(tab) => {
+					// First check if the tab should be visible based on permissions
+					if (tab.id === 'connections' && !($user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections))) {
+						return false;
+					}
+					if (tab.id === 'tools' && !($user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers))) {
+						return false;
+					}
+					if (tab.id === 'admin' && $user?.role !== 'admin') {
+						return false;
+					}
+					
+					// Then check if it matches the search query
+					return tab.title.toLowerCase().includes(lowerCaseQuery) ||
+						tab.keywords.some((keyword) => keyword.includes(lowerCaseQuery));
+				}
 			)
 			.map((tab) => tab.id);
 	};
