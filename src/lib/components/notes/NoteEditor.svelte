@@ -445,6 +445,21 @@
 
 					recording = true;
 				}}
+				onUpload={async () => {
+					const input = document.createElement('input');
+					input.type = 'file';
+					input.accept = 'audio/*';
+					input.multiple = false;
+					input.click();
+
+					input.onchange = async (e) => {
+						const files = e.target.files;
+
+						if (files && files.length > 0) {
+							await uploadFileHandler(files[0]);
+						}
+					};
+				}}
 			>
 				<button
 					class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
