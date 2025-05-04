@@ -55,13 +55,11 @@
 	};
 
 	async function reinvite() {
-		const res = await reinviteUser(localStorage.token, user?.email).catch((error) => {
+		await reinviteUser(localStorage.token, user?.email)
+		.then(() => toast.success($i18n.t('Successfully resend invite')))
+		.catch((error) => {
 			toast.error(`${error}`);
-			return null;
-		});
-		console.log(res);
-
-		toast.success($i18n.t('Successfully resend invite'));
+		});		
 	}
 
 	async function revokeInviteHandler() {
@@ -123,11 +121,14 @@
 							const rect = groupTriggerEl.getBoundingClientRect();
 							const screenWidth = window.innerWidth;
 							if (screenWidth < 1290) {
-								submenuX = rect.left - 178;
+								// submenuX = rect.left - 178;
+								submenuX = -178;
 							} else {
-								submenuX = rect.right + 8;
+								// submenuX = rect.right + 8;
+								submenuX = 8;
 							}
-							submenuY = rect.top - 40;
+							// submenuY = rect.top - 40;
+							submenuY = -40;
 							showSubmenu = true;
 						}
 					}}
@@ -173,7 +174,7 @@
 					{#if showSubmenu}
 						<button
 							type="button"
-							class="fixed bg-white dark:bg-customGray-900 border px-1 py-2 border-gray-300 dark:border-customGray-700 rounded-xl shadow z-20 min-w-30"
+							class="absolute bg-white dark:bg-customGray-900 border px-1 py-2 border-gray-300 dark:border-customGray-700 rounded-xl shadow z-20 min-w-30"
 							style="top: {submenuY}px; left: {submenuX}px"
 							on:mouseenter={() => (hoveringSubmenu = true)}
 							on:mouseleave={() => {

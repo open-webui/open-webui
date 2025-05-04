@@ -258,7 +258,7 @@
 		</div>
 	</div>
 	
-	{#each filteredUsers as user, userIdx}
+	{#each filteredUsers as user, userIdx (user.id)}
 		<div class="grid grid-cols-[52%_70px_1fr_26px] gap-x-2 mb-[14px] group cursor-pointer">
 			<div class="flex items-center">
 				<img
