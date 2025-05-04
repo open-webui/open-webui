@@ -96,7 +96,6 @@
 	let debounceTimeout: NodeJS.Timeout | null = null;
 
 	const changeDebounceHandler = () => {
-		console.log('debounce');
 		if (debounceTimeout) {
 			clearTimeout(debounceTimeout);
 		}
