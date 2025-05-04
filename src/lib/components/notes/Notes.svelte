@@ -97,14 +97,31 @@
 			const virtualWidth = 1024; // Fixed width (adjust as needed)
 			const virtualHeight = 1400; // Fixed height (adjust as needed)
 
+			// STEP 1. Get a DOM node to render
+			const html = note.data?.content?.html ?? '';
+			let node;
+			if (html instanceof HTMLElement) {
+				node = html;
+			} else {
+				// If it's HTML string, render to a temporary hidden element
+				node = document.createElement('div');
+				node.innerHTML = html;
+				document.body.appendChild(node);
+			}
+
 			// Render to canvas with predefined width
-			const canvas = await html2canvas(note.data.content.html, {
+			const canvas = await html2canvas(node, {
 				useCORS: true,
 				scale: 2, // Keep at 1x to avoid unexpected enlargements
 				width: virtualWidth, // Set fixed virtual screen width
 				windowWidth: virtualWidth, // Ensure consistent rendering
 				windowHeight: virtualHeight
 			});
+
+			// Remove hidden node if needed
+			if (!(html instanceof HTMLElement)) {
+				document.body.removeChild(node);
+			}
 
 			const imgData = canvas.toDataURL('image/png');
 
@@ -133,6 +150,8 @@
 			pdf.save(`${note.title}.pdf`);
 		} catch (error) {
 			console.error('Error generating PDF', error);
+
+			toast.error(`${error}`);
 		}
 	};
 
