@@ -12,6 +12,7 @@ vite.config.ts.timestamp-*
 __pycache__/
 *.py[cod]
 *$py.class
+!**.gitkeep
 
 # C extensions
 *.so
@@ -90,6 +91,7 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+notebooks/data/*
 
 # IPython
 profile_default/
