@@ -53,7 +53,9 @@
 
 	export let id: null | string = null;
 
-	let note = {
+	let note = null;
+
+	const newNote = {
 		title: '',
 		data: {
 			content: {
@@ -85,8 +87,7 @@
 			note = res;
 			files = res.data.files || [];
 		} else {
-			toast.error($i18n.t('Note not found'));
-			goto('/notes');
+			goto('/');
 			return;
 		}
 
@@ -96,12 +97,17 @@
 	let debounceTimeout: NodeJS.Timeout | null = null;
 
 	const changeDebounceHandler = () => {
-		console.log('debounce');
 		if (debounceTimeout) {
 			clearTimeout(debounceTimeout);
 		}
 
 		debounceTimeout = setTimeout(async () => {
+			if (!note) {
+				return;
+			}
+
+			console.log('Saving note:', note);
+
 			const res = await updateNoteById(localStorage.token, id, {
 				...note,
 				title: note.title === '' ? $i18n.t('Untitled') : note.title
@@ -331,7 +337,7 @@
 			</div>
 
 			<div class=" flex-1 w-full h-full overflow-auto px-4 pb-5">
-				{#if files}
+				{#if files && files.length > 0}
 					<div class="mb-3.5 mt-1.5 w-full flex gap-1 flex-wrap z-40">
 						{#each files as file, fileIdx}
 							<div class="w-fit">
@@ -354,7 +360,6 @@
 										type={file.type}
 										size={file?.size}
 										loading={file.status === 'uploading'}
-										colorClassName="bg-white dark:bg-gray-850 "
 										on:dismiss={() => {
 											files = files.filter((item) => item?.id !== file.id);
 											note.data.files = files.length > 0 ? files : null;
@@ -372,8 +377,8 @@
 					placeholder={$i18n.t('Write something...')}
 					json={true}
 					onChange={(content) => {
-						note.data.html = content.html;
-						note.data.md = content.md;
+						note.data.content.html = content.html;
+						note.data.content.md = content.md;
 					}}
 				/>
 			</div>

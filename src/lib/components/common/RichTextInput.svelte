@@ -374,7 +374,7 @@
 		}
 	});
 
-	$: if (value && editor) {
+	$: if (value !== null && editor) {
 		onValueChange();
 	}
 

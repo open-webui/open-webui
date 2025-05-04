@@ -38,7 +38,8 @@
 			web_search: true,
 			image_generation: true,
 			code_interpreter: true,
-			playground_access: false
+			playground_access: false,
+			notes: true
 		}
 	};
 
@@ -383,10 +384,20 @@
 		</div>
 
 		<div class="  flex w-full justify-between my-2 pr-2">
-            		<div class=" self-center text-xs font-medium">
-                		{$i18n.t('Playground Access')}
-            		</div>
-            		<Switch bind:state={permissions.features.playground_access} />
-        	</div>
+      
+      <div class=" self-center text-xs font-medium">
+        {$i18n.t('Playground Access')}
+      </div>
+      
+      <Switch bind:state={permissions.features.playground_access} />
+    </div>
+    
+    <div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Notes')}
+			</div>
+
+			<Switch bind:state={permissions.features.notes} />
+		</div>
 	</div>
 </div>

@@ -82,7 +82,8 @@
 			web_search: true,
 			image_generation: true,
 			code_interpreter: true,
-			playground_access: false
+			playground_access: false,
+			notes: true
 		}
 	};
 

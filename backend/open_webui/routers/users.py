@@ -130,6 +130,7 @@ class FeaturesPermissions(BaseModel):
     image_generation: bool = True
     code_interpreter: bool = True
     playground_access: bool = False
+    notes: bool = True
 
 
 class UserPermissions(BaseModel):
