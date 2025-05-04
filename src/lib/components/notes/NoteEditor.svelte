@@ -9,6 +9,7 @@
 
 	const i18n = getContext('i18n');
 
+	import { marked } from 'marked';
 	import { toast } from 'svelte-sonner';
 
 	import { config, settings, showSidebar } from '$lib/stores';
@@ -62,6 +63,8 @@
 	import SparklesSolid from '../icons/SparklesSolid.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Bars3BottomLeft from '../icons/Bars3BottomLeft.svelte';
+	import ArrowUturnLeft from '../icons/ArrowUturnLeft.svelte';
+	import ArrowUturnRight from '../icons/ArrowUturnRight.svelte';
 
 	export let id: null | string = null;
 
@@ -75,6 +78,7 @@
 				html: '',
 				md: ''
 			},
+			versions: [],
 			files: null
 		},
 		meta: null,
@@ -83,14 +87,15 @@
 
 	let files = [];
 
-	let selectedVersion = 'note';
-
+	let versionIdx = null;
 	let recording = false;
 	let displayMediaRecord = false;
 
 	let showDeleteConfirm = false;
 	let dragged = false;
+
 	let loading = false;
+	let enhancing = false;
 
 	const init = async () => {
 		loading = true;
@@ -118,7 +123,7 @@
 		}
 
 		debounceTimeout = setTimeout(async () => {
-			if (!note) {
+			if (!note || enhancing || versionIdx !== null) {
 				return;
 			}
 
@@ -141,7 +146,104 @@
 		init();
 	}
 
-	const versionToggleHandler = () => {};
+	function areContentsEqual(a, b) {
+		return JSON.stringify(a) === JSON.stringify(b);
+	}
+
+	function insertNoteVersion(note) {
+		const current = {
+			json: note.data.content.json,
+			html: note.data.content.html,
+			md: note.data.content.md
+		};
+		const lastVersion = note.data.versions?.at(-1);
+
+		if (!lastVersion || !areContentsEqual(lastVersion, current)) {
+			note.data.versions = (note.data.versions ?? []).concat(current);
+			return true;
+		}
+		return false;
+	}
+
+	async function aiEnhanceContent(content) {
+		const md = content.md + '_ai';
+		const html = marked.parse(md);
+
+		return {
+			json: null,
+			html: html,
+			md: md
+		};
+	}
+
+	async function enhanceNoteHandler() {
+		insertNoteVersion(note);
+
+		enhancing = true;
+		const aiResult = await aiEnhanceContent(note.data.content);
+
+		note.data.content.json = aiResult.json;
+		note.data.content.html = aiResult.html;
+		note.data.content.md = aiResult.md;
+
+		enhancing = false;
+		versionIdx = null;
+	}
+
+	function setContentByVersion(versionIdx) {
+		if (!note.data.versions?.length) return;
+		let idx = versionIdx;
+
+		if (idx === null) idx = note.data.versions.length - 1; // latest
+		const v = note.data.versions[idx];
+
+		note.data.content.json = v.json;
+		note.data.content.html = v.html;
+		note.data.content.md = v.md;
+
+		if (versionIdx === null) {
+			const lastVersion = note.data.versions.at(-1);
+			const currentContent = note.data.content;
+
+			if (areContentsEqual(lastVersion, currentContent)) {
+				// remove the last version
+				note.data.versions = note.data.versions.slice(0, -1);
+			}
+		}
+	}
+
+	// Navigation
+	function versionNavigateHandler(direction) {
+		if (!note.data.versions || note.data.versions.length === 0) return;
+
+		if (versionIdx === null) {
+			// Get latest snapshots
+			const lastVersion = note.data.versions.at(-1);
+			const currentContent = note.data.content;
+
+			if (!areContentsEqual(lastVersion, currentContent)) {
+				// If the current content is different from the last version, insert a new version
+				insertNoteVersion(note);
+				versionIdx = note.data.versions.length - 1;
+			} else {
+				versionIdx = note.data.versions.length;
+			}
+		}
+
+		if (direction === 'prev') {
+			if (versionIdx > 0) versionIdx -= 1;
+		} else if (direction === 'next') {
+			if (versionIdx < note.data.versions.length - 1) versionIdx += 1;
+			else versionIdx = null; // Reset to latest
+
+			if (versionIdx === note.data.versions.length - 1) {
+				// If we reach the latest version, reset to null
+				versionIdx = null;
+			}
+		}
+
+		setContentByVersion(versionIdx);
+	}
 
 	const uploadFileHandler = async (file) => {
 		const tempItemId = uuidv4();
@@ -428,7 +530,7 @@
 	{:else}
 		<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
 			<div class="shrink-0 w-full flex justify-between items-center px-4.5 pt-1 mb-1.5">
-				<div class="w-full flex">
+				<div class="w-full flex items-center">
 					<input
 						class="w-full text-2xl font-medium bg-transparent outline-hidden"
 						type="text"
@@ -437,7 +539,34 @@
 						required
 					/>
 
-					<div>
+					<div class="flex items-center gap-2">
+						{#if note.data?.versions?.length > 0}
+							<div>
+								<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
+									<button
+										class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
+										on:click={() => {
+											versionNavigateHandler('prev');
+										}}
+										disabled={(versionIdx === null && note.data.versions.length === 0) ||
+											versionIdx === 0}
+									>
+										<ArrowUturnLeft className="size-4" />
+									</button>
+
+									<button
+										class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
+										on:click={() => {
+											versionNavigateHandler('next');
+										}}
+										disabled={versionIdx >= note.data.versions.length || versionIdx === null}
+									>
+										<ArrowUturnRight className="size-4" />
+									</button>
+								</div>
+							</div>
+						{/if}
+
 						<NoteMenu
 							onDownload={(type) => {
 								downloadHandler(type);
@@ -524,6 +653,7 @@
 					placeholder={$i18n.t('Write something...')}
 					html={note.data?.content?.html}
 					json={true}
+					editable={versionIdx === null}
 					onChange={(content) => {
 						note.data.content.html = content.html;
 						note.data.content.md = content.md;
@@ -609,18 +739,20 @@
 					};
 				}}
 			>
-				<button
-					class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
-					type="button"
-				>
-					<MicSolid className="size-4.5" />
-				</button>
+				<Tooltip content={$i18n.t('Record')} placement="top">
+					<button
+						class="cursor-pointer p-2.5 flex rounded-full border border-gray-50 bg-white dark:border-none dark:bg-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition shadow-xl"
+						type="button"
+					>
+						<MicSolid className="size-4.5" />
+					</button>
+				</Tooltip>
 			</RecordMenu>
 
 			<div
-				class="cursor-pointer p-0.5 flex gap-0.5 rounded-full border border-gray-50 dark:border-gray-850 dark:bg-gray-850 transition shadow-xl"
+				class="cursor-pointer flex gap-0.5 rounded-full border border-gray-50 dark:border-gray-850 dark:bg-gray-850 transition shadow-xl"
 			>
-				<Tooltip content={$i18n.t('My Notes')} placement="top">
+				<!-- <Tooltip content={$i18n.t('My Notes')} placement="top">
 					<button
 						class="p-2 size-8.5 flex justify-center items-center {selectedVersion === 'note'
 							? 'bg-gray-100 dark:bg-gray-800 '
@@ -633,16 +765,13 @@
 					>
 						<Bars3BottomLeft />
 					</button>
-				</Tooltip>
+				</Tooltip> -->
 
-				<Tooltip content={$i18n.t('Enhance Notes')} placement="top">
+				<Tooltip content={$i18n.t('Enhance')} placement="top">
 					<button
-						class="p-2 size-8.5 flex justify-center items-center {selectedVersion === 'ai'
-							? 'bg-gray-100 dark:bg-gray-800 '
-							: ' hover:bg-gray-50 dark:hover:bg-gray-800'} rounded-full transition shrink-0"
+						class="p-2.5 flex justify-center items-center hover:bg-gray-50 dark:hover:bg-gray-800 rounded-full transition shrink-0"
 						on:click={() => {
-							selectedVersion = 'ai';
-							versionToggleHandler();
+							enhanceNoteHandler();
 						}}
 						type="button"
 					>
