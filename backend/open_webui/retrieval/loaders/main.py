@@ -2,6 +2,9 @@ import requests
 import logging
 import ftfy
 import sys
+import inspect
+
+from typing import get_type_hints, Callable, List, Dict, Optional
 
 from langchain_community.document_loaders import (
     AzureAIDocumentIntelligenceLoader,
@@ -22,6 +25,8 @@ from langchain_community.document_loaders import (
 from langchain_core.documents import Document
 
 from open_webui.retrieval.loaders.mistral import MistralLoader
+from open_webui.models.functions import Functions, FunctionModel
+from open_webui.utils.plugin import load_function_module_by_id
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
@@ -192,12 +197,89 @@ class Loader:
         loader = self._get_loader(filename, file_content_type, file_path)
         docs = loader.load()
 
+        docs = self._run_document_processors(docs)
+
         return [
             Document(
                 page_content=ftfy.fix_text(doc.page_content), metadata=doc.metadata
             )
             for doc in docs
         ]
+
+    def _get_sorted_document_processors(self) -> List[FunctionModel]:
+        def _get_priority(function_id) -> int:
+            function = Functions.get_function_by_id(function_id)
+            if function is not None:
+                valves = Functions.get_function_valves_by_id(function_id)
+                return valves.get("priority", 0) if valves else 0
+            return 0
+
+        docproc = Functions.get_functions_by_type("document", active_only=True)
+        docproc.sort(key=lambda f: _get_priority(f.id))
+        return docproc
+
+    def _load_valid_process_function(
+        self, dp: Document, loaded_modules: Dict[str, object]
+    ) -> Optional[Callable]:
+        docp_id = dp.id
+        docp_name = dp.name or docp_id
+
+        try:
+            if docp_id not in loaded_modules:
+                loaded_modules[docp_id] = load_function_module_by_id(docp_id)
+
+            function_module, _, _ = loaded_modules[docp_id]
+            handler = getattr(function_module, "process", None)
+
+            if not callable(handler):
+                raise TypeError("process is not callable")
+
+            sig = inspect.signature(handler)
+            hints = get_type_hints(handler)
+
+            if (
+                len(sig.parameters) != 1
+                or "text" not in sig.parameters
+                or hints.get("text") != str
+            ):
+                raise TypeError("Invalid process function signature")
+
+            return handler
+        except Exception as e:
+            log.warning(f"Processor '{docp_name}' skipped: {e}")
+            return None
+
+    def _apply_processor_to_documents(
+        self, handler: Callable, name: str, docs: list[Document]
+    ) -> None:
+        for doc in docs:
+            try:
+                processed = handler(doc.page_content)
+                if isinstance(processed, str):
+                    doc.page_content = processed
+                else:
+                    log.warning(f"Processor '{name}' returned non-str value")
+            except Exception as e:
+                log.warning(
+                    f"Error in processor '{name}': {e}. "
+                    f"Metadata: {doc.metadata}, "
+                    f"Content (truncated): {doc.page_content[:200]}..."
+                )
+
+    def _run_document_processors(self, docs: list[Document]) -> list[Document]:
+        docproc = self._get_sorted_document_processors()
+        log.info(
+            f"Loader {len(docproc)} active document processors found: {', '.join(dp.name or dp.id for dp in docproc)}"
+        )
+        loaded_modules: Dict[str, object] = {}
+
+        for dp in docproc:
+            handler = self._load_valid_process_function(dp, loaded_modules)
+            if not handler:
+                continue
+            self._apply_processor_to_documents(handler, dp.name or dp.id, docs)
+
+        return docs
 
     def _is_text_file(self, file_ext: str, file_content_type: str) -> bool:
         return file_ext in known_source_ext or (
