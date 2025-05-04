@@ -187,7 +187,7 @@ async def get_audio_config(request: Request, user=Depends(get_admin_user)):
             "AZURE_REGION": request.app.state.config.AUDIO_STT_AZURE_REGION,
             "AZURE_LOCALES": request.app.state.config.AUDIO_STT_AZURE_LOCALES,
             "AZURE_ENDPOINT": request.app.state.config.AUDIO_STT_AZURE_ENDPOINT,
-            "AZURE_MAX_SPEAKERS": request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS,            
+            "AZURE_MAX_SPEAKERS": request.app.state.config.AUDIO_STT_AZURE_MAX_SPEAKERS,
         },
     }
 
