@@ -31,7 +31,7 @@
 	import { onMount, getContext } from 'svelte';
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 
-	import { createNewNote, getNotes } from '$lib/apis/notes';
+	import { createNewNote, deleteNoteById, getNotes } from '$lib/apis/notes';
 	import { capitalizeFirstLetter } from '$lib/utils';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
@@ -155,6 +155,17 @@
 		}
 	};
 
+	const deleteNoteHandler = async (id) => {
+		const res = await deleteNoteById(localStorage.token, id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			init();
+		}
+	};
+
 	onMount(async () => {
 		await init();
 		loaded = true;
@@ -171,7 +182,10 @@
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}
 		title={$i18n.t('Delete note?')}
-		on:confirm={() => {}}
+		on:confirm={() => {
+			deleteNoteHandler(selectedNote.id);
+			showDeleteConfirm = false;
+		}}
 	>
 		<div class=" text-sm text-gray-500">
 			{$i18n.t('This will delete')} <span class="  font-semibold">{selectedNote.title}</span>.
