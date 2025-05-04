@@ -886,6 +886,7 @@
 	"Pipelines Valves": "파이프라인 밸브",
 	"Plain text (.txt)": "일반 텍스트(.txt)",
 	"Playground": "놀이터",
+	"Playground Access": "",
 	"Playwright Timeout (ms)": "Playwright 시간 초과 (ms)",
 	"Playwright WebSocket URL": "Playwright WebSocket URL",
 	"Please carefully review the following warnings:": "다음 주의를 조심히 확인해주십시오",

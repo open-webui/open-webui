@@ -886,6 +886,7 @@
 	"Pipelines Valves": "Pipeline Valves",
 	"Plain text (.txt)": "Nur Text (.txt)",
 	"Playground": "Testumgebung",
+	"Playground Access": "Zugriff auf Testumgebung",
 	"Playwright Timeout (ms)": "",
 	"Playwright WebSocket URL": "",
 	"Please carefully review the following warnings:": "Bitte überprüfen Sie die folgenden Warnungen sorgfältig:",

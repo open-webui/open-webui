@@ -886,6 +886,7 @@
 	"Pipelines Valves": "Putkistojen venttiilit",
 	"Plain text (.txt)": "Pelkkä teksti (.txt)",
 	"Playground": "Leikkipaikka",
+	"Playground Access": "",
 	"Playwright Timeout (ms)": "Playwright aikakatkaisu (ms)",
 	"Playwright WebSocket URL": "Playwright WebSocket verkko-osoite",
 	"Please carefully review the following warnings:": "Tarkista huolellisesti seuraavat varoitukset:",

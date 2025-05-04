@@ -194,7 +194,7 @@
 	};
 
 	onMount(async () => {
-		if ($user?.role !== 'admin') {
+		if (!$user?.role === 'admin' || !$user?.permissions?.features?.playground_access) {
 			await goto('/');
 		}
 

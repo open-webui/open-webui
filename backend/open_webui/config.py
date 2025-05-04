@@ -1137,8 +1137,14 @@ USER_PERMISSIONS_FEATURES_CODE_INTERPRETER = (
     == "true"
 )
 
+USER_PERMISSIONS_FEATURES_PLAYGROUND_ACCESS = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_PLAYGROUND_ACCESS", "False").lower()
+    == "true"
+)
+
 USER_PERMISSIONS_FEATURES_NOTES = (
-    os.environ.get("USER_PERMISSIONS_FEATURES_NOTES", "True").lower() == "true"
+    os.environ.get("USER_PERMISSIONS_FEATURES_NOTES", "True").lower()
+  == "true"
 )
 
 
@@ -1174,6 +1180,7 @@ DEFAULT_USER_PERMISSIONS = {
         "web_search": USER_PERMISSIONS_FEATURES_WEB_SEARCH,
         "image_generation": USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
         "code_interpreter": USER_PERMISSIONS_FEATURES_CODE_INTERPRETER,
+        "playground_access": USER_PERMISSIONS_FEATURES_PLAYGROUND_ACCESS,
         "notes": USER_PERMISSIONS_FEATURES_NOTES,
     },
 }
