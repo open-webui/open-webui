@@ -70,48 +70,67 @@ class YoutubeLoader:
             self.language = language
 
     def load(self) -> List[Document]:
-        """Load YouTube transcripts into `Document` objects."""
-        try:
-            from youtube_transcript_api import (
-                NoTranscriptFound,
-                TranscriptsDisabled,
-                YouTubeTranscriptApi,
-            )
-        except ImportError:
-            raise ImportError(
-                'Could not import "youtube_transcript_api" Python package. '
-                "Please install it with `pip install youtube-transcript-api`."
-            )
-
-        if self.proxy_url:
-            youtube_proxies = {
-                "http": self.proxy_url,
-                "https": self.proxy_url,
-            }
-            # Don't log complete URL because it might contain secrets
-            log.debug(f"Using proxy URL: {self.proxy_url[:14]}...")
-        else:
-            youtube_proxies = None
-
-        try:
-            transcript_list = YouTubeTranscriptApi.list_transcripts(
-                self.video_id, proxies=youtube_proxies
-            )
-        except Exception as e:
-            log.exception("Loading YouTube transcript failed")
-            return []
-
-        try:
-            transcript = transcript_list.find_transcript(self.language)
-        except NoTranscriptFound:
-            transcript = transcript_list.find_transcript(["en"])
-
-        transcript_pieces: List[Dict[str, Any]] = transcript.fetch()
-
-        transcript = " ".join(
-            map(
-                lambda transcript_piece: transcript_piece.text.strip(" "),
-                transcript_pieces,
-            )
+    """Load YouTube transcripts into `Document` objects."""
+    try:
+        from youtube_transcript_api import (
+            NoTranscriptFound,
+            TranscriptsDisabled,
+            YouTubeTranscriptApi,
         )
-        return [Document(page_content=transcript, metadata=self._metadata)]
+    except ImportError:
+        raise ImportError(
+            'Could not import "youtube_transcript_api" Python package. '
+            "Please install it with `pip install youtube-transcript-api`."
+        )
+
+    if self.proxy_url:
+        youtube_proxies = {
+            "http": self.proxy_url,
+            "https": self.proxy_url,
+        }
+        # Don't log complete URL because it might contain secrets
+        log.debug(f"Using proxy URL: {self.proxy_url[:14]}...")
+    else:
+        youtube_proxies = None
+
+    try:
+        transcript_list = YouTubeTranscriptApi.list_transcripts(
+            self.video_id, proxies=youtube_proxies
+        )
+    except Exception as e:
+        log.exception("Loading YouTube transcript failed")
+        return []
+
+    # Try each language in order of priority
+    last_exception = None
+    for lang in self.language:
+        try:
+            log.debug(f"Attempting to find transcript for language '{lang}'")
+            transcript = transcript_list.find_transcript([lang])
+            log.info(f"Found transcript for language '{lang}'")
+            
+            transcript_pieces: List[Dict[str, Any]] = transcript.fetch()
+            transcript_text = " ".join(
+                map(
+                    lambda transcript_piece: transcript_piece.text.strip(" "),
+                    transcript_pieces,
+                )
+            )
+            return [Document(page_content=transcript_text, metadata=self._metadata)]
+        except NoTranscriptFound as e:
+            log.debug(f"No transcript found for language '{lang}'")
+            last_exception = e
+            continue
+        except Exception as e:
+            # If we hit any other type of exception, log it and re-raise
+            log.exception(f"Error finding transcript for language '{lang}'")
+            raise e
+
+    # If all specified languages fail, raise the last exception
+    # This maintains compatibility with the error handling in the rest of the application
+    if last_exception:
+        log.warning(f"No transcript found for any of the specified languages: {', '.join(self.language)}")
+        raise last_exception
+    
+    # This should never happen (we'd have raised an exception above)
+    return []
