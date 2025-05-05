@@ -789,7 +789,13 @@ def transcription(
 ):
     log.info(f"file.content_type: {file.content_type}")
 
-    supported_filetypes = ("audio/mpeg", "audio/wav", "audio/ogg", "audio/x-m4a")
+    supported_filetypes = (
+        "audio/mpeg",
+        "audio/wav",
+        "audio/ogg",
+        "audio/x-m4a",
+        "audio/webm",
+    )
 
     if not file.content_type.startswith(supported_filetypes):
         raise HTTPException(
