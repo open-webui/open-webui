@@ -12,11 +12,11 @@
 	import { marked } from 'marked';
 	import { toast } from 'svelte-sonner';
 
-	import { config, settings, showSidebar } from '$lib/stores';
+	import { config, models, settings, showSidebar } from '$lib/stores';
 	import { goto } from '$app/navigation';
 
-	import { compressImage, copyToClipboard } from '$lib/utils';
-	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { compressImage, copyToClipboard, splitStream } from '$lib/utils';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { uploadFile } from '$lib/apis/files';
 
 	import dayjs from '$lib/dayjs';
@@ -65,6 +65,10 @@
 	import Bars3BottomLeft from '../icons/Bars3BottomLeft.svelte';
 	import ArrowUturnLeft from '../icons/ArrowUturnLeft.svelte';
 	import ArrowUturnRight from '../icons/ArrowUturnRight.svelte';
+	import Sidebar from '../common/Sidebar.svelte';
+	import ArrowRight from '../icons/ArrowRight.svelte';
+	import Cog6 from '../icons/Cog6.svelte';
+	import { chatCompletion } from '$lib/apis/openai';
 
 	export let id: null | string = null;
 
@@ -88,14 +92,19 @@
 	let files = [];
 
 	let versionIdx = null;
+	let selectedModelId = null;
+
 	let recording = false;
 	let displayMediaRecord = false;
 
+	let showSettings = false;
 	let showDeleteConfirm = false;
-	let dragged = false;
 
+	let dragged = false;
 	let loading = false;
+
 	let enhancing = false;
+	let streaming = false;
 
 	const init = async () => {
 		loading = true;
@@ -165,29 +174,22 @@
 		return false;
 	}
 
-	async function aiEnhanceContent(content) {
-		// fake delay
-		await new Promise((resolve) => setTimeout(resolve, 2000));
-
-		const md = content.md + '_ai';
-		const html = marked.parse(md);
-
-		return {
-			json: null,
-			html: html,
-			md: md
-		};
-	}
-
 	async function enhanceNoteHandler() {
-		insertNoteVersion(note);
+		if (selectedModelId === '') {
+			toast.error($i18n.t('Please select a model.'));
+			return;
+		}
+
+		const model = $models.find((model) => model.id === selectedModelId);
+		if (!model) {
+			selectedModelId = '';
+			return;
+		}
 
 		enhancing = true;
-		const aiResult = await aiEnhanceContent(note.data.content);
 
-		note.data.content.json = aiResult.json;
-		note.data.content.html = aiResult.html;
-		note.data.content.md = aiResult.md;
+		insertNoteVersion(note);
+		await enhanceCompletionHandler(model);
 
 		enhancing = false;
 		versionIdx = null;
@@ -456,6 +458,96 @@
 		}
 	};
 
+	const enhanceCompletionHandler = async (model) => {
+		let enhancedContent = {
+			json: null,
+			html: '',
+			md: ''
+		};
+
+		const systemPrompt = `Enhance existing notes using additional context provided from audio transcription or uploaded file content. Your task is to make the notes more useful and comprehensive by incorporating relevant information from the provided context.
+
+Input will be provided within <notes> and <context> XML tags, providing a structure for the existing notes and context respectively.
+
+# Output Format
+
+Provide the enhanced notes in markdown format. Use markdown syntax for headings, lists, and emphasis to improve clarity and presentation. Ensure that all integrated content from the context is accurately reflected. Return only the markdown formatted note.
+`;
+
+		const [res, controller] = await chatCompletion(
+			localStorage.token,
+			{
+				model: model.id,
+				stream: true,
+				messages: [
+					{
+						role: 'system',
+						content: systemPrompt
+					},
+					{
+						role: 'user',
+						content:
+							`<notes>${note.data.content.md}</notes>` +
+							(files && files.length > 0
+								? `\n<context>${files.map((file) => `${file.name}: ${file?.file?.data?.content ?? 'Could not extract content'}\n`).join('')}</context>`
+								: '')
+					}
+				]
+			},
+			`${WEBUI_BASE_URL}/api`
+		);
+
+		await tick();
+
+		streaming = true;
+
+		if (res && res.ok) {
+			const reader = res.body
+				.pipeThrough(new TextDecoderStream())
+				.pipeThrough(splitStream('\n'))
+				.getReader();
+
+			while (true) {
+				const { value, done } = await reader.read();
+				if (done) {
+					break;
+				}
+
+				try {
+					let lines = value.split('\n');
+
+					for (const line of lines) {
+						if (line !== '') {
+							console.log(line);
+							if (line === 'data: [DONE]') {
+								console.log(line);
+							} else {
+								let data = JSON.parse(line.replace(/^data: /, ''));
+								console.log(data);
+
+								if (data.choices && data.choices.length > 0) {
+									const choice = data.choices[0];
+									if (choice.delta && choice.delta.content) {
+										enhancedContent.md += choice.delta.content;
+										enhancedContent.html = marked.parse(enhancedContent.md);
+
+										note.data.content.md = enhancedContent.md;
+										note.data.content.html = enhancedContent.html;
+										note.data.content.json = null;
+									}
+								}
+							}
+						}
+					}
+				} catch (error) {
+					console.log(error);
+				}
+			}
+		}
+
+		streaming = false;
+	};
+
 	const onDragOver = (e) => {
 		e.preventDefault();
 
@@ -488,6 +580,14 @@
 
 	onMount(async () => {
 		await tick();
+
+		if ($settings?.models) {
+			selectedModelId = $settings?.models[0];
+		} else if ($config?.default_models) {
+			selectedModelId = $config?.default_models.split(',')[0];
+		} else {
+			selectedModelId = '';
+		}
 
 		const dropzoneElement = document.getElementById('note-editor');
 
@@ -524,6 +624,42 @@
 </DeleteConfirmDialog>
 
 <div class="relative flex-1 w-full h-full flex justify-center" id="note-editor">
+	<Sidebar bind:show={showSettings} className=" bg-white dark:bg-gray-900" width="300px">
+		<div class="flex flex-col px-5 py-3 text-sm">
+			<div class="flex justify-between items-center mb-2">
+				<div class=" font-medium text-base">Settings</div>
+
+				<div class=" translate-x-1.5">
+					<button
+						class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
+						on:click={() => {
+							showSettings = !showSettings;
+						}}
+					>
+						<ArrowRight className="size-3" strokeWidth="2.5" />
+					</button>
+				</div>
+			</div>
+
+			<div class="mt-1">
+				<div>
+					<div class=" text-xs font-medium mb-1">Model</div>
+
+					<div class="w-full">
+						<select
+							class="w-full bg-transparent text-sm outline-hidden"
+							bind:value={selectedModelId}
+						>
+							{#each $models as model}
+								<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
+							{/each}
+						</select>
+					</div>
+				</div>
+			</div>
+		</div>
+	</Sidebar>
+
 	{#if loading}
 		<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
 			<div class="m-auto">
@@ -542,7 +678,7 @@
 						required
 					/>
 
-					<div class="flex items-center gap-2">
+					<div class="flex items-center gap-2 translate-x-1">
 						{#if note.data?.versions?.length > 0}
 							<div>
 								<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
@@ -588,13 +724,17 @@
 								showDeleteConfirm = true;
 							}}
 						>
-							<button
-								class="self-center w-fit text-sm p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-								type="button"
-							>
-								<EllipsisHorizontal className="size-5" />
-							</button>
+							<EllipsisHorizontal className="size-5" />
 						</NoteMenu>
+
+						<button
+							class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
+							on:click={() => {
+								showSettings = !showSettings;
+							}}
+						>
+							<Cog6 />
+						</button>
 					</div>
 				</div>
 			</div>
@@ -618,7 +758,9 @@
 			<div class=" flex-1 w-full h-full overflow-auto px-4 pb-14 relative">
 				{#if enhancing}
 					<div
-						class="w-full h-full absolute top-0 left-0 backdrop-blur-xs bg-white/10 dark:bg-gray-900/10 flex items-center justify-center z-10"
+						class="w-full h-full absolute top-0 left-0 {streaming
+							? ''
+							: ' backdrop-blur-xs  bg-white/10 dark:bg-gray-900/10'} flex items-center justify-center z-10 cursor-not-allowed"
 					></div>
 				{/if}
 
@@ -674,7 +816,7 @@
 </div>
 
 <div
-	class="absolute z-30 bottom-0 right-0 p-5 max-w-full {$showSidebar
+	class="absolute z-20 bottom-0 right-0 p-5 max-w-full {$showSidebar
 		? 'md:max-w-[calc(100%-260px)]'
 		: ''} w-full flex justify-end"
 >
