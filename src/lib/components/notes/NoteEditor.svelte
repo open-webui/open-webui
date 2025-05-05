@@ -758,7 +758,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 			<div class=" flex-1 w-full h-full overflow-auto px-4 pb-14 relative">
 				{#if enhancing}
 					<div
-						class="w-full h-full absolute top-0 left-0 {streaming
+						class="w-full h-full fixed top-0 left-0 {streaming
 							? ''
 							: ' backdrop-blur-xs  bg-white/10 dark:bg-gray-900/10'} flex items-center justify-center z-10 cursor-not-allowed"
 					></div>
