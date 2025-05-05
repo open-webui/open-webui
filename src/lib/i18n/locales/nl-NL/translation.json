@@ -407,7 +407,7 @@
 	"Enter CFG Scale (e.g. 7.0)": "Voer CFG schaal in (bv. 7.0)",
 	"Enter Chunk Overlap": "Voeg Chunk Overlap toe",
 	"Enter Chunk Size": "Voeg Chunk Size toe",
-	"Enter comma-seperated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "Voer kommagescheiden \"token:bias_waarde\" paren in (bijv. 5432:100, 413:-100)",
+	"Enter comma-separated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "Voer kommagescheiden \"token:bias_waarde\" paren in (bijv. 5432:100, 413:-100)",
 	"Enter description": "Voer beschrijving in",
 	"Enter Docling Server URL": "Voer Docling Server-URL in",
 	"Enter Document Intelligence Endpoint": "Voer Document Intelligence endpoint in",

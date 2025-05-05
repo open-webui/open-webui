@@ -407,7 +407,7 @@
 	"Enter CFG Scale (e.g. 7.0)": "",
 	"Enter Chunk Overlap": "ใส่การทับซ้อนส่วนข้อมูล",
 	"Enter Chunk Size": "ใส่ขนาดส่วนข้อมูล",
-	"Enter comma-seperated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "",
+	"Enter comma-separated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "",
 	"Enter description": "",
 	"Enter Docling Server URL": "",
 	"Enter Document Intelligence Endpoint": "",

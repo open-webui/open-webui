@@ -407,7 +407,7 @@
 	"Enter CFG Scale (e.g. 7.0)": "Въведете CFG Scale (напр. 7.0)",
 	"Enter Chunk Overlap": "Въведете припокриване на чънкове",
 	"Enter Chunk Size": "Въведете размер на чънк",
-	"Enter comma-seperated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "",
+	"Enter comma-separated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "",
 	"Enter description": "Въведете описание",
 	"Enter Docling Server URL": "",
 	"Enter Document Intelligence Endpoint": "",

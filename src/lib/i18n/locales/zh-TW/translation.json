@@ -407,7 +407,7 @@
 	"Enter CFG Scale (e.g. 7.0)": "輸入 CFG 比例（例如：7.0）",
 	"Enter Chunk Overlap": "輸入區塊重疊",
 	"Enter Chunk Size": "輸入區塊大小",
-	"Enter comma-seperated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "輸入逗號分隔的 \"token:bias_value\" 配對 (範例：5432:100, 413:-100)",
+	"Enter comma-separated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "輸入逗號分隔的 \"token:bias_value\" 配對 (範例：5432:100, 413:-100)",
 	"Enter description": "輸入描述",
 	"Enter Docling Server URL": "請輸入 Docling 伺服器 URL",
 	"Enter Document Intelligence Endpoint": "輸入 Document Intelligence 端點",

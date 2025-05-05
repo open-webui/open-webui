@@ -407,7 +407,7 @@
 	"Enter CFG Scale (e.g. 7.0)": "Zadajte mierku CFG (napr. 7.0)",
 	"Enter Chunk Overlap": "Zadajte prekryv časti",
 	"Enter Chunk Size": "Zadajte veľkosť časti",
-	"Enter comma-seperated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "",
+	"Enter comma-separated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "",
 	"Enter description": "Zadajte popis",
 	"Enter Docling Server URL": "",
 	"Enter Document Intelligence Endpoint": "",

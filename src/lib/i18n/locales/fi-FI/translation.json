@@ -407,7 +407,7 @@
 	"Enter CFG Scale (e.g. 7.0)": "Kirjoita CFG-mitta (esim. 7.0)",
 	"Enter Chunk Overlap": "Syötä osien päällekkäisyys",
 	"Enter Chunk Size": "Syötä osien koko",
-	"Enter comma-seperated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "",
+	"Enter comma-separated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "",
 	"Enter description": "Kirjoita kuvaus",
 	"Enter Docling Server URL": "Kirjoita Docling palvelimen verkko-osoite",
 	"Enter Document Intelligence Endpoint": "Kirjoita asiakirja tiedustelun päätepiste",

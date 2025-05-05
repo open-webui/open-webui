@@ -407,7 +407,7 @@
 	"Enter CFG Scale (e.g. 7.0)": "Nhập Thang CFG (vd: 7.0)",
 	"Enter Chunk Overlap": "Nhập Chunk chồng lấn (overlap)",
 	"Enter Chunk Size": "Nhập Kích thước Chunk",
-	"Enter comma-seperated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "Nhập các cặp \"token:giá_trị_bias\" được phân tách bằng dấu phẩy (ví dụ: 5432:100, 413:-100)",
+	"Enter comma-separated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "Nhập các cặp \"token:giá_trị_bias\" được phân tách bằng dấu phẩy (ví dụ: 5432:100, 413:-100)",
 	"Enter description": "Nhập mô tả",
 	"Enter Docling Server URL": "Nhập URL Máy chủ Docling",
 	"Enter Document Intelligence Endpoint": "Nhập Endpoint Trí tuệ Tài liệu",
