@@ -169,7 +169,7 @@ class OAuthManager:
             all_group_names = {g.name for g in all_available_groups}
             groups_created = False
             # Determine creator ID: Prefer admin, fallback to current user if no admin exists
-            admin_user = Users.get_admin_user()
+            admin_user = Users.get_super_admin_user()
             creator_id = admin_user.id if admin_user else user.id
             log.debug(f"Using creator ID {creator_id} for potential group creation.")
 
