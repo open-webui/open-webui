@@ -23,6 +23,8 @@
 	import AddUserModal from '$lib/components/admin/Users/UserList/AddUserModal.svelte';
 
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import RoleUpdateConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
@@ -49,7 +51,17 @@
 
 	let showUserChatsModal = false;
 	let showEditUserModal = false;
+	let showUpdateRoleModal = false;
 
+	const onUpdateRole = (user) => {
+		if (user.role === 'user') {
+			updateRoleHandler(user.id, 'admin');
+		} else if (user.role === 'pending') {
+			updateRoleHandler(user.id, 'user');
+		} else {
+			updateRoleHandler(user.id, 'pending');
+		}
+	};
 	const updateRoleHandler = async (id, role) => {
 		const res = await updateUserRole(localStorage.token, id, role).catch((error) => {
 			toast.error(`${error}`);
@@ -112,6 +124,22 @@
 	on:confirm={() => {
 		deleteUserHandler(selectedUser.id);
 	}}
+/>
+
+<RoleUpdateConfirmDialog
+	bind:show={showUpdateRoleModal}
+	on:confirm={() => {
+		onUpdateRole(selectedUser);
+	}}
+	title={$i18n.t('Update User Role')}
+	message={$i18n.t(`Are you sure you want to update this user\'s role to **{{ROLE}}**?`, {
+		ROLE:
+			selectedUser?.role === 'user'
+				? 'admin'
+				: selectedUser?.role === 'pending'
+					? 'user'
+					: 'pending'
+	})}
 />
 
 {#key selectedUser}
@@ -372,13 +400,8 @@
 						<button
 							class=" translate-y-0.5"
 							on:click={() => {
-								if (user.role === 'user') {
-									updateRoleHandler(user.id, 'admin');
-								} else if (user.role === 'pending') {
-									updateRoleHandler(user.id, 'user');
-								} else {
-									updateRoleHandler(user.id, 'pending');
-								}
+								selectedUser = user;
+								showUpdateRoleModal = true;
 							}}
 						>
 							<Badge
