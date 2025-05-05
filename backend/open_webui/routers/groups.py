@@ -16,6 +16,7 @@ from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.access_control import has_access, has_permission
 from open_webui.env import SRC_LOG_LEVELS
 
 
@@ -43,8 +44,15 @@ async def get_groups(user=Depends(get_verified_user)):
 
 
 @router.post("/create", response_model=Optional[GroupResponse])
-async def create_new_group(form_data: GroupForm, user=Depends(get_admin_user)):
+async def create_new_group(request: Request, form_data: GroupForm, user=Depends(get_verified_user)):
     try:
+        if user.role != "admin" and not has_permission(
+            user.id, "features.self_group_management", request.app.state.config.USER_PERMISSIONS
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.UNAUTHORIZED,
+            )
         group = Groups.insert_new_group(user.id, form_data)
         if group:
             return group
@@ -67,9 +75,16 @@ async def create_new_group(form_data: GroupForm, user=Depends(get_admin_user)):
 
 
 @router.get("/id/{id}", response_model=Optional[GroupResponse])
-async def get_group_by_id(id: str, user=Depends(get_admin_user)):
+async def get_group_by_id(request: Request, id: str, user=Depends(get_verified_user)):
+    if user.role != "admin" and not has_permission(
+            user.id, "features.self_group_management", request.app.state.config.USER_PERMISSIONS
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.UNAUTHORIZED,
+            )
     group = Groups.get_group_by_id(id)
-    if group:
+    if group and group.user_id == user.id:
         return group
     else:
         raise HTTPException(
@@ -85,9 +100,16 @@ async def get_group_by_id(id: str, user=Depends(get_admin_user)):
 
 @router.post("/id/{id}/update", response_model=Optional[GroupResponse])
 async def update_group_by_id(
-    id: str, form_data: GroupUpdateForm, user=Depends(get_admin_user)
+    request: Request, id: str, form_data: GroupUpdateForm, user=Depends(get_verified_user)
 ):
     try:
+        if user.role != "admin" and not has_permission(
+            user.id, "features.self_group_management", request.app.state.config.USER_PERMISSIONS
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.UNAUTHORIZED,
+            )
         if form_data.user_ids:
             form_data.user_ids = Users.get_valid_user_ids(form_data.user_ids)
 
@@ -113,16 +135,26 @@ async def update_group_by_id(
 
 
 @router.delete("/id/{id}/delete", response_model=bool)
-async def delete_group_by_id(id: str, user=Depends(get_admin_user)):
+async def delete_group_by_id(request: Request, id: str, user=Depends(get_verified_user)):
     try:
-        result = Groups.delete_group_by_id(id)
-        if result:
-            return result
-        else:
+        if user.role != "admin" and not has_permission(
+            user.id, "features.self_group_management", request.app.state.config.USER_PERMISSIONS
+        ):
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.DEFAULT("Error deleting group"),
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.UNAUTHORIZED,
             )
+        result = None
+        group = Groups.get_group_by_id(id)
+        if group:
+            if user.role == "admin" or group.user_id == user.id:
+                result = Groups.delete_group_by_id(id)
+                return result
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT("Error deleting group"),
+                )
     except Exception as e:
         log.exception(f"Error deleting group {id}: {e}")
         raise HTTPException(

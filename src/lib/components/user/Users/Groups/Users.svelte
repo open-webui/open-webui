@@ -8,40 +8,54 @@
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import Badge from '$lib/components/common/Badge.svelte';
 
+
 	export let users = [];
 	export let userIds = [];
+	export let members = [];
 
 	let filteredUsers = [];
 
-	$: filteredUsers = users
-		.filter((user) => {
-			if (user?.role === 'admin') {
-				return false;
-			}
+	$: filteredUsers = (() => {
+		// Without query: return only first 10 users with members on top
+		if (query === '') {
+			const topUsers = users.slice(0, 10);
+			const additionalMembers = members.filter(
+				member => !topUsers.some(user => user.id === member.id)
+			);
+			return [...additionalMembers, ...topUsers].sort((a, b) => {
+				const aUserIndex = userIds.indexOf(a.id);
+				const bUserIndex = userIds.indexOf(b.id);
 
-			if (query === '') {
-				return true;
-			}
+				if (aUserIndex !== -1 && bUserIndex === -1) return -1;
+				if (bUserIndex !== -1 && aUserIndex === -1) return 1;
+				if (aUserIndex !== -1 && bUserIndex !== -1) return aUserIndex - bUserIndex;
 
-			return (
+				return a.name.localeCompare(b.name);
+			});
+		}
+
+		// Query mode: search across all users
+		const combinedUsers = [
+			...users,
+			...members.filter(member => !users.some(user => user.id === member.id))
+		];
+
+		return combinedUsers
+			.filter(user =>
 				user.name.toLowerCase().includes(query.toLowerCase()) ||
 				user.email.toLowerCase().includes(query.toLowerCase())
-			);
-		})
-		.sort((a, b) => {
-			const aUserIndex = userIds.indexOf(a.id);
-			const bUserIndex = userIds.indexOf(b.id);
+			)
+			.sort((a, b) => {
+				const aUserIndex = userIds.indexOf(a.id);
+				const bUserIndex = userIds.indexOf(b.id);
 
-			// Compare based on userIds or fall back to alphabetical order
-			if (aUserIndex !== -1 && bUserIndex === -1) return -1; // 'a' has valid userId -> prioritize
-			if (bUserIndex !== -1 && aUserIndex === -1) return 1; // 'b' has valid userId -> prioritize
+				if (aUserIndex !== -1 && bUserIndex === -1) return -1;
+				if (bUserIndex !== -1 && aUserIndex === -1) return 1;
+				if (aUserIndex !== -1 && bUserIndex !== -1) return aUserIndex - bUserIndex;
 
-			// Both a and b are either in the userIds array or not, so we'll sort them by their indices
-			if (aUserIndex !== -1 && bUserIndex !== -1) return aUserIndex - bUserIndex;
-
-			// If both are not in the userIds, fallback to alphabetical sorting by name
-			return a.name.localeCompare(b.name);
-		});
+				return a.name.localeCompare(b.name);
+			});
+	})();
 
 	let query = '';
 </script>
@@ -108,7 +122,6 @@
 											<td><span class="text-gray-600">{user.email}</span></td>
 										</tr>
 									</table>
-
 								</div>
 							</Tooltip>
 

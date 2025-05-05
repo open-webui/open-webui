@@ -43,7 +43,7 @@ async def get_users(
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
     page: Optional[int] = 1,
-    user=Depends(get_admin_user),
+    user=Depends(get_verified_user),
 ):
     limit = PAGE_ITEM_COUNT
 
@@ -58,13 +58,14 @@ async def get_users(
     if direction:
         filter["direction"] = direction
 
-    return Users.get_users(filter=filter, skip=skip, limit=limit)
+    if user.role == "admin":
+        return Users.get_users(filter=filter, skip=skip, limit=limit)
+    else:
+        return Users.get_users(filter=filter, skip=skip, limit=10)
 
 
 @router.get("/all", response_model=UserListResponse)
-async def get_all_users(
-    user=Depends(get_admin_user),
-):
+async def get_all_users(user=Depends(get_verified_user)):
     return Users.get_users()
 
 
@@ -130,6 +131,7 @@ class FeaturesPermissions(BaseModel):
     image_generation: bool = True
     code_interpreter: bool = True
     notes: bool = True
+    self_group_management: bool = False
 
 
 class UserPermissions(BaseModel):
@@ -159,7 +161,7 @@ async def get_default_user_permissions(request: Request, user=Depends(get_admin_
 
 @router.post("/default/permissions")
 async def update_default_user_permissions(
-    request: Request, form_data: UserPermissions, user=Depends(get_admin_user)
+    request: Request, form_data: UserPermissions, user=Depends(get_verified_user)
 ):
     request.app.state.config.USER_PERMISSIONS = form_data.model_dump()
     return request.app.state.config.USER_PERMISSIONS
@@ -282,7 +284,9 @@ async def update_user_info_by_session_user(
 
 
 class UserResponse(BaseModel):
+    id: str
     name: str
+    email: str
     profile_image_url: str
     active: Optional[bool] = None
 
@@ -307,7 +311,9 @@ async def get_user_by_id(user_id: str, user=Depends(get_verified_user)):
     if user:
         return UserResponse(
             **{
+                "id": user.id,
                 "name": user.name,
+                "email": user.email,
                 "profile_image_url": user.profile_image_url,
                 "active": get_active_status_by_user_id(user_id),
             }

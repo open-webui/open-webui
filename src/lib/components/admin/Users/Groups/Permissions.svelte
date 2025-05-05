@@ -38,7 +38,8 @@
 			web_search: true,
 			image_generation: true,
 			code_interpreter: true,
-			notes: true
+			notes: true,
+			self_group_management: false
 		}
 	};
 
@@ -388,6 +389,14 @@
 			</div>
 
 			<Switch bind:state={permissions.features.notes} />
+		</div>
+
+		<div class="  flex w-full justify-between my-2 pr-2">
+			<div class=" self-center text-xs font-medium">
+				{$i18n.t('Group Management')}
+			</div>
+
+			<Switch bind:state={permissions.features.self_group_management} />
 		</div>
 	</div>
 </div>

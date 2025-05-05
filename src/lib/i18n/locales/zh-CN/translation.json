@@ -4,7 +4,7 @@
 	"(e.g. `sh webui.sh --api --api-auth username_password`)": "（例如 `sh webui.sh --api --api-auth username_password`）",
 	"(e.g. `sh webui.sh --api`)": "（例如 `sh webui.sh --api`）",
 	"(latest)": "（最新版）",
-	"(leave blank for Azure Commercial URL auto-generation)": "（留空以便 Azure Commercial URL 自动生成）",
+	"(leave blank for to use commercial endpoint)": "",
 	"(Ollama)": "(Ollama)",
 	"{{ models }}": "{{ models }}",
 	"{{COUNT}} Available Tools": "{{COUNT}} 个可用工具",
