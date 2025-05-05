@@ -78,6 +78,12 @@
 			toast.error(`${error}`);
 			return null;
 		});
+
+		// if the user is deleted and the current page has only one user, go back to the previous page
+		if (users.length === 1 && page > 1) {
+			page -= 1;
+		}
+
 		if (res) {
 			getUserList();
 		}
