@@ -10,15 +10,15 @@ export const getPermissions = async (token: string) => {
 			Authorization: `Bearer ${token}`
 		}
 	})
-    .then(async (res) => {
-        if (!res.ok) throw await res.json();
-        return res.json();
-    })
-    .catch((err) => {
-        console.log(err);
-        error = err.detail;
-        return null;
-    });
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
 
 	if (error) {
 		throw error;
@@ -27,7 +27,13 @@ export const getPermissions = async (token: string) => {
 	return res;
 };
 
-export const addPermission = async (token: string, category: string, name: string, label: string, description: string) => {
+export const addPermission = async (
+	token: string,
+	category: string,
+	name: string,
+	label: string,
+	description: string
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/permissions/`, {
@@ -43,45 +49,15 @@ export const addPermission = async (token: string, category: string, name: strin
 			description: description
 		})
 	})
-    .then(async (res) => {
-        if (!res.ok) throw await res.json();
-        return res.json();
-    })
-    .catch((err) => {
-        console.log(err);
-        error = err.detail;
-        return null;
-    });
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-
-export const updatePermission = async (token: string, permissionId: number, permissionName: string) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/permissions/${permissionId}`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({
-			name: permissionName
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
 		})
-	})
-    .then(async (res) => {
-        if (!res.ok) throw await res.json();
-        return res.json();
-    })
-    .catch((err) => {
-        console.log(err);
-        error = err.detail;
-        return null;
-    });
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
 
 	if (error) {
 		throw error;
@@ -89,31 +65,3 @@ export const updatePermission = async (token: string, permissionId: number, perm
 
 	return res;
 };
-
-export const deletePermission = async (token: string, permissionId: number) => {
-	let error = null;
-
-	const res = await fetch(`${WEBUI_API_BASE_URL}/permissions/${permissionId}`, {
-		method: 'DELETE',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-	})
-    .then(async (res) => {
-        if (!res.ok) throw await res.json();
-        return res.json();
-    })
-    .catch((err) => {
-        console.log(err);
-        error = err.detail;
-        return null;
-    });
-
-	if (error) {
-		throw error;
-	}
-
-	return res;
-};
-

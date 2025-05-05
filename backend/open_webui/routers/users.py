@@ -20,11 +20,18 @@ from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
-from open_webui.utils.access_control import get_permissions, has_permission
-
-from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user, get_current_user
+from open_webui.utils.auth import (
+    get_admin_user,
+    get_password_hash,
+    get_verified_user,
+    get_current_user,
+)
 from open_webui.utils.access_control import get_permissions
-from open_webui.models.permissions import Permissions, PermissionCategory, PermissionModel
+from open_webui.models.permissions import (
+    Permissions,
+    PermissionCategory,
+    PermissionModel,
+)
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -140,12 +147,18 @@ class UserPermissions(BaseModel):
     chat: ChatPermissions
     features: FeaturesPermissions
 
-@router.get("/default/permissions", response_model=dict[PermissionCategory, dict[str, bool]])
+
+@router.get(
+    "/default/permissions", response_model=dict[PermissionCategory, dict[str, bool]]
+)
 async def get_default_user_permissions(request: Request, user=Depends(get_admin_user)):
     return Permissions.get_ordre_by_category()
 
+
 @router.post("/default/permissions")
-async def update_default_user_permissions(form_data: UserPermissions, user=Depends(get_admin_user)):
+async def update_default_user_permissions(
+    form_data: UserPermissions, user=Depends(get_admin_user)
+):
     permissions_dict = form_data.model_dump()
 
     for category_str, permissions in permissions_dict.items():
@@ -154,10 +167,10 @@ async def update_default_user_permissions(form_data: UserPermissions, user=Depen
 
             for permission_name, value in permissions.items():
                 permission_data = {
-                    'name': permission_name,
-                    'category': category,
-                    'value': value,
-                    'description': f"Default {category.value} permission for {permission_name}"
+                    "name": permission_name,
+                    "category": category,
+                    "value": value,
+                    "description": f"Default {category.value} permission for {permission_name}",
                 }
 
                 if Permissions.exists(permission_data):

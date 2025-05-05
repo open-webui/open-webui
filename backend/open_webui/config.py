@@ -33,6 +33,7 @@ from open_webui.internal.db import Base, get_db
 from open_webui.utils.redis import get_redis_connection
 from open_webui.models.permissions import Permissions
 
+
 class EndpointFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         return record.getMessage().find("/health") == -1
@@ -1198,11 +1199,13 @@ DEFAULT_USER_PERMISSIONS_LABELS = {
         "web_search": "Web Search",
         "image_generation": "Image Generation",
         "code_interpreter": "Code Interpreter",
-        "notes": "Notes"
+        "notes": "Notes",
     },
 }
 
-USER_PERMISSIONS = Permissions.set_initial_permissions(DEFAULT_USER_PERMISSIONS, DEFAULT_USER_PERMISSIONS_LABELS)
+USER_PERMISSIONS = Permissions.set_initial_permissions(
+    DEFAULT_USER_PERMISSIONS, DEFAULT_USER_PERMISSIONS_LABELS
+)
 
 ENABLE_CHANNELS = PersistentConfig(
     "ENABLE_CHANNELS",

@@ -10,7 +10,7 @@
 	import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import {getUserDefaultPermissions} from "$lib/apis/users";
+	import { getUserDefaultPermissions } from '$lib/apis/users';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -66,7 +66,7 @@
 		init();
 	}
 
-	onMount(async() => {
+	onMount(async () => {
 		defaultPermissions = await getUserDefaultPermissions(localStorage.token).catch((error) => {
 			toast.error(`${error}`);
 			return [];
@@ -204,7 +204,7 @@
 							{#if selectedTab == 'general'}
 								<Display bind:name bind:description />
 							{:else if selectedTab == 'permissions'}
-								<Permissions bind:permissions bind:defaultPermissions/>
+								<Permissions bind:permissions bind:defaultPermissions />
 							{:else if selectedTab == 'users'}
 								<Users bind:userIds {users} />
 							{/if}

@@ -138,7 +138,9 @@ class OAuthManager:
                 for allowed_role in oauth_allowed_roles:
                     # If the user has any of the allowed roles, assign the role "user"
                     if allowed_role in oauth_roles:
-                        first_match = self.find_first_role_match(oauth_roles, oauth_allowed_roles)
+                        first_match = self.find_first_role_match(
+                            oauth_roles, oauth_allowed_roles
+                        )
                         if first_match:
                             Roles.add_role_if_role_do_not_exists(first_match)
                             role = first_match
