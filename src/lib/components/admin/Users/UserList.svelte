@@ -137,7 +137,6 @@
 	on:confirm={() => {
 		onUpdateRole(selectedUser);
 	}}
-	title={$i18n.t('Update User Role')}
 	message={$i18n.t(`Are you sure you want to update this user\'s role to **{{ROLE}}**?`, {
 		ROLE:
 			selectedUser?.role === 'user'
