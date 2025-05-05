@@ -1209,6 +1209,7 @@ DEFAULT_USER_PERMISSIONS_LABELS = {
         "web_search": "Web Search",
         "image_generation": "Image Generation",
         "code_interpreter": "Code Interpreter",
+        "notes": "Notes"
     },
 }
 
