@@ -744,6 +744,7 @@
 	"Model not selected": "དཔེ་དབྱིབས་གདམ་ག་མ་བྱས།",
 	"Model Params": "དཔེ་དབྱིབས་ཀྱི་ཞུགས་གྲངས།",
 	"Model Permissions": "དཔེ་དབྱིབས་ཀྱི་དབང་ཚད།",
+	"Model supports file uploads": "དཔེ་དབྱིབས་ཀྱིས་ཡིག་ཆ་སྤར་བར་རྒྱབ་སྐྱོར་བྱེད་སྟེར།",
 	"Model updated successfully": "དཔེ་དབྱིབས་ལེགས་པར་གསར་སྒྱུར་བྱས།",
 	"Modelfile Content": "Modelfile ནང་དོན།",
 	"Models": "དཔེ་དབྱིབས།",

@@ -744,6 +744,7 @@
 	"Model not selected": "Модель не выбрана",
 	"Model Params": "Параметры модели",
 	"Model Permissions": "Разрешения Модели",
+	"Model supports file uploads": "Модель поддерживает загрузку файлов",
 	"Model updated successfully": "Модель успешно обновлена",
 	"Modelfile Content": "Содержимое файла модели",
 	"Models": "Модели",

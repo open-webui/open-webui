@@ -744,6 +744,7 @@
 	"Model not selected": "모델이 선택되지 않았습니다.",
 	"Model Params": "모델 파라미터",
 	"Model Permissions": "",
+	"Model supports file uploads": "모델이 파일 업로드를 지원합니다",
 	"Model updated successfully": "성공적으로 모델이 업데이트되었습니다",
 	"Modelfile Content": "Modelfile 내용",
 	"Models": "모델",

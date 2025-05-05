@@ -744,6 +744,7 @@
 	"Model not selected": "Modèle non sélectionné",
 	"Model Params": "Paramètres du modèle",
 	"Model Permissions": "Autorisations du modèle",
+	"Model supports file uploads": "Le modèle prend en charge le téléchargement de fichiers",
 	"Model updated successfully": "Le modèle a été mis à jour avec succès",
 	"Modelfile Content": "Contenu du Fichier de Modèle",
 	"Models": "Modèles",

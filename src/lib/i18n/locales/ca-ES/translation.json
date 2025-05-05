@@ -744,6 +744,7 @@
 	"Model not selected": "Model no seleccionat",
 	"Model Params": "Paràmetres del model",
 	"Model Permissions": "Permisos dels models",
+	"Model supports file uploads": "El model permet la pujada d'arxius",
 	"Model updated successfully": "Model actualitzat correctament",
 	"Modelfile Content": "Contingut del Modelfile",
 	"Models": "Models",

@@ -744,6 +744,7 @@
 	"Model not selected": "未选择模型",
 	"Model Params": "模型参数",
 	"Model Permissions": "模型权限",
+	"Model supports file uploads": "模型支持文件上传",
 	"Model updated successfully": "模型更新成功",
 	"Modelfile Content": "模型文件内容",
 	"Models": "模型",

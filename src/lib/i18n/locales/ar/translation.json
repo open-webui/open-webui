@@ -744,6 +744,7 @@
 	"Model not selected": "لم تختار موديل",
 	"Model Params": "معلمات النموذج",
 	"Model Permissions": "أذونات النموذج",
+	"Model supports file uploads": "يدعم النموذج تحميل الملفات",
 	"Model updated successfully": "تم تحديث النموذج بنجاح",
 	"Modelfile Content": "محتوى الملف النموذجي",
 	"Models": "الموديلات",

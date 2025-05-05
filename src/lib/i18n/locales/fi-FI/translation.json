@@ -744,6 +744,7 @@
 	"Model not selected": "Mallia ei ole valittu",
 	"Model Params": "Mallin parametrit",
 	"Model Permissions": "Mallin käyttöoikeudet",
+	"Model supports file uploads": "Malli tukee tiedostojen lataamista",
 	"Model updated successfully": "Malli päivitetty onnistuneesti",
 	"Modelfile Content": "Mallitiedoston sisältö",
 	"Models": "Mallit",

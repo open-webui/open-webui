@@ -744,6 +744,7 @@
 	"Model not selected": "Nincs kiválasztva modell",
 	"Model Params": "Modell paraméterek",
 	"Model Permissions": "Modell engedélyek",
+	"Model supports file uploads": "A modell támogatja a fájlok feltöltését",
 	"Model updated successfully": "Modell sikeresen frissítve",
 	"Modelfile Content": "Modellfájl tartalom",
 	"Models": "Modellek",

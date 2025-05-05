@@ -744,6 +744,7 @@
 	"Model not selected": "მოდელი არჩეული არაა",
 	"Model Params": "მოდელის პარამეტრები",
 	"Model Permissions": "მოდელის წვდომები",
+	"Model supports file uploads": "მოდელი მხარს უჭერს ფაილების ატვირთვას",
 	"Model updated successfully": "",
 	"Modelfile Content": "მოდელის ფაილის შემცველობა",
 	"Models": "მოდელები",
