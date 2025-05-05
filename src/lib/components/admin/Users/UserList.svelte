@@ -156,19 +156,19 @@
 		<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 
 		{#if ($config?.license_metadata?.seats ?? null) !== null}
-			{#if users.length > $config?.license_metadata?.seats}
+			{#if total > $config?.license_metadata?.seats}
 				<span class="text-lg font-medium text-red-500"
-					>{users.length} of {$config?.license_metadata?.seats}
+					>{total} of {$config?.license_metadata?.seats}
 					<span class="text-sm font-normal">available users</span></span
 				>
 			{:else}
 				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-					>{users.length} of {$config?.license_metadata?.seats}
+					>{total} of {$config?.license_metadata?.seats}
 					<span class="text-sm font-normal">available users</span></span
 				>
 			{/if}
 		{:else}
-			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{users.length}</span>
+			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{total}</span>
 		{/if}
 	</div>
 
