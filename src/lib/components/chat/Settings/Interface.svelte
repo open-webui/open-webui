@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { getBackendConfig } from '$lib/apis';
-	import { setDefaultPromptSuggestions } from '$lib/apis/configs';
 	import { config, models, settings, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -30,7 +28,9 @@
 	// Interface
 	let defaultModelId = '';
 	let showUsername = false;
+
 	let notificationSound = true;
+	let notificationSoundAlways = false;
 
 	let detectArtifacts = true;
 
@@ -115,6 +115,11 @@
 	const toggleNotificationSound = async () => {
 		notificationSound = !notificationSound;
 		saveSettings({ notificationSound: notificationSound });
+	};
+
+	const toggleNotificationSoundAlways = async () => {
+		notificationSoundAlways = !notificationSoundAlways;
+		saveSettings({ notificationSoundAlways: notificationSoundAlways });
 	};
 
 	const toggleShowChangelog = async () => {
@@ -294,7 +299,8 @@
 		chatDirection = $settings.chatDirection ?? 'auto';
 		userLocation = $settings.userLocation ?? false;
 
-		notificationSound = $settings.notificationSound ?? true;
+		notificationSound = $settings?.notificationSound ?? true;
+		notificationSoundAlways = $settings?.notificationSoundAlways ?? false;
 
 		hapticFeedback = $settings.hapticFeedback ?? false;
 		ctrlEnterToSend = $settings.ctrlEnterToSend ?? false;
@@ -476,6 +482,30 @@
 					</button>
 				</div>
 			</div>
+
+			{#if notificationSound}
+				<div>
+					<div class=" py-0.5 flex w-full justify-between">
+						<div class=" self-center text-xs">
+							{$i18n.t('Always Play Notification Sound')}
+						</div>
+
+						<button
+							class="p-1 px-3 text-xs flex rounded-sm transition"
+							on:click={() => {
+								toggleNotificationSoundAlways();
+							}}
+							type="button"
+						>
+							{#if notificationSoundAlways === true}
+								<span class="ml-2 self-center">{$i18n.t('On')}</span>
+							{:else}
+								<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+							{/if}
+						</button>
+					</div>
+				</div>
+			{/if}
 
 			{#if $user?.role === 'admin'}
 				<div>
@@ -855,7 +885,7 @@
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
 					<div class=" self-center text-xs">
-						{$i18n.t('Scroll to bottom when switching between branches')}
+						{$i18n.t('Scroll On Branch Change')}
 					</div>
 
 					<button

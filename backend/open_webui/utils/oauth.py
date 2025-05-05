@@ -3,6 +3,7 @@ import logging
 import mimetypes
 import sys
 import uuid
+import json
 
 import aiohttp
 from authlib.integrations.starlette_client import OAuth
@@ -15,7 +16,7 @@ from starlette.responses import RedirectResponse
 
 from open_webui.models.auths import Auths
 from open_webui.models.users import Users
-from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm
+from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm, GroupForm
 from open_webui.config import (
     DEFAULT_USER_ROLE,
     ENABLE_OAUTH_SIGNUP,
@@ -23,6 +24,8 @@ from open_webui.config import (
     OAUTH_PROVIDERS,
     ENABLE_OAUTH_ROLE_MANAGEMENT,
     ENABLE_OAUTH_GROUP_MANAGEMENT,
+    ENABLE_OAUTH_GROUP_CREATION,
+    OAUTH_BLOCKED_GROUPS,
     OAUTH_ROLES_CLAIM,
     OAUTH_GROUPS_CLAIM,
     OAUTH_EMAIL_CLAIM,
@@ -57,6 +60,8 @@ auth_manager_config.ENABLE_OAUTH_SIGNUP = ENABLE_OAUTH_SIGNUP
 auth_manager_config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL = OAUTH_MERGE_ACCOUNTS_BY_EMAIL
 auth_manager_config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
 auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT = ENABLE_OAUTH_GROUP_MANAGEMENT
+auth_manager_config.ENABLE_OAUTH_GROUP_CREATION = ENABLE_OAUTH_GROUP_CREATION
+auth_manager_config.OAUTH_BLOCKED_GROUPS = OAUTH_BLOCKED_GROUPS
 auth_manager_config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
 auth_manager_config.OAUTH_GROUPS_CLAIM = OAUTH_GROUPS_CLAIM
 auth_manager_config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
@@ -140,6 +145,12 @@ class OAuthManager:
         log.debug("Running OAUTH Group management")
         oauth_claim = auth_manager_config.OAUTH_GROUPS_CLAIM
 
+        try:
+            blocked_groups = json.loads(auth_manager_config.OAUTH_BLOCKED_GROUPS)
+        except Exception as e:
+            log.exception(f"Error loading OAUTH_BLOCKED_GROUPS: {e}")
+            blocked_groups = []
+
         user_oauth_groups = []
         # Nested claim search for groups claim
         if oauth_claim:
@@ -152,6 +163,51 @@ class OAuthManager:
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
         all_available_groups: list[GroupModel] = Groups.get_groups()
 
+        # Create groups if they don't exist and creation is enabled
+        if auth_manager_config.ENABLE_OAUTH_GROUP_CREATION:
+            log.debug("Checking for missing groups to create...")
+            all_group_names = {g.name for g in all_available_groups}
+            groups_created = False
+            # Determine creator ID: Prefer admin, fallback to current user if no admin exists
+            admin_user = Users.get_admin_user()
+            creator_id = admin_user.id if admin_user else user.id
+            log.debug(f"Using creator ID {creator_id} for potential group creation.")
+
+            for group_name in user_oauth_groups:
+                if group_name not in all_group_names:
+                    log.info(
+                        f"Group '{group_name}' not found via OAuth claim. Creating group..."
+                    )
+                    try:
+                        new_group_form = GroupForm(
+                            name=group_name,
+                            description=f"Group '{group_name}' created automatically via OAuth.",
+                            permissions=default_permissions,  # Use default permissions from function args
+                            user_ids=[],  # Start with no users, user will be added later by subsequent logic
+                        )
+                        # Use determined creator ID (admin or fallback to current user)
+                        created_group = Groups.insert_new_group(
+                            creator_id, new_group_form
+                        )
+                        if created_group:
+                            log.info(
+                                f"Successfully created group '{group_name}' with ID {created_group.id} using creator ID {creator_id}"
+                            )
+                            groups_created = True
+                            # Add to local set to prevent duplicate creation attempts in this run
+                            all_group_names.add(group_name)
+                        else:
+                            log.error(
+                                f"Failed to create group '{group_name}' via OAuth."
+                            )
+                    except Exception as e:
+                        log.error(f"Error creating group '{group_name}' via OAuth: {e}")
+
+            # Refresh the list of all available groups if any were created
+            if groups_created:
+                all_available_groups = Groups.get_groups()
+                log.debug("Refreshed list of all available groups after creation.")
+
         log.debug(f"Oauth Groups claim: {oauth_claim}")
         log.debug(f"User oauth groups: {user_oauth_groups}")
         log.debug(f"User's current groups: {[g.name for g in user_current_groups]}")
@@ -161,7 +217,11 @@ class OAuthManager:
 
         # Remove groups that user is no longer a part of
         for group_model in user_current_groups:
-            if user_oauth_groups and group_model.name not in user_oauth_groups:
+            if (
+                user_oauth_groups
+                and group_model.name not in user_oauth_groups
+                and group_model.name not in blocked_groups
+            ):
                 # Remove group from user
                 log.debug(
                     f"Removing user from group {group_model.name} as it is no longer in their oauth groups"
@@ -191,6 +251,7 @@ class OAuthManager:
                 user_oauth_groups
                 and group_model.name in user_oauth_groups
                 and not any(gm.name == group_model.name for gm in user_current_groups)
+                and group_model.name not in blocked_groups
             ):
                 # Add user to group
                 log.debug(
@@ -257,7 +318,7 @@ class OAuthManager:
                 try:
                     access_token = token.get("access_token")
                     headers = {"Authorization": f"Bearer {access_token}"}
-                    async with aiohttp.ClientSession() as session:
+                    async with aiohttp.ClientSession(trust_env=True) as session:
                         async with session.get(
                             "https://api.github.com/user/emails", headers=headers
                         ) as resp:
@@ -339,7 +400,7 @@ class OAuthManager:
                                 get_kwargs["headers"] = {
                                     "Authorization": f"Bearer {access_token}",
                                 }
-                            async with aiohttp.ClientSession() as session:
+                            async with aiohttp.ClientSession(trust_env=True) as session:
                                 async with session.get(
                                     picture_url, **get_kwargs
                                 ) as resp:
