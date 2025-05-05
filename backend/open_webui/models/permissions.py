@@ -1,3 +1,4 @@
+import os
 from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -7,6 +8,9 @@ from sqlalchemy import Column, String, Integer, Enum as SQLAlchemyEnum
 from open_webui.internal.db import Base, get_db
 from open_webui.models.roles import RolePermission, Role
 
+persistent_config = (
+    os.environ.get("ENABLE_PERSISTENT_CONFIG", "True").lower() == "true"
+)
 
 ####################
 # Role DB Schema
@@ -155,28 +159,31 @@ class PermissionsTable:
 
             return result
 
-    # TODO: if config is not persistent enabled, just override permissions given
     def set_initial_permissions(self,
         default_permissions: dict[PermissionCategory, dict[str, bool]],
         default_labels: dict[PermissionCategory, dict[str, str]],
         role_name: str = "user"
     ) -> dict[PermissionCategory, dict[str, bool]]:
         with get_db() as db:
-            # Check if any permissions exist
-            existing_count = db.query(Permission).count()
+            role = db.query(Role).filter_by(name=role_name).order_by(Role.id).first()
+            if not role:
+                raise ValueError(f"Role '{role_name}' not found")
 
-            if existing_count == 0:
-                role = db.query(Role).filter_by(name=role_name).order_by(Role.id).first()
+            # No permissions exist, initialize with defaults
+            for category_str, perms in default_permissions.items():
+                # Convert string category to enum
+                try:
+                    category = PermissionCategory(category_str)
+                except ValueError:
+                    continue  # Skip invalid categories
 
-                # No permissions exist, initialize with defaults
-                for category_str, perms in default_permissions.items():
-                    # Convert string category to enum
-                    try:
-                        category = PermissionCategory(category_str)
-                    except ValueError:
-                        continue  # Skip invalid categories
+                for perm_name, value in perms.items():
+                    existing_permission = db.query(Permission).filter_by(
+                        name=perm_name,
+                        category=category
+                    ).first()
 
-                    for perm_name, value in perms.items():
+                    if not existing_permission:
                         new_permission = Permission(
                             name=perm_name,
                             category=category,
@@ -193,12 +200,20 @@ class PermissionsTable:
                             value=value
                         )
                         db.add(role_permission)
+                    else:
+                        if not persistent_config:
+                            # Override store permission with the ones from env.
+                            role_permission = db.query(RolePermission).filter_by(
+                                role_id=role.id,
+                                permission_id=existing_permission.id
+                            ).first()
+                            role_permission.value = value
 
-                try:
-                    db.commit()
-                except Exception as e:
-                    db.rollback()
-                    raise e
+            try:
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                raise e
 
             # Return current permissions structure
             return self.get_ordre_by_category()
