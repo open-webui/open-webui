@@ -88,8 +88,7 @@ class YoutubeLoader:
                 "http": self.proxy_url,
                 "https": self.proxy_url,
             }
-            # Don't log complete URL because it might contain secrets
-            log.debug(f"Using proxy URL: {self.proxy_url[:14]}...")
+            log.debug(f"Using proxy URL: {self.proxy_url}...")
         else:
             youtube_proxies = None
     
@@ -105,9 +104,8 @@ class YoutubeLoader:
         last_exception = None
         for lang in self.language:
             try:
-                log.debug(f"Attempting to find transcript for language '{lang}'")
                 transcript = transcript_list.find_transcript([lang])
-                log.info(f"Found transcript for language '{lang}'")
+                log.debug(f"Found transcript for language '{lang}'")
                 
                 transcript_pieces: List[Dict[str, Any]] = transcript.fetch()
                 transcript_text = " ".join(
@@ -127,10 +125,8 @@ class YoutubeLoader:
                 raise e
     
         # If all specified languages fail, raise the last exception
-        # This maintains compatibility with the error handling in the rest of the application
         if last_exception:
             log.warning(f"No transcript found for any of the specified languages: {', '.join(self.language)}")
             raise last_exception
         
-        # This should never happen (we'd have raised an exception above)
         return []
