@@ -9,7 +9,7 @@
 	import Groups from './Users/Groups.svelte';
 	import Roles from './Users/RoleList.svelte';
 	import PermissionList from './Users/PermissionList.svelte';
-	import Wrench from "$lib/components/icons/Wrench.svelte";
+	import WrenchSolid from "$lib/components/icons/WrenchSolid.svelte";
 
 	const i18n = getContext('i18n');
 
@@ -123,7 +123,7 @@
 			}}
 		>
 			<div class=" self-center mr-2">
-				<Wrench />
+				<WrenchSolid />
 			</div>
 			<div class=" self-center">{$i18n.t('Permissions')}</div>
 		</button>

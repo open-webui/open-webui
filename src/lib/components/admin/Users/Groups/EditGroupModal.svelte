@@ -10,6 +10,7 @@
 	import UserPlusSolid from '$lib/components/icons/UserPlusSolid.svelte';
 	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import {getUserDefaultPermissions} from "$lib/apis/users";
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -31,33 +32,8 @@
 	export let name = '';
 	export let description = '';
 
-	export let permissions = {
-		workspace: {
-			models: false,
-			knowledge: false,
-			prompts: false,
-			tools: false
-		},
-		sharing: {
-			public_models: false,
-			public_knowledge: false,
-			public_prompts: false,
-			public_tools: false
-		},
-		chat: {
-			controls: true,
-			file_upload: true,
-			delete: true,
-			edit: true,
-			temporary: true
-		},
-		features: {
-			direct_tool_servers: false,
-			web_search: true,
-			image_generation: true,
-			code_interpreter: true
-		}
-	};
+	export let defaultPermissions = {};
+	export let permissions = {};
 	export let userIds = [];
 
 	const submitHandler = async () => {
@@ -90,7 +66,12 @@
 		init();
 	}
 
-	onMount(() => {
+	onMount(async() => {
+		defaultPermissions = await getUserDefaultPermissions(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return [];
+		});
+		console.log(tabs);
 		selectedTab = tabs[0];
 		init();
 	});
@@ -223,7 +204,7 @@
 							{#if selectedTab == 'general'}
 								<Display bind:name bind:description />
 							{:else if selectedTab == 'permissions'}
-								<Permissions bind:permissions />
+								<Permissions bind:permissions bind:defaultPermissions/>
 							{:else if selectedTab == 'users'}
 								<Users bind:userIds {users} />
 							{/if}
