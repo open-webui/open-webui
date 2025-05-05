@@ -420,7 +420,7 @@
 	"Enter CFG Scale (e.g. 7.0)": "CFG ཆེ་ཆུང་འཇུག་པ། (དཔེར་ན། 7.0)",
 	"Enter Chunk Overlap": "དུམ་བུ་བསྣོལ་བ་འཇུག་པ།",
 	"Enter Chunk Size": "དུམ་བུའི་ཆེ་ཆུང་འཇུག་པ།",
-	"Enter comma-seperated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "ཚེག་བསྐུངས་ཀྱིས་ལོགས་སུ་བཀར་བའི་ \"ཊོཀ་ཀེན།:ཕྱོགས་ཞེན་རིན་ཐང་།\" ཆ་འཇུག་པ། (དཔེར། 5432:100, 413:-100)",
+	"Enter comma-separated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "ཚེག་བསྐུངས་ཀྱིས་ལོགས་སུ་བཀར་བའི་ \"ཊོཀ་ཀེན།:ཕྱོགས་ཞེན་རིན་ཐང་།\" ཆ་འཇུག་པ། (དཔེར། 5432:100, 413:-100)",
 	"Enter description": "འགྲེལ་བཤད་འཇུག་པ།",
 	"Enter Docling OCR Engine": "",
 	"Enter Docling OCR Language(s)": "",

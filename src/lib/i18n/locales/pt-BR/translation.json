@@ -420,7 +420,7 @@
 	"Enter CFG Scale (e.g. 7.0)": "Digite a escala de CFG (por exemplo, 7.0)",
 	"Enter Chunk Overlap": "Digite a Sobreposição de Chunk",
 	"Enter Chunk Size": "Digite o Tamanho do Chunk",
-	"Enter comma-seperated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "",
+	"Enter comma-separated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "",
 	"Enter description": "Digite a descrição",
 	"Enter Docling OCR Engine": "",
 	"Enter Docling OCR Language(s)": "",

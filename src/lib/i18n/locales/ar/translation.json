@@ -420,7 +420,7 @@
 	"Enter CFG Scale (e.g. 7.0)": "أدخل مقياس CFG (مثال: 7.0)",
 	"Enter Chunk Overlap": "أدخل الChunk Overlap",
 	"Enter Chunk Size": "أدخل Chunk الحجم",
-	"Enter comma-seperated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "أدخل أزواج \"الرمز:قيمة التحيز\" مفصولة بفواصل (مثال: 5432:100، 413:-100)",
+	"Enter comma-separated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "أدخل أزواج \"الرمز:قيمة التحيز\" مفصولة بفواصل (مثال: 5432:100، 413:-100)",
 	"Enter description": "أدخل الوصف",
 	"Enter Docling OCR Engine": "",
 	"Enter Docling OCR Language(s)": "",
