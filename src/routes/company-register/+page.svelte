@@ -15,12 +15,16 @@
 		toastVisible,
 		toastMessage,
 		toastType,
-		showToast
+		showToast,
+		company,
+		companyConfig
 	} from '$lib/stores';
 	import { getSessionUser, userSignIn } from '$lib/apis/auths';
 	import { getBackendConfig } from '$lib/apis';
 	import { generateInitialsImage } from '$lib/utils';
 	import CustomToast from '$lib/components/common/CustomToast.svelte';
+	import { toast } from 'svelte-sonner';
+	import { getCompanyDetails, getCompanyConfig } from '$lib/apis/auths';
 
 	let step = 1;
 
@@ -74,6 +78,25 @@
 			if(user) {
 				await setSessionUser(user);
 				step = step + 1;
+				const [companyInfo, companyConfigInfo] = await Promise.all([
+					getCompanyDetails(user.token).catch((error) => {
+						toast.error(`${error}`);
+						return null;
+					}),
+					getCompanyConfig(user.token).catch((error) => {
+						toast.error(`${error}`);
+						return null;
+					})
+				]);
+
+				if (companyInfo) {
+					company.set(companyInfo);
+				}
+
+				if (companyConfigInfo) {
+					console.log(companyConfigInfo);
+					companyConfig.set(companyConfigInfo);
+				}
 			}
 		}
 		if (step < 4) step += 1;	

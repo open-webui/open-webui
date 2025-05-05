@@ -2,8 +2,8 @@
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 
-	import { user, config, settings } from '$lib/stores';
-	import { updateUserProfile, createAPIKey, getAPIKey, deleteUserProfile } from '$lib/apis/auths';
+	import { user, config, settings, company, companyConfig } from '$lib/stores';
+	import { updateUserProfile, createAPIKey, getAPIKey, deleteUserProfile, updateCompanyConfig, getCompanyConfig, updateCompanyDetails } from '$lib/apis/auths';
 	import { getGravatarUrl } from '$lib/apis/utils';
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
 	import { copyToClipboard } from '$lib/utils';
@@ -22,6 +22,7 @@
 	import { onClickOutside } from '$lib/utils';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
+	import LoaderIcon from '$lib/components/icons/LoaderIcon.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -32,7 +33,7 @@
 	let companyName = '';
 	let loading = false;
 
-	let hideModelLogo = '';
+	let hideModelLogo = false;
 
 	
 	let profileImageInputElement: HTMLInputElement;
@@ -42,21 +43,21 @@
 	let userPermissions = {
 		websearch: false,
 		image_generation: false,
-		code_interpreter: false,
-		audio: false
+		// code_interpreter: false,
+		// audio: false
 	};
 
 	const userPermissionsIcons = {
 		websearch: WebSearchIcon,
 		image_generation: ImageGenerateIcon,
-		code_interpreter: CodeInterpreterIcon,
+		// code_interpreter: CodeInterpreterIcon,
 	};
 
 	const userPermissionsText = {
 		websearch: "Web Search",
 		image_generation: "Image Gen",
-		code_interpreter: "Code Interpreter",
-		audio: "Audio In and Out"
+		// code_interpreter: "Code Interpreter",
+		// audio: "Audio In and Out"
 	}
 
 	let showUserPermissionsDropdown = false;
@@ -65,16 +66,10 @@
 	let showChatLifetimeDropdown = false;
 	let chatLifetimeDropdownRef;
 
-	const chatLifetimeOptions = ['3 months', '6 months', '9 months'];
-	let chatLifetime = chatLifetimeOptions[0];
+	const chatLifetimeOptions = [{value: 30, label: '30 days'}, {value: 91, label: '3 months'}, {value: 183, label: '6 months'}, {value: 275, label: '9 months'}, {value: 365, label: '1 year'}, {value: 0, label: "no limit"}];
+	let chatLifetime = chatLifetimeOptions[5];
 
-	let userNotice = 'LLMs can make mistakes. Check our AI Policy before using';
-	
-
-	const submitHandler = async () => {
-		loading = true;
-		loading = false;
-	};
+	let userNotice = '';
 
 
 	const deleteUserHandler = async () => {
@@ -83,8 +78,76 @@
 	}
 
 	onMount(async () => {
-		
-	});
+		companyName = $company?.name;
+		profileImageUrl = $company?.profile_image_url;	
+		if($companyConfig?.config?.ui?.hide_model_logo_in_chat) {
+			hideModelLogo = $companyConfig?.config?.ui?.hide_model_logo_in_chat;
+		}
+		if($companyConfig?.config?.rag?.web?.search?.enable){
+			userPermissions = {
+				...userPermissions,
+				websearch: $companyConfig?.config?.rag?.web?.search?.enable,
+			};
+		if($companyConfig?.config?.image_generation?.enable) {
+			userPermissions = {
+				...userPermissions,
+				image_generation: $companyConfig?.config?.image_generation?.enable
+			};
+		}
+		if($companyConfig?.config?.ui?.custom_user_notice) {
+			userNotice = $companyConfig?.config?.ui?.custom_user_notice;
+		}
+	}});
+
+	const onSubmit = async () => {
+		loading = true;
+
+		const promises = [];
+		let companyInfo = null;
+
+		if (companyName !== $company.name || profileImageUrl !== $company?.profile_image_url) {
+			const companyPromise = updateCompanyDetails(localStorage.token, companyName, profileImageUrl)
+				.then((res) => {
+					companyInfo = res;
+				})
+				.catch((error) => {
+					toast.error(`${error}`);
+				});
+			promises.push(companyPromise);
+		}
+
+		let updateConfigSuccess = false;
+
+		const configPromise = updateCompanyConfig(
+			localStorage.token,
+			hideModelLogo,
+			chatLifetimeOptions?.value,
+			userNotice,
+			userPermissions?.websearch,
+			userPermissions?.image_generation
+		)
+			.then(() => {
+				updateConfigSuccess = true;
+			})
+			.catch((error) => {
+				toast.error(`${error}`);
+			});
+		promises.push(configPromise);
+
+		await Promise.all(promises);
+
+		if (companyInfo) {
+			company.set(companyInfo);
+		}
+
+		if (updateConfigSuccess) {
+			toast.success($i18n.t('Updated successfuly'));
+			const companyConfigInfo = await getCompanyConfig(localStorage.token);
+			companyConfig.set(companyConfigInfo);
+		}
+
+		loading = false;
+	}
 </script>
 
 <!-- space-y-3 overflow-y-scroll max-h-[28rem] lg:max-h-full -->
@@ -355,7 +418,7 @@
 						>
 						
 						<div class="flex items-center gap-2 text-xs dark:text-customGray-100/50">
-							{chatLifetime}
+							{chatLifetime.label}
 							<ChevronDown className="size-3" />
 						</div>
 						
@@ -375,7 +438,7 @@
 											showChatLifetimeDropdown = false;
 										}}
 									>
-										{option}
+										{$i18n.t(option.label)}
 									</button>
 								{/each}
 							</div>
@@ -408,17 +471,16 @@
 			class=" text-xs w-[168px] h-10 px-3 py-2 transition rounded-lg {loading
 				? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
 				: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center items-center"
-			type="submit"
+			type="button"
 			disabled={loading}
-			on:click={async () => {
-				const res = await submitHandler();
-
-				if (res) {
-					saveHandler();
-				}
-			}}
+			on:click={onSubmit}
 		>
 			{$i18n.t('Save')}
+			{#if loading}
+				<div class="ml-1.5 self-center">
+					<LoaderIcon />
+				</div>
+			{/if}
 		</button>
 	</div>
 	<div class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2">

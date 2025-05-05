@@ -6,9 +6,9 @@
 	import { page } from '$app/stores';
 
 	import { getBackendConfig } from '$lib/apis';
-	import { completeInvite } from '$lib/apis/auths';
+	import { completeInvite, getCompanyDetails, getCompanyConfig } from '$lib/apis/auths';
 
-	import { WEBUI_NAME, config, user, socket, toastVisible, toastMessage, toastType, showToast } from '$lib/stores';
+	import { WEBUI_NAME, config, user, socket, toastVisible, toastMessage, toastType, showToast, company, companyConfig } from '$lib/stores';
 
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import UserIcon from '$lib/components/icons/UserIcon.svelte';
@@ -74,10 +74,31 @@
 		const sessionUser = await completeInvite(firstName, lastName, password, inviteToken, profileImageUrl).catch(
 			(error) => {
 				toast.error(`${error}`);
+				loading = false;
 				return null;
 			}
 		);
 		await setSessionUser(sessionUser);
+		
+		const [companyInfo, companyConfigInfo] = await Promise.all([
+			getCompanyDetails(sessionUser.token).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			}),
+			getCompanyConfig(sessionUser.token).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			})
+		]);
+
+		if (companyInfo) {
+			company.set(companyInfo);
+		}
+
+		if (companyConfigInfo) {
+			console.log(companyConfigInfo);
+			companyConfig.set(companyConfigInfo);
+		}
 		loading = false;
 	}
 

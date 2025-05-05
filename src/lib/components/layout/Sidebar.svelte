@@ -20,7 +20,8 @@
 		channels,
 		socket,
 		config,
-		isApp
+		isApp,
+		company
 	} from '$lib/stores';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	import { page } from '$app/stores';
@@ -537,12 +538,12 @@
 						>
 							<div class=" self-center mr-3">
 								<img
-									src={$user.profile_image_url}
+									src={$company?.profile_image_url}
 									class=" max-w-[30px] object-cover rounded-md"
 									alt="User profile"
 								/>
 							</div>
-							<div class=" self-center font-medium text-sm mr-1">{$user.first_name} {$user.last_name}</div>
+							<div class=" self-center font-medium text-sm mr-1">{$company?.name}</div>
 							<ChevronDown className=" size-3" strokeWidth="2.5" />
 						</button>
 					</UserMenu>
