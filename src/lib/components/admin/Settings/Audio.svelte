@@ -32,6 +32,7 @@
 	let TTS_VOICE = '';
 	let TTS_SPLIT_ON: TTS_RESPONSE_SPLIT = TTS_RESPONSE_SPLIT.PUNCTUATION;
 	let TTS_AZURE_SPEECH_REGION = '';
+	let TTS_AZURE_SPEECH_ENDPOINT = '';
 	let TTS_AZURE_SPEECH_OUTPUT_FORMAT = '';
 
 	let STT_OPENAI_API_BASE_URL = '';
@@ -42,8 +43,8 @@
 	let STT_AZURE_API_KEY = '';
 	let STT_AZURE_REGION = '';
 	let STT_AZURE_LOCALES = '';
-	let STT_AZURE_BASE_URL = '';
-	let STT_AZURE_MAX_SPEAKERS = '';
+	let STT_AZURE_ENDPOINT = '';
+	let STT_AZURE_MAX_SPEAKERS = '';    
 	let STT_DEEPGRAM_API_KEY = '';
 
 	let STT_WHISPER_MODEL_LOADING = false;
@@ -105,6 +106,7 @@
 				VOICE: TTS_VOICE,
 				SPLIT_ON: TTS_SPLIT_ON,
 				AZURE_SPEECH_REGION: TTS_AZURE_SPEECH_REGION,
+				AZURE_SPEECH_ENDPOINT: TTS_AZURE_SPEECH_ENDPOINT,
 				AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT
 			},
 			stt: {
@@ -117,7 +119,7 @@
 				AZURE_API_KEY: STT_AZURE_API_KEY,
 				AZURE_REGION: STT_AZURE_REGION,
 				AZURE_LOCALES: STT_AZURE_LOCALES,
-				AZURE_BASE_URL: STT_AZURE_BASE_URL,
+				AZURE_ENDPOINT: STT_AZURE_ENDPOINT,
 				AZURE_MAX_SPEAKERS: STT_AZURE_MAX_SPEAKERS
 			}
 		});
@@ -149,9 +151,10 @@
 
 			TTS_SPLIT_ON = res.tts.SPLIT_ON || TTS_RESPONSE_SPLIT.PUNCTUATION;
 
-			TTS_AZURE_SPEECH_OUTPUT_FORMAT = res.tts.AZURE_SPEECH_OUTPUT_FORMAT;
 			TTS_AZURE_SPEECH_REGION = res.tts.AZURE_SPEECH_REGION;
-
+			TTS_AZURE_SPEECH_ENDPOINT = res.tts.AZURE_SPEECH_ENDPOINT;
+			TTS_AZURE_SPEECH_OUTPUT_FORMAT = res.tts.AZURE_SPEECH_OUTPUT_FORMAT;
+			
 			STT_OPENAI_API_BASE_URL = res.stt.OPENAI_API_BASE_URL;
 			STT_OPENAI_API_KEY = res.stt.OPENAI_API_KEY;
 
@@ -161,7 +164,7 @@
 			STT_AZURE_API_KEY = res.stt.AZURE_API_KEY;
 			STT_AZURE_REGION = res.stt.AZURE_REGION;
 			STT_AZURE_LOCALES = res.stt.AZURE_LOCALES;
-			STT_AZURE_BASE_URL = res.stt.AZURE_BASE_URL;
+			STT_AZURE_ENDPOINT = res.stt.AZURE_ENDPOINT;
 			STT_AZURE_MAX_SPEAKERS = res.stt.AZURE_MAX_SPEAKERS;
 			STT_DEEPGRAM_API_KEY = res.stt.DEEPGRAM_API_KEY;
 		}
@@ -272,15 +275,22 @@
 								bind:value={STT_AZURE_API_KEY}
 								required
 							/>
-							<input
-								class="flex-1 w-full rounded-lg py-2 pl-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								placeholder={$i18n.t('Azure Region')}
-								bind:value={STT_AZURE_REGION}
-								required
-							/>
 						</div>
 
 						<hr class="border-gray-100 dark:border-gray-850 my-2" />
+
+						<div>
+							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Azure Region')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={STT_AZURE_REGION}
+										placeholder={$i18n.t('e.g., westus (leave blank for eastus)')}
+									/>
+								</div>
+							</div>
+						</div> 
 
 						<div>
 							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Language Locales')}</div>
@@ -289,20 +299,20 @@
 									<input
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										bind:value={STT_AZURE_LOCALES}
-										placeholder={$i18n.t('e.g., en-US,ja-JP (leave blank for auto-detect)')}
+										placeholder={$i18n.t('e.g., en-US, ja-JP (leave blank for auto-detect)')}
 									/>
 								</div>
 							</div>
-						</div>
+						</div> 
 
 						<div>
-							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Base URL')}</div>
+							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Endpoint URL')}</div>
 							<div class="flex w-full">
 								<div class="flex-1">
 									<input
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-										bind:value={STT_AZURE_BASE_URL}
-										placeholder={$i18n.t('(leave blank for Azure Commercial URL auto-generation)')}
+										bind:value={STT_AZURE_ENDPOINT}
+										placeholder={$i18n.t('(leave blank for to use commercial endpoint)')}
 									/>
 								</div>
 							</div>
@@ -468,18 +478,39 @@
 				{:else if TTS_ENGINE === 'azure'}
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
-							<input
-								class="flex-1 w-full rounded-lg py-2 pl-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							<SensitiveInput
 								placeholder={$i18n.t('API Key')}
 								bind:value={TTS_API_KEY}
 								required
 							/>
-							<input
-								class="flex-1 w-full rounded-lg py-2 pl-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-								placeholder={$i18n.t('Azure Region')}
-								bind:value={TTS_AZURE_SPEECH_REGION}
-								required
-							/>
+						</div>
+
+						<hr class="border-gray-100 dark:border-gray-850 my-2" />
+
+						<div>
+							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Azure Region')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={TTS_AZURE_SPEECH_REGION}
+										placeholder={$i18n.t('e.g., westus (leave blank for eastus)')}
+									/>
+								</div>
+							</div>
+						</div> 
+                        
+						<div>
+							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Endpoint URL')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={TTS_AZURE_SPEECH_ENDPOINT}
+										placeholder={$i18n.t('(leave blank for to use commercial endpoint)')}
+									/>
+								</div>
+							</div>
 						</div>
 					</div>
 				{/if}

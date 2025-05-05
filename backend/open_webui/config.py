@@ -2680,16 +2680,16 @@ AUDIO_STT_AZURE_LOCALES = PersistentConfig(
     os.getenv("AUDIO_STT_AZURE_LOCALES", ""),
 )
 
-AUDIO_STT_AZURE_BASE_URL = PersistentConfig(
-    "AUDIO_STT_AZURE_BASE_URL",
-    "audio.stt.azure.base_url",
-    os.getenv("AUDIO_STT_AZURE_BASE_URL", ""),
+AUDIO_STT_AZURE_ENDPOINT = PersistentConfig(
+    "AUDIO_STT_AZURE_ENDPOINT",
+    "audio.stt.azure.url",
+    os.getenv("AUDIO_STT_AZURE_ENDPOINT", ""),
 )
 
 AUDIO_STT_AZURE_MAX_SPEAKERS = PersistentConfig(
     "AUDIO_STT_AZURE_MAX_SPEAKERS",
     "audio.stt.azure.max_speakers",
-    os.getenv("AUDIO_STT_AZURE_MAX_SPEAKERS", "3"),
+    os.getenv("AUDIO_STT_AZURE_MAX_SPEAKERS", ""),
 )
 
 AUDIO_TTS_OPENAI_API_BASE_URL = PersistentConfig(
@@ -2715,7 +2715,6 @@ AUDIO_TTS_ENGINE = PersistentConfig(
     os.getenv("AUDIO_TTS_ENGINE", ""),
 )
 
-
 AUDIO_TTS_MODEL = PersistentConfig(
     "AUDIO_TTS_MODEL",
     "audio.tts.model",
@@ -2737,7 +2736,13 @@ AUDIO_TTS_SPLIT_ON = PersistentConfig(
 AUDIO_TTS_AZURE_SPEECH_REGION = PersistentConfig(
     "AUDIO_TTS_AZURE_SPEECH_REGION",
     "audio.tts.azure.speech_region",
-    os.getenv("AUDIO_TTS_AZURE_SPEECH_REGION", "eastus"),
+    os.getenv("AUDIO_TTS_AZURE_SPEECH_REGION", ""),
+)
+
+AUDIO_TTS_AZURE_SPEECH_ENDPOINT = PersistentConfig(
+    "AUDIO_TTS_AZURE_SPEECH_ENDPOINT",
+    "audio.tts.azure.speech_endpoint",
+    os.getenv("AUDIO_TTS_AZURE_SPEECH_ENDPOINT", ""),
 )
 
 AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
@@ -2747,7 +2752,6 @@ AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
         "AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT", "audio-24khz-160kbitrate-mono-mp3"
     ),
 )
-
 
 ####################################
 # LDAP
