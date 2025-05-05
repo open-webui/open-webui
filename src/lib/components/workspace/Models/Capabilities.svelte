@@ -12,7 +12,7 @@
 			'Sends `stream_options: { include_usage: true }` in the request.\nSupported providers will return token usage information in the response when set.'
 		),
 		citations: $i18n.t('Displays citations in the response'),
-		fileUploadSupported: 'Model supports file uploads',
+		fileUploadSupported: $i18n.t('Model supports file uploads')
 	};
 
 	export let capabilities: {
