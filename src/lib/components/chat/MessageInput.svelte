@@ -16,7 +16,8 @@
 		showCallOverlay,
 		tools,
 		user as _user,
-		showControls
+		showControls,
+		companyConfig
 	} from '$lib/stores';
 
 	import { blobToFile, compressImage, createMessagesList, findWordIndices } from '$lib/utils';
@@ -1241,7 +1242,7 @@
 
 										<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
 											{#if $_user}
-												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search) && (customModel?.info?.meta?.capabilities?.websearch ?? true)}
+												{#if $companyConfig?.config?.rag?.web?.search?.enable && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search) && (customModel?.info?.meta?.capabilities?.websearch ?? true)}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
 															on:click|preventDefault={() => {
@@ -1266,7 +1267,7 @@
 													</Tooltip>
 												{/if}
 
-												{#if $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation) && (customModel?.info?.meta?.capabilities?.image_generation ?? true)}
+												{#if $companyConfig?.config?.image_generation?.enable && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation) && (customModel?.info?.meta?.capabilities?.image_generation ?? true)}
 													<Tooltip content={$i18n.t('Generate an image')} placement="top">
 														<button
 															on:click|preventDefault={() => {

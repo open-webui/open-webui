@@ -35,7 +35,8 @@
 		showOverview,
 		chatTitle,
 		showArtifacts,
-		tools
+		tools,
+		companyConfig
 	} from '$lib/stores';
 	import {
 		convertMessagesToHistory,
@@ -677,9 +678,9 @@
 			// } else {
 				if ($settings?.models) {
 					selectedModels = $settings?.models;
-				} else if ($config?.default_models) {
-					console.log($config?.default_models.split(',') ?? '');
-					selectedModels = $config?.default_models.split(',');
+				} else if ($companyConfig?.config?.models?.DEFAULT_MODELS) {
+					console.log($companyConfig?.config?.models?.DEFAULT_MODELS);
+					selectedModels = $companyConfig?.config?.models?.DEFAULT_MODELS?.split(',');
 				} else {
 					selectedModels = [''];
 				}
@@ -2064,8 +2065,12 @@
 
 							<div
 								class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
-							>
-								{$i18n.t('LLMs can make mistakes. Verify important information.')}
+							>	
+								{#if $companyConfig?.config?.ui?.custom_user_notice}
+									{$i18n.t($companyConfig?.config?.ui?.custom_user_notice)}
+								{:else}
+									{$i18n.t('LLMs can make mistakes. Verify important information.')}
+								{/if}
 							</div>
 						</div>
 					{:else}
@@ -2119,7 +2124,11 @@
 								}}
 							/>
 							<div class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0">
-								{$i18n.t('LLMs can make mistakes. Verify important information.')}
+								{#if $companyConfig?.config?.ui?.custom_user_notice}
+									{$i18n.t($companyConfig?.config?.ui?.custom_user_notice)}
+								{:else}
+									{$i18n.t('LLMs can make mistakes. Verify important information.')}
+								{/if}
 							</div>
 						</div>
 					{/if}

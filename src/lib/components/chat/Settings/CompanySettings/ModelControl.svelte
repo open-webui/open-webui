@@ -8,7 +8,7 @@
 	import { onClickOutside } from '$lib/utils';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { getModelsConfig, setModelsConfig } from '$lib/apis/configs';
-	import { models as storeModels } from '$lib/stores';
+	import { companyConfig, models as storeModels } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import GroupIcon from '$lib/components/icons/GroupIcon.svelte';
 	import PublicIcon from '$lib/components/icons/PublicIcon.svelte';
@@ -19,6 +19,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import InfoIcon from '$lib/components/icons/InfoIcon.svelte';
 	import AdditionaModelInfo from '../../ModelSelector/AdditionaModelInfo.svelte';
+	import { getCompanyConfig } from '$lib/apis/auths';
 
 	const i18n = getContext('i18n');
 
@@ -99,6 +100,11 @@
 		if (res) {
 			toast.success($i18n.t('Models configuration saved successfully'));
 			defaultInit();
+			const companyConfigInfo = await getCompanyConfig(localStorage.token)
+			.catch(error => toast.error(error));
+			if(companyConfigInfo) {
+				companyConfig.set(companyConfigInfo);
+			}
 		} else {
 			toast.error($i18n.t('Failed to save models configuration'));
 		}
@@ -130,7 +136,6 @@
 		info.user_id = selectedModel.user_id;
 		info.company_id = selectedModel.company_id;
 		info.meta = { ...selectedModel.meta, files: [] };
-		console.log(info, 'info------------->');
 
 		const res = await updateModelById(localStorage.token, modelId, info).catch((error) => {
 			return null;
@@ -151,7 +156,7 @@
 			<div class="text-xs dark:text-customGray-300">{$i18n.t('Model')}</div>
 		</div>
 	</div>
-	<div class="mb-2.5" use:onClickOutside={() => (showBaseDropdown = false)}>
+	<div class="mb-5" use:onClickOutside={() => (showBaseDropdown = false)}>
 		<div class="relative" bind:this={dropdownBaseRef}>
 			<button
 				type="button"
@@ -196,7 +201,7 @@
 			{/if}
 		</div>
 	</div>
-	<div class="mb-5" use:onClickOutside={() => (showImageDropdown = false)}>
+	<!-- <div class="mb-5" use:onClickOutside={() => (showImageDropdown = false)}>
 		<div class="relative" bind:this={dropdownImageRef}>
 			<button
 				type="button"
@@ -240,7 +245,7 @@
 				</div>
 			{/if}
 		</div>
-	</div>
+	</div> -->
 	{#if models !== null}
 		<div>
 			{#each Object.keys(organizations) as organization (organization)}

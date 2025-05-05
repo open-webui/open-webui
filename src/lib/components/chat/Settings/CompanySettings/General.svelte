@@ -97,6 +97,7 @@
 		if($companyConfig?.config?.ui?.custom_user_notice) {
 			userNotice = $companyConfig?.config?.ui?.custom_user_notice;
 		}
+		console.log($companyConfig)
 	}});
 
 	const onSubmit = async () => {
