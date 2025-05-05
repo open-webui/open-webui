@@ -39,6 +39,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Document from '$lib/components/icons/Document.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
+	import { generateTitle } from '$lib/apis';
 
 	export let className = '';
 
@@ -136,6 +137,7 @@
 
 	let itemElement;
 
+	let generating = false;
 	let doubleClicked = false;
 	let dragged = false;
 	let x = 0;
@@ -223,6 +225,40 @@
 			if (input) input.focus();
 		}, 0);
 	};
+
+	const generateTitleHandler = async () => {
+		generating = true;
+		if (!chat) {
+			chat = await getChatById(localStorage.token, id);
+		}
+
+		const messages = (chat.chat?.messages ?? []).map((message) => {
+			return {
+				role: message.role,
+				content: message.content
+			};
+		});
+
+		const model = chat.chat.models.at(0) ?? chat.models.at(0) ?? '';
+
+		chatTitle = '';
+
+		const generatedTitle = await generateTitle(localStorage.token, model, messages).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
+
+		if (generatedTitle) {
+			if (generatedTitle !== title) {
+				editChatTitle(id, generatedTitle);
+			}
+
+			confirmEdit = false;
+		}
+		generating = false;
+	};
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={id} />
@@ -264,14 +300,22 @@
 				? 'bg-gray-200 dark:bg-gray-900'
 				: selected
 					? 'bg-gray-100 dark:bg-gray-950'
-					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis"
+					: 'group-hover:bg-gray-100 dark:group-hover:bg-gray-950'}  whitespace-nowrap text-ellipsis relative {generating
+				? 'cursor-not-allowed'
+				: ''}"
 		>
 			<input
 				id="chat-title-input-{id}"
 				bind:value={chatTitle}
 				class=" bg-transparent w-full outline-hidden mr-10"
+				placeholder={generating ? $i18n.t('Generating...') : ''}
 				on:keydown={chatTitleInputKeydownHandler}
 				on:blur={async (e) => {
+					// check if target is generate button
+					if (e.relatedTarget?.id === 'generate-title-button') {
+						return;
+					}
+
 					if (doubleClicked) {
 						e.preventDefault();
 						e.stopPropagation();
@@ -360,7 +404,17 @@
 				class="flex self-center items-center space-x-1.5 z-10 translate-y-[0.5px] -translate-x-[0.5px]"
 			>
 				<Tooltip content={$i18n.t('Generate')}>
-					<button class=" self-center dark:hover:text-white transition" on:click={() => {}}>
+					<button
+						class=" self-center dark:hover:text-white transition"
+						id="generate-title-button"
+						on:click={(e) => {
+							e.preventDefault();
+							e.stopImmediatePropagation();
+							e.stopPropagation();
+
+							generateTitleHandler();
+						}}
+					>
 						<Sparkles strokeWidth="2" />
 					</button>
 				</Tooltip>
