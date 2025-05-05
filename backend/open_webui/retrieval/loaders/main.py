@@ -90,7 +90,7 @@ class TikaLoader:
         self.file_path = file_path
         self.mime_type = mime_type
 
-        self.exextract_images = extract_images
+        self.extract_images = extract_images
 
     def load(self) -> list[Document]:
         with open(self.file_path, "rb") as f:
