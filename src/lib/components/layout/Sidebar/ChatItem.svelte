@@ -66,7 +66,6 @@
 
 	let showShareChatModal = false;
 	let confirmEdit = false;
-	let editInputFocused = false;
 
 	let chatTitle = title;
 
@@ -137,6 +136,7 @@
 
 	let itemElement;
 
+	let doubleClicked = false;
 	let dragged = false;
 	let x = 0;
 	let y = 0;
@@ -212,19 +212,17 @@
 		}
 	};
 
-	const focusEditInput = async () => {
-		console.log('focusEditInput');
+	const renameHandler = async () => {
+		chatTitle = title;
+		confirmEdit = true;
+
 		await tick();
 
-		const input = document.getElementById(`chat-title-input-${id}`);
-		if (input) {
-			input.focus();
-		}
+		setTimeout(() => {
+			const input = document.getElementById(`chat-title-input-${id}`);
+			if (input) input.focus();
+		}, 0);
 	};
-
-	$: if (confirmEdit) {
-		focusEditInput();
-	}
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={id} />
@@ -273,18 +271,27 @@
 				bind:value={chatTitle}
 				class=" bg-transparent w-full outline-hidden mr-10"
 				on:keydown={chatTitleInputKeydownHandler}
-				on:focus={() => {
-					editInputFocused = true;
-				}}
-				on:blur={() => {
-					if (editInputFocused) {
-						if (chatTitle !== title) {
-							editChatTitle(id, chatTitle);
-						}
+				on:blur={async (e) => {
+					if (doubleClicked) {
+						e.preventDefault();
+						e.stopPropagation();
 
-						confirmEdit = false;
-						chatTitle = '';
+						await tick();
+						setTimeout(() => {
+							const input = document.getElementById(`chat-title-input-${id}`);
+							if (input) input.focus();
+						}, 0);
+
+						doubleClicked = false;
+						return;
 					}
+
+					if (chatTitle !== title) {
+						editChatTitle(id, chatTitle);
+					}
+
+					confirmEdit = false;
+					chatTitle = '';
 				}}
 			/>
 		</div>
@@ -304,9 +311,12 @@
 					showSidebar.set(false);
 				}
 			}}
-			on:dblclick={() => {
-				chatTitle = title;
-				confirmEdit = true;
+			on:dblclick={async (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+
+				doubleClicked = true;
+				renameHandler();
 			}}
 			on:mouseenter={(e) => {
 				mouseOver = true;
@@ -394,16 +404,7 @@
 					archiveChatHandler={() => {
 						archiveChatHandler(id);
 					}}
-					renameHandler={async () => {
-						chatTitle = title;
-						confirmEdit = true;
-
-						await tick();
-						const input = document.getElementById(`chat-title-input-${id}`);
-						if (input) {
-							input.focus();
-						}
-					}}
+					{renameHandler}
 					deleteHandler={() => {
 						showDeleteConfirm = true;
 					}}
