@@ -50,7 +50,8 @@ import asyncio
 
 @router.post("/", response_model=FileModelResponse)
 def upload_file(
-    request: Request, file: UploadFile = File(...), 
+    request: Request,
+    file: UploadFile = File(...),
     user=Depends(get_verified_user),
     file_metadata: dict = {},
 ):
@@ -131,7 +132,7 @@ def process_tasks(request, background_tasks, form_data, user, task_id):
 
     task["status"] = "Processing PDF..."
     content = process_file_async(request, background_tasks, form_data, task_id, user)
-    task["text"] = content.get('content')
+    task["text"] = content.get("content")
     task["status"] = "Processing Completed"
 
 
@@ -145,12 +146,11 @@ async def upload_file_async(
     global tasks_cache
     log.info(f"file.content_type: {file.content_type}")
 
-    try:
-        unsanitized_filename = file.filename
-        filename = os.path.basename(unsanitized_filename)
-        
-        if file_metadata:
-            file_metadata = json.loads(file_metadata) 
+    unsanitized_filename = file.filename
+    filename = os.path.basename(unsanitized_filename)
+
+    if file_metadata:
+        file_metadata = json.loads(file_metadata)
 
     # replace filename with uuid
     task_id = str(uuid.uuid4())
@@ -186,16 +186,7 @@ async def upload_file_async(
     )
     # file_item = Files.get_file_by_id(id=id)
 
-        return {"task_id": task_id}
-    except Exception as e:
-        log.exception(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=ERROR_MESSAGES.DEFAULT(e),
-        )
-
-
-    
+    return {"task_id": task_id}
 
 
 ############################
@@ -219,7 +210,7 @@ async def get_task_status(task_id: str):
 
 
 @router.get("/get_tasks")
-async def get_task_status():
+def get_task_status():
     if tasks_cache:
         return {"task_ids": list(tasks_cache.keys())}  # Retorna apenas os task_ids
     return {"message": "No tasks found"}
