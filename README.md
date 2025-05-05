@@ -66,13 +66,13 @@ Want to learn more about Open WebUI's features? Check out our [Open WebUI docume
 
 ## Sponsors 🙌
 
-
 #### Emerald
 
 <a href="https://n8n.io/" target="_blank">
   <img src="https://docs.openwebui.com/sponsors/logos/n8n.png" alt="n8n" style="width: 8rem; height: 8rem; border-radius: .75rem;" />
 </a>
 
+---
 
 We are incredibly grateful for the generous support of our sponsors. Their contributions help us to maintain and improve our project, ensuring we can continue to deliver quality work to our community. Thank you!
 
