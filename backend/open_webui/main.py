@@ -34,6 +34,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response
 
 from beyond_the_loop.routers import payments
+from open_webui.middleware.company_config import CompanyConfigMiddleware
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
@@ -61,6 +62,10 @@ from open_webui.routers import (
     utils,
 )
 from beyond_the_loop.routers import openai, audio
+from beyond_the_loop.routers import auths
+from beyond_the_loop.routers import analytics
+from beyond_the_loop.routers import payments
+from beyond_the_loop.routers import companies
 
 from open_webui.routers.retrieval import (
     get_embedding_function,
@@ -328,7 +333,9 @@ https://github.com/open-webui/open-webui
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
-        reset_config()
+        # Note: This won't actually save to the database since company_id is None
+        # It will just reset the in-memory config to the default values
+        reset_config(None)
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     yield
@@ -532,7 +539,6 @@ except Exception as e:
     log.error(f"Error updating models: {e}")
     pass
 
-
 app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.config.RAG_EMBEDDING_ENGINE,
     app.state.config.RAG_EMBEDDING_MODEL,
@@ -677,6 +683,7 @@ class RedirectMiddleware(BaseHTTPMiddleware):
 # Add the middleware to the app
 app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(CompanyConfigMiddleware)
 
 
 @app.middleware("http")
@@ -764,7 +771,7 @@ app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
 
 app.include_router(payments.router, prefix="/api/v1/payments", tags=["payments"])
-
+app.include_router(companies.router, prefix="/api/v1/companies", tags=["companies"])
 
 ##################################
 #

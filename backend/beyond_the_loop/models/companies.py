@@ -59,6 +59,23 @@ class CompanyForm(BaseModel):
     company: dict
 
 
+class UpdateCompanyForm(BaseModel):
+    """Request model for updating company details"""
+    name: Optional[str] = None
+    profile_image_url: Optional[str] = None
+
+class CompanyConfigResponse(BaseModel):
+    """Response model for company configuration"""
+    config: dict
+
+class UpdateCompanyConfigRequest(BaseModel):
+    """Request model for updating company configuration"""
+    hide_model_logo_in_chat: Optional[bool] = None
+    chat_retention_days: Optional[int] = None
+    custom_user_notice: Optional[str] = None
+    features_web_search: Optional[bool] = None
+    features_image_generation: Optional[bool] = None
+
 class CompanyResponse(BaseModel):
     id: str
     name: str
