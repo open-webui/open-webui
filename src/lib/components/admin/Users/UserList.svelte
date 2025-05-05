@@ -416,10 +416,20 @@
 							on:click={() => {
 								selectedUser = user;
 								showUpdateRoleModal = true;
+								// // Find the current role index
+								// const currentRoleIndex = roles.findIndex((r) => r.name === user.role);
+								// // Get the next role index (loop back to 0 if at end)
+								// const nextRoleIndex = (currentRoleIndex + 1) % roles.length;
+								// // Update to role
+								// updateRoleHandler(user.id, roles[nextRoleIndex].name);
 							}}
 						>
 							<Badge
-								type={user.role === 'admin' ? 'info' : user.role !== 'pending' ? 'success' : 'muted'}
+								type={user.role === 'admin'
+									? 'info'
+									: user.role !== 'pending'
+										? 'success'
+										: 'muted'}
 								content={$i18n.t(user.role)}
 							/>
 						</button>

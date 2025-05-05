@@ -1024,7 +1024,9 @@ app.include_router(
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 
 app.include_router(roles.router, prefix="/api/v1/roles", tags=["roles"])
-app.include_router(permissions.router, prefix="/api/v1/permissions", tags=["permissions"])
+app.include_router(
+    permissions.router, prefix="/api/v1/permissions", tags=["permissions"]
+)
 
 
 try:

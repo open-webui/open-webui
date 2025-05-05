@@ -104,7 +104,22 @@ class ERROR_MESSAGES(str, Enum):
     )
     FILE_NOT_PROCESSED = "Extracted content is not available for this file. Please ensure that the file is processed before proceeding."
 
-    DELETE_ROLE_ERROR = "Oops! Something went wrong. We encountered an issue while trying to delete the role. Please give it another shot."
+    PERMISSION_FETCH_FAILED = "Permissions fetch failed. Please try again later."
+    PERMISSION_NOT_FOUND = (
+        lambda name="", category="": f"Permission '{name}' with category '{category}' was not found"
+    )
+
+    ROLE_ALREADY_EXISTS = (
+        lambda role="": f"A role with the name '{role}' already exists"
+    )
+    ROLE_DO_NOT_EXISTS = "A role does not exist."
+    ROLE_ALREADY_ASSIGNED_TO_GROUP = ()
+    ROLE_DELETE_ERROR = "Oops! Something went wrong. We encountered an issue while trying to delete the role. Please give it another shot."
+    ROLE_NOT_FOUND = (
+        "This role does not exist.  Please check the role name and try again."
+    )
+    ROLE_ERROR = "Oops! Something went wrong. Please try again later."
+
 
 class TASKS(str, Enum):
     def __str__(self) -> str:

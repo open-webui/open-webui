@@ -12,10 +12,10 @@ from open_webui.internal.db import Base, get_db
 # Association table for the many-to-many relationship (role <-> permission) with value
 ####################
 class RolePermission(Base):
-    __tablename__ = 'role_permissions'
+    __tablename__ = "role_permissions"
 
-    role_id = Column(Integer, ForeignKey('roles.id'), primary_key=True)
-    permission_id = Column(Integer, ForeignKey('permissions.id'), primary_key=True)
+    role_id = Column(Integer, ForeignKey("roles.id"), primary_key=True)
+    permission_id = Column(Integer, ForeignKey("permissions.id"), primary_key=True)
     value = Column(Boolean, default=False)
 
     # Add relationships to both sides
@@ -26,6 +26,7 @@ class RolePermission(Base):
 ####################
 # Role DB Schema
 ####################
+
 
 class Role(Base):
     __tablename__ = "roles"
@@ -55,20 +56,19 @@ class RoleModel(BaseModel):
 # Forms
 ####################
 
+
 class RoleForm(BaseModel):
     role: str
 
 
 class RolesTable:
     def insert_new_role(
-            self,
-            name: str,
+        self,
+        name: str,
     ) -> Optional[RoleModel]:
         with get_db() as db:
             result = Role(
-                name=name,
-                created_at=int(time.time()),
-                updated_at=int(time.time())
+                name=name, created_at=int(time.time()), updated_at=int(time.time())
             )
             db.add(result)
             db.commit()
@@ -102,7 +102,9 @@ class RolesTable:
             db.commit()
             return self.get_role_by_id(role_id)
 
-    def get_roles(self, skip: Optional[int] = None, limit: Optional[int] = None) -> list[RoleModel]:
+    def get_roles(
+        self, skip: Optional[int] = None, limit: Optional[int] = None
+    ) -> list[RoleModel]:
         with get_db() as db:
 
             query = db.query(Role).order_by(Role.id)
