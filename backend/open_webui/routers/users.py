@@ -208,10 +208,10 @@ async def update_user_settings_by_session_user(
     request: Request, form_data: UserSettings, user=Depends(get_verified_user)
 ):
     update_data = form_data.model_dump()
-    # Check if a non-admin user is trying to modify the restricted setting without permission
+    # Check if a non-admin user is trying to modify the restricted Direct Tools setting without permission
     if (
         user.role != "admin"
-        and "directToolServers" in update_data
+        and "toolServers" in update_data.get('ui').keys()
         and not has_permission(
             user.id, "features.direct_tool_servers", request.app.state.config.USER_PERMISSIONS
         )
