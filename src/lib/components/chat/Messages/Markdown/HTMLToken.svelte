@@ -22,7 +22,21 @@
 
 {#if token.type === 'html'}
 	{#if html && html.includes('<video')}
-		{@html html}
+		{@const video = html.match(/<video[^>]*>([\s\S]*?)<\/video>/)}
+		{@const videoSrc = video && video[1]}
+		{#if videoSrc}
+			<!-- svelte-ignore a11y-media-has-caption -->
+			<video
+				class="w-full my-2"
+				src={videoSrc}
+				title="Video player"
+				frameborder="0"
+				referrerpolicy="strict-origin-when-cross-origin"
+				allowfullscreen
+			></video>
+		{:else}
+			{token.text}
+		{/if}
 	{:else if token.text && token.text.match(/<iframe\s+[^>]*src="https:\/\/www\.youtube\.com\/embed\/([a-zA-Z0-9_-]{11})(?:\?[^"]*)?"[^>]*><\/iframe>/)}
 		{@const match = token.text.match(
 			/<iframe\s+[^>]*src="https:\/\/www\.youtube\.com\/embed\/([a-zA-Z0-9_-]{11})(?:\?[^"]*)?"[^>]*><\/iframe>/

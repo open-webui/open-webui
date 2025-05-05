@@ -239,7 +239,16 @@
 			audioChunks = [];
 			recording = false;
 		};
-		mediaRecorder.start();
+
+		try {
+			mediaRecorder.start();
+		} catch (error) {
+			console.error('Error starting recording:', error);
+			toast.error($i18n.t('Error starting recording.'));
+			loading = false;
+			recording = false;
+			return;
+		}
 
 		if (transcribe) {
 			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
