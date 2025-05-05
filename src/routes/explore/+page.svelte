@@ -60,7 +60,7 @@
 
 <AnimatedBackground />
 
-<content class="flex flex-col items-center pt-20 mx-3 text-blue-800">
+<content class="flex flex-col items-center mx-3 text-blue-800 w-full">
 		<h1 class="my-5 text-5xl leading-[56px] font-overpass text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-700">
 			{$i18n.t('Welcome to IONOS GPT,', { ns: 'ionos' })}
 			<br>
