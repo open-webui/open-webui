@@ -118,8 +118,7 @@ class YoutubeLoader:
                 log.debug(f"No transcript found for language '{lang}'")
                 continue
             except Exception as e:
-                # If we hit any other type of exception, log it and re-raise
-                log.exception(f"Error finding transcript for language '{lang}'")
+                log.warning(f"Error finding transcript for language '{lang}'")
                 raise e
     
         # If all specified languages fail, fall back to English (unless English was already tried)
@@ -141,7 +140,7 @@ class YoutubeLoader:
                 log.exception("Error finding English transcript fallback")
                 raise e
         
-        # If we get here, all languages failed including the English fallback
+        # All languages failed
         languages_tried = ", ".join(self.language)
         if "en" not in self.language:
             languages_tried += ", en (fallback)"
