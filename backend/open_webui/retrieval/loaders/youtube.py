@@ -88,8 +88,7 @@ class YoutubeLoader:
                 "http": self.proxy_url,
                 "https": self.proxy_url,
             }
-            # Don't log complete URL because it might contain secrets
-            log.debug(f"Using proxy URL: {self.proxy_url[:14]}...")
+            log.debug(f"Using proxy URL: {self.proxy_url}...")
         else:
             youtube_proxies = None
     
