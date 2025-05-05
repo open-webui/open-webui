@@ -85,10 +85,11 @@ known_source_ext = [
 
 
 class TikaLoader:
-    def __init__(self, url, file_path, mime_type=None):
+    def __init__(self, url, file_path, mime_type=None, loader_kwargs=None):
         self.url = url
         self.file_path = file_path
         self.mime_type = mime_type
+        self.kwargs = loader_kwargs if loader_kwargs is not None else {}
 
     def load(self) -> list[Document]:
         with open(self.file_path, "rb") as f:
@@ -213,6 +214,7 @@ class Loader:
                     url=self.kwargs.get("TIKA_SERVER_URL"),
                     file_path=file_path,
                     mime_type=file_content_type,
+                    loader_kwargs=self.kwargs,
                 )
         elif self.engine == "docling" and self.kwargs.get("DOCLING_SERVER_URL"):
             if self._is_text_file(file_ext, file_content_type):
