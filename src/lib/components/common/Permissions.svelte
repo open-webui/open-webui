@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import  { getPermissions } from '$lib/apis/permissions'
+	import { getPermissions } from '$lib/apis/permissions';
 
 	const i18n = getContext('i18n');
 
 	import Switch from '$lib/components/common/Switch.svelte';
-	import {toast} from "svelte-sonner";
+	import { toast } from 'svelte-sonner';
 
 	export let defaultPermissions = {};
 	export let permissions = {};
 
-	let allPermissions = []
+	let allPermissions = [];
 	let loading = true;
 
 	// Reactive statement to ensure all fields are present in `permissions`
@@ -31,7 +31,7 @@
 
 	function formatPermissionName(key: string): string {
 		// Find a permission with a matching name in allPermissions
-		const permission = Array.isArray(allPermissions) && allPermissions.find(p => p.name === key);
+		const permission = Array.isArray(allPermissions) && allPermissions.find((p) => p.name === key);
 
 		// Return the label
 		return permission.label;
@@ -41,7 +41,7 @@
 		return key.charAt(0).toUpperCase() + key.slice(1) + ' Permissions';
 	}
 
-	onMount(async() => {
+	onMount(async () => {
 		permissions = fillMissingProperties(permissions, defaultPermissions);
 
 		try {
@@ -49,11 +49,11 @@
 			if (Array.isArray(result) && result.length > 0) {
 				allPermissions = result;
 			} else {
-				console.error("getPermissions returned empty or invalid data", result);
-				toast.error("Failed to load permission data");
+				console.error('getPermissions returned empty or invalid data', result);
+				toast.error('Failed to load permission data');
 			}
 		} catch (error) {
-			console.error("Error loading permissions:", error);
+			console.error('Error loading permissions:', error);
 			toast.error(`Failed to load permissions: ${error}`);
 		} finally {
 			loading = false;
@@ -72,7 +72,9 @@
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 			{/if}
 			<div>
-				<div class=" mb-2 text-sm font-medium">{$i18n.t(formatPermissionCategory(categoryName))}</div>
+				<div class=" mb-2 text-sm font-medium">
+					{$i18n.t(formatPermissionCategory(categoryName))}
+				</div>
 
 				{#each Object.entries(category) as [key, value]}
 					<div class="flex w-full justify-between my-2 pr-2">

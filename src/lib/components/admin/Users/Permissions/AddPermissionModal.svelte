@@ -30,7 +30,13 @@
 		};
 
 		loading = true;
-		const res = await addPermission(localStorage.token, _permission.category, _permission.name, _permission.label, _permission.description).catch((error) => {
+		const res = await addPermission(
+			localStorage.token,
+			_permission.category,
+			_permission.name,
+			_permission.label,
+			_permission.description
+		).catch((error) => {
 			toast.error(`${error}`);
 		});
 
@@ -68,18 +74,19 @@
 
 		<div class="flex flex-col md:flex-row w-full px-4 pb-3 md:space-x-4 dark:text-gray-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
-				<form class="flex flex-col w-full"
+				<form
+					class="flex flex-col w-full"
 					on:submit|preventDefault={() => {
 						submitHandler();
-					}}>
-
+					}}
+				>
 					<div class="flex flex-col w-full mt-1">
 						<div class="mb-1 text-xs text-gray-500">{$i18n.t('Category')}</div>
 						<div class="flex-1">
 							<select
-									class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
-									bind:value={_permission.category}
-									required
+								class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+								bind:value={_permission.category}
+								required
 							>
 								{#each _categories as category}
 									<option value={category}>{category}</option>

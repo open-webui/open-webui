@@ -5,13 +5,13 @@
 	import { onMount, getContext } from 'svelte';
 
 	import { updateRole, getRolePermissions, linkRoleToPermissions } from '$lib/apis/roles';
-    import { getUserDefaultPermissions } from '$lib/apis/users'
+	import { getUserDefaultPermissions } from '$lib/apis/users';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
-	import Permissions from "$lib/components/common/Permissions.svelte";
-	import WrenchSolid from "$lib/components/icons/WrenchSolid.svelte";
-	import Plus from "$lib/components/icons/Plus.svelte";
+	import Permissions from '$lib/components/common/Permissions.svelte';
+	import WrenchSolid from '$lib/components/icons/WrenchSolid.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -20,14 +20,14 @@
 	export let show = false;
 	export let selectedRole;
 	export let tabs = ['general', 'permissions'];
-	export let lockedRoles = ['pending', 'user', 'admin']
+	export let lockedRoles = ['pending', 'user', 'admin'];
 
 	let selectedTab = 'general';
 	let defaultPermissions = {};
 	let permissions = {};
 	let _role = {
 		id: '',
-		name: '',
+		name: ''
 	};
 
 	const submitHandler = async () => {
@@ -39,7 +39,13 @@
 			// Loop through permissions and link them to the role
 			for (const [categoryName, category] of Object.entries(permissions)) {
 				for (const [permissionName, value] of Object.entries(category)) {
-					await linkRoleToPermissions(localStorage.token, _role.name, categoryName, permissionName, value).catch((error) => {
+					await linkRoleToPermissions(
+						localStorage.token,
+						_role.name,
+						categoryName,
+						permissionName,
+						value
+					).catch((error) => {
 						toast.error(`Failed to link permission ${permissionName}: ${error}`);
 					});
 				}
@@ -49,7 +55,6 @@
 			show = false;
 		}
 	};
-
 
 	onMount(async () => {
 		if (selectedRole) {
@@ -169,7 +174,7 @@
 											placeholder={$i18n.t('Role name, should be lower case and without spaces')}
 											autocomplete="off"
 											required
-											disabled="{lockedRoles.includes(_role.name) ? 'disabled' : ''}"
+											disabled={lockedRoles.includes(_role.name) ? 'disabled' : ''}
 										/>
 									</div>
 								</div>

@@ -10,15 +10,15 @@ export const getRoles = async (token: string) => {
 			Authorization: `Bearer ${token}`
 		}
 	})
-    .then(async (res) => {
-        if (!res.ok) throw await res.json();
-        return res.json();
-    })
-    .catch((err) => {
-        console.log(err);
-        error = err.detail;
-        return null;
-    });
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
 
 	if (error) {
 		throw error;
@@ -40,15 +40,15 @@ export const addRole = async (token: string, roleName: string) => {
 			role: roleName
 		})
 	})
-    .then(async (res) => {
-        if (!res.ok) throw await res.json();
-        return res.json();
-    })
-    .catch((err) => {
-        console.log(err);
-        error = err.detail;
-        return null;
-    });
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
 
 	if (error) {
 		throw error;
@@ -70,15 +70,15 @@ export const updateRole = async (token: string, roleId: number, roleName: string
 			role: roleName
 		})
 	})
-    .then(async (res) => {
-        if (!res.ok) throw await res.json();
-        return res.json();
-    })
-    .catch((err) => {
-        console.log(err);
-        error = err.detail;
-        return null;
-    });
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
 
 	if (error) {
 		throw error;
@@ -95,17 +95,17 @@ export const deleteRole = async (token: string, roleName: string) => {
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
-		},
+		}
 	})
-    .then(async (res) => {
-        if (!res.ok) throw await res.json();
-        return res.json();
-    })
-    .catch((err) => {
-        console.log(err);
-        error = err.detail;
-        return null;
-    });
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
 
 	if (error) {
 		throw error;
@@ -114,7 +114,7 @@ export const deleteRole = async (token: string, roleName: string) => {
 	return res;
 };
 
-export const getRolePermissions = async (token: string, roleName: string ) => {
+export const getRolePermissions = async (token: string, roleName: string) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/roles/${roleName}/permissions`, {
@@ -124,15 +124,15 @@ export const getRolePermissions = async (token: string, roleName: string ) => {
 			Authorization: `Bearer ${token}`
 		}
 	})
-    .then(async (res) => {
-        if (!res.ok) throw await res.json();
-        return res.json();
-    })
-    .catch((err) => {
-        console.log(err);
-        error = err.detail;
-        return null;
-    });
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
 
 	if (error) {
 		throw error;
@@ -141,7 +141,13 @@ export const getRolePermissions = async (token: string, roleName: string ) => {
 	return res;
 };
 
-export const linkRoleToPermissions = async (token: string, roleName: string, categoryName: string, permissionName: string, value: boolean ) => {
+export const linkRoleToPermissions = async (
+	token: string,
+	roleName: string,
+	categoryName: string,
+	permissionName: string,
+	value: boolean
+) => {
 	let error = null;
 	const res = await fetch(`${WEBUI_API_BASE_URL}/roles/${roleName}/permission/link`, {
 		method: 'POST',
@@ -155,15 +161,15 @@ export const linkRoleToPermissions = async (token: string, roleName: string, cat
 			value: value
 		})
 	})
-    .then(async (res) => {
-        if (!res.ok) throw await res.json();
-        return res.json();
-    })
-    .catch((err) => {
-        console.log(err);
-        error = err.detail;
-        return null;
-    });
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
 
 	if (error) {
 		throw error;
@@ -172,25 +178,33 @@ export const linkRoleToPermissions = async (token: string, roleName: string, cat
 	return res;
 };
 
-export const unlinkRoleFromPermissions = async (token: string, roleName: string, categoryName: string, permissionName: string) => {
+export const unlinkRoleFromPermissions = async (
+	token: string,
+	roleName: string,
+	categoryName: string,
+	permissionName: string
+) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/roles/${roleName}/permission/${categoryName}/${permissionName}`, {
-		method: 'DELETE',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-	})
-    .then(async (res) => {
-        if (!res.ok) throw await res.json();
-        return res.json();
-    })
-    .catch((err) => {
-        console.log(err);
-        error = err.detail;
-        return null;
-    });
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/roles/${roleName}/permission/${categoryName}/${permissionName}`,
+		{
+			method: 'DELETE',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
 
 	if (error) {
 		throw error;

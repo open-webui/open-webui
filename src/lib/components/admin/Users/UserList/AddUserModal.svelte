@@ -87,7 +87,7 @@
 						if (idx > 0) {
 							if (
 								columns.length === 4 &&
-								roles.map(role => role.name).includes(columns[3].toLowerCase())
+								roles.map((role) => role.name).includes(columns[3].toLowerCase())
 							) {
 								const res = await addUser(
 									localStorage.token,
@@ -201,7 +201,6 @@
 										{#each roles as role}
 											<option value={role.name}>{$i18n.t(role.name)}</option>
 										{/each}
-
 									</select>
 								</div>
 							</div>
