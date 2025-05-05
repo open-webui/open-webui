@@ -21,7 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
 from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user
-from open_webui.utils.access_control import get_permissions
+from open_webui.utils.access_control import get_permissions, has_permission
 
 
 log = logging.getLogger(__name__)
@@ -205,11 +205,26 @@ async def get_user_settings_by_session_user(user=Depends(get_verified_user)):
 
 @router.post("/user/settings/update", response_model=UserSettings)
 async def update_user_settings_by_session_user(
-    form_data: UserSettings, user=Depends(get_verified_user)
+    request: Request, form_data: UserSettings, user=Depends(get_verified_user)
 ):
-    user = Users.update_user_settings_by_id(user.id, form_data.model_dump())
-    if user:
-        return user.settings
+    update_data = form_data.model_dump()
+    # Check if a non-admin user is trying to modify the restricted setting without permission
+    if (
+        user.role != "admin"
+        and "directToolServers" in update_data
+        and not has_permission(
+            user.id, "features.direct_tool_servers", request.app.state.config.USER_PERMISSIONS
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+        )
+
+    # Proceed with the update
+    updated_user = Users.update_user_settings_by_id(user.id, update_data)
+    if updated_user:
+        return updated_user.settings
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
