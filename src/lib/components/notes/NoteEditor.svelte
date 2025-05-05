@@ -458,6 +458,14 @@
 		}
 	};
 
+	const scrollToBottom = () => {
+		const element = document.getElementById('note-content-container');
+
+		if (element) {
+			element.scrollTop = element?.scrollHeight;
+		}
+	};
+
 	const enhanceCompletionHandler = async (model) => {
 		let enhancedContent = {
 			json: null,
@@ -534,6 +542,8 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 										note.data.content.md = enhancedContent.md;
 										note.data.content.html = enhancedContent.html;
 										note.data.content.json = null;
+
+										scrollToBottom();
 									}
 								}
 							}
@@ -668,7 +678,7 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 		</div>
 	{:else}
 		<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
-			<div class="shrink-0 w-full flex justify-between items-center px-4.5 pt-1 mb-1.5">
+			<div class="shrink-0 w-full flex justify-between items-center px-4.5 mb-1.5">
 				<div class="w-full flex items-center">
 					<input
 						class="w-full text-2xl font-medium bg-transparent outline-hidden"
@@ -755,7 +765,10 @@ Provide the enhanced notes in markdown format. Use markdown syntax for headings,
 				</div>
 			</div>
 
-			<div class=" flex-1 w-full h-full overflow-auto px-4 pb-14 relative">
+			<div
+				class=" flex-1 w-full h-full overflow-auto px-4 pb-20 relative"
+				id="note-content-container"
+			>
 				{#if enhancing}
 					<div
 						class="w-full h-full fixed top-0 left-0 {streaming
