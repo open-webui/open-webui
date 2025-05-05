@@ -61,9 +61,6 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 Want to learn more about Open WebUI's features? Check out our [Open WebUI documentation](https://docs.openwebui.com/features) for a comprehensive overview!
 
-
-
-
 ## Sponsors 🙌
 
 #### Emerald
@@ -84,7 +81,6 @@ Want to learn more about Open WebUI's features? Check out our [Open WebUI docume
 ---
 
 We are incredibly grateful for the generous support of our sponsors. Their contributions help us to maintain and improve our project, ensuring we can continue to deliver quality work to our community. Thank you!
-
 
 ## How to Install 🚀
 
