@@ -88,7 +88,8 @@ class YoutubeLoader:
                 "http": self.proxy_url,
                 "https": self.proxy_url,
             }
-            log.debug(f"Using proxy URL: {self.proxy_url}...")
+            # Don't log complete URL because it might contain secrets
+            log.debug(f"Using proxy URL: {self.proxy_url[:14]}...")
         else:
             youtube_proxies = None
     
@@ -101,12 +102,10 @@ class YoutubeLoader:
             return []
     
         # Try each language in order of priority
-        last_exception = None
         for lang in self.language:
             try:
                 transcript = transcript_list.find_transcript([lang])
                 log.debug(f"Found transcript for language '{lang}'")
-                
                 transcript_pieces: List[Dict[str, Any]] = transcript.fetch()
                 transcript_text = " ".join(
                     map(
@@ -115,18 +114,37 @@ class YoutubeLoader:
                     )
                 )
                 return [Document(page_content=transcript_text, metadata=self._metadata)]
-            except NoTranscriptFound as e:
+            except NoTranscriptFound:
                 log.debug(f"No transcript found for language '{lang}'")
-                last_exception = e
                 continue
             except Exception as e:
                 # If we hit any other type of exception, log it and re-raise
                 log.exception(f"Error finding transcript for language '{lang}'")
                 raise e
     
-        # If all specified languages fail, raise the last exception
-        if last_exception:
-            log.warning(f"No transcript found for any of the specified languages: {', '.join(self.language)}")
-            raise last_exception
+        # If all specified languages fail, fall back to English (unless English was already tried)
+        if "en" not in self.language:
+            try:
+                log.debug("Falling back to English transcript")
+                transcript = transcript_list.find_transcript(["en"])
+                transcript_pieces: List[Dict[str, Any]] = transcript.fetch()
+                transcript_text = " ".join(
+                    map(
+                        lambda transcript_piece: transcript_piece.text.strip(" "),
+                        transcript_pieces,
+                    )
+                )
+                return [Document(page_content=transcript_text, metadata=self._metadata)]
+            except NoTranscriptFound:
+                log.warning("No English transcript found as fallback")
+            except Exception as e:
+                log.exception("Error finding English transcript fallback")
+                raise e
         
-        return []
+        # If we get here, all languages failed including the English fallback
+        languages_tried = ", ".join(self.language)
+        if "en" not in self.language:
+            languages_tried += ", en (fallback)"
+        
+        log.warning(f"No transcript found for any of the specified languages: {languages_tried}")
+        raise NoTranscriptFound(f"No transcript found for any supported language")
