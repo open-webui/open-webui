@@ -106,6 +106,11 @@ RUN echo -n 00000000-0000-0000-0000-000000000000 > $HOME/.cache/chroma/telemetry
 # Make sure the user has access to the app and root directory
 RUN chown -R $UID:$GID /app $HOME
 
+# 替换为 fastly CDN
+RUN echo "deb http://cdn-fastly.deb.debian.org/debian bookworm main\n\
+deb http://cdn-fastly.deb.debian.org/debian-security bookworm-security main\n\
+deb http://cdn-fastly.deb.debian.org/debian bookworm-updates main" > /etc/apt/sources.list
+
 RUN if [ "$USE_OLLAMA" = "true" ]; then \
     apt-get update && \
     # Install pandoc and netcat
