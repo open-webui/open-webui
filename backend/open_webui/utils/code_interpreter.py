@@ -50,7 +50,7 @@ class JupyterCodeExecuter:
         self.password = password
         self.timeout = timeout
         self.kernel_id = ""
-        self.session = aiohttp.ClientSession(base_url=self.base_url)
+        self.session = aiohttp.ClientSession(trust_env=True, base_url=self.base_url)
         self.params = {}
         self.result = ResultModel()
 
