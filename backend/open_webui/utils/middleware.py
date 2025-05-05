@@ -938,7 +938,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             )
 
     # If there are citations, add them to the data_items
-    sources = [source for source in sources if source.get("source", {}).get("name", "")]
+    sources = [
+        source
+        for source in sources
+        if source.get("source", {}).get("name", "")
+        or source.get("source", {}).get("id", "")
+    ]
 
     if len(sources) > 0:
         events.append({"sources": sources})

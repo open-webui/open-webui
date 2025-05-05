@@ -382,7 +382,7 @@
 	"Enter CFG Scale (e.g. 7.0)": "Ingresa a escala de CFG (p.ej., 7.0)",
 	"Enter Chunk Overlap": "Ingresar superposición de fragmentos",
 	"Enter Chunk Size": "Ingrese o tamaño do fragmento",
-	"Enter comma-seperated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "",
+	"Enter comma-separated \"token:bias_value\" pairs (example: 5432:100, 413:-100)": "",
 	"Enter description": "Ingrese a descripción",
 	"Enter Document Intelligence Endpoint": "Ingrese o punto final de Intelixencia de Documentos",
 	"Enter Document Intelligence Key": "Ingrese a chave de Intelixencia de Documentos",

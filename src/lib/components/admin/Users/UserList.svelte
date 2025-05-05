@@ -23,6 +23,8 @@
 	import AddUserModal from '$lib/components/admin/Users/UserList/AddUserModal.svelte';
 
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import RoleUpdateConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+
 	import Badge from '$lib/components/common/Badge.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
@@ -49,7 +51,17 @@
 
 	let showUserChatsModal = false;
 	let showEditUserModal = false;
+	let showUpdateRoleModal = false;
 
+	const onUpdateRole = (user) => {
+		if (user.role === 'user') {
+			updateRoleHandler(user.id, 'admin');
+		} else if (user.role === 'pending') {
+			updateRoleHandler(user.id, 'user');
+		} else {
+			updateRoleHandler(user.id, 'pending');
+		}
+	};
 	const updateRoleHandler = async (id, role) => {
 		const res = await updateUserRole(localStorage.token, id, role).catch((error) => {
 			toast.error(`${error}`);
@@ -66,6 +78,12 @@
 			toast.error(`${error}`);
 			return null;
 		});
+
+		// if the user is deleted and the current page has only one user, go back to the previous page
+		if (users.length === 1 && page > 1) {
+			page -= 1;
+		}
+
 		if (res) {
 			getUserList();
 		}
@@ -114,6 +132,21 @@
 	}}
 />
 
+<RoleUpdateConfirmDialog
+	bind:show={showUpdateRoleModal}
+	on:confirm={() => {
+		onUpdateRole(selectedUser);
+	}}
+	message={$i18n.t(`Are you sure you want to update this user\'s role to **{{ROLE}}**?`, {
+		ROLE:
+			selectedUser?.role === 'user'
+				? 'admin'
+				: selectedUser?.role === 'pending'
+					? 'user'
+					: 'pending'
+	})}
+/>
+
 {#key selectedUser}
 	<EditUserModal
 		bind:show={showEditUserModal}
@@ -156,19 +189,19 @@
 		<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 
 		{#if ($config?.license_metadata?.seats ?? null) !== null}
-			{#if users.length > $config?.license_metadata?.seats}
+			{#if total > $config?.license_metadata?.seats}
 				<span class="text-lg font-medium text-red-500"
-					>{users.length} of {$config?.license_metadata?.seats}
+					>{total} of {$config?.license_metadata?.seats}
 					<span class="text-sm font-normal">available users</span></span
 				>
 			{:else}
 				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-					>{users.length} of {$config?.license_metadata?.seats}
+					>{total} of {$config?.license_metadata?.seats}
 					<span class="text-sm font-normal">available users</span></span
 				>
 			{/if}
 		{:else}
-			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{users.length}</span>
+			<span class="text-lg font-medium text-gray-500 dark:text-gray-300">{total}</span>
 		{/if}
 	</div>
 
@@ -372,13 +405,8 @@
 						<button
 							class=" translate-y-0.5"
 							on:click={() => {
-								if (user.role === 'user') {
-									updateRoleHandler(user.id, 'admin');
-								} else if (user.role === 'pending') {
-									updateRoleHandler(user.id, 'user');
-								} else {
-									updateRoleHandler(user.id, 'pending');
-								}
+								selectedUser = user;
+								showUpdateRoleModal = true;
 							}}
 						>
 							<Badge
