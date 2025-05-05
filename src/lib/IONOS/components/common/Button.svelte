@@ -16,7 +16,7 @@
 	export let pressable = false;
 	export let iconOnly = false;
 
-	const baseClasses = 'select-none outline-offset-2';
+	const baseClasses = 'select-none font-semibold text-sm outline-offset-2';
 
 	$: classes = `${className} ${iconOnly ? 'p-1.5' : 'px-4 py-1'} ${baseClasses} ${stateClassBuilder(type, disabled, pressed)}`;
 </script>
