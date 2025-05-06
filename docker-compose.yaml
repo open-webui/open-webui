@@ -32,6 +32,13 @@ services:
       - host.docker.internal:host-gateway
     dns: 8.8.8.8
 
+  mcpo:
+    build:
+      context: ./mcpo
+      dockerfile: Dockerfile
+    container_name: mcpo
+    ports:
+      - 8044:8000
 volumes:
   # ollama: {}
   open-webui: {}

@@ -1,0 +1,7 @@
+fastapi>=0.104.1
+pydantic>=2.10.6
+uvicorn>=0.34.0 
+python-dotenv>=1.0.1
+anyio>=4.5.0
+mcp==1.2.0
+pyodbc

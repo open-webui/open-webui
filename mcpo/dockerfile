@@ -1,0 +1,28 @@
+FROM python:3.11.12-bullseye
+WORKDIR /app
+
+# Install ODBC Driver 17 for SQL Server
+RUN apt-get update && apt-get install -y curl gnupg2 unixodbc-dev \
+    && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y msodbcsql17 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+# Install mcpo and uv globally (outside virtual env)
+RUN pip3 install mcpo uv
+# Create and activate virtual environment
+RUN python -m venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
+
+# Install requirements in virtual environment
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+
+
+COPY . .
+
+EXPOSE 8000
+# Use virtual environment's Python for running the server
+CMD ["uvx", "mcpo", "--host", "0.0.0.0", "--port", "8000", "--api-key", "top-secret", "--", "/app/venv/bin/python", "/app/src/mssql/server.py"]
