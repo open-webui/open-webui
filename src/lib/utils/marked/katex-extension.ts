@@ -11,7 +11,8 @@ const DELIMITER_LIST = [
 ];
 
 // Defines characters that are allowed to immediately precede or follow a math delimiter.
-const ALLOWED_SURROUNDING_CHARS = '\\s?。，!-\\/:-@\\[-`{-~\\p{Script=Han}';
+const ALLOWED_SURROUNDING_CHARS =
+	'\\s?。，、；!-\\/:-@\\[-`{-~\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}';
 
 // const DELIMITER_LIST = [
 //     { left: '$$', right: '$$', display: false },
