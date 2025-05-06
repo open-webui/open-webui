@@ -554,7 +554,7 @@ async def get_models(
                             raise Exception(error_detail)
 
                         response_data = await r.json()
-                        
+
                         # Add Azure tag to models
                         if "data" in response_data:
                             for model in response_data["data"]:
@@ -562,7 +562,7 @@ async def get_models(
                                     model["tags"] = ["azure"]
                                 elif "azure" not in model["tags"]:
                                     model["tags"].append("azure")
-                        
+
                         models = response_data
                 else:
                     # Standard OpenAI API
@@ -827,14 +827,16 @@ async def generate_chat_completion(
 
     # Check if this is an Azure OpenAI URL
     is_azure = is_azure_openai_url(url)
-    
+
     # Prepare the request based on the API type
     if is_azure:
         # For Azure OpenAI, we need to format the URL and headers differently
         formatted_url, payload_dict, headers = prepare_azure_openai_request(
-            url, 
-            json.loads(json.dumps(payload)),  # Convert to dict and back to ensure serialization
-            key
+            url,
+            json.loads(
+                json.dumps(payload)
+            ),  # Convert to dict and back to ensure serialization
+            key,
         )
         payload = json.dumps(payload_dict)
         request_url = formatted_url
@@ -941,7 +943,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
     try:
         session = aiohttp.ClientSession(trust_env=True)
-        
+
         # Check if this is an Azure OpenAI URL
         if is_azure_openai_url(url):
             # For Azure OpenAI, we need to use a different URL format and headers
@@ -966,8 +968,8 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                 except Exception as e:
                     log.error(f"Error processing Azure OpenAI request: {e}")
                     raise HTTPException(
-                        status_code=500, 
-                        detail=f"Error processing Azure OpenAI request: {str(e)}"
+                        status_code=500,
+                        detail=f"Error processing Azure OpenAI request: {str(e)}",
                     )
             else:
                 # For other paths, use the standard Azure format
@@ -1014,7 +1016,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                 },
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             )
-            
+
         r.raise_for_status()
 
         # Check if response is SSE
