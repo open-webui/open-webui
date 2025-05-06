@@ -64,7 +64,7 @@ class YoutubeLoader:
         self._metadata = {"source": video_id}
         self.language = language
         self.proxy_url = proxy_url
-        # If language is string, convert to list
+        # Ensure language is a list
         if isinstance(language, str):
             self.language = [language]
         else:
