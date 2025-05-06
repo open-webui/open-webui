@@ -290,7 +290,7 @@
 									/>
 								</div>
 							</div>
-						</div> 
+						</div>
 
 						<div>
 							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Language Locales')}</div>
@@ -303,7 +303,7 @@
 									/>
 								</div>
 							</div>
-						</div> 
+						</div>
 
 						<div>
 							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Endpoint URL')}</div>
@@ -498,7 +498,7 @@
 									/>
 								</div>
 							</div>
-						</div> 
+						</div>
 
 						<div>
 							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Endpoint URL')}</div>
