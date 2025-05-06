@@ -6,7 +6,7 @@ import logging
 import re
 from typing import Dict, Optional, Tuple
 
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, AZURE_OPENAI_API_VERSION
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
@@ -65,7 +65,7 @@ def format_azure_openai_url(
     base_url: str,
     model: str,
     api_path: str = "chat/completions",
-    api_version: str = "2024-12-01-preview",
+    api_version: str = AZURE_OPENAI_API_VERSION,
 ) -> str:
     """
     Format an Azure OpenAI URL with the correct structure.

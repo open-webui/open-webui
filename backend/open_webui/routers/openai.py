@@ -26,6 +26,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     ENABLE_FORWARD_USER_INFO_HEADERS,
     BYPASS_MODEL_ACCESS_CONTROL,
+    AZURE_OPENAI_API_VERSION,
 )
 from open_webui.models.users import UserModel
 
@@ -539,7 +540,7 @@ async def get_models(
                         ),
                     }
                     # For Azure OpenAI, we need to use the models endpoint with api-version
-                    azure_url = f"{url}/openai/models?api-version=2024-02-01-preview"
+                    azure_url = f"{url}/openai/models?api-version=2024-12-01-preview"
                     async with session.get(
                         azure_url,
                         headers=headers,
@@ -666,7 +667,7 @@ async def verify_connection(
                     ),
                 }
                 # For Azure OpenAI, we need to use the models endpoint with api-version
-                azure_url = f"{url}/openai/models?api-version=2024-12-01-preview"
+                azure_url = f"{url}/openai/models?api-version={AZURE_OPENAI_API_VERSION}"
                 async with session.get(
                     azure_url,
                     headers=headers,
@@ -973,7 +974,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
                     )
             else:
                 # For other paths, use the standard Azure format
-                azure_url = f"{url}/openai/{path}?api-version=2024-12-01-preview"
+                azure_url = f"{url}/openai/{path}?api-version={AZURE_OPENAI_API_VERSION}"
                 r = await session.request(
                     method=request.method,
                     url=azure_url,
