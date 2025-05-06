@@ -462,6 +462,7 @@
 						bind:this={filesInputElement}
 						bind:files={inputFiles}
 						type="file"
+						accept=".csv,.tsv"
 						hidden
 						multiple
 						on:change={async () => {

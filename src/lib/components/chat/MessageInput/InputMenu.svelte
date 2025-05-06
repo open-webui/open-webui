@@ -145,7 +145,7 @@
 				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
 
-			<Tooltip
+			<!-- <Tooltip
 				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files.') : ''}
 				className="w-full"
 			>
@@ -170,7 +170,7 @@
 					<CameraSolid />
 					<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
 				</DropdownMenu.Item>
-			</Tooltip>
+			</Tooltip> -->
 
 			<Tooltip
 				content={!fileUploadEnabled ? $i18n.t('You do not have permission to upload files.') : ''}
