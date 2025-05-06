@@ -142,7 +142,6 @@
 	$: if (chatIdProp) {
 		(async () => {
 			loading = true;
-			console.log(chatIdProp);
 
 			prompt = '';
 			files = [];
@@ -150,22 +149,25 @@
 			webSearchEnabled = false;
 			imageGenerationEnabled = false;
 
+			if (localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
+				try {
+					const input = JSON.parse(
+						localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)
+					);
+
+					prompt = input.prompt;
+					files = input.files;
+					selectedToolIds = input.selectedToolIds;
+					webSearchEnabled = input.webSearchEnabled;
+					imageGenerationEnabled = input.imageGenerationEnabled;
+
+					console.log('chat-input', input);
+				} catch (e) {}
+			}
+
 			if (chatIdProp && (await loadChat())) {
 				await tick();
 				loading = false;
-
-				if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
-					try {
-						const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
-
-						prompt = input.prompt;
-						files = input.files;
-						selectedToolIds = input.selectedToolIds;
-						webSearchEnabled = input.webSearchEnabled;
-						imageGenerationEnabled = input.imageGenerationEnabled;
-					} catch (e) {}
-				}
-
 				window.setTimeout(() => scrollToBottom(), 0);
 				const chatInput = document.getElementById('chat-input');
 				chatInput?.focus();
@@ -416,9 +418,12 @@
 			}
 		}
 
-		if (localStorage.getItem(`chat-input-${chatIdProp}`)) {
+		if (localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
 			try {
-				const input = JSON.parse(localStorage.getItem(`chat-input-${chatIdProp}`));
+				const input = JSON.parse(
+					localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)
+				);
+				console.log('chat-input', input);
 				prompt = input.prompt;
 				files = input.files;
 				selectedToolIds = input.selectedToolIds;
@@ -2040,6 +2045,7 @@
 								{stopResponse}
 								{createMessagePair}
 								onChange={(input) => {
+									console.log(input);
 									if (input.prompt !== null) {
 										localStorage.setItem(`chat-input-${$chatId}`, JSON.stringify(input));
 									} else {
