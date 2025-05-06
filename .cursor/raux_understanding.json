@@ -1,0 +1,117 @@
+{
+  "project_understanding": {
+    "raux": {
+      "description": "RAUX (AMD GAIA UI [beta]) is AMD's UI for interacting with AI models, based on a fork of Open WebUI",
+      "origin": {
+        "forked_from": "Open WebUI (https://github.com/open-webui/open-webui)",
+        "original_project": "User-friendly AI interface supporting Ollama, OpenAI API, and other LLM backends",
+        "fork_relationship": "RAUX is a customized fork of Open WebUI, adapted specifically for integration with AMD's GAIA framework and optimized for AMD hardware"
+      },
+      "key_components": {
+        "backend": {
+          "description": "Server component that manages models and handles API requests",
+          "features": [
+            "Model management",
+            "API integration",
+            "User authentication",
+            "Conversation history",
+            "RAG capabilities"
+          ]
+        },
+        "frontend": {
+          "description": "Web-based UI built with SvelteKit",
+          "features": [
+            "Chat interface",
+            "Model selection",
+            "Settings management",
+            "Theme customization",
+            "Responsive design"
+          ]
+        },
+        "installation": {
+          "description": "Multiple installation methods available",
+          "methods": {
+            "standalone_installer": {
+              "description": "Windows installer built with NSIS",
+              "file": "Installer-UX.nsi",
+              "features": [
+                "User-friendly GUI",
+                "Automatic dependency handling",
+                "Desktop shortcut creation",
+                "Embedded Python support"
+              ]
+            },
+            "python_script": {
+              "description": "Direct installation via Python script",
+              "file": "install.py",
+              "features": [
+                "Flexible installation options",
+                "Command-line installation",
+                "Custom installation directory",
+                "Debug logging capabilities"
+              ]
+            },
+            "gaia_integration": {
+              "description": "Installation as part of GAIA setup",
+              "components": {
+                "gaia_installer": "GAIA/installer/Installer.nsi",
+                "downloader": "GAIA/installer/gaia_raux_installer.py",
+                "installer": "RAUX/installer/ux_installer/install.py"
+              },
+              "process_flow": "GAIA installer → gaia_raux_installer.py → download release → extract files → run install.py → create shortcuts"
+            }
+          }
+        },
+        "build_process": {
+          "description": "Automated build process using GitHub Actions",
+          "workflows": {
+            "pr_builds": {
+              "file": "build-pr.yml",
+              "purpose": "Builds for pull requests (no releases)",
+              "artifacts": [
+                "Wheel package",
+                "Installer executable (not released)"
+              ]
+            },
+            "release_builds": {
+              "file": "build-release.yml",
+              "purpose": "Production builds that create GitHub releases",
+              "artifacts": [
+                "Wheel package",
+                "Installer executable",
+                "Checksum files",
+                "Zip archive with installation components"
+              ]
+            }
+          }
+        },
+        "deployment": {
+          "description": "How RAUX is deployed and runs on user systems",
+          "components": {
+            "python_environment": "Dedicated Python environment (embedded or conda)",
+            "web_server": "Local web server running on port 8080",
+            "browser_interface": "Accessed through user's web browser",
+            "desktop_shortcut": "Launches server and opens browser"
+          }
+        },
+        "integration_points": {
+          "gaia": {
+            "description": "Integration with GAIA framework",
+            "features": [
+              "Shared installation process",
+              "Configuration based on GAIA mode (Generic, Hybrid)",
+              "Access to GAIA-managed models"
+            ]
+          }
+        }
+      },
+      "file_patterns": {
+        "backend": ["backend/**/*.py"],
+        "frontend": ["src/**/*.{svelte,ts,js}"],
+        "installer": ["installer/**/*"],
+        "workflows": [".github/workflows/**/*.yml"],
+        "documentation": ["docs/**/*.md"]
+      }
+    }
+  }
+} 
