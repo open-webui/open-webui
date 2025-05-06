@@ -42,6 +42,8 @@
 	let STT_AZURE_API_KEY = '';
 	let STT_AZURE_REGION = '';
 	let STT_AZURE_LOCALES = '';
+	let STT_AZURE_BASE_URL = '';
+	let STT_AZURE_MAX_SPEAKERS = '';
 	let STT_DEEPGRAM_API_KEY = '';
 
 	let STT_WHISPER_MODEL_LOADING = false;
@@ -114,7 +116,9 @@
 				DEEPGRAM_API_KEY: STT_DEEPGRAM_API_KEY,
 				AZURE_API_KEY: STT_AZURE_API_KEY,
 				AZURE_REGION: STT_AZURE_REGION,
-				AZURE_LOCALES: STT_AZURE_LOCALES
+				AZURE_LOCALES: STT_AZURE_LOCALES,
+				AZURE_BASE_URL: STT_AZURE_BASE_URL,
+				AZURE_MAX_SPEAKERS: STT_AZURE_MAX_SPEAKERS
 			}
 		});
 
@@ -157,6 +161,8 @@
 			STT_AZURE_API_KEY = res.stt.AZURE_API_KEY;
 			STT_AZURE_REGION = res.stt.AZURE_REGION;
 			STT_AZURE_LOCALES = res.stt.AZURE_LOCALES;
+			STT_AZURE_BASE_URL = res.stt.AZURE_BASE_URL;
+			STT_AZURE_MAX_SPEAKERS = res.stt.AZURE_MAX_SPEAKERS;
 			STT_DEEPGRAM_API_KEY = res.stt.DEEPGRAM_API_KEY;
 		}
 
@@ -284,6 +290,32 @@
 										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 										bind:value={STT_AZURE_LOCALES}
 										placeholder={$i18n.t('e.g., en-US,ja-JP (leave blank for auto-detect)')}
+									/>
+								</div>
+							</div>
+						</div>
+
+						<div>
+							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Base URL')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={STT_AZURE_BASE_URL}
+										placeholder={$i18n.t('(leave blank for Azure Commercial URL auto-generation)')}
+									/>
+								</div>
+							</div>
+						</div>
+
+						<div>
+							<div class=" mb-1.5 text-sm font-medium">{$i18n.t('Max Speakers')}</div>
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										bind:value={STT_AZURE_MAX_SPEAKERS}
+										placeholder={$i18n.t('e.g., 3, 4, 5 (leave blank for default)')}
 									/>
 								</div>
 							</div>

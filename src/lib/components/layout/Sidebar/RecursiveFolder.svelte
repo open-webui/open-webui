@@ -252,7 +252,7 @@
 
 	const nameUpdateHandler = async () => {
 		if (name === '') {
-			toast.error($i18n.t('Folder name cannot be empty'));
+			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
 		}
 
@@ -374,8 +374,8 @@
 		buttonClassName="w-full"
 		hide={(folders[folderId]?.childrenIds ?? []).length === 0 &&
 			(folders[folderId].items?.chats ?? []).length === 0}
-		on:change={(e) => {
-			dispatch('open', e.detail);
+		onChange={(state) => {
+			dispatch('open', state);
 		}}
 	>
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
