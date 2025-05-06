@@ -197,7 +197,9 @@ class Loader:
         loader = self._get_loader(filename, file_content_type, file_path)
         docs = loader.load()
 
-        docs = self._run_document_processors(docs)
+        docs = self._run_document_processors(
+            filename, file_content_type, file_path, docs
+        )
 
         return [
             Document(
@@ -214,7 +216,7 @@ class Loader:
                 return valves.get("priority", 0) if valves else 0
             return 0
 
-        docproc = Functions.get_functions_by_type("document", active_only=True)
+        docproc = Functions.get_functions_by_type("documentprocessor", active_only=True)
         docproc.sort(key=lambda f: _get_priority(f.id))
         return docproc
 
@@ -238,9 +240,15 @@ class Loader:
             hints = get_type_hints(handler)
 
             if (
-                len(sig.parameters) != 1
-                or "text" not in sig.parameters
-                or hints.get("text") != str
+                len(sig.parameters) != 4
+                or "doc" not in sig.parameters
+                or hints.get("doc") != Document
+                or "filename" not in sig.parameters
+                or hints.get("filename") != str
+                or "file_content_type" not in sig.parameters
+                or hints.get("file_content_type") != str
+                or "file_path" not in sig.parameters
+                or hints.get("file_path") != str
             ):
                 raise TypeError("Invalid process function signature")
 
@@ -250,15 +258,17 @@ class Loader:
             return None
 
     def _apply_processor_to_documents(
-        self, handler: Callable, name: str, docs: list[Document]
+        self,
+        handler: Callable,
+        name: str,
+        filename: str,
+        file_content_type: str,
+        file_path: str,
+        docs: list[Document],
     ) -> None:
         for doc in docs:
             try:
-                processed = handler(doc.page_content)
-                if isinstance(processed, str):
-                    doc.page_content = processed
-                else:
-                    log.warning(f"Processor '{name}' returned non-str value")
+                doc = handler(filename, file_content_type, file_path, doc)
             except Exception as e:
                 log.warning(
                     f"Error in processor '{name}': {e}. "
@@ -266,7 +276,13 @@ class Loader:
                     f"Content (truncated): {doc.page_content[:200]}..."
                 )
 
-    def _run_document_processors(self, docs: list[Document]) -> list[Document]:
+    def _run_document_processors(
+        self,
+        filename: str,
+        file_content_type: str,
+        file_path: str,
+        docs: list[Document],
+    ) -> list[Document]:
         docproc = self._get_sorted_document_processors()
         log.info(
             f"Loader {len(docproc)} active document processors found: {', '.join(dp.name or dp.id for dp in docproc)}"
@@ -277,7 +293,9 @@ class Loader:
             handler = self._load_valid_process_function(dp, loaded_modules)
             if not handler:
                 continue
-            self._apply_processor_to_documents(handler, dp.name or dp.id, docs)
+            self._apply_processor_to_documents(
+                handler, dp.name or dp.id, filename, file_content_type, file_path, docs
+            )
 
         return docs
 
