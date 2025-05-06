@@ -99,6 +99,33 @@
 		}
 	};
 
+	// Function to update chart theme colors
+	function updateChartThemeColors() {
+		const isDark = document.documentElement.classList.contains('dark');
+		const textColor = isDark ? '#e5e7eb' : '#1f2937';
+		const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
+		// Update chart options
+		chartOptions.plugins.legend.labels.color = textColor;
+		chartOptions.scales.x.ticks.color = textColor;
+		chartOptions.scales.x.grid.color = gridColor;
+		chartOptions.scales.y.ticks.color = textColor;
+		chartOptions.scales.y.grid.color = gridColor;
+
+		// Update existing charts with new theme colors
+		const charts = [dailyActiveUsersChart, dailyPromptsChart, dailyTokensChart, modelPromptsChart];
+		charts.forEach((chart) => {
+			if (chart) {
+				chart.options.plugins.legend.labels.color = textColor;
+				chart.options.scales.x.ticks.color = textColor;
+				chart.options.scales.x.grid.color = gridColor;
+				chart.options.scales.y.ticks.color = textColor;
+				chart.options.scales.y.grid.color = gridColor;
+				chart.update();
+			}
+		});
+	}
+
 	// Update chart labels function
 	function updateChartLabels() {
 		if (dailyActiveUsersChart) {
@@ -448,6 +475,24 @@
 				updateChartLabels();
 			});
 
+			// Add theme change observer
+			const observer = new MutationObserver((mutations) => {
+				mutations.forEach((mutation) => {
+					if (
+						mutation.type === 'attributes' &&
+						mutation.attributeName === 'class' &&
+						mutation.target === document.documentElement
+					) {
+						updateChartThemeColors();
+					}
+				});
+			});
+
+			observer.observe(document.documentElement, {
+				attributes: true,
+				attributeFilter: ['class']
+			});
+
 			domains = await getDomains(localStorage.token);
 			models = await getModels(localStorage.token);
 
@@ -458,6 +503,9 @@
 
 			await updateCharts(selectedDomain, selectedModel);
 			updateRangeMetrics(); // Load initial range metrics
+
+			// Store the observer in a variable for cleanup
+			return () => observer.disconnect();
 		} catch (error) {
 			console.error('Error initializing charts:', error);
 		}
@@ -657,6 +705,7 @@
 						{$i18n.t('Model Analysis')}
 					</button>
 				</li>
+				<!-- Business Insights tab hidden for now
 				<li class="mr-2">
 					<button
 						class={`inline-block p-4 rounded-t-lg border-b-2 ${
@@ -669,14 +718,15 @@
 						{$i18n.t('Business Insights')}
 					</button>
 				</li>
+				-->
 			</ul>
 		</div>
 
 		<!-- Tab Content Container - Takes up remaining height -->
-		<div class="flex-grow overflow-hidden px-4 lg:px-6">
+		<div class="flex-grow overflow-hidden">
 			<!-- Tab Content - Users -->
 			<div class={`${activeTab === 'users' ? 'flex flex-col h-full' : 'hidden'}`}>
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-6">
 					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
 						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
 							{$i18n.t('Total Users')}
@@ -710,7 +760,7 @@
 
 			<!-- Tab Content - Prompts -->
 			<div class={`${activeTab === 'prompts' ? 'flex flex-col h-full' : 'hidden'}`}>
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-6">
 					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
 						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
 							{$i18n.t('Total Prompts')}
@@ -744,7 +794,7 @@
 
 			<!-- Tab Content - Tokens -->
 			<div class={`${activeTab === 'tokens' ? 'flex flex-col h-full' : 'hidden'}`}>
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-6">
 					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
 						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
 							{$i18n.t('Total Tokens')}
@@ -780,7 +830,7 @@
 			<div class={`${activeTab === 'models' ? 'flex flex-col h-full' : 'hidden'}`}>
 				{#if models.length === 0}
 					<div
-						class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800 flex items-center justify-center h-64"
+						class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800 flex items-center justify-center h-64 mt-6"
 					>
 						<div class="text-center">
 							<p class="text-xl text-gray-500 dark:text-gray-400 mb-4">
@@ -789,7 +839,7 @@
 						</div>
 					</div>
 				{:else if selectedModel}
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-6">
 						<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
 							<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
 								{$i18n.t('Total Model Prompts')}
@@ -826,7 +876,7 @@
 					</div>
 				{:else}
 					<div
-						class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800 flex items-center justify-center h-64"
+						class="bg-white shadow-lg rounded-lg p-6 dark:bg-gray-800 flex items-center justify-center h-64 mt-6"
 					>
 						<div class="text-center">
 							<p class="text-xl text-gray-500 dark:text-gray-400 mb-4">
@@ -842,7 +892,7 @@
 
 			<!-- Replace Cost Analysis Tab Content with Business Insights in matching style -->
 			<div class={`${activeTab === 'business' ? 'flex flex-col h-full' : 'hidden'}`}>
-				<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-6">
 					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
 						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
 							{$i18n.t('Cost Analysis')}
