@@ -15,7 +15,8 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
-from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user, get_current_user
+from open_webui.utils.webhook import post_webhook
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -298,6 +299,30 @@ async def update_user_by_id(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail=ERROR_MESSAGES.USER_NOT_FOUND,
     )
+
+
+
+@router.delete("/user/self", response_model=bool)
+async def delete_self(request: Request, user=Depends(get_current_user)):
+    if user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admins may not delete their own account",
+        )
+
+    Users.update_user_role_by_id(user.id, "pending")
+
+    post_webhook(
+        request.app.state.config.WEBHOOK_URL,
+        "delete-account",
+        {
+            "action": "delete",
+            "message": "delete account",
+            "user": user.model_dump_json(exclude_none=True),
+        },
+    )
+
+    return True
 
 
 ############################
