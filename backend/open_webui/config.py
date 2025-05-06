@@ -1824,6 +1824,11 @@ ONEDRIVE_SHAREPOINT_URL = PersistentConfig(
     os.environ.get("ONEDRIVE_SHAREPOINT_URL", ""),
 )
 
+ONEDRIVE_SHAREPOINT_TENANT_ID = PersistentConfig(
+    "ONEDRIVE_SHAREPOINT_TENANT_ID",
+    "onedrive.sharepoint_tenant_id",
+    os.environ.get("ONEDRIVE_SHAREPOINT_TENANT_ID", ""),
+)
 
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(
