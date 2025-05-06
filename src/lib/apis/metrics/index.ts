@@ -458,3 +458,42 @@ export const getModelHistoricalPrompts = async (
 		return generateFallbackDates(days);
 	}
 };
+
+// New functions for enhanced metrics
+export const getRangeMetrics = async (
+	token: string,
+	startDate: string,
+	endDate: string,
+	domain?: string,
+	model?: string
+): Promise<any> => {
+	try {
+		let url = `${WEBUI_API_BASE_URL}/metrics/range/users?start_date=${startDate}&end_date=${endDate}`;
+
+		if (domain) {
+			url += `&domain=${encodeURIComponent(domain)}`;
+		}
+
+		if (model) {
+			url += `&model=${encodeURIComponent(model)}`;
+		}
+
+		const res = await fetch(url, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			const error = await res.json();
+			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get range metrics'}`);
+		}
+
+		return await res.json();
+	} catch (err) {
+		console.error('Error fetching range metrics:', err);
+		throw new Error(err.message || 'An unexpected error occurred');
+	}
+};

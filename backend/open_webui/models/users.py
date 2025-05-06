@@ -412,5 +412,73 @@ class UsersTable:
 
             return sorted(fallback, key=lambda x: x["date"])
 
+    def get_range_metrics(
+        self, start_timestamp: int, end_timestamp: int, domain: str = None
+    ) -> dict:
+        """Get user metrics for a specific date range"""
+        try:
+            with get_db() as db:
+                # Get the total count of users active in the range
+                query = db.query(User).filter(
+                    User.last_active_at
+                    >= start_timestamp * 1_000_000_000,  # Convert to nanoseconds
+                    User.last_active_at
+                    < end_timestamp * 1_000_000_000,  # Convert to nanoseconds
+                )
+
+                if domain:
+                    query = query.filter(User.domain == domain)
+
+                active_users = query.count()
+
+                # Get the total count of all users (for domain if specified)
+                total_query = db.query(User)
+                if domain:
+                    total_query = total_query.filter(User.domain == domain)
+
+                total_users = total_query.count()
+
+                return {"total_users": total_users, "active_users": active_users}
+        except Exception as e:
+            logger.error(f"Failed to get range metrics: {e}")
+            return {"total_users": 0, "active_users": 0}
+
+    def get_historical_daily_data(
+        self, start_timestamp: int, end_timestamp: int, domain: str = None
+    ) -> list[dict]:
+        """Get historical daily user data for a specific date range"""
+        try:
+            result = []
+
+            # Convert timestamps to readable dates
+            start_date = time.strftime("%Y-%m-%d", time.localtime(start_timestamp))
+            end_date = time.strftime("%Y-%m-%d", time.localtime(end_timestamp))
+
+            # Get daily data for each day in the range
+            current_day = start_timestamp
+            while current_day < end_timestamp:
+                next_day = current_day + 86400  # add one day in seconds
+
+                with get_db() as db:
+                    query = db.query(User).filter(
+                        User.last_active_at >= current_day * 1_000_000_000,
+                        User.last_active_at < next_day * 1_000_000_000,
+                    )
+
+                    if domain:
+                        query = query.filter(User.domain == domain)
+
+                    count = query.count()
+
+                    day_str = time.strftime("%Y-%m-%d", time.localtime(current_day))
+                    result.append({"date": day_str, "users": count})
+
+                current_day = next_day
+
+            return result
+        except Exception as e:
+            logger.error(f"Failed to get historical daily data: {e}")
+            return []
+
 
 Users = UsersTable()

@@ -314,5 +314,168 @@ class MessageMetricsTable:
 
             return sorted(fallback, key=lambda x: x["date"])
 
+    def get_range_metrics(
+        self,
+        start_timestamp: int,
+        end_timestamp: int,
+        domain: str = None,
+        model: str = None,
+    ) -> dict:
+        """Get message metrics for a specific date range"""
+        try:
+            with get_db() as db:
+                # Build query with range filters
+                query = db.query(MessageMetric).filter(
+                    MessageMetric.created_at
+                    >= start_timestamp * 1_000_000_000,  # Convert to nanoseconds
+                    MessageMetric.created_at
+                    < end_timestamp * 1_000_000_000,  # Convert to nanoseconds
+                )
+
+                # Apply domain filter if specified
+                if domain:
+                    query = query.filter(MessageMetric.user_domain == domain)
+
+                # Apply model filter if specified
+                if model:
+                    query = query.filter(MessageMetric.model == model)
+
+                # Count total prompts
+                total_prompts = query.count()
+
+                # Sum total tokens
+                tokens_sum = query.with_entities(
+                    func.sum(MessageMetric.total_tokens)
+                ).first()
+
+                total_tokens = (
+                    round(tokens_sum[0], 2) if tokens_sum and tokens_sum[0] else 0
+                )
+
+                return {"total_prompts": total_prompts, "total_tokens": total_tokens}
+        except Exception as e:
+            logger.error(f"Failed to get range metrics: {e}")
+            return {"total_prompts": 0, "total_tokens": 0}
+
+    def get_model_token_usage(
+        self, start_timestamp: int, end_timestamp: int, domain: str = None
+    ) -> list[dict]:
+        """Get token usage by model for a specific date range"""
+        try:
+            with get_db() as db:
+                # Base query with filters
+                query = (
+                    db.query(
+                        MessageMetric.model,
+                        func.sum(MessageMetric.total_tokens).label("tokens"),
+                    )
+                    .filter(
+                        MessageMetric.created_at >= start_timestamp * 1_000_000_000,
+                        MessageMetric.created_at < end_timestamp * 1_000_000_000,
+                    )
+                    .group_by(MessageMetric.model)
+                )
+
+                if domain:
+                    query = query.filter(MessageMetric.user_domain == domain)
+
+                # Execute query and process results
+                results = query.all()
+
+                # Format the results as a list of dictionaries
+                model_usage = [
+                    {"model": model, "tokens": round(tokens, 2) if tokens else 0}
+                    for model, tokens in results
+                    if model  # Filter out None models
+                ]
+
+                return model_usage
+        except Exception as e:
+            logger.error(f"Failed to get model token usage: {e}")
+            return []
+
+    def get_historical_daily_data(
+        self,
+        start_timestamp: int,
+        end_timestamp: int,
+        domain: str = None,
+        model: str = None,
+    ) -> list[dict]:
+        """Get historical daily prompt data for a specific date range"""
+        try:
+            result = []
+
+            # Get daily data for each day in the range
+            current_day = start_timestamp
+            while current_day < end_timestamp:
+                next_day = current_day + 86400  # add one day in seconds
+
+                with get_db() as db:
+                    query = db.query(MessageMetric).filter(
+                        MessageMetric.created_at >= current_day * 1_000_000_000,
+                        MessageMetric.created_at < next_day * 1_000_000_000,
+                    )
+
+                    if domain:
+                        query = query.filter(MessageMetric.user_domain == domain)
+
+                    if model:
+                        query = query.filter(MessageMetric.model == model)
+
+                    count = query.count()
+
+                    day_str = time.strftime("%Y-%m-%d", time.localtime(current_day))
+                    result.append({"date": day_str, "prompts": count})
+
+                current_day = next_day
+
+            return result
+        except Exception as e:
+            logger.error(f"Failed to get historical daily data: {e}")
+            return []
+
+    def get_historical_daily_tokens(
+        self,
+        start_timestamp: int,
+        end_timestamp: int,
+        domain: str = None,
+        model: str = None,
+    ) -> list[dict]:
+        """Get historical daily token usage data for a specific date range"""
+        try:
+            result = []
+
+            # Get daily data for each day in the range
+            current_day = start_timestamp
+            while current_day < end_timestamp:
+                next_day = current_day + 86400  # add one day in seconds
+
+                with get_db() as db:
+                    query = db.query(func.sum(MessageMetric.total_tokens)).filter(
+                        MessageMetric.created_at >= current_day * 1_000_000_000,
+                        MessageMetric.created_at < next_day * 1_000_000_000,
+                    )
+
+                    if domain:
+                        query = query.filter(MessageMetric.user_domain == domain)
+
+                    if model:
+                        query = query.filter(MessageMetric.model == model)
+
+                    tokens_sum = query.first()
+                    tokens_count = (
+                        round(tokens_sum[0], 2) if tokens_sum and tokens_sum[0] else 0
+                    )
+
+                    day_str = time.strftime("%Y-%m-%d", time.localtime(current_day))
+                    result.append({"date": day_str, "tokens": tokens_count})
+
+                current_day = next_day
+
+            return result
+        except Exception as e:
+            logger.error(f"Failed to get historical daily tokens: {e}")
+            return []
+
 
 MessageMetrics = MessageMetricsTable()
