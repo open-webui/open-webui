@@ -21,7 +21,7 @@ if "%1"=="--mode" (
 )
 
 REM Set RAUX conda environment path
-set "RAUX_CONDA_ENV=%LOCALAPPDATA%\RAUX\raux_env"
+set "RAUX_CONDA_ENV=%LOCALAPPDATA%\GAIA\RAUX\raux_env"
 
 REM Check if mode is not GENERIC to determine if Lemonade should be launched
 if /I NOT "%mode%"=="GENERIC" (
@@ -34,7 +34,7 @@ REM Set environment variables for PowerShell script
 set "RAUX_VERSION=%version%"
 
 REM Launch RAUX with appropriate environment variables
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '%LOCALAPPDATA%\RAUX\launch_raux.ps1'"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '%LOCALAPPDATA%\GAIA\RAUX\launch_raux.ps1'"
 echo RAUX Server has stopped.
 
 pause
