@@ -1,5 +1,7 @@
+import defaultTheme from 'tailwindcss/defaultTheme';
 import typography from '@tailwindcss/typography';
 import containerQuries from '@tailwindcss/container-queries';
+
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -7,6 +9,9 @@ export default {
 	content: ['./src/**/*.{html,js,svelte,ts}'],
 	theme: {
 		extend: {
+			fontFamily: {
+				sans: ['BuenosAires', ...defaultTheme.fontFamily.sans],
+			},
 			colors: {
 				gray: {
 					50: 'var(--color-gray-50, #f9f9f9)',

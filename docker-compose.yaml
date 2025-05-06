@@ -1,3 +1,5 @@
+name: deltion-gpt
+
 services:
   ollama:
     volumes:

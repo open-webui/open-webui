@@ -10,6 +10,7 @@
   If we ever want to remove these styles, we need to add an explicit border
   color utility to any element that depends on these defaults.
 */
+
 @layer base {
 	*,
 	::after,
@@ -39,6 +40,13 @@
 	input::placeholder,
 	textarea::placeholder {
 		color: theme(--color-gray-400);
+	}
+}
+
+/* Globale override → hele UI */
+@layer base {
+	html {
+	  font-family: "BuenosAires", var(--font-sans);
 	}
 }
 
