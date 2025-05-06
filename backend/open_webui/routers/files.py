@@ -91,7 +91,7 @@ def upload_file(
     knowledge_id: Optional[str] = Form(...),
 ):
     log.info(f"file.content_type: {file.content_type}")
-    print("KNOWLEDGE_ID: ", knowledge_id)
+
     file_metadata = file_metadata if file_metadata else {}
     try:
         unsanitized_filename = file.filename
