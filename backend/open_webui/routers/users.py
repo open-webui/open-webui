@@ -112,27 +112,8 @@ async def get_users(
 
 
 ############################
-# User Groups
-############################
-
-
-@router.get("/groups")
-async def get_user_groups(user=Depends(get_verified_user)):
-    return Users.get_user_groups(user.id)
-
-
-############################
-# User Permissions
-############################
-
-
-@router.get("/permissions")
-async def get_user_permissisions(user=Depends(get_verified_user)):
-    return Users.get_user_groups(user.id)
-
-
-############################
 # User Default Permissions
+
 ############################
 class WorkspacePermissions(BaseModel):
     models: bool = False
@@ -161,7 +142,7 @@ class UserPermissions(BaseModel):
     features: FeaturesPermissions
 
 
-@router.get("/default/permissions", response_model=UserPermissions)
+@router.get("/permissions", response_model=UserPermissions)
 async def get_user_permissions(request: Request, user=Depends(get_admin_user)):
     return {
         "workspace": WorkspacePermissions(
@@ -176,7 +157,7 @@ async def get_user_permissions(request: Request, user=Depends(get_admin_user)):
     }
 
 
-@router.post("/default/permissions")
+@router.post("/permissions")
 async def update_user_permissions(
     request: Request, form_data: UserPermissions, user=Depends(get_admin_user)
 ):
