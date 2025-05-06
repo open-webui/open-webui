@@ -68,7 +68,7 @@ class YoutubeLoader:
         if isinstance(language, str):
             self.language = [language]
         else:
-            self.language = list(language)  # Make a copy to avoid modifying the original
+            self.language = list(language)
         
         # Add English as fallback if not already in the list
         if "en" not in self.language:
