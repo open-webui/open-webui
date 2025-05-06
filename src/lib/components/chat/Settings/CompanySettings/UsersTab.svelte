@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 	import { onClickOutside } from '$lib/utils';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import { updateUserRole, getUsers, deleteUserById } from '$lib/apis/users';
@@ -10,11 +10,12 @@
 	import { toast } from 'svelte-sonner';
 	import { inviteUsers } from '$lib/apis/auths';
 	import ChevronUpDown from '$lib/components/icons/ChevronUpDown.svelte';
-	
+	import GroupSelect from './GroupSelect.svelte';
+	import { getGroups } from '$lib/apis/groups';
 
 	const i18n = getContext('i18n');
 
-	$: console.log(WEBUI_BASE_URL)
+	$: console.log(WEBUI_BASE_URL);
 
 	export let users = [];
 	export let getUsersHandler: Function;
@@ -74,6 +75,7 @@
 	let roles = ['user', 'admin'];
 	let selectedRole = roles[0];
 	let openDropdownIdx = null;
+	let selectedGroups = [];
 
 	const updateRoleHandler = async (id, role) => {
 		const res = await updateUserRole(localStorage.token, id, role).catch((error) => {
@@ -87,13 +89,29 @@
 	};
 
 	const inviteUsersHandler = async () => {
-		const invitees = invitedEmails.map(item => ({email: item, role: selectedRole}));
-		const res = await inviteUsers(localStorage.token, invitees).catch(error => toast.error(`${error}`));
-		console.log(res)
+		const invitees = invitedEmails.map((item) => ({ email: item, role: selectedRole }));
+		const existingGroups = selectedGroups?.filter(group => group.id);
+		const newGroups = selectedGroups?.filter(group => !group.id);
+		const existingGroupsIds= existingGroups?.length > 0 ? existingGroups?.map(group => group.id) : null;
+		const newGroupNames = newGroups?.length > 0 ? newGroups?.map(group => group.name) : null;
+		const res = await inviteUsers(localStorage.token, invitees, existingGroupsIds, newGroupNames).catch((error) =>
+			toast.error(`${error}`)
+		);
+		console.log(res);
 		getUsersHandler();
 		invitedEmails = [];
+		selectedGroups = []
+	};
+	let groups = [];
+	const setGroups = async () => {
+		groups = await getGroups(localStorage.token);
+	};
+	onMount(async () => {
+		setGroups();
+	});
 
-	}
+	
+	$: console.log(selectedGroups, 'selected groups');
 </script>
 
 <div class="pb-24 min-h-[32rem]">
@@ -108,7 +126,6 @@
 		class="flex flex-col self-center dark:bg-customGray-800 rounded-2xl w-full"
 		on:submit={(e) => {
 			e.preventDefault();
-			inviteHandler();
 		}}
 	>
 		<div
@@ -161,64 +178,75 @@
 		<span class="text-xs dark:text-customGray-100/50 mb-5"
 			>{$i18n.t('Separate multiple email addresses with commas.')}</span
 		>
-		<div class="flex w-full items-center justify-between">
-			<div class="flex-1 mr-2.5" use:onClickOutside={() => (showUsersRoleDropdown = false)}>
-				<div class="relative" bind:this={usersRoleRef}>
-					<button
-						type="button"
-						class="flex items-center justify-between w-full text-sm {selectedRole
-							? 'h-12'
-							: 'h-10'} px-3 py-2 {showUsersRoleDropdown
-							? 'border'
-							: ''} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer"
-						on:click={() => (showUsersRoleDropdown = !showUsersRoleDropdown)}
-					>
-						<span class="text-gray-500 dark:text-customGray-100">{$i18n.t('User Permissions')}</span
-						>
-						<div class="flex items-center">
-							<div class="text-xs dark:text-customGray-100/50 max-w-[15rem] text-left">
-								{#if selectedRole === "user"}
-									<span class="bg-[#024D15] rounded-lg text-xs text-[#0F8C18] px-2 w-fit">{$i18n.t('User')}</span>
-								{:else}
-									<span class="bg-[#33176E] rounded-lg text-xs text-[#7147CD] px-2 w-fit">{$i18n.t('Admin')}</span>
-								{/if}
-							</div>
-							<ChevronDown className="size-3 ml-1" />
-						</div>
-					</button>
 
-					{#if showUsersRoleDropdown}
-						<div
-							class="max-h-60 overflow-y-auto absolute top-10 right-4 z-50 bg-white dark:bg-customGray-900 border border-gray-300 dark:border-customGray-700 rounded-md shadow"
-						>
-							<div class="px-[6px] py-1">
-								{#each roles as role}
-									<div
-										role="button"
-										tabindex="0"
-										on:click={() => {
-											selectedRole = role;
-											showUsersRoleDropdown = false;
-										}}
-										class="flex items-center justify-end rounded-xl w-full py-1 cursor-pointer text-sm dark:text-customGray-100"
-									>
-										<div class="flex items-center">
-											{#if role === "user"}
-												<span class="bg-[#024D15] rounded-lg text-xs text-[#0F8C18] px-2 w-fit">{$i18n.t('User')}</span>
-											{:else}
-												<span class="bg-[#33176E] rounded-lg text-xs text-[#7147CD] px-2 w-fit">{$i18n.t('Admin')}</span>
-											{/if}
-										</div>
-									</div>
-								{/each}
-							</div>
+		<div class="w-full mb-2.5" use:onClickOutside={() => (showUsersRoleDropdown = false)}>
+			<div class="relative" bind:this={usersRoleRef}>
+				<button
+					type="button"
+					class="flex items-center justify-between w-full text-sm {selectedRole
+						? 'h-12'
+						: 'h-10'} px-3 py-2 {showUsersRoleDropdown
+						? 'border'
+						: ''} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer"
+					on:click={() => (showUsersRoleDropdown = !showUsersRoleDropdown)}
+				>
+					<span class="text-gray-500 dark:text-customGray-100">{$i18n.t('User Permissions')}</span>
+					<div class="flex items-center">
+						<div class="text-xs dark:text-customGray-100/50 max-w-[15rem] text-left">
+							{#if selectedRole === 'user'}
+								<span class="bg-[#024D15] rounded-lg text-xs text-[#0F8C18] px-2 w-fit"
+									>{$i18n.t('User')}</span
+								>
+							{:else}
+								<span class="bg-[#33176E] rounded-lg text-xs text-[#7147CD] px-2 w-fit"
+									>{$i18n.t('Admin')}</span
+								>
+							{/if}
 						</div>
-					{/if}
-				</div>
+						<ChevronDown className="size-3 ml-1" />
+					</div>
+				</button>
+
+				{#if showUsersRoleDropdown}
+					<div
+						class="max-h-60 overflow-y-auto absolute top-10 right-4 z-50 bg-white dark:bg-customGray-900 border border-gray-300 dark:border-customGray-700 rounded-md shadow"
+					>
+						<div class="px-[6px] py-1">
+							{#each roles as role}
+								<div
+									role="button"
+									tabindex="0"
+									on:click={() => {
+										selectedRole = role;
+										showUsersRoleDropdown = false;
+									}}
+									class="flex items-center justify-end rounded-xl w-full py-1 cursor-pointer text-sm dark:text-customGray-100"
+								>
+									<div class="flex items-center">
+										{#if role === 'user'}
+											<span class="bg-[#024D15] rounded-lg text-xs text-[#0F8C18] px-2 w-fit"
+												>{$i18n.t('User')}</span
+											>
+										{:else}
+											<span class="bg-[#33176E] rounded-lg text-xs text-[#7147CD] px-2 w-fit"
+												>{$i18n.t('Admin')}</span
+											>
+										{/if}
+									</div>
+								</div>
+							{/each}
+						</div>
+					</div>
+				{/if}
 			</div>
+		</div>
+		<div class="flex w-full items-start justify-between">
+			<GroupSelect bind:selected={selectedGroups} {groups} placeholder="Add group..." />
 			<button
-				class="bg-gray-900 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 text-gray-100 dark:text-customGray-200 py-2.5 px-4 h-12 rounded-lg transition"
-				on:click={() => {inviteUsersHandler()}}
+				class="ml-2.5 whitespace-nowrap bg-gray-900 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 text-gray-100 dark:text-customGray-200 py-2.5 px-4 h-12 rounded-lg transition"
+				on:click={() => {
+					inviteUsersHandler();
+				}}
 				type="button"
 			>
 				{$i18n.t('Send invites')}
@@ -226,7 +254,9 @@
 		</div>
 	</form>
 	<div class="flex justify-end mt-5 mb-1">
-		<div class="flex w-[12rem] border dark:border-customGray-700 rounded-lg dark:bg-customGray-900 dark:text-customGray-200">
+		<div
+			class="flex w-[12rem] border dark:border-customGray-700 rounded-lg dark:bg-customGray-900 dark:text-customGray-200"
+		>
 			<div class=" self-center ml-4 mr-2">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -257,7 +287,7 @@
 			<div class="text-xs dark:text-customGray-300">{$i18n.t('Roles')}</div>
 		</div>
 	</div>
-	
+
 	{#each filteredUsers as user, userIdx (user.id)}
 		<div class="grid grid-cols-[52%_70px_1fr_26px] gap-x-2 mb-[14px] group cursor-pointer">
 			<div class="flex items-center">
@@ -270,8 +300,11 @@
 						: `/user.png`}
 					alt="user"
 				/>
-				{#if (user?.first_name !== 'INVITED')}
-					<div class="text-xs dark:text-customGray-100 mr-1 whitespace-nowrap">{user.first_name} {user.last_name}</div>
+				{#if user?.first_name !== 'INVITED'}
+					<div class="text-xs dark:text-customGray-100 mr-1 whitespace-nowrap">
+						{user.first_name}
+						{user.last_name}
+					</div>
 				{/if}
 				<div class="text-xs dark:text-customGray-590 mr-1 whitespace-nowrap">{user.email}</div>
 			</div>
@@ -279,14 +312,19 @@
 				<div class="relative flex items-start">
 					<button
 						type="button"
-						class="px-2 text-xs rounded-lg {user.role === 'user' ? 'bg-[#024D15] text-[#0F8C18]' : 'bg-[#33176E] text-[#7147CD]'}"
-						on:click={() => openDropdownIdx = openDropdownIdx === userIdx ? null : userIdx}
+						class="px-2 text-xs rounded-lg {user.role === 'user'
+							? 'bg-[#024D15] text-[#0F8C18]'
+							: 'bg-[#33176E] text-[#7147CD]'}"
+						on:click={() => (openDropdownIdx = openDropdownIdx === userIdx ? null : userIdx)}
 					>
 						{$i18n.t(user.role === 'user' ? 'User' : 'Admin')}
 					</button>
-			
+
 					{#if openDropdownIdx === userIdx}
-						<div  use:onClickOutside={() => (openDropdownIdx = null)} class="absolute top-5 z-10 py-1 bg-white dark:bg-customGray-900 rounded-md shadow-lg border dark:border-customGray-700">
+						<div
+							use:onClickOutside={() => (openDropdownIdx = null)}
+							class="absolute top-5 z-10 py-1 bg-white dark:bg-customGray-900 rounded-md shadow-lg border dark:border-customGray-700"
+						>
 							<button
 								class="flex justify-end w-full whitespace-nowrap text-left pl-2 pr-[6px] py-1 text-xs"
 								on:click={() => {
@@ -294,7 +332,9 @@
 									openDropdownIdx = null;
 								}}
 							>
-								<span class="bg-[#024D15] rounded-lg text-xs text-[#0F8C18] px-2 w-fit">{$i18n.t('User')}</span>
+								<span class="bg-[#024D15] rounded-lg text-xs text-[#0F8C18] px-2 w-fit"
+									>{$i18n.t('User')}</span
+								>
 							</button>
 							<button
 								class="flex justify-end w-full whitespace-nowrap text-left pl-2 pr-[6px] py-1 text-xs"
@@ -303,12 +343,14 @@
 									openDropdownIdx = null;
 								}}
 							>
-								<span class="bg-[#33176E] rounded-lg text-xs text-[#7147CD] px-2 w-fit">{$i18n.t('Admin')}</span>
+								<span class="bg-[#33176E] rounded-lg text-xs text-[#7147CD] px-2 w-fit"
+									>{$i18n.t('Admin')}</span
+								>
 							</button>
 						</div>
 					{/if}
 				</div>
-				<ChevronDown className="size-2 ml-[3px]"/>
+				<ChevronDown className="size-2 ml-[3px]" />
 				<!-- <button
 					class="flex"
 					on:click={() => {
@@ -327,17 +369,20 @@
 				</button> -->
 			</div>
 			<div>
-				{#if (user?.first_name === 'INVITED')}
-					<div class="self-center rounded-lg text-xs px-2 w-fit whitespace-nowrap bg-[#113272] text-[#3F70CF]">Invite pending</div>
+				{#if user?.first_name === 'INVITED'}
+					<div
+						class="self-center rounded-lg text-xs px-2 w-fit whitespace-nowrap bg-[#113272] text-[#3F70CF]"
+					>
+						Invite pending
+					</div>
 				{/if}
 			</div>
-			{#if (user?.first_name === 'INVITED')}
+			{#if user?.first_name === 'INVITED'}
 				<div class=" h-4">
 					<InviteMenu {user} {getUsersHandler}>
 						<button
 							type="button"
 							class="dark:text-white flex justify-between items-center rounded-md cursor-pointer invisible group-hover:visible"
-							
 						>
 							<EllipsisHorizontal className="size-5" />
 						</button>

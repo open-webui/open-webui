@@ -430,7 +430,9 @@ export const addUser = async (
 
 export const inviteUsers = async (
 	token: string,
-	invitees: { email: string; role: string }[]
+	invitees: { email: string; role: string }[],
+	existingGroupsIds: string[] | null, 
+	newGroupNames: string[] | null
 ) => {
 	let error = null;
 
@@ -441,7 +443,9 @@ export const inviteUsers = async (
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			invitees
+			invitees,
+			group_ids: existingGroupsIds,
+			group_names: newGroupNames
 		})
 	})
 		.then(async (res) => {
