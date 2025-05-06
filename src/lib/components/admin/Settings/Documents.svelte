@@ -113,7 +113,7 @@
 			return;
 		}
 
-		if ((embeddingEngine === 'openai' && OpenAIKey === '') || OpenAIUrl === '') {
+		if (embeddingEngine === 'openai' && (OpenAIKey === '' || OpenAIUrl === '')) {
 			toast.error($i18n.t('OpenAI URL/Key required.'));
 			return;
 		}
