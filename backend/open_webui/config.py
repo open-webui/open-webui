@@ -2689,7 +2689,7 @@ AUDIO_STT_AZURE_BASE_URL = PersistentConfig(
 AUDIO_STT_AZURE_MAX_SPEAKERS = PersistentConfig(
     "AUDIO_STT_AZURE_MAX_SPEAKERS",
     "audio.stt.azure.max_speakers",
-    os.getenv("AUDIO_STT_AZURE_MAX_SPEAKERS", "3"),
+    os.getenv("AUDIO_STT_AZURE_MAX_SPEAKERS", ""),
 )
 
 AUDIO_TTS_OPENAI_API_BASE_URL = PersistentConfig(
@@ -2737,7 +2737,13 @@ AUDIO_TTS_SPLIT_ON = PersistentConfig(
 AUDIO_TTS_AZURE_SPEECH_REGION = PersistentConfig(
     "AUDIO_TTS_AZURE_SPEECH_REGION",
     "audio.tts.azure.speech_region",
-    os.getenv("AUDIO_TTS_AZURE_SPEECH_REGION", "eastus"),
+    os.getenv("AUDIO_TTS_AZURE_SPEECH_REGION", ""),
+)
+
+AUDIO_TTS_AZURE_SPEECH_BASE_URL = PersistentConfig(
+    "AUDIO_TTS_AZURE_SPEECH_BASE_URL",
+    "audio.tts.azure.speech_base_url",
+    os.getenv("AUDIO_TTS_AZURE_SPEECH_BASE_URL", ""),
 )
 
 AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
