@@ -478,11 +478,7 @@
 				{:else if TTS_ENGINE === 'azure'}
 					<div>
 						<div class="mt-1 flex gap-2 mb-1">
-							<SensitiveInput
-								placeholder={$i18n.t('API Key')}
-								bind:value={TTS_API_KEY}
-								required
-							/>
+							<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={TTS_API_KEY} required />
 						</div>
 
 						<hr class="border-gray-100 dark:border-gray-850 my-2" />
