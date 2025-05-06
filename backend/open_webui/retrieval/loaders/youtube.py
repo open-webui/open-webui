@@ -64,6 +64,7 @@ class YoutubeLoader:
         self._metadata = {"source": video_id}
         self.language = language
         self.proxy_url = proxy_url
+        # If language is string, convert to list
         if isinstance(language, str):
             self.language = [language]
         else:
@@ -100,7 +101,7 @@ class YoutubeLoader:
         except Exception as e:
             log.exception("Loading YouTube transcript failed")
             return []
-    
+
         # Make a copy of the language list to avoid modifying the original
         languages_to_try = list(self.language)
         
@@ -129,7 +130,7 @@ class YoutubeLoader:
                 log.info(f"Error finding transcript for language '{lang}'")
                 raise e
         
-        # If we get here, all languages failed including the English fallback
+        # If we get here, all languages failed
         languages_tried = ", ".join(languages_to_try)
         log.warning(f"No transcript found for any of the specified languages: {languages_tried}")
-        raise NoTranscriptFound(f"No transcript found for any supported language")
+        raise NoTranscriptFound(f"No transcript found for any supported language. Add additional supported languages and verify whether the video has any transcripts.")
