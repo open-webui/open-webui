@@ -9,18 +9,22 @@
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import ManageUsersMenu from './ManageUsersMenu.svelte';
-    import { updateGroupById } from '$lib/apis/groups';
+	import { updateGroupById, deleteGroupById } from '$lib/apis/groups';
+	import GroupPermissions from './GroupPermissions.svelte';
+	import RenameGroupDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+    import RemoveFromGroup from './RemoveFromGroup.svelte';
 
 	const i18n = getContext('i18n');
 	export let users = [];
 	let groupName = '';
 	let groups = [];
 
-    let permissions = {
+	let permissions = {
 		workspace: {
-			models: false,
-			knowledge: false,
-			prompts: false,
+			models: true,
+			knowledge: true,
+			prompts: true,
 			tools: false
 		},
 		chat: {
@@ -31,17 +35,17 @@
 			temporary: true
 		},
 		features: {
-			web_search: true,
-			image_generation: true,
-			code_interpreter: true
+			web_search: false,
+			image_generation: false,
+			code_interpreter: false
 		}
 	};
 
-    const setGroups = async () => {
+	const setGroups = async () => {
 		groups = await getGroups(localStorage.token);
 	};
- 
-    const updateGroupHandler = async (groupId, _group) => {
+
+	const updateGroupHandler = async (groupId, _group) => {
 		const res = await updateGroupById(localStorage.token, groupId, _group).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -49,6 +53,18 @@
 
 		if (res) {
 			toast.success($i18n.t('Group updated successfully'));
+			setGroups();
+		}
+	};
+
+	const deleteHandler = async (id) => {
+		const res = await deleteGroupById(localStorage.token, id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Group deleted successfully'));
 			setGroups();
 		}
 	};
@@ -78,7 +94,51 @@
 			await setGroups();
 		}
 	});
+
+	let showRenameGroup = false;
+	let renameName = '';
+	let renameGroupId = null;
+
+	let showDeleteConfirm = false;
+	let groupToDelete = null;
 </script>
+
+<RenameGroupDialog
+	bind:show={showRenameGroup}
+	title="Create New Folder"
+	bind:inputValue={renameName}
+	input={true}
+	inputPlaceholder={$i18n.t('Title')}
+	confirmLabel={$i18n.t('Done')}
+	noMessage={true}
+	inputType="input"
+	on:confirm={(e) => {
+		const group = groups.find((group) => group.id === renameGroupId);
+		updateGroupHandler(renameGroupId, { ...group, name: renameName });
+		renameName = '';
+		renameGroupId = null;
+	}}
+	on:cancel={() => {
+		renameName = '';
+		renameGroupId = null;
+	}}
+/>
+
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete group?')}
+	on:confirm={() => {
+		deleteHandler(groupToDelete?.id);
+		groupToDelete = null;
+	}}
+	on:cancel={() => {
+		groupToDelete = null;
+	}}
+>
+	<div class=" text-sm text-gray-500 flex-1 line-clamp-3">
+		{$i18n.t('This will delete')} <span class="  font-semibold">{groupToDelete?.name}</span>.
+	</div>
+</DeleteConfirmDialog>
 
 <div class="pb-56">
 	<div
@@ -120,13 +180,15 @@
 	</div>
 	<div>
 		{#each groups as group (group.id)}
-			<Accordeon>
+			<Accordeon id={group.id}>
 				<span slot="title"
 					>{group.name}
+                    {#if users?.filter((user) => group.user_ids?.includes(user.id))?.length > 0}
 					{users?.filter((user) => group.user_ids?.includes(user.id))?.length} ({$i18n.t(
 						'Users'
-					)})</span
-				>
+					)})
+                    {/if}
+                    </span>
 				<div slot="right" class="flex items-center">
 					<ManageUsersMenu {users} {group} {updateGroupHandler}>
 						<button type="button" class="flex items-center mr-1 font-medium hover:dark:text-white">
@@ -135,17 +197,37 @@
 							<ChevronDown className="size-2" />
 						</button>
 					</ManageUsersMenu>
-					<button
-						type="button"
-						on:click={(e) => {
-							e.stopPropagation();
+					<GroupPermissions
+						{group}
+						on:editName={() => {
+							renameName = group.name;
+							renameGroupId = group.id;
+							showRenameGroup = true;
+						}}
+						on:deleteGroup={() => {
+							showDeleteConfirm = true;
+							groupToDelete = group;
+						}}
+						on:changePermissions={(e) => {
+							updateGroupHandler(group.id, {
+								...group,
+								permissions: { ...permissions, features: {
+                                    web_search: e.detail.web_search,
+			                        image_generation: e.detail.image_generation,
+			                        code_interpreter: e.detail.code_interpreter
+                                }}
+							});
+							console.log(e.detail);
 						}}
 					>
-						<EllipsisHorizontal />
-					</button>
+						<button type="button" class="hover:dark:text-white h-4">
+							<EllipsisHorizontal />
+						</button>
+					</GroupPermissions>
 				</div>
 				{#each users?.filter((user) => group.user_ids?.includes(user.id)) as user (user.id)}
-					<div class="flex items-center my-2.5">
+				<div class="flex items-center justify-between w-full group cursor-pointer mt-2.5">
+                    <div class="flex items-center">
 						<img
 							class=" rounded-full w-3 h-3 object-cover mr-1"
 							src={user.profile_image_url.startsWith(WEBUI_BASE_URL) ||
@@ -163,6 +245,18 @@
 						{/if}
 						<div class="text-xs dark:text-customGray-590 mr-1 whitespace-nowrap">{user.email}</div>
 					</div>
+                    <RemoveFromGroup on:removeFromGroup={() => {
+                        console.log('test')
+                        updateGroupHandler(group.id, {
+							...group,
+							user_ids: [...group.user_ids?.filter(id => id !== user.id)]
+						});
+                    }}>
+                        <button type="button" class="invisible group-hover:visible">
+                            <EllipsisHorizontal/>
+                        </button>
+                    </RemoveFromGroup>
+                </div>
 				{/each}
 			</Accordeon>
 		{/each}

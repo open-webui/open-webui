@@ -1,13 +1,14 @@
 <script lang="ts">
 	
 	let open = false;
+	export let id;
 </script>
 
 <div class="mb-1">
 	<div
 		class="flex justify-between items-center w-full text-left py-2 text-xs dark:text-customGray-300 border-b dark:border-customGray-700"
 	>
-		<button class="flex items-center" on:click={() => (open = !open)}>
+		<button id={`group-${id}`} class="flex items-center" on:click={() => (open = !open)}>
 			<svg
 				width="4"
 				height="6"
@@ -27,7 +28,7 @@
 	</div>
 
 	{#if open}
-		<div class="px-4 py-2">
+		<div class="py-2">
 			<slot />
 		</div>
 	{/if}
