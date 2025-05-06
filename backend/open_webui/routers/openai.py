@@ -31,6 +31,7 @@ from open_webui.models.users import UserModel
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENV, SRC_LOG_LEVELS
+from open_webui.utils.azure import is_azure_openai_url, prepare_azure_openai_request
 
 
 from open_webui.utils.payload import (
@@ -60,10 +61,11 @@ async def send_get_request(url, key=None, user: UserModel = None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-            async with session.get(
-                url,
-                headers={
-                    **({"Authorization": f"Bearer {key}"} if key else {}),
+            # Check if this is an Azure OpenAI URL
+            if is_azure_openai_url(url):
+                # For Azure OpenAI, we need to use the api-key header instead of Authorization
+                headers = {
+                    **({"api-key": key} if key else {}),
                     **(
                         {
                             "X-OpenWebUI-User-Name": user.name,
@@ -74,10 +76,35 @@ async def send_get_request(url, key=None, user: UserModel = None):
                         if ENABLE_FORWARD_USER_INFO_HEADERS and user
                         else {}
                     ),
-                },
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as response:
-                return await response.json()
+                }
+                # For Azure OpenAI, we need to use the models endpoint
+                azure_url = f"{url}/openai/models?api-version=2023-05-15"
+                async with session.get(
+                    azure_url,
+                    headers=headers,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ) as response:
+                    return await response.json()
+            else:
+                # Standard OpenAI API
+                async with session.get(
+                    url,
+                    headers={
+                        **({"Authorization": f"Bearer {key}"} if key else {}),
+                        **(
+                            {
+                                "X-OpenWebUI-User-Name": user.name,
+                                "X-OpenWebUI-User-Id": user.id,
+                                "X-OpenWebUI-User-Email": user.email,
+                                "X-OpenWebUI-User-Role": user.role,
+                            }
+                            if ENABLE_FORWARD_USER_INFO_HEADERS and user
+                            else {}
+                        ),
+                    },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ) as response:
+                    return await response.json()
     except Exception as e:
         # Handle connection error here
         log.error(f"Connection error: {e}")
@@ -293,13 +320,23 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
         if (str(idx) not in request.app.state.config.OPENAI_API_CONFIGS) and (
             url not in request.app.state.config.OPENAI_API_CONFIGS  # Legacy support
         ):
-            request_tasks.append(
-                send_get_request(
-                    f"{url}/models",
-                    request.app.state.config.OPENAI_API_KEYS[idx],
-                    user=user,
+            # For Azure OpenAI, we need to use a different endpoint format
+            if is_azure_openai_url(url):
+                request_tasks.append(
+                    send_get_request(
+                        url,
+                        request.app.state.config.OPENAI_API_KEYS[idx],
+                        user=user,
+                    )
                 )
-            )
+            else:
+                request_tasks.append(
+                    send_get_request(
+                        f"{url}/models",
+                        request.app.state.config.OPENAI_API_KEYS[idx],
+                        user=user,
+                    )
+                )
         else:
             api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
                 str(idx),
@@ -313,13 +350,23 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
             if enable:
                 if len(model_ids) == 0:
-                    request_tasks.append(
-                        send_get_request(
-                            f"{url}/models",
-                            request.app.state.config.OPENAI_API_KEYS[idx],
-                            user=user,
+                    # For Azure OpenAI, we need to use a different endpoint format
+                    if is_azure_openai_url(url):
+                        request_tasks.append(
+                            send_get_request(
+                                url,
+                                request.app.state.config.OPENAI_API_KEYS[idx],
+                                user=user,
+                            )
                         )
-                    )
+                    else:
+                        request_tasks.append(
+                            send_get_request(
+                                f"{url}/models",
+                                request.app.state.config.OPENAI_API_KEYS[idx],
+                                user=user,
+                            )
+                        )
                 else:
                     model_list = {
                         "object": "list",
@@ -355,6 +402,13 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
             prefix_id = api_config.get("prefix_id", None)
             tags = api_config.get("tags", [])
+
+            # Add Azure tag for Azure OpenAI endpoints
+            if is_azure_openai_url(url) and "azure" not in tags:
+                if not tags:
+                    tags = ["azure"]
+                else:
+                    tags.append("azure")
 
             if prefix_id:
                 for model in (
@@ -467,10 +521,11 @@ async def get_models(
             timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
         ) as session:
             try:
-                async with session.get(
-                    f"{url}/models",
-                    headers={
-                        "Authorization": f"Bearer {key}",
+                # Check if this is an Azure OpenAI URL
+                if is_azure_openai_url(url):
+                    # For Azure OpenAI, we need to use the api-key header instead of Authorization
+                    headers = {
+                        "api-key": key,
                         "Content-Type": "application/json",
                         **(
                             {
@@ -482,39 +537,83 @@ async def get_models(
                             if ENABLE_FORWARD_USER_INFO_HEADERS
                             else {}
                         ),
-                    },
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                ) as r:
-                    if r.status != 200:
-                        # Extract response error details if available
-                        error_detail = f"HTTP Error: {r.status}"
-                        res = await r.json()
-                        if "error" in res:
-                            error_detail = f"External Error: {res['error']}"
-                        raise Exception(error_detail)
+                    }
+                    # For Azure OpenAI, we need to use the models endpoint with api-version
+                    azure_url = f"{url}/openai/models?api-version=2024-02-01-preview"
+                    async with session.get(
+                        azure_url,
+                        headers=headers,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    ) as r:
+                        if r.status != 200:
+                            # Extract response error details if available
+                            error_detail = f"HTTP Error: {r.status}"
+                            res = await r.json()
+                            if "error" in res:
+                                error_detail = f"External Error: {res['error']}"
+                            raise Exception(error_detail)
 
-                    response_data = await r.json()
+                        response_data = await r.json()
+                        
+                        # Add Azure tag to models
+                        if "data" in response_data:
+                            for model in response_data["data"]:
+                                if "tags" not in model:
+                                    model["tags"] = ["azure"]
+                                elif "azure" not in model["tags"]:
+                                    model["tags"].append("azure")
+                        
+                        models = response_data
+                else:
+                    # Standard OpenAI API
+                    async with session.get(
+                        f"{url}/models",
+                        headers={
+                            "Authorization": f"Bearer {key}",
+                            "Content-Type": "application/json",
+                            **(
+                                {
+                                    "X-OpenWebUI-User-Name": user.name,
+                                    "X-OpenWebUI-User-Id": user.id,
+                                    "X-OpenWebUI-User-Email": user.email,
+                                    "X-OpenWebUI-User-Role": user.role,
+                                }
+                                if ENABLE_FORWARD_USER_INFO_HEADERS
+                                else {}
+                            ),
+                        },
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    ) as r:
+                        if r.status != 200:
+                            # Extract response error details if available
+                            error_detail = f"HTTP Error: {r.status}"
+                            res = await r.json()
+                            if "error" in res:
+                                error_detail = f"External Error: {res['error']}"
+                            raise Exception(error_detail)
 
-                    # Check if we're calling OpenAI API based on the URL
-                    if "api.openai.com" in url:
-                        # Filter models according to the specified conditions
-                        response_data["data"] = [
-                            model
-                            for model in response_data.get("data", [])
-                            if not any(
-                                name in model["id"]
-                                for name in [
-                                    "babbage",
-                                    "dall-e",
-                                    "davinci",
-                                    "embedding",
-                                    "tts",
-                                    "whisper",
-                                ]
-                            )
-                        ]
+                        response_data = await r.json()
 
-                    models = response_data
+                        # Check if we're calling OpenAI API based on the URL
+                        if "api.openai.com" in url:
+                            # Filter models according to the specified conditions
+                            response_data["data"] = [
+                                model
+                                for model in response_data.get("data", [])
+                                if not any(
+                                    name in model["id"]
+                                    for name in [
+                                        "babbage",
+                                        "dall-e",
+                                        "davinci",
+                                        "embedding",
+                                        "tts",
+                                        "whisper",
+                                    ]
+                                )
+                            ]
+
+                        models = response_data
             except aiohttp.ClientError as e:
                 # ClientError covers all aiohttp requests issues
                 log.exception(f"Client error: {str(e)}")
@@ -549,10 +648,11 @@ async def verify_connection(
         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
     ) as session:
         try:
-            async with session.get(
-                f"{url}/models",
-                headers={
-                    "Authorization": f"Bearer {key}",
+            # Check if this is an Azure OpenAI URL
+            if is_azure_openai_url(url):
+                # For Azure OpenAI, we need to use the api-key header instead of Authorization
+                headers = {
+                    "api-key": key,
                     "Content-Type": "application/json",
                     **(
                         {
@@ -564,19 +664,54 @@ async def verify_connection(
                         if ENABLE_FORWARD_USER_INFO_HEADERS
                         else {}
                     ),
-                },
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
-                if r.status != 200:
-                    # Extract response error details if available
-                    error_detail = f"HTTP Error: {r.status}"
-                    res = await r.json()
-                    if "error" in res:
-                        error_detail = f"External Error: {res['error']}"
-                    raise Exception(error_detail)
+                }
+                # For Azure OpenAI, we need to use the models endpoint with api-version
+                azure_url = f"{url}/openai/models?api-version=2024-02-01-preview"
+                async with session.get(
+                    azure_url,
+                    headers=headers,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ) as r:
+                    if r.status != 200:
+                        # Extract response error details if available
+                        error_detail = f"HTTP Error: {r.status}"
+                        res = await r.json()
+                        if "error" in res:
+                            error_detail = f"External Error: {res['error']}"
+                        raise Exception(error_detail)
 
-                response_data = await r.json()
-                return response_data
+                    response_data = await r.json()
+                    return response_data
+            else:
+                # Standard OpenAI API
+                async with session.get(
+                    f"{url}/models",
+                    headers={
+                        "Authorization": f"Bearer {key}",
+                        "Content-Type": "application/json",
+                        **(
+                            {
+                                "X-OpenWebUI-User-Name": user.name,
+                                "X-OpenWebUI-User-Id": user.id,
+                                "X-OpenWebUI-User-Email": user.email,
+                                "X-OpenWebUI-User-Role": user.role,
+                            }
+                            if ENABLE_FORWARD_USER_INFO_HEADERS
+                            else {}
+                        ),
+                    },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ) as r:
+                    if r.status != 200:
+                        # Extract response error details if available
+                        error_detail = f"HTTP Error: {r.status}"
+                        res = await r.json()
+                        if "error" in res:
+                            error_detail = f"External Error: {res['error']}"
+                        raise Exception(error_detail)
+
+                    response_data = await r.json()
+                    return response_data
 
         except aiohttp.ClientError as e:
             # ClientError covers all aiohttp requests issues
@@ -690,7 +825,44 @@ async def generate_chat_completion(
             convert_logit_bias_input_to_json(payload["logit_bias"])
         )
 
-    payload = json.dumps(payload)
+    # Check if this is an Azure OpenAI URL
+    is_azure = is_azure_openai_url(url)
+    
+    # Prepare the request based on the API type
+    if is_azure:
+        # For Azure OpenAI, we need to format the URL and headers differently
+        formatted_url, payload_dict, headers = prepare_azure_openai_request(
+            url, 
+            json.loads(json.dumps(payload)),  # Convert to dict and back to ensure serialization
+            key
+        )
+        payload = json.dumps(payload_dict)
+        request_url = formatted_url
+    else:
+        # Standard OpenAI API
+        request_url = f"{url}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+            **(
+                {
+                    "HTTP-Referer": "https://openwebui.com/",
+                    "X-Title": "Open WebUI",
+                }
+                if "openrouter.ai" in url
+                else {}
+            ),
+            **(
+                {
+                    "X-OpenWebUI-User-Name": user.name,
+                    "X-OpenWebUI-User-Id": user.id,
+                    "X-OpenWebUI-User-Email": user.email,
+                    "X-OpenWebUI-User-Role": user.role,
+                }
+                if ENABLE_FORWARD_USER_INFO_HEADERS
+                else {}
+            ),
+        }
 
     r = None
     session = None
@@ -704,30 +876,9 @@ async def generate_chat_completion(
 
         r = await session.request(
             method="POST",
-            url=f"{url}/chat/completions",
+            url=request_url,
             data=payload,
-            headers={
-                "Authorization": f"Bearer {key}",
-                "Content-Type": "application/json",
-                **(
-                    {
-                        "HTTP-Referer": "https://openwebui.com/",
-                        "X-Title": "Open WebUI",
-                    }
-                    if "openrouter.ai" in url
-                    else {}
-                ),
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS
-                    else {}
-                ),
-            },
+            headers=headers,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
 
@@ -790,26 +941,80 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
     try:
         session = aiohttp.ClientSession(trust_env=True)
-        r = await session.request(
-            method=request.method,
-            url=f"{url}/{path}",
-            data=body,
-            headers={
-                "Authorization": f"Bearer {key}",
-                "Content-Type": "application/json",
-                **(
-                    {
-                        "X-OpenWebUI-User-Name": user.name,
-                        "X-OpenWebUI-User-Id": user.id,
-                        "X-OpenWebUI-User-Email": user.email,
-                        "X-OpenWebUI-User-Role": user.role,
-                    }
-                    if ENABLE_FORWARD_USER_INFO_HEADERS
-                    else {}
-                ),
-            },
-            ssl=AIOHTTP_CLIENT_SESSION_SSL,
-        )
+        
+        # Check if this is an Azure OpenAI URL
+        if is_azure_openai_url(url):
+            # For Azure OpenAI, we need to use a different URL format and headers
+            # This is a simplified approach - in a real implementation, you'd need to handle
+            # different API paths and versions more carefully
+            if path == "chat/completions":
+                # Extract model from body for Azure URL formatting
+                try:
+                    body_dict = json.loads(body)
+                    model = body_dict.get("model", "")
+                    formatted_url, body_dict, headers = prepare_azure_openai_request(
+                        url, body_dict, key
+                    )
+                    body = json.dumps(body_dict).encode()
+                    r = await session.request(
+                        method=request.method,
+                        url=formatted_url,
+                        data=body,
+                        headers=headers,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    )
+                except Exception as e:
+                    log.error(f"Error processing Azure OpenAI request: {e}")
+                    raise HTTPException(
+                        status_code=500, 
+                        detail=f"Error processing Azure OpenAI request: {str(e)}"
+                    )
+            else:
+                # For other paths, use the standard Azure format
+                azure_url = f"{url}/openai/{path}?api-version=2023-05-15"
+                r = await session.request(
+                    method=request.method,
+                    url=azure_url,
+                    data=body,
+                    headers={
+                        "api-key": key,
+                        "Content-Type": "application/json",
+                        **(
+                            {
+                                "X-OpenWebUI-User-Name": user.name,
+                                "X-OpenWebUI-User-Id": user.id,
+                                "X-OpenWebUI-User-Email": user.email,
+                                "X-OpenWebUI-User-Role": user.role,
+                            }
+                            if ENABLE_FORWARD_USER_INFO_HEADERS
+                            else {}
+                        ),
+                    },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                )
+        else:
+            # Standard OpenAI API
+            r = await session.request(
+                method=request.method,
+                url=f"{url}/{path}",
+                data=body,
+                headers={
+                    "Authorization": f"Bearer {key}",
+                    "Content-Type": "application/json",
+                    **(
+                        {
+                            "X-OpenWebUI-User-Name": user.name,
+                            "X-OpenWebUI-User-Id": user.id,
+                            "X-OpenWebUI-User-Email": user.email,
+                            "X-OpenWebUI-User-Role": user.role,
+                        }
+                        if ENABLE_FORWARD_USER_INFO_HEADERS
+                        else {}
+                    ),
+                },
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            )
+            
         r.raise_for_status()
 
         # Check if response is SSE
