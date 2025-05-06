@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getAdminDetails } from '$lib/apis/auths';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, getContext } from 'svelte';
+	import { config } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 
@@ -27,9 +28,13 @@
 
 				<div class=" mt-4 text-center text-sm dark:text-gray-200 w-full">
 					{$i18n.t('Your account status is currently pending activation.')}<br />
-					{$i18n.t(
-						'To access the WebUI, please reach out to the administrator. Admins can manage user statuses from the Admin Panel.'
-					)}
+					{#if $config?.features?.enable_signup_verify}
+						{$i18n.t('Please check your email inbox for the activation link.')}
+					{:else}
+						{$i18n.t(
+							'To access the WebUI, please reach out to the administrator. Admins can manage user statuses from the Admin Panel.'
+						)}
+					{/if}
 				</div>
 
 				{#if adminDetails}

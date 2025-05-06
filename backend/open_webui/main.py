@@ -341,6 +341,12 @@ from open_webui.config import (
     AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH,
     AppConfig,
     reset_config,
+    ENABLE_SIGNUP_VERIFY,
+    SIGNUP_EMAIL_DOMAIN_WHITELIST,
+    SMTP_HOST,
+    SMTP_PORT,
+    SMTP_USERNAME,
+    SMTP_PASSWORD,
 )
 from open_webui.env import (
     AUDIT_EXCLUDED_PATHS,
@@ -551,6 +557,13 @@ app.state.config.ENABLE_DIRECT_CONNECTIONS = ENABLE_DIRECT_CONNECTIONS
 app.state.config.WEBUI_URL = WEBUI_URL
 app.state.config.ENABLE_SIGNUP = ENABLE_SIGNUP
 app.state.config.ENABLE_LOGIN_FORM = ENABLE_LOGIN_FORM
+
+app.state.config.ENABLE_SIGNUP_VERIFY = ENABLE_SIGNUP_VERIFY
+app.state.config.SIGNUP_EMAIL_DOMAIN_WHITELIST = SIGNUP_EMAIL_DOMAIN_WHITELIST
+app.state.config.SMTP_HOST = SMTP_HOST
+app.state.config.SMTP_PORT = SMTP_PORT
+app.state.config.SMTP_USERNAME = SMTP_USERNAME
+app.state.config.SMTP_PASSWORD = SMTP_PASSWORD
 
 app.state.config.ENABLE_API_KEY = ENABLE_API_KEY
 app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS = (
@@ -1326,6 +1339,7 @@ async def get_app_config(request: Request):
             "enable_api_key": app.state.config.ENABLE_API_KEY,
             "enable_signup": app.state.config.ENABLE_SIGNUP,
             "enable_login_form": app.state.config.ENABLE_LOGIN_FORM,
+            "enable_signup_verify": app.state.config.ENABLE_SIGNUP_VERIFY,
             "enable_websocket": ENABLE_WEBSOCKET_SUPPORT,
             **(
                 {

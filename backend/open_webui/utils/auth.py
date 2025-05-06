@@ -7,11 +7,13 @@ import hashlib
 import requests
 import os
 
-
 from datetime import datetime, timedelta
 import pytz
 from pytz import UTC
 from typing import Optional, Union, List, Dict
+
+from open_webui.config import WEBUI_URL
+from open_webui.utils.smtp import send_email
 
 from open_webui.models.users import Users
 
@@ -21,12 +23,17 @@ from open_webui.env import (
     TRUSTED_SIGNATURE_KEY,
     STATIC_DIR,
     SRC_LOG_LEVELS,
+    REDIS_URL,
+    REDIS_SENTINEL_HOSTS,
+    REDIS_SENTINEL_PORT,
+    WEBUI_NAME,
 )
 
 from fastapi import BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 
+from open_webui.utils.redis import get_redis_connection, get_sentinels_from_env
 
 logging.getLogger("passlib").setLevel(logging.ERROR)
 
@@ -35,6 +42,7 @@ log.setLevel(SRC_LOG_LEVELS["OAUTH"])
 
 SESSION_SECRET = WEBUI_SECRET_KEY
 ALGORITHM = "HS256"
+
 
 ##############
 # Auth Utils
@@ -255,3 +263,34 @@ def get_admin_user(user=Depends(get_current_user)):
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return user
+
+
+def get_email_code_key(code: str) -> str:
+    return f"email_verify:{code}"
+
+
+def send_verify_email(email: str):
+    redis = get_redis_connection(
+        redis_url=REDIS_URL,
+        redis_sentinels=get_sentinels_from_env(
+            REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT
+        ),
+    )
+    code = f"{uuid.uuid4().hex}{uuid.uuid1().hex}"
+    redis.set(name=get_email_code_key(code=code), value=email, ex=timedelta(days=1))
+    link = f"{WEBUI_URL.value.rstrip('/')}/api/v1/auths/signup_verify/{code}"
+    send_email(
+        receiver=email,
+        subject=f"{WEBUI_NAME} Email Verify",
+        body=f"Click this link to verify your email: {link}",
+    )
+
+
+def verify_email_by_code(code: str) -> str:
+    redis = get_redis_connection(
+        redis_url=REDIS_URL,
+        redis_sentinels=get_sentinels_from_env(
+            REDIS_SENTINEL_HOSTS, REDIS_SENTINEL_PORT
+        ),
+    )
+    return redis.get(name=get_email_code_key(code=code))
