@@ -61,7 +61,9 @@ def get_permissions(
     # Combine permissions from all user groups
     for group in user_groups:
         group_permissions = group.permissions
-        permissions = combine_permissions(permissions, group_permissions)
+
+        if group_permissions:
+            permissions = combine_permissions(permissions, group_permissions)
 
     # Ensure all fields from default_permissions are present and filled in
     permissions = fill_missing_permissions(permissions, default_permissions)

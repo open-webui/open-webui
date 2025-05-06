@@ -115,7 +115,7 @@ class GroupTable:
         with get_db() as db:
             return [
                 GroupModel.model_validate(group)
-                for group in db.query(Group).filter_by(company_id=company_id).order_by(Group.updated_at.desc()).all()
+                for group in db.query(Group).filter_by(company_id=company_id).all()
             ]
 
     def get_groups_by_member_id(self, user_id: str) -> list[GroupModel]:
