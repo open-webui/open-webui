@@ -501,9 +501,9 @@ async def image_generations(
                     else request.app.state.config.IMAGE_SIZE
                 ),
                 **(
-                    {"response_format": "b64_json"}
+                    {}
                     if "gpt-image-1" in request.app.state.config.IMAGE_GENERATION_MODEL
-                    else {}
+                    else {"response_format": "b64_json"}
                 ),
             }
 
