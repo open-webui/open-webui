@@ -118,7 +118,7 @@
 		return file;
 	};
 
-	const uploadFileHandler = async (file) => {
+	const uploadFileHandler = async (file, knowledgeId) => {
 		console.log(file);
 
 		const tempItemId = uuidv4();
@@ -158,7 +158,7 @@
 		knowledge.files = [...(knowledge.files ?? []), fileItem];
 
 		try {
-			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
+			const uploadedFile = await uploadFile(localStorage.token, file, knowledgeId).catch((e) => {
 				toast.error(`${e}`);
 				return null;
 			});
@@ -249,7 +249,7 @@
 					const file = await entry.getFile();
 					const fileWithPath = new File([file], entryPath, { type: file.type });
 
-					await uploadFileHandler(fileWithPath);
+					await uploadFileHandler(fileWithPath, id);
 					uploadedFiles++;
 					updateProgress();
 				} else if (entry.kind === 'directory') {
@@ -311,7 +311,7 @@
 							const relativePath = file.webkitRelativePath || file.name;
 							const fileWithPath = new File([file], relativePath, { type: file.type });
 
-							await uploadFileHandler(fileWithPath);
+							await uploadFileHandler(fileWithPath, id);
 							uploadedFiles++;
 							updateProgress();
 						}
@@ -509,7 +509,7 @@
 
 				if (inputFiles && inputFiles.length > 0) {
 					for (const file of inputFiles) {
-						await uploadFileHandler(file);
+						await uploadFileHandler(file, id);
 					}
 				} else {
 					toast.error($i18n.t(`File not found.`));
@@ -628,7 +628,7 @@
 	bind:show={showAddTextContentModal}
 	on:submit={(e) => {
 		const file = createFileFromText(e.detail.name, e.detail.content);
-		uploadFileHandler(file);
+		uploadFileHandler(file, id);
 	}}
 />
 
@@ -641,7 +641,7 @@
 	on:change={async () => {
 		if (inputFiles && inputFiles.length > 0) {
 			for (const file of inputFiles) {
-				await uploadFileHandler(file);
+				await uploadFileHandler(file, id);
 			}
 
 			inputFiles = null;
