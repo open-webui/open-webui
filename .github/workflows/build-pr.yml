@@ -86,6 +86,12 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+    # Define job outputs here
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      commit: ${{ steps.get_version.outputs.commit }}
+      installer_name: ${{ steps.rename_installer.outputs.installer_name }}
+      zip_name: ${{ steps.zip_installer.outputs.zip_name }}
 
     steps:
       - name: Checkout repository
@@ -107,15 +113,17 @@ jobs:
           }
 
       - name: Create dist directory
-        run: mkdir -p dist
+        run: New-Item -ItemType Directory -Force -Path "dist"
 
       - name: Get version from package.json
         id: get_version
         run: |
           $VERSION = (Get-Content package.json | ConvertFrom-Json).version
           $COMMIT = "${{ github.sha }}".Substring(0, 7)
-          echo "VERSION=$VERSION" >> $env:GITHUB_ENV
-          echo "COMMIT=$COMMIT" >> $env:GITHUB_ENV
+          echo "version=$VERSION" >> $env:GITHUB_OUTPUT
+          echo "commit=$COMMIT" >> $env:GITHUB_OUTPUT
+          Write-Host "Version: $VERSION"
+          Write-Host "Commit: $COMMIT"
 
       # Download the wheel file directly from the artifact
       - name: Download wheel artifact
@@ -127,10 +135,10 @@ jobs:
       - name: List downloaded wheel files
         run: |
           Write-Host "Listing downloaded wheel files:"
-          Get-ChildItem -Path dist -Filter "*.whl"
-          $WHEEL_FILE = Get-ChildItem -Path dist -Filter "*.whl" | Select-Object -First 1
+          Get-ChildItem -Path "dist" -Filter "*.whl"
+          $WHEEL_FILE = Get-ChildItem -Path "dist" -Filter "*.whl" | Select-Object -First 1
           if ($WHEEL_FILE) {
-            echo "WHEEL_FILENAME=$($WHEEL_FILE.Name)" >> $env:GITHUB_ENV
+            Write-Output "wheel_filename=$($WHEEL_FILE.Name)"
             Write-Host "Using wheel file: $($WHEEL_FILE.Name)"
           } else {
             Write-Host "ERROR: No wheel file found in dist directory!"
@@ -143,33 +151,33 @@ jobs:
           Invoke-WebRequest -UserAgent "Wget" -Uri "https://sourceforge.net/projects/nsis/files/NSIS%203/3.10/nsis-3.10-setup.exe" -OutFile "nsis.exe"
           
           # Install NSIS
-          Start-Process nsis.exe -ArgumentList '/S' -Wait
+          Start-Process -FilePath ".\nsis.exe" -ArgumentList '/S' -Wait
           
           # Add NSIS to PATH
-          echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
+          $env:PATH = "C:\Program Files (x86)\NSIS;$env:PATH"
 
       - name: Check for NSIS script
         run: |
-          $SCRIPT_PATH = "installer/Installer-UX.nsi"
+          $SCRIPT_PATH = Join-Path -Path $PWD -ChildPath "installer\Installer-UX.nsi"
           if (Test-Path -Path $SCRIPT_PATH) {
             Write-Host "NSIS script found at $SCRIPT_PATH"
             Get-Content -Path $SCRIPT_PATH -TotalCount 10  # Show first 10 lines
           } else {
             Write-Host "ERROR: NSIS script not found at $SCRIPT_PATH"
-            Write-Host "Current directory: $(Get-Location)"
+            Write-Host "Current directory: $PWD"
             Write-Host "Listing all files in the repository:"
             Get-ChildItem -Path . -Recurse | Select-Object -ExpandProperty FullName
           }
 
       - name: Build installer
         run: |
-          echo "Building installer with NSIS..."
+          Write-Host "Building installer with NSIS..."
           # Use the full path to the script
-          $SCRIPT_PATH = "$(Get-Location)\installer\Installer-UX.nsi"
+          $SCRIPT_PATH = Join-Path -Path $PWD -ChildPath "installer\Installer-UX.nsi"
           Write-Host "Using NSIS script at: $SCRIPT_PATH"
           
           if (Test-Path -Path $SCRIPT_PATH) {
-            makensis $SCRIPT_PATH
+            & "C:\Program Files (x86)\NSIS\makensis.exe" $SCRIPT_PATH
           } else {
             Write-Host "ERROR: NSIS script not found at $SCRIPT_PATH"
             exit 1
@@ -177,15 +185,24 @@ jobs:
 
       - name: Rename installer
         if: success()
+        id: rename_installer
         run: |
           if (Test-Path -Path "installer") {
             $INSTALLER_FILES = Get-ChildItem -Path "installer" -Filter "*.exe" | Where-Object { $_.Name -ne "nsis.exe" }
             if ($INSTALLER_FILES) {
               $INSTALLER_PATH = $INSTALLER_FILES[0].FullName
               Write-Host "Found installer at: $INSTALLER_PATH"
-              $NEW_NAME = "raux-$env:VERSION-$env:COMMIT-setup.exe"
+              $VERSION = "${{ steps.get_version.outputs.version }}"
+              $COMMIT = "${{ steps.get_version.outputs.commit }}"
+              Write-Host "Using version: $VERSION"
+              Write-Host "Using commit: $COMMIT"
+              $NEW_NAME = "raux-$VERSION-$COMMIT-setup.exe"
+              Write-Host "New installer name will be: $NEW_NAME"
               Move-Item -Path $INSTALLER_PATH -Destination $NEW_NAME -Force
-              echo "INSTALLER_NAME=$NEW_NAME" >> $env:GITHUB_ENV
+              echo "installer_name=$NEW_NAME" >> $env:GITHUB_OUTPUT
+              Write-Host "Set installer_name to: $NEW_NAME"
+              Write-Host "Current directory: $PWD"
+              Write-Host "File exists after move: $(Test-Path -Path $NEW_NAME)"
             } else {
               Write-Host "ERROR: No installer .exe files found in installer directory!"
               exit 1
@@ -198,63 +215,103 @@ jobs:
       - name: Create checksums
         if: success()
         run: |
+          # Get the installer name from the previous step
+          $INSTALLER_NAME = "${{ steps.rename_installer.outputs.installer_name }}"
+          Write-Host "Creating checksum for installer: $INSTALLER_NAME"
+          Write-Host "Current directory: $PWD"
+          
+          # Verify the file exists
+          if (-not (Test-Path -Path $INSTALLER_NAME)) {
+            Write-Host "ERROR: Installer file not found at: $INSTALLER_NAME"
+            Write-Host "Listing current directory contents:"
+            Get-ChildItem
+            exit 1
+          }
+          
           # Create SHA256 checksum file
-          $CHECKSUM = (Get-FileHash -Path $env:INSTALLER_NAME -Algorithm SHA256).Hash.ToLower()
-          $CHECKSUM | Out-File -FilePath "$env:INSTALLER_NAME.sha256" -Encoding ascii
-          Write-Host "Created checksum file with value: $CHECKSUM"
+          try {
+            $CHECKSUM = (Get-FileHash -Path $INSTALLER_NAME -Algorithm SHA256).Hash.ToLower()
+            $CHECKSUM | Out-File -FilePath "$INSTALLER_NAME.sha256" -Encoding ascii
+            Write-Host "Created checksum file with value: $CHECKSUM"
+            Write-Host "Checksum file exists: $(Test-Path -Path "$INSTALLER_NAME.sha256")"
+          } catch {
+            Write-Host "ERROR: Failed to create checksum: $_"
+            exit 1
+          }
 
       - name: Zip installer executable
         if: success()
+        id: zip_installer
         run: |
           # First, create a directory to hold all files we want to include in the zip
-          mkdir -p package
+          New-Item -ItemType Directory -Force -Path "package"
           
           # Copy the installer executable
-          Copy-Item "$env:INSTALLER_NAME" -Destination "package/"
+          Copy-Item "${{ steps.rename_installer.outputs.installer_name }}" -Destination "package\"
           
           # Copy the ux_installer directory with install.py
-          if (Test-Path -Path "installer/ux_installer") {
+          if (Test-Path -Path "installer\ux_installer") {
             Write-Host "Copying ux_installer directory to package"
-            Copy-Item -Path "installer/ux_installer" -Destination "package/" -Recurse
+            Copy-Item -Path "installer\ux_installer" -Destination "package\" -Recurse
           } else {
             Write-Host "WARNING: ux_installer directory not found in installer directory"
           }
           
           # Copy the launcher scripts
-          if (Test-Path -Path "installer/launch_lemonade.ps1") {
+          if (Test-Path -Path "installer\launch_lemonade.ps1") {
             Write-Host "Copying launch_lemonade.ps1 to package"
-            Copy-Item -Path "installer/launch_lemonade.ps1" -Destination "package/"
+            Copy-Item -Path "installer\launch_lemonade.ps1" -Destination "package\"
           } else {
             Write-Host "WARNING: launch_lemonade.ps1 not found in installer directory"
           }
           
-          if (Test-Path -Path "installer/launch_raux.ps1") {
+          if (Test-Path -Path "installer\launch_raux.ps1") {
             Write-Host "Copying launch_raux.ps1 to package"
-            Copy-Item -Path "installer/launch_raux.ps1" -Destination "package/"
+            Copy-Item -Path "installer\launch_raux.ps1" -Destination "package\"
           } else {
             Write-Host "WARNING: launch_raux.ps1 not found in installer directory"
           }
           
-          if (Test-Path -Path "installer/launch_raux.cmd") {
+          if (Test-Path -Path "installer\launch_raux.cmd") {
             Write-Host "Copying launch_raux.cmd to package"
-            Copy-Item -Path "installer/launch_raux.cmd" -Destination "package/"
+            Copy-Item -Path "installer\launch_raux.cmd" -Destination "package\"
           } else {
             Write-Host "WARNING: launch_raux.cmd not found in installer directory"
           }
           
           # Create the zip file with all contents
-          $ZIP_NAME = "raux-$env:VERSION-$env:COMMIT-setup.zip"
-          Compress-Archive -Path "package/*" -DestinationPath $ZIP_NAME
-          echo "ZIP_NAME=$ZIP_NAME" >> $env:GITHUB_ENV
+          $ZIP_NAME = "raux-${{ steps.get_version.outputs.version }}-${{ steps.get_version.outputs.commit }}-setup.zip"
+          Compress-Archive -Path "package\*" -DestinationPath $ZIP_NAME
+          echo "zip_name=$ZIP_NAME" >> $env:GITHUB_OUTPUT
           Write-Host "Created zip file: $ZIP_NAME with installer, ux_installer directory, and launcher scripts"
+
+      - name: Create README for artifacts
+        run: |
+          echo "Creating README.txt file for artifacts"
+          echo "RAUX Installer Package" > README.txt
+          echo "=====================" >> README.txt
+          echo "" >> README.txt
+          echo "This package contains the following files:" >> README.txt
+          echo "- ${{ steps.rename_installer.outputs.installer_name }}: The installer executable" >> README.txt
+          echo "- ${{ steps.rename_installer.outputs.installer_name }}.sha256: Checksum file" >> README.txt
+          echo "- ${{ steps.zip_installer.outputs.zip_name }}: Packaged installer with all components" >> README.txt
+          echo "" >> README.txt
+          echo "To test the installer locally:" >> README.txt
+          echo "1. Use the .zip file with the '/LOCAL_RELEASE' parameter:" >> README.txt
+          echo "   Installer-UX.exe /LOCAL_RELEASE=path/to/${{ steps.zip_installer.outputs.zip_name }}" >> README.txt
+          echo "" >> README.txt
+          echo "2. Or use the VS Code task \"Run RAUX Installer with Local Release\"" >> README.txt
+          Write-Host "Created README.txt file for artifacts"
 
       # Upload all installer artifacts
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
         with:
+          name: raux-installer-package
           if-no-files-found: error
           path: |
-            ${{ env.INSTALLER_NAME }}
-            ${{ env.INSTALLER_NAME }}.sha256
-            ${{ env.ZIP_NAME }}
+            ${{ steps.rename_installer.outputs.installer_name }}
+            ${{ steps.rename_installer.outputs.installer_name }}.sha256
+            ${{ steps.zip_installer.outputs.zip_name }}
+            README.txt
           retention-days: 7
