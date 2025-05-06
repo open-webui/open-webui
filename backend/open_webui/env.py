@@ -262,7 +262,43 @@ if os.path.exists(f"{DATA_DIR}/ollama.db"):
 else:
     pass
 
-DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
+# Get all Database related environment variables
+db_type = os.environ.get("DATABASE_TYPE", "sqlite")
+db_user = os.environ.get("DATABASE_USER", "openwebui")
+db_password = os.environ.get("DATABASE_PASSWORD", "")
+db_host = os.environ.get("DATABASE_HOST", "localhost")
+db_port = os.environ.get("DATABASE_PORT", "5432")
+db_name = os.environ.get("DATABASE_NAME", "openwebui")
+DB_DEFAULT_URL = f"sqlite:///{DATA_DIR}/webui.db"
+db_url = os.environ.get("DATABASE_URL", DB_DEFAULT_URL)
+
+# Define the database URL
+DATABASE_URL_TEMP = ""
+
+# Construct the database URL based on the database type
+if db_url and db_url != DB_DEFAULT_URL:
+    # emulate the legacy default if DATABASE_URL environment variable is set
+    DATABASE_URL_TEMP = db_url
+elif db_type == "sqlite":
+    # Ensure that SQLite uses the default
+    DATABASE_URL_TEMP = DB_DEFAULT_URL
+elif db_type == "postgresql":
+    # Check if essential variables are set
+    if not (db_user and db_name):
+        raise ValueError("DATABASE_USER and DATABASE_NAME must be set for PostgreSQL.")
+    if not db_password:
+        DATABASE_URL_TEMP = (
+            f"postgresql://{db_user}@{db_host}:{db_port}/{db_name}"
+        )
+    else:
+        DATABASE_URL_TEMP = (
+                f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+        )
+else:
+    raise ValueError(f"Unsupported database type: {db_type}. Supported types "
+                     "are: sqlite, postgresql")
+
+DATABASE_URL = DATABASE_URL_TEMP
 
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:
