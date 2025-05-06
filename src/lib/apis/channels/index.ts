@@ -1,5 +1,4 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
-import { t } from 'i18next';
 
 type ChannelForm = {
 	name: string;
