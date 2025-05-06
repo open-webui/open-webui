@@ -97,7 +97,6 @@
 		if($companyConfig?.config?.ui?.custom_user_notice) {
 			userNotice = $companyConfig?.config?.ui?.custom_user_notice;
 		}
-		console.log($companyConfig)
 	}});
 
 	const onSubmit = async () => {
@@ -105,6 +104,7 @@
 
 		const promises = [];
 		let companyInfo = null;
+		let companyConfigInfo = null;
 
 		if (companyName !== $company.name || profileImageUrl !== $company?.profile_image_url) {
 			const companyPromise = updateCompanyDetails(localStorage.token, companyName, profileImageUrl)
@@ -117,8 +117,6 @@
 			promises.push(companyPromise);
 		}
 
-		let updateConfigSuccess = false;
-
 		const configPromise = updateCompanyConfig(
 			localStorage.token,
 			hideModelLogo,
@@ -127,8 +125,8 @@
 			userPermissions?.websearch,
 			userPermissions?.image_generation
 		)
-			.then(() => {
-				updateConfigSuccess = true;
+			.then((res) => {
+				companyConfigInfo = res;
 			})
 			.catch((error) => {
 				toast.error(`${error}`);
@@ -141,9 +139,8 @@
 			company.set(companyInfo);
 		}
 
-		if (updateConfigSuccess) {
+		if (companyConfigInfo) {
 			toast.success($i18n.t('Updated successfuly'));
-			const companyConfigInfo = await getCompanyConfig(localStorage.token);
 			companyConfig.set(companyConfigInfo);
 		}
 

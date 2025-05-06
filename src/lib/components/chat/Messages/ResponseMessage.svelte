@@ -9,7 +9,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, models, settings, user } from '$lib/stores';
+	import { config, models, settings, user, company, companyConfig } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -486,8 +486,10 @@
 	let modelIconUrl = '';
 
 	$: {
-		if (!model?.info?.base_model_id) {
-			modelIconUrl = getModelIcon(model?.id);
+		if($companyConfig?.config?.ui?.hide_model_logo_in_chat){
+			modelIconUrl = $company?.profile_image_url;
+		}else if (!model?.info?.base_model_id) {
+			modelIconUrl = getModelIcon(model?.name);
 		} else if (
 			model?.info?.meta?.profile_image_url &&
 			model?.info?.meta?.profile_image_url !== '/static/favicon.png'
