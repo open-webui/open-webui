@@ -26,7 +26,7 @@ router = APIRouter()
 @router.get("/", response_model=list[GroupResponse])
 async def get_groups(user=Depends(get_verified_user)):
     if user.role == "admin":
-        return Groups.get_groups()
+        return Groups.get_groups_by_company(user.company_id)
     else:
         return Groups.get_groups_by_member_id(user.id)
 
@@ -39,7 +39,7 @@ async def get_groups(user=Depends(get_verified_user)):
 @router.post("/create", response_model=Optional[GroupResponse])
 async def create_new_function(form_data: GroupForm, user=Depends(get_admin_user)):
     try:
-        group = Groups.insert_new_group(user.id, form_data)
+        group = Groups.insert_new_group(user.company_id, form_data)
         if group:
             return group
         else:
