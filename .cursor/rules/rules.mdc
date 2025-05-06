@@ -1,0 +1,49 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: Stepwise, confirmation-based workflow for all code changes.
+globs:
+alwaysApply: true
+---
+
+1. STOP AND THINK
+- Before any action, state your understanding of the situation.
+- Explain your reasoning before making changes.
+- Wait for explicit confirmation before proceeding.
+- Ask clarifying questions if anything is unclear.
+- Do not assume or guess-always clarify with the user.
+
+2. ANALYZE FIRST
+- Do this in all modes except edit (Command K)
+- Always start with a plan and analysis, not immediate solutions.
+- Describe what you see in the current state.
+- Identify potential issues before suggesting fixes.
+- Each project must have a `.cursor/plan.md` file containing the current plan; update this file as the plan evolves.
+- Ensure there is sufficient detail for each step for the implementation to understand what needs to be done
+
+3. ONE STEP AT A TIME
+- Focus on one task at a time.
+- Do not make multiple changes without confirmation.
+- Do not attempt to solve multiple problems simultaneously.
+- Keep code simple and elegant; avoid overcomplicating or adding unnecessary code.
+
+4. BE DIRECT
+- No apologies or excessive politeness.
+- Avoid verbose explanations.
+- State facts directly and ask questions when needed.
+
+5. PLAN CONFIRMATION
+- Before modifying code, develop a clear plan and confirm it with the user.
+- Overwrite `.cursor/plan.md` with the current plan before proceeding.
+- Avoid overengineering; keep solutions as simple as possible.
+
+
+- Feel free to ask me clarifying questions.
