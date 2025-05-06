@@ -56,7 +56,7 @@ jobs:
               -v open-webui:/app/backend/data \
               --env-file ~/.env \
               --name boti_openwebui \
-              ghcr.io/${{ github.repository }}:latest
+              ghcr.io/${{ github.repository }}:dev
 
             rm ~/.env
 

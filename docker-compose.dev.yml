@@ -1,0 +1,75 @@
+services:
+  
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile # Requieres generating a Caddyfile previously with the config for the server
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - caddy-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  boti-open-webui:
+    pull_policy: always
+    image: ghcr.io/iaud-tech/boti-open-webui:dev
+    container_name: boti-open-webui
+    restart: unless-stopped
+    depends_on:
+      - caddy
+    ports: # This wont be used, since the caddy will redirect the traffic to this container
+      - ${OPEN_WEBUI_PORT-3000}:8080
+    env_file:
+      - .env # This file should contain the environment variables needed for the open-webui
+    volumes:
+      - open-webui:/app/backend/data
+    networks:
+      - caddy-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  pipelines:
+    pull_policy: always
+    image: ghcr.io/open-webui/pipelines:main
+    container_name: pipelines
+    volumes:
+      - pipelines:/app/pipelines
+    restart: unless-stopped
+    depends_on:
+      - boti-open-webui
+    environment:
+      - PIPELINES_API_KEY=CHANGE_ME # This should be changed to a secure key or specified in the .env file
+    ports: # This wont be used, since the caddy will redirect the traffic to this container
+      - 9099:9099
+    networks:
+      - caddy-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+      
+
+volumes:
+  caddy_data:
+  caddy_config:
+  open-webui:
+  pipelines:
+
+networks:
+  caddy-net:
+    external: true
+    name: caddy-net
+  
