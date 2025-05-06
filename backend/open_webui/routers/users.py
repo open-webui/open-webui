@@ -6,6 +6,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.chats import Chats
 from open_webui.models.users import (
     UserModel,
+    UserListResponse,
     UserRoleUpdateForm,
     Users,
     UserSettings,
@@ -33,13 +34,38 @@ router = APIRouter()
 ############################
 
 
-@router.get("/", response_model=list[UserModel])
+PAGE_ITEM_COUNT = 10
+
+
+@router.get("/", response_model=UserListResponse)
 async def get_users(
-    skip: Optional[int] = None,
-    limit: Optional[int] = None,
+    query: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
+    page: Optional[int] = 1,
     user=Depends(get_admin_user),
 ):
-    return Users.get_users(skip, limit)
+    limit = PAGE_ITEM_COUNT
+
+    page = max(1, page)
+    skip = (page - 1) * limit
+
+    filter = {}
+    if query:
+        filter["query"] = query
+    if order_by:
+        filter["order_by"] = order_by
+    if direction:
+        filter["direction"] = direction
+
+    return Users.get_users(filter=filter, skip=skip, limit=limit)
+
+
+@router.get("/all", response_model=UserListResponse)
+async def get_all_users(
+    user=Depends(get_admin_user),
+):
+    return Users.get_users()
 
 
 ############################
@@ -88,6 +114,8 @@ class ChatPermissions(BaseModel):
     file_upload: bool = True
     delete: bool = True
     edit: bool = True
+    share: bool = True
+    export: bool = True
     stt: bool = True
     tts: bool = True
     call: bool = True
@@ -101,6 +129,7 @@ class FeaturesPermissions(BaseModel):
     web_search: bool = True
     image_generation: bool = True
     code_interpreter: bool = True
+    notes: bool = True
 
 
 class UserPermissions(BaseModel):
@@ -288,6 +317,21 @@ async def update_user_by_id(
     form_data: UserUpdateForm,
     session_user=Depends(get_admin_user),
 ):
+    # Prevent modification of the primary admin user by other admins
+    try:
+        first_user = Users.get_first_user()
+        if first_user and user_id == first_user.id and session_user.id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+            )
+    except Exception as e:
+        log.error(f"Error checking primary admin status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not verify primary admin status.",
+        )
+
     user = Users.get_user_by_id(user_id)
 
     if user:
@@ -335,6 +379,21 @@ async def update_user_by_id(
 
 @router.delete("/{user_id}", response_model=bool)
 async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
+    # Prevent deletion of the primary admin user
+    try:
+        first_user = Users.get_first_user()
+        if first_user and user_id == first_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=ERROR_MESSAGES.ACTION_PROHIBITED,
+            )
+    except Exception as e:
+        log.error(f"Error checking primary admin status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not verify primary admin status.",
+        )
+
     if user.id != user_id:
         result = Auths.delete_auth_by_id(user_id)
 
@@ -346,6 +405,7 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
             detail=ERROR_MESSAGES.DELETE_USER_ERROR,
         )
 
+    # Prevent self-deletion
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail=ERROR_MESSAGES.ACTION_PROHIBITED,

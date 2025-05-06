@@ -355,29 +355,33 @@ async def chat_web_search_handler(
 
     all_results = []
 
-    for searchQuery in queries:
-        await event_emitter(
-            {
-                "type": "status",
-                "data": {
-                    "action": "web_search",
-                    "description": 'Searching "{{searchQuery}}"',
-                    "query": searchQuery,
-                    "done": False,
-                },
-            }
-        )
+    await event_emitter(
+        {
+            "type": "status",
+            "data": {
+                "action": "web_search",
+                "description": "Searching the web",
+                "done": False,
+            },
+        }
+    )
 
-        try:
-            results = await process_web_search(
+    gathered_results = await asyncio.gather(
+        *(
+            process_web_search(
                 request,
-                SearchForm(
-                    **{
-                        "query": searchQuery,
-                    }
-                ),
+                SearchForm(**{"query": searchQuery}),
                 user=user,
             )
+            for searchQuery in queries
+        ),
+        return_exceptions=True,
+    )
+
+    for searchQuery, results in zip(queries, gathered_results):
+        try:
+            if isinstance(results, Exception):
+                raise Exception(f"Error searching {searchQuery}: {str(results)}")
 
             if results:
                 all_results.append(results)
@@ -888,16 +892,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # If context is not empty, insert it into the messages
     if len(sources) > 0:
         context_string = ""
-        citated_file_idx = {}
-        for _, source in enumerate(sources, 1):
+        citation_idx = {}
+        for source in sources:
             if "document" in source:
                 for doc_context, doc_meta in zip(
                     source["document"], source["metadata"]
                 ):
-                    file_id = doc_meta.get("file_id")
-                    if file_id not in citated_file_idx:
-                        citated_file_idx[file_id] = len(citated_file_idx) + 1
-                    context_string += f'<source id="{citated_file_idx[file_id]}">{doc_context}</source>\n'
+                    citation_id = (
+                        doc_meta.get("source", None)
+                        or source.get("source", {}).get("id", None)
+                        or "N/A"
+                    )
+                    if citation_id not in citation_idx:
+                        citation_idx[citation_id] = len(citation_idx) + 1
+                    context_string += f'<source id="{citation_idx[citation_id]}">{doc_context}</source>\n'
 
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])
@@ -930,7 +938,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             )
 
     # If there are citations, add them to the data_items
-    sources = [source for source in sources if source.get("source", {}).get("name", "")]
+    sources = [
+        source
+        for source in sources
+        if source.get("source", {}).get("name", "")
+        or source.get("source", {}).get("id", "")
+    ]
 
     if len(sources) > 0:
         events.append({"sources": sources})
@@ -1129,7 +1142,7 @@ async def process_chat_response(
                     )
 
                     # Send a webhook notification if the user is not active
-                    if get_active_status_by_user_id(user.id) is None:
+                    if not get_active_status_by_user_id(user.id):
                         webhook_url = Users.get_user_webhook_url_by_id(user.id)
                         if webhook_url:
                             post_webhook(
@@ -1418,8 +1431,10 @@ async def process_chat_response(
                             if after_tag:
                                 content_blocks[-1]["content"] = after_tag
 
+                            content = after_tag
                             break
-                elif content_blocks[-1]["type"] == content_type:
+
+                if content and content_blocks[-1]["type"] == content_type:
                     start_tag = content_blocks[-1]["start_tag"]
                     end_tag = content_blocks[-1]["end_tag"]
                     # Match end tag e.g., </tag>
@@ -1667,6 +1682,15 @@ async def process_chat_response(
 
                                                 if current_response_tool_call is None:
                                                     # Add the new tool call
+                                                    delta_tool_call.setdefault(
+                                                        "function", {}
+                                                    )
+                                                    delta_tool_call[
+                                                        "function"
+                                                    ].setdefault("name", "")
+                                                    delta_tool_call[
+                                                        "function"
+                                                    ].setdefault("arguments", "")
                                                     response_tool_calls.append(
                                                         delta_tool_call
                                                     )
@@ -2211,7 +2235,7 @@ async def process_chat_response(
                     )
 
                 # Send a webhook notification if the user is not active
-                if get_active_status_by_user_id(user.id) is None:
+                if not get_active_status_by_user_id(user.id):
                     webhook_url = Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
                         post_webhook(
