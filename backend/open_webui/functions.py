@@ -195,7 +195,7 @@ async def generate_function_chat_completion(
         return params
 
     model_id = form_data.get("model")
-    model_info = Models.get_model_by_id(model_id)
+    model_info = Models.get_model_by_name_and_company(model_id, user.company_id)
 
     metadata = form_data.pop("metadata", {})
 

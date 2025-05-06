@@ -796,7 +796,8 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
                     filtered_models.append(model)
                 continue
 
-            model_info = Models.get_model_by_id(model["id"])
+            model_info = Models.get_model_by_name_and_company(model["id"], user.company_id)
+
             if model_info:
                 if model_info.user_id == user.id or has_access(
                     user.id, type="read", access_control=model_info.access_control
@@ -853,7 +854,7 @@ async def chat_completion(
         if model_id not in request.app.state.MODELS:
             raise Exception("Model not found")
         model = request.app.state.MODELS[model_id]
-        model_info = Models.get_model_by_id(model_id)
+        model_info = Models.get_model_by_name_and_company(model_id, user.company_id)
 
         # Check if user has access to the model
         if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":

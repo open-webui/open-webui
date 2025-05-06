@@ -436,10 +436,11 @@ async def generate_autocompletion(
     models = request.app.state.MODELS
 
     model_id = form_data["model"]
+
     if model_id not in models:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Model not found",
+            detail="Model not found, model id not in models",
         )
 
     # Check if the user has a custom task model

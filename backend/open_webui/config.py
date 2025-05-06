@@ -260,7 +260,7 @@ class PersistentConfig(Generic[T]):
         self.env_value = env_value
         self.config_value = get_config_value(config_path, company_id=None)
         if self.config_value is not None:
-            log.info(f"'{env_name}' loaded from the default config")
+            # log.info(f"'{env_name}' loaded from the default config")
             self.value = self.config_value
         else:
             self.value = env_value
@@ -288,17 +288,17 @@ class PersistentConfig(Generic[T]):
 
         if self.config_value is not None:
             self.value = self.config_value
-            log.info(f"Updated {self.env_name} to new value {self.value}")
+            #log.info(f"Updated {self.env_name} to new value {self.value}")
         else:
             self.value = self.env_value
-            log.info(f"Updated {self.env_name} to default value {self.value}")
+            #log.info(f"Updated {self.env_name} to default value {self.value}")
 
     def save(self, company_id):
         # If company_id is None, we can't save to the database
         if company_id is None:
             return
             
-        log.info(f"Saving '{self.env_name}' to the database")
+        #log.info(f"Saving '{self.env_name}' to the database")
         path_parts = self.config_path.split(".")
         
         # Get the full config
@@ -1549,7 +1549,7 @@ RAG_EMBEDDING_MODEL = PersistentConfig(
     "rag.embedding_model",
     os.environ.get("RAG_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"),
 )
-log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL.value}")
+#log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL.value}")
 
 RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
     not OFFLINE_MODE

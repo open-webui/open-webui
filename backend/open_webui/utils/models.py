@@ -38,39 +38,6 @@ async def get_all_base_models(request: Request, user: User):
     if request.app.state.config.ENABLE_OPENAI_API:
         openai_models = await openai.get_all_models(request)
         openai_models = openai_models["data"]
-        
-        # Register OpenAI models in the database if they don't exist
-        for model in openai_models:
-            existing_model = Models.get_model_by_id(model["id"])
-            if not existing_model:
-                Models.insert_new_model(
-                    ModelForm(
-                        id=model["id"],
-                        name=model["id"],  # Use ID as name since OpenAI models don't have separate names
-                        meta=ModelMeta(
-                            description="OpenAI model",
-                            profile_image_url="/static/favicon.png",
-                        ),
-                        params=ModelParams(),
-                        access_control=None,  # None means public access
-                    ),
-                    user_id=user.id,
-                    company_id=user.company_id
-                )
-
-    if request.app.state.config.ENABLE_OLLAMA_API:
-        ollama_models = await ollama.get_all_models(request)
-        ollama_models = [
-            {
-                "id": model["model"],
-                "name": model["name"],
-                "object": "model",
-                "created": int(time.time()),
-                "owned_by": "ollama",
-                "ollama": model,
-            }
-            for model in ollama_models["models"]
-        ]
 
     function_models = await get_function_models(request)
     models = function_models + openai_models + ollama_models
@@ -128,13 +95,14 @@ async def get_all_models(request: Request, user: User):
         for function in Functions.get_functions_by_type("action", active_only=True)
     ]
 
-    custom_models = Models.get_all_models()
+    custom_models = Models.get_all_models_by_company(user.company_id)
+
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
             for model in models:
                 if (
-                    custom_model.id == model["id"]
-                    or custom_model.id == model["id"].split(":")[0]
+                    custom_model.name == model["id"]
+                    or custom_model.name == model["id"].split(":")[0]
                 ):
                     if custom_model.is_active:
                         model["name"] = custom_model.name
@@ -239,6 +207,7 @@ async def get_all_models(request: Request, user: User):
     log.debug(f"get_all_models() returned {len(models)} models")
 
     request.app.state.MODELS = {model["id"]: model for model in models}
+
     return models
 
 
@@ -253,7 +222,7 @@ def check_model_access(user, model):
         ):
             raise Exception("Model not found")
     else:
-        model_info = Models.get_model_by_id(model.get("id"))
+        model_info = Models.get_model_by_name_and_company(model.get("id"), user.company_id)
         if not model_info:
             raise Exception("Model not found")
         elif not (

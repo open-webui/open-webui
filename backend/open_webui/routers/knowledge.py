@@ -510,7 +510,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     log.info(f"Deleting knowledge base: {id} (name: {knowledge.name})")
 
     # Get all models
-    models = Models.get_all_models()
+    models = Models.get_all_models_by_company(user.company_id)
     log.info(f"Found {len(models)} models to check for knowledge base {id}")
 
     # Update models that reference this knowledge base
@@ -534,7 +534,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
                     access_control=model.access_control,
                     is_active=model.is_active,
                 )
-                Models.update_model_by_id(model.id, model_form)
+                Models.update_model_by_id_and_company(model.id, model_form, user.company_id)
 
     # Clean up vector DB
     try:

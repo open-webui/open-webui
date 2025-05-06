@@ -350,7 +350,7 @@ async def get_filtered_models(models, user):
     # Filter models based on user access control
     filtered_models = []
     for model in models.get("data", []):
-        model_info = Models.get_model_by_id(model["id"])
+        model_info = Models.get_model_by_name_and_company(model["id"], user.company_id)
         if model_info:
             if has_access(
                 user.id, type="read", access_control=model_info.access_control
@@ -554,7 +554,7 @@ async def generate_chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
     bypass_filter: Optional[bool] = False,
-    magicPromt: Optional[bool] = False
+    magic_prompt: Optional[bool] = False
 ):
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
@@ -562,7 +562,7 @@ async def generate_chat_completion(
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
 
-    model_info = Models.get_model_by_id(form_data.get("model"))
+    model_info = Models.get_model_by_name_and_company(form_data.get("model"), user.company_id)
 
     if model_info is None:
         raise HTTPException(
@@ -575,11 +575,11 @@ async def generate_chat_completion(
     # Initialize the credit cost variable
     model_message_credit_cost = 0
 
-    model_id = model_info.base_model_id if model_info.base_model_id else model_info.id
+    # Check for base_model_id first in case of user defined custom model
+    model_name = model_info.base_model_id if model_info.base_model_id else model_info.name
 
-    if has_chat_id or magicPromt:
-        # Check for base_model_id first in case of user defined custom model
-        model_message_credit_cost = ModelMessageCreditCosts.get_cost_by_model(model_id)
+    if has_chat_id or magic_prompt:
+        model_message_credit_cost = ModelMessageCreditCosts.get_cost_by_model(model_name)
 
         # Get current credit balance
         current_balance = Companies.get_credit_balance(user.company_id)
@@ -621,7 +621,7 @@ async def generate_chat_completion(
     if model_info:
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
-            model_id = model_info.base_model_id
+            model_name = model_info.base_model_id
 
         params = model_info.params.model_dump()
         payload = apply_model_params_to_body_openai(params, payload)
@@ -646,7 +646,7 @@ async def generate_chat_completion(
             )
 
     await get_all_models(request)
-    model = request.app.state.OPENAI_MODELS.get(model_id)
+    model = request.app.state.OPENAI_MODELS.get(model_name)
     if model:
         idx = model["urlIdx"]
     else:
@@ -757,7 +757,7 @@ async def generate_chat_completion(
                                 # End of stream
                                 # Add completion to completion table if it's a chat message from the user
                                 if has_chat_id:
-                                    Completions.insert_new_completion(user.id, metadata["chat_id"], model_id, model_message_credit_cost, calculate_saved_time_in_seconds(last_user_message, full_response))
+                                    Completions.insert_new_completion(user.id, metadata["chat_id"], model_name, model_message_credit_cost, calculate_saved_time_in_seconds(last_user_message, full_response))
                         except json.JSONDecodeError:
                             print(f"\n{chunk_str}")
                     yield chunk
@@ -783,7 +783,7 @@ async def generate_chat_completion(
                 # Add completion to completion table
                 response_content = response.get('choices', [{}])[0].get('message', {}).get('content', '')
 
-                Completions.insert_new_completion(user.id, metadata["chat_id"], model_id, model_message_credit_cost, calculate_saved_time_in_seconds(last_user_message, response_content))
+                Completions.insert_new_completion(user.id, metadata["chat_id"], model_name, model_message_credit_cost, calculate_saved_time_in_seconds(last_user_message, response_content))
 
             return response
     except Exception as e:
