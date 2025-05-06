@@ -101,8 +101,16 @@ class YoutubeLoader:
             log.exception("Loading YouTube transcript failed")
             return []
     
+        # Make a copy of the language list to avoid modifying the original
+        languages_to_try = list(self.language)
+        
+        # Add English as fallback, if not already in the list
+        if "en" not in languages_to_try:
+            log.debug("Adding English as fallback language")
+            languages_to_try.append("en")
+        
         # Try each language in order of priority
-        for lang in self.language:
+        for lang in languages_to_try:
             try:
                 transcript = transcript_list.find_transcript([lang])
                 log.debug(f"Found transcript for language '{lang}'")
@@ -120,30 +128,8 @@ class YoutubeLoader:
             except Exception as e:
                 log.info(f"Error finding transcript for language '{lang}'")
                 raise e
-    
-        # If all specified languages fail, fall back to English (unless English was already tried)
-        if "en" not in self.language:
-            try:
-                log.debug("Falling back to English transcript")
-                transcript = transcript_list.find_transcript(["en"])
-                transcript_pieces: List[Dict[str, Any]] = transcript.fetch()
-                transcript_text = " ".join(
-                    map(
-                        lambda transcript_piece: transcript_piece.text.strip(" "),
-                        transcript_pieces,
-                    )
-                )
-                return [Document(page_content=transcript_text, metadata=self._metadata)]
-            except NoTranscriptFound:
-                log.warning("No English transcript found as fallback")
-            except Exception as e:
-                log.exception("Error finding English transcript fallback")
-                raise e
         
-        # All languages failed
-        languages_tried = ", ".join(self.language)
-        if "en" not in self.language:
-            languages_tried += ", en (fallback)"
-        
+        # If we get here, all languages failed including the English fallback
+        languages_tried = ", ".join(languages_to_try)
         log.warning(f"No transcript found for any of the specified languages: {languages_tried}")
         raise NoTranscriptFound(f"No transcript found for any supported language")
