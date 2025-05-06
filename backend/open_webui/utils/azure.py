@@ -65,7 +65,7 @@ def format_azure_openai_url(
     base_url: str,
     model: str,
     api_path: str = "chat/completions",
-    api_version: str = "2024-02-01-preview",
+    api_version: str = "2024-12-01-preview",
 ) -> str:
     """
     Format an Azure OpenAI URL with the correct structure.
@@ -74,7 +74,7 @@ def format_azure_openai_url(
         base_url: The base Azure OpenAI endpoint
         model: The model name or deployment name
         api_path: The API path (default: chat/completions)
-        api_version: The API version (default: 2023-05-15)
+        api_version: The API version (default: 2024-12-01-preview)
 
     Returns:
         Formatted Azure OpenAI URL
