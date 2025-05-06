@@ -44,8 +44,8 @@
 	let showResetConfirm = false;
 	let showResetUploadDirConfirm = false;
 
-	let embeddingEngine = '';
-	let embeddingModel = '';
+	let embeddingEngine = 'portkey';
+	let embeddingModel = 'text-embedding-d47871';
 	let embeddingBatchSize = 1;
 	let rerankingModel = '';
 
@@ -72,6 +72,9 @@
 
 	let OpenAIUrl = '';
 	let OpenAIKey = '';
+
+	let PortkeyUrl = 'https://ai-gateway.apps.cloud.rt.nyu.edu/v1';
+	let PortkeyKey = 'dogDlg+W3/1qn7LsU3oTuJHDEopS';
 
 	let OllamaUrl = '';
 	let OllamaKey = '';
@@ -114,7 +117,7 @@
 			toast.error($i18n.t('OpenAI URL/Key required.'));
 			return;
 		}
-		if (embeddingEngine === 'portkey' && (OpenAIKey === '' || OpenAIUrl === '')) {
+		if (embeddingEngine === 'portkey' && (PortkeyKey === '' || PortkeyUrl === '')) {
 			toast.error($i18n.t('PORTKEY URL/Key required.'));
 			return;
 		}
@@ -132,8 +135,8 @@
 				url: OllamaUrl
 			},
 			openai_config: {
-				key: OpenAIKey,
-				url: OpenAIUrl
+				key: embeddingEngine === 'portkey' ? PortkeyKey : OpenAIKey,
+				url: embeddingEngine === 'portkey' ? PortkeyUrl : OpenAIUrl
 			}
 		}).catch(async (error) => {
 			toast.error(`${error}`);
@@ -245,15 +248,38 @@
 		const embeddingConfig = await getEmbeddingConfig(localStorage.token, $user.email);
 
 		if (embeddingConfig) {
-			embeddingEngine = embeddingConfig.embedding_engine;
-			embeddingModel = embeddingConfig.embedding_model;
+			embeddingEngine = embeddingConfig.embedding_engine || 'portkey';
+			if (!embeddingConfig.embedding_model) {
+				if (embeddingConfig.embedding_engine === 'portkey') {
+					embeddingModel = 'text-embedding-d47871'; 
+				} else if (embeddingConfig.embedding_engine === '') {
+					embeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
+				} else {
+					embeddingModel = '';
+				}
+			} else {
+				embeddingModel = embeddingConfig.embedding_model;
+			}
+
+
+
+			// embeddingModel = embeddingConfig.embedding_model;
 			embeddingBatchSize = embeddingConfig.embedding_batch_size ?? 1;
 
-			OpenAIKey = embeddingConfig.openai_config.key;
-			OpenAIUrl = embeddingConfig.openai_config.url;
+			if (embeddingConfig.embedding_engine === 'portkey') {
+				PortkeyKey = embeddingConfig.openai_config?.key || PortkeyKey;
+				PortkeyUrl = embeddingConfig.openai_config?.url || PortkeyUrl;
+			} else if (embeddingConfig.embedding_engine === 'openai') {
+				OpenAIKey = embeddingConfig.openai_config?.key || OpenAIKey;
+				OpenAIUrl = embeddingConfig.openai_config?.url || OpenAIUrl;
+			}
+
 
 			OllamaKey = embeddingConfig.ollama_config.key;
 			OllamaUrl = embeddingConfig.ollama_config.url;
+		} else {
+		embeddingEngine = 'portkey';
+		embeddingModel = 'text-embedding-d47871';
 		}
 	};
 
@@ -493,15 +519,15 @@
 										} else if (e.target.value === 'openai') {
 											embeddingModel = 'text-embedding-3-small';
 										} else if (e.target.value === 'portkey') {
-											embeddingModel = 'text-embedding-3-small';
+											embeddingModel = 'text-embedding-d47871'
 										} else if (e.target.value === '') {
 											embeddingModel = 'sentence-transformers/all-MiniLM-L6-v2';
 										}
 									}}
 								>
-									<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
+									<!-- <option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
 									<option value="ollama">{$i18n.t('Ollama')}</option>
-									<option value="openai">{$i18n.t('OpenAI')}</option>
+									<option value="openai">{$i18n.t('OpenAI')}</option> -->
 									<option value="portkey">{$i18n.t('Portkey')}</option>
 								</select>
 							</div>
@@ -538,10 +564,10 @@
 								<input
 									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
 									placeholder={$i18n.t('API Base URL')}
-									bind:value={OpenAIUrl}
+									bind:value={PortkeyUrl}
 									required
 								/>
-								<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={OpenAIKey} />
+								<SensitiveInput placeholder={$i18n.t('API Key')} bind:value={PortkeyKey} />
 							</div>
 						{/if}
 					</div>

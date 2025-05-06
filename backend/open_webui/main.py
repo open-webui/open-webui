@@ -392,6 +392,66 @@ v{VERSION} - building the best open-source AI user interface.
 https://github.com/open-webui/open-webui
 """
 )
+from sqlalchemy import create_engine, inspect
+def ensure_group_created_by_column():
+    from open_webui.config import DATABASE_URL
+
+    engine = create_engine(DATABASE_URL)
+    with engine.connect() as conn:
+        inspector = inspect(conn)
+        columns = [col["name"] for col in inspector.get_columns("group")]
+
+        if "created_by" not in columns:
+            print("Adding missing column: group.created_by")
+            conn.execute(text('ALTER TABLE "group" ADD COLUMN created_by TEXT;'))
+            print("Column 'created_by' added successfully")
+        else:
+            print("Column 'created_by' already exists")
+
+def ensure_function_created_by_column():
+    from open_webui.config import DATABASE_URL
+
+    engine = create_engine(DATABASE_URL)
+    with engine.connect() as conn:
+        inspector = inspect(conn)
+        columns = [col["name"] for col in inspector.get_columns("function")]
+
+        if "created_by" not in columns:
+            print("Adding missing column: function.created_by")
+            conn.execute(text('ALTER TABLE "function" ADD COLUMN created_by TEXT;'))
+            print("Column 'created_by' added successfully")
+        else:
+            print("Column 'created_by' already exists")
+
+def ensure_tool_created_by_column():
+    from open_webui.config import DATABASE_URL
+
+    engine = create_engine(DATABASE_URL)
+    with engine.connect() as conn:
+        inspector = inspect(conn)
+        columns = [col["name"] for col in inspector.get_columns("tool")]
+
+        if "created_by" not in columns:
+            print("Adding missing column: tool.created_by")
+            conn.execute(text('ALTER TABLE "tool" ADD COLUMN created_by TEXT;'))
+            print("Column 'created_by' added successfully")
+        else:
+            print("Column 'created_by' already exists")
+
+def ensure_model_created_by_column():
+    from open_webui.config import DATABASE_URL
+
+    engine = create_engine(DATABASE_URL)
+    with engine.connect() as conn:
+        inspector = inspect(conn)
+        columns = [col["name"] for col in inspector.get_columns("model")]
+
+        if "created_by" not in columns:
+            print("Adding missing column: model.created_by")
+            conn.execute(text('ALTER TABLE "model" ADD COLUMN created_by TEXT;'))
+            print("Column 'created_by' added successfully")
+        else:
+            print(" Column 'created_by' already exists")
 
 
 @asynccontextmanager
@@ -404,6 +464,11 @@ async def lifespan(app: FastAPI):
         get_license_data(app, app.state.config.LICENSE_KEY)
 
     asyncio.create_task(periodic_usage_pool_cleanup())
+    ensure_group_created_by_column()
+    ensure_model_created_by_column()
+    ensure_tool_created_by_column()
+    ensure_function_created_by_column()
+    # ensure_config_email_column()
     yield
 
 

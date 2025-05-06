@@ -17,9 +17,6 @@ depends_on = None
 
 
 def upgrade():
-    existing_tables = set(get_existing_tables())
-    if "group" in existing_tables:
-        op.drop_table("group")
 
     op.create_table(
         "group",

@@ -165,6 +165,21 @@ def get_config():
         config_entry = db.query(Config).order_by(Config.id.desc()).first()
         return config_entry.data if config_entry else DEFAULT_CONFIG
 
+from sqlalchemy import create_engine, inspect, text
+
+def ensure_config_email_column():
+    engine = create_engine(DATABASE_URL)
+    with engine.connect() as conn:
+        inspector = inspect(conn)
+        columns = [col["name"] for col in inspector.get_columns("config")]
+        if "email" not in columns:
+            print("🔧 Adding missing column: config.email")
+            conn.execute(text('ALTER TABLE "config" ADD COLUMN email TEXT DEFAULT \'system@default\';'))
+            print(" Column 'email' added successfully")
+        else:
+            print("Column 'email' already exists")
+
+ensure_config_email_column()
 
 CONFIG_DATA = get_config()
 
@@ -1868,7 +1883,7 @@ PDF_EXTRACT_IMAGES = PersistentConfig(
 RAG_EMBEDDING_MODEL = PersistentConfig(
     "RAG_EMBEDDING_MODEL",
     "rag.embedding_model",
-    os.environ.get("RAG_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"),
+    os.environ.get("RAG_EMBEDDING_MODEL", "text-embedding-d47871"),
 )
 log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL.value}")
 
