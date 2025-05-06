@@ -83,7 +83,7 @@ class YoutubeLoader:
                 'Could not import "youtube_transcript_api" Python package. '
                 "Please install it with `pip install youtube-transcript-api`."
             )
-    
+
         if self.proxy_url:
             youtube_proxies = {
                 "http": self.proxy_url,
@@ -93,7 +93,7 @@ class YoutubeLoader:
             log.debug(f"Using proxy URL: {self.proxy_url[:14]}...")
         else:
             youtube_proxies = None
-    
+        
         try:
             transcript_list = YouTubeTranscriptApi.list_transcripts(
                 self.video_id, proxies=youtube_proxies
@@ -101,11 +101,11 @@ class YoutubeLoader:
         except Exception as e:
             log.exception("Loading YouTube transcript failed")
             return []
-
+        
         # Make a copy of the language list to avoid modifying the original
         languages_to_try = list(self.language)
         
-        # Add English as fallback, if not already in the list
+        # Add English as fallback if not already in the list
         if "en" not in languages_to_try:
             log.debug("Adding English as fallback language")
             languages_to_try.append("en")
@@ -129,8 +129,8 @@ class YoutubeLoader:
             except Exception as e:
                 log.info(f"Error finding transcript for language '{lang}'")
                 raise e
-        
+
         # If we get here, all languages failed
         languages_tried = ", ".join(languages_to_try)
-        log.warning(f"No transcript found for any of the specified languages: {languages_tried}")
-        raise NoTranscriptFound(f"No transcript found for any supported language. Add additional supported languages and verify whether the video has any transcripts.")
+        log.warning(f"No transcript found for any of the specified languages: {languages_tried}. Verify if the video has transcripts, add more languages if needed.")
+        raise NoTranscriptFound(f"No transcript found for any supported language. Verify if the video has transcripts, add more languages if needed.")
