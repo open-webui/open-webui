@@ -1,12 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:svgjs="http://svgjs.dev/svgjs" width="600" height="600"><svg width="600" height="600" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
   <style>
     path {
-      stroke: #000000;
-    }
-    @media (prefers-color-scheme: dark) {
-      path {
         stroke: #FFFFFF;
-      }
     }
   </style>
   <g class="layer">

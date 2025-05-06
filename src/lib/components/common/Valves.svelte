@@ -106,12 +106,12 @@
 						{/if}
 					</div>
 				</div>
-			{/if}
 
-			{#if (valvesSpec.properties[property]?.description ?? null) !== null}
-				<div class="text-xs text-gray-500">
-					{valvesSpec.properties[property].description}
-				</div>
+				{#if (valvesSpec.properties[property]?.description ?? null) !== null}
+					<div class="text-xs text-gray-500">
+						{valvesSpec.properties[property].description}
+					</div>
+				{/if}
 			{/if}
 		</div>
 	{/each}
