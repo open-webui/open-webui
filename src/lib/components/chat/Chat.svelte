@@ -91,7 +91,7 @@
 
 	export let chatIdProp = '';
 
-	let loading = false;
+	let loading = true;
 
 	const eventTarget = new EventTarget();
 	let controlPane;
@@ -160,8 +160,7 @@
 					selectedToolIds = input.selectedToolIds;
 					webSearchEnabled = input.webSearchEnabled;
 					imageGenerationEnabled = input.imageGenerationEnabled;
-
-					console.log('chat-input', input);
+					codeInterpreterEnabled = input.codeInterpreterEnabled;
 				} catch (e) {}
 			}
 
@@ -401,6 +400,7 @@
 	};
 
 	onMount(async () => {
+		loading = true;
 		console.log('mounted');
 		window.addEventListener('message', onMessageHandler);
 		$socket?.on('chat-events', chatEventHandler);
@@ -429,14 +429,19 @@
 				selectedToolIds = input.selectedToolIds;
 				webSearchEnabled = input.webSearchEnabled;
 				imageGenerationEnabled = input.imageGenerationEnabled;
+				codeInterpreterEnabled = input.codeInterpreterEnabled;
 			} catch (e) {
 				prompt = '';
 				files = [];
 				selectedToolIds = [];
 				webSearchEnabled = false;
 				imageGenerationEnabled = false;
+				codeInterpreterEnabled = false;
 			}
 		}
+
+		loading = false;
+		await tick();
 
 		showControls.subscribe(async (value) => {
 			if (controlPane && !$mobile) {
@@ -2045,11 +2050,13 @@
 								{stopResponse}
 								{createMessagePair}
 								onChange={(input) => {
-									console.log(input);
 									if (input.prompt !== null) {
-										localStorage.setItem(`chat-input-${$chatId}`, JSON.stringify(input));
+										localStorage.setItem(
+											`chat-input${$chatId ? `-${$chatId}` : ''}`,
+											JSON.stringify(input)
+										);
 									} else {
-										localStorage.removeItem(`chat-input-${$chatId}`);
+										localStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
 									}
 								}}
 								on:upload={async (e) => {
