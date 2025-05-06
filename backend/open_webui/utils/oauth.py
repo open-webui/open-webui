@@ -158,7 +158,13 @@ class OAuthManager:
             nested_claims = oauth_claim.split(".")
             for nested_claim in nested_claims:
                 claim_data = claim_data.get(nested_claim, {})
-            user_oauth_groups = claim_data if isinstance(claim_data, list) else []
+                
+            if isinstance(claim_data, list):
+                user_oauth_groups = claim_data
+            elif isinstance(claim_data, str):
+                user_oauth_groups = [claim_data]
+            else:
+                user_oauth_groups = []
 
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
         all_available_groups: list[GroupModel] = Groups.get_groups()
