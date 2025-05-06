@@ -182,3 +182,19 @@ def install_frontmatter_requirements(requirements: str):
 
     else:
         log.info("No requirements found in frontmatter.")
+
+
+def install_all_function_requirements():
+    functions = Functions.get_functions(active_only=True)
+
+    for fn in functions:
+        try:
+            if not fn.content:
+                continue
+            frontmatter = extract_frontmatter(fn.content)
+            requirements = frontmatter.get("requirements", "")
+            install_frontmatter_requirements(requirements)
+        except Exception as e:
+            log.error(f"Failed to install function {fn.id}: {e}")
+
+    log.info("Completed requirement installation for all functions and tools.")

@@ -380,11 +380,17 @@ from open_webui.tasks import (
 )  # Import from tasks.py
 
 from open_webui.utils.redis import get_sentinels_from_env
+from open_webui.utils.plugin import install_all_function_requirements
 
 
 if SAFE_MODE:
     print("SAFE MODE ENABLED")
     Functions.deactivate_all_functions()
+else:
+    try:
+        install_all_function_requirements()
+    except Exception as e:
+        print(f"Function requirements install failed. Error: {e}")
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
