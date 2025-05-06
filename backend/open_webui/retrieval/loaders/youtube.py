@@ -62,13 +62,17 @@ class YoutubeLoader:
         _video_id = _parse_video_id(video_id)
         self.video_id = _video_id if _video_id is not None else video_id
         self._metadata = {"source": video_id}
-        self.language = language
         self.proxy_url = proxy_url
+        
         # Ensure language is a list
         if isinstance(language, str):
             self.language = [language]
         else:
-            self.language = language
+            self.language = list(language)  # Make a copy to avoid modifying the original
+        
+        # Add English as fallback if not already in the list
+        if "en" not in self.language:
+            self.language.append("en")
 
     def load(self) -> List[Document]:
         """Load YouTube transcripts into `Document` objects."""
@@ -83,7 +87,7 @@ class YoutubeLoader:
                 'Could not import "youtube_transcript_api" Python package. '
                 "Please install it with `pip install youtube-transcript-api`."
             )
-
+    
         if self.proxy_url:
             youtube_proxies = {
                 "http": self.proxy_url,
@@ -102,16 +106,8 @@ class YoutubeLoader:
             log.exception("Loading YouTube transcript failed")
             return []
         
-        # Make a copy of the language list to avoid modifying the original
-        languages_to_try = list(self.language)
-        
-        # Add English as fallback if not already in the list
-        if "en" not in languages_to_try:
-            log.debug("Adding English as fallback language")
-            languages_to_try.append("en")
-        
         # Try each language in order of priority
-        for lang in languages_to_try:
+        for lang in self.language:
             try:
                 transcript = transcript_list.find_transcript([lang])
                 log.debug(f"Found transcript for language '{lang}'")
@@ -129,8 +125,8 @@ class YoutubeLoader:
             except Exception as e:
                 log.info(f"Error finding transcript for language '{lang}'")
                 raise e
-
+    
         # If we get here, all languages failed
-        languages_tried = ", ".join(languages_to_try)
-        log.warning(f"No transcript found for any of the specified languages: {languages_tried}. Verify if the video has transcripts, add more languages if needed.")
-        raise NoTranscriptFound(f"No transcript found for any supported language. Verify if the video has transcripts, add more languages if needed.")
+        languages_tried = ", ".join(self.language)
+        log.warning(f"No transcript found for any of the specified languages: {languages_tried}")
+        raise NoTranscriptFound(f"No transcript found for any supported language")
