@@ -85,10 +85,12 @@ known_source_ext = [
 
 
 class TikaLoader:
-    def __init__(self, url, file_path, mime_type=None):
+    def __init__(self, url, file_path, mime_type=None, extract_images=None):
         self.url = url
         self.file_path = file_path
         self.mime_type = mime_type
+
+        self.extract_images = extract_images
 
     def load(self) -> list[Document]:
         with open(self.file_path, "rb") as f:
@@ -98,6 +100,9 @@ class TikaLoader:
             headers = {"Content-Type": self.mime_type}
         else:
             headers = {}
+
+        if self.extract_images == True:
+            headers["X-Tika-PDFextractInlineImages"] = "true"
 
         endpoint = self.url
         if not endpoint.endswith("/"):
@@ -121,10 +126,14 @@ class TikaLoader:
 
 
 class DoclingLoader:
-    def __init__(self, url, file_path=None, mime_type=None):
+    def __init__(
+        self, url, file_path=None, mime_type=None, ocr_engine=None, ocr_lang=None
+    ):
         self.url = url.rstrip("/")
         self.file_path = file_path
         self.mime_type = mime_type
+        self.ocr_engine = ocr_engine
+        self.ocr_lang = ocr_lang
 
     def load(self) -> list[Document]:
         with open(self.file_path, "rb") as f:
@@ -140,6 +149,12 @@ class DoclingLoader:
                 "image_export_mode": "placeholder",
                 "table_mode": "accurate",
             }
+
+            if self.ocr_engine and self.ocr_lang:
+                params["ocr_engine"] = self.ocr_engine
+                params["ocr_lang"] = [
+                    lang.strip() for lang in self.ocr_lang.split(",") if lang.strip()
+                ]
 
             endpoint = f"{self.url}/v1alpha/convert/file"
             r = requests.post(endpoint, files=files, data=params)
@@ -200,6 +215,7 @@ class Loader:
                     url=self.kwargs.get("TIKA_SERVER_URL"),
                     file_path=file_path,
                     mime_type=file_content_type,
+                    extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
                 )
         elif self.engine == "docling" and self.kwargs.get("DOCLING_SERVER_URL"):
             if self._is_text_file(file_ext, file_content_type):
@@ -209,6 +225,8 @@ class Loader:
                     url=self.kwargs.get("DOCLING_SERVER_URL"),
                     file_path=file_path,
                     mime_type=file_content_type,
+                    ocr_engine=self.kwargs.get("DOCLING_OCR_ENGINE"),
+                    ocr_lang=self.kwargs.get("DOCLING_OCR_LANG"),
                 )
         elif (
             self.engine == "document_intelligence"
