@@ -14,6 +14,7 @@
 
 	let webSearchEngines = [
 		'searxng',
+		'yacy',
 		'google_pse',
 		'brave',
 		'kagi',
@@ -30,9 +31,11 @@
 		'bing',
 		'exa',
 		'perplexity',
-		'sougou'
+		'sougou',
+		'firecrawl',
+		'external'
 	];
-	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily'];
+	let webLoaderEngines = ['playwright', 'firecrawl', 'tavily', 'external'];
 
 	let webConfig = null;
 
@@ -140,6 +143,53 @@
 												autocomplete="off"
 											/>
 										</div>
+									</div>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'yacy'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Yacy Instance URL')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter Yacy URL (e.g. http://yacy.example.com:8090)')}
+												bind:value={webConfig.YACY_QUERY_URL}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+							</div>
+							<div class="mb-2.5 flex w-full flex-col">
+								<div class="flex gap-2">
+									<div class="w-full">
+										<div class=" self-center text-xs font-medium mb-1">
+											{$i18n.t('Yacy Username')}
+										</div>
+
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											placeholder={$i18n.t('Enter Yacy Username')}
+											bind:value={webConfig.YACY_USERNAME}
+											required
+										/>
+									</div>
+
+									<div class="w-full">
+										<div class=" self-center text-xs font-medium mb-1">
+											{$i18n.t('Yacy Password')}
+										</div>
+
+										<SensitiveInput
+											placeholder={$i18n.t('Enter Yacy Password')}
+											bind:value={webConfig.YACY_PASSWORD}
+										/>
 									</div>
 								</div>
 							</div>
@@ -431,6 +481,68 @@
 									/>
 								</div>
 							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'firecrawl'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Firecrawl API Base URL')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter Firecrawl API Base URL')}
+												bind:value={webConfig.FIRECRAWL_API_BASE_URL}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('Firecrawl API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter Firecrawl API Key')}
+										bind:value={webConfig.FIRECRAWL_API_KEY}
+									/>
+								</div>
+							</div>
+						{:else if webConfig.WEB_SEARCH_ENGINE === 'external'}
+							<div class="mb-2.5 flex w-full flex-col">
+								<div>
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('External Web Search URL')}
+									</div>
+
+									<div class="flex w-full">
+										<div class="flex-1">
+											<input
+												class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+												type="text"
+												placeholder={$i18n.t('Enter External Web Search URL')}
+												bind:value={webConfig.EXTERNAL_WEB_SEARCH_URL}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								</div>
+
+								<div class="mt-2">
+									<div class=" self-center text-xs font-medium mb-1">
+										{$i18n.t('External Web Search API Key')}
+									</div>
+
+									<SensitiveInput
+										placeholder={$i18n.t('Enter External Web Search API Key')}
+										bind:value={webConfig.EXTERNAL_WEB_SEARCH_API_KEY}
+									/>
+								</div>
+							</div>
 						{/if}
 					{/if}
 
@@ -588,7 +700,7 @@
 								</div>
 							</div>
 						</div>
-					{:else if webConfig.WEB_LOADER_ENGINE === 'firecrawl'}
+					{:else if webConfig.WEB_LOADER_ENGINE === 'firecrawl' && webConfig.WEB_SEARCH_ENGINE !== 'firecrawl'}
 						<div class="mb-2.5 flex w-full flex-col">
 							<div>
 								<div class=" self-center text-xs font-medium mb-1">
@@ -651,6 +763,37 @@
 									/>
 								</div>
 							{/if}
+						</div>
+					{:else if webConfig.WEB_LOADER_ENGINE === 'external'}
+						<div class="mb-2.5 flex w-full flex-col">
+							<div>
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('External Web Loader URL')}
+								</div>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+											type="text"
+											placeholder={$i18n.t('Enter External Web Loader URL')}
+											bind:value={webConfig.EXTERNAL_WEB_LOADER_URL}
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div class="mt-2">
+								<div class=" self-center text-xs font-medium mb-1">
+									{$i18n.t('External Web Loader API Key')}
+								</div>
+
+								<SensitiveInput
+									placeholder={$i18n.t('Enter External Web Loader API Key')}
+									bind:value={webConfig.EXTERNAL_WEB_LOADER_API_KEY}
+								/>
+							</div>
 						</div>
 					{/if}
 

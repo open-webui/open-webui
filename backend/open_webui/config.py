@@ -509,6 +509,19 @@ ENABLE_OAUTH_GROUP_MANAGEMENT = PersistentConfig(
     os.environ.get("ENABLE_OAUTH_GROUP_MANAGEMENT", "False").lower() == "true",
 )
 
+ENABLE_OAUTH_GROUP_CREATION = PersistentConfig(
+    "ENABLE_OAUTH_GROUP_CREATION",
+    "oauth.enable_group_creation",
+    os.environ.get("ENABLE_OAUTH_GROUP_CREATION", "False").lower() == "true",
+)
+
+
+OAUTH_BLOCKED_GROUPS = PersistentConfig(
+    "OAUTH_BLOCKED_GROUPS",
+    "oauth.blocked_groups",
+    os.environ.get("OAUTH_BLOCKED_GROUPS", "[]"),
+)
+
 OAUTH_ROLES_CLAIM = PersistentConfig(
     "OAUTH_ROLES_CLAIM",
     "oauth.roles_claim",
@@ -952,10 +965,15 @@ DEFAULT_MODELS = PersistentConfig(
     "DEFAULT_MODELS", "ui.default_models", os.environ.get("DEFAULT_MODELS", None)
 )
 
-DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
-    "DEFAULT_PROMPT_SUGGESTIONS",
-    "ui.prompt_suggestions",
-    [
+try:
+    default_prompt_suggestions = json.loads(
+        os.environ.get("DEFAULT_PROMPT_SUGGESTIONS", "[]")
+    )
+except Exception as e:
+    log.exception(f"Error loading DEFAULT_PROMPT_SUGGESTIONS: {e}")
+    default_prompt_suggestions = []
+if default_prompt_suggestions == []:
+    default_prompt_suggestions = [
         {
             "title": ["Help me study", "vocabulary for a college entrance exam"],
             "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
@@ -983,7 +1001,11 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
             "title": ["Overcome procrastination", "give me tips"],
             "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
         },
-    ],
+    ]
+DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
+    "DEFAULT_PROMPT_SUGGESTIONS",
+    "ui.prompt_suggestions",
+    default_prompt_suggestions,
 )
 
 MODEL_ORDER_LIST = PersistentConfig(
@@ -1062,6 +1084,14 @@ USER_PERMISSIONS_CHAT_EDIT = (
     os.environ.get("USER_PERMISSIONS_CHAT_EDIT", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_CHAT_SHARE = (
+    os.environ.get("USER_PERMISSIONS_CHAT_SHARE", "True").lower() == "true"
+)
+
+USER_PERMISSIONS_CHAT_EXPORT = (
+    os.environ.get("USER_PERMISSIONS_CHAT_EXPORT", "True").lower() == "true"
+)
+
 USER_PERMISSIONS_CHAT_STT = (
     os.environ.get("USER_PERMISSIONS_CHAT_STT", "True").lower() == "true"
 )
@@ -1107,6 +1137,10 @@ USER_PERMISSIONS_FEATURES_CODE_INTERPRETER = (
     == "true"
 )
 
+USER_PERMISSIONS_FEATURES_NOTES = (
+    os.environ.get("USER_PERMISSIONS_FEATURES_NOTES", "True").lower() == "true"
+)
+
 
 DEFAULT_USER_PERMISSIONS = {
     "workspace": {
@@ -1126,6 +1160,8 @@ DEFAULT_USER_PERMISSIONS = {
         "file_upload": USER_PERMISSIONS_CHAT_FILE_UPLOAD,
         "delete": USER_PERMISSIONS_CHAT_DELETE,
         "edit": USER_PERMISSIONS_CHAT_EDIT,
+        "share": USER_PERMISSIONS_CHAT_SHARE,
+        "export": USER_PERMISSIONS_CHAT_EXPORT,
         "stt": USER_PERMISSIONS_CHAT_STT,
         "tts": USER_PERMISSIONS_CHAT_TTS,
         "call": USER_PERMISSIONS_CHAT_CALL,
@@ -1138,6 +1174,7 @@ DEFAULT_USER_PERMISSIONS = {
         "web_search": USER_PERMISSIONS_FEATURES_WEB_SEARCH,
         "image_generation": USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
         "code_interpreter": USER_PERMISSIONS_FEATURES_CODE_INTERPRETER,
+        "notes": USER_PERMISSIONS_FEATURES_NOTES,
     },
 }
 
@@ -1153,6 +1190,11 @@ ENABLE_CHANNELS = PersistentConfig(
     os.environ.get("ENABLE_CHANNELS", "False").lower() == "true",
 )
 
+ENABLE_NOTES = PersistentConfig(
+    "ENABLE_NOTES",
+    "notes.enable",
+    os.environ.get("ENABLE_NOTES", "True").lower() == "true",
+)
 
 ENABLE_EVALUATION_ARENA_MODELS = PersistentConfig(
     "ENABLE_EVALUATION_ARENA_MODELS",
@@ -1203,6 +1245,9 @@ ENABLE_USER_WEBHOOKS = PersistentConfig(
     os.environ.get("ENABLE_USER_WEBHOOKS", "True").lower() == "true",
 )
 
+# FastAPI / AnyIO settings
+THREAD_POOL_SIZE = int(os.getenv("THREAD_POOL_SIZE", "0"))
+
 
 def validate_cors_origins(origins):
     for origin in origins:
@@ -1229,7 +1274,9 @@ def validate_cors_origin(origin):
 # To test CORS_ALLOW_ORIGIN locally, you can set something like
 # CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
 # in your .env file depending on your frontend port, 5173 in this case.
-CORS_ALLOW_ORIGIN = os.environ.get("CORS_ALLOW_ORIGIN", "*").split(";")
+CORS_ALLOW_ORIGIN = os.environ.get(
+    "CORS_ALLOW_ORIGIN", "*;http://localhost:5173;http://localhost:8080"
+).split(";")
 
 if "*" in CORS_ALLOW_ORIGIN:
     log.warning(
@@ -1693,6 +1740,9 @@ MILVUS_TOKEN = os.environ.get("MILVUS_TOKEN", None)
 # Qdrant
 QDRANT_URI = os.environ.get("QDRANT_URI", None)
 QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
+QDRANT_ON_DISK = os.environ.get("QDRANT_ON_DISK", "false").lower() == "true"
+QDRANT_PREFER_GRPC = os.environ.get("QDRANT_PREFER_GRPC", "False").lower() == "true"
+QDRANT_GRPC_PORT = int(os.environ.get("QDRANT_GRPC_PORT", "6334"))
 
 # OpenSearch
 OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
@@ -1723,6 +1773,14 @@ if VECTOR_DB == "pgvector" and not PGVECTOR_DB_URL.startswith("postgres"):
 PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH = int(
     os.environ.get("PGVECTOR_INITIALIZE_MAX_VECTOR_LENGTH", "1536")
 )
+
+# Pinecone
+PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY", None)
+PINECONE_ENVIRONMENT = os.environ.get("PINECONE_ENVIRONMENT", None)
+PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "open-webui-index")
+PINECONE_DIMENSION = int(os.getenv("PINECONE_DIMENSION", 1536))  # or 3072, 1024, 768
+PINECONE_METRIC = os.getenv("PINECONE_METRIC", "cosine")
+PINECONE_CLOUD = os.getenv("PINECONE_CLOUD", "aws")  # or "gcp" or "azure"
 
 ####################################
 # Information Retrieval (RAG)
@@ -1760,6 +1818,13 @@ ONEDRIVE_CLIENT_ID = PersistentConfig(
     os.environ.get("ONEDRIVE_CLIENT_ID", ""),
 )
 
+ONEDRIVE_SHAREPOINT_URL = PersistentConfig(
+    "ONEDRIVE_SHAREPOINT_URL",
+    "onedrive.sharepoint_url",
+    os.environ.get("ONEDRIVE_SHAREPOINT_URL", ""),
+)
+
+
 # RAG Content Extraction
 CONTENT_EXTRACTION_ENGINE = PersistentConfig(
     "CONTENT_EXTRACTION_ENGINE",
@@ -1777,6 +1842,18 @@ DOCLING_SERVER_URL = PersistentConfig(
     "DOCLING_SERVER_URL",
     "rag.docling_server_url",
     os.getenv("DOCLING_SERVER_URL", "http://docling:5001"),
+)
+
+DOCLING_OCR_ENGINE = PersistentConfig(
+    "DOCLING_OCR_ENGINE",
+    "rag.docling_ocr_engine",
+    os.getenv("DOCLING_OCR_ENGINE", "tesseract"),
+)
+
+DOCLING_OCR_LANG = PersistentConfig(
+    "DOCLING_OCR_LANG",
+    "rag.docling_ocr_lang",
+    os.getenv("DOCLING_OCR_LANG", "eng,fra,deu,spa"),
 )
 
 DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
@@ -2087,6 +2164,24 @@ SEARXNG_QUERY_URL = PersistentConfig(
     os.getenv("SEARXNG_QUERY_URL", ""),
 )
 
+YACY_QUERY_URL = PersistentConfig(
+    "YACY_QUERY_URL",
+    "rag.web.search.yacy_query_url",
+    os.getenv("YACY_QUERY_URL", ""),
+)
+
+YACY_USERNAME = PersistentConfig(
+    "YACY_USERNAME",
+    "rag.web.search.yacy_username",
+    os.getenv("YACY_USERNAME", ""),
+)
+
+YACY_PASSWORD = PersistentConfig(
+    "YACY_PASSWORD",
+    "rag.web.search.yacy_password",
+    os.getenv("YACY_PASSWORD", ""),
+)
+
 GOOGLE_PSE_API_KEY = PersistentConfig(
     "GOOGLE_PSE_API_KEY",
     "rag.web.search.google_pse_api_key",
@@ -2251,6 +2346,29 @@ FIRECRAWL_API_BASE_URL = PersistentConfig(
     os.environ.get("FIRECRAWL_API_BASE_URL", "https://api.firecrawl.dev"),
 )
 
+EXTERNAL_WEB_SEARCH_URL = PersistentConfig(
+    "EXTERNAL_WEB_SEARCH_URL",
+    "rag.web.search.external_web_search_url",
+    os.environ.get("EXTERNAL_WEB_SEARCH_URL", ""),
+)
+
+EXTERNAL_WEB_SEARCH_API_KEY = PersistentConfig(
+    "EXTERNAL_WEB_SEARCH_API_KEY",
+    "rag.web.search.external_web_search_api_key",
+    os.environ.get("EXTERNAL_WEB_SEARCH_API_KEY", ""),
+)
+
+EXTERNAL_WEB_LOADER_URL = PersistentConfig(
+    "EXTERNAL_WEB_LOADER_URL",
+    "rag.web.loader.external_web_loader_url",
+    os.environ.get("EXTERNAL_WEB_LOADER_URL", ""),
+)
+
+EXTERNAL_WEB_LOADER_API_KEY = PersistentConfig(
+    "EXTERNAL_WEB_LOADER_API_KEY",
+    "rag.web.loader.external_web_loader_api_key",
+    os.environ.get("EXTERNAL_WEB_LOADER_API_KEY", ""),
+)
 
 ####################################
 # Images
@@ -2510,6 +2628,7 @@ WHISPER_VAD_FILTER = PersistentConfig(
     os.getenv("WHISPER_VAD_FILTER", "False").lower() == "true",
 )
 
+WHISPER_LANGUAGE = os.getenv("WHISPER_LANGUAGE", "").lower() or None
 
 # Add Deepgram configuration
 DEEPGRAM_API_KEY = PersistentConfig(
@@ -2559,6 +2678,18 @@ AUDIO_STT_AZURE_LOCALES = PersistentConfig(
     "AUDIO_STT_AZURE_LOCALES",
     "audio.stt.azure.locales",
     os.getenv("AUDIO_STT_AZURE_LOCALES", ""),
+)
+
+AUDIO_STT_AZURE_BASE_URL = PersistentConfig(
+    "AUDIO_STT_AZURE_BASE_URL",
+    "audio.stt.azure.base_url",
+    os.getenv("AUDIO_STT_AZURE_BASE_URL", ""),
+)
+
+AUDIO_STT_AZURE_MAX_SPEAKERS = PersistentConfig(
+    "AUDIO_STT_AZURE_MAX_SPEAKERS",
+    "audio.stt.azure.max_speakers",
+    os.getenv("AUDIO_STT_AZURE_MAX_SPEAKERS", "3"),
 )
 
 AUDIO_TTS_OPENAI_API_BASE_URL = PersistentConfig(
