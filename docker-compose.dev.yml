@@ -29,7 +29,7 @@ services:
     ports: # This wont be used, since the caddy will redirect the traffic to this container
       - ${OPEN_WEBUI_PORT-3000}:8080
     env_file:
-      - .env # This file should contain the environment variables needed for the open-webui
+      - .env
     volumes:
       - open-webui:/app/backend/data
     networks:
@@ -49,8 +49,8 @@ services:
     restart: unless-stopped
     depends_on:
       - boti-open-webui
-    environment:
-      - PIPELINES_API_KEY=CHANGE_ME # This should be changed to a secure key or specified in the .env file
+    env_file:
+      - .env
     ports: # This wont be used, since the caddy will redirect the traffic to this container
       - 9099:9099
     networks:
