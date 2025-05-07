@@ -796,15 +796,14 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
-    if not request.app.state.MODELS:
-        await get_all_models(request, user)
+    await get_all_models(request, user)
 
     tasks = form_data.pop("background_tasks", None)
     try:
         model_id = form_data.get("model", None)
 
         if model_id not in request.app.state.MODELS:
-            raise Exception("Model not found")
+            raise Exception("Model not found for chat completion")
 
         model = request.app.state.MODELS[model_id]
         model_info = Models.get_model_by_id(model_id)
