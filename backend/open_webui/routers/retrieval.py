@@ -3,6 +3,7 @@ import logging
 import mimetypes
 import os
 import shutil
+import asyncio
 
 import uuid
 from datetime import datetime
@@ -188,7 +189,7 @@ class ProcessUrlForm(CollectionNameForm):
 
 
 class SearchForm(BaseModel):
-    query: str
+    query: Union[str, List[str]]
 
 
 @router.get("/")
@@ -1572,24 +1573,41 @@ async def process_web_search(
         logging.info(
             f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.query}"
         )
-        web_results = await run_in_threadpool(
-            search_web,
-            request,
-            request.app.state.config.WEB_SEARCH_ENGINE,
-            form_data.query,
-        )
+        # Handle both single query string and list of queries
+        queries = form_data.query if isinstance(form_data.query, list) else [form_data.query]
+        
+        # Gather all web search results concurrently
+        search_tasks = [
+            run_in_threadpool(
+                search_web,
+                request,
+                request.app.state.config.WEB_SEARCH_ENGINE,
+                query,
+            )
+            for query in queries
+        ]
+        all_web_results = await asyncio.gather(*search_tasks)
+        
+        # Flatten results and remove duplicates based on link
+        seen_links = set()
+        unique_results = []
+        for results in all_web_results:
+            for result in results:
+                if result.link not in seen_links:
+                    seen_links.add(result.link)
+                    unique_results.append(result)
+        
     except Exception as e:
         log.exception(e)
-
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
         )
 
-    log.debug(f"web_results: {web_results}")
+    log.debug(f"web_results: {unique_results}")
 
     try:
-        urls = [result.link for result in web_results]
+        urls = [result.link for result in unique_results]
         loader = get_web_loader(
             urls,
             verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
@@ -1620,29 +1638,24 @@ async def process_web_search(
                 "loaded_count": len(docs),
             }
         else:
-            collection_names = []
-            for doc_idx, doc in enumerate(docs):
-                if doc and doc.page_content:
-                    try:
-                        collection_name = f"web-search-{calculate_sha256_string(form_data.query + '-' + urls[doc_idx])}"[
-                            :63
-                        ]
-
-                        collection_names.append(collection_name)
-                        await run_in_threadpool(
-                            save_docs_to_vector_db,
-                            request,
-                            [doc],
-                            collection_name,
-                            overwrite=True,
-                            user=user,
-                        )
-                    except Exception as e:
-                        log.debug(f"error saving doc {doc_idx}: {e}")
+            # Create a single collection for all documents
+            collection_name = f"web-search-{calculate_sha256_string('-'.join(queries))}"[:63]
+            
+            try:
+                await run_in_threadpool(
+                    save_docs_to_vector_db,
+                    request,
+                    docs,
+                    collection_name,
+                    overwrite=True,
+                    user=user,
+                )
+            except Exception as e:
+                log.debug(f"error saving docs: {e}")
 
             return {
                 "status": True,
-                "collection_names": collection_names,
+                "collection_names": [collection_name],
                 "filenames": urls,
                 "loaded_count": len(docs),
             }
