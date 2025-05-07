@@ -42,7 +42,7 @@
 
 	import SettingsOverlay from '$lib/IONOS/components/settings/Settings.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
-	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
+	import AccountPending from '$lib/IONOS/components/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import KnowledgeManager from '$lib/IONOS/components/knowledge/KnowledgeManager.svelte';
 
