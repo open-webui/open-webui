@@ -290,13 +290,13 @@
 		class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5"
 	>
 		<div class="flex w-full justify-start items-center">
-			<div class="text-xs dark:text-customGray-300 w-[calc(55%+8px)]">{$i18n.t('Users')}</div>
+			<div class="text-xs dark:text-customGray-300 w-[calc(100%-250px)]">{$i18n.t('Users')}</div>
 			<div class="text-xs dark:text-customGray-300">{$i18n.t('Roles')}</div>
 		</div>
 	</div>
 
 	{#each filteredUsers as user, userIdx (user.id)}
-		<div class="grid grid-cols-[52%_70px_1fr_26px] gap-x-2 mb-[14px] group cursor-pointer">
+		<div class="grid grid-cols-[1fr_110px_100px_26px] gap-x-2 mb-[14px] group cursor-pointer">
 			<div class="flex items-center">
 				<img
 					class=" rounded-full w-3 h-3 object-cover mr-2.5"

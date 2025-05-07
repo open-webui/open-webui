@@ -168,6 +168,8 @@
 	let showLanguageDropdown = false;
 	let languageDropdownRef;
 
+	let selectedLanguage;
+
 	$: selectedLanguage = languages?.find(item => item.code === lang);
 
 	// Audio
@@ -241,6 +243,7 @@
 		enableMemory = $settings?.memory ?? false;
 	});
 
+
 </script>
 
 <ManageModal bind:show={showManageModal} />
@@ -263,7 +266,7 @@
 							>{$i18n.t('Language')}</span
 						>
 						<div class="flex items-center gap-2 text-xs dark:text-customGray-100/50">
-							{selectedLanguage?.['title']}
+							{selectedLanguage?.['title']?.replace(/\s*\(.*?\)/, '')}
 							<ChevronDown className="size-3" />
 						</div>
 					</button>
@@ -279,6 +282,7 @@
 										class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
 										on:click={() => {
 											$i18n.changeLanguage(language['code']);
+											selectedLanguage = language;
 											showLanguageDropdown = false;
 										}}
 									>
