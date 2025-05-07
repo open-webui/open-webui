@@ -192,7 +192,7 @@ function Start-LemonadeServer {
             if ($response -ne "Y") {
                 Write-Host "Aborting startup..." -ForegroundColor Red
                 $exitRequested = $true
-                exit
+                exit 1
             }
         }
     }
