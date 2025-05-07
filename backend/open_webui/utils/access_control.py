@@ -99,7 +99,7 @@ def has_permission(
 
     for group in user_groups:
         group_permissions = group.permissions
-        if get_permission(group_permissions, permission_hierarchy):
+        if group_permissions and get_permission(group_permissions, permission_hierarchy):
             return True
 
     # Check default permissions afterward if the group permissions don't allow it

@@ -345,7 +345,7 @@ async def get_filtered_models(models, user):
     # Filter models based on user access control
     filtered_models = []
     for model in models.get("models", []):
-        model_info = Models.get_model_by_name_and_company(model["model"], user.company_id)
+        model_info = Models.get_model_by_id(model["model"])
         if model_info:
             if has_access(
                 user.id, type="read", access_control=model_info.access_control
@@ -992,7 +992,7 @@ async def generate_chat_completion(
     payload = {**form_data.model_dump(exclude_none=True)}
 
     model_id = payload["model"]
-    model_info = Models.get_model_by_name_and_company(model_id, user.company_id)
+    model_info = Models.get_model_by_id(model_id)
 
     if model_info:
         if model_info.base_model_id:
@@ -1101,7 +1101,7 @@ async def generate_openai_completion(
     if ":" not in model_id:
         model_id = f"{model_id}:latest"
 
-    model_info = Models.get_model_by_name_and_company(model_id, user.company_id)
+    model_info = Models.get_model_by_id(model_id)
     if model_info:
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
@@ -1177,7 +1177,7 @@ async def generate_openai_chat_completion(
     if ":" not in model_id:
         model_id = f"{model_id}:latest"
 
-    model_info = Models.get_model_by_name_and_company(model_id, user.company_id)
+    model_info = Models.get_model_by_id(model_id)
     if model_info:
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
@@ -1285,7 +1285,7 @@ async def get_openai_models(
         # Filter models based on user access control
         filtered_models = []
         for model in models:
-            model_info = Models.get_model_by_name_and_company(model["id"], user.company_id)
+            model_info = Models.get_model_by_id(model["id"])
             if model_info:
                 if has_access(
                     user.id, type="read", access_control=model_info.access_control

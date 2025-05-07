@@ -350,7 +350,7 @@ async def get_filtered_models(models, user):
     # Filter models based on user access control
     filtered_models = []
     for model in models.get("data", []):
-        model_info = Models.get_model_by_name_and_company(model["id"], user.company_id)
+        model_info = Models.get_model_by_id(model["id"])
         if model_info:
             if has_access(
                 user.id, type="read", access_control=model_info.access_control
@@ -562,7 +562,7 @@ async def generate_chat_completion(
     payload = {**form_data}
     metadata = payload.pop("metadata", None)
 
-    model_info = Models.get_model_by_name_and_company(form_data.get("model"), user.company_id)
+    model_info = Models.get_model_by_id(form_data.get("model"))
 
     if model_info is None:
         raise HTTPException(
@@ -575,11 +575,17 @@ async def generate_chat_completion(
     # Initialize the credit cost variable
     model_message_credit_cost = 0
 
-    # Check for base_model_id first in case of user defined custom model
-    model_name = model_info.base_model_id if model_info.base_model_id else model_info.name
+    print("HGALLLOOOOO", model_info)
+
+    if model_info.base_model_id:
+        model_name = Models.get_model_by_id(model_info.base_model_id).name
+    else:
+        model_name = model_info.name
 
     if has_chat_id or magic_prompt:
         model_message_credit_cost = ModelMessageCreditCosts.get_cost_by_model(model_name)
+
+        print("model message credit cost", model_message_credit_cost, model_name)
 
         # Get current credit balance
         current_balance = Companies.get_credit_balance(user.company_id)
@@ -622,6 +628,8 @@ async def generate_chat_completion(
         if model_info.base_model_id:
             payload["model"] = model_info.base_model_id
             model_name = model_info.base_model_id
+        else:
+            payload["model"] = model_info.name
 
         params = model_info.params.model_dump()
         payload = apply_model_params_to_body_openai(params, payload)

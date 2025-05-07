@@ -555,23 +555,20 @@ async def complete_registration(request: Request, response: Response, form_data:
 
             # Register OpenAI models in the database if they don't exist
             for model in openai_models:
-                existing_model = Models.get_model_by_name_and_company(model["id"], user.company_id)
-
-                if not existing_model:
-                    Models.insert_new_model(
-                        ModelForm(
-                            id=str(uuid.uuid4()),
-                            name=model["id"],  # Use ID as name since OpenAI models don't have separate names
-                            meta=ModelMeta(
-                                description="OpenAI model",
-                                profile_image_url="/static/favicon.png",
-                            ),
-                            params=ModelParams(),
-                            access_control=None,  # None means public access
+                Models.insert_new_model(
+                    ModelForm(
+                        id=str(uuid.uuid4()),
+                        name=model["id"],  # Use ID as name since OpenAI models don't have separate names
+                        meta=ModelMeta(
+                            description="OpenAI model",
+                            profile_image_url="/static/favicon.png",
                         ),
-                        user_id=None,
-                        company_id=user.company_id
-                    )
+                        params=ModelParams(),
+                        access_control=None,  # None means public access
+                    ),
+                    user_id=None,
+                    company_id=user.company_id
+                )
 
     except Exception as err:
         raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))

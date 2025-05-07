@@ -203,6 +203,13 @@ class ModelsTable:
         self, user_id: str, company_id: str, permission: str = "read"
     ) -> list[ModelUserResponse]:
         models = self.get_models()
+
+        print("MODELS", models)
+
+
+        for model in models:
+            print(f"Model {model.id} company_id: {model.company_id}, is the same as company_id: {company_id == model.company_id}")
+
         return [
             model
             for model in models
@@ -213,6 +220,14 @@ class ModelsTable:
     def get_models_by_company_id(self, company_id: str) -> list[ModelModel]:
         models = self.get_models()
         return [model for model in models if model.company_id == company_id]
+
+    def get_model_by_id(self, id: str) -> Optional[ModelModel]:
+        try:
+            with get_db() as db:
+                model = db.query(Model).filter_by(id=id).first()
+                return ModelModel.model_validate(model)
+        except Exception:
+            return None
 
     def get_model_by_name_and_company(self, name: str, company_id: str) -> Optional[ModelModel]:
         try:
@@ -235,7 +250,7 @@ class ModelsTable:
                 )
                 db.commit()
 
-                return self.get_model_by_name_and_company(id, company_id)
+                return self.get_model_by_id(id)
             except Exception:
                 return None
 
@@ -256,6 +271,14 @@ class ModelsTable:
         except Exception as e:
             print(e)
 
+            return None
+
+    def get_model_by_name_and_company(self, name: str, company_id: str) -> Optional[ModelModel]:
+        try:
+            with get_db() as db:
+                model = db.query(Model).filter_by(name=name, company_id=company_id).first()
+                return ModelModel.model_validate(model)
+        except Exception:
             return None
 
     def delete_model_by_id_and_company(self, id: str, company_id: str) -> bool:

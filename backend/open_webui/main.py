@@ -782,61 +782,12 @@ app.include_router(companies.router, prefix="/api/v1/companies", tags=["companie
 
 @app.get("/api/models")
 async def get_models(request: Request, user=Depends(get_verified_user)):
-    def get_filtered_models(models, user):
-        filtered_models = []
-        for model in models:
-            if model.get("arena"):
-                if has_access(
-                    user.id,
-                    type="read",
-                    access_control=model.get("info", {})
-                    .get("meta", {})
-                    .get("access_control", {}),
-                ):
-                    filtered_models.append(model)
-                continue
-
-            model_info = Models.get_model_by_name_and_company(model["id"], user.company_id)
-
-            if model_info:
-                if model_info.user_id == user.id or has_access(
-                    user.id, type="read", access_control=model_info.access_control
-                ):
-                    filtered_models.append(model)
-
-        return filtered_models
-
-    models = await get_all_models(request, user)
-
-    # Filter out filter pipelines
-    models = [
-        model
-        for model in models
-        if "pipeline" not in model or model["pipeline"].get("type", None) != "filter"
-    ]
-
-    model_order_list = request.app.state.config.MODEL_ORDER_LIST
-    if model_order_list:
-        model_order_dict = {model_id: i for i, model_id in enumerate(model_order_list)}
-        # Sort models by order list priority, with fallback for those not in the list
-        models.sort(
-            key=lambda x: (model_order_dict.get(x["id"], float("inf")), x["name"])
-        )
-
-    # Filter out models that the user does not have access to
-    if not BYPASS_MODEL_ACCESS_CONTROL:
-        models = get_filtered_models(models, user)
-
-    log.debug(
-        f"/api/models returned filtered models accessible to the user: {json.dumps([model['id'] for model in models])}"
-    )
-    return {"data": models}
+    return {"data": Models.get_models_by_user_and_company(user.id, user.company_id) + Models.get_base_models_by_comany(user.company_id)}
 
 
 @app.get("/api/models/base")
 async def get_base_models(request: Request, user=Depends(get_admin_user)):
-    models = await get_all_base_models(request, user)
-    return {"data": models}
+    return {"data": Models.get_base_models_by_comany(user.company_id)}
 
 
 @app.post("/api/chat/completions")
@@ -851,10 +802,12 @@ async def chat_completion(
     tasks = form_data.pop("background_tasks", None)
     try:
         model_id = form_data.get("model", None)
+
         if model_id not in request.app.state.MODELS:
             raise Exception("Model not found")
+
         model = request.app.state.MODELS[model_id]
-        model_info = Models.get_model_by_name_and_company(model_id, user.company_id)
+        model_info = Models.get_model_by_id(model_id)
 
         # Check if user has access to the model
         if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":

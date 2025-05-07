@@ -39,6 +39,10 @@ async def get_all_base_models(request: Request, user: User):
         openai_models = await openai.get_all_models(request)
         openai_models = openai_models["data"]
 
+        for model in openai_models:
+            model_id = Models.get_model_by_name_and_company(model["name"], user.company_id).id
+            model["id"] = model_id
+
     function_models = await get_function_models(request)
     models = function_models + openai_models + ollama_models
 
@@ -222,7 +226,7 @@ def check_model_access(user, model):
         ):
             raise Exception("Model not found")
     else:
-        model_info = Models.get_model_by_name_and_company(model.get("id"), user.company_id)
+        model_info = Models.get_model_by_id(model.get("id"))
         if not model_info:
             raise Exception("Model not found")
         elif not (
