@@ -1,19 +1,16 @@
-import os
-from pathlib import Path
 from typing import Optional
 
 
 from beyond_the_loop.models.users import Users
-from open_webui.models.groups import (
+from beyond_the_loop.models.groups import (
     Groups,
     GroupForm,
     GroupUpdateForm,
     GroupResponse,
 )
 
-from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
 router = APIRouter()

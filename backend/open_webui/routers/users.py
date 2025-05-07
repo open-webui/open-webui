@@ -6,6 +6,7 @@ from typing import Optional
 
 from beyond_the_loop.models.users import UserInviteForm, UserCreateForm
 from beyond_the_loop.models.auths import Auths
+from beyond_the_loop.models.groups import Groups, GroupForm
 from open_webui.models.chats import Chats
 from beyond_the_loop.models.users import (
     UserModel,
@@ -35,38 +36,98 @@ router = APIRouter()
 
 @router.post("/invite")
 async def invite_user(form_data: UserInviteForm, user=Depends(get_admin_user)):
-    invited_users = []
+    successful_invites = []
+    failed_invites = []
+    groups = []
     
-    for invitee in form_data.invitees:
-        if not validate_email_format(invitee.email.lower()):
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
-            )
-
-        if Users.get_user_by_email(invitee.email.lower()):
-            raise HTTPException(400, detail=f"Email {invitee.email} is already taken")
-
-        invite_token = hashlib.sha256(invitee.email.lower().encode()).hexdigest()
-
-        # Send welcome email with the generated password
-        email_service = EmailService()
-        email_service.send_invite_mail(
-            to_email=invitee.email.lower(),
-            invite_token=invite_token
-        )
-
-        new_user = Users.insert_new_user(
-            str(uuid.uuid4()), 
-            "INVITED", 
-            "INVITED", 
-            invitee.email.lower(), 
-            user.company_id, 
-            role=invitee.role,
-            invite_token=invite_token
-        )
-        invited_users.append(new_user)
-
-    return invited_users
+    try:
+        # Create new groups
+        for group_name in form_data.group_names or []:
+            try:
+                group = Groups.insert_new_group(user.company_id, GroupForm(name=group_name, description=""))
+                groups.append(group)
+            except Exception as e:
+                log.error(f"Failed to create group {group_name}: {str(e)}")
+                return {"success": False, "message": f"Failed to create group {group_name}"}
+        
+        # Get existing groups
+        for group_id in form_data.group_ids or []:
+            try:
+                group = Groups.get_group_by_id(group_id)
+                if not group:
+                    return {"success": False, "message": f"Group with ID {group_id} not found"}
+                groups.append(group)
+            except Exception as e:
+                log.error(f"Failed to get group with ID {group_id}: {str(e)}")
+                return {"success": False, "message": f"Failed to get group with ID {group_id}"}
+        
+        # Invite users
+        for invitee in form_data.invitees:
+            try:
+                email = invitee.email.lower()
+                
+                # Validate email format
+                if not validate_email_format(email):
+                    failed_invites.append({"email": email, "reason": ERROR_MESSAGES.INVALID_EMAIL_FORMAT})
+                    continue
+                
+                # Check if user already exists
+                if Users.get_user_by_email(email):
+                    failed_invites.append({"email": email, "reason": f"Email {email} is already taken"})
+                    continue
+                
+                # Generate invite token
+                invite_token = hashlib.sha256(email.encode()).hexdigest()
+                
+                # Send welcome email
+                email_service = EmailService()
+                email_service.send_invite_mail(
+                    to_email=email,
+                    invite_token=invite_token
+                )
+                
+                # Create new user
+                new_user = Users.insert_new_user(
+                    str(uuid.uuid4()), 
+                    "INVITED", 
+                    "INVITED", 
+                    email, 
+                    user.company_id, 
+                    role=invitee.role,
+                    invite_token=invite_token
+                )
+                
+                # Add user to groups
+                for group in groups:
+                    if new_user.id not in group.user_ids:
+                        group.user_ids.append(new_user.id)
+                        Groups.update_group_by_id(group.id, group)
+                
+                successful_invites.append(email)
+                
+            except Exception as e:
+                log.error(f"Failed to invite user {invitee.email}: {str(e)}")
+                failed_invites.append({"email": invitee.email, "reason": str(e)})
+        
+        # Determine overall success
+        if not form_data.invitees:
+            return {"success": False, "message": "No invitees provided"}
+        
+        if len(successful_invites) == len(form_data.invitees):
+            return {"success": True, "message": "All users invited successfully"}
+        elif len(successful_invites) > 0:
+            return {
+                "success": True,
+                "message": f"Invited {len(successful_invites)} out of {len(form_data.invitees)} users",
+                "successful_invites": successful_invites,
+                "failed_invites": failed_invites
+            }
+        else:
+            return {"success": False, "message": "Failed to invite any users", "failed_invites": failed_invites}
+            
+    except Exception as e:
+        log.error(f"Error in invite_user: {str(e)}")
+        return {"success": False, "message": f"An error occurred: {str(e)}"}
 
 
 ############################

@@ -15,7 +15,7 @@ from starlette.responses import RedirectResponse
 from beyond_the_loop.models.auths import Auths
 from beyond_the_loop.models.users import Users
 from beyond_the_loop.models.companies import NO_COMPANY
-from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm
+from beyond_the_loop.models.groups import Groups, GroupModel, GroupUpdateForm
 from open_webui.config import (
     DEFAULT_USER_ROLE,
     ENABLE_OAUTH_SIGNUP,

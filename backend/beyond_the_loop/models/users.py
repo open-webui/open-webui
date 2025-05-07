@@ -3,7 +3,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.models.chats import Chats
-from open_webui.models.groups import Groups
+from beyond_the_loop.models.groups import Groups
 
 from functools import partial
 
@@ -127,6 +127,8 @@ class InviteeData(BaseModel):
 
 class UserInviteForm(BaseModel):
     invitees: list[InviteeData]
+    group_ids: Optional[list[str]] = None
+    group_names: Optional[list[str]] = None
 
 
 class UserCreateForm(BaseModel):
