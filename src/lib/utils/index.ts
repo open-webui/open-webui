@@ -1090,6 +1090,8 @@ export function getModelIcon(label: string): string {
 		return '/google-gemini-icon.svg';
 	} else if (lower.includes('mistral') || lower.includes('pixtral')) {
 		return '/mistral-color.svg';
+	} else if (lower.includes('lama')) {
+		return '/ollama-1.svg';
 	} else {
 		return '/static/favicon.png';
 	}

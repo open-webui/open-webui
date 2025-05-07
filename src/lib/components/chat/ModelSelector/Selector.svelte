@@ -25,6 +25,7 @@
 	import StarRating from './IntelligenceRating.svelte';
 	import SpeedRating from './SpeedRating.svelte';
 	import { modelsInfo } from '../../../../data/modelsInfo';
+	import { getModelIcon } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -227,24 +228,6 @@
 		}
 	};
 
-	function getModelIcon(label: string): string {
-		if(!label) return '';
-		const lower = label.toLowerCase();
-
-		if (lower.includes('perplexity')) {
-			return '/perplexity-ai-icon.svg';
-		} else if (lower.includes('gpt')) {
-			return '/chatgpt-icon.svg';
-		} else if (lower.includes('claude')) {
-			return '/claude-ai-icon.svg';
-		} else if (lower.includes('gemini')) {
-			return '/google-gemini-icon.svg';
-		} else if (lower.includes('mistral') || lower.includes('pixtral')) {
-			return '/mistral-color.svg';
-		} else {
-			return '/static/favicon.png';
-		}
-	}
 	let hoveredItem = null;
 
 	let knowledgeCutoff = null;
@@ -568,7 +551,7 @@
 							<p class="text-2xs dark:text-white/50">{$i18n.t('Knowledge Cutoff')}</p>
 						</div>
 
-						<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+						<div class="py-1.5 text-xs border-b dark:border-customGray-700 last:border-b-0">
 							{#if modelsInfo?.[hoveredItem?.label]?.intelligence_score}
 								<StarRating rating={modelsInfo?.[hoveredItem?.label]?.intelligence_score} />
 							{:else}
@@ -577,7 +560,7 @@
 							<p class="text-2xs dark:text-white/50">{$i18n.t('Intelligence Score')}</p>
 						</div>
 
-						<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+						<div class="py-1.5 text-xs border-b dark:border-customGray-700 last:border-b-0">
 							{#if modelsInfo?.[hoveredItem?.label]?.speed}
 								<SpeedRating rating={modelsInfo?.[hoveredItem?.label]?.speed} />
 							{:else}

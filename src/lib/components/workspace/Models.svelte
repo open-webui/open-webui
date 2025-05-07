@@ -539,7 +539,7 @@
 							<div class=" text-xs mt-0.5">
 								<Tooltip
 									content={model?.user?.email ?? $i18n.t('Deleted User')}
-									className="flex shrink-0"
+									className="flex shrink-0 items-center"
 									placement="top-start"
 								>
 									{#if model?.user?.profile_image_url}
