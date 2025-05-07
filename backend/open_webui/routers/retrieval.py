@@ -1601,6 +1601,10 @@ async def process_web_search(
             doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
         ]  # only keep URLs
 
+        # Remove duplicates
+        urls = list(dict.fromkeys(urls))
+        log.debug(f"urls: {urls}")
+
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
                 "status": True,
