@@ -64,9 +64,10 @@
 
 <Confirm
 	title={$i18n.t('Do you want to delete all chats?', { ns: 'ionos' })}
-	message={$i18n.t('This action can not be undone', { ns: 'ionos' })}
 	show={confirmChatDeletion}
 	confirmText={$i18n.t('Delete all chats', { ns: 'ionos' })}
 	confirmHandler={onDeleteChatsConfirmed}
 	cancelHandler={() => { confirmChatDeletion = false; }}
-/>
+>
+	{$i18n.t('This action can not be undone', { ns: 'ionos' })}
+</Confirm>

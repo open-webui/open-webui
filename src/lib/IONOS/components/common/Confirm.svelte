@@ -9,7 +9,6 @@
 	const i18n = getContext<Readable<I18Next>>('i18n');
 
 	export let title = '';
-	export let message = '';
 	export let show = false;
 	export let confirmText = $i18n.t('OK');
 	export let confirmHandler = () => { };
@@ -30,7 +29,7 @@
 		/>
 	<div slot="content" class="flex flex-col min-w-[calc(400px-60px)] max-w-[calc(550px-60px)] text-blue-800">
 		<div class="mb-2.5 text-sm" >
-			{message}
+			<slot />
 		</div>
 
 		<div class="flex flex-row justify-end mt-2.5">

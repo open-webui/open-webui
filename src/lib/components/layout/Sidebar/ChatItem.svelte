@@ -199,14 +199,15 @@
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}
 	title={$i18n.t('Delete chat?')}
-	message={$i18n.t('Are you sure you want to delete this chat?')}
 	confirmHandler={() => {
 		deleteChatHandler(id);
 	}}
 	cancelHandler={() => {
 		showDeleteConfirm = false;
 	}}
-/>
+>
+	{$i18n.t('Are you sure you want to delete this chat?')}
+</DeleteConfirmDialog>
 
 {#if dragged && x && y}
 	<DragGhost {x} {y}>

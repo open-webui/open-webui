@@ -160,9 +160,10 @@
 
 <Confirm
 	title={$i18n.t('Delete knowledge base?', { ns: 'ionos' })}
-	message={$i18n.t('This action can not be undone', { ns: 'ionos' })}
 	show={confirmKnowledgeDeletion}
 	confirmText={$i18n.t('Delete knowledge base', { ns: 'ionos' })}
 	confirmHandler={onKnowledgeDeletionConfirmed}
 	cancelHandler={() => { confirmKnowledgeDeletion = false; }}
-/>
+>
+	{$i18n.t('This action can not be undone', { ns: 'ionos' })}
+</Confirm>
