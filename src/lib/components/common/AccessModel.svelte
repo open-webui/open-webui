@@ -68,7 +68,7 @@
 			}
 		};
 		updateModel(openAccessDropdownId, accessControl);
-		openAccessDropdownId = null;
+		// openAccessDropdownId = null;
 	};
 
 	$: activeGroupIds = [
@@ -189,7 +189,7 @@
 					{#if showSubmenu}
 						<button
 							type="button"
-							class="min-w-[6rem] absolute left-[7.8rem] -bottom-2 bg-white dark:bg-customGray-900 border px-1 py-2 border-gray-300 dark:border-customGray-700 rounded-xl shadow z-20 min-w-30"
+							class="min-w-[8rem] absolute left-[7.8rem] -bottom-2 bg-white dark:bg-customGray-900 border px-1 py-2 border-gray-300 dark:border-customGray-700 rounded-xl shadow z-20 min-w-30"
 							
 							on:mouseenter={() => (hoveringSubmenu = true)}
 							on:mouseleave={() => {
