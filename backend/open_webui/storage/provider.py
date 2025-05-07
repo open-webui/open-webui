@@ -134,21 +134,28 @@ class S3StorageProvider(StorageProvider):
 
         self.bucket_name = S3_BUCKET_NAME
         self.key_prefix = S3_KEY_PREFIX if S3_KEY_PREFIX else ""
+        # Detect if using Cloudflare R2
+        self.is_r2 = "r2.cloudflarestorage.com" in (S3_ENDPOINT_URL or "").lower()
 
     def upload_file(
         self, file: BinaryIO, filename: str, tags: Dict[str, str]
     ) -> Tuple[bytes, str]:
-        """Handles uploading of the file to S3 storage."""
+        """Handles uploading of the file to S3 and R2 storage."""
         _, file_path = LocalStorageProvider.upload_file(file, filename, tags)
-        tagging = {"TagSet": [{"Key": k, "Value": v} for k, v in tags.items()]}
         try:
             s3_key = os.path.join(self.key_prefix, filename)
-            self.s3_client.upload_file(file_path, self.bucket_name, s3_key)
-            self.s3_client.put_object_tagging(
-                Bucket=self.bucket_name,
-                Key=s3_key,
-                Tagging=tagging,
-            )
+            if self.is_r2:
+                # R2: Upload without any tagging
+                self.s3_client.upload_file(file_path, self.bucket_name, s3_key)
+            else:
+                # AWS S3 etc: Attach tags if present
+                tagging_str = "&".join(f"{k}={v}" for k, v in tags.items())
+                self.s3_client.upload_file(
+                    file_path,
+                    self.bucket_name,
+                    s3_key,
+                    ExtraArgs={"Tagging": tagging_str} if tags else None,
+                )
             return (
                 open(file_path, "rb").read(),
                 "s3://" + self.bucket_name + "/" + s3_key,
