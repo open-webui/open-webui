@@ -31,6 +31,7 @@
 	import PublicIcon from '../icons/PublicIcon.svelte';
 	import PrivateIcon from '../icons/PrivateIcon.svelte';
 	import { getGroups } from '$lib/apis/groups';
+	import { user } from '$lib/stores';
 
 	let loaded = false;
 
@@ -244,6 +245,7 @@
 									)
 								);
 							} else {
+								if($user.id === item.user_id)
 								goto(`/workspace/knowledge/${item.id}`);
 							}
 						}}
@@ -278,6 +280,7 @@
 										{/if}
 									</div>
 								</div>
+								{#if $user.id === item.user_id}
 								<div class="invisible group-hover:visible">
 									<ItemMenu
 										{item}
@@ -287,6 +290,7 @@
 										}}
 									/>
 								</div>
+								{/if}
 							</div>
 
 							<div class="self-center flex-1 px-1 mb-1">
