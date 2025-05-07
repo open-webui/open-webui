@@ -13,7 +13,8 @@
 		'mb484@nyu.edu',
 		'sm11538@nyu.edu',
 		'cg4532@nyu.edu',
-		'jy4421@nyu.edu'
+		'jy4421@nyu.edu',
+		'ht2490@nyu.edu'
 	];
 
 	let loaded = false;

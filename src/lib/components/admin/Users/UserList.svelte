@@ -36,7 +36,8 @@
 		'mb484@nyu.edu',
 		'sm11538@nyu.edu',
 		'cg4532@nyu.edu',
-		'jy4421@nyu.edu'
+		'jy4421@nyu.edu',
+		'ht2490@nyu.edu'
 	];
 
 	// function to override the label if the user is truly "admin" + in SUPER_ADMIN_EMAILS
