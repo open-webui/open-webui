@@ -97,8 +97,15 @@
 		const res = await inviteUsers(localStorage.token, invitees, existingGroupsIds, newGroupNames).catch((error) =>
 			toast.error(`${error}`)
 		);
-		console.log(res);
-		getUsersHandler();
+		if (res?.success){
+			toast.success($i18n.t('Invited successfuly'))
+			getUsersHandler();
+		} else {
+			res?.failed_invites?.forEach(res => {
+				toast.error(`${res.reason}`)
+			})
+		}
+		
 		invitedEmails = [];
 		selectedGroups = []
 	};
