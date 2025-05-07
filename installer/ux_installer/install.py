@@ -65,143 +65,6 @@ def log(message, print_to_console=True):
             print(f"WARNING: Failed to write to log file: {str(e)}")
 
 
-def check_conda():
-    """
-    Checks if conda is installed and available in the PATH.
-
-    Returns:
-        tuple: (bool, str) - (is_installed, conda_executable_path)
-    """
-    log("Checking if conda is installed...")
-
-    try:
-        # Try to find conda in the PATH
-        result = subprocess.run(
-            ["where", "conda"], capture_output=True, text=True, check=False
-        )
-
-        if result.returncode == 0:
-            conda_path = result.stdout.strip().split("\n")[0]
-            log(f"Conda found at: {conda_path}")
-            return True, conda_path
-        else:
-            # Try to find conda in common locations
-            common_locations = [
-                os.path.join(
-                    os.environ.get("USERPROFILE", ""),
-                    "miniconda3",
-                    "Scripts",
-                    "conda.exe",
-                ),
-                os.path.join(
-                    os.environ.get("USERPROFILE", ""),
-                    "Anaconda3",
-                    "Scripts",
-                    "conda.exe",
-                ),
-                os.path.join("C:", "ProgramData", "miniconda3", "Scripts", "conda.exe"),
-                os.path.join("C:", "ProgramData", "Anaconda3", "Scripts", "conda.exe"),
-                os.path.join(
-                    os.environ.get("LOCALAPPDATA", ""),
-                    "Continuum",
-                    "miniconda3",
-                    "Scripts",
-                    "conda.exe",
-                ),
-                os.path.join(
-                    os.environ.get("LOCALAPPDATA", ""),
-                    "Continuum",
-                    "anaconda3",
-                    "Scripts",
-                    "conda.exe",
-                ),
-            ]
-
-            for location in common_locations:
-                if os.path.exists(location):
-                    log(f"Conda found at: {location}")
-                    return True, location
-
-            log("Conda not found in PATH or common locations")
-            return False, None
-
-    except Exception as e:
-        log(f"Error checking for conda: {str(e)}")
-        return False, None
-
-
-def install_miniconda(install_dir):
-    """
-    Downloads and installs Miniconda.
-
-    Args:
-        install_dir: Directory where to install Miniconda
-
-    Returns:
-        tuple: (bool, str) - (success, conda_executable_path)
-    """
-    log("-------------")
-    log("- Miniconda -")
-    log("-------------")
-    log("Downloading Miniconda installer...")
-
-    try:
-        # Determine the appropriate Miniconda installer
-        installer_url = (
-            "https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe"
-        )
-        installer_path = os.path.join(
-            tempfile.gettempdir(), "Miniconda3-latest-Windows-x86_64.exe"
-        )
-
-        # Download the installer
-        log(f"Downloading from: {installer_url}")
-        response = requests.get(installer_url, stream=True)
-        response.raise_for_status()
-
-        with open(installer_path, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-
-        log(f"Downloaded installer to: {installer_path}")
-
-        # Install Miniconda
-        miniconda_path = os.path.join(os.path.expanduser("~"), "miniconda3")
-        log(f"Installing Miniconda to: {miniconda_path}")
-
-        # Run the installer silently
-        result = subprocess.run(
-            [
-                installer_path,
-                "/InstallationType=JustMe",
-                "/AddToPath=1",
-                "/RegisterPython=0",
-                "/S",
-                f"/D={miniconda_path}",
-            ],
-            check=False,
-        )
-
-        if result.returncode != 0:
-            log(f"Miniconda installation failed with code: {result.returncode}")
-            return False, None
-
-        # Determine the path to conda executable
-        conda_path = os.path.join(miniconda_path, "Scripts", "conda.exe")
-
-        log("Miniconda installation completed successfully")
-
-        # Initialize conda
-        log("Initializing conda...")
-        subprocess.run([conda_path, "init"], check=False)
-
-        return True, conda_path
-
-    except Exception as e:
-        log(f"Error installing Miniconda: {str(e)}")
-        return False, None
-
-
 def create_conda_env(
     conda_path, env_name=CONDA_ENV_NAME, python_version=PYTHON_VERSION, install_dir=None
 ):
@@ -606,39 +469,13 @@ def main():
             log("Continuing with installation without removing existing files")
             log("This will add new files alongside existing ones")
 
-        # Check if conda is installed
-        conda_installed, conda_path = check_conda()
-
-        if not conda_installed:
-            log("Conda not installed")
-
-            if not args.yes:
-                user_input = input(
-                    "Conda is not installed. Would you like to install Miniconda? (y/n): "
-                )
-                if user_input.lower() != "y":
-                    log("Installation cancelled by user")
-                    return 1
-
-            # Install Miniconda
-            miniconda_success, conda_path = install_miniconda(install_dir)
-
-            if not miniconda_success:
-                log("Failed to install Miniconda. Installation will be aborted.")
-                return 1
-
-        # Create conda environment
-        env_success, python_path = create_conda_env(
-            conda_path, CONDA_ENV_NAME, PYTHON_VERSION, install_dir
-        )
-
-        if not env_success:
-            log(
-                "Failed to create the Python environment. Installation will be aborted."
-            )
-            return 1
-
-        log(f"Conda found at: {conda_path}")
+        # Assume conda is installed and we're already in a conda environment
+        log("Using existing conda installation")
+        
+        # Assume the conda environment is at install_dir\raux_env
+        env_path = os.path.join(install_dir, CONDA_ENV_NAME)
+        python_path = os.path.join(env_path, "python.exe")
+        log(f"Using conda environment at: {env_path}")
         log(f"Python executable: {python_path}")
 
         # Create wheels directory
