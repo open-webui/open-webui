@@ -334,7 +334,7 @@
 						class="w-full rounded-lg pl-2 py-2 px-1 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 						type="text"
 						placeholder={$i18n.t(
-							'Enter comma-seperated "token:bias_value" pairs (example: 5432:100, 413:-100)'
+							'Enter comma-separated "token:bias_value" pairs (example: 5432:100, 413:-100)'
 						)}
 						bind:value={params.logit_bias}
 						autocomplete="off"

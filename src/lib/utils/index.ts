@@ -15,6 +15,11 @@ dayjs.extend(localizedFormat);
 import { WEBUI_BASE_URL } from '$lib/constants';
 import { TTS_RESPONSE_SPLIT } from '$lib/types';
 
+import { marked } from 'marked';
+import markedExtension from '$lib/utils/marked/extension';
+import markedKatexExtension from '$lib/utils/marked/katex-extension';
+import hljs from 'highlight.js';
+
 //////////////////////////
 // Helper functions
 //////////////////////////
@@ -36,8 +41,7 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 		},
 		{
 			regex: /{{HTML_FILE_ID_([a-f0-9-]+)}}/gi,
-			replacement: (_, fileId) =>
-				`<iframe src="${WEBUI_BASE_URL}/api/v1/files/${fileId}/content/html" width="100%" frameborder="0" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"></iframe>`
+			replacement: (_, fileId) => `<file type="html" id="${fileId}" />`
 		}
 	];
 
@@ -309,46 +313,129 @@ export const formatDate = (inputDate) => {
 	}
 };
 
-export const copyToClipboard = async (text) => {
-	let result = false;
-	if (!navigator.clipboard) {
-		const textArea = document.createElement('textarea');
-		textArea.value = text;
+export const copyToClipboard = async (text, formatted = false) => {
+	if (formatted) {
+		const options = {
+			throwOnError: false,
+			highlight: function (code, lang) {
+				const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+				return hljs.highlight(code, { language }).value;
+			}
+		};
+		marked.use(markedKatexExtension(options));
+		marked.use(markedExtension(options));
 
-		// Avoid scrolling to bottom
-		textArea.style.top = '0';
-		textArea.style.left = '0';
-		textArea.style.position = 'fixed';
+		const htmlContent = marked.parse(text);
 
-		document.body.appendChild(textArea);
-		textArea.focus();
-		textArea.select();
+		// Add basic styling to make the content look better when pasted
+		const styledHtml = `
+			<div>
+				<style>
+					pre {
+						background-color: #f6f8fa;
+						border-radius: 6px;
+						padding: 16px;
+						overflow: auto;
+					}
+					code {
+						font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+						font-size: 14px;
+					}
+					.hljs-keyword { color: #d73a49; }
+					.hljs-string { color: #032f62; }
+					.hljs-comment { color: #6a737d; }
+					.hljs-function { color: #6f42c1; }
+					.hljs-number { color: #005cc5; }
+					.hljs-operator { color: #d73a49; }
+					.hljs-class { color: #6f42c1; }
+					.hljs-title { color: #6f42c1; }
+					.hljs-params { color: #24292e; }
+					.hljs-built_in { color: #005cc5; }
+					blockquote {
+						border-left: 4px solid #dfe2e5;
+						padding-left: 16px;
+						color: #6a737d;
+						margin-left: 0;
+						margin-right: 0;
+					}
+					table {
+						border-collapse: collapse;
+						width: 100%;
+						margin-bottom: 16px;
+					}
+					table, th, td {
+						border: 1px solid #dfe2e5;
+					}
+					th, td {
+						padding: 8px 12px;
+					}
+					th {
+						background-color: #f6f8fa;
+					}
+				</style>
+				${htmlContent}
+			</div>
+		`;
+
+		// Create a blob with HTML content
+		const blob = new Blob([styledHtml], { type: 'text/html' });
 
 		try {
-			const successful = document.execCommand('copy');
-			const msg = successful ? 'successful' : 'unsuccessful';
-			console.log('Fallback: Copying text command was ' + msg);
-			result = true;
+			// Create a ClipboardItem with HTML content
+			const data = new ClipboardItem({
+				'text/html': blob,
+				'text/plain': new Blob([text], { type: 'text/plain' })
+			});
+
+			// Write to clipboard
+			await navigator.clipboard.write([data]);
+			return true;
 		} catch (err) {
-			console.error('Fallback: Oops, unable to copy', err);
+			console.error('Error copying formatted content:', err);
+			// Fallback to plain text
+			return await copyToClipboard(text);
+		}
+	} else {
+		let result = false;
+		if (!navigator.clipboard) {
+			const textArea = document.createElement('textarea');
+			textArea.value = text;
+
+			// Avoid scrolling to bottom
+			textArea.style.top = '0';
+			textArea.style.left = '0';
+			textArea.style.position = 'fixed';
+
+			document.body.appendChild(textArea);
+			textArea.focus();
+			textArea.select();
+
+			try {
+				const successful = document.execCommand('copy');
+				const msg = successful ? 'successful' : 'unsuccessful';
+				console.log('Fallback: Copying text command was ' + msg);
+				result = true;
+			} catch (err) {
+				console.error('Fallback: Oops, unable to copy', err);
+			}
+
+			document.body.removeChild(textArea);
+			return result;
 		}
 
-		document.body.removeChild(textArea);
+		result = await navigator.clipboard
+			.writeText(text)
+			.then(() => {
+				console.log('Async: Copying to clipboard was successful!');
+				return true;
+			})
+			.catch((error) => {
+				console.error('Async: Could not copy text: ', error);
+				return false;
+			});
+
 		return result;
 	}
-
-	result = await navigator.clipboard
-		.writeText(text)
-		.then(() => {
-			console.log('Async: Copying to clipboard was successful!');
-			return true;
-		})
-		.catch((error) => {
-			console.error('Async: Could not copy text: ', error);
-			return false;
-		});
-
-	return result;
 };
 
 export const compareVersion = (latest, current) => {
@@ -680,6 +767,11 @@ export const removeDetails = (content, types) => {
 		);
 	}
 
+	return content;
+};
+
+export const removeAllDetails = (content) => {
+	content = content.replace(/<details[^>]*>.*?<\/details>/gis, '');
 	return content;
 };
 
@@ -1150,58 +1242,80 @@ export const convertOpenApiToToolPayload = (openApiSpec) => {
 
 	for (const [path, methods] of Object.entries(openApiSpec.paths)) {
 		for (const [method, operation] of Object.entries(methods)) {
-			const tool = {
-				type: 'function',
-				name: operation.operationId,
-				description: operation.description || operation.summary || 'No description available.',
-				parameters: {
-					type: 'object',
-					properties: {},
-					required: []
-				}
-			};
-
-			// Extract path and query parameters
-			if (operation.parameters) {
-				operation.parameters.forEach((param) => {
-					tool.parameters.properties[param.name] = {
-						type: param.schema.type,
-						description: param.schema.description || ''
-					};
-
-					if (param.required) {
-						tool.parameters.required.push(param.name);
+			if (operation?.operationId) {
+				const tool = {
+					type: 'function',
+					name: operation.operationId,
+					description: operation.description || operation.summary || 'No description available.',
+					parameters: {
+						type: 'object',
+						properties: {},
+						required: []
 					}
-				});
-			}
+				};
 
-			// Extract and recursively resolve requestBody if available
-			if (operation.requestBody) {
-				const content = operation.requestBody.content;
-				if (content && content['application/json']) {
-					const requestSchema = content['application/json'].schema;
-					const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);
-
-					if (resolvedRequestSchema.properties) {
-						tool.parameters.properties = {
-							...tool.parameters.properties,
-							...resolvedRequestSchema.properties
+				// Extract path and query parameters
+				if (operation.parameters) {
+					operation.parameters.forEach((param) => {
+						let description = param.schema.description || param.description || '';
+						if (param.schema.enum && Array.isArray(param.schema.enum)) {
+							description += `. Possible values: ${param.schema.enum.join(', ')}`;
+						}
+						tool.parameters.properties[param.name] = {
+							type: param.schema.type,
+							description: description
 						};
 
-						if (resolvedRequestSchema.required) {
-							tool.parameters.required = [
-								...new Set([...tool.parameters.required, ...resolvedRequestSchema.required])
-							];
+						if (param.required) {
+							tool.parameters.required.push(param.name);
 						}
-					} else if (resolvedRequestSchema.type === 'array') {
-						tool.parameters = resolvedRequestSchema; // special case when root schema is an array
+					});
+				}
+
+				// Extract and recursively resolve requestBody if available
+				if (operation.requestBody) {
+					const content = operation.requestBody.content;
+					if (content && content['application/json']) {
+						const requestSchema = content['application/json'].schema;
+						const resolvedRequestSchema = resolveSchema(requestSchema, openApiSpec.components);
+
+						if (resolvedRequestSchema.properties) {
+							tool.parameters.properties = {
+								...tool.parameters.properties,
+								...resolvedRequestSchema.properties
+							};
+
+							if (resolvedRequestSchema.required) {
+								tool.parameters.required = [
+									...new Set([...tool.parameters.required, ...resolvedRequestSchema.required])
+								];
+							}
+						} else if (resolvedRequestSchema.type === 'array') {
+							tool.parameters = resolvedRequestSchema; // special case when root schema is an array
+						}
 					}
 				}
-			}
 
-			toolPayload.push(tool);
+				toolPayload.push(tool);
+			}
 		}
 	}
 
 	return toolPayload;
+};
+
+export const slugify = (str: string): string => {
+	return (
+		str
+			// 1. Normalize: separate accented letters into base + combining marks
+			.normalize('NFD')
+			// 2. Remove all combining marks (the accents)
+			.replace(/[\u0300-\u036f]/g, '')
+			// 3. Replace any sequence of whitespace with a single hyphen
+			.replace(/\s+/g, '-')
+			// 4. Remove all characters except alphanumeric characters and hyphens
+			.replace(/[^a-zA-Z0-9-]/g, '')
+			// 5. Convert to lowercase
+			.toLowerCase()
+	);
 };

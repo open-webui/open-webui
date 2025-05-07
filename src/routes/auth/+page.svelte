@@ -12,6 +12,7 @@
 	import { WEBUI_NAME, config, user, socket } from '$lib/stores';
 
 	import { generateInitialsImage, canvasPixelTest } from '$lib/utils';
+	import { setupSocket } from '$lib/utils/websocket';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
@@ -40,6 +41,9 @@
 			toast.success($i18n.t(`You're now logged in.`));
 			if (sessionUser.token) {
 				localStorage.token = sessionUser.token;
+			}
+			if (!$socket) {
+				await setupSocket($config.features?.enable_websocket ?? true);
 			}
 
 			$socket.emit('user-join', { auth: { token: sessionUser.token } });

@@ -4,7 +4,12 @@ import json
 import logging
 from typing import Optional
 
-from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
+from open_webui.retrieval.vector.main import (
+    VectorDBBase,
+    VectorItem,
+    SearchResult,
+    GetResult,
+)
 from open_webui.config import (
     MILVUS_URI,
     MILVUS_DB,
@@ -16,7 +21,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-class MilvusClient:
+class MilvusClient(VectorDBBase):
     def __init__(self):
         self.collection_prefix = "open_webui"
         if MILVUS_TOKEN is None:

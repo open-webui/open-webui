@@ -45,6 +45,14 @@
 			);
 		}
 	}
+
+	const decodeString = (str: string) => {
+		try {
+			return decodeURIComponent(str);
+		} catch (e) {
+			return str;
+		}
+	};
 </script>
 
 <Modal size="lg" bind:show>
@@ -99,7 +107,7 @@
 												: `#`}
 										target="_blank"
 									>
-										{decodeURIComponent(document?.metadata?.name ?? document.source.name)}
+										{decodeString(document?.metadata?.name ?? document.source.name)}
 									</a>
 									{#if document?.metadata?.page}
 										<span class="text-xs text-gray-500 dark:text-gray-400">
@@ -131,12 +139,15 @@
 														{percentage.toFixed(2)}%
 													</span>
 												{/if}
+
+												{#if typeof document?.distance === 'number'}
+													<span class="text-gray-500 dark:text-gray-500">
+														({(document?.distance ?? 0).toFixed(4)})
+													</span>
+												{/if}
+											{:else if typeof document?.distance === 'number'}
 												<span class="text-gray-500 dark:text-gray-500">
 													({(document?.distance ?? 0).toFixed(4)})
-												</span>
-											{:else}
-												<span class="text-gray-500 dark:text-gray-500">
-													{(document?.distance ?? 0).toFixed(4)}
 												</span>
 											{/if}
 										</div>

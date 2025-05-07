@@ -114,9 +114,12 @@ async def get_all_models(request, user: UserModel = None):
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
             for model in models:
-                if (
-                    custom_model.id == model["id"]
-                    or custom_model.id == model["id"].split(":")[0]
+                if custom_model.id == model["id"] or (
+                    model.get("owned_by") == "ollama"
+                    and custom_model.id
+                    == model["id"].split(":")[
+                        0
+                    ]  # Ollama may return model ids in different formats (e.g., 'llama3' vs. 'llama3:7b')
                 ):
                     if custom_model.is_active:
                         model["name"] = custom_model.name
@@ -200,6 +203,7 @@ async def get_all_models(request, user: UserModel = None):
         else:
             function_module, _, _ = load_function_module_by_id(function_id)
             request.app.state.FUNCTIONS[function_id] = function_module
+        return function_module
 
     for model in models:
         action_ids = [
