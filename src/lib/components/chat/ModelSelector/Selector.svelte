@@ -60,15 +60,15 @@
 
 	const filteredSourceItems = items
 		.filter?.((item) => !item?.model?.name?.toLowerCase()?.includes('arena'))
-		?.filter((item) => item.model?.info?.base_model_id == null);
-
+		?.filter((item) => item.model?.base_model_id == null);
+	console.log(filteredSourceItems, 'items')
 	const fuse = new Fuse(
 		filteredSourceItems.map((item) => {
 			const _item = {
 				...item,
 				modelName: item.model?.name,
-				tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' '),
-				desc: item.model?.info?.meta?.description
+				tags: item.model?.meta?.tags?.map((tag) => tag.name).join(' '),
+				desc: item.model?.meta?.description
 			};
 			return _item;
 		}),
@@ -228,6 +228,7 @@
 	};
 
 	function getModelIcon(label: string): string {
+		if(!label) return '';
 		const lower = label.toLowerCase();
 
 		if (lower.includes('perplexity')) {
@@ -259,6 +260,13 @@
 			knowledgeCutoff = formatted;
 		}
 	}
+	let baseModel = null;
+	$: {
+		if(selectedModel?.model?.base_model_id){
+			baseModel = items.find(item => item?.model?.id === selectedModel?.model?.base_model_id)
+		}
+	}
+	$: console.log(baseModel)
 </script>
 
 <DropdownMenu.Root
@@ -270,7 +278,7 @@
 	}}
 	closeFocus={false}
 >
-	{#if !selectedModel?.model?.info?.base_model_id}
+	{#if !selectedModel?.model?.base_model_id}
 		<DropdownMenu.Trigger
 			class="relative w-full flex"
 			aria-label={placeholder}
@@ -298,12 +306,12 @@
 		>
 			{#if selectedModel}
 				<img
-					src={selectedModel?.model?.info?.meta?.profile_image_url ? selectedModel?.model?.info?.meta?.profile_image_url : getModelIcon(selectedModel?.model?.info?.base_model_id)}
+					src={selectedModel?.model?.meta?.profile_image_url ? selectedModel?.model?.meta?.profile_image_url : getModelIcon(baseModel?.model?.name)}
 					alt="Model"
 					class="rounded-full size-4 self-center mr-2"
 				/>
 				{selectedModel.label}
-				({selectedModel?.model?.info?.base_model_id})
+				({baseModel?.model?.name})
 			{:else}
 				{placeholder}
 			{/if}
@@ -371,9 +379,9 @@
 						}}
 					>
 						<div class="flex flex-col">
-							{#if $mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
+							{#if $mobile && (item?.model?.meta?.tags ?? []).length > 0}
 								<div class="flex gap-0.5 self-start h-full mb-1.5 -translate-x-1">
-									{#each item.model?.info?.meta.tags as tag}
+									{#each item.model?.meta.tags as tag}
 										<div
 											class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 										>

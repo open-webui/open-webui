@@ -484,17 +484,18 @@
 	});
 
 	let modelIconUrl = '';
+	$: console.log(model, 'model---->')
 
 	$: {
 		if($companyConfig?.config?.ui?.hide_model_logo_in_chat){
 			modelIconUrl = $company?.profile_image_url;
-		}else if (!model?.info?.base_model_id) {
+		}else if (!model?.base_model_id) {
 			modelIconUrl = getModelIcon(model?.name);
 		} else if (
-			model?.info?.meta?.profile_image_url &&
-			model?.info?.meta?.profile_image_url !== '/static/favicon.png'
+			model?.meta?.profile_image_url &&
+			model?.meta?.profile_image_url !== '/static/favicon.png'
 		) {
-			modelIconUrl = model?.info?.meta?.profile_image_url;
+			modelIconUrl = model?.meta?.profile_image_url;
 		} else {
 			modelIconUrl = '/logo_light.png';
 		}
