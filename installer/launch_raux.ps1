@@ -212,7 +212,7 @@ function Start-RAUXServer {
     Write-Host "Starting RAUX$version server..." -ForegroundColor Cyan
     $rauxPinfo = New-Object System.Diagnostics.ProcessStartInfo
     $rauxPinfo.FileName = "cmd.exe"
-    $rauxPinfo.Arguments = "/C call conda activate $condaEnvPath; open-webui serve"
+    $rauxPinfo.Arguments = "/C call conda activate $condaEnvPath && open-webui serve"
     $rauxPinfo.RedirectStandardError = $false
     $rauxPinfo.RedirectStandardOutput = $false
     $rauxPinfo.UseShellExecute = $true
