@@ -1,20 +1,38 @@
 <script lang="ts">
-	import { createEventDispatcher, tick } from 'svelte';
-	import { Switch } from 'bits-ui';
-	export let state = true;
+	import { createEventDispatcher } from 'svelte';
+	export let state = false;
+	export let label = '';
+	export let id = crypto.randomUUID();
+	export let description = '';
+	export let messages: string[] = [];
 
 	const dispatch = createEventDispatcher();
 
-	$: dispatch('change', state);
+	function handleChange(event: Event) {
+		const target = event.target as HTMLInputElement;
+		state = target.checked;
+		dispatch('change', state);
+	}
 </script>
 
-<Switch.Root
-	bind:checked={state}
-	class="flex h-5 min-h-5 w-9 shrink-0 cursor-pointer items-center rounded-full px-[3px] mx-[1px] transition  {state
-		? ' bg-emerald-600'
-		: 'bg-gray-200 dark:bg-transparent'} outline outline-1 outline-gray-100 dark:outline-gray-800"
->
-	<Switch.Thumb
-		class="pointer-events-none block size-4 shrink-0 rounded-full bg-white transition-transform data-[state=checked]:translate-x-3.5 data-[state=unchecked]:translate-x-0 data-[state=unchecked]:shadow-mini "
+<div class="fr-toggle">
+	<input
+		type="checkbox"
+		class="fr-toggle__input"
+		aria-describedby="{id}-messages"
+		{id}
+		bind:checked={state}
+		on:change={handleChange}
 	/>
-</Switch.Root>
+	<label class="fr-toggle__label" for={id}>{label}</label>
+	{#if messages.length > 0 || description}
+		<div class="fr-messages-group" id="{id}-messages" aria-live="polite">
+			{#if description}
+				<p class="fr-message">{description}</p>
+			{/if}
+			{#each messages as message}
+				<p class="fr-message">{message}</p>
+			{/each}
+		</div>
+	{/if}
+</div>
