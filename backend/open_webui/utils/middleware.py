@@ -672,6 +672,9 @@ def apply_params_to_form_data(form_data, model):
         if "frequency_penalty" in params and params["frequency_penalty"] is not None:
             form_data["frequency_penalty"] = params["frequency_penalty"]
 
+        if "presence_penalty" in params and params["presence_penalty"] is not None:
+            form_data["presence_penalty"] = params["presence_penalty"]
+
         if "reasoning_effort" in params and params["reasoning_effort"] is not None:
             form_data["reasoning_effort"] = params["reasoning_effort"]
 
@@ -1430,11 +1433,12 @@ async def process_chat_response(
 
                             if after_tag:
                                 content_blocks[-1]["content"] = after_tag
+                                tag_content_handler(
+                                    content_type, tags, after_tag, content_blocks
+                                )
 
-                            content = after_tag
                             break
-
-                if content and content_blocks[-1]["type"] == content_type:
+                elif content_blocks[-1]["type"] == content_type:
                     start_tag = content_blocks[-1]["start_tag"]
                     end_tag = content_blocks[-1]["end_tag"]
                     # Match end tag e.g., </tag>

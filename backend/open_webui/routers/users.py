@@ -21,7 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
 from open_webui.utils.auth import get_admin_user, get_password_hash, get_verified_user
-from open_webui.utils.access_control import get_permissions
+from open_webui.utils.access_control import get_permissions, has_permission
 
 
 log = logging.getLogger(__name__)
@@ -205,9 +205,22 @@ async def get_user_settings_by_session_user(user=Depends(get_verified_user)):
 
 @router.post("/user/settings/update", response_model=UserSettings)
 async def update_user_settings_by_session_user(
-    form_data: UserSettings, user=Depends(get_verified_user)
+    request: Request, form_data: UserSettings, user=Depends(get_verified_user)
 ):
-    user = Users.update_user_settings_by_id(user.id, form_data.model_dump())
+    updated_user_settings = form_data.model_dump()
+    if (
+        user.role != "admin"
+        and "toolServers" in updated_user_settings.get("ui").keys()
+        and not has_permission(
+            user.id,
+            "features.direct_tool_servers",
+            request.app.state.config.USER_PERMISSIONS,
+        )
+    ):
+        # If the user is not an admin and does not have permission to use tool servers, remove the key
+        updated_user_settings["ui"].pop("toolServers", None)
+
+    user = Users.update_user_settings_by_id(user.id, updated_user_settings)
     if user:
         return user.settings
     else:

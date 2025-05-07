@@ -921,11 +921,19 @@ OPENAI_API_BASE_URL = "https://api.openai.com/v1"
 # TOOL_SERVERS
 ####################################
 
+try:
+    tool_server_connections = json.loads(
+        os.environ.get("TOOL_SERVER_CONNECTIONS", "[]")
+    )
+except Exception as e:
+    log.exception(f"Error loading TOOL_SERVER_CONNECTIONS: {e}")
+    tool_server_connections = []
+
 
 TOOL_SERVER_CONNECTIONS = PersistentConfig(
     "TOOL_SERVER_CONNECTIONS",
     "tool_server.connections",
-    [],
+    tool_server_connections,
 )
 
 ####################################
@@ -1002,6 +1010,7 @@ if default_prompt_suggestions == []:
             "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
         },
     ]
+
 DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
     "DEFAULT_PROMPT_SUGGESTIONS",
     "ui.prompt_suggestions",
@@ -2689,7 +2698,7 @@ AUDIO_STT_AZURE_BASE_URL = PersistentConfig(
 AUDIO_STT_AZURE_MAX_SPEAKERS = PersistentConfig(
     "AUDIO_STT_AZURE_MAX_SPEAKERS",
     "audio.stt.azure.max_speakers",
-    os.getenv("AUDIO_STT_AZURE_MAX_SPEAKERS", "3"),
+    os.getenv("AUDIO_STT_AZURE_MAX_SPEAKERS", ""),
 )
 
 AUDIO_TTS_OPENAI_API_BASE_URL = PersistentConfig(
@@ -2737,7 +2746,13 @@ AUDIO_TTS_SPLIT_ON = PersistentConfig(
 AUDIO_TTS_AZURE_SPEECH_REGION = PersistentConfig(
     "AUDIO_TTS_AZURE_SPEECH_REGION",
     "audio.tts.azure.speech_region",
-    os.getenv("AUDIO_TTS_AZURE_SPEECH_REGION", "eastus"),
+    os.getenv("AUDIO_TTS_AZURE_SPEECH_REGION", ""),
+)
+
+AUDIO_TTS_AZURE_SPEECH_BASE_URL = PersistentConfig(
+    "AUDIO_TTS_AZURE_SPEECH_BASE_URL",
+    "audio.tts.azure.speech_base_url",
+    os.getenv("AUDIO_TTS_AZURE_SPEECH_BASE_URL", ""),
 )
 
 AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT = PersistentConfig(
