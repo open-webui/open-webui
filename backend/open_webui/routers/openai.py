@@ -78,8 +78,8 @@ async def send_get_request(url, key=None, user: UserModel = None):
                         else {}
                     ),
                 }
-                # For Azure OpenAI, we need to use the models endpoint
-                azure_url = f"{url}/openai/models?api-version=2024-12-01-preview"
+                # For Azure OpenAI, we need to use the deployments endpoint instead of models
+                azure_url = f"{url}/openai/deployments?api-version=2023-03-15-preview"
                 async with session.get(
                     azure_url,
                     headers=headers,
@@ -539,8 +539,8 @@ async def get_models(
                             else {}
                         ),
                     }
-                    # For Azure OpenAI, we need to use the models endpoint with api-version
-                    azure_url = f"{url}/openai/models?api-version=2024-12-01-preview"
+                    # For Azure OpenAI, we need to use the deployments endpoint with api-version
+                    azure_url = f"{url}/openai/deployments?api-version=2023-03-15-preview"
                     async with session.get(
                         azure_url,
                         headers=headers,

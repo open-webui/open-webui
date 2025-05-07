@@ -74,7 +74,7 @@ def format_azure_openai_url(
         base_url: The base Azure OpenAI endpoint
         model: The model name or deployment name
         api_path: The API path (default: chat/completions)
-        api_version: The API version (default: 2024-12-01-preview)
+        api_version: The API version (default: 2023-03-15-preview)
 
     Returns:
         Formatted Azure OpenAI URL
@@ -90,6 +90,11 @@ def format_azure_openai_url(
 
     # Use the provided model as deployment name
     deployment_name = model
+    
+    # Special case for o-series models which require a newer API version
+    if model.startswith("o") and model.endswith("-mini"):
+        api_version = "2024-12-01-preview"
+        log.debug(f"Using API version {api_version} for o-series model {model}")
 
     # Format the URL
     url = f"{base_url}/openai/deployments/{deployment_name}/{api_path}?api-version={api_version}"
@@ -115,8 +120,42 @@ def prepare_azure_openai_request(
 
     # Format the URL for Azure OpenAI
     formatted_url = format_azure_openai_url(url, model)
+    
+    # Filter allowed parameters based on Azure OpenAI API
+    allowed_params = {
+        "messages", "temperature", "role", "content", "contentPart", 
+        "contentPartImage", "enhancements", "dataSources", "n", 
+        "stream", "stop", "max_tokens", "presence_penalty", 
+        "frequency_penalty", "logit_bias", "user", "function_call", 
+        "functions", "tools", "tool_choice", "top_p", "log_probs", 
+        "top_logprobs", "response_format", "seed", "max_completion_tokens"
+    }
+    
+    # Remap user field if needed
+    if "user" in payload and not isinstance(payload["user"], str):
+        payload["user"] = payload["user"]["id"] if "id" in payload["user"] else str(payload["user"])
+    
+    # Special handling for o-series models
+    if model.startswith("o") and model.endswith("-mini"):
+        # Convert max_tokens to max_completion_tokens for o-series models
+        if "max_tokens" in payload:
+            payload["max_completion_tokens"] = payload["max_tokens"]
+            del payload["max_tokens"]
+        
+        # Remove temperature if not 1 for o-series models
+        if "temperature" in payload and payload["temperature"] != 1:
+            log.debug(f"Removing temperature parameter for o-series model {model} as only default value (1) is supported")
+            del payload["temperature"]
+    
+    # Filter out unsupported parameters
+    filtered_payload = {k: v for k, v in payload.items() if k in allowed_params}
+    
+    # Log dropped parameters for debugging
+    if len(payload) != len(filtered_payload):
+        dropped_params = set(payload.keys()) - set(filtered_payload.keys())
+        log.debug(f"Dropped params for Azure OpenAI: {', '.join(dropped_params)}")
 
     # Prepare headers
     headers = {"api-key": api_key, "Content-Type": "application/json"}
 
-    return formatted_url, payload, headers
+    return formatted_url, filtered_payload, headers
