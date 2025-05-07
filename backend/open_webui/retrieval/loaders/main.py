@@ -85,10 +85,12 @@ known_source_ext = [
 
 
 class TikaLoader:
-    def __init__(self, url, file_path, mime_type=None):
+    def __init__(self, url, file_path, mime_type=None, extract_images=None):
         self.url = url
         self.file_path = file_path
         self.mime_type = mime_type
+
+        self.extract_images = extract_images
 
     def load(self) -> list[Document]:
         with open(self.file_path, "rb") as f:
@@ -99,7 +101,7 @@ class TikaLoader:
         else:
             headers = {}
 
-        if self.kwargs.get("PDF_EXTRACT_IMAGES") == True:
+        if self.extract_images == True:
             headers["X-Tika-PDFextractInlineImages"] = "true"
 
         endpoint = self.url
@@ -213,6 +215,7 @@ class Loader:
                     url=self.kwargs.get("TIKA_SERVER_URL"),
                     file_path=file_path,
                     mime_type=file_content_type,
+                    extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
                 )
         elif self.engine == "docling" and self.kwargs.get("DOCLING_SERVER_URL"):
             if self._is_text_file(file_ext, file_content_type):
