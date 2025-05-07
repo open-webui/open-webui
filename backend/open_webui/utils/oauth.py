@@ -158,7 +158,13 @@ class OAuthManager:
             nested_claims = oauth_claim.split(".")
             for nested_claim in nested_claims:
                 claim_data = claim_data.get(nested_claim, {})
-            user_oauth_groups = claim_data if isinstance(claim_data, list) else []
+
+            if isinstance(claim_data, list):
+                user_oauth_groups = claim_data
+            elif isinstance(claim_data, str):
+                user_oauth_groups = [claim_data]
+            else:
+                user_oauth_groups = []
 
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
         all_available_groups: list[GroupModel] = Groups.get_groups()
@@ -169,7 +175,7 @@ class OAuthManager:
             all_group_names = {g.name for g in all_available_groups}
             groups_created = False
             # Determine creator ID: Prefer admin, fallback to current user if no admin exists
-            admin_user = Users.get_admin_user()
+            admin_user = Users.get_super_admin_user()
             creator_id = admin_user.id if admin_user else user.id
             log.debug(f"Using creator ID {creator_id} for potential group creation.")
 

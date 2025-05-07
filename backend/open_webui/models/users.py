@@ -391,5 +391,13 @@ class UsersTable:
             users = db.query(User).filter(User.id.in_(user_ids)).all()
             return [user.id for user in users]
 
+    def get_super_admin_user(self) -> Optional[UserModel]:
+        with get_db() as db:
+            user = db.query(User).filter_by(role="admin").first()
+            if user:
+                return UserModel.model_validate(user)
+            else:
+                return None
+
 
 Users = UsersTable()

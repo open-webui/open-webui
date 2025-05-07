@@ -15,7 +15,7 @@ from open_webui.env import SRC_LOG_LEVELS
 
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control import has_access, has_permission
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -124,8 +124,10 @@ async def get_note_by_id(request: Request, id: str, user=Depends(get_verified_us
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if user.role != "admin" and not has_access(
-        user.id, type="read", access_control=note.access_control
+    if (
+        user.role != "admin"
+        and user.id != note.user_id
+        and not has_access(user.id, type="read", access_control=note.access_control)
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -157,8 +159,10 @@ async def update_note_by_id(
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if user.role != "admin" and not has_access(
-        user.id, type="write", access_control=note.access_control
+    if (
+        user.role != "admin"
+        and user.id != note.user_id
+        and not has_access(user.id, type="write", access_control=note.access_control)
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
@@ -195,8 +199,10 @@ async def delete_note_by_id(request: Request, id: str, user=Depends(get_verified
             status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND
         )
 
-    if user.role != "admin" and not has_access(
-        user.id, type="write", access_control=note.access_control
+    if (
+        user.role != "admin"
+        and user.id != note.user_id
+        and not has_access(user.id, type="write", access_control=note.access_control)
     ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
