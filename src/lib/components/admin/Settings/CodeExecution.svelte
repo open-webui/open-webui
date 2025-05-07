@@ -46,6 +46,16 @@
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="mb-2.5">
+						<div class=" flex w-full justify-between">
+							<div class=" self-center text-xs font-medium">
+								{$i18n.t('Enable Code Execution')}
+							</div>
+
+							<Switch bind:state={config.ENABLE_CODE_EXECUTION} />
+						</div>
+					</div>
+
+					<div class="mb-2.5">
 						<div class="flex w-full justify-between">
 							<div class=" self-center text-xs font-medium">{$i18n.t('Code Execution Engine')}</div>
 							<div class="flex items-center relative">

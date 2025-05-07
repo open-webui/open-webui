@@ -1,7 +1,7 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
 
-	import { getBackendConfig, getVersionUpdates, getWebhookUrl, updateWebhookUrl } from '$lib/apis';
+	import { getVersionUpdates, getWebhookUrl, updateWebhookUrl } from '$lib/apis';
 	import {
 		getAdminConfig,
 		getLdapConfig,
@@ -554,7 +554,6 @@
 													</div>
 													<input
 														class="w-full bg-transparent outline-hidden py-0.5"
-														required
 														placeholder={$i18n.t('Enter certificate path')}
 														bind:value={LDAP_SERVER.certificate_path}
 													/>
@@ -604,10 +603,26 @@
 
 					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
 						<div class=" self-center text-xs font-medium">
+							{$i18n.t('Notes')} ({$i18n.t('Beta')})
+						</div>
+
+						<Switch bind:state={adminConfig.ENABLE_NOTES} />
+					</div>
+
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">
 							{$i18n.t('Channels')} ({$i18n.t('Beta')})
 						</div>
 
 						<Switch bind:state={adminConfig.ENABLE_CHANNELS} />
+					</div>
+
+					<div class="mb-2.5 flex w-full items-center justify-between pr-2">
+						<div class=" self-center text-xs font-medium">
+							{$i18n.t('User Webhooks')}
+						</div>
+
+						<Switch bind:state={adminConfig.ENABLE_USER_WEBHOOKS} />
 					</div>
 
 					<div class="mb-2.5 w-full justify-between">

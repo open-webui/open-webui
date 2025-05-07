@@ -54,6 +54,7 @@ from open_webui.config import (
 from open_webui.env import (
     ENV,
     SRC_LOG_LEVELS,
+    AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST,
     BYPASS_MODEL_ACCESS_CONTROL,
@@ -91,6 +92,7 @@ async def send_get_request(url, key=None, user: UserModel = None):
                         else {}
                     ),
                 },
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as response:
                 return await response.json()
     except Exception as e:
@@ -141,6 +143,7 @@ async def send_post_request(
                     else {}
                 ),
             },
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
         )
         r.raise_for_status()
 
@@ -216,7 +219,8 @@ async def verify_connection(
     key = form_data.key
 
     async with aiohttp.ClientSession(
-        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+        trust_env=True,
+        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
     ) as session:
         try:
             async with session.get(
@@ -234,6 +238,7 @@ async def verify_connection(
                         else {}
                     ),
                 },
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 if r.status != 200:
                     detail = f"HTTP Error: {r.status}"
@@ -295,7 +300,7 @@ async def update_config(
     }
 
 
-@cached(ttl=3)
+@cached(ttl=1)
 async def get_all_models(request: Request, user: UserModel = None):
     log.info("get_all_models()")
     if request.app.state.config.ENABLE_OLLAMA_API:
@@ -336,6 +341,7 @@ async def get_all_models(request: Request, user: UserModel = None):
                 )
 
                 prefix_id = api_config.get("prefix_id", None)
+                tags = api_config.get("tags", [])
                 model_ids = api_config.get("model_ids", [])
 
                 if len(model_ids) != 0 and "models" in response:
@@ -349,6 +355,10 @@ async def get_all_models(request: Request, user: UserModel = None):
                 if prefix_id:
                     for model in response.get("models", []):
                         model["model"] = f"{prefix_id}.{model['model']}"
+
+                if tags:
+                    for model in response.get("models", []):
+                        model["tags"] = tags
 
         def merge_models_lists(model_lists):
             merged_models = {}
@@ -460,18 +470,27 @@ async def get_ollama_versions(request: Request, url_idx: Optional[int] = None):
     if request.app.state.config.ENABLE_OLLAMA_API:
         if url_idx is None:
             # returns lowest version
-            request_tasks = [
-                send_get_request(
-                    f"{url}/api/version",
+            request_tasks = []
+
+            for idx, url in enumerate(request.app.state.config.OLLAMA_BASE_URLS):
+                api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+                    str(idx),
                     request.app.state.config.OLLAMA_API_CONFIGS.get(
-                        str(idx),
-                        request.app.state.config.OLLAMA_API_CONFIGS.get(
-                            url, {}
-                        ),  # Legacy support
-                    ).get("key", None),
+                        url, {}
+                    ),  # Legacy support
                 )
-                for idx, url in enumerate(request.app.state.config.OLLAMA_BASE_URLS)
-            ]
+
+                enable = api_config.get("enable", True)
+                key = api_config.get("key", None)
+
+                if enable:
+                    request_tasks.append(
+                        send_get_request(
+                            f"{url}/api/version",
+                            key,
+                        )
+                    )
+
             responses = await asyncio.gather(*request_tasks)
             responses = list(filter(lambda x: x is not None, responses))
 
@@ -864,7 +883,15 @@ async def embed(
             )
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
+    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+        str(url_idx),
+        request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
+    )
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
+
+    prefix_id = api_config.get("prefix_id", None)
+    if prefix_id:
+        form_data.model = form_data.model.replace(f"{prefix_id}.", "")
 
     try:
         r = requests.request(
@@ -943,7 +970,15 @@ async def embeddings(
             )
 
     url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
+    api_config = request.app.state.config.OLLAMA_API_CONFIGS.get(
+        str(url_idx),
+        request.app.state.config.OLLAMA_API_CONFIGS.get(url, {}),  # Legacy support
+    )
     key = get_api_key(url_idx, url, request.app.state.config.OLLAMA_API_CONFIGS)
+
+    prefix_id = api_config.get("prefix_id", None)
+    if prefix_id:
+        form_data.model = form_data.model.replace(f"{prefix_id}.", "")
 
     try:
         r = requests.request(
@@ -992,7 +1027,7 @@ class GenerateCompletionForm(BaseModel):
     prompt: str
     suffix: Optional[str] = None
     images: Optional[list[str]] = None
-    format: Optional[str] = None
+    format: Optional[Union[dict, str]] = None
     options: Optional[dict] = None
     system: Optional[str] = None
     template: Optional[str] = None
@@ -1164,7 +1199,7 @@ async def generate_chat_completion(
     prefix_id = api_config.get("prefix_id", None)
     if prefix_id:
         payload["model"] = payload["model"].replace(f"{prefix_id}.", "")
-
+    # payload["keep_alive"] = -1 # keep alive forever
     return await send_post_request(
         url=f"{url}/api/chat",
         payload=json.dumps(payload),
@@ -1183,7 +1218,7 @@ class OpenAIChatMessageContent(BaseModel):
 
 class OpenAIChatMessage(BaseModel):
     role: str
-    content: Union[str, list[OpenAIChatMessageContent]]
+    content: Union[Optional[str], list[OpenAIChatMessageContent]]
 
     model_config = ConfigDict(extra="allow")
 
@@ -1468,7 +1503,9 @@ async def download_file_stream(
     timeout = aiohttp.ClientTimeout(total=600)  # Set the timeout
 
     async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-        async with session.get(file_url, headers=headers) as response:
+        async with session.get(
+            file_url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL
+        ) as response:
             total_size = int(response.headers.get("content-length", 0)) + current_size
 
             with open(file_path, "ab+") as file:
@@ -1483,7 +1520,8 @@ async def download_file_stream(
 
                 if done:
                     file.seek(0)
-                    hashed = calculate_sha256(file)
+                    chunk_size = 1024 * 1024 * 2
+                    hashed = calculate_sha256(file, chunk_size)
                     file.seek(0)
 
                     url = f"{ollama_url}/api/blobs/sha256:{hashed}"
