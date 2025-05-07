@@ -440,8 +440,10 @@
 			}
 		}
 
-		loading = false;
-		await tick();
+		if (!chatIdProp) {
+			loading = false;
+			await tick();
+		}
 
 		showControls.subscribe(async (value) => {
 			if (controlPane && !$mobile) {
