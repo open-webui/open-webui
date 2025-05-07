@@ -18,6 +18,7 @@
 	import KnowledgeList from './KnowledgeList.svelte';
 	import EditKnowledge from './EditKnowledge.svelte';
 	import CreateKnowledge from './CreateKnowledge.svelte';
+	import DialogHeader from '$lib/IONOS/components/common/DialogHeader.svelte';
 
 	const i18n = getContext<Readable<I18Next>>('i18n');
 
@@ -88,19 +89,26 @@
 </svelte:head>
 
 <Dialog
-	title={$i18n.t("Knowledge Management", { ns: 'ionos' })}
 	dialogId="knowledge-manager"
-	on:close={() => { showKnowlegeManager(false); }}
 	show={$knowledgeManager}
+	class="max-w-[800px] min-h-[300px]"
 >
-	{#if loaded}
-		<div class="flex py-4 border-b min-w-[500px]">
+	<DialogHeader
+		slot="header"
+		title={$i18n.t("Knowledge Management", { ns: 'ionos' })}
+		on:close={() => { showKnowlegeManager(false); }}
+		dialogId="knowledge-manager"
+		class="p-[30px]"
+	/>
+
+	<div slot="content" class="p-[30px]">
+		<div class="flex pb-5 border-b min-w-[500px]" class:hidden={!loaded}>
 			<div class="flex grow">
 				<div class="self-center ml-1 mr-3">
 					<Search className="size-5" />
 				</div>
 				<input
-					class="w-full text-sm py-1 rounded-r-xl outline-none bg-transparent"
+					class="w-full text-sm py-1 rounded-r-xl outline-none bg-transparent placeholder:text-blue-800"
 					bind:value={query}
 					placeholder={$i18n.t('Search Knowledge', { ns: 'ionos' })}
 				/>
@@ -114,22 +122,21 @@
 				</Button>
 			</div>
 		</div>
-
-		<div class="overflow-y-scroll h-[320px]">
+		<div class="overflow-y-scroll h-[320px]" class:hidden={!loaded}>
 			<KnowledgeList
 				items={filteredItems}
 				on:select={select}
 			/>
 		</div>
-
-		<div class=" text-gray-500 text-xs py-4 border-t">
+		<div class=" text-gray-500 text-xs py-4 border-t" class:hidden={!loaded}>
 			ⓘ {$i18n.t("Use '#' in the prompt input to load and include your knowledge.", { ns: 'ionos' })}
 		</div>
-	{:else}
-		<div class="w-full h-full flex justify-center items-center">
-			<Spinner />
+		<div class="w-full h-full flex justify-center items-center  min-w-[500px]" class:hidden={!!loaded}>
+			<Spinner size="20"/>
 		</div>
-	{/if}
+	</div>
+
+
 </Dialog>
 
 {#if knowledgeBeingEdited}

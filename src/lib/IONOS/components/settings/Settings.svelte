@@ -4,6 +4,7 @@
 	import { getContext } from 'svelte';
 	import Dialog from '$lib/IONOS/components/common/Dialog.svelte';
  	import FilledUserAvatar from '$lib/IONOS/components/icons/FilledUserAvatar.svelte';
+	import DialogHeader from '$lib/IONOS/components/common/DialogHeader.svelte';
  	import Gear from '$lib/IONOS/components/icons/Gear.svelte';
 	import General from './General.svelte';
 	import Account from './Account.svelte';
@@ -17,13 +18,19 @@
 </script>
 
 <Dialog
-	title={$i18n.t("Settings", { ns: 'ionos' })}
 	dialogId="settings"
-	on:close={() => { showSettings.set(false); }}
 	show={show}
+	class="p-0 min-h-[400px] min-w-[750px] max-w-[750px]"
 >
+	<DialogHeader
+		slot="header"
+		title={$i18n.t("Settings", { ns: 'ionos' })}
+		on:close={() => { showSettings.set(false); }}
+		dialogId="settings"
+		class="p-[30px]"
+	/>
 
-	<div class="flex flex-row gap-4 py-5 px-2 min-h-[350px] min-w-[700px] max-w-[700px] text-blue-800">
+	<div slot="content" class="flex flex-row gap-[30px] p-5 text-blue-800">
 		<nav class="w-48 flex-shrink-0">
 			<ul class="flex flex-col">
 				<li class="mb-3">
@@ -45,7 +52,7 @@
 			</ul>
 		</nav>
 
-		<div class="flex-grow">
+		<div class="flex-grow pr-2.5">
 			{#if section === 'general'}
 				<General />
 			{:else if section === 'account'}

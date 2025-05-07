@@ -12,13 +12,14 @@
 	import { remove, removeFile } from '$lib/IONOS/services/knowledge';
 	import { files, init as initFiles, upload } from './uploader';
 	import { getFiles } from './dataTransferItemConverter';
-	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Spinner from '$lib/IONOS/components/icons/Spinner.svelte';
 	import Dialog from '$lib/IONOS/components/common/Dialog.svelte';
 	import Confirm from '$lib/IONOS/components/common/Confirm.svelte';
 	import Filepicker from '$lib/IONOS/components/common/Filepicker.svelte';
 	import DropUploadZone from './DropUploadZone.svelte';
 	import KnowledgeFileList from './KnowledgeFileList.svelte';
 	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte';
+	import DialogHeader from '$lib/IONOS/components/common/DialogHeader.svelte';
 
 	const i18n = getContext<Readable<I18Next>>('i18n');
 	const dispatch = createEventDispatcher();
@@ -96,13 +97,20 @@
 </svelte:head>
 
 <Dialog
-	title={knowledge.name}
 	dialogId="knowledge-editor"
-	on:close={() => { dispatch('close'); }}
 	show={true}
+	class="p-0"
 >
-	<div class="flex flex-col min-w-[500px] min-h-[200px] relative">
-		<div class="flex justify-end items-end py-4 border-b cursor-default" class:grow={$files.length === 0}>
+	<DialogHeader
+		slot="header"
+		title={knowledge.name}
+		on:close={() => { dispatch('close'); }}
+		dialogId="knowledge-editor"
+		class="p-[30px]"
+	/>
+
+	<div slot="content" class="flex flex-col min-w-[500px] min-h-[200px] relative p-5 text-blue-800">
+		<div class="flex justify-end items-end pb-5 border-gray-200 border-b cursor-default" class:grow={$files.length === 0}>
 			<Button
 				on:click={() => { confirmKnowledgeDeletion = true; }}
 				type={ButtonType.caution}
@@ -114,7 +122,7 @@
 		<DropUploadZone
 			onDrop={onDrop}
 		>
-			<div class="flex flex-col justify-center py-5 border-b cursor-default" class:grow={$files.length === 0}>
+			<div class="flex flex-col justify-center py-5 border-b border-gray-200 cursor-default" class:grow={$files.length === 0}>
 				<p class="block text-center">
 					{$i18n.t('Drop your files here, or', { ns: 'ionos' })}
 					<Filepicker on:selected={onFilesSelected}>

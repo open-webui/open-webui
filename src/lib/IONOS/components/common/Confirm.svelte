@@ -4,6 +4,7 @@
 	import { getContext } from 'svelte';
 	import Dialog from '$lib/IONOS/components/common/Dialog.svelte';
 	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte';
+	import DialogHeader from '$lib/IONOS/components/common/DialogHeader.svelte';
 
 	const i18n = getContext<Readable<I18Next>>('i18n');
 
@@ -17,17 +18,22 @@
 </script>
 
 <Dialog
-	closable={false}
-	{title}
 	dialogId="confirmation-dialog"
 	{show}
 >
-	<div class="flex flex-col min-w-[400px] max-w-[400px]">
-		<div class="">
+	<DialogHeader
+			slot="header"
+			{title}
+			closable={false}
+			dialogId="confirmation-dialog"
+			class="mb-2.5"
+		/>
+	<div slot="content" class="flex flex-col min-w-[calc(400px-60px)] max-w-[calc(550px-60px)] text-blue-800">
+		<div class="mb-2.5" >
 			{message}
 		</div>
 
-		<div class="flex flex-row justify-end pt-8 pb-2">
+		<div class="flex flex-row justify-end mt-2.5">
 			<Button
 				on:click={cancelHandler}
 				type={ButtonType.tertiary}

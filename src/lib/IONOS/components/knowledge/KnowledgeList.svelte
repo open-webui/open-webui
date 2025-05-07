@@ -11,7 +11,7 @@
 {#each items as { id, name, description }}
 	<div
 		data-id={id}
-		class="flex flex-row border-b last:border-none items-center"
+		class="flex flex-row border-b last:border-none items-center px-2.5"
 	>
 		<div class="grow shrink w-[0] py-3 cursor-default">
 			<span class="block text-nowrap overflow-hidden text-ellipsis">{name}</span>

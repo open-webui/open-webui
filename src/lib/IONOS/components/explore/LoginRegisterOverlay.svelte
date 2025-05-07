@@ -14,14 +14,13 @@
 </script>
 
 <Dialog
-	hasHeader={false}
 	dialogId="register-login"
 	{show}
 >
-	<content class="block p-7 flex flex-col gap-5">
-		<h1 class="text-3xl">
-			{$i18n.t('Your AI Experts Are Ready', { ns: 'ionos' })}
-		</h1>
+	<h1 class="text-3xl p-2.5" slot="header">
+		{$i18n.t('Your AI Experts Are Ready', { ns: 'ionos' })}
+	</h1>
+	<content slot="content" class="p-2.5 block flex flex-col gap-5">
 
 		<ul>
 			<li class="flex items-center my-4">

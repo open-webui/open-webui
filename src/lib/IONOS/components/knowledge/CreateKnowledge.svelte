@@ -7,6 +7,7 @@
 	import Dialog from '$lib/IONOS/components/common/Dialog.svelte';
 	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte'
 	import { create as createKnowledge } from '$lib/IONOS/services/knowledge';
+	import DialogHeader from '$lib/IONOS/components/common/DialogHeader.svelte';
 
 	const i18n = getContext<Readable<I18Next>>('i18n');
 	const dispatch = createEventDispatcher();
@@ -40,17 +41,24 @@
 </svelte:head>
 
 <Dialog
-	title={$i18n.t("Create a knowledge base", { ns: 'ionos' })}
 	dialogId="knowledge-create"
-	on:close={() => { dispatch('close'); }}
 	show={show}
+	class="p-0"
 >
+	<DialogHeader
+			slot="header"
+			title={$i18n.t("Create a knowledge base", { ns: 'ionos' })}
+			on:close={() => { dispatch('close'); }}
+			dialogId="knowledge-create"
+			class="p-[30px]"
+		/>
 	<form
 		on:submit|preventDefault={create}
-		class="flex flex-col gap-4 min-w-[500px]"
+		class="flex flex-col gap-4 min-w-[500px] p-5"
+		slot="content"
 	>
-		<div class="flex flex-col justify-center cursor-default">
-			<h2 class="my-4">
+		<div class="flex flex-col justify-center cursor-default gap-5">
+			<h2 class="font-semibold text-sm text-blue-800 px-2.5">
 				{$i18n.t('What are you working on?', { ns: 'ionos' })}
 			</h2>
 
@@ -63,8 +71,8 @@
 			/>
 		</div>
 
-		<div class="flex flex-col justify-center cursor-default gap-2">
-			<h2 class="my-4">
+		<div class="flex flex-col justify-center cursor-default gap-5">
+			<h2 class="font-semibold text-sm text-blue-800 px-2.5">
 				{$i18n.t('What are you trying to achieve?', { ns: 'ionos' })}
 			</h2>
 
