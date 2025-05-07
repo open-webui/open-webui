@@ -11,8 +11,8 @@
 	let knowledgeCutoff = null;
 
 	$: {
-		if (modelsInfo?.[hoveredItem?.id]?.knowledge_cutoff) {
-			const date = new Date(modelsInfo?.[hoveredItem?.id]?.knowledge_cutoff);
+		if (modelsInfo?.[hoveredItem?.name]?.knowledge_cutoff) {
+			const date = new Date(modelsInfo?.[hoveredItem?.name]?.knowledge_cutoff);
 
 			const formatted = date.toLocaleString('default', {
 				year: 'numeric',
@@ -21,7 +21,7 @@
 			knowledgeCutoff = formatted;
 		}
 	}
-    let tooltipEl;
+let tooltipEl;
 let triggerEl;
 let placeAbove = false;
 
@@ -57,25 +57,25 @@ bind:this={tooltipEl}
 class={`invisible group-hover:visible absolute px-3 py-1 left-full ml-2 w-52 p-2 rounded-xl border border-customGray-700 bg-white dark:bg-customGray-900 text-sm text-gray-800 dark:text-white z-50
 	${placeAbove ? 'bottom-full mb-2' : 'top-0'}`}
 >
-	{#if modelsInfo?.[hoveredItem?.id]?.organization}
+	{#if modelsInfo?.[hoveredItem?.name]?.organization}
 		<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
 			<p class="text-xs dark:text-white">
-				{modelsInfo?.[hoveredItem?.id]?.organization}
+				{modelsInfo?.[hoveredItem?.name]?.organization}
 			</p>
 			<p class="text-2xs dark:text-white/50">{$i18n.t('Organization')}</p>
 		</div>
 	{/if}
-	{#if modelsInfo?.[hoveredItem?.id]?.hosted_in}
+	{#if modelsInfo?.[hoveredItem?.name]?.hosted_in}
 		<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
-			<p class="text-xs dark:text-white">{modelsInfo?.[hoveredItem?.id]?.hosted_in}</p>
+			<p class="text-xs dark:text-white">{modelsInfo?.[hoveredItem?.name]?.hosted_in}</p>
 			<p class="text-2xs dark:text-white/50">{$i18n.t('Hosted In')}</p>
 		</div>
 	{/if}
 
 	<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
 		<p class="text-xs dark:text-white">
-			{#if modelsInfo?.[hoveredItem?.id]?.context_window}
-				{modelsInfo?.[hoveredItem?.id]?.context_window}
+			{#if modelsInfo?.[hoveredItem?.name]?.context_window}
+				{modelsInfo?.[hoveredItem?.name]?.context_window}
 			{:else}
 				N/A
 			{/if}
@@ -94,30 +94,30 @@ class={`invisible group-hover:visible absolute px-3 py-1 left-full ml-2 w-52 p-2
 		<p class="text-2xs dark:text-white/50">{$i18n.t('Knowledge Cutoff')}</p>
 	</div>
 
-	<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
-		{#if modelsInfo?.[hoveredItem?.id]?.intelligence_score}
-			<StarRating rating={modelsInfo?.[hoveredItem?.id]?.intelligence_score} />
+	<div class="py-1.5 text-xs border-b dark:border-customGray-700 last:border-b-0">
+		{#if modelsInfo?.[hoveredItem?.name]?.intelligence_score}
+			<StarRating rating={modelsInfo?.[hoveredItem?.name]?.intelligence_score} />
 		{:else}
 			N/A
 		{/if}
 		<p class="text-2xs dark:text-white/50">{$i18n.t('Intelligence Score')}</p>
 	</div>
 
-	<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
-		{#if modelsInfo?.[hoveredItem?.id]?.speed}
-			<SpeedRating rating={modelsInfo?.[hoveredItem?.id]?.speed} />
+	<div class="py-1.5 text-xs border-b dark:border-customGray-700 last:border-b-0">
+		{#if modelsInfo?.[hoveredItem?.name]?.speed}
+			<SpeedRating rating={modelsInfo?.[hoveredItem?.name]?.speed} />
 		{:else}
 			N/A
 		{/if}
 		<p class="text-2xs dark:text-white/50">{$i18n.t('Speed')}</p>
 	</div>
 
-	{#if modelsInfo?.[hoveredItem?.id]?.multimodal}
+	{#if modelsInfo?.[hoveredItem?.name]?.multimodal}
 		<div class="py-2.5 border-b dark:border-customGray-700 last:border-b-0">
 			<p class="text-xs dark:text-white">{$i18n.t('Multimodal')}</p>
 		</div>
 	{/if}
-	{#if modelsInfo?.[hoveredItem?.id]?.reasoning}
+	{#if modelsInfo?.[hoveredItem?.name]?.reasoning}
 		<div class="py-2.5 border-b dark:border-customGray-700 last:border-b-0">
 			<p class="text-xs dark:text-white">{$i18n.t('Reasoning')}</p>
 		</div>
