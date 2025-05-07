@@ -1036,7 +1036,7 @@ def process_text(
     log.debug(f"text_content: {text_content}")
 
     parsers = get_parsers_by_type(request, PARSER_TYPE.TEXT, None)
-    results = [p.save_docs_to_vector_db(request, docs, collection_name, user=user) for p in parsers]
+    results = [p.store(request, docs, collection_name, user=user) for p in parsers]
 
     if all(results):
         return {
@@ -1454,24 +1454,8 @@ async def process_web_search(
                 "loaded_count": len(docs),
             }
         else:
-#<<<<<<< HEAD
-            # TODO: ENABLE
             parsers = get_parsers_by_type(request, PARSER_TYPE.WEB_SEARCH, form_data.query)
-            #for parser in parsers:
 
-#                # TODO: this was originally async here, does it need to be again?
-#                result_dict = parser.parse(
-#                    request,
-#                    docs=docs,
-#                    user=user,
-#                )
-#
-#                parser.store(request,
-#                             collection_name,
-#                             result_dict['texts'],
-#                             result_dict['embeddings'],
-#                             result_dict['metadatas'])
-#=======
             collection_names = []
             for doc_idx, doc in enumerate(docs):
                 if doc and doc.page_content:
@@ -1481,14 +1465,6 @@ async def process_web_search(
                         ]
 
                         collection_names.append(collection_name)
-                        #await run_in_threadpool(
-                        #    save_docs_to_vector_db,
-                        #    request,
-                        #    [doc],
-                        #    collection_name,
-                        #    overwrite=True,
-                        #    user=user,
-                        #)
                         for parser in parsers:
                             result_dict = parser.parse(
                                 request,
@@ -1505,7 +1481,6 @@ async def process_web_search(
 
                     except Exception as e:
                         log.debug(f"error saving doc {doc_idx}: {e}")
-#>>>>>>> upstream/main
 
             return {
                 "status": True,

@@ -165,8 +165,6 @@ async def create_new_knowledge(
 ############################
 # ReindexKnowledgeFiles
 ############################
-
-
 @router.post("/reindex", response_model=bool)
 async def reindex_knowledge_files(request: Request, user=Depends(get_verified_user)):
     if user.role != "admin":
@@ -180,6 +178,8 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
     log.info(f"Starting reindexing for {len(knowledge_bases)} knowledge bases")
 
     deleted_knowledge_bases = []
+
+    parsers = get_all_parsers(request)
 
     for knowledge_base in knowledge_bases:
         # -- Robust error handling for missing or invalid data
@@ -199,6 +199,10 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
         try:
             file_ids = knowledge_base.data.get("file_ids", [])
             files = Files.get_files_by_ids(file_ids)
+
+            for parser in parsers:
+                parser.delete_collection(knowledge_base.id)
+
             try:
                 if VECTOR_DB_CLIENT.has_collection(collection_name=knowledge_base.id):
                     VECTOR_DB_CLIENT.delete_collection(
@@ -529,34 +533,12 @@ def remove_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-#<<<<<<< HEAD
     file_collection = f"file-{form_data.file_id}"
     parsers = get_all_parsers(request)
     for parser in parsers:
         parser.delete_doc(knowledge.id, form_data.file_id)
         # note that this is only deleting the file-specific collection
         parser.delete_collection(file_collection)
-#=======
-    # Remove content from the vector database
-#    try:
-#        VECTOR_DB_CLIENT.delete(
-#            collection_name=knowledge.id, filter={"file_id": form_data.file_id}
-#        )
-#    except Exception as e:
-#        log.debug("This was most likely caused by bypassing embedding processing")
-#        log.debug(e)
-#        pass
-
-    try:
-        # Remove the file's collection from vector database
-        file_collection = f"file-{form_data.file_id}"
-        if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-            VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
-    except Exception as e:
-        log.debug("This was most likely caused by bypassing embedding processing")
-        log.debug(e)
-        pass
-#>>>>>>> upstream/main
 
     # Delete file from database
     Files.delete_file_by_id(form_data.file_id)
