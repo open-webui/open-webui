@@ -89,7 +89,7 @@
 					}
 				}
 			} else if (type === 'typing' && event.message_id === threadId) {
-				if (event.user.id === $user.id) {
+				if (event.user.id === $user?.id) {
 					return;
 				}
 

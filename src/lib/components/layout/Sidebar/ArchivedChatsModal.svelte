@@ -134,7 +134,7 @@
 							<div class="relative overflow-x-auto">
 								<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
 									<thead
-										class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 dark:border-gray-850"
+										class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 border-gray-50 dark:border-gray-850"
 									>
 										<tr>
 											<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
@@ -150,7 +150,7 @@
 													.includes(searchValue.toLowerCase())) as chat, idx}
 											<tr
 												class="bg-transparent {idx !== chats.length - 1 &&
-													'border-b'} dark:bg-gray-900 dark:border-gray-850 text-xs"
+													'border-b'} dark:bg-gray-900 border-gray-50 dark:border-gray-850 text-xs"
 											>
 												<td class="px-3 py-1 w-2/3">
 													<a href="/c/{chat.id}" target="_blank">

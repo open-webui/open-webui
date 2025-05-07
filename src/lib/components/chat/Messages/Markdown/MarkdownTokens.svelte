@@ -1,6 +1,6 @@
 <script lang="ts">
 	import DOMPurify from 'dompurify';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import fileSaver from 'file-saver';
@@ -14,12 +14,14 @@
 	import CodeBlock from '$lib/components/chat/Messages/CodeBlock.svelte';
 	import MarkdownInlineTokens from '$lib/components/chat/Messages/Markdown/MarkdownInlineTokens.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
+	import AlertRenderer, { alertComponent } from './AlertRenderer.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArrowDownTray from '$lib/components/icons/ArrowDownTray.svelte';
-	import Source from './Source.svelte';
 
-	const dispatch = createEventDispatcher();
+	import Source from './Source.svelte';
+	import { settings } from '$lib/stores';
+	import HtmlToken from './HTMLToken.svelte';
 
 	export let id: string;
 	export let tokens: Token[];
@@ -27,6 +29,9 @@
 	export let attributes = {};
 
 	export let save = false;
+
+	export let onUpdate: Function = () => {};
+	export let onCode: Function = () => {};
 
 	export let onTaskClick: Function = () => {};
 	export let onSourceClick: Function = () => {};
@@ -84,16 +89,15 @@
 		{#if token.raw.includes('```')}
 			<CodeBlock
 				id={`${id}-${tokenIdx}`}
+				collapsed={$settings?.collapseCodeBlocks ?? false}
 				{token}
 				lang={token?.lang ?? ''}
 				code={token?.text ?? ''}
 				{attributes}
 				{save}
-				onCode={(value) => {
-					dispatch('code', value);
-				}}
+				{onCode}
 				onSave={(value) => {
-					dispatch('update', {
+					onUpdate({
 						raw: token.raw,
 						oldContent: token.text,
 						newContent: value
@@ -119,7 +123,7 @@
 									class="px-3! py-1.5! cursor-pointer border border-gray-100 dark:border-gray-850"
 									style={token.align[headerIdx] ? '' : `text-align: ${token.align[headerIdx]}`}
 								>
-									<div class="flex flex-col gap-1.5 text-left">
+									<div class="gap-1.5 text-left">
 										<div class="shrink-0 break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-header-${headerIdx}`}
@@ -140,7 +144,7 @@
 										class="px-3! py-1.5! text-gray-900 dark:text-white w-max border border-gray-100 dark:border-gray-850"
 										style={token.align[cellIdx] ? '' : `text-align: ${token.align[cellIdx]}`}
 									>
-										<div class="flex flex-col break-normal">
+										<div class="break-normal">
 											<MarkdownInlineTokens
 												id={`${id}-${tokenIdx}-row-${rowIdx}-${cellIdx}`}
 												tokens={cell.tokens}
@@ -170,14 +174,19 @@
 			</div>
 		</div>
 	{:else if token.type === 'blockquote'}
-		<blockquote dir="auto">
-			<svelte:self id={`${id}-${tokenIdx}`} tokens={token.tokens} {onTaskClick} {onSourceClick} />
-		</blockquote>
+		{@const alert = alertComponent(token)}
+		{#if alert}
+			<AlertRenderer {token} {alert} />
+		{:else}
+			<blockquote dir="auto">
+				<svelte:self id={`${id}-${tokenIdx}`} tokens={token.tokens} {onTaskClick} {onSourceClick} />
+			</blockquote>
+		{/if}
 	{:else if token.type === 'list'}
 		{#if token.ordered}
-			<ol start={token.start || 1}>
+			<ol start={token.start || 1} dir="auto">
 				{#each token.items as item, itemIdx}
-					<li dir="auto" class="text-start">
+					<li class="text-start">
 						{#if item?.task}
 							<input
 								class=" translate-y-[1px] -translate-x-1"
@@ -207,9 +216,9 @@
 				{/each}
 			</ol>
 		{:else}
-			<ul>
+			<ul dir="auto">
 				{#each token.items as item, itemIdx}
-					<li dir="auto" class="text-start">
+					<li class="text-start">
 						{#if item?.task}
 							<input
 								class=" translate-y-[1px] -translate-x-1"
@@ -242,6 +251,7 @@
 	{:else if token.type === 'details'}
 		<Collapsible
 			title={token.summary}
+			open={$settings?.expandDetails ?? false}
 			attributes={token?.attributes}
 			className="w-full space-y-1"
 			dir="auto"
@@ -257,16 +267,7 @@
 			</div>
 		</Collapsible>
 	{:else if token.type === 'html'}
-		{@const html = DOMPurify.sanitize(token.text)}
-		{#if html && html.includes('<video')}
-			{@html html}
-		{:else if token.text.includes(`<iframe src="${WEBUI_BASE_URL}/api/v1/files/`)}
-			{@html `${token.text}`}
-		{:else if token.text.includes(`<source_id`)}
-			<Source {id} {token} onClick={onSourceClick} />
-		{:else}
-			{token.text}
-		{/if}
+		<HtmlToken {id} {token} {onSourceClick} />
 	{:else if token.type === 'iframe'}
 		<iframe
 			src="{WEBUI_BASE_URL}/api/v1/files/{token.fileId}/content"
@@ -285,7 +286,7 @@
 		</p>
 	{:else if token.type === 'text'}
 		{#if top}
-			<p dir="auto">
+			<p>
 				{#if token.tokens}
 					<MarkdownInlineTokens id={`${id}-${tokenIdx}-t`} tokens={token.tokens} {onSourceClick} />
 				{:else}

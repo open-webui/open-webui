@@ -4,7 +4,12 @@ import json
 import logging
 from typing import Optional
 
-from open_webui.retrieval.vector.main import VectorItem, SearchResult, GetResult
+from open_webui.retrieval.vector.main import (
+    VectorDBBase,
+    VectorItem,
+    SearchResult,
+    GetResult,
+)
 from open_webui.config import (
     MILVUS_URI,
     MILVUS_DB,
@@ -16,7 +21,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-class MilvusClient:
+class MilvusClient(VectorDBBase):
     def __init__(self):
         self.collection_prefix = "open_webui"
         if MILVUS_TOKEN is None:
@@ -64,7 +69,10 @@ class MilvusClient:
 
             for item in match:
                 _ids.append(item.get("id"))
-                _distances.append(item.get("distance"))
+                # normalize milvus score from [-1, 1] to [0, 1] range
+                # https://milvus.io/docs/de/metric.md
+                _dist = (item.get("distance") + 1.0) / 2.0
+                _distances.append(_dist)
                 _documents.append(item.get("entity", {}).get("data", {}).get("text"))
                 _metadatas.append(item.get("entity", {}).get("metadata"))
 

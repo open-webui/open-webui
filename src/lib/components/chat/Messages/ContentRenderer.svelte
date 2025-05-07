@@ -4,7 +4,7 @@
 	const dispatch = createEventDispatcher();
 
 	import Markdown from './Markdown.svelte';
-	import { chatId, mobile, showArtifacts, showControls, showOverview } from '$lib/stores';
+	import { chatId, mobile, settings, showArtifacts, showControls, showOverview } from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList } from '$lib/utils';
 
@@ -84,7 +84,12 @@
 		}
 
 		if (floatingButtonsElement) {
-			floatingButtonsElement.closeHandler();
+			// check if closeHandler is defined
+
+			if (typeof floatingButtonsElement?.closeHandler === 'function') {
+				// call the closeHandler function
+				floatingButtonsElement?.closeHandler();
+			}
 		}
 	};
 
@@ -149,13 +154,14 @@
 		}, [])}
 		{onSourceClick}
 		{onTaskClick}
-		on:update={(e) => {
-			dispatch('update', e.detail);
+		onUpdate={(value) => {
+			dispatch('update', value);
 		}}
-		on:code={(e) => {
-			const { lang, code } = e.detail;
+		onCode={(value) => {
+			const { lang, code } = value;
 
 			if (
+				($settings?.detectArtifacts ?? true) &&
 				(['html', 'svg'].includes(lang) || (lang === 'xml' && code.includes('svg'))) &&
 				!$mobile &&
 				$chatId

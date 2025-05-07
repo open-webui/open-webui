@@ -9,9 +9,9 @@
 - [ ] **Changelog:** Ensure a changelog entry following the format of [Keep a Changelog](https://keepachangelog.com/) is added at the bottom of the PR description.
 - [ ] **Documentation:** Have you updated relevant documentation [Open WebUI Docs](https://github.com/open-webui/docs), or other documentation sources?
 - [ ] **Dependencies:** Are there any new dependencies? Have you updated the dependency versions in the documentation?
-- [ ] **Testing:** Have you written and run sufficient tests for validating the changes?
+- [ ] **Testing:** Have you written and run sufficient tests to validate the changes?
 - [ ] **Code review:** Have you performed a self-review of your code, addressing any coding standard issues and ensuring adherence to the project's coding standards?
-- [ ] **Prefix:** To cleary categorize this pull request, prefix the pull request title, using one of the following:
+- [ ] **Prefix:** To clearly categorize this pull request, prefix the pull request title using one of the following:
   - **BREAKING CHANGE**: Significant changes that may affect compatibility
   - **build**: Changes that affect the build system or external dependencies
   - **ci**: Changes to our continuous integration processes or workflows
@@ -22,7 +22,7 @@
   - **i18n**: Internationalization or localization changes
   - **perf**: Performance improvement
   - **refactor**: Code restructuring for better maintainability, readability, or scalability
-  - **style**: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc.)
+  - **style**: Changes that do not affect the meaning of the code (white space, formatting, missing semi-colons, etc.)
   - **test**: Adding missing tests or correcting existing tests
   - **WIP**: Work in progress, a temporary label for incomplete or ongoing work
 
@@ -70,3 +70,7 @@
 ### Screenshots or Videos
 
 - [Attach any relevant screenshots or videos demonstrating the changes]
+
+### Contributor License Agreement
+
+By submitting this pull request, I confirm that I have read and fully agree to the [Contributor License Agreement (CLA)](/CONTRIBUTOR_LICENSE_AGREEMENT), and I am providing my contributions under its terms.
