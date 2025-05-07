@@ -387,11 +387,6 @@ def get_embedding_function(
     key,
     embedding_batch_size,
 ):
-    print("INFO *************************")
-    print(embedding_engine)
-    print(embedding_model)
-    print(embedding_function)
-
     if embedding_engine == "":
         return lambda query, prefix=None, user=None: embedding_function.encode(
             query, **({"prompt": prefix} if prefix else {})

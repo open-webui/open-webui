@@ -333,7 +333,7 @@ class ContentForm(BaseModel):
 
 @router.post("/{id}/data/content/update")
 async def update_file_data_content_by_id(
-        request: Request, id: str, form_data: ContentForm, user=Depends(get_verified_user)
+    request: Request, id: str, form_data: ContentForm, user=Depends(get_verified_user)
 ):
     file = Files.get_file_by_id(id)
 
