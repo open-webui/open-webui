@@ -1574,8 +1574,10 @@ async def process_web_search(
             f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.query}"
         )
         # Handle both single query string and list of queries
-        queries = form_data.query if isinstance(form_data.query, list) else [form_data.query]
-        
+        queries = (
+            form_data.query if isinstance(form_data.query, list) else [form_data.query]
+        )
+
         # Gather all web search results concurrently
         search_tasks = [
             run_in_threadpool(
@@ -1587,7 +1589,7 @@ async def process_web_search(
             for query in queries
         ]
         all_web_results = await asyncio.gather(*search_tasks)
-        
+
         # Flatten results and remove duplicates based on link
         seen_links = set()
         unique_results = []
@@ -1596,7 +1598,7 @@ async def process_web_search(
                 if result.link not in seen_links:
                     seen_links.add(result.link)
                     unique_results.append(result)
-        
+
     except Exception as e:
         log.exception(e)
         raise HTTPException(
@@ -1635,8 +1637,10 @@ async def process_web_search(
             }
         else:
             # Create a single collection for all documents
-            collection_name = f"web-search-{calculate_sha256_string('-'.join(queries))}"[:63]
-            
+            collection_name = (
+                f"web-search-{calculate_sha256_string('-'.join(queries))}"[:63]
+            )
+
             try:
                 await run_in_threadpool(
                     save_docs_to_vector_db,
