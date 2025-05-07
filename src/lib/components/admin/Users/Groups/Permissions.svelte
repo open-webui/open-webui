@@ -40,6 +40,7 @@
 			code_interpreter: true,
 			notes: true,
 			self_group_management: false
+
 		}
 	};
 
@@ -398,5 +399,6 @@
 
 			<Switch bind:state={permissions.features.self_group_management} />
 		</div>
+
 	</div>
 </div>

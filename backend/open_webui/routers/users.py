@@ -134,6 +134,7 @@ class FeaturesPermissions(BaseModel):
     self_group_management: bool = False
 
 
+
 class UserPermissions(BaseModel):
     workspace: WorkspacePermissions
     sharing: SharingPermissions

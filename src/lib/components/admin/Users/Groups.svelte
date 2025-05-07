@@ -84,7 +84,7 @@
 			code_interpreter: true,
 			notes: true,
 			self_group_management: false
-		}
+
 	};
 
 	let showCreateGroupModal = false;
