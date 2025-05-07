@@ -95,11 +95,12 @@
 						>
 							<ArrowRightCircle className="size-6" />
 						</button>
-						<div id="get-started" class="mt-1.5 font-primary text-base font-medium">{$i18n.t(`Get started`)}</div>
+						<div id="get-started" class="mt-1.5 font-primary text-base font-medium">
+							{$i18n.t(`Get started`)}
+						</div>
 					</div>
 				</div>
 			</div>
-
 		</div>
 	</div>
 {/if}
