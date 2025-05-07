@@ -224,7 +224,6 @@
 	};
 
 	const inputFilesHandler = async (inputFiles) => {
-
 		console.log('Input files handler called with:', inputFiles);
 		inputFiles.forEach((file) => {
 			console.log('Processing file:', {

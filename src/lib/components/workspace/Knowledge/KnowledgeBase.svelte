@@ -158,8 +158,8 @@
 		knowledge.files = [...(knowledge.files ?? []), fileItem];
 
 		try {
-		    // marking not to process the files being uploaded here as they will be process when added to knowledge
-		    // don't want to process twice
+			// marking not to process the files being uploaded here as they will be process when added to knowledge
+			// don't want to process twice
 			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
 				toast.error(`${e}`);
 				return null;
