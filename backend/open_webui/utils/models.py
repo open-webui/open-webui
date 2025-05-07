@@ -224,14 +224,14 @@ def check_model_access(user, model):
             .get("meta", {})
             .get("access_control", {}),
         ):
-            raise Exception("Model not found")
+            raise Exception("Model not found in check model access (arena)")
     else:
         model_info = Models.get_model_by_id(model.get("id"))
         if not model_info:
-            raise Exception("Model not found")
+            raise Exception("Model not found in check model access")
         elif not (
-            has_access(
+            user.id == model_info.user_id or has_access(
                 user.id, type="read", access_control=model_info.access_control
             )
         ):
-            raise Exception("Model not found")
+            raise Exception("No access to model")

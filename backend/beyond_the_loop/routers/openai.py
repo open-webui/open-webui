@@ -575,17 +575,15 @@ async def generate_chat_completion(
     # Initialize the credit cost variable
     model_message_credit_cost = 0
 
-    print("HGALLLOOOOO", model_info)
-
     if model_info.base_model_id:
         model_name = Models.get_model_by_id(model_info.base_model_id).name
     else:
         model_name = model_info.name
 
+    payload["model"] = model_name
+
     if has_chat_id or magic_prompt:
         model_message_credit_cost = ModelMessageCreditCosts.get_cost_by_model(model_name)
-
-        print("model message credit cost", model_message_credit_cost, model_name)
 
         # Get current credit balance
         current_balance = Companies.get_credit_balance(user.company_id)
@@ -623,38 +621,31 @@ async def generate_chat_completion(
         # Subtract credits from balance
         Companies.subtract_credit_balance(user.company_id, model_message_credit_cost)
 
-    # Check model info and override the payload
-    if model_info:
-        if model_info.base_model_id:
-            payload["model"] = model_info.base_model_id
-            model_name = model_info.base_model_id
-        else:
-            payload["model"] = model_info.name
+    params = model_info.params.model_dump()
+    payload = apply_model_params_to_body_openai(params, payload)
+    payload = apply_model_system_prompt_to_body(params, payload, metadata, user)
 
-        params = model_info.params.model_dump()
-        payload = apply_model_params_to_body_openai(params, payload)
-        payload = apply_model_system_prompt_to_body(params, payload, metadata, user)
-
-        # Check if user has access to the model
-        if not bypass_filter and user.role == "user":
-            if not (
-                has_access(
-                    user.id, type="read", access_control=model_info.access_control
-                )
-            ):
-                raise HTTPException(
-                    status_code=403,
-                    detail="Model not found, no access for user",
-                )
-    elif not bypass_filter:
-        if user.role != "admin":
+    # Check if user has access to the model
+    if not bypass_filter:
+        if not (
+            user.id == model_info.user_id or has_access(
+                user.id, type="read", access_control=model_info.access_control
+            )
+        ):
             raise HTTPException(
                 status_code=403,
-                detail="Model not found, user is no admin",
+                detail="Model not found, no access for user",
             )
+
+    elif not bypass_filter:
+        raise HTTPException(
+            status_code=403,
+            detail="Model not found, user is no admin",
+        )
 
     await get_all_models(request)
     model = request.app.state.OPENAI_MODELS.get(model_name)
+
     if model:
         idx = model["urlIdx"]
     else:
