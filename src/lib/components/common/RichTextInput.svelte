@@ -43,6 +43,7 @@
 
 	export let json = false;
 	export let raw = false;
+	export let editable = true;
 
 	export let preserveBreaks = false;
 	export let generateAutoCompletion: Function = async () => null;
@@ -57,6 +58,16 @@
 	const options = {
 		throwOnError: false
 	};
+
+	$: if (editor) {
+		editor.setOptions({
+			editable: editable
+		});
+	}
+
+	$: if (value === null && html !== null && editor) {
+		editor.commands.setContent(html);
+	}
 
 	// Function to find the next template in the document
 	function findNextTemplate(doc, from = 0) {
@@ -164,6 +175,10 @@
 
 				// Usage example
 				content = await tryParse(value);
+			}
+		} else {
+			if (html && !content) {
+				content = html;
 			}
 		}
 
@@ -374,7 +389,7 @@
 		}
 	});
 
-	$: if (value && editor) {
+	$: if (value !== null && editor) {
 		onValueChange();
 	}
 

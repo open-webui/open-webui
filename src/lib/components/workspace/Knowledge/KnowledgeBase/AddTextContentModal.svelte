@@ -9,7 +9,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import Mic from '$lib/components/icons/Mic.svelte';
+	import MicSolid from '$lib/components/icons/MicSolid.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import VoiceRecording from '$lib/components/chat/MessageInput/VoiceRecording.svelte';
 	export let show = false;
@@ -125,7 +125,7 @@
 									}
 								}}
 							>
-								<Mic className="size-5" />
+								<MicSolid className="size-5" />
 							</button>
 						</Tooltip>
 					{/if}

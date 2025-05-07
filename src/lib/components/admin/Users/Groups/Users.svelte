@@ -102,7 +102,13 @@
 										alt="user"
 									/>
 
-									<div class=" font-medium self-center">{user.name}</div>
+									<table>
+										<tr>
+											<td style="width: 80px;"><span>{user.name}</span></td>
+											<td><span class="text-gray-600">{user.email}</span></td>
+										</tr>
+									</table>
+
 								</div>
 							</Tooltip>
 

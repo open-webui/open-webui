@@ -291,7 +291,9 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
         param_description = function_param_descriptions.get(name, None)
 
         if param_description:
-            field_defs[name] = type_hint, Field(default_value, description=param_description)
+            field_defs[name] = type_hint, Field(
+                default_value, description=param_description
+            )
         else:
             field_defs[name] = type_hint, default_value
 

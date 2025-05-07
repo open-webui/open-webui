@@ -6,10 +6,16 @@
 
 	import { transcribeAudio } from '$lib/apis/audio';
 
+	import dayjs from 'dayjs';
+	import LocalizedFormat from 'dayjs/plugin/localizedFormat';
+	dayjs.extend(LocalizedFormat);
+
 	const i18n = getContext('i18n');
 
 	export let recording = false;
 	export let transcribe = true;
+	export let displayMedia = false;
+
 	export let className = ' p-2.5 w-full max-w-full';
 
 	export let onCancel = () => {};
@@ -132,11 +138,11 @@
 		detectSound();
 	};
 
-	const onStopHandler = async (audioBlob) => {
+	const onStopHandler = async (audioBlob, ext: string = 'wav') => {
 		// Create a blob from the audio chunks
 
 		await tick();
-		const file = blobToFile(audioBlob, 'recording.wav');
+		const file = blobToFile(audioBlob, `Recording-${dayjs().format('L LT')}.${ext}`);
 
 		if (transcribe) {
 			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
@@ -161,29 +167,44 @@
 		}
 	};
 
-	const saveRecording = (blob) => {
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		document.body.appendChild(a);
-		a.style = 'display: none';
-		a.href = url;
-		a.download = 'recording.wav';
-		a.click();
-		window.URL.revokeObjectURL(url);
-	};
-
 	const startRecording = async () => {
 		loading = true;
 
-		stream = await navigator.mediaDevices.getUserMedia({
-			audio: {
-				echoCancellation: true,
-				noiseSuppression: true,
-				autoGainControl: true
+		try {
+			if (displayMedia) {
+				const mediaStream = await navigator.mediaDevices.getDisplayMedia({
+					audio: true
+				});
+
+				stream = new MediaStream();
+				for (const track of mediaStream.getAudioTracks()) {
+					stream.addTrack(track);
+				}
+
+				for (const track of mediaStream.getVideoTracks()) {
+					track.stop();
+				}
+			} else {
+				stream = await navigator.mediaDevices.getUserMedia({
+					audio: {
+						echoCancellation: true,
+						noiseSuppression: true,
+						autoGainControl: true
+					}
+				});
 			}
+		} catch (err) {
+			console.error('Error accessing media devices.', err);
+			toast.error($i18n.t('Error accessing media devices.'));
+			loading = false;
+			recording = false;
+			return;
+		}
+
+		mediaRecorder = new MediaRecorder(stream, {
+			mimeType: 'audio/webm; codecs=opus'
 		});
 
-		mediaRecorder = new MediaRecorder(stream);
 		mediaRecorder.onstart = () => {
 			console.log('Recording started');
 			loading = false;
@@ -197,8 +218,19 @@
 			console.log('Recording stopped');
 
 			if (confirmed) {
-				const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-				await onStopHandler(audioBlob);
+				// Use the actual type provided by MediaRecorder
+				let type = audioChunks[0]?.type || mediaRecorder.mimeType || 'audio/webm';
+
+				// split `/` and `;` to get the extension
+				let ext = type.split('/')[1].split(';')[0] || 'webm';
+
+				// If not audio, default to audio/webm
+				if (!type.startsWith('audio/')) {
+					ext = 'webm';
+				}
+
+				const audioBlob = new Blob(audioChunks, { type: type });
+				await onStopHandler(audioBlob, ext);
 
 				confirmed = false;
 				loading = false;
@@ -207,7 +239,16 @@
 			audioChunks = [];
 			recording = false;
 		};
-		mediaRecorder.start();
+
+		try {
+			mediaRecorder.start();
+		} catch (error) {
+			console.error('Error starting recording:', error);
+			toast.error($i18n.t('Error starting recording.'));
+			loading = false;
+			recording = false;
+			return;
+		}
 
 		if (transcribe) {
 			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {

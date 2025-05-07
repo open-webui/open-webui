@@ -39,6 +39,8 @@ def get_permissions(
         permissions: Dict[str, Any], group_permissions: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Combine permissions from multiple groups by taking the most permissive value."""
+        if group_permissions is None:
+            group_permissions = {}
         for key, value in group_permissions.items():
             if isinstance(value, dict):
                 if key not in permissions:
