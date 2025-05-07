@@ -48,6 +48,8 @@
 		workspaceModels = await getBaseModels(localStorage.token);
 		baseModels = await getModels(localStorage.token, true);
 
+		console.log("ONITIT MODELS", workspaceModels, baseModels);
+
 		models = baseModels.map((m) => {
 			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
 
@@ -72,13 +74,18 @@
 	const defaultInit = async () => {
 		config = await getModelsConfig(localStorage.token);
 
+		const modelOrderList = config.MODEL_ORDER_LIST || [];
+		const allModelIds = $storeModels.map((model) => model.id);
+
+		console.log("STORED MODELS", $storeModels);
+
 		if (config?.DEFAULT_MODELS) {
-			defaultModelIds = (config?.DEFAULT_MODELS).split(',').filter((id) => id);
+			defaultModelIds = (config?.DEFAULT_MODELS ?? '').split(',').filter(Boolean).map((id) => $storeModels.find((m) => m.id === id)?.name ?? '');
 		} else {
 			defaultModelIds = [];
 		}
-		const modelOrderList = config.MODEL_ORDER_LIST || [];
-		const allModelIds = $storeModels.map((model) => model.id);
+
+		console.log("HALLOO", modelOrderList, allModelIds);
 
 		// Create a Set for quick lookup of ordered IDs
 		const orderedSet = new Set(modelOrderList);
@@ -122,8 +129,6 @@
 
 	const updateModel = async (modelId, accessControl) => {
 		const selectedModel = models.find((model) => model.id === modelId);
-		console.log(selectedModel);
-		console.log(modelId, accessControl);
 		let info = {};
 		info.id = selectedModel.id;
 		info.name = selectedModel.name;
@@ -252,24 +257,27 @@
 				<div class="mb-5">
 					<div class="text-sm dark:text-customGray-100 mb-2.5">{organization}</div>
 					{#each models?.filter((m) => organizations[organization]
-							.map((item) => item.toLowerCase())
-							.includes(m.id.toLowerCase())) as model (model.id)}
+							.map((item) => {
+								console.log(item, m);
+								return item.toLowerCase()
+							})
+							.includes(m.name.toLowerCase())) as model (model.name)}
 						<div class="grid grid-cols-[60%_1fr_1fr] border-t last:border-b border-customGray-700">
 							<div class="border-l border-r border-customGray-700 py-2 px-2">
 								<div class="flex items-center mb-1">
-									<img class="w-4 h-4 rounded-full" src={getModelIcon(model.id)} alt={model.id} />
+									<img class="w-4 h-4 rounded-full" src={getModelIcon(model.name)} alt={model.name} />
 									<div class="text-xs dark:text-white ml-2">{model.name}</div>
 									
 										<AdditionaModelInfo hoveredItem={model} />
 									
 								</div>
 								<div class="text-xs dark:text-customGray-590">
-									{modelsInfo[model.id].description}
+									{modelsInfo[model.name].description}
 								</div>
 							</div>
 							<div class="border-r border-customGray-700 flex justify-center items-center">
 								<div class="text-xs dark:text-white">
-									{modelsInfo[model.id]?.creditsPerMessage}x
+									{modelsInfo[model.name]?.creditsPerMessage}x
 								</div>
 							</div>
 							<div class="border-r border-customGray-700 flex justify-center items-center">

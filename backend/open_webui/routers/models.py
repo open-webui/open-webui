@@ -151,8 +151,11 @@ async def update_model_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
+    print("ACCCCCESSED MODEL", model)
+
     if (
-        model.user_id != user.id
+        (not model.base_model_id and user.role != "admin")
+        and model.user_id != user.id
         and not has_access(user.id, "write", model.access_control)
     ):
         raise HTTPException(
