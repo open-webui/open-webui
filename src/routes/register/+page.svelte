@@ -18,6 +18,7 @@
 	import HidePassIcon from '$lib/components/icons/HidePassIcon.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import InfoIcon from '$lib/components/icons/InfoIcon.svelte';
+	import { generateInitialsImage } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 
@@ -71,7 +72,7 @@
 			return;
 		}
 		loading = true;
-		const sessionUser = await completeInvite(firstName, lastName, password, inviteToken, profileImageUrl).catch(
+		const sessionUser = await completeInvite(firstName, lastName, password, inviteToken, profileImageUrl ? profileImageUrl : generateInitialsImage(firstName)).catch(
 			(error) => {
 				toast.error(`${error}`);
 				loading = false;

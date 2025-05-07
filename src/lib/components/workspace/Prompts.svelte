@@ -400,7 +400,7 @@
 								<div class="text-xs line-clamp-1 dark:text-customGray-100/50 text-left">
 									{prompt.description}
 								</div>
-								{#if !prompt.prebuilt}
+								<!-- {#if !prompt.prebuilt}
 									<div class=" text-xs px-0.5 dark:text-customGray-100">
 										<Tooltip
 											content={prompt?.user?.email ?? $i18n.t('Deleted User')}
@@ -418,7 +418,7 @@
 											</div>
 										</Tooltip>
 									</div>
-								{/if}
+								{/if} -->
 							</button>
 						</div>
 					</div>

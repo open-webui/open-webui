@@ -46,6 +46,7 @@
 	import GroupIcon from '../icons/GroupIcon.svelte';
 	import PublicIcon from '../icons/PublicIcon.svelte';
 	import PrivateIcon from '../icons/PrivateIcon.svelte';
+	import dayjs from 'dayjs';
 
 	let shiftKey = false;
 
@@ -560,7 +561,7 @@
 								</Tooltip>
 							</div>
 							<div class="text-xs dark:text-customGray-100">
-								{formatter.format(new Date(model.created_at * 1000))}
+								{dayjs(model.updated_at * 1000).fromNow()}
 							</div>
 
 							<!-- <div class="flex flex-row gap-0.5 items-center">
