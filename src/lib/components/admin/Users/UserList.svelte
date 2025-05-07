@@ -55,15 +55,20 @@
 	let showEditUserModal = false;
 	let showUpdateRoleModal = false;
 
-	const onUpdateRole = (user) => {
-		if (user.role === 'user') {
-			updateRoleHandler(user.id, 'admin');
-		} else if (user.role === 'pending') {
-			updateRoleHandler(user.id, 'user');
-		} else {
-			updateRoleHandler(user.id, 'pending');
-		}
+	const getNextRole = (currentRole) => {
+		// Find the current role index
+		const currentRoleIndex = roles.findIndex((r) => r.name === selectedUser.role);
+		// Get the next role index (loop back to 0 if at end)
+		const nextRoleIndex = (currentRoleIndex + 1) % roles.length;
+
+		return roles[nextRoleIndex];
 	};
+
+	const onUpdateRole = (user) => {
+		const role = getNextRole(user.role);
+		updateRoleHandler(user.id, role.name);
+	};
+
 	const updateRoleHandler = async (id, role) => {
 		const res = await updateUserRole(localStorage.token, id, role).catch((error) => {
 			toast.error(`${error}`);
@@ -142,20 +147,18 @@
 	}}
 />
 
-<RoleUpdateConfirmDialog
-	bind:show={showUpdateRoleModal}
-	on:confirm={() => {
-		onUpdateRole(selectedUser);
-	}}
-	message={$i18n.t(`Are you sure you want to update this user\'s role to **{{ROLE}}**?`, {
-		ROLE:
-			selectedUser?.role === 'user'
-				? 'admin'
-				: selectedUser?.role === 'pending'
-					? 'user'
-					: 'pending'
-	})}
-/>
+
+{#key selectedUser}
+	<RoleUpdateConfirmDialog
+		bind:show={showUpdateRoleModal}
+		on:confirm={() => {
+			onUpdateRole(selectedUser);
+		}}
+		message={$i18n.t(`Are you sure you want to update this user\'s role to **{{ROLE}}**?`, {
+			ROLE: selectedUser?.role ? getNextRole(selectedUser.role).name : ''
+		})}
+	/>
+{/key}
 
 {#key selectedUser}
 	<EditUserModal
