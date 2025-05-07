@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Knowledge } from '$lib/apis/knowledge/types';
 	import { createEventDispatcher } from 'svelte';
-	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import ChevronRight from '$lib/IONOS/components/icons/ChevronRight.svelte';
 
 	export let items: Knowledge[] = [];
 
@@ -19,7 +19,7 @@
 		</div>
 		<div class="w-5 h-5 ml-5">
 			<button on:click={() => dispatch('select', id)}>
-				<ChevronRight className="w-5 h-5" />
+				<ChevronRight />
 			</button>
 		</div>
 	</div>

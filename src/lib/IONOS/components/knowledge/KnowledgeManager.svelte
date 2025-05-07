@@ -11,8 +11,8 @@
 	import { getKnowledgeBaseList } from '$lib/apis/knowledge';
 	import { WEBUI_NAME } from '$lib/stores';
 	import { knowledgeManager, showKnowlegeManager } from '$lib/IONOS/stores/dialogs';
-	import Spinner from '$lib/components/common/Spinner.svelte';
-	import Search from '$lib/components/icons/Search.svelte';
+	import Spinner from '$lib/IONOS/components/icons/Spinner.svelte';
+	import MagnifyingGlass from '$lib/IONOS/components/icons/MagnifyingGlass.svelte';
 	import Dialog from '$lib/IONOS/components/common/Dialog.svelte';
 	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte';
 	import KnowledgeList from './KnowledgeList.svelte';
@@ -105,7 +105,7 @@
 		<div class="flex pb-5 border-b min-w-[500px]" class:hidden={!loaded}>
 			<div class="flex grow">
 				<div class="self-center ml-1 mr-3">
-					<Search className="size-5" />
+					<MagnifyingGlass />
 				</div>
 				<input
 					class="w-full text-sm py-1 rounded-r-xl outline-none bg-transparent placeholder:text-blue-800"

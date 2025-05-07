@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { KnowledgeFile } from '$lib/apis/knowledge/types';
 	import { createEventDispatcher } from 'svelte';
-	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
+	import GarbageBin from '$lib/IONOS/components/icons/GarbageBin.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -15,7 +15,7 @@
 		</div>
 		<div class="grow-0 w-5 h-5 ml-5">
 			<button on:click={() => dispatch('delete', id)}>
-				<GarbageBin className="w-5 h-5" />
+				<GarbageBin />
 			</button>
 		</div>
 	</div>
