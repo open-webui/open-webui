@@ -842,8 +842,10 @@ async def generate_chat_completion(
         payload = json.dumps(payload_dict)
         request_url = formatted_url
     else:
-        # Standard OpenAI API
+        # Standard OpenAI API - use original payload without Azure modifications
         request_url = f"{url}/chat/completions"
+        # Convert the payload to JSON string directly without Azure-specific filtering
+        payload = json.dumps(payload)
         headers = {
             "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
