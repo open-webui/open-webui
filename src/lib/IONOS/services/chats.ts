@@ -31,6 +31,11 @@ export const exportAll = async (): Promise<void> => {
 };
 
 export async function hasChats(): Promise<boolean> {
-	const chats = await getChatList(localStorage.token, 1);
-	return chats.length > 0;
+	try {
+		const chats = await getChatList(localStorage.token, 1);
+		return chats.length > 0;
+	} catch (e) {
+		console.error(e);
+		return false;
+	}
 };
