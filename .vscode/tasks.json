@@ -28,20 +28,6 @@
             "problemMatcher": []
         },
 		{
-			"label": "Run RAUX Prebuild",
-			"type": "shell",
-			"command": "bash",
-			"args": [
-				"${workspaceFolder}/installer/raux_prebuild",
-				"${input:rauxPrebuildSwitch}"
-			],
-			"presentation": {
-				"reveal": "always",
-				"panel": "new"
-			},
-			"problemMatcher": []
-		},
-		{
 			"label": "Clean RAUX Environment: AppData",
 			"type": "shell",
 			"command": "cmd",
@@ -139,17 +125,6 @@
 			"type": "command",
 			"command": "workbench.action.tasks.terminate",
 			"args": "start-frontend"
-		},
-		{
-			"id": "rauxPrebuildSwitch",
-			"type": "pickString",
-			"description": "Select RAUX Prebuild switch (no value needed)",
-			"options": [
-				"--solution-version",
-				"--build",
-				"--package"
-			],
-			"default": "--solution-version"
 		}
 	]
 }
