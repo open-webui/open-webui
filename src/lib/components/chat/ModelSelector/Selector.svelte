@@ -268,7 +268,7 @@
 			id="model-selector-{id}-button"
 		>
 			<div
-				class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
+				class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between dark:text-customGray-100 placeholder-gray-400 focus:outline-none"
 			>
 				{#if selectedModel}
 					<img
@@ -280,12 +280,12 @@
 				{:else}
 					{placeholder}
 				{/if}
-				<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
+				<ChevronDown className=" self-center ml-2 size-2" strokeWidth="2" />
 			</div>
 		</DropdownMenu.Trigger>
 	{:else}
 		<div
-			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
+			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between placeholder-gray-400 focus:outline-none"
 		>
 			{#if selectedModel}
 				<img
@@ -307,7 +307,7 @@
 			: `${className}`} w-[180px] justify-start rounded-xl border dark:border-customGray-700 bg-white dark:bg-customGray-900 dark:text-white shadow-lg  outline-none"
 		transition={flyAndScale}
 		side={$mobile ? 'bottom' : 'bottom-start'}
-		sideOffset={3}
+		sideOffset={5}
 	>
 		<slot>
 			{#if searchEnabled}
@@ -347,7 +347,7 @@
 				{#each filteredItems as item, index}
 					<button
 						aria-label="model-item"
-						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-[5px] px-2 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-customGray-950 rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
+						class="flex w-full text-left line-clamp-1 select-none items-center rounded-button py-[5px] px-2 text-sm text-gray-700 dark:text-customGray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-customGray-950 dark:hover:text-white rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
 						selectedModelIdx
 							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
 							: ''}"
@@ -516,7 +516,7 @@
 					>
 						{#if modelsInfo?.[hoveredItem?.label]?.organization}
 							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
-								<p class="text-xs dark:text-white">
+								<p class="text-xs dark:text-customGray-100">
 									{modelsInfo?.[hoveredItem?.label]?.organization}
 								</p>
 								<p class="text-2xs dark:text-white/50">{$i18n.t('Organization')}</p>
@@ -524,13 +524,13 @@
 						{/if}
 						{#if modelsInfo?.[hoveredItem?.label]?.hosted_in}
 							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
-								<p class="text-xs dark:text-white">{modelsInfo?.[hoveredItem?.label]?.hosted_in}</p>
+								<p class="text-xs dark:text-customGray-100">{modelsInfo?.[hoveredItem?.label]?.hosted_in}</p>
 								<p class="text-2xs dark:text-white/50">{$i18n.t('Hosted In')}</p>
 							</div>
 						{/if}
 
 						<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
-							<p class="text-xs dark:text-white">
+							<p class="text-xs dark:text-customGray-100">
 								{#if modelsInfo?.[hoveredItem?.label]?.context_window}
 									{modelsInfo?.[hoveredItem?.label]?.context_window}
 								{:else}
@@ -541,7 +541,7 @@
 						</div>
 
 						<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
-							<p class="text-xs dark:text-white">
+							<p class="text-xs dark:text-customGray-100">
 								{#if knowledgeCutoff}
 									{knowledgeCutoff}
 								{:else}
@@ -551,7 +551,7 @@
 							<p class="text-2xs dark:text-white/50">{$i18n.t('Knowledge Cutoff')}</p>
 						</div>
 
-						<div class="py-1.5 text-xs border-b dark:border-customGray-700 last:border-b-0">
+						<div class="py-1.5 text-xs dark:text-customGray-100 border-b dark:border-customGray-700 last:border-b-0">
 							{#if modelsInfo?.[hoveredItem?.label]?.intelligence_score}
 								<StarRating rating={modelsInfo?.[hoveredItem?.label]?.intelligence_score} />
 							{:else}
@@ -560,7 +560,7 @@
 							<p class="text-2xs dark:text-white/50">{$i18n.t('Intelligence Score')}</p>
 						</div>
 
-						<div class="py-1.5 text-xs border-b dark:border-customGray-700 last:border-b-0">
+						<div class="py-1.5 text-xs dark:text-customGray-100 border-b dark:border-customGray-700 last:border-b-0">
 							{#if modelsInfo?.[hoveredItem?.label]?.speed}
 								<SpeedRating rating={modelsInfo?.[hoveredItem?.label]?.speed} />
 							{:else}
@@ -571,12 +571,12 @@
 
 						{#if modelsInfo?.[hoveredItem?.label]?.multimodal}
 							<div class="py-2.5 border-b dark:border-customGray-700 last:border-b-0">
-								<p class="text-xs dark:text-white">{$i18n.t('Multimodal')}</p>
+								<p class="text-xs dark:text-customGray-100">{$i18n.t('Multimodal')}</p>
 							</div>
 						{/if}
 						{#if modelsInfo?.[hoveredItem?.label]?.reasoning}
 							<div class="py-2.5 border-b dark:border-customGray-700 last:border-b-0">
-								<p class="text-xs dark:text-white">{$i18n.t('Reasoning')}</p>
+								<p class="text-xs dark:text-customGray-100">{$i18n.t('Reasoning')}</p>
 							</div>
 						{/if}
 					</div>
@@ -590,7 +590,7 @@
 						placement="top-start"
 					>
 						<button
-							class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
+							class="flex w-full line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
 							on:click={() => {
 								pullModelHandler();
 							}}

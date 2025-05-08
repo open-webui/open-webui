@@ -166,7 +166,7 @@
 	}
 	let hoveredPrompt = null;
 	let menuIdOpened = null;
-	$: console.log(hoveredPrompt, menuIdOpened)
+	
 </script>
 
 <svelte:head>
@@ -308,7 +308,7 @@
 			<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
 				{#each filteredItems as prompt}
 					<div
-						on:mouseenter={() => hoveredPrompt = prompt.content}
+						on:mouseenter={() => hoveredPrompt = prompt.command}
 						on:mouseleave={() => hoveredPrompt = null}
 						class=" group flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 dark:bg-customGray-800 rounded-2xl transition"
 					>
@@ -317,20 +317,20 @@
 								<div class="flex items-center gap-1 flex-wrap">
 									{#if prompt.access_control == null && prompt.prebuilt}
 										<div
-											class="flex gap-1 items-center {(hoveredPrompt === prompt.content || menuIdOpened === prompt.content) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<span>{$i18n.t('Prebuilt')}</span>
 										</div>
 									{:else if prompt.access_control == null}
 										<div
-											class="flex gap-1 items-center {(hoveredPrompt === prompt.content || menuIdOpened === prompt.content) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<PublicIcon />
 											<span>{$i18n.t('Public')}</span>
 										</div>
 									{:else if getGroupNamesFromAccess(prompt).length < 1}
 										<div
-											class="flex gap-1 items-center {(hoveredPrompt === prompt.content || menuIdOpened === prompt.content) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<PrivateIcon />
 											<span>{$i18n.t('Private')}</span>
@@ -338,7 +338,7 @@
 									{:else}
 										{#each getGroupNamesFromAccess(prompt) as groupName}
 											<div
-												class="flex gap-1 items-center {(hoveredPrompt === prompt.content || menuIdOpened === prompt.content) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+												class="flex gap-1 items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 											>
 												<GroupIcon />
 												<span>{groupName}</span>
@@ -348,7 +348,7 @@
 									{#if prompt.meta && Array.isArray(prompt.meta.tags)}
 										{#each prompt?.meta?.tags as promptTag}
 											<div
-												class="flex items-center {(hoveredPrompt === prompt.content || menuIdOpened === prompt.content) ? 'dark:text-white' : 'dark:text-customGray-100'} text-xs dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
+												class="flex items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-100'} text-xs dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
 											>
 												{promptTag.name}
 											</div>
@@ -357,7 +357,7 @@
 								</div>
 							</div>
 							{#if !prompt.prebuilt && (prompt.user_id === $user?.id || $user?.role === 'admin')}
-								<div class="{(hoveredPrompt === prompt.content || menuIdOpened === prompt.content) ? 'visible' : 'invisible'}">
+								<div class="{(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'visible' : 'invisible'}">
 									<PromptMenu
 										{prompt}
 										shareHandler={() => {
@@ -375,7 +375,7 @@
 										}}
 										onClose={() => {}}
 										on:openMenu={() => {
-											menuIdOpened = prompt.content
+											menuIdOpened = prompt.command
 										}}
 										on:closeMenu={() => {
 											menuIdOpened = null
@@ -399,7 +399,7 @@
 							  }} 
 							>
 								<div class=" flex-1 flex items-center gap-2 self-center">
-									<div class="text-base line-clamp-1 capitalize {(hoveredPrompt === prompt.content || menuIdOpened === prompt.content) ? 'dark:text-white' : 'dark:text-customGray-100'}">
+									<div class="text-base line-clamp-1 capitalize {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-100'}">
 										{prompt.title}
 									</div>
 									<!-- <div

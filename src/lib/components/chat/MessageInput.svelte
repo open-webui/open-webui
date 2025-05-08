@@ -790,7 +790,7 @@
 								<div class="px-2.5 min-h-[60px]">
 									{#if $settings?.richTextInput ?? true}
 										<div
-											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
+											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-none w-full pt-5 px-3 resize-none h-fit max-h-80 overflow-auto"
 										>
 											<RichTextInput
 												bind:this={chatInputElement}
@@ -1185,7 +1185,7 @@
 									{/if}
 								</div>
 
-								<div class=" flex justify-between mt-1.5 mb-2.5 mx-0.5 max-w-full">
+								<div class=" flex justify-between mt-1.5 mb-5 mx-4 max-w-full">
 									<div class="ml-1 self-end gap-0.5 flex items-center flex-1 max-w-[80%]">
 										<InputMenu
 											bind:selectedToolIds

@@ -34,11 +34,11 @@
 	
 </script>
 
-<div class="flex flex-col items-start dark:bg-customGray-800 py-[3px] px-[6px] rounded-md w-fit">
+<div class="flex flex-col items-start dark:bg-customGray-800 py-[4px] px-[6px] rounded-md w-fit">
 	{#each selectedModels as selectedModel, selectedModelIdx}
 		<div class="flex w-full max-w-fit">
 			<div class="overflow-hidden w-full">
-				<div class="mr-1 max-w-full">
+				<div class="max-w-full">
 					<Selector
 						id={`${selectedModelIdx}`}
 						placeholder={$i18n.t('Select a model')}

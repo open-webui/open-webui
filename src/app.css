@@ -276,7 +276,8 @@ input[type='number'] {
 .ProseMirror p.is-editor-empty:first-child::before {
 	content: attr(data-placeholder);
 	float: left;
-	color: #adb5bd;
+	color: #929AA1;
+	opacity: 50%;
 	pointer-events: none;
 	font-size: 16px;
 
