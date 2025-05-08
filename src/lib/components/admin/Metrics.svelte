@@ -143,7 +143,6 @@
 			enrolledUsersChart.data.datasets[0].label = $i18n.t('Enrolled Users');
 			enrolledUsersChart.update();
 		}
-
 		if (dailyActiveUsersChart) {
 			dailyActiveUsersChart.data.datasets[0].label = $i18n.t('Daily Active Users');
 			dailyActiveUsersChart.update();
@@ -855,7 +854,7 @@
 					</div>
 				</div>
 			</div>
-
+      
 			<!-- Tab Content - Tokens -->
 			<div class={`${activeTab === 'tokens' ? 'flex flex-col h-full' : 'hidden'}`}>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 mt-6">

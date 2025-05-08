@@ -480,7 +480,6 @@ class UsersTable:
 
                 return sorted(fallback, key=lambda x: x["date"])
 
-
     def get_range_metrics(
         self, start_timestamp: int, end_timestamp: int, domain: str = None
     ) -> dict:

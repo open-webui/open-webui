@@ -503,7 +503,7 @@ export const getRangeMetrics = async (
 	model?: string
 ): Promise<any> => {
 	try {
-		let url = `${WEBUI_API_BASE_URL}/metrics/range/metrics?start_date=${startDate}&end_date=${endDate}`;
+		let url = `${WEBUI_API_BASE_URL}/metrics/range/users?start_date=${startDate}&end_date=${endDate}`;
 
 		if (domain) {
 			url += `&domain=${encodeURIComponent(domain)}`;

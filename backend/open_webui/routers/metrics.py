@@ -244,7 +244,7 @@ async def get_model_historical_prompts(
 ############################
 
 
-@router.get("/range/metrics")
+@router.get("/range/users")
 async def get_range_metrics(
     start_date: str,
     end_date: str,
