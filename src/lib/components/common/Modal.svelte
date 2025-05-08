@@ -3,7 +3,7 @@
 	import { fade } from 'svelte/transition';
 
 	import { flyAndScale } from '$lib/utils/transitions';
-	import * as FocusTrap from 'focus-trap'
+	import * as FocusTrap from 'focus-trap';
 	export let show = true;
 	export let size = 'md';
 	export let containerClassName = 'p-3';
@@ -46,7 +46,7 @@
 	onMount(() => {
 		mounted = true;
 	});
-	
+
 	$: if (show && modalElement) {
 		document.body.appendChild(modalElement);
 		focusTrap = FocusTrap.createFocusTrap(modalElement);
