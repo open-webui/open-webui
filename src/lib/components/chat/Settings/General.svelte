@@ -15,8 +15,8 @@
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'deltion', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
-	let selectedTheme = 'system';
+	let themes = ['dark', 'light', 'system', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
+	let selectedTheme = 'deltion';
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
 	let lang = $i18n.language;
@@ -293,7 +293,7 @@
 					</select>
 				</div>
 			</div>
-			{#if $i18n.language === 'en-US'}
+			<!-- {#if $i18n.language === 'en-US'}
 				<div class="mb-2 text-xs text-gray-400 dark:text-gray-500">
 					Couldn't find your language?
 					<a
@@ -304,7 +304,7 @@
 						Help us translate Open WebUI!
 					</a>
 				</div>
-			{/if}
+			{/if} -->
 
 			<div>
 				<div class=" py-0.5 flex w-full justify-between">
