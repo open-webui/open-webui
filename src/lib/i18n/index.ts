@@ -41,7 +41,7 @@ export const initI18n = (defaultLocale?: string | undefined) => {
 	let detectionOrder = defaultLocale
 		? ['querystring', 'localStorage']
 		: ['querystring', 'localStorage', 'navigator'];
-	let fallbackDefaultLocale = defaultLocale ? [defaultLocale] : ['en-US'];
+	let fallbackDefaultLocale = defaultLocale ? [defaultLocale] : ['nl-NL'];
 
 	const loadResource = (language: string, namespace: string) =>
 		import(`./locales/${language}/${namespace}.json`);
@@ -67,7 +67,7 @@ export const initI18n = (defaultLocale?: string | undefined) => {
 			}
 		});
 
-	const lang = i18next?.language || defaultLocale || 'en-US';
+	const lang = i18next?.language || defaultLocale || 'nl-NL';
 	document.documentElement.setAttribute('lang', lang);
 };
 
