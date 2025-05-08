@@ -1262,7 +1262,16 @@ ENABLE_USER_WEBHOOKS = PersistentConfig(
 )
 
 # FastAPI / AnyIO settings
-THREAD_POOL_SIZE = int(os.getenv("THREAD_POOL_SIZE", "0"))
+THREAD_POOL_SIZE = os.getenv("THREAD_POOL_SIZE", None)
+
+if THREAD_POOL_SIZE is not None and isinstance(THREAD_POOL_SIZE, str):
+    try:
+        THREAD_POOL_SIZE = int(THREAD_POOL_SIZE)
+    except ValueError:
+        log.warning(
+            f"THREAD_POOL_SIZE is not a valid integer: {THREAD_POOL_SIZE}. Defaulting to None."
+        )
+        THREAD_POOL_SIZE = None
 
 
 def validate_cors_origins(origins):

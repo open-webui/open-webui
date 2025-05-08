@@ -461,10 +461,9 @@ async def lifespan(app: FastAPI):
     log.info("Installing external dependencies of functions and tools...")
     install_tool_and_function_dependencies()
 
-    pool_size = THREAD_POOL_SIZE
-    if pool_size and pool_size > 0:
+    if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
         limiter = anyio.to_thread.current_default_thread_limiter()
-        limiter.total_tokens = pool_size
+        limiter.total_tokens = THREAD_POOL_SIZE
 
     asyncio.create_task(periodic_usage_pool_cleanup())
 
