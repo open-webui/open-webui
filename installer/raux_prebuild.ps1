@@ -12,7 +12,7 @@ param(
 
 function GetVersion {
     Write-Host "[GetVersion] Invoked"
-    $packageJsonPath = Join-Path $PSScriptRoot '..' 'package.json'
+    $packageJsonPath = Join-Path (Split-Path $PSScriptRoot -Parent) 'package.json'
     if (-Not (Test-Path $packageJsonPath)) {
         Write-Host "ERROR: package.json not found at $packageJsonPath"
         exit 1
