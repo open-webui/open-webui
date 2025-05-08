@@ -110,7 +110,7 @@ if os.path.exists(f"{DATA_DIR}/config.json"):
 DEFAULT_CONFIG = {
     "version": 0,
     "ui": {
-        "default_locale": "",
+        "default_locale": "nl-NL",
         "prompt_suggestions": [
             {
                 "title": [
@@ -1355,7 +1355,7 @@ Generate a concise, 3-5 word title with an emoji summarizing the chat history.
 ### Guidelines:
 - The title should clearly represent the main theme or subject of the conversation.
 - Use emojis that enhance understanding of the topic, but avoid quotation marks or special formatting.
-- Write the title in the chat's primary language; default to English if multilingual.
+- Write the title in the chat's primary language; default to Dutch if multilingual.
 - Prioritize accuracy over excessive creativity; keep it clear and simple.
 ### Output:
 JSON format: { "title": "your concise title here" }
@@ -1384,7 +1384,7 @@ Generate 1-3 broad tags categorizing the main themes of the chat history, along 
 - Start with high-level domains (e.g. Science, Technology, Philosophy, Arts, Politics, Business, Health, Sports, Entertainment, Education)
 - Consider including relevant subfields/subdomains if they are strongly represented throughout the conversation
 - If content is too short (less than 3 messages) or too diverse, use only ["General"]
-- Use the chat's primary language; default to English if multilingual
+- Use the chat's primary language; default to Dutch if multilingual
 - Prioritize accuracy over specificity
 
 ### Output:
@@ -1407,7 +1407,7 @@ Generate a detailed prompt for am image generation task based on the given langu
 ### Guidelines:
 - Be descriptive and detailed, focusing on the most important aspects of the image.
 - Avoid making assumptions or adding information not present in the image.
-- Use the chat's primary language; default to English if multilingual.
+- Use the chat's primary language; default to Dutch if multilingual.
 - If the image is too complex, focus on the most prominent elements.
 
 ### Output:
