@@ -760,7 +760,8 @@ def save_docs_to_vector_db(
         if result is not None:
             existing_doc_ids = result.ids[0]
             if existing_doc_ids:
-                log.info(f"Document with hash {metadata['hash']} already exists")
+                log.info(
+                    f"Document with hash {metadata['hash']} already exists")
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
@@ -775,9 +776,11 @@ def save_docs_to_vector_db(
                 f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
             )
 
-            tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
+            tiktoken.get_encoding(
+                str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
             text_splitter = TokenTextSplitter(
-                encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
+                encoding_name=str(
+                    request.app.state.config.TIKTOKEN_ENCODING_NAME),
                 chunk_size=request.app.state.config.CHUNK_SIZE,
                 chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
                 add_start_index=True,
@@ -821,7 +824,8 @@ def save_docs_to_vector_db(
             log.info(f"collection {collection_name} already exists")
 
             if overwrite:
-                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                VECTOR_DB_CLIENT.delete_collection(
+                    collection_name=collection_name)
                 log.info(f"deleting existing collection {collection_name}")
             elif add is False:
                 log.info(
@@ -897,7 +901,8 @@ def process_file(
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
 
-            VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
+            VECTOR_DB_CLIENT.delete_collection(
+                collection_name=f"file-{file.id}")
 
             docs = [
                 Document(
@@ -947,7 +952,8 @@ def process_file(
         else:
             # Process the file and save the content
             # Usage: /files/
-            is_pdf2text = engine == "pdftotext" and file.meta.get("content_type") == "application/pdf"
+            is_pdf2text = engine == "pdftotext" and file.meta.get(
+                "content_type") == "application/pdf"
             file_path = file.path
             if file_path:
                 file_path = Storage.get_file(file_path)
@@ -1042,140 +1048,135 @@ def process_file(
                 detail=str(e),
             )
 
+
 @router.post("/process/file_async")
 def process_file_async(
     request: Request,
-    background_tasks: BackgroundTasks,
     form_data: ProcessFileForm,
-    task_id : str,
+    task_id: str,
     user=Depends(get_verified_user),
 ):
-    try:
-        file = Files.get_file_by_id(task_id)
+    file = Files.get_file_by_id(task_id)
 
-        collection_name = form_data.collection_name
-        engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE
-        is_pdf2text = engine == "pdftotext" and file.meta.get("content_type") == "application/pdf"
+    collection_name = form_data.collection_name
+    engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE
+    is_pdf2text = engine == "pdftotext" and file.meta.get(
+        "content_type") == "application/pdf"
 
-        if collection_name is None:
-            collection_name = f"file-{file.id}"
+    if collection_name is None:
+        collection_name = f"file-{file.id}"
+    log.info(f"Is pdftotext: {is_pdf2text}")
+    # Process the file and save the content
+    # Usage: /files/
+    file_path = file.path
+    if file_path:
+        file_path = Storage.get_file(file_path)
+        loader = Loader(
+            engine=engine,
+            TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
+            PDFTOTEXT_SERVER_URL=request.app.state.config.PDFTOTEXT_SERVER_URL,
+            PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
+            MAXPAGES_PDFTOTEXT=request.app.state.config.MAXPAGES_PDFTOTEXT,
+        )
+        if is_pdf2text:
+            task_id = loader.load(file.filename, file.meta.get(
+                "content_type"), file_path, isasync=True)
 
-        # Process the file and save the content
-        # Usage: /files/
-        file_path = file.path
-        if file_path:
-            file_path = Storage.get_file(file_path)
-            loader = Loader(
-                engine=engine,
-                TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
-                PDFTOTEXT_SERVER_URL=request.app.state.config.PDFTOTEXT_SERVER_URL,
-                PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
-                MAXPAGES_PDFTOTEXT=request.app.state.config.MAXPAGES_PDFTOTEXT,
-            )
-            if is_pdf2text:
-                task_id = loader.load(file.filename, file.meta.get("content_type"), file_path, isasync=True)
+            text_content = loader.loader.get_text(task_id)
 
-                text_content = loader.loader.get_text(task_id)
-
-                docs = [Document(
-                    page_content=text_content,
-                    metadata={
-                        "name": file.filename,
-                        "created_by": file.user_id,
-                        "file_id": file.id,
-                        "source": file.filename,
-                    },
-                )]
-
-                log.info(f"OCR Task {task_id} created successfully.")
-
-            else:
-                docs = loader.load(
-                    file.filename, file.meta.get("content_type"), file_path
+            log.info(f"task_id: {task_id}")
+            log.info(f"text_content: {text_content}")
+            if not text_content:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
                 )
-                docs = [
-                    Document(
-                        page_content=doc.page_content,
-                        metadata={
-                            **doc.metadata,
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            "source": file.filename,
-                        },
-                    )
-                    for doc in docs
-                ]
+
+            docs = [Document(
+                page_content=text_content,
+                metadata={
+                    "name": file.filename,
+                    "created_by": file.user_id,
+                    "file_id": file.id,
+                    "source": file.filename,
+                },
+            )]
+
+            log.info(f"OCR Task {task_id} created successfully.")
+
         else:
+            docs = loader.load(
+                file.filename, file.meta.get("content_type"), file_path
+            )
             docs = [
                 Document(
-                    page_content=file.data.get("content", ""),
+                    page_content=doc.page_content,
                     metadata={
-                        **file.meta,
+                        **doc.metadata,
                         "name": file.filename,
                         "created_by": file.user_id,
                         "file_id": file.id,
                         "source": file.filename,
                     },
                 )
+                for doc in docs
             ]
+    else:
+        docs = [
+            Document(
+                page_content=file.data.get("content", ""),
+                metadata={
+                    **file.meta,
+                    "name": file.filename,
+                    "created_by": file.user_id,
+                    "file_id": file.id,
+                    "source": file.filename,
+                },
+            )
+        ]
 
-        if not is_pdf2text:
-            text_content = " ".join([doc.page_content for doc in docs])
+    if not is_pdf2text:
+        text_content = " ".join([doc.page_content for doc in docs])
 
+    Files.update_file_data_by_id(
+        file.id,
+        {"content": text_content},
+    )
 
-        Files.update_file_data_by_id(
-            file.id,
-            {"content": text_content},
+    hash = calculate_sha256_string(text_content)
+    Files.update_file_hash_by_id(file.id, hash)
+
+    try:
+        result = save_docs_to_vector_db(
+            request,
+            docs=docs,
+            collection_name=collection_name,
+            metadata={
+                "file_id": file.id,
+                "name": file.filename,
+                "hash": hash,
+            },
+            add=(True if form_data.collection_name else False),
+            user=user,
         )
 
-        hash = calculate_sha256_string(text_content)
-        Files.update_file_hash_by_id(file.id, hash)
-
-        try:
-            result = save_docs_to_vector_db(
-                request,
-                docs=docs,
-                collection_name=collection_name,
-                metadata={
-                    "file_id": file.id,
-                    "name": file.filename,
-                    "hash": hash,
-                },
-                add=(True if form_data.collection_name else False),
-                user=user,
-            )
-
-            if result:
-                Files.update_file_metadata_by_id(
-                    file.id,
-                    {
-                        "collection_name": collection_name,
-                    },
-                )
-
-                return {
-                    "status": True,
+        if result:
+            Files.update_file_metadata_by_id(
+                file.id,
+                {
                     "collection_name": collection_name,
-                    "filename": file.filename,
-                    "content": text_content,
-                }
-        except Exception as e:
-            raise e
+                },
+            )
 
-
+            return {
+                "status": True,
+                "collection_name": collection_name,
+                "filename": file.filename,
+                "content": text_content,
+            }
     except Exception as e:
-        log.exception(e)
-        if "No pandoc was found" in str(e):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
-            )
+        raise e
+
 
 class ProcessTextForm(BaseModel):
     name: str
@@ -1333,7 +1334,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
-            raise Exception("No SEARXNG_QUERY_URL found in environment variables")
+            raise Exception(
+                "No SEARXNG_QUERY_URL found in environment variables")
     elif engine == "google_pse":
         if (
             request.app.state.config.GOOGLE_PSE_API_KEY
@@ -1359,7 +1361,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
-            raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
+            raise Exception(
+                "No BRAVE_SEARCH_API_KEY found in environment variables")
     elif engine == "kagi":
         if request.app.state.config.KAGI_SEARCH_API_KEY:
             return search_kagi(
@@ -1369,7 +1372,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
-            raise Exception("No KAGI_SEARCH_API_KEY found in environment variables")
+            raise Exception(
+                "No KAGI_SEARCH_API_KEY found in environment variables")
     elif engine == "mojeek":
         if request.app.state.config.MOJEEK_SEARCH_API_KEY:
             return search_mojeek(
@@ -1379,7 +1383,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
-            raise Exception("No MOJEEK_SEARCH_API_KEY found in environment variables")
+            raise Exception(
+                "No MOJEEK_SEARCH_API_KEY found in environment variables")
     elif engine == "bocha":
         if request.app.state.config.BOCHA_SEARCH_API_KEY:
             return search_bocha(
@@ -1389,7 +1394,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
-            raise Exception("No BOCHA_SEARCH_API_KEY found in environment variables")
+            raise Exception(
+                "No BOCHA_SEARCH_API_KEY found in environment variables")
     elif engine == "serpstack":
         if request.app.state.config.SERPSTACK_API_KEY:
             return search_serpstack(
@@ -1400,7 +1406,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 https_enabled=request.app.state.config.SERPSTACK_HTTPS,
             )
         else:
-            raise Exception("No SERPSTACK_API_KEY found in environment variables")
+            raise Exception(
+                "No SERPSTACK_API_KEY found in environment variables")
     elif engine == "serper":
         if request.app.state.config.SERPER_API_KEY:
             return search_serper(
@@ -1447,7 +1454,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
-            raise Exception("No SEARCHAPI_API_KEY found in environment variables")
+            raise Exception(
+                "No SEARCHAPI_API_KEY found in environment variables")
     elif engine == "serpapi":
         if request.app.state.config.SERPAPI_API_KEY:
             return search_serpapi(
@@ -1458,7 +1466,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
-            raise Exception("No SERPAPI_API_KEY found in environment variables")
+            raise Exception(
+                "No SERPAPI_API_KEY found in environment variables")
     elif engine == "jina":
         return search_jina(
             request.app.state.config.JINA_API_KEY,
@@ -1482,7 +1491,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
     else:
-        raise Exception("No search engine API key found in environment variables")
+        raise Exception(
+            "No search engine API key found in environment variables")
 
 
 @router.post("/process/web/search")
@@ -1775,12 +1785,15 @@ def process_files_batch(
             Files.update_file_data_by_id(file.id, {"content": text_content})
 
             all_docs.extend(docs)
-            results.append(BatchProcessFilesResult(file_id=file.id, status="prepared"))
+            results.append(BatchProcessFilesResult(
+                file_id=file.id, status="prepared"))
 
         except Exception as e:
-            log.error(f"process_files_batch: Error processing file {file.id}: {str(e)}")
+            log.error(
+                f"process_files_batch: Error processing file {file.id}: {str(e)}")
             errors.append(
-                BatchProcessFilesResult(file_id=file.id, status="failed", error=str(e))
+                BatchProcessFilesResult(
+                    file_id=file.id, status="failed", error=str(e))
             )
 
     # Save all documents in one batch
@@ -1808,7 +1821,8 @@ def process_files_batch(
             for result in results:
                 result.status = "failed"
                 errors.append(
-                    BatchProcessFilesResult(file_id=result.file_id, error=str(e))
+                    BatchProcessFilesResult(
+                        file_id=result.file_id, error=str(e))
                 )
 
     return BatchProcessFilesResponse(results=results, errors=errors)
