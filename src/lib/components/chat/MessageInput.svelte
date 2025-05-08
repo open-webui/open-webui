@@ -86,7 +86,7 @@
 
 	$: onChange({
 		prompt,
-		files,
+		files: files.filter((file) => file.type !== 'image'),
 		selectedToolIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
