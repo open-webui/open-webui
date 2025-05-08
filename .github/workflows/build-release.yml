@@ -11,12 +11,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Run raux_prebuild.ps1 --solution-version
-        run: powershell -ExecutionPolicy ByPass -File installer/raux_prebuild.ps1 --solution-version
-      - name: Run raux_prebuild.ps1 --build
-        run: powershell -ExecutionPolicy ByPass -File installer/raux_prebuild.ps1 --build
-      - name: Run raux_prebuild.ps1 --package
-        run: powershell -ExecutionPolicy ByPass -File installer/raux_prebuild.ps1 --package
+      - name: Run raux_prebuild.ps1 -solution-version
+        run: powershell -ExecutionPolicy ByPass -File installer/raux_prebuild.ps1 -solution_version
+      - name: Run raux_prebuild.ps1 -build
+        run: powershell -ExecutionPolicy ByPass -File installer/raux_prebuild.ps1 -build
+      - name: Run raux_prebuild.ps1 -package
+        run: powershell -ExecutionPolicy ByPass -File installer/raux_prebuild.ps1 -package
 
   build-and-package:
     needs: prebuild
