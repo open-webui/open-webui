@@ -112,6 +112,7 @@ async def update_prompt_by_command(
     if (
         prompt.user_id != user.id
         and not has_access(user.id, "write", prompt.access_control)
+        and user.role != "admin"
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -151,6 +152,7 @@ async def delete_prompt_by_command(command: str, user=Depends(get_verified_user)
     if (
         prompt.user_id != user.id
         and not has_access(user.id, "write", prompt.access_control)
+        and user.role != "admin"
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

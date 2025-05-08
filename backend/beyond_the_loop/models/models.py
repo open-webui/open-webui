@@ -192,23 +192,19 @@ class ModelsTable:
                 )
             return models
 
-    def get_base_models_by_comany(self, company_id: str) -> list[ModelModel]:
+    def get_base_models_by_comany_and_user(self, company_id: str, user_id: str, role: str) -> list[ModelModel]:
         with get_db() as db:
+            models = db.query(Model).filter(Model.base_model_id == None, Model.company_id == company_id).all()
             return [
                 ModelModel.model_validate(model)
-                for model in db.query(Model).filter(Model.base_model_id == None, Model.company_id == company_id).all()
+                for model in models
+                if has_access(user_id, "read", model.access_control) or role == "admin"
             ]
 
     def get_models_by_user_and_company(
         self, user_id: str, company_id: str, permission: str = "read"
     ) -> list[ModelUserResponse]:
         models = self.get_models()
-
-        print("MODELS", models)
-
-
-        for model in models:
-            print(f"Model {model.id} company_id: {model.company_id}, is the same as company_id: {company_id == model.company_id}")
 
         return [
             model

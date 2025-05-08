@@ -782,12 +782,12 @@ app.include_router(companies.router, prefix="/api/v1/companies", tags=["companie
 
 @app.get("/api/models")
 async def get_models(request: Request, user=Depends(get_verified_user)):
-    return {"data": Models.get_models_by_user_and_company(user.id, user.company_id) + Models.get_base_models_by_comany(user.company_id)}
+    return {"data": Models.get_models_by_user_and_company(user.id, user.company_id) + Models.get_base_models_by_comany_and_user(user.company_id, user.id, user.role)}
 
 
 @app.get("/api/models/base")
 async def get_base_models(request: Request, user=Depends(get_admin_user)):
-    return {"data": Models.get_base_models_by_comany(user.company_id)}
+    return {"data": Models.get_base_models_by_comany_and_user(user.company_id, user.id, user.role)}
 
 
 @app.post("/api/chat/completions")
