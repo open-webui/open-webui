@@ -461,4 +461,40 @@ class UsersTable:
             return False
 
 
+def get_users_by_company(company_id: str) -> list[UserModel]:
+    """
+    Returns all users for a specific company.
+    """
+    try:
+        with get_db() as db:
+            users = db.query(User).filter(User.company_id == company_id).all()
+            return [UserModel.model_validate(user) for user in users]
+    except Exception as e:
+        print(f"Error getting users by company: {e}")
+        return []
+
+
+def get_active_users_by_company(company_id: str, since_timestamp: int) -> list[UserModel]:
+    """
+    Returns users for a specific company that were active since the given timestamp.
+    
+    Args:
+        company_id: The ID of the company to filter users by
+        since_timestamp: Unix timestamp to filter users who were active since this time
+        
+    Returns:
+        A list of UserModel objects representing active users
+    """
+    try:
+        with get_db() as db:
+            active_users = db.query(User).filter(
+                User.company_id == company_id,
+                User.last_active_at >= since_timestamp
+            ).all()
+            return [UserModel.model_validate(user) for user in active_users]
+    except Exception as e:
+        print(f"Error getting active users by company: {e}")
+        return []
+
+
 Users = UsersTable()
