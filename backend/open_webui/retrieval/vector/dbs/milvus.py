@@ -1,4 +1,3 @@
-import os # Added import
 from pymilvus import MilvusClient as Client
 from pymilvus import FieldSchema, DataType
 import json
