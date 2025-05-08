@@ -245,7 +245,7 @@
 									)
 								);
 							} else {
-								if($user.id === item.user_id)
+								if($user.id === item.user_id || $user?.role === 'admin')
 								goto(`/workspace/knowledge/${item.id}`);
 							}
 						}}
@@ -280,7 +280,7 @@
 										{/if}
 									</div>
 								</div>
-								{#if $user.id === item.user_id}
+								{#if ($user.id === item.user_id || $user?.role === 'admin')}
 								<div class="invisible group-hover:visible">
 									<ItemMenu
 										{item}

@@ -351,7 +351,7 @@
 									{/if}
 								</div>
 							</div>
-							{#if !prompt.prebuilt && prompt.user_id === $user?.id}
+							{#if !prompt.prebuilt && (prompt.user_id === $user?.id || $user?.role === 'admin')}
 								<div class="invisible group-hover:visible">
 									<PromptMenu
 										{prompt}
