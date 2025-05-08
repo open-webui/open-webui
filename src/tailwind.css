@@ -41,13 +41,13 @@
 	textarea::placeholder {
 		color: theme(--color-gray-400);
 	}
+
 }
 
-/* Globale override → hele UI */
-@layer base {
-	html {
-	  font-family: "BuenosAires", var(--font-sans);
-	}
-}
+@layer utilities {
+	.font-primary   { @apply font-primary;   }
+	.font-secondary { @apply font-secondary; }
+  }  
+
 
 @custom-variant hover (&:hover);

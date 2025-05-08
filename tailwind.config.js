@@ -10,8 +10,10 @@ export default {
 	theme: {
 		extend: {
 			fontFamily: {
-				sans: ['BuenosAires', ...defaultTheme.fontFamily.sans],
-			},
+				primary: ['BuenosAires', ...defaultTheme.fontFamily.sans],
+				secondary: ['InstrumentSerif', ...defaultTheme.fontFamily.sans],
+				sans: ['InstrumentSerif', ...defaultTheme.fontFamily.sans],
+			  },
 			colors: {
 				gray: {
 					50: 'var(--color-gray-50, #f9f9f9)',
