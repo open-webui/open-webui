@@ -10,6 +10,7 @@
 		getTotalTokens,
 		getDailyTokens,
 		getHistoricalUsers,
+		getHistoricalDailyUsers,
 		getHistoricalPrompts,
 		getHistoricalTokens,
 		getModelPrompts,
@@ -47,10 +48,14 @@
 		modelDailyPrompts: number = 0;
 
 	// Chart objects
-	let dailyActiveUsersChart: any, dailyPromptsChart: any, dailyTokensChart: any;
+	let enrolledUsersChart: any,
+		dailyActiveUsersChart: any,
+		dailyPromptsChart: any,
+		dailyTokensChart: any;
 	let modelPromptsChart: any;
 
 	// Chart data
+	let enrolledUsersData: any[] = [];
 	let dailyActiveUsersData: any[] = [];
 	let dailyPromptsData: any[] = [];
 	let dailyTokensData: any[] = [];
@@ -113,7 +118,13 @@
 		chartOptions.scales.y.grid.color = gridColor;
 
 		// Update existing charts with new theme colors
-		const charts = [dailyActiveUsersChart, dailyPromptsChart, dailyTokensChart, modelPromptsChart];
+		const charts = [
+			enrolledUsersChart,
+			dailyActiveUsersChart,
+			dailyPromptsChart,
+			dailyTokensChart,
+			modelPromptsChart
+		];
 		charts.forEach((chart) => {
 			if (chart) {
 				chart.options.plugins.legend.labels.color = textColor;
@@ -128,6 +139,11 @@
 
 	// Update chart labels function
 	function updateChartLabels() {
+		if (enrolledUsersChart) {
+			enrolledUsersChart.data.datasets[0].label = $i18n.t('Enrolled Users');
+			enrolledUsersChart.update();
+		}
+
 		if (dailyActiveUsersChart) {
 			dailyActiveUsersChart.data.datasets[0].label = $i18n.t('Daily Active Users');
 			dailyActiveUsersChart.update();
@@ -226,7 +242,12 @@
 
 			// Fetch historical data for charts
 			try {
-				dailyActiveUsersData = await getHistoricalUsers(localStorage.token, days, updatedDomain);
+				enrolledUsersData = await getHistoricalUsers(localStorage.token, days, updatedDomain);
+				dailyActiveUsersData = await getHistoricalDailyUsers(
+					localStorage.token,
+					days,
+					updatedDomain
+				);
 				dailyPromptsData = await getHistoricalPrompts(localStorage.token, days, updatedDomain);
 				dailyTokensData = await getHistoricalTokens(localStorage.token, days, updatedDomain);
 
@@ -255,22 +276,23 @@
 	// Initialize charts function
 	function initializeCharts() {
 		// Users chart - for both overview and users tabs
-		if ((activeTab === 'users' || activeTab === 'overview') && dailyActiveUsersData.length > 0) {
-			const chartId = activeTab === 'overview' ? 'dailyActiveUsersChart' : 'usersOverTimeChart';
-			const canvas = document.getElementById(chartId);
-			const ctx = canvas?.getContext('2d');
-			if (ctx) {
-				if (dailyActiveUsersChart) {
-					dailyActiveUsersChart.destroy();
+		if (activeTab === 'users' && dailyActiveUsersData.length > 0 && enrolledUsersData.length > 0) {
+			// Enrolled Users Chart
+			const enrolledChartId = 'userEnrollmentsOverTimeChart';
+			const enrolledCanvas = document.getElementById(enrolledChartId);
+			const enrolledCtx = enrolledCanvas?.getContext('2d');
+			if (enrolledCtx) {
+				if (enrolledUsersChart) {
+					enrolledUsersChart.destroy();
 				}
-				dailyActiveUsersChart = new Chart(ctx, {
+				enrolledUsersChart = new Chart(enrolledCtx, {
 					type: 'line',
 					data: {
-						labels: dailyActiveUsersData.map((item) => item.date),
+						labels: enrolledUsersData.map((item) => item.date),
 						datasets: [
 							{
-								label: $i18n.t('Daily Active Users'),
-								data: dailyActiveUsersData.map((item) => item.count),
+								label: $i18n.t('Enrolled Users'),
+								data: enrolledUsersData.map((item) => item.count),
 								borderColor: 'rgb(59, 130, 246)',
 								backgroundColor: 'rgba(59, 130, 246, 0.2)',
 								borderWidth: 2,
@@ -278,6 +300,37 @@
 								pointBorderColor: '#fff',
 								pointHoverBackgroundColor: '#fff',
 								pointHoverBorderColor: 'rgb(59, 130, 246)',
+								tension: 0.1
+							}
+						]
+					},
+					options: chartOptions
+				});
+			}
+
+			// Daily Active Users Chart
+			const dailyChartId = 'usersOverTimeChart';
+			const dailyCanvas = document.getElementById(dailyChartId);
+			const dailyCtx = dailyCanvas?.getContext('2d');
+			if (dailyCtx) {
+				if (dailyActiveUsersChart) {
+					dailyActiveUsersChart.destroy();
+				}
+				dailyActiveUsersChart = new Chart(dailyCtx, {
+					type: 'line',
+					data: {
+						labels: dailyActiveUsersData.map((item) => item.date),
+						datasets: [
+							{
+								label: $i18n.t('Daily Active Users'),
+								data: dailyActiveUsersData.map((item) => item.count),
+								borderColor: 'rgb(34, 197, 94)',
+								backgroundColor: 'rgba(34, 197, 94, 0.2)',
+								borderWidth: 2,
+								pointBackgroundColor: 'rgb(34, 197, 94)',
+								pointBorderColor: '#fff',
+								pointHoverBackgroundColor: '#fff',
+								pointHoverBorderColor: 'rgb(34, 197, 94)',
 								tension: 0.1
 							}
 						]
@@ -518,6 +571,7 @@
 		}
 
 		// Clean up charts
+		if (enrolledUsersChart) enrolledUsersChart.destroy();
 		if (dailyActiveUsersChart) dailyActiveUsersChart.destroy();
 		if (dailyPromptsChart) dailyPromptsChart.destroy();
 		if (dailyTokensChart) dailyTokensChart.destroy();
@@ -743,6 +797,16 @@
 						<h4 class="text-3xl font-bold text-blue-700 dark:text-blue-400">{dailyUsers}</h4>
 						<div class="text-sm text-gray-600 dark:text-gray-400 mt-2">
 							{$i18n.t('Number of users active in the last 24 hours')}
+						</div>
+					</div>
+				</div>
+				<div class="grid grid-cols-1 gap-6 mb-6">
+					<div class="bg-white shadow-lg rounded-lg p-4 dark:bg-gray-800">
+						<h5 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+							{$i18n.t('User Enrollments Over Time')}
+						</h5>
+						<div class="h-80">
+							<canvas id="userEnrollmentsOverTimeChart"></canvas>
 						</div>
 					</div>
 				</div>

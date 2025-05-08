@@ -19,61 +19,6 @@ log.setLevel(SRC_LOG_LEVELS["METRICS"])
 router = APIRouter()
 
 ############################
-# GetDomains
-############################
-
-
-@router.get("/domains")
-async def get_total_users_by_domain(user=Depends(get_verified_user)):
-    if user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    domains = Users.get_user_domains() or []
-    return {"domains": domains}
-
-
-############################
-# GetTotalUsers
-############################
-
-
-@router.get("/users")
-async def get_total_users(domain: str = None, user=Depends(get_verified_user)):
-    if not user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    total_users = Users.get_num_users(domain) if domain else Users.get_num_users()
-    return {"total_users": total_users}
-
-
-############################
-# GetDailyUsers
-############################
-
-
-@router.get("/daily/users")
-async def get_daily_users_number(domain: str = None, user=Depends(get_verified_user)):
-    if not user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    total_daily_users = (
-        Users.get_daily_users_number(domain=domain)
-        if domain
-        else Users.get_daily_users_number()
-    )
-    return {"total_daily_users": total_daily_users}
-
-
-############################
 # GetTotalPrompts
 ############################
 
@@ -158,30 +103,6 @@ async def get_daily_tokens(domain: str = None, user=Depends(get_verified_user)):
         else MessageMetrics.get_daily_message_tokens_sum()
     )
     return {"total_daily_tokens": total_daily_tokens}
-
-
-############################
-# GetHistoricalUsers
-############################
-
-
-@router.get("/historical/users")
-async def get_historical_users(
-    days: int = 7, domain: str = None, user=Depends(get_verified_user)
-):
-    if not user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    # Handle both None and empty string for domain
-    if domain == "":
-        domain = None
-
-    historical_data = Users.get_historical_users_data(days, domain)
-
-    return {"historical_users": historical_data}
 
 
 ############################
@@ -323,7 +244,7 @@ async def get_model_historical_prompts(
 ############################
 
 
-@router.get("/range/users")
+@router.get("/range/metrics")
 async def get_range_metrics(
     start_date: str,
     end_date: str,
