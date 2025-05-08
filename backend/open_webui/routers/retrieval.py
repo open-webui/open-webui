@@ -103,6 +103,7 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 #
 ##########################################
 
+
 def get_ef(
     engine: str,
     embedding_model: str,
@@ -758,7 +759,8 @@ def save_docs_to_vector_db(
         if result is not None:
             existing_doc_ids = result.ids[0]
             if existing_doc_ids:
-                log.info(f"Document with hash {metadata['hash']} already exists")
+                log.info(
+                    f"Document with hash {metadata['hash']} already exists")
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
@@ -773,9 +775,11 @@ def save_docs_to_vector_db(
                 f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
             )
 
-            tiktoken.get_encoding(str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
+            tiktoken.get_encoding(
+                str(request.app.state.config.TIKTOKEN_ENCODING_NAME))
             text_splitter = TokenTextSplitter(
-                encoding_name=str(request.app.state.config.TIKTOKEN_ENCODING_NAME),
+                encoding_name=str(
+                    request.app.state.config.TIKTOKEN_ENCODING_NAME),
                 chunk_size=request.app.state.config.CHUNK_SIZE,
                 chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
                 add_start_index=True,
@@ -819,7 +823,8 @@ def save_docs_to_vector_db(
             log.info(f"collection {collection_name} already exists")
 
             if overwrite:
-                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                VECTOR_DB_CLIENT.delete_collection(
+                    collection_name=collection_name)
                 log.info(f"deleting existing collection {collection_name}")
             elif add is False:
                 log.info(
@@ -828,7 +833,7 @@ def save_docs_to_vector_db(
                 return True
 
         log.info(f"adding to collection {collection_name}")
-        
+
         if VECTOR_DB != 'weaviate':
             embedding_function = get_embedding_function(
                 request.app.state.config.RAG_EMBEDDING_ENGINE,
@@ -906,7 +911,8 @@ def process_file(
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update
 
-            VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
+            VECTOR_DB_CLIENT.delete_collection(
+                collection_name=f"file-{file.id}")
 
             docs = [
                 Document(
@@ -1059,7 +1065,6 @@ def process_file(
 @router.post("/process/file_async")
 def process_file_async(
     request: Request,
-    background_tasks: BackgroundTasks,
     form_data: ProcessFileForm,
     task_id: str,
     user=Depends(get_verified_user),
@@ -1070,7 +1075,8 @@ def process_file_async(
         collection_name = form_data.collection_name
         engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE
         is_pdf2text = (
-            engine == "pdftotext" and file.meta.get("content_type") == "application/pdf"
+            engine == "pdftotext" and file.meta.get(
+                "content_type") == "application/pdf"
         )
 
         if collection_name is None:
@@ -1356,7 +1362,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
-            raise Exception("No SEARXNG_QUERY_URL found in environment variables")
+            raise Exception(
+                "No SEARXNG_QUERY_URL found in environment variables")
     elif engine == "google_pse":
         if (
             request.app.state.config.GOOGLE_PSE_API_KEY
@@ -1382,7 +1389,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
-            raise Exception("No BRAVE_SEARCH_API_KEY found in environment variables")
+            raise Exception(
+                "No BRAVE_SEARCH_API_KEY found in environment variables")
     elif engine == "kagi":
         if request.app.state.config.KAGI_SEARCH_API_KEY:
             return search_kagi(
@@ -1392,7 +1400,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
-            raise Exception("No KAGI_SEARCH_API_KEY found in environment variables")
+            raise Exception(
+                "No KAGI_SEARCH_API_KEY found in environment variables")
     elif engine == "mojeek":
         if request.app.state.config.MOJEEK_SEARCH_API_KEY:
             return search_mojeek(
@@ -1402,7 +1411,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
-            raise Exception("No MOJEEK_SEARCH_API_KEY found in environment variables")
+            raise Exception(
+                "No MOJEEK_SEARCH_API_KEY found in environment variables")
     elif engine == "bocha":
         if request.app.state.config.BOCHA_SEARCH_API_KEY:
             return search_bocha(
@@ -1412,7 +1422,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
-            raise Exception("No BOCHA_SEARCH_API_KEY found in environment variables")
+            raise Exception(
+                "No BOCHA_SEARCH_API_KEY found in environment variables")
     elif engine == "serpstack":
         if request.app.state.config.SERPSTACK_API_KEY:
             return search_serpstack(
@@ -1423,7 +1434,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 https_enabled=request.app.state.config.SERPSTACK_HTTPS,
             )
         else:
-            raise Exception("No SERPSTACK_API_KEY found in environment variables")
+            raise Exception(
+                "No SERPSTACK_API_KEY found in environment variables")
     elif engine == "serper":
         if request.app.state.config.SERPER_API_KEY:
             return search_serper(
@@ -1470,7 +1482,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
-            raise Exception("No SEARCHAPI_API_KEY found in environment variables")
+            raise Exception(
+                "No SEARCHAPI_API_KEY found in environment variables")
     elif engine == "serpapi":
         if request.app.state.config.SERPAPI_API_KEY:
             return search_serpapi(
@@ -1481,7 +1494,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
                 request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
             )
         else:
-            raise Exception("No SERPAPI_API_KEY found in environment variables")
+            raise Exception(
+                "No SERPAPI_API_KEY found in environment variables")
     elif engine == "jina":
         return search_jina(
             request.app.state.config.JINA_API_KEY,
@@ -1505,7 +1519,8 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             request.app.state.config.RAG_WEB_SEARCH_DOMAIN_FILTER_LIST,
         )
     else:
-        raise Exception("No search engine API key found in environment variables")
+        raise Exception(
+            "No search engine API key found in environment variables")
 
 
 @router.post("/process/web/search")
@@ -1798,12 +1813,15 @@ def process_files_batch(
             Files.update_file_data_by_id(file.id, {"content": text_content})
 
             all_docs.extend(docs)
-            results.append(BatchProcessFilesResult(file_id=file.id, status="prepared"))
+            results.append(BatchProcessFilesResult(
+                file_id=file.id, status="prepared"))
 
         except Exception as e:
-            log.error(f"process_files_batch: Error processing file {file.id}: {str(e)}")
+            log.error(
+                f"process_files_batch: Error processing file {file.id}: {str(e)}")
             errors.append(
-                BatchProcessFilesResult(file_id=file.id, status="failed", error=str(e))
+                BatchProcessFilesResult(
+                    file_id=file.id, status="failed", error=str(e))
             )
 
     # Save all documents in one batch
@@ -1831,7 +1849,8 @@ def process_files_batch(
             for result in results:
                 result.status = "failed"
                 errors.append(
-                    BatchProcessFilesResult(file_id=result.file_id, error=str(e))
+                    BatchProcessFilesResult(
+                        file_id=result.file_id, error=str(e))
                 )
 
     return BatchProcessFilesResponse(results=results, errors=errors)

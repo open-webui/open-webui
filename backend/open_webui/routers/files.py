@@ -3,6 +3,7 @@ import os
 import uuid
 import json
 from pathlib import Path
+from fastapi import Form
 from typing import Optional, Dict
 from urllib.parse import quote
 
@@ -14,7 +15,6 @@ from fastapi import (
     Request,
     UploadFile,
     status,
-    BackgroundTasks,
 )
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
@@ -25,14 +25,18 @@ from open_webui.models.files import (
     FileModelResponse,
     Files,
 )
+from open_webui.models.tasks import AsyncTaskResponse
 from open_webui.routers.retrieval import (
     ProcessFileForm,
     process_file,
-    process_file_async,
 )
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.tasks import process_tasks
+from open_webui.tasks import celery_app
+from celery.result import AsyncResult
 from pydantic import BaseModel
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -41,11 +45,6 @@ router = APIRouter()
 ############################
 # Upload File
 ############################
-
-
-from threading import Lock
-
-import asyncio
 
 
 @router.post("/", response_model=FileModelResponse)
@@ -117,45 +116,19 @@ def upload_file(
 ############################
 
 
-tasks_cache = {}  # Dictionary to store task results
-
-### Cache temporário para exemplo (substituir por um sistema persistente)
-cache_lock = Lock()
-
-
-def process_tasks(request, background_tasks, form_data, user, task_id):
-    """Executa OCR e processamento do PDF de forma assíncrona."""
-
-    global tasks_cache
-    with cache_lock:
-        task = tasks_cache.get(task_id, {})
-
-    task["status"] = "Processing PDF..."
-    content = process_file_async(request, background_tasks, form_data, task_id, user)
-    task["text"] = content.get("content")
-    task["status"] = "Processing Completed"
-
-
-@router.post("/async")
+@router.post("/async", response_model=AsyncTaskResponse)
 async def upload_file_async(
     request: Request,
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     user=Depends(get_verified_user),
 ):
-    global tasks_cache
     log.info(f"file.content_type: {file.content_type}")
 
     unsanitized_filename = file.filename
     filename = os.path.basename(unsanitized_filename)
 
-    if file_metadata:
-        file_metadata = json.loads(file_metadata)
-
     # replace filename with uuid
     task_id = str(uuid.uuid4())
-    with cache_lock:
-        tasks_cache[task_id] = {"status": "queued", "result": None, "error": None}
     name = filename
     filename = f"{id}_{filename}"
     contents, file_path = Storage.upload_file(file.file, filename)
@@ -175,18 +148,11 @@ async def upload_file_async(
             }
         ),
     )
-
-    background_tasks.add_task(
-        process_tasks,
-        request,
-        background_tasks,
-        ProcessFileForm(file_id=task_id),
-        user,
-        task_id,
-    )
-    # file_item = Files.get_file_by_id(id=id)
-
-    return {"task_id": task_id}
+    # Envia a task pro RabbitMQ via Celery
+    async_result = process_tasks.delay(form_data=ProcessFileForm(
+        file_id=task_id), user=user, task_id=task_id)
+    message = f"Task {task_id} adicionada à fila de processamento"
+    return AsyncTaskResponse(task_id=task_id, status="queued", message=message)
 
 
 ############################
@@ -197,23 +163,8 @@ async def upload_file_async(
 # Rota opcional para verificar status da task
 @router.get("/task_status/{task_id}")
 async def get_task_status(task_id: str):
-    global tasks_cache
-    with cache_lock:
-        task = tasks_cache.get(task_id, {})
-    return {
-        "task_id": task_id,
-        "status": task.get("status", "not_found"),
-        "result": task.get("result"),
-        "error": task.get("error"),
-        "task": task,
-    }
-
-
-@router.get("/get_tasks")
-def get_task_status():
-    if tasks_cache:
-        return {"task_ids": list(tasks_cache.keys())}  # Retorna apenas os task_ids
-    return {"message": "No tasks found"}
+    res = AsyncResult(task_id, app=celery_app)
+    return {"task_id": task_id, "status": res.status, "result": res.result if res.ready() else None}
 
 
 ############################

@@ -3,6 +3,28 @@ import asyncio
 from typing import Dict
 from uuid import uuid4
 
+from open_webui.celery_worker import celery_app
+from open_webui.routers.retrieval import (
+    process_file,
+    process_file_async,
+)
+# from app.core.pdf import extract_text
+
+
+@celery_app.task
+def process_tasks(request, form_data, user, task_id):
+    """Executa OCR e processamento do PDF de forma assíncrona."""
+    try:
+        # Decodifica base64 para bytes
+        content = process_file_async(request=request,
+                                     form_data=form_data, task_id=task_id, user=user)
+
+        return {"status": "completed", "result": content, "cd_hash": task_id}
+
+    except Exception as e:
+        return {"status": "failed", "error": str(e), "cd_hash": task_id}
+
+
 # A dictionary to keep track of active tasks
 tasks: Dict[str, asyncio.Task] = {}
 
