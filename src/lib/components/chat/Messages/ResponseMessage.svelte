@@ -45,6 +45,7 @@
 	import ReadMessageIcon from '$lib/components/icons/ReadMessageIcon.svelte';
 	import MessageEditIcon from '$lib/components/icons/MessageEditIcon.svelte';
 	import RegenerateIcon from '$lib/components/icons/RegenerateIcon.svelte';
+	import StopReading from '$lib/components/icons/StopReading.svelte';
 	import { getModelIcon } from '$lib/utils';
 
 	interface MessageType {
@@ -515,19 +516,19 @@
 
 		<div class="flex-auto w-0 pl-1">
 			<Name>
-				<Tooltip content={model?.name ?? message.model} placement="top-start">
+				<!-- <Tooltip content={model?.name ?? message.model} placement="top-start"> -->
 					<span class="line-clamp-1 text-base">
 						{model?.name ?? message.model}
 					</span>
-				</Tooltip>
+				<!-- </Tooltip> -->
 
 				{#if message.timestamp}
 					<div
 						class=" self-center text-2xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 					>
-						<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
+						<!-- <Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}> -->
 							<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
-						</Tooltip>
+						<!-- </Tooltip> -->
 					</div>
 				{/if}
 			</Name>
@@ -686,7 +687,7 @@
 							</div>
 						{:else}
 							<div
-								class="w-full flex flex-col relative text-base leading-[1.8] dark:text-customGray-100"
+								class="w-full flex flex-col relative text-base leading-[1.5] dark:text-customGray-100"
 								id="response-content-container"
 							>
 								{#if message.content === '' && !message.error}
@@ -858,7 +859,7 @@
 									>
 										{#if loadingSpeech}
 											<svg
-												class=" w-4 h-4"
+												class=" w-3 h-3"
 												fill="currentColor"
 												viewBox="0 0 24 24"
 												xmlns="http://www.w3.org/2000/svg"
@@ -889,20 +890,7 @@
 												<circle class="spinner_S1WN spinner_JApP" cx="20" cy="12" r="3" />
 											</svg>
 										{:else if speaking}
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="2"
-												stroke="currentColor"
-												class="w-3.5 h-3.5"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z"
-												/>
-											</svg>
+											<StopReading className="size-3"/>	
 										{:else}
 											<ReadMessageIcon />
 										{/if}

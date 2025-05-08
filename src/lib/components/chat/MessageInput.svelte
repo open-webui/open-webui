@@ -495,8 +495,7 @@
 									scrollToBottom();
 								}}
 							>
-							<ScrollToBottomIcon className="size-5"/>
-								
+							<ScrollToBottomIcon className="size-6"/>	
 							</button>
 						</div>
 					{/if}

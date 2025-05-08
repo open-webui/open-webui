@@ -374,4 +374,10 @@ input:-webkit-autofill {
 	-webkit-text-fill-color: white  !important;
 	transition: background-color 9999s ease-in-out 0s;
 }
+#response-content-container strong {
+	font-weight: 500;
+}
+#response-content-container li::marker {
+	color: white;
+}
 
