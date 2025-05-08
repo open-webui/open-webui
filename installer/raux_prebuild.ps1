@@ -12,7 +12,19 @@ param(
 
 function GetVersion {
     Write-Host "[GetVersion] Invoked"
-    # TODO: Implement logic to extract version from package.json
+    $packageJsonPath = Join-Path $PSScriptRoot '..' 'package.json'
+    if (-Not (Test-Path $packageJsonPath)) {
+        Write-Host "ERROR: package.json not found at $packageJsonPath"
+        exit 1
+    }
+    $packageJson = Get-Content $packageJsonPath -Raw | ConvertFrom-Json
+    $version = $packageJson.version
+    Write-Host "Version: $version"
+    # For GitHub Actions, output to GITHUB_OUTPUT if set
+    if ($env:GITHUB_OUTPUT) {
+        "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+    }
+    return $version
 }
 
 function BuildSolution {
