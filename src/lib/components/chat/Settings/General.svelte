@@ -488,7 +488,7 @@
 				</div>
 			</div>
 
-			<div class="relative w-full dark:bg-customGray-900 rounded-md">
+			<div class="relative w-full dark:bg-customGray-900 rounded-md mb-2.5">
 				{#if system}
 					<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('System Prompt')}</div>
 				{/if}
@@ -498,17 +498,15 @@
 					class="px-2.5 py-2 text-sm {system ? "mt-2" : "mt-0"} w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none"
 					rows="4"
 				/>
-				{#if !system}
-					<span
-						class="absolute top-[1.625rem] w-[18rem] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
-					>
-						{$i18n.t('Adding a system prompt shapes LLM responses to better fit specific objectives.')}
-					</span>
-				{/if}
+			</div>
+			<div class="text-xs text-gray-600 dark:text-customGray-100/50 mb-5">
+				<div>
+					{$i18n.t('Adding a system prompt shapes LLM responses to better fit specific objectives.')}
+				</div>
 			</div>
 
 			
-			<div class="mt-2.5">
+			<div class="mb-2.5">
 				<div class="flex items-center justify-between mb-1 w-full dark:bg-customGray-900 rounded-md h-10 px-2.5 py-2">
 					
 						<div class="text-sm dark:text-customGray-100">

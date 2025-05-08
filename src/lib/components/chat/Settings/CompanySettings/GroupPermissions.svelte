@@ -90,10 +90,10 @@
 							const screenWidth = window.innerWidth;
 							if (screenWidth < 1290) {
 								// submenuX = rect.left - 178;
-								submenuX = -178;
+								submenuX = -183;
 							} else {
 								// submenuX = rect.right + 8;
-								submenuX = 8;
+								submenuX = 158;
 							}
 							// submenuY = rect.top - 40;
 							submenuY = -40;
@@ -142,7 +142,7 @@
 					{#if showSubmenu}
 						<button
 							type="button"
-							class="absolute bg-white dark:bg-customGray-900 border px-1 py-2 border-gray-300 dark:border-customGray-700 rounded-xl shadow z-20 min-w-30"
+							class="w-[11rem] absolute bg-white dark:bg-customGray-900 border px-1 py-2 border-gray-300 dark:border-customGray-700 rounded-xl shadow z-20 min-w-30"
 							style="top: {submenuY}px; left: {submenuX}px"
 							on:mouseenter={() => (hoveringSubmenu = true)}
 							on:mouseleave={() => {
@@ -180,7 +180,7 @@
 					on:click={() => {
                         dispatch('deleteGroup')
                     }}
-					class="flex gap-2 items-center px-3 py-2 text-xs text-[#F65351] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
+					class="flex gap-2 items-center px-3 py-2 text-xs text-[#F65351] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md"
 				>
 					<DeleteIcon />
 					<div class="flex items-center">{$i18n.t('Delete group')}</div>
