@@ -296,7 +296,7 @@
 	</div>
 
 	{#each filteredUsers as user, userIdx (user.id)}
-		<div class="grid grid-cols-[1fr_110px_100px_26px] gap-x-2 mb-[14px] group cursor-pointer">
+		<div class="grid grid-cols-[220px_110px_100px_26px] gap-x-2 mb-[14px] group cursor-pointer">
 			<div class="flex items-center">
 				<img
 					class=" rounded-full w-3 h-3 object-cover mr-2.5"
