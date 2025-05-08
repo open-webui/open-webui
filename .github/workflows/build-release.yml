@@ -50,8 +50,6 @@ jobs:
             })
             console.log(`Created release ${release.data.html_url}`)
             return release.data.id;
-      - name: Package RAUX
-        run: bash installer/raux_prebuild --package
       - name: Upload package to GitHub release
         uses: actions/upload-artifact@v4
         with:
