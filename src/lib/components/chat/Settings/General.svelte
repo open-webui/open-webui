@@ -15,7 +15,7 @@
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
+	let themes = ['dark', 'light', 'deltion', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
 	let selectedTheme = 'system';
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
@@ -222,6 +222,14 @@
 			document.documentElement.classList.add('dark');
 		}
 
+		if(themeToApply === 'deltion') {
+			document.documentElement.style.setProperty('--color-gray-800', '#101010');
+			document.documentElement.style.setProperty('--color-gray-850', '#050505');
+			document.documentElement.style.setProperty('--color-gray-900', '#343469');
+			document.documentElement.style.setProperty('--color-gray-950', '#343469');
+			document.documentElement.classList.add('dark');
+		}
+
 		console.log(_theme);
 	};
 
@@ -250,6 +258,7 @@
 						<option value="dark">⚫ {$i18n.t('Dark')}</option>
 						<!-- <option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option> -->
 						<option value="light">⚪ {$i18n.t('Light')}</option>
+						<option value="deltion">⚪ {$i18n.t('Deltion')}</option>
 						<!-- <option value="her">🌷 Her</option>
 						<option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
 						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option> -->
