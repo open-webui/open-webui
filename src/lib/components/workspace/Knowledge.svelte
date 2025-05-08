@@ -126,6 +126,9 @@
 			window.removeEventListener('resize', updateScrollHeight);
 		};
 	});
+
+	let hoveredKowledge = null;
+	let menuIdOpened = null;
 </script>
 
 <svelte:head>
@@ -236,7 +239,9 @@
 			<div class="mb-2 gap-2 grid lg:grid-cols-2 xl:grid-cols-3" id="knowledge-list">
 				{#each filteredItems as item}
 					<button
-						class="group flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 dark:bg-customGray-800 dark:hover:bg-white/5 hover:bg-black/5 rounded-2xl transition"
+					on:mouseenter={() =>  hoveredKowledge = item.id}
+					on:mouseleave={() =>  hoveredKowledge = null}
+						class="group flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 dark:bg-customGray-800 rounded-2xl transition"
 						on:click={() => {
 							if (item?.meta?.document) {
 								toast.error(
@@ -256,14 +261,14 @@
 									<div class="flex items-center gap-1 flex-wrap">
 										{#if item.access_control == null}
 											<div
-												class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+												class="flex gap-1 items-center text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'dark:text-customGray-300'}"
 											>
 												<PublicIcon />
 												<span>{$i18n.t('Public')}</span>
 											</div>
 										{:else if getGroupNamesFromAccess(item).length < 1}
 											<div
-												class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+												class="flex gap-1 items-center text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'dark:text-customGray-300'}"
 											>
 												<PrivateIcon />
 												<span>{$i18n.t('Private')}</span>
@@ -271,7 +276,7 @@
 										{:else}
 											{#each getGroupNamesFromAccess(item) as groupName}
 												<div
-													class="flex items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+													class="flex items-center text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'dark:text-customGray-300'}"
 												>
 													<GroupIcon />
 													<span>{groupName}</span>
@@ -281,12 +286,18 @@
 									</div>
 								</div>
 								{#if ($user.id === item.user_id || $user?.role === 'admin')}
-								<div class="invisible group-hover:visible">
+								<div class="{(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'visible' : 'invisible'}">
 									<ItemMenu
 										{item}
 										on:delete={() => {
 											selectedItem = item;
 											showDeleteConfirm = true;
+										}}
+										on:openMenu={() => {
+											menuIdOpened = item.id
+										}}
+										on:closeMenu={() => {
+											menuIdOpened = null
 										}}
 									/>
 								</div>
@@ -294,7 +305,7 @@
 							</div>
 
 							<div class="self-center flex-1 px-1 mb-1">
-								<div class="text-left line-clamp-2 h-fit text-base dark:text-customGray-100 leading-[1.2] mb-1.5">{item.name}</div>
+								<div class="text-left line-clamp-2 h-fit text-base {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'dark:text-customGray-100'} leading-[1.2] mb-1.5">{item.name}</div>
 								<div class="mb-5 text-left overflow-hidden text-ellipsis line-clamp-1 text-xs dark:text-customGray-100/50">
 									{item.description}
 								</div>
@@ -319,7 +330,7 @@
 								{/if}
 								</Tooltip>
 							</div>
-							<div class=" text-xs text-gray-500 line-clamp-1 dark:text-customGray-100">
+							<div class=" text-xs text-gray-500 line-clamp-1 dark:text-customGray-100/50">
 								{$i18n.t('Updated')}
 								{dayjs(item.updated_at * 1000).fromNow()}
 							</div>

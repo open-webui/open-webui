@@ -380,4 +380,19 @@ input:-webkit-autofill {
 #response-content-container li::marker {
 	color: white;
 }
+#response-content-container h1 {
+	font-size: 1.375rem;
+	font-weight: 500;
+}
+#response-content-container h2 {
+	font-size: 1.125rem;
+	font-weight: 500;
+}
+#response-content-container h3,
+#response-content-container h4
+#response-content-container h5
+#response-content-container h6 {
+	font-size: 1.125rem;
+	font-weight: 500;
+}
 

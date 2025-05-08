@@ -278,6 +278,9 @@
 			updateScrollHeight();
 		}, 0);
 	}
+	let hoveredModel = null;
+	let menuIdOpened = null;
+	
 </script>
 
 <svelte:head>
@@ -360,7 +363,7 @@
 	<div class="pl-[22px] pr-[15px]">
 		<div
 			id="assistants-filters"
-			class="flex items-center justify-between py-5 pr-[22px] flex-col md:flex-row"
+			class="flex items-start justify-between py-5 pr-[22px] flex-col md:flex-row"
 		>
 			<div class="flex items-start space-x-[5px] flex-col sm:flex-row mb-3 sm:mb-0">
 				<div
@@ -414,9 +417,11 @@
 				</div>
 			{/if}
 			<div class="mb-2 gap-2 grid lg:grid-cols-2 xl:grid-cols-3" id="model-list">
-				{#each filteredModels as model}
+				{#each filteredModels as model (model.id)}
 					<div
-						class="group flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 dark:bg-customGray-800 dark:hover:bg-white/5 hover:bg-black/5 rounded-2xl transition"
+						on:mouseenter={() => hoveredModel = model.id}
+						on:mouseleave={() => hoveredModel = null}
+						class="flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 bg-customGray-800 rounded-2xl transition"
 						id="model-item-{model.id}"
 					>
 						<div class="flex items-start justify-between">
@@ -424,14 +429,14 @@
 								<div class="flex items-center gap-1 flex-wrap">
 									{#if model.access_control == null}
 										<div
-											class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<PublicIcon />
 											<span>{$i18n.t('Public')}</span>
 										</div>
 									{:else if getGroupNamesFromAccess(model).length < 1}
 										<div
-											class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<PrivateIcon />
 											<span>{$i18n.t('Private')}</span>
@@ -439,7 +444,7 @@
 									{:else}
 										{#each getGroupNamesFromAccess(model) as groupName}
 											<div
-												class="flex items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+												class="flex items-center {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 											>
 												<GroupIcon />
 												<span>{groupName}</span>
@@ -449,7 +454,7 @@
 
 									{#each model.meta?.tags as modelTag}
 										<div
-											class="flex items-center dark:text-white text-xs dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
+											class="flex items-center {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'dark:text-customGray-100'} text-xs dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
 										>
 											{modelTag.name}
 										</div>
@@ -457,7 +462,7 @@
 								</div>
 							</div>
 							{#if $user?.role === 'admin' || model.user_id === $user?.id || model?.access_control?.write.group_ids?.some( (wg) => group_ids.includes(wg) )}
-							<div class="invisible group-hover:visible">
+							<div class="{(hoveredModel === model.id || menuIdOpened === model.id) ? 'visible' : 'invisible'} ">
 								<ModelMenu
 									user={$user}
 									{model}
@@ -478,9 +483,15 @@
 										showModelDeleteConfirm = true;
 									}}
 									onClose={() => {}}
+									on:openMenu={() => {
+										menuIdOpened = model.id
+									}}
+									on:closeMenu={() => {
+										menuIdOpened = null
+									}}
 								>
 									<button
-										class="self-center w-fit text-sm px-0.5 h-[21px] dark:text-white dark:hover:text-white hover:bg-black/5 dark:hover:bg-customGray-900 rounded-md"
+										class="self-center w-fit text-sm px-0.5 h-[21px] dark:text-white dark:hover:text-white hover:bg-black/5  rounded-md"
 										type="button"
 									>
 										<EllipsisHorizontal className="size-5" />
@@ -512,16 +523,11 @@
 								href={`/?models=${encodeURIComponent(model.id)}`}
 							>
 								<div class=" flex-1 self-center">
-									<Tooltip
-										content={marked.parse(model?.meta?.description ?? model.id)}
-										className=" w-fit"
-										placement="top-start"
-									>
-										<div class="text-base dark:text-customGray-100 line-clamp-2 leading-[1.2]">
-											{model.name}
-										</div>
-									</Tooltip>
-
+									
+									<div class="text-base {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'dark:text-customGray-100'}  line-clamp-2 leading-[1.2]">
+										{model.name}
+									</div>
+								
 									<div class="mt-[5px] flex gap-1 text-xs overflow-hidden">
 										<div class="line-clamp-1 text-xs dark:text-customGray-100/50">
 											{#if (model?.meta?.description ?? '').trim()}
@@ -560,7 +566,7 @@
 									</div>
 								</Tooltip>
 							</div>
-							<div class="text-xs dark:text-customGray-100">
+							<div class="text-xs dark:text-customGray-100/50">
 								{dayjs(model.updated_at * 1000).fromNow()}
 							</div>
 

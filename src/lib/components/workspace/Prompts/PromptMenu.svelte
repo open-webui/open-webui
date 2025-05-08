@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
-	import { getContext } from 'svelte';
+	import { getContext, createEventDispatcher } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
@@ -16,6 +16,7 @@
 	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
 
 	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
 	export let shareHandler: Function;
 	export let cloneHandler: Function;
@@ -31,20 +32,21 @@
 	bind:show
 	on:change={(e) => {
 		if (e.detail === false) {
+			dispatch('closeMenu');
 			onClose();
+		}else{
+			dispatch('openMenu');
 		}
 	}}
->
-	<Tooltip content={$i18n.t('More')}>
-		<slot />
-	</Tooltip>
-
+>	
+	<slot />
+	
 	<div slot="content">
 		<DropdownMenu.Content
 			class="w-full max-w-[160px] rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-customGray-700 z-50 bg-white dark:bg-customGray-900 dark:text-white shadow"
 			sideOffset={-2}
 			side="bottom"
-			align="start"
+			align="end"
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item>
