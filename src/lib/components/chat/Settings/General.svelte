@@ -175,6 +175,24 @@
 			document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
 		}
 
+		if (themeToApply === 'deltion') {
+			/* ---- DELTION BRAND COLOURS ---- */
+			document.documentElement.style.setProperty('--color-gray-50', '#eeeef7'); // bijna wit
+			document.documentElement.style.setProperty('--color-gray-100', '#ddddee');
+			document.documentElement.style.setProperty('--color-gray-200', '#c2c2e1');
+			document.documentElement.style.setProperty('--color-gray-300', '#9c9cce');
+			document.documentElement.style.setProperty('--color-gray-400', '#7777bb');
+			document.documentElement.style.setProperty('--color-gray-500', '#5353a7'); // mid-tone
+			document.documentElement.style.setProperty('--color-gray-600', '#404082');
+			document.documentElement.style.setProperty('--color-gray-700', '#313163');
+			document.documentElement.style.setProperty('--color-gray-800', '#232348');
+			document.documentElement.style.setProperty('--color-gray-850', '#1b1b37');
+			document.documentElement.style.setProperty('--color-gray-900', '#191933');
+			document.documentElement.style.setProperty('--color-gray-950', '#111122'); // bijna zwart
+
+			document.documentElement.classList.add('dark');
+		}
+
 		themes
 			.filter((e) => e !== themeToApply)
 			.forEach((e) => {
@@ -219,24 +237,6 @@
 			document.documentElement.style.setProperty('--color-gray-850', '#050505');
 			document.documentElement.style.setProperty('--color-gray-900', '#000000');
 			document.documentElement.style.setProperty('--color-gray-950', '#000000');
-			document.documentElement.classList.add('dark');
-		}
-
-		if (themeToApply === 'deltion') {
-			/* ---- DELTION BRAND COLOURS ---- */
-			document.documentElement.style.setProperty('--color-gray-50', '#eeeef7'); // bijna wit
-			document.documentElement.style.setProperty('--color-gray-100', '#ddddee');
-			document.documentElement.style.setProperty('--color-gray-200', '#c2c2e1');
-			document.documentElement.style.setProperty('--color-gray-300', '#9c9cce');
-			document.documentElement.style.setProperty('--color-gray-400', '#7777bb');
-			document.documentElement.style.setProperty('--color-gray-500', '#5353a7'); // mid-tone
-			document.documentElement.style.setProperty('--color-gray-600', '#404082');
-			document.documentElement.style.setProperty('--color-gray-700', '#313163');
-			document.documentElement.style.setProperty('--color-gray-800', '#232348');
-			document.documentElement.style.setProperty('--color-gray-850', '#1b1b37');
-			document.documentElement.style.setProperty('--color-gray-900', '#191933');
-			document.documentElement.style.setProperty('--color-gray-950', '#111122'); // bijna zwart
-
 			document.documentElement.classList.add('dark');
 		}
 
