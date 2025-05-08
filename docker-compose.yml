@@ -18,6 +18,7 @@ services:
     container_name: open-webui
     volumes:
       - ./open-webui-data:/app/backend/data
+      # - ./backend/open_webui:/app/backend/open_webui  # TEMP: for python debug
     # depends_on:
     #   - ollama
     ports:
