@@ -1,13 +1,15 @@
 param(
     [Parameter(Mandatory=$false)][switch]$solution_version,
-    [Parameter(Mandatory=$false)][switch]$build,
+    [Parameter(Mandatory=$false)][switch]$build_frontend,
+    [Parameter(Mandatory=$false)][switch]$build_backend,
     [Parameter(Mandatory=$false)][switch]$package
 )
 # raux_prebuild.ps1
-# This script provides three main methods for CI/CD automation:
+# This script provides methods for CI/CD automation:
 # 1. GetVersion --solution-version
-# 2. BuildSolution --build
-# 3. PackageSolution --package
+# 2. BuildFrontend --build-frontend
+# 3. BuildBackend --build-backend
+# 4. PackageSolution --package
 # Each method prints its name and the received parameter.
 
 function GetVersion {
@@ -27,9 +29,31 @@ function GetVersion {
     return $version
 }
 
-function BuildSolution {
-    Write-Host "[BuildSolution] Invoked"
-    # TODO: Implement logic to generate bin folder and return its location
+function BuildFrontend {
+    Write-Host "[BuildFrontend] Invoked"
+    $ErrorActionPreference = 'Stop'
+    try {
+        Push-Location "$PSScriptRoot\.."  # Go to repo root
+        npm ci
+        npm run build
+        Pop-Location
+    } catch {
+        Write-Host "ERROR: Frontend build failed: $_"
+        exit 1
+    }
+}
+
+function BuildBackend {
+    Write-Host "[BuildBackend] Invoked"
+    $ErrorActionPreference = 'Stop'
+    try {
+        Push-Location "$PSScriptRoot\..\backend"
+        pip install -r requirements.txt
+        Pop-Location
+    } catch {
+        Write-Host "ERROR: Backend dependency installation failed: $_"
+        exit 1
+    }
 }
 
 function PackageSolution {
@@ -40,10 +64,12 @@ function PackageSolution {
 # Main script logic: parse arguments and dispatch to the correct function
 if ($solution_version) {
     GetVersion
-} elseif ($build) {
-    BuildSolution
+} elseif ($build_frontend) {
+    BuildFrontend
+} elseif ($build_backend) {
+    BuildBackend
 } elseif ($package) {
     PackageSolution
 } else {
-    Write-Host "No valid parameter provided. Use --solution-version, --build, or --package."
+    Write-Host "No valid parameter provided. Use --solution-version, --build-frontend, --build-backend, or --package."
 }

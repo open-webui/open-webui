@@ -146,7 +146,8 @@
 			"description": "Select RAUX Prebuild switch (no value needed)",
 			"options": [
 				"-solution_version",
-				"-build",
+				"-build_frontend",
+				"-build_backend",
 				"-package"
 			],
 			"default": "-solution_version"
