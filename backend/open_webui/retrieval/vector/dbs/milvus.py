@@ -14,6 +14,11 @@ from open_webui.config import (
     MILVUS_URI,
     MILVUS_DB,
     MILVUS_TOKEN,
+    MILVUS_INDEX_TYPE,
+    MILVUS_METRIC_TYPE,
+    MILVUS_HNSW_M,
+    MILVUS_HNSW_EFCONSTRUCTION,
+    MILVUS_IVF_FLAT_NLIST,
 )
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -106,66 +111,33 @@ class MilvusClient(VectorDBBase):
 
         index_params = self.client.prepare_index_params()
 
-        # Get index type from environment variable.
-        # Milvus standalone (local mode) supports: FLAT, IVF_FLAT, AUTOINDEX.
-        # HNSW is often preferred for performance but may require a clustered Milvus setup.
-        # Defaulting to AUTOINDEX for broader compatibility, especially with Milvus standalone.
-        default_index_type = "AUTOINDEX"
-        milvus_index_type_env = os.getenv("MILVUS_INDEX_TYPE")
-
-        if milvus_index_type_env:
-            milvus_index_type = milvus_index_type_env.upper()
-            log.info(f"Milvus index type from MILVUS_INDEX_TYPE env var: {milvus_index_type}")
-        else:
-            milvus_index_type = default_index_type
-            log.info(f"MILVUS_INDEX_TYPE env var not set, defaulting to: {milvus_index_type}")
+        # Use configurations from config.py
+        index_type = MILVUS_INDEX_TYPE.upper()
+        metric_type = MILVUS_METRIC_TYPE.upper()
+        
+        log.info(f"Using Milvus index type: {index_type}, metric type: {metric_type}")
 
         index_creation_params = {}
-        metric_type = os.getenv("MILVUS_METRIC_TYPE", "COSINE").upper() # Default to COSINE
-
-        if milvus_index_type == "HNSW":
-            # Parameters for HNSW
-            m_env = os.getenv("MILVUS_HNSW_M", "16")
-            ef_construction_env = os.getenv("MILVUS_HNSW_EFCONSTRUCTION", "100")
-            try:
-                m_val = int(m_env)
-                ef_val = int(ef_construction_env)
-            except ValueError:
-                log.warning(f"Invalid HNSW params M='{m_env}' or efConstruction='{ef_construction_env}'. Defaulting to M=16, efConstruction=100.")
-                m_val = 16
-                ef_val = 100
-            index_creation_params = {"M": m_val, "efConstruction": ef_val}
-            log.info(f"Using HNSW index with metric {metric_type}, params: {index_creation_params}")
-        elif milvus_index_type == "IVF_FLAT":
-            # Parameters for IVF_FLAT
-            nlist_env = os.getenv("MILVUS_IVF_FLAT_NLIST", "128")
-            try:
-                nlist = int(nlist_env)
-            except ValueError:
-                log.warning(f"Invalid MILVUS_IVF_FLAT_NLIST value '{nlist_env}'. Defaulting to 128.")
-                nlist = 128
-            index_creation_params = {"nlist": nlist}
-            log.info(f"Using IVF_FLAT index with metric {metric_type}, params: {index_creation_params}")
-        elif milvus_index_type == "FLAT":
-            log.info(f"Using FLAT index with metric {metric_type} (no specific build-time params).")
-            # No specific build-time parameters needed for FLAT
-        elif milvus_index_type == "AUTOINDEX":
-            log.info(f"Using AUTOINDEX with metric {metric_type} (params managed by Milvus).")
-            # No specific build-time parameters needed for AUTOINDEX
+        if index_type == "HNSW":
+            index_creation_params = {"M": MILVUS_HNSW_M, "efConstruction": MILVUS_HNSW_EFCONSTRUCTION}
+            log.info(f"HNSW params: {index_creation_params}")
+        elif index_type == "IVF_FLAT":
+            index_creation_params = {"nlist": MILVUS_IVF_FLAT_NLIST}
+            log.info(f"IVF_FLAT params: {index_creation_params}")
+        elif index_type in ["FLAT", "AUTOINDEX"]:
+            log.info(f"Using {index_type} index with no specific build-time params.")
         else:
             log.warning(
-                f"Unsupported or unrecognized MILVUS_INDEX_TYPE: '{milvus_index_type}'. "
-                f"Falling back to '{default_index_type}'. "
-                f"Supported types: HNSW, IVF_FLAT, FLAT, AUTOINDEX."
+                f"Unsupported MILVUS_INDEX_TYPE: '{index_type}'. "
+                f"Supported types: HNSW, IVF_FLAT, FLAT, AUTOINDEX. "
+                f"Milvus will use its default for the collection if this type is not directly supported for index creation."
             )
-            milvus_index_type = default_index_type # Fallback to a safe default
-            # index_creation_params remains {} which is fine for AUTOINDEX/FLAT
-            log.info(f"Fell back to {default_index_type} index with metric {metric_type}.")
-
+            # For unsupported types, pass the type directly to Milvus; it might handle it or use a default.
+            # If Milvus errors out, the user needs to correct the MILVUS_INDEX_TYPE env var.
 
         index_params.add_index(
             field_name="vector",
-            index_type=milvus_index_type,
+            index_type=index_type,
             metric_type=metric_type,
             params=index_creation_params,
         )
@@ -175,7 +147,7 @@ class MilvusClient(VectorDBBase):
             schema=schema,
             index_params=index_params,
         )
-        log.info(f"Successfully created collection '{self.collection_prefix}_{collection_name}' with index type '{milvus_index_type}' and metric '{metric_type}'.")
+        log.info(f"Successfully created collection '{self.collection_prefix}_{collection_name}' with index type '{index_type}' and metric '{metric_type}'.")
 
 
     def has_collection(self, collection_name: str) -> bool:
