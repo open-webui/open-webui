@@ -222,11 +222,54 @@
 			document.documentElement.classList.add('dark');
 		}
 
-		if(themeToApply === 'deltion') {
-			document.documentElement.style.setProperty('--color-gray-800', '#101010');
-			document.documentElement.style.setProperty('--color-gray-850', '#050505');
-			document.documentElement.style.setProperty('--color-gray-900', '#343469');
-			document.documentElement.style.setProperty('--color-gray-950', '#343469');
+		if (themeToApply === 'deltion') {
+			/* ---- DELTION BRAND COLOURS ---- */
+			document.documentElement.style.setProperty('--p', '#343469'); // primary
+			document.documentElement.style.setProperty('--pf', '#24244a'); // primary-focus (10 % donkerder)
+			document.documentElement.style.setProperty('--pc', '#ffffff'); // primary-content (tekst)
+
+			document.documentElement.style.setProperty('--a', '#f58220'); // accent
+			document.documentElement.style.setProperty('--af', '#ffa846'); // accent-focus (15 % lichter)
+			document.documentElement.style.setProperty('--ac', '#1a0b00'); // accent-content
+
+			/* optioneel: koppel secondary aan een lichtere tint van blauw  */
+			document.documentElement.style.setProperty('--s', '#4e4e9e');
+			document.documentElement.style.setProperty('--sf', '#393974');
+			document.documentElement.style.setProperty('--sc', '#ffffff');
+
+			/* neutral & base kleuren: sluiten aan op jouw grijstinten */
+			document.documentElement.style.setProperty('--n', '#262626');
+			document.documentElement.style.setProperty('--nf', '#171717');
+			document.documentElement.style.setProperty('--nc', '#e3e3e3');
+
+			document.documentElement.style.setProperty('--b1', '#171717'); // base-100  (background)
+			document.documentElement.style.setProperty('--b2', '#262626'); // base-200
+			document.documentElement.style.setProperty('--b3', '#333333'); // base-300
+			document.documentElement.style.setProperty('--bc', '#e3e3e3'); // base-content (tekst)
+
+			/* ---- EXTRA (TAILWIND-LIKE) SCHAAL VOOR PRIMARY ---- */
+			document.documentElement.style.setProperty('--color-primary-50', '#b0b0d8');
+			document.documentElement.style.setProperty('--color-primary-100', '#8686c3');
+			document.documentElement.style.setProperty('--color-primary-200', '#6767b4');
+			document.documentElement.style.setProperty('--color-primary-300', '#4e4e9e');
+			document.documentElement.style.setProperty('--color-primary-400', '#444488');
+			document.documentElement.style.setProperty('--color-primary-500', '#393974');
+			document.documentElement.style.setProperty('--color-primary-600', '#343469');
+			document.documentElement.style.setProperty('--color-primary-700', '#2c2c59');
+			document.documentElement.style.setProperty('--color-primary-800', '#24244a');
+			document.documentElement.style.setProperty('--color-primary-900', '#15152a');
+
+			/* ---- EXTRA (TAILWIND-LIKE) SCHAAL VOOR ACCENT ---- */
+			document.documentElement.style.setProperty('--color-accent-50', '#ffe8d3');
+			document.documentElement.style.setProperty('--color-accent-100', '#ffd5af');
+			document.documentElement.style.setProperty('--color-accent-200', '#fbcca5');
+			document.documentElement.style.setProperty('--color-accent-300', '#f9af70');
+			document.documentElement.style.setProperty('--color-accent-400', '#f6913b');
+			document.documentElement.style.setProperty('--color-accent-500', '#f58220');
+			document.documentElement.style.setProperty('--color-accent-600', '#d4670a');
+			document.documentElement.style.setProperty('--color-accent-700', '#9f4d07');
+			document.documentElement.style.setProperty('--color-accent-800', '#6a3305');
+			document.documentElement.style.setProperty('--color-accent-900', '#321a02');
 			document.documentElement.classList.add('dark');
 		}
 
@@ -254,11 +297,11 @@
 						placeholder="Select a theme"
 						on:change={() => themeChangeHandler(selectedTheme)}
 					>
+						<option value="deltion">🟠 {$i18n.t('Deltion')}</option>
 						<option value="system">⚙️ {$i18n.t('System')}</option>
 						<option value="dark">⚫ {$i18n.t('Dark')}</option>
 						<!-- <option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option> -->
 						<option value="light">⚪ {$i18n.t('Light')}</option>
-						<option value="deltion">⚪ {$i18n.t('Deltion')}</option>
 						<!-- <option value="her">🌷 Her</option>
 						<option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
 						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option> -->
