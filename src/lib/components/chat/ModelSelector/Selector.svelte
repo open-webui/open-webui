@@ -62,7 +62,7 @@
 	const filteredSourceItems = items
 		.filter?.((item) => !item?.model?.name?.toLowerCase()?.includes('arena'))
 		?.filter((item) => item.model?.base_model_id == null);
-	console.log(filteredSourceItems, 'items')
+	console.log(filteredSourceItems, 'items');
 	const fuse = new Fuse(
 		filteredSourceItems.map((item) => {
 			const _item = {
@@ -245,11 +245,11 @@
 	}
 	let baseModel = null;
 	$: {
-		if(selectedModel?.model?.base_model_id){
-			baseModel = items.find(item => item?.model?.id === selectedModel?.model?.base_model_id)
+		if (selectedModel?.model?.base_model_id) {
+			baseModel = items.find((item) => item?.model?.id === selectedModel?.model?.base_model_id);
 		}
 	}
-	$: console.log(baseModel)
+	
 </script>
 
 <DropdownMenu.Root
@@ -289,12 +289,12 @@
 		>
 			{#if selectedModel}
 				<img
-					src={selectedModel?.model?.meta?.profile_image_url ? selectedModel?.model?.meta?.profile_image_url : getModelIcon(baseModel?.model?.name)}
+					src={getModelIcon(baseModel?.model?.name)}
 					alt="Model"
 					class="rounded-full size-4 self-center mr-2"
 				/>
-				{selectedModel.label}
-				({baseModel?.model?.name})
+				<!-- {selectedModel.label} -->
+				{baseModel?.model?.name}
 			{:else}
 				{placeholder}
 			{/if}
