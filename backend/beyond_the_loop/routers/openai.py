@@ -628,7 +628,7 @@ async def generate_chat_completion(
     # Check if user has access to the model
     if not bypass_filter:
         if not (
-            user.id == model_info.user_id or has_access(
+            user.id == model_info.user_id or (not model_info.base_model_id and user.role == "admin") or has_access(
                 user.id, type="read", access_control=model_info.access_control
             )
         ):

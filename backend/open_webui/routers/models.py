@@ -34,7 +34,7 @@ async def get_models(user=Depends(get_verified_user)):
 
 @router.get("/base", response_model=list[ModelResponse])
 async def get_base_models(user=Depends(get_admin_user)):
-    return Models.get_base_models_by_comany(user.company_id)
+    return Models.get_base_models_by_comany_and_user(user.company_id, user.id, user.role)
 
 
 ############################
@@ -150,8 +150,6 @@ async def update_model_by_id(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-
-    print("ACCCCCESSED MODEL", model)
 
     if (
         (not model.base_model_id and user.role != "admin")
