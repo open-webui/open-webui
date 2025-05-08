@@ -15,6 +15,32 @@
 			},
 			"problemMatcher": []
 		},
+        {
+            "label": "Run RAUX Installer",
+            "type": "shell",
+            "command": "${workspaceFolder}\\installer\\Installer-UX.exe",
+            "dependsOn": ["Build RAUX Installer"],
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+		{
+			"label": "Run RAUX Prebuild",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-ExecutionPolicy", "ByPass", "-File", "${workspaceFolder}/installer/raux_prebuild.ps1",
+				"${input:rauxPrebuildSwitch}"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			},
+			"problemMatcher": []
+		},
 		{
 			"label": "Clean RAUX Environment: AppData",
 			"type": "shell",
@@ -113,6 +139,17 @@
 			"type": "command",
 			"command": "workbench.action.tasks.terminate",
 			"args": "start-frontend"
+		},
+		{
+			"id": "rauxPrebuildSwitch",
+			"type": "pickString",
+			"description": "Select RAUX Prebuild switch (no value needed)",
+			"options": [
+				"-solution_version",
+				"-build",
+				"-package"
+			],
+			"default": "-solution_version"
 		}
 	]
 }
