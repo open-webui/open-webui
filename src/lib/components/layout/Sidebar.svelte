@@ -871,7 +871,7 @@
 								: $i18n.t('User Menu')}
 							role={$user?.role}
 							buttonID="sidebar-user-menu"
-							buttonClass="select-none flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							buttonClass="self-center font-medium select-none flex items-center rounded-xl py-2.5 px-2.5 w-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 							on:show={(e) => {
 								if (e.detail === 'archived-chat') {
 									showArchivedChats.set(true);
@@ -883,7 +883,7 @@
 								class=" max-w-[30px] object-cover rounded-full self-center mr-3"
 								alt="User profile"
 							/>
-							<div class=" self-center font-medium">{$user?.name}</div>
+							{$user?.name}
 						</UserMenu>
 					</Tooltip>
 				{/if}

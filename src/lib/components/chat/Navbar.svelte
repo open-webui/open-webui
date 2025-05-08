@@ -69,7 +69,7 @@
 				<Tooltip content={$i18n.t('Show Sidebar')}>
 					<button
 						id="sidebar-toggle-button"
-						class="cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+						class="m-auto self-center cursor-pointer px-2 py-2 flex rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 						on:click={async () => {
 							showSidebar.set(!$showSidebar);
 							toast.announce($i18n.t('Sidebar expanded.'));
@@ -77,9 +77,7 @@
 						}}
 						aria-label="Show Sidebar"
 					>
-						<div class=" m-auto self-center">
-							<MenuLines />
-						</div>
+						<MenuLines />
 					</button>
 				</Tooltip>
 			</div>
@@ -132,28 +130,24 @@
 				{:else if $mobile && ($user.role === 'admin' || $user?.permissions.chat?.controls)}
 					<Tooltip content={$i18n.t('Controls')}>
 						<button
-							class=" flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							class="m-auto self-center flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							on:click={async () => {
 								await showControls.set(!$showControls);
 							}}
-							aria-label="Controls"
+							aria-label={$i18n.t('Controls')}
 						>
-							<div class=" m-auto self-center">
-								<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
-							</div>
+							<AdjustmentsHorizontal className=" size-5" strokeWidth="0.5" />
 						</button>
 					</Tooltip>
 				{/if}
 				<Tooltip content={$i18n.t('New Chat')}>
 					<button
 						id="new-chat-button"
-						class="flex cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+						class=" flex m-auto self-center cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 						on:click={handleNewChat}
-						aria-label="New Chat"
+						aria-label={$i18n.t('New Chat')}
 					>
-						<div class="m-auto self-center">
-							<PencilSquare className="size-5" strokeWidth="2" />
-						</div>
+						<PencilSquare className=" size-5" strokeWidth="2" />
 					</button>
 				</Tooltip>
 			</div>

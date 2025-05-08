@@ -36,33 +36,25 @@
 	{#each prompts as prompt, promptIdx}
 		{#if prompt.lang == $i18n.language}
 			<button
-				class="flex flex-col flex-1 shrink-0 w-full justify-between px-3 py-2 rounded-xl bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition group"
+				class="flex flex-col flex-1 shrink-0 w-full justify-between px-3 py-2 rounded-xl bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition group text-left"
 				on:click={() => {
 					dispatch('select', prompt.content);
 				}}
 			>
-				<div class="flex flex-col text-left">
+				<span
+					class="font-medium text-gray-600 dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
+				>
 					{#if prompt.title && prompt.title[0] !== ''}
-						<h3
-							class="  font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
-						>
-							{prompt.title[0]}
-						</h3>
-						<div class="text-xs text-gray-700 dark:text-gray-400 font-normal line-clamp-1">
-							{prompt.title[1]}
-						</div>
+						{$i18n.t(prompt.title[0])}
 					{:else}
-						<h3
-							class="  font-medium dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
-						>
-							{prompt.content}
-						</h3>
-
-						<h3 class="text-xs text-gray-700 dark:text-gray-400 font-normal line-clamp-1">
-							Prompt
-						</h3>
+						{$i18n.t(prompt.content)}
 					{/if}
-				</div>
+				</span>
+				{#if prompt.title && prompt.title[1]}
+					<span class="text-xs text-gray-600 dark:text-gray-300 font-normal line-clamp-1">
+						{$i18n.t(prompt.title[1])}
+					</span>
+				{/if}
 			</button>
 		{/if}
 	{/each}

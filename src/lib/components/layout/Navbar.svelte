@@ -152,15 +152,13 @@
 						id="new-chat-button"
 						class=" flex {$showSidebar
 							? 'md:hidden'
-							: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							: ''} m-auto self-center cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 						on:click={() => {
 							initNewChat();
 						}}
-						aria-label="New Chat"
+						aria-label={$i18n.t('New Chat')}
 					>
-						<div class=" m-auto self-center">
-							<PencilSquare className=" size-5" strokeWidth="2" />
-						</div>
+						<PencilSquare className=" size-5" strokeWidth="2" />
 					</button>
 				</Tooltip>
 
@@ -175,17 +173,15 @@
 						}}
 					>
 						<button
-							class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
-							aria-label="User Menu"
+							class="self-center select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							aria-label={$i18n.t('User Menu')}
 						>
-							<div class=" self-center">
-								<img
-									src={$user.profile_image_url}
-									class="size-6 object-cover rounded-full"
-									alt="User profile"
-									draggable="false"
-								/>
-							</div>
+							<img
+								src={$user?.profile_image_url}
+								class="size-6 object-cover rounded-full"
+								alt="User profile"
+								draggable="false"
+							/>
 						</button>
 					</UserMenu>
 				{/if}
