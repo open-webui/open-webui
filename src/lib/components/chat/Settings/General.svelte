@@ -203,7 +203,7 @@
 
 			if (res) {
 				console.log(res);
-				voices = res.voices;
+				voices = [...res.voices, {id: 'alloy', name: 'alloy'}];
 			}
 		}
 	};

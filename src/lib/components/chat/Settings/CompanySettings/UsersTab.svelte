@@ -12,6 +12,8 @@
 	import ChevronUpDown from '$lib/components/icons/ChevronUpDown.svelte';
 	import GroupSelect from './GroupSelect.svelte';
 	import { getGroups } from '$lib/apis/groups';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -117,9 +119,38 @@
 		setGroups();
 	});
 
-	
-	$: console.log(selectedGroups, 'selected groups');
+	let showDeleteConfirm = false;
+	let userToDelete = null;
+
+	const deleteHandler = async (id) => {
+		const res = await deleteUserById(localStorage.token, id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('User deleted successfully'));
+			getUsersHandler();
+		}
+	};
+
 </script>
+
+<DeleteConfirmDialog
+	bind:show={showDeleteConfirm}
+	title={$i18n.t('Delete user?')}
+	on:confirm={() => {
+		deleteHandler(userToDelete?.id);
+		userToDelete = null;
+	}}
+	on:cancel={() => {
+		userToDelete = null;
+	}}
+>
+<div class=" text-sm text-gray-500 flex-1 line-clamp-3">
+	{$i18n.t('This will delete')} <span class="  font-semibold">{userToDelete?.email}</span>.
+</div>
+</DeleteConfirmDialog>
 
 <div class="pb-24 min-h-[32rem]">
 	<div
@@ -201,11 +232,11 @@
 					<div class="flex items-center">
 						<div class="text-xs dark:text-customGray-100/50 max-w-[15rem] text-left">
 							{#if selectedRole === 'user'}
-								<span class="bg-[#024D15] rounded-lg text-xs text-[#0F8C18] px-2 w-fit"
+								<span class="bg-[#024D15] rounded-[9px] text-xs text-[#0F8C18] px-2 py-1 w-fit"
 									>{$i18n.t('User')}</span
 								>
 							{:else}
-								<span class="bg-[#33176E] rounded-lg text-xs text-[#7147CD] px-2 w-fit"
+								<span class="bg-[#33176E] rounded-[9px] text-xs text-[#7147CD] px-2 py-1 w-fit"
 									>{$i18n.t('Admin')}</span
 								>
 							{/if}
@@ -231,11 +262,11 @@
 								>
 									<div class="flex items-center">
 										{#if role === 'user'}
-											<span class="bg-[#024D15] rounded-lg text-xs text-[#0F8C18] px-2 w-fit"
+											<span class="bg-[#024D15] rounded-[9px] py-[3px] text-xs text-[#0F8C18] px-2 w-fit"
 												>{$i18n.t('User')}</span
 											>
 										{:else}
-											<span class="bg-[#33176E] rounded-lg text-xs text-[#7147CD] px-2 w-fit"
+											<span class="bg-[#33176E] rounded-[9px] py-[3px] text-xs text-[#7147CD] px-2 w-fit"
 												>{$i18n.t('Admin')}</span
 											>
 										{/if}
@@ -296,7 +327,7 @@
 	</div>
 
 	{#each filteredUsers as user, userIdx (user.id)}
-		<div class="grid grid-cols-[220px_110px_100px_26px] gap-x-2 mb-[14px] group cursor-pointer">
+		<div class="grid grid-cols-[220px_110px_100px_26px] gap-x-2 mb-2 group cursor-pointer">
 			<div class="flex items-center">
 				<img
 					class=" rounded-full w-3 h-3 object-cover mr-2.5"
@@ -313,13 +344,18 @@
 						{user.last_name}
 					</div>
 				{/if}
-				<div class="text-xs dark:text-customGray-590 mr-1 whitespace-nowrap">{user.email}</div>
+				<Tooltip
+					content={user.email}
+					className=" w-fit overflow-hidden"
+					placement="top-end"					>
+					<div class="text-xs dark:text-customGray-590 mr-1 truncate text-ellipsis whitespace-nowrap">{user.email}</div>
+			</Tooltip>
 			</div>
 			<div class="flex items-center">
-				<div class="relative flex items-start">
+				<div class="relative flex items-start w-fit">
 					<button
 						type="button"
-						class="px-2 text-xs rounded-lg {user.role === 'user'
+						class="px-2 py-[3px] text-xs rounded-lg {user.role === 'user'
 							? 'bg-[#024D15] text-[#0F8C18]'
 							: 'bg-[#33176E] text-[#7147CD]'}"
 						on:click={() => (openDropdownIdx = openDropdownIdx === userIdx ? null : userIdx)}
@@ -330,7 +366,7 @@
 					{#if openDropdownIdx === userIdx}
 						<div
 							use:onClickOutside={() => (openDropdownIdx = null)}
-							class="absolute top-5 z-10 py-1 bg-white dark:bg-customGray-900 rounded-md shadow-lg border dark:border-customGray-700"
+							class="absolute top-6 -right-4 z-10 py-1 bg-white dark:bg-customGray-900 rounded-md shadow-lg border dark:border-customGray-700"
 						>
 							<button
 								class="flex justify-end w-full whitespace-nowrap text-left pl-2 pr-[6px] py-1 text-xs"
@@ -339,7 +375,7 @@
 									openDropdownIdx = null;
 								}}
 							>
-								<span class="bg-[#024D15] rounded-lg text-xs text-[#0F8C18] px-2 w-fit"
+								<span class="bg-[#024D15] rounded-[9px] text-xs text-[#0F8C18] px-2 py-[3px] w-fit"
 									>{$i18n.t('User')}</span
 								>
 							</button>
@@ -350,7 +386,7 @@
 									openDropdownIdx = null;
 								}}
 							>
-								<span class="bg-[#33176E] rounded-lg text-xs text-[#7147CD] px-2 w-fit"
+								<span class="bg-[#33176E] rounded-[9px] text-xs text-[#7147CD] px-2 py-[3px] w-fit"
 									>{$i18n.t('Admin')}</span
 								>
 							</button>
@@ -358,35 +394,24 @@
 					{/if}
 				</div>
 				<ChevronDown className="size-2 ml-[3px]" />
-				<!-- <button
-					class="flex"
-					on:click={() => {
-						if (user.role === 'user') {
-							updateRoleHandler(user.id, 'admin');
-						}  else {
-							updateRoleHandler(user.id, 'user');
-						}
-					}}
-				>
-					{#if user.role === "user"}
-						<span class="bg-[#024D15] rounded-lg text-xs text-[#0F8C18] px-2 w-fit">{$i18n.t('User')}</span>
-					{:else}
-						<span class="bg-[#33176E] rounded-lg text-xs text-[#7147CD] px-2 w-fit">{$i18n.t('Admin')}</span>
-					{/if}
-				</button> -->
 			</div>
 			<div>
 				{#if user?.first_name === 'INVITED'}
 					<div
-						class="self-center rounded-lg text-xs px-2 w-fit whitespace-nowrap bg-[#113272] text-[#3F70CF]"
+						class="self-center rounded-[9px] text-xs px-2 py-[3px] w-fit whitespace-nowrap bg-[#113272] text-[#3F70CF]"
 					>
 						Invite pending
 					</div>
 				{/if}
 			</div>
-			{#if user?.first_name === 'INVITED'}
 				<div class=" h-4">
-					<InviteMenu {user} {getUsersHandler}>
+					<InviteMenu {user} {getUsersHandler} 
+					inviteCompleted={user?.first_name !== 'INVITED'}
+					on:deleteUser={() => {
+						showDeleteConfirm = true;
+						userToDelete = user;
+					}}
+					>
 						<button
 							type="button"
 							class="dark:text-white flex justify-between items-center rounded-md cursor-pointer invisible group-hover:visible"
@@ -394,26 +419,7 @@
 							<EllipsisHorizontal className="size-5" />
 						</button>
 					</InviteMenu>
-					<!-- <InviteMenu
-						editHandler={async () => {
-						}}
-						deleteHandler={async () => {
-							
-						}}
-						onClose={() => {}}
-					>
-						<button
-							class="self-center w-fit text-sm px-0.5 h-[21px] dark:text-white dark:hover:text-white hover:bg-black/5 dark:hover:bg-customGray-900 rounded-md"
-							type="button"
-							on:click={(e) => {}}
-						>
-							<EllipsisHorizontal className="size-5" />
-						</button>
-					</InviteMenu> -->
 				</div>
-			{:else}
-				<div></div>
-			{/if}
 		</div>
 	{/each}
 </div>
