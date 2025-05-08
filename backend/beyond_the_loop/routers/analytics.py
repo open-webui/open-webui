@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from fastapi import HTTPException, Depends
 from fastapi.params import Query
 
+from beyond_the_loop.models.users import Users
+from beyond_the_loop.models.users import get_users_by_company, get_active_users_by_company
 from open_webui.internal.db import get_db
 from beyond_the_loop.models.completions import Completion
 from beyond_the_loop.models.users import User
@@ -469,3 +471,104 @@ async def get_saved_time_in_seconds(
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching saved time stats: {e}")
+
+
+@router.get("/stats/total-users")
+async def get_total_users(user=Depends(get_verified_user)):
+    """
+    Returns the total number of users that have an account for the user's company.
+    """
+    try:
+        return {"total_users": len(get_users_by_company(user.company_id))}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching total users: {e}")
+
+
+@router.get("/stats/adoption-rate")
+async def get_adoption_rate(user=Depends(get_verified_user)):
+    """
+    Returns the adoption rate: percentage of users for the user's company 
+    that logged in in the last 30 days.
+    """
+    try:
+        # Calculate timestamp for 30 days ago
+        thirty_days_ago = int((datetime.now() - timedelta(days=30)).timestamp())
+
+        with get_db() as db:
+            # Get total number of users in the company
+            total_users = len(get_users_by_company(user.company_id))
+
+            # Get number of active users in the last 30 days
+            active_users = len(get_active_users_by_company(user.company_id, thirty_days_ago))
+
+            # Calculate adoption rate as a percentage
+            adoption_rate = (active_users / total_users * 100) if total_users > 0 else 0
+
+        return {
+            "total_users": total_users,
+            "active_users": active_users,
+            "adoption_rate": round(adoption_rate, 2)  # Round to 2 decimal places
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calculating adoption rate: {e}")
+
+
+@router.get("/stats/power-users")
+async def get_power_users(user=Depends(get_verified_user)):
+    """
+    Returns users for the user's company that wrote more than 400 messages 
+    in the last 30 days.
+    """
+    try:
+        # Calculate timestamp for 30 days ago
+        thirty_days_ago = int((datetime.now() - timedelta(days=30)).timestamp())
+
+        with get_db() as db:
+            # Find users with more than 400 messages in the last 30 days
+            power_users_query = db.query(
+                User.id,
+                User.first_name,
+                User.last_name,
+                User.email,
+                User.profile_image_url,
+                func.count(Completion.id).label("message_count")
+            ).join(
+                Completion, User.id == Completion.user_id
+            ).filter(
+                User.company_id == user.company_id,
+                Completion.created_at >= thirty_days_ago
+            ).group_by(
+                User.id, User.first_name, User.last_name, User.email, User.profile_image_url
+            ).having(
+                func.count(Completion.id) > 400
+            ).order_by(
+                func.count(Completion.id).desc()
+            ).all()
+
+            # Format the results
+            power_users = [
+                {
+                    "user_id": user_id,
+                    "first_name": first_name,
+                    "last_name": last_name,
+                    "email": email,
+                    "profile_image_url": profile_image_url,
+                    "message_count": message_count
+                }
+                for user_id, first_name, last_name, email, profile_image_url, message_count in power_users_query
+            ]
+
+            # Get total number of users in the company for percentage calculation
+            total_users = len(get_users_by_company(user.company_id))
+
+            # Calculate percentage of power users
+            power_users_percentage = (len(power_users) / total_users * 100) if total_users > 0 else 0
+
+        return {
+            "power_users": power_users,
+            "power_users_count": len(power_users),
+            "total_users": total_users,
+            "power_users_percentage": round(power_users_percentage, 2)  # Round to 2 decimal places
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching power users: {e}")
