@@ -30,9 +30,9 @@
 		{
 			"label": "Run RAUX Prebuild",
 			"type": "shell",
-			"command": "powershell",
+			"command": "bash",
 			"args": [
-				"-ExecutionPolicy", "ByPass", "-File", "${workspaceFolder}/installer/raux_prebuild.ps1",
+				"${workspaceFolder}/installer/raux_prebuild",
 				"${input:rauxPrebuildSwitch}"
 			],
 			"presentation": {
@@ -145,12 +145,11 @@
 			"type": "pickString",
 			"description": "Select RAUX Prebuild switch (no value needed)",
 			"options": [
-				"-solution_version",
-				"-build_frontend",
-				"-build_backend",
-				"-package"
+				"--solution-version",
+				"--build",
+				"--package"
 			],
-			"default": "-solution_version"
+			"default": "--solution-version"
 		}
 	]
 }
