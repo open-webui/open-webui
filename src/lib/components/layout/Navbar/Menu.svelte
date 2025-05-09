@@ -68,65 +68,66 @@
 		if (containerElement) {
 			try {
 				const isDarkMode = document.documentElement.classList.contains('dark');
+				const virtualWidth = 800; // Fixed width in px
+				const pagePixelHeight = 1200; // Each slice height (adjust to avoid canvas bugs; generally 2–4k is safe)
 
-				console.log('isDarkMode', isDarkMode);
-
-				// Define a fixed virtual screen size
-				const virtualWidth = 800; // Fixed width (adjust as needed)
-				// Clone the container to avoid layout shifts
+				// Clone & style once
 				const clonedElement = containerElement.cloneNode(true);
 				clonedElement.classList.add('text-black');
 				clonedElement.classList.add('dark:text-white');
-				clonedElement.style.width = `${virtualWidth}px`; // Apply fixed width
-				clonedElement.style.height = 'auto'; // Allow content to expand
+				clonedElement.style.width = `${virtualWidth}px`;
+				clonedElement.style.position = 'absolute';
+				clonedElement.style.left = '-9999px'; // Offscreen
+				clonedElement.style.height = 'auto';
+				document.body.appendChild(clonedElement);
 
-				document.body.appendChild(clonedElement); // Temporarily add to DOM
+				// Get total height after attached to DOM
+				const totalHeight = clonedElement.scrollHeight;
+				let offsetY = 0;
+				let page = 0;
 
-				// Render to canvas with predefined width
-				const canvas = await html2canvas(clonedElement, {
-					backgroundColor: isDarkMode ? '#000' : '#fff',
-					useCORS: true,
-					scale: 2, // Keep at 1x to avoid unexpected enlargements
-					width: virtualWidth, // Set fixed virtual screen width
-					windowWidth: virtualWidth // Ensure consistent rendering
-				});
-
-				document.body.removeChild(clonedElement); // Clean up temp element
-
-				const imgData = canvas.toDataURL('image/png');
-
-				// A4 page settings
+				// Prepare PDF
 				const pdf = new jsPDF('p', 'mm', 'a4');
-				const imgWidth = 210; // A4 width in mm
-				const pageHeight = 297; // A4 height in mm
+				const imgWidth = 210; // A4 mm
+				const pageHeight = 297; // A4 mm
 
-				// Maintain aspect ratio
-				const imgHeight = (canvas.height * imgWidth) / canvas.width;
-				let heightLeft = imgHeight;
-				let position = 0;
+				while (offsetY < totalHeight) {
+					// For each slice, adjust scrollTop to show desired part
+					clonedElement.scrollTop = offsetY;
 
-				// Set page background for dark mode
-				if (isDarkMode) {
-					pdf.setFillColor(0, 0, 0);
-					pdf.rect(0, 0, imgWidth, pageHeight, 'F'); // Apply black bg
-				}
+					// Optionally: mask/hide overflowing content via CSS if needed
+					clonedElement.style.maxHeight = `${pagePixelHeight}px`;
+					// Only render the visible part
+					const canvas = await html2canvas(clonedElement, {
+						backgroundColor: isDarkMode ? '#000' : '#fff',
+						useCORS: true,
+						scale: 2,
+						width: virtualWidth,
+						height: Math.min(pagePixelHeight, totalHeight - offsetY),
+						// Optionally: y offset for correct region?
+						windowWidth: virtualWidth
+						//windowHeight: pagePixelHeight,
+					});
+					const imgData = canvas.toDataURL('image/png');
+					// Maintain aspect ratio
+					const imgHeight = (canvas.height * imgWidth) / canvas.width;
+					const position = 0; // Always first line, since we've clipped vertically
 
-				pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-				heightLeft -= pageHeight;
+					if (page > 0) pdf.addPage();
 
-				// Handle additional pages
-				while (heightLeft > 0) {
-					position -= pageHeight;
-					pdf.addPage();
-
+					// Set page background for dark mode
 					if (isDarkMode) {
 						pdf.setFillColor(0, 0, 0);
-						pdf.rect(0, 0, imgWidth, pageHeight, 'F');
+						pdf.rect(0, 0, imgWidth, pageHeight, 'F'); // black bg
 					}
 
 					pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-					heightLeft -= pageHeight;
+
+					offsetY += pagePixelHeight;
+					page++;
 				}
+
+				document.body.removeChild(clonedElement);
 
 				pdf.save(`chat-${chat.chat.title}.pdf`);
 			} catch (error) {
