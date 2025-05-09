@@ -482,21 +482,21 @@
 							bind:recording
 							on:cancel={async () => {
 								recording = false;
-			    
+
 								await tick();
 								document.getElementById('chat-input')?.focus();
-			    				}}
+							}}
 			    				on:confirm={async (e) => {
 								const { text, filename } = e.detail;
 								prompt = `${prompt}${text} `;
-			    
+
 								recording = false;
 			    
 								await tick();
 								document.getElementById('chat-input')?.focus();
-			    
+
 								if ($settings?.speechAutoSend ?? false) {
-				    					dispatch('submit', prompt);
+									dispatch('submit', prompt);
 								}
 							}}
 						/>
