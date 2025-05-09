@@ -15,7 +15,7 @@
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'system', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
+	let themes = ['dark', 'light', 'deltion', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
 	let selectedTheme = 'deltion';
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
@@ -201,7 +201,6 @@
 			document.documentElement.style.setProperty('--color-gray-850', '#1b1b37');
 			document.documentElement.style.setProperty('--color-gray-900', '#191933');
 			document.documentElement.style.setProperty('--color-gray-950', '#111122'); // bijna zwart
-
 			document.documentElement.classList.add('dark');
 		}
 
@@ -216,14 +215,7 @@
 			} else {
 				console.log('Setting meta theme color: ' + _theme);
 				metaThemeColor.setAttribute(
-					'content',
-					_theme === 'dark'
-						? '#171717'
-						: _theme === 'oled-dark'
-							? '#000000'
-							: _theme === 'her'
-								? '#983724'
-								: '#ffffff'
+					'content', _theme === 'deltion' ? '#191933' : _theme === 'dark' ? '#171717' : _theme === 'oled-dark' ? '#000000' : _theme === 'her' ? '#983724' : '#ffffff'
 				);
 			}
 		}
