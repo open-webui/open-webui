@@ -132,7 +132,7 @@
 	>
 		<div class="flex flex-col flex-auto justify-center relative">
 			<div class=" flex flex-col w-full flex-auto overflow-auto h-0" id="messages-container">
-				<div class="pt-5 px-2 w-full max-w-[43rem] mx-auto">
+				<div class="pt-5 px-2 w-full max-w-5xl mx-auto">
 					<div class="px-3">
 						<div class=" text-2xl font-semibold line-clamp-1">
 							{title}

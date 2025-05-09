@@ -66,7 +66,7 @@
 			<div
 				class="px-5
 			
-			{($settings?.widescreenMode ?? null) ? 'max-w-full' : 'max-w-[43rem]'} mx-auto"
+			{($settings?.widescreenMode ?? null) ? 'max-w-full' : 'max-w-5xl'} mx-auto"
 			>
 				{#if channel}
 					<div class="flex flex-col gap-1.5 pb-5 pt-10">

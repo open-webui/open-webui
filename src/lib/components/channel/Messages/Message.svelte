@@ -65,7 +65,7 @@
 			? 'pt-1.5 pb-0.5'
 			: ''} w-full {($settings?.widescreenMode ?? null)
 			? 'max-w-full'
-			: 'max-w-[43rem]'} mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 transition relative"
+			: 'max-w-5xl'} mx-auto group hover:bg-gray-300/5 dark:hover:bg-gray-700/5 transition relative"
 	>
 		{#if !edit}
 			<div
