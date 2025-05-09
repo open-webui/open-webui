@@ -5,7 +5,7 @@ services:
     volumes:
       - ollama:/root/.ollama
     container_name: ollama
-    pull_policy: never
+    pull_policy: missing
     tty: true
     restart: unless-stopped
     image: ollama/ollama:0.6.8
@@ -17,7 +17,7 @@ services:
         OLLAMA_BASE_URL: '/ollama'
       dockerfile: Dockerfile
     image: ghcr.io/open-webui/open-webui:0.6.7
-    pull_policy: never
+    pull_policy: missing
     container_name: open-webui
     volumes:
       - open-webui:/app/backend/data
