@@ -39,7 +39,7 @@
 
 	const submitHandler = async () => {
 		loading = true;
-    
+
 		if (validateCommandString(command)) {
 			await onSubmit({
 				title,
@@ -51,7 +51,7 @@
 			toast.error(
 				$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
 			);
-	    	}
+		}
 
 		loading = false;
 	};
