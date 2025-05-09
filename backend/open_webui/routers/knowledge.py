@@ -8,7 +8,6 @@ from open_webui.models.knowledge import (
     KnowledgeForm,
     KnowledgeResponse,
     KnowledgeUserResponse,
-    RAGConfigForm
 )
 from open_webui.models.files import Files, FileModel, FileMetadataResponse
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
@@ -141,7 +140,7 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
 
 @router.post("/create", response_model=Optional[KnowledgeResponse])
 async def create_new_knowledge(
-    request: Request, form_data: KnowledgeForm, rag_data: RAGConfigForm, user=Depends(get_verified_user)
+    request: Request, form_data: KnowledgeForm, user=Depends(get_verified_user)
 ):
     if user.role != "admin" and not has_permission(
         user.id, "workspace.knowledge", request.app.state.config.USER_PERMISSIONS
@@ -151,7 +150,7 @@ async def create_new_knowledge(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    knowledge = Knowledges.insert_new_knowledge(user.id, form_data, rag_data)
+    knowledge = Knowledges.insert_new_knowledge(user.id, form_data)
 
     if knowledge:
         return knowledge

@@ -88,7 +88,7 @@ def upload_file(
     user=Depends(get_verified_user),
     file_metadata: dict = None,
     process: bool = Query(True),
-    knowledge_id: Optional[str] = Form(...),
+    knowledge_id: Optional[str] = Form(None)
 ):
     log.info(f"file.content_type: {file.content_type}")
 
@@ -138,8 +138,7 @@ def upload_file(
 
                     process_file(
                         request,
-                        ProcessFileForm(file_id=id, content=result.get("text", "")),
-                        knowledge_id= knowledge_id,
+                        ProcessFileForm(file_id=id, content=result.get("text", ""), knowledge_id=knowledge_id),
                         user=user,
                     )
                 elif file.content_type not in [
@@ -151,7 +150,7 @@ def upload_file(
                     "video/quicktime",
                     "video/webm",
                 ]:
-                    process_file(request, ProcessFileForm(file_id=id), knowledge_id=knowledge_id, user=user)
+                    process_file(request, ProcessFileForm(file_id=id, knowledge_id=knowledge_id), user=user)
 
                 file_item = Files.get_file_by_id(id=id)
             except Exception as e:
