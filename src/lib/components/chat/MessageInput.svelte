@@ -1071,7 +1071,7 @@
 															type: fileData.blob.type || 'application/octet-stream'
 														});
 														await uploadFileHandler(file);
-						    							} else {
+													} else {
 														console.log('No file was selected from OneDrive');
 													}
 												} catch (error) {
