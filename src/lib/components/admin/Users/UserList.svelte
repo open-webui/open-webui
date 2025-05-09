@@ -521,7 +521,7 @@
 	ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
 </div>
 
-<Pagination bind:page count={total} perPage={10} />
+<Pagination bind:page count={total} perPage={30} />
 
 {#if !$config?.license_metadata}
 	{#if total > 50}
