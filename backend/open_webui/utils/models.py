@@ -36,23 +36,46 @@ async def get_all_base_models(request: Request, user: UserModel = None):
     ollama_models = []
 
     if request.app.state.config.ENABLE_OPENAI_API:
-        openai_models = await openai.get_all_models(request, user=user)
-        openai_models = openai_models["data"]
+        openai_models_response = await openai.get_all_models(request, user=user)
+        # openai_models_response is typically a dict like {"data": [model_dict1, ...]}
+        openai_model_data_list = openai_models_response.get("data", [])
+        
+        processed_openai_models = []
+        for model_dict in openai_model_data_list:
+            model_dict["owned_by"] = "openai"
+            # Assuming urlIdx is already in model_dict if provided by openai.get_all_models
+            processed_openai_models.append(model_dict)
+        openai_models = processed_openai_models
+    # If not ENABLE_OPENAI_API, openai_models remains its initial empty list value.
 
     if request.app.state.config.ENABLE_OLLAMA_API:
-        ollama_models = await ollama.get_all_models(request, user=user)
-        ollama_models = [
-            {
-                "id": model["model"],
-                "name": model["name"],
+        ollama_models_response = await ollama.get_all_models(request, user=user)
+        # ollama_models_response is typically a dict like {"models": [model_dict1, ...]}
+        ollama_model_data_list = ollama_models_response.get("models", [])
+
+        processed_ollama_models = []
+        for model_from_provider in ollama_model_data_list:
+            entry = {
+                "id": model_from_provider.get("model", model_from_provider.get("id")), # Handle if 'id' or 'model' field is used for model identifier
+                "name": model_from_provider.get("name"),
                 "object": "model",
                 "created": int(time.time()),
-                "owned_by": "ollama",
-                "ollama": model,
-                "tags": model.get("tags", []),
+                "owned_by": "ollama", # This is correctly set
+                "ollama": model_from_provider, # Store the original provider data
+                "tags": model_from_provider.get("tags", []),
             }
-            for model in ollama_models["models"]
-        ]
+            
+            # Promote urlIdx or urls from the provider's model data to the top level
+            if "urlIdx" in model_from_provider: # Singular urlIdx (preferred by dispatcher)
+                entry["urlIdx"] = model_from_provider["urlIdx"]
+            elif "urls" in model_from_provider: # List of url indices
+                entry["urls"] = model_from_provider["urls"]
+                # If only 'urls' is available, the dispatcher logic might need adjustment
+                # or ollama.get_all_models should provide a singular 'urlIdx'.
+
+            processed_ollama_models.append(entry)
+        ollama_models = processed_ollama_models
+    # If not ENABLE_OLLAMA_API, ollama_models remains its initial empty list value.
 
     function_models = await get_function_models(request)
     models = function_models + openai_models + ollama_models

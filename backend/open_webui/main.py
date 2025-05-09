@@ -14,7 +14,7 @@ from urllib.parse import urlencode, parse_qs, urlparse
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from typing import Optional
+from typing import Optional, List
 from aiocache import cached
 import aiohttp
 import anyio.to_thread
@@ -56,8 +56,8 @@ from open_webui.socket.main import (
 from open_webui.routers import (
     audio,
     images,
-    ollama,
-    openai,
+    ollama as ollama_router,
+    openai as openai_router,
     retrieval,
     pipelines,
     tasks,
@@ -89,30 +89,24 @@ from open_webui.routers.retrieval import (
 from open_webui.internal.db import Session, engine
 
 from open_webui.models.functions import Functions
-from open_webui.models.models import Models
+from open_webui.models.models import Models as DBModels
 from open_webui.models.users import UserModel, Users
 from open_webui.models.chats import Chats
 
 from open_webui.config import (
     LICENSE_KEY,
-    # Ollama
     ENABLE_OLLAMA_API,
     OLLAMA_BASE_URLS,
     OLLAMA_API_CONFIGS,
-    # OpenAI
     ENABLE_OPENAI_API,
     ONEDRIVE_CLIENT_ID,
     ONEDRIVE_SHAREPOINT_URL,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
-    # Direct Connections
     ENABLE_DIRECT_CONNECTIONS,
-    # Thread pool size for FastAPI/AnyIO
     THREAD_POOL_SIZE,
-    # Tool Server Configs
     TOOL_SERVER_CONNECTIONS,
-    # Code Execution
     ENABLE_CODE_EXECUTION,
     CODE_EXECUTION_ENGINE,
     CODE_EXECUTION_JUPYTER_URL,
@@ -128,7 +122,6 @@ from open_webui.config import (
     CODE_INTERPRETER_JUPYTER_AUTH_TOKEN,
     CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD,
     CODE_INTERPRETER_JUPYTER_TIMEOUT,
-    # Image
     AUTOMATIC1111_API_AUTH,
     AUTOMATIC1111_BASE_URL,
     AUTOMATIC1111_CFG_SCALE,
@@ -148,7 +141,6 @@ from open_webui.config import (
     IMAGES_OPENAI_API_KEY,
     IMAGES_GEMINI_API_BASE_URL,
     IMAGES_GEMINI_API_KEY,
-    # Audio
     AUDIO_STT_ENGINE,
     AUDIO_STT_MODEL,
     AUDIO_STT_OPENAI_API_BASE_URL,
@@ -179,7 +171,6 @@ from open_webui.config import (
     DEEPGRAM_API_KEY,
     WHISPER_MODEL_AUTO_UPDATE,
     WHISPER_MODEL_DIR,
-    # Retrieval
     RAG_TEMPLATE,
     DEFAULT_RAG_TEMPLATE,
     RAG_FULL_CONTEXT,
@@ -216,7 +207,6 @@ from open_webui.config import (
     PDF_EXTRACT_IMAGES,
     YOUTUBE_LOADER_LANGUAGE,
     YOUTUBE_LOADER_PROXY_URL,
-    # Retrieval (Web Search)
     ENABLE_WEB_SEARCH,
     WEB_SEARCH_ENGINE,
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL,
@@ -265,7 +255,6 @@ from open_webui.config import (
     EXTERNAL_WEB_SEARCH_API_KEY,
     EXTERNAL_WEB_LOADER_URL,
     EXTERNAL_WEB_LOADER_API_KEY,
-    # WebUI
     WEBUI_AUTH,
     WEBUI_NAME,
     WEBUI_BANNERS,
@@ -291,7 +280,6 @@ from open_webui.config import (
     DEFAULT_ARENA_MODEL,
     MODEL_ORDER_LIST,
     EVALUATION_ARENA_MODELS,
-    # WebUI (OAuth)
     ENABLE_OAUTH_ROLE_MANAGEMENT,
     OAUTH_ROLES_CLAIM,
     OAUTH_EMAIL_CLAIM,
@@ -299,7 +287,6 @@ from open_webui.config import (
     OAUTH_USERNAME_CLAIM,
     OAUTH_ALLOWED_ROLES,
     OAUTH_ADMIN_ROLES,
-    # WebUI (LDAP)
     ENABLE_LDAP,
     LDAP_SERVER_LABEL,
     LDAP_SERVER_HOST,
@@ -313,7 +300,6 @@ from open_webui.config import (
     LDAP_USE_TLS,
     LDAP_CA_CERT_FILE,
     LDAP_CIPHERS,
-    # Misc
     ENV,
     CACHE_DIR,
     STATIC_DIR,
@@ -322,10 +308,8 @@ from open_webui.config import (
     DEFAULT_LOCALE,
     OAUTH_PROVIDERS,
     WEBUI_URL,
-    # Admin
     ENABLE_ADMIN_CHAT_ACCESS,
     ENABLE_ADMIN_EXPORT,
-    # Tasks
     TASK_MODEL,
     TASK_MODEL_EXTERNAL,
     ENABLE_TAGS_GENERATION,
@@ -399,9 +383,11 @@ from open_webui.tasks import (
     list_task_ids_by_chat_id,
     stop_task,
     list_tasks,
-)  # Import from tasks.py
+)
 
 from open_webui.utils.redis import get_sentinels_from_env
+
+from open_webui.models.embeddings import OpenAIEmbeddingRequest, OpenAIEmbeddingResponse
 
 
 if SAFE_MODE:
@@ -984,8 +970,8 @@ app.add_middleware(
 app.mount("/ws", socket_app)
 
 
-app.include_router(ollama.router, prefix="/ollama", tags=["ollama"])
-app.include_router(openai.router, prefix="/openai", tags=["openai"])
+app.include_router(ollama_router.router, prefix="/ollama", tags=["ollama"])
+app.include_router(openai_router.router, prefix="/openai", tags=["openai"])
 
 
 app.include_router(pipelines.router, prefix="/api/v1/pipelines", tags=["pipelines"])
@@ -1058,7 +1044,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
                     filtered_models.append(model)
                 continue
 
-            model_info = Models.get_model_by_id(model["id"])
+            model_info = DBModels.get_model_by_id(model["id"])
             if model_info:
                 if user.id == model_info.user_id or has_access(
                     user.id, type="read", access_control=model_info.access_control
@@ -1135,7 +1121,7 @@ async def chat_completion(
                 raise Exception("Model not found")
 
             model = request.app.state.MODELS[model_id]
-            model_info = Models.get_model_by_id(model_id)
+            model_info = DBModels.get_model_by_id(model_id)
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":
@@ -1563,4 +1549,86 @@ if os.path.exists(FRONTEND_BUILD_DIR):
 else:
     log.warning(
         f"Frontend build directory not found at '{FRONTEND_BUILD_DIR}'. Serving API only."
+    )
+
+# New centralized, versioned dispatcher for embeddings
+@app.post("/api/v1/embeddings", response_model=OpenAIEmbeddingResponse)
+async def api_v1_embeddings_dispatcher(
+    request_obj: Request, 
+    request_data: OpenAIEmbeddingRequest, 
+    user: UserModel = Depends(get_verified_user)
+):
+    model_id_from_request = request_data.model
+    log = logging.getLogger(__name__) # Get logger instance
+
+    # Ensure app.state.MODELS is populated
+    if not hasattr(request_obj.app.state, 'MODELS') or not request_obj.app.state.MODELS:
+        await get_all_models(request_obj, user=user)
+
+    model_config = request_obj.app.state.MODELS.get(model_id_from_request)
+    if not model_config and ":" not in model_id_from_request: # Try with :latest for Ollama
+        model_config = request_obj.app.state.MODELS.get(f"{model_id_from_request}:latest")
+    
+    if not model_config:
+        log.warning(f"Model '{model_id_from_request}' not in live app.state.MODELS, checking database.")
+        db_model_info = DBModels.get_model_by_id(model_id_from_request)
+        if db_model_info:
+            base_model_id_for_provider_info = getattr(db_model_info, 'base_model_id', None)
+            if base_model_id_for_provider_info:
+                model_config_for_provider = request_obj.app.state.MODELS.get(base_model_id_for_provider_info)
+                if not model_config_for_provider and ":" not in base_model_id_for_provider_info:
+                     model_config_for_provider = request_obj.app.state.MODELS.get(f"{base_model_id_for_provider_info}:latest")
+                if model_config_for_provider:
+                    model_config = {
+                        "id": model_id_from_request, 
+                        "name": db_model_info.name, 
+                        "owned_by": model_config_for_provider.get("owned_by"),
+                        "urlIdx": model_config_for_provider.get("urlIdx")
+                    }
+                else:
+                     raise HTTPException(status_code=404, detail=f"Base model '{base_model_id_for_provider_info}' for custom model '{model_id_from_request}' not found.")
+            else:
+                model_config = {
+                    "id": db_model_info.id, 
+                    "name": db_model_info.name, 
+                    "owned_by": getattr(db_model_info, 'owned_by_provider_key', 'unknown') 
+                }
+                log.warning(f"Using DB model info for dispatch: {model_config}")
+        else:
+            raise HTTPException(status_code=404, detail=f"Model '{model_id_from_request}' not found.")
+
+    provider = model_config.get("owned_by")
+    url_idx = model_config.get("urlIdx") 
+
+    log.debug(f"Dispatching /api/v1/embeddings for '{model_id_from_request}' to provider '{provider}', urlIdx: {url_idx}")
+
+    if provider == "ollama":
+        if url_idx is None:
+             log.error(f"Ollama model '{model_id_from_request}' misconfigured: missing urlIdx.")
+             raise HTTPException(status_code=500, detail=f"Ollama model '{model_id_from_request}' misconfigured.")
+        return await generate_ollama_embeddings_v1(request_obj, request_data, user, url_idx)
+    elif provider == "openai": 
+        if url_idx is None:
+             log.error(f"OpenAI model '{model_id_from_request}' misconfigured: missing urlIdx.")
+             raise HTTPException(status_code=500, detail=f"OpenAI model '{model_id_from_request}' misconfigured.")
+        return await generate_openai_embeddings_proxied(request_obj, user, url_idx)
+    elif provider == "local": 
+        from open_webui.routers.local import generate_local_embeddings_v1
+        return await generate_local_embeddings_v1(request_obj, request_data, user)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported provider '{provider}' for model '{model_id_from_request}'.")
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=ENV.PORT,
+        workers=1,
+        reload=True,
+        reload_delay=1.0,
+        access_log=False,
+        log_config=None,
     )

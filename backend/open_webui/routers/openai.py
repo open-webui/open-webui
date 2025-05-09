@@ -3,20 +3,22 @@ import hashlib
 import json
 import logging
 from pathlib import Path
-from typing import Literal, Optional, overload
+from typing import Literal, Optional, overload, List
 
 import aiohttp
 from aiocache import cached
 import requests
+import httpx
 
 
 from fastapi import Depends, FastAPI, HTTPException, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
 from open_webui.models.models import Models
+from open_webui.models.embeddings import OpenAIEmbeddingResponse
 from open_webui.config import (
     CACHE_DIR,
 )
@@ -113,6 +115,49 @@ def openai_o_series_handler(payload):
             payload["messages"][0]["role"] = "developer"
 
     return payload
+
+
+async def generate_openai_embeddings_proxied(
+    request_obj: Request,
+    user: UserModel,
+    url_idx: int
+):
+    body = await request_obj.body()
+    
+    openai_url = request_obj.app.state.config.OPENAI_API_BASE_URLS.value[url_idx]
+    openai_key = request_obj.app.state.config.OPENAI_API_KEYS.value[url_idx]
+
+    target_embeddings_url = f"{openai_url.rstrip('/')}/v1/embeddings"
+
+    headers = {
+        "Authorization": f"Bearer {openai_key}",
+        "Content-Type": "application/json",
+    }
+    if ENABLE_FORWARD_USER_INFO_HEADERS.value and user:
+        headers.update({
+            "X-OpenWebUI-User-Name": user.name,
+            "X-OpenWebUI-User-Id": user.id,
+            "X-OpenWebUI-User-Email": user.email,
+            "X-OpenWebUI-User-Role": user.role,
+        })
+    
+    if "user-agent" in request_obj.headers:
+        headers["User-Agent"] = request_obj.headers["user-agent"]
+    
+    async with httpx.AsyncClient(timeout=request_obj.app.state.config.AIOHTTP_CLIENT_TIMEOUT.value) as client:
+        response = await client.post(target_embeddings_url, content=body, headers=headers)
+
+        if response.status_code != 200:
+            error_detail = f"OpenAI API Proxy Error ({response.status_code})"
+            try:
+                err_json = response.json()
+                if "error" in err_json: 
+                    error_detail = f"OpenAI: {err_json['error'].get('message', str(err_json['error']))}"
+            except:
+                error_detail = f"OpenAI: {response.text}"
+            log.error(error_detail)
+            raise HTTPException(status_code=response.status_code, detail=error_detail)
+        return await response.json()
 
 
 ##########################################
@@ -848,3 +893,22 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
             if r:
                 r.close()
             await session.close()
+
+
+# New endpoint for direct access if desired, using the v1 path
+@router.post("/v1/embeddings", response_model=OpenAIEmbeddingResponse) 
+async def openai_v1_embeddings_direct_endpoint(
+    request: Request, 
+    user=Depends(get_verified_user)
+):
+    # Default to idx 0 if called directly at /openai/v1/embeddings
+    # The dispatcher in main.py should pass the correct url_idx based on model.
+    url_idx = 0 
+    
+    # If OPENAI_API_BASE_URLS is empty, raise an error
+    if not request.app.state.config.OPENAI_API_BASE_URLS.value:
+        raise HTTPException(status_code=500, detail="No OpenAI base URLs configured.")
+    if url_idx >= len(request.app.state.config.OPENAI_API_BASE_URLS.value):
+        raise HTTPException(status_code=500, detail=f"url_idx {url_idx} is out of range for configured OpenAI URLs.")
+
+    return await generate_openai_embeddings_proxied(request, user, url_idx)
