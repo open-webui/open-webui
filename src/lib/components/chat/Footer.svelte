@@ -3,6 +3,7 @@
 	let expanded = false;
 
 	function toggleFooter() {
+		window._paq?.push(['trackEvent', 'Footer', 'Toggle']);
 		expanded = !expanded;
 	}
 </script>

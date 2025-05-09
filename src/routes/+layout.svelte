@@ -51,6 +51,11 @@
 
 	setContext('i18n', i18n);
 
+	// Initialize Matomo _paq array if not already initialized
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	if (!window._paq) window._paq = [];
+	const _paq = window._paq;
+
 	const bc = new BroadcastChannel('active-tab-channel');
 
 	let loaded = false;
@@ -334,7 +339,7 @@
 									console.log({ status: true });
 
 									// res will either be SSE or JSON
-									const reader = res.body.getReader();
+									const reader = res.body?.getReader();
 									const decoder = new TextDecoder();
 
 									const processStream = async () => {
@@ -376,7 +381,7 @@
 					console.error('chatCompletion', error);
 					cb(error);
 				} finally {
-					$socket.emit(channel, {
+					$socket?.emit(channel, {
 						done: true
 					});
 				}
@@ -435,6 +440,23 @@
 	};
 
 	onMount(async () => {
+		// Track referrer using Matomo
+		if (document.referrer) {
+			_paq.push(['setReferrerUrl', document.referrer]);
+		}
+
+		// Track UTM parameters if present
+		const urlParams = new URLSearchParams(window.location.search);
+		if (urlParams.has('utm_source')) {
+			_paq.push(['setCustomDimension', 1, urlParams.get('utm_source') || '']);
+		}
+		if (urlParams.has('utm_campaign')) {
+			_paq.push(['setCustomDimension', 2, urlParams.get('utm_campaign') || '']);
+		}
+
+		// Track page view
+		_paq.push(['trackPageView']);
+
 		if (typeof window !== 'undefined' && window.applyTheme) {
 			window.applyTheme();
 		}

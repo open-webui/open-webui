@@ -88,7 +88,10 @@
 					   px-3 py-2 rounded-xl bg-transparent hover:bg-black/5
 					   dark:hover:bg-white/5 transition group"
 				style="animation-delay: {idx * 60}ms"
-				on:click={() => dispatch('select', prompt.content)}
+				on:click={() => {
+					window._paq?.push(['trackEvent', 'Suggestions', 'Select', prompt.content]);
+					dispatch('select', prompt.content);
+				}}
 			>
 				<div class="flex flex-col text-left">
 					{#if prompt.title}

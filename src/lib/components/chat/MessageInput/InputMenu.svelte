@@ -154,6 +154,7 @@
 						? 'opacity-50'
 						: ''}"
 					on:click={() => {
+						window._paq?.push(['trackEvent', 'Capture', 'Clicked image capture input button']);
 						if (fileUploadEnabled) {
 							if (!detectMobile()) {
 								screenCaptureHandler();
@@ -181,6 +182,7 @@
 						? 'opacity-50'
 						: ''}"
 					on:click={() => {
+						window._paq?.push(['trackEvent', 'UploadFiles']);
 						if (fileUploadEnabled) {
 							uploadFilesHandler();
 						}

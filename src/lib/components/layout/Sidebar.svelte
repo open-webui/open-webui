@@ -500,6 +500,7 @@
 					class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] fr-background-action-high--blue-france hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					href="/workspace"
 					on:click={() => {
+						window._paq?.push(['trackEvent', 'Workspace', 'Clicked']);
 						selectedChatId = null;
 						chatId.set('');
 

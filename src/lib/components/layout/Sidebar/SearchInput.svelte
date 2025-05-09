@@ -15,6 +15,7 @@
 	<button
 		class="flex-grow flex space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 		on:click={() => {
+			window._paq?.push(['trackEvent', 'ChatSearch', 'Clicked']);
 			showSearchModal = true;
 		}}
 	>

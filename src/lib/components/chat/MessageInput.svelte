@@ -1196,6 +1196,8 @@
 													class=" text-gray-600 dark:text-gray-300 hover:text-[var(--text-action-high-blue-france)] transition rounded-full p-1.5 mr-0.5 self-center"
 													type="button"
 													on:click={async () => {
+														window._paq?.push(['trackEvent', 'VoiceRecord']);
+
 														try {
 															let stream = await navigator.mediaDevices
 																.getUserMedia({ audio: true })

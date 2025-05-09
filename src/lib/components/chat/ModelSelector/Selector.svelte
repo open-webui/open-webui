@@ -314,6 +314,10 @@
 <DropdownMenu.Root
 	bind:open={show}
 	onOpenChange={async () => {
+		if (!show) {
+			window._paq?.push(['trackEvent', 'ModelSelector', 'Open', value]);
+		}
+
 		searchValue = '';
 		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	// Import declaration file for Matomo analytics
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, tick } from 'svelte';
@@ -25,6 +26,13 @@
 	import type { i18n as i18nType } from 'i18next';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
+
+	// Access Matomo analytics
+	interface TrackingCommand extends Array<string | number | string[]> {}
+
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	if (!window._paq) window._paq = [];
+	const _paq: TrackingCommand[] = window._paq;
 
 	interface SessionUser {
 		token: string;
@@ -96,6 +104,10 @@
 
 			const redirectPath = querystringValue('redirect') || '/';
 			goto(redirectPath);
+
+			_paq.push(['trackEvent', 'Auth', 'OAuth Login Success']);
+		} else {
+			_paq.push(['trackEvent', 'Auth', 'OAuth Login Failed']);
 		}
 	};
 
@@ -153,6 +165,8 @@
 		await user.set(sessionUser);
 		await config.set(await getBackendConfig());
 		goto('/');
+
+		_paq.push(['trackEvent', 'Auth', 'OAuth Login Success']);
 	};
 
 	async function setLogoImage() {
@@ -188,6 +202,10 @@
 
 		loaded = true;
 		setLogoImage();
+
+		_paq.push(['trackPageView', 'Auth Page']);
+
+		// UTM tracking is now handled in +layout.svelte
 	});
 </script>
 
@@ -207,7 +225,6 @@
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
 
 	{#if loaded}
-
 		<div class="min-h-full w-full flex flex-col">
 			<div class="flex-1 flex items-center">
 				<div class="w-full flex justify-center font-primary text-black dark:text-white py-20">
@@ -322,7 +339,10 @@
 
 										<!-- Login button -->
 										<div class="w-full flex justify-center">
-											<ProconnectButton />
+											<ProconnectButton
+												on:click={() =>
+													_paq.push(['trackEvent', 'Auth', 'ProConnect Button Click'])}
+											/>
 										</div>
 									</div>
 
