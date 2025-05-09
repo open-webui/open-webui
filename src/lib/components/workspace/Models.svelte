@@ -85,8 +85,8 @@
 				selectedTags.size === 0 || Array.from(selectedTags).some((tag) => modelTags.includes(tag));
 
 			const isPublic = m.access_control === null;
-			const isPrivate = m.access_control !== null;
-
+			// const isPrivate = m.access_control !== null;
+			const isPrivate = m?.user_id === $user?.id;
 			const accessMatch =
 				accessFilter === 'all' ||
 				(accessFilter === 'public' && isPublic) ||
@@ -394,7 +394,7 @@
 				<button
 					on:click={() => (accessFilter = 'private')}
 					class={`${accessFilter === 'private' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
-					>{$i18n.t('Private')}</button
+					>{$i18n.t('My Assistants')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'public')}

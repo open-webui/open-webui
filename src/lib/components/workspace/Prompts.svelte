@@ -62,7 +62,8 @@
 		filteredItems = prompts.filter((p) => {
 			const nameMatch = query === '' || p.command.includes(query);
 			const isPublic = p.access_control === null && !p.prebuilt;
-			const isPrivate = p.access_control !== null;
+			// const isPrivate = p.access_control !== null;
+			const isPrivate = p?.user_id === $user?.id;
 			const isPrebuilt = p.prebuilt;
 
 			const modelTags = p.meta?.tags?.map((t) => t.name.toLowerCase()) || [];
@@ -281,7 +282,7 @@
 				<button
 					on:click={() => (accessFilter = 'private')}
 					class={`${accessFilter === 'private' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
-					>{$i18n.t('Private')}</button
+					>{$i18n.t('My Prompts')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'public')}
