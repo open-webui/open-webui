@@ -76,7 +76,7 @@
 				? ' -mt-1'
 				: 'text-center items-center justify-center'}  self-start text-gray-400 dark:text-gray-600"
 		>
-			{$WEBUI_NAME} ‧ v0.0.1 (Alpha)
+			{$WEBUI_NAME} ‧ {WEBUI_VERSION}
 		</div>
 	{/if}
 </div>
