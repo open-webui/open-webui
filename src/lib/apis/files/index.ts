@@ -1,9 +1,11 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export const uploadFile = async (token: string, file: File, knowledge_id: string) => {
+export const uploadFile = async (token: string, file: File, knowledge_id?: string) => {
 	const data = new FormData();
 	data.append('file', file);
-	data.append('knowledge_id', knowledge_id);
+	if (knowledge_id) {
+		data.append('knowledge_id', knowledge_id);
+	}
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/files/`, {

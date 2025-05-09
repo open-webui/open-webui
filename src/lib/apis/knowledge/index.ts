@@ -17,10 +17,10 @@ export const createNewKnowledge = async (
 			authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			form_data: {name: name,
+			name: name,
 			description: description,
-			access_control: accessControl},
-			rag_data: rag_config
+			access_control: accessControl,
+			rag_config: rag_config
 		})
 	})
 		.then(async (res) => {

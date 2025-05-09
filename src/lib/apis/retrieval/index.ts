@@ -200,6 +200,7 @@ type EmbeddingModelUpdateForm = {
 	embedding_engine: string;
 	embedding_model: string;
 	embedding_batch_size?: number;
+	collection_name?: string;
 };
 
 export const updateEmbeddingConfig = async (token: string, payload: EmbeddingModelUpdateForm) => {
@@ -264,6 +265,8 @@ export const getRerankingConfig = async (token: string, collectionForm?: Collect
 
 type RerankingModelUpdateForm = {
 	reranking_model: string;
+	collection_name?: string; 
+
 };
 
 export const updateRerankingConfig = async (token: string, payload: RerankingModelUpdateForm) => {
