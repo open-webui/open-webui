@@ -32,7 +32,7 @@ from open_webui.config import (
     DEFAULT_MOA_GENERATION_PROMPT_TEMPLATE,
 )
 from open_webui.env import SRC_LOG_LEVELS
-
+from open_webui.utils.models import get_all_models
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -432,6 +432,8 @@ async def generate_autocompletion(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Input prompt exceeds maximum length of {request.app.state.config.AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH}",
             )
+
+    await get_all_models(request, user)
 
     models = request.app.state.MODELS
 
