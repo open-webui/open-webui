@@ -158,13 +158,14 @@
 		knowledge.files = [...(knowledge.files ?? []), fileItem];
 
 		try {
+			// marking not to process the files being uploaded here as they will be process when added to knowledge
+			// don't want to process twice
 			const uploadedFile = await uploadFile(localStorage.token, file).catch((e) => {
 				toast.error(`${e}`);
 				return null;
 			});
 
 			if (uploadedFile) {
-				console.log(uploadedFile);
 				knowledge.files = knowledge.files.map((item) => {
 					if (item.itemId === tempItemId) {
 						item.id = uploadedFile.id;
@@ -174,6 +175,7 @@
 					delete item.itemId;
 					return item;
 				});
+
 				await addFileHandler(uploadedFile.id);
 			} else {
 				toast.error($i18n.t('Failed to upload file.'));

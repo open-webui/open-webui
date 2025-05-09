@@ -9,6 +9,8 @@ from open_webui.models.knowledge import (
     KnowledgeResponse,
     KnowledgeUserResponse,
 )
+
+from open_webui.utils.parser import PARSER_TYPE
 from open_webui.models.files import Files, FileModel, FileMetadataResponse
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
@@ -17,21 +19,20 @@ from open_webui.routers.retrieval import (
     process_files_batch,
     BatchProcessFilesForm,
 )
-from open_webui.storage.provider import Storage
+from open_webui.functions import get_parsers_by_type, get_all_parsers
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 
-
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.models.models import Models, ModelForm
-
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 router = APIRouter()
+
 
 ############################
 # getKnowledgeBases
@@ -164,8 +165,6 @@ async def create_new_knowledge(
 ############################
 # ReindexKnowledgeFiles
 ############################
-
-
 @router.post("/reindex", response_model=bool)
 async def reindex_knowledge_files(request: Request, user=Depends(get_verified_user)):
     if user.role != "admin":
@@ -179,6 +178,8 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
     log.info(f"Starting reindexing for {len(knowledge_bases)} knowledge bases")
 
     deleted_knowledge_bases = []
+
+    parsers = get_all_parsers(request)
 
     for knowledge_base in knowledge_bases:
         # -- Robust error handling for missing or invalid data
@@ -198,6 +199,10 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
         try:
             file_ids = knowledge_base.data.get("file_ids", [])
             files = Files.get_files_by_ids(file_ids)
+
+            for parser in parsers:
+                parser.delete_collection(knowledge_base.id)
+
             try:
                 if VECTOR_DB_CLIENT.has_collection(collection_name=knowledge_base.id):
                     VECTOR_DB_CLIENT.delete_collection(
@@ -262,7 +267,6 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
             or knowledge.user_id == user.id
             or has_access(user.id, "read", knowledge.access_control)
         ):
-
             file_ids = knowledge.data.get("file_ids", []) if knowledge.data else []
             files = Files.get_file_metadatas_by_ids(file_ids)
 
@@ -367,23 +371,37 @@ def add_file_to_knowledge_by_id(
             detail=ERROR_MESSAGES.FILE_NOT_PROCESSED,
         )
 
-    # Add content to the vector database
-    try:
-        process_file(
-            request,
-            ProcessFileForm(file_id=form_data.file_id, collection_name=id),
-            user=user,
-        )
-    except Exception as e:
-        log.debug(e)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        )
+    parsers = get_parsers_by_type(request, PARSER_TYPE.FILE, file.filename)
+    # content is the raw data and not to be used in collection
+    content_keys = [k for k in file.data.keys() if k != 'content']
+
+    assert 'content' in file.data.keys()
+    assert len(content_keys) > 0
+
+    for key in content_keys:
+        content = file.data[key]
+
+        assert 'texts' in content.keys()
+        assert 'embeddings' in content.keys()
+        assert 'metadatas' in content.keys()
+
+        for parser in parsers:
+            parser.store(request,
+                         id,
+                         content['texts'],
+                         content['embeddings'],
+                         content['metadatas'])
 
     if knowledge:
         data = knowledge.data or {}
         file_ids = data.get("file_ids", [])
+
+        Files.update_file_metadata_by_id(
+            file.id,
+            {
+                "collection_name": id,
+            },
+        )
 
         if form_data.file_id not in file_ids:
             file_ids.append(form_data.file_id)
@@ -434,7 +452,6 @@ def update_file_from_knowledge_by_id(
         and not has_access(user.id, "write", knowledge.access_control)
         and user.role != "admin"
     ):
-
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
@@ -447,12 +464,10 @@ def update_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    # Remove content from the vector database
-    VECTOR_DB_CLIENT.delete(
-        collection_name=knowledge.id, filter={"file_id": form_data.file_id}
-    )
+    parsers = get_all_parsers(request)
+    for parser in parsers:
+        parser.delete_doc(knowledge.id, form_data.file_id)
 
-    # Add content to the vector database
     try:
         process_file(
             request,
@@ -489,6 +504,7 @@ def update_file_from_knowledge_by_id(
 
 @router.post("/{id}/file/remove", response_model=Optional[KnowledgeFilesResponse])
 def remove_file_from_knowledge_by_id(
+    request: Request,
     id: str,
     form_data: KnowledgeFileIdForm,
     user=Depends(get_verified_user),
@@ -517,25 +533,12 @@ def remove_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    # Remove content from the vector database
-    try:
-        VECTOR_DB_CLIENT.delete(
-            collection_name=knowledge.id, filter={"file_id": form_data.file_id}
-        )
-    except Exception as e:
-        log.debug("This was most likely caused by bypassing embedding processing")
-        log.debug(e)
-        pass
-
-    try:
-        # Remove the file's collection from vector database
-        file_collection = f"file-{form_data.file_id}"
-        if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-            VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
-    except Exception as e:
-        log.debug("This was most likely caused by bypassing embedding processing")
-        log.debug(e)
-        pass
+    file_collection = f"file-{form_data.file_id}"
+    parsers = get_all_parsers(request)
+    for parser in parsers:
+        parser.delete_doc(knowledge.id, form_data.file_id)
+        # note that this is only deleting the file-specific collection
+        parser.delete_collection(file_collection)
 
     # Delete file from database
     Files.delete_file_by_id(form_data.file_id)
@@ -580,7 +583,9 @@ def remove_file_from_knowledge_by_id(
 
 
 @router.delete("/{id}/delete", response_model=bool)
-async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
+async def delete_knowledge_by_id(request: Request,
+                                 id: str,
+                                 user=Depends(get_verified_user)):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
@@ -629,7 +634,9 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
     # Clean up vector DB
     try:
-        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+        parsers = get_all_parsers(request)
+        for parser in parsers:
+            parser.delete_collection(id)
     except Exception as e:
         log.debug(e)
         pass
@@ -643,7 +650,9 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
 
 @router.post("/{id}/reset", response_model=Optional[KnowledgeResponse])
-async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
+async def reset_knowledge_by_id(request: Request,
+                                id: str,
+                                user=Depends(get_verified_user)):
     knowledge = Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
@@ -662,7 +671,9 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         )
 
     try:
-        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+        parsers = get_all_parsers(request)
+        for parser in parsers:
+            parser.delete_collection(id)
     except Exception as e:
         log.debug(e)
         pass

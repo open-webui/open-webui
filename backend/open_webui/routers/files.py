@@ -39,7 +39,6 @@ from pydantic import BaseModel
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
-
 router = APIRouter()
 
 
@@ -78,8 +77,6 @@ def has_access_to_file(
 ############################
 # Upload File
 ############################
-
-
 @router.post("/", response_model=FileModelResponse)
 def upload_file(
     request: Request,

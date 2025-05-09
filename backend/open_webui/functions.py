@@ -18,19 +18,17 @@ from fastapi import (
 )
 from starlette.responses import Response, StreamingResponse
 
-
 from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
 )
-
 
 from open_webui.models.functions import Functions
 from open_webui.models.models import Models
 
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.tools import get_tools
-from open_webui.utils.access_control import has_access
+from open_webui.utils.parser import PARSER_TYPE, DefaultParser
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
@@ -45,7 +43,6 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_model_system_prompt_to_body,
 )
-
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -281,7 +278,7 @@ async def generate_function_chat_completion(
 
             except Exception as e:
                 log.error(f"Error: {e}")
-                yield f"data: {json.dumps({'error': {'detail':str(e)}})}\n\n"
+                yield f"data: {json.dumps({'error': {'detail': str(e)}})}\n\n"
                 return
 
             if isinstance(res, str):
@@ -320,3 +317,73 @@ async def generate_function_chat_completion(
 
         message = await get_message_content(res)
         return openai_chat_completion_message_template(form_data["model"], message)
+
+
+def verify_parser(parser):
+    # verification of required settings
+    if not hasattr(parser, 'name'):
+        raise NotImplementedError("Parser instance requires self.name as a attribute")
+    if not hasattr(parser, 'parser_type'):
+        raise NotImplementedError(f"Parser {parser.name} requires parser_type as a attribute")
+    if not hasattr(parser, 'parse'):
+        raise NotImplementedError(f"Parser {parser.name} requires parse as a method")
+    if not hasattr(parser, 'store'):
+        raise NotImplementedError(f"Parser {parser.name} requires store as a method")
+    if not hasattr(parser, 'delete_doc'):
+        raise NotImplementedError(f"Parser {parser.name} requires delete_doc as a method")
+    if not hasattr(parser, 'delete_collection'):
+        raise NotImplementedError(f"Parser {parser.name} requires delete_collection as a method")
+    if not hasattr(parser, 'reset'):
+        raise NotImplementedError(f"Parser {parser.name} requires reset as a method")
+
+    return True
+
+
+def get_all_parsers(request, active_only=True):
+    parser_files = Functions.get_functions_by_type("parser", active_only)
+    all_parsers = [get_function_module_by_id(request, pf.id) for pf in parser_files]
+
+    for parser in all_parsers:
+        verify_parser(parser)
+
+    # need to have at least one parsing option every time
+    if len(all_parsers) == 0:
+        all_parsers.append(DefaultParser())
+
+    return all_parsers
+
+
+def get_parsers_by_type(request, parser_type, file_id, active_only=True):
+    parser_files = Functions.get_functions_by_type("parser", active_only)
+    all_parsers = [get_function_module_by_id(request, pf.id) for pf in parser_files]
+
+    # allows users to set either a single type or a list of types
+    relevant_parsers = []
+    for parser in all_parsers:
+        # verification of required settings
+        verify_parser(parser)
+
+        # 1. single item needs to be moved to list
+        if type(parser.parser_type) == PARSER_TYPE:
+            parser.parser_type = [parser.parser_type]
+
+        # 2. all needs to be changed to list of all types. All overrides other settings
+        if PARSER_TYPE.ALL in parser.parser_type:
+            # new parser types will automatically be accounted for
+            parser.parser_type = [t for t in PARSER_TYPE]
+            parser.parser_type.remove(PARSER_TYPE.ALL)
+
+        # 3. list of viable items is now looked at
+        if parser_type in parser.parser_type:
+            print(f"viable parser {parser.name}")
+            # allow users to change if parser is applicable based on item type
+            if parser.is_applicable_to_item(file_id):
+                print(f"applicable parser {parser.name}")
+                relevant_parsers.append(parser)
+
+    # need to have at least one parsing option every time
+    if len(relevant_parsers) == 0:
+        log.info(f"No parsers for {parser_type}. Using DefaultParser")
+        relevant_parsers.append(DefaultParser(parser_type))
+
+    return relevant_parsers
