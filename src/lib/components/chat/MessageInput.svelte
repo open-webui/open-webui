@@ -465,6 +465,7 @@
 	});
 
 	let customModel = null;
+	$: console.log(customModel)
 
 	$: {
 		if(selectedModels.length === 1) {
@@ -1232,7 +1233,7 @@
 
 										<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
 											{#if $_user}
-												{#if $companyConfig?.config?.rag?.web?.search?.enable && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search) && (customModel?.info?.meta?.capabilities?.websearch ?? true)}
+												{#if $companyConfig?.config?.rag?.web?.search?.enable && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search) && (customModel?.meta?.capabilities?.websearch ?? true)}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
 															on:click|preventDefault={() => {
@@ -1257,7 +1258,7 @@
 													</Tooltip>
 												{/if}
 
-												{#if $companyConfig?.config?.image_generation?.enable && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation) && (customModel?.info?.meta?.capabilities?.image_generation ?? true)}
+												{#if $companyConfig?.config?.image_generation?.enable && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation) && (customModel?.meta?.capabilities?.image_generation ?? true)}
 													<Tooltip content={$i18n.t('Generate an image')} placement="top">
 														<button
 															on:click|preventDefault={() => {
@@ -1281,7 +1282,7 @@
 													</Tooltip>
 												{/if}
 
-												{#if ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter) && (customModel?.info?.meta?.capabilities?.code_interpreter ?? true)}
+												{#if ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter) && (customModel?.meta?.capabilities?.code_interpreter ?? true)}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
 															on:click|preventDefault={() => {
