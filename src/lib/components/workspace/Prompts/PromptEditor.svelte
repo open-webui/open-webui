@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick, getContext } from 'svelte';
+
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	import { toast } from 'svelte-sonner';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -8,34 +9,34 @@
 	import AccessControlModal from '../common/AccessControlModal.svelte';
 	import { user } from '$lib/stores';
 	import { slugify } from '$lib/utils';
-    
+
 	export let onSubmit: Function;
 	export let edit = false;
 	export let prompt = null;
-    
+
 	const i18n = getContext('i18n');
-    
+
 	let loading = false;
-    
+
 	let title = '';
 	let command = '';
 	let content = '';
-    
+
 	let accessControl = {};
-    
+
 	let showAccessControlModal = false;
-    
+
 	let hasManualEdit = false;
-    
+
 	$: if (!edit && !hasManualEdit) {
 	    command = title !== '' ? slugify(title) : '';
 	}
-    
+
 	// Track manual edits
 	function handleCommandInput(e: Event) {
 	    hasManualEdit = true;
 	}
-    
+
 	const submitHandler = async () => {
 		loading = true;
     
@@ -51,10 +52,10 @@
 		    		$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
 			);
 	    	}
-    
+
 	    	loading = false;
 	};
-    
+
 	const validateCommandString = (inputString) => {
 		// Regular expression to match only alphanumeric characters and hyphen
 	 	const regex = /^[a-zA-Z0-9-]+$/;
@@ -62,7 +63,7 @@
 		// Test the input string against the regular expression
 	    	return regex.test(inputString);
 	};
-    
+
 	onMount(async () => {
 		if (prompt) {
 			title = prompt.title;
@@ -75,14 +76,14 @@
 	    	}
 	});
 </script>
-    
+
 <AccessControlModal
 	bind:show={showAccessControlModal}
 	bind:accessControl
 	accessRoles={['read', 'write']}
 	allowPublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
 />
-    
+
 <div class="w-full max-h-full flex justify-center">
 	<form
 		class="flex flex-col w-full mb-10"
@@ -95,20 +96,20 @@
 		    		content={`${$i18n.t('Only alphanumeric characters and hyphens are allowed')} - ${$i18n.t(
 					'Activate this command by typing "/{{COMMAND}}" to chat input.',
 					{
-			    			COMMAND: command
+						COMMAND: command
 					}
-		    		)}`}
-		    		placement="bottom-start"
+				)}`}
+				placement="bottom-start"
 			>
-		    		<div class="flex flex-col w-full">
+				<div class="flex flex-col w-full">
 					<div class="flex items-center">
-			    			<input
+						<input
 							class="text-2xl font-semibold w-full bg-transparent outline-hidden"
 							placeholder={$i18n.t('Title')}
 							bind:value={title}
 							required
 			    			/>
-    
+
 			    			<div class="self-center shrink-0">
 							<button
 				    				class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
@@ -125,7 +126,7 @@
 							</button>
 			    			</div>
 					</div>
-    
+
 					<div class="flex gap-0.5 items-center text-xs text-gray-500">
 						<div class="">/</div>
 						<input
@@ -140,12 +141,12 @@
 		    		</div>
 			</Tooltip>
 	    	</div>
-    
+
 	    	<div class="my-2">
 			<div class="flex w-full justify-between">
 		    		<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt Content')}</div>
 		</div>
-    
+
 		<div class="mt-2">
 		    <div>
 			<RichTextInput
@@ -155,7 +156,7 @@
 			    preserveBreaks={false} 
 			/>
 		    </div>
-    
+
 		    <div class="text-xs text-gray-400 dark:text-gray-500">
 			ⓘ {$i18n.t('Format your variables using brackets like this:')}&nbsp;<span
 			    class=" text-gray-600 dark:text-gray-300 font-medium"
@@ -175,7 +176,7 @@
 		    </div>
 		</div>
 	    </div>
-    
+
 	    <div class="my-4 flex justify-end pb-20">
 		<button
 		    class=" text-sm w-full lg:w-fit px-4 py-2 transition rounded-lg {loading
@@ -185,7 +186,7 @@
 		    disabled={loading}
 		>
 		    <div class=" self-center font-medium">{$i18n.t('Save & Create')}</div>
-    
+
 		    {#if loading}
 			<div class="ml-1.5 self-center">
 			    <svg
