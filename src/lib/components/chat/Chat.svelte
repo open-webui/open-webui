@@ -2019,6 +2019,7 @@
 									bind:history
 									bind:autoScroll
 									bind:prompt
+									bind:files
 									{selectedModels}
 									{atSelectedModel}
 									{sendPrompt}
