@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { DropdownMenu } from 'bits-ui';
-	import { createEventDispatcher, getContext, onMount } from 'svelte';
+	import { createEventDispatcher, getContext, onMount, tick } from 'svelte';
 	import { toast } from '$lib/utils/toast';
 
 	import { flyAndScale } from '$lib/utils/transitions';
@@ -35,14 +35,27 @@
 			document.getElementById(elementId)?.focus();
 		}, 10);
 	};
+
+	let liveRegionText = '';
 </script>
+
+<div aria-live="polite" aria-atomic="true" class="sr-only">
+	{liveRegionText}
+</div>
 
 <DropdownMenu.Root
 	bind:open={show}
-	onOpenChange={(state) => {
+	onOpenChange={async (state) => {
 		dispatch('change', state);
 		changeFocus(buttonID);
-		toast.announce(`${$i18n.t('Active Users')}: ${$activeUserIds?.length}`);
+
+		if (state) {
+			await tick();
+			liveRegionText = '';
+			setTimeout(() => {
+				liveRegionText = `${$i18n.t('Active Users')}: ${$activeUserIds?.length}`;
+			}, 40);
+		}
 	}}
 >
 	<DropdownMenu.Trigger class={buttonClass} aria-label={ariaLabel} id={buttonID}>
