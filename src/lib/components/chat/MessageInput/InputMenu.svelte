@@ -102,7 +102,7 @@
 			transition={flyAndScale}
 		>
 			{#if Object.keys(tools).length > 0}
-				<div class="  max-h-28 overflow-y-auto scrollbar-hidden">
+				<div class="max-h-28 overflow-y-auto scrollbar-thin">
 					{#each Object.keys(tools) as toolId}
 						<button
 							class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
@@ -141,6 +141,17 @@
 						</button>
 					{/each}
 				</div>
+<button
+						class="flex w-full justify-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800"
+						on:click={() => {
+							const element = document.querySelector('.max-h-28');
+							if (element) {
+								element.classList.remove('max-h-28');
+							}
+						}}
+					>
+						^
+					</button>
 
 				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
