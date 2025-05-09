@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount, tick, getContext } from 'svelte';
-    import RichTextInput from '$lib/components/common/RichTextInput.svelte'; // IMPORT this
+    import RichTextInput from '$lib/components/common/RichTextInput.svelte';
     import { toast } from 'svelte-sonner';
     import Tooltip from '$lib/components/common/Tooltip.svelte';
     import AccessControl from '../common/AccessControl.svelte';
@@ -31,6 +31,7 @@
         command = title !== '' ? slugify(title) : '';
     }
 
+    // Track manual edits
     function handleCommandInput(e: Event) {
         hasManualEdit = true;
     }
