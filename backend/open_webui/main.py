@@ -211,6 +211,7 @@ from open_webui.config import (
     PDF_EXTRACT_IMAGES,
     YOUTUBE_LOADER_LANGUAGE,
     YOUTUBE_LOADER_PROXY_URL,
+    DEFAULT_RAG_SETTINGS,
     # Retrieval (Web Search)
     ENABLE_WEB_SEARCH,
     WEB_SEARCH_ENGINE,
@@ -706,6 +707,7 @@ app.state.config.EXTERNAL_WEB_SEARCH_API_KEY = EXTERNAL_WEB_SEARCH_API_KEY
 app.state.config.EXTERNAL_WEB_LOADER_URL = EXTERNAL_WEB_LOADER_URL
 app.state.config.EXTERNAL_WEB_LOADER_API_KEY = EXTERNAL_WEB_LOADER_API_KEY
 
+app.state.config.DEFAULT_RAG_SETTINGS = DEFAULT_RAG_SETTINGS
 
 app.state.config.PLAYWRIGHT_WS_URL = PLAYWRIGHT_WS_URL
 app.state.config.PLAYWRIGHT_TIMEOUT = PLAYWRIGHT_TIMEOUT
@@ -714,20 +716,20 @@ app.state.config.FIRECRAWL_API_KEY = FIRECRAWL_API_KEY
 app.state.config.TAVILY_EXTRACT_DEPTH = TAVILY_EXTRACT_DEPTH
 
 app.state.EMBEDDING_FUNCTION = None
-app.state.ef = None
-app.state.rf = None
+app.state.ef = {}
+app.state.rf = {}
 
 app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 
 try:
-    app.state.ef = get_ef(
+    app.state.ef["DEFAULT"] = get_ef(
         app.state.config.RAG_EMBEDDING_ENGINE,
         app.state.config.RAG_EMBEDDING_MODEL,
         RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     )
 
-    app.state.rf = get_rf(
+    app.state.rf["DEFAULT"] = get_rf(
         app.state.config.RAG_RERANKING_MODEL,
         RAG_RERANKING_MODEL_AUTO_UPDATE,
     )
