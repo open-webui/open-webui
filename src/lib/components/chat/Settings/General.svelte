@@ -15,8 +15,8 @@
 	export let getModels: Function;
 
 	// General
-	let themes = ['dark', 'light', 'deltion', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
-	let selectedTheme = 'deltion';
+	let themes = ['dark', 'light', 'deltion-dark', 'rose-pine dark', 'rose-pine-dawn light', 'oled-dark'];
+	let selectedTheme = 'system';
 
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
 	let lang = $i18n.language;
@@ -162,18 +162,32 @@
 	});
 
 	const applyTheme = (_theme: string) => {
+		//Reset color to default
+		document.documentElement.style.setProperty('--color-gray-50', '#f9f9f9');
+		document.documentElement.style.setProperty('--color-gray-100', '#ececec');
+		document.documentElement.style.setProperty('--color-gray-200', '#e3e3e3');
+		document.documentElement.style.setProperty('--color-gray-300', '#cdcdcd');
+		document.documentElement.style.setProperty('--color-gray-400', '#b4b4b4');
+		document.documentElement.style.setProperty('--color-gray-500', '#9b9b9b');
+		document.documentElement.style.setProperty('--color-gray-600', '#676767');
+		document.documentElement.style.setProperty('--color-gray-700', '#4e4e4e');
+		document.documentElement.style.setProperty('--color-gray-800', '#333');
+		document.documentElement.style.setProperty('--color-gray-850', '#262626');
+		document.documentElement.style.setProperty('--color-gray-900', '#171717');
+		document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
+
 		let themeToApply = _theme === 'oled-dark' ? 'dark' : _theme;
 
 		if (_theme === 'system') {
 			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 		}
 
-		if (themeToApply === 'dark' && !_theme.includes('oled')) {
+		/*if (themeToApply === 'dark' && !_theme.includes('oled')) {
 			document.documentElement.style.setProperty('--color-gray-800', '#333');
 			document.documentElement.style.setProperty('--color-gray-850', '#262626');
 			document.documentElement.style.setProperty('--color-gray-900', '#171717');
 			document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
-		}
+		} */
 
 		themes
 			.filter((e) => e !== themeToApply)
@@ -187,23 +201,6 @@
 			document.documentElement.classList.add(e);
 		});
 
-		if (themeToApply === 'deltion') {
-			/* ---- DELTION BRAND COLOURS ---- */
-			document.documentElement.style.setProperty('--color-gray-50', '#eeeef7'); // bijna wit
-			document.documentElement.style.setProperty('--color-gray-100', '#ddddee');
-			document.documentElement.style.setProperty('--color-gray-200', '#c2c2e1');
-			document.documentElement.style.setProperty('--color-gray-300', '#9c9cce');
-			document.documentElement.style.setProperty('--color-gray-400', '#7777bb');
-			document.documentElement.style.setProperty('--color-gray-500', '#5353a7'); // mid-tone
-			document.documentElement.style.setProperty('--color-gray-600', '#404082');
-			document.documentElement.style.setProperty('--color-gray-700', '#313163');
-			document.documentElement.style.setProperty('--color-gray-800', '#232348');
-			document.documentElement.style.setProperty('--color-gray-850', '#1b1b37');
-			document.documentElement.style.setProperty('--color-gray-900', '#191933');
-			document.documentElement.style.setProperty('--color-gray-950', '#111122'); // bijna zwart
-			document.documentElement.classList.add('dark');
-		}
-
 		const metaThemeColor = document.querySelector('meta[name="theme-color"]');
 		if (metaThemeColor) {
 			if (_theme.includes('system')) {
@@ -215,13 +212,39 @@
 			} else {
 				console.log('Setting meta theme color: ' + _theme);
 				metaThemeColor.setAttribute(
-					'content', _theme === 'deltion' ? '#191933' : _theme === 'dark' ? '#171717' : _theme === 'oled-dark' ? '#000000' : _theme === 'her' ? '#983724' : '#ffffff'
+					'content',
+					_theme === 'deltion-dark'
+						? '#191933'
+						: _theme === 'dark'
+							? '#171717'
+							: _theme === 'oled-dark'
+								? '#000000'
+								: _theme === 'her'
+									? '#983724'
+									: '#ffffff'
 				);
 			}
 		}
 
 		if (typeof window !== 'undefined' && window.applyTheme) {
 			window.applyTheme();
+		}
+
+		if (_theme === 'deltion-dark') {
+			/* ---- DELTION BRAND COLOURS ---- */
+			document.documentElement.style.setProperty('--color-gray-50', '#eeeef7'); 
+			document.documentElement.style.setProperty('--color-gray-100', '#ddddee');
+			document.documentElement.style.setProperty('--color-gray-200', '#c2c2e1');
+			document.documentElement.style.setProperty('--color-gray-300', '#9c9cce');
+			document.documentElement.style.setProperty('--color-gray-400', '#7777bb');
+			document.documentElement.style.setProperty('--color-gray-500', '#5353a7');
+			document.documentElement.style.setProperty('--color-gray-600', '#404082');
+			document.documentElement.style.setProperty('--color-gray-700', '#313163');
+			document.documentElement.style.setProperty('--color-gray-800', '#232348');
+			document.documentElement.style.setProperty('--color-gray-850', '#1b1b37');
+			document.documentElement.style.setProperty('--color-gray-900', '#191933');
+			document.documentElement.style.setProperty('--color-gray-950', '#111122');
+			document.documentElement.classList.add('dark');
 		}
 
 		if (_theme.includes('oled')) {
@@ -256,7 +279,7 @@
 						placeholder="Select a theme"
 						on:change={() => themeChangeHandler(selectedTheme)}
 					>
-						<option value="deltion">🟠 {$i18n.t('Deltion')}</option>
+						<option value="deltion-dark">🔵 {$i18n.t('Deltion')}</option>
 						<option value="system">⚙️ {$i18n.t('System')}</option>
 						<option value="dark">⚫ {$i18n.t('Dark')}</option>
 						<!-- <option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option> -->
