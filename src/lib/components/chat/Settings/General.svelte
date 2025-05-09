@@ -182,13 +182,6 @@
 			themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 		}
 
-		/*if (themeToApply === 'dark' && !_theme.includes('oled')) {
-			document.documentElement.style.setProperty('--color-gray-800', '#333');
-			document.documentElement.style.setProperty('--color-gray-850', '#262626');
-			document.documentElement.style.setProperty('--color-gray-900', '#171717');
-			document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
-		} */
-
 		themes
 			.filter((e) => e !== themeToApply)
 			.forEach((e) => {
@@ -279,14 +272,10 @@
 						placeholder="Select a theme"
 						on:change={() => themeChangeHandler(selectedTheme)}
 					>
-						<option value="deltion-dark">🔵 {$i18n.t('Deltion')}</option>
 						<option value="system">⚙️ {$i18n.t('System')}</option>
+						<option value="deltion-dark">🔵 {$i18n.t('Deltion')}</option>
 						<option value="dark">⚫ {$i18n.t('Dark')}</option>
-						<!-- <option value="oled-dark">🌃 {$i18n.t('OLED Dark')}</option> -->
 						<option value="light">⚪ {$i18n.t('Light')}</option>
-						<!-- <option value="her">🌷 Her</option>
-						<option value="rose-pine dark">🪻 {$i18n.t('Rosé Pine')}</option>
-						<option value="rose-pine-dawn light">🌷 {$i18n.t('Rosé Pine Dawn')}</option> -->
 					</select>
 				</div>
 			</div>
