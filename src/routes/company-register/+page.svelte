@@ -58,7 +58,7 @@
 		}
 		
 		if (step === 4) {
-			if(!company_name || !company_size || !company_industry || !company_team_function || !company_profile_image_url) {
+			if(!company_name || !company_size || !company_industry || !company_team_function) {
 				showToast('error', "To continue, please provide full information about your company and team.")
 				return;
 			}
