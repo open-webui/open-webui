@@ -148,12 +148,11 @@
     
 		<div class="mt-2">
 		    <div>
-			<!-- REPLACE Textarea with RichTextInput -->
 			<RichTextInput
 			    className="input-prose-sm text-sm w-full bg-transparent outline-hidden" 
 			    placeholder={$i18n.t('Write a summary in 50 words that summarizes [topic or keyword].')}
 			    bind:value={content}
-			    preserveBreaks={false} 
+			    preserveBreaks={true} 
 			/>
 		    </div>
     
