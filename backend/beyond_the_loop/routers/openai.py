@@ -809,8 +809,10 @@ async def generate_chat_completion(
 async def generate_prompt(request: Request, form_data: dict, user=Depends(get_verified_user)):
     messages = magic_prompt_util.generate_magic_prompt_messages(form_data["prompt"])
 
+    model = Models.get_model_by_name_and_company("Gemini 2.0 Flash", user.company_id)
+
     form_data = {
-        "model": "Gemini 2.0 Flash",
+        "model": model.id,
         "messages": messages,
         "stream": False,
         "metadata": {"chat_id": None},
@@ -826,7 +828,7 @@ async def generate_prompt(request: Request, form_data: dict, user=Depends(get_ve
     if len(floating_variables) > 0:
 
         form_data = {
-            "model": "Gemini 2.0 Flash",
+            "model": model.id,
             "messages": [{'role': "user", "content": magic_prompt_util.remove_floating_variables_prompt.replace("{$PROMPT}", extracted_prompt_template)}],
             "stream": False,
             "metadata": {"chat_id": None},
