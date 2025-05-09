@@ -9,23 +9,14 @@
     let activeTab = 'users';
     const i18n = getContext('i18n');
 
-    let users = [];
+    export let users = [];
+    export let getUsersHandler: Function;
 
-    $: if (activeTab) {
-		getUsersHandler();
-	}
+    // $: if (activeTab) {
+	// 	getUsersHandler();
+	// }
 
-	const getUsersHandler = async () => {
-		users = await getUsers(localStorage.token);
-	};
-
-	onMount(async () => {
-		if ($user?.role !== 'admin') {
-			await goto('/');
-		} else {
-			users = await getUsers(localStorage.token);
-		}
-	});
+	
    
 
 

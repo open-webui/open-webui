@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, tick } from 'svelte';
+	import { getContext, tick, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { models, settings, user } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
@@ -24,6 +24,7 @@
 	import UserManagement from './Settings/CompanySettings/UserManagement.svelte';
 	import ModelControlIcon from '../icons/ModelControlIcon.svelte';
 	import ModelControl from './Settings/CompanySettings/ModelControl.svelte';
+	import { getUsers } from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
 
@@ -124,6 +125,15 @@
 		addScrollListener();
 	} else {
 		removeScrollListener();
+	}
+	let users = [];
+	const getUsersHandler = async () => {
+		users = await getUsers(localStorage.token);
+	};
+
+	$: if(show){
+		getUsersHandler();
+		selectedTab = 'general-settings';
 	}
 </script>
 
@@ -442,6 +452,8 @@
 					
 				{:else if selectedTab === 'user-management'}
 					<UserManagement
+						{users}
+						{getUsersHandler}
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
 						}}
