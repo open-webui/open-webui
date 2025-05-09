@@ -7,7 +7,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-class PdftotextLoader:
+class PdftotextLoader():
     def __init__(self, pdf_path: str, url: str, max_pages: int):
         self.pdf_path = pdf_path
         url += "/api-ds-ocr/text_extract"
@@ -23,13 +23,19 @@ class PdftotextLoader:
         headers = {
             "accept": "application/json",
         }
-        files = {"pdf_upload": pdf}
-        data = {"max_pages": self.max_pages, "header_footer": True}
+        
+        files = {
+            "pdf_upload": pdf
+        }
+        data = {
+            'max_pages': self.max_pages,
+            'header_footer': True
+        }
 
-        r = requests.post(
-            url=self.url, headers=headers, files=files, data=data, timeout=240
-        )
-        # log.info(r)
+        r = requests.post(url=self.url, headers=headers,
+                          files=files, data=data, timeout=240)
+        log.info(r)
+
         response = r.json()
         txt = response.get("text", "")
 
@@ -46,6 +52,8 @@ class PdftotextLoaderAsync:
         self.max_pages = max_pages
 
     def load(self):
+        log.info(self.max_pages)
+
         with open(self.pdf_path, "rb") as f:
             pdf = f.read()
 
@@ -53,11 +61,17 @@ class PdftotextLoaderAsync:
             "accept": "application/json",
         }
 
-        files = {"pdf_upload": pdf}
+        files = {
+            "pdf_upload": pdf
+        }
 
-        data = {"header_footer": True}
+        data = {
+            'max_pages': self.max_pages,
+            'header_footer': True
+        }
 
-        r = requests.post(url=self.url, headers=headers, files=files, data=data)
+        r = requests.post(url=self.url, headers=headers,
+
         log.info(r)
         response = r.json()
         task_id = response.get("task_id", "")
@@ -88,10 +102,10 @@ class PdftotextLoaderAsync:
         linear_theshold = 240
         while True:
             status_response = self.check_status(task_id)
-            if status_response and status_response.get("status") == "completed":
-                return status_response.get("result").get("text")
-            time.sleep(
-                time_to_sleep
-            )  # Avoids CPU overload by waiting before rechecking
+            if status_response and status_response.get("status") == "SUCCESS":
+                return status_response.get("result").get('result')
+            # Avoids CPU overload by waiting before rechecking
+            time.sleep(time_to_sleep)
+
             if time_to_sleep < linear_theshold:
                 time_to_sleep *= 2

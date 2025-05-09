@@ -1,3 +1,5 @@
+import asyncio
+from threading import Lock
 import logging
 import os
 import uuid
@@ -44,7 +46,6 @@ router = APIRouter()
 
 
 from threading import Lock
-
 import asyncio
 
 
@@ -119,21 +120,23 @@ def upload_file(
 
 tasks_cache = {}  # Dictionary to store task results
 
-### Cache temporário para exemplo (substituir por um sistema persistente)
+# Cache temporário para exemplo (substituir por um sistema persistente)
 cache_lock = Lock()
 
 
-def process_tasks(request, background_tasks, form_data, user, task_id):
+def process_tasks(request, form_data, user, task_id):
     """Executa OCR e processamento do PDF de forma assíncrona."""
 
     global tasks_cache
     with cache_lock:
         task = tasks_cache.get(task_id, {})
 
-    task["status"] = "Processing PDF..."
-    content = process_file_async(request, background_tasks, form_data, task_id, user)
-    task["text"] = content.get("content")
-    task["status"] = "Processing Completed"
+    task['status'] = "Processing PDF..."
+    text = process_file_async(
+        request, form_data, task_id, user)
+    task['text'] = text
+    task['status'] = "Processing Completed"
+
 
 
 @router.post("/async")
@@ -179,7 +182,6 @@ async def upload_file_async(
     background_tasks.add_task(
         process_tasks,
         request,
-        background_tasks,
         ProcessFileForm(file_id=task_id),
         user,
         task_id,
@@ -212,7 +214,8 @@ async def get_task_status(task_id: str):
 @router.get("/get_tasks")
 def get_task_status():
     if tasks_cache:
-        return {"task_ids": list(tasks_cache.keys())}  # Retorna apenas os task_ids
+        # Retorna apenas os task_ids
+        return {"task_ids": list(tasks_cache.keys())}
     return {"message": "No tasks found"}
 
 
