@@ -34,7 +34,7 @@
 	}
 
 	$: filteredUsers = users
-		.filter((user) => user?.first_name !== 'INVITED')
+		// .filter((user) => user?.first_name !== 'INVITED')
 		.filter((user) => !group?.user_ids?.includes(user.id))
 		.filter((user) => {
 			if (search === '') {
@@ -46,7 +46,7 @@
 			}
 		});
     $: noUsersToAdd = users
-		.filter((user) => user?.first_name !== 'INVITED')
+		// .filter((user) => user?.first_name !== 'INVITED')
 		.filter((user) => !group?.user_ids?.includes(user.id))?.length === 0 ? true : false
 </script>
 
@@ -128,10 +128,12 @@
 								: `/user.png`}
 							alt="user"
 						/>
-						<div class="text-xs dark:text-customGray-100 mr-1 whitespace-nowrap">
-							{user.first_name}
-							{user.last_name}
-						</div>
+						{#if user?.first_name !== "INVITED"}
+							<div class="text-xs dark:text-customGray-100 mr-1 whitespace-nowrap">
+								{user.first_name}
+								{user.last_name}
+							</div>
+						{/if}
 						<div class="text-xs dark:text-customGray-590 mr-1 whitespace-nowrap">{user.email}</div>
 					</button>
 				{/each}
