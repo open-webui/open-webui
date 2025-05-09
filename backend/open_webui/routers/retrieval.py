@@ -1590,6 +1590,11 @@ async def process_web_search(
 
     try:
         urls = [result.link for result in web_results]
+
+        # Remove duplicates
+        urls = list(dict.fromkeys(urls))
+        log.debug(f"urls: {urls}")
+
         loader = get_web_loader(
             urls,
             verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
@@ -1600,10 +1605,6 @@ async def process_web_search(
         urls = [
             doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
         ]  # only keep URLs
-
-        # Remove duplicates
-        urls = list(dict.fromkeys(urls))
-        log.debug(f"urls: {urls}")
 
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
