@@ -29,7 +29,7 @@
 			class="mb-2.5"
 		/>
 	<div slot="content" class="flex flex-col min-w-[calc(400px-60px)] max-w-[calc(550px-60px)] text-blue-800">
-		<div class="mb-2.5" >
+		<div class="mb-2.5 text-sm" >
 			{message}
 		</div>
 
