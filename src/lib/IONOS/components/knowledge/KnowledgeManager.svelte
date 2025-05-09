@@ -11,7 +11,7 @@
 	import { getKnowledgeBaseList } from '$lib/apis/knowledge';
 	import { WEBUI_NAME } from '$lib/stores';
 	import { knowledgeManager, showKnowlegeManager } from '$lib/IONOS/stores/dialogs';
-	import Spinner from '$lib/IONOS/components/icons/Spinner.svelte';
+	import LoadingCover from '$lib/IONOS/components/common/LoadingCover.svelte';
 	import MagnifyingGlass from '$lib/IONOS/components/icons/MagnifyingGlass.svelte';
 	import Dialog from '$lib/IONOS/components/common/Dialog.svelte';
 	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte';
@@ -131,12 +131,11 @@
 		<div class=" text-gray-500 text-xs py-4 border-t" class:hidden={!loaded}>
 			ⓘ {$i18n.t("Use '#' in the prompt input to load and include your knowledge.", { ns: 'ionos' })}
 		</div>
-		<div class="w-full h-full flex justify-center items-center  min-w-[500px]" class:hidden={!!loaded}>
-			<Spinner size="20"/>
-		</div>
+
+		{#if !loaded}
+			<LoadingCover size="20" />
+		{/if}
 	</div>
-
-
 </Dialog>
 
 {#if knowledgeBeingEdited}
