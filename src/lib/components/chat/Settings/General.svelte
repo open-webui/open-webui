@@ -175,6 +175,18 @@
 			document.documentElement.style.setProperty('--color-gray-950', '#0d0d0d');
 		}
 
+		themes
+			.filter((e) => e !== themeToApply)
+			.forEach((e) => {
+				e.split(' ').forEach((e) => {
+					document.documentElement.classList.remove(e);
+				});
+			});
+
+		themeToApply.split(' ').forEach((e) => {
+			document.documentElement.classList.add(e);
+		});
+
 		if (themeToApply === 'deltion') {
 			/* ---- DELTION BRAND COLOURS ---- */
 			document.documentElement.style.setProperty('--color-gray-50', '#eeeef7'); // bijna wit
@@ -192,18 +204,6 @@
 
 			document.documentElement.classList.add('dark');
 		}
-
-		themes
-			.filter((e) => e !== themeToApply)
-			.forEach((e) => {
-				e.split(' ').forEach((e) => {
-					document.documentElement.classList.remove(e);
-				});
-			});
-
-		themeToApply.split(' ').forEach((e) => {
-			document.documentElement.classList.add(e);
-		});
 
 		const metaThemeColor = document.querySelector('meta[name="theme-color"]');
 		if (metaThemeColor) {
