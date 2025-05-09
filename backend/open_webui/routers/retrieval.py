@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Union
 import asyncio
+import re
 
 from fastapi import (
     Depends,
@@ -35,9 +36,8 @@ from langchain_core.documents import Document
 from open_webui.models.files import FileModel, Files
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
-
-
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.config import VECTOR_DB
 
 # Document loaders
 from open_webui.retrieval.loaders.main import Loader
@@ -103,7 +103,6 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 #
 ##########################################
 
-
 def get_ef(
     engine: str,
     embedding_model: str,
@@ -156,7 +155,6 @@ def get_rf(
                 log.error("CrossEncoder error")
                 raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
     return rf
-
 
 ##########################################
 #
@@ -834,36 +832,47 @@ def save_docs_to_vector_db(
                 return True
 
         log.info(f"adding to collection {collection_name}")
-        embedding_function = get_embedding_function(
-            request.app.state.config.RAG_EMBEDDING_ENGINE,
-            request.app.state.config.RAG_EMBEDDING_MODEL,
-            request.app.state.ef,
-            (
-                request.app.state.config.RAG_OPENAI_API_BASE_URL
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                else request.app.state.config.RAG_OLLAMA_BASE_URL
-            ),
-            (
-                request.app.state.config.RAG_OPENAI_API_KEY
-                if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
-                else request.app.state.config.RAG_OLLAMA_API_KEY
-            ),
-            request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-        )
+        
+        if VECTOR_DB != 'weaviate':
+            embedding_function = get_embedding_function(
+                request.app.state.config.RAG_EMBEDDING_ENGINE,
+                request.app.state.config.RAG_EMBEDDING_MODEL,
+                request.app.state.ef,
+                (
+                    request.app.state.config.RAG_OPENAI_API_BASE_URL
+                    if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                    else request.app.state.config.RAG_OLLAMA_BASE_URL
+                ),
+                (
+                    request.app.state.config.RAG_OPENAI_API_KEY
+                    if request.app.state.config.RAG_EMBEDDING_ENGINE == "openai"
+                    else request.app.state.config.RAG_OLLAMA_API_KEY
+                ),
+                request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+            )
 
-        embeddings = embedding_function(
-            list(map(lambda x: x.replace("\n", " "), texts)), user=user
-        )
+            embeddings = embedding_function(
+                list(map(lambda x: x.replace("\n", " "), texts)), user=user
+            )
 
-        items = [
-            {
-                "id": str(uuid.uuid4()),
-                "text": text,
-                "vector": embeddings[idx],
-                "metadata": metadatas[idx],
-            }
-            for idx, text in enumerate(texts)
-        ]
+            items = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "text": text,
+                    "vector": embeddings[idx],
+                    "metadata": metadatas[idx],
+                }
+                for idx, text in enumerate(texts)
+            ]
+        else:
+            items = [
+                {
+                    "id": str(uuid.uuid4()),
+                    "text": text,
+                    "metadata": metadatas[idx],
+                }
+                for idx, text in enumerate(texts)
+            ]
 
         VECTOR_DB_CLIENT.insert(
             collection_name=collection_name,
@@ -922,9 +931,14 @@ def process_file(
             # Check if the file has already been processed and save the content
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
-            result = VECTOR_DB_CLIENT.query(
-                collection_name=f"file-{file.id}", filter={"file_id": file.id}
-            )
+            if VECTOR_DB_CLIENT == 'weaviate':
+                result = VECTOR_DB_CLIENT.query(
+                    collection_name=f"file-{file.id}", filter={"file_id": file.id}
+                )
+            else:
+                result = VECTOR_DB_CLIENT.query(
+                    collection_name=f"file-{file.id}", filter={"file_id": file.id}
+                )
 
             if result is not None and len(result.ids[0]) > 0:
                 docs = [
@@ -954,6 +968,7 @@ def process_file(
             # Usage: /files/
             is_pdf2text = engine == "pdftotext" and file.meta.get(
                 "content_type") == "application/pdf"
+
             file_path = file.path
             if file_path:
                 file_path = Storage.get_file(file_path)
@@ -1102,6 +1117,7 @@ def process_file_async(
                 },
             )]
 
+
             log.info(f"OCR Task {task_id} created successfully.")
 
         else:
@@ -1125,6 +1141,7 @@ def process_file_async(
         docs = [
             Document(
                 page_content=file.data.get("content", ""),
+
                 metadata={
                     **file.meta,
                     "name": file.filename,

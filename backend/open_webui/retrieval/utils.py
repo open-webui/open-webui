@@ -45,11 +45,18 @@ class VectorSearchRetriever(BaseRetriever):
         *,
         run_manager: CallbackManagerForRetrieverRun,
     ) -> list[Document]:
-        result = VECTOR_DB_CLIENT.search(
-            collection_name=self.collection_name,
-            vectors=[self.embedding_function(query)],
-            limit=self.top_k,
-        )
+        if VECTOR_DB == 'weaviate':
+            result = VECTOR_DB_CLIENT.search(
+                collection_name=self.collection_name,
+                query=query,
+                limit=self.top_k,
+            )
+        else:
+            result = VECTOR_DB_CLIENT.search(
+                collection_name=self.collection_name,
+                vectors=[self.embedding_function(query)],
+                limit=self.top_k,
+            )
 
         ids = result.ids[0]
         metadatas = result.metadatas[0]
@@ -84,6 +91,23 @@ def query_doc(
         print(e)
         raise e
 
+def query_doc_weaviate(
+    collection_name: str, query: str, k: int, user: UserModel = None
+):
+    try:
+        result = VECTOR_DB_CLIENT.search(
+            collection_name=collection_name,
+            query=query,
+            limit=k,
+        )
+
+        if result:
+            log.info(f"query_doc_weaviate:result {result.ids} {result.metadatas} {result.distances}")
+
+        return result
+    except Exception as e:
+        print(e)
+        raise e
 
 def get_doc(collection_name: str, user: UserModel = None):
     try:
@@ -120,7 +144,6 @@ def query_doc_with_hybrid_search(
             embedding_function=embedding_function,
             top_k=k,
         )
-
         ensemble_retriever = EnsembleRetriever(
             retrievers=[bm25_retriever, vector_search_retriever], weights=[0.5, 0.5]
         )
@@ -142,13 +165,31 @@ def query_doc_with_hybrid_search(
             "metadatas": [[d.metadata for d in result]],
         }
 
-        log.info(
-            "query_doc_with_hybrid_search:result "
-            + f'{result["metadatas"]} {result["distances"]}'
-        )
+        #log.info(
+        #    "query_doc_with_hybrid_search:result "
+        #    + f'{result["metadatas"]} {result["distances"]}'
+        #)
         return result
     except Exception as e:
         raise e
+
+
+
+def query_doc_with_hybrid_search_weaviate(
+    collection_name: str,
+    query: str,
+    k: int,
+) -> dict:
+    try:
+        result = VECTOR_DB_CLIENT.hybrid_search(collection_name=collection_name, query = query, limit = k)
+
+        if result:
+            log.info(f"query_doc_weaviate_hybrid:result {result.ids} {result.metadatas} {result.distances}")
+
+        return result
+    except Exception as e:
+        raise e
+
 
 
 def merge_get_results(get_results: list[dict]) -> dict:
@@ -240,15 +281,27 @@ def query_collection(
 ) -> dict:
     results = []
     for query in queries:
-        query_embedding = embedding_function(query)
+        if VECTOR_DB == 'weaviate':
+            query_embedding = query
+        else:
+            query_embedding = embedding_function(query)
+            
         for collection_name in collection_names:
             if collection_name:
+                result = None
                 try:
-                    result = query_doc(
+                    if VECTOR_DB == 'weaviate' :
+                        result = query_doc_weaviate(
                         collection_name=collection_name,
                         k=k,
-                        query_embedding=query_embedding,
-                    )
+                        query=query,
+                        )
+                    else:
+                        result = query_doc(
+                            collection_name=collection_name,
+                            k=k,
+                            query_embedding=query_embedding,
+                        )
                     if result is not None:
                         results.append(result.model_dump())
                 except Exception as e:
@@ -277,14 +330,22 @@ def query_collection_with_hybrid_search(
     for collection_name in collection_names:
         try:
             for query in queries:
-                result = query_doc_with_hybrid_search(
-                    collection_name=collection_name,
-                    query=query,
-                    embedding_function=embedding_function,
-                    k=k,
-                    reranking_function=reranking_function,
-                    r=r,
-                )
+                if VECTOR_DB == 'weaviate':
+                    result = query_doc_with_hybrid_search_weaviate(
+                        collection_name=collection_name,
+                        query=query,
+                        k=k,
+                    )
+                else:
+                    result = query_doc_with_hybrid_search(
+                        collection_name=collection_name,
+                        query=query,
+                        embedding_function=embedding_function,
+                        k=k,
+                        reranking_function=reranking_function,
+                        r=r,
+                    )
+                    
                 results.append(result)
         except Exception as e:
             log.exception(
