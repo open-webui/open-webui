@@ -84,13 +84,13 @@
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 
-    $: onChange({
-	prompt,
-	files,
-	selectedToolIds,
-	imageGenerationEnabled,
-	webSearchEnabled
-    });
+	$: onChange({
+		prompt,
+		files,
+		selectedToolIds,
+		imageGenerationEnabled,
+		webSearchEnabled
+	});
 
 	let showTools = false;
 
