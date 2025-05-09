@@ -110,6 +110,7 @@
 		folderElement.removeEventListener('drop', onDrop);
 		folderElement.removeEventListener('dragleave', onDragLeave);
 	});
+
 </script>
 
 <div bind:this={folderElement} class="relative {className}">
@@ -123,6 +124,7 @@
 		<Collapsible
 			bind:open
 			className="w-full "
+			disabled={onAdd ? true : false}
 			buttonClassName="w-full"
 			on:change={(e) => {
 				dispatch('change', e.detail);
@@ -130,9 +132,9 @@
 		>
 			<!-- svelte-ignore a11y-no-static-element-interactions -->
 			<div
-				class="w-full group rounded-md relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-customGray-900 text-gray-500 dark:text-gray-500 transition"
+				class="w-full group rounded-md relative flex items-center justify-between text-gray-500 dark:text-gray-500 transition"
 			>
-				<button class="w-full py-1.5 pl-2 flex items-center gap-1.5 text-sm font-medium">
+				<button class="w-full py-1.5 pl-2.5 flex items-center {onAdd ? '' : 'gap-1.5'} text-sm font-medium">
 					<div class="text-gray-300 dark:text-customGray-300">
 						{#if !typeChats}
 							{#if open}

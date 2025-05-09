@@ -40,12 +40,7 @@ router = APIRouter()
 
 @router.get("/", response_model=list[KnowledgeUserResponse])
 async def get_knowledge(user=Depends(get_verified_user)):
-    knowledge_bases = []
-
-    if user.role == "admin":
-        knowledge_bases = Knowledges.get_knowledge_bases()
-    else:
-        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "read")
+    knowledge_bases = Knowledges.get_knowledge_bases_by_user_and_company(user.id, user.company_id, "read")
 
     # Get files for each knowledge base
     knowledge_with_files = []
@@ -88,12 +83,7 @@ async def get_knowledge(user=Depends(get_verified_user)):
 
 @router.get("/list", response_model=list[KnowledgeUserResponse])
 async def get_knowledge_list(user=Depends(get_verified_user)):
-    knowledge_bases = []
-
-    if user.role == "admin":
-        knowledge_bases = Knowledges.get_knowledge_bases()
-    else:
-        knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "write")
+    knowledge_bases = Knowledges.get_knowledge_bases_by_user_and_company(user.id, user.company_id, "read")
 
     # Get files for each knowledge base
     knowledge_with_files = []
@@ -150,7 +140,7 @@ async def create_new_knowledge(
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
-    knowledge = Knowledges.insert_new_knowledge(user.id, form_data)
+    knowledge = Knowledges.insert_new_knowledge(user.id, form_data, user.company_id)
 
     if knowledge:
         return knowledge
@@ -177,8 +167,7 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     if knowledge:
 
         if (
-            user.role == "admin"
-            or knowledge.user_id == user.id
+            knowledge.user_id == user.id
             or has_access(user.id, "read", knowledge.access_control)
         ):
 
@@ -213,7 +202,7 @@ async def update_knowledge_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
-    # Is the user the original creator, in a group with write access, or an admin
+    # Is the user the original creator, in a group with write access, or public
     if (
         knowledge.user_id != user.id
         and not has_access(user.id, "write", knowledge.access_control)
@@ -510,7 +499,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
     log.info(f"Deleting knowledge base: {id} (name: {knowledge.name})")
 
     # Get all models
-    models = Models.get_all_models()
+    models = Models.get_all_models_by_company(user.company_id)
     log.info(f"Found {len(models)} models to check for knowledge base {id}")
 
     # Update models that reference this knowledge base
@@ -534,7 +523,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
                     access_control=model.access_control,
                     is_active=model.is_active,
                 )
-                Models.update_model_by_id(model.id, model_form)
+                Models.update_model_by_id_and_company(model.id, model_form, user.company_id)
 
     # Clean up vector DB
     try:

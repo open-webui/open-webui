@@ -1,4 +1,3 @@
-import json
 import logging
 import time
 from typing import Optional
@@ -6,9 +5,6 @@ import uuid
 
 from open_webui.internal.db import Base, get_db
 from open_webui.env import SRC_LOG_LEVELS
-
-from open_webui.models.files import FileMetadataResponse
-
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON, func
@@ -26,7 +22,7 @@ class Group(Base):
     __tablename__ = "group"
 
     id = Column(Text, unique=True, primary_key=True)
-    user_id = Column(Text)
+    company_id = Column(Text, nullable=False)
 
     name = Column(Text)
     description = Column(Text)
@@ -44,7 +40,7 @@ class Group(Base):
 class GroupModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str
-    user_id: str
+    company_id: str
 
     name: str
     description: str
@@ -66,7 +62,7 @@ class GroupModel(BaseModel):
 
 class GroupResponse(BaseModel):
     id: str
-    user_id: str
+    company_id: str
     name: str
     description: str
     permissions: Optional[dict] = None
@@ -89,14 +85,14 @@ class GroupUpdateForm(GroupForm):
 
 class GroupTable:
     def insert_new_group(
-        self, user_id: str, form_data: GroupForm
+        self, company_id: str, form_data: GroupForm
     ) -> Optional[GroupModel]:
         with get_db() as db:
             group = GroupModel(
                 **{
                     **form_data.model_dump(exclude_none=True),
                     "id": str(uuid.uuid4()),
-                    "user_id": user_id,
+                    "company_id": company_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -115,11 +111,11 @@ class GroupTable:
             except Exception:
                 return None
 
-    def get_groups(self) -> list[GroupModel]:
+    def get_groups_by_company(self, company_id: str) -> list[GroupModel]:
         with get_db() as db:
             return [
                 GroupModel.model_validate(group)
-                for group in db.query(Group).order_by(Group.updated_at.desc()).all()
+                for group in db.query(Group).filter_by(company_id=company_id).all()
             ]
 
     def get_groups_by_member_id(self, user_id: str) -> list[GroupModel]:

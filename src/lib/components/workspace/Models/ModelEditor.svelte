@@ -181,8 +181,9 @@
 		}
 
 		info.params.stop = params.stop ? params.stop.split(',').filter((s) => s.trim()) : null;
+		const baseModel = $models?.find(item => item.id === info.base_model_id);
 		Object.keys(info.params).forEach((key) => {
-			if (info.params[key] === '' || info.params[key] === null || (info.base_model_id === "GPT o3-mini" && key==="temperature")) {
+			if (info.params[key] === '' || info.params[key] === null || ((baseModel?.name === "GPT o3-mini" || baseModel?.name === "GPT o1" || baseModel?.name === "GPT o1-mini") && key==="temperature")) {
 				delete info.params[key];
 			}
 		});
@@ -205,7 +206,8 @@
 		}
 
 		if (model) {
-			if(model.base_model_id === "GPT o3-mini") {
+			const baseModel = $models?.find(item => item.id === model.base_model_id);
+			if(baseModel?.name === "GPT o3-mini" || baseModel?.name === "GPT o1" || baseModel?.name === "GPT o1-mini") {
 				disableCreativity = true;
 			}
 			console.log(model);
@@ -362,6 +364,7 @@
 	};
 
 	let showAddKnowledge = false;
+	$: console.log($models)
 </script>
 
 {#if loaded}
@@ -877,12 +880,12 @@
 												>
 													<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
 													<div class="px-1">
-														{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena') as model}
+														{#each $models?.filter(item => !item.base_model_id)?.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena') as model}
 															<button
 																class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
 																on:click={() => {
 																	info.base_model_id = model.id;
-																	if(model.id === "GPT o3-mini"){
+																	if(model.name === "GPT o3-mini" || model?.name === "GPT o1" || model?.name === "GPT o1-mini"){
 																		disableCreativity = true;
 																	}else{
 																		if(disableCreativity) {

@@ -384,21 +384,21 @@
 			>
 				<div class="text-gray-300 dark:text-customGray-300">
 					{#if open}
-						<ChevronDown className=" size-3" strokeWidth="2.5" />
+						<ChevronDown className=" size-2" strokeWidth="2.5" />
 					{:else}
-						<ChevronRight className=" size-3" strokeWidth="2.5" />
+						<ChevronRight className=" size-2" strokeWidth="2.5" />
 					{/if}
 				</div>
 				
 				<div class="text-gray-300 dark:text-customGray-300">
 					{#if open}
-						<FolderOpenIcon />	
+						<FolderOpenIcon className="size-3.5"/>	
 					{:else}
-						<FolderIcon />	
+						<FolderIcon className="size-3.5"/>	
 					{/if}	
 				</div>
 
-				<div class="translate-y-[0.5px] flex-1 justify-start text-start line-clamp-1">
+				<div class="flex-1 justify-start text-start line-clamp-1">
 					{#if edit}
 						<input
 							id="folder-{folderId}-input"

@@ -62,7 +62,8 @@
 		filteredItems = prompts.filter((p) => {
 			const nameMatch = query === '' || p.command.includes(query);
 			const isPublic = p.access_control === null && !p.prebuilt;
-			const isPrivate = p.access_control !== null;
+			// const isPrivate = p.access_control !== null;
+			const isPrivate = p?.user_id === $user?.id;
 			const isPrebuilt = p.prebuilt;
 
 			const modelTags = p.meta?.tags?.map((t) => t.name.toLowerCase()) || [];
@@ -164,6 +165,9 @@
 			updateScrollHeight();
 		}, 0);
 	}
+	let hoveredPrompt = null;
+	let menuIdOpened = null;
+	
 </script>
 
 <svelte:head>
@@ -247,7 +251,7 @@
 	<div class="pl-[22px] pr-[15px]">
 		<div
 			id="prompts-filters"
-			class="flex items-center justify-between py-5 pr-[22px] flex-col md:flex-row"
+			class="flex justify-between py-5 pr-[22px] flex-col md:flex-row items-start"
 		>
 			<div class="flex items-start space-x-[5px] flex-col sm:flex-row mb-3 sm:mb-0">
 				<div
@@ -278,7 +282,7 @@
 				<button
 					on:click={() => (accessFilter = 'private')}
 					class={`${accessFilter === 'private' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
-					>{$i18n.t('Private')}</button
+					>{$i18n.t('My Prompts')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'public')}
@@ -305,27 +309,29 @@
 			<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
 				{#each filteredItems as prompt}
 					<div
-						class=" group flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 dark:bg-customGray-800 dark:hover:bg-white/5 hover:bg-black/5 rounded-2xl transition"
+						on:mouseenter={() => hoveredPrompt = prompt.command}
+						on:mouseleave={() => hoveredPrompt = null}
+						class=" group flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 dark:bg-customGray-800 rounded-2xl transition"
 					>
 						<div class="flex items-start justify-between">
 							<div class="flex items-center">
 								<div class="flex items-center gap-1 flex-wrap">
 									{#if prompt.access_control == null && prompt.prebuilt}
 										<div
-											class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<span>{$i18n.t('Prebuilt')}</span>
 										</div>
 									{:else if prompt.access_control == null}
 										<div
-											class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<PublicIcon />
 											<span>{$i18n.t('Public')}</span>
 										</div>
 									{:else if getGroupNamesFromAccess(prompt).length < 1}
 										<div
-											class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<PrivateIcon />
 											<span>{$i18n.t('Private')}</span>
@@ -333,7 +339,7 @@
 									{:else}
 										{#each getGroupNamesFromAccess(prompt) as groupName}
 											<div
-												class="flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+												class="flex gap-1 items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 											>
 												<GroupIcon />
 												<span>{groupName}</span>
@@ -343,7 +349,7 @@
 									{#if prompt.meta && Array.isArray(prompt.meta.tags)}
 										{#each prompt?.meta?.tags as promptTag}
 											<div
-												class="flex items-center dark:text-white text-xs dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
+												class="flex items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-100'} text-xs dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
 											>
 												{promptTag.name}
 											</div>
@@ -351,8 +357,8 @@
 									{/if}
 								</div>
 							</div>
-							{#if !prompt.prebuilt}
-								<div class="invisible group-hover:visible">
+							{#if !prompt.prebuilt && (prompt.user_id === $user?.id || $user?.role === 'admin')}
+								<div class="{(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'visible' : 'invisible'}">
 									<PromptMenu
 										{prompt}
 										shareHandler={() => {
@@ -369,9 +375,15 @@
 											showDeleteConfirm = true;
 										}}
 										onClose={() => {}}
+										on:openMenu={() => {
+											menuIdOpened = prompt.command
+										}}
+										on:closeMenu={() => {
+											menuIdOpened = null
+										}}
 									>
 										<button
-											class="self-center w-fit text-sm px-0.5 h-[21px] dark:text-white dark:hover:text-white hover:bg-black/5 dark:hover:bg-customGray-900 rounded-md"
+											class="self-center w-fit text-sm px-0.5 h-[21px] dark:text-white dark:hover:text-white rounded-md"
 											type="button"
 										>
 											<EllipsisHorizontal className="size-5" />
@@ -388,7 +400,7 @@
 							  }} 
 							>
 								<div class=" flex-1 flex items-center gap-2 self-center">
-									<div class="text-base line-clamp-1 capitalize dark:text-customGray-100">
+									<div class="text-base line-clamp-1 capitalize {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-100'}">
 										{prompt.title}
 									</div>
 									<!-- <div
@@ -400,7 +412,7 @@
 								<div class="text-xs line-clamp-1 dark:text-customGray-100/50 text-left">
 									{prompt.description}
 								</div>
-								{#if !prompt.prebuilt}
+								<!-- {#if !prompt.prebuilt}
 									<div class=" text-xs px-0.5 dark:text-customGray-100">
 										<Tooltip
 											content={prompt?.user?.email ?? $i18n.t('Deleted User')}
@@ -418,7 +430,7 @@
 											</div>
 										</Tooltip>
 									</div>
-								{/if}
+								{/if} -->
 							</button>
 						</div>
 					</div>

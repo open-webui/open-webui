@@ -36,6 +36,8 @@ class Knowledge(Base):
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
 
+    company_id = Column(Text, nullable=False)
+
     access_control = Column(JSON, nullable=True)  # Controls data access levels.
     # Defines access control rules for this entry.
     # - `None`: Public access, available to all users with the "user" role.
@@ -69,6 +71,8 @@ class KnowledgeModel(BaseModel):
     data: Optional[dict] = None
     meta: Optional[dict] = None
 
+    company_id: str
+
     access_control: Optional[dict] = None
 
     created_at: int  # timestamp in epoch
@@ -101,7 +105,7 @@ class KnowledgeForm(BaseModel):
 
 class KnowledgeTable:
     def insert_new_knowledge(
-        self, user_id: str, form_data: KnowledgeForm
+        self, user_id: str, form_data: KnowledgeForm, company_id: str
     ) -> Optional[KnowledgeModel]:
         with get_db() as db:
             knowledge = KnowledgeModel(
@@ -109,6 +113,7 @@ class KnowledgeTable:
                     **form_data.model_dump(),
                     "id": str(uuid.uuid4()),
                     "user_id": user_id,
+                    "company_id": company_id,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -143,15 +148,15 @@ class KnowledgeTable:
                 )
             return knowledge_bases
 
-    def get_knowledge_bases_by_user_id(
-        self, user_id: str, permission: str = "write"
+    def get_knowledge_bases_by_user_and_company(
+        self, user_id: str, company_id: str, permission: str = "write"
     ) -> list[KnowledgeUserModel]:
         knowledge_bases = self.get_knowledge_bases()
         return [
             knowledge_base
             for knowledge_base in knowledge_bases
             if knowledge_base.user_id == user_id
-            or has_access(user_id, permission, knowledge_base.access_control)
+            or (knowledge_base.company_id == company_id and has_access(user_id, permission, knowledge_base.access_control))
         ]
 
     def get_knowledge_by_id(self, id: str) -> Optional[KnowledgeModel]:
@@ -206,16 +211,6 @@ class KnowledgeTable:
                 return True
         except Exception:
             return False
-
-    def delete_all_knowledge(self) -> bool:
-        with get_db() as db:
-            try:
-                db.query(Knowledge).delete()
-                db.commit()
-
-                return True
-            except Exception:
-                return False
 
 
 Knowledges = KnowledgeTable()

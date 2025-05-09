@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 import chromadb
 import requests
 from pydantic import BaseModel
-from sqlalchemy import JSON, Column, DateTime, Integer, func
+from sqlalchemy import JSON, Column, DateTime, Integer, func, String
 
 from open_webui.env import (
     DATA_DIR,
@@ -69,6 +69,7 @@ class Config(Base):
     version = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     updated_at = Column(DateTime, nullable=True, onupdate=func.now())
+    company_id = Column(String, nullable=False)
 
 
 def load_json_config():
@@ -76,11 +77,11 @@ def load_json_config():
         return json.load(file)
 
 
-def save_to_db(data):
+def save_to_db(data, company_id):
     with get_db() as db:
-        existing_config = db.query(Config).first()
+        existing_config = db.query(Config).filter_by(company_id=company_id).first()
         if not existing_config:
-            new_config = Config(data=data, version=0)
+            new_config = Config(data=data, version=0, company_id=company_id)
             db.add(new_config)
         else:
             existing_config.data = data
@@ -89,83 +90,134 @@ def save_to_db(data):
         db.commit()
 
 
-def reset_config():
+def reset_config(company_id):
     with get_db() as db:
-        db.query(Config).delete()
+        db.query(Config).filter_by(company_id=company_id).delete()
         db.commit()
 
 
-# When initializing, check if config.json exists and migrate it to the database
-if os.path.exists(f"{DATA_DIR}/config.json"):
-    data = load_json_config()
-    save_to_db(data)
-    os.rename(f"{DATA_DIR}/config.json", f"{DATA_DIR}/old_config.json")
-
 DEFAULT_CONFIG = {
-    "version": 0,
-    "ui": {
-        "default_locale": "",
-        "prompt_suggestions": [
-            {
-                "title": [
-                    "Help me study",
-                    "vocabulary for a college entrance exam",
-                ],
-                "content": "Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.",
-            },
-            {
-                "title": [
-                    "Give me ideas",
-                    "for what to do with my kids' art",
-                ],
-                "content": "What are 5 creative things I could do with my kids' art? I don't want to throw them away, but it's also so much clutter.",
-            },
-            {
-                "title": ["Tell me a fun fact", "about the Roman Empire"],
-                "content": "Tell me a random fun fact about the Roman Empire",
-            },
-            {
-                "title": [
-                    "Show me a code snippet",
-                    "of a website's sticky header",
-                ],
-                "content": "Show me a code snippet of a website's sticky header in CSS and JavaScript.",
-            },
-            {
-                "title": [
-                    "Explain options trading",
-                    "if I'm familiar with buying and selling stocks",
-                ],
-                "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
-            },
-            {
-                "title": ["Overcome procrastination", "give me tips"],
-                "content": "Could you start by asking me about instances when I procrastinate the most and then give me some suggestions to overcome it?",
-            },
-            {
-                "title": [
-                    "Grammar check",
-                    "rewrite it for better readability ",
-                ],
-                "content": 'Check the following sentence for grammar and clarity: "[sentence]". Rewrite it for better readability while maintaining its original meaning.',
-            },
-        ],
+    "concurrent_requests": 10,
+    "rag": {
+        "pdf_extract_images": False,
+        "youtube_loader_language": ["en"],
+        "youtube_loader_proxy_url": "",
+        "enable_web_loader_ssl_verification": False,
+        "web": {
+            "search": {
+                "enable": True,
+                "engine": "google_pse",
+                "searxng_query_url": "",
+                "google_pse_api_key": os.environ.get("GOOGLE_PSE_API_KEY", ""),
+                "google_pse_engine_id": os.environ.get("GOOGLE_PSE_ENGINE_ID", ""),
+                "brave_search_api_key": "",
+                "kagi_search_api_key": "",
+                "mojeek_search_api_key": "",
+                "serpstack_api_key": "",
+                "serpstack_https": True,
+                "serper_api_key": "",
+                "serply_api_key": "",
+                "tavily_api_key": "",
+                "searchapi_api_key": "",
+                "searchapi_engine": "",
+                "jina_api_key": "",
+                "bing_search_v7_endpoint": "https://api.bing.microsoft.com/v7.0/search",
+                "bing_search_v7_subscription_key": "",
+                "exa_api_key": "",
+                "result_count": 3,
+                "concurrent_requests": 10,
+            }
+        },
+        "template": "### Task:\nRespond to the user query using the provided context, incorporating inline citations in the format [source_id] **only when the <source_id> tag is explicitly provided** in the context.\n\n### Guidelines:\n- If you don't know the answer, clearly state that.\n- If uncertain, ask the user for clarification.\n- Respond in the same language as the user's query.\n- If the context is unreadable or of poor quality, inform the user and provide the best possible answer.\n- If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.\n- **Only include inline citations using [source_id] when a <source_id> tag is explicitly provided in the context.**  \n- Do not cite if the <source_id> tag is not provided in the context.  \n- Do not use XML tags in your response.\n- Ensure citations are concise and directly related to the information provided.\n\n### Example of Citation:\nIf the user asks about a specific topic and the information is found in \"whitepaper.pdf\" with a provided <source_id>, the response should include the citation like so:  \n* \"According to the study, the proposed method increases efficiency by 20% [whitepaper.pdf].\"\nIf no <source_id> is present, the response should omit the citation.\n\n### Output:\nProvide a clear and direct response to the user's query, including inline citations in the format [source_id] only when the <source_id> tag is present in the context.\n\n<context>\n{{CONTEXT}}\n</context>\n\n<user_query>\n{{QUERY}}\n</user_query>\n",
+        "top_k": 10,
+        "relevance_threshold": 0.0,
+        "enable_hybrid_search": True,
+        "embedding_engine": "openai",
+        "embedding_model": "text-embedding-3-small",
+        "openai_api_base_url": "https://api.openai.com/v1",
+        "openai_api_key": os.environ.get("OPENAI_API_KEY", ""),
+        "ollama": {"url": "http://localhost:11434", "key": ""},
+        "embedding_batch_size": 2048,
+        "reranking_model": "",
+        "file": {"max_size": None, "max_count": None},
+        "CONTENT_EXTRACTION_ENGINE": "",
+        "tika_server_url": "http://tika:9998",
+        "text_splitter": "",
+        "chunk_size": 1000,
+        "chunk_overlap": 100,
     },
+    "google_drive": {"enable": False},
+    "audio": {
+        "tts": {
+            "openai": {
+                "api_base_url": "https://api.openai.com/v1",
+                "api_key": os.environ.get("OPENAI_API_KEY", ""),
+            },
+            "api_key": "",
+            "engine": "openai",
+            "model": "tts-1",
+            "voice": "alloy",
+            "split_on": "punctuation",
+            "azure": {
+                "speech_region": "eastus",
+                "speech_output_format": "audio-24khz-160kbitrate-mono-mp3",
+            },
+        },
+        "stt": {
+            "openai": {
+                "api_base_url": "https://api.openai.com/v1",
+                "api_key": os.environ.get("OPENAI_API_KEY", ""),
+            },
+            "engine": "openai",
+            "model": "whisper-1",
+            "whisper_model": "base",
+        },
+    },
+    "image_generation": {
+        "engine": "openai",
+        "enable": True,
+        "prompt": {"enable": True},
+        "openai": {
+            "api_base_url": "https://api.openai.com/v1",
+            "api_key": os.environ.get("OPENAI_API_KEY", ""),
+        },
+        "automatic1111": {"base_url": "", "api_auth": "", "cfg_scale": None, "sampler": None, "scheduler": None},
+        "comfyui": {"base_url": "", "workflow": "{\n  \"3\": {\n    \"inputs\": {\n      \"seed\": 0,\n      \"steps\": 20,\n      \"cfg\": 8,\n      \"sampler_name\": \"euler\",\n      \"scheduler\": \"normal\",\n      \"denoise\": 1,\n      \"model\": [\n        \"4\",\n        0\n      ],\n      \"positive\": [\n        \"6\",\n        0\n      ],\n      \"negative\": [\n        \"7\",\n        0\n      ],\n      \"latent_image\": [\n        \"5\",\n        0\n      ]\n    },\n    \"class_type\": \"KSampler\",\n    \"_meta\": {\n      \"title\": \"KSampler\"\n    }\n  },\n  \"4\": {\n    \"inputs\": {\n      \"ckpt_name\": \"model.safetensors\"\n    },\n    \"class_type\": \"CheckpointLoaderSimple\",\n    \"_meta\": {\n      \"title\": \"Load Checkpoint\"\n    }\n  },\n  \"5\": {\n    \"inputs\": {\n      \"width\": 512,\n      \"height\": 512,\n      \"batch_size\": 1\n    },\n    \"class_type\": \"EmptyLatentImage\",\n    \"_meta\": {\n      \"title\": \"Empty Latent Image\"\n    }\n  },\n  \"6\": {\n    \"inputs\": {\n      \"text\": \"Prompt\",\n      \"clip\": [\n        \"4\",\n        1\n      ]\n    },\n    \"class_type\": \"CLIPTextEncode\",\n    \"_meta\": {\n      \"title\": \"CLIP Text Encode (Prompt)\"\n    }\n  },\n  \"7\": {\n    \"inputs\": {\n      \"text\": \"\",\n      \"clip\": [\n        \"4\",\n        1\n      ]\n    },\n    \"class_type\": \"CLIPTextEncode\",\n    \"_meta\": {\n      \"title\": \"CLIP Text Encode (Prompt)\"\n    }\n  },\n  \"8\": {\n    \"inputs\": {\n      \"samples\": [\n        \"3\",\n        0\n      ],\n      \"vae\": [\n        \"4\",\n        2\n      ]\n    },\n    \"class_type\": \"VAEDecode\",\n    \"_meta\": {\n      \"title\": \"VAE Decode\"\n    }\n  },\n  \"9\": {\n    \"inputs\": {\n      \"filename_prefix\": \"ComfyUI\",\n      \"images\": [\n        \"8\",\n        0\n      ]\n    },\n    \"class_type\": \"SaveImage\",\n    \"_meta\": {\n      \"title\": \"Save Image\"\n    }\n  }\n}",
+        "nodes": [
+            {"type": "prompt", "key": "text", "node_ids": []},
+            {"type": "model", "key": "ckpt_name", "node_ids": []},
+            {"type": "width", "key": "width", "node_ids": []},
+            {"type": "height", "key": "height", "node_ids": []},
+            {"type": "steps", "key": "steps", "node_ids": []},
+            {"type": "seed", "key": "seed", "node_ids": []},
+        ],
+        "model": "dall-e-3",
+        "size": "1024x1024",
+        "steps": 50,
+        },
+    }
 }
 
-
-def get_config():
+def get_config(company_id):
+    # If company_id is None, return the default config directly
+    if company_id is None:
+        return DEFAULT_CONFIG
+        
     with get_db() as db:
-        config_entry = db.query(Config).order_by(Config.id.desc()).first()
-        return config_entry.data if config_entry else DEFAULT_CONFIG
+        config_entry = db.query(Config).filter_by(company_id=company_id).order_by(Config.id.desc()).first()
+        if not config_entry:
+            # If no config exists for this company, return the default config
+            return DEFAULT_CONFIG
+        return config_entry.data
 
 
-CONFIG_DATA = get_config()
+# Initialize with the default config
+CONFIG_DATA = DEFAULT_CONFIG
 
 
-def get_config_value(config_path: str):
+def get_config_value(config_path: str, company_id):
     path_parts = config_path.split(".")
-    cur_config = CONFIG_DATA
+    cur_config = get_config(company_id)
     for key in path_parts:
         if key in cur_config:
             cur_config = cur_config[key]
@@ -177,20 +229,25 @@ def get_config_value(config_path: str):
 PERSISTENT_CONFIG_REGISTRY = []
 
 
-def save_config(config):
+def save_config(config, company_id):
+    # If company_id is None, we can't save to the database (company_id is required)
+    if company_id is None:
+        return False
+        
     global CONFIG_DATA
     global PERSISTENT_CONFIG_REGISTRY
     try:
-        save_to_db(config)
-        CONFIG_DATA = config
-
+        save_to_db(config, company_id)
+        
         # Trigger updates on all registered PersistentConfig entries
-        for config_item in PERSISTENT_CONFIG_REGISTRY:
-            config_item.update()
+        for config_entry in PERSISTENT_CONFIG_REGISTRY:
+            if hasattr(config_entry, "update"):
+                config_entry.update(company_id)
+
+        return True
     except Exception as e:
-        log.exception(e)
+        log.error(f"Error saving config: {e}")
         return False
-    return True
 
 
 T = TypeVar("T")
@@ -201,9 +258,9 @@ class PersistentConfig(Generic[T]):
         self.env_name = env_name
         self.config_path = config_path
         self.env_value = env_value
-        self.config_value = get_config_value(config_path)
+        self.config_value = get_config_value(config_path, company_id=None)
         if self.config_value is not None:
-            log.info(f"'{env_name}' loaded from the latest database entry")
+            # log.info(f"'{env_name}' loaded from the default config")
             self.value = self.config_value
         else:
             self.value = env_value
@@ -226,41 +283,69 @@ class PersistentConfig(Generic[T]):
             )
         return super().__getattribute__(item)
 
-    def update(self):
-        new_value = get_config_value(self.config_path)
-        if new_value is not None:
-            self.value = new_value
-            log.info(f"Updated {self.env_name} to new value {self.value}")
+    def update(self, company_id):
+        self.config_value = get_config_value(self.config_path, company_id)
 
-    def save(self):
-        log.info(f"Saving '{self.env_name}' to the database")
+        if self.config_value is not None:
+            self.value = self.config_value
+            #log.info(f"Updated {self.env_name} to new value {self.value}")
+        else:
+            self.value = self.env_value
+            #log.info(f"Updated {self.env_name} to default value {self.value}")
+
+    def save(self, company_id):
+        # If company_id is None, we can't save to the database
+        if company_id is None:
+            return
+            
+        #log.info(f"Saving '{self.env_name}' to the database")
         path_parts = self.config_path.split(".")
-        sub_config = CONFIG_DATA
+        
+        # Get the full config
+        full_config = get_config(company_id)
+        
+        # Create a reference to navigate through the config
+        current = full_config
+        
+        # Navigate to the correct nested location
         for key in path_parts[:-1]:
-            if key not in sub_config:
-                sub_config[key] = {}
-            sub_config = sub_config[key]
-        sub_config[path_parts[-1]] = self.value
-        save_to_db(CONFIG_DATA)
+            if key not in current:
+                current[key] = {}
+            current = current[key]
+            
+        # Update the specific value
+        current[path_parts[-1]] = self.value
+        
+        # Save the entire updated config
+        save_config(full_config, company_id)
         self.config_value = self.value
 
 
 class AppConfig:
-    _state: dict[str, PersistentConfig]
-
     def __init__(self):
         super().__setattr__("_state", {})
+        super().__setattr__("_current_company_id", None)
 
     def __setattr__(self, key, value):
         if isinstance(value, PersistentConfig):
             self._state[key] = value
         else:
             self._state[key].value = value
-            self._state[key].save()
+            self._state[key].save(self._current_company_id)
 
     def __getattr__(self, key):
         return self._state[key].value
 
+    # Set the current company ID for this config instance and update all config values
+    def set_company_id(self, company_id: str):
+        super().__setattr__("_current_company_id", company_id)
+        for key, config in self._state.items():
+            if hasattr(config, "update"):
+                config.update(company_id)
+
+    # Get the current company ID for this config instance
+    def get_company_id(self):
+        return self._current_company_id
 
 ####################################
 # WEBUI_AUTH (Required for security)
@@ -768,7 +853,7 @@ ENABLE_SIGNUP = PersistentConfig(
     (
         False
         if not WEBUI_AUTH
-        else os.environ.get("ENABLE_SIGNUP", "True").lower() == "true"
+        else os.environ.get("ENABLE_SIGNUP", "True").lower() == "true",
     ),
 )
 
@@ -836,17 +921,17 @@ DEFAULT_USER_ROLE = PersistentConfig(
 )
 
 USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS = (
-    os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS", "False").lower()
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS", "true").lower()
     == "true"
 )
 
 USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS = (
-    os.environ.get("USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS", "False").lower()
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_KNOWLEDGE_ACCESS", "true").lower()
     == "true"
 )
 
 USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS = (
-    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS", "False").lower()
+    os.environ.get("USER_PERMISSIONS_WORKSPACE_PROMPTS_ACCESS", "true").lower()
     == "true"
 )
 
@@ -964,6 +1049,26 @@ ENABLE_MESSAGE_RATING = PersistentConfig(
     "ENABLE_MESSAGE_RATING",
     "ui.enable_message_rating",
     os.environ.get("ENABLE_MESSAGE_RATING", "True").lower() == "true",
+)
+
+
+HIDE_MODEL_LOGO_IN_CHAT = PersistentConfig(
+    "HIDE_MODEL_LOGO_IN_CHAT",
+    "ui.hide_model_logo_in_chat",
+    os.environ.get("HIDE_MODEL_LOGO_IN_CHAT", "False").lower() == "true",
+)
+
+CHAT_RETENTION_DAYS = PersistentConfig(
+    "CHAT_RETENTION_DAYS",
+    "data.chat_retention_days",
+    int(os.environ.get("CHAT_RETENTION_DAYS", "365")),
+)
+
+
+CUSTOM_USER_NOTICE = PersistentConfig(
+    "CUSTOM_USER_NOTICE",
+    "ui.custom_user_notice",
+    os.environ.get("CUSTOM_USER_NOTICE", None),
 )
 
 
@@ -1444,7 +1549,7 @@ RAG_EMBEDDING_MODEL = PersistentConfig(
     "rag.embedding_model",
     os.environ.get("RAG_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"),
 )
-log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL.value}")
+#log.info(f"Embedding model set: {RAG_EMBEDDING_MODEL.value}")
 
 RAG_EMBEDDING_MODEL_AUTO_UPDATE = (
     not OFFLINE_MODE

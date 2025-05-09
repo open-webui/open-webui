@@ -7,7 +7,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
+	import { config, user, models as _models, temporaryChatEnabled, company } from '$lib/stores';
 	import { sanitizeResponseContent, findWordIndices } from '$lib/utils';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -90,6 +90,7 @@
 	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
 
 	onMount(() => {});
+	$: currentModel = $_models.find((item) => item.id === selectedModels?.[0]);
 </script>
 
 <div class="m-auto w-full max-w-6xl px-2 @2xl:px-20 translate-y-6 py-24 text-center">
@@ -188,7 +189,25 @@
 				</div>
 			</div> -->
 
-			<div class="text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
+			<div class="relative text-base font-normal @md:max-w-3xl w-full py-3 {atSelectedModel ? 'mt-2' : ''}">
+				{#if currentModel?.base_model_id}
+					<div class="absolute -top-[12rem] left-1/2 tramsform -translate-x-1/2 max-w-[20rem] flex items-center flex-col">
+						<img
+							class="w-16 h-16 rounded-lg mb-2"
+							src={currentModel?.meta?.profile_image_url
+								? currentModel?.meta?.profile_image_url
+								: $company?.profile_image_url}
+							alt={currentModel?.name}
+						/>
+						<div class="dark:text-customGray-100 text-base font-normal mb-2">
+							{currentModel?.name}
+						</div>
+						<div class="text-xs dark:text-customGray-100/50 font-normal">
+							{currentModel?.meta?.description} fgsdf fgfdsg dsfg sdgsdfgsdfgsdf fs gsd gdsgd dfsd g
+							fdgdsfg
+						</div>
+					</div>
+				{/if}
 				<div class="px-2.5 mb-2.5 flex justify-between">
 					<ModelSelector
 						{initNewChatCompleted}

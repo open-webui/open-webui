@@ -25,6 +25,7 @@
 	import StarRating from './IntelligenceRating.svelte';
 	import SpeedRating from './SpeedRating.svelte';
 	import { modelsInfo } from '../../../../data/modelsInfo';
+	import { getModelIcon } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -60,15 +61,15 @@
 
 	const filteredSourceItems = items
 		.filter?.((item) => !item?.model?.name?.toLowerCase()?.includes('arena'))
-		?.filter((item) => item.model?.info?.base_model_id == null);
-
+		?.filter((item) => item.model?.base_model_id == null);
+	console.log(filteredSourceItems, 'items');
 	const fuse = new Fuse(
 		filteredSourceItems.map((item) => {
 			const _item = {
 				...item,
 				modelName: item.model?.name,
-				tags: item.model?.info?.meta?.tags?.map((tag) => tag.name).join(' '),
-				desc: item.model?.info?.meta?.description
+				tags: item.model?.meta?.tags?.map((tag) => tag.name).join(' '),
+				desc: item.model?.meta?.description
 			};
 			return _item;
 		}),
@@ -227,23 +228,6 @@
 		}
 	};
 
-	function getModelIcon(label: string): string {
-		const lower = label.toLowerCase();
-
-		if (lower.includes('perplexity')) {
-			return '/perplexity-ai-icon.svg';
-		} else if (lower.includes('gpt')) {
-			return '/chatgpt-icon.svg';
-		} else if (lower.includes('claude')) {
-			return '/claude-ai-icon.svg';
-		} else if (lower.includes('gemini')) {
-			return '/google-gemini-icon.svg';
-		} else if (lower.includes('mistral') || lower.includes('pixtral')) {
-			return '/mistral-color.svg';
-		} else {
-			return '/static/favicon.png';
-		}
-	}
 	let hoveredItem = null;
 
 	let knowledgeCutoff = null;
@@ -259,6 +243,13 @@
 			knowledgeCutoff = formatted;
 		}
 	}
+	let baseModel = null;
+	$: {
+		if (selectedModel?.model?.base_model_id) {
+			baseModel = items.find((item) => item?.model?.id === selectedModel?.model?.base_model_id);
+		}
+	}
+	
 </script>
 
 <DropdownMenu.Root
@@ -270,14 +261,14 @@
 	}}
 	closeFocus={false}
 >
-	{#if !selectedModel?.model?.info?.base_model_id}
+	{#if !selectedModel?.model?.base_model_id}
 		<DropdownMenu.Trigger
 			class="relative w-full flex"
 			aria-label={placeholder}
 			id="model-selector-{id}-button"
 		>
 			<div
-				class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
+				class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between dark:text-customGray-100 placeholder-gray-400 focus:outline-none"
 			>
 				{#if selectedModel}
 					<img
@@ -289,21 +280,21 @@
 				{:else}
 					{placeholder}
 				{/if}
-				<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
+				<ChevronDown className=" self-center ml-2 size-2" strokeWidth="2" />
 			</div>
 		</DropdownMenu.Trigger>
 	{:else}
 		<div
-			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-none"
+			class="flex w-full text-left px-0.5 outline-none bg-transparent truncate {triggerClassName} justify-between placeholder-gray-400 focus:outline-none"
 		>
 			{#if selectedModel}
 				<img
-					src={selectedModel?.model?.info?.meta?.profile_image_url ? selectedModel?.model?.info?.meta?.profile_image_url : getModelIcon(selectedModel?.model?.info?.base_model_id)}
+					src={getModelIcon(baseModel?.model?.name)}
 					alt="Model"
 					class="rounded-full size-4 self-center mr-2"
 				/>
-				{selectedModel.label}
-				({selectedModel?.model?.info?.base_model_id})
+				<!-- {selectedModel.label} -->
+				{baseModel?.model?.name}
 			{:else}
 				{placeholder}
 			{/if}
@@ -316,7 +307,7 @@
 			: `${className}`} w-[180px] justify-start rounded-xl border dark:border-customGray-700 bg-white dark:bg-customGray-900 dark:text-white shadow-lg  outline-none"
 		transition={flyAndScale}
 		side={$mobile ? 'bottom' : 'bottom-start'}
-		sideOffset={3}
+		sideOffset={5}
 	>
 		<slot>
 			{#if searchEnabled}
@@ -356,7 +347,7 @@
 				{#each filteredItems as item, index}
 					<button
 						aria-label="model-item"
-						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-[5px] px-2 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-customGray-950 rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
+						class="flex w-full text-left line-clamp-1 select-none items-center rounded-button py-[5px] px-2 text-sm text-gray-700 dark:text-customGray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-customGray-950 dark:hover:text-white rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
 						selectedModelIdx
 							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
 							: ''}"
@@ -371,9 +362,9 @@
 						}}
 					>
 						<div class="flex flex-col">
-							{#if $mobile && (item?.model?.info?.meta?.tags ?? []).length > 0}
+							{#if $mobile && (item?.model?.meta?.tags ?? []).length > 0}
 								<div class="flex gap-0.5 self-start h-full mb-1.5 -translate-x-1">
-									{#each item.model?.info?.meta.tags as tag}
+									{#each item.model?.meta.tags as tag}
 										<div
 											class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
 										>
@@ -525,7 +516,7 @@
 					>
 						{#if modelsInfo?.[hoveredItem?.label]?.organization}
 							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
-								<p class="text-xs dark:text-white">
+								<p class="text-xs dark:text-customGray-100">
 									{modelsInfo?.[hoveredItem?.label]?.organization}
 								</p>
 								<p class="text-2xs dark:text-white/50">{$i18n.t('Organization')}</p>
@@ -533,13 +524,13 @@
 						{/if}
 						{#if modelsInfo?.[hoveredItem?.label]?.hosted_in}
 							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
-								<p class="text-xs dark:text-white">{modelsInfo?.[hoveredItem?.label]?.hosted_in}</p>
+								<p class="text-xs dark:text-customGray-100">{modelsInfo?.[hoveredItem?.label]?.hosted_in}</p>
 								<p class="text-2xs dark:text-white/50">{$i18n.t('Hosted In')}</p>
 							</div>
 						{/if}
 
 						<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
-							<p class="text-xs dark:text-white">
+							<p class="text-xs dark:text-customGray-100">
 								{#if modelsInfo?.[hoveredItem?.label]?.context_window}
 									{modelsInfo?.[hoveredItem?.label]?.context_window}
 								{:else}
@@ -550,7 +541,7 @@
 						</div>
 
 						<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
-							<p class="text-xs dark:text-white">
+							<p class="text-xs dark:text-customGray-100">
 								{#if knowledgeCutoff}
 									{knowledgeCutoff}
 								{:else}
@@ -560,7 +551,7 @@
 							<p class="text-2xs dark:text-white/50">{$i18n.t('Knowledge Cutoff')}</p>
 						</div>
 
-						<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+						<div class="py-1.5 text-xs dark:text-customGray-100 border-b dark:border-customGray-700 last:border-b-0">
 							{#if modelsInfo?.[hoveredItem?.label]?.intelligence_score}
 								<StarRating rating={modelsInfo?.[hoveredItem?.label]?.intelligence_score} />
 							{:else}
@@ -569,7 +560,7 @@
 							<p class="text-2xs dark:text-white/50">{$i18n.t('Intelligence Score')}</p>
 						</div>
 
-						<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">
+						<div class="py-1.5 text-xs dark:text-customGray-100 border-b dark:border-customGray-700 last:border-b-0">
 							{#if modelsInfo?.[hoveredItem?.label]?.speed}
 								<SpeedRating rating={modelsInfo?.[hoveredItem?.label]?.speed} />
 							{:else}
@@ -580,12 +571,12 @@
 
 						{#if modelsInfo?.[hoveredItem?.label]?.multimodal}
 							<div class="py-2.5 border-b dark:border-customGray-700 last:border-b-0">
-								<p class="text-xs dark:text-white">{$i18n.t('Multimodal')}</p>
+								<p class="text-xs dark:text-customGray-100">{$i18n.t('Multimodal')}</p>
 							</div>
 						{/if}
 						{#if modelsInfo?.[hoveredItem?.label]?.reasoning}
 							<div class="py-2.5 border-b dark:border-customGray-700 last:border-b-0">
-								<p class="text-xs dark:text-white">{$i18n.t('Reasoning')}</p>
+								<p class="text-xs dark:text-customGray-100">{$i18n.t('Reasoning')}</p>
 							</div>
 						{/if}
 					</div>
@@ -599,7 +590,7 @@
 						placement="top-start"
 					>
 						<button
-							class="flex w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
+							class="flex w-full line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted"
 							on:click={() => {
 								pullModelHandler();
 							}}

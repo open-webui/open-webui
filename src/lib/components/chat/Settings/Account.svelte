@@ -56,12 +56,12 @@
 				profileImageUrl = generateInitialsImage(firstName);
 			}
 		}
-		if (email !== $user.email) {
-			if (!isValidEmail(email)) {
-				toast.error($i18n.t('Please enter valid email.'));
-				return;
-			}
-		}
+		// if (email !== $user.email) {
+		// 	if (!isValidEmail(email)) {
+		// 		toast.error($i18n.t('Please enter valid email.'));
+		// 		return;
+		// 	}
+		// }
 		if (currentPassword) {
 			if(!newPassword) {
 				toast.error(
@@ -220,7 +220,7 @@
 			}}
 		/>
 
-		<div class="mb-14">
+		<div class="mb-4">
 			<!-- <div class=" text-sm font-medium">{$i18n.t('Account')}</div> -->
 
 			<div class="flex space-x-5">
@@ -344,7 +344,7 @@
 						/>
 					</div>
 				</div>
-				<div class="flex flex-col w-full">
+				<!-- <div class="flex flex-col w-full">
 					<div class="relative w-full dark:bg-customGray-900 rounded-md">
 						{#if email}
 							<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
@@ -359,7 +359,7 @@
 							disabled
 						/>
 					</div>
-				</div>
+				</div> -->
 			</div>
 
 			<!-- <div class="pt-2">

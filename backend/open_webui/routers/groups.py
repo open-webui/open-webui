@@ -1,19 +1,16 @@
-import os
-from pathlib import Path
 from typing import Optional
 
 
 from beyond_the_loop.models.users import Users
-from open_webui.models.groups import (
+from beyond_the_loop.models.groups import (
     Groups,
     GroupForm,
     GroupUpdateForm,
     GroupResponse,
 )
 
-from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from open_webui.utils.auth import get_admin_user, get_verified_user
 
 router = APIRouter()
@@ -26,7 +23,7 @@ router = APIRouter()
 @router.get("/", response_model=list[GroupResponse])
 async def get_groups(user=Depends(get_verified_user)):
     if user.role == "admin":
-        return Groups.get_groups()
+        return Groups.get_groups_by_company(user.company_id)
     else:
         return Groups.get_groups_by_member_id(user.id)
 
@@ -39,7 +36,7 @@ async def get_groups(user=Depends(get_verified_user)):
 @router.post("/create", response_model=Optional[GroupResponse])
 async def create_new_function(form_data: GroupForm, user=Depends(get_admin_user)):
     try:
-        group = Groups.insert_new_group(user.id, form_data)
+        group = Groups.insert_new_group(user.company_id, form_data)
         if group:
             return group
         else:

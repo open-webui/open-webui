@@ -34,6 +34,7 @@
 		tags,
 		banners,
 		showSettings,
+		showCompanySettings,
 		showChangelog,
 		temporaryChatEnabled
 	} from '$lib/stores';
@@ -43,6 +44,7 @@
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
+	import CompanySettingsModal from '$lib/components/chat/CompanySettingsModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -217,6 +219,7 @@
 </script>
 
 <SettingsModal bind:show={$showSettings} />
+<CompanySettingsModal bind:show={$showCompanySettings}/>
 <!-- <ChangelogModal bind:show={$showChangelog} /> -->
 
 <!-- {#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}

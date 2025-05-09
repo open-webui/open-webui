@@ -279,7 +279,7 @@
 				{#if pinned}
 					<PinnedFilledIcon/>
 				{/if}
-				<div class=" text-left text-sm ml-[5px] overflow-hidden w-full h-[20px]">
+				<div class=" text-left text-sm ml-[5px] overflow-hidden truncate text-ellipsis w-[90%] h-[20px]">
 					{title}
 				</div>
 			</div>
@@ -296,7 +296,7 @@
 				: 'invisible group-hover:visible from-gray-100 dark:from-customGray-900'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
-			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-gradient-to-l from-80%
+			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-1 bg-gradient-to-l from-80%
 
               to-transparent"
 		on:mouseenter={(e) => {
@@ -335,7 +335,7 @@
 					</button>
 				</Tooltip>
 			</div>
-		{:else if shiftKey && mouseOver}
+		<!-- {:else if shiftKey && mouseOver}
 			<div class=" flex items-center self-center space-x-1.5">
 				<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 					<button
@@ -360,7 +360,7 @@
 						<GarbageBin strokeWidth="2" />
 					</button>
 				</Tooltip>
-			</div>
+			</div> -->
 		{:else}
 			<div class="flex self-center space-x-1 z-10">
 				<ChatMenu

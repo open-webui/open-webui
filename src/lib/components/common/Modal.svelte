@@ -6,6 +6,7 @@
 
 	export let show = true;
 	export let size = 'md';
+	export let blockBackdropClick = false;
 
 	export let containerClassName = 'p-3';
 	export let className = 'bg-gray-50 dark:bg-gray-900 rounded-2xl';
@@ -72,6 +73,7 @@
 		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] {containerClassName} flex justify-center z-[9999] overflow-y-auto overscroll-contain"
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
+			if(blockBackdropClick) return;
 			show = false;
 		}}
 	>

@@ -41,7 +41,7 @@
 			if (aUserIndex !== -1 && bUserIndex !== -1) return aUserIndex - bUserIndex;
 
 			// If both are not in the userIds, fallback to alphabetical sorting by name
-			return a.name.localeCompare(b.name);
+			return a.first_name.localeCompare(b.first_name);
 		});
 
 	let query = '';

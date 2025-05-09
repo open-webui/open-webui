@@ -2,8 +2,6 @@
 	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { getContext, createEventDispatcher } from 'svelte';
-	const dispatch = createEventDispatcher();
-
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
@@ -19,6 +17,7 @@
 	import MessageEditIcon from '$lib/components/icons/MessageEditIcon.svelte';
 
 	const i18n = getContext('i18n');
+	const dispatch = createEventDispatcher();
 
 	export let onClose: Function = () => {};
 
@@ -31,29 +30,30 @@
 	bind:show
 	on:change={(e) => {
 		if (e.detail === false) {
+			dispatch('closeMenu');
 			onClose();
 		}
 	}}
 	align="end"
 >
-	<Tooltip content={$i18n.t('More')}>
 		<slot
 			><button
-				class="self-center w-fit text-sm px-0.5 h-[21px] dark:text-white dark:hover:text-white hover:bg-black/5 dark:hover:bg-customGray-900 rounded-md"
-										type="button"
+				class="self-center w-fit text-sm px-0.5 h-[21px] dark:text-white rounded-md"
+				type="button"
 				on:click={(e) => {
 					e.stopPropagation();
+					dispatch('openMenu');
 					show = true;
 				}}
 			>
 				<EllipsisHorizontal className="size-5" />
 			</button>
 		</slot>
-	</Tooltip>
+
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[160px] rounded-xl px-1 py-1.5 border border-gray-300/30 dark:border-gray-700/50 z-50 bg-white dark:bg-gray-850 dark:text-white shadow"
+			class="w-full max-w-[160px] rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-customGray-700 z-50 bg-white dark:bg-customGray-900 dark:text-white shadow"
 			sideOffset={-2}
 			side="bottom"
 			align="end"

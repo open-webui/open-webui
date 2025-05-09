@@ -15,7 +15,7 @@ from starlette.responses import RedirectResponse
 from beyond_the_loop.models.auths import Auths
 from beyond_the_loop.models.users import Users
 from beyond_the_loop.models.companies import NO_COMPANY
-from open_webui.models.groups import Groups, GroupModel, GroupUpdateForm
+from beyond_the_loop.models.groups import Groups, GroupModel, GroupUpdateForm
 from open_webui.config import (
     DEFAULT_USER_ROLE,
     ENABLE_OAUTH_SIGNUP,
@@ -122,7 +122,7 @@ class OAuthManager:
 
         user_oauth_groups: list[str] = user_data.get(oauth_claim, list())
         user_current_groups: list[GroupModel] = Groups.get_groups_by_member_id(user.id)
-        all_available_groups: list[GroupModel] = Groups.get_groups()
+        all_available_groups: list[GroupModel] = Groups.get_groups_by_company(user.company_id)
 
         # Remove groups that user is no longer a part of
         for group_model in user_current_groups:

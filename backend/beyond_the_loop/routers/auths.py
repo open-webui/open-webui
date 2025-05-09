@@ -24,6 +24,7 @@ from beyond_the_loop.models.auths import (
 from beyond_the_loop.models.users import Users
 from beyond_the_loop.models.companies import Companies, NO_COMPANY
 from beyond_the_loop.services.email_service import EmailService
+from beyond_the_loop.models.models import Models, ModelForm, ModelMeta, ModelParams
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
     WEBUI_AUTH,
@@ -57,6 +58,8 @@ from typing import Optional
 from ssl import CERT_REQUIRED, PROTOCOL_TLS
 from ldap3 import Server, Connection, NONE, Tls
 from ldap3.utils.conv import escape_filter_chars
+
+from beyond_the_loop.routers import openai
 
 router = APIRouter()
 
@@ -539,7 +542,33 @@ async def complete_registration(request: Request, response: Response, form_data:
         user = Users.complete_by_id(user.id, form_data.first_name, form_data.last_name, form_data.profile_image_url, new_company_id)
 
         Companies.create_company({
-                "id": new_company_id, "name": form_data.company_name, "credit_balance": 0, "size": form_data.company_size, "industry": form_data.company_industry, "team_function": form_data.company_team_function, "profile_image_url": form_data.company_profile_image_url})
+                "id": new_company_id, "name": form_data.company_name, "credit_balance": 10000, "size": form_data.company_size, "industry": form_data.company_industry, "team_function": form_data.company_team_function, "profile_image_url": form_data.company_profile_image_url})
+
+        # Save default config for the new company
+        from open_webui.config import save_config, DEFAULT_CONFIG
+        save_config(DEFAULT_CONFIG, new_company_id)
+
+        # Create model entries in DB based on the LiteLLM models
+        if request.app.state.config.ENABLE_OPENAI_API:
+            openai_models = await openai.get_all_models(request)
+            openai_models = openai_models["data"]
+
+            # Register OpenAI models in the database if they don't exist
+            for model in openai_models:
+                Models.insert_new_model(
+                    ModelForm(
+                        id=str(uuid.uuid4()),
+                        name=model["id"],  # Use ID as name since OpenAI models don't have separate names
+                        meta=ModelMeta(
+                            description="OpenAI model",
+                            profile_image_url="/static/favicon.png",
+                        ),
+                        params=ModelParams(),
+                        access_control=None,  # None means public access
+                    ),
+                    user_id=None,
+                    company_id=user.company_id
+                )
 
     except Exception as err:
         raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))

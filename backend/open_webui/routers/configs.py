@@ -11,30 +11,6 @@ from open_webui.config import BannerModel
 router = APIRouter()
 
 
-############################
-# ImportConfig
-############################
-
-
-class ImportConfigForm(BaseModel):
-    config: dict
-
-
-@router.post("/import", response_model=dict)
-async def import_config(form_data: ImportConfigForm, user=Depends(get_admin_user)):
-    save_config(form_data.config)
-    return get_config()
-
-
-############################
-# ExportConfig
-############################
-
-
-@router.get("/export", response_model=dict)
-async def export_config(user=Depends(get_admin_user)):
-    return get_config()
-
 
 ############################
 # SetDefaultModels
@@ -56,11 +32,26 @@ async def get_models_config(request: Request, user=Depends(get_admin_user)):
 async def set_models_config(
     request: Request, form_data: ModelsConfigForm, user=Depends(get_admin_user)
 ):
+    # Get company_id from the authenticated user
+    company_id = user.company_id
+    
+    # Update app state config
     request.app.state.config.DEFAULT_MODELS = form_data.DEFAULT_MODELS
     request.app.state.config.MODEL_ORDER_LIST = form_data.MODEL_ORDER_LIST
+    
+    # Get current config and update it
+    current_config = get_config(company_id)
+    if "models" not in current_config:
+        current_config["models"] = {}
+    current_config["models"]["DEFAULT_MODELS"] = form_data.DEFAULT_MODELS
+    current_config["models"]["MODEL_ORDER_LIST"] = form_data.MODEL_ORDER_LIST
+    
+    # Save the updated config
+    save_config(current_config, company_id)
+    
     return {
-        "DEFAULT_MODELS": request.app.state.config.DEFAULT_MODELS,
-        "MODEL_ORDER_LIST": request.app.state.config.MODEL_ORDER_LIST,
+        "DEFAULT_MODELS": form_data.DEFAULT_MODELS,
+        "MODEL_ORDER_LIST": form_data.MODEL_ORDER_LIST,
     }
 
 
@@ -75,12 +66,23 @@ class SetDefaultSuggestionsForm(BaseModel):
 
 @router.post("/suggestions", response_model=list[PromptSuggestion])
 async def set_default_suggestions(
-    request: Request,
-    form_data: SetDefaultSuggestionsForm,
-    user=Depends(get_admin_user),
+    request: Request, form_data: SetDefaultSuggestionsForm, user=Depends(get_admin_user)
 ):
+    # Get company_id from the authenticated user
+    company_id = user.company_id
+    
     data = form_data.model_dump()
     request.app.state.config.DEFAULT_PROMPT_SUGGESTIONS = data["suggestions"]
+    
+    # Get current config and update it
+    current_config = get_config(company_id)
+    if "ui" not in current_config:
+        current_config["ui"] = {}
+    current_config["ui"]["prompt_suggestions"] = data["suggestions"]
+    
+    # Save the updated config
+    save_config(current_config, company_id)
+    
     return request.app.state.config.DEFAULT_PROMPT_SUGGESTIONS
 
 
@@ -95,12 +97,23 @@ class SetBannersForm(BaseModel):
 
 @router.post("/banners", response_model=list[BannerModel])
 async def set_banners(
-    request: Request,
-    form_data: SetBannersForm,
-    user=Depends(get_admin_user),
+    request: Request, form_data: SetBannersForm, user=Depends(get_admin_user)
 ):
+    # Get company_id from the authenticated user
+    company_id = user.company_id
+    
     data = form_data.model_dump()
     request.app.state.config.BANNERS = data["banners"]
+    
+    # Get current config and update it
+    current_config = get_config(company_id)
+    if "banners" not in current_config:
+        current_config["banners"] = []
+    current_config["banners"] = data["banners"]
+    
+    # Save the updated config
+    save_config(current_config, company_id)
+    
     return request.app.state.config.BANNERS
 
 

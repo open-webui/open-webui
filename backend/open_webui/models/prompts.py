@@ -114,10 +114,10 @@ class PromptsTable:
         except Exception:
             return None
 
-    def get_prompt_by_command(self, command: str) -> Optional[PromptModel]:
+    def get_prompt_by_command_and_company(self, command: str, company_id: str) -> Optional[PromptModel]:
         try:
             with get_db() as db:
-                prompt = db.query(Prompt).filter_by(command=command).first()
+                prompt = db.query(Prompt).filter_by(command=command, company_id=company_id).first()
                 return PromptModel.model_validate(prompt)
         except Exception:
             return None
@@ -139,8 +139,8 @@ class PromptsTable:
 
             return prompts
 
-    def get_prompts_by_user_id(
-        self, user_id: str, permission: str = "write"
+    def get_prompts_by_user_and_company(
+        self, user_id: str, company_id: str, permission: str = "write"
     ) -> list[PromptUserResponse]:
         prompts = self.get_prompts()
 
@@ -149,27 +149,16 @@ class PromptsTable:
             for prompt in prompts
             if prompt.user_id == user_id
             or prompt.prebuilt
-            or has_access(user_id, permission, prompt.access_control)
+            or (prompt.company_id == company_id and has_access(user_id, permission, prompt.access_control))
         ]
 
-    def get_prompts_by_company_id(
-        self, company_id: str, permission: str = "write"
-    ) -> list[PromptUserResponse]:
-        prompts = self.get_prompts()
 
-        return [
-            prompt
-            for prompt in prompts
-            if prompt.company_id == company_id
-            or has_access(company_id, permission, prompt.access_control)
-        ]
-
-    def update_prompt_by_command(
-        self, command: str, form_data: PromptForm
+    def update_prompt_by_command_and_company(
+        self, command: str, form_data: PromptForm, company_id: str
     ) -> Optional[PromptModel]:
         try:
             with get_db() as db:
-                prompt = db.query(Prompt).filter_by(command=command).first()
+                prompt = db.query(Prompt).filter_by(command=command, company_id=company_id).first()
                 prompt.title = form_data.title
                 prompt.content = form_data.content
                 prompt.access_control = form_data.access_control
@@ -180,10 +169,10 @@ class PromptsTable:
         except Exception:
             return None
 
-    def delete_prompt_by_command(self, command: str) -> bool:
+    def delete_prompt_by_command_and_company(self, command: str, company_id: str) -> bool:
         try:
             with get_db() as db:
-                db.query(Prompt).filter_by(command=command).delete()
+                db.query(Prompt).filter_by(command=command, company_id=company_id).delete()
                 db.commit()
 
                 return True

@@ -34,6 +34,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response
 
 from beyond_the_loop.routers import payments
+from open_webui.middleware.company_config import CompanyConfigMiddleware
 from open_webui.socket.main import (
     app as socket_app,
     periodic_usage_pool_cleanup,
@@ -61,6 +62,10 @@ from open_webui.routers import (
     utils,
 )
 from beyond_the_loop.routers import openai, audio
+from beyond_the_loop.routers import auths
+from beyond_the_loop.routers import analytics
+from beyond_the_loop.routers import payments
+from beyond_the_loop.routers import companies
 
 from open_webui.routers.retrieval import (
     get_embedding_function,
@@ -328,7 +333,9 @@ https://github.com/open-webui/open-webui
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if RESET_CONFIG_ON_START:
-        reset_config()
+        # Note: This won't actually save to the database since company_id is None
+        # It will just reset the in-memory config to the default values
+        reset_config(None)
 
     asyncio.create_task(periodic_usage_pool_cleanup())
     yield
@@ -532,7 +539,6 @@ except Exception as e:
     log.error(f"Error updating models: {e}")
     pass
 
-
 app.state.EMBEDDING_FUNCTION = get_embedding_function(
     app.state.config.RAG_EMBEDDING_ENGINE,
     app.state.config.RAG_EMBEDDING_MODEL,
@@ -677,6 +683,7 @@ class RedirectMiddleware(BaseHTTPMiddleware):
 # Add the middleware to the app
 app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(CompanyConfigMiddleware)
 
 
 @app.middleware("http")
@@ -764,7 +771,7 @@ app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
 
 app.include_router(payments.router, prefix="/api/v1/payments", tags=["payments"])
-
+app.include_router(companies.router, prefix="/api/v1/companies", tags=["companies"])
 
 ##################################
 #
@@ -775,60 +782,12 @@ app.include_router(payments.router, prefix="/api/v1/payments", tags=["payments"]
 
 @app.get("/api/models")
 async def get_models(request: Request, user=Depends(get_verified_user)):
-    def get_filtered_models(models, user):
-        filtered_models = []
-        for model in models:
-            if model.get("arena"):
-                if has_access(
-                    user.id,
-                    type="read",
-                    access_control=model.get("info", {})
-                    .get("meta", {})
-                    .get("access_control", {}),
-                ):
-                    filtered_models.append(model)
-                continue
-
-            model_info = Models.get_model_by_id(model["id"])
-            if model_info:
-                if model_info.user_id == user.id or has_access(
-                    user.id, type="read", access_control=model_info.access_control
-                ):
-                    filtered_models.append(model)
-
-        return filtered_models
-
-    models = await get_all_models(request, user)
-
-    # Filter out filter pipelines
-    models = [
-        model
-        for model in models
-        if "pipeline" not in model or model["pipeline"].get("type", None) != "filter"
-    ]
-
-    model_order_list = request.app.state.config.MODEL_ORDER_LIST
-    if model_order_list:
-        model_order_dict = {model_id: i for i, model_id in enumerate(model_order_list)}
-        # Sort models by order list priority, with fallback for those not in the list
-        models.sort(
-            key=lambda x: (model_order_dict.get(x["id"], float("inf")), x["name"])
-        )
-
-    # Filter out models that the user does not have access to
-    if not BYPASS_MODEL_ACCESS_CONTROL:
-        models = get_filtered_models(models, user)
-
-    log.debug(
-        f"/api/models returned filtered models accessible to the user: {json.dumps([model['id'] for model in models])}"
-    )
-    return {"data": models}
+    return {"data": Models.get_models_by_user_and_company(user.id, user.company_id) + Models.get_base_models_by_comany_and_user(user.company_id, user.id, user.role)}
 
 
 @app.get("/api/models/base")
 async def get_base_models(request: Request, user=Depends(get_admin_user)):
-    models = await get_all_base_models(request, user)
-    return {"data": models}
+    return {"data": Models.get_base_models_by_comany_and_user(user.company_id, user.id, user.role)}
 
 
 @app.post("/api/chat/completions")
@@ -837,14 +796,15 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
-    if not request.app.state.MODELS:
-        await get_all_models(request, user)
+    await get_all_models(request, user)
 
     tasks = form_data.pop("background_tasks", None)
     try:
         model_id = form_data.get("model", None)
+
         if model_id not in request.app.state.MODELS:
-            raise Exception("Model not found")
+            raise Exception("Model not found for chat completion")
+
         model = request.app.state.MODELS[model_id]
         model_info = Models.get_model_by_id(model_id)
 

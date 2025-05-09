@@ -178,7 +178,8 @@
 					</div>
 
 					<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
-						<div>
+						<div></div>
+						<!-- <div>
 							<button
 								id="save-edit-message-button"
 								class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
@@ -188,7 +189,7 @@
 							>
 								{$i18n.t('Save')}
 							</button>
-						</div>
+						</div> -->
 
 						<div class="flex space-x-1.5">
 							<button
@@ -218,7 +219,7 @@
 					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 						<div
 							class="rounded-md {($settings?.chatBubble ?? true)
-								? `max-w-[90%] px-2.5 py-1.5  bg-gray-50 dark:bg-customGray-800 text-base dark:text-customGray-100 leading-[1.8] ${
+								? `max-w-[90%] px-2.5 py-1.5  bg-gray-50 dark:bg-customGray-800 text-base dark:text-customGray-100 leading-[1.5] ${
 										message.files ? 'rounded-tr-lg' : ''
 									}`
 								: ' w-full'}"

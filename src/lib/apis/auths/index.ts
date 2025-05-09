@@ -430,7 +430,9 @@ export const addUser = async (
 
 export const inviteUsers = async (
 	token: string,
-	invitees: { email: string; role: string }[]
+	invitees: { email: string; role: string }[],
+	existingGroupsIds: string[] | null, 
+	newGroupNames: string[] | null
 ) => {
 	let error = null;
 
@@ -441,7 +443,9 @@ export const inviteUsers = async (
 			...(token && { authorization: `Bearer ${token}` })
 		},
 		body: JSON.stringify({
-			invitees
+			invitees,
+			group_ids: existingGroupsIds,
+			group_names: newGroupNames
 		})
 	})
 		.then(async (res) => {
@@ -889,6 +893,137 @@ export const completeRegistration = async (
 			company_industry,
 			company_team_function,
 			company_profile_image_url
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+}
+
+
+export const getCompanyDetails = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/companies/details`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		credentials: 'include'
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateCompanyDetails = async (token: string, name: string, profile_image_url: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/companies/details`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		credentials: 'include',
+		body: JSON.stringify({
+			name,
+			profile_image_url
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getCompanyConfig = async (token: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/companies/config`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		credentials: 'include'
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			error = err.detail;
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateCompanyConfig = async (
+	token: string,
+	hide_model_logo_in_chat: boolean,
+    chat_retention_days: number,
+    custom_user_notice: string,
+    features_web_search: boolean,
+    features_image_generation: boolean
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/companies/config`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		credentials: 'include',
+		body: JSON.stringify({
+			hide_model_logo_in_chat,
+			chat_retention_days,
+			custom_user_notice,
+			features_web_search,
+			features_image_generation
 		})
 	})
 		.then(async (res) => {

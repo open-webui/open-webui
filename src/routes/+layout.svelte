@@ -25,14 +25,16 @@
 		temporaryChatEnabled,
 		isLastActiveTab,
 		isApp,
-		appInfo
+		appInfo,
+		company,
+		companyConfig
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Toaster, toast } from 'svelte-sonner';
 
 	import { getBackendConfig } from '$lib/apis';
-	import { getSessionUser } from '$lib/apis/auths';
+	import { getSessionUser, getCompanyDetails, getCompanyConfig } from '$lib/apis/auths';
 
 	import '../tailwind.css';
 	import '../app.css';
@@ -398,6 +400,25 @@
 						return null;
 					});
 
+					const [companyInfo, companyConfigInfo] = await Promise.all([
+						getCompanyDetails(localStorage.token).catch((error) => {
+							toast.error(`${error}`);
+							return null;
+						}),
+						getCompanyConfig(localStorage.token).catch((error) => {
+							toast.error(`${error}`);
+							return null;
+						})
+					]);
+
+					if (companyInfo) {
+						company.set(companyInfo);
+					}
+
+					if (companyConfigInfo) {
+						console.log(companyConfigInfo);
+						companyConfig.set(companyConfigInfo);
+					}
 					if (sessionUser) {
 						// Save Session User to Store
 						$socket.emit('user-join', { auth: { token: sessionUser.token } });

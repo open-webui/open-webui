@@ -76,7 +76,7 @@ class Model(Base):
         Holds a JSON encoded blob of metadata, see `ModelMeta`.
     """
 
-    user_id = Column(Text, nullable=False)
+    user_id = Column(Text, nullable=True)
 
     company_id = Column(Text, nullable=False)
 
@@ -117,7 +117,7 @@ class ModelModel(BaseModel):
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
-    user_id: str
+    user_id: Optional[str]
     company_id: str
 
     model_config = ConfigDict(from_attributes=True)
@@ -173,9 +173,9 @@ class ModelsTable:
             print(e)
             return None
 
-    def get_all_models(self) -> list[ModelModel]:
+    def get_all_models_by_company(self, company_id: str) -> list[ModelModel]:
         with get_db() as db:
-            return [ModelModel.model_validate(model) for model in db.query(Model).all()]
+            return [ModelModel.model_validate(model) for model in db.query(Model).filter_by(company_id=company_id).all()]
 
     def get_models(self) -> list[ModelUserResponse]:
         with get_db() as db:
@@ -192,17 +192,20 @@ class ModelsTable:
                 )
             return models
 
-    def get_base_models(self) -> list[ModelModel]:
+    def get_base_models_by_comany_and_user(self, company_id: str, user_id: str, role: str) -> list[ModelModel]:
         with get_db() as db:
+            models = db.query(Model).filter(Model.base_model_id == None, Model.company_id == company_id).all()
             return [
                 ModelModel.model_validate(model)
-                for model in db.query(Model).filter(Model.base_model_id == None).all()
+                for model in models
+                if has_access(user_id, "read", model.access_control) or role == "admin"
             ]
 
-    def get_models_by_user_id_and_company_id(
+    def get_models_by_user_and_company(
         self, user_id: str, company_id: str, permission: str = "read"
     ) -> list[ModelUserResponse]:
         models = self.get_models()
+
         return [
             model
             for model in models
@@ -217,17 +220,25 @@ class ModelsTable:
     def get_model_by_id(self, id: str) -> Optional[ModelModel]:
         try:
             with get_db() as db:
-                model = db.get(Model, id)
+                model = db.query(Model).filter_by(id=id).first()
                 return ModelModel.model_validate(model)
         except Exception:
             return None
 
-    def toggle_model_by_id(self, id: str) -> Optional[ModelModel]:
+    def get_model_by_name_and_company(self, name: str, company_id: str) -> Optional[ModelModel]:
+        try:
+            with get_db() as db:
+                model = db.query(Model).filter_by(name=name, company_id=company_id).first()
+                return ModelModel.model_validate(model)
+        except Exception:
+            return None
+
+    def toggle_model_by_id_and_company(self, id: str, company_id: str) -> Optional[ModelModel]:
         with get_db() as db:
             try:
-                is_active = db.query(Model).filter_by(id=id).first().is_active
+                is_active = db.query(Model).filter_by(id=id, company_id=company_id).first().is_active
 
-                db.query(Model).filter_by(id=id).update(
+                db.query(Model).filter_by(id=id, company_id=company_id).update(
                     {
                         "is_active": not is_active,
                         "updated_at": int(time.time()),
@@ -239,13 +250,13 @@ class ModelsTable:
             except Exception:
                 return None
 
-    def update_model_by_id(self, id: str, model: ModelForm) -> Optional[ModelModel]:
+    def update_model_by_id_and_company(self, id: str, model: ModelForm, company_id: str) -> Optional[ModelModel]:
         try:
             with get_db() as db:
                 # update only the fields that are present in the model
                 result = (
                     db.query(Model)
-                    .filter_by(id=id)
+                    .filter_by(id=id, company_id=company_id)
                     .update(model.model_dump(exclude={"id"}))
                 )
                 db.commit()
@@ -258,20 +269,18 @@ class ModelsTable:
 
             return None
 
-    def delete_model_by_id(self, id: str) -> bool:
+    def get_model_by_name_and_company(self, name: str, company_id: str) -> Optional[ModelModel]:
         try:
             with get_db() as db:
-                db.query(Model).filter_by(id=id).delete()
-                db.commit()
-
-                return True
+                model = db.query(Model).filter_by(name=name, company_id=company_id).first()
+                return ModelModel.model_validate(model)
         except Exception:
-            return False
+            return None
 
-    def delete_all_models(self) -> bool:
+    def delete_model_by_id_and_company(self, id: str, company_id: str) -> bool:
         try:
             with get_db() as db:
-                db.query(Model).delete()
+                db.query(Model).filter_by(id=id, company_id=company_id).delete()
                 db.commit()
 
                 return True

@@ -11,6 +11,9 @@ export const WEBUI_NAME = writable(APP_NAME);
 export const config: Writable<Config | undefined> = writable(undefined);
 export const user: Writable<SessionUser | undefined> = writable(undefined);
 
+export const company = writable(null);
+export const companyConfig = writable(null);
+
 // Electron App
 export const isApp = writable(false);
 export const appInfo = writable(null);
@@ -62,6 +65,7 @@ export const settings: Writable<Settings> = writable({});
 
 export const showSidebar = writable(false);
 export const showSettings = writable(false);
+export const showCompanySettings = writable(false);
 export const showArchivedChats = writable(false);
 export const showChangelog = writable(false);
 

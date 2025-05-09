@@ -1436,12 +1436,6 @@ def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin
         return {"status": False}
 
 
-@router.post("/reset/db")
-def reset_vector_db(user=Depends(get_admin_user)):
-    VECTOR_DB_CLIENT.reset()
-    Knowledges.delete_all_knowledge()
-
-
 @router.post("/reset/uploads")
 def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
     folder = f"{UPLOAD_DIR}"

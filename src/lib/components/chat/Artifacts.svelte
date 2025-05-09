@@ -189,7 +189,7 @@
 			<div class=" absolute top-0 left-0 right-0 bottom-0 z-10"></div>
 		{/if}
 
-		<div class="absolute pointer-events-none z-50 w-full flex items-center justify-start p-4">
+		<!-- <div class="absolute pointer-events-none z-50 w-full flex items-center justify-start p-4">
 			<button
 				class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
 				on:click={() => {
@@ -198,7 +198,7 @@
 			>
 				<ArrowLeft className="size-3.5  text-gray-900 dark:text-white" />
 			</button>
-		</div>
+		</div> -->
 
 		<div class=" absolute pointer-events-none z-50 w-full flex items-center justify-end p-4">
 			<button
@@ -306,7 +306,7 @@
 					}}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
 				>
 
-				{#if contents[selectedContentIdx].type === 'iframe'}
+				<!-- {#if contents[selectedContentIdx].type === 'iframe'}
 					<Tooltip content={$i18n.t('Open in full screen')}>
 						<button
 							class=" bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md p-0.5"
@@ -315,7 +315,7 @@
 							<ArrowsPointingOut className="size-3.5" />
 						</button>
 					</Tooltip>
-				{/if}
+				{/if} -->
 			</div>
 		</div>
 	{/if}

@@ -9,7 +9,8 @@ export const modelsInfo = {
 		speed: 3.0,
 		multimodal: false,
 		reasoning: false,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	},
 	'Claude 3.5 Sonnet': {
 		organization: 'Anthropic',
@@ -21,7 +22,8 @@ export const modelsInfo = {
 		speed: 3.0,
 		multimodal: true,
 		reasoning: false,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	},
 	'Claude 3.7 Sonnet': {
 		organization: 'Anthropic',
@@ -33,7 +35,8 @@ export const modelsInfo = {
 		speed: 2.0,
 		multimodal: true,
 		reasoning: false,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	},
 	'DeepSeek-R1': {
 		organization: 'Deep Seek',
@@ -45,7 +48,8 @@ export const modelsInfo = {
 		speed: 1.0,
 		multimodal: false,
 		reasoning: true,
-		included: false
+		included: false,
+		creditsPerMessage: 20
 	},
 	'DeepSeek-V3': {
 		organization: 'Deep Seek',
@@ -57,7 +61,8 @@ export const modelsInfo = {
 		speed: 3.0,
 		multimodal: false,
 		reasoning: false,
-		included: false
+		included: false,
+		creditsPerMessage: 20
 	},
 	'Gemini 2.0 Flash': {
 		organization: 'Google',
@@ -69,7 +74,8 @@ export const modelsInfo = {
 		speed: 1.0,
 		multimodal: true,
 		reasoning: false,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	},
 	'Gemini 2.0 Flash Thinking': {
 		organization: 'Google',
@@ -81,7 +87,8 @@ export const modelsInfo = {
 		speed: 1.0,
 		multimodal: true,
 		reasoning: true,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	},
 	'GPT-4.5': {
 		organization: 'OpenAI',
@@ -93,7 +100,8 @@ export const modelsInfo = {
 		speed: 1.0,
 		multimodal: true,
 		reasoning: false,
-		included: false
+		included: false,
+		creditsPerMessage: 20
 	},
 	'GPT 4o': {
 		organization: 'OpenAI',
@@ -105,7 +113,8 @@ export const modelsInfo = {
 		speed: 3.5,
 		multimodal: true,
 		reasoning: false,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	},
 	'GPT 4o-mini': {
 		organization: 'OpenAI',
@@ -117,7 +126,8 @@ export const modelsInfo = {
 		speed: 3.0,
 		multimodal: true,
 		reasoning: false,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	},
 	'Mistral Large 2': {
 		organization: 'Mistral',
@@ -129,7 +139,8 @@ export const modelsInfo = {
 		speed: 2.0,
 		multimodal: false,
 		reasoning: false,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	},
 	"GPT o1": {
 		organization: 'OpenAI',
@@ -141,7 +152,8 @@ export const modelsInfo = {
 		speed: 2.5,
 		multimodal: false,
 		reasoning: true,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	},
 	'GPT o1-mini': {
 		organization: 'OpenAI',
@@ -153,7 +165,8 @@ export const modelsInfo = {
 		speed: 3.5,
 		multimodal: false,
 		reasoning: true,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	},
 	'GPT o3-mini': {
 		organization: 'OpenAI',
@@ -165,7 +178,8 @@ export const modelsInfo = {
 		speed: 3.5,
 		multimodal: false,
 		reasoning: true,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	},
 	'Pixtral Large': {
 		organization: 'Mistral',
@@ -177,7 +191,8 @@ export const modelsInfo = {
 		speed: 0.5,
 		multimodal: true,
 		reasoning: false,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	},
 	'Llama 3.1': {
 		organization: 'Meta',
@@ -189,7 +204,8 @@ export const modelsInfo = {
 		speed: 3.0,
 		multimodal: false,
 		reasoning: false,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	},
 	'Perplexity Sonar Deep Research': {
 		organization: 'Perplexity',
@@ -201,7 +217,8 @@ export const modelsInfo = {
 		speed: 1.0,
 		multimodal: false,
 		reasoning: false,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	},
 	'Perplexity Sonar Reasoning Pro': {
 		organization: 'Perplexity',
@@ -213,7 +230,8 @@ export const modelsInfo = {
 		speed: 1.0,
 		multimodal: false,
 		reasoning: true,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	},
 	'Perplexity Sonar Pro': {
 		organization: 'Perplexity',
@@ -225,7 +243,8 @@ export const modelsInfo = {
 		speed: 1.0,
 		multimodal: false,
 		reasoning: false,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	},
 	"Perplexity Sonar": {
 		organization: 'Perplexity',
@@ -237,6 +256,28 @@ export const modelsInfo = {
 		speed: 1.0,
 		multimodal: false,
 		reasoning: false,
-		included: true
+		included: true,
+		creditsPerMessage: 20
 	}
+};
+
+export const mapModelsToOrganizations = (modelsInfo) => {
+	const organizations = {};
+
+	for (const [modelName, modelData] of Object.entries(modelsInfo)) {
+		const { organization, description } = modelData;
+		if(organization === "Deep Seek") {
+			continue;
+		}
+
+		if (!organizations[organization]) {
+			organizations[organization] = [];
+		}
+	
+		organizations[organization].push(modelName);
+		
+		
+	}
+
+	return organizations;
 };
