@@ -203,7 +203,7 @@
 							{currentModel?.name}
 						</div>
 						<div class="text-xs dark:text-customGray-100/50 font-normal">
-							{currentModel?.meta?.description} fgsdf fgfdsg dsfg sdgsdfgsdfgsdf fs gsd gdsgd dfsd g
+							{currentModel?.meta?.description}
 							fdgdsfg
 						</div>
 					</div>
