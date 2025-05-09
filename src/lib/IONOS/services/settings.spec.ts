@@ -56,6 +56,7 @@ describe('settings', () => {
 
 			const expectedNewSettings: Partial<Settings> = {
 				chatDirection: 'LTR' as const,
+				conversationMode: true,
 				speechAutoSend: false,
 				responseAutoPlayback: false,
 			};
