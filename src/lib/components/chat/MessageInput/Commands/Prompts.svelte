@@ -304,7 +304,7 @@
                             }}
                         >
                             <div class="font-medium text-black dark:text-gray-100">
-                                {libPrompt.command} {/* Clean command name like "myPrompt" */}
+                                {libPrompt.command}
                             </div>
                             <div class="text-xs text-gray-600 dark:text-gray-100">
                                 {libPrompt.title}
