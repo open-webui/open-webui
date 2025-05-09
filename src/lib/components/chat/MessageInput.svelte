@@ -486,12 +486,12 @@
 								await tick();
 								document.getElementById('chat-input')?.focus();
 							}}
-			    				on:confirm={async (e) => {
+							on:confirm={async (e) => {
 								const { text, filename } = e.detail;
 								prompt = `${prompt}${text} `;
 
 								recording = false;
-			    
+
 								await tick();
 								document.getElementById('chat-input')?.focus();
 
@@ -1066,18 +1066,18 @@
 					    						uploadOneDriveHandler={async () => {
 												try {
 						    							const fileData = await pickAndDownloadFile();
-						    							if (fileData) {
+													if (fileData) {
 														const file = new File([fileData.blob], fileData.name, {
-							    								type: fileData.blob.type || 'application/octet-stream'
+															type: fileData.blob.type || 'application/octet-stream'
 														});
 														await uploadFileHandler(file);
 						    							} else {
 														console.log('No file was selected from OneDrive');
-						    							}
+													}
 												} catch (error) {
 						    							console.error('OneDrive Error:', error);
-													}
-					    						}}
+												}
+											}}
 											onClose={async () => {
 												await tick();
 
