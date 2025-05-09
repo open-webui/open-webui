@@ -1067,16 +1067,16 @@
 												try {
 						    						const fileData = await pickAndDownloadFile();
 						    						if (fileData) {
-													const file = new File([fileData.blob], fileData.name, {
-							    						type: fileData.blob.type || 'application/octet-stream'
-													});
-													await uploadFileHandler(file);
-						    						} else {
-													console.log('No file was selected from OneDrive');
-						    						}
+														const file = new File([fileData.blob], fileData.name, {
+							    								type: fileData.blob.type || 'application/octet-stream'
+														});
+														await uploadFileHandler(file);
+						    							} else {
+														console.log('No file was selected from OneDrive');
+						    							}
 												} catch (error) {
-						    						console.error('OneDrive Error:', error);
-												}
+						    							console.error('OneDrive Error:', error);
+													}
 					    						}}
 											onClose={async () => {
 												await tick();
