@@ -97,20 +97,17 @@ class KnowledgeForm(BaseModel):
     description: str
     data: Optional[dict] = None
     access_control: Optional[dict] = None
-
-
-class RAGConfigForm(BaseModel):
     rag_config: Optional[dict] = None
 
 
 class KnowledgeTable:
     def insert_new_knowledge(
-        self, user_id: str, form_data: KnowledgeForm, rag_data: RAGConfigForm
+        self, user_id: str, form_data: KnowledgeForm
     ) -> Optional[KnowledgeModel]:
         with get_db() as db:
             knowledge_data = {
                 **form_data.model_dump(),
-                "data": {"rag_config": rag_data.rag_config},
+                "data": {"rag_config": form_data.rag_config},
                 "id": str(uuid.uuid4()),
                 "user_id": user_id,
                 "created_at": int(time.time()),
