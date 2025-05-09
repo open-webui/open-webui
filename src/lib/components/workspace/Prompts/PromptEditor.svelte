@@ -41,12 +41,12 @@
     
 		if (validateCommandString(command)) {
 			await onSubmit({
-		    	title,
-		    	command,
-		    	content, // Content from RichTextInput will be submitted
-		    	access_control: accessControl
+				title,
+				command,
+				content, // Content from RichTextInput will be submitted
+				access_control: accessControl
 			});
-	    	} else {
+		} else {
 			toast.error(
 		    		$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
 			);
@@ -57,8 +57,8 @@
     
 	const validateCommandString = (inputString) => {
 		// Regular expression to match only alphanumeric characters and hyphen
-	    	const regex = /^[a-zA-Z0-9-]+$/;
-    
+	 	const regex = /^[a-zA-Z0-9-]+$/;
+
 		// Test the input string against the regular expression
 	    	return regex.test(inputString);
 	};
@@ -117,17 +117,17 @@
 									showAccessControlModal = true;
 				    				}}
 							>
-				    			<LockClosed strokeWidth="2.5" className="size-3.5" />
+				    				<LockClosed strokeWidth="2.5" className="size-3.5" />
     
-				    			<div class="text-sm font-medium shrink-0">
-								{$i18n.t('Access')}
-				    			</div>
-						</button>
-			    		</div>
+				    				<div class="text-sm font-medium shrink-0">
+									{$i18n.t('Access')}
+				    				</div>
+							</button>
+			    			</div>
 					</div>
     
 					<div class="flex gap-0.5 items-center text-xs text-gray-500">
-			    			<div class="">/</div>
+						<div class="">/</div>
 						<input
 							class=" w-full bg-transparent outline-hidden"
 							placeholder={$i18n.t('Command')}
