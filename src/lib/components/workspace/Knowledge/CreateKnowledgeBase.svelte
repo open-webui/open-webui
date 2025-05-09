@@ -69,33 +69,9 @@
 
 	let enableIndividualRagConfig = false;
 
-    // Default RAG configuration
-	let RAGConfig = {
-	CONTENT_EXTRACTION_ENGINE: '',
-	TIKA_SERVER_URL: '',
-	DOCLING_SERVER_URL: '',
-	DOCUMENT_INTELLIGENCE_ENDPOINT: '',
-	DOCUMENT_INTELLIGENCE_KEY: '',
-	MISTRAL_OCR_API_KEY: '',
-	BYPASS_EMBEDDING_AND_RETRIEVAL: false,
-	TEXT_SPLITTER: '',
-	CHUNK_SIZE: 1000,
-	CHUNK_OVERLAP: 200,
-	RAG_FULL_CONTEXT: false,
-	ENABLE_RAG_HYBRID_SEARCH: false,
-	TOP_K: 4,
-	TOP_K_RERANKER: 4,
-	RELEVANCE_THRESHOLD: 0.0,
-	RAG_TEMPLATE: '',
-	PDF_EXTRACT_IMAGES: false,
-	DEFAULT_RAG_SETTINGS: true 
-
-};
-
-
+    let RAGConfig = null;
 
 	const embeddingModelUpdateHandler = async () => {
-		if (!enableIndividualRagConfig) return;
 
 		if (embeddingEngine === '' && embeddingModel.split('/').length - 1 > 1) {
 			toast.error(
@@ -142,7 +118,8 @@
 			openai_config: {
 				key: OpenAIKey,
 				url: OpenAIUrl
-			}
+			},
+            collection_name: name
 		}).catch(async (error) => {
 			toast.error(`${error}`);
 			await setEmbeddingConfig();
@@ -161,13 +138,13 @@
 	};
 
 	const rerankingModelUpdateHandler = async () => {
-		if (!enableIndividualRagConfig) return;
 
 		console.log('Update reranking model attempt:', rerankingModel);
 
 		updateRerankingModelLoading = true;
 		const res = await updateRerankingConfig(localStorage.token, {
-			reranking_model: rerankingModel
+			reranking_model: rerankingModel,
+            collection_name: name
 		}).catch(async (error) => {
 			toast.error(`${error}`);
 			await setRerankingConfig();
@@ -192,9 +169,8 @@
 	};
 
 	const setEmbeddingConfig = async () => {
-		if (!enableIndividualRagConfig) return;
 
-		const embeddingConfig = await getEmbeddingConfig(localStorage.token, {collection_name: name});
+		const embeddingConfig = await getEmbeddingConfig(localStorage.token);
 
 		if (embeddingConfig) {
 			embeddingEngine = embeddingConfig.embedding_engine;
@@ -210,7 +186,6 @@
 	};
 
 	const setRerankingConfig = async () => {
-		if (!enableIndividualRagConfig) return;
 
 		const rerankingConfig = await getRerankingConfig(localStorage.token);
 
@@ -280,6 +255,13 @@
 
         loading = false;
     };
+
+    onMount(async () => {
+		await setEmbeddingConfig();
+		await setRerankingConfig();
+
+		RAGConfig = await getRAGConfig(localStorage.token);
+	});
 </script>
 
 <div class="w-full max-h-full">
@@ -371,6 +353,23 @@
         </div>
 
         {#if enableIndividualRagConfig}
+            <div class="flex w-full justify-between">
+                <div class="self-center text-xs font-medium">
+                    {$i18n.t('Content Extraction Engine')}
+                </div>
+                <div class="">
+                    <select
+                        class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 text-xs bg-transparent outline-hidden text-right"
+                        bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}
+                    >
+                        <option value="">{$i18n.t('Default')}</option>
+                        <option value="tika">{$i18n.t('Tika')}</option>
+                        <option value="docling">{$i18n.t('Docling')}</option>
+                        <option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
+                        <option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
+                    </select>
+                </div>
+            </div>
             <div class="space-y-4 mt-4">
                 {#if RAGConfig.CONTENT_EXTRACTION_ENGINE === ''}
                     <div class="flex w-full mt-1">
@@ -699,9 +698,6 @@
                         <div class="flex items-center relative">
                             <Switch
                                 bind:state={RAGConfig.ENABLE_RAG_HYBRID_SEARCH}
-                                on:change={() => {
-                                    submitHandler();
-                                }}
                             />
                         </div>
                     </div>
