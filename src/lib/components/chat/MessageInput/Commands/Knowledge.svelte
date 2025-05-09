@@ -154,6 +154,14 @@
 			keys: ['name', 'description']
 		});
 	});
+
+	const decodeString = (str: string) => {
+		try {
+			return decodeURIComponent(str);
+		} catch (e) {
+			return str;
+		}
+	};
 </script>
 
 {#if filteredItems.length > 0 || prompt.split(' ')?.at(0)?.substring(1).startsWith('http')}
@@ -210,7 +218,7 @@
 									{/if}
 
 									<div class="line-clamp-1">
-										{decodeURIComponent(item?.name)}
+										{decodeString(item?.name)}
 									</div>
 								</div>
 
@@ -257,7 +265,7 @@
 									{/each}
 								{:else}
 									<div class=" text-gray-500 text-xs mt-1 mb-2">
-										{$i18n.t('No files found.')}
+										{$i18n.t('File not found.')}
 									</div>
 								{/if}
 							</div> -->

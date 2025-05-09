@@ -235,46 +235,30 @@ async def chat_completion_tools_handler(
                 if isinstance(tool_result, str):
                     tool = tools[tool_function_name]
                     tool_id = tool.get("tool_id", "")
+
+                    tool_name = (
+                        f"{tool_id}/{tool_function_name}"
+                        if tool_id
+                        else f"{tool_function_name}"
+                    )
                     if tool.get("metadata", {}).get("citation", False) or tool.get(
                         "direct", False
                     ):
-
+                        # Citation is enabled for this tool
                         sources.append(
                             {
                                 "source": {
-                                    "name": (
-                                        f"TOOL:" + f"{tool_id}/{tool_function_name}"
-                                        if tool_id
-                                        else f"{tool_function_name}"
-                                    ),
+                                    "name": (f"TOOL:{tool_name}"),
                                 },
-                                "document": [tool_result, *tool_result_files],
-                                "metadata": [
-                                    {
-                                        "source": (
-                                            f"TOOL:" + f"{tool_id}/{tool_function_name}"
-                                            if tool_id
-                                            else f"{tool_function_name}"
-                                        )
-                                    }
-                                ],
+                                "document": [tool_result],
+                                "metadata": [{"source": (f"TOOL:{tool_name}")}],
                             }
                         )
                     else:
-                        sources.append(
-                            {
-                                "source": {},
-                                "document": [tool_result, *tool_result_files],
-                                "metadata": [
-                                    {
-                                        "source": (
-                                            f"TOOL:" + f"{tool_id}/{tool_function_name}"
-                                            if tool_id
-                                            else f"{tool_function_name}"
-                                        )
-                                    }
-                                ],
-                            }
+                        # Citation is not enabled for this tool
+                        body["messages"] = add_or_update_user_message(
+                            f"\nTool `{tool_name}` Output: {tool_result}",
+                            body["messages"],
                         )
 
                     if (
@@ -371,29 +355,33 @@ async def chat_web_search_handler(
 
     all_results = []
 
-    for searchQuery in queries:
-        await event_emitter(
-            {
-                "type": "status",
-                "data": {
-                    "action": "web_search",
-                    "description": 'Searching "{{searchQuery}}"',
-                    "query": searchQuery,
-                    "done": False,
-                },
-            }
-        )
+    await event_emitter(
+        {
+            "type": "status",
+            "data": {
+                "action": "web_search",
+                "description": "Searching the web",
+                "done": False,
+            },
+        }
+    )
 
-        try:
-            results = await process_web_search(
+    gathered_results = await asyncio.gather(
+        *(
+            process_web_search(
                 request,
-                SearchForm(
-                    **{
-                        "query": searchQuery,
-                    }
-                ),
+                SearchForm(**{"query": searchQuery}),
                 user=user,
             )
+            for searchQuery in queries
+        ),
+        return_exceptions=True,
+    )
+
+    for searchQuery, results in zip(queries, gathered_results):
+        try:
+            if isinstance(results, Exception):
+                raise Exception(f"Error searching {searchQuery}: {str(results)}")
 
             if results:
                 all_results.append(results)
@@ -550,13 +538,20 @@ async def chat_image_generation_handler(
             }
         )
 
-        for image in images:
-            await __event_emitter__(
-                {
-                    "type": "message",
-                    "data": {"content": f"![Generated Image]({image['url']})\n"},
-                }
-            )
+        await __event_emitter__(
+            {
+                "type": "files",
+                "data": {
+                    "files": [
+                        {
+                            "type": "image",
+                            "url": image["url"],
+                        }
+                        for image in images
+                    ]
+                },
+            }
+        )
 
         system_message_content = "<context>User is shown the generated image, tell the user that the image has been generated</context>"
     except Exception as e:
@@ -897,12 +892,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # If context is not empty, insert it into the messages
     if len(sources) > 0:
         context_string = ""
-        for source_idx, source in enumerate(sources):
+        citation_idx = {}
+        for source in sources:
             if "document" in source:
-                for doc_idx, doc_context in enumerate(source["document"]):
-                    context_string += (
-                        f'<source id="{source_idx + 1}">{doc_context}</source>\n'
+                for doc_context, doc_meta in zip(
+                    source["document"], source["metadata"]
+                ):
+                    citation_id = (
+                        doc_meta.get("source", None)
+                        or source.get("source", {}).get("id", None)
+                        or "N/A"
                     )
+                    if citation_id not in citation_idx:
+                        citation_idx[citation_id] = len(citation_idx) + 1
+                    context_string += f'<source id="{citation_idx[citation_id]}">{doc_context}</source>\n'
 
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])
@@ -935,7 +938,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             )
 
     # If there are citations, add them to the data_items
-    sources = [source for source in sources if source.get("source", {}).get("name", "")]
+    sources = [
+        source
+        for source in sources
+        if source.get("source", {}).get("name", "")
+        or source.get("source", {}).get("id", "")
+    ]
 
     if len(sources) > 0:
         events.append({"sources": sources})
@@ -1134,7 +1142,7 @@ async def process_chat_response(
                     )
 
                     # Send a webhook notification if the user is not active
-                    if get_active_status_by_user_id(user.id) is None:
+                    if not get_active_status_by_user_id(user.id):
                         webhook_url = Users.get_user_webhook_url_by_id(user.id)
                         if webhook_url:
                             post_webhook(
@@ -1422,6 +1430,9 @@ async def process_chat_response(
 
                             if after_tag:
                                 content_blocks[-1]["content"] = after_tag
+                                tag_content_handler(
+                                    content_type, tags, after_tag, content_blocks
+                                )
 
                             break
                 elif content_blocks[-1]["type"] == content_type:
@@ -1609,6 +1620,9 @@ async def process_chat_response(
                             )
 
                             if data:
+                                if "event" in data:
+                                    await event_emitter(data.get("event", {}))
+
                                 if "selected_model_id" in data:
                                     model_id = data["selected_model_id"]
                                     Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -1653,14 +1667,36 @@ async def process_chat_response(
                                             )
 
                                             if tool_call_index is not None:
-                                                if (
-                                                    len(response_tool_calls)
-                                                    <= tool_call_index
-                                                ):
+                                                # Check if the tool call already exists
+                                                current_response_tool_call = None
+                                                for (
+                                                    response_tool_call
+                                                ) in response_tool_calls:
+                                                    if (
+                                                        response_tool_call.get("index")
+                                                        == tool_call_index
+                                                    ):
+                                                        current_response_tool_call = (
+                                                            response_tool_call
+                                                        )
+                                                        break
+
+                                                if current_response_tool_call is None:
+                                                    # Add the new tool call
+                                                    delta_tool_call.setdefault(
+                                                        "function", {}
+                                                    )
+                                                    delta_tool_call[
+                                                        "function"
+                                                    ].setdefault("name", "")
+                                                    delta_tool_call[
+                                                        "function"
+                                                    ].setdefault("arguments", "")
                                                     response_tool_calls.append(
                                                         delta_tool_call
                                                     )
                                                 else:
+                                                    # Update the existing tool call
                                                     delta_name = delta_tool_call.get(
                                                         "function", {}
                                                     ).get("name")
@@ -1671,16 +1707,14 @@ async def process_chat_response(
                                                     )
 
                                                     if delta_name:
-                                                        response_tool_calls[
-                                                            tool_call_index
-                                                        ]["function"][
-                                                            "name"
-                                                        ] += delta_name
+                                                        current_response_tool_call[
+                                                            "function"
+                                                        ]["name"] += delta_name
 
                                                     if delta_arguments:
-                                                        response_tool_calls[
-                                                            tool_call_index
-                                                        ]["function"][
+                                                        current_response_tool_call[
+                                                            "function"
+                                                        ][
                                                             "arguments"
                                                         ] += delta_arguments
 
@@ -2202,7 +2236,7 @@ async def process_chat_response(
                     )
 
                 # Send a webhook notification if the user is not active
-                if get_active_status_by_user_id(user.id) is None:
+                if not get_active_status_by_user_id(user.id):
                     webhook_url = Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
                         post_webhook(
@@ -2243,7 +2277,9 @@ async def process_chat_response(
                 await response.background()
 
         # background_tasks.add_task(post_response_handler, response, events)
-        task_id, _ = create_task(post_response_handler(response, events))
+        task_id, _ = create_task(
+            post_response_handler(response, events), id=metadata["chat_id"]
+        )
         return {"status": True, "task_id": task_id}
 
     else:

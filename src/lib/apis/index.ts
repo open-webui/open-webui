@@ -2,6 +2,7 @@ import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload } from '$lib/utils';
 import { getOpenAIModelsDirect } from './openai';
 
+import { parse } from 'yaml';
 import { toast } from 'svelte-sonner';
 
 export const getModels = async (
@@ -259,6 +260,38 @@ export const stopTask = async (token: string, id: string) => {
 	return res;
 };
 
+export const getTaskIdsByChatId = async (token: string, chat_id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/chat/${chat_id}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.log(err);
+			if ('detail' in err) {
+				error = err.detail;
+			} else {
+				error = err;
+			}
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getToolServerData = async (token: string, url: string) => {
 	let error = null;
 
@@ -271,8 +304,15 @@ export const getToolServerData = async (token: string, url: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
-			return res.json();
+			// Check if URL ends with .yaml or .yml to determine format
+			if (url.toLowerCase().endsWith('.yaml') || url.toLowerCase().endsWith('.yml')) {
+				if (!res.ok) throw await res.text();
+				const text = await res.text();
+				return parse(text);
+			} else {
+				if (!res.ok) throw await res.json();
+				return res.json();
+			}
 		})
 		.catch((err) => {
 			console.log(err);
@@ -305,7 +345,7 @@ export const getToolServersData = async (i18n, servers: object[]) => {
 				.filter((server) => server?.config?.enable)
 				.map(async (server) => {
 					const data = await getToolServerData(
-						server?.key,
+						(server?.auth_type ?? 'bearer') === 'bearer' ? server?.key : localStorage.token,
 						server?.url + '/' + (server?.path ?? 'openapi.json')
 					).catch((err) => {
 						toast.error(
@@ -499,7 +539,7 @@ export const updateTaskConfig = async (token: string, config: object) => {
 export const generateTitle = async (
 	token: string = '',
 	model: string,
-	messages: string[],
+	messages: object[],
 	chat_id?: string
 ) => {
 	let error = null;
@@ -533,7 +573,39 @@ export const generateTitle = async (
 		throw error;
 	}
 
-	return res?.choices[0]?.message?.content.replace(/["']/g, '') ?? 'New Chat';
+	try {
+		// Step 1: Safely extract the response string
+		const response = res?.choices[0]?.message?.content ?? '';
+
+		// Step 2: Attempt to fix common JSON format issues like single quotes
+		const sanitizedResponse = response.replace(/['‘’`]/g, '"'); // Convert single quotes to double quotes for valid JSON
+
+		// Step 3: Find the relevant JSON block within the response
+		const jsonStartIndex = sanitizedResponse.indexOf('{');
+		const jsonEndIndex = sanitizedResponse.lastIndexOf('}');
+
+		// Step 4: Check if we found a valid JSON block (with both `{` and `}`)
+		if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+			const jsonResponse = sanitizedResponse.substring(jsonStartIndex, jsonEndIndex + 1);
+
+			// Step 5: Parse the JSON block
+			const parsed = JSON.parse(jsonResponse);
+
+			// Step 6: If there's a "tags" key, return the tags array; otherwise, return an empty array
+			if (parsed && parsed.title) {
+				return parsed.title;
+			} else {
+				return null;
+			}
+		}
+
+		// If no valid JSON block found, return an empty array
+		return null;
+	} catch (e) {
+		// Catch and safely return empty array on any parsing errors
+		console.error('Failed to parse response: ', e);
+		return null;
+	}
 };
 
 export const generateTags = async (

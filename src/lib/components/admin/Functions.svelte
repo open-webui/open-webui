@@ -192,7 +192,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Functions')} | {$WEBUI_NAME}
+		{$i18n.t('Functions')} • {$WEBUI_NAME}
 	</title>
 </svelte:head>
 

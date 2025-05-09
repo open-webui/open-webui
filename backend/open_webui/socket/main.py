@@ -9,9 +9,8 @@ from open_webui.models.users import Users, UserNameResponse
 from open_webui.models.channels import Channels
 from open_webui.models.chats import Chats
 from open_webui.utils.redis import (
-    parse_redis_sentinel_url,
     get_sentinels_from_env,
-    AsyncRedisSentinelManager,
+    get_sentinel_url_from_env,
 )
 
 from open_webui.env import (
@@ -38,15 +37,10 @@ log.setLevel(SRC_LOG_LEVELS["SOCKET"])
 
 if WEBSOCKET_MANAGER == "redis":
     if WEBSOCKET_SENTINEL_HOSTS:
-        redis_config = parse_redis_sentinel_url(WEBSOCKET_REDIS_URL)
-        mgr = AsyncRedisSentinelManager(
-            WEBSOCKET_SENTINEL_HOSTS.split(","),
-            sentinel_port=int(WEBSOCKET_SENTINEL_PORT),
-            redis_port=redis_config["port"],
-            service=redis_config["service"],
-            db=redis_config["db"],
-            username=redis_config["username"],
-            password=redis_config["password"],
+        mgr = socketio.AsyncRedisManager(
+            get_sentinel_url_from_env(
+                WEBSOCKET_REDIS_URL, WEBSOCKET_SENTINEL_HOSTS, WEBSOCKET_SENTINEL_PORT
+            )
         )
     else:
         mgr = socketio.AsyncRedisManager(WEBSOCKET_REDIS_URL)
@@ -198,6 +192,9 @@ async def connect(sid, environ, auth):
             # print(f"user {user.name}({user.id}) connected with session ID {sid}")
             await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
             await sio.emit("usage", {"models": get_models_in_use()})
+            return True
+
+    return False
 
 
 @sio.on("user-join")
@@ -320,8 +317,8 @@ def get_event_emitter(request_info, update_db=True):
             )
         )
 
-        for session_id in session_ids:
-            await sio.emit(
+        emit_tasks = [
+            sio.emit(
                 "chat-events",
                 {
                     "chat_id": request_info.get("chat_id", None),
@@ -330,6 +327,10 @@ def get_event_emitter(request_info, update_db=True):
                 },
                 to=session_id,
             )
+            for session_id in session_ids
+        ]
+
+        await asyncio.gather(*emit_tasks)
 
         if update_db:
             if "type" in event_data and event_data["type"] == "status":
@@ -345,16 +346,17 @@ def get_event_emitter(request_info, update_db=True):
                     request_info["message_id"],
                 )
 
-                content = message.get("content", "")
-                content += event_data.get("data", {}).get("content", "")
+                if message:
+                    content = message.get("content", "")
+                    content += event_data.get("data", {}).get("content", "")
 
-                Chats.upsert_message_to_chat_by_id_and_message_id(
-                    request_info["chat_id"],
-                    request_info["message_id"],
-                    {
-                        "content": content,
-                    },
-                )
+                    Chats.upsert_message_to_chat_by_id_and_message_id(
+                        request_info["chat_id"],
+                        request_info["message_id"],
+                        {
+                            "content": content,
+                        },
+                    )
 
             if "type" in event_data and event_data["type"] == "replace":
                 content = event_data.get("data", {}).get("content", "")
