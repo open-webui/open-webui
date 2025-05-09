@@ -37,113 +37,113 @@
 	}
     
 	const submitHandler = async () => {
-	    loading = true;
+		loading = true;
     
-	    if (validateCommandString(command)) {
-		await onSubmit({
-		    title,
-		    command,
-		    content, // Content from RichTextInput will be submitted
-		    access_control: accessControl
-		});
-	    } else {
-		toast.error(
-		    $i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
-		);
-	    }
+		if (validateCommandString(command)) {
+			await onSubmit({
+		    	title,
+		    	command,
+		    	content, // Content from RichTextInput will be submitted
+		    	access_control: accessControl
+			});
+	    	} else {
+			toast.error(
+		    		$i18n.t('Only alphanumeric characters and hyphens are allowed in the command string.')
+			);
+	    	}
     
-	    loading = false;
+	    	loading = false;
 	};
     
 	const validateCommandString = (inputString) => {
-	    // Regular expression to match only alphanumeric characters and hyphen
-	    const regex = /^[a-zA-Z0-9-]+$/;
+		// Regular expression to match only alphanumeric characters and hyphen
+	    	const regex = /^[a-zA-Z0-9-]+$/;
     
-	    // Test the input string against the regular expression
-	    return regex.test(inputString);
+		// Test the input string against the regular expression
+	    	return regex.test(inputString);
 	};
     
 	onMount(async () => {
-	    if (prompt) {
-		title = prompt.title;
-		await tick();
+		if (prompt) {
+			title = prompt.title;
+			await tick();
     
-		command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
-		content = prompt.content; // Initialize content for RichTextInput
+			command = prompt.command.at(0) === '/' ? prompt.command.slice(1) : prompt.command;
+			content = prompt.content; // Initialize content for RichTextInput
     
-		accessControl = prompt?.access_control ?? {};
-	    }
+			accessControl = prompt?.access_control ?? {};
+	    	}
 	});
-    </script>
+</script>
     
-    <AccessControlModal
+<AccessControlModal
 	bind:show={showAccessControlModal}
 	bind:accessControl
 	accessRoles={['read', 'write']}
 	allowPublic={$user?.permissions?.sharing?.public_prompts || $user?.role === 'admin'}
-    />
+/>
     
-    <div class="w-full max-h-full flex justify-center">
+<div class="w-full max-h-full flex justify-center">
 	<form
-	    class="flex flex-col w-full mb-10"
-	    on:submit|preventDefault={() => {
-		submitHandler();
-	    }}
+		class="flex flex-col w-full mb-10"
+	    	on:submit|preventDefault={() => {
+			submitHandler();
+	    	}}
 	>
-	    <div class="my-2">
-		<Tooltip
-		    content={`${$i18n.t('Only alphanumeric characters and hyphens are allowed')} - ${$i18n.t(
-			'Activate this command by typing "/{{COMMAND}}" to chat input.',
-			{
-			    COMMAND: command
-			}
-		    )}`}
-		    placement="bottom-start"
-		>
-		    <div class="flex flex-col w-full">
-			<div class="flex items-center">
-			    <input
-				class="text-2xl font-semibold w-full bg-transparent outline-hidden"
-				placeholder={$i18n.t('Title')}
-				bind:value={title}
-				required
-			    />
+	    	<div class="my-2">
+			<Tooltip
+		    		content={`${$i18n.t('Only alphanumeric characters and hyphens are allowed')} - ${$i18n.t(
+					'Activate this command by typing "/{{COMMAND}}" to chat input.',
+					{
+			    			COMMAND: command
+					}
+		    		)}`}
+		    		placement="bottom-start"
+			>
+		    		<div class="flex flex-col w-full">
+					<div class="flex items-center">
+			    			<input
+							class="text-2xl font-semibold w-full bg-transparent outline-hidden"
+							placeholder={$i18n.t('Title')}
+							bind:value={title}
+							required
+			    			/>
     
-			    <div class="self-center shrink-0">
-				<button
-				    class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
-				    type="button"
-				    on:click={() => {
-					showAccessControlModal = true;
-				    }}
-				>
-				    <LockClosed strokeWidth="2.5" className="size-3.5" />
+			    			<div class="self-center shrink-0">
+							<button
+				    				class="bg-gray-50 hover:bg-gray-100 text-black dark:bg-gray-850 dark:hover:bg-gray-800 dark:text-white transition px-2 py-1 rounded-full flex gap-1 items-center"
+				    				type="button"
+				    				on:click={() => {
+									showAccessControlModal = true;
+				    				}}
+							>
+				    			<LockClosed strokeWidth="2.5" className="size-3.5" />
     
-				    <div class="text-sm font-medium shrink-0">
-					{$i18n.t('Access')}
-				    </div>
-				</button>
-			    </div>
-			</div>
+				    			<div class="text-sm font-medium shrink-0">
+								{$i18n.t('Access')}
+				    			</div>
+						</button>
+			    		</div>
+					</div>
     
-			<div class="flex gap-0.5 items-center text-xs text-gray-500">
-			    <div class="">/</div>
-			    <input
-				class=" w-full bg-transparent outline-hidden"
-				placeholder={$i18n.t('Command')}
-				bind:value={command}
-				on:input={handleCommandInput}
-				required
-				disabled={edit}
-			    />
-			</div>
-		    </div>
-		</Tooltip>
-	    </div>
+					<div class="flex gap-0.5 items-center text-xs text-gray-500">
+			    			<div class="">/</div>
+						<input
+							class=" w-full bg-transparent outline-hidden"
+							placeholder={$i18n.t('Command')}
+							bind:value={command}
+							on:input={handleCommandInput}
+							required
+							disabled={edit}
+			    			/>
+					</div>
+		    		</div>
+			</Tooltip>
+	    	</div>
     
-	    <div class="my-2">
-		<div class="flex w-full justify-between">
-		    <div class=" self-center text-sm font-semibold">{$i18n.t('Prompt Content')}</div>
+	    	<div class="my-2">
+			<div class="flex w-full justify-between">
+		    		<div class=" self-center text-sm font-semibold">{$i18n.t('Prompt Content')}</div>
 		</div>
     
 		<div class="mt-2">
