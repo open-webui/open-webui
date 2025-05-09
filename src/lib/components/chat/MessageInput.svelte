@@ -1065,8 +1065,8 @@
 											}}
 					    						uploadOneDriveHandler={async () => {
 												try {
-						    						const fileData = await pickAndDownloadFile();
-						    						if (fileData) {
+						    							const fileData = await pickAndDownloadFile();
+						    							if (fileData) {
 														const file = new File([fileData.blob], fileData.name, {
 							    								type: fileData.blob.type || 'application/octet-stream'
 														});
