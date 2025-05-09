@@ -35,6 +35,7 @@
 		banners,
 		showSettings,
 		showChangelog,
+		showFeedbackBanner,
 		temporaryChatEnabled,
 		toolServers
 	} from '$lib/stores';
@@ -60,6 +61,14 @@
 	let localDBChats = [];
 
 	let version;
+
+	// Need this to avoid banner flashing when the user has dismissed it
+	if (
+		typeof localStorage !== 'undefined' &&
+		localStorage.getItem('dismissedFeedbackBanner') === 'true'
+	) {
+		showFeedbackBanner.set(false);
+	}
 
 	onMount(async () => {
 		if ($user === undefined || $user === null) {
@@ -261,15 +270,11 @@
 	<main
 		class="text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-[100vh] overflow-auto w-full relative z-0"
 	>
-		<div class="mb-[5vh]">
+		<div class={$showFeedbackBanner ? 'mb-[8.5vh]' : 'mb-[5vh]'}>
 			<Header />
 		</div>
 
-		{#if !loaded}
-			<div class="flex items-center justify-center h-full">
-				<div class="loading">Loading...</div>
-			</div>
-		{:else if !['user', 'admin'].includes($user?.role)}
+		{#if !['user', 'admin'].includes($user?.role)}
 			<AccountPending />
 		{:else if localDBChats.length > 0}
 			<div class="fixed w-full flex z-50">

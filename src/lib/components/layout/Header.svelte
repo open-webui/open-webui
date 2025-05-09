@@ -1,26 +1,12 @@
 <script lang="ts">
-	import {
-		showControls,
-		showSidebar,
-		temporaryChatEnabled,
-		user,
-		mobile,
-		showArchivedChats,
-		chatId,
-		chats
-	} from '$lib/stores';
+	import { user, showArchivedChats, chatId, showFeedbackBanner } from '$lib/stores';
 	import { getContext } from 'svelte';
-	import Tooltip from '../common/Tooltip.svelte';
-	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import { goto } from '$app/navigation';
+	import type { i18n as i18nType } from 'i18next';
+	import type { Writable } from 'svelte/store';
 
-	interface I18n {
-		t: (key: string) => string;
-	}
-
-	const i18n = getContext<I18n>('i18n');
-	const t = (key: string) => i18n?.t?.(key) ?? key;
+	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	const handleHomeClick = async () => {
 		chatId.set('');
@@ -33,10 +19,7 @@
 >
 	<div class=" h-full mx-auto flex items-center px-4 w-full">
 		<div class="flex items-center flex-1">
-			<button
-				on:click={handleHomeClick}
-				class="flex items-center gap-3 p-1.5 rounded-xl"
-			>
+			<button on:click={handleHomeClick} class="flex items-center gap-3 p-1.5 rounded-xl">
 				<img src="/static/favicon.png" alt="Logo" class="h-8 w-8 rounded-full" />
 				<div class="text-2xl font-bold fr-text-title--blue-france">Albert</div>
 				<div
@@ -49,7 +32,7 @@
 
 		<div class="flex items-center gap-2">
 			<!-- {#if !$mobile}
-				<Tooltip content={t('Controls')}>
+				<Tooltip content={$i18n.t('Controls')}>
 					<button
 						class="flex cursor-pointer px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-850 transition text-gray-600 dark:text-gray-400"
 						on:click={async () => {
@@ -91,4 +74,45 @@
 			{/if}
 		</div>
 	</div>
+	{#if $showFeedbackBanner}
+		<div
+			class="w-full bg-blue-50 dark:bg-blue-900/30 flex items-center relative h-[3.5vh] border-b border-blue-100 dark:border-blue-800/30"
+		>
+			<div class="mx-auto flex items-center gap-3">
+				<span class="text-sm text-gray-700 dark:text-gray-200 align-middle">
+					💬 {$i18n.t('We would love to hear what you think about Albert')}
+				</span>
+				<a	
+					href="https://grist.numerique.gouv.fr/o/albert/forms/3YqFNWKSkYjLTK9quzcSLq/75"
+					class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline underline-offset-2"
+					target="_blank"
+					rel="noopener noreferrer"
+				>
+					{$i18n.t('Share your feedback')}
+				</a>
+			</div>
+
+			<button
+				on:click={() => {
+					showFeedbackBanner.set(false);
+					localStorage.setItem('dismissedFeedbackBanner', 'true');
+				}}
+				class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 absolute right-2"
+				aria-label={$i18n.t('Dismiss banner')}
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					class="h-4 w-4"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</button>
+		</div>
+	{/if}
 </div>
