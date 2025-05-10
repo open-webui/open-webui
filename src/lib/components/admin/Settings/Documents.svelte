@@ -215,18 +215,8 @@
 			OllamaUrl = embeddingConfig.ollama_config.url;
 		}
 	};
-
-	const setRerankingConfig = async () => {
-		const rerankingConfig = await getRerankingConfig(localStorage.token);
-
-		if (rerankingConfig) {
-			rerankingModel = rerankingConfig.reranking_model;
-		}
-	};
-
 	onMount(async () => {
 		await setEmbeddingConfig();
-		await setRerankingConfig();
 
 		RAGConfig = await getRAGConfig(localStorage.token);
 	});
