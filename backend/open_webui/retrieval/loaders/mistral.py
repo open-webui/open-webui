@@ -1,6 +1,5 @@
 import asyncio
-import aiohttp
-from aiohttp import ClientTimeout
+import httpx
 from tenacity import retry, wait_exponential, stop_after_attempt
 import logging
 import os
@@ -38,27 +37,26 @@ class MistralLoader:
         self.api_key = api_key
         self.file_path = file_path
         self.headers = {"Authorization": f"Bearer {self.api_key}"}
-        # Use an aiohttp session for async I/O with a 30s timeout to avoid hangs
-        timeout = ClientTimeout(total=30)
-        self.session = aiohttp.ClientSession(headers=self.headers, timeout=timeout)
+        # Use httpx AsyncClient with HTTP/2 and 30s timeout
+        self.session = httpx.AsyncClient(
+            headers=self.headers,
+            timeout=30.0,
+            http2=True,
+        )
         # Semaphore to throttle concurrent loads
         self._sem = asyncio.Semaphore(5)
 
-    async def _handle_response(self, response):
+    async def _handle_response(self, response: httpx.Response):
         """Checks response status and returns JSON content."""
-        if response.status >= 400:
-            text = await response.text()
-            raise aiohttp.ClientResponseError(
-                request_info=response.request_info,
-                history=response.history,
-                status=response.status,
-                message=text,
-                headers=response.headers,
-            )
-        # Handle potential empty responses for certain successful requests (e.g., DELETE)
-        if response.status == 204 or response.content_length == 0:
-            return {}  # Return empty dict if no content
-        return await response.json()
+        try:
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            text = exc.response.text
+            log.error(f"HTTP error occurred: {exc} - Response: {text}")
+            raise
+        if response.status_code == 204 or not response.content:
+            return {}
+        return response.json()
 
     async def _upload_file(self) -> str:
         """Uploads the file to Mistral for OCR processing."""
@@ -68,14 +66,12 @@ class MistralLoader:
 
         try:
             with open(self.file_path, "rb") as f:
-                data = aiohttp.FormData()
-                data.add_field('file', f, filename=file_name, content_type='application/pdf')
-                data.add_field('purpose', 'ocr')
-
-                upload_headers = self.headers.copy()  # Avoid modifying self.headers
-
-                async with self.session.post(url, headers=upload_headers, data=data) as resp:
-                    response_data = await self._handle_response(resp)
+                files = {
+                    "file": (file_name, f, "application/pdf"),
+                    "purpose": (None, "ocr"),
+                }
+                r = await self.session.post(url, files=files)
+                response_data = self._handle_response(r)
 
             file_id = response_data.get("id")
             if not file_id:
@@ -94,8 +90,8 @@ class MistralLoader:
         signed_url_headers = {**self.headers, "Accept": "application/json"}
 
         try:
-            async with self.session.get(url, headers=signed_url_headers, params=params) as resp:
-                response_data = await self._handle_response(resp)
+            r = await self.session.get(url, params=params)
+            response_data = self._handle_response(r)
             signed_url = response_data.get("url")
             if not signed_url:
                 raise ValueError("Signed URL not found in response.")
@@ -125,8 +121,8 @@ class MistralLoader:
         }
 
         try:
-            async with self.session.post(url, headers=ocr_headers, json=payload) as resp:
-                ocr_response = await self._handle_response(resp)
+            r = await self.session.post(url, json=payload)
+            ocr_response = self._handle_response(r)
             log.info("OCR processing done.")
             log.debug("OCR response: %s", ocr_response)
             return ocr_response
@@ -141,8 +137,8 @@ class MistralLoader:
         # No specific Accept header needed, default or Authorization is usually sufficient
 
         try:
-            async with self.session.delete(url, headers=self.headers) as resp:
-                delete_response = await self._handle_response(resp)
+            r = await self.session.delete(url)
+            delete_response = self._handle_response(r)
             log.info(
                 f"File deleted successfully: {delete_response}"
             )  # Log the response if available
@@ -240,7 +236,7 @@ class MistralLoader:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Exit async context manager, ensuring session cleanup."""
-        await self.session.close()
+        await self.session.aclose()
 
 async def shutdown_loader(loader: MistralLoader):
-    await loader.session.close()
+    await loader.session.aclose()
