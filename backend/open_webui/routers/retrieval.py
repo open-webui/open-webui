@@ -1607,7 +1607,7 @@ async def process_web_search(
     urls = []
     try:
         logging.info(
-            f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.query}"
+            f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.queries}"
         )
 
         search_tasks = [
