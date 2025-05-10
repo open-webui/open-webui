@@ -797,6 +797,65 @@ from langchain_core.callbacks import Callbacks
 from langchain_core.documents import BaseDocumentCompressor, Document
 
 
+def rerank_remote(
+    query: str,
+    documents: list[str],
+    api_url: str,
+    api_key: str = None,
+    model: str = None,
+    top_n: int = 3,
+) -> list[tuple[int, float]]:
+    indexed_docs = [(i, doc) for i, doc in enumerate(documents) if doc.strip()]
+    if not indexed_docs:
+        log.warning("rerank_remote: All documents are empty or blank.")
+        return []
+    filtered_indices, filtered_documents = zip(*indexed_docs)
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    payload = {
+        "query": query,
+        "documents": list(filtered_documents),
+        "model": model,
+        "top_n": top_n,
+        "return_documents": False,
+    }
+
+    try:
+        log.info(f"Sending rerank request to {api_url}")
+        response = requests.post(api_url, headers=headers, json=payload, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+
+        results = data.get("results", [])
+        if not results:
+            log.warning("rerank_remote: No results returned from API.")
+            return []
+
+        reranked = []
+        for entry in results:
+            filtered_idx = entry.get("index")
+            score = entry.get("relevance_score")
+            if filtered_idx is not None and score is not None:
+                original_idx = filtered_indices[filtered_idx]
+                reranked.append((original_idx, score))
+            else:
+                log.warning(f"rerank_remote: Skipping malformed result entry: {entry}")
+
+        return reranked
+
+    except requests.RequestException as e:
+        log.error(f"rerank_remote: Request failed - {e}")
+    except ValueError as e:
+        log.error(f"rerank_remote: Invalid JSON response - {e}")
+    except Exception as e:
+        log.error(f"rerank_remote: Unexpected error - {e}")
+
+    return [(i, 0.0) for i in range(len(documents))]
+
+
 class RerankCompressor(BaseDocumentCompressor):
     embedding_function: Any
     top_n: int
