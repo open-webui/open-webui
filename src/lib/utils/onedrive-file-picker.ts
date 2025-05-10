@@ -40,7 +40,7 @@ class OneDriveConfig {
 			headers,
 			credentials: 'include'
 		});
-		
+
 		if (!response.ok) {
 			throw new Error('Failed to fetch OneDrive credentials');
 		}
@@ -66,9 +66,10 @@ class OneDriveConfig {
 		await this.ensureInitialized(authorityType);
 
 		if (!this.msalInstance) {
-			const authorityEndpoint = this.currentAuthorityType === 'organizations' 
-				? (this.sharepointTenantId || 'common')
-				: 'consumers';
+			const authorityEndpoint =
+				this.currentAuthorityType === 'organizations'
+					? this.sharepointTenantId || 'common'
+					: 'consumers';
 			const msalParams = {
 				auth: {
 					authority: `https://login.microsoftonline.com/${authorityEndpoint}`,

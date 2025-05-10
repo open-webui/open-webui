@@ -50,8 +50,8 @@ class JupyterCodeExecuter:
         self.password = password
         self.timeout = timeout
         self.kernel_id = ""
-        if self.base_url[-1] != '/':
-            self.base_url += '/'
+        if self.base_url[-1] != "/":
+            self.base_url += "/"
         self.session = aiohttp.ClientSession(trust_env=True, base_url=self.base_url)
         self.params = {}
         self.result = ResultModel()
@@ -103,9 +103,7 @@ class JupyterCodeExecuter:
             self.params.update({"token": self.token})
 
     async def init_kernel(self) -> None:
-        async with self.session.post(
-            url="api/kernels", params=self.params
-        ) as response:
+        async with self.session.post(url="api/kernels", params=self.params) as response:
             response.raise_for_status()
             kernel_data = await response.json()
             self.kernel_id = kernel_data["id"]

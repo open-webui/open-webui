@@ -48,7 +48,9 @@ class PineconeClient(VectorDBBase):
         self.cloud = PINECONE_CLOUD
 
         # Initialize Pinecone gRPC client for improved performance
-        self.client = PineconeGRPC(api_key=self.api_key, environment=self.environment, cloud=self.cloud)
+        self.client = PineconeGRPC(
+            api_key=self.api_key, environment=self.environment, cloud=self.cloud
+        )
 
         # Persistent executor for batch operations
         self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
@@ -222,7 +224,9 @@ class PineconeClient(VectorDBBase):
                 raise
         elapsed = time.time() - start_time
         log.debug(f"Insert of {len(points)} vectors took {elapsed:.2f} seconds")
-        log.info(f"Successfully inserted {len(points)} vectors in parallel batches into '{collection_name_with_prefix}'")
+        log.info(
+            f"Successfully inserted {len(points)} vectors in parallel batches into '{collection_name_with_prefix}'"
+        )
 
     def upsert(self, collection_name: str, items: List[VectorItem]) -> None:
         """Upsert (insert or update) vectors into a collection."""
@@ -251,7 +255,9 @@ class PineconeClient(VectorDBBase):
                 raise
         elapsed = time.time() - start_time
         log.debug(f"Upsert of {len(points)} vectors took {elapsed:.2f} seconds")
-        log.info(f"Successfully upserted {len(points)} vectors in parallel batches into '{collection_name_with_prefix}'")
+        log.info(
+            f"Successfully upserted {len(points)} vectors in parallel batches into '{collection_name_with_prefix}'"
+        )
 
     async def insert_async(self, collection_name: str, items: List[VectorItem]) -> None:
         """Async version of insert using asyncio and run_in_executor for improved performance."""
@@ -259,16 +265,19 @@ class PineconeClient(VectorDBBase):
             log.warning("No items to insert")
             return
 
-        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
+        collection_name_with_prefix = self._get_collection_name_with_prefix(
+            collection_name
+        )
         points = self._create_points(items, collection_name_with_prefix)
 
         # Create batches
-        batches = [points[i : i + BATCH_SIZE] for i in range(0, len(points), BATCH_SIZE)]
+        batches = [
+            points[i : i + BATCH_SIZE] for i in range(0, len(points), BATCH_SIZE)
+        ]
         loop = asyncio.get_event_loop()
         tasks = [
             loop.run_in_executor(
-                None,
-                functools.partial(self.index.upsert, vectors=batch)
+                None, functools.partial(self.index.upsert, vectors=batch)
             )
             for batch in batches
         ]
@@ -277,7 +286,9 @@ class PineconeClient(VectorDBBase):
             if isinstance(result, Exception):
                 log.error(f"Error in async insert batch: {result}")
                 raise result
-        log.info(f"Successfully async inserted {len(points)} vectors in batches into '{collection_name_with_prefix}'")
+        log.info(
+            f"Successfully async inserted {len(points)} vectors in batches into '{collection_name_with_prefix}'"
+        )
 
     async def upsert_async(self, collection_name: str, items: List[VectorItem]) -> None:
         """Async version of upsert using asyncio and run_in_executor for improved performance."""
@@ -285,16 +296,19 @@ class PineconeClient(VectorDBBase):
             log.warning("No items to upsert")
             return
 
-        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
+        collection_name_with_prefix = self._get_collection_name_with_prefix(
+            collection_name
+        )
         points = self._create_points(items, collection_name_with_prefix)
 
         # Create batches
-        batches = [points[i : i + BATCH_SIZE] for i in range(0, len(points), BATCH_SIZE)]
+        batches = [
+            points[i : i + BATCH_SIZE] for i in range(0, len(points), BATCH_SIZE)
+        ]
         loop = asyncio.get_event_loop()
         tasks = [
             loop.run_in_executor(
-                None,
-                functools.partial(self.index.upsert, vectors=batch)
+                None, functools.partial(self.index.upsert, vectors=batch)
             )
             for batch in batches
         ]
@@ -303,7 +317,9 @@ class PineconeClient(VectorDBBase):
             if isinstance(result, Exception):
                 log.error(f"Error in async upsert batch: {result}")
                 raise result
-        log.info(f"Successfully async upserted {len(points)} vectors in batches into '{collection_name_with_prefix}'")
+        log.info(
+            f"Successfully async upserted {len(points)} vectors in batches into '{collection_name_with_prefix}'"
+        )
 
     def streaming_upsert(self, collection_name: str, items: List[VectorItem]) -> None:
         """Perform a streaming upsert over gRPC for performance testing."""
@@ -311,7 +327,9 @@ class PineconeClient(VectorDBBase):
             log.warning("No items to upsert via streaming")
             return
 
-        collection_name_with_prefix = self._get_collection_name_with_prefix(collection_name)
+        collection_name_with_prefix = self._get_collection_name_with_prefix(
+            collection_name
+        )
         points = self._create_points(items, collection_name_with_prefix)
 
         # Open a streaming upsert channel
@@ -322,7 +340,9 @@ class PineconeClient(VectorDBBase):
                 stream.send(point)
             # close the stream to finalize
             stream.close()
-            log.info(f"Successfully streamed upsert of {len(points)} vectors into '{collection_name_with_prefix}'")
+            log.info(
+                f"Successfully streamed upsert of {len(points)} vectors into '{collection_name_with_prefix}'"
+            )
         except Exception as e:
             log.error(f"Error during streaming upsert: {e}")
             raise
