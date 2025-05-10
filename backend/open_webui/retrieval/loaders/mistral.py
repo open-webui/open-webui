@@ -1,5 +1,6 @@
 import asyncio
 import aiohttp
+from aiohttp import ClientTimeout
 from tenacity import retry, wait_exponential, stop_after_attempt
 import logging
 import os
@@ -37,8 +38,9 @@ class MistralLoader:
         self.api_key = api_key
         self.file_path = file_path
         self.headers = {"Authorization": f"Bearer {self.api_key}"}
-        # Use an aiohttp session for async I/O
-        self.session = aiohttp.ClientSession(headers=self.headers)
+        # Use an aiohttp session for async I/O with a 30s timeout to avoid hangs
+        timeout = ClientTimeout(total=30)
+        self.session = aiohttp.ClientSession(headers=self.headers, timeout=timeout)
         # Semaphore to throttle concurrent loads
         self._sem = asyncio.Semaphore(5)
 
@@ -65,17 +67,15 @@ class MistralLoader:
         file_name = os.path.basename(self.file_path)
 
         try:
-            f = open(self.file_path, "rb")
-            data = aiohttp.FormData()
-            data.add_field('file', f, filename=file_name, content_type='application/pdf')
-            data.add_field('purpose', 'ocr')
+            with open(self.file_path, "rb") as f:
+                data = aiohttp.FormData()
+                data.add_field('file', f, filename=file_name, content_type='application/pdf')
+                data.add_field('purpose', 'ocr')
 
-            upload_headers = self.headers.copy()  # Avoid modifying self.headers
+                upload_headers = self.headers.copy()  # Avoid modifying self.headers
 
-            async with self.session.post(url, headers=upload_headers, data=data) as resp:
-                response_data = await self._handle_response(resp)
-
-            f.close()
+                async with self.session.post(url, headers=upload_headers, data=data) as resp:
+                    response_data = await self._handle_response(resp)
 
             file_id = response_data.get("id")
             if not file_id:
@@ -224,6 +224,7 @@ class MistralLoader:
                 return [Document(page_content=f"Error during processing: {e}", metadata={})]
             finally:
                 # 5. Delete file (attempt even if prior steps failed after upload)
+
                 if file_id:
                     try:
                         await self._delete_file(file_id)
@@ -232,6 +233,14 @@ class MistralLoader:
                         log.error(
                             f"Cleanup error: Could not delete file ID {file_id}. Reason: {del_e}"
                         )
+
+    async def __aenter__(self):
+        """Enter async context manager."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Exit async context manager, ensuring session cleanup."""
+        await self.session.close()
 
 async def shutdown_loader(loader: MistralLoader):
     await loader.session.close()
