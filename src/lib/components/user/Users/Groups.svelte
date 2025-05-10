@@ -24,9 +24,10 @@
 	import AddGroupModal from './Groups/AddGroupModal.svelte';
 	import { createNewGroup, getGroups } from '$lib/apis/groups';
 	import {
-		getUserDefaultPermissions,
+		// getUserDefaultPermissions,
 		getAllUsers,
-		updateUserDefaultPermissions
+		getUsers,
+		// updateUserDefaultPermissions
 	} from '$lib/apis/users';
 
 	const i18n = getContext('i18n');
@@ -81,14 +82,12 @@
 			direct_tool_servers: false,
 			web_search: true,
 			image_generation: true,
-			code_interpreter: true,
-			notes: true,
-			self_group_management: false
+			code_interpreter: true
 		}
 	};
 
 	let showCreateGroupModal = false;
-	let showDefaultPermissionsModal = false;
+	// let showDefaultPermissionsModal = false;
 
 	const setGroups = async () => {
 		groups = await getGroups(localStorage.token);
@@ -106,25 +105,25 @@
 		}
 	};
 
-	const updateDefaultPermissionsHandler = async (group) => {
-		console.log(group.permissions);
+	// const updateDefaultPermissionsHandler = async (group) => {
+	// 	console.log(group.permissions);
 
-		const res = await updateUserDefaultPermissions(localStorage.token, group.permissions).catch(
-			(error) => {
-				toast.error(`${error}`);
-				return null;
-			}
-		);
+	// 	const res = await updateUserDefaultPermissions(localStorage.token, group.permissions).catch(
+	// 		(error) => {
+	// 			toast.error(`${error}`);
+	// 			return null;
+	// 		}
+	// 	);
 
-		if (res) {
-			toast.success($i18n.t('Default permissions updated successfully'));
-			defaultPermissions = await getUserDefaultPermissions(localStorage.token);
-		}
-	};
+	// 	if (res) {
+	// 		toast.success($i18n.t('Default permissions updated successfully'));
+	// 		defaultPermissions = await getUserDefaultPermissions(localStorage.token);
+	// 	}
+	// };
 
 	onMount(async () => {
-		if ($user?.role !== 'admin') {
-			await goto('/');
+		if ($user?.role == 'admin') {
+			await goto('/admin/users');
 			return;
 		}
 
@@ -139,7 +138,7 @@
 		}
 
 		await setGroups();
-		defaultPermissions = await getUserDefaultPermissions(localStorage.token);
+		// defaultPermissions = await getUserDefaultPermissions(localStorage.token);
 
 		loaded = true;
 	});
@@ -199,11 +198,11 @@
 		{#if filteredGroups.length === 0}
 			<div class="flex flex-col items-center justify-center h-40">
 				<div class=" text-xl font-medium">
-					{$i18n.t('Organize your users')}
+					{$i18n.t('Organize your groups')}
 				</div>
 
 				<div class="mt-1 text-sm dark:text-gray-300">
-					{$i18n.t('Use groups to group your users and assign permissions.')}
+					{$i18n.t('Use groups to group your teams.')}
 				</div>
 
 				<div class="mt-3">
@@ -240,7 +239,7 @@
 
 		<hr class="mb-2 border-gray-100 dark:border-gray-850" />
 
-		<GroupModal
+		<!-- <GroupModal
 			bind:show={showDefaultPermissionsModal}
 			tabs={['permissions']}
 			bind:permissions={defaultPermissions}
@@ -271,6 +270,6 @@
 			<div>
 				<ChevronRight strokeWidth="2.5" />
 			</div>
-		</button>
+		</button> -->
 	</div>
 {/if}

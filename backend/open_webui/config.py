@@ -1110,6 +1110,10 @@ USER_PERMISSIONS_FEATURES_NOTES = (
     os.environ.get("USER_PERMISSIONS_FEATURES_NOTES", "True").lower() == "true"
 )
 
+USER_PERMISSIONS_SELF_GROUP_MANAGEMENT = (
+    os.environ.get("USER_PERMISSIONS_SELF_GROUP_MANAGEMENT", "False").lower()
+    == "true"
+)
 
 DEFAULT_USER_PERMISSIONS = {
     "workspace": {
@@ -1144,6 +1148,7 @@ DEFAULT_USER_PERMISSIONS = {
         "image_generation": USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
         "code_interpreter": USER_PERMISSIONS_FEATURES_CODE_INTERPRETER,
         "notes": USER_PERMISSIONS_FEATURES_NOTES,
+        "self_group_management": USER_PERMISSIONS_SELF_GROUP_MANAGEMENT
     },
 }
 
@@ -1253,7 +1258,7 @@ def validate_cors_origin(origin):
 # CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
 # in your .env file depending on your frontend port, 5173 in this case.
 CORS_ALLOW_ORIGIN = os.environ.get(
-    "CORS_ALLOW_ORIGIN", "*;http://localhost:5173;http://localhost:8080"
+    "CORS_ALLOW_ORIGIN", "http://localhost:5173"
 ).split(";")
 
 if "*" in CORS_ALLOW_ORIGIN:
