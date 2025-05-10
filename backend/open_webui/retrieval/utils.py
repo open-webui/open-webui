@@ -119,6 +119,12 @@ def query_doc_with_hybrid_search(
 ) -> dict:
     try:
         log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
+
+        remote_url = os.getenv("REMOTE_RERANKER_URL", "")
+        remote_key = os.getenv("REMOTE_RERANKER_KEY", "")
+        remote_model = os.getenv("REMOTE_RERANKER_MODEL", "")
+        use_remote_reranker = bool(remote_url)
+
         bm25_retriever = BM25Retriever.from_texts(
             texts=collection_result.documents[0],
             metadatas=collection_result.metadatas[0],
@@ -139,6 +145,10 @@ def query_doc_with_hybrid_search(
             top_n=k_reranker,
             reranking_function=reranking_function,
             r_score=r,
+            use_remote_reranker=use_remote_reranker,
+            remote_reranker_url=remote_url,
+            remote_reranker_key=remote_key,
+            remote_reranker_model=remote_model,
         )
 
         compression_retriever = ContextualCompressionRetriever(
@@ -792,6 +802,10 @@ class RerankCompressor(BaseDocumentCompressor):
     top_n: int
     reranking_function: Any
     r_score: float
+    use_remote_reranker: bool = False
+    remote_reranker_url: str = None
+    remote_reranker_key: str = None
+    remote_reranker_model: str = None
 
     class Config:
         extra = "forbid"
@@ -803,20 +817,40 @@ class RerankCompressor(BaseDocumentCompressor):
         query: str,
         callbacks: Optional[Callbacks] = None,
     ) -> Sequence[Document]:
-        reranking = self.reranking_function is not None
+        doc_contents = [doc.page_content for doc in documents]
+        scores = []
 
-        if reranking:
-            scores = self.reranking_function.predict(
-                [(query, doc.page_content) for doc in documents]
-            )
-        else:
-            from sentence_transformers import util
+        try:
+            if self.use_remote_reranker and self.remote_reranker_url:
+                log.info(f"RerankCompressor: Using remote reranker at {self.remote_reranker_url}")
+                reranked = rerank_remote(
+                    query=query,
+                    documents=doc_contents,
+                    api_url=self.remote_reranker_url,
+                    api_key=self.remote_reranker_key,
+                    model=self.remote_reranker_model,
+                    top_n=self.top_n if self.r_score == 0 else None
+                )
 
-            query_embedding = self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
-            document_embedding = self.embedding_function(
-                [doc.page_content for doc in documents], RAG_EMBEDDING_CONTENT_PREFIX
-            )
-            scores = util.cos_sim(query_embedding, document_embedding)[0]
+                indices, scores_list = zip(*reranked) if reranked else ([], [])
+                scores = [0.0] * len(documents)
+                for idx, score in zip(indices, scores_list):
+                    scores[idx] = score
+            elif self.reranking_function is not None:
+                scores = self.reranking_function.predict(
+                    [(query, doc.page_content) for doc in documents]
+                )
+            elif self.embedding_function is not None:
+                from sentence_transformers import util
+
+                query_embedding = self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
+                document_embedding = self.embedding_function(doc_contents, RAG_EMBEDDING_CONTENT_PREFIX)
+                scores = util.cos_sim(query_embedding, document_embedding)[0]
+            else:
+                raise ValueError("No valid reranking or embedding method available.")
+        except Exception as e:
+            log.error(f"RerankCompressor: Error while scoring documents: {e}")
+            return []
 
         docs_with_scores = list(zip(documents, scores.tolist()))
         if self.r_score:
