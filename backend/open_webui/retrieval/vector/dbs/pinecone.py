@@ -1,7 +1,7 @@
 from typing import Optional, List, Dict, Any, Union
 import logging
 import time  # for measuring elapsed time
-from pinecone import Pinecone, ServerlessSpec
+from pinecone import ServerlessSpec
 
 import asyncio  # for async upserts
 import functools  # for partial binding in async tasks
@@ -496,5 +496,18 @@ class PineconeClient(VectorDBBase):
             raise
 
     def close(self):
-        """Shut down the thread pool."""
+        """Shut down the gRPC channel and thread pool."""
+        try:
+            self.client.close()
+            log.info("Pinecone gRPC channel closed.")
+        except Exception as e:
+            log.warning(f"Failed to close Pinecone gRPC channel: {e}")
         self._executor.shutdown(wait=True)
+
+    def __enter__(self):
+        """Enter context manager."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit context manager, ensuring resources are cleaned up."""
+        self.close()
