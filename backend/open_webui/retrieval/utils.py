@@ -898,20 +898,20 @@ class RerankCompressor(BaseDocumentCompressor):
             elif self.reranking_function is not None:
                 scores = self.reranking_function.predict(
                     [(query, doc.page_content) for doc in documents]
-                )
+                ).tolist()
             elif self.embedding_function is not None:
                 from sentence_transformers import util
 
                 query_embedding = self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)
                 document_embedding = self.embedding_function(doc_contents, RAG_EMBEDDING_CONTENT_PREFIX)
-                scores = util.cos_sim(query_embedding, document_embedding)[0]
+                scores = util.cos_sim(query_embedding, document_embedding)[0].tolist()
             else:
                 raise ValueError("No valid reranking or embedding method available.")
         except Exception as e:
             log.error(f"RerankCompressor: Error while scoring documents: {e}")
             return []
 
-        docs_with_scores = list(zip(documents, scores.tolist()))
+        docs_with_scores = list(zip(documents, scores))
         if self.r_score:
             docs_with_scores = [
                 (d, s) for d, s in docs_with_scores if s >= self.r_score
