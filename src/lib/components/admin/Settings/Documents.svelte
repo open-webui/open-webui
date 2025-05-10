@@ -622,6 +622,13 @@
 												class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
 												bind:value={RAGConfig.RAG_RERANKING_ENGINE}
 												placeholder="Select a reranking model engine"
+												on:change={(e) => {
+													if (e.target.value === 'external') {
+														RAGConfig.RAG_RERANKING_MODEL = '';
+													} else if (e.target.value === '') {
+														RAGConfig.RAG_RERANKING_MODEL = 'BAAI/bge-reranker-v2-m3';
+													}
+												}}
 											>
 												<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
 												<option value="external">{$i18n.t('External')}</option>
