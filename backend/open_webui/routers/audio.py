@@ -544,7 +544,6 @@ def transcribe(request: Request, file_path):
     elif request.app.state.config.STT_ENGINE == "openai":
         convert_format = get_audio_convert_format(file_path)
 
-        print(f"convert_format: {convert_format}")
         if convert_format:
             ext = convert_format.split(".")[-1]
 
