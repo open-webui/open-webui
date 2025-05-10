@@ -11,6 +11,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import { user } from '$lib/stores';
 
 	let formElement = null;
 	let loading = false;
@@ -154,9 +155,11 @@ class Tools:
 
 	const saveHandler = async () => {
 		loading = true;
+		let emailPrefix = $user?.email?.split('@')[0]
+		const finalName = (!edit && !clone && !name.endsWith(`_${emailPrefix}`))? `${name}_${emailPrefix}`: name;
 		onSave({
 			id,
-			name,
+			name: finalName,
 			meta,
 			content,
 			access_control: accessControl

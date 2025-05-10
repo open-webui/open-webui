@@ -9,7 +9,7 @@ from open_webui.models.knowledge import (
     KnowledgeResponse,
     KnowledgeUserResponse,
 )
-from open_webui.models.files import Files, FileModel
+from open_webui.models.files import Files, FileModel, FileModelResponse
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
     process_file,
