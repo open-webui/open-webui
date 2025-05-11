@@ -199,7 +199,7 @@
 				</div>
 			{/if}
 			<input
-				class={`px-2.5 text-sm ${company_name ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+				class={`px-2.5 text-sm ${company_name ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 				placeholder={$i18n.t('Name')}
 				bind:value={company_name}
 				required
@@ -210,7 +210,7 @@
         <div class="relative" bind:this={companySizeDropdownRef}>
             <button
                 type="button"
-                class={`flex items-center justify-between w-full text-sm h-10 px-3 py-2 ${
+                class={`flex items-center justify-between w-full text-sm h-12 px-3 py-2 ${
                     companySizeDropdown ? 'border' : ''
                 } border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer`}
                 on:click={() => {
@@ -254,7 +254,7 @@
         <div class="relative" bind:this={industryDropdownRef}>
             <button
                 type="button"
-                class={`flex items-center justify-between w-full text-sm h-10 px-3 py-2 ${
+                class={`flex items-center justify-between w-full text-sm h-12 px-3 py-2 ${
                     industryDropdown ? 'border' : ''
                 } border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer`}
                 on:click={() => {
@@ -299,7 +299,7 @@
         <div class="relative" bind:this={teamDropdownRef}>
             <button
                 type="button"
-                class={`flex items-center justify-between w-full text-sm h-10 px-3 py-2 ${
+                class={`flex items-center justify-between w-full text-sm h-12 px-3 py-2 ${
                     teamDropdown ? 'border' : ''
                 } border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer`}
                 on:click={() => {

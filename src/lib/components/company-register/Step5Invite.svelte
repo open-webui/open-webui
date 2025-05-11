@@ -37,6 +37,15 @@
 
 	let input = '';
 	let inputRef: HTMLInputElement;
+	let ghostRef;
+	function updateInputWidth() {
+		if (ghostRef && inputRef) {
+			ghostRef.textContent = input || ' ';
+			const width = ghostRef.offsetWidth + 10; 
+			inputRef.style.width = `${width}px`;
+		}
+	}
+
 	let emailFocused = false;
 
 	const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -129,14 +138,16 @@
                 bind:this={inputRef}
                 bind:value={input}
                 placeholder="Enter email..."
-                class="text-xs bg-transparent outline-none px-1 h-6 w-auto max-w-[150px]"
+                class="text-xs bg-transparent outline-none px-1 h-6"
                 on:keydown={handleKeydown}
                 on:blur={() => {
 					addEmail()
 					emailFocused = false
 					}}
 				on:focus={() => (emailFocused = true)}
+				on:input={updateInputWidth}
             />
+			<span bind:this={ghostRef} class="invisible absolute whitespace-pre text-xs px-1"></span>
         </div>
     </div>
     <div class="mt-2.5 flex justify-end gap-7">

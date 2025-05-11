@@ -82,7 +82,7 @@
 				</div>
 			{/if}
 			<input
-				class={`px-2.5 text-sm ${email ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+				class={`px-2.5 text-sm ${email ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 				placeholder={$i18n.t('Email address')}
 				bind:value={email}
 				type="email"
@@ -110,7 +110,7 @@
 				</div>
 			{/if}
 			<input
-				class={`px-2.5 text-sm ${registration_code ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+				class={`px-2.5 text-sm ${registration_code ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 				placeholder={$i18n.t('Enter the code')}
 				bind:value={registration_code}
 				required
