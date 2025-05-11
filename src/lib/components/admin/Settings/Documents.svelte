@@ -123,35 +123,6 @@
 		}
 	};
 
-	const rerankingModelUpdateHandler = async () => {
-		console.log('Update reranking model attempt:', rerankingModel);
-
-		updateRerankingModelLoading = true;
-		const res = await updateRerankingConfig(localStorage.token, {
-			reranking_model: rerankingModel
-		}).catch(async (error) => {
-			toast.error(`${error}`);
-			await setRerankingConfig();
-			return null;
-		});
-		updateRerankingModelLoading = false;
-
-		if (res) {
-			console.log('rerankingModelUpdateHandler:', res);
-			if (res.status === true) {
-				if (rerankingModel === '') {
-					toast.success($i18n.t('Reranking model disabled', res), {
-						duration: 1000 * 10
-					});
-				} else {
-					toast.success($i18n.t('Reranking model set to "{{reranking_model}}"', res), {
-						duration: 1000 * 10
-					});
-				}
-			}
-		}
-	};
-
 	const submitHandler = async () => {
 		if (RAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika' && RAGConfig.TIKA_SERVER_URL === '') {
 			toast.error($i18n.t('Tika Server URL required.'));
@@ -190,10 +161,6 @@
 
 		if (!RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL) {
 			await embeddingModelUpdateHandler();
-
-			if (RAGConfig.ENABLE_RAG_HYBRID_SEARCH) {
-				await rerankingModelUpdateHandler();
-			}
 		}
 
 		const res = await updateRAGConfig(localStorage.token, RAGConfig);
@@ -215,18 +182,8 @@
 			OllamaUrl = embeddingConfig.ollama_config.url;
 		}
 	};
-
-	const setRerankingConfig = async () => {
-		const rerankingConfig = await getRerankingConfig(localStorage.token);
-
-		if (rerankingConfig) {
-			rerankingModel = rerankingConfig.reranking_model;
-		}
-	};
-
 	onMount(async () => {
 		await setEmbeddingConfig();
-		await setRerankingConfig();
 
 		RAGConfig = await getRAGConfig(localStorage.token);
 	});
@@ -655,6 +612,48 @@
 							</div>
 
 							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+								<div class="  mb-2.5 flex flex-col w-full justify-between">
+									<div class="flex w-full justify-between">
+										<div class=" self-center text-xs font-medium">
+											{$i18n.t('Reranking Engine')}
+										</div>
+										<div class="flex items-center relative">
+											<select
+												class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+												bind:value={RAGConfig.RAG_RERANKING_ENGINE}
+												placeholder="Select a reranking model engine"
+												on:change={(e) => {
+													if (e.target.value === 'external') {
+														RAGConfig.RAG_RERANKING_MODEL = '';
+													} else if (e.target.value === '') {
+														RAGConfig.RAG_RERANKING_MODEL = 'BAAI/bge-reranker-v2-m3';
+													}
+												}}
+											>
+												<option value="">{$i18n.t('Default (SentenceTransformers)')}</option>
+												<option value="external">{$i18n.t('External')}</option>
+											</select>
+										</div>
+									</div>
+
+									{#if RAGConfig.RAG_RERANKING_ENGINE === 'external'}
+										<div class="my-0.5 flex gap-2 pr-2">
+											<input
+												class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+												placeholder={$i18n.t('API Base URL')}
+												bind:value={RAGConfig.RAG_EXTERNAL_RERANKER_URL}
+												required
+											/>
+
+											<SensitiveInput
+												placeholder={$i18n.t('API Key')}
+												bind:value={RAGConfig.RAG_EXTERNAL_RERANKER_API_KEY}
+												required={false}
+											/>
+										</div>
+									{/if}
+								</div>
+
 								<div class="  mb-2.5 flex flex-col w-full">
 									<div class=" mb-1 text-xs font-medium">{$i18n.t('Reranking Model')}</div>
 
@@ -666,62 +665,9 @@
 													placeholder={$i18n.t('Set reranking model (e.g. {{model}})', {
 														model: 'BAAI/bge-reranker-v2-m3'
 													})}
-													bind:value={rerankingModel}
+													bind:value={RAGConfig.RAG_RERANKING_MODEL}
 												/>
 											</div>
-											<button
-												class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
-												on:click={() => {
-													rerankingModelUpdateHandler();
-												}}
-												disabled={updateRerankingModelLoading}
-											>
-												{#if updateRerankingModelLoading}
-													<div class="self-center">
-														<svg
-															class=" w-4 h-4"
-															viewBox="0 0 24 24"
-															fill="currentColor"
-															xmlns="http://www.w3.org/2000/svg"
-														>
-															<style>
-																.spinner_ajPY {
-																	transform-origin: center;
-																	animation: spinner_AtaB 0.75s infinite linear;
-																}
-
-																@keyframes spinner_AtaB {
-																	100% {
-																		transform: rotate(360deg);
-																	}
-																}
-															</style>
-															<path
-																d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-																opacity=".25"
-															/>
-															<path
-																d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-																class="spinner_ajPY"
-															/>
-														</svg>
-													</div>
-												{:else}
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 16 16"
-														fill="currentColor"
-														class="w-4 h-4"
-													>
-														<path
-															d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
-														/>
-														<path
-															d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
-														/>
-													</svg>
-												{/if}
-											</button>
 										</div>
 									</div>
 								</div>
