@@ -319,7 +319,7 @@
 												const res = await getTopModels(localStorage.token, start, end);
 												analytics = {
 													...analytics,
-													topModels: res
+													topModels: res?.length > 0 ? res : []
 												}
 												showMonthsDropdown = false;
 											}}
