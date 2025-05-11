@@ -682,7 +682,8 @@
 					console.log($companyConfig?.config?.models?.DEFAULT_MODELS);
 					selectedModels = $companyConfig?.config?.models?.DEFAULT_MODELS?.split(',');
 				} else {
-					selectedModels = [''];
+					const gptDefault = $models?.find(item => item.name === 'GPT 4o-mini')
+					selectedModels = [gptDefault?.id];
 				}
 			//}
 		}
