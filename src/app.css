@@ -81,7 +81,7 @@ textarea::placeholder {
 }
 
 .font-primary {
-	font-family: 'Archivo', sans-serif;
+	font-family: 'Archivo', 'Vazirmatn', sans-serif;
 }
 
 .drag-region {
