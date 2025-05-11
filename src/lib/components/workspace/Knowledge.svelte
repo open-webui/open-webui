@@ -331,8 +331,7 @@
 								</Tooltip>
 							</div>
 							<div class=" text-xs text-gray-500 line-clamp-1 dark:text-customGray-100/50">
-								{$i18n.t('Updated')}
-								{dayjs(item.updated_at * 1000).fromNow()}
+								{dayjs(item.updated_at * 1000).format('DD.MM.YYYY')}
 							</div>
 						</div>
 					</button>
