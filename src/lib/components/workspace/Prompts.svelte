@@ -400,7 +400,7 @@
 							  }} 
 							>
 								<div class=" flex-1 flex items-center gap-2 self-center">
-									<div class="text-base line-clamp-1 capitalize {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-100'}">
+									<div class="text-left text-base line-clamp-1 capitalize {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-100'}">
 										{prompt.title}
 									</div>
 									<!-- <div
