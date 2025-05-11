@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, getContext, tick } from 'svelte';
-	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
+	import { models, tools, functions, knowledge as knowledgeCollections, user, companyConfig } from '$lib/stores';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -72,9 +72,10 @@
 		}
 	}
 
+	const gptDefault = $models?.find(item => item.name === 'GPT 4o-mini')
 	let info = {
 		id: '',
-		base_model_id: null,
+		base_model_id: $companyConfig?.config?.models?.DEFAULT_MODELS ? $companyConfig?.config?.models?.DEFAULT_MODELS : gptDefault?.id,
 		name: '',
 		meta: {
 			profile_image_url: '',
