@@ -336,8 +336,12 @@ print(
  \___/| .__/ \___|_| |_|    \_/\_/ \___|_.__/ \___/|___|
       |_|
 
+for butterboard - an AI ondoarding & adaptation platform 
+2025 @ butterboard.online
 
-v{VERSION} - building the best open-source AI user interface.
+fork version 0.01 alpha
+
+based on v{VERSION} - building the best open-source AI user interface.
 {f"Commit: {WEBUI_BUILD_HASH}" if WEBUI_BUILD_HASH != "dev-build" else ""}
 https://github.com/open-webui/open-webui
 """
@@ -1143,7 +1147,7 @@ async def get_manifest_json():
     return {
         "name": WEBUI_NAME,
         "short_name": WEBUI_NAME,
-        "description": "Open WebUI is an open, extensible, user-friendly interface for AI that adapts to your workflow.",
+        "description": "Butterboard is an AI onboarding and adaptation platform. UI is based on Open WebUI - open, extensible, user-friendly interface for AI that adapts to your workflow.",
         "start_url": "/",
         "display": "standalone",
         "background_color": "#343541",

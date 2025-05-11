@@ -133,10 +133,10 @@ DEFAULT_CONFIG = {
             },
             {
                 "title": [
-                    "Explain options trading",
-                    "if I'm familiar with buying and selling stocks",
+                    "Как получить отпуск?",
+                    "С кем его согласовать и какие документы нужны",
                 ],
-                "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
+                "content": "Как правильно оформить отпуск согласно регламенту компании?",
             },
             {
                 "title": ["Overcome procrastination", "give me tips"],
@@ -855,7 +855,7 @@ DEFAULT_PROMPT_SUGGESTIONS = PersistentConfig(
         },
         {
             "title": [
-                "Explain options trading",
+                "Как оформить отпуск?",
                 "if I'm familiar with buying and selling stocks",
             ],
             "content": "Explain options trading in simple terms if I'm familiar with buying and selling stocks.",
