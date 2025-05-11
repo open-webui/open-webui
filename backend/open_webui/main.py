@@ -715,7 +715,7 @@ app.state.config.FIRECRAWL_API_BASE_URL = FIRECRAWL_API_BASE_URL
 app.state.config.FIRECRAWL_API_KEY = FIRECRAWL_API_KEY
 app.state.config.TAVILY_EXTRACT_DEPTH = TAVILY_EXTRACT_DEPTH
 
-app.state.EMBEDDING_FUNCTION = None
+app.state.EMBEDDING_FUNCTION = {}
 app.state.ef = {}
 app.state.rf = {}
 
@@ -738,7 +738,7 @@ except Exception as e:
     pass
 
 
-app.state.EMBEDDING_FUNCTION = get_embedding_function(
+app.state.EMBEDDING_FUNCTION["DEFAULT"] = get_embedding_function(
     app.state.config.RAG_EMBEDDING_ENGINE,
     app.state.config.RAG_EMBEDDING_MODEL,
     app.state.ef,
