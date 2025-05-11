@@ -20,10 +20,22 @@
 	import DocumentChartBar from '../icons/DocumentChartBar.svelte';
 	import Evaluations from './Settings/Evaluations.svelte';
 	import CodeExecution from './Settings/CodeExecution.svelte';
+	import { user } from '$lib/stores'; 
+
+	const SPECIAL_ADMIN_EMAILS = [
+	'cg4532@nyu.edu',
+	'ms15138@nyu.edu',
+	'mb484@nyu.edu',
+	'jy4421@nyu.edu',
+	'sm11538@nyu.edu',
+	'ht2490@nyu.edu'
+	];
+
+	const canViewRestrictedTabs = () => SPECIAL_ADMIN_EMAILS.includes($user?.email);
 
 	const i18n = getContext('i18n');
 
-	let selectedTab = 'general';
+	let selectedTab = 'models';
 
 	onMount(() => {
 		const containerElement = document.getElementById('admin-settings-tabs-container');
@@ -44,6 +56,7 @@
 		id="admin-settings-tabs-container"
 		class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-medium text-left scrollbar-none"
 	>
+	{#if canViewRestrictedTabs()}
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 lg:flex-none flex text-right transition {selectedTab ===
 			'general'
@@ -69,7 +82,9 @@
 			</div>
 			<div class=" self-center">{$i18n.t('General')}</div>
 		</button>
+	{/if}
 
+	{#if canViewRestrictedTabs()}
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'connections'
@@ -93,6 +108,7 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Connections')}</div>
 		</button>
+	{/if}
 
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
@@ -119,7 +135,8 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Models')}</div>
 		</button>
-
+	
+	{#if canViewRestrictedTabs()}
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'evaluations'
@@ -134,6 +151,7 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Evaluations')}</div>
 		</button>
+	{/if}
 
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
@@ -188,7 +206,7 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Web Search')}</div>
 		</button>
-
+	{#if canViewRestrictedTabs()}
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'code-execution'
@@ -214,7 +232,9 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Code Execution')}</div>
 		</button>
+	{/if}
 
+	{#if canViewRestrictedTabs()}
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'interface'
@@ -240,7 +260,9 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Interface')}</div>
 		</button>
-
+	{/if}
+	
+	{#if canViewRestrictedTabs()}
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'audio'
@@ -267,7 +289,9 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Audio')}</div>
 		</button>
+	{/if}
 
+	{#if canViewRestrictedTabs()}	
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'images'
@@ -293,7 +317,9 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Images')}</div>
 		</button>
-
+	{/if}
+	
+	{#if canViewRestrictedTabs()}
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'pipelines'
@@ -323,7 +349,9 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Pipelines')}</div>
 		</button>
+	{/if}
 
+	{#if canViewRestrictedTabs()}
 		<button
 			class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-right transition {selectedTab ===
 			'db'
@@ -351,6 +379,7 @@
 			</div>
 			<div class=" self-center">{$i18n.t('Database')}</div>
 		</button>
+	{/if}
 	</div>
 
 	<div class="flex-1 mt-3 lg:mt-0 overflow-y-scroll pr-1 scrollbar-hidden">
@@ -362,7 +391,7 @@
 					await tick();
 					await config.set(await getBackendConfig());
 				}}
-			/>
+			/>	
 		{:else if selectedTab === 'connections'}
 			<Connections
 				on:save={() => {

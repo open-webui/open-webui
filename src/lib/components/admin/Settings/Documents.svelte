@@ -916,7 +916,7 @@
 				</div>
 			</div>
 
-			<div class="mb-3">
+			<!-- <div class="mb-3">
 				<div class=" mb-2.5 text-base font-medium">{$i18n.t('Danger Zone')}</div>
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
@@ -950,7 +950,7 @@
 						</button>
 					</div>
 				</div>
-			</div>
+			</div> -->
 		</div>
 	</div>
 	<div class="flex justify-end pt-3 text-sm font-medium">
