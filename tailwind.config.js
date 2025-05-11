@@ -19,6 +19,9 @@ export default {
 				'6.5': '1.625rem',
 				'45': '11.25rem', 
 			},
+			borderRadius: {
+				mdx: '10px'
+			},
 			colors: {
 				gray: {
 					50: '#f9f9f9',

@@ -25,7 +25,13 @@
 	import ModelControlIcon from '../icons/ModelControlIcon.svelte';
 	import ModelControl from './Settings/CompanySettings/ModelControl.svelte';
 	import { getUsers } from '$lib/apis/users';
-
+	import AnalyticsIcon from '../icons/AnalyticsIcon.svelte';
+	import Analytics from './Settings/CompanySettings/Analytics.svelte';
+	import { getTopModels, getTotalUsers, getTotalMessages, getAdoptionRate, getPowerUsers, getSavedTimeInSeconds, getTopUsers, getTotalBilling, getTotalChats } from '$lib/apis/analytics';
+	import BillingIcon from '../icons/BillingIcon.svelte';
+	import Billing from './Settings/CompanySettings/Billing.svelte';
+	import { getMonthRange } from '$lib/utils';
+	
 	const i18n = getContext('i18n');
 
 	export let show = false;
@@ -55,6 +61,20 @@
 			keywords: [	
 			]
 		},
+		{
+			id: 'analytics',
+			title: 'Analitics',
+			keywords: [
+
+			]
+		},
+		{
+			id: 'billing',
+			title: 'Billing',
+			keywords: [
+
+			]
+		}
 		
 	];
 
@@ -131,10 +151,65 @@
 		users = await getUsers(localStorage.token);
 	};
 
+	let analytics = null;
+	let analyticsLoading = false;
+
+	async function fetchAnalytics() {
+	const token = localStorage.token;
+	const now = new Date();
+	const year = now.getFullYear();
+	const month = now.getMonth() + 1;
+	const { start, end } = getMonthRange(year, month);
+	console.log(start, end)
+	try {
+		analyticsLoading = true;
+		const [
+			topModels,
+			totalUsers,
+			totalMessages,
+			adoptionRate,
+			powerUsers,
+			savedTime,
+			topUsers,
+			totalBilling,
+			totalChats
+		] = await Promise.allSettled([
+			getTopModels(token, start, end),
+			getTotalUsers(token),
+			getTotalMessages(token),
+			getAdoptionRate(token),
+			getPowerUsers(token),
+			getSavedTimeInSeconds(token),
+			getTopUsers(token, start, end),
+			getTotalBilling(token),
+			getTotalChats(token)
+		]);
+		
+		analytics = {
+			topModels: topModels?.status === 'fulfilled' ? topModels?.value : [],
+			totalUsers: totalUsers?.status === 'fulfilled' ? totalUsers?.value : {},
+			totalMessages: totalMessages?.status === 'fulfilled' ? totalMessages?.value : {},
+			adoptionRate: adoptionRate?.status === 'fulfilled' ? adoptionRate?.value : {},
+			powerUsers: powerUsers?.status === 'fulfilled' ? powerUsers?.value : {},
+			savedTime: savedTime?.status === 'fulfilled' ? savedTime?.value : {},
+			topUsers: topUsers?.status === 'fulfilled' ? topUsers?.value : [],
+			totalBilling: totalBilling?.status === 'fulfilled' ? totalBilling?.value : {},
+			totalChats: totalChats?.status === 'fulfilled' ? totalChats?.value : {}
+		}
+		console.log(analytics)
+	} catch (error) {
+		console.error('Error fetching analytics:', error);
+	} finally {
+		analyticsLoading = false;
+	}
+}
+
 	$: if(show){
 		getUsersHandler();
+		fetchAnalytics();
 		selectedTab = 'general-settings';
 	}
+
 </script>
 
 <Modal size="md-plus" bind:show blockBackdropClick={true} className="dark:bg-customGray-800 rounded-2xl" containerClassName="bg-[#1D1A1A]/50 backdrop-blur-[7.44px]">
@@ -165,7 +240,7 @@
 		<div class="flex flex-col md:flex-row w-full pr-7 md:space-x-4">
 			<div
 				id="settings-tabs-container"
-				class="rounded-bl-lg pl-4 pt-5 pr-2 tabs flex flex-row dark:bg-customGray-900 gap-2.5 md:gap-1 md:flex-col flex-1 md:flex-none md:w-[290px] dark:text-gray-200 text-sm font-medium text-left mb-1 md:mb-0"
+				class="rounded-bl-lg pl-4 pt-5 pr-2 tabs flex flex-row dark:bg-customGray-900 gap-2.5 md:gap-1 md:flex-col flex-1 md:flex-none md:w-[252px] dark:text-gray-200 text-sm font-medium text-left mb-1 md:mb-0"
 			>
 				<!-- <div class="hidden md:flex w-full rounded-xl -mb-1 px-0.5 gap-2" id="settings-search">
 					<div class="self-center rounded-l-xl bg-transparent">
@@ -230,6 +305,40 @@
 								<ModelControlIcon/>
 							</div>
 							<div class=" self-center">{$i18n.t('Model Control')}</div>
+						</div>
+					</button>
+					{:else if tabId === 'analytics'}
+					<button
+						class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+						'analytics'
+							? 'dark:bg-customGray-800'
+							: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+						on:click={() => {
+							selectedTab = 'analytics';
+						}}
+					>
+						<div class="flex items-center mb-1">
+							<div class=" self-center mr-2">
+								<AnalyticsIcon/>
+							</div>
+							<div class=" self-center">{$i18n.t('Analytics')}</div>
+						</div>
+					</button>
+					{:else if tabId === 'billing'}
+					<button
+						class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+						'billing'
+							? 'dark:bg-customGray-800'
+							: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+						on:click={() => {
+							selectedTab = 'billing';
+						}}
+					>
+						<div class="flex items-center mb-1">
+							<div class=" self-center mr-2">
+								<BillingIcon/>
+							</div>
+							<div class=" self-center">{$i18n.t('Billing')}</div>
 						</div>
 					</button>
 
@@ -460,8 +569,10 @@
 					/>
 				{:else if selectedTab === 'model-control'}
 					<ModelControl/>
-				{:else if selectedTab === 'about'}
-					<About />
+				{:else if selectedTab === 'analytics'}
+					<Analytics {analytics} {analyticsLoading}/>
+				{:else if selectedTab === 'billing'}
+					<Billing/>
 				{/if}
 			</div>
 		</div>
