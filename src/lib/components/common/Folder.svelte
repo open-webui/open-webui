@@ -152,7 +152,7 @@
 
 				{#if onAdd}
 					<button
-						class="absolute z-10 right-2 self-center flex items-center dark:text-customGray-300"
+						class="absolute z-10 right-2 self-center flex items-center dark:text-customGray-300 "
 						on:pointerup={(e) => {
 							e.stopPropagation();
 						}}
@@ -164,7 +164,7 @@
 					>
 						<Tooltip content={onAddLabel}>
 							<button
-								class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
+								class="p-0.5 dark:hover:bg-customGray-900 rounded-md touch-auto"
 								on:click={(e) => {}}
 							>
 								<AddFolderIcon />	
