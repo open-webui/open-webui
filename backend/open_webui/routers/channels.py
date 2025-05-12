@@ -448,6 +448,11 @@ async def update_message_by_id(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
         )
 
+    if message.user_id != user.id:
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
+    )
+
     try:
         message = Messages.update_message_by_id(message_id, form_data)
         message = Messages.get_message_by_id(message_id)
@@ -653,6 +658,11 @@ async def delete_message_by_id(
     if message.channel_id != id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT()
+        )
+
+    if message.user_id != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT()
         )
 
     try:
