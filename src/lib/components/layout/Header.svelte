@@ -88,7 +88,7 @@
 					target="_blank"
 					rel="noopener noreferrer"
 				>
-					{$i18n.t('Share your feedback')}
+					{$i18n.t('Share your feedback (french)')}
 				</a>
 			</div>
 

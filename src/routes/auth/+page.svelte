@@ -47,18 +47,18 @@
 	let currentIndex = 0;
 	const carouselItems = [
 		{
-			title: 'Posez vos questions',
-			description: 'Albert répond à vos question au quotidien.',
+			title: $i18n.t('Ask your questions'),
+			description: $i18n.t('Albert answers your everyday questions.'),
 			image: '/assets/illustrations/question.svg'
 		},
 		{
-			title: 'Intégrez vos documents',
-			description: 'Albert vous aide à discuter avec vos documents.',
+			title: $i18n.t('Integrate your documents'),
+			description: $i18n.t('Albert helps you chat with your documents.'),
 			image: '/assets/illustrations/file-search.svg'
 		},
 		{
-			title: 'IA ❤️ Internet',
-			description: 'Albert peut utiliser internet pour répondre à vos questions.',
+			title: $i18n.t('AI ❤️ Internet'),
+			description: $i18n.t('Albert can use the internet to answer your questions.'),
 			image: '/assets/illustrations/internet.svg'
 		}
 	];
@@ -320,11 +320,7 @@
 														<div
 															class="text-2xl sm:text-4xl md:text-5xl fr-text-default--grey font-bold text-center"
 														>
-															{$i18n.t("L'IA")}
-															<br />
-															{$i18n.t('au service')}
-															<br />
-															{$i18n.t('des agents.')}
+															{@html $i18n.t('ai_for_public_services').replace(/\n/g, '<br />')}
 														</div>
 													</div>
 												</div>
@@ -341,17 +337,17 @@
 									</div>
 
 									<!-- Right column - Carousel -->
-									<div class="w-full md:w-1/2">
+									<div class="w-full md:w-1/2 hidden md:block">
 										<div class="w-full max-w-md mx-auto">
 											<!-- Carousel container -->
 											<div
-												class="carousel relative min-h-[250px] sm:min-h-[300px] md:min-h-[350px] overflow-hidden"
+												class="carousel flex flex-col justify-between min-h-[350px] h-[350px] sm:min-h-[400px] sm:h-[400px] md:min-h-[450px] md:h-[450px] overflow-hidden"
 											>
 												{#each carouselItems as item, i}
 													{#if currentIndex === i}
 														<!-- Carousel item -->
 														<div
-															class="carousel-item flex flex-col gap-4 md:gap-6 absolute w-full"
+															class="carousel-item flex flex-col gap-4 md:gap-6 w-full h-full"
 															in:fly={{ x: 200, duration: 1000, opacity: 1 }}
 															out:fly={{ x: -200, duration: 1000, opacity: 0 }}
 														>
@@ -365,11 +361,11 @@
 																</p>
 															</div>
 															<!-- Carousel image -->
-															<div class="w-full h-44 sm:h-48 md:h-56 relative">
+															<div class="flex-1 flex items-center justify-center">
 																<img
 																	src={item.image}
 																	alt={$i18n.t(item.title)}
-																	class="w-full h-full object-contain"
+																	class="max-h-56 sm:max-h-64 md:max-h-72 w-auto object-contain"
 																/>
 															</div>
 															<!-- Carousel navigation dots -->

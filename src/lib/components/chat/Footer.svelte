@@ -1,5 +1,7 @@
 <script>
 	import { slide } from 'svelte/transition';
+	import { getContext } from 'svelte';
+	const i18n = getContext('i18n');
 	let expanded = false;
 
 	function toggleFooter() {
@@ -23,9 +25,9 @@
 				aria-controls="footer-content"
 			>
 				{#if expanded}
-					Réduire les informations
+					{$i18n.t('Reduce information')}
 				{:else}
-					Plus d'informations
+					{$i18n.t('More information')}
 				{/if}
 			</button>
 		</div>
@@ -78,29 +80,31 @@
 						<div class="footer-links-column">
 							<ul class="fr-footer__bottom-list">
 								<li class="fr-footer__bottom-item">
-									<a class="fr-footer__bottom-link" href="#">Plan du site</a>
+									<a class="fr-footer__bottom-link" href="#">{$i18n.t('Site map')}</a>
 								</li>
 								<li class="fr-footer__bottom-item">
 									<a class="fr-footer__bottom-link" href="#"
-										>Accessibilité : partiellement conforme</a
+										>{$i18n.t('Accessibility: not compliant')}</a
 									>
 								</li>
 								<li class="fr-footer__bottom-item">
-									<a class="fr-footer__bottom-link" href="#">Mentions légales</a>
+									<a class="fr-footer__bottom-link" href="#">{$i18n.t('Legal notice')}</a>
 								</li>
 								<li class="fr-footer__bottom-item">
-									<a class="fr-footer__bottom-link" href="/privacy">Données personnelles</a>
+									<a class="fr-footer__bottom-link" href="/privacy">{$i18n.t('Personal data')}</a>
 								</li>
 								<li class="fr-footer__bottom-item">
-									<a class="fr-footer__bottom-link" href="/terms">Conditions d'utilisation</a>
+									<a class="fr-footer__bottom-link" href="/terms">{$i18n.t('Terms of use')}</a>
 								</li>
 							</ul>
 						</div>
 
 						<div class="fr-footer__bottom-copy">
 							<p>
-								Sauf mention explicite de propriété intellectuelle détenue par des tiers, les
-								contenus de ce site sont proposés sous <a
+								{$i18n.t(
+									'Except where otherwise noted, content on this site is licensed under the'
+								)}
+								<a
 									href="https://github.com/etalab/licence-ouverte/blob/master/LO.md"
 									target="_blank"
 									rel="noopener external"

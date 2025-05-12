@@ -1264,7 +1264,7 @@
 	"Youtube Language": "",
 	"Youtube Proxy URL": "",
 	"We would love to hear what you think about Albert": "Nous aimerions savoir ce que vous pensez d'Albert",
-	"Share your feedback": "Partagez votre avis",
+	"Share your feedback (french)": "Partagez votre avis",
 	"Dismiss banner": "Fermer la bannière",
 	"You'll have a direct conversation with our AI assistant to ask any questions you have.": "Vous aurez une conversation directe avec notre assistant IA pour poser toutes les questions que vous avez.",
 	"You're about to switch from chat to completion mode. This will create a new temporary chat. Do you want to proceed?": "Vous êtes sur le point de passer du mode conversation au mode complétion. Cela créera une nouvelle conversation temporaire. Voulez-vous continuer ?",
@@ -1273,6 +1273,20 @@
 	"You're muted": "Vous êtes en sourdine",
 	"Your account is now active!": "Votre compte est maintenant actif !",
 	"Your chat history will be accessible to all users (not just you).": "Votre historique de chat sera accessible à tous les utilisateurs (pas seulement vous).",
-	"Your chats.": "Vos conversations."
+	"Your chats.": "Vos conversations.",
+	"Reduce information": "Réduire les informations",
+	"More information": "Plus d'informations",
+	"Site map": "Plan du site",
+	"Accessibility: not compliant": "Accessibilité : non conforme",
+	"Legal notice": "Mentions légales",
+	"Personal data": "Données personnelles",
+	"Terms of use": "Conditions d'utilisation",
+	"Except where otherwise noted, content on this site is licensed under the": "Sauf indication contraire, le contenu de ce site est sous licence",
+	"Ask your questions": "Posez vos questions",
+	"Albert answers your everyday questions.": "Albert répond à vos questions au quotidien.",
+	"Integrate your documents": "Intégrez vos documents",
+	"Albert helps you chat with your documents.": "Albert vous aide à discuter avec vos documents.",
+	"AI ❤️ Internet": "IA ❤️ Internet",
+	"Albert can use the internet to answer your questions.": "Albert peut utiliser internet pour répondre à vos questions.",
+	"ai_for_public_services": "IA\npour\nles services publics"
 }
-
