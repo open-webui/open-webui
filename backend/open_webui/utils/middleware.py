@@ -3,6 +3,7 @@ import logging
 import sys
 import os
 import base64
+import io
 
 import asyncio
 from aiocache import cached
@@ -18,7 +19,7 @@ from uuid import uuid4
 from concurrent.futures import ThreadPoolExecutor
 
 
-from fastapi import Request, HTTPException
+from fastapi import Request, HTTPException, UploadFile
 from starlette.responses import Response, StreamingResponse
 
 
@@ -41,6 +42,7 @@ from open_webui.routers.pipelines import (
     process_pipeline_inlet_filter,
     process_pipeline_outlet_filter,
 )
+from open_webui.routers.files import upload_file
 
 from open_webui.utils.webhook import post_webhook
 
@@ -2039,7 +2041,7 @@ async def process_chat_response(
                         )
 
                         retries += 1
-                        log.debug(f"Attempt count: {retries}")
+                        log.debug(f"Attempt count: {retries}, intepreter {request.app.state.config.CODE_INTERPRETER_ENGINE}")
 
                         output = ""
                         try:
@@ -2088,73 +2090,35 @@ async def process_chat_response(
                                         "stdout": "Code interpreter engine not configured."
                                     }
 
-                                log.debug(f"Code interpreter output: {output}")
 
                                 if isinstance(output, dict):
-                                    stdout = output.get("stdout", "")
+                                    for sourceField in ("stdout", "result"):
+                                        source = output.get(sourceField, "")
 
-                                    if isinstance(stdout, str):
-                                        stdoutLines = stdout.split("\n")
-                                        for idx, line in enumerate(stdoutLines):
-                                            if "data:image/png;base64" in line:
-                                                id = str(uuid4())
+                                        if isinstance(source, str):
+                                            sourceLines = source.split("\n")
+                                            for idx, line in enumerate(sourceLines):
+                                                if "data:image/png;base64" in line:
+                                                    # line looks like data:image/png;base64,<base64data>
+                                                    content_type = line.split(',')[0].split(';')[0].split(':')[1]
+                                                    file_data = io.BytesIO(base64.b64decode(line.split(',')[1]))
+                                                    file_name = f"image-{metadata['chat_id']}-{metadata['message_id']}-{sourceField}-{idx}.png"
+                                                    file = UploadFile(
+                                                        filename=file_name,
+                                                        file=file_data,
+                                                        headers={"content-type": content_type},
+                                                    )
+                                                    file_response = upload_file(request, file, user=user)
+                                                    Chats.add_output_file_id_to_chat(metadata["chat_id"], file_response.id)
 
-                                                # ensure the path exists
-                                                os.makedirs(
-                                                    os.path.join(CACHE_DIR, "images"),
-                                                    exist_ok=True,
-                                                )
-
-                                                image_path = os.path.join(
-                                                    CACHE_DIR,
-                                                    f"images/{id}.png",
-                                                )
-
-                                                with open(image_path, "wb") as f:
-                                                    f.write(
-                                                        base64.b64decode(
-                                                            line.split(",")[1]
-                                                        )
+                                                    sourceLines[idx] = (
+                                                        f"![Output Image {idx}](/api/v1/files/{file_response.id}/content)"
                                                     )
 
-                                                stdoutLines[idx] = (
-                                                    f"![Output Image {idx}](/cache/images/{id}.png)"
-                                                )
+                                            output[sourceField] = "\n".join(sourceLines)
 
-                                        output["stdout"] = "\n".join(stdoutLines)
-
-                                    result = output.get("result", "")
-
-                                    if isinstance(result, str):
-                                        resultLines = result.split("\n")
-                                        for idx, line in enumerate(resultLines):
-                                            if "data:image/png;base64" in line:
-                                                id = str(uuid4())
-
-                                                # ensure the path exists
-                                                os.makedirs(
-                                                    os.path.join(CACHE_DIR, "images"),
-                                                    exist_ok=True,
-                                                )
-
-                                                image_path = os.path.join(
-                                                    CACHE_DIR,
-                                                    f"images/{id}.png",
-                                                )
-
-                                                with open(image_path, "wb") as f:
-                                                    f.write(
-                                                        base64.b64decode(
-                                                            line.split(",")[1]
-                                                        )
-                                                    )
-
-                                                resultLines[idx] = (
-                                                    f"![Output Image {idx}](/cache/images/{id}.png)"
-                                                )
-
-                                        output["result"] = "\n".join(resultLines)
                         except Exception as e:
+                            log.exception(e)
                             output = str(e)
 
                         content_blocks[-1]["output"] = output

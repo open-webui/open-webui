@@ -6,6 +6,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
+from open_webui.models.files import Files
 from open_webui.env import SRC_LOG_LEVELS
 
 from pydantic import BaseModel, ConfigDict
@@ -296,6 +297,14 @@ class ChatTable:
                 .update({"share_id": shared_chat.id})
             )
             db.commit()
+
+            # Make sure all the output files are shared. There names are GUIDs
+            # and they don't show up in search for everyone, so these can still
+            # only be accessed if you know their GUID and are a valid user.
+            for fileId in chat.meta.get("outputFileIds", []):
+                log.debug(f"Setting shared on file {fileId}")
+                Files.update_file_access_control_by_id(fileId, {"shared": True})
+
             return shared_chat if (shared_result and result) else None
 
     def update_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
@@ -907,6 +916,46 @@ class ChatTable:
                 return True
         except Exception:
             return False
+
+    def add_output_file_id_to_chat(self, id: str, file_id: str) -> Optional[ChatModel]:
+        """Adds a new file ID to the outputFileIds list in the chat's metadata."""
+        try:
+            with get_db() as db:
+                chat = db.query(Chat).filter(Chat.id == id).with_for_update().first()
+                if chat is None:
+                    return None
+
+                output_file_ids = chat.meta.get("outputFileIds", [])
+                if file_id in output_file_ids:
+                    return ChatModel.model_validate(chat)
+
+                output_file_ids.append(file_id)
+                chat.meta = {
+                    **chat.meta,
+                    "outputFileIds": output_file_ids
+                }
+                chat.updated_at = int(time.time())
+
+                db.commit()
+                return ChatModel.model_validate(chat)
+        except Exception as e:
+            log.error(f"Error adding output file ID: {e}")
+            return None
+
+    def get_output_file_ids_by_chat_id(self, id: str) -> list[str]:
+        """
+        Gets all file IDs from the outputFileIds list in the chat's metadata.
+        """
+        try:
+            with get_db() as db:
+                chat = db.query(Chat).filter(Chat.id == id).first()
+                if chat is None:
+                    return []
+
+                return chat.meta.get("outputFileIds", [])
+        except Exception as e:
+            log.error(f"Error getting output file IDs: {e}")
+            return []
 
 
 Chats = ChatTable()

@@ -211,6 +211,16 @@ class FilesTable:
             except Exception:
                 return None
 
+    def update_file_access_control_by_id(self, id: str, access_control: dict) -> Optional[FileModel]:
+        with get_db() as db:
+            try:
+                file = db.query(File).filter_by(id=id).first()
+                file.access_control = {**(file.access_control if file.access_control else {}), **access_control}
+                db.commit()
+                return FileModel.model_validate(file)
+            except Exception as e:
+                return None
+
     def delete_file_by_id(self, id: str) -> bool:
         with get_db() as db:
             try:
