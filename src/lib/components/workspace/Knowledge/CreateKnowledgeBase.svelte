@@ -229,13 +229,6 @@
 				return;
 			}
 
-			if (!RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL) {
-				await embeddingModelUpdateHandler();
-
-				if (RAGConfig.ENABLE_RAG_HYBRID_SEARCH) {
-					await rerankingModelUpdateHandler();
-				}
-			}
 		}
 
         const res = await createNewKnowledge(localStorage.token, 
@@ -252,7 +245,15 @@
             knowledge.set(await getKnowledgeBases(localStorage.token));
             goto(`/workspace/knowledge/${res.id}`);
         }
+        if (enableIndividualRagConfig) {
+			if (!RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL) {
+				await embeddingModelUpdateHandler();
 
+				if (RAGConfig.ENABLE_RAG_HYBRID_SEARCH) {
+					await rerankingModelUpdateHandler();
+				}
+			}
+        }
         loading = false;
     };
 
