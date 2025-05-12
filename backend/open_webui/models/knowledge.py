@@ -35,6 +35,7 @@ class Knowledge(Base):
 
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
+    rag_config = Column(JSON, nullable=True)  # Configuration for RAG (Retrieval-Augmented Generation) model.
 
     access_control = Column(JSON, nullable=True)  # Controls data access levels.
     # Defines access control rules for this entry.
@@ -68,6 +69,7 @@ class KnowledgeModel(BaseModel):
 
     data: Optional[dict] = None
     meta: Optional[dict] = None
+    rag_config: Optional[dict] = None  # Configuration for RAG (Retrieval-Augmented Generation) model.
 
     access_control: Optional[dict] = None
 
@@ -97,7 +99,7 @@ class KnowledgeForm(BaseModel):
     description: str
     data: Optional[dict] = None
     access_control: Optional[dict] = None
-    rag_config: Optional[dict] = None
+    rag_config: Optional[dict] = {}
 
 
 class KnowledgeTable:
@@ -107,7 +109,6 @@ class KnowledgeTable:
         with get_db() as db:
             knowledge_data = {
                 **form_data.model_dump(),
-                "data": {"rag_config": form_data.rag_config},
                 "id": str(uuid.uuid4()),
                 "user_id": user_id,
                 "created_at": int(time.time()),
