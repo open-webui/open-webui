@@ -34,7 +34,7 @@ router = APIRouter()
 ############################
 
 
-PAGE_ITEM_COUNT = 10
+PAGE_ITEM_COUNT = 30
 
 
 @router.get("/", response_model=UserListResponse)

@@ -1,6 +1,6 @@
 {
 	"name": "open-webui",
-	"version": "0.6.7",
+	"version": "0.6.9",
 	"private": true,
 	"scripts": {
 		"dev": "npm run pyodide:fetch && vite dev --host",
@@ -79,6 +79,7 @@
 		"dompurify": "^3.2.5",
 		"eventsource-parser": "^1.1.2",
 		"file-saver": "^2.0.5",
+		"focus-trap": "^7.6.4",
 		"fuse.js": "^7.0.0",
 		"highlight.js": "^11.9.0",
 		"html-entities": "^2.5.3",
