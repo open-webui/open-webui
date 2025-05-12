@@ -151,13 +151,19 @@ class QdrantClient(VectorDBBase):
             log.info(
                 f"Multi-tenant collection {mt_collection_name} created with dimension {dimension}!"
             )
+        except UnexpectedResponse as e:
+            # Check for the specific 409 Conflict status code for "already exists" errors
+            if e.status_code == 409:
+                error_data = e.structured()
+                error_msg = error_data.get("status", {}).get("error", "")
+
+                if "already exists" in error_msg:
+                    log.debug(f"Collection {mt_collection_name} already exists")
+                    return
+            # If it's not an already exists error, re-raise
+            raise e
         except Exception as e:
-            # If collection already exists, that's fine
-            if "already exists" in str(e).lower():
-                log.debug(f"Collection {mt_collection_name} already exists")
-            else:
-                # Re-raise other errors
-                raise
+            raise e
 
     def _create_points(self, items: list[VectorItem], tenant_id: str):
         """
