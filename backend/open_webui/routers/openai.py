@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Literal, Optional, overload
 
@@ -352,6 +353,17 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                     url, {}
                 ),  # Legacy support
             )
+
+            if isinstance(response,dict) and isinstance(response.get("data",[]), str):
+                if re.fullmatch(r'(\s*[A-Za-z0-9_.-]+\s*,)+\s*[A-Za-z0-9_.-]+\s*', response["data"]):
+                    ids = [s.strip() for s in response["data"].split(',') if s.strip()]
+                    response["data"] = [
+                        {
+                            'id': model_id,
+                            'object': 'model'
+                        }
+                        for model_id in ids
+                    ]
 
             prefix_id = api_config.get("prefix_id", None)
             tags = api_config.get("tags", [])
