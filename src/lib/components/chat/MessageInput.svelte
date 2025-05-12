@@ -611,6 +611,7 @@
 												bind:this={chatInputElement}
 												bind:value={prompt}
 												id="chat-input"
+												preserveBreaks={true}
 												messageInput={true}
 												shiftEnter={!($settings?.ctrlEnterToSend ?? false) &&
 													(!$mobile ||

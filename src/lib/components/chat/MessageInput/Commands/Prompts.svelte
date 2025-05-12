@@ -22,9 +22,18 @@
 	let selectedPromptIdx = 0;
 	let filteredPrompts = [];
 
-	$: filteredPrompts = $prompts
-		.filter((p) => p.command.toLowerCase().includes(command.toLowerCase()))
-		.sort((a, b) => a.title.localeCompare(b.title));
+	$: {
+		if (command && command.length > 1) {
+			const commandName = command.substring(1).toLowerCase();
+			const cleanedCommandName = commandName.replace(/<\/?p>/gi, '').trim();
+
+			filteredPrompts = $prompts
+				.filter((p) => p.command.toLowerCase().includes(cleanedCommandName))
+				.sort((a, b) => a.title.localeCompare(b.title));
+		} else {
+			filteredPrompts = [];
+		}
+	}
 
 	$: if (command) {
 		selectedPromptIdx = 0;
@@ -120,23 +129,42 @@
 			text = text.replaceAll('{{CURRENT_WEEKDAY}}', weekday);
 		}
 
-		const lines = prompt.split('\n');
-		const lastLine = lines.pop();
-
-		const lastLineWords = lastLine.split(' ');
-		const lastWord = lastLineWords.pop();
-
 		if ($settings?.richTextInput ?? true) {
-			lastLineWords.push(
-				`${text.replace(/</g, '&lt;').replace(/>/g, '&gt;').replaceAll('\n', '<br/>')}`
-			);
+			const allPromptLines = prompt.split('\n');
+			const lastLineWithTrigger = allPromptLines.pop() || ''; // Line where command was typed
+			const wordsInLastLine = lastLineWithTrigger.split(' ');
+			wordsInLastLine.pop(); // Remove the command trigger itself (e.g., /mycommand)
 
-			lines.push(lastLineWords.join(' '));
-			prompt = lines.join('<br/>');
+			let fullPromptPrefix = '';
+			if (allPromptLines.length > 0) {
+			fullPromptPrefix = allPromptLines.join('\n');
+			}
+			if (wordsInLastLine.length > 0) {
+			if (fullPromptPrefix.length > 0) {
+				fullPromptPrefix += '\n';
+			}
+			fullPromptPrefix += wordsInLastLine.join(' ');
+			}
+			fullPromptPrefix = fullPromptPrefix.trimEnd();
+
+			if (text && text.trim().length > 0) { // If 'text' (the command's content) is not empty
+			if (fullPromptPrefix.length > 0) {
+				prompt = fullPromptPrefix + '\n\n' + text;
+			} else {
+				prompt = text;
+			}
+			} else {
+			prompt = fullPromptPrefix;
+			}
+
 		} else {
-			lastLineWords.push(text);
-			lines.push(lastLineWords.join(' '));
-			prompt = lines.join('\n');
+			const currentInputLines = prompt.split('\n');
+			const lastCurrentInputLine = currentInputLines.pop() || '';
+			const lastCurrentInputLineWords = lastCurrentInputLine.split(' ');
+			lastCurrentInputLineWords.pop();
+			lastCurrentInputLineWords.push(command.content);
+			currentInputLines.push(lastCurrentInputLineWords.join(' '));
+			prompt = currentInputLines.join('\n');
 		}
 
 		const chatInputContainerElement = document.getElementById('chat-input-container');
