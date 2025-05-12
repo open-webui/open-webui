@@ -2035,20 +2035,35 @@ YOUTUBE_LOADER_PROXY_URL = PersistentConfig(
 )
 
 
-ENABLE_RAG_WEB_SEARCH = PersistentConfig(
-    "ENABLE_RAG_WEB_SEARCH",
+# ENABLE_RAG_WEB_SEARCH = PersistentConfig(
+#     "ENABLE_RAG_WEB_SEARCH",
+#     "rag.web.search.enable",
+#     os.getenv("ENABLE_RAG_WEB_SEARCH", "False").lower() == "true",
+# )
+
+ENABLE_RAG_WEB_SEARCH = UserScopedConfig(
     "rag.web.search.enable",
     os.getenv("ENABLE_RAG_WEB_SEARCH", "False").lower() == "true",
 )
 
-RAG_WEB_SEARCH_ENGINE = PersistentConfig(
-    "RAG_WEB_SEARCH_ENGINE",
+# RAG_WEB_SEARCH_ENGINE = PersistentConfig(
+#     "RAG_WEB_SEARCH_ENGINE",
+#     "rag.web.search.engine",
+#     os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
+# )
+
+RAG_WEB_SEARCH_ENGINE = UserScopedConfig(
     "rag.web.search.engine",
     os.getenv("RAG_WEB_SEARCH_ENGINE", ""),
 )
 
-BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
-    "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL",
+# BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = PersistentConfig(
+#     "BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL",
+#     "rag.web.search.bypass_embedding_and_retrieval",
+#     os.getenv("BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
+# )
+
+BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = UserScopedConfig(
     "rag.web.search.bypass_embedding_and_retrieval",
     os.getenv("BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL", "False").lower() == "true",
 )
@@ -2066,136 +2081,249 @@ RAG_WEB_SEARCH_DOMAIN_FILTER_LIST = PersistentConfig(
 )
 
 
-SEARXNG_QUERY_URL = PersistentConfig(
-    "SEARXNG_QUERY_URL",
+# SEARXNG_QUERY_URL = PersistentConfig(
+#     "SEARXNG_QUERY_URL",
+#     "rag.web.search.searxng_query_url",
+#     os.getenv("SEARXNG_QUERY_URL", ""),
+# )
+
+SEARXNG_QUERY_URL = UserScopedConfig(
     "rag.web.search.searxng_query_url",
     os.getenv("SEARXNG_QUERY_URL", ""),
 )
 
-GOOGLE_PSE_API_KEY = PersistentConfig(
-    "GOOGLE_PSE_API_KEY",
+# GOOGLE_PSE_API_KEY = PersistentConfig(
+#     "GOOGLE_PSE_API_KEY",
+#     "rag.web.search.google_pse_api_key",
+#     os.getenv("GOOGLE_PSE_API_KEY", ""),
+# )
+
+GOOGLE_PSE_API_KEY = UserScopedConfig(
     "rag.web.search.google_pse_api_key",
     os.getenv("GOOGLE_PSE_API_KEY", ""),
 )
 
-GOOGLE_PSE_ENGINE_ID = PersistentConfig(
-    "GOOGLE_PSE_ENGINE_ID",
+# GOOGLE_PSE_ENGINE_ID = PersistentConfig(
+#     "GOOGLE_PSE_ENGINE_ID",
+#     "rag.web.search.google_pse_engine_id",
+#     os.getenv("GOOGLE_PSE_ENGINE_ID", ""),
+# )
+
+GOOGLE_PSE_ENGINE_ID = UserScopedConfig(
     "rag.web.search.google_pse_engine_id",
     os.getenv("GOOGLE_PSE_ENGINE_ID", ""),
 )
 
-BRAVE_SEARCH_API_KEY = PersistentConfig(
-    "BRAVE_SEARCH_API_KEY",
+# BRAVE_SEARCH_API_KEY = PersistentConfig(
+#     "BRAVE_SEARCH_API_KEY",
+#     "rag.web.search.brave_search_api_key",
+#     os.getenv("BRAVE_SEARCH_API_KEY", ""),
+# )
+
+BRAVE_SEARCH_API_KEY = UserScopedConfig(
     "rag.web.search.brave_search_api_key",
     os.getenv("BRAVE_SEARCH_API_KEY", ""),
 )
 
-KAGI_SEARCH_API_KEY = PersistentConfig(
-    "KAGI_SEARCH_API_KEY",
+# KAGI_SEARCH_API_KEY = PersistentConfig(
+#     "KAGI_SEARCH_API_KEY",
+#     "rag.web.search.kagi_search_api_key",
+#     os.getenv("KAGI_SEARCH_API_KEY", ""),
+# )
+
+KAGI_SEARCH_API_KEY = UserScopedConfig(
     "rag.web.search.kagi_search_api_key",
     os.getenv("KAGI_SEARCH_API_KEY", ""),
 )
 
-MOJEEK_SEARCH_API_KEY = PersistentConfig(
-    "MOJEEK_SEARCH_API_KEY",
+# MOJEEK_SEARCH_API_KEY = PersistentConfig(
+#     "MOJEEK_SEARCH_API_KEY",
+#     "rag.web.search.mojeek_search_api_key",
+#     os.getenv("MOJEEK_SEARCH_API_KEY", ""),
+# )
+
+MOJEEK_SEARCH_API_KEY = UserScopedConfig(
     "rag.web.search.mojeek_search_api_key",
     os.getenv("MOJEEK_SEARCH_API_KEY", ""),
 )
 
-BOCHA_SEARCH_API_KEY = PersistentConfig(
-    "BOCHA_SEARCH_API_KEY",
+# BOCHA_SEARCH_API_KEY = PersistentConfig(
+#     "BOCHA_SEARCH_API_KEY",
+#     "rag.web.search.bocha_search_api_key",
+#     os.getenv("BOCHA_SEARCH_API_KEY", ""),
+# )
+
+BOCHA_SEARCH_API_KEY = UserScopedConfig(
     "rag.web.search.bocha_search_api_key",
     os.getenv("BOCHA_SEARCH_API_KEY", ""),
 )
 
-SERPSTACK_API_KEY = PersistentConfig(
-    "SERPSTACK_API_KEY",
+# SERPSTACK_API_KEY = PersistentConfig(
+#     "SERPSTACK_API_KEY",
+#     "rag.web.search.serpstack_api_key",
+#     os.getenv("SERPSTACK_API_KEY", ""),
+# )
+
+SERPSTACK_API_KEY = UserScopedConfig(
     "rag.web.search.serpstack_api_key",
     os.getenv("SERPSTACK_API_KEY", ""),
 )
 
-SERPSTACK_HTTPS = PersistentConfig(
-    "SERPSTACK_HTTPS",
+
+# SERPSTACK_HTTPS = PersistentConfig(
+#     "SERPSTACK_HTTPS",
+#     "rag.web.search.serpstack_https",
+#     os.getenv("SERPSTACK_HTTPS", "True").lower() == "true",
+# )
+
+SERPSTACK_HTTPS = UserScopedConfig(
     "rag.web.search.serpstack_https",
     os.getenv("SERPSTACK_HTTPS", "True").lower() == "true",
 )
 
-SERPER_API_KEY = PersistentConfig(
-    "SERPER_API_KEY",
+# SERPER_API_KEY = PersistentConfig(
+#     "SERPER_API_KEY",
+#     "rag.web.search.serper_api_key",
+#     os.getenv("SERPER_API_KEY", ""),
+# )
+
+SERPER_API_KEY = UserScopedConfig(
     "rag.web.search.serper_api_key",
     os.getenv("SERPER_API_KEY", ""),
 )
 
-SERPLY_API_KEY = PersistentConfig(
-    "SERPLY_API_KEY",
+# SERPLY_API_KEY = PersistentConfig(
+#     "SERPLY_API_KEY",
+#     "rag.web.search.serply_api_key",
+#     os.getenv("SERPLY_API_KEY", ""),
+# )
+
+SERPLY_API_KEY = UserScopedConfig(
     "rag.web.search.serply_api_key",
     os.getenv("SERPLY_API_KEY", ""),
 )
 
-TAVILY_API_KEY = PersistentConfig(
-    "TAVILY_API_KEY",
+# TAVILY_API_KEY = PersistentConfig(
+#     "TAVILY_API_KEY",
+#     "rag.web.search.tavily_api_key",
+#     os.getenv("TAVILY_API_KEY", ""),
+# )
+
+TAVILY_API_KEY = UserScopedConfig(
     "rag.web.search.tavily_api_key",
     os.getenv("TAVILY_API_KEY", ""),
 )
 
-JINA_API_KEY = PersistentConfig(
-    "JINA_API_KEY",
+# JINA_API_KEY = PersistentConfig(
+#     "JINA_API_KEY",
+#     "rag.web.search.jina_api_key",
+#     os.getenv("JINA_API_KEY", ""),
+# )
+
+JINA_API_KEY = UserScopedConfig(
     "rag.web.search.jina_api_key",
     os.getenv("JINA_API_KEY", ""),
 )
 
-SEARCHAPI_API_KEY = PersistentConfig(
-    "SEARCHAPI_API_KEY",
+# SEARCHAPI_API_KEY = PersistentConfig(
+#     "SEARCHAPI_API_KEY",
+#     "rag.web.search.searchapi_api_key",
+#     os.getenv("SEARCHAPI_API_KEY", ""),
+# )
+
+SEARCHAPI_API_KEY = UserScopedConfig(
     "rag.web.search.searchapi_api_key",
     os.getenv("SEARCHAPI_API_KEY", ""),
 )
 
-SEARCHAPI_ENGINE = PersistentConfig(
-    "SEARCHAPI_ENGINE",
+# SEARCHAPI_ENGINE = PersistentConfig(
+#     "SEARCHAPI_ENGINE",
+#     "rag.web.search.searchapi_engine",
+#     os.getenv("SEARCHAPI_ENGINE", ""),
+# )
+
+SEARCHAPI_ENGINE = UserScopedConfig(
     "rag.web.search.searchapi_engine",
     os.getenv("SEARCHAPI_ENGINE", ""),
 )
 
-SERPAPI_API_KEY = PersistentConfig(
-    "SERPAPI_API_KEY",
+# SERPAPI_API_KEY = PersistentConfig(
+#     "SERPAPI_API_KEY",
+#     "rag.web.search.serpapi_api_key",
+#     os.getenv("SERPAPI_API_KEY", ""),
+# )
+
+SERPAPI_API_KEY = UserScopedConfig(
     "rag.web.search.serpapi_api_key",
     os.getenv("SERPAPI_API_KEY", ""),
 )
 
-SERPAPI_ENGINE = PersistentConfig(
-    "SERPAPI_ENGINE",
+# SERPAPI_ENGINE = PersistentConfig(
+#     "SERPAPI_ENGINE",
+#     "rag.web.search.serpapi_engine",
+#     os.getenv("SERPAPI_ENGINE", ""),
+# )
+
+SERPAPI_ENGINE = UserScopedConfig(
     "rag.web.search.serpapi_engine",
     os.getenv("SERPAPI_ENGINE", ""),
 )
 
-BING_SEARCH_V7_ENDPOINT = PersistentConfig(
-    "BING_SEARCH_V7_ENDPOINT",
+# BING_SEARCH_V7_ENDPOINT = PersistentConfig(
+#     "BING_SEARCH_V7_ENDPOINT",
+#     "rag.web.search.bing_search_v7_endpoint",
+#     os.environ.get(
+#         "BING_SEARCH_V7_ENDPOINT", "https://api.bing.microsoft.com/v7.0/search"
+#     ),
+# )
+
+BING_SEARCH_V7_ENDPOINT = UserScopedConfig(
     "rag.web.search.bing_search_v7_endpoint",
     os.environ.get(
         "BING_SEARCH_V7_ENDPOINT", "https://api.bing.microsoft.com/v7.0/search"
     ),
 )
 
-BING_SEARCH_V7_SUBSCRIPTION_KEY = PersistentConfig(
-    "BING_SEARCH_V7_SUBSCRIPTION_KEY",
+# BING_SEARCH_V7_SUBSCRIPTION_KEY = PersistentConfig(
+#     "BING_SEARCH_V7_SUBSCRIPTION_KEY",
+#     "rag.web.search.bing_search_v7_subscription_key",
+#     os.environ.get("BING_SEARCH_V7_SUBSCRIPTION_KEY", ""),
+# )
+
+BING_SEARCH_V7_SUBSCRIPTION_KEY = UserScopedConfig(
     "rag.web.search.bing_search_v7_subscription_key",
     os.environ.get("BING_SEARCH_V7_SUBSCRIPTION_KEY", ""),
 )
 
-EXA_API_KEY = PersistentConfig(
-    "EXA_API_KEY",
+# EXA_API_KEY = PersistentConfig(
+#     "EXA_API_KEY",
+#     "rag.web.search.exa_api_key",
+#     os.getenv("EXA_API_KEY", ""),
+# )
+
+EXA_API_KEY = UserScopedConfig(
     "rag.web.search.exa_api_key",
     os.getenv("EXA_API_KEY", ""),
 )
 
-RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
-    "RAG_WEB_SEARCH_RESULT_COUNT",
+# RAG_WEB_SEARCH_RESULT_COUNT = PersistentConfig(
+#     "RAG_WEB_SEARCH_RESULT_COUNT",
+#     "rag.web.search.result_count",
+#     int(os.getenv("RAG_WEB_SEARCH_RESULT_COUNT", "3")),
+# )
+
+RAG_WEB_SEARCH_RESULT_COUNT = UserScopedConfig(
     "rag.web.search.result_count",
     int(os.getenv("RAG_WEB_SEARCH_RESULT_COUNT", "3")),
 )
 
-RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
-    "RAG_WEB_SEARCH_CONCURRENT_REQUESTS",
+# RAG_WEB_SEARCH_CONCURRENT_REQUESTS = PersistentConfig(
+#     "RAG_WEB_SEARCH_CONCURRENT_REQUESTS",
+#     "rag.web.search.concurrent_requests",
+#     int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
+# )
+
+RAG_WEB_SEARCH_CONCURRENT_REQUESTS = UserScopedConfig(
     "rag.web.search.concurrent_requests",
     int(os.getenv("RAG_WEB_SEARCH_CONCURRENT_REQUESTS", "10")),
 )
@@ -2206,8 +2334,14 @@ RAG_WEB_LOADER_ENGINE = PersistentConfig(
     os.environ.get("RAG_WEB_LOADER_ENGINE", "safe_web"),
 )
 
-RAG_WEB_SEARCH_TRUST_ENV = PersistentConfig(
-    "RAG_WEB_SEARCH_TRUST_ENV",
+
+# RAG_WEB_SEARCH_TRUST_ENV = PersistentConfig(
+#     "RAG_WEB_SEARCH_TRUST_ENV",
+#     "rag.web.search.trust_env",
+#     os.getenv("RAG_WEB_SEARCH_TRUST_ENV", "False").lower() == "true",
+# )
+
+RAG_WEB_SEARCH_TRUST_ENV = UserScopedConfig(
     "rag.web.search.trust_env",
     os.getenv("RAG_WEB_SEARCH_TRUST_ENV", "False").lower() == "true",
 )
