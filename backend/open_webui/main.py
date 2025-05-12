@@ -723,13 +723,13 @@ app.state.YOUTUBE_LOADER_TRANSLATION = None
 
 
 try:
-    app.state.ef["DEFAULT"] = get_ef(
+    app.state.ef[app.state.config.RAG_EMBEDDING_MODEL] = get_ef(
         app.state.config.RAG_EMBEDDING_ENGINE,
         app.state.config.RAG_EMBEDDING_MODEL,
         RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     )
 
-    app.state.rf["DEFAULT"] = get_rf(
+    app.state.rf[app.state.config.RAG_RERANKING_MODEL] = get_rf(
         app.state.config.RAG_RERANKING_MODEL,
         RAG_RERANKING_MODEL_AUTO_UPDATE,
     )
@@ -738,7 +738,7 @@ except Exception as e:
     pass
 
 
-app.state.EMBEDDING_FUNCTION["DEFAULT"] = get_embedding_function(
+app.state.EMBEDDING_FUNCTION[app.state.config.RAG_EMBEDDING_MODEL] = get_embedding_function(
     app.state.config.RAG_EMBEDDING_ENGINE,
     app.state.config.RAG_EMBEDDING_MODEL,
     app.state.ef,
