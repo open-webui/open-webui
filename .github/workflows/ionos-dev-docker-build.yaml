@@ -142,31 +142,22 @@ jobs:
               sleep 5
             fi
           done
-          echo "Pod ${POD_NAME} is running."
-          # Monitor the job status and print logs every 30 seconds
-          start_time=$(date +%s)
-          while true; do
-            current_time=$(date +%s)
-            elapsed=$((current_time - start_time))
-            # Print pod logs
-            echo "=== Logs for pod ${POD_NAME} ==="
-            kubectl logs --namespace=arc-runners ${POD_NAME}
-            # Check if the job is complete
-            JOB_STATUS=$(kubectl get job --namespace=arc-runners ${{ env.JOB_NAME }} -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}')
-            if [[ "$JOB_STATUS" == "True" ]]; then
-              echo "Job ${{ env.JOB_NAME }} is complete."
-              break
-            fi
-            # Timeout check
-            if [[ $elapsed -ge $TIMEOUT ]]; then
-              echo "Job ${{ env.JOB_NAME }} did not complete within timeout. Exiting."
-              exit 1
-            fi
-            echo "Job is not complete yet. Checking again in ${INTERVAL}s..."
-            sleep $INTERVAL
-          done
-          echo "Image is pushed to the Harbor Registry with TAG '${{ github.run_id }}'"
+          echo "Pod ${POD_NAME} is running. Following the log ..."
 
+          echo "=== Logs for pod ${POD_NAME} ==="
+          kubectl logs --namespace=arc-runners ${POD_NAME} --follow
+          echo "=== END: Logs for pod ${POD_NAME} ==="
+
+          JOB_EXIT_CODE=$( kubectl get pod ${POD_NAME} -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode}' )
+          if [[ "$JOB_EXIT_CODE" == "0" ]]; then
+            echo "Job ${{ env.JOB_NAME }} is complete."
+            echo "Image is pushed to the Harbor Registry with TAG '${{ github.run_id }}'"
+          else
+            echo "Job ${{ env.JOB_NAME }} failed. Status JSON:"
+            kubectl get job --namespace=arc-runners ${{ env.JOB_NAME }} -o yaml
+            exit 1
+          fi
+            
       - name: Delete Kaniko Job
         run: |
           kubectl delete job ${{ env.JOB_NAME }} --namespace=arc-runners --ignore-not-found
