@@ -1471,6 +1471,10 @@ AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
 DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE = """### Task:
 You are an autocompletion system. Continue the text in `<text>` based on the **completion type** in `<type>` and the given language.  
 
+### **User Data**:
+User Name: {{USER_NAME}}
+User Email: {{USER_EMAIL}}
+
 ### **Instructions**:
 1. Analyze `<text>` for context and meaning.  
 2. Use `<type>` to guide your output:  
@@ -1518,6 +1522,9 @@ TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = PersistentConfig(
 
 
 DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = """Available Tools: {{TOOLS}}
+
+User Name: {{USER_NAME}}
+User Email: {{USER_EMAIL}}
 
 Your task is to choose and return the correct tool(s) from the list of available tools based on the query. Follow these guidelines:
 
@@ -2028,6 +2035,10 @@ CHUNK_OVERLAP = PersistentConfig(
 
 DEFAULT_RAG_TEMPLATE = """### Task:
 Respond to the user query using the provided context, incorporating inline citations in the format [id] **only when the <source> tag includes an explicit id attribute** (e.g., <source id="1">).
+
+### User Data:
+User Name: {{USER_NAME}}
+User Email: {{USER_EMAIL}}
 
 ### Guidelines:
 - If you don't know the answer, clearly state that.

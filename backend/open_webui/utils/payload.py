@@ -26,6 +26,7 @@ def apply_model_system_prompt_to_body(
         template_params = {
             "user_name": user.name,
             "user_location": user.info.get("location") if user.info else None,
+            "user_email": user.email
         }
     else:
         template_params = {}

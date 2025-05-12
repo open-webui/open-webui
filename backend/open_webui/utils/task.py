@@ -39,7 +39,7 @@ def prompt_variables_template(template: str, variables: dict[str, str]) -> str:
 
 
 def prompt_template(
-    template: str, user_name: Optional[str] = None, user_location: Optional[str] = None
+    template: str, user_name: Optional[str] = None, user_location: Optional[str] = None, user_email: Optional[str] = None
 ) -> str:
     # Get the current date
     current_date = datetime.now()
@@ -69,6 +69,13 @@ def prompt_template(
     else:
         # Replace {{USER_LOCATION}} in the template with "Unknown"
         template = template.replace("{{USER_LOCATION}}", "Unknown")
+
+    if user_email:
+        # Replace {{USER_EMAIL}} in the template with the current email
+        template = template.replace("{{USER_EMAIL}}", user_email)
+    else:
+        # Replace {{USER_EMAIL}} in the template with "Unknown"
+        template = template.replace("{{USER_EMAIL}}", "Unknown")
 
     return template
 
@@ -198,7 +205,7 @@ def title_generation_template(
     template = prompt_template(
         template,
         **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
+            {"user_name": user.get("name"), "user_location": user.get("location"), "user_email": user.get("email")}
             if user
             else {}
         ),
@@ -217,7 +224,7 @@ def tags_generation_template(
     template = prompt_template(
         template,
         **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
+            {"user_name": user.get("name"), "user_location": user.get("location"), "user_email": user.get("email")}
             if user
             else {}
         ),
@@ -235,7 +242,7 @@ def image_prompt_generation_template(
     template = prompt_template(
         template,
         **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
+            {"user_name": user.get("name"), "user_location": user.get("location"), "user_email": user.get("email")}
             if user
             else {}
         ),
@@ -250,7 +257,7 @@ def emoji_generation_template(
     template = prompt_template(
         template,
         **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
+            {"user_name": user.get("name"), "user_location": user.get("location"), "user_email": user.get("email")}
             if user
             else {}
         ),
@@ -273,7 +280,7 @@ def autocomplete_generation_template(
     template = prompt_template(
         template,
         **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
+            {"user_name": user.get("name"), "user_location": user.get("location"), "user_email": user.get("email")}
             if user
             else {}
         ),
@@ -291,7 +298,7 @@ def query_generation_template(
     template = prompt_template(
         template,
         **(
-            {"user_name": user.get("name"), "user_location": user.get("location")}
+            {"user_name": user.get("name"), "user_location": user.get("location"), "user_email": user.get("email")}
             if user
             else {}
         ),
@@ -336,6 +343,12 @@ def moa_response_generation_template(
     return template
 
 
-def tools_function_calling_generation_template(template: str, tools_specs: str) -> str:
+def tools_function_calling_generation_template(template: str, tools_specs: str, user: Optional[dict] = None) -> str:
     template = template.replace("{{TOOLS}}", tools_specs)
+    if user:
+        template = template.replace("{{USER_NAME}}", user.name)
+        template = template.replace("{{USER_EMAIL}}", user.email)
+    else:
+        template = template.replace("{{USER_NAME}}", "Unknown")
+        template = template.replace("{{USER_EMAIL}}", "Unknown")    
     return template

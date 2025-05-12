@@ -155,7 +155,7 @@ async def chat_completion_tools_handler(
         template = DEFAULT_TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
 
     tools_function_calling_prompt = tools_function_calling_generation_template(
-        template, tools_specs
+        template, tools_specs, user
     )
     payload = get_tools_function_calling_payload(
         body["messages"], task_model_id, tools_function_calling_prompt

@@ -192,6 +192,7 @@ async def generate_title(
         {
             "name": user.name,
             "location": user.info.get("location") if user.info else None,
+            "email": user.email,
         },
     )
 
@@ -274,7 +275,7 @@ async def generate_chat_tags(
         template = DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE
 
     content = tags_generation_template(
-        template, form_data["messages"], {"name": user.name}
+        template, form_data["messages"], {"name": user.name, "email": user.email}
     )
 
     payload = {
@@ -346,6 +347,7 @@ async def generate_image_prompt(
         form_data["messages"],
         user={
             "name": user.name,
+            "email": user.email,
         },
     )
 
@@ -429,7 +431,7 @@ async def generate_queries(
         template = DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE
 
     content = query_generation_template(
-        template, form_data["messages"], {"name": user.name}
+        template, form_data["messages"], {"name": user.name, "email": user.email}
     )
 
     payload = {
@@ -516,7 +518,7 @@ async def generate_autocompletion(
         template = DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE
 
     content = autocomplete_generation_template(
-        template, prompt, messages, type, {"name": user.name}
+        template, prompt, messages, type, {"name": user.name, "email": user.email}
     )
 
     payload = {
@@ -585,6 +587,7 @@ async def generate_emoji(
         {
             "name": user.name,
             "location": user.info.get("location") if user.info else None,
+            "email": user.email
         },
     )
 
