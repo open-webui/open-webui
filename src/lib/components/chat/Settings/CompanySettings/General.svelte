@@ -23,6 +23,8 @@
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
 	import LoaderIcon from '$lib/components/icons/LoaderIcon.svelte';
+	import LinkEditor from './LinkEditor.svelte';
+	import OnBoarding from '$lib/components/OnBoarding.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -305,20 +307,25 @@
 							</div>
 						{/if}
 						<input
-							class={`px-2.5 text-sm ${companyName ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-customGray-100 dark:placeholder:text-customGray-100 outline-none`}
+							class={`px-2.5 text-sm ${companyName ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-customGray-100 dark:placeholder:text-customGray-100 outline-none`}
 							placeholder={$i18n.t(' Name')}
 							bind:value={companyName}
 						/>
 					</div>
 				</div>
 				<div class="mb-2.5">
-					<div class="flex items-center justify-between mb-1 w-full dark:bg-customGray-900 rounded-md h-10 px-2.5 py-2">
+					<div class="flex items-center justify-between mb-1 w-full dark:bg-customGray-900 rounded-md h-12 px-2.5 py-2">
 						
 							<div class="text-sm dark:text-customGray-100">
 								{$i18n.t('Hide model logo in chat')}
 							</div>
 		
-						<div class="">
+						<div class="flex items-center">
+							{#if hideModelLogo}
+								<div class="text-xs dark:text-customGray-100/50 mr-2">On</div>
+							{:else}
+								<div class="text-xs dark:text-customGray-100/50 mr-2">Off</div>
+							{/if}
 							<Switch
 								bind:state={hideModelLogo}
 							/>
@@ -341,7 +348,7 @@
 				<div class="relative" bind:this={userPermissionsRef}>
 					<button
 						type="button"
-						class="flex items-center justify-between w-full text-sm {Object.keys(userPermissions)?.filter(item => userPermissions?.[item])?.length > 0 ? 'h-12' : 'h-10'} px-3 py-2 {
+						class="flex items-center justify-between w-full text-sm h-12 px-3 py-2 {
 							showUserPermissionsDropdown ? 'border' : ''
 						} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer"
 						on:click={() => (showUserPermissionsDropdown = !showUserPermissionsDropdown)}
@@ -404,7 +411,7 @@
 				<div class="relative" bind:this={chatLifetimeDropdownRef}>
 					<button
 						type="button"
-						class={`flex items-center justify-between w-full text-sm h-10 px-3 py-2 ${
+						class={`flex items-center justify-between w-full text-sm h-12 px-3 py-2 ${
 							showChatLifetimeDropdown ? 'border' : ''
 						} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer`}
 						on:click={() => {
@@ -444,7 +451,7 @@
 					{/if}
 				</div>
 			</div>
-			<div class="flex flex-col w-full mb-2.5">
+			<!-- <div class="flex flex-col w-full mb-2.5">
 				<div class="relative w-full dark:bg-customGray-900 rounded-md">
 					{#if userNotice}
 						<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
@@ -457,7 +464,8 @@
 						bind:value={userNotice}
 					/>
 				</div>
-			</div>
+			</div> -->
+			<LinkEditor bind:text={userNotice} label={$i18n.t('User notice')}/>
 			<span class="text-xs dark:text-customGray-100/50">
 				{$i18n.t('The disclaimer is displayed at the bottom of the user interface')}
 			</span>

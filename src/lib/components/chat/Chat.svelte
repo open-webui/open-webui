@@ -88,6 +88,7 @@
 	import Spinner from '../common/Spinner.svelte';
 	import ModelSelector from './ModelSelector.svelte';
 	import BookIcon from '../icons/BookIcon.svelte';
+	import DOMPurify from 'dompurify';
 
 	export let chatIdProp = '';
 
@@ -2065,10 +2066,13 @@
 							</div>
 
 							<div
-								class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
+								class="user-notice absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
 							>	
 								{#if $companyConfig?.config?.ui?.custom_user_notice}
-									{$i18n.t($companyConfig?.config?.ui?.custom_user_notice)}
+									{@html DOMPurify.sanitize(
+										$i18n.t($companyConfig?.config?.ui?.custom_user_notice),
+										{ ADD_ATTR: ['target'] }
+									)}	
 								{:else}
 									{$i18n.t('LLMs can make mistakes. Verify important information.')}
 								{/if}
@@ -2124,9 +2128,12 @@
 									}
 								}}
 							/>
-							<div class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0">
+							<div class="user-notice absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0">
 								{#if $companyConfig?.config?.ui?.custom_user_notice}
-									{$i18n.t($companyConfig?.config?.ui?.custom_user_notice)}
+									{@html DOMPurify.sanitize(
+										$i18n.t($companyConfig?.config?.ui?.custom_user_notice),
+										{ ADD_ATTR: ['target'] }
+									)}
 								{:else}
 									{$i18n.t('LLMs can make mistakes. Verify important information.')}
 								{/if}

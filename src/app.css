@@ -417,3 +417,7 @@ html.dark .custom-scrollbar::-webkit-scrollbar-thumb {
 	background-color: #181818;
 }
 
+.user-notice a {
+	text-decoration: underline;
+}
+
