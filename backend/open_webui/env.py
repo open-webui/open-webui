@@ -408,10 +408,18 @@ OFFLINE_MODE = os.environ.get("OFFLINE_MODE", "false").lower() == "true"
 if OFFLINE_MODE:
     os.environ["HF_HUB_OFFLINE"] = "1"
 
-
 ####################################
 # Customizations
 ####################################
+
+WEBHOOK_TIMEOUT_STR = os.environ.get("WEBHOOK_TIMEOUT", None)
+WEBHOOK_TIMEOUT = 90
+
+if WEBHOOK_TIMEOUT_STR:
+    try:
+        WEBHOOK_TIMEOUT = int(WEBHOOK_TIMEOUT_STR)
+    except Exception:
+        pass
 
 IONOS_REGISTRATION_URL = os.environ.get("IONOS_REGISTRATION_URL", None)
 IONOS_LOGOUT_URL = os.environ.get("IONOS_LOGOUT_URL", None)
