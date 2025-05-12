@@ -930,10 +930,7 @@ class ChatTable:
                     return ChatModel.model_validate(chat)
 
                 output_file_ids.append(file_id)
-                chat.meta = {
-                    **chat.meta,
-                    "outputFileIds": output_file_ids
-                }
+                chat.meta = {**chat.meta, "outputFileIds": output_file_ids}
                 chat.updated_at = int(time.time())
 
                 db.commit()

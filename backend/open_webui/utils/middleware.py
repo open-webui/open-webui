@@ -2041,7 +2041,9 @@ async def process_chat_response(
                         )
 
                         retries += 1
-                        log.debug(f"Attempt count: {retries}, intepreter {request.app.state.config.CODE_INTERPRETER_ENGINE}")
+                        log.debug(
+                            f"Attempt count: {retries}, intepreter {request.app.state.config.CODE_INTERPRETER_ENGINE}"
+                        )
 
                         output = ""
                         try:
@@ -2090,7 +2092,6 @@ async def process_chat_response(
                                         "stdout": "Code interpreter engine not configured."
                                     }
 
-
                                 if isinstance(output, dict):
                                     for sourceField in ("stdout", "result"):
                                         source = output.get(sourceField, "")
@@ -2100,16 +2101,31 @@ async def process_chat_response(
                                             for idx, line in enumerate(sourceLines):
                                                 if "data:image/png;base64" in line:
                                                     # line looks like data:image/png;base64,<base64data>
-                                                    content_type = line.split(',')[0].split(';')[0].split(':')[1]
-                                                    file_data = io.BytesIO(base64.b64decode(line.split(',')[1]))
+                                                    content_type = (
+                                                        line.split(",")[0]
+                                                        .split(";")[0]
+                                                        .split(":")[1]
+                                                    )
+                                                    file_data = io.BytesIO(
+                                                        base64.b64decode(
+                                                            line.split(",")[1]
+                                                        )
+                                                    )
                                                     file_name = f"image-{metadata['chat_id']}-{metadata['message_id']}-{sourceField}-{idx}.png"
                                                     file = UploadFile(
                                                         filename=file_name,
                                                         file=file_data,
-                                                        headers={"content-type": content_type},
+                                                        headers={
+                                                            "content-type": content_type
+                                                        },
                                                     )
-                                                    file_response = upload_file(request, file, user=user)
-                                                    Chats.add_output_file_id_to_chat(metadata["chat_id"], file_response.id)
+                                                    file_response = upload_file(
+                                                        request, file, user=user
+                                                    )
+                                                    Chats.add_output_file_id_to_chat(
+                                                        metadata["chat_id"],
+                                                        file_response.id,
+                                                    )
 
                                                     sourceLines[idx] = (
                                                         f"![Output Image {idx}](/api/v1/files/{file_response.id}/content)"
