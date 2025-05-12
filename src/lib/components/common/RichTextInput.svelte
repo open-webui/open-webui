@@ -234,9 +234,7 @@
 			editorProps: {
 				attributes: {
 					id,
-					'aria-label': ariaLabel,
-					title: title,
-					role: 'textbox'
+					'aria-label': $i18n.t('Message Input')
 				},
 				handleDOMEvents: {
 					focus: (view, event) => {
@@ -391,14 +389,17 @@
 		);
 		if (placeholderExtension) {
 			placeholderExtension.options.placeholder = placeholderText;
-			editor.view.dispatch(editor.view.state.tr); // Trigger a re-render
+			(placeholderExtension.options.label = $i18n.t('Message Input')),
+				editor.view.dispatch(editor.view.state.tr); // Trigger a re-render
 		}
 	}
 </script>
 
 <div
+	role="textbox"
 	bind:this={element}
 	class="relative w-full min-w-full {focusFlag
 		? 'outline-1 outline-black focus:outline-white'
 		: ''} h-full min-h-fit mb-1 {className}"
+	aria-label={$i18n.t('Message Input')}
 />

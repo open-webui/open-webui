@@ -904,6 +904,7 @@
 											placement="top-start"
 										>
 											<textarea
+												aria-label={$i18n.t('Message Input')}
 												id="chat-input"
 												dir="auto"
 												bind:this={chatInputElement}

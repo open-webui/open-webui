@@ -733,6 +733,7 @@
     "Message editing cancelled.": "L'édition du message est annulée",
     "Message editing confirmed.": "Edition du message confirmée.",
     "Message editing started.": "L'édition du message a commencé.",
+    "Message Input": "entrée de message",
     "Message is empty": "Le message est vide",
     "Message rating should be enabled to use this feature": "",
     "Message saved as copy. You are now in copied message chain.": "Message enregistré en tant que copie. Vous êtes maintenant dans la chaîne de messages copiés.",
