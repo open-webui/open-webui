@@ -107,7 +107,7 @@
             {#if noUsersToAdd}
                 <div class="mt-3">{$i18n.t('No users to add')}</div>
             {/if}
-			<div class="mt-2 max-h-[180px] overflow-y-auto pr-1">
+			<div class="mt-2 max-h-[180px] overflow-y-auto overflow-x-hidden custom-scrollbar pr-1">
 				{#each filteredUsers as user}
 					<button
 						on:click={async () => {

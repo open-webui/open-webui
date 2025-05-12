@@ -877,7 +877,7 @@
 
 											{#if showDropdown}
 												<div
-													class="max-h-60 overflow-y-auto absolute z-50 w-full -mt-1 bg-white dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
+													class="max-h-60 overflow-y-auto custom-scrollbar absolute z-50 w-full -mt-1 bg-white dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
 												>
 													<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
 													<div class="px-1">
