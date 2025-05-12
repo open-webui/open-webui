@@ -44,52 +44,15 @@
 	});
 
 	let selectedMonth = monthOptions[0];
-
-	// let mock_users = [
-	// 	{
-	// 		user_id: 'u1',
-	// 		first_name: 'Alice',
-	// 		last_name: 'Johnson',
-	// 		email: 'alice.johnson@example.com',
-	// 		profile_image_url: 'https://example.com/images/alice.jpg',
-	// 		total_credits_used: 150
-	// 	},
-	// 	{
-	// 		user_id: 'u2',
-	// 		first_name: 'Bob',
-	// 		last_name: 'Smith',
-	// 		email: 'bob.smith@example.com',
-	// 		profile_image_url: 'https://example.com/images/bob.jpg',
-	// 		total_credits_used: 230
-	// 	},
-	// 	{
-	// 		user_id: 'u3',
-	// 		first_name: 'Clara',
-	// 		last_name: 'Lopez',
-	// 		email: 'clara.lopez@example.com',
-	// 		profile_image_url: 'https://example.com/images/clara.jpg',
-	// 		total_credits_used: 85
-	// 	},
-	// 	{
-	// 		user_id: 'u4',
-	// 		first_name: 'David',
-	// 		last_name: 'Wang',
-	// 		email: 'david.wang@example.com',
-	// 		profile_image_url: 'https://example.com/images/david.jpg',
-	// 		total_credits_used: 310
-	// 	},
-	// 	{
-	// 		user_id: 'u5',
-	// 		first_name: 'Eva',
-	// 		last_name: 'Nguyen',
-	// 		email: 'eva.nguyen@example.com',
-	// 		profile_image_url: 'https://example.com/images/eva.jpg',
-	// 		total_credits_used: 190
-	// 	}
-	// ];
-
 	let chartMessagesData = null;
 	let chartChatsData = null;
+
+	let users = [];
+	$: {
+		if (analytics?.topUsers?.top_by_credits?.length > 0) {
+			users = analytics?.topUsers?.top_by_credits;
+		} 
+	}
 	$: {
 		if (analytics?.totalMessages?.monthly_messages) {
 			chartMessagesData = {
@@ -124,6 +87,8 @@
 			};
 		}
 	}
+
+	
 
 	const chartOptions = {
 		responsive: true,
@@ -194,7 +159,9 @@
 				</Tooltip>
 			</div>
 			<div class="rounded-2xl dark:bg-customGray-900 pt-4 pb-2 flex flex-col items-center">
-				<div class="text-2xl dark:text-customGray-100 mb-2.5">?</div>
+				<div class="text-2xl dark:text-customGray-100 mb-2.5">
+					{analytics?.totalAssistants?.total_assistants}
+				</div>
 				<div class="text-xs dark:text-customGray-100/50 mb-1">{$i18n.t('Assistants Created')}</div>
 				<Tooltip content="text">
 					<div
@@ -205,7 +172,7 @@
 				</Tooltip>
 			</div>
 		</div>
-		<div class="dark:bg-customGray-900 rounded-2xl p-4 mt-5">
+		<div class="dark:bg-customGray-900 rounded-2xl p-4 pb-1 mt-5">
 			<div
 				class="flex w-full justify-between items-center pb-2.5 border-b border-customGray-700 mb-2.5"
 			>
@@ -238,6 +205,13 @@
 											tabindex="0"
 											on:click={() => {
 												selectedSortOrder = option;
+												if (option.value === 'credits') {
+													users = analytics?.topUsers?.top_by_credits;
+												} else if (option.value === 'messages') {
+													users = analytics?.topUsers?.top_by_messages;
+												} else {
+													users = analytics?.topUsers?.top_by_assistants;
+												}
 												showUsersSortDropdown = false;
 											}}
 											class="flex items-center justify-end w-full cursor-pointer text-xs dark:text-customGray-100 px-2 py-2 dark:hover:bg-customGray-950 rounded-md"
@@ -252,7 +226,7 @@
 				</div>
 			</div>
 
-			{#each analytics?.topUsers as user}
+			{#each users as user}
 				<div class="flex items-center justify-between mb-3">
 					<div class="flex items-center">
 						<img
@@ -278,11 +252,23 @@
 							</div>
 						</Tooltip>
 					</div>
-					<div class="text-xs dark:text-customGray-590">{user?.total_credits_used} credits</div>
+					{#if selectedSortOrder.value === 'credits'}
+						<div class="text-xs dark:text-customGray-590">
+							{user?.total_credits_used} {$i18n.t('credits')}
+						</div>
+					{:else if selectedSortOrder.value === 'messages'}
+						<div class="text-xs dark:text-customGray-590">
+							{user?.message_count} {$i18n.t('messages')}
+						</div>
+					{:else}
+						<div class="text-xs dark:text-customGray-590">
+							{user?.assistant_count} {$i18n.t('assistants')}
+						</div>
+					{/if}
 				</div>
 			{/each}
 		</div>
-		<div class="dark:bg-customGray-900 rounded-2xl p-4 mt-5">
+		<div class="dark:bg-customGray-900 rounded-2xl p-4 pb-1 mt-5">
 			<div
 				class="flex w-full justify-between items-center pb-2.5 border-b border-customGray-700 mb-2.5"
 			>
@@ -315,12 +301,15 @@
 											tabindex="0"
 											on:click={async () => {
 												selectedMonth = option;
-												const { start, end } = getMonthRange(selectedMonth.value.year, selectedMonth.value.month);
+												const { start, end } = getMonthRange(
+													selectedMonth.value.year,
+													selectedMonth.value.month
+												);
 												const res = await getTopModels(localStorage.token, start, end);
 												analytics = {
 													...analytics,
 													topModels: res?.length > 0 ? res : []
-												}
+												};
 												showMonthsDropdown = false;
 											}}
 											class="flex items-center justify-end w-full cursor-pointer text-xs dark:text-customGray-100 px-2 py-2 dark:hover:bg-customGray-950 rounded-md"

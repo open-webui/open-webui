@@ -27,7 +27,7 @@
 	import { getUsers } from '$lib/apis/users';
 	import AnalyticsIcon from '../icons/AnalyticsIcon.svelte';
 	import Analytics from './Settings/CompanySettings/Analytics.svelte';
-	import { getTopModels, getTotalUsers, getTotalMessages, getAdoptionRate, getPowerUsers, getSavedTimeInSeconds, getTopUsers, getTotalBilling, getTotalChats } from '$lib/apis/analytics';
+	import { getTopModels, getTotalUsers, getTotalMessages, getAdoptionRate, getPowerUsers, getSavedTimeInSeconds, getTopUsers, getTotalBilling, getTotalChats, getTotalAssistants } from '$lib/apis/analytics';
 	import BillingIcon from '../icons/BillingIcon.svelte';
 	import Billing from './Settings/CompanySettings/Billing.svelte';
 	import { getMonthRange } from '$lib/utils';
@@ -172,7 +172,8 @@
 			savedTime,
 			topUsers,
 			totalBilling,
-			totalChats
+			totalChats,
+			totalAssistants
 		] = await Promise.allSettled([
 			getTopModels(token, start, end),
 			getTotalUsers(token),
@@ -182,7 +183,8 @@
 			getSavedTimeInSeconds(token),
 			getTopUsers(token, start, end),
 			getTotalBilling(token),
-			getTotalChats(token)
+			getTotalChats(token),
+			getTotalAssistants(token),
 		]);
 		
 		analytics = {
@@ -192,9 +194,10 @@
 			adoptionRate: adoptionRate?.status === 'fulfilled' ? adoptionRate?.value : {},
 			powerUsers: powerUsers?.status === 'fulfilled' ? powerUsers?.value : {},
 			savedTime: savedTime?.status === 'fulfilled' ? savedTime?.value : {},
-			topUsers: topUsers?.status === 'fulfilled' ? topUsers?.value : [],
+			topUsers: topUsers?.status === 'fulfilled' ? topUsers?.value : {},
 			totalBilling: totalBilling?.status === 'fulfilled' ? totalBilling?.value : {},
-			totalChats: totalChats?.status === 'fulfilled' ? totalChats?.value : {}
+			totalChats: totalChats?.status === 'fulfilled' ? totalChats?.value : {},
+			totalAssistants: totalAssistants?.status === 'fulfilled' ? totalAssistants?.value : {},
 		}
 		console.log(analytics)
 	} catch (error) {
