@@ -11,14 +11,12 @@ from typing import Optional
 import requests
 
 
-from fastapi import Depends, FastAPI, HTTPException, Request, APIRouter
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Depends, HTTPException, Request, APIRouter
 from pydantic import BaseModel
-
 
 from open_webui.config import CACHE_DIR
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import ENV, SRC_LOG_LEVELS, ENABLE_FORWARD_USER_INFO_HEADERS
+from open_webui.env import SRC_LOG_LEVELS, ENABLE_FORWARD_USER_INFO_HEADERS
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.images.comfyui import (
@@ -26,7 +24,7 @@ from open_webui.utils.images.comfyui import (
     ComfyUIWorkflow,
     comfyui_generate_image,
 )
-
+from beyond_the_loop.services.credit_service import CreditService
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["IMAGES"])
@@ -486,6 +484,8 @@ async def image_generations(
                 "response_format": "b64_json",
             }
 
+            print("DAAATA", data)
+
             # Use asyncio.to_thread for the requests.post call
             r = await asyncio.to_thread(
                 requests.post,
@@ -506,6 +506,9 @@ async def image_generations(
 
                 with open(file_body_path, "w") as f:
                     json.dump(data, f)
+
+            credit_service = CreditService()
+            await credit_service.subtract_credits_by_user_for_image(user, request.app.state.config.IMAGE_GENERATION_MODEL)
 
             return images
 

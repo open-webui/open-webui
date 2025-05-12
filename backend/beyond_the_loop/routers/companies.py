@@ -39,6 +39,17 @@ async def get_company_config(request: Request, user=Depends(get_current_user)):
         
         # Get the company config from the database
         config = get_config(company_id)
+
+        # Remove security relevant fields
+        config.get("audio", {}).get("stt", {}).get("openai", {}).pop("api_key", None)
+        config.get("audio", {}).get("tts", {}).get("openai", {}).pop("api_key", None)
+
+        config.get("image_generation", {}).get("openai", {}).pop("api_key", None)
+
+        config.get("rag", {}).pop("openai_api_key", None)
+
+        config.get("rag", {}).get("web", {}).get("search", {}).pop("google_pse_api_key", None)
+        config.get("rag", {}).get("web", {}).get("search", {}).pop("google_pse_engine_id", None)
         
         return {"config": config}
     except Exception as e:
