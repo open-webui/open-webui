@@ -24,6 +24,12 @@
 	font-display: swap;
 }
 
+@font-face {
+	font-family: 'Vazirmatn';
+	src: url('/assets/fonts/Vazirmatn-Variable.ttf');
+	font-display: swap;
+}
+
 html {
 	word-break: break-word;
 }
@@ -75,7 +81,7 @@ textarea::placeholder {
 }
 
 .font-primary {
-	font-family: 'Archivo', sans-serif;
+	font-family: 'Archivo', 'Vazirmatn', sans-serif;
 }
 
 .drag-region {
