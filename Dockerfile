@@ -132,6 +132,10 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
 # install python dependencies
 COPY --chown=$UID:$GID ./backend/requirements.txt ./requirements.txt
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libglib2.0-0 poppler-utils tesseract-ocr && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN pip3 install --no-cache-dir uv && \
     if [ "$USE_CUDA" = "true" ]; then \
     # If you use CUDA the whisper and embedding model will be downloaded on first use

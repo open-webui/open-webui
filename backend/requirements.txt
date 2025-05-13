@@ -138,3 +138,10 @@ opentelemetry-instrumentation-requests==0.53b1
 opentelemetry-instrumentation-logging==0.53b1
 opentelemetry-instrumentation-httpx==0.53b1
 opentelemetry-instrumentation-aiohttp-client==0.53b1
+
+## OCR Libraries
+PyMuPDF==1.25.5
+pi_heif==0.7.0
+pdf2image==1.17.0
+unstructured_inference==0.8.10
+unstructured_pytesseract==0.3.15

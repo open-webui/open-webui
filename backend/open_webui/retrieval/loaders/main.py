@@ -3,6 +3,9 @@ import logging
 import ftfy
 import sys
 
+from unstructured.partition.pdf import partition_pdf
+from unstructured.partition.auto import partition
+
 from langchain_community.document_loaders import (
     AzureAIDocumentIntelligenceLoader,
     BSHTMLLoader,
@@ -10,6 +13,8 @@ from langchain_community.document_loaders import (
     Docx2txtLoader,
     OutlookMessageLoader,
     PyPDFLoader,
+    PyMuPDFLoader,
+    UnstructuredPDFLoader,
     TextLoader,
     UnstructuredEPubLoader,
     UnstructuredExcelLoader,
@@ -189,8 +194,12 @@ class Loader:
     def load(
         self, filename: str, file_content_type: str, file_path: str
     ) -> list[Document]:
-        loader = self._get_loader(filename, file_content_type, file_path)
+        file_ext = filename.split(".")[-1].lower()
+        loader = self._get_loader(file_ext, file_content_type, file_path)
         docs = loader.load()
+
+        if file_ext == "pdf":
+            docs = self._ensure_pdf_content(loader, docs, file_path, filename)
 
         return [
             Document(
@@ -204,9 +213,7 @@ class Loader:
             file_content_type and file_content_type.find("text/") >= 0
         )
 
-    def _get_loader(self, filename: str, file_content_type: str, file_path: str):
-        file_ext = filename.split(".")[-1].lower()
-
+    def _get_loader(self, file_ext: str, file_content_type: str, file_path: str):
         if self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
             if self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
@@ -260,7 +267,7 @@ class Loader:
             )
         else:
             if file_ext == "pdf":
-                loader = PyPDFLoader(
+                loader = PyMuPDFLoader(
                     file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
                 )
             elif file_ext == "csv":
@@ -299,3 +306,24 @@ class Loader:
                 loader = TextLoader(file_path, autodetect_encoding=True)
 
         return loader
+    
+    def _ensure_pdf_content(self, loader, docs, file_path, filename):
+        extract_images = self.kwargs.get("PDF_EXTRACT_IMAGES", False)
+        if docs and any(doc.page_content.strip() for doc in docs):
+            return docs
+
+        log.warning(f"PyMuPDFLoader returned empty or invalid content for {filename}")
+
+        if not isinstance(loader, UnstructuredPDFLoader):
+            fallback_loader = UnstructuredPDFLoader(file_path, extract_images=extract_images)
+            try:
+                fallback_docs = fallback_loader.load()
+                if fallback_docs and any(doc.page_content.strip() for doc in fallback_docs):
+                    return fallback_docs
+                
+                log.error(f"UnstructuredPDFLoader also returned empty content for {filename}")
+                raise Exception("No content extracted from PDF")
+            except Exception as e:
+                log.error(f"UnstructuredPDFLoader failed for {filename}: {e}")
+                raise e
+        return docs
