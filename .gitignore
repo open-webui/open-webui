@@ -313,3 +313,5 @@ cypress/screenshots
 .cursor
 
 static/pyodide/pyodide-lock.json
+# turborepo
+.turbo
