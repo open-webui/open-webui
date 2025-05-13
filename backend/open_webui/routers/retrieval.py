@@ -1117,7 +1117,7 @@ def process_file_async(
 
         if is_pdf2text:
             task_id = loader.load(file.filename, file.meta.get(
-                "content_type"), file_path, isasync=True)
+                "content_type"), file_path, is_async=True)
 
             text_content = loader.loader.get_text(task_id)
 

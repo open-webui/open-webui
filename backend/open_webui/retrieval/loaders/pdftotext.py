@@ -102,14 +102,23 @@ class PdftotextLoaderAsync:
         """
         Synchronously retrieves the extracted text once the task is completed.
         """
-        time_to_sleep = 20
+        time_to_sleep = 10
         linear_theshold = 240
+        linear_limit = 60*15
+        start_time = time.time()
+        elapsed_time = 0
         while True:
             status_response = self.check_status(task_id)
             if status_response and status_response.get("status") == "SUCCESS":
                 return status_response.get("result").get('result')
             # Avoids CPU overload by waiting before rechecking
             time.sleep(time_to_sleep)
+
+            elapsed_time = time.time() - start_time
+            if elapsed_time > linear_limit:
+                raise Exception(
+                    f"Timeout waiting for OCR task to complete, elapsed time: {elapsed_time} seconds"
+                )
 
             if time_to_sleep < linear_theshold:
                 time_to_sleep *= 2
