@@ -67,16 +67,15 @@
 			keywords: [
 
 			]
-		},
-		{
-			id: 'billing',
-			title: 'Billing',
-			keywords: [
-
-			]
 		}
-		
-	];
+		//{
+		//	id: 'billing',
+		//	title: 'Billing',
+		//	keywords: [
+		//
+		//		]
+		//}
+		];
 
 	let search = '';
 	let visibleTabs = searchData.map((tab) => tab.id);
