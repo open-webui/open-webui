@@ -6,7 +6,7 @@
 
 	import { chatId, settings, showArtifacts, showControls } from '$lib/stores';
 	import XMark from '../icons/XMark.svelte';
-	import { copyToClipboard, createMessagesList } from '$lib/utils';
+	import { copyToClipboard, downloadContents, createMessagesList } from '$lib/utils';
 	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import SvgPanZoom from '../common/SVGPanZoom.svelte';
@@ -20,6 +20,7 @@
 	let selectedContentIdx = 0;
 
 	let copied = false;
+	let download = false;
 	let iframeElement: HTMLIFrameElement;
 
 	$: if (history) {
@@ -263,6 +264,17 @@
 									copied = false;
 								}, 2000);
 							}}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
+						>
+						<button
+							class="copy-code-button bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+							on:click={() => {
+								downloadContents(contents[selectedContentIdx].content, contents[selectedContentIdx].type);
+								download = true;
+
+								setTimeout(() => {
+									download = false;
+								}, 2000);
+							}}>{download ? $i18n.t('Done') : $i18n.t('Download')}</button
 						>
 
 						{#if contents[selectedContentIdx].type === 'iframe'}

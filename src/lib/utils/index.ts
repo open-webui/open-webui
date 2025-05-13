@@ -438,6 +438,37 @@ export const copyToClipboard = async (text, formatted = false) => {
 	}
 };
 
+export const downloadContents = async (text, type) => {
+	let content = text;
+	let filename = 'download.' + type;
+	let mimeType = 'text/plain';
+
+	if (type === 'iframe') {
+		filename = 'download.html';
+	}
+	
+	// Create a blob with the content
+	const blob = new Blob([content], { type: mimeType });
+	
+	// Create a temporary URL for the blob
+	const url = URL.createObjectURL(blob);
+	
+	// Create a temporary link element
+	const link = document.createElement('a');
+	link.href = url;
+	link.download = filename;
+	
+	// Append the link to the document, click it, and remove it
+	document.body.appendChild(link);
+	link.click();
+	
+	// Clean up
+	setTimeout(() => {
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url);
+	}, 100);
+};
+
 export const compareVersion = (latest, current) => {
 	return current === '0.0.0'
 		? false
