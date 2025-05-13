@@ -1535,7 +1535,7 @@ async def process_chat_response(
             # We might want to disable this by default
             DETECT_REASONING = True
             DETECT_SOLUTION = True
-            DETECT_CODE_INTERPRETER = metadata.get("features", {}).get(
+            DETECT_CODE_INTERPRETER = (metadata.get("features", {}) or {}).get(
                 "code_interpreter", False
             )
 
