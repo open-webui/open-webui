@@ -92,16 +92,29 @@ from open_webui.env import (
     DEVICE_TYPE,
     DOCKER,
 )
+from open_webui.exceptions import InvalidPDFError
 from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
+
+
+def is_valid_pdf(filepath):
+    try:
+        with open(filepath, 'rb') as f:
+            header = f.read(5)
+            if header != b'%PDF-':
+                raise InvalidPDFError(
+                    f"Arquivo {filepath} não tem cabeçalho PDF válido.")
+    except Exception as e:
+        raise InvalidPDFError(f"Erro ao validar o PDF {filepath}: {e}")
 
 ##########################################
 #
 # Utility functions
 #
 ##########################################
+
 
 def get_ef(
     engine: str,
@@ -832,7 +845,7 @@ def save_docs_to_vector_db(
                 return True
 
         log.info(f"adding to collection {collection_name}")
-        
+
         if VECTOR_DB != 'weaviate':
             embedding_function = get_embedding_function(
                 request.app.state.config.RAG_EMBEDDING_ENGINE,
@@ -1086,6 +1099,14 @@ def process_file_async(
     file_path = file.path
     if file_path:
         file_path = Storage.get_file(file_path)
+        file_ext = file.filename.split(".")[-1].lower()
+        if file_ext == "pdf":
+            try:
+                is_valid_pdf(file_path)
+            except InvalidPDFError as e:
+                log.exception(f"Erro na tarefa em background: {e}")
+                raise e
+
         loader = Loader(
             engine=engine,
             TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
@@ -1093,6 +1114,7 @@ def process_file_async(
             PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
             MAXPAGES_PDFTOTEXT=request.app.state.config.MAXPAGES_PDFTOTEXT,
         )
+
         if is_pdf2text:
             task_id = loader.load(file.filename, file.meta.get(
                 "content_type"), file_path, isasync=True)
@@ -1117,9 +1139,7 @@ def process_file_async(
                 },
             )]
 
-
             log.info(f"OCR Task {task_id} created successfully.")
-
         else:
             docs = loader.load(
                 file.filename, file.meta.get("content_type"), file_path

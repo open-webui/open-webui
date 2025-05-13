@@ -45,10 +45,6 @@ router = APIRouter()
 ############################
 
 
-from threading import Lock
-import asyncio
-
-
 @router.post("/", response_model=FileModelResponse)
 def upload_file(
     request: Request,
@@ -132,11 +128,16 @@ def process_tasks(request, form_data, user, task_id):
         task = tasks_cache.get(task_id, {})
 
     task['status'] = "Processing PDF..."
-    text = process_file_async(
-        request, form_data, task_id, user)
+    try:
+        text = process_file_async(
+            request, form_data, task_id, user)
+    except Exception as e:
+        log.exception(e)
+        task['error'] = str(e)
+        task['status'] = "Processing Failed"
+        return
     task['text'] = text
     task['status'] = "Processing Completed"
-
 
 
 @router.post("/async")
@@ -152,13 +153,11 @@ async def upload_file_async(
     unsanitized_filename = file.filename
     filename = os.path.basename(unsanitized_filename)
 
-    if file_metadata:
-        file_metadata = json.loads(file_metadata)
-
     # replace filename with uuid
     task_id = str(uuid.uuid4())
     with cache_lock:
-        tasks_cache[task_id] = {"status": "queued", "result": None, "error": None}
+        tasks_cache[task_id] = {"status": "queued",
+                                "result": None, "error": None}
     name = filename
     filename = f"{id}_{filename}"
     contents, file_path = Storage.upload_file(file.file, filename)

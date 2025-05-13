@@ -23,7 +23,7 @@ class PdftotextLoader():
         headers = {
             "accept": "application/json",
         }
-        
+
         files = {
             "pdf_upload": pdf
         }
@@ -70,7 +70,11 @@ class PdftotextLoaderAsync:
             'header_footer': True
         }
 
-        r = requests.post(url=self.url, headers=headers,
+        r = requests.post(url=self.url,
+                          headers=headers,
+                          files=files,
+                          data=data,
+                          )
 
         log.info(r)
         response = r.json()
