@@ -2,7 +2,7 @@
 	import Fuse from 'fuse.js';
 	import Bolt from '$lib/components/icons/Bolt.svelte';
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
-	import { WEBUI_NAME } from '$lib/stores';
+	import { settings, WEBUI_NAME } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
 
 	const i18n = getContext('i18n');
@@ -72,7 +72,9 @@
 		<!-- Keine Vorschläge -->
 
 		<div
-			class="flex w-full text-center items-center justify-center self-start text-gray-400 dark:text-gray-600"
+			class="flex w-full {$settings?.landingPageMode === 'chat'
+				? ' -mt-1'
+				: 'text-center items-center justify-center'}  self-start text-gray-400 dark:text-gray-600"
 		>
 			{$WEBUI_NAME} ‧ v{WEBUI_VERSION}
 		</div>
