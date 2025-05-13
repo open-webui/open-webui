@@ -1,4 +1,5 @@
 import logging
+import base64
 import os
 import uuid
 import json
@@ -149,8 +150,14 @@ async def upload_file_async(
         ),
     )
     # Envia a task pro RabbitMQ via Celery
-    async_result = process_tasks.delay(form_data=ProcessFileForm(
-        file_id=task_id), user=user, task_id=task_id)
+    form_data = ProcessFileForm(file_id=task_id)
+    args = {'collection_name': form_data.collection_name,
+            'text_splitter': request.app.state.config.TEXT_SPLITTER,
+            'task_id': task_id,
+            'chunk_overlap': request.app.state.config.CHUNK_OVERLAP,
+            'chunk_size': request.app.state.config.CHUNK_SIZE}
+
+    async_result = process_tasks.delay(args=args)
     message = f"Task {task_id} adicionada à fila de processamento"
     return AsyncTaskResponse(task_id=task_id, status="queued", message=message)
 
