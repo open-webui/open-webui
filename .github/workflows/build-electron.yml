@@ -1,0 +1,138 @@
+name: Build and Release Electron App
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.1.0)'
+        required: true
+        default: ''
+
+jobs:
+  extract-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
+      cleaned_version: ${{ steps.clean-version.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set version from tag or input
+        id: get-version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${{ github.ref_name }}"
+            # Remove 'v' prefix if present
+            VERSION="${VERSION#v}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Clean version string
+        id: clean-version
+        run: |
+          # Remove any non-numeric/dot characters for use in file names
+          CLEAN_VERSION=$(echo "${{ steps.get-version.outputs.version }}" | sed 's/[^0-9\.]//g')
+          echo "version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
+      
+  build-electron:
+    needs: extract-version
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: 'raux-electron/package-lock.json'
+
+      - name: Extract CHANGELOG entry
+        id: changelog
+        run: |
+          $pattern = "## [v${{ needs.extract-version.outputs.version }}]"
+          $content = Get-Content CHANGELOG.md -Raw
+          $regex = "(?s)$pattern(.*?)(?=\n## \[v|$)"
+          $match = [regex]::Match($content, $regex)
+          if ($match.Success) {
+              $notes = $match.Groups[1].Value.Trim()
+              # Convert notes to a format that can be passed in the GitHub environment
+              $notes = $notes -replace "`n", "%0A"
+              echo "notes=$notes" >> $env:GITHUB_OUTPUT
+          } else {
+              echo "notes=Release v${{ needs.extract-version.outputs.version }}%0ANo release notes available." >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Install dependencies
+        run: |
+          cd raux-electron
+          npm ci
+
+      - name: Update version in package.json
+        run: |
+          cd raux-electron
+          $packageJson = Get-Content -Path package.json -Raw | ConvertFrom-Json
+          $packageJson.version = "${{ needs.extract-version.outputs.version }}"
+          $packageJson | ConvertTo-Json -Depth 100 | Set-Content -Path package.json
+          echo "Updated package.json version to ${{ needs.extract-version.outputs.version }}"
+
+      - name: Build Electron app
+        run: |
+          cd raux-electron
+          npm run make
+
+      - name: Find generated files
+        id: find-files
+        run: |
+          # Find NSIS installer
+          $INSTALLER = Get-ChildItem -Path "raux-electron\out\make\squirrel.windows\x64\*.exe" -Recurse | Select-Object -First 1
+          if ($INSTALLER) {
+            echo "installer_path=$($INSTALLER.FullName)" >> $env:GITHUB_OUTPUT
+            echo "installer_name=$($INSTALLER.Name)" >> $env:GITHUB_OUTPUT
+            echo "Found installer: $($INSTALLER.FullName)"
+          } else {
+            echo "Error: No installer found!"
+            exit 1
+          }
+
+          # Find zip file if available
+          $ZIP = Get-ChildItem -Path "raux-electron\out\make\zip\win32\x64\*.zip" -Recurse | Select-Object -First 1
+          if ($ZIP) {
+            echo "zip_path=$($ZIP.FullName)" >> $env:GITHUB_OUTPUT
+            echo "zip_name=$($ZIP.Name)" >> $env:GITHUB_OUTPUT
+            echo "Found zip: $($ZIP.FullName)"
+          }
+
+      - name: Create SHA256 checksum
+        run: |
+          $INSTALLER_PATH = "${{ steps.find-files.outputs.installer_path }}"
+          $CHECKSUM = (Get-FileHash -Path $INSTALLER_PATH -Algorithm SHA256).Hash.ToLower()
+          $CHECKSUM | Out-File -FilePath "$INSTALLER_PATH.sha256" -Encoding ascii
+          echo "Created checksum for installer: $CHECKSUM"
+
+      - name: Create GitHub release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ${{ steps.find-files.outputs.installer_path }}
+            ${{ steps.find-files.outputs.installer_path }}.sha256
+            ${{ steps.find-files.outputs.zip_path }}
+          tag_name: v${{ needs.extract-version.outputs.version }}
+          name: v${{ needs.extract-version.outputs.version }}
+          body: ${{ steps.changelog.outputs.notes }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload additional build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: raux-electron/out/
+          retention-days: 7
