@@ -158,6 +158,10 @@ def upload_file(
             except Exception as e:
                 log.exception(e)
                 log.error(f"Error processing file: {file_item.id}")
+
+                if "File extension" in str(e):
+                    raise(e)
+                    
                 file_item = FileModelResponse(
                     **{
                         **file_item.model_dump(),

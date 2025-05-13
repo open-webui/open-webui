@@ -23,7 +23,7 @@ from langchain_core.documents import Document
 
 from open_webui.retrieval.loaders.mistral import MistralLoader
 
-from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
+from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, RAG_FILE_UPLOAD_TYPE_ALLOWLIST
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -189,15 +189,34 @@ class Loader:
     def load(
         self, filename: str, file_content_type: str, file_path: str
     ) -> list[Document]:
-        loader = self._get_loader(filename, file_content_type, file_path)
-        docs = loader.load()
+        # always lowercase the file extension
+        file_ext = filename.rsplit(".", 1)[-1].lower()
 
-        return [
-            Document(
-                page_content=ftfy.fix_text(doc.page_content), metadata=doc.metadata
+        if RAG_FILE_UPLOAD_TYPE_ALLOWLIST:
+            allowed_file_types = [ext.strip().lower() for ext in RAG_FILE_UPLOAD_TYPE_ALLOWLIST.split(";")]
+            is_allowed = file_ext in allowed_file_types
+        else:
+            # empty allowlist means “allow everything”
+            allowed_file_types = []
+            is_allowed = True
+
+        if is_allowed:
+            loader = self._get_loader(filename, file_content_type, file_path)
+            docs = loader.load()
+            return [
+                Document(
+                    page_content=ftfy.fix_text(doc.page_content),
+                    metadata=doc.metadata
+                )
+                for doc in docs
+            ]
+        else:
+            raise Exception(
+                f"File extension {file_ext!r} is not allowed for uploading; "
+                f"choose one of {allowed_file_types}"
             )
-            for doc in docs
-        ]
+
+
 
     def _is_text_file(self, file_ext: str, file_content_type: str) -> bool:
         return file_ext in known_source_ext or (
