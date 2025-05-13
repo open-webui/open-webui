@@ -71,7 +71,7 @@
 	const chatLifetimeOptions = [{value: 30, label: '30 days'}, {value: 91, label: '3 months'}, {value: 183, label: '6 months'}, {value: 275, label: '9 months'}, {value: 365, label: '1 year'}, {value: 0, label: "no limit"}];
 	let chatLifetime = chatLifetimeOptions[5];
 
-	let userNotice = 'LLMs can make mistakes. Verify important information.';
+	let userNotice = '';
 
 
 	const deleteUserHandler = async () => {
@@ -96,10 +96,11 @@
 				image_generation: $companyConfig?.config?.image_generation?.enable
 			};
 		}
-		if($companyConfig?.config?.ui?.custom_user_notice) {
-			userNotice = $companyConfig?.config?.ui?.custom_user_notice;
-		}
+		// if($companyConfig?.config?.ui?.custom_user_notice) {
+		// 	userNotice = $companyConfig?.config?.ui?.custom_user_notice;
+		// }
 	}});
+	$: console.log(userNotice, 'user notice')
 
 	const onSubmit = async () => {
 		loading = true;
@@ -465,7 +466,8 @@
 					/>
 				</div>
 			</div> -->
-			<LinkEditor bind:text={userNotice} label={$i18n.t('User notice')}/>
+			<LinkEditor on:updateContent={(e) => userNotice = e.detail}/>
+			<!-- <LinkEditor bind:text={userNotice} label={$i18n.t('User notice')}/> -->
 			<span class="text-xs dark:text-customGray-100/50">
 				{$i18n.t('The disclaimer is displayed at the bottom of the user interface')}
 			</span>

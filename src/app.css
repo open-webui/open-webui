@@ -421,3 +421,13 @@ html.dark .custom-scrollbar::-webkit-scrollbar-thumb {
 	text-decoration: underline;
 }
 
+#editor .ProseMirror p {
+	margin: 0;
+	font-size: 14px;
+	margin-top: 6px;
+}
+html.dark #editor .ProseMirror a {
+	color: #D0CECE;	
+	text-decoration: underline;
+}
+

@@ -1,110 +1,82 @@
 <script>
-	import { tick } from 'svelte';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, createEventDispatcher, getContext } from 'svelte';
+	import { Editor } from '@tiptap/core';
+	import StarterKit from '@tiptap/starter-kit';
+	import Link from '@tiptap/extension-link';
 	import AddLinkIcon from '$lib/components/icons/AddLinkIcon.svelte';
-    import { toast } from 'svelte-sonner';
+	import { companyConfig } from '$lib/stores';
 
 	const i18n = getContext('i18n');
+	let editor;
+	let url = '';
+	let showLinkInput = false;
+	
+	const dispatch = createEventDispatcher();
 
-	export let text = '';
-	export let label = '';
-	let textareaEl;
-	let showLinkEditor = false;
-	let selectedText = '';
-	let linkUrl = '';
-	let selectionStart = 0;
-	let selectionEnd = 0;
+	onMount(() => {
+		editor = new Editor({
+			element: document.querySelector('#editor'),
+			extensions: [
+				StarterKit,
+				Link.configure({
+					openOnClick: false
+				})
+			],
+			content: $companyConfig?.config?.ui?.custom_user_notice ? $companyConfig?.config?.ui?.custom_user_notice : 'LLMs can make mistakes. Verify important information.',
+			onUpdate: ({ editor }) => {
+				dispatch('updateContent', editor.getHTML());
+			}
+		});
+	});
 
-	function prepareLinkEditor() {
-		selectionStart = textareaEl.selectionStart;
-		selectionEnd = textareaEl.selectionEnd;
-
-		if (selectionStart === selectionEnd) {
-            toast.error($i18n.t('Select word to add link'))
-            return;
-        }
-
-		selectedText = text.slice(selectionStart, selectionEnd);
-		console.log(selectedText);
-		showLinkEditor = true;
-		linkUrl = '';
+	function setLink() {
+		if (!editor) return;
+		const previousUrl = editor.getAttributes('link').href;
+		url = previousUrl || '';
+		showLinkInput = true;
 	}
 
-	async function insertLink() {
-		if (!linkUrl || !selectedText) return;
+	function applyLink() {
+		editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+		showLinkInput = false;
+		url = '';
+	}
 
-		const before = text.slice(0, selectionStart);
-		const after = text.slice(selectionEnd);
-
-		const linkedText = `<a href="${linkUrl}" target="_blank" rel="noopener">${selectedText}</a>`;
-		text = before + linkedText + after;
-
-		showLinkEditor = false;
-		selectedText = '';
-		linkUrl = '';
-
-		await tick();
-		textareaEl.focus();
+	function removeLink() {
+		editor.chain().focus().unsetLink().run();
+		showLinkInput = false;
+		url = '';
 	}
 </script>
 
-<div class="flex flex-col w-full mb-2.5 relative">
-	<div class="relative w-full dark:bg-customGray-900 rounded-md">
-		{#if text}
-			<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
-				{label}
-			</div>
-		{/if}
-		<textarea
-			rows={3}
-			class={`pl-2.5 pr-4 text-sm pt-4 w-full bg-transparent dark:text-customGray-100 dark:placeholder:text-customGray-100 outline-none`}
-			placeholder={label}
-			bind:this={textareaEl}
-			bind:value={text}
-		/>
+<div class="relative">
+	<div class="{editor?.getHTML() === '<p></p>' ? 'text-sm' : 'text-xs'} absolute left-2.5 top-1 dark:text-customGray-100/50">
+		{$i18n.t('User notice')}
 	</div>
-	<button on:click={prepareLinkEditor} class="absolute right-2 w-4 h-4 top-4">
+	<div
+		id="editor"
+		class="prose rounded p-2 px-2.5 dark:bg-customGray-900 min-h-[48px] dark:text-customGray-100"
+	></div>
+	<button on:click={setLink} class="absolute right-2 w-4 h-4 top-4">
 		<AddLinkIcon />
 	</button>
-	{#if showLinkEditor}
-		<div
-			class="absolute top-20 rounded p-3 dark:bg-customGray-900 flex items-end justify-between w-full border dark:border-customGray-700"
-		>
-			<button
-				on:click={() => {
-					showLinkEditor = false;
-					selectedText = '';
-					linkUrl = '';
-				}}
-				class="absolute top-2 right-2 text-gray-500 text-xs"
-				aria-label="Close"
-			>
-				✕
-			</button>
-			<div class="w-24 mr-1">
-				<label class="block text-xs dark:text-customGray-100/50">{$i18n.t('Selected Text')}</label>
-				<input
-					type="text"
-					bind:value={selectedText}
-					class="w-full outline-none text-sm border dark:text-customGray-100 p-1 bg-transparent dark:border-customGray-700 rounded-md"
-				/>
-			</div>
-			<div class="flex-1">
-				<label class="block text-xs dark:text-customGray-100/50">{$i18n.t('URL')}</label>
-				<input
-					type="text"
-					placeholder="https://example.com"
-					bind:value={linkUrl}
-					class="outline-none w-full text-sm border dark:text-customGray-100 dark:border-customGray-700 rounded-md p-1 bg-transparent"
-				/>
-			</div>
 
-			<button
-				on:click={insertLink}
-				class=" ml-1 text-xs dark:text-customGray-200 h-[30px] border dark:border-customGray-700 dark:bg-customGray-950 rounded-lg px-4 py-1"
-			>
-				{$i18n.t('Insert link')}
-			</button>
+	{#if showLinkInput}
+		<div>
+			<div class="mt-2 flex space-x-2">
+				<input
+					type="url"
+					bind:value={url}
+					placeholder="Enter URL"
+					class="outline-none text-sm dark:text-customGray-100 rounded-md p-1 dark:bg-customGray-900 w-[300px]"
+				/>
+				<button
+					on:click={applyLink}
+					class=" ml-1 text-xs dark:text-customGray-200 h-[30px] border dark:border-customGray-700 dark:bg-customGray-950 rounded-lg px-4 py-1"
+					>{$i18n.t('Apply')}</button
+				>
+				<button on:click={removeLink} class="text-xs dark:text-customGray-200">{$i18n.t('Remove Link')}</button>
+			</div>
 		</div>
 	{/if}
 </div>
