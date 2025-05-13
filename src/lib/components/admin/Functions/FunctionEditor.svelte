@@ -262,7 +262,7 @@ class Pipe:
 		// let finalName = (edit || name.endsWith(`_${emailPrefix}`)) ? name : `${name}_${emailPrefix}`;
 		const finalName = (!edit && !clone && !name.endsWith(`_${emailPrefix}`))? `${name}_${emailPrefix}`: name;
 		onSave({
-			id,
+			id: finalName,
 			name: finalName,
 			meta,
 			content
