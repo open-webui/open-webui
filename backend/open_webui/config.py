@@ -285,8 +285,6 @@ class PersistentConfig(Generic[T]):
     def update(self, company_id):
         self.config_value = get_config_value(self.config_path, company_id)
 
-        print("UPDATED", company_id, self.config_path, self.config_value)
-
         if self.config_value is not None:
             self.value = self.config_value
             #log.info(f"Updated {self.env_name} to new value {self.value}")
@@ -339,7 +337,6 @@ class AppConfig:
 
     # Set the current company ID for this config instance and update all config values
     def set_company_id(self, company_id: str):
-        print("SET CONFIG NEW", )
         super().__setattr__("_current_company_id", company_id)
         for key, config in self._state.items():
             if hasattr(config, "update"):

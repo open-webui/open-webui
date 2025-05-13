@@ -455,6 +455,9 @@ async def image_generations(
 
     r = None
     try:
+        credit_service = CreditService()
+        credit_service.check_for_sufficient_balance(user)
+
         if request.app.state.config.IMAGE_GENERATION_ENGINE == "openai":
             headers = {}
             headers["Authorization"] = (
@@ -483,8 +486,6 @@ async def image_generations(
                 ),
                 "response_format": "b64_json",
             }
-
-            print("DAAATA", data)
 
             # Use asyncio.to_thread for the requests.post call
             r = await asyncio.to_thread(

@@ -72,4 +72,16 @@ class ModelCostTable:
 
             return model_cost.cost_per_image
 
+    def get_cost_per_minute_tts_by_model_name(self, model_name: str):
+        with get_db() as db:
+            model_cost = db.query(ModelCost).filter_by(model_name=model_name).first()
+
+            return model_cost.cost_per_minute
+
+    def get_cost_per_million_characters_stt_by_model_name(self, model_name: str):
+        with get_db() as db:
+            model_cost = db.query(ModelCost).filter_by(model_name=model_name).first()
+
+            return model_cost.cost_per_million_characters
+
 ModelCosts = ModelCostTable()
