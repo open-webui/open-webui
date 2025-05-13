@@ -26,13 +26,7 @@
 	import type { i18n as i18nType } from 'i18next';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
-
-	// Access Matomo analytics
-	interface TrackingCommand extends Array<string | number | string[]> {}
-
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	if (!window._paq) window._paq = [];
-	const _paq: TrackingCommand[] = window._paq;
+	const _paq = window._paq;
 
 	interface SessionUser {
 		token: string;

@@ -51,9 +51,6 @@
 
 	setContext('i18n', i18n);
 
-	// Initialize Matomo _paq array if not already initialized
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	if (!window._paq) window._paq = [];
 	const _paq = window._paq;
 
 	const bc = new BroadcastChannel('active-tab-channel');
