@@ -567,7 +567,7 @@
 								</Tooltip>
 							</div>
 							<div class="text-xs dark:text-customGray-100/50">
-								{dayjs(model.updated_at * 1000).fromNow()}
+								{dayjs(model.updated_at * 1000).format('DD.MM.YYYY')}
 							</div>
 
 							<!-- <div class="flex flex-row gap-0.5 items-center">

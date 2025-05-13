@@ -184,7 +184,7 @@
 
 			{#if showBaseDropdown}
 				<div
-					class="max-h-60 overflow-y-auto absolute z-50 w-full -mt-1 bg-white dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
+					class="max-h-60 overflow-y-auto custom-scrollbar absolute z-50 w-full -mt-1 bg-white dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
 				>
 					<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
 					<div class="px-1">
@@ -253,9 +253,23 @@
 	</div> -->
 	{#if models !== null}
 		<div>
-			{#each Object.keys(organizations) as organization (organization)}
+			{#each Object.keys(organizations) as organization, idx (organization)}
 				<div class="mb-5">
-					<div class="text-sm dark:text-customGray-100 mb-2.5">{organization}</div>
+					<div class="grid grid-cols-[60%_1fr_1fr] mb-2.5">
+						<div class="text-sm dark:text-customGray-100 flex items-end">{organization}</div>
+						{#if idx === 0}
+							<div class="px-2 text-xs dark:text-customGray-300 flex items-end justify-center">
+								<div>{$i18n.t('Cost Multiple')}</div>
+								<Tooltip content={$i18n?.t('The Cost Multiple shows how different Models compare in price. For details, visit our pricing page.')}>
+									<div class="ml-1 cursor-pointer flex justify-center items-center w-[18px] h-[18px] rounded-full dark:bg-customGray-700">
+										<InfoIcon className="size-6" />
+									</div>
+								</Tooltip>
+							</div>
+							<div class="text-xs dark:text-customGray-300 flex items-end">{$i18n.t('Access Rights')}</div>
+						{/if}
+						
+					</div>
 					{#each models?.filter((m) => organizations[organization]
 							.map((item) => {
 								console.log(item, m);
@@ -275,9 +289,13 @@
 									{modelsInfo[model.name].description}
 								</div>
 							</div>
-							<div class="border-r border-customGray-700 flex justify-center items-center">
+							<div class="border-r border-customGray-700 flex justify-center items-center dark:text-customGray-100">
 								<div class="text-xs dark:text-white">
-									{modelsInfo[model.name]?.creditsPerMessage}x
+									{#if (modelsInfo[model.name]?.credit_multiple)}
+									    {modelsInfo[model.name]?.credit_multiple}x
+									{:else}
+										N/A
+									{/if}
 								</div>
 							</div>
 							<div class="border-r border-customGray-700 flex justify-center items-center">

@@ -202,10 +202,11 @@
 						<div class="dark:text-customGray-100 text-base font-normal mb-2">
 							{currentModel?.name}
 						</div>
+						{#if currentModel?.meta?.description}
 						<div class="text-xs dark:text-customGray-100/50 font-normal">
 							{currentModel?.meta?.description}
-							fdgdsfg
 						</div>
+						{/if}
 					</div>
 				{/if}
 				<div class="px-2.5 mb-2.5 flex justify-between">

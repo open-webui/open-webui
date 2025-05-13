@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount, getContext, tick } from 'svelte';
-	import { models, tools, functions, knowledge as knowledgeCollections, user } from '$lib/stores';
+	import { models, tools, functions, knowledge as knowledgeCollections, user, companyConfig } from '$lib/stores';
 
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Tags from '$lib/components/common/Tags.svelte';
@@ -72,9 +72,10 @@
 		}
 	}
 
+	const gptDefault = $models?.find(item => item.name === 'GPT 4o-mini')
 	let info = {
 		id: '',
-		base_model_id: null,
+		base_model_id: $companyConfig?.config?.models?.DEFAULT_MODELS ? $companyConfig?.config?.models?.DEFAULT_MODELS : gptDefault?.id,
 		name: '',
 		meta: {
 			profile_image_url: '',
@@ -876,7 +877,7 @@
 
 											{#if showDropdown}
 												<div
-													class="max-h-60 overflow-y-auto absolute z-50 w-full -mt-1 bg-white dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
+													class="max-h-60 overflow-y-auto custom-scrollbar absolute z-50 w-full -mt-1 bg-white dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
 												>
 													<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
 													<div class="px-1">

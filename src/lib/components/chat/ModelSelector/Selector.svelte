@@ -24,8 +24,9 @@
 	import DeleteIcon from '$lib/components/icons/DeleteIcon.svelte';
 	import StarRating from './IntelligenceRating.svelte';
 	import SpeedRating from './SpeedRating.svelte';
-	import { modelsInfo } from '../../../../data/modelsInfo';
+	import { modelsInfo, mapModelsToOrganizations } from '../../../../data/modelsInfo';
 	import { getModelIcon } from '$lib/utils';
+
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -59,9 +60,14 @@
 
 	let selectedModelIdx = 0;
 
+	let modelGroups = mapModelsToOrganizations(modelsInfo);
+	const desiredOrder = Object.values(modelGroups).flat();
+	const orderMap = new Map(desiredOrder.map((name, index) => [name, index]));
+	
 	const filteredSourceItems = items
 		.filter?.((item) => !item?.model?.name?.toLowerCase()?.includes('arena'))
-		?.filter((item) => item.model?.base_model_id == null);
+		?.filter((item) => item.model?.base_model_id == null)
+		.sort((a, b) => (orderMap.get(a?.model?.name) ?? Infinity) - (orderMap.get(b?.model?.name) ?? Infinity));
 	console.log(filteredSourceItems, 'items');
 	const fuse = new Fuse(
 		filteredSourceItems.map((item) => {
@@ -319,7 +325,7 @@
 					<input
 						id="model-search-input"
 						bind:value={searchValue}
-						class="w-full text-sm bg-transparent outline-none pl-7 h-[25px] rounded-lg border border-customGray-700 placeholder:text-xs"
+						class="w-full text-xs bg-transparent outline-none pl-7 h-[25px] rounded-lg border border-customGray-700 placeholder:text-xs"
 						placeholder={searchPlaceholder}
 						autocomplete="off"
 						on:keydown={(e) => {
@@ -343,13 +349,13 @@
 				</div>
 			{/if}
 
-			<div class="px-[3px] my-2 max-h-64 overflow-y-auto scrollbar-hidden group">
+			<div class="px-[3px] my-2 max-h-64 overflow-y-auto custom-scrollbar group">
 				{#each filteredItems as item, index}
 					<button
 						aria-label="model-item"
 						class="flex w-full text-left line-clamp-1 select-none items-center rounded-button py-[5px] px-2 text-sm text-gray-700 dark:text-customGray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-customGray-950 dark:hover:text-white rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
 						selectedModelIdx
-							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
+							? 'bg-gray-100 dark:bg-customGray-900 group-hover:bg-transparent'
 							: ''}"
 						data-arrow-selected={index === selectedModelIdx}
 						on:mouseenter={() => (hoveredItem = item)}
@@ -512,7 +518,7 @@
 				{/each}
 				{#if hoveredItem}
 					<div
-						class="absolute px-3 py-1 left-full ml-2 top-0 w-52 p-2 rounded-xl border border-customGray-700 bg-white dark:bg-customGray-900 text-sm text-gray-800 dark:text-white z-50"
+						class="absolute px-3 py-1 left-full ml-1 top-0 w-52 p-2 rounded-xl border border-customGray-700 bg-white dark:bg-customGray-900 text-sm text-gray-800 dark:text-white z-50"
 					>
 						{#if modelsInfo?.[hoveredItem?.label]?.organization}
 							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">

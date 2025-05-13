@@ -183,7 +183,7 @@
 					{/if}
 					{#if showPassword}
 						<input
-							class={`px-2.5 text-sm ${password ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
+							class={`px-2.5 text-sm ${password ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
 							type="text"
 							bind:value={password}
 							placeholder={isPasswordReset ? $i18n.t('New Password') : $i18n.t('Create Password')}
@@ -192,7 +192,7 @@
 						/>
 					{:else}
 						<input
-							class={`px-2.5 text-sm ${password ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
+							class={`px-2.5 text-sm ${password ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
 							type="password"
 							bind:value={password}
 							placeholder={isPasswordReset ? $i18n.t('New Password') : $i18n.t('Create Password')}
@@ -224,7 +224,7 @@
 					{/if}
 					{#if showConfirmPassword}
 						<input
-							class={`px-2.5 text-sm ${confirmPassword ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
+							class={`px-2.5 text-sm ${confirmPassword ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
 							type="text"
 							bind:value={confirmPassword}
 							placeholder={$i18n.t('Confirm Password')}
@@ -233,7 +233,7 @@
 						/>
 					{:else}
 						<input
-							class={`px-2.5 text-sm ${confirmPassword ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
+							class={`px-2.5 text-sm ${confirmPassword ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
 							type="password"
 							bind:value={confirmPassword}
 							placeholder={$i18n.t('Confirm Password')}

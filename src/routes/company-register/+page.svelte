@@ -65,7 +65,7 @@
 			const user = await completeRegistration(
 				first_name,
 				last_name,
-				registration_code,
+				registration_code?.trim(),
 				password,
 				profile_image_url ? profile_image_url : generateInitialsImage(first_name),
 				company_name,

@@ -29,6 +29,15 @@
 
 	let input = '';
 	let inputRef: HTMLInputElement;
+	let ghostRef;
+
+	function updateInputWidth() {
+		if (ghostRef && inputRef) {
+			ghostRef.textContent = input || ' ';
+			const width = ghostRef.offsetWidth + 10; 
+			inputRef.style.width = `${width}px`;
+		}
+	}
 
 	let search = '';
 
@@ -191,7 +200,7 @@
 						{email}
 						<button
 							type="button"
-							class="ml-1 text-xs font-bold hover:text-red-500"
+							class="ml-1 text-xs font-bold"
 							on:click={() => removeEmail(email)}
 						>
 							×
@@ -203,14 +212,16 @@
 					bind:this={inputRef}
 					bind:value={input}
 					placeholder="Enter email..."
-					class="text-xs bg-transparent outline-none px-1 h-6 w-auto max-w-[150px]"
+					class="text-xs bg-transparent outline-none px-1 h-6"
 					on:keydown={handleKeydown}
 					on:blur={() => {
 						addEmail();
 						emailFocused = false;
 					}}
 					on:focus={() => (emailFocused = true)}
+					on:input={updateInputWidth}
 				/>
+				<span bind:this={ghostRef} class="invisible absolute whitespace-pre text-xs px-1"></span>
 			</div>
 		</div>
 		<span class="text-xs dark:text-customGray-100/50 mb-5"
