@@ -188,7 +188,7 @@
 		]);
 		
 		analytics = {
-			topModels: topModels?.status === 'fulfilled' ? topModels?.value : [],
+			topModels: topModels?.status === 'fulfilled' && !topModels?.value?.message ? topModels?.value : [],
 			totalUsers: totalUsers?.status === 'fulfilled' ? totalUsers?.value : {},
 			totalMessages: totalMessages?.status === 'fulfilled' ? totalMessages?.value : {},
 			adoptionRate: adoptionRate?.status === 'fulfilled' ? adoptionRate?.value : {},
@@ -327,7 +327,7 @@
 							<div class=" self-center">{$i18n.t('Analytics')}</div>
 						</div>
 					</button>
-					{:else if tabId === 'billing'}
+					<!-- {:else if tabId === 'billing'}
 					<button
 						class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 						'billing'
@@ -343,7 +343,7 @@
 							</div>
 							<div class=" self-center">{$i18n.t('Billing')}</div>
 						</div>
-					</button>
+					</button> -->
 
                     {/if}
 

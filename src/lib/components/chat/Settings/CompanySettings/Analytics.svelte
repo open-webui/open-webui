@@ -124,7 +124,7 @@
 					{analytics?.totalUsers?.total_users}
 				</div>
 				<div class="text-xs dark:text-customGray-100/50 mb-1">{$i18n.t('Total Users')}</div>
-				<Tooltip content="text">
+				<Tooltip content="">
 					<div
 						class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full dark:bg-customGray-700"
 					>
@@ -137,7 +137,7 @@
 					{analytics?.adoptionRate?.adoption_rate}%
 				</div>
 				<div class="text-xs dark:text-customGray-100/50 mb-1">{$i18n.t('Adoption Rate')}</div>
-				<Tooltip content="text">
+				<Tooltip content="">
 					<div
 						class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full dark:bg-customGray-700"
 					>
@@ -150,7 +150,7 @@
 					{analytics?.powerUsers?.power_users_count}
 				</div>
 				<div class="text-xs dark:text-customGray-100/50 mb-1">{$i18n.t('Power Users')}</div>
-				<Tooltip content="text">
+				<Tooltip content="">
 					<div
 						class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full dark:bg-customGray-700"
 					>
@@ -163,7 +163,7 @@
 					{analytics?.totalAssistants?.total_assistants}
 				</div>
 				<div class="text-xs dark:text-customGray-100/50 mb-1">{$i18n.t('Assistants Created')}</div>
-				<Tooltip content="text">
+				<Tooltip content="">
 					<div
 						class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full dark:bg-customGray-700"
 					>
