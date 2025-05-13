@@ -159,18 +159,19 @@ def get_models_in_use():
 
 @sio.on("usage")
 async def usage(sid, data):
-    model_id = data["model"]
-    # Record the timestamp for the last update
-    current_time = int(time.time())
+    if sid in SESSION_POOL:
+        model_id = data["model"]
+        # Record the timestamp for the last update
+        current_time = int(time.time())
 
-    # Store the new usage data and task
-    USAGE_POOL[model_id] = {
-        **(USAGE_POOL[model_id] if model_id in USAGE_POOL else {}),
-        sid: {"updated_at": current_time},
-    }
+        # Store the new usage data and task
+        USAGE_POOL[model_id] = {
+            **(USAGE_POOL[model_id] if model_id in USAGE_POOL else {}),
+            sid: {"updated_at": current_time},
+        }
 
-    # Broadcast the usage data to all clients
-    await sio.emit("usage", {"models": get_models_in_use()})
+        # Broadcast the usage data to all clients
+        await sio.emit("usage", {"models": get_models_in_use()})
 
 
 @sio.event
@@ -192,9 +193,6 @@ async def connect(sid, environ, auth):
             # print(f"user {user.name}({user.id}) connected with session ID {sid}")
             await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
             await sio.emit("usage", {"models": get_models_in_use()})
-            return True
-
-    return False
 
 
 @sio.on("user-join")
@@ -281,7 +279,8 @@ async def channel_events(sid, data):
 
 @sio.on("user-list")
 async def user_list(sid):
-    await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
+    if sid in SESSION_POOL:
+        await sio.emit("user-list", {"user_ids": list(USER_POOL.keys())})
 
 
 @sio.event
