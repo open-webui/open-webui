@@ -90,7 +90,7 @@ jobs:
                   - --dockerfile=./Dockerfile
                   - --context=dir:///workspace
                   - --destination=${{ env.REGISTRY_URL }}:${{ github.run_id }}
-                  - --destination=${{ env.REGISTRY_URL }}:${ADDITIONAL_TAG}
+                  - --destination=${{ env.REGISTRY_URL }}:${ADDITIONAL_TAG//\//_}
                   - --build-arg=BUILD_HASH=${{ github.sha }}
                   - --git=recurse-submodules=true
                   - --skip-tls-verify
