@@ -98,17 +98,24 @@
 								tippyOptions={{ duration: [500, 0] }}
 							>
 								<div class="text-sm dark:text-gray-400 flex items-center gap-2 w-fit">
-									<a
+									<button
 										class="hover:text-gray-500 dark:hover:text-gray-100 underline grow"
-										href={document?.metadata?.file_id
-											? `${WEBUI_API_BASE_URL}/files/${document?.metadata?.file_id}/content${document?.metadata?.page !== undefined ? `#page=${document.metadata.page + 1}` : ''}`
-											: document.source?.url?.includes('http')
-												? document.source.url
-												: `#`}
 										target="_blank"
+										on:click={(e) => {
+											if (document?.metadata?.file_id) {
+												e.preventDefault();
+												fetch(`${WEBUI_API_BASE_URL}/files/${document.metadata.file_id}/content${document.metadata.page !== undefined ? `#page=${document.metadata.page + 1}` : ''}`)
+												.then(response => response.blob())
+												.then(blob => {
+													const url = window.URL.createObjectURL(blob);
+													window.open(url, '_blank');
+												})
+												.catch(error => console.error('Error fetching file:', error));
+											}
+										}}
 									>
 										{decodeString(document?.metadata?.name ?? document.source.name)}
-									</a>
+									</button>
 									{#if document?.metadata?.page}
 										<span class="text-xs text-gray-500 dark:text-gray-400">
 											({$i18n.t('page')}
