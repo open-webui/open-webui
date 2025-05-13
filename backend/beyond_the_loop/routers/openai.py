@@ -552,6 +552,7 @@ async def generate_chat_completion(
     bypass_filter: Optional[bool] = False,
     magic_prompt: Optional[bool] = False
 ):
+    global credit_service
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
@@ -753,7 +754,7 @@ async def generate_chat_completion(
 
                 input_tokens = response.get('usage', {}).get('prompt_tokens', 0)
                 output_tokens = response.get('usage', {}).get('completion_tokens', 0)
-                reasoning_tokens = response.get('usage', {}).get('completion_tokens_details', 0).get("reasoning_tokens", 0)
+                reasoning_tokens = response.get('usage', {}).get('completion_tokens_details', {}).get("reasoning_tokens", 0)
 
                 with_search_query_cost = "Perplexity" in model_name
 

@@ -592,7 +592,7 @@ async def transcription(
 
             audio = AudioSegment.from_file(file_path)
             duration_in_seconds = len(audio) / 1000  # pydub uses milliseconds
-            duration_in_minutes = math.ceil(duration_in_seconds / 60)  # Round up to the nearest minute
+            duration_in_minutes = duration_in_seconds / 60  # Calculate exact minutes as a float
 
             data = transcribe(request, file_path)
             file_path = file_path.split("/")[-1]
