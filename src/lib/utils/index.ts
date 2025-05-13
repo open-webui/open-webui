@@ -1097,3 +1097,34 @@ export function getModelIcon(label: string): string {
 	}
 }
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+export const getMonths = (data) => {
+	const values = [];
+	const keys = Object.keys(data);
+	const start = Number(keys?.[0]?.split('-')?.[1]) - 1;
+	const count = Object.keys(data)?.length + start;
+
+	for (let i = start; i < count; ++i) {
+		const value = MONTHS[Math.ceil(i) % 12];
+		values.push(value);
+	}
+	return values;
+}
+
+export function getMonthRange(year: number, month: number) {
+	const start = dayjs(`${year}-${month.toString().padStart(2, '0')}-01`);
+	const now = dayjs();
+
+	const isCurrentMonth = now.year() === year && now.month() === month - 1;
+
+	const end = isCurrentMonth
+		? now
+		: start.endOf('month');
+
+	return {
+		start: start.format('YYYY-MM-DD'),
+		end: end.format('YYYY-MM-DD')
+	};
+}
+

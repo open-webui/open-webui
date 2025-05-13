@@ -142,7 +142,9 @@ async def create_user(form_data: UserCreateForm):
             status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.INVALID_EMAIL_FORMAT
         )
 
-    if Users.get_user_by_email(form_data.email.lower()):
+    user = Users.get_user_by_email(form_data.email.lower())
+
+    if user and not user.registration_code:
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
     registration_code = str(random.randint(10**8, 10**9 - 1))

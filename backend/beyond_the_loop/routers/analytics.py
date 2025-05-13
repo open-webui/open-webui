@@ -8,6 +8,7 @@ from beyond_the_loop.models.users import get_users_by_company, get_active_users_
 from open_webui.internal.db import get_db
 from beyond_the_loop.models.completions import Completion
 from beyond_the_loop.models.users import User
+from beyond_the_loop.models.models import Model
 
 from sqlalchemy import func
 
@@ -41,9 +42,11 @@ async def get_top_models(
 
         if end_date:
             end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            end_date_dt = datetime(end_date_dt.year, end_date_dt.month, end_date_dt.day, 23, 59, 59)
             end_timestamp = int(end_date_dt.timestamp())
         else:
             end_date_dt = datetime.now()
+            end_date_dt = datetime(end_date_dt.year, end_date_dt.month, end_date_dt.day, 23, 59, 59)
             end_timestamp = int(end_date_dt.timestamp())
 
         if start_timestamp > end_timestamp:
@@ -79,7 +82,8 @@ async def get_top_users(
     user=Depends(get_verified_user)
 ):
     """
-    Returns the top 3 users based on token usage for the user's company and within a specified date range.
+    Returns the top users based on different metrics (credits used, messages, assistants created)
+    for the user's company and within a specified date range.
     """
     try:
         if start_date:
@@ -90,16 +94,19 @@ async def get_top_users(
 
         if end_date:
             end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            end_date_dt = datetime(end_date_dt.year, end_date_dt.month, end_date_dt.day, 23, 59, 59)
             end_timestamp = int(end_date_dt.timestamp())
         else:
             end_date_dt = datetime.now()
+            end_date_dt = datetime(end_date_dt.year, end_date_dt.month, end_date_dt.day, 23, 59, 59)
             end_timestamp = int(end_date_dt.timestamp())
 
         if start_timestamp > end_timestamp:
             raise HTTPException(status_code=400, detail="Start date must be before end date.")
 
         with get_db() as db:
-            top_users = db.query(
+            # Query top users by credits used
+            top_users_by_credits = db.query(
                 Completion.user_id,
                 func.sum(Completion.credits_used).label("total_credits"),
                 User.first_name,
@@ -111,25 +118,104 @@ async def get_top_users(
             ).filter(
                 Completion.created_at >= start_timestamp,
                 Completion.created_at <= end_timestamp,
+                User.company_id == user.company_id
             ).group_by(
                 Completion.user_id, User.first_name, User.last_name, User.email, User.profile_image_url
             ).order_by(
                 func.sum(Completion.credits_used).desc()
-            ).limit(3).all()
+            ).limit(5).all()
 
-        return [
+            # Query top users by message count
+            top_users_by_messages = db.query(
+                Completion.user_id,
+                func.count(Completion.id).label("message_count"),
+                User.first_name,
+                User.last_name,
+                User.email,
+                User.profile_image_url
+            ).join(
+                User, User.id == Completion.user_id
+            ).filter(
+                Completion.created_at >= start_timestamp,
+                Completion.created_at <= end_timestamp,
+                User.company_id == user.company_id
+            ).group_by(
+                Completion.user_id, User.first_name, User.last_name, User.email, User.profile_image_url
+            ).order_by(
+                func.count(Completion.id).desc()
+            ).limit(5).all()
+
+            # Query top users by assistants created
+            top_users_by_assistants = db.query(
+                Model.user_id,
+                func.count(Model.id).label("assistant_count"),
+                User.first_name,
+                User.last_name,
+                User.email,
+                User.profile_image_url
+            ).join(
+                User, User.id == Model.user_id
+            ).filter(
+                Model.created_at >= start_timestamp,
+                Model.created_at <= end_timestamp,
+                Model.company_id == user.company_id
+            ).group_by(
+                Model.user_id, User.first_name, User.last_name, User.email, User.profile_image_url
+            ).order_by(
+                func.count(Model.id).desc()
+            ).limit(5).all()
+
+        # Format results for credits
+        top_by_credits = [
             {
                 "user_id": user_id,
-                "name": name,
+                "first_name": first_name,
+                "last_name": last_name,
                 "email": email,
                 "profile_image_url": profile_image_url,
                 "total_credits_used": total_credits
             }
-            for user_id, total_credits, name, email, profile_image_url in top_users
+            for user_id, total_credits, first_name, last_name, email, profile_image_url in top_users_by_credits
         ]
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+
+        # Format results for messages
+        top_by_messages = [
+            {
+                "user_id": user_id,
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": email,
+                "profile_image_url": profile_image_url,
+                "message_count": message_count
+            }
+            for user_id, message_count, first_name, last_name, email, profile_image_url in top_users_by_messages
+        ]
+
+        # Format results for assistants
+        top_by_assistants = [
+            {
+                "user_id": user_id,
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": email,
+                "profile_image_url": profile_image_url,
+                "assistant_count": assistant_count
+            }
+            for user_id, assistant_count, first_name, last_name, email, profile_image_url in top_users_by_assistants
+        ]
+
+        return {
+            "top_by_credits": top_by_credits,
+            "top_by_messages": top_by_messages,
+            "top_by_assistants": top_by_assistants
+        }
+    except ValueError as ve:
+        # Add more detailed error information
+        log.error(f"ValueError in get_top_users: {ve}")
+        raise HTTPException(status_code=400, detail=f"Invalid date format. Use YYYY-MM-DD. Error: {ve}")
     except Exception as e:
+        # Log the specific error
+        log.error(f"Error in get_top_users: {e}")
         raise HTTPException(status_code=500, detail=f"Error fetching top users: {e}")
 
 
@@ -156,14 +242,13 @@ async def get_total_billing(
         # Parse end_date
         if end_date:
             end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            end_date_dt = datetime(end_date_dt.year, end_date_dt.month, end_date_dt.day, 23, 59, 59)
         else:
             end_date_dt = current_date  # Default to current date
+            end_date_dt = datetime(end_date_dt.year, end_date_dt.month, end_date_dt.day, 23, 59, 59)
 
         if start_date_dt > end_date_dt:
             raise HTTPException(status_code=400, detail="Start date must be before end date.")
-
-        # Ensure end_date includes the entire day
-        end_date_dt = end_date_dt.replace(hour=23, minute=59, second=59)
 
         with get_db() as db:
             query = db.query(
@@ -241,14 +326,13 @@ async def get_total_messages(
         # Parse end_date
         if end_date:
             end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            end_date_dt = datetime(end_date_dt.year, end_date_dt.month, end_date_dt.day, 23, 59, 59)
         else:
             end_date_dt = current_date  # Default to current date
+            end_date_dt = datetime(end_date_dt.year, end_date_dt.month, end_date_dt.day, 23, 59, 59)
 
         if start_date_dt > end_date_dt:
             raise HTTPException(status_code=400, detail="Start date must be before end date.")
-
-        # Ensure end_date includes the entire day
-        end_date_dt = end_date_dt.replace(hour=23, minute=59, second=59)
 
         with get_db() as db:
             query = db.query(
@@ -326,14 +410,13 @@ async def get_total_chats(
         # Parse end_date
         if end_date:
             end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            end_date_dt = datetime(end_date_dt.year, end_date_dt.month, end_date_dt.day, 23, 59, 59)
         else:
             end_date_dt = current_date  # Default to current date
+            end_date_dt = datetime(end_date_dt.year, end_date_dt.month, end_date_dt.day, 23, 59, 59)
 
         if start_date_dt > end_date_dt:
             raise HTTPException(status_code=400, detail="Start date must be before end date.")
-
-        # Ensure end_date includes the entire day
-        end_date_dt = end_date_dt.replace(hour=23, minute=59, second=59)
 
         with get_db() as db:
             query = db.query(
@@ -411,14 +494,13 @@ async def get_saved_time_in_seconds(
         # Parse end_date
         if end_date:
             end_date_dt = datetime.strptime(end_date, "%Y-%m-%d")
+            end_date_dt = datetime(end_date_dt.year, end_date_dt.month, end_date_dt.day, 23, 59, 59)
         else:
             end_date_dt = current_date  # Default to current date
+            end_date_dt = datetime(end_date_dt.year, end_date_dt.month, end_date_dt.day, 23, 59, 59)
 
         if start_date_dt > end_date_dt:
             raise HTTPException(status_code=400, detail="Start date must be before end date.")
-
-        # Ensure end_date includes the entire day
-        end_date_dt = end_date_dt.replace(hour=23, minute=59, second=59)
 
         with get_db() as db:
             query = db.query(
@@ -572,3 +654,21 @@ async def get_power_users(user=Depends(get_verified_user)):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching power users: {e}")
+
+
+@router.get("/stats/total-assistants")
+async def get_total_assistants(user=Depends(get_verified_user)):
+    """
+    Returns the total number of assistants (models) that are available for the user's company.
+    """
+    try:
+        with get_db() as db:
+            # Query models that belong to the user's company
+            total_assistants = db.query(Model).filter(
+                Model.company_id == user.company_id,
+                Model.base_model_id != None
+            ).count()
+            
+            return {"total_assistants": total_assistants}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching total assistants: {e}")
