@@ -220,8 +220,10 @@ type Config = {
 			[key: string]: string;
 		};
 	};
-	account_pending_title?: string;
-    account_pending_text?: string;
+	ui?: {
+		pending_user_overlay_title?: string;
+		pending_user_overlay_description?: string;
+	};
 };
 
 type PromptSuggestion = {

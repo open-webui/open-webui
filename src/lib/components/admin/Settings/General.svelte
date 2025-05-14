@@ -18,6 +18,7 @@
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -306,23 +307,28 @@
 					</div>
 
 					<div class="mb-3.5">
-						<div class=" self-center text-xs font-medium mb-1">{$i18n.t('Custom Account Pending Title')}</div>
-						<textarea
-							class="w-full mt-1 rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-							rows="2"
-							placeholder={$i18n.t('Enter a custom title to be displayed on the account pending screen. Leave empty for default.')}
-							bind:value={adminConfig.ACCOUNT_PENDING_TITLE}
-						></textarea>
+						<div class=" self-center text-xs font-medium mb-1">
+							{$i18n.t('Pending User Overlay Title')}
+						</div>
+						<Textarea
+							rows={2}
+							placeholder={$i18n.t(
+								'Enter a title for the pending user info overlay. Leave empty for default.'
+							)}
+							bind:value={adminConfig.PENDING_USER_OVERLAY_TITLE}
+						/>
 					</div>
 
 					<div class="mb-3.5">
-						<div class=" self-center text-xs font-medium mb-1">{$i18n.t('Custom Account Pending Text')}</div>
-						<textarea
-							class="w-full mt-1 rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
-							rows="3"
-							placeholder={$i18n.t('Enter a custom text to be displayed on the account pending screen. Leave empty for default.')}
-							bind:value={adminConfig.ACCOUNT_PENDING_TEXT}
-						></textarea>
+						<div class=" self-center text-xs font-medium mb-1">
+							{$i18n.t('Pending User Overlay Content')}
+						</div>
+						<Textarea
+							placeholder={$i18n.t(
+								'Enter content for the pending user info overlay. Leave empty for default.'
+							)}
+							bind:value={adminConfig.PENDING_USER_OVERLAY_CONTENT}
+						/>
 					</div>
 
 					<div class="mb-2.5 flex w-full justify-between pr-2">

@@ -696,8 +696,8 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
-        "ACCOUNT_PENDING_TEXT": request.app.state.config.ACCOUNT_PENDING_TEXT,
-        "ACCOUNT_PENDING_TITLE": request.app.state.config.ACCOUNT_PENDING_TITLE,
+        "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
+        "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
     }
 
 
@@ -715,8 +715,8 @@ class AdminConfig(BaseModel):
     ENABLE_CHANNELS: bool
     ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
-    ACCOUNT_PENDING_TEXT: Optional[str] = None
-    ACCOUNT_PENDING_TITLE: Optional[str] = None
+    PENDING_USER_OVERLAY_TITLE: Optional[str] = None
+    PENDING_USER_OVERLAY_CONTENT: Optional[str] = None
 
 
 @router.post("/admin/config")
@@ -754,8 +754,12 @@ async def update_admin_config(
 
     request.app.state.config.ENABLE_USER_WEBHOOKS = form_data.ENABLE_USER_WEBHOOKS
 
-    request.app.state.config.ACCOUNT_PENDING_TEXT = form_data.ACCOUNT_PENDING_TEXT
-    request.app.state.config.ACCOUNT_PENDING_TITLE = form_data.ACCOUNT_PENDING_TITLE
+    request.app.state.config.PENDING_USER_OVERLAY_TITLETLE = (
+        form_data.PENDING_USER_OVERLAY_TITLE
+    )
+    request.app.state.config.PENDING_USER_OVERLAY_CONTENT = (
+        form_data.PENDING_USER_OVERLAY_CONTENT
+    )
 
     return {
         "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
@@ -771,8 +775,8 @@ async def update_admin_config(
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
-        "ACCOUNT_PENDING_TEXT": request.app.state.config.ACCOUNT_PENDING_TEXT,
-        "ACCOUNT_PENDING_TITLE": request.app.state.config.ACCOUNT_PENDING_TITLE,
+        "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
+        "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
     }
 
 

@@ -21,17 +21,23 @@
 	>
 		<div class="m-auto pb-10 flex flex-col justify-center">
 			<div class="max-w-md">
-				<div class="text-center dark:text-white text-2xl font-medium z-50" style="white-space: pre-wrap;">
-					{#if $config?.ui?.account_pending_title && $config?.ui?.account_pending_title.trim() !== ""}
-						{$config.ui.account_pending_title}
+				<div
+					class="text-center dark:text-white text-2xl font-medium z-50"
+					style="white-space: pre-wrap;"
+				>
+					{#if $config?.ui?.pending_user_overlay_title && $config?.ui?.pending_user_overlay_title.trim() !== ''}
+						{$config.ui.pending_user_overlay_title}
 					{:else}
-						{$i18n.t('Account Activation Pending')}{#if !$config?.ui?.account_pending_title || $config?.ui?.account_pending_title.trim() === ""}<br />{/if}{$i18n.t('Contact Admin for WebUI Access')}
+						{$i18n.t('Account Activation Pending')}<br />{$i18n.t('Contact Admin for WebUI Access')}
 					{/if}
 				</div>
 
-				<div class=" mt-4 text-center text-sm dark:text-gray-200 w-full" style="white-space: pre-wrap;">
-					{#if $config?.ui?.account_pending_text && $config?.ui?.account_pending_text.trim() !== ""}
-						{$config.ui.account_pending_text}
+				<div
+					class=" mt-4 text-center text-sm dark:text-gray-200 w-full"
+					style="white-space: pre-wrap;"
+				>
+					{#if $config?.ui?.pending_user_overlay_content && $config?.ui?.pending_user_overlay_content.trim() !== ''}
+						{$config.ui.pending_user_overlay_content}
 					{:else}
 						{$i18n.t('Your account status is currently pending activation.')}{'\n'}{$i18n.t(
 							'To access the WebUI, please reach out to the administrator. Admins can manage user statuses from the Admin Panel.'
