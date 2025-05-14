@@ -232,7 +232,7 @@
 	};
 </script>
 
-<div class="flex flex-col h-full justify-between text-sm">
+<div class="flex flex-col h-full justify-between text-sm" id="general-content">
 	<div class="  overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div class="">
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Settings')}</div>

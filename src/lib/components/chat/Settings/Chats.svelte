@@ -107,7 +107,7 @@
 
 <ArchivedChatsModal bind:show={showArchivedChatsModal} on:change={handleArchivedChatsChange} />
 
-<div class="flex flex-col h-full justify-between space-y-3 text-sm">
+<div id="chats-content" class="flex flex-col h-full justify-between space-y-3 text-sm">
 	<div class=" space-y-2 overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div class="flex flex-col">
 			<input

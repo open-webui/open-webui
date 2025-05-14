@@ -74,6 +74,7 @@
 	on:submit|preventDefault={() => {
 		updateHandler();
 	}}
+	id="connections-content"
 >
 	<div class=" overflow-y-scroll scrollbar-hidden h-full">
 		{#if config !== null}
