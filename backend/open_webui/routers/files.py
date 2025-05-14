@@ -1,10 +1,12 @@
 import asyncio
 from threading import Lock
 import logging
+import base64
 import os
 import uuid
 import json
 from pathlib import Path
+from fastapi import Form
 from typing import Optional, Dict
 from urllib.parse import quote
 
@@ -16,7 +18,6 @@ from fastapi import (
     Request,
     UploadFile,
     status,
-    BackgroundTasks,
 )
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
@@ -27,14 +28,18 @@ from open_webui.models.files import (
     FileModelResponse,
     Files,
 )
+from open_webui.models.tasks import AsyncTaskResponse
 from open_webui.routers.retrieval import (
     ProcessFileForm,
     process_file,
-    process_file_async,
 )
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.tasks import process_tasks
+from open_webui.tasks import celery_app
+from celery.result import AsyncResult
 from pydantic import BaseModel
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -113,41 +118,12 @@ def upload_file(
 # Async Files routes
 ############################
 
-
-tasks_cache = {}  # Dictionary to store task results
-
-# Cache temporário para exemplo (substituir por um sistema persistente)
-cache_lock = Lock()
-
-
-def process_tasks(request, form_data, user, task_id):
-    """Executa OCR e processamento do PDF de forma assíncrona."""
-
-    global tasks_cache
-    with cache_lock:
-        task = tasks_cache.get(task_id, {})
-
-    task['status'] = "Processing PDF..."
-    try:
-        text = process_file_async(
-            request, form_data, task_id, user)
-    except Exception as e:
-        log.exception(e)
-        task['error'] = str(e)
-        task['status'] = "Processing Failed"
-        return
-    task['text'] = text
-    task['status'] = "Processing Completed"
-
-
-@router.post("/async")
+@router.post("/async", response_model=AsyncTaskResponse)
 async def upload_file_async(
     request: Request,
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     user=Depends(get_verified_user),
 ):
-    global tasks_cache
     log.info(f"file.content_type: {file.content_type}")
 
     unsanitized_filename = file.filename
@@ -155,9 +131,6 @@ async def upload_file_async(
 
     # replace filename with uuid
     task_id = str(uuid.uuid4())
-    with cache_lock:
-        tasks_cache[task_id] = {"status": "queued",
-                                "result": None, "error": None}
     name = filename
     filename = f"{id}_{filename}"
     contents, file_path = Storage.upload_file(file.file, filename)
@@ -177,17 +150,48 @@ async def upload_file_async(
             }
         ),
     )
+    # Envia a task pro RabbitMQ via Celery
+    form_data = ProcessFileForm(file_id=task_id)
+    args = {'collection_name': form_data.collection_name,
+            'text_splitter': request.app.state.config.TEXT_SPLITTER,
+            'task_id': task_id,
+            'chunk_overlap': request.app.state.config.CHUNK_OVERLAP,
+            'chunk_size': request.app.state.config.CHUNK_SIZE,
+            'engine': request.app.state.config.CONTENT_EXTRACTION_ENGINE,
+            "model": request.app.state.config.RAG_EMBEDDING_MODEL,
+            "tiktoken_encoding_name": request.app.state.config.TIKTOKEN_ENCODING_NAME,
+            "rag_openai_api_base_url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
+            "rag_ollama_api_key": request.app.state.config.RAG_OLLAMA_API_KEY,
+            "rag_embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+            "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
+            "pdftotext_server_url": request.app.state.config.PDFTOTEXT_SERVER_URL,
+            "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
+            "maxpages_pdftotext": request.app.state.config.MAXPAGES_PDFTOTEXT,
+            }
+    # Adiciona os parâmetros necessários para o processamento
+    # da task
+    # args = {
+    #     "collection_name": form_data.collection_name,
+    #     "text_splitter": request.app.state.config.TEXT_SPLITTER,
+    #     "task_id": task_id,
+    #     "chunk_overlap": request.app.state.config.CHUNK_OVERLAP,
+    #     "chunk_size": request.app.state.config.CHUNK_SIZE,
+    #     "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
+    #     "model": request.app.state.config.RAG_EMBEDDING_MODEL,
+    #     "tiktoken_encoding_name": request.app.state.config.TIKTOKEN_ENCODING_NAME,
+    #     "rag_openai_api_base_url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
+    #     "rag_ollama_api_key": request.app.state.config.RAG_OLLAMA_API_KEY,
+    #     "rag_embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+    #     "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
+    #     "pdftotext_server_url": request.app.state.config.PDFTOTEXT_SERVER_URL,
+    #     "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
+    #     "maxpages_pdftotext": request.app.state.config.MAXPAGES_PDFTOTEXT,
+    # }
 
-    background_tasks.add_task(
-        process_tasks,
-        request,
-        ProcessFileForm(file_id=task_id),
-        user,
-        task_id,
-    )
-    # file_item = Files.get_file_by_id(id=id)
+    _ = process_tasks.delay(args=args)
+    message = f"Task {task_id} adicionada à fila de processamento"
+    return AsyncTaskResponse(task_id=task_id, status="queued", message=message)
 
-    return {"task_id": task_id}
 
 
 ############################
@@ -198,24 +202,8 @@ async def upload_file_async(
 # Rota opcional para verificar status da task
 @router.get("/task_status/{task_id}")
 async def get_task_status(task_id: str):
-    global tasks_cache
-    with cache_lock:
-        task = tasks_cache.get(task_id, {})
-    return {
-        "task_id": task_id,
-        "status": task.get("status", "not_found"),
-        "result": task.get("result"),
-        "error": task.get("error"),
-        "task": task,
-    }
-
-
-@router.get("/get_tasks")
-def get_task_status():
-    if tasks_cache:
-        # Retorna apenas os task_ids
-        return {"task_ids": list(tasks_cache.keys())}
-    return {"message": "No tasks found"}
+    res = AsyncResult(task_id, app=celery_app)
+    return {"task_id": task_id, "status": res.status, "result": res.result if res.ready() else None}
 
 
 ############################

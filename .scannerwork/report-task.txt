@@ -1,0 +1,6 @@
+projectKey=openweb-iara
+serverUrl=http://localhost:9000
+serverVersion=25.4.0.105899
+dashboardUrl=http://localhost:9000/dashboard?id=openweb-iara
+ceTaskId=20d8bf39-a71c-478a-9a93-41c2f9aee63e
+ceTaskUrl=http://localhost:9000/api/ce/task?id=20d8bf39-a71c-478a-9a93-41c2f9aee63e
