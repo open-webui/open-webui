@@ -5,7 +5,6 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
-
 	export let show = false;
 	export let citation;
 	export let showPercentage = false;
@@ -104,7 +103,12 @@
 										on:click={(e) => {
 											if (document?.metadata?.file_id) {
 												e.preventDefault();
-												fetch(`${WEBUI_API_BASE_URL}/files/${document.metadata.file_id}/content${document.metadata.page !== undefined ? `#page=${document.metadata.page + 1}` : ''}`)
+												fetch(`${WEBUI_API_BASE_URL}/files/${document.metadata.file_id}/content${document.metadata.page !== undefined ? `#page=${document.metadata.page + 1}` : ''}`,{
+													headers: {
+														'Authorization': `Bearer ${localStorage.token}`
+													},
+													credentials: 'include'
+												})
 												.then(response => response.blob())
 												.then(blob => {
 													const url = window.URL.createObjectURL(blob);
