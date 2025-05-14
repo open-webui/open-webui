@@ -353,115 +353,86 @@ async def chat_web_search_handler(
         )
         return form_data
 
-    all_results = []
+    await event_emitter(
+        {
+            "type": "status",
+            "data": {
+                "action": "web_search",
+                "description": "Searching the web",
+                "done": False,
+            },
+        }
+    )
 
-    for searchQuery in queries:
-        await event_emitter(
-            {
-                "type": "status",
-                "data": {
-                    "action": "web_search",
-                    "description": 'Searching "{{searchQuery}}"',
-                    "query": searchQuery,
-                    "done": False,
-                },
-            }
+    try:
+        results = await process_web_search(
+            request,
+            SearchForm(queries=queries),
+            user=user,
         )
 
-        try:
-            results = await process_web_search(
-                request,
-                SearchForm(
-                    **{
-                        "query": searchQuery,
+        if results:
+            files = form_data.get("files", [])
+
+            if results.get("collection_names"):
+                for col_idx, collection_name in enumerate(
+                    results.get("collection_names")
+                ):
+                    files.append(
+                        {
+                            "collection_name": collection_name,
+                            "name": ", ".join(queries),
+                            "type": "web_search",
+                            "urls": results["filenames"],
+                        }
+                    )
+            elif results.get("docs"):
+                # Invoked when bypass embedding and retrieval is set to True
+                docs = results["docs"]
+                files.append(
+                    {
+                        "docs": docs,
+                        "name": ", ".join(queries),
+                        "type": "web_search",
+                        "urls": results["filenames"],
                     }
-                ),
-                user=user,
-            )
+                )
 
-            if results:
-                all_results.append(results)
-                files = form_data.get("files", [])
+            form_data["files"] = files
 
-                if results.get("collection_names"):
-                    for col_idx, collection_name in enumerate(
-                        results.get("collection_names")
-                    ):
-                        files.append(
-                            {
-                                "collection_name": collection_name,
-                                "name": searchQuery,
-                                "type": "web_search",
-                                "urls": [results["filenames"][col_idx]],
-                            }
-                        )
-                elif results.get("docs"):
-                    # Invoked when bypass embedding and retrieval is set to True
-                    docs = results["docs"]
-
-                    if len(docs) == len(results["filenames"]):
-                        # the number of docs and filenames (urls) should be the same
-                        for doc_idx, doc in enumerate(docs):
-                            files.append(
-                                {
-                                    "docs": [doc],
-                                    "name": searchQuery,
-                                    "type": "web_search",
-                                    "urls": [results["filenames"][doc_idx]],
-                                }
-                            )
-                    else:
-                        # edge case when the number of docs and filenames (urls) are not the same
-                        # this should not happen, but if it does, we will just append the docs
-                        files.append(
-                            {
-                                "docs": results.get("docs", []),
-                                "name": searchQuery,
-                                "type": "web_search",
-                                "urls": results["filenames"],
-                            }
-                        )
-
-                form_data["files"] = files
-        except Exception as e:
-            log.exception(e)
             await event_emitter(
                 {
                     "type": "status",
                     "data": {
                         "action": "web_search",
-                        "description": 'Error searching "{{searchQuery}}"',
-                        "query": searchQuery,
+                        "description": "Searched {{count}} sites",
+                        "urls": results["filenames"],
+                        "done": True,
+                    },
+                }
+            )
+        else:
+            await event_emitter(
+                {
+                    "type": "status",
+                    "data": {
+                        "action": "web_search",
+                        "description": "No search results found",
                         "done": True,
                         "error": True,
                     },
                 }
             )
 
-    if all_results:
-        urls = []
-        for results in all_results:
-            if "filenames" in results:
-                urls.extend(results["filenames"])
-
+    except Exception as e:
+        log.exception(e)
         await event_emitter(
             {
                 "type": "status",
                 "data": {
                     "action": "web_search",
-                    "description": "Searched {{count}} sites",
-                    "urls": urls,
-                    "done": True,
-                },
-            }
-        )
-    else:
-        await event_emitter(
-            {
-                "type": "status",
-                "data": {
-                    "action": "web_search",
-                    "description": "No search results found",
+                    "description": "An error occurred while searching the web",
+                    "queries": queries,
                     "done": True,
                     "error": True,
                 },
@@ -667,6 +638,9 @@ def apply_params_to_form_data(form_data, model):
 
         if "frequency_penalty" in params and params["frequency_penalty"] is not None:
             form_data["frequency_penalty"] = params["frequency_penalty"]
+
+        if "presence_penalty" in params and params["presence_penalty"] is not None:
+            form_data["presence_penalty"] = params["presence_penalty"]
 
         if "reasoning_effort" in params and params["reasoning_effort"] is not None:
             form_data["reasoning_effort"] = params["reasoning_effort"]
@@ -888,16 +862,20 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # If context is not empty, insert it into the messages
     if len(sources) > 0:
         context_string = ""
-        citated_file_idx = {}
-        for _, source in enumerate(sources, 1):
+        citation_idx = {}
+        for source in sources:
             if "document" in source:
                 for doc_context, doc_meta in zip(
                     source["document"], source["metadata"]
                 ):
-                    file_id = doc_meta.get("file_id")
-                    if file_id not in citated_file_idx:
-                        citated_file_idx[file_id] = len(citated_file_idx) + 1
-                    context_string += f'<source id="{citated_file_idx[file_id]}">{doc_context}</source>\n'
+                    citation_id = (
+                        doc_meta.get("source", None)
+                        or source.get("source", {}).get("id", None)
+                        or "N/A"
+                    )
+                    if citation_id not in citation_idx:
+                        citation_idx[citation_id] = len(citation_idx) + 1
+                    context_string += f'<source id="{citation_idx[citation_id]}">{doc_context}</source>\n'
 
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])
@@ -930,7 +908,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             )
 
     # If there are citations, add them to the data_items
-    sources = [source for source in sources if source.get("source", {}).get("name", "")]
+    sources = [
+        source
+        for source in sources
+        if source.get("source", {}).get("name", "")
+        or source.get("source", {}).get("id", "")
+    ]
 
     if len(sources) > 0:
         events.append({"sources": sources})
@@ -960,6 +943,20 @@ async def process_chat_response(
 
         if message:
             messages = get_message_list(message_map, message.get("id"))
+
+            # Remove reasoning details and files from the messages.
+            # as get_message_list creates a new list, it does not affect
+            # the original messages outside of this handler
+            for message in messages:
+                message["content"] = re.sub(
+                    r"<details\s+type=\"reasoning\"[^>]*>.*?<\/details>",
+                    "",
+                    message["content"],
+                    flags=re.S,
+                ).strip()
+
+                if message.get("files"):
+                    message["files"] = []
 
             if tasks and messages:
                 if TASKS.TITLE_GENERATION in tasks:
@@ -1129,7 +1126,7 @@ async def process_chat_response(
                     )
 
                     # Send a webhook notification if the user is not active
-                    if get_active_status_by_user_id(user.id) is None:
+                    if not get_active_status_by_user_id(user.id):
                         webhook_url = Users.get_user_webhook_url_by_id(user.id)
                         if webhook_url:
                             post_webhook(
@@ -1417,6 +1414,9 @@ async def process_chat_response(
 
                             if after_tag:
                                 content_blocks[-1]["content"] = after_tag
+                                tag_content_handler(
+                                    content_type, tags, after_tag, content_blocks
+                                )
 
                             break
                 elif content_blocks[-1]["type"] == content_type:
@@ -1667,6 +1667,15 @@ async def process_chat_response(
 
                                                 if current_response_tool_call is None:
                                                     # Add the new tool call
+                                                    delta_tool_call.setdefault(
+                                                        "function", {}
+                                                    )
+                                                    delta_tool_call[
+                                                        "function"
+                                                    ].setdefault("name", "")
+                                                    delta_tool_call[
+                                                        "function"
+                                                    ].setdefault("arguments", "")
                                                     response_tool_calls.append(
                                                         delta_tool_call
                                                     )
@@ -2211,7 +2220,7 @@ async def process_chat_response(
                     )
 
                 # Send a webhook notification if the user is not active
-                if get_active_status_by_user_id(user.id) is None:
+                if not get_active_status_by_user_id(user.id):
                     webhook_url = Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
                         post_webhook(
