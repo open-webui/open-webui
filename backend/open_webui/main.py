@@ -1170,8 +1170,8 @@ async def chat_completion(
             "tool_ids": form_data.get("tool_ids", None),
             "tool_servers": form_data.pop("tool_servers", None),
             "files": form_data.get("files", None),
-            "features": form_data.get("features", None),
-            "variables": form_data.get("variables", None),
+            "features": form_data.get("features", {}),
+            "variables": form_data.get("variables", {}),
             "model": model,
             "direct": model_item.get("direct", False),
             **(
