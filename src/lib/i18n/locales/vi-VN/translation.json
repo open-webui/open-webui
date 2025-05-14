@@ -236,6 +236,7 @@
 	"Connections": "Kết nối",
 	"Connections saved successfully": "Đã lưu kết nối thành công",
 	"Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort.": "Hạn chế nỗ lực suy luận cho các mô hình suy luận. Chỉ áp dụng cho các mô hình suy luận từ các nhà cung cấp cụ thể hỗ trợ nỗ lực suy luận.",
+	"Contact Admin for WebUI Access": "",
 	"Content": "Nội dung",
 	"Content Extraction Engine": "Engine Trích xuất Nội dung",
 	"Context Length": "Độ dài ngữ cảnh (Context Length)",

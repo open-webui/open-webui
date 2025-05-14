@@ -28,7 +28,8 @@
 					{#if $config?.ui?.pending_user_overlay_title && $config?.ui?.pending_user_overlay_title.trim() !== ''}
 						{$config.ui.pending_user_overlay_title}
 					{:else}
-						{$i18n.t('Account Activation Pending')}<br />{$i18n.t('Contact Admin for WebUI Access')}
+						{$i18n.t('Account Activation Pending')}<br />
+						{$i18n.t('Contact Admin for WebUI Access')}
 					{/if}
 				</div>
 

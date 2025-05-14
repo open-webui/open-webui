@@ -236,6 +236,7 @@
 	"Connections": "སྦྲེལ་མཐུད།",
 	"Connections saved successfully": "",
 	"Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort.": "རྒྱུ་མཚན་འདྲེན་པའི་དཔེ་དབྱིབས་ཀྱི་རྒྱུ་མཚན་འདྲེན་པའི་འབད་བརྩོན་ལ་ཚད་བཀག་བྱེད་པ། རྒྱུ་མཚན་འདྲེན་པའི་འབད་བརྩོན་ལ་རྒྱབ་སྐྱོར་བྱེད་པའི་མཁོ་སྤྲོད་པ་ངེས་ཅན་གྱི་རྒྱུ་མཚན་འདྲེན་པའི་དཔེ་དབྱིབས་ལ་ཁོ་ན་འཕྲོད་པ།",
+	"Contact Admin for WebUI Access": "",
 	"Content": "ནང་དོན།",
 	"Content Extraction Engine": "ནང་དོན་འདོན་སྤེལ་འཕྲུལ་འཁོར།",
 	"Context Length": "ནང་དོན་གྱི་རིང་ཚད།",

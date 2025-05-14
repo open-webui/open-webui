@@ -236,6 +236,7 @@
 	"Connections": "Connexions",
 	"Connections saved successfully": "Les connexions s'han desat correctament",
 	"Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort.": "Restringeix l'esforç de raonament dels models de raonament. Només aplicable a models de raonament de proveïdors específics que donen suport a l'esforç de raonament.",
+	"Contact Admin for WebUI Access": "",
 	"Content": "Contingut",
 	"Content Extraction Engine": "Motor d'extracció de contingut",
 	"Context Length": "Mida del context",

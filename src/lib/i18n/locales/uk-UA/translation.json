@@ -236,6 +236,7 @@
 	"Connections": "З'єднання",
 	"Connections saved successfully": "",
 	"Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort.": "Обмежує зусилля на міркування для моделей міркування. Діє лише для моделей міркування від конкретних постачальників, які підтримують зусилля міркування.",
+	"Contact Admin for WebUI Access": "",
 	"Content": "Зміст",
 	"Content Extraction Engine": "Рушій вилучення контенту",
 	"Context Length": "Довжина контексту",
