@@ -15,6 +15,7 @@ import aiohttp
 from aiocache import cached
 import requests
 from open_webui.models.users import UserModel
+import tempfile
 
 from open_webui.env import (
     ENABLE_FORWARD_USER_INFO_HEADERS,
@@ -1585,18 +1586,19 @@ async def upload_model(
     if url_idx is None:
         url_idx = 0
     ollama_url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-    # --- P1: save file locally ---
-    chunk_size = 1024 * 1024 * 2  # 2 MB chunks
-    with open(file_path, "wb") as out_f:
+    
+    # Use tempfile to avoid path traversal attack
+    with tempfile.NamedTemporaryFile(delete=False, dir=UPLOAD_DIR) as temp_file:
+        file_path = temp_file.name
+        
+        # --- P1: save file locally ---
+        chunk_size = 1024 * 1024 * 2  # 2 MB chunks
         while True:
             chunk = file.file.read(chunk_size)
             # log.info(f"Chunk: {str(chunk)}") # DEBUG
             if not chunk:
                 break
-            out_f.write(chunk)
+            temp_file.write(chunk)
 
     async def file_process_stream():
         nonlocal ollama_url
@@ -1626,17 +1628,16 @@ async def upload_model(
 
             if response.ok:
                 log.info(f"Uploaded to /api/blobs")  # DEBUG
-                # Remove local file
-                os.remove(file_path)
 
-                # Create model in ollama
-                model_name, ext = os.path.splitext(file.filename)
+                # Create model in ollama - Use safe model name
+                file_base_name = os.path.basename(file.filename)
+                model_name, ext = os.path.splitext(file_base_name)
                 log.info(f"Created Model: {model_name}")  # DEBUG
 
                 create_payload = {
                     "model": model_name,
                     # Reference the file by its original name => the uploaded blob's digest
-                    "files": {file.filename: f"sha256:{file_hash}"},
+                    "files": {file_base_name: f"sha256:{file_hash}"},
                 }
                 log.info(f"Model Payload: {create_payload}")  # DEBUG
 
@@ -1653,7 +1654,7 @@ async def upload_model(
                     done_msg = {
                         "done": True,
                         "blob": f"sha256:{file_hash}",
-                        "name": file.filename,
+                        "name": file_base_name,
                         "model_created": model_name,
                     }
                     yield f"data: {json.dumps(done_msg)}\n\n"
@@ -1668,5 +1669,9 @@ async def upload_model(
         except Exception as e:
             res = {"error": str(e)}
             yield f"data: {json.dumps(res)}\n\n"
+        finally:
+            # Ensure the temp file is deleted
+            if os.path.exists(file_path):
+                os.remove(file_path)
 
     return StreamingResponse(file_process_stream(), media_type="text/event-stream")
