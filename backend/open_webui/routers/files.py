@@ -125,37 +125,37 @@ def upload_file(
         )
         if process:
             try:
+                if file.content_type:
+                    if file.content_type.startswith(
+                        (
+                            "audio/mpeg",
+                            "audio/wav",
+                            "audio/ogg",
+                            "audio/x-m4a",
+                            "audio/webm",
+                            "video/webm",
+                        )
+                    ):
+                        file_path = Storage.get_file(file_path)
+                        result = transcribe(request, file_path)
 
-                if file.content_type.startswith(
-                    (
-                        "audio/mpeg",
-                        "audio/wav",
-                        "audio/ogg",
-                        "audio/x-m4a",
-                        "audio/webm",
-                        "video/webm",
-                    )
-                ):
-                    file_path = Storage.get_file(file_path)
-                    result = transcribe(request, file_path)
-
-                    process_file(
-                        request,
-                        ProcessFileForm(file_id=id, content=result.get("text", "")),
-                        user=user,
-                    )
-                elif file.content_type not in [
-                    "image/png",
-                    "image/jpeg",
-                    "image/gif",
-                    "video/mp4",
-                    "video/ogg",
-                    "video/quicktime",
-                ]:
-                    process_file(request, ProcessFileForm(file_id=id), user=user)
+                        process_file(
+                            request,
+                            ProcessFileForm(file_id=id, content=result.get("text", "")),
+                            user=user,
+                        )
+                    elif file.content_type not in [
+                        "image/png",
+                        "image/jpeg",
+                        "image/gif",
+                        "video/mp4",
+                        "video/ogg",
+                        "video/quicktime",
+                    ]:
+                        process_file(request, ProcessFileForm(file_id=id), user=user)
                 else:
                     log.info(
-                        f"File type {file.content_type} is not supported for processing, but trying to process anyway"
+                        f"File type {file.content_type} is not provided, but trying to process anyway"
                     )
                     process_file(request, ProcessFileForm(file_id=id), user=user)
 
