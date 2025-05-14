@@ -754,7 +754,7 @@ async def update_admin_config(
 
     request.app.state.config.ENABLE_USER_WEBHOOKS = form_data.ENABLE_USER_WEBHOOKS
 
-    request.app.state.config.PENDING_USER_OVERLAY_TITLETLE = (
+    request.app.state.config.PENDING_USER_OVERLAY_TITLE = (
         form_data.PENDING_USER_OVERLAY_TITLE
     )
     request.app.state.config.PENDING_USER_OVERLAY_CONTENT = (
