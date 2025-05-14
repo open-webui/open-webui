@@ -11,8 +11,6 @@
     import AccessControl from '../common/AccessControl.svelte';
 
 
-	const dispatch = createEventDispatcher();
-
 	import {
 		getQuerySettings,
 		updateQuerySettings,
@@ -25,14 +23,8 @@
 		updateRAGConfig
 	} from '$lib/apis/retrieval';
 
-	import { reindexKnowledgeFiles } from '$lib/apis/knowledge';
-	import { deleteAllFiles } from '$lib/apis/files';
-
-	import ResetUploadDirConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import ResetVectorDBConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import ReindexKnowledgeFilesConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
-	import Spinner from '$lib/components/common/Spinner.svelte';
+	import resourcesToBackend from 'i18next-resources-to-backend';
 
     const i18n = getContext('i18n');
 
@@ -43,10 +35,6 @@
 	
 	let updateEmbeddingModelLoading = false;
 	let updateRerankingModelLoading = false;
-
-	let showResetConfirm = false;
-	let showResetUploadDirConfirm = false;
-	let showReindexConfirm = false;
 
 	let embeddingEngine = '';
 	let embeddingModel = '';
@@ -71,7 +59,7 @@
 
     let RAGConfig = null;
 
-	const embeddingModelUpdateHandler = async () => {
+	const embeddingModelUpdateHandler = async (knowledgeId) => {
 
 		if (embeddingEngine === '' && embeddingModel.split('/').length - 1 > 1) {
 			toast.error(
@@ -119,7 +107,7 @@
 				key: OpenAIKey,
 				url: OpenAIUrl
 			},
-            collection_name: name
+            knowledge_id: knowledgeId
 		}).catch(async (error) => {
 			toast.error(`${error}`);
 			await setEmbeddingConfig();
@@ -137,14 +125,14 @@
 		}
 	};
 
-	const rerankingModelUpdateHandler = async () => {
+	const rerankingModelUpdateHandler = async (knowledgeId) => {
 
 		console.log('Update reranking model attempt:', rerankingModel);
 
 		updateRerankingModelLoading = true;
 		const res = await updateRerankingConfig(localStorage.token, {
 			reranking_model: rerankingModel,
-            collection_name: name
+            knowledge_id: knowledgeId
 		}).catch(async (error) => {
 			toast.error(`${error}`);
 			await setRerankingConfig();
@@ -247,10 +235,10 @@
         }
         if (enableIndividualRagConfig) {
 			if (!RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL) {
-				await embeddingModelUpdateHandler();
+				await embeddingModelUpdateHandler(res.id);
 
 				if (RAGConfig.ENABLE_RAG_HYBRID_SEARCH) {
-					await rerankingModelUpdateHandler();
+					await rerankingModelUpdateHandler(res.id);
 				}
 			}
         }
