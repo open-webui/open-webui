@@ -323,6 +323,7 @@ from open_webui.config import (
     LDAP_APP_PASSWORD,
     LDAP_USE_TLS,
     LDAP_CA_CERT_FILE,
+    LDAP_VALIDATE_CERT,
     LDAP_CIPHERS,
     # Misc
     ENV,
@@ -617,6 +618,7 @@ app.state.config.LDAP_SEARCH_BASE = LDAP_SEARCH_BASE
 app.state.config.LDAP_SEARCH_FILTERS = LDAP_SEARCH_FILTERS
 app.state.config.LDAP_USE_TLS = LDAP_USE_TLS
 app.state.config.LDAP_CA_CERT_FILE = LDAP_CA_CERT_FILE
+app.state.config.LDAP_VALIDATE_CERT = LDAP_VALIDATE_CERT
 app.state.config.LDAP_CIPHERS = LDAP_CIPHERS
 
 

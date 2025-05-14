@@ -585,6 +585,13 @@
 													/>
 												</div>
 											</div>
+											<div class="flex justify-between items-center text-xs">
+												<div class=" font-medium">Validate certificate</div>
+
+												<div class="mt-1">
+													<Switch bind:state={LDAP_SERVER.validate_cert} />
+												</div>
+											</div>
 											<div class="flex w-full gap-2">
 												<div class="w-full">
 													<div class=" self-center text-xs font-medium min-w-fit mb-1">
