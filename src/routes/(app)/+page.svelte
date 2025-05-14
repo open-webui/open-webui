@@ -7,12 +7,12 @@
 	} from '$lib/apis/payments';
 	import { subscription } from '$lib/stores';
 
-	onMount(async () => {
-		const sub = await getCurrentSubscription(localStorage.token).catch(error => console.log(error));
-		if(sub){
-			subscription.set(sub);
-		}
-	})
+	// onMount(async () => {
+	// 	const sub = await getCurrentSubscription(localStorage.token).catch(error => console.log(error));
+	// 	if(sub){
+	// 		subscription.set(sub);
+	// 	}
+	// })
 </script>
 
 <!-- <Help /> -->

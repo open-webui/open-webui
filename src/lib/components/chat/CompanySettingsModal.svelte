@@ -22,7 +22,8 @@
 	import { getMonthRange } from '$lib/utils';
 	import { page } from '$app/stores';
 	import {
-		getCurrentSubscription
+		getCurrentSubscription,
+		getSubscriptionPlans
 	} from '$lib/apis/payments';
 	import { subscription } from '$lib/stores';
 	
@@ -30,6 +31,7 @@
 
 	export let show = false;
 	let selectedTab = 'general-settings';
+	let plans = [];
 
 	interface SettingsTab {
 		id: string;
@@ -200,23 +202,38 @@
 			totalAssistants: totalAssistants?.status === 'fulfilled' ? totalAssistants?.value : {},
 		}
 		console.log(analytics)
-	} catch (error) {
-		console.error('Error fetching analytics:', error);
-	} finally {
-		analyticsLoading = false;
+		} catch (error) {
+			console.error('Error fetching analytics:', error);
+		} finally {
+			analyticsLoading = false;
+		}
 	}
-}
+	let autoRecharge = false;
+	let subscriptionLoading = false;
 	async function getSubscription() {
-		const sub = await getCurrentSubscription(localStorage.token).catch(error => console.log(error));
+		subscriptionLoading = true;
+		const sub = await getCurrentSubscription(localStorage.token).catch(error => {
+			console.log(error);
+			subscriptionLoading = false;
+		});
 		if(sub){
 			subscription.set(sub);
+			autoRecharge = sub?.auto_recharge ? sub?.auto_recharge : false;
+			subscriptionLoading = false;
+		}
+	}
+	async function getPlans() {
+		const res = await getSubscriptionPlans(localStorage.token).catch((error) => console.log(error));
+		if (res) {
+			plans = res;
 		}
 	}
 
 	$: if(show){
 		getUsersHandler();
 		fetchAnalytics();
-		// getSubscription();
+		getSubscription();
+		getPlans();
 		const tabParam = $page.url.searchParams.get('tab');
 		selectedTab = tabParam || 'general-settings';
 	}
@@ -590,7 +607,7 @@
 				{:else if selectedTab === 'analytics'}
 					<Analytics {analytics} {analyticsLoading}/>
 				{:else if selectedTab === 'billing'}
-					<Billing/>
+					<Billing bind:autoRecharge bind:subscriptionLoading {plans}/>
 				{/if}
 			</div>
 		</div>
