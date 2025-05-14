@@ -1,6 +1,6 @@
 import { RETRIEVAL_API_BASE_URL } from '$lib/constants';
 
-export const getRAGConfig = async (token: string,  collectionForm?: CollectionNameForm) => {
+export const getRAGConfig = async (token: string,  collectionForm?: CollectionForm) => {
 	let error = null;
 
 	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/config`, {
@@ -52,21 +52,68 @@ type YoutubeConfigForm = {
 	proxy_url: string;
 };
 
+type WebConfigForm = {
+	ENABLE_WEB_SEARCH?: boolean;
+	WEB_SEARCH_ENGINE?: string;
+	WEB_SEARCH_TRUST_ENV?: boolean;
+	WEB_SEARCH_RESULT_COUNT?: number;
+	WEB_SEARCH_CONCURRENT_REQUESTS?: number;
+	WEB_SEARCH_DOMAIN_FILTER_LIST?: string[];
+	BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL?: boolean;
+	SEARXNG_QUERY_URL?: string;
+	YACY_QUERY_URL?: string;
+	YACY_USERNAME?: string;
+	YACY_PASSWORD?: string;
+	GOOGLE_PSE_API_KEY?: string;
+	GOOGLE_PSE_ENGINE_ID?: string;
+	BRAVE_SEARCH_API_KEY?: string;
+	KAGI_SEARCH_API_KEY?: string;
+	MOJEEK_SEARCH_API_KEY?: string;
+	BOCHA_SEARCH_API_KEY?: string;
+	SERPSTACK_API_KEY?: string;
+	SERPSTACK_HTTPS?: boolean;
+	SERPER_API_KEY?: string;
+	SERPLY_API_KEY?: string;
+	TAVILY_API_KEY?: string;
+	SEARCHAPI_API_KEY?: string;
+	SEARCHAPI_ENGINE?: string;
+	SERPAPI_API_KEY?: string;
+	SERPAPI_ENGINE?: string;
+	JINA_API_KEY?: string;
+	BING_SEARCH_V7_ENDPOINT?: string;
+	BING_SEARCH_V7_SUBSCRIPTION_KEY?: string;
+	EXA_API_KEY?: string;
+	PERPLEXITY_API_KEY?: string;
+	SOUGOU_API_SID?: string;
+	SOUGOU_API_SK?: string;
+	WEB_LOADER_ENGINE?: string;
+	ENABLE_WEB_LOADER_SSL_VERIFICATION?: boolean;
+	PLAYWRIGHT_WS_URL?: string;
+	PLAYWRIGHT_TIMEOUT?: number;
+	FIRECRAWL_API_KEY?: string;
+	FIRECRAWL_API_BASE_URL?: string;
+	TAVILY_EXTRACT_DEPTH?: string;
+	EXTERNAL_WEB_SEARCH_URL?: string;
+	EXTERNAL_WEB_SEARCH_API_KEY?: string;
+	EXTERNAL_WEB_LOADER_URL?: string;
+	EXTERNAL_WEB_LOADER_API_KEY?: string;
+	YOUTUBE_LOADER_LANGUAGE?: string[];
+	YOUTUBE_LOADER_PROXY_URL?: string;
+	YOUTUBE_LOADER_TRANSLATION?: string;
+};
 type RAGConfigForm = {
 	PDF_EXTRACT_IMAGES?: boolean;
 	ENABLE_GOOGLE_DRIVE_INTEGRATION?: boolean;
 	ENABLE_ONEDRIVE_INTEGRATION?: boolean;
 	chunk?: ChunkConfigForm;
 	content_extraction?: ContentExtractConfigForm;
-	web_loader_ssl_verification?: boolean;
+	web?: WebConfigForm;
 	youtube?: YoutubeConfigForm;
+	knowledge_id?: string;
 };
 
-type CollectionNameForm = {
-	collection_name: string;
-};
 
-export const updateRAGConfig = async (token: string, payload: RAGConfigForm, collectionForm?: CollectionNameForm) => {
+export const updateRAGConfig = async (token: string, form_data: RAGConfigForm) => {
 	let error = null;
 
 	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/config/update`, {
@@ -76,9 +123,8 @@ export const updateRAGConfig = async (token: string, payload: RAGConfigForm, col
 			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({
-			...payload,
-			...(collectionForm ? { collectionForm: collectionForm } : {})
-		})
+			form_data
+			})
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -160,7 +206,7 @@ export const updateQuerySettings = async (token: string, settings: QuerySettings
 	return res;
 };
 
-export const getEmbeddingConfig = async (token: string, collectionForm?: CollectionNameForm) => {
+export const getEmbeddingConfig = async (token: string, collectionForm?: CollectionForm) => {
 	let error = null;
 
 	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/embedding`, {
@@ -200,7 +246,7 @@ type EmbeddingModelUpdateForm = {
 	embedding_engine: string;
 	embedding_model: string;
 	embedding_batch_size?: number;
-	collection_name?: string;
+	knowledge_id?: string;
 };
 
 export const updateEmbeddingConfig = async (token: string, payload: EmbeddingModelUpdateForm) => {
@@ -233,7 +279,7 @@ export const updateEmbeddingConfig = async (token: string, payload: EmbeddingMod
 	return res;
 };
 
-export const getRerankingConfig = async (token: string, collectionForm?: CollectionNameForm) => {
+export const getRerankingConfig = async (token: string, collectionForm?: CollectionForm) => {
 	let error = null;
 
 	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/reranking`, {
@@ -265,7 +311,7 @@ export const getRerankingConfig = async (token: string, collectionForm?: Collect
 
 type RerankingModelUpdateForm = {
 	reranking_model: string;
-	collection_name?: string; 
+	knowledge_id?: string; 
 
 };
 
