@@ -92,7 +92,7 @@ async def create_subscription_session(request: CreateSubscriptionRequest, user=D
             limit=1
         )
 
-        if subscriptions.data is not None:
+        if company.stripe_customer_id and subscriptions.data:
             raise HTTPException(status_code=400, detail="Customer has already active subscription")
 
         print(f"Using price ID: {stripe_price_id} for plan: {request.plan_id}")
