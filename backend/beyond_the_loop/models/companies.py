@@ -3,13 +3,13 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional
 
 from sqlalchemy.orm import relationship
-from sqlalchemy import Integer, String, Column, Text, Boolean
+from sqlalchemy import String, Column, Text, Boolean, Float
 
 from open_webui.internal.db import get_db, Base
 
 # Constants
 NO_COMPANY = "NO_COMPANY"
-EIGHTY_PERCENT_CREDIT_LIMIT = 4000
+EIGHTY_PERCENT_CREDIT_LIMIT = 1
 
 ####################
 # Company DB Schema
@@ -23,8 +23,8 @@ class Company(Base):
     profile_image_url = Column(Text, nullable=True)
     default_model = Column(String, nullable=True)
     allowed_models = Column(Text, nullable=True)
-    credit_balance = Column(Integer, default=0)
-    flex_credit_balance = Column(Integer, nullable=True)
+    credit_balance = Column(Float, default=0)
+    flex_credit_balance = Column(Float, nullable=True)
     auto_recharge = Column(Boolean, default=False)
     credit_card_number = Column(String, nullable=True)
     size = Column(String, nullable=True)
@@ -42,8 +42,8 @@ class CompanyModel(BaseModel):
     profile_image_url: Optional[str] = None
     default_model: Optional[str] = "GPT 4o"
     allowed_models: Optional[str] = None
-    credit_balance: Optional[int] = 0
-    flex_credit_balance: Optional[int] = None
+    credit_balance: Optional[float] = 0
+    flex_credit_balance: Optional[float] = None
     auto_recharge: Optional[bool] = False
     credit_card_number: Optional[str] = None
     size: Optional[str] = None
