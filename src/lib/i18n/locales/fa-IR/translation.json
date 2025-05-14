@@ -236,7 +236,7 @@
 	"Connections": "ارتباطات",
 	"Connections saved successfully": "ارتباطات با موفقیت ذخیره شدند",
 	"Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort.": "تلاش برای استدلال در مدل\u200cهای استدلالی را محدود می\u200cکند. فقط برای مدل\u200cهای استدلالی از ارائه\u200cدهندگان خاصی که از تلاش استدلالی پشتیبانی می\u200cکنند قابل اجراست.",
-	"Contact Admin for WebUI Access": "",
+	"Contact Admin for WebUI Access": "برای دسترسی به WebUI با مدیر تماس بگیرید",
 	"Content": "محتوا",
 	"Content Extraction Engine": "موتور استخراج محتوا",
 	"Context Length": "طول زمینه",

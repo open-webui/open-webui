@@ -236,7 +236,7 @@
 	"Connections": "連線",
 	"Connections saved successfully": "連線已成功儲存",
 	"Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort.": "限制推理模型的推理程度。僅適用於特定供應商支援推理程度的推理模型。",
-	"Contact Admin for WebUI Access": "",
+	"Contact Admin for WebUI Access": "請聯絡管理員以取得 WebUI 存取權限",
 	"Content": "內容",
 	"Content Extraction Engine": "內容擷取引擎",
 	"Context Length": "上下文長度",

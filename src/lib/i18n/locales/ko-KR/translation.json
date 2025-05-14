@@ -236,7 +236,7 @@
 	"Connections": "연결",
 	"Connections saved successfully": "연결이 성공적으로 저장되었습니다",
 	"Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort.": "추론 모델의 추론 난이도를 제한합니다. 추론 난이도를 지원하는 특정 공급자의 추론 모델에만 적용됩니다.",
-	"Contact Admin for WebUI Access": "",
+	"Contact Admin for WebUI Access": "WebUI 접속을 위해서는 관리자에게 연락에 연락하십시오",
 	"Content": "내용",
 	"Content Extraction Engine": "콘텐츠 추출 엔진",
 	"Context Length": "내용 길이",

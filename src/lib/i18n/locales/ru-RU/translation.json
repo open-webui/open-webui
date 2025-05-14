@@ -236,7 +236,7 @@
 	"Connections": "Подключения",
 	"Connections saved successfully": "Подключение успешно сохранено",
 	"Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort.": "Ограничивает усилия по обоснованию для моделей обоснования. Применимо только к моделям обоснования от конкретных поставщиков, которые поддерживают усилия по обоснованию.",
-	"Contact Admin for WebUI Access": "",
+	"Contact Admin for WebUI Access": "Обратитесь к администратору для получения доступа к WebUI",
 	"Content": "Содержание",
 	"Content Extraction Engine": "Механизм извлечения контента",
 	"Context Length": "Длина контекста",

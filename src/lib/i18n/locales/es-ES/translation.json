@@ -236,7 +236,8 @@
 	"Connections": "Conexiones",
 	"Connections saved successfully": "Conexiones grabadas correctamente",
 	"Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort.": "Limita el esfuerzo de razonamiento para los modelos de razonamiento. Solo aplicable a modelos de razonamiento de proveedores específicos que soportan el esfuerzo de razonamiento.",
-	"Contact Admin for WebUI Access": "",
+	"Contact Admin for WebUI Access": "Contacta con Admin para obtener acceso a WebUI",
+
 	"Content": "Contenido",
 	"Content Extraction Engine": "Motor para la Extracción de Contenido",
 	"Context Length": "Longitud del Contexto",

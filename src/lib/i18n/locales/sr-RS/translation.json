@@ -236,7 +236,8 @@
 	"Connections": "Везе",
 	"Connections saved successfully": "",
 	"Constrains effort on reasoning for reasoning models. Only applicable to reasoning models from specific providers that support reasoning effort.": "",
-	"Contact Admin for WebUI Access": "",
+	"Contact Admin for WebUI Access": "Пишите админима за приступ на WebUI",
+
 	"Content": "Садржај",
 	"Content Extraction Engine": "",
 	"Context Length": "Дужина контекста",
