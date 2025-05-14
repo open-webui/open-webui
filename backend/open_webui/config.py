@@ -989,6 +989,18 @@ DEFAULT_USER_ROLE = PersistentConfig(
     os.getenv("DEFAULT_USER_ROLE", "pending"),
 )
 
+ACCOUNT_PENDING_TEXT = PersistentConfig(
+    "ACCOUNT_PENDING_TEXT",
+    "ui.account_pending_text",
+    os.environ.get("ACCOUNT_PENDING_TEXT", "")
+)
+
+ACCOUNT_PENDING_TITLE = PersistentConfig(
+    "ACCOUNT_PENDING_TITLE",
+    "ui.account_pending_title",
+    os.environ.get("ACCOUNT_PENDING_TITLE", "")
+)
+
 USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS = (
     os.environ.get("USER_PERMISSIONS_WORKSPACE_MODELS_ACCESS", "False").lower()
     == "true"

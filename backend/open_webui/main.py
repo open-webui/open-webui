@@ -292,6 +292,8 @@ from open_webui.config import (
     ENABLE_EVALUATION_ARENA_MODELS,
     USER_PERMISSIONS,
     DEFAULT_USER_ROLE,
+    ACCOUNT_PENDING_TEXT,
+    ACCOUNT_PENDING_TITLE,
     DEFAULT_PROMPT_SUGGESTIONS,
     DEFAULT_MODELS,
     DEFAULT_ARENA_MODEL,
@@ -573,6 +575,8 @@ app.state.config.ADMIN_EMAIL = ADMIN_EMAIL
 app.state.config.DEFAULT_MODELS = DEFAULT_MODELS
 app.state.config.DEFAULT_PROMPT_SUGGESTIONS = DEFAULT_PROMPT_SUGGESTIONS
 app.state.config.DEFAULT_USER_ROLE = DEFAULT_USER_ROLE
+app.state.config.ACCOUNT_PENDING_TEXT = ACCOUNT_PENDING_TEXT
+app.state.config.ACCOUNT_PENDING_TITLE = ACCOUNT_PENDING_TITLE
 
 app.state.config.USER_PERMISSIONS = USER_PERMISSIONS
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
@@ -1396,6 +1400,10 @@ async def get_app_config(request: Request):
                     "client_id": ONEDRIVE_CLIENT_ID.value,
                     "sharepoint_url": ONEDRIVE_SHAREPOINT_URL.value,
                     "sharepoint_tenant_id": ONEDRIVE_SHAREPOINT_TENANT_ID.value,
+                },
+                "ui": {
+                    "account_pending_title": app.state.config.ACCOUNT_PENDING_TITLE,
+                    "account_pending_text": app.state.config.ACCOUNT_PENDING_TEXT,
                 },
                 "license_metadata": app.state.LICENSE_METADATA,
                 **(
