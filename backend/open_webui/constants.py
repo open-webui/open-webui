@@ -103,6 +103,9 @@ class ERROR_MESSAGES(str, Enum):
         "Duplicate content detected. Please provide unique content to proceed."
     )
     FILE_NOT_PROCESSED = "Extracted content is not available for this file. Please ensure that the file is processed before proceeding."
+    INVALID_FILE_TYPE = (
+        lambda extension="": f"File extension '{extension}' is not allowed."
+    )
 
 
 class TASKS(str, Enum):

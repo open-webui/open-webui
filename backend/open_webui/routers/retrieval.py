@@ -102,6 +102,7 @@ from open_webui.env import (
 )
 
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.retrieval.exceptions.invalid_file_type_exception import InvalidFileTypeException
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -1138,10 +1139,11 @@ def process_file(
                     DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
                     MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
                 )
+
                 docs = loader.load(
                     file.filename, file.meta.get("content_type"), file_path
                 )
-
+              
                 docs = [
                     Document(
                         page_content=doc.page_content,
@@ -1217,6 +1219,8 @@ def process_file(
                 "filename": file.filename,
                 "content": text_content,
             }
+    except InvalidFileTypeException:
+        raise
 
     except Exception as e:
         log.exception(e)

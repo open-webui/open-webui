@@ -34,6 +34,7 @@ from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.routers.audio import transcribe
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.retrieval.exceptions.invalid_file_type_exception import InvalidFileTypeException
 from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
@@ -155,6 +156,10 @@ def upload_file(
                     process_file(request, ProcessFileForm(file_id=id), user=user)
 
                 file_item = Files.get_file_by_id(id=id)
+
+            except InvalidFileTypeException:
+                log.exception("Invalid file type during processing", exc_info=True)
+                raise
             except Exception as e:
                 log.exception(e)
                 log.error(f"Error processing file: {file_item.id}")
@@ -176,7 +181,12 @@ def upload_file(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=ERROR_MESSAGES.DEFAULT("Error uploading file"),
             )
-
+        
+    except InvalidFileTypeException as e:
+        raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=ERROR_MESSAGES.INVALID_FILE_TYPE(e.extension),
+                )
     except Exception as e:
         log.exception(e)
         raise HTTPException(

@@ -23,6 +23,8 @@ from langchain_core.documents import Document
 
 from open_webui.retrieval.loaders.mistral import MistralLoader
 
+from open_webui.retrieval.exceptions.invalid_file_type_exception import InvalidFileTypeException
+
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, RAG_FILE_UPLOAD_TYPE_ALLOWLIST
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -189,34 +191,35 @@ class Loader:
     def load(
         self, filename: str, file_content_type: str, file_path: str
     ) -> list[Document]:
-        # always lowercase the file extension
         file_ext = filename.rsplit(".", 1)[-1].lower()
 
-        if RAG_FILE_UPLOAD_TYPE_ALLOWLIST:
-            allowed_file_types = [ext.strip().lower() for ext in RAG_FILE_UPLOAD_TYPE_ALLOWLIST.split(";")]
-            is_allowed = file_ext in allowed_file_types
-        else:
-            # empty allowlist means “allow everything”
-            allowed_file_types = []
-            is_allowed = True
+        self._check_extension(file_ext)
 
-        if is_allowed:
-            loader = self._get_loader(filename, file_content_type, file_path)
-            docs = loader.load()
-            return [
-                Document(
-                    page_content=ftfy.fix_text(doc.page_content),
-                    metadata=doc.metadata
-                )
-                for doc in docs
-            ]
-        else:
-            raise Exception(
-                f"File extension {file_ext!r} is not allowed for uploading; "
-                f"choose one of {allowed_file_types}"
+        loader = self._get_loader(filename, file_content_type, file_path)
+        docs = loader.load()
+        return [
+            Document(
+                page_content=ftfy.fix_text(doc.page_content),
+                metadata=doc.metadata
             )
+            for doc in docs
+        ]
 
 
+    def _check_extension(self, ext: str):
+        """
+        Parse the environment variable RAG_FILE_UPLOAD_TYPE_ALLOWLIST and
+        raise if file extension is not in it. Empty allowlist => allow all.
+        """
+        allowlist = RAG_FILE_UPLOAD_TYPE_ALLOWLIST
+        if allowlist:
+            allowed_types = [
+                e.strip().lower()
+                for e in allowlist.split(";")
+                if e.strip()
+            ]
+            if ext not in allowed_types:
+                raise InvalidFileTypeException(ext)
 
     def _is_text_file(self, file_ext: str, file_content_type: str) -> bool:
         return file_ext in known_source_ext or (
