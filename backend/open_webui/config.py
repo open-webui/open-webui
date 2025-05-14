@@ -1951,6 +1951,12 @@ RAG_FILE_MAX_SIZE = PersistentConfig(
     ),
 )
 
+RAG_ALLOWED_FILE_EXTENSIONS = PersistentConfig(
+    "RAG_ALLOWED_FILE_EXTENSIONS",
+    "rag.file.allowed_extensions",
+    os.environ.get("RAG_ALLOWED_FILE_EXTENSIONS", "").split(","),
+)
+
 RAG_EMBEDDING_ENGINE = PersistentConfig(
     "RAG_EMBEDDING_ENGINE",
     "rag.embedding_engine",

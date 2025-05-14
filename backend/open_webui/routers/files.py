@@ -95,6 +95,16 @@ def upload_file(
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)
 
+        file_extension = os.path.splitext(filename)[1]
+        if request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+            if file_extension not in request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(
+                        f"File type {file_extension} is not allowed"
+                    ),
+                )
+
         # replace filename with uuid
         id = str(uuid.uuid4())
         name = filename
