@@ -91,7 +91,7 @@ class DefaultParser(ParserInterface):
               user=None,
               **kwargs
               ) -> dict:
-        docs = self.split(request, docs)
+        docs = self.split(request, docs, **kwargs)
         texts = [doc.page_content for doc in docs]
         metadatas = self.metadata(request, docs, metadata)
 
@@ -104,35 +104,7 @@ class DefaultParser(ParserInterface):
 
         return {"texts": texts, "embeddings": embeddings, "metadatas": metadatas}
 
-    def pre(self, request, **kwargs):
-        '''
-        called before the rest of the parser functions
-        '''
-
-        docs = kwargs.pop('docs', None)
-        collection_name = kwargs.pop('collection_name', None)
-
-        def _get_docs_info(docs: list[Document]) -> str:
-            docs_info = set()
-
-            # Trying to select relevant metadata identifying the document.
-            for doc in docs:
-                metadata = getattr(doc, "metadata", {})
-                doc_name = metadata.get("name", "")
-                if not doc_name:
-                    doc_name = metadata.get("title", "")
-                if not doc_name:
-                    doc_name = metadata.get("source", "")
-                if doc_name:
-                    docs_info.add(doc_name)
-
-            return ", ".join(docs_info)
-
-        log.info(
-            f"{self.name}: save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
-        )
-
-    def split(self, request, docs) -> Tuple[List[Document]]:
+    def split(self, request, docs, **kwargs) -> Tuple[List[Document]]:
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=request.app.state.config.CHUNK_SIZE,

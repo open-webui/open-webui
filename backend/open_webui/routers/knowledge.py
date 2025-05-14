@@ -19,7 +19,7 @@ from open_webui.routers.retrieval import (
     process_files_batch,
     BatchProcessFilesForm,
 )
-from open_webui.functions import get_parsers_by_type, get_all_parsers
+from open_webui.functions import get_parsers_by_type, get_all_parsers, get_file_relevant_parsers
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.utils.auth import get_verified_user
@@ -180,7 +180,6 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
     deleted_knowledge_bases = []
 
     parsers = get_all_parsers(request)
-
     for knowledge_base in knowledge_bases:
         # -- Robust error handling for missing or invalid data
         if not knowledge_base.data or not isinstance(knowledge_base.data, dict):
@@ -464,9 +463,9 @@ def update_file_from_knowledge_by_id(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    parsers = get_all_parsers(request)
+    parsers = get_file_relevant_parsers(request, file.filename)
     for parser in parsers:
-        parser.delete_doc(knowledge.id, form_data.file_id)
+        parser.delete_doc(knowledge.id, file.filename)
 
     try:
         process_file(
@@ -534,9 +533,9 @@ def remove_file_from_knowledge_by_id(
         )
 
     file_collection = f"file-{form_data.file_id}"
-    parsers = get_all_parsers(request)
+    parsers = get_file_relevant_parsers(request, file.filename)
     for parser in parsers:
-        parser.delete_doc(knowledge.id, form_data.file_id)
+        parser.delete_doc(knowledge.id, file.filename)
         # note that this is only deleting the file-specific collection
         parser.delete_collection(file_collection)
 
