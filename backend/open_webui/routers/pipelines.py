@@ -188,6 +188,9 @@ async def get_pipelines_list(request: Request, user=Depends(get_admin_user)):
         ]
     }
 
+# Constants
+MAX_FILE_SIZE_MB = 25
+MAX_FILE_SIZE = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
 
 @router.post("/upload")
 async def upload_pipeline(
@@ -203,55 +206,55 @@ async def upload_pipeline(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only Python (.py) files are allowed.",
         )
+    
+    if file.size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File size exceeds the maximum limit of {MAX_FILE_SIZE_MB}MB.",
+        )
 
-    upload_folder = f"{CACHE_DIR}/pipelines"
-    os.makedirs(upload_folder, exist_ok=True)
-    file_path = os.path.join(upload_folder, file.filename)
-
-    r = None
+    response = None
     try:
-        # Save the uploaded file
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
         url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
         key = request.app.state.config.OPENAI_API_KEYS[urlIdx]
 
-        with open(file_path, "rb") as f:
-            files = {"file": f}
-            r = requests.post(
+        async with aiohttp.ClientSession() as session:
+            data = aiohttp.FormData()
+            data.add_field('file', file.file, filename=file.filename, content_type=file.content_type)
+            
+            async with session.post(
                 f"{url}/pipelines/upload",
                 headers={"Authorization": f"Bearer {key}"},
-                files=files,
-            )
+                data=data,
+            ) as response:
+                response.raise_for_status()
+                data = await response.json()
+                return {**data}
 
-        r.raise_for_status()
-        data = r.json()
-
-        return {**data}
-    except Exception as e:
-        # Handle connection error here
-        log.exception(f"Connection error: {e}")
-
+    except aiohttp.ClientResponseError as e:
+        # Handle HTTP errors
+        log.exception(f"HTTP error: {e}")
         detail = None
-        status_code = status.HTTP_404_NOT_FOUND
-        if r is not None:
-            status_code = r.status_code
-            try:
-                res = r.json()
-                if "detail" in res:
-                    detail = res["detail"]
-            except Exception:
-                pass
+        status_code = e.status
+        try:
+            res = await response.json() if response and response.content_type == "application/json" else {}
+            if "detail" in res:
+                detail = res["detail"]
+        except Exception:
+            pass
 
         raise HTTPException(
             status_code=status_code,
             detail=detail if detail else "Pipeline not found",
         )
-    finally:
-        # Ensure the file is deleted after the upload is completed or on failure
-        if os.path.exists(file_path):
-            os.remove(file_path)
+    except Exception as e:
+        # Handle connection error here
+        log.exception(f"Connection error: {e}")
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pipeline not found",
+        )
 
 
 class AddPipelineForm(BaseModel):
