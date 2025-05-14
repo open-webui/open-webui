@@ -9,9 +9,13 @@
 	import {
 		getSubscriptionPlans,
 		createSubscriptionSession,
-		getCurrentSubscription
+		rechargeFlexCredits,
+		updateAutoRecharge,
+		getCurrentSubscription,
+		deleteCurrentSubscription
 	} from '$lib/apis/payments';
 	import dayjs from 'dayjs';
+	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
 	let autoRecharge = false;
@@ -37,9 +41,28 @@
 			window.location.href = res.url;
 		}
 	}
+
+	async function fetchCurrentSubscription() {
+		const sub = await getCurrentSubscription(localStorage.token)
+		.catch(error => console.log(error));
+		subscription.set(sub);
+	}
+
+	async function recharge () {
+		const res = await rechargeFlexCredits(localStorage.token).catch((error) =>
+			console.log(error)
+		);
+		if(res.payment_intent) {
+			toast.success($i18n.t(res.message))
+		}
+		fetchCurrentSubscription()
+		
+	}
 	$: console.log($subscription);
 	$: currentPlan = plans?.find((item) => item.id === $subscription?.plan);
 	$: console.log(currentPlan, 'current plan');
+
+	$: seatsWidth = $subscription?.seats ? `${($subscription?.seats_taken/$subscription?.seats*100)}%` : '100%';
 </script>
 
 <UpdatePaymentDetails
@@ -120,7 +143,7 @@
 	<div class="rounded-2xl dark:bg-customGray-900 pt-4 px-4 mb-2.5">
 		<div class="flex items-center justify-between pb-2.5 border-b dark:border-customGray-700">
 			<div class="flex items-center gap-2.5">
-				{#if $subscription?.plan === 'starter'}
+				{#if $subscription?.plan === 'starter' || $subscription?.plan === 'free'}
 					<div
 						class="mb-2.5 flex justify-center items-center w-[50px] h-[50px] bg-[#024D15] rounded-mdx text-[#0F8C18]"
 					>
@@ -164,9 +187,11 @@
 		</div>
 		<div class="flex items-center justify-between pt-2.5 pb-3">
 			<div class="text-xs dark:text-customGray-100">{$i18n.t('Billing details')}</div>
-			<div class="text-xs dark:text-customGray-590">
-				Monthly (renews ({dayjs($subscription?.next_billing_date * 1000)?.format('DD.MM.YYYY')}))
-			</div>
+			{#if $subscription?.plan !== 'free'}
+				<div class="text-xs dark:text-customGray-590">
+					Monthly (renews ({dayjs($subscription?.next_billing_date * 1000)?.format('DD.MM.YYYY')}))
+				</div>
+			{/if}
 		</div>
 	</div>
 
@@ -174,28 +199,37 @@
 		<div class="flex items-center justify-between pb-3">
 			<div class="text-xs dark:text-customGray-300 font-medium">{$i18n.t('Seats')}</div>
 			<div class="text-xs dark:text-customGray-590">
-				<span class="text-xs dark:text-customGray-100">18 {$i18n.t('used')}</span><span
-					class="dark:text-customGray-590">/ 25 {$i18n.t('included')}</span
+				<span class="text-xs dark:text-customGray-100">{$subscription?.seats_taken} {$i18n.t('used')}</span><span
+					class="dark:text-customGray-590">/ {$subscription?.seats} {$i18n.t('included')}</span
 				>
 			</div>
 		</div>
 		<div class="relative w-full h-1 rounded-sm bg-customGray-800">
-			<div class="absolute left-0 h-1 rounded-sm bg-[#024D15] w-[300px]"></div>
+			<div style={`width: ${seatsWidth};`} class="absolute left-0 h-1 rounded-sm bg-[#024D15]"></div>
 		</div>
 	</div>
 	<div class="rounded-2xl dark:bg-customGray-900 pt-4 px-4 pb-4 mb-2.5">
 		<div class="flex items-center justify-between pb-2.5 border-b dark:border-customGray-700">
 			<div class="text-xs dark:text-customGray-300 font-medium">{$i18n.t('Base credits')}</div>
 			<div class="text-xs dark:text-customGray-590">
-				<span class="text-xs dark:text-customGray-100">0 {$i18n.t('used')}</span><span
-					class="dark:text-customGray-590">/ 5000 {$i18n.t('included')}</span
+				{#if $subscription?.plan !== 'free'}
+				<span class="text-xs dark:text-customGray-100">{currentPlan?.credits_per_month - $subscription?.credits_remaining} {$i18n.t('used')}</span><span
+					class="dark:text-customGray-590">/ {currentPlan?.credits_per_month} {$i18n.t('included')}</span
 				>
+				{:else}
+					<span class="text-xs dark:text-customGray-100">0 {$i18n.t('used')}/</span>
+					<span class="dark:text-customGray-590">0 {$i18n.t('included')}</span>
+				{/if}
 			</div>
 		</div>
 		<div class="flex items-center justify-between pt-2.5">
-			<div class="text-xs dark:text-customGray-590">
-				{$i18n.t('Credits will reset on')} March 25, 2025
-			</div>
+			{#if $subscription?.plan !== 'free'}
+				<div class="text-xs dark:text-customGray-590">
+					{$i18n.t('Credits will reset on')} {dayjs($subscription?.next_billing_date * 1000)?.format('DD.MM.YYYY')}
+				</div>
+			{:else}
+				<div></div>
+			{/if}
 			<button
 				class="flex items-center justify-center rounded-[10px] dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
 			>
@@ -208,15 +242,20 @@
 		<div class="flex items-center justify-between pb-2.5 border-b dark:border-customGray-700">
 			<div class="text-xs dark:text-customGray-300 font-medium">{$i18n.t('Flex credits')}</div>
 			<div class="text-xs dark:text-customGray-590">
-				<span class="text-xs dark:text-customGray-100">0 {$i18n.t('used')}</span><span
-					class="dark:text-customGray-590">/ 0 {$i18n.t('included')}</span
+				<!-- <span class="text-xs dark:text-customGray-100">0 {$i18n.t('used')}</span> -->
+				<span
+					class="dark:text-customGray-100">{$subscription?.flex_credits_remaining ? $subscription?.flex_credits_remaining : 0} {$i18n.t('remaining')}</span
 				>
 			</div>
 		</div>
 		<div class="flex items-center justify-between pt-2.5">
 			<div class="flex items-center">
 				<div class="text-xs dark:text-customGray-590 mr-2.5">{$i18n.t('Auto recharge')}</div>
-				<Switch bind:state={autoRecharge} on:change={async (e) => {}} />
+				<Switch bind:state={autoRecharge} on:change={async (e) => {
+					const res = await updateAutoRecharge(localStorage.token, e.detail).catch(error => console.log(error))
+					toast.success($i18n.t(res.message))
+					fetchCurrentSubscription()
+				}} />
 				<div class="text-xs dark:text-customGray-590 ml-2.5">
 					{#if autoRecharge}
 						{$i18n.t('On')}
@@ -226,6 +265,7 @@
 				</div>
 			</div>
 			<button
+				on:click={recharge}
 				class="flex items-center justify-center rounded-[10px] dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
 			>
 				{$i18n.t('Buy credits')}
@@ -233,7 +273,7 @@
 		</div>
 	</div>
 
-	<div
+	<!-- <div
 		class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5 mt-2.5"
 	>
 		<div class="flex w-full justify-between items-center">
@@ -256,5 +296,23 @@
 		class="flex items-center justify-center rounded-[10px] dark:bg-customGray-900 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
 	>
 		{$i18n.t('View billing statement')}
+	</button> -->
+	<div
+		class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5 mt-2.5"
+	>
+		<div class="flex w-full justify-between items-center">
+			<div class="text-xs dark:text-customGray-300">{$i18n.t('Cancel Subscription')}</div>
+		</div>
+	</div>
+	<button
+		on:click={async () => {
+			await deleteCurrentSubscription(localStorage.token)
+			.then(res => toast.success($i18n.t(res?.message)))
+			.catch(error => toast.error(error));
+			fetchCurrentSubscription();	
+		}}
+		class="flex items-center justify-center rounded-[10px] dark:bg-customGray-900 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
+	>
+		{$i18n.t('Cancel Subscription')}
 	</button>
 </div>

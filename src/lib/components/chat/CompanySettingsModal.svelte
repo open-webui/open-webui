@@ -20,11 +20,16 @@
 	import BillingIcon from '../icons/BillingIcon.svelte';
 	import Billing from './Settings/CompanySettings/Billing.svelte';
 	import { getMonthRange } from '$lib/utils';
+	import { page } from '$app/stores';
+	import {
+		getCurrentSubscription
+	} from '$lib/apis/payments';
+	import { subscription } from '$lib/stores';
 	
 	const i18n = getContext('i18n');
 
 	export let show = false;
-	export let selectedTab = 'general-settings';
+	let selectedTab = 'general-settings';
 
 	interface SettingsTab {
 		id: string;
@@ -201,11 +206,19 @@
 		analyticsLoading = false;
 	}
 }
+	async function getSubscription() {
+		const sub = await getCurrentSubscription(localStorage.token).catch(error => console.log(error));
+		if(sub){
+			subscription.set(sub);
+		}
+	}
 
 	$: if(show){
 		getUsersHandler();
 		fetchAnalytics();
-		// selectedTab = 'general-settings';
+		// getSubscription();
+		const tabParam = $page.url.searchParams.get('tab');
+		selectedTab = tabParam || 'general-settings';
 	}
 
 </script>

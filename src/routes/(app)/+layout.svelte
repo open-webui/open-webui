@@ -220,19 +220,19 @@
 	let selectedTab = 'general-settings';
 
 	$: modalParam = $page.url.searchParams.get('modal');
-	$: tabParam = $page.url.searchParams.get('tab');
+	// $: tabParam = $page.url.searchParams.get('tab');
 
 	// Watch for changes in URL params
 	$: {
 		if (modalParam === 'company-settings') {
 			showCompanySettings.set(true);
-			selectedTab = tabParam || 'general-settings';
+			// selectedTab = tabParam || 'general-settings';
 		}
 	}
 </script>
 
 <SettingsModal bind:show={$showSettings} />
-<CompanySettingsModal bind:show={$showCompanySettings} {selectedTab}/>
+<CompanySettingsModal bind:show={$showCompanySettings}/>
 <!-- <ChangelogModal bind:show={$showChangelog} /> -->
 
 <!-- {#if version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}
