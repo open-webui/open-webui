@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import BillingPlanIcon from '$lib/components/icons/BillingPlanIcon.svelte';
+	import StarterPlanIcon from '$lib/components/icons/StarterPlanIcon.svelte';
+	import BusinessPlanIcon from '$lib/components/icons/BusinessPlanIcon.svelte';
+	import GrowthPlanIcon from '$lib/components/icons/GrowthPlanIcon.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import UpdatePaymentDetails from './UpdatePaymentDetails.svelte';
 	import { user, subscription } from '$lib/stores';
@@ -35,9 +37,9 @@
 			window.location.href = res.url;
 		}
 	}
-	$: console.log($subscription)
-	$: currentPlan = plans?.find(item => item.id === $subscription?.plan);
-	$: console.log(currentPlan, 'current plan')
+	$: console.log($subscription);
+	$: currentPlan = plans?.find((item) => item.id === $subscription?.plan);
+	$: console.log(currentPlan, 'current plan');
 </script>
 
 <UpdatePaymentDetails
@@ -50,24 +52,56 @@
 		{#if plans?.length > 0}
 			<div class="grid grid-cols-3 gap-2">
 				{#each plans as plan}
-					<div class="border dark:border-customGray-700 rounded-lg p-2 flex flex-col items-center">
-						<div class="text-base dark:text-customGray-100 mb-2 font-medium">{plan?.name}</div>
-						{#if (plan?.id === $subscription?.plan)}
-						<div class="text-xs dark:text-customGray-100">current</div>
+					<div class="dark:bg-customGray-900 rounded-lg p-5 flex flex-col items-center">
+						{#if plan.id === 'starter'}
+							<div
+								class="mb-2.5 flex justify-center items-center w-[50px] h-[50px] bg-[#024D15] rounded-mdx text-[#0F8C18]"
+							>
+								<StarterPlanIcon className="size-6" />
+							</div>
+						{:else if plan.id === 'team'}
+							<div
+								class="mb-2.5 flex justify-center items-center w-[50px] h-[50px] bg-[#4621A5] rounded-mdx text-[#A588EF]"
+							>
+								<BusinessPlanIcon className="size-6" />
+							</div>
+						{:else if plan.id === 'growth'}
+							<div
+								class="mb-2.5 flex justify-center items-center w-[50px] h-[50px] bg-[#840E70] rounded-mdx text-[#F294E2]"
+							>
+								<GrowthPlanIcon className="size-6" />
+							</div>
 						{/if}
-						<div class="text-sm dark:text-customGray-100 mb-2">
-							€{plan?.price_monthly / 100}/month
+						<div class="text-base dark:text-customGray-100 mb-5">
+							{plan?.name}
+							{$i18n.t('Plan')}
 						</div>
-						<div class="text-xs dark:text-customGray-100 mb-4 text-center">
-							{plan?.credits_per_month} credits per month
+						<div class="dark:text-customGray-100 mb-5 text-2xl">
+							€{plan?.price_monthly / 100}/<span class="text-xs dark:text-customGray-100/50"
+								>month</span
+							>
+						</div>
+						<div class="text-xs dark:text-customGray-590 text-center">
+							5 seats,
+						</div>
+						<div class="text-xs dark:text-customGray-590 text-center">
+							150€ included,
+						</div>
+						<div class="text-xs dark:text-customGray-590 text-center mb-5">
+							all features
 						</div>
 						<button
 							on:click={() => upgradeSubscription(plan.id)}
 							type="button"
 							disabled={plan?.id === $subscription?.plan}
-							class="w-full mt-auto flex items-center justify-center rounded-[10px] dark:bg-customGray-900 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
-							>Select</button
+							class="w-full mt-auto flex h-10 items-center justify-center rounded-[10px] dark:bg-customGray-900 {plan?.id !== $subscription?.plan ? 'dark:hover:bg-customGray-950' : ''} border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
 						>
+							{#if plan?.id === $subscription?.plan}
+								{$i18n.t('Current Plan')}
+							{:else}
+								{$i18n.t('Select')}
+							{/if}
+						</button>
 					</div>
 				{/each}
 			</div>
@@ -86,33 +120,53 @@
 	<div class="rounded-2xl dark:bg-customGray-900 pt-4 px-4 mb-2.5">
 		<div class="flex items-center justify-between pb-2.5 border-b dark:border-customGray-700">
 			<div class="flex items-center gap-2.5">
-				<div
-					class="flex justify-center items-center w-[50px] h-[50px] bg-[#024D15] rounded-mdx text-[#0F8C18]"
-				>
-					<BillingPlanIcon className="size-6" />
-				</div>
+				{#if $subscription?.plan === 'starter'}
+					<div
+						class="mb-2.5 flex justify-center items-center w-[50px] h-[50px] bg-[#024D15] rounded-mdx text-[#0F8C18]"
+					>
+						<StarterPlanIcon className="size-6" />
+					</div>
+				{:else if $subscription?.plan === 'team'}
+					<div
+						class="mb-2.5 flex justify-center items-center w-[50px] h-[50px] bg-[#4621A5] rounded-mdx text-[#A588EF]"
+					>
+						<BusinessPlanIcon className="size-6" />
+					</div>
+				{:else if $subscription?.plan === 'growth'}
+					<div
+						class="mb-2.5 flex justify-center items-center w-[50px] h-[50px] bg-[#840E70] rounded-mdx text-[#F294E2]"
+					>
+						<GrowthPlanIcon className="size-6" />
+					</div>
+				{/if}
 				<div>
 					<div class="flex items-center gap-2.5">
-						<div class="text-sm dark:text-customGray-100 capitalize">{$i18n.t($subscription?.plan)}</div>
+						<div class="text-sm dark:text-customGray-100 capitalize">
+							{$i18n.t($subscription?.plan)}
+						</div>
 						<div
 							class="flex justify-center items-center text-xs dark:text-customGray-590 dark:bg-customGray-800 px-2 py-1 rounded-mdx"
 						>
 							Monthly
 						</div>
 					</div>
-					<div class="text-xs dark:text-customGray-100/50 mt-2">€{currentPlan?.price_monthly ? currentPlan?.price_monthly/100 : '0.00'}/mo</div>
+					<div class="text-xs dark:text-customGray-100/50 mt-2">
+						€{currentPlan?.price_monthly ? currentPlan?.price_monthly / 100 : '0.00'}/mo
+					</div>
 				</div>
 			</div>
 			<button
 				on:click={() => (showUpdateDetails = true)}
 				class="flex items-center justify-center rounded-mdx dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-3 text-xs dark:text-customGray-200"
 			>
-				{$i18n.t('Upgrade plan')}
+				{$i18n.t('Explore Plans')}
 			</button>
 		</div>
 		<div class="flex items-center justify-between pt-2.5 pb-3">
 			<div class="text-xs dark:text-customGray-100">{$i18n.t('Billing details')}</div>
-			<div class="text-xs dark:text-customGray-590">Monthly (renews ({dayjs($subscription?.next_billing_date * 1000)?.format('DD.MM.YYYY')}))</div>
+			<div class="text-xs dark:text-customGray-590">
+				Monthly (renews ({dayjs($subscription?.next_billing_date * 1000)?.format('DD.MM.YYYY')}))
+			</div>
 		</div>
 	</div>
 
