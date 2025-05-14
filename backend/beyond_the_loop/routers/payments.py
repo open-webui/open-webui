@@ -84,7 +84,17 @@ async def create_subscription_session(request: CreateSubscriptionRequest, user=D
             
         company = Companies.get_company_by_id(user.company_id)
         stripe_customer_id = company.stripe_customer_id
-        
+
+        # Get subscription from Stripe
+        subscriptions = stripe.Subscription.list(
+            customer=stripe_customer_id,
+            status='active',
+            limit=1
+        )
+
+        if subscriptions.data is not None:
+            raise HTTPException(status_code=400, detail="Customer has already active subscription")
+
         print(f"Using price ID: {stripe_price_id} for plan: {request.plan_id}")
         
         # Create a Stripe Checkout session for subscription
