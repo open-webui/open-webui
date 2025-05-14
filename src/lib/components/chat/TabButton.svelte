@@ -6,7 +6,7 @@
 </script>
 
 <button
-	class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selected
+	class="w-full px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selected
 		? 'bg-gray-800'
 		: 'hover:bg-gray-800'}"
 	on:click={onClick}
