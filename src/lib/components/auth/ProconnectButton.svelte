@@ -1,5 +1,8 @@
 <script>
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { getContext } from 'svelte';
+
+	const i18n = getContext('i18n');
 </script>
 
 <div>
@@ -37,10 +40,10 @@
 			href="https://www.proconnect.gouv.fr/"
 			target="_blank"
 			rel="noopener noreferrer"
-			title="Qu’est-ce que ProConnect ? - nouvelle fenêtre"
+			title={$i18n.t("What is ProConnect ? - New window")}
 			class="underline"
 		>
-			Qu’est-ce que ProConnect ?
+			{$i18n.t("What is ProConnect ?")}
 		</a>
 	</p>
 </div>
@@ -60,12 +63,11 @@
 
 	.proconnect-button {
 		width: 214px;
-		height: 56px;		
+		height: 56px;
 		border: none;
 	}
 
 	.proconnect-button:hover {
-		background-color: var(--hover) !important;	
+		background-color: var(--hover) !important;
 	}
-
 </style>
