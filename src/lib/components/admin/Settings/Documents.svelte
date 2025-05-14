@@ -124,6 +124,13 @@
 	};
 
 	const submitHandler = async () => {
+		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'external' &&
+			RAGConfig.EXTERNAL_DOCUMENT_LOADER_URL === ''
+		) {
+			toast.error($i18n.t('External Document Loader URL required.'));
+			return;
+		}
 		if (RAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika' && RAGConfig.TIKA_SERVER_URL === '') {
 			toast.error($i18n.t('Tika Server URL required.'));
 			return;
@@ -256,6 +263,7 @@
 									bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}
 								>
 									<option value="">{$i18n.t('Default')}</option>
+									<option value="external">{$i18n.t('External')}</option>
 									<option value="tika">{$i18n.t('Tika')}</option>
 									<option value="docling">{$i18n.t('Docling')}</option>
 									<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
@@ -274,6 +282,19 @@
 										<Switch bind:state={RAGConfig.PDF_EXTRACT_IMAGES} />
 									</div>
 								</div>
+							</div>
+						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'external'}
+							<div class="my-0.5 flex gap-2 pr-2">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter External Document Loader URL')}
+									bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_URL}
+								/>
+								<SensitiveInput
+									placeholder={$i18n.t('Enter External Document Loader API Key')}
+									required={false}
+									bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_API_KEY}
+								/>
 							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika'}
 							<div class="flex w-full mt-1">

@@ -21,6 +21,8 @@ from langchain_community.document_loaders import (
 )
 from langchain_core.documents import Document
 
+
+from open_webui.retrieval.loaders.external_document import ExternalDocumentLoader
 from open_webui.retrieval.loaders.mistral import MistralLoader
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
@@ -213,6 +215,17 @@ class Loader:
     def _get_loader(self, filename: str, file_content_type: str, file_path: str):
         file_ext = filename.split(".")[-1].lower()
 
+        if (
+            self.engine == "external"
+            and self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_URL")
+            and self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_API_KEY")
+        ):
+            loader = ExternalDocumentLoader(
+                file_path=file_path,
+                url=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_URL"),
+                api_key=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_API_KEY"),
+                mime_type=file_content_type,
+            )
         if self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
             if self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
@@ -262,6 +275,15 @@ class Loader:
             )
         elif (
             self.engine == "mistral_ocr"
+            and self.kwargs.get("MISTRAL_OCR_API_KEY") != ""
+            and file_ext
+            in ["pdf"]  # Mistral OCR currently only supports PDF and images
+        ):
+            loader = MistralLoader(
+                api_key=self.kwargs.get("MISTRAL_OCR_API_KEY"), file_path=file_path
+            )
+        elif (
+            self.engine == "external"
             and self.kwargs.get("MISTRAL_OCR_API_KEY") != ""
             and file_ext
             in ["pdf"]  # Mistral OCR currently only supports PDF and images

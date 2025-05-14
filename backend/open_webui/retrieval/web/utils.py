@@ -25,7 +25,7 @@ from langchain_community.document_loaders.firecrawl import FireCrawlLoader
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 from open_webui.retrieval.loaders.tavily import TavilyLoader
-from open_webui.retrieval.loaders.external import ExternalLoader
+from backend.open_webui.retrieval.loaders.external_web import ExternalWebLoader
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
@@ -628,7 +628,7 @@ def get_web_loader(
         web_loader_args["extract_depth"] = TAVILY_EXTRACT_DEPTH.value
 
     if WEB_LOADER_ENGINE.value == "external":
-        WebLoaderClass = ExternalLoader
+        WebLoaderClass = ExternalWebLoader
         web_loader_args["external_url"] = EXTERNAL_WEB_LOADER_URL.value
         web_loader_args["external_api_key"] = EXTERNAL_WEB_LOADER_API_KEY.value
 
