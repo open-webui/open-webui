@@ -39,7 +39,7 @@ from open_webui.config import (
     EXTERNAL_WEB_LOADER_URL,
     EXTERNAL_WEB_LOADER_API_KEY,
 )
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, AIOHTTP_CLIENT_SESSION_SSL
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -515,7 +515,9 @@ class SafeWebBaseLoader(WebBaseLoader):
                         kwargs["ssl"] = False
 
                     async with session.get(
-                        url, **(self.requests_kwargs | kwargs)
+                        url,
+                        **(self.requests_kwargs | kwargs),
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     ) as response:
                         if self.raise_for_status:
                             response.raise_for_status()
