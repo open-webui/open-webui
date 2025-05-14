@@ -218,13 +218,23 @@ class KnowledgeTable:
                 return True
             except Exception:
                 return False
-
-    def get_knowledge_by_collection_name(self, name: str) -> Optional[KnowledgeModel]:
+    
+    def update_rag_config_by_id(
+        self, id: str, rag_config: dict
+    ) -> Optional[KnowledgeModel]:
         try:
             with get_db() as db:
-                knowledge = db.query(Knowledge).filter_by(name=name).first()
-                return KnowledgeModel.model_validate(knowledge) if knowledge else None
-        except Exception:
+                knowledge = self.get_knowledge_by_id(id=id)
+                db.query(Knowledge).filter_by(id=id).update(
+                    {
+                        "rag_config": rag_config,
+                        "updated_at": int(time.time()),
+                    }
+                )
+                db.commit()
+                return self.get_knowledge_by_id(id=id)
+        except Exception as e:
+            log.exception(e)
             return None
 
 Knowledges = KnowledgeTable()
