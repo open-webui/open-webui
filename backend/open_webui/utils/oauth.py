@@ -305,7 +305,7 @@ class OAuthManager:
                 get_kwargs["headers"] = {
                     "Authorization": f"Bearer {access_token}",
                 }
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(picture_url, **get_kwargs) as resp:
                     if resp.ok:
                         picture = await resp.read()
