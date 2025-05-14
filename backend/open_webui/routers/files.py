@@ -155,9 +155,39 @@ async def upload_file_async(
             'text_splitter': request.app.state.config.TEXT_SPLITTER,
             'task_id': task_id,
             'chunk_overlap': request.app.state.config.CHUNK_OVERLAP,
-            'chunk_size': request.app.state.config.CHUNK_SIZE}
+            'chunk_size': request.app.state.config.CHUNK_SIZE,
+            'engine': request.app.state.config.CONTENT_EXTRACTION_ENGINE,
+            "model": request.app.state.config.RAG_EMBEDDING_MODEL,
+            "tiktoken_encoding_name": request.app.state.config.TIKTOKEN_ENCODING_NAME,
+            "rag_openai_api_base_url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
+            "rag_ollama_api_key": request.app.state.config.RAG_OLLAMA_API_KEY,
+            "rag_embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+            "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
+            "pdftotext_server_url": request.app.state.config.PDFTOTEXT_SERVER_URL,
+            "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
+            "maxpages_pdftotext": request.app.state.config.MAXPAGES_PDFTOTEXT,
+            }
+    # Adiciona os parâmetros necessários para o processamento
+    # da task
+    # args = {
+    #     "collection_name": form_data.collection_name,
+    #     "text_splitter": request.app.state.config.TEXT_SPLITTER,
+    #     "task_id": task_id,
+    #     "chunk_overlap": request.app.state.config.CHUNK_OVERLAP,
+    #     "chunk_size": request.app.state.config.CHUNK_SIZE,
+    #     "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
+    #     "model": request.app.state.config.RAG_EMBEDDING_MODEL,
+    #     "tiktoken_encoding_name": request.app.state.config.TIKTOKEN_ENCODING_NAME,
+    #     "rag_openai_api_base_url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
+    #     "rag_ollama_api_key": request.app.state.config.RAG_OLLAMA_API_KEY,
+    #     "rag_embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+    #     "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
+    #     "pdftotext_server_url": request.app.state.config.PDFTOTEXT_SERVER_URL,
+    #     "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
+    #     "maxpages_pdftotext": request.app.state.config.MAXPAGES_PDFTOTEXT,
+    # }
 
-    async_result = process_tasks.delay(args=args)
+    _ = process_tasks.delay(args=args)
     message = f"Task {task_id} adicionada à fila de processamento"
     return AsyncTaskResponse(task_id=task_id, status="queued", message=message)
 

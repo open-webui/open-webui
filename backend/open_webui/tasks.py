@@ -41,6 +41,7 @@ from open_webui.retrieval.loaders.main import Loader
 from open_webui.models.files import Files
 from open_webui.routers.retrieval import get_ef
 from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.config import VECTOR_DB
 from typing import Optional
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 import tiktoken
@@ -50,7 +51,6 @@ from open_webui.env import (
     DOCKER,
 )
 from open_webui.constants import ERROR_MESSAGES
-from types import SimpleNamespace
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
@@ -58,13 +58,7 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 @celery_app.task
 def process_tasks(args):
     """Executa OCR e processamento do PDF de forma assíncrona."""
-    args = SimpleNamespace(**args)
-    content = process_file_celery(
-        collection_name=args.collection_name,
-        task_id=args.task_id,
-        text_splitter=args.text_splitter,
-        chunk_size=args.chunk_size,
-        chunk_overlap=args.chunk_overlap,)
+    content = process_file_celery(args)
 
     return {"status": "completed", "result": content, "cd_hash": args.task_id}
 
@@ -72,191 +66,17 @@ def process_tasks(args):
     #     return {"status": "failed", "error": str(e), "cd_hash": task_id}
 
 
-def save_docs_to_vector_db_celery(
-    docs,
-    metadata: Optional[dict] = None,
-    overwrite: bool = False,
-    split: bool = True,
-    add: bool = False,
-    args: Optional[dict] = None,
-) -> bool:
-    def _get_docs_info(docs: list[Document]) -> str:
-        docs_info = set()
-
-        # Trying to select relevant metadata identifying the document.
-        for doc in docs:
-            metadata = getattr(doc, "metadata", {})
-            doc_name = metadata.get("name", "")
-            if not doc_name:
-                doc_name = metadata.get("title", "")
-            if not doc_name:
-                doc_name = metadata.get("source", "")
-            if doc_name:
-                docs_info.add(doc_name)
-
-        return ", ".join(docs_info)
-
-    log.info(
-        f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
-    )
-
-    # Check if entries with the same hash (metadata.hash) already exist
-    if metadata and "hash" in metadata:
-        result = VECTOR_DB_CLIENT.query(
-            collection_name=collection_name,
-            filter={"hash": metadata["hash"]},
-        )
-
-        if result is not None:
-            existing_doc_ids = result.ids[0]
-            if existing_doc_ids:
-                log.info(
-                    f"Document with hash {metadata['hash']} already exists")
-                raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
-
-    if split:
-        if text_splitter in ["", "character"]:
-            text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=chunk_size,
-                chunk_overlap=chunk_overlap,
-                add_start_index=True,
-            )
-        elif text_splitter == "token":
-            log.info(
-                f"Using token text splitter: {TIKTOKEN_ENCODING_NAME}"
-            )
-
-            tiktoken.get_encoding(
-                str(TIKTOKEN_ENCODING_NAME))
-            text_splitter = TokenTextSplitter(
-                encoding_name=str(
-                    TIKTOKEN_ENCODING_NAME),
-                chunk_size=chunk_size,
-                chunk_overlap=chunk_overlap,
-                add_start_index=True,
-            )
-        else:
-            raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
-
-        docs = text_splitter.split_documents(docs)
-
-    if len(docs) == 0:
-        raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
-
-    texts = [doc.page_content for doc in docs]
-    metadatas = [
-        {
-            **doc.metadata,
-            **(metadata if metadata else {}),
-            "embedding_config": json.dumps(
-                {
-                    "engine": RAG_EMBEDDING_ENGINE,
-                    "model": RAG_EMBEDDING_MODEL,
-                }
-            ),
-        }
-        for doc in docs
-    ]
-
-    # ChromaDB does not like datetime formats
-    # for meta-data so convert them to string.
-    for metadata in metadatas:
-        for key, value in metadata.items():
-            if (
-                isinstance(value, datetime)
-                or isinstance(value, list)
-                or isinstance(value, dict)
-            ):
-                metadata[key] = str(value)
-
+def process_file_celery(args):
     try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
-            log.info(f"collection {collection_name} already exists")
+        file = Files.get_file_by_id(args["task_id"])
 
-            if overwrite:
-                VECTOR_DB_CLIENT.delete_collection(
-                    collection_name=collection_name)
-                log.info(f"deleting existing collection {collection_name}")
-            elif add is False:
-                log.info(
-                    f"collection {collection_name} already exists, overwrite is False and add is False"
-                )
-                return True
-
-        log.info(f"adding to collection {collection_name}")
-
-        if VECTOR_DB != 'weaviate':
-            ef = get_ef(
-                RAG_EMBEDDING_ENGINE,
-                RAG_EMBEDDING_MODEL,
-            )
-            embedding_function = get_embedding_function(
-                RAG_EMBEDDING_ENGINE,
-                RAG_EMBEDDING_MODEL,
-                ef,
-                (
-                    RAG_OPENAI_API_BASE_URL
-                    if RAG_EMBEDDING_ENGINE == "openai"
-                    else RAG_OLLAMA_BASE_URL
-                ),
-                (
-                    RAG_OPENAI_API_KEY
-                    if RAG_EMBEDDING_ENGINE == "openai"
-                    else RAG_OLLAMA_API_KEY
-                ),
-                RAG_EMBEDDING_BATCH_SIZE,
-            )
-
-            embeddings = embedding_function(
-                list(map(lambda x: x.replace("\n", " "), texts)), user=user
-            )
-
-            items = [
-                {
-                    "id": str(uuid4()),
-                    "text": text,
-                    "vector": embeddings[idx],
-                    "metadata": metadatas[idx],
-                }
-                for idx, text in enumerate(texts)
-            ]
-        else:
-            items = [
-                {
-                    "id": str(uuid4()),
-                    "text": text,
-                    "metadata": metadatas[idx],
-                }
-                for idx, text in enumerate(texts)
-            ]
-
-        VECTOR_DB_CLIENT.insert(
-            collection_name=collection_name,
-            items=items,
-        )
-
-        return True
-    except Exception as e:
-        log.exception(e)
-        raise e
-
-
-def process_file_celery(
-    task_id,
-    collection_name,
-    text_splitter,
-    chunk_size,
-    chunk_overlap,
-):
-    try:
-        file = Files.get_file_by_id(task_id)
-
-        engine = CONTENT_EXTRACTION_ENGINE
+        engine = args["content_extraction_engine"]
         is_pdf2text = (
             engine == "pdftotext" and file.meta.get(
                 "content_type") == "application/pdf"
         )
 
+        collection_name = args.get("collection_name")
         if collection_name is None:
             collection_name = f"file-{file.id}"
 
@@ -268,17 +88,17 @@ def process_file_celery(
             file_path = Storage.get_file(file_path)
             loader = Loader(
                 engine=engine,
-                TIKA_SERVER_URL=TIKA_SERVER_URL,
-                PDFTOTEXT_SERVER_URL=PDFTOTEXT_SERVER_URL,
-                PDF_EXTRACT_IMAGES=PDF_EXTRACT_IMAGES,
-                MAXPAGES_PDFTOTEXT=MAXPAGES_PDFTOTEXT,
+                TIKA_SERVER_URL=args["tika_server_url"],
+                PDFTOTEXT_SERVER_URL=args["pdftotext_server_url"],
+                PDF_EXTRACT_IMAGES=args["pdf_extract_images"],
+                MAXPAGES_PDFTOTEXT=args["maxpages_pdftotext"],
             )
             if is_pdf2text:
                 task_id = loader.load(
                     file.filename,
                     file.meta.get("content_type"),
                     file_path,
-                    isasync=True,
+                    is_async=True,
                 )
 
                 text_content = loader.loader.get_text(task_id)
@@ -342,16 +162,13 @@ def process_file_celery(
         try:
             result = save_docs_to_vector_db_celery(
                 docs=docs,
-                collection_name=collection_name,
                 metadata={
                     "file_id": file.id,
                     "name": file.filename,
                     "hash": hash,
                 },
-                add=(True if collection_name else False),
-                text_splitter=text_splitter,
-                chunk_size=chunk_size,
-                chunk_overlap=chunk_overlap,
+                add=(True if args["collection_name"] else False),
+                args=args,
             )
 
             if result:
@@ -383,6 +200,176 @@ def process_file_celery(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e),
             )
+
+
+def save_docs_to_vector_db_celery(
+    docs,
+    metadata: Optional[dict] = None,
+    overwrite: bool = False,
+    split: bool = True,
+    add: bool = False,
+    args: dict = {},
+) -> bool:
+    def _get_docs_info(docs: list[Document]) -> str:
+        docs_info = set()
+
+        # Trying to select relevant metadata identifying the document.
+        for doc in docs:
+            metadata = getattr(doc, "metadata", {})
+            doc_name = metadata.get("name", "")
+            if not doc_name:
+                doc_name = metadata.get("title", "")
+            if not doc_name:
+                doc_name = metadata.get("source", "")
+            if doc_name:
+                docs_info.add(doc_name)
+
+        return ", ".join(docs_info)
+
+    log.info(
+        f"save_docs_to_vector_db: document {_get_docs_info(docs)} {args["collection_name"]}"
+    )
+
+    # Check if entries with the same hash (metadata.hash) already exist
+    if metadata and "hash" in metadata:
+        result = VECTOR_DB_CLIENT.query(
+            collection_name=args["collection_name"],
+            filter={"hash": metadata["hash"]},
+        )
+
+        if result is not None:
+            existing_doc_ids = result.ids[0]
+            if existing_doc_ids:
+                log.info(
+                    f"Document with hash {metadata['hash']} already exists")
+                raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
+
+    if split:
+        if text_splitter in ["", "character"]:
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=args["chunk_size"],
+                chunk_overlap=args["chunk_overlap"],
+                add_start_index=True,
+            )
+        elif text_splitter == "token":
+            log.info(
+                f"Using token text splitter: {args["tiktoken_encoding_name"]}"
+            )
+
+            tiktoken.get_encoding(
+                str(args["tiktoken_encoding_name"]))
+            text_splitter = TokenTextSplitter(
+                encoding_name=str(
+                    args["tiktoken_encoding_name"]),
+                chunk_size=args["chunk_size"],
+                chunk_overlap=args["chunk_overlap"],
+                add_start_index=True,
+            )
+        else:
+            raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
+
+        docs = text_splitter.split_documents(docs)
+
+    if len(docs) == 0:
+        raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
+
+    texts = [doc.page_content for doc in docs]
+    metadatas = [
+        {
+            **doc.metadata,
+            **(metadata if metadata else {}),
+            "embedding_config": json.dumps(
+                {
+                    "engine": args["rag_embedding_engine"],
+                    "model": args["rag_embedding_model"],
+                }
+            ),
+        }
+        for doc in docs
+    ]
+
+    # ChromaDB does not like datetime formats
+    # for meta-data so convert them to string.
+    for metadata in metadatas:
+        for key, value in metadata.items():
+            if (
+                isinstance(value, datetime)
+                or isinstance(value, list)
+                or isinstance(value, dict)
+            ):
+                metadata[key] = str(value)
+
+    try:
+        if VECTOR_DB_CLIENT.has_collection(collection_name=args["collection_name"]):
+            log.info(f"collection {args["collection_name"]} already exists")
+
+            if overwrite:
+                VECTOR_DB_CLIENT.delete_collection(
+                    collection_name=args["collection_name"])
+                log.info(
+                    f"deleting existing collection {args["collection_name"]}")
+            elif add is False:
+                log.info(
+                    f"collection {args["collection_name"]} already exists, overwrite is False and add is False"
+                )
+                return True
+
+        log.info(f"adding to collection {args["collection_name"]}")
+
+        if VECTOR_DB != 'weaviate':
+            ef = get_ef(
+                args["rag_embedding_engine"],
+                args["rag_embedding_model"],
+            )
+            embedding_function = get_embedding_function(
+                args["rag_embedding_engine"],
+                args["rag_embedding_model"],
+                ef,
+                (
+                    args["rag_openai_api_base_url"]
+                    if args["rag_embedding_engine"] == "openai"
+                    else args["rag_ollama_api_base_url"]
+                ),
+                (
+                    args["rag_openai_api_key"]
+                    if args["rag_embedding_engine"] == "openai"
+                    else args["rag_ollama_api_key"]
+                ),
+                args["rag_embedding_batch_size"],
+            )
+
+            embeddings = embedding_function(
+                list(map(lambda x: x.replace("\n", " "), texts)), user=user
+            )
+
+            items = [
+                {
+                    "id": str(uuid4()),
+                    "text": text,
+                    "vector": embeddings[idx],
+                    "metadata": metadatas[idx],
+                }
+                for idx, text in enumerate(texts)
+            ]
+        else:
+            items = [
+                {
+                    "id": str(uuid4()),
+                    "text": text,
+                    "metadata": metadatas[idx],
+                }
+                for idx, text in enumerate(texts)
+            ]
+
+        VECTOR_DB_CLIENT.insert(
+            collection_name=args["collection_name"],
+            items=items,
+        )
+
+        return True
+    except Exception as e:
+        log.exception(e)
+        raise e
 
 
 # A dictionary to keep track of active tasks
