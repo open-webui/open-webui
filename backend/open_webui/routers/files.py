@@ -1,3 +1,5 @@
+import asyncio
+from threading import Lock
 import logging
 import base64
 import os
@@ -116,7 +118,6 @@ def upload_file(
 # Async Files routes
 ############################
 
-
 @router.post("/async", response_model=AsyncTaskResponse)
 async def upload_file_async(
     request: Request,
@@ -190,6 +191,7 @@ async def upload_file_async(
     _ = process_tasks.delay(args=args)
     message = f"Task {task_id} adicionada à fila de processamento"
     return AsyncTaskResponse(task_id=task_id, status="queued", message=message)
+
 
 
 ############################

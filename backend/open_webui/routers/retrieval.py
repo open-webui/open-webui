@@ -92,10 +92,22 @@ from open_webui.env import (
     DEVICE_TYPE,
     DOCKER,
 )
+from open_webui.exceptions import InvalidPDFError
 from open_webui.constants import ERROR_MESSAGES
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
+
+
+def is_valid_pdf(filepath):
+    try:
+        with open(filepath, 'rb') as f:
+            header = f.read(5)
+            if header != b'%PDF-':
+                raise InvalidPDFError(
+                    f"Arquivo {filepath} não tem cabeçalho PDF válido.")
+    except Exception as e:
+        raise InvalidPDFError(f"Erro ao validar o PDF {filepath}: {e}")
 
 ##########################################
 #
@@ -967,6 +979,9 @@ def process_file(
         else:
             # Process the file and save the content
             # Usage: /files/
+            is_pdf2text = engine == "pdftotext" and file.meta.get(
+                "content_type") == "application/pdf"
+
             file_path = file.path
             if file_path:
                 file_path = Storage.get_file(file_path)
@@ -1069,141 +1084,135 @@ def process_file_async(
     task_id: str,
     user=Depends(get_verified_user),
 ):
-    try:
-        file = Files.get_file_by_id(task_id)
+    file = Files.get_file_by_id(task_id)
 
-        collection_name = form_data.collection_name
-        engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE
-        is_pdf2text = (
-            engine == "pdftotext" and file.meta.get(
-                "content_type") == "application/pdf"
+    collection_name = form_data.collection_name
+    engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE
+    is_pdf2text = engine == "pdftotext" and file.meta.get(
+        "content_type") == "application/pdf"
+
+    if collection_name is None:
+        collection_name = f"file-{file.id}"
+    log.info(f"Is pdftotext: {is_pdf2text}")
+    # Process the file and save the content
+    # Usage: /files/
+    file_path = file.path
+    if file_path:
+        file_path = Storage.get_file(file_path)
+        file_ext = file.filename.split(".")[-1].lower()
+        if file_ext == "pdf":
+            try:
+                is_valid_pdf(file_path)
+            except InvalidPDFError as e:
+                log.exception(f"Erro na tarefa em background: {e}")
+                raise e
+
+        loader = Loader(
+            engine=engine,
+            TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
+            PDFTOTEXT_SERVER_URL=request.app.state.config.PDFTOTEXT_SERVER_URL,
+            PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
+            MAXPAGES_PDFTOTEXT=request.app.state.config.MAXPAGES_PDFTOTEXT,
         )
 
-        if collection_name is None:
-            collection_name = f"file-{file.id}"
+        if is_pdf2text:
+            task_id = loader.load(file.filename, file.meta.get(
+                "content_type"), file_path, is_async=True)
 
-        # Process the file and save the content
-        # Usage: /files/
-        file_path = file.path
-        text_content = ""
-        if file_path:
-            file_path = Storage.get_file(file_path)
-            loader = Loader(
-                engine=engine,
-                TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
-                PDFTOTEXT_SERVER_URL=request.app.state.config.PDFTOTEXT_SERVER_URL,
-                PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
-                MAXPAGES_PDFTOTEXT=request.app.state.config.MAXPAGES_PDFTOTEXT,
-            )
-            if is_pdf2text:
-                task_id = loader.load(
-                    file.filename,
-                    file.meta.get("content_type"),
-                    file_path,
-                    isasync=True,
+            text_content = loader.loader.get_text(task_id)
+
+            log.info(f"task_id: {task_id}")
+            log.info(f"text_content: {text_content}")
+            if not text_content:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
                 )
 
-                text_content = loader.loader.get_text(task_id)
+            docs = [Document(
+                page_content=text_content,
+                metadata={
+                    "name": file.filename,
+                    "created_by": file.user_id,
+                    "file_id": file.id,
+                    "source": file.filename,
+                },
+            )]
 
-                docs = [
-                    Document(
-                        page_content=text_content,
-                        metadata={
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            "source": file.filename,
-                        },
-                    )
-                ]
-
-                log.info(f"OCR Task {task_id} created successfully.")
-
-            else:
-                docs = loader.load(
-                    file.filename, file.meta.get("content_type"), file_path
-                )
-                docs = [
-                    Document(
-                        page_content=doc.page_content,
-                        metadata={
-                            **doc.metadata,
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            "source": file.filename,
-                        },
-                    )
-                    for doc in docs
-                ]
+            log.info(f"OCR Task {task_id} created successfully.")
         else:
+            docs = loader.load(
+                file.filename, file.meta.get("content_type"), file_path
+            )
             docs = [
                 Document(
-                    page_content=file.data.get("content", ""),
+                    page_content=doc.page_content,
                     metadata={
-                        **file.meta,
+                        **doc.metadata,
                         "name": file.filename,
                         "created_by": file.user_id,
                         "file_id": file.id,
                         "source": file.filename,
                     },
                 )
+                for doc in docs
             ]
+    else:
+        docs = [
+            Document(
+                page_content=file.data.get("content", ""),
 
-        if not is_pdf2text:
-            text_content = " ".join([doc.page_content for doc in docs])
+                metadata={
+                    **file.meta,
+                    "name": file.filename,
+                    "created_by": file.user_id,
+                    "file_id": file.id,
+                    "source": file.filename,
+                },
+            )
+        ]
 
-        Files.update_file_data_by_id(
-            file.id,
-            {"content": text_content},
+    if not is_pdf2text:
+        text_content = " ".join([doc.page_content for doc in docs])
+
+    Files.update_file_data_by_id(
+        file.id,
+        {"content": text_content},
+    )
+
+    hash = calculate_sha256_string(text_content)
+    Files.update_file_hash_by_id(file.id, hash)
+
+    try:
+        result = save_docs_to_vector_db(
+            request,
+            docs=docs,
+            collection_name=collection_name,
+            metadata={
+                "file_id": file.id,
+                "name": file.filename,
+                "hash": hash,
+            },
+            add=(True if form_data.collection_name else False),
+            user=user,
         )
 
-        hash = calculate_sha256_string(text_content)
-        Files.update_file_hash_by_id(file.id, hash)
-
-        try:
-            result = save_docs_to_vector_db(
-                request,
-                docs=docs,
-                collection_name=collection_name,
-                metadata={
-                    "file_id": file.id,
-                    "name": file.filename,
-                    "hash": hash,
-                },
-                add=(True if form_data.collection_name else False),
-                user=user,
-            )
-
-            if result:
-                Files.update_file_metadata_by_id(
-                    file.id,
-                    {
-                        "collection_name": collection_name,
-                    },
-                )
-
-                return {
-                    "status": True,
+        if result:
+            Files.update_file_metadata_by_id(
+                file.id,
+                {
                     "collection_name": collection_name,
-                    "filename": file.filename,
-                    "content": text_content,
-                }
-        except Exception as e:
-            raise e
+                },
+            )
 
+            return {
+                "status": True,
+                "collection_name": collection_name,
+                "filename": file.filename,
+                "content": text_content,
+            }
     except Exception as e:
-        log.exception(e)
-        if "No pandoc was found" in str(e):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(e),
-            )
+        raise e
 
 
 class ProcessTextForm(BaseModel):
