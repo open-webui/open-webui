@@ -197,8 +197,10 @@ async def upload_pipeline(
     user=Depends(get_admin_user),
 ):
     log.info(f"upload_pipeline: urlIdx={urlIdx}, filename={file.filename}")
+    filename = os.path.basename(file.filename)
+
     # Check if the uploaded file is a python file
-    if not (file.filename and file.filename.endswith(".py")):
+    if not (filename and filename.endswith(".py")):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only Python (.py) files are allowed.",
@@ -206,7 +208,7 @@ async def upload_pipeline(
 
     upload_folder = f"{CACHE_DIR}/pipelines"
     os.makedirs(upload_folder, exist_ok=True)
-    file_path = os.path.join(upload_folder, file.filename)
+    file_path = os.path.join(upload_folder, filename)
 
     r = None
     try:
