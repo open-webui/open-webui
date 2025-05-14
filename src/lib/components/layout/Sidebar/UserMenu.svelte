@@ -60,7 +60,12 @@
 				<button
 					class="flex rounded-md text-sm text-customGray-100 py-2 px-3 w-full hover:bg-gray-50 dark:hover:text-white dark:hover:bg-customGray-950 transition"
 					on:click={async () => {
-						await showCompanySettings.set(true);
+						// showCompanySettings.set(true);
+						const url = new URL(window.location.href);
+						url.searchParams.set('modal', 'company-settings');
+						url.searchParams.set('tab', 'general-settings');
+						goto(`${url.pathname}${url.search}`, { keepfocus: true, replaceState: false });
+	
 						show = false;
 
 						if ($mobile) {

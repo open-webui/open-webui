@@ -7,18 +7,7 @@
 	import { goto } from '$app/navigation';
 
 	import Modal from '../common/Modal.svelte';
-	import Account from './Settings/Account.svelte';
-	import About from './Settings/About.svelte';
-	import Interface from './Settings/Interface.svelte';
-	import Audio from './Settings/Audio.svelte';
-	import Chats from './Settings/Chats.svelte';
-	import User from '../icons/User.svelte';
-	import Personalization from './Settings/Personalization.svelte';
-	import SearchInput from '../layout/Sidebar/SearchInput.svelte';
-	import Search from '../icons/Search.svelte';
 	import ProfileIcon from '../icons/ProfileIcon.svelte';
-	import PersonalizationIcon from '../icons/PersonalizationIcon.svelte';
-	import ChatIcon from '../icons/ChatIcon.svelte';
     import GeneralSettings from '$lib/components/chat/Settings/CompanySettings/General.svelte';
 	import GroupIcon from '../icons/GroupIcon.svelte';
 	import UserManagement from './Settings/CompanySettings/UserManagement.svelte';
@@ -35,11 +24,19 @@
 	const i18n = getContext('i18n');
 
 	export let show = false;
+	export let selectedTab = 'general-settings';
 
 	interface SettingsTab {
 		id: string;
 		title: string;
 		keywords: string[];
+	}
+
+	function updateTabParam(tab) {
+		const url = new URL(window.location.href);
+		url.searchParams.set('tab', tab);
+		url.searchParams.set('modal', 'company-settings'); 
+		window.history.replaceState({}, '', url); 
 	}
 
 	const searchData: SettingsTab[] = [
@@ -113,7 +110,6 @@
 		return await _getModels(localStorage.token);
 	};
 
-	let selectedTab = 'general-settings';
 
 	// Function to handle sideways scrolling
 	const scrollHandler = (event) => {
@@ -209,7 +205,7 @@
 	$: if(show){
 		getUsersHandler();
 		fetchAnalytics();
-		selectedTab = 'general-settings';
+		// selectedTab = 'general-settings';
 	}
 
 </script>
@@ -222,7 +218,10 @@
 				<button
 					class="self-center"
 					on:click={() => {
-						show = false;
+						const url = new URL(window.location.href);
+						url.search = ''; 
+						goto(url.pathname, { replaceState: true });
+						show = false;	
 					}}
 				>
 					<svg
@@ -266,6 +265,7 @@
                             : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
                         on:click={() => {
                             selectedTab = 'general-settings';
+							updateTabParam(selectedTab);
                         }}
                     >
                         <div class="flex items-center mb-1">
@@ -283,6 +283,7 @@
                             : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
                         on:click={() => {
                             selectedTab = 'user-management';
+							updateTabParam(selectedTab);
                         }}
                     >
                         <div class="flex items-center mb-1">
@@ -300,6 +301,7 @@
 							: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 						on:click={() => {
 							selectedTab = 'model-control';
+							updateTabParam(selectedTab);
 						}}
 					>
 						<div class="flex items-center mb-1">
@@ -317,6 +319,7 @@
 							: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 						on:click={() => {
 							selectedTab = 'analytics';
+							updateTabParam(selectedTab);
 						}}
 					>
 						<div class="flex items-center mb-1">
@@ -334,6 +337,7 @@
 							: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 						on:click={() => {
 							selectedTab = 'billing';
+							updateTabParam(selectedTab);
 						}}
 					>
 						<div class="flex items-center mb-1">
