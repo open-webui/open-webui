@@ -105,10 +105,10 @@
 							>
 						</div>
 						<div class="text-xs dark:text-customGray-590 text-center">
-							5 seats,
+							{plan?.seats} {$i18n.t('seats')},
 						</div>
 						<div class="text-xs dark:text-customGray-590 text-center">
-							150€ included,
+							€{plan?.credits_per_month} {$i18n.t('included')},
 						</div>
 						<div class="text-xs dark:text-customGray-590 text-center mb-5">
 							all features

@@ -50,6 +50,7 @@ class SubscriptionPlanResponse(BaseModel):
     name: str
     price_monthly: int
     credits_per_month: int
+    seats: int
 
 class SubscriptionResponse(BaseModel):
     """Response model for company subscription details"""
@@ -122,7 +123,8 @@ async def get_subscription_plans():
             id=plan_id,
             name=plan_details["name"],
             price_monthly=plan_details["price_monthly"],
-            credits_per_month=plan_details["credits_per_month"]
+            credits_per_month=plan_details["credits_per_month"],
+            seats=plan_details["seats"]
         ))
     return plans
 
