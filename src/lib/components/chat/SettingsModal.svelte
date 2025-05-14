@@ -26,6 +26,7 @@
 	import BusinessCard from '../icons/BusinessCard.svelte';
 	import InfoSolid from '../icons/InfoSolid.svelte';
 	import Search from '../icons/Search.svelte';
+	import { goto } from '$app/navigation';
 
 	const i18n = getContext('i18n');
 
@@ -34,7 +35,7 @@
 	interface SettingsTab {
 		id: string;
 		title: string;
-		icon: typeof SvelteComponent<{ className?: string }>;
+		icon?: typeof SvelteComponent<{ className?: string }>;
 		keywords: string[];
 		displayTab: boolean;
 	}
@@ -267,7 +268,7 @@
 		{
 			id: 'admin',
 			title: 'Admin',
-			displayTab: true,
+			displayTab: false,
 			keywords: [
 				'admin',
 				'administrator',
@@ -294,8 +295,7 @@
 				'ollama',
 				'openai',
 				'users'
-			],
-			icon: BusinessCard
+			]
 		},
 		{
 			id: 'about',
@@ -394,6 +394,11 @@
 		}
 	};
 
+	const navigate = async (url: string) => {
+		show = false;
+		await goto(url);
+	};
+
 	$: if (show) {
 		addScrollListener();
 	} else {
@@ -440,20 +445,30 @@
 						placeholder={$i18n.t('Search')}
 					/>
 				</div>
-
 				{#if searchData.length > 0}
-					{#each searchData as tab}
-						{#if tab.displayTab}
-							<TabButton
-								id={tab.id}
-								label={tab.title}
-								selected={selectedTab === tab.id}
-								onClick={() => (selectedTab = tab.id)}
-							>
-								<svelte:component this={tab.icon} className="w-5 h-5" />
-							</TabButton>
-						{/if}
-					{/each}
+					<div role="tablist" class="w-full mt-2">
+						{#each searchData as tab}
+							{#if tab.displayTab}
+								<TabButton
+									id={tab.id}
+									label={$i18n.t(tab.title)}
+									selected={selectedTab === tab.id}
+									onClick={() => (selectedTab = tab.id)}
+								>
+									<svelte:component this={tab.icon} className="w-5 h-5" />
+								</TabButton>
+							{/if}
+						{/each}
+					</div>
+					<a
+						on:click={navigate('/admin/settings')}
+						class="mt-2 px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left underline hover:text-blue-800 dark:hover:text-blue-300 transition-colors duration-200"
+					>
+						<div class="self-center mr-2">
+							<BusinessCard />
+						</div>
+						<div class="self-center">{$i18n.t('Admin Settings')}</div>
+					</a>
 				{:else}
 					<div class="text-center text-gray-500 mt-4">
 						{$i18n.t('No results found')}
