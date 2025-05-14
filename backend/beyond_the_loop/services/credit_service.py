@@ -8,7 +8,7 @@ from beyond_the_loop.models.users import Users
 from beyond_the_loop.models.companies import Companies, EIGHTY_PERCENT_CREDIT_LIMIT
 from beyond_the_loop.services.email_service import EmailService
 from beyond_the_loop.models.model_costs import ModelCosts
-from beyond_the_loop.routers.payments import FLEX_CREDITS_DEFAULT_PRICE
+from beyond_the_loop.routers.payments import FLEX_CREDITS_DEFAULT_PRICE_IN_CENTS
 
 PROFIT_MARGIN_FACTOR = 1.5
 DOLLAR_PER_EUR = 0.9
@@ -145,9 +145,6 @@ class CreditService:
             
             if not company.stripe_customer_id:
                 raise HTTPException(status_code=400, detail="No payment method found. Please add a payment method first.")
-            
-            # Retrieve the customer to check for payment methods
-            customer = stripe.Customer.retrieve(company.stripe_customer_id)
             
             # Get the customer's payment methods
             payment_methods = stripe.PaymentMethod.list(

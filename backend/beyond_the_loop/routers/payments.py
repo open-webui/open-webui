@@ -17,7 +17,7 @@ webhook_secret = os.environ.get('WEBHOOK_SECRET')
 stripe.api_key = os.environ.get('STRIPE_API_KEY')
 
 # Constants
-FLEX_CREDITS_DEFAULT_PRICE = 2500 # Amount in cents (25 euro)
+FLEX_CREDITS_DEFAULT_PRICE_IN_CENTS = 2500 # Amount in cents (25 euro)
 
 # Subscription Plans
 SUBSCRIPTION_PLANS = {
@@ -97,7 +97,7 @@ async def create_subscription_session(request: CreateSubscriptionRequest, user=D
             mode='subscription',
             customer=stripe_customer_id if stripe_customer_id else None,
             customer_email=None if stripe_customer_id else user.email,
-            success_url=os.getenv('BACKEND_ADDRESS'),
+            success_url=os.getenv('BACKEND_ADDRESS') + "?modal=company-settings&tab=billing",
             cancel_url=os.getenv('BACKEND_ADDRESS'),
             subscription_data={
                 'metadata': {
@@ -135,20 +135,22 @@ async def get_subscription(user=Depends(get_verified_user)):
     """Get the current subscription details for the company"""
     try:
         company = Companies.get_company_by_id(user.company_id)
-        if not company.stripe_customer_id:
-            return {"plan": "free", "status": "inactive", "flex_credits_remaining": company.flex_credit_balance, "credits_remaining": company.credit_balance, "seats": 0, "seats_taken": Users.count_users_by_company_id(user.company_id)}
-            
+
+        if company.stripe_customer_id is None:
+            return {}
+
         # Get subscription from Stripe
         subscriptions = stripe.Subscription.list(
             customer=company.stripe_customer_id,
             status='active',
             limit=1
         )
-        
-        if not subscriptions.data:
-            return {"plan": "free", "status": "inactive", "flex_credits_remaining": company.flex_credit_balance, "credits_remaining": company.credit_balance, "seats": 0, "seats_taken": Users.count_users_by_company_id(user.company_id)}
-            
+
+        if subscriptions.data is None:
+            return {}
+
         subscription = subscriptions.data[0]
+
         plan_id = subscription.metadata.get('plan_id', 'free')
 
         plan = SUBSCRIPTION_PLANS[plan_id] or {}
@@ -165,7 +167,8 @@ async def get_subscription(user=Depends(get_verified_user)):
             "flex_credits_remaining": company.flex_credit_balance,
             "credits_remaining": company.credit_balance,
             "seats": plan.get("seats", 0),
-            "seats_taken": Users.count_users_by_company_id(user.company_id)
+            "seats_taken": Users.count_users_by_company_id(user.company_id),
+            "auto_recharge": company.auto_recharge
         }
     except Exception as e:
         print(f"Error getting subscription: {e}")
@@ -178,7 +181,7 @@ async def cancel_subscription(user=Depends(get_verified_user)):
     """Cancel the current subscription"""
     try:
         company = Companies.get_company_by_id(user.company_id)
-        if not company or not company.stripe_customer_id:
+        if not company.stripe_customer_id:
             raise HTTPException(status_code=404, detail="No active subscription found")
             
         # Get subscription from Stripe
@@ -198,9 +201,6 @@ async def cancel_subscription(user=Depends(get_verified_user)):
             subscription.id,
             cancel_at_period_end=True
         )
-
-        # Remove stripe customer id from customer to signal that there is no active subscription
-        Companies.update_company_by_id(user.company_id, {"stripe_customer_id": None})
         
         return {"message": "Subscription will be canceled at the end of the billing period"}
     except Exception as e:
@@ -327,7 +327,7 @@ def handle_checkout_session_completed(data):
             print(f"Company not found for user: {user_email}")
             return
             
-        # Save Stripe Customer ID if missing to signal that there is an active subscription
+        # Save Stripe Customer ID if missing
         if not company.stripe_customer_id:
             Companies.update_company_by_id(user.company_id, {"stripe_customer_id": data["customer"]})
             print(f"Updated Stripe customer ID for company {user.company_id}")
@@ -483,7 +483,7 @@ def handle_payment_intent_succeeded(data):
             
         # Check if this payment was already logged (from manual recharge)
         if data.get("metadata", {}).get("flex_credits_recharge") == "true":
-            Companies.add_flex_credit_balance(company.id, FLEX_CREDITS_DEFAULT_PRICE / 100)
+            Companies.add_flex_credit_balance(company.id, FLEX_CREDITS_DEFAULT_PRICE_IN_CENTS / 100)
 
             Companies.update_company_by_id(company.id, {"budget_mail_80_sent": False, "budget_mail_100_sent": False})
 
@@ -492,7 +492,7 @@ def handle_payment_intent_succeeded(data):
                 "stripe_transaction_id": payment_intent_id,
                 "company_id": company.id,
                 "description": "Flex Credits Recharge",
-                "charged_amount": FLEX_CREDITS_DEFAULT_PRICE / 100,
+                "charged_amount": FLEX_CREDITS_DEFAULT_PRICE_IN_CENTS / 100,
                 "currency": data.get("currency", "eur"),
                 "payment_status": "succeeded",
                 "payment_method": "card",
@@ -529,9 +529,6 @@ async def recharge_flex_credits(user=Depends(get_verified_user)):
         if not company.stripe_customer_id:
             raise HTTPException(status_code=400, detail="No active subscription found. Please subscribe first.")
         
-        # Retrieve the customer to check for payment methods
-        customer = stripe.Customer.retrieve(company.stripe_customer_id)
-        
         # Get the customer's payment methods
         payment_methods = stripe.PaymentMethod.list(
             customer=company.stripe_customer_id,
@@ -550,7 +547,7 @@ async def recharge_flex_credits(user=Depends(get_verified_user)):
         
         # Create a PaymentIntent
         payment_intent = stripe.PaymentIntent.create(
-            amount=FLEX_CREDITS_DEFAULT_PRICE,
+            amount=FLEX_CREDITS_DEFAULT_PRICE_IN_CENTS,
             currency="eur",
             customer=company.stripe_customer_id,
             payment_method=default_payment_method,  # Specify the payment method
@@ -565,7 +562,7 @@ async def recharge_flex_credits(user=Depends(get_verified_user)):
                 "flex_credits_recharge": "true"
             }
         )
-        
+
         return {"message": "Credits recharged successfully", "payment_intent": payment_intent.id}
         
     except stripe.error.CardError as e:
@@ -582,7 +579,7 @@ async def customer_billing_page(user=Depends(get_verified_user)):
         company = Companies.get_company_by_id(user.company_id)
         
         if not company.stripe_customer_id:
-            raise HTTPException(status_code=400, detail="No payment method found")
+            raise HTTPException(status_code=400, detail="No stripe customer method found for company")
         
         # Create a billing portal session
         session = stripe.billing_portal.Session.create(
