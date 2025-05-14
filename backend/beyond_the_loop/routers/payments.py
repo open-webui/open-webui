@@ -137,7 +137,10 @@ async def get_subscription(user=Depends(get_verified_user)):
         company = Companies.get_company_by_id(user.company_id)
 
         if company.stripe_customer_id is None:
-            return {}
+            return {
+                'credits_remaining': company.credit_balance,
+                'plan': 'free'
+            }
 
         # Get subscription from Stripe
         subscriptions = stripe.Subscription.list(
@@ -147,7 +150,10 @@ async def get_subscription(user=Depends(get_verified_user)):
         )
 
         if subscriptions.data is None:
-            return {}
+            return {
+                'credits_remaining': company.credit_balance,
+                'plan': 'free'
+            }
 
         subscription = subscriptions.data[0]
 

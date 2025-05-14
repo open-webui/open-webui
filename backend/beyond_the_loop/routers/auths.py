@@ -66,8 +66,7 @@ router = APIRouter()
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
-INITIAL_CREDIT_BALANCE = 2000
-
+INITIAL_CREDIT_BALANCE = 5
 
 def validate_password(password: str) -> bool:
     """
