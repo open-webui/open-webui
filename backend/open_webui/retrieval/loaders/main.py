@@ -126,14 +126,12 @@ class TikaLoader:
 
 
 class DoclingLoader:
-    def __init__(
-        self, url, file_path=None, mime_type=None, ocr_engine=None, ocr_lang=None
-    ):
+    def __init__(self, url, file_path=None, mime_type=None, params=None):
         self.url = url.rstrip("/")
         self.file_path = file_path
         self.mime_type = mime_type
-        self.ocr_engine = ocr_engine
-        self.ocr_lang = ocr_lang
+
+        self.params = params or {}
 
     def load(self) -> list[Document]:
         with open(self.file_path, "rb") as f:
@@ -150,11 +148,19 @@ class DoclingLoader:
                 "table_mode": "accurate",
             }
 
-            if self.ocr_engine and self.ocr_lang:
-                params["ocr_engine"] = self.ocr_engine
-                params["ocr_lang"] = [
-                    lang.strip() for lang in self.ocr_lang.split(",") if lang.strip()
-                ]
+            if self.params:
+                if self.params.get("do_picture_classification"):
+                    params["do_picture_classification"] = self.params.get(
+                        "do_picture_classification"
+                    )
+
+                if self.params.get("ocr_engine") and self.params.get("ocr_lang"):
+                    params["ocr_engine"] = self.params.get("ocr_engine")
+                    params["ocr_lang"] = [
+                        lang.strip()
+                        for lang in self.params.get("ocr_lang").split(",")
+                        if lang.strip()
+                    ]
 
             endpoint = f"{self.url}/v1alpha/convert/file"
             r = requests.post(endpoint, files=files, data=params)
@@ -225,8 +231,13 @@ class Loader:
                     url=self.kwargs.get("DOCLING_SERVER_URL"),
                     file_path=file_path,
                     mime_type=file_content_type,
-                    ocr_engine=self.kwargs.get("DOCLING_OCR_ENGINE"),
-                    ocr_lang=self.kwargs.get("DOCLING_OCR_LANG"),
+                    params={
+                        "ocr_engine": self.kwargs.get("DOCLING_OCR_ENGINE"),
+                        "ocr_lang": self.kwargs.get("DOCLING_OCR_LANG"),
+                        "do_picture_classification": self.kwargs.get(
+                            "DOCLING_DO_PICTURE_DESCRIPTION"
+                        ),
+                    },
                 )
         elif (
             self.engine == "document_intelligence"

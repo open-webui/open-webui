@@ -1849,6 +1849,12 @@ DOCLING_OCR_LANG = PersistentConfig(
     os.getenv("DOCLING_OCR_LANG", "eng,fra,deu,spa"),
 )
 
+DOCLING_DO_PICTURE_DESCRIPTION = PersistentConfig(
+    "DOCLING_DO_PICTURE_DESCRIPTION",
+    "rag.docling_do_picture_description",
+    os.getenv("DOCLING_DO_PICTURE_DESCRIPTION", "False").lower() == "true",
+)
+
 DOCUMENT_INTELLIGENCE_ENDPOINT = PersistentConfig(
     "DOCUMENT_INTELLIGENCE_ENDPOINT",
     "rag.document_intelligence_endpoint",
