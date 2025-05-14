@@ -25,7 +25,7 @@
 					class="text-center dark:text-white text-2xl font-medium z-50"
 					style="white-space: pre-wrap;"
 				>
-					{#if $config?.ui?.pending_user_overlay_title && $config?.ui?.pending_user_overlay_title.trim() !== ''}
+					{#if ($config?.ui?.pending_user_overlay_title ?? '').trim() !== ''}
 						{$config.ui.pending_user_overlay_title}
 					{:else}
 						{$i18n.t('Account Activation Pending')}<br />
@@ -37,7 +37,7 @@
 					class=" mt-4 text-center text-sm dark:text-gray-200 w-full"
 					style="white-space: pre-wrap;"
 				>
-					{#if $config?.ui?.pending_user_overlay_content && $config?.ui?.pending_user_overlay_content.trim() !== ''}
+					{#if ($config?.ui?.pending_user_overlay_content ?? '').trim() !== ''}
 						{$config.ui.pending_user_overlay_content}
 					{:else}
 						{$i18n.t('Your account status is currently pending activation.')}{'\n'}{$i18n.t(
