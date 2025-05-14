@@ -18,27 +18,29 @@ stripe.api_key = os.environ.get('STRIPE_API_KEY')
 
 # Constants
 FLEX_CREDITS_DEFAULT_PRICE = 2500 # Amount in cents (25 euro)
-FLEX_CREDITS_DEFAULT_AMOUNT = 100000
 
 # Subscription Plans
 SUBSCRIPTION_PLANS = {
     "starter": {
         "name": "Starter",
         "price_monthly": 2500,  # 25€ in cents
-        "credits_per_month": 5000,
-        "stripe_price_id": "price_1RNqj4BBwyxb4MZjz4vVypid"
+        "credits_per_month": 5,
+        "stripe_price_id": "price_1RNqhyBBwyxb4MZjNJU4b13w",
+        "seats": 5
     },
     "team": {
-        "name": "Team",
+        "name": "Business",
         "price_monthly": 14900,  # 149€ in cents
-        "credits_per_month": 25000,
-        "stripe_price_id": "price_1RNqiZBBwyxb4MZj6bXjHenV"
+        "credits_per_month": 50,
+        "stripe_price_id": "price_1RNqiZBBwyxb4MZj6bXjHenV",
+        "seats": 25
     },
     "growth": {
         "name": "Growth",
         "price_monthly": 84900,  # 849€ in cents
-        "credits_per_month": 150000,
-        "stripe_price_id": "price_1RNqhyBBwyxb4MZjNJU4b13w"
+        "credits_per_month": 150,
+        "stripe_price_id": "price_1RNqj4BBwyxb4MZjz4vVypid",
+        "seats": 1000
     }
 }
 
@@ -131,8 +133,8 @@ async def get_subscription(user=Depends(get_verified_user)):
     """Get the current subscription details for the company"""
     try:
         company = Companies.get_company_by_id(user.company_id)
-        if not company or not company.stripe_customer_id:
-            return {"plan": "free", "status": "inactive", "flex_credits_remaining": company.flex_credit_balance if company else 0}
+        if not company.stripe_customer_id:
+            return {"plan": "free", "status": "inactive", "flex_credits_remaining": company.flex_credit_balance, "credits_remaining": company.credit_balance, "seats": 0, "seats_taken": Users.count_users_by_company_id(user.company_id)}
             
         # Get subscription from Stripe
         subscriptions = stripe.Subscription.list(
@@ -142,11 +144,13 @@ async def get_subscription(user=Depends(get_verified_user)):
         )
         
         if not subscriptions.data:
-            return {"plan": "free", "status": "inactive", "flex_credits_remaining": company.flex_credit_balance}
+            return {"plan": "free", "status": "inactive", "flex_credits_remaining": company.flex_credit_balance, "credits_remaining": company.credit_balance, "seats": 0, "seats_taken": Users.count_users_by_company_id(user.company_id)}
             
         subscription = subscriptions.data[0]
         plan_id = subscription.metadata.get('plan_id', 'free')
-        
+
+        plan = SUBSCRIPTION_PLANS[plan_id] or {}
+
         return {
             "plan": plan_id,
             "status": subscription.status,
@@ -156,7 +160,10 @@ async def get_subscription(user=Depends(get_verified_user)):
             "canceled_at": subscription.canceled_at if hasattr(subscription, 'canceled_at') else None,
             "will_renew": not subscription.cancel_at_period_end and subscription.status == 'active',
             "next_billing_date": subscription.current_period_end if not subscription.cancel_at_period_end and subscription.status == 'active' else None,
-            "flex_credits_remaining": company.flex_credit_balance
+            "flex_credits_remaining": company.flex_credit_balance,
+            "credits_remaining": company.credit_balance,
+            "seats": plan.get("seats", 0),
+            "seats_taken": Users.count_users_by_company_id(user.company_id)
         }
     except Exception as e:
         print(f"Error getting subscription: {e}")
@@ -474,7 +481,7 @@ def handle_payment_intent_succeeded(data):
             
         # Check if this payment was already logged (from manual recharge)
         if data.get("metadata", {}).get("flex_credits_recharge") == "true":
-            Companies.add_flex_credit_balance(company.id, FLEX_CREDITS_DEFAULT_AMOUNT)
+            Companies.add_flex_credit_balance(company.id, FLEX_CREDITS_DEFAULT_PRICE / 100)
 
             Companies.update_company_by_id(company.id, {"budget_mail_80_sent": False, "budget_mail_100_sent": False})
 

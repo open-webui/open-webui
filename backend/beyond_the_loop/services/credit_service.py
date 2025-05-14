@@ -8,10 +8,9 @@ from beyond_the_loop.models.users import Users
 from beyond_the_loop.models.companies import Companies, EIGHTY_PERCENT_CREDIT_LIMIT
 from beyond_the_loop.services.email_service import EmailService
 from beyond_the_loop.models.model_costs import ModelCosts
-from beyond_the_loop.routers.payments import FLEX_CREDITS_DEFAULT_PRICE, FLEX_CREDITS_DEFAULT_AMOUNT
+from beyond_the_loop.routers.payments import FLEX_CREDITS_DEFAULT_PRICE
 
 PROFIT_MARGIN_FACTOR = 1.5
-COSTS_PER_CREDIT = (FLEX_CREDITS_DEFAULT_PRICE / 100) / FLEX_CREDITS_DEFAULT_AMOUNT
 DOLLAR_PER_EUR = 0.9
 
 class CreditService:
@@ -88,21 +87,21 @@ class CreditService:
     async def subtract_credits_by_user_for_stt(self, user, model_name: str, minutes: float):
         tts_cost = ModelCosts.get_cost_per_minute_tts_by_model_name(model_name) * minutes * PROFIT_MARGIN_FACTOR * DOLLAR_PER_EUR
 
-        credit_cost = math.ceil(tts_cost / COSTS_PER_CREDIT)
+        credit_cost = tts_cost
 
         return await self.subtract_credits_by_user_and_credits(user, credit_cost)
 
     async def subtract_credits_by_user_for_tts(self, user, model_name: str, characters: int):
         tts_cost = characters * (ModelCosts.get_cost_per_million_characters_stt_by_model_name(model_name) / 1000000) * PROFIT_MARGIN_FACTOR * DOLLAR_PER_EUR
 
-        credit_cost = math.ceil(tts_cost / COSTS_PER_CREDIT)
+        credit_cost = tts_cost
 
         return await self.subtract_credits_by_user_and_credits(user, credit_cost)
 
     async def subtract_credits_by_user_for_image(self, user, model_name: str):
         image_cost = ModelCosts.get_cost_per_image_by_model_name(model_name) * PROFIT_MARGIN_FACTOR * DOLLAR_PER_EUR
 
-        credit_cost = math.ceil(image_cost / COSTS_PER_CREDIT)
+        credit_cost = image_cost
 
         return await self.subtract_credits_by_user_and_credits(user, credit_cost)
 
@@ -122,9 +121,7 @@ class CreditService:
 
         total_costs = (input_tokens * costs_per_input_token + output_tokens * cost_per_output_token + reasoning_tokens * cost_per_reasoning_token + search_query_cost) * PROFIT_MARGIN_FACTOR * DOLLAR_PER_EUR
 
-        print("COST PER CREDIT", COSTS_PER_CREDIT)
-
-        credit_cost = math.ceil(total_costs / COSTS_PER_CREDIT)
+        credit_cost = total_costs
 
         print(f" Model: {model_name}", f"Reasoning tokens: {reasoning_tokens}", f"Search query cost: {search_query_cost}", f"Credit cost: {credit_cost}", f"Cost per input token: {costs_per_input_token}", f"Cost per output token: {cost_per_output_token}", f"Total costs: {total_costs}", f"Input tokens: {input_tokens}", f"Output tokens: {output_tokens}")
 

@@ -506,6 +506,17 @@ class UsersTable:
             print(f"Error getting admin users by company: {e}")
             return []
 
+    def count_users_by_company_id(self, company_id: str) -> int:
+        """
+        Returns the number of users for a specific company.
+        """
+        try:
+            with get_db() as db:
+                return db.query(User).filter(User.company_id == company_id).count()
+        except Exception as e:
+            print(f"Error counting users by company: {e}")
+            return 0
+
 
 def get_users_by_company(company_id: str) -> list[UserModel]:
     """
