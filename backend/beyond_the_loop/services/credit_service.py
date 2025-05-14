@@ -3,7 +3,6 @@ import math
 import stripe
 from typing import Optional
 from fastapi import HTTPException
-from litellm.llms.azure.cost_calculation import cost_per_token
 
 from beyond_the_loop.models.users import Users
 from beyond_the_loop.models.companies import Companies, EIGHTY_PERCENT_CREDIT_LIMIT

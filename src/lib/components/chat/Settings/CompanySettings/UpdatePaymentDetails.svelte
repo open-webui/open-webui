@@ -77,18 +77,18 @@
 		}}
 	>
 		<div
-			class=" m-auto relative rounded-2xl max-w-full w-[23rem] mx-2 bg-gray-50 dark:bg-customGray-800 max-h-[100dvh] shadow-3xl"
+			class=" m-auto relative rounded-2xl max-w-full w-[34rem] mx-2 bg-gray-50 dark:bg-customGray-800 max-h-[100dvh] shadow-3xl"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();
 			}}
 		>
 			<div class="px-5 py-5 flex flex-col text-left">
-				<div class="border-b border-customGray-700 flex justify-between items-center pb-2.5">
+				<div class="border-customGray-700 flex justify-between items-center pb-2.5">
 					<div
 						class=" text-base dark:text-customGray-100 text-left"
 					>
-						{$i18n.t('Add payment method')}
+						{$i18n.t('Upgrade plan')}
 					</div>
 					<button
 						class="text-customGray-300"
@@ -131,7 +131,7 @@
 					</div>
 				</slot>
 
-				<div class="mt-6 flex justify-end gap-7">
+				<!-- <div class="mt-6 flex justify-end gap-7">
 					<button
 						class="text-gray-800 w-fit text-sm dark:text-customGray-200 py-2.5 rounded-lg transition"
 						on:click={() => {
@@ -151,7 +151,7 @@
 					>
 						{$i18n.t('Add payment method')}
 					</button>
-				</div>
+				</div> -->
 			</div>
 		</div>
 	</div>

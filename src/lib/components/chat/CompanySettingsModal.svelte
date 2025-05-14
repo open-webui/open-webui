@@ -67,14 +67,14 @@
 			keywords: [
 
 			]
+		},
+		{
+			id: 'billing',
+			title: 'Billing',
+			keywords: [
+		
+			]
 		}
-		//{
-		//	id: 'billing',
-		//	title: 'Billing',
-		//	keywords: [
-		//
-		//		]
-		//}
 		];
 
 	let search = '';
@@ -326,7 +326,7 @@
 							<div class=" self-center">{$i18n.t('Analytics')}</div>
 						</div>
 					</button>
-					<!-- {:else if tabId === 'billing'}
+					{:else if tabId === 'billing'}
 					<button
 						class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 						'billing'
@@ -342,8 +342,7 @@
 							</div>
 							<div class=" self-center">{$i18n.t('Billing')}</div>
 						</div>
-					</button> -->
-
+					</button>
                     {/if}
 
 						<!-- {#if tabId === 'general'}

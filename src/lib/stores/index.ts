@@ -13,6 +13,7 @@ export const user: Writable<SessionUser | undefined> = writable(undefined);
 
 export const company = writable(null);
 export const companyConfig = writable(null);
+export const subscription = writable(null);
 
 // Electron App
 export const isApp = writable(false);

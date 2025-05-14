@@ -2,13 +2,43 @@
 	import { getContext, onMount } from 'svelte';
 	import BillingPlanIcon from '$lib/components/icons/BillingPlanIcon.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
-    import UpdatePaymentDetails from './UpdatePaymentDetails.svelte';
+	import UpdatePaymentDetails from './UpdatePaymentDetails.svelte';
+	import { user, subscription } from '$lib/stores';
+	import {
+		getSubscriptionPlans,
+		createSubscriptionSession,
+		getCurrentSubscription
+	} from '$lib/apis/payments';
+	import dayjs from 'dayjs';
 
 	const i18n = getContext('i18n');
 	let autoRecharge = false;
-    let showUpdateDetails = false;
-</script>
+	let showUpdateDetails = false;
+	let current = null;
 
+	let plans = [];
+	onMount(async () => {
+		const res = await getSubscriptionPlans(localStorage.token).catch((error) => console.log(error));
+		if (res) {
+			plans = res;
+			console.log(plans);
+		}
+		// const sub = await getCurrentSubscription(localStorage.token);
+		// console.log(sub, 'current sub');
+	});
+
+	async function upgradeSubscription(plan_id) {
+		const res = await createSubscriptionSession(localStorage.token, plan_id).catch((error) =>
+			console.log(error)
+		);
+		if (res) {
+			window.location.href = res.url;
+		}
+	}
+	$: console.log($subscription)
+	$: currentPlan = plans?.find(item => item.id === $subscription?.plan);
+	$: console.log(currentPlan, 'current plan')
+</script>
 
 <UpdatePaymentDetails
 	bind:show={showUpdateDetails}
@@ -16,7 +46,33 @@
 		// submitHandler();
 	}}
 >
-<div>payment info</div>
+	<div>
+		{#if plans?.length > 0}
+			<div class="grid grid-cols-3 gap-2">
+				{#each plans as plan}
+					<div class="border dark:border-customGray-700 rounded-lg p-2 flex flex-col items-center">
+						<div class="text-base dark:text-customGray-100 mb-2 font-medium">{plan?.name}</div>
+						{#if (plan?.id === $subscription?.plan)}
+						<div class="text-xs dark:text-customGray-100">current</div>
+						{/if}
+						<div class="text-sm dark:text-customGray-100 mb-2">
+							€{plan?.price_monthly / 100}/month
+						</div>
+						<div class="text-xs dark:text-customGray-100 mb-4 text-center">
+							{plan?.credits_per_month} credits per month
+						</div>
+						<button
+							on:click={() => upgradeSubscription(plan.id)}
+							type="button"
+							disabled={plan?.id === $subscription?.plan}
+							class="w-full mt-auto flex items-center justify-center rounded-[10px] dark:bg-customGray-900 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
+							>Select</button
+						>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</div>
 </UpdatePaymentDetails>
 
 <div class="pb-20">
@@ -37,25 +93,26 @@
 				</div>
 				<div>
 					<div class="flex items-center gap-2.5">
-						<div class="text-sm dark:text-customGray-100">{$i18n.t('Free')}</div>
+						<div class="text-sm dark:text-customGray-100 capitalize">{$i18n.t($subscription?.plan)}</div>
 						<div
 							class="flex justify-center items-center text-xs dark:text-customGray-590 dark:bg-customGray-800 px-2 py-1 rounded-mdx"
 						>
 							Monthly
 						</div>
 					</div>
-					<div class="text-xs dark:text-customGray-100/50 mt-2">€0.00/mo</div>
+					<div class="text-xs dark:text-customGray-100/50 mt-2">€{currentPlan?.price_monthly ? currentPlan?.price_monthly/100 : '0.00'}/mo</div>
 				</div>
 			</div>
 			<button
+				on:click={() => (showUpdateDetails = true)}
 				class="flex items-center justify-center rounded-mdx dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-3 text-xs dark:text-customGray-200"
 			>
-				{$i18n.t('Explore plan')}
+				{$i18n.t('Upgrade plan')}
 			</button>
 		</div>
 		<div class="flex items-center justify-between pt-2.5 pb-3">
 			<div class="text-xs dark:text-customGray-100">{$i18n.t('Billing details')}</div>
-			<div class="text-xs dark:text-customGray-590">Monthly (renews (March 25th, 2025))</div>
+			<div class="text-xs dark:text-customGray-590">Monthly (renews ({dayjs($subscription?.next_billing_date * 1000)?.format('DD.MM.YYYY')}))</div>
 		</div>
 	</div>
 
@@ -130,7 +187,6 @@
 		</div>
 	</div>
 	<button
-        on:click={() => showUpdateDetails = true}
 		class="flex items-center justify-center rounded-[10px] dark:bg-customGray-900 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
 	>
 		{$i18n.t('Update billing details')}
