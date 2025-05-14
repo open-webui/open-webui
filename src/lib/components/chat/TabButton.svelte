@@ -7,8 +7,8 @@
 
 <button
 	class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selected
-		? ''
-		: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+		? 'bg-gray-800'
+		: 'hover:bg-gray-800'}"
 	on:click={onClick}
 	role="tab"
 	aria-selected={selected}
