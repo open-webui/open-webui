@@ -2879,7 +2879,7 @@ LDAP_CA_CERT_FILE = PersistentConfig(
 LDAP_VALIDATE_CERT = PersistentConfig(
     "LDAP_VALIDATE_CERT",
     "ldap.server.validate_cert",
-    os.environ.get("LDAP_USE_TLS", "True").lower() == "true",
+    os.environ.get("LDAP_VALIDATE_CERT", "True").lower() == "true",
 )
 
 LDAP_CIPHERS = PersistentConfig(
