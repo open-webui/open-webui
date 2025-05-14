@@ -353,16 +353,37 @@ def get_all_parsers(request, active_only=True):
     return all_parsers
 
 
-def get_parsers_by_type(request, parser_type, file_id, active_only=True):
+def get_file_relevant_parsers(request, file_id, active_only=True):
     parser_files = Functions.get_functions_by_type("parser", active_only)
     all_parsers = [get_function_module_by_id(request, pf.id) for pf in parser_files]
 
-    # allows users to set either a single type or a list of types
     relevant_parsers = []
     for parser in all_parsers:
         # verification of required settings
         verify_parser(parser)
 
+        if parser.is_applicable_to_item(file_id):
+            print(f"applicable parser {parser.name}")
+            relevant_parsers.append(parser)
+
+    # need to have at least one parsing option every time
+    if len(relevant_parsers) == 0:
+        log.info(f"No parsers for {file_id}. Using DefaultParser")
+        relevant_parsers.append(DefaultParser(file_id))
+
+    return relevant_parsers
+
+
+def get_parsers_by_type(request, parser_type, file_id, active_only=True):
+    parser_files = Functions.get_functions_by_type("parser", active_only)
+    all_parsers = [get_function_module_by_id(request, pf.id) for pf in parser_files]
+
+    relevant_parsers = []
+    for parser in all_parsers:
+        # verification of required settings
+        verify_parser(parser)
+
+        # allows users to set either a single type or a list of types
         # 1. single item needs to be moved to list
         if type(parser.parser_type) == PARSER_TYPE:
             parser.parser_type = [parser.parser_type]
@@ -383,7 +404,7 @@ def get_parsers_by_type(request, parser_type, file_id, active_only=True):
 
     # need to have at least one parsing option every time
     if len(relevant_parsers) == 0:
-        log.info(f"No parsers for {parser_type}. Using DefaultParser")
+        log.info(f"No parsers for {parser_type}/{file_id}. Using DefaultParser")
         relevant_parsers.append(DefaultParser(parser_type))
 
     return relevant_parsers
