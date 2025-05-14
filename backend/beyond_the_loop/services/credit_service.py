@@ -12,6 +12,7 @@ from beyond_the_loop.routers.payments import FLEX_CREDITS_DEFAULT_PRICE, FLEX_CR
 
 PROFIT_MARGIN_FACTOR = 1.5
 COSTS_PER_CREDIT = (FLEX_CREDITS_DEFAULT_PRICE / 100) / FLEX_CREDITS_DEFAULT_AMOUNT
+DOLLAR_PER_EUR = 0.9
 
 class CreditService:
     def __init__(self):
@@ -84,13 +85,24 @@ class CreditService:
 
         return credit_cost
 
-    async def subtract_credits_by_user_for_image(self, user, model_name: str):
-        print("model naaaame", model_name)
+    async def subtract_credits_by_user_for_stt(self, user, model_name: str, minutes: float):
+        tts_cost = ModelCosts.get_cost_per_minute_tts_by_model_name(model_name) * minutes * PROFIT_MARGIN_FACTOR * DOLLAR_PER_EUR
 
-        image_cost = ModelCosts.get_cost_per_image_by_model_name(model_name) * PROFIT_MARGIN_FACTOR
+        credit_cost = math.ceil(tts_cost / COSTS_PER_CREDIT)
+
+        return await self.subtract_credits_by_user_and_credits(user, credit_cost)
+
+    async def subtract_credits_by_user_for_tts(self, user, model_name: str, characters: int):
+        tts_cost = characters * (ModelCosts.get_cost_per_million_characters_stt_by_model_name(model_name) / 1000000) * PROFIT_MARGIN_FACTOR * DOLLAR_PER_EUR
+
+        credit_cost = math.ceil(tts_cost / COSTS_PER_CREDIT)
+
+        return await self.subtract_credits_by_user_and_credits(user, credit_cost)
+
+    async def subtract_credits_by_user_for_image(self, user, model_name: str):
+        image_cost = ModelCosts.get_cost_per_image_by_model_name(model_name) * PROFIT_MARGIN_FACTOR * DOLLAR_PER_EUR
 
         credit_cost = math.ceil(image_cost / COSTS_PER_CREDIT)
-        print("credit cost", credit_cost)
 
         return await self.subtract_credits_by_user_and_credits(user, credit_cost)
 
@@ -108,7 +120,7 @@ class CreditService:
         else:
             search_query_cost = 0
 
-        total_costs = (input_tokens * costs_per_input_token + output_tokens * cost_per_output_token + reasoning_tokens * cost_per_reasoning_token + search_query_cost) * PROFIT_MARGIN_FACTOR
+        total_costs = (input_tokens * costs_per_input_token + output_tokens * cost_per_output_token + reasoning_tokens * cost_per_reasoning_token + search_query_cost) * PROFIT_MARGIN_FACTOR * DOLLAR_PER_EUR
 
         print("COST PER CREDIT", COSTS_PER_CREDIT)
 
@@ -194,3 +206,19 @@ class CreditService:
             int: The current credit balance, or None if the company doesn't exist
         """
         return Companies.get_credit_balance(company_id)
+
+    def check_for_sufficient_balance(self, user):
+        current_balance = Companies.get_credit_balance(user.company_id)
+
+        # Check if company has sufficient credits
+        if current_balance == 0:
+            if not Companies.get_company_by_id(user.company_id).budget_mail_100_sent:
+                email_service = EmailService()
+                email_service.send_budget_mail_100(to_email=user.email, recipient_name=user.first_name + " " + user.last_name)
+
+                Companies.update_company_by_id(user.company_id, {"budget_mail_100_sent": True})
+
+            raise HTTPException(
+                status_code=402,  # 402 Payment Required
+                detail=f"Insufficient credits. No credits left.",
+            )

@@ -552,6 +552,7 @@ async def generate_chat_completion(
     bypass_filter: Optional[bool] = False,
     magic_prompt: Optional[bool] = False
 ):
+    global credit_service
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
@@ -576,20 +577,8 @@ async def generate_chat_completion(
     payload["model"] = model_name
 
     if has_chat_id or magic_prompt:
-        # Get current credit balance
-        current_balance = Companies.get_credit_balance(user.company_id)
-
-        # Check if company has sufficient credits
-        if current_balance == 0:
-            if not Companies.get_company_by_id(user.company_id).budget_mail_100_sent:
-                email_service = EmailService()
-                email_service.send_budget_mail_100(to_email=user.email, recipient_name=user.first_name + " " + user.last_name)
-                Companies.update_company_by_id(user.company_id, {"budget_mail_100_sent": True})
-
-            raise HTTPException(
-                status_code=402,  # 402 Payment Required
-                detail=f"Insufficient credits. No credits left.",
-            )
+        credit_service = CreditService()
+        credit_service.check_for_sufficient_balance(user)
 
     params = model_info.params.model_dump()
     payload = apply_model_params_to_body_openai(params, payload)
@@ -731,13 +720,10 @@ async def generate_chat_completion(
                                     input_tokens = data.get('usage', {}).get('prompt_tokens', 0)
                                     output_tokens = data.get('usage', {}).get('completion_tokens', 0)
 
-                                    print("USAGE", data.get('usage', {}))
-
-                                    reasoning_tokens = data.get('usage', {}).get('completion_tokens_details', 0).get("reasoning_tokens", 0)
+                                    reasoning_tokens = data.get('usage', {}).get('completion_tokens_details', {}).get("reasoning_tokens", 0)
 
                                     with_search_query_cost = "Perplexity" in model_name
 
-                                    credit_service = CreditService()
                                     credit_cost = await credit_service.subtract_credits_by_user_and_tokens(user, model_name, input_tokens, output_tokens, reasoning_tokens, with_search_query_cost)
 
                                     Completions.insert_new_completion(user.id, metadata["chat_id"], model_name, credit_cost, calculate_saved_time_in_seconds(last_user_message, full_response))
@@ -766,15 +752,12 @@ async def generate_chat_completion(
                 # Add completion to completion table
                 response_content = response.get('choices', [{}])[0].get('message', {}).get('content', '')
 
-                print("USAGE", response.get('usage', {}))
-
                 input_tokens = response.get('usage', {}).get('prompt_tokens', 0)
                 output_tokens = response.get('usage', {}).get('completion_tokens', 0)
-                reasoning_tokens = response.get('usage', {}).get('completion_tokens_details', 0).get("reasoning_tokens", 0)
+                reasoning_tokens = response.get('usage', {}).get('completion_tokens_details', {}).get("reasoning_tokens", 0)
 
                 with_search_query_cost = "Perplexity" in model_name
 
-                credit_service = CreditService()
                 credit_cost = await credit_service.subtract_credits_by_user_and_tokens(user, model_name, input_tokens, output_tokens, reasoning_tokens, with_search_query_cost)
 
                 Completions.insert_new_completion(user.id, metadata["chat_id"], model_name, credit_cost, calculate_saved_time_in_seconds(last_user_message, response_content))

@@ -189,6 +189,9 @@ async def cancel_subscription(user=Depends(get_verified_user)):
             subscription.id,
             cancel_at_period_end=True
         )
+
+        # Remove stripe customer id from customer to signal that there is no active subscription
+        Companies.update_company_by_id(user.company_id, {"stripe_customer_id": None})
         
         return {"message": "Subscription will be canceled at the end of the billing period"}
     except Exception as e:
@@ -315,7 +318,7 @@ def handle_checkout_session_completed(data):
             print(f"Company not found for user: {user_email}")
             return
             
-        # Save Stripe Customer ID if missing
+        # Save Stripe Customer ID if missing to signal that there is an active subscription
         if not company.stripe_customer_id:
             Companies.update_company_by_id(user.company_id, {"stripe_customer_id": data["customer"]})
             print(f"Updated Stripe customer ID for company {user.company_id}")
@@ -515,7 +518,7 @@ async def recharge_flex_credits(user=Depends(get_verified_user)):
         company = Companies.get_company_by_id(user.company_id)
         
         if not company.stripe_customer_id:
-            raise HTTPException(status_code=400, detail="No payment method found. Please add a payment method first.")
+            raise HTTPException(status_code=400, detail="No active subscription found. Please subscribe first.")
         
         # Retrieve the customer to check for payment methods
         customer = stripe.Customer.retrieve(company.stripe_customer_id)

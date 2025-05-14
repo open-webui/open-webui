@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import math
 import os
 import uuid
 from functools import lru_cache
@@ -41,7 +42,7 @@ from open_webui.env import (
     DEVICE_TYPE,
     ENABLE_FORWARD_USER_INFO_HEADERS,
 )
-
+from beyond_the_loop.services.credit_service import CreditService
 
 router = APIRouter()
 
@@ -235,6 +236,9 @@ def load_speech_pipeline(request):
 
 @router.post("/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
+    credit_service = CreditService()
+    credit_service.check_for_sufficient_balance(user)
+
     body = await request.body()
     name = hashlib.sha256(
         body
@@ -281,6 +285,10 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                     },
                 ) as r:
                     r.raise_for_status()
+
+                    number_of_characters_in_input = len(payload["input"])
+
+                    await credit_service.subtract_credits_by_user_for_tts(user, request.app.state.config.TTS_MODEL, number_of_characters_in_input)
 
                     async with aiofiles.open(file_path, "wb") as f:
                         await f.write(await r.read())
@@ -541,12 +549,15 @@ def compress_audio(file_path):
 
 
 @router.post("/transcriptions")
-def transcription(
+async def transcription(
     request: Request,
     file: UploadFile = File(...),
     user=Depends(get_verified_user),
 ):
     log.info(f"file.content_type: {file.content_type}")
+
+    credit_service = CreditService()
+    credit_service.check_for_sufficient_balance(user)
 
     if file.content_type not in ["audio/mpeg", "audio/wav", "audio/ogg", "audio/x-m4a"]:
         raise HTTPException(
@@ -579,8 +590,15 @@ def transcription(
                     detail=ERROR_MESSAGES.DEFAULT(e),
                 )
 
+            audio = AudioSegment.from_file(file_path)
+            duration_in_seconds = len(audio) / 1000  # pydub uses milliseconds
+            duration_in_minutes = duration_in_seconds / 60  # Calculate exact minutes as a float
+
             data = transcribe(request, file_path)
             file_path = file_path.split("/")[-1]
+
+            await credit_service.subtract_credits_by_user_for_stt(user, request.app.state.config.STT_MODEL, duration_in_minutes)
+
             return {**data, "filename": file_path}
         except Exception as e:
             log.exception(e)
