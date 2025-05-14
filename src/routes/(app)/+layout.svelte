@@ -270,7 +270,7 @@
 	<main
 		class="text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-[100vh] overflow-auto w-full relative z-0"
 	>
-		<div class={$showFeedbackBanner ? 'mb-[8.5vh]' : 'mb-[5vh]'}>
+		<div class={$showFeedbackBanner ? 'mb-[17vh] sm:mb-[8.5vh]' : 'mb-[5vh]'}>
 			<Header />
 		</div>
 

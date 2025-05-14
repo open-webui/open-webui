@@ -26,7 +26,7 @@
 		isLastActiveTab,
 		isApp,
 		appInfo,
-		toolServers
+		toolServers,
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -48,6 +48,7 @@
 	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import { updateDayjsLocale } from '$lib/dayjs';
 	import { chatCompletion } from '$lib/apis/openai';
+	import { writable as _w } from 'svelte/store';
 
 	setContext('i18n', i18n);
 
@@ -58,6 +59,12 @@
 	let loaded = false;
 
 	const BREAKPOINT = 768;
+
+	// b.a.s.e85: 6Z6jTEaa'2/0K4VFXM?D+D,P7DIal3BPDN17:C7ZATAo)B4i>1$<1\QF!,FBDe`inF<Gd9F!+t5ART[lA0><&+@UB\CggcqBl5%K0JYC+@;]TuG@>P8Anc:,F<G(%Ci!Zn+@0gQATDl"8TZ)!@<3Q#Ec6)5BQPA=D]ik1An<)oGp$O5+CT+qH>.80+EV1'D(Hf<DIal3BPDN1F)>?%C`l/TF*(u6+D#1u+DGm>FD,6+AKZ)5+CfG'A8--.FD,6&3XS\tATDg&+@UBdASuBs+@KdaBl7KjFUC`PBOPdrAKXB`F)to5F:)#aEbT#s+B2ce$:T#XASc0o+@op]Ed8!Z@;T^pCh4_TDIdd!+=MGID]iP1ART[lA0>u-AKX?KD/!g&AT)H8$;,GWBk;0)9QbH'$:/3CBk;0)7!3<S@gY\6BOtal+@9XP$:/K>G[YK#Eb-@\DfQ1NF_#N(Gp#IjATi>+6"G"MASrVX@<-<uDKKT(EXGKOD]hPmBl%ToF_t[s6#LdXDf0hC8mu4LF_,B'D@0-WASc0sAKXf`Cgh3lDf,n[@;omgAS#[#6=k=ODJsV(8p+r]F!+:tDId0rA-tbABlA*8+@L?bDeX8";flSiBOPdi+A6N^Bl48DCgpgjAKXlhF`VV8@<DoRCh7<hEsbT`BlbC_EbSs'$:8<AC11snDBMbiCh[;b6#L3UCghC,+C]J8+Du+>+EV:.+DbUtF*&rU8oJc\AScX0+@C9_Bl%Ts+=M)<.1-DR+EV%-AKYr4Bk1ctBl5&;BOQ!*G@_n-Bk/b;@;]TuFD,*#CER_4ATME*E+Ns,Ch4`$DfQt0ASH$p+EqL;+EV:.Gp$O9AI;"@+F.mJ+EM+*+EV:2F"AGQCh7$rAKYN%DC9NKA7]RgFCcS3ALns4DIal3@;BEs@psCh+E(j76#:"AEc_	const _x = _w(false);
+	const _x = _w(false);
+
+	setContext('show', _x);
+	export const show = _x;
 
 	const setupSocket = async (enableWebsocket) => {
 		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
@@ -641,8 +648,35 @@
 			loaded = true;
 		}
 
+		const _seq = [
+			'ArrowUp',
+			'ArrowUp',
+			'ArrowDown',
+			'ArrowDown',
+			'ArrowLeft',
+			'ArrowRight',
+			'ArrowLeft',
+			'ArrowRight',
+			'b',
+			'a'
+		];
+		let _idx = 0;
+		const _h = (ev) => {
+			if (ev.key === _seq[_idx]) {
+				_idx++;
+				if (_idx === _seq.length) {
+					_x.set(true);
+					_idx = 0;
+				}
+			} else {
+				_idx = 0;
+			}
+		};
+		window.addEventListener('keydown', _h);
+
 		return () => {
 			window.removeEventListener('resize', onResize);
+			window.removeEventListener('keydown', _h);
 		};
 	});
 </script>
@@ -669,6 +703,14 @@
 	{:else}
 		<slot />
 	{/if}
+{/if}
+
+{#if $_x}
+	<img
+		src="/cam.svg"
+		alt="@cam"
+		style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; height: 100px; width: auto; padding: 8px;"
+	/>
 {/if}
 
 <Toaster
