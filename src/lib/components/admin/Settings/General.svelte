@@ -305,6 +305,32 @@
 						<Switch bind:state={adminConfig.SHOW_ADMIN_DETAILS} />
 					</div>
 
+					<div class="mb-3.5">
+						<div class=" self-center text-xs font-medium mb-1">{$i18n.t('Custom Account Pending Title')}</div>
+						<textarea
+							class="w-full mt-1 rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							rows="2"
+							placeholder={$i18n.t('Enter custom title. Supports line breaks. Leave empty for default.')}
+							bind:value={adminConfig.ACCOUNT_PENDING_TITLE}
+						></textarea>
+						<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('This title displays on the account pending screen. If empty, the default title is shown.')}
+						</div>
+					</div>
+
+					<div class="mb-3.5">
+						<div class=" self-center text-xs font-medium mb-1">{$i18n.t('Custom Account Pending Text')}</div>
+						<textarea
+							class="w-full mt-1 rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+							rows="3"
+							placeholder={$i18n.t('Enter custom text. Leave empty for default.')}
+							bind:value={adminConfig.ACCOUNT_PENDING_TEXT}
+						></textarea>
+						<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('This text displays on the account pending screen. If empty, the default message is shown.')}
+						</div>
+					</div>
+
 					<div class="mb-2.5 flex w-full justify-between pr-2">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Enable API Key')}</div>
 
