@@ -36,9 +36,9 @@ update:
 	$(DOCKER_COMPOSE) up --build -d
 	$(DOCKER_COMPOSE) start
 
-build:
+docker-build:
 	@echo "--> Docker build"
-	@docker build -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.16 .
+	@docker build -t docker-unj-repo.softplan.com.br/unj/inovacao/openwebui-iara:0.5.16-2 .
 
 create-buildx:
 	@docker buildx create --use
