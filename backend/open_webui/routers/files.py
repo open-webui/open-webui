@@ -153,6 +153,11 @@ def upload_file(
                     "video/quicktime",
                 ]:
                     process_file(request, ProcessFileForm(file_id=id), user=user)
+                else:
+                    log.info(
+                        f"File type {file.content_type} is not supported for processing, but trying to process anyway"
+                    )
+                    process_file(request, ProcessFileForm(file_id=id), user=user)
 
                 file_item = Files.get_file_by_id(id=id)
             except Exception as e:
