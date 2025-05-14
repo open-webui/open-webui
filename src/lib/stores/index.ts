@@ -219,6 +219,8 @@ type Config = {
 			[key: string]: string;
 		};
 	};
+	account_pending_title?: string;
+    account_pending_text?: string;
 };
 
 type PromptSuggestion = {

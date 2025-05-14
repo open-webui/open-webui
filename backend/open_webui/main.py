@@ -1399,6 +1399,10 @@ async def get_app_config(request: Request):
                     "sharepoint_url": ONEDRIVE_SHAREPOINT_URL.value,
                     "sharepoint_tenant_id": ONEDRIVE_SHAREPOINT_TENANT_ID.value,
                 },
+                "ui": {
+                    "account_pending_title": app.state.config.ACCOUNT_PENDING_TITLE,
+                    "account_pending_text": app.state.config.ACCOUNT_PENDING_TEXT,
+                },
                 "license_metadata": app.state.LICENSE_METADATA,
                 **(
                     {
