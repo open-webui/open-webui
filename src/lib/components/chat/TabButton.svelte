@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	export let id;
 	export let label;
 	export let selected;
@@ -13,7 +13,6 @@
 	role="tab"
 	aria-selected={selected}
 	aria-controls={`${id}-content`}
-	aria-label={label}
 >
 	<div class=" self-center mr-2">
 		<slot></slot>
