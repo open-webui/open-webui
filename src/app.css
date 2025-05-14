@@ -322,6 +322,12 @@ input[type='number'] {
 	@apply line-clamp-1 absolute;
 }
 
+@media (prefers-color-scheme: dark) {
+	.ProseMirror p.is-editor-empty:first-child::before {
+		color: #757575;
+	}
+}
+
 .ai-autocompletion::after {
 	color: #a0a0a0;
 
