@@ -2,6 +2,7 @@
 	import type { Readable } from 'svelte/store';
 	import type { I18Next } from '$lib/IONOS/i18next.d.ts';
 	import type {
+		KnowledgeFile,
 		KnowledgeFileId,
 		Knowledge,
 	} from '$lib/apis/knowledge/types';
@@ -46,6 +47,9 @@
 		try {
 			await removeFile(knowledge.id, fileId);
 			toast.success($i18n.t('File removed successfully.', { ns: 'ionos' }));
+			files.update((files: KnowledgeFile[]) => {
+				return files.filter((file) => file.id !== fileId);
+			});
 		} catch (e) {
 			console.error(`Error deleting file ${fileId}`, e);
 			toast.error($i18n.t('Error deleting file', { ns: 'ionos' }));
