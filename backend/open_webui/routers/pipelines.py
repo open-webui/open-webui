@@ -68,15 +68,9 @@ async def process_pipeline_inlet_filter(request, payload, user, models):
 
     async with aiohttp.ClientSession(trust_env=True) as session:
         for filter in sorted_filters:
-            urlIdx = filter.get("urlIdx")
-            if urlIdx is None:
-                continue
-            
-            # Convert urlIdx to integer to avoid TypeError with string indices
             try:
-                urlIdx = int(urlIdx)
-            except (ValueError, TypeError):
-                log.error(f"Invalid urlIdx value: {urlIdx}")
+                urlIdx = int(filter.get("urlIdx"))
+            except (ValueError, TypeError, AttributeError):
                 continue
 
             url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
@@ -124,15 +118,9 @@ async def process_pipeline_outlet_filter(request, payload, user, models):
 
     async with aiohttp.ClientSession(trust_env=True) as session:
         for filter in sorted_filters:
-            urlIdx = filter.get("urlIdx")
-            if urlIdx is None:
-                continue
-            
-            # Convert urlIdx to integer to avoid TypeError with string indices
             try:
-                urlIdx = int(urlIdx)
-            except (ValueError, TypeError):
-                log.error(f"Invalid urlIdx value: {urlIdx}")
+                urlIdx = int(filter.get("urlIdx"))
+            except (ValueError, TypeError, AttributeError):
                 continue
 
             url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
