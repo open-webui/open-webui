@@ -121,6 +121,7 @@
 	let selectedToolIds = [];
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
+	let thinkingEnabled = false;
 	let codeInterpreterEnabled = false;
 
 	let chat = null;
