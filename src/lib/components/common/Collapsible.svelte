@@ -2,7 +2,7 @@
 	import { decode } from 'html-entities';
 	import { v4 as uuidv4 } from 'uuid';
 
-	import { getContext, createEventDispatcher } from 'svelte';
+	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import dayjs from '$lib/dayjs';
@@ -25,9 +25,6 @@
 
 	// Assuming $i18n.languages is an array of language codes
 	$: loadLocale($i18n.languages);
-
-	const dispatch = createEventDispatcher();
-	$: dispatch('change', open);
 
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
@@ -54,6 +51,10 @@
 
 	export let disabled = false;
 	export let hide = false;
+
+	export let onChange: Function = () => {};
+
+	$: onChange(open);
 
 	const collapsibleId = uuidv4();
 

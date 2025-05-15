@@ -265,7 +265,7 @@
 									{/each}
 								{:else}
 									<div class=" text-gray-500 text-xs mt-1 mb-2">
-										{$i18n.t('No files found.')}
+										{$i18n.t('File not found.')}
 									</div>
 								{/if}
 							</div> -->
