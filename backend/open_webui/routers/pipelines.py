@@ -69,7 +69,10 @@ async def process_pipeline_inlet_filter(request, payload, user, models):
     async with aiohttp.ClientSession(trust_env=True) as session:
         for filter in sorted_filters:
             urlIdx = filter.get("urlIdx")
-            if urlIdx is None:
+
+            try:
+                urlIdx = int(urlIdx)
+            except:
                 continue
 
             url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
@@ -119,7 +122,10 @@ async def process_pipeline_outlet_filter(request, payload, user, models):
     async with aiohttp.ClientSession(trust_env=True) as session:
         for filter in sorted_filters:
             urlIdx = filter.get("urlIdx")
-            if urlIdx is None:
+
+            try:
+                urlIdx = int(urlIdx)
+            except:
                 continue
 
             url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
