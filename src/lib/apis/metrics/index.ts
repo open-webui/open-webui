@@ -2,7 +2,7 @@ import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export const getDomains = async (token: string): Promise<string[]> => {
 	try {
-		const res = await fetch(`${WEBUI_API_BASE_URL}/metrics/domains`, {
+		const res = await fetch(`${WEBUI_API_BASE_URL}/users/domains`, {
 			method: 'GET',
 			headers: {
 				Accept: 'application/json',
@@ -24,8 +24,8 @@ export const getDomains = async (token: string): Promise<string[]> => {
 export const getTotalUsers = async (token: string, domain?: string): Promise<number> => {
 	try {
 		const url = domain
-			? `${WEBUI_API_BASE_URL}/metrics/users?domain=${encodeURIComponent(domain)}`
-			: `${WEBUI_API_BASE_URL}/metrics/users`;
+			? `${WEBUI_API_BASE_URL}/users/count?domain=${encodeURIComponent(domain)}`
+			: `${WEBUI_API_BASE_URL}/users/count`;
 
 		const res = await fetch(url, {
 			method: 'GET',
@@ -43,7 +43,7 @@ export const getTotalUsers = async (token: string, domain?: string): Promise<num
 			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get users'}`);
 		}
 		const data = await res.json();
-		return data.total_users || 0;
+		return data || 0;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
 	}
@@ -52,8 +52,8 @@ export const getTotalUsers = async (token: string, domain?: string): Promise<num
 export const getDailyUsers = async (token: string, domain?: string): Promise<number> => {
 	try {
 		const url = domain
-			? `${WEBUI_API_BASE_URL}/metrics/daily/users?domain=${encodeURIComponent(domain)}`
-			: `${WEBUI_API_BASE_URL}/metrics/daily/users`;
+			? `${WEBUI_API_BASE_URL}/users/daily/count?domain=${encodeURIComponent(domain)}`
+			: `${WEBUI_API_BASE_URL}/users/daily/count`;
 		const res = await fetch(url, {
 			method: 'GET',
 			headers: {
@@ -70,9 +70,81 @@ export const getDailyUsers = async (token: string, domain?: string): Promise<num
 			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get daily users'}`);
 		}
 		const data = await res.json();
-		return data.total_daily_users || 0;
+		return data || 0;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
+	}
+};
+
+export const getHistoricalUsers = async (
+	token: string,
+	days: number = 7,
+	domain?: string
+): Promise<Array<{ date: string; count: number }>> => {
+	try {
+		// Build URL with proper domain handling
+		let url = `${WEBUI_API_BASE_URL}/users/enrollment/historical?days=${days}`;
+
+		if (domain) {
+			url += `&domain=${encodeURIComponent(domain)}`;
+		}
+
+		const res = await fetch(url, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			if (res.status === 404) {
+				return generateFallbackDates(days);
+			}
+			const error = await res.json();
+			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get historical users'}`);
+		}
+		const data = await res.json();
+		return data.historical_users || [];
+	} catch (err) {
+		console.error('Error fetching historical users:', err);
+		return generateFallbackDates(days);
+	}
+};
+
+export const getHistoricalDailyUsers = async (
+	token: string,
+	days: number = 7,
+	domain?: string
+): Promise<Array<{ date: string; count: number }>> => {
+	try {
+		// Build URL with proper domain handling
+		let url = `${WEBUI_API_BASE_URL}/users/daily/historical?days=${days}`;
+
+		if (domain) {
+			url += `&domain=${encodeURIComponent(domain)}`;
+		}
+
+		const res = await fetch(url, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			if (res.status === 404) {
+				return generateFallbackDates(days);
+			}
+			const error = await res.json();
+			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get historical users'}`);
+		}
+		const data = await res.json();
+		return data.historical_daily_users || [];
+	} catch (err) {
+		console.error('Error fetching historical users:', err);
+		return generateFallbackDates(days);
 	}
 };
 
@@ -182,43 +254,6 @@ export const getDailyTokens = async (token: string, domain?: string): Promise<nu
 		return data.total_daily_tokens || 0;
 	} catch (err) {
 		throw new Error(err.message || 'An unexpected error occurred');
-	}
-};
-
-export const getHistoricalUsers = async (
-	token: string,
-	days: number = 7,
-	domain?: string
-): Promise<any[]> => {
-	try {
-		// Build URL with proper domain handling
-		let url = `${WEBUI_API_BASE_URL}/metrics/historical/users?days=${days}`;
-
-		// Only add domain parameter if it's not null or undefined
-		if (domain !== null && domain !== undefined) {
-			url += `&domain=${encodeURIComponent(domain)}`;
-		}
-
-		const res = await fetch(url, {
-			method: 'GET',
-			headers: {
-				Accept: 'application/json',
-				authorization: `Bearer ${token}`
-			}
-		});
-
-		if (!res.ok) {
-			if (res.status === 404) {
-				return generateFallbackDates(days);
-			}
-			const error = await res.json();
-			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get historical users'}`);
-		}
-		const data = await res.json();
-		return data.historical_users || [];
-	} catch (err) {
-		console.error('Error fetching historical users:', err);
-		return generateFallbackDates(days);
 	}
 };
 
@@ -456,5 +491,44 @@ export const getModelHistoricalPrompts = async (
 	} catch (err) {
 		console.error('Error fetching model historical prompts:', err);
 		return generateFallbackDates(days);
+	}
+};
+
+// New functions for enhanced metrics
+export const getRangeMetrics = async (
+	token: string,
+	startDate: string,
+	endDate: string,
+	domain?: string,
+	model?: string
+): Promise<any> => {
+	try {
+		let url = `${WEBUI_API_BASE_URL}/metrics/range/users?start_date=${startDate}&end_date=${endDate}`;
+
+		if (domain) {
+			url += `&domain=${encodeURIComponent(domain)}`;
+		}
+
+		if (model) {
+			url += `&model=${encodeURIComponent(model)}`;
+		}
+
+		const res = await fetch(url, {
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		});
+
+		if (!res.ok) {
+			const error = await res.json();
+			throw new Error(`Error ${res.status}: ${error.detail || 'Failed to get range metrics'}`);
+		}
+
+		return await res.json();
+	} catch (err) {
+		console.error('Error fetching range metrics:', err);
+		throw new Error(err.message || 'An unexpected error occurred');
 	}
 };

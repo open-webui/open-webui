@@ -106,6 +106,12 @@ export const AIAutocompletion = Extension.create({
 										if (suggestion && suggestion.trim() !== '') {
 											if (view.state.selection.$head.pos === view.state.selection.$head.end()) {
 												if (view.state === newState) {
+													// Ensure suggestion starts with a space if it doesn't already
+													// and the prompt doesn't end with a space
+													if (!suggestion.startsWith(' ') && !prompt.endsWith(' ')) {
+														suggestion = ' ' + suggestion;
+													}
+
 													view.dispatch(
 														newState.tr.setNodeMarkup(currentPos, null, {
 															...newNode.attrs,

@@ -11,66 +11,12 @@ import logging
 
 from open_webui.utils.auth import get_verified_user
 from open_webui.env import SRC_LOG_LEVELS
+from datetime import datetime
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["METRICS"])
 
 router = APIRouter()
-
-############################
-# GetDomains
-############################
-
-
-@router.get("/domains")
-async def get_total_users_by_domain(user=Depends(get_verified_user)):
-    if user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    domains = Users.get_user_domains() or []
-    return {"domains": domains}
-
-
-############################
-# GetTotalUsers
-############################
-
-
-@router.get("/users")
-async def get_total_users(domain: str = None, user=Depends(get_verified_user)):
-    if not user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    total_users = Users.get_num_users(domain) if domain else Users.get_num_users()
-    return {"total_users": total_users}
-
-
-############################
-# GetDailyUsers
-############################
-
-
-@router.get("/daily/users")
-async def get_daily_users_number(domain: str = None, user=Depends(get_verified_user)):
-    if not user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    total_daily_users = (
-        Users.get_daily_users_number(domain=domain)
-        if domain
-        else Users.get_daily_users_number()
-    )
-    return {"total_daily_users": total_daily_users}
-
 
 ############################
 # GetTotalPrompts
@@ -157,30 +103,6 @@ async def get_daily_tokens(domain: str = None, user=Depends(get_verified_user)):
         else MessageMetrics.get_daily_message_tokens_sum()
     )
     return {"total_daily_tokens": total_daily_tokens}
-
-
-############################
-# GetHistoricalUsers
-############################
-
-
-@router.get("/historical/users")
-async def get_historical_users(
-    days: int = 7, domain: str = None, user=Depends(get_verified_user)
-):
-    if not user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
-    # Handle both None and empty string for domain
-    if domain == "":
-        domain = None
-
-    historical_data = Users.get_historical_users_data(days, domain)
-
-    return {"historical_users": historical_data}
 
 
 ############################
@@ -315,3 +237,114 @@ async def get_model_historical_prompts(
     historical_data = MessageMetrics.get_historical_messages_data(days, domain, model)
 
     return {"historical_prompts": historical_data}
+
+
+############################
+# Date Range Metrics
+############################
+
+
+@router.get("/range/users")
+async def get_range_metrics(
+    start_date: str,
+    end_date: str,
+    domain: str = None,
+    model: str = None,
+    user=Depends(get_verified_user),
+):
+    """Get metrics for a specific date range"""
+    if not user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    try:
+        # Convert dates to timestamps
+        start_timestamp = int(datetime.strptime(start_date, "%Y-%m-%d").timestamp())
+        end_timestamp = (
+            int(datetime.strptime(end_date, "%Y-%m-%d").timestamp()) + 86400
+        )  # End of day
+
+        # Calculate total number of days in range for averaging
+        days_in_range = (end_timestamp - start_timestamp) // 86400
+
+        # Get metrics for date range
+        users_data = Users.get_range_metrics(start_timestamp, end_timestamp, domain)
+        prompts_data = MessageMetrics.get_range_metrics(
+            start_timestamp, end_timestamp, domain, model
+        )
+
+        # Calculate averages
+        avg_daily_users = (
+            users_data["total_users"] / days_in_range if days_in_range > 0 else 0
+        )
+        avg_daily_prompts = (
+            prompts_data["total_prompts"] / days_in_range if days_in_range > 0 else 0
+        )
+        avg_tokens_per_prompt = (
+            prompts_data["total_tokens"] / prompts_data["total_prompts"]
+            if prompts_data["total_prompts"] > 0
+            else 0
+        )
+
+        # Calculate growth rates if previous period data is available
+        prev_start = start_timestamp - (end_timestamp - start_timestamp)
+        prev_end = start_timestamp
+        prev_users_data = Users.get_range_metrics(prev_start, prev_end, domain)
+        prev_prompts_data = MessageMetrics.get_range_metrics(
+            prev_start, prev_end, domain, model
+        )
+
+        user_growth = (
+            (
+                (users_data["total_users"] - prev_users_data["total_users"])
+                / prev_users_data["total_users"]
+            )
+            * 100
+            if prev_users_data["total_users"] > 0
+            else 0
+        )
+        prompt_growth = (
+            (
+                (prompts_data["total_prompts"] - prev_prompts_data["total_prompts"])
+                / prev_prompts_data["total_prompts"]
+            )
+            * 100
+            if prev_prompts_data["total_prompts"] > 0
+            else 0
+        )
+
+        return {
+            "period": {
+                "start_date": start_date,
+                "end_date": end_date,
+                "days": days_in_range,
+            },
+            "metrics": {
+                "total_users": users_data["total_users"],
+                "total_prompts": prompts_data["total_prompts"],
+                "total_tokens": prompts_data["total_tokens"],
+                "active_users": users_data["active_users"],
+            },
+            "averages": {
+                "avg_daily_users": round(avg_daily_users, 2),
+                "avg_daily_prompts": round(avg_daily_prompts, 2),
+                "avg_tokens_per_prompt": round(avg_tokens_per_prompt, 2),
+                "avg_prompts_per_user": (
+                    round(prompts_data["total_prompts"] / users_data["active_users"], 2)
+                    if users_data["active_users"] > 0
+                    else 0
+                ),
+            },
+            "growth": {
+                "user_growth_percent": round(user_growth, 2),
+                "prompt_growth_percent": round(prompt_growth, 2),
+            },
+        }
+    except Exception as e:
+        log.exception(f"Error getting range metrics: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get range metrics: {str(e)}",
+        )

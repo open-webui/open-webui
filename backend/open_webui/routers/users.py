@@ -54,6 +54,23 @@ async def get_user_groups(user=Depends(get_verified_user)):
 
 
 ############################
+# User Domains
+############################
+
+
+@router.get("/domains")
+async def get_user_domains(user=Depends(get_verified_user)):
+    if user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    domains = Users.get_user_domains() or []
+    return {"domains": domains}
+
+
+############################
 # User Permissions
 ############################
 
@@ -61,6 +78,42 @@ async def get_user_groups(user=Depends(get_verified_user)):
 @router.get("/permissions")
 async def get_user_permissisions(user=Depends(get_verified_user)):
     return Users.get_user_groups(user.id)
+
+
+############################
+# Get Users Count
+############################
+
+
+@router.get("/count")
+async def get_users_count(domain: str = None, user=Depends(get_verified_user)):
+    if not user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    return Users.get_num_users(domain) if domain else Users.get_num_users()
+
+
+############################
+# Get Daily Users Count
+############################
+
+
+@router.get("/daily/count")
+async def get_daily_users_count(domain: str = None, user=Depends(get_verified_user)):
+    if not user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    return (
+        Users.get_daily_users_number(domain=domain)
+        if domain
+        else Users.get_daily_users_number()
+    )
 
 
 ############################
@@ -346,3 +399,49 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
         status_code=status.HTTP_403_FORBIDDEN,
         detail=ERROR_MESSAGES.ACTION_PROHIBITED,
     )
+
+
+############################
+# Get Historical Enrolled Users
+############################
+
+
+@router.get("/enrollment/historical")
+async def get_users_enrollment_historical(
+    days: int = 7, domain: str = None, user=Depends(get_verified_user)
+):
+    if not user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    # Handle both None and empty string for domain
+    if domain == "":
+        domain = None
+    historical_data = Users.get_historical_users_data(days, domain)
+    return {"historical_users": historical_data}
+
+
+############################
+# GetHistoricalDailyUsers
+############################
+
+
+@router.get("/daily/historical")
+async def get_historical_daily_users(
+    days: int = 7, domain: str = None, user=Depends(get_verified_user)
+):
+    if not user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+    # Handle both None and empty string for domain
+    if domain == "":
+        domain = None
+
+    historical_daily_data = Users.get_historical_daily_users_data(days, domain)
+
+    return {"historical_daily_users": historical_daily_data}
