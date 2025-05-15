@@ -1,6 +1,6 @@
 from open_webui.retrieval.vector.main import VectorDBBase
 from open_webui.retrieval.vector.type import VectorType
-from open_webui.config import VECTOR_DB, QDRANT_MULTI_TENANCY
+from open_webui.config import VECTOR_DB, QDRANT_MULTITENANCY
 
 
 class Vector:
@@ -16,7 +16,7 @@ class Vector:
 
                 return MilvusClient()
             case VectorType.QDRANT:
-                if QDRANT_MULTI_TENANCY:
+                if QDRANT_MULTITENANCY:
                     from open_webui.retrieval.vector.dbs.qdrant_multitenancy import QdrantClient
 
                     return QdrantClient()
