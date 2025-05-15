@@ -232,9 +232,9 @@
 
 	$: if(show){
 		getUsersHandler();
-		fetchAnalytics();
 		getSubscription();
 		getPlans();
+		fetchAnalytics();
 		const tabParam = $page.url.searchParams.get('tab');
 		selectedTab = tabParam || 'general-settings';
 	}
@@ -598,6 +598,7 @@
 				{:else if selectedTab === 'user-management'}
 					<UserManagement
 						{users}
+						{getSubscription}
 						{getUsersHandler}
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
 	import WarningIcon from '$lib/components/icons/WarningIcon.svelte';
-	import { user, subscription } from '$lib/stores';
+	import { user, subscription, isBlocked } from '$lib/stores';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -11,7 +11,6 @@
 
 	let modalElement = null;
 	export let content = '';
-	let show = true;
 	let mounted = false;
 
 	onMount(() => {
@@ -19,7 +18,7 @@
 	});
 
 	$: if (mounted) {
-		if (show && modalElement) {
+		if (modalElement) {
 			document.body.appendChild(modalElement);
 			document.body.style.overflow = 'hidden';
 		} else if (modalElement) {
@@ -29,7 +28,6 @@
 	}
 </script>
 
-{#if show}
 	<div
 		bind:this={modalElement}
 		class=" fixed top-0 right-0 left-0 bottom-0 bg-[#1D1A1A]/50 backdrop-blur-[7.44px] w-full h-screen max-h-[100dvh] flex justify-center z-[99999999] overflow-hidden overscroll-contain"
@@ -77,7 +75,8 @@
 					{#if $subscription?.plan !== 'free'}
 						<a
 							on:click={() => {
-								show = false;
+								// show = false;
+                                {isBlocked.set(false)}
 							}}
 							href="/?modal=company-settings&tab=billing&recharge=open"
 							class="flex items-center justify-center h-10 rounded-mdx dark:bg-customGray-900 hover:dark:bg-customGray-950 border dark:border-customGray-700 px-8 py-3 text-xs dark:text-customGray-200"
@@ -87,7 +86,8 @@
 					{:else}
 						<a
 							on:click={() => {
-								show = false;
+								// show = false;
+                                {isBlocked.set(false)}
 							}}
 							href="/?modal=company-settings&tab=billing&plans=open"
 							class="flex items-center justify-center h-10 rounded-mdx dark:bg-customGray-900 hover:dark:bg-customGray-950 border dark:border-customGray-700 px-8 py-3 text-xs dark:text-customGray-200"
@@ -99,7 +99,7 @@
 			</div>
 		</div>
 	</div>
-{/if}
+
 
 <style>
 	.modal-content {

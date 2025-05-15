@@ -9,7 +9,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, models, settings, user, company, companyConfig } from '$lib/stores';
+	import { config, models, settings, user, company, companyConfig, isBlocked } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -108,6 +108,12 @@
 	$: if (history.messages) {
 		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
 			message = JSON.parse(JSON.stringify(history.messages[messageId]));
+		}
+	}
+	$: {
+		if(message?.error?.content?.includes('402: Insufficient credits')){
+			console.log('errr----------------------->')
+			isBlocked.set(true);
 		}
 	}
 
@@ -741,11 +747,12 @@
 								{/if}
 
 								{#if message?.error}
-									{#if message?.error?.content?.includes('402: Insufficient credits')}
+									<!-- {#if message?.error?.content?.includes('402: Insufficient credits')}
+										
 										<CustomChatError content={message?.error?.content ?? message.content}/>
-									{:else}
+									{:else} -->
 										<Error content={message?.error?.content ?? message.content} />
-									{/if}	
+									<!-- {/if}	 -->
 								{/if}
 
 								{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}

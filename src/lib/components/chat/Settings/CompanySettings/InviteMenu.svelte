@@ -26,6 +26,7 @@
 	export let user = null;
 
 	export let getUsersHandler: Function;
+	export let getSubscription: Function;
 
 	export let inviteCompleted = false;
 	let showDropdown = false;
@@ -46,6 +47,7 @@
 			return null;
 		});
 		getUsersHandler();
+		getSubscription();
 		toast.success($i18n.t('Invite revoked successfuly'));
 	}
 	async function copyInviteLink(token) {
