@@ -1,0 +1,72 @@
+# docker-compose.tools.yaml
+#
+# This file provides general-purpose tools for Open WebUI users:
+#   - SearxNG: Metasearch engine for research and data gathering
+#   - Jupyter: Interactive notebook server for code, data science, and prototyping
+#   - ComfyUI: Visual workflow tool for image generation and manipulation
+#
+# These services are intended to be used alongside Open WebUI, but are not part of the core AI workflow automation stack.
+#
+# Usage: docker compose -f docker-compose.yaml -f docker-compose.tools.yaml up -d
+services:
+  searxng:
+    container_name: searxng
+    image: docker.io/searxng/searxng:latest
+    restart: unless-stopped
+    ports:
+      - 8080:8080
+    volumes:
+      - ./searxng:/etc/searxng:rw  # SearxNG configuration and data
+    environment:
+      - SEARXNG_BASE_URL=https://${SEARXNG_HOSTNAME:-localhost}/
+      - UWSGI_WORKERS=${SEARXNG_UWSGI_WORKERS:-4}
+      - UWSGI_THREADS=${SEARXNG_UWSGI_THREADS:-4}
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+  jupyter:
+    image: jupyter/minimal-notebook:latest
+    container_name: jupyter-notebook
+    ports:
+      - "8888:8888"
+    volumes:
+      - jupyter_data:/home/jovyan/work  # Persistent notebook and data storage
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN=123456  # Change this for production!
+
+  comfyui:
+    image: ghcr.io/lecode-official/comfyui-docker:latest
+    container_name: comfyui
+    restart: unless-stopped
+    environment:
+      - USER_ID=${USER_ID:-1000}
+      - GROUP_ID=${GROUP_ID:-1000}
+    ports:
+      - "8188:8188"
+    volumes:
+      - ${HOME}/shared/comfyui/models:/opt/comfyui/models  # Shared models
+      - ${HOME}/shared/comfyui/custom-nodes:/opt/comfyui/custom_nodes  # Shared custom nodes
+      - ${HOME}/shared/comfyui/workflows:/opt/comfyui/user/default/workflows  # Shared workflows
+      - ./comfyui/config.ini:/opt/comfyui/user/default/ComfyUI-Manager/config.ini:rw  # Config file
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    runtime: nvidia
+    privileged: true
+    security_opt:
+      - seccomp=unconfined
+
+volumes:
+  jupyter_data:  # Persistent storage for Jupyter notebooks 

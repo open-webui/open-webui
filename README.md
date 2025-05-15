@@ -171,13 +171,36 @@ After installation, you can access Open WebUI at [http://localhost:3000](http://
 
 We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and Helm. Visit our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
 
+## Modular Docker Compose Setup (Advanced)
+
+Open WebUI now supports a modular Docker Compose setup for advanced users and multi-tool environments:
+
+- `docker-compose.tools.yaml`: Provides general-purpose tools (SearxNG, Jupyter, ComfyUI) for research, prototyping, and image workflows. Can be used alongside the main stack.
+- `docker-compose.ai-lab.yaml`: Provides the AI Lab stack (Flowise, n8n, Qdrant, Postgres, Redis) for workflow automation, orchestration, and vector search.
+
+### Example Usage
+
+To start the full stack with all tools and AI lab services:
+
+```sh
+docker compose -f docker-compose.yaml -f docker-compose.tools.yaml -f docker-compose.ai-lab.yaml up -d
+```
+
+You can also start only the tools or only the AI lab stack by including just the relevant override file(s).
+
+### Shared Resource Structure
+
+All large models, workflows, and custom nodes are stored in a centralized `/home/paulo/shared` directory (configurable in your compose files), making it easy to share resources across projects and containers.
+
+See the top of each compose file for detailed documentation and service explanations.
+
 ### Troubleshooting
 
 Encountering connection issues? Our [Open WebUI Documentation](https://docs.openwebui.com/troubleshooting/) has got you covered. For further assistance and to join our vibrant community, visit the [Open WebUI Discord](https://discord.gg/5rJgQTnV4s).
 
 #### Open WebUI: Server Connection Error
 
-If you're experiencing connection issues, it’s often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
+If you're experiencing connection issues, it's often due to the WebUI docker container not being able to reach the Ollama server at 127.0.0.1:11434 (host.docker.internal:11434) inside the container . Use the `--network=host` flag in your docker command to resolve this. Note that the port changes from 3000 to 8080, resulting in the link: `http://localhost:8080`.
 
 **Example Docker Command**:
 

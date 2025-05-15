@@ -1,0 +1,110 @@
+# docker-compose.ai-lab.yaml
+#
+# This file provides the AI Lab stack for advanced workflow automation and orchestration:
+#   - Flowise: Visual LLM workflow builder
+#   - n8n: General-purpose workflow automation
+#   - Qdrant: Vector database for semantic search
+#   - Postgres: Relational database for n8n and other services
+#   - Redis (Valkey): Fast in-memory data store
+#
+# These services are intended to be used together for building, automating, and scaling AI-powered workflows.
+#
+# Usage: docker compose -f docker-compose.yaml -f docker-compose.ai-lab.yaml up -d
+services:
+  flowise:
+    image: flowiseai/flowise
+    restart: unless-stopped
+    container_name: flowise
+    environment:
+      - PORT=3001
+    ports:
+      - 3001:3001
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ~/.flowise:/root/.flowise  # User settings and state
+      - ${HOME}/shared/flowise/workflows:/workflows  # Shared workflows
+      - ${HOME}/shared/flowise/models:/models  # Shared models
+    entrypoint: /bin/sh -c "sleep 3; flowise start"
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_USER=postgres
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+      - DB_POSTGRESDB_DATABASE=postgres
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_PERSONALIZATION_ENABLED=false
+      - N8N_ENCRYPTION_KEY
+      - N8N_USER_MANAGEMENT_JWT_SECRET
+      - WEBHOOK_URL=${N8N_HOSTNAME:+https://}${N8N_HOSTNAME:-http://localhost:5678}
+    ports:
+      - 5678:5678
+    volumes:
+      - n8n_storage:/home/node/.n8n  # Persistent n8n data
+      - ./n8n/backup:/backup  # Backups
+      - ./shared:/data/shared  # Shared data
+      - ${HOME}/shared/n8n/workflows:/workflows  # Shared workflows
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  qdrant:
+    image: qdrant/qdrant
+    container_name: qdrant
+    restart: unless-stopped
+    ports:
+      - 6333:6333
+    volumes:
+      - qdrant_storage:/qdrant/storage  # Persistent vector data
+
+  postgres:
+    image: postgres:${POSTGRES_VERSION:-latest}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    ports:
+      - 127.0.0.1:5433:5432
+    volumes:
+      - langfuse_postgres_data:/var/lib/postgresql/data  # Persistent Postgres data
+
+  redis:
+    container_name: redis
+    image: docker.io/valkey/valkey:8-alpine
+    command: valkey-server --save 30 1 --loglevel warning --requirepass ${REDIS_AUTH:-LOCALONLYREDIS}
+    restart: unless-stopped
+    volumes:
+      - valkey-data:/data  # Persistent Redis data
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_AUTH:-LOCALONLYREDIS}", "ping"]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+
+volumes:
+  n8n_storage:  # Persistent storage for n8n
+  qdrant_storage:  # Persistent storage for Qdrant
+  langfuse_postgres_data:  # Persistent storage for Postgres
+  valkey-data:  # Persistent storage for Redis
