@@ -343,7 +343,7 @@ export const getAndUpdateUserLocation = async (token: string) => {
 		await updateUserInfo(token, { location: location });
 		return location;
 	} else {
-		console.log('Failed to get user location');
+		console.info('Failed to get user location');
 		return null;
 	}
 };

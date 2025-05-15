@@ -59,10 +59,10 @@
 			};
 		});
 
-		console.log(version);
+		console.info(version);
 
 		updateAvailable = compareVersion(version.latest, version.current);
-		console.log(updateAvailable);
+		console.info(updateAvailable);
 	};
 
 	const updateLdapServerHandler = async () => {
