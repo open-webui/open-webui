@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from open_webui.utils.telemetry.metrics import initialize_telemetry_metrics
 from opentelemetry import trace, metrics
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
@@ -13,10 +14,6 @@ from sqlalchemy import Engine
 from open_webui.utils.telemetry.exporters import LazyBatchSpanProcessor
 from open_webui.utils.telemetry.instrumentors import Instrumentor
 from open_webui.env import OTEL_SERVICE_NAME, OTEL_EXPORTER_OTLP_ENDPOINT
-
-meter = None
-login_counter = None
-active_sessions_gauge = None
 
 
 def setup(app: FastAPI, db_engine: Engine):
@@ -41,14 +38,5 @@ def setup(app: FastAPI, db_engine: Engine):
     )
     meter_provider = MeterProvider(resource=resource, metric_readers=[reader])
     metrics.set_meter_provider(meter_provider)
-
-    global meter, login_counter, active_sessions_gauge
     meter = metrics.get_meter(OTEL_SERVICE_NAME)
-
-    login_counter = meter.create_counter(
-        "user_login_total", description="Total number of user logins"
-    )
-
-    active_sessions_gauge = meter.create_gauge(
-        "active.sessions", description="Number of currently active user sessions"
-    )
+    initialize_telemetry_metrics(meter)

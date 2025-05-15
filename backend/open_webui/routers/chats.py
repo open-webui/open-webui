@@ -23,6 +23,7 @@ from pydantic import BaseModel
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.telemetry import metrics
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -99,6 +100,8 @@ async def get_user_chat_list_by_user_id(
 async def create_new_chat(form_data: ChatForm, user=Depends(get_verified_user)):
     try:
         chat = Chats.insert_new_chat(user.id, form_data)
+        if metrics.telemetry_metrics is not None:
+            metrics.telemetry_metrics.track_user_request(user.id)
         return ChatResponse(**chat.model_dump())
     except Exception as e:
         log.exception(e)
