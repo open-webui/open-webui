@@ -1,17 +1,25 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, tick, getContext, onMount, onDestroy } from 'svelte';
+	import { tick, getContext, onMount, onDestroy } from 'svelte';
 	import { config, settings } from '$lib/stores';
 	import { blobToFile, calculateSHA256, extractCurlyBraceWords } from '$lib/utils';
 
 	import { transcribeAudio } from '$lib/apis/audio';
 
+	import dayjs from 'dayjs';
+	import LocalizedFormat from 'dayjs/plugin/localizedFormat';
+	dayjs.extend(LocalizedFormat);
+
 	const i18n = getContext('i18n');
 
-	const dispatch = createEventDispatcher();
-
 	export let recording = false;
+	export let transcribe = true;
+	export let displayMedia = false;
+
 	export let className = ' p-2.5 w-full max-w-full';
+
+	export let onCancel = () => {};
+	export let onConfirm = (data) => {};
 
 	let loading = false;
 	let confirmed = false;
@@ -130,45 +138,73 @@
 		detectSound();
 	};
 
-	const transcribeHandler = async (audioBlob) => {
+	const onStopHandler = async (audioBlob, ext: string = 'wav') => {
 		// Create a blob from the audio chunks
 
 		await tick();
-		const file = blobToFile(audioBlob, 'recording.wav');
+		const file = blobToFile(audioBlob, `Recording-${dayjs().format('L LT')}.${ext}`);
 
-		const res = await transcribeAudio(localStorage.token, file).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
+		if (transcribe) {
+			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
+				// with web stt, we don't need to send the file to the server
+				return;
+			}
 
-		if (res) {
-			console.log(res);
-			dispatch('confirm', res);
+			const res = await transcribeAudio(localStorage.token, file).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (res) {
+				console.log(res);
+				onConfirm(res);
+			}
+		} else {
+			onConfirm({
+				file: file,
+				blob: audioBlob
+			});
 		}
-	};
-
-	const saveRecording = (blob) => {
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		document.body.appendChild(a);
-		a.style = 'display: none';
-		a.href = url;
-		a.download = 'recording.wav';
-		a.click();
-		window.URL.revokeObjectURL(url);
 	};
 
 	const startRecording = async () => {
 		loading = true;
 
-		stream = await navigator.mediaDevices.getUserMedia({
-			audio: {
-				echoCancellation: true,
-				noiseSuppression: true,
-				autoGainControl: true
+		try {
+			if (displayMedia) {
+				const mediaStream = await navigator.mediaDevices.getDisplayMedia({
+					audio: true
+				});
+
+				stream = new MediaStream();
+				for (const track of mediaStream.getAudioTracks()) {
+					stream.addTrack(track);
+				}
+
+				for (const track of mediaStream.getVideoTracks()) {
+					track.stop();
+				}
+			} else {
+				stream = await navigator.mediaDevices.getUserMedia({
+					audio: {
+						echoCancellation: true,
+						noiseSuppression: true,
+						autoGainControl: true
+					}
+				});
 			}
+		} catch (err) {
+			console.error('Error accessing media devices.', err);
+			toast.error($i18n.t('Error accessing media devices.'));
+			loading = false;
+			recording = false;
+			return;
+		}
+
+		mediaRecorder = new MediaRecorder(stream, {
+			mimeType: 'audio/webm; codecs=opus'
 		});
-		mediaRecorder = new MediaRecorder(stream);
+
 		mediaRecorder.onstart = () => {
 			console.log('Recording started');
 			loading = false;
@@ -180,77 +216,99 @@
 		mediaRecorder.ondataavailable = (event) => audioChunks.push(event.data);
 		mediaRecorder.onstop = async () => {
 			console.log('Recording stopped');
-			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
-				audioChunks = [];
-			} else {
-				if (confirmed) {
-					const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
 
-					await transcribeHandler(audioBlob);
+			if (confirmed) {
+				// Use the actual type provided by MediaRecorder
+				let type = audioChunks[0]?.type || mediaRecorder.mimeType || 'audio/webm';
 
-					confirmed = false;
-					loading = false;
+				// split `/` and `;` to get the extension
+				let ext = type.split('/')[1].split(';')[0] || 'webm';
+
+				// If not audio, default to audio/webm
+				if (!type.startsWith('audio/')) {
+					ext = 'webm';
 				}
-				audioChunks = [];
-				recording = false;
+
+				const audioBlob = new Blob(audioChunks, { type: type });
+				await onStopHandler(audioBlob, ext);
+
+				confirmed = false;
+				loading = false;
 			}
+
+			audioChunks = [];
+			recording = false;
 		};
-		mediaRecorder.start();
-		if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
-			if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-				// Create a SpeechRecognition object
-				speechRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
 
-				// Set continuous to true for continuous recognition
-				speechRecognition.continuous = true;
+		try {
+			mediaRecorder.start();
+		} catch (error) {
+			console.error('Error starting recording:', error);
+			toast.error($i18n.t('Error starting recording.'));
+			loading = false;
+			recording = false;
+			return;
+		}
 
-				// Set the timeout for turning off the recognition after inactivity (in milliseconds)
-				const inactivityTimeout = 2000; // 3 seconds
+		if (transcribe) {
+			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
+				if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+					// Create a SpeechRecognition object
+					speechRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
 
-				let timeoutId;
-				// Start recognition
-				speechRecognition.start();
+					// Set continuous to true for continuous recognition
+					speechRecognition.continuous = true;
 
-				// Event triggered when speech is recognized
-				speechRecognition.onresult = async (event) => {
-					// Clear the inactivity timeout
-					clearTimeout(timeoutId);
+					// Set the timeout for turning off the recognition after inactivity (in milliseconds)
+					const inactivityTimeout = 2000; // 3 seconds
 
-					// Handle recognized speech
-					console.log(event);
-					const transcript = event.results[Object.keys(event.results).length - 1][0].transcript;
+					let timeoutId;
+					// Start recognition
+					speechRecognition.start();
 
-					transcription = `${transcription}${transcript}`;
+					// Event triggered when speech is recognized
+					speechRecognition.onresult = async (event) => {
+						// Clear the inactivity timeout
+						clearTimeout(timeoutId);
 
-					await tick();
-					document.getElementById('chat-input')?.focus();
+						// Handle recognized speech
+						console.log(event);
+						const transcript = event.results[Object.keys(event.results).length - 1][0].transcript;
 
-					// Restart the inactivity timeout
-					timeoutId = setTimeout(() => {
-						console.log('Speech recognition turned off due to inactivity.');
-						speechRecognition.stop();
-					}, inactivityTimeout);
-				};
+						transcription = `${transcription}${transcript}`;
 
-				// Event triggered when recognition is ended
-				speechRecognition.onend = function () {
-					// Restart recognition after it ends
-					console.log('recognition ended');
+						await tick();
+						document.getElementById('chat-input')?.focus();
 
-					confirmRecording();
-					dispatch('confirm', { text: transcription });
-					confirmed = false;
-					loading = false;
-				};
+						// Restart the inactivity timeout
+						timeoutId = setTimeout(() => {
+							console.log('Speech recognition turned off due to inactivity.');
+							speechRecognition.stop();
+						}, inactivityTimeout);
+					};
 
-				// Event triggered when an error occurs
-				speechRecognition.onerror = function (event) {
-					console.log(event);
-					toast.error($i18n.t(`Speech recognition error: {{error}}`, { error: event.error }));
-					dispatch('cancel');
+					// Event triggered when recognition is ended
+					speechRecognition.onend = function () {
+						// Restart recognition after it ends
+						console.log('recognition ended');
 
-					stopRecording();
-				};
+						confirmRecording();
+						onConfirm({
+							text: transcription
+						});
+						confirmed = false;
+						loading = false;
+					};
+
+					// Event triggered when an error occurs
+					speechRecognition.onerror = function (event) {
+						console.log(event);
+						toast.error($i18n.t(`Speech recognition error: {{error}}`, { error: event.error }));
+						onCancel();
+
+						stopRecording();
+					};
+				}
 			}
 		}
 	};
@@ -339,7 +397,7 @@
              rounded-full"
 			on:click={async () => {
 				stopRecording();
-				dispatch('cancel');
+				onCancel();
 			}}
 		>
 			<svg

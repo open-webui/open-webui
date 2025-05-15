@@ -157,7 +157,8 @@ def load_function_module_by_id(function_id, content=None):
             raise Exception("No Function class found in the module")
     except Exception as e:
         log.error(f"Error loading module: {function_id}: {e}")
-        del sys.modules[module_name]  # Cleanup by removing the module in case of error
+        # Cleanup by removing the module in case of error
+        del sys.modules[module_name]
 
         Functions.update_function_by_id(function_id, {"is_active": False})
         raise e
@@ -182,3 +183,32 @@ def install_frontmatter_requirements(requirements: str):
 
     else:
         log.info("No requirements found in frontmatter.")
+
+
+def install_tool_and_function_dependencies():
+    """
+    Install all dependencies for all admin tools and active functions.
+
+    By first collecting all dependencies from the frontmatter of each tool and function,
+    and then installing them using pip. Duplicates or similar version specifications are
+    handled by pip as much as possible.
+    """
+    function_list = Functions.get_functions(active_only=True)
+    tool_list = Tools.get_tools()
+
+    all_dependencies = ""
+    try:
+        for function in function_list:
+            frontmatter = extract_frontmatter(replace_imports(function.content))
+            if dependencies := frontmatter.get("requirements"):
+                all_dependencies += f"{dependencies}, "
+        for tool in tool_list:
+            # Only install requirements for admin tools
+            if tool.user.role == "admin":
+                frontmatter = extract_frontmatter(replace_imports(tool.content))
+                if dependencies := frontmatter.get("requirements"):
+                    all_dependencies += f"{dependencies}, "
+
+        install_frontmatter_requirements(all_dependencies.strip(", "))
+    except Exception as e:
+        log.error(f"Error installing requirements: {e}")

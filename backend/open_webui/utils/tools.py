@@ -36,7 +36,10 @@ from langchain_core.utils.function_calling import (
 from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
 from open_webui.utils.plugin import load_tool_module_by_id
-from open_webui.env import AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA
+from open_webui.env import (
+    AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
+    AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+)
 
 import copy
 
@@ -276,8 +279,8 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
 
     docstring = func.__doc__
 
-    description = parse_description(docstring)
-    function_descriptions = parse_docstring(docstring)
+    function_description = parse_description(docstring)
+    function_param_descriptions = parse_docstring(docstring)
 
     field_defs = {}
     for name, param in parameters.items():
@@ -285,15 +288,17 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
         type_hint = type_hints.get(name, Any)
         default_value = param.default if param.default is not param.empty else ...
 
-        description = function_descriptions.get(name, None)
+        param_description = function_param_descriptions.get(name, None)
 
-        if description:
-            field_defs[name] = type_hint, Field(default_value, description=description)
+        if param_description:
+            field_defs[name] = type_hint, Field(
+                default_value, description=param_description
+            )
         else:
             field_defs[name] = type_hint, default_value
 
     model = create_model(func.__name__, **field_defs)
-    model.__doc__ = description
+    model.__doc__ = function_description
 
     return model
 
@@ -371,51 +376,64 @@ def convert_openapi_to_tool_payload(openapi_spec):
 
     for path, methods in openapi_spec.get("paths", {}).items():
         for method, operation in methods.items():
-            tool = {
-                "type": "function",
-                "name": operation.get("operationId"),
-                "description": operation.get(
-                    "description", operation.get("summary", "No description available.")
-                ),
-                "parameters": {"type": "object", "properties": {}, "required": []},
-            }
-
-            # Extract path and query parameters
-            for param in operation.get("parameters", []):
-                param_name = param["name"]
-                param_schema = param.get("schema", {})
-                tool["parameters"]["properties"][param_name] = {
-                    "type": param_schema.get("type"),
-                    "description": param_schema.get("description", ""),
+            if operation.get("operationId"):
+                tool = {
+                    "type": "function",
+                    "name": operation.get("operationId"),
+                    "description": operation.get(
+                        "description",
+                        operation.get("summary", "No description available."),
+                    ),
+                    "parameters": {"type": "object", "properties": {}, "required": []},
                 }
-                if param.get("required"):
-                    tool["parameters"]["required"].append(param_name)
 
-            # Extract and resolve requestBody if available
-            request_body = operation.get("requestBody")
-            if request_body:
-                content = request_body.get("content", {})
-                json_schema = content.get("application/json", {}).get("schema")
-                if json_schema:
-                    resolved_schema = resolve_schema(
-                        json_schema, openapi_spec.get("components", {})
-                    )
-
-                    if resolved_schema.get("properties"):
-                        tool["parameters"]["properties"].update(
-                            resolved_schema["properties"]
+                # Extract path and query parameters
+                for param in operation.get("parameters", []):
+                    param_name = param["name"]
+                    param_schema = param.get("schema", {})
+                    description = param_schema.get("description", "")
+                    if not description:
+                        description = param.get("description") or ""
+                    if param_schema.get("enum") and isinstance(
+                        param_schema.get("enum"), list
+                    ):
+                        description += (
+                            f". Possible values: {', '.join(param_schema.get('enum'))}"
                         )
-                        if "required" in resolved_schema:
-                            tool["parameters"]["required"] = list(
-                                set(
-                                    tool["parameters"]["required"]
-                                    + resolved_schema["required"]
-                                )
-                            )
-                    elif resolved_schema.get("type") == "array":
-                        tool["parameters"] = resolved_schema  # special case for array
+                    tool["parameters"]["properties"][param_name] = {
+                        "type": param_schema.get("type"),
+                        "description": description,
+                    }
+                    if param.get("required"):
+                        tool["parameters"]["required"].append(param_name)
 
-            tool_payload.append(tool)
+                # Extract and resolve requestBody if available
+                request_body = operation.get("requestBody")
+                if request_body:
+                    content = request_body.get("content", {})
+                    json_schema = content.get("application/json", {}).get("schema")
+                    if json_schema:
+                        resolved_schema = resolve_schema(
+                            json_schema, openapi_spec.get("components", {})
+                        )
+
+                        if resolved_schema.get("properties"):
+                            tool["parameters"]["properties"].update(
+                                resolved_schema["properties"]
+                            )
+                            if "required" in resolved_schema:
+                                tool["parameters"]["required"] = list(
+                                    set(
+                                        tool["parameters"]["required"]
+                                        + resolved_schema["required"]
+                                    )
+                                )
+                        elif resolved_schema.get("type") == "array":
+                            tool["parameters"] = (
+                                resolved_schema  # special case for array
+                            )
+
+                tool_payload.append(tool)
 
     return tool_payload
 
@@ -431,8 +449,10 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
     error = None
     try:
         timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
-        async with aiohttp.ClientSession(timeout=timeout) as session:
-            async with session.get(url, headers=headers) as response:
+        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+            async with session.get(
+                url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+            ) as response:
                 if response.status != 200:
                     error_body = await response.json()
                     raise Exception(error_body)
@@ -573,19 +593,26 @@ async def execute_tool_server(
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(trust_env=True) as session:
             request_method = getattr(session, http_method.lower())
 
             if http_method in ["post", "put", "patch"]:
                 async with request_method(
-                    final_url, json=body_params, headers=headers
+                    final_url,
+                    json=body_params,
+                    headers=headers,
+                    ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
                 ) as response:
                     if response.status >= 400:
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")
                     return await response.json()
             else:
-                async with request_method(final_url, headers=headers) as response:
+                async with request_method(
+                    final_url,
+                    headers=headers,
+                    ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+                ) as response:
                     if response.status >= 400:
                         text = await response.text()
                         raise Exception(f"HTTP error {response.status}: {text}")

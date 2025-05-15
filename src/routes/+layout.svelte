@@ -26,14 +26,15 @@
 		isLastActiveTab,
 		isApp,
 		appInfo,
-		toolServers
+		toolServers,
+		playingNotificationSound
 	} from '$lib/stores';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Toaster, toast } from 'svelte-sonner';
 
 	import { executeToolServer, getBackendConfig } from '$lib/apis';
-	import { getSessionUser } from '$lib/apis/auths';
+	import { getSessionUser, userSignOut } from '$lib/apis/auths';
 
 	import '../tailwind.css';
 	import '../app.css';
@@ -53,6 +54,7 @@
 	const bc = new BroadcastChannel('active-tab-channel');
 
 	let loaded = false;
+	let tokenTimer = null;
 
 	const BREAKPOINT = 768;
 
@@ -259,9 +261,19 @@
 				const { done, content, title } = data;
 
 				if (done) {
+					if ($settings?.notificationSoundAlways ?? false) {
+						playingNotificationSound.set(true);
+
+						const audio = new Audio(`/audio/notification.mp3`);
+						audio.play().finally(() => {
+							// Ensure the global state is reset after the sound finishes
+							playingNotificationSound.set(false);
+						});
+					}
+
 					if ($isLastActiveTab) {
 						if ($settings?.notificationEnabled ?? false) {
-							new Notification(`${title} | Open WebUI`, {
+							new Notification(`${title} • Open WebUI`, {
 								body: content,
 								icon: `${WEBUI_BASE_URL}/static/favicon.png`
 							});
@@ -410,7 +422,7 @@
 			if (type === 'message') {
 				if ($isLastActiveTab) {
 					if ($settings?.notificationEnabled ?? false) {
-						new Notification(`${data?.user?.name} (#${event?.channel?.name}) | Open WebUI`, {
+						new Notification(`${data?.user?.name} (#${event?.channel?.name}) • Open WebUI`, {
 							body: data?.content,
 							icon: data?.user?.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`
 						});
@@ -429,6 +441,24 @@
 					unstyled: true
 				});
 			}
+		}
+	};
+
+	const checkTokenExpiry = async () => {
+		const exp = $user?.expires_at; // token expiry time in unix timestamp
+		const now = Math.floor(Date.now() / 1000); // current time in unix timestamp
+
+		if (!exp) {
+			// If no expiry time is set, do nothing
+			return;
+		}
+
+		if (now >= exp) {
+			await userSignOut();
+			user.set(null);
+
+			localStorage.removeItem('token');
+			location.href = '/auth';
 		}
 	};
 
@@ -549,6 +579,12 @@
 
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
+
+						// Set up the token expiry check
+						if (tokenTimer) {
+							clearInterval(tokenTimer);
+						}
+						tokenTimer = setInterval(checkTokenExpiry, 1000);
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
@@ -639,4 +675,5 @@
 			: 'light'}
 	richColors
 	position="top-right"
+	closeButton
 />
