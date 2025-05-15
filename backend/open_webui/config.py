@@ -1751,7 +1751,7 @@ QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
 QDRANT_ON_DISK = os.environ.get("QDRANT_ON_DISK", "false").lower() == "true"
 QDRANT_PREFER_GRPC = os.environ.get("QDRANT_PREFER_GRPC", "False").lower() == "true"
 QDRANT_GRPC_PORT = int(os.environ.get("QDRANT_GRPC_PORT", "6334"))
-QDRANT_MULTITENANCY = os.environ.get("QDRANT_MULTITENANCY", "false").lower() == "true"
+ENABLE_QDRANT_MULTITENANCY_MODE = os.environ.get("ENABLE_QDRANT_MULTITENANCY_MODE", "false").lower() == "true"
 
 # OpenSearch
 OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
