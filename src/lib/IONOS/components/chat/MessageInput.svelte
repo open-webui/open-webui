@@ -24,7 +24,7 @@
 	import { WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
-	import InputMenu from '$lib/components/chat/MessageInput/InputMenu.svelte';
+	import InputMenu from '$lib/IONOS/components/chat/MessageInput/InputMenu.svelte';
 	import FilesOverlay from '$lib/components/chat/MessageInput/FilesOverlay.svelte';
 	import Commands from '$lib/components/chat/MessageInput/Commands.svelte';
 	import SelectedFileBadges from '$lib/IONOS/components/chat/SelectedFileBadges.svelte';
@@ -654,6 +654,9 @@
 														})
 													);
 												}
+											}}
+											on:knowledge={() => {
+												prompt += '#';
 											}}
 											onClose={async () => {
 												await tick();

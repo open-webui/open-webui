@@ -33,7 +33,6 @@
 	let show = false;
 
 	let showImageGeneration = false;
-	let ionosRestriction = true;
 
 	$: showImageGeneration =
 		$config?.features?.enable_image_generation &&
@@ -130,7 +129,7 @@
 				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
 
-			{#if showImageGeneration && !ionosRestriction}
+			{#if showImageGeneration}
 				<button
 					class="flex w-full justify-between gap-2 items-center px-3 py-2 text-sm font-medium cursor-pointer rounded-xl"
 					on:click={() => {
@@ -166,7 +165,7 @@
 				<hr class="border-black/5 dark:border-white/5 my-1" />
 			{/if}
 
-			{#if !$mobile && screenCaptureHandler && !ionosRestriction}
+			{#if !$mobile && screenCaptureHandler}
 				<DropdownMenu.Item
 					class="flex gap-2 items-center px-3 py-2 text-sm  font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800  rounded-xl"
 					on:click={() => {
