@@ -1585,7 +1585,9 @@ async def upload_model(
     if url_idx is None:
         url_idx = 0
     ollama_url = request.app.state.config.OLLAMA_BASE_URLS[url_idx]
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
+
+    filename = os.path.basename(file.filename)
+    file_path = os.path.join(UPLOAD_DIR, filename)
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
     # --- P1: save file locally ---
@@ -1630,13 +1632,13 @@ async def upload_model(
                 os.remove(file_path)
 
                 # Create model in ollama
-                model_name, ext = os.path.splitext(file.filename)
+                model_name, ext = os.path.splitext(filename)
                 log.info(f"Created Model: {model_name}")  # DEBUG
 
                 create_payload = {
                     "model": model_name,
                     # Reference the file by its original name => the uploaded blob's digest
-                    "files": {file.filename: f"sha256:{file_hash}"},
+                    "files": {filename: f"sha256:{file_hash}"},
                 }
                 log.info(f"Model Payload: {create_payload}")  # DEBUG
 
@@ -1653,7 +1655,7 @@ async def upload_model(
                     done_msg = {
                         "done": True,
                         "blob": f"sha256:{file_hash}",
-                        "name": file.filename,
+                        "name": filename,
                         "model_created": model_name,
                     }
                     yield f"data: {json.dumps(done_msg)}\n\n"

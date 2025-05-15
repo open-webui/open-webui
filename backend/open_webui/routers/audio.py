@@ -38,6 +38,7 @@ from open_webui.config import (
 
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
+    AIOHTTP_CLIENT_SESSION_SSL,
     AIOHTTP_CLIENT_TIMEOUT,
     ENV,
     SRC_LOG_LEVELS,
@@ -326,6 +327,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                             else {}
                         ),
                     },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
                     r.raise_for_status()
 
@@ -381,6 +383,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         "Content-Type": "application/json",
                         "xi-api-key": request.app.state.config.TTS_API_KEY,
                     },
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
                     r.raise_for_status()
 
@@ -439,6 +442,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                         "X-Microsoft-OutputFormat": output_format,
                     },
                     data=data,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
                     r.raise_for_status()
 

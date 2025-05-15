@@ -651,7 +651,7 @@ def apply_params_to_form_data(form_data, model):
                     convert_logit_bias_input_to_json(params["logit_bias"])
                 )
             except Exception as e:
-                print(f"Error parsing logit_bias: {e}")
+                log.exception(f"Error parsing logit_bias: {e}")
 
     return form_data
 

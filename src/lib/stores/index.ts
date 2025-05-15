@@ -213,11 +213,16 @@ type Config = {
 		enable_admin_chat_access: boolean;
 		enable_community_sharing: boolean;
 		enable_autocomplete_generation: boolean;
+		enable_direct_connections: boolean;
 	};
 	oauth: {
 		providers: {
 			[key: string]: string;
 		};
+	};
+	ui?: {
+		pending_user_overlay_title?: string;
+		pending_user_overlay_description?: string;
 	};
 };
 

@@ -157,6 +157,10 @@
 	const copyToClipboard = async (text) => {
 		text = removeAllDetails(text);
 
+		if (($config?.ui?.response_watermark ?? '').trim() !== '') {
+			text = `${text}\n\n${$config?.ui?.response_watermark}`;
+		}
+
 		const res = await _copyToClipboard(text, $settings?.copyFormatted ?? false);
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
@@ -560,13 +564,18 @@
 		await tick();
 		if (buttonsContainerElement) {
 			console.log(buttonsContainerElement);
-			buttonsContainerElement.addEventListener('wheel', function (event) {
-				// console.log(event.deltaY);
 
-				event.preventDefault();
-				if (event.deltaY !== 0) {
-					// Adjust horizontal scroll position based on vertical scroll
-					buttonsContainerElement.scrollLeft += event.deltaY;
+			buttonsContainerElement.addEventListener('wheel', function (event) {
+				if (buttonsContainerElement.scrollWidth <= buttonsContainerElement.clientWidth) {
+					// If the container is not scrollable, horizontal scroll
+					return;
+				} else {
+					event.preventDefault();
+
+					if (event.deltaY !== 0) {
+						// Adjust horizontal scroll position based on vertical scroll
+						buttonsContainerElement.scrollLeft += event.deltaY;
+					}
 				}
 			});
 		}

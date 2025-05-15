@@ -25,7 +25,7 @@ from langchain_community.document_loaders.firecrawl import FireCrawlLoader
 from langchain_community.document_loaders.base import BaseLoader
 from langchain_core.documents import Document
 from open_webui.retrieval.loaders.tavily import TavilyLoader
-from open_webui.retrieval.loaders.external import ExternalLoader
+from open_webui.retrieval.loaders.external_web import ExternalWebLoader
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.config import (
     ENABLE_RAG_LOCAL_WEB_FETCH,
@@ -39,7 +39,7 @@ from open_webui.config import (
     EXTERNAL_WEB_LOADER_URL,
     EXTERNAL_WEB_LOADER_API_KEY,
 )
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, AIOHTTP_CLIENT_SESSION_SSL
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -515,7 +515,9 @@ class SafeWebBaseLoader(WebBaseLoader):
                         kwargs["ssl"] = False
 
                     async with session.get(
-                        url, **(self.requests_kwargs | kwargs)
+                        url,
+                        **(self.requests_kwargs | kwargs),
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     ) as response:
                         if self.raise_for_status:
                             response.raise_for_status()
@@ -628,7 +630,7 @@ def get_web_loader(
         web_loader_args["extract_depth"] = TAVILY_EXTRACT_DEPTH.value
 
     if WEB_LOADER_ENGINE.value == "external":
-        WebLoaderClass = ExternalLoader
+        WebLoaderClass = ExternalWebLoader
         web_loader_args["external_url"] = EXTERNAL_WEB_LOADER_URL.value
         web_loader_args["external_api_key"] = EXTERNAL_WEB_LOADER_API_KEY.value
 
