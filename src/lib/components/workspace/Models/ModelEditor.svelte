@@ -78,7 +78,8 @@
 	let capabilities = {
 		vision: true,
 		usage: undefined,
-		citations: true
+		citations: true,
+		switch_thinking: false,
 	};
 
 	let knowledge = [];

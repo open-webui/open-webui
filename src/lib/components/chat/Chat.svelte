@@ -121,8 +121,8 @@
 	let selectedToolIds = [];
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
-	let thinkingEnabled = false;
 	let codeInterpreterEnabled = false;
+	let thinkingEnabled = false;
 
 	let chat = null;
 	let tags = [];
@@ -148,6 +148,7 @@
 			files = [];
 			selectedToolIds = [];
 			webSearchEnabled = false;
+			webSearchEnabled = false;
 			imageGenerationEnabled = false;
 
 			if (localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
@@ -161,6 +162,7 @@
 						files = input.files;
 						selectedToolIds = input.selectedToolIds;
 						webSearchEnabled = input.webSearchEnabled;
+						thinkingEnabled = input.thinkingEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
 					}
@@ -426,6 +428,7 @@
 			files = [];
 			selectedToolIds = [];
 			webSearchEnabled = false;
+			thinkingEnabled = false;
 			imageGenerationEnabled = false;
 			codeInterpreterEnabled = false;
 
@@ -441,6 +444,7 @@
 					webSearchEnabled = input.webSearchEnabled;
 					imageGenerationEnabled = input.imageGenerationEnabled;
 					codeInterpreterEnabled = input.codeInterpreterEnabled;
+					thinkingEnabled = input.thinkingEnabled;
 				}
 			} catch (e) {}
 		}
@@ -747,6 +751,10 @@
 		}
 		if ($page.url.searchParams.get('web-search') === 'true') {
 			webSearchEnabled = true;
+		}
+
+		if ($page.url.searchParams.get('thinking') === 'true') {
+			thinkingEnabled = true;
 		}
 
 		if ($page.url.searchParams.get('image-generation') === 'true') {
@@ -1636,7 +1644,8 @@
 						$config?.features?.enable_web_search &&
 						($user?.role === 'admin' || $user?.permissions?.features?.web_search)
 							? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
-							: false
+							: false,
+					thinking: thinkingEnabled
 				},
 				variables: {
 					...getPromptVariables(
@@ -2062,6 +2071,7 @@
 								bind:imageGenerationEnabled
 								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
+								bind:thinkingEnabled
 								bind:atSelectedModel
 								toolServers={$toolServers}
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
@@ -2118,6 +2128,7 @@
 								bind:imageGenerationEnabled
 								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
+								bind:thinkingEnabled
 								bind:atSelectedModel
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								toolServers={$toolServers}
