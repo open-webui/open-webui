@@ -71,6 +71,13 @@ async def process_pipeline_inlet_filter(request, payload, user, models):
             urlIdx = filter.get("urlIdx")
             if urlIdx is None:
                 continue
+            
+            # Convert urlIdx to integer to avoid TypeError with string indices
+            try:
+                urlIdx = int(urlIdx)
+            except (ValueError, TypeError):
+                log.error(f"Invalid urlIdx value: {urlIdx}")
+                continue
 
             url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
             key = request.app.state.config.OPENAI_API_KEYS[urlIdx]
@@ -119,6 +126,13 @@ async def process_pipeline_outlet_filter(request, payload, user, models):
         for filter in sorted_filters:
             urlIdx = filter.get("urlIdx")
             if urlIdx is None:
+                continue
+            
+            # Convert urlIdx to integer to avoid TypeError with string indices
+            try:
+                urlIdx = int(urlIdx)
+            except (ValueError, TypeError):
+                log.error(f"Invalid urlIdx value: {urlIdx}")
                 continue
 
             url = request.app.state.config.OPENAI_API_BASE_URLS[urlIdx]
