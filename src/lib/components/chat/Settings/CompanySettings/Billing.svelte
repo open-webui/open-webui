@@ -198,7 +198,7 @@
 							</div>
 						</div>
 						<div class="text-xs dark:text-customGray-100/50 mt-2">
-							€{currentPlan?.price_monthly ? currentPlan?.price_monthly / 100 : '0.00'}/mo
+							€{currentPlan?.price_monthly ? (currentPlan?.price_monthly / 100).toFixed(2) : '0.00'}/mo
 						</div>
 					</div>
 				</div>
@@ -247,11 +247,11 @@
 				<div class="text-xs dark:text-customGray-300 font-medium">{$i18n.t('Base credits')}</div>
 				<div class="text-xs dark:text-customGray-590">
 					{#if $subscription?.plan !== 'free'}
-					<span class="text-xs dark:text-customGray-100">{currentPlan?.credits_per_month - $subscription?.credits_remaining} {$i18n.t('used')}</span><span
-						class="dark:text-customGray-590">/ {currentPlan?.credits_per_month} {$i18n.t('included')}</span
+					<span class="text-xs dark:text-customGray-100">€{(currentPlan?.credits_per_month - $subscription?.credits_remaining)?.toFixed(2)} {$i18n.t('used')}</span><span
+						class="dark:text-customGray-590">/ €{(currentPlan?.credits_per_month).toFixed(2)} {$i18n.t('included')}</span
 					>
 					{:else}
-						<span class="text-xs dark:text-customGray-100">{$subscription?.credits_remaining} {$i18n.t('credits remaining')}</span>
+						<span class="text-xs dark:text-customGray-100">€{($subscription?.credits_remaining).toFixed(2)} {$i18n.t('credits remaining')}</span>
 					{/if}
 				</div>
 			</div>
@@ -278,7 +278,7 @@
 					<div class="text-xs dark:text-customGray-590">
 						<!-- <span class="text-xs dark:text-customGray-100">0 {$i18n.t('used')}</span> -->
 						<span
-							class="dark:text-customGray-100">{$subscription?.flex_credits_remaining ? $subscription?.flex_credits_remaining : 0} {$i18n.t('remaining')}</span
+							class="dark:text-customGray-100">€{($subscription?.flex_credits_remaining ? $subscription?.flex_credits_remaining : 0).toFixed(2)} {$i18n.t('remaining')}</span
 						>
 					</div>
 				</div>
@@ -300,7 +300,7 @@
 					</div>
 					<button
 						on:click={recharge}
-						class="flex items-center justify-center rounded-[10px] dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
+						class="flex items-center justify-center rounded-[10px] dark:hover:bg-customGray-950 border dark:border-customGray-700 px-8 py-2 text-xs dark:text-customGray-200"
 					>
 						{$i18n.t('Buy credits')}
 					</button>
