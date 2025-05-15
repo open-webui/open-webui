@@ -5,11 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7-ccv2-1.3.0] - 2025-05-15
+
+### Changed
+
+- **🛡️ Licensing**: Added Canadian Crown licensing to the project for compliance and transparency.
+
+### Added
+
+- **📊 Metrics Dashboard**: The dashboard now includes a graph for historical user enrollment, and date range selection has been added for more flexible analysis.
+
+### Fixed
+
+- **📊 Message Metrics Timestamp Standardization**: Message metrics now use a consistent timestamp format improving data accuracy.
+- **🌍 Translation Improvements**: Added missing translations to ensure a more consistent and accessible user experience for speakers of all supported languages.
+- **💡 AI Suggestion Spacing**: Ensured that AI suggestions always include a space at the start of the sentence for improved readability.
+
 ## [0.5.7-ccv2-1.2.1] - 2025-04-28
 
 ### Changed
 
-- **📊 Metric Dashboard**: The dasboard has now tabs and model analysis providing real-time updates and improved clarity.
+- **📊 Metric Dashboard**: The dashboard has now tabs and model analysis providing real-time updates and improved clarity.
 
 ### Fixed
 
