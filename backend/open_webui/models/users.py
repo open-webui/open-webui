@@ -395,7 +395,6 @@ class UsersTable:
                     result.append({"date": date_str, "count": count})
 
             # Return in chronological order
-            print(result)
             return result
         except Exception as e:
             logger.error(f"Failed to get historical users data: {e}")
@@ -489,9 +488,9 @@ class UsersTable:
                 # Get the total count of users active in the range
                 query = db.query(User).filter(
                     User.last_active_at
-                    >= start_timestamp * 1_000_000_000,  # Convert to nanoseconds
+                    >= start_timestamp,
                     User.last_active_at
-                    < end_timestamp * 1_000_000_000,  # Convert to nanoseconds
+                    < end_timestamp,
                 )
 
                 if domain:
@@ -529,8 +528,8 @@ class UsersTable:
 
                 with get_db() as db:
                     query = db.query(User).filter(
-                        User.last_active_at >= current_day * 1_000_000_000,
-                        User.last_active_at < next_day * 1_000_000_000,
+                        User.last_active_at >= current_day,
+                        User.last_active_at < next_day,
                     )
 
                     if domain:

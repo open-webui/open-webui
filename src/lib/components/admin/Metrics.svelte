@@ -173,7 +173,7 @@
 		{ value: 'custom', label: $i18n.t('Custom Range') }
 	];
 	let selectedDateRange = '7days';
-	let startDate = formatDate(new Date(Date.now() - 7 * 24 * 60 * 60));
+	let startDate = formatDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
 	let endDate = formatDate(new Date());
 	let showCustomDateRange = false;
 
@@ -188,7 +188,7 @@
 		if (start && end) {
 			const startDate = new Date(start);
 			const endDate = new Date(end);
-			const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (60 * 60 * 24));
+			const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 			return Math.max(daysDiff, 1); // Ensure at least 1 day
 		}
 		return 7; // Default to 7 days
@@ -479,19 +479,19 @@
 		const today = new Date();
 
 		if (range === '7days') {
-			startDate = formatDate(new Date(today.getTime() - 7 * 24 * 60 * 60));
+			startDate = formatDate(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000));
 			endDate = formatDate(today);
 			showCustomDateRange = false;
 		} else if (range === '30days') {
-			startDate = formatDate(new Date(today.getTime() - 30 * 24 * 60 * 60));
+			startDate = formatDate(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000));
 			endDate = formatDate(today);
 			showCustomDateRange = false;
 		} else if (range === '60days') {
-			startDate = formatDate(new Date(today.getTime() - 60 * 24 * 60 * 60));
+			startDate = formatDate(new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000));
 			endDate = formatDate(today);
 			showCustomDateRange = false;
 		} else if (range === '90days') {
-			startDate = formatDate(new Date(today.getTime() - 90 * 24 * 60 * 60));
+			startDate = formatDate(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000));
 			endDate = formatDate(today);
 			showCustomDateRange = false;
 		} else if (range === 'custom') {

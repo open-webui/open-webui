@@ -410,7 +410,6 @@ async def delete_user_by_id(user_id: str, user=Depends(get_admin_user)):
 async def get_users_enrollment_historical(
     days: int = 7, domain: str = None, user=Depends(get_verified_user)
 ):
-    print("HISTORICAL USERS")
     if not user.role == "admin":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -421,7 +420,6 @@ async def get_users_enrollment_historical(
     if domain == "":
         domain = None
     historical_data = Users.get_historical_users_data(days, domain)
-    print(f"historical_data: {historical_data}")
     return {"historical_users": historical_data}
 
 
