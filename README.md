@@ -239,6 +239,60 @@ If you are running Open WebUI in an offline environment, you can set the `HF_HUB
 export HF_HUB_OFFLINE=1
 ```
 
+### Node.js Heap Out of Memory (Build Error)
+
+If you encounter a build error like:
+
+```
+FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory
+```
+
+during Docker or local builds, you need to increase the Node.js memory limit. This is common for large Svelte/Vite/Node.js projects.
+
+**Solution:**
+
+For local builds:
+```sh
+export NODE_OPTIONS=--max-old-space-size=8192
+```
+
+For Docker Compose builds:
+```sh
+NODE_OPTIONS=--max-old-space-size=8192 docker compose -f docker-compose.yaml -f docker-compose.tools.yaml -f docker-compose.ai-lab.yaml up -d --build
+```
+
+This will prevent heap out of memory errors during the frontend build process.
+
+### Faster Docker Builds
+
+To speed up Docker Compose builds and leverage caching:
+
+1. **Enable BuildKit and Compose Bake:**
+   ```sh
+   export DOCKER_BUILDKIT=1
+   export COMPOSE_DOCKER_CLI_BUILD=1
+   export COMPOSE_BAKE=1
+   NODE_OPTIONS=--max-old-space-size=8192 docker compose -f docker-compose.yaml -f docker-compose.tools.yaml -f docker-compose.ai-lab.yaml up -d --build
+   ```
+
+2. **Optimize Dockerfile for Caching:**
+   - Place `COPY package*.json ./` and `RUN npm install` before `COPY . .` in your Dockerfile. See the Dockerfile in this repo for an example.
+
+3. **Use a `.dockerignore` file:**
+   - Exclude unnecessary files from the build context (e.g., `node_modules`, `.git`, `test/`, `docs/`).
+
+These steps will make your builds faster and more reliable.
+
+### GPU Support for Ollama (Docker Compose)
+
+To enable GPU support for Ollama, add `docker-compose.gpu.yaml` to your compose command:
+
+```sh
+docker compose -f docker-compose.yaml -f docker-compose.tools.yaml -f docker-compose.ai-lab.yaml -f docker-compose.gpu.yaml up -d
+```
+
+Make sure you have the NVIDIA Container Toolkit installed on your system.
+
 ## What's Next? 🌟
 
 Discover upcoming features on our roadmap in the [Open WebUI Documentation](https://docs.openwebui.com/roadmap/).
