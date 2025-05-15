@@ -918,7 +918,7 @@ def update_trusted_header_user_groups(user, request, default_permissions):
 
     # Remove groups that user is no longer a part of
     for group_model in user_current_groups:
-        if user_trusted_groups and group_model.name not in user_trusted_groups:
+        if group_model.name not in user_trusted_groups:
             log.debug(
                 f"Removing user from group {group_model.name} as it is no longer in their trusted header groups"
             )
