@@ -187,6 +187,7 @@ def rag_template(template: str, context: str, query: str):
 
     return template
 
+
 def filter_out_details(messages: list[dict]) -> list[dict]:
     """
     Filter out the details tags from the messages
@@ -198,6 +199,7 @@ def filter_out_details(messages: list[dict]) -> list[dict]:
                 message["content"] = message.get("content").split("</details>")[1]
         filtered_messages.append(message)
     return filtered_messages
+
 
 def title_generation_template(
     template: str, messages: list[dict], user: Optional[dict] = None
