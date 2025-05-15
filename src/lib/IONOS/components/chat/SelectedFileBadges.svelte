@@ -2,7 +2,7 @@
 
 <script lang="ts">
 	import { deleteFileById } from '$lib/apis/files';
-	import FileItem from '$lib/components/common/FileItem.svelte';
+	import FileItem from '$lib/IONOS/components/common/FileItem.svelte';
 
 	export let files = [];
 </script>
@@ -15,7 +15,8 @@
 			type={file.type}
 			size={file?.size}
 			small={true}
-			className="px-1 py-1"
+			className="px-1 py-1 rounded-full"
+			colorClassName="bg-blue-100 text-blue-500"
 			loading={file.status === 'uploading'}
 			dismissible={true}
 			edit={true}
