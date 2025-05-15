@@ -201,7 +201,6 @@ class UsersTable:
         except Exception:
             return None
 
-
     def get_first_user(self) -> UserModel:
         try:
             with get_db() as db:
