@@ -229,6 +229,7 @@
 		}
 	}
 
+
 	$: if(show){
 		getUsersHandler();
 		fetchAnalytics();

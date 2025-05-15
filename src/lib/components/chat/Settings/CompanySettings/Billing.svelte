@@ -19,20 +19,29 @@
 	import { toast } from 'svelte-sonner';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { goto } from '$app/navigation';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	const i18n = getContext('i18n');
 	export let autoRecharge = false;
 	export let subscriptionLoading = false;
 	let showUpdateDetails = false;
+	let showBuyFlexCredits = false;
 
+	$: console.log(showUpdateDetails)
+	let mounted = false;
 	export let plans = [];
-	// onMount(async () => {
-	// 	const res = await getSubscriptionPlans(localStorage.token).catch((error) => console.log(error));
-	// 	if (res) {
-	// 		plans = res;
-	// 		console.log(plans);
-	// 	}
-	// });
+	onMount(() => {
+		mounted = true;
+		const url = new URL(window.location.href);
+		const plansParam = url.searchParams.get('plans');
+		if(plansParam === 'open'){
+			showUpdateDetails = true;
+		}
+		const rechargeParam = url.searchParams.get('recharge');
+		if(rechargeParam === 'open'){
+			showBuyFlexCredits = true;
+		}
+	})
 
 	async function upgradeSubscription(plan_id) {
 		const res = await createSubscriptionSession(localStorage.token, plan_id).catch((error) =>
@@ -101,8 +110,32 @@
 
 	$: seatsWidth = $subscription?.seats ? $subscription?.seats_taken > $subscription?.seats ? '100%' : `${($subscription?.seats_taken/$subscription?.seats*100)}%` : '100%';
 	$: creditsWidth = $subscription?.credits_remaining ? `${(((currentPlan?.credits_per_month - $subscription?.credits_remaining)/currentPlan?.credits_per_month) * 100)}%` : '100%';
-	$:console.log(creditsWidth, 'width----->')
+	
+
+	$: {
+		if(showBuyFlexCredits === false && mounted){
+			const url = new URL(window.location.href);
+			url.searchParams.delete('recharge'); 
+			window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+		}
+	}
 </script>
+
+
+<ConfirmDialog
+	bind:show={showBuyFlexCredits}
+	title={$i18n.t('Buy credits?')}
+	on:confirm={recharge}
+	on:cancel={() => {
+		const url = new URL(window.location.href);
+		url.searchParams.delete('recharge'); 
+		window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+	}}
+>
+	<div class=" text-sm text-gray-500 flex-1 line-clamp-3">
+		{$i18n.t('You will be charged for')} <span class="  font-semibold">€{(25).toFixed(2)}</span>.
+	</div>
+</ConfirmDialog>
 
 <UpdatePaymentDetails
 	bind:show={showUpdateDetails}
@@ -164,6 +197,8 @@
 					</div>
 				{/each}
 			</div>
+		{:else}
+			<Spinner/>
 		{/if}
 	</div>
 </UpdatePaymentDetails>
@@ -216,7 +251,12 @@
 					</div>
 				</div>
 				<button
-					on:click={() => (showUpdateDetails = true)}
+					on:click={() => {
+						showUpdateDetails = true
+						const url = new URL(window.location.href);
+						url.searchParams.set('plans', 'open'); 
+						window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+					}}
 					class="flex items-center justify-center rounded-mdx dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-3 text-xs dark:text-customGray-200"
 				>
 					{$i18n.t('Explore Plans')}
@@ -264,7 +304,9 @@
 						class="dark:text-customGray-590">/ €{(currentPlan?.credits_per_month).toFixed(2)} {$i18n.t('included')}</span
 					>
 					{:else}
-						<span class="text-xs dark:text-customGray-100">€{($subscription?.credits_remaining).toFixed(2)} {$i18n.t('credits remaining')}</span>
+					<span class="text-xs dark:text-customGray-100">€{(5 - $subscription?.credits_remaining)?.toFixed(2)} {$i18n.t('used')}</span><span
+						class="dark:text-customGray-590">/ €{(5).toFixed(2)} {$i18n.t('included')}</span
+					>
 					{/if}
 				</div>
 			</div>
@@ -321,7 +363,12 @@
 						</div>
 					</div>
 					<button
-						on:click={recharge}
+						on:click={() => {
+							showBuyFlexCredits = true;
+							const url = new URL(window.location.href);
+							url.searchParams.set('recharge', 'open'); 
+							window.history.replaceState({}, '', `${url.pathname}${url.search}`);
+						}}
 						class="flex items-center justify-center rounded-[10px] dark:hover:bg-customGray-950 border dark:border-customGray-700 px-8 py-2 text-xs dark:text-customGray-200"
 					>
 						{$i18n.t('Buy credits')}

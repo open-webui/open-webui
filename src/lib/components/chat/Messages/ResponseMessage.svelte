@@ -47,6 +47,7 @@
 	import RegenerateIcon from '$lib/components/icons/RegenerateIcon.svelte';
 	import StopReading from '$lib/components/icons/StopReading.svelte';
 	import { getModelIcon } from '$lib/utils';
+	import CustomChatError from './CustomChatError.svelte';
 
 	interface MessageType {
 		id: string;
@@ -740,7 +741,11 @@
 								{/if}
 
 								{#if message?.error}
-									<Error content={message?.error?.content ?? message.content} />
+									{#if message?.error?.content?.includes('402: Insufficient credits')}
+										<CustomChatError content={message?.error?.content ?? message.content}/>
+									{:else}
+										<Error content={message?.error?.content ?? message.content} />
+									{/if}	
 								{/if}
 
 								{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
