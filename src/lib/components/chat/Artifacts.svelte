@@ -266,7 +266,7 @@
 							}}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
 						>
 						<button
-							class="copy-code-button bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
+							class="download-code-button bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md px-1.5 py-0.5"
 							on:click={() => {
 								downloadContents(contents[selectedContentIdx].content, contents[selectedContentIdx].type);
 								download = true;
