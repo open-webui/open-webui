@@ -11,6 +11,7 @@ import random
 
 from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
+
 from pydantic import BaseModel
 from sqlalchemy import text
 
@@ -19,6 +20,8 @@ from aiocache import cached
 import aiohttp
 import anyio.to_thread
 import requests
+
+from open_webui.retention.cleanup import run_data_retention
 
 
 from fastapi import (
@@ -469,6 +472,7 @@ async def lifespan(app: FastAPI):
         limiter.total_tokens = THREAD_POOL_SIZE
 
     asyncio.create_task(periodic_usage_pool_cleanup())
+    asyncio.create_task(run_data_retention())
 
     yield
 
