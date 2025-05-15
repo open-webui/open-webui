@@ -487,10 +487,8 @@ class UsersTable:
             with get_db() as db:
                 # Get the total count of users active in the range
                 query = db.query(User).filter(
-                    User.last_active_at
-                    >= start_timestamp,
-                    User.last_active_at
-                    < end_timestamp,
+                    User.last_active_at >= start_timestamp,
+                    User.last_active_at < end_timestamp,
                 )
 
                 if domain:
