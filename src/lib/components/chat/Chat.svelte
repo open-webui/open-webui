@@ -195,10 +195,12 @@
 
 	$: if (selectedModels) {
 		setToolIds();
+		setFilterIds();
 	}
 
 	$: if (atSelectedModel || selectedModels) {
 		setToolIds();
+		setFilterIds();
 	}
 
 	const setToolIds = async () => {
@@ -215,6 +217,17 @@
 			selectedToolIds = (model?.info?.meta?.toolIds ?? []).filter((id) =>
 				$tools.find((t) => t.id === id)
 			);
+		}
+	};
+
+	const setFilterIds = async () => {
+		if (selectedModels.length !== 1 && !atSelectedModel) {
+			selectedFilterIds = [];
+		}
+
+		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
+		if (model) {
+			selectedFilterIds = model?.info?.meta?.filterIds ?? [];
 		}
 	};
 

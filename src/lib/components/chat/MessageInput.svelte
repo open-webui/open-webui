@@ -49,9 +49,9 @@
 	import Headphone from '../icons/Headphone.svelte';
 	import GlobeAlt from '../icons/GlobeAlt.svelte';
 	import Photo from '../icons/Photo.svelte';
-	import LightBlub from '../icons/LightBlub.svelte';
 	import Wrench from '../icons/Wrench.svelte';
 	import CommandLine from '../icons/CommandLine.svelte';
+	import Sparkles from '../icons/Sparkles.svelte';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
@@ -120,10 +120,10 @@
 		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
 	);
 
-	let reasoningCapableModels = [];
-	$: reasoningCapableModels = $models
-		.filter((model) => model.info?.meta?.capabilities?.reasoning ?? false)
-		.map((model) => model.id);
+	let toggleFilters = [];
+	$: toggleFilters = (atSelectedModel?.id || selectedModels)
+		.map((id) => ($models.find((model) => model.id === id) || {})?.filters ?? [])
+		.reduce((acc, filters) => acc.filter((f1) => filters.some((f2) => f2.id === f1.id)));
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
@@ -363,7 +363,6 @@
 </script>
 
 <FilesOverlay show={dragged} />
-
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
 
 {#if loaded}
@@ -1151,6 +1150,47 @@
 											{/if}
 
 											{#if $_user}
+												{#each toggleFilters as filter, filterIdx (filter.id)}
+													<Tooltip content={filter?.description} placement="top">
+														<button
+															on:click|preventDefault={() => {
+																if (selectedFilterIds.includes(filter.id)) {
+																	selectedFilterIds = selectedFilterIds.filter(
+																		(id) => id !== filter.id
+																	);
+																} else {
+																	selectedFilterIds = [...selectedFilterIds, filter.id];
+																}
+															}}
+															type="button"
+															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {selectedFilterIds.includes(
+																filter.id
+															)
+																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-100 dark:hover:bg-gray-800 '} capitalize"
+														>
+															{#if filter?.icon_url}
+																<div class="size-5">
+																	<img
+																		src={filter?.icon_url}
+																		class="size-5 {filter.icon_url.includes('svg')
+																			? 'dark:invert-[80%]'
+																			: ''}"
+																		style="fill: currentColor;"
+																		alt={filter?.name}
+																	/>
+																</div>
+															{:else}
+																<Sparkles className="size-5" strokeWidth="1.75" />
+															{/if}
+															<span
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
+																>{filter?.name}</span
+															>
+														</button>
+													</Tooltip>
+												{/each}
+
 												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
