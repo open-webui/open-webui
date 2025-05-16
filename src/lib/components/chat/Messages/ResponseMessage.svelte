@@ -580,6 +580,14 @@
 			});
 		}
 	});
+
+	let screenReaderDiv: HTMLDivElement;
+	
+	$: if (message.done) {
+		if (screenReaderDiv) {
+			screenReaderDiv.textContent = message.content;
+		}
+	}
 </script>
 
 <DeleteConfirmDialog
@@ -589,6 +597,14 @@
 		deleteMessageHandler();
 	}}
 />
+
+<div 
+	bind:this={screenReaderDiv}
+	aria-live="polite" 
+	class="sr-only"
+>
+	{message.done ? message.content : ''}
+</div>
 
 {#key message.id}
 	<div
