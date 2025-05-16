@@ -3,7 +3,7 @@ from threading import Lock
 import logging
 import base64
 import os
-import uuid
+from uuid import uuid4
 import json
 from pathlib import Path
 from fastapi import Form
@@ -35,8 +35,8 @@ from open_webui.routers.retrieval import (
 )
 from open_webui.storage.provider import Storage
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.tasks import process_tasks
-from open_webui.tasks import celery_app
+from open_webui.tasks_celery import process_tasks
+from open_webui.tasks_celery import celery_app
 from celery.result import AsyncResult
 from pydantic import BaseModel
 
@@ -63,7 +63,7 @@ def upload_file(
         filename = os.path.basename(unsanitized_filename)
 
         # replace filename with uuid
-        id = str(uuid.uuid4())
+        id = str(uuid4())
         name = filename
         filename = f"{id}_{filename}"
         contents, file_path = Storage.upload_file(file.file, filename)
@@ -130,7 +130,7 @@ async def upload_file_async(
     filename = os.path.basename(unsanitized_filename)
 
     # replace filename with uuid
-    task_id = str(uuid.uuid4())
+    task_id = str(uuid4())
     name = filename
     filename = f"{id}_{filename}"
     contents, file_path = Storage.upload_file(file.file, filename)
@@ -152,22 +152,6 @@ async def upload_file_async(
     )
     # Envia a task pro RabbitMQ via Celery
     form_data = ProcessFileForm(file_id=task_id)
-    args = {'collection_name': form_data.collection_name,
-            'text_splitter': request.app.state.config.TEXT_SPLITTER,
-            'task_id': task_id,
-            'chunk_overlap': request.app.state.config.CHUNK_OVERLAP,
-            'chunk_size': request.app.state.config.CHUNK_SIZE,
-            'engine': request.app.state.config.CONTENT_EXTRACTION_ENGINE,
-            "model": request.app.state.config.RAG_EMBEDDING_MODEL,
-            "tiktoken_encoding_name": request.app.state.config.TIKTOKEN_ENCODING_NAME,
-            "rag_openai_api_base_url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
-            "rag_ollama_api_key": request.app.state.config.RAG_OLLAMA_API_KEY,
-            "rag_embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
-            "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
-            "pdftotext_server_url": request.app.state.config.PDFTOTEXT_SERVER_URL,
-            "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
-            "maxpages_pdftotext": request.app.state.config.MAXPAGES_PDFTOTEXT,
-            }
     # Adiciona os parâmetros necessários para o processamento
     # da task
     # args = {
@@ -179,8 +163,10 @@ async def upload_file_async(
     #     "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
     #     "model": request.app.state.config.RAG_EMBEDDING_MODEL,
     #     "tiktoken_encoding_name": request.app.state.config.TIKTOKEN_ENCODING_NAME,
+    #     "rag_embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
     #     "rag_openai_api_base_url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
     #     "rag_ollama_api_key": request.app.state.config.RAG_OLLAMA_API_KEY,
+    #     "rag_ollama_base_url": request.app.state.config.RAG_OLLAMA_BASE_URL,
     #     "rag_embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
     #     "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
     #     "pdftotext_server_url": request.app.state.config.PDFTOTEXT_SERVER_URL,
@@ -188,11 +174,35 @@ async def upload_file_async(
     #     "maxpages_pdftotext": request.app.state.config.MAXPAGES_PDFTOTEXT,
     # }
 
-    _ = process_tasks.delay(args=args)
-    message = f"Task {task_id} adicionada à fila de processamento"
-    return AsyncTaskResponse(task_id=task_id, status="queued", message=message)
+    args = {'collection_name': form_data.collection_name,
+            'text_splitter': request.app.state.config.TEXT_SPLITTER,
+            'task_id': task_id,
+            'chunk_overlap': request.app.state.config.CHUNK_OVERLAP,
+            'chunk_size': request.app.state.config.CHUNK_SIZE,
+            'engine': request.app.state.config.CONTENT_EXTRACTION_ENGINE,
+            "rag_embedding_model": request.app.state.config.RAG_EMBEDDING_MODEL,
+            "tiktoken_encoding_name": request.app.state.config.TIKTOKEN_ENCODING_NAME,
+            "rag_embedding_engine": request.app.state.config.RAG_EMBEDDING_ENGINE,
+            "rag_openai_api_base_url": request.app.state.config.RAG_OPENAI_API_BASE_URL,
+            "rag_ollama_api_key": request.app.state.config.RAG_OLLAMA_API_KEY,
+            "rag_ollama_base_url": request.app.state.config.RAG_OLLAMA_BASE_URL,
+            "rag_embedding_batch_size": request.app.state.config.RAG_EMBEDDING_BATCH_SIZE,
+            "tika_server_url": request.app.state.config.TIKA_SERVER_URL,
+            "pdftotext_server_url": request.app.state.config.PDFTOTEXT_SERVER_URL,
+            "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
+            "maxpages_pdftotext": request.app.state.config.MAXPAGES_PDFTOTEXT,
+            }
 
-
+    try:
+        async_result = process_tasks.delay(args=args)
+        message = f"Task {task_id} adicionada à fila de processamento"
+        log.info(f"Task {task_id} adicionada à fila de processamento")
+    except Exception as e:
+        log.exception(e)
+        log.error(f"Error processing file: {task_id}")
+        message = f"Task {task_id} falhou ao ser processada"
+        return AsyncTaskResponse(task_id=task_id, status="Error", message=message)
+    return AsyncTaskResponse(task_id=async_result.id, status="queued", message=message)
 
 ############################
 # Get task_status
@@ -203,7 +213,7 @@ async def upload_file_async(
 @router.get("/task_status/{task_id}")
 async def get_task_status(task_id: str):
     res = AsyncResult(task_id, app=celery_app)
-    return {"task_id": task_id, "status": res.status, "result": res.result if res.ready() else None}
+    return {"task_id": task_id, "result": res.result if res.ready() else None}
 
 
 ############################

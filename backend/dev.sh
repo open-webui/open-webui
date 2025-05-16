@@ -29,7 +29,7 @@ FASTAPI_PID=$!
 sleep 10
 export CELERY_BROKER_URL="amqp://guest:guest@localhost:5672//"
 echo "Iniciando o Celery worker..."
-celery -A open_webui.celery_worker worker --loglevel=info --concurrency=2 &
+celery -A open_webui.celery_worker worker --loglevel=INFO --concurrency=10 &
 CELERY_PID=$!
 
 trap "kill $FASTAPI_PID $CELERY_PID" SIGINT SIGTERM

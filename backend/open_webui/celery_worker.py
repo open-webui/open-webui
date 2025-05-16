@@ -9,4 +9,4 @@ celery_app = Celery(
 )
 
 
-celery_app.autodiscover_tasks(["open_webui.tasks"])  # <- importante!
+celery_app.autodiscover_tasks(["open_webui.tasks_celery"])  # <- importante!
