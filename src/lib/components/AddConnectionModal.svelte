@@ -30,6 +30,9 @@
 	let url = '';
 	let key = '';
 
+	let connectionType = 'external';
+	let azure = false;
+
 	let prefixId = '';
 	let enable = true;
 	let tags = [];
@@ -95,7 +98,9 @@
 				enable: enable,
 				tags: tags,
 				prefix_id: prefixId,
-				model_ids: modelIds
+				model_ids: modelIds,
+				connection_type: connectionType,
+				...(!ollama && azure ? { azure: true } : {})
 			}
 		};
 
@@ -120,6 +125,13 @@
 			tags = connection.config?.tags ?? [];
 			prefixId = connection.config?.prefix_id ?? '';
 			modelIds = connection.config?.model_ids ?? [];
+
+			if (ollama) {
+				connectionType = connection.config?.connection_type ?? 'local';
+			} else {
+				connectionType = connection.config?.connection_type ?? 'external';
+				azure = connection.config?.azure ?? false;
+			}
 		}
 	};
 
@@ -134,7 +146,7 @@
 
 <Modal size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
+		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-1.5">
 			<div class=" text-lg font-medium self-center font-primary">
 				{#if edit}
 					{$i18n.t('Edit Connection')}
@@ -172,6 +184,28 @@
 				>
 					<div class="px-1">
 						<div class="flex gap-2">
+							<div class="flex w-full justify-between items-center">
+								<div class=" text-xs text-gray-500">{$i18n.t('Connection Type')}</div>
+
+								<div class="">
+									<button
+										on:click={() => {
+											connectionType = connectionType === 'local' ? 'external' : 'local';
+										}}
+										type="button"
+										class=" text-xs text-gray-700 dark:text-gray-300"
+									>
+										{#if connectionType === 'local'}
+											{$i18n.t('Local')}
+										{:else}
+											{$i18n.t('External')}
+										{/if}
+									</button>
+								</div>
+							</div>
+						</div>
+
+						<div class="flex gap-2 mt-1.5">
 							<div class="flex flex-col w-full">
 								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('URL')}</div>
 
