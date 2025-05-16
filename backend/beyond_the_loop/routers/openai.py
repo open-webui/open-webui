@@ -651,7 +651,8 @@ async def generate_chat_completion(
     if "max_tokens" in payload and "max_completion_tokens" in payload:
         del payload["max_tokens"]
 
-    payload["stream_options"] = {"include_usage": True}
+    if payload["stream"]:
+        payload["stream_options"] = {"include_usage": True}
 
     # Convert the modified body back to JSON
     payload = json.dumps(payload)
@@ -720,7 +721,12 @@ async def generate_chat_completion(
                                     input_tokens = data.get('usage', {}).get('prompt_tokens', 0)
                                     output_tokens = data.get('usage', {}).get('completion_tokens', 0)
 
-                                    reasoning_tokens = data.get('usage', {}).get('completion_tokens_details', {}).get("reasoning_tokens", 0)
+                                    # Safely access nested dictionary values
+                                    completion_tokens_details = data.get('usage', {}).get(
+                                        'completion_tokens_details', {})
+                                    reasoning_tokens = 0
+                                    if completion_tokens_details is not None:
+                                        reasoning_tokens = completion_tokens_details.get("reasoning_tokens", 0)
 
                                     with_search_query_cost = "Perplexity" in model_name
 
@@ -754,7 +760,12 @@ async def generate_chat_completion(
 
                 input_tokens = response.get('usage', {}).get('prompt_tokens', 0)
                 output_tokens = response.get('usage', {}).get('completion_tokens', 0)
-                reasoning_tokens = response.get('usage', {}).get('completion_tokens_details', {}).get("reasoning_tokens", 0)
+
+                # Safely access nested dictionary values
+                completion_tokens_details = response.get('usage', {}).get('completion_tokens_details', {})
+                reasoning_tokens = 0
+                if completion_tokens_details is not None:
+                    reasoning_tokens = completion_tokens_details.get("reasoning_tokens", 0)
 
                 with_search_query_cost = "Perplexity" in model_name
 
