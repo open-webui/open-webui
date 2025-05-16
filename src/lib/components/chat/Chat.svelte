@@ -214,9 +214,13 @@
 
 		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
 		if (model) {
-			selectedToolIds = (model?.info?.meta?.toolIds ?? []).filter((id) =>
-				$tools.find((t) => t.id === id)
-			);
+			selectedToolIds = [
+				...new Set(
+					[...selectedToolIds, ...(model?.info?.meta?.toolIds ?? [])].filter((id) =>
+						$tools.find((t) => t.id === id)
+					)
+				)
+			];
 		}
 	};
 
