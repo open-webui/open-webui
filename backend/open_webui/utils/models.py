@@ -203,8 +203,11 @@ async def get_all_models(request, user: UserModel = None):
                     "id": f"{function.id}.{action['id']}",
                     "name": action.get("name", f"{function.name} ({action['id']})"),
                     "description": function.meta.description,
-                    "icon_url": action.get(
-                        "icon_url", function.meta.manifest.get("icon_url", None)
+                    "icon": action.get(
+                        "icon_url",
+                        function.meta.manifest.get("icon_url", None)
+                        or getattr(module, "icon_url", None)
+                        or getattr(module, "icon", None),
                     ),
                 }
                 for action in actions
@@ -215,7 +218,9 @@ async def get_all_models(request, user: UserModel = None):
                     "id": function.id,
                     "name": function.name,
                     "description": function.meta.description,
-                    "icon_url": function.meta.manifest.get("icon_url", None),
+                    "icon": function.meta.manifest.get("icon_url", None)
+                    or getattr(module, "icon_url", None)
+                    or getattr(module, "icon", None),
                 }
             ]
 
@@ -226,7 +231,9 @@ async def get_all_models(request, user: UserModel = None):
                 "id": function.id,
                 "name": function.name,
                 "description": function.meta.description,
-                "icon_url": function.meta.manifest.get("icon_url", None),
+                "icon": function.meta.manifest.get("icon_url", None)
+                or getattr(module, "icon_url", None)
+                or getattr(module, "icon", None),
             }
         ]
 
