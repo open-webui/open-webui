@@ -25,21 +25,21 @@ SUBSCRIPTION_PLANS = {
         "name": "Starter",
         "price_monthly": 2500,  # 25€ in cents
         "credits_per_month": 5,
-        "stripe_price_id": "price_1RNqhyBBwyxb4MZjNJU4b13w",
+        "stripe_price_id": "price_1RNq8xBBwyxb4MZjy1k0SneL",
         "seats": 5
     },
     "team": {
         "name": "Business",
         "price_monthly": 14900,  # 149€ in cents
         "credits_per_month": 50,
-        "stripe_price_id": "price_1RNqiZBBwyxb4MZj6bXjHenV",
+        "stripe_price_id": "price_1RNqAcBBwyxb4MZjAGivhdo7",
         "seats": 25
     },
     "growth": {
         "name": "Growth",
         "price_monthly": 84900,  # 849€ in cents
         "credits_per_month": 150,
-        "stripe_price_id": "price_1RNqj4BBwyxb4MZjz4vVypid",
+        "stripe_price_id": "price_1RNqIXBBwyxb4MZjUY83qDes",
         "seats": 1000
     }
 }
