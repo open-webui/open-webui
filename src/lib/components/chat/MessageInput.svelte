@@ -878,20 +878,38 @@
 														e.preventDefault();
 														commandsElement.selectUp();
 
+														const container = document.getElementById('command-options-container');
 														const commandOptionButton = [
 															...document.getElementsByClassName('selected-command-option-button')
 														]?.at(-1);
-														commandOptionButton.scrollIntoView({ block: 'center' });
+
+														if (commandOptionButton && container) {
+															const elTop = commandOptionButton.offsetTop;
+															const elHeight = commandOptionButton.offsetHeight;
+															const containerHeight = container.clientHeight;
+
+															// Center the selected button in the container
+															container.scrollTop = elTop - containerHeight / 2 + elHeight / 2;
+														}
 													}
 
 													if (commandsContainerElement && e.key === 'ArrowDown') {
 														e.preventDefault();
 														commandsElement.selectDown();
 
+														const container = document.getElementById('command-options-container');
 														const commandOptionButton = [
 															...document.getElementsByClassName('selected-command-option-button')
 														]?.at(-1);
-														commandOptionButton.scrollIntoView({ block: 'center' });
+
+														if (commandOptionButton && container) {
+															const elTop = commandOptionButton.offsetTop;
+															const elHeight = commandOptionButton.offsetHeight;
+															const containerHeight = container.clientHeight;
+
+															// Center the selected button in the container
+															container.scrollTop = elTop - containerHeight / 2 + elHeight / 2;
+														}
 													}
 
 													if (commandsContainerElement && e.key === 'Enter') {
