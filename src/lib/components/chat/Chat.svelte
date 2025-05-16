@@ -119,10 +119,10 @@
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
 	let selectedToolIds = [];
+	let selectedFilterIds = [];
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
-	let reasoningEnabled = false;
 
 	let chat = null;
 	let tags = [];
@@ -147,8 +147,8 @@
 			prompt = '';
 			files = [];
 			selectedToolIds = [];
+			selectedFilterIds = [];
 			webSearchEnabled = false;
-			reasoningEnabled = false;
 			imageGenerationEnabled = false;
 
 			if (localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
@@ -161,8 +161,8 @@
 						prompt = input.prompt;
 						files = input.files;
 						selectedToolIds = input.selectedToolIds;
+						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
-						reasoningEnabled = input.reasoningEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
 					}
@@ -427,8 +427,8 @@
 			prompt = '';
 			files = [];
 			selectedToolIds = [];
+			selectedFilterIds = [];
 			webSearchEnabled = false;
-			reasoningEnabled = false;
 			imageGenerationEnabled = false;
 			codeInterpreterEnabled = false;
 
@@ -441,10 +441,10 @@
 					prompt = input.prompt;
 					files = input.files;
 					selectedToolIds = input.selectedToolIds;
+					selectedFilterIds = input.selectedFilterIds;
 					webSearchEnabled = input.webSearchEnabled;
 					imageGenerationEnabled = input.imageGenerationEnabled;
 					codeInterpreterEnabled = input.codeInterpreterEnabled;
-					reasoningEnabled = input.reasoningEnabled;
 				}
 			} catch (e) {}
 		}
@@ -751,10 +751,6 @@
 		}
 		if ($page.url.searchParams.get('web-search') === 'true') {
 			webSearchEnabled = true;
-		}
-
-		if ($page.url.searchParams.get('reasoning') === 'true') {
-			reasoningEnabled = true;
 		}
 
 		if ($page.url.searchParams.get('image-generation') === 'true') {
@@ -1626,6 +1622,7 @@
 				},
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
+				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 				tool_servers: $toolServers,
 
@@ -1644,8 +1641,7 @@
 						$config?.features?.enable_web_search &&
 						($user?.role === 'admin' || $user?.permissions?.features?.web_search)
 							? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
-							: false,
-					reasoning: reasoningEnabled
+							: false
 				},
 				variables: {
 					...getPromptVariables(
@@ -2068,10 +2064,10 @@
 								bind:prompt
 								bind:autoScroll
 								bind:selectedToolIds
+								bind:selectedFilterIds
 								bind:imageGenerationEnabled
 								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
-								bind:reasoningEnabled
 								bind:atSelectedModel
 								toolServers={$toolServers}
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
@@ -2125,10 +2121,10 @@
 								bind:prompt
 								bind:autoScroll
 								bind:selectedToolIds
+								bind:selectedFilterIds
 								bind:imageGenerationEnabled
 								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
-								bind:reasoningEnabled
 								bind:atSelectedModel
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								toolServers={$toolServers}

@@ -790,11 +790,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 ),
                 form_data["messages"],
             )
-        if "reasoning" in features:
-            form_data["enable_thinking"] = features["reasoning"]
-            form_data["chat_template_kwargs"] = {
-                "enable_thinking": features["thinking"]
-            }
 
     tool_ids = form_data.pop("tool_ids", None)
     files = form_data.pop("files", None)

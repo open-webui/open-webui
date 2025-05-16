@@ -26,7 +26,7 @@
 		<div class=" self-center text-sm font-semibold">{$i18n.t('Capabilities')}</div>
 	</div>
 	<div class="flex">
-		{#each Object.keys(capabilities) as capability}
+		{#each Object.keys(helpText) as capability}
 			<div class=" flex items-center gap-2 mr-3">
 				<Checkbox
 					state={capabilities[capability] ? 'checked' : 'unchecked'}

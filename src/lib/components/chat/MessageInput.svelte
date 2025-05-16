@@ -80,20 +80,20 @@
 	export let toolServers = [];
 
 	export let selectedToolIds = [];
+	export let selectedFilterIds = [];
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
-	export let reasoningEnabled = false;
 
 	$: onChange({
 		prompt,
 		files: files.filter((file) => file.type !== 'image'),
 		selectedToolIds,
+		selectedFilterIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
-		codeInterpreterEnabled,
-		reasoningEnabled
+		codeInterpreterEnabled
 	});
 
 	let showTools = false;
@@ -781,7 +781,6 @@
 														selectedToolIds = [];
 														webSearchEnabled = false;
 														imageGenerationEnabled = false;
-														reasoningEnabled = false;
 													}
 												}}
 												on:paste={async (e) => {
@@ -1005,7 +1004,6 @@
 													selectedToolIds = [];
 													webSearchEnabled = false;
 													imageGenerationEnabled = false;
-													reasoningEnabled = false;
 												}
 											}}
 											rows="1"
@@ -1153,24 +1151,6 @@
 											{/if}
 
 											{#if $_user}
-												{#if selectedModels.length > 0 && selectedModels.some( (model) => reasoningCapableModels.includes(model) )}
-													<Tooltip content={$i18n.t('Think before responding')} placement="top">
-														<button
-															on:click|preventDefault={() => (reasoningEnabled = !reasoningEnabled)}
-															type="button"
-															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {reasoningEnabled
-																? 'bg-blue-100 dark:bg-blue-500/20 border-blue-400/20 text-blue-500 dark:text-blue-400'
-																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
-														>
-															<LightBlub className="size-5" strokeWidth="1.75" />
-															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
-																>{$i18n.t('Reason')}</span
-															>
-														</button>
-													</Tooltip>
-												{/if}
-
 												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
