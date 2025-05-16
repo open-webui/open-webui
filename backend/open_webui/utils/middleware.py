@@ -340,6 +340,11 @@ async def chat_web_search_handler(
         log.exception(e)
         queries = [user_message]
 
+    # Check if generated queries are empty
+    if len(queries) == 1 and queries[0].strip() == "":
+        queries = [user_message]
+
+    # Check if queries are not found
     if len(queries) == 0:
         await event_emitter(
             {
