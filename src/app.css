@@ -409,7 +409,7 @@ input:-webkit-autofill {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-	background-color: #1E1E1E; 
+	background-color: #E8E8E8; 
 	border-radius: 6px;
 }
 

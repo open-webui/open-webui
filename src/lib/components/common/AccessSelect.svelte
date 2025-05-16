@@ -136,7 +136,7 @@
 
 		{#if showDropdown}
 			<div
-				class="flex flex-col absolute left-0 right-0 -mt-1 bg-lightGray-300 dark:bg-customGray-900 px-1 py-2 border-l border-b border-r border-lightGray-400 dark:border-customGray-700 rounded-b-lg z-10"
+				class="flex flex-col absolute left-0 right-0 -mt-2 bg-lightGray-300 dark:bg-customGray-900 px-1 py-2 border-l border-b border-r border-lightGray-400 dark:border-customGray-700 rounded-b-lg z-10"
 			>
                 <hr class=" border-lightGray-400 dark:border-gray-850 my-1.5" />
 				<button

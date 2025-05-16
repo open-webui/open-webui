@@ -39,24 +39,24 @@
 			type="button"
 			class={`flex items-center justify-between w-full text-sm h-10 px-3 py-2 ${
 				showCapabilitiesDropdown ? 'border' : ''
-			} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer`}
+			} border-lightGray-400 dark:border-customGray-700 rounded-md bg-lightGray-300 dark:bg-customGray-900 cursor-pointer`}
 			on:click={() => (showCapabilitiesDropdown = !showCapabilitiesDropdown)}
 		>
-			<span class="text-gray-500 dark:text-customGray-100">{$i18n.t('Chat View')}</span>
+			<span class="text-lightGray-100 dark:text-customGray-100">{$i18n.t('Chat View')}</span>
 			<ChevronDown className="size-3" />
 		</button>
 
 		{#if showCapabilitiesDropdown}
 			<div
-				class="max-h-60 pb-1 overflow-y-auto absolute z-50 w-full -mt-1 bg-white dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
+				class="max-h-60 pb-1 overflow-y-auto absolute z-50 w-full -mt-1 bg-lightGray-300 dark:bg-customGray-900 border-l border-r border-b border-lightGray-400 dark:border-customGray-700 rounded-b-md"
 			>
-				<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
+				<hr class="border-t border-lightGray-400 dark:border-customGray-700 mb-2 mt-1 mx-0.5" />
 				<div class="px-1">
 					{#each Object.keys(capabilities) as capability}
 						<div
 							role="button"
 							tabindex="0"
-							class="flex items-center rounded-xl w-full justify-between px-3 py-2 hover:bg-gray-100 dark:hover:bg-customGray-950 cursor-pointer text-sm dark:text-customGray-100"
+							class="flex items-center rounded-xl w-full justify-between px-3 py-2 hover:bg-lightGray-700 dark:hover:bg-customGray-950 cursor-pointer text-sm text-lightGray-100 dark:text-customGray-100"
 						>
                             <div class="flex items-center gap-2">
                                 {#if capabilityIcons[capability]}

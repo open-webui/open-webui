@@ -95,7 +95,7 @@
 	<div class="py-[22px] px-[15px] border-b border-lightGray-400 dark:border-customGray-700 ">
 		<button class="flex items-center gap-1" on:click={() => history.back()}>
 			<BackIcon />
-			<div class="flex items-center text-lightGray-100 dark:text-white md:self-center text-sm-plus font-medium leading-none px-0.5">
+			<div class="flex items-center text-lightGray-100 dark:text-customGray-100 md:self-center text-sm-plus font-medium leading-none px-0.5">
 				{$i18n.t('Create prompt')}
 			</div>
 		</button>
@@ -115,7 +115,7 @@
 							<div class="text-xs absolute left-2 top-1 text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('Title')}</div>
 						{/if}
 						<input
-							class={`px-2.5 text-sm ${title ? "mt-2" : "mt-0"} w-full h-12 bg-transparent text-lightGray-100 placeholder:text-lightGray-100 dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							class={`px-2.5 text-sm ${title ? "pt-2" : "pt-0"} w-full h-12 bg-transparent text-lightGray-100 placeholder:text-lightGray-100 dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 							placeholder={$i18n.t('Title')}
 							bind:value={title}
 							required
@@ -152,7 +152,7 @@
 						<div class="text-xs absolute left-2 top-1 text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('Description')}</div>
 					{/if}
 					<input
-						class={`px-2.5 text-sm ${description ? "mt-2" : "mt-0"} w-full text-lightGray-100 placeholder:text-lightGray-100 h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+						class={`px-2.5 text-sm ${description ? "pt-2" : "pt-0"} w-full text-lightGray-100 placeholder:text-lightGray-100 h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 						placeholder={$i18n.t('Description')}
 						bind:value={description}
 						required
@@ -165,7 +165,7 @@
 						<div class="text-xs absolute left-2 top-1 text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('Prompt Content')}</div>
 					{/if}
 					<Textarea
-						className={`px-2.5 py-2 text-sm ${content ? "mt-2" : "mt-0"} w-full text-lightGray-100 placeholder:text-lightGray-100 h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+						className={`px-2.5 py-2 text-sm ${content ? "pt-4" : "pt-2"} w-full text-lightGray-100 placeholder:text-lightGray-100 h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 						placeholder={$i18n.t('Prompt Content')}
 						bind:value={content}
 						rows={4}

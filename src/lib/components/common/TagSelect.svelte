@@ -120,7 +120,7 @@
 
 	{#if showDropdown && (available?.length > 0 || input)}
 		<div
-			class="max-h-60 overflow-y-auto absolute left-0 right-0 -mt-1 bg-lightGray-300 dark:bg-customGray-900 px-1 py-2 border-l border-b border-r border-lightGray-400 dark:border-customGray-700 rounded-b-lg z-10"
+			class="max-h-60 overflow-y-auto absolute left-0 right-0 -mt-2 bg-lightGray-300 dark:bg-customGray-900 px-1 py-2 border-l border-b border-r border-lightGray-400 dark:border-customGray-700 rounded-b-lg z-10"
 		>
         <hr class="border-t border-lightGray-400 dark:border-customGray-700 mb-2"/>
         <div class="px-3">

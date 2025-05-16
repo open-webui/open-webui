@@ -141,7 +141,7 @@
 </script>
 
 <div class="w-full max-h-full">
-	<div class="py-5 px-4 border-b border-customGray-700">
+	<div class="py-5 px-4 border-b border-lightGray-400 dark:border-customGray-700">
 		<button
 			class="flex items-center gap-1"
 			on:click={() => {
@@ -152,36 +152,36 @@
 				<BackIcon />
 			</div>
 			{#if edit}
-				<div class=" self-center font-medium text-sm">{$i18n.t('Edit Knowledge')}</div>
+				<div class=" self-center font-medium text-sm text-lightGray-100 dark:text-customGray-100">{$i18n.t('Edit Knowledge')}</div>
 			{:else}
-				<div class=" self-center font-medium text-sm">{$i18n.t('Create Knowledge')}</div>
+				<div class=" self-center font-medium text-sm text-lightGray-100 dark:text-customGray-100">{$i18n.t('Create Knowledge')}</div>
 			{/if}
 		</button>
 	</div>
 	<div class="flex w-[34rem] py-3 px-4">
 		<form
-			class="w-full flex flex-col dark:bg-customGray-800 rounded-2xl pt-6 pb-3 px-3"
+			class="w-full flex flex-col bg-lightGray-550 dark:bg-customGray-800 rounded-2xl pt-6 pb-3 px-3"
 			on:submit|preventDefault={() => {
 				submitHandler();
 			}}
 		>
 			<div class="flex flex-col w-full mb-1.5">
 				<div class="mb-1.5">
-					<div class="relative w-full dark:bg-customGray-900 rounded-md">
+					<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 						{#if name}
-							<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+							<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 								{$i18n.t('Name')}
 							</div>
 						{/if}
 						<input
-							class={`px-2.5 text-sm ${name ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							class={`px-2.5 text-sm ${name ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent text-lightGray-100 dark:text-customGray-100 placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 outline-none`}
 							placeholder={$i18n.t('Name')}
 							bind:value={name}
 							required
 						/>
 						{#if !name}
 							<span
-								class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+								class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-lightGray-100/50 dark:text-customGray-100/50 pointer-events-none select-none"
 							>
 								{$i18n.t('What are you working on')}
 							</span>
@@ -189,14 +189,14 @@
 					</div>
 				</div>
 				<div class="mb-1">
-					<div class="relative w-full dark:bg-customGray-900 rounded-md">
+					<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 						{#if description}
-							<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+							<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 								{$i18n.t('Description')}
 							</div>
 						{/if}
 						<Textarea
-							className={`px-2.5 py-2.5 text-sm ${description ? 'mt-2' : 'mt-0'} w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							className={`px-2.5 py-2.5 text-sm ${description ? 'pt-4' : 'pt-2'} w-full h-20 bg-transparent text-lightGray-100 dark:text-customGray-100 placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 outline-none`}
 							placeholder={$i18n.t('Description')}
 							bind:value={description}
 							rows={4}
@@ -204,7 +204,7 @@
 						/>
 						{#if !description}
 							<span
-								class="absolute top-6.5 w-45 text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+								class="absolute top-6.5 w-45 text-right right-2.5 -translate-y-1/2 text-xs text-lightGray-100/50 dark:text-customGray-100/50 pointer-events-none select-none"
 							>
 								{$i18n.t('Describe your knowledge base and objectives')}
 							</span>
@@ -212,13 +212,13 @@
 					</div>
 				</div>
 				<div>
-					<div class="w-full flex py-2.5 border-b border-customGray-700 mb-2.5">
-						<div class="w-[17.5rem] text-xs dark:text-customGray-300">
+					<div class="w-full flex py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5">
+						<div class="w-[17.5rem] text-xs text-lightGray-100 dark:text-customGray-300">
 							{$i18n.t('Knowledge base')}
 						</div>
 						{#if files.length > 0}
-							<div class="w-20 text-xs dark:text-customGray-300">{formatFileSize(totalFileSize)}</div>
-							<div class="w-20 text-xs dark:text-customGray-300">Added</div>
+							<div class="w-20 text-xs text-lightGray-100 dark:text-customGray-300">{formatFileSize(totalFileSize)}</div>
+							<div class="w-20 text-xs text-lightGray-100 dark:text-customGray-300">Added</div>
 						{/if}
 					</div>
 					{#if files.length > 0}
@@ -251,8 +251,8 @@
 					<Dropzone {uploadFileHandler} />
 				</div>
 				<div>
-					<div class="py-2.5 border-b border-customGray-700 mb-2.5">
-						<div class="text-xs dark:text-customGray-300">{$i18n.t('Organization')}</div>
+					<div class="py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5">
+						<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Organization')}</div>
 					</div>
 					<AccessSelect bind:accessControl accessRoles={['read', 'write']} />
 				</div>
@@ -261,9 +261,9 @@
 			<div class="flex justify-end mt-2">
 				<div>
 					<button
-						class=" text-xs w-[10.5rem] h-10 px-3 py-2 transition rounded-lg {loading
-							? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
-							: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center"
+						class=" text-xs w-[10.5rem] h-10 px-3 py-2 font-medium transition rounded-lg {loading
+							? ' cursor-not-allowed bg-lightGray-300 hover:bg-lightGray-500 text-lightGray-100 dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
+							: 'bg-lightGray-300 hover:bg-lightGray-500 text-lightGray-100 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center"
 						type="submit"
 						disabled={loading}
 					>
