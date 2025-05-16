@@ -284,6 +284,10 @@ input[type='number'] {
 	@apply line-clamp-1 absolute;
 }
 
+html.dark .ProseMirror p.is-editor-empty:first-child::before {
+	color: #B3B3B3;
+}
+
 .ai-autocompletion::after {
 	color: #a0a0a0;
 

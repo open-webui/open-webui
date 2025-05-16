@@ -639,7 +639,7 @@
 			</div>
 		</div>
 
-		<div class="{transparentBackground ? 'bg-transparent' : 'bg-white dark:bg-customGray-900'} ">
+		<div class="{transparentBackground ? 'bg-transparent' : 'bg-lightGray-300 dark:bg-customGray-900'} ">
 			<div
 				class="{($settings?.widescreenMode ?? null)
 					? 'max-w-full'
@@ -696,7 +696,7 @@
 							}}
 						>
 							<div
-								class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-gray-600/5 dark:bg-customGray-800 dark:text-gray-100"
+								class="flex-1 flex flex-col relative w-full rounded-3xl px-1 bg-lightGray-800 dark:bg-customGray-800 dark:text-gray-100"
 								dir={$settings?.chatDirection ?? 'LTR'}
 							>
 								{#if files.length > 0}
@@ -1223,7 +1223,7 @@
 											}}
 										>
 											<button
-												class="bg-transparent hover:bg-gray-100 text-gray-800 dark:text-white dark:hover:bg-customGray-900 transition rounded-md p-[3px] outline-none focus:outline-none"
+												class="bg-transparent hover:bg-gray-100 text-customGray-900 dark:text-customGray-100 dark:hover:bg-customGray-900 transition rounded-md p-[3px] outline-none focus:outline-none"
 												type="button"
 												aria-label="More"
 											>
@@ -1245,7 +1245,7 @@
 															class="p-[3px] flex gap-1.5 items-center text-xs rounded-md font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
 																? 'bg-blue-100 dark:bg-customBlue-700/60 text-blue-500 dark:text-white'
-																: 'bg-transparent text-gray-600 dark:text-gray-400 border-gray-200 hover:bg-gray-100 dark:hover:bg-customGray-900'}"
+																: 'bg-transparent text-customGray-900 dark:text-customGray-100 border-gray-200 hover:bg-gray-100 dark:hover:bg-customGray-900'}"
 														>
 															<WebSearchIcon />
 															{#if webSearchEnabled || ($settings?.webSearch ?? false) === 'always'}
@@ -1269,7 +1269,7 @@
 															type="button"
 															class="p-[3px] flex gap-1.5 items-center text-xs rounded-md font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {imageGenerationEnabled
 																? 'bg-gray-100 dark:bg-customBlue-700/60 text-gray-600 dark:text-white'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-customGray-900 '}"
+																: 'bg-transparent text-customGray-900 dark:text-customGray-100 border-gray-200 hover:bg-gray-100 dark:hover:bg-customGray-900 '}"
 														>
 															<ImageGenerateIcon />
 															{#if imageGenerationEnabled}
@@ -1293,7 +1293,7 @@
 															type="button"
 															class="p-[3px] flex gap-1.5 items-center text-xs rounded-lg font-medium transition-colors duration-300 focus:outline-none max-w-full overflow-hidden {codeInterpreterEnabled
 																? 'bg-gray-100 dark:bg-customBlue-700/60 text-gray-600 dark:text-white'
-																: 'bg-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-customGray-900 '}"
+																: 'bg-transparent text-customGray-900 dark:text-customGray-100 border-gray-200 hover:bg-gray-100 dark:hover:bg-customGray-900 '}"
 														>
 															<CodeInterpreterIcon />
 															{#if codeInterpreterEnabled}
@@ -1314,7 +1314,7 @@
 											<Tooltip content={$i18n.t('Magic prompt')}>
 												<button
 													id="magic-search-button"
-													class={`${isMagicLoading ? 'dark:bg-customBlue-700/60' : ''} text-gray-600 dark:text-gray-300 text-xs leading-none hover:text-gray-700 dark:hover:text-white ${!isMagicLoading? 'dark:hover:bg-customGray-900' : ''}  transition rounded-md py-[3px] px-[5px] mr-0.5 self-center`}
+													class={`${isMagicLoading ? 'dark:bg-customBlue-700/60' : ''} text-customGray-900 dark:text-customGray-100 text-xs leading-none hover:text-gray-700 dark:hover:text-white ${!isMagicLoading? 'dark:hover:bg-customGray-900' : ''}  transition rounded-md py-[3px] px-[5px] mr-0.5 self-center`}
 													type="button"
 													aria-label="Magic Prompt"
 													disabled={prompt === '' || isMagicLoading}
@@ -1337,7 +1337,7 @@
 											<Tooltip content={$i18n.t('Record voice')}>
 												<button
 													id="voice-input-button"
-													class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 dark:hover:bg-customGray-900 transition rounded-md p-[3px] mr-0.5 self-center"
+													class=" text-customGray-900 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-gray-200 dark:hover:bg-customGray-900 transition rounded-md p-[3px] mr-0.5 self-center"
 													type="button"
 													on:click={async () => {
 														try {
@@ -1377,7 +1377,7 @@
 												<div class=" flex items-center">
 													<Tooltip content={$i18n.t('Call')}>
 														<button
-															class="bg-black text-white hover:bg-gray-900 dark:bg-transparent dark:text-customGray-100 dark:hover:bg-customGray-900 transition rounded-md p-[3px] self-center"
+															class=" hover:bg-gray-900 dark:bg-transparent text-customGray-900 dark:text-customGray-100 dark:hover:bg-customGray-900 transition rounded-md p-[3px] self-center"
 															type="button"
 															on:click={async () => {
 																if (selectedModels.length > 1) {

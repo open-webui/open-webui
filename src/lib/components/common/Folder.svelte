@@ -132,15 +132,15 @@
 		>
 			<!-- svelte-ignore a11y-no-static-element-interactions -->
 			<div
-				class="w-full group rounded-md relative flex items-center justify-between text-gray-500 dark:text-gray-500 transition"
+				class="w-full group rounded-md relative flex items-center justify-between text-lightGray-450 dark:text-gray-500 transition"
 			>
 				<button class="w-full py-1.5 pl-2.5 flex items-center {onAdd ? '' : 'gap-1.5'} text-sm font-medium">
-					<div class="text-gray-300 dark:text-customGray-300">
+					<div class="text-lightGray-100 dark:text-customGray-300">
 						{#if !typeChats}
 							{#if open}
-								<ChevronDown className=" size-3" strokeWidth="2.5" />
+								<ChevronDown className=" size-2" strokeWidth="2.5" />
 							{:else}
-								<ChevronRight className=" size-3" strokeWidth="2.5" />
+								<ChevronRight className=" size-2" strokeWidth="2.5" />
 							{/if}
 						{/if}
 					</div>
@@ -164,7 +164,7 @@
 					>
 						<Tooltip content={onAddLabel}>
 							<button
-								class="p-0.5 dark:hover:bg-customGray-900 rounded-md touch-auto"
+								class="p-0.5 text-customGray-900 dark:hover:bg-customGray-900 rounded-md touch-auto"
 								on:click={(e) => {}}
 							>
 								<AddFolderIcon />	

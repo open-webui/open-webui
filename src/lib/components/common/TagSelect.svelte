@@ -63,26 +63,26 @@
 >
 	<button
         type="button"
-		class={`${isFocused ? 'border' : ''} dark:border-customGray-700 w-full flex flex-wrap items-center gap-2 bg-white dark:bg-customGray-900 rounded-md px-2.5 pb-1.5 ${selected?.length > 0 ? 'pt-[22px]' : 'pt-1.5'}`}
+		class={`${isFocused ? 'border' : ''} border-lightGray-400 dark:border-customGray-700 w-full flex flex-wrap items-center gap-2 bg-lightGray-300 dark:bg-customGray-900 rounded-md px-2.5 pb-[9px] ${selected?.length > 0 ? 'pt-[22px]' : 'pt-[11px]'}`}
 		on:click={() => {
             inputElement.focus();
             emptyInputPlaceholderVisible = false;
         }}
 	>
         {#if selected?.length > 0}
-        <div class="absolute top-1 text-xs text-customGray-100/50">{$i18n.t('Category')}</div>
+        <div class="absolute top-1 text-xs text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('Category')}</div>
         {/if}
         {#if emptyInputPlaceholderVisible}
-        <div class="flex items-center absolute justify-between pr-2.5 w-[calc(100%-10px)] dark:bg-customGray-900">
-            <p class="text-sm dark:text-customGray-100">{$i18n.t('Category')}</p>
-            <p class="text-xs dark:text-customGray-100/50">{$i18n.t('E.g. Finance or Marketing or Name of project')}</p>
+        <div class="flex items-center absolute justify-between pr-2.5 w-[calc(100%-10px)] bg-lightGray-300 dark:bg-customGray-900">
+            <p class="text-sm text-lightGray-100 dark:text-customGray-100">{$i18n.t('Category')}</p>
+            <p class="text-xs text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('E.g. Finance or Marketing or Name of project')}</p>
         </div>
         {/if}
 		{#if selected}
 			{#each selected as tag, i}
 				<span
 					style="background-color: {getTagColor(tag.name)}"
-					class="px-2 py-1 rounded-lg text-sm leading-none text-customGray-100 flex items-center"
+					class="px-2 py-1 rounded-lg text-sm leading-none text-white dark:text-customGray-100 flex items-center"
 				>
 					{tag.name}
 					<button
@@ -114,19 +114,19 @@
                 }    
             }}
 			on:keydown={handleKeyDown}
-			class={`flex-1 min-w-[8ch] outline-none placeholder:text-xs placeholder:text-customGray-100/50 text-sm bg-transparent py-1`}
+			class={`flex-1 min-w-[8ch] outline-none placeholder:text-xs placeholder:text-lightGray-100/50 dark:placeholder:text-customGray-100/50 text-sm bg-transparent py-1`}
 		/>
         </button>
 
 	{#if showDropdown && (available?.length > 0 || input)}
 		<div
-			class="max-h-60 overflow-y-auto absolute left-0 right-0 -mt-1 bg-white dark:bg-customGray-900 px-1 py-2 border-l border-b border-r border-gray-300 dark:border-customGray-700 rounded-b-lg shadow z-10"
+			class="max-h-60 overflow-y-auto absolute left-0 right-0 -mt-1 bg-lightGray-300 dark:bg-customGray-900 px-1 py-2 border-l border-b border-r border-lightGray-400 dark:border-customGray-700 rounded-b-lg z-10"
 		>
-        <hr class="border-t border-customGray-700 mb-2"/>
+        <hr class="border-t border-lightGray-400 dark:border-customGray-700 mb-2"/>
         <div class="px-3">
 			{#each available as tag}
 				<div
-					class="px-2 py-1 rounded-lg text-sm w-fit cursor-pointer mb-2 text-customGray-100"
+					class="px-2 py-1 rounded-lg text-sm w-fit cursor-pointer mb-2 text-white dark:text-customGray-100"
 					style="background-color: {getTagColor(tag.name)}"
 					on:click={() => addTag(tag.name)}
 				>
@@ -136,7 +136,7 @@
 
 			{#if input && !$tags.find((t) => t.name.toLowerCase() === input.toLowerCase())}
 				<button
-					class="px-3 py-2 text-sm dark:text-customGray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-customGray-800"
+					class="px-3 py-2 text-sm text-lightGray-100 dark:text-customGray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-customGray-800"
 					on:click={() => addTag(input)}
 				>
                     {$i18n.t('Add')} "{input}"

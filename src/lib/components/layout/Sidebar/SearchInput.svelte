@@ -81,7 +81,7 @@
 </script>
 
 <div class="pl-[14px] pr-[11px] mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
-	<div class="relative flex w-full rounded-lg border border-customGray-700 dark:text-customGray-200 dark:hover:text-white dark:bg-customGray-900" id="chat-search">
+	<div class="relative flex w-full rounded-lg border border-lightGray-500 dark:border-customGray-700 text-frayLight-650 dark:text-customGray-200 dark:hover:text-white bg-lightGray-600 dark:bg-customGray-900" id="chat-search">
 		<div class="absolute left-[66px] self-center pl-3 py-2 rounded-l-xl bg-transparent">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"

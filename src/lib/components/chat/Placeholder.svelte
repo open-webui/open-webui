@@ -216,10 +216,10 @@
 						showSetDefault={!history.currentId}
 					/>
 					<div
-						class="flex space-x-[5px] items-center py-[3px] px-[6px] rounded-md dark:bg-customGray-800"
+						class="flex space-x-[5px] items-center py-[3px] px-[6px]  rounded-md bg-lightGray-800 dark:bg-customGray-800"
 					>
 						<BookIcon />
-						<a class="min-w-fit text-xs dark:text-customGray-600" href="/workspace/prompts"
+						<a class="min-w-fit text-xs text-customGray-600 dark:text-customGray-600 font-medium" href="/workspace/prompts"
 							>{$i18n.t('Prompts')}
 						</a>
 					</div>

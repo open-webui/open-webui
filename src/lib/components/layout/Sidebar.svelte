@@ -490,7 +490,7 @@
 		? 'md:relative w-[260px] max-w-[260px]'
 		: '-translate-x-[260px] w-[0px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-gray-50 text-gray-900 dark:bg-customGray-800 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
+		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-lightGray-200 text-gayLight-100 dark:bg-customGray-800 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
         "
 	data-state={$showSidebar}
 >
@@ -518,7 +518,7 @@
 			: 'invisible'}"
 	>
 		<div
-			class="flex align-center justify-between items-center px-2.5 pb-2 border-b border-customGray-700 mb-2.5"
+			class="flex align-center justify-between items-center px-2.5 pb-2 border-b border-lightGray-500 dark:border-customGray-700 mb-2.5"
 		>
 			<div class="flex flex-col font-primary">
 				{#if $user !== undefined}
@@ -543,19 +543,19 @@
 									alt="User profile"
 								/>
 							</div>
-							<div class=" self-center font-medium text-sm mr-1">{$company?.name}</div>
+							<div class=" self-center font-medium text-sm mr-1 text-lightGray-1300 dark:text-customGray-100">{$company?.name}</div>
 							<ChevronDown className=" size-3" strokeWidth="2.5" />
 						</button>
 					</UserMenu>
 				{/if}
 			</div>
 			<button
-				class=" cursor-pointer flex justify-center items-center w-[25px] h-[25px] rounded-lg hover:bg-gray-100 dark:hover:bg-customGray-900 border border-transparent dark:hover:border-customGray-700 transition"
+				class=" cursor-pointer flex justify-center items-center w-[25px] h-[25px] rounded-lg hover:bg-lightGray-700 dark:hover:bg-customGray-900 border border-transparent dark:hover:border-customGray-700 transition"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
 			>
-				<div class=" m-auto self-center">
+				<div class=" m-auto self-center text-customGray-900 dark:text-customGray-300">
 					<ShowSidebarIcon />
 				</div>
 			</button>
@@ -576,7 +576,7 @@
 		<div class="px-2">
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
 				<div
-					class="{$page.url.pathname.startsWith('/workspace/models') ? 'dark:bg-customGray-900' : ''} flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition"
+					class="{$page.url.pathname.startsWith('/workspace/models') ? 'dark:bg-customGray-900 bg-lightGray-700' : ''} font-medium flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-lightGray-100 dark:text-customGray-100 dark:hover:text-white hover:bg-lightGray-700 dark:hover:bg-customGray-900 transition"
 				>
 					<Assistans />
 					<a
@@ -597,7 +597,7 @@
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
 				<div
-					class="{$page.url.pathname.startsWith('/workspace/knowledge') ? 'dark:bg-customGray-900' : ''} flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition"
+					class="{$page.url.pathname.startsWith('/workspace/knowledge') ? 'dark:bg-customGray-900 bg-lightGray-700' : ''} font-medium flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-lightGray-100 dark:text-customGray-100 dark:hover:text-white hover:bg-lightGray-700 dark:hover:bg-customGray-900 transition"
 				>
 					<Knowledge />
 					<a
@@ -620,7 +620,7 @@
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
 				<div
-					class="{$page.url.pathname.startsWith('/workspace/prompts') ? 'dark:bg-customGray-900' : ''} flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-gray-300 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white dark:hover:bg-customGray-900 transition"
+					class="{$page.url.pathname.startsWith('/workspace/prompts') ? 'dark:bg-customGray-900 bg-lightGray-700' : ''} font-medium flex items-center space-x-[10px] rounded-[5px] px-2 py-1.5 text-lightGray-100 dark:text-customGray-100 dark:hover:text-white hover:bg-lightGray-700 dark:hover:bg-customGray-900 transition"
 				>
 					<Prompts />
 					<a
@@ -641,11 +641,11 @@
 		</div>
 
 		<div
-			class="pl-[14px] pr-[11px] my-2 flex justify-between space-x-1 text-gray-600 dark:text-gray-400"
+			class="pl-[14px] pr-[11px] my-2 flex justify-between space-x-1 text-lightGray-100 dark:text-customGray-200"
 		>
 			<a
 				id="sidebar-new-chat-button"
-				class="flex justify-center items-center flex-1 rounded-lg text-xs px-2 py-1 border border-customGray-700 h-[35px] text-right text-gray-850 dark:text-customGray-200 dark:hover:text-white dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-customGray-950 transition no-drag-region"
+				class="font-medium flex justify-center items-center flex-1 rounded-lg text-xs px-2 py-1 border border-lightGray-400 dark:border-customGray-700 h-[35px] text-right text-lightGray-100 dark:text-customGray-200 dark:hover:text-white bg-lightGray-300 dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-customGray-950 transition no-drag-region"
 				href="/"
 				draggable="false"
 				on:click={async () => {
@@ -861,7 +861,7 @@
 							{#each $chats as chat, idx}
 								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
 									<div
-										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
+										class="w-full pl-2.5 text-xs text-lightGray-450 dark:text-gray-500 font-medium {idx ===
 										0
 											? ''
 											: 'pt-5'} pb-1.5"
