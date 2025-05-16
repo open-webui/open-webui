@@ -91,10 +91,6 @@ extract_msg
 pydub
 duckduckgo-search~=7.2.1
 
-# Presidio PII Filter Dependencies
-presidio-analyzer
-presidio-anonymizer
-
 ## Google Drive
 google-api-python-client
 google-auth-httplib2
