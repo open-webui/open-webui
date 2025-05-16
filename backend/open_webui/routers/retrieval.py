@@ -170,6 +170,18 @@ def get_rf(
                 except Exception as e:
                     log.error(f"ExternalReranking: {e}")
                     raise Exception(ERROR_MESSAGES.DEFAULT(e))
+            elif "." in engine:
+                try:
+                    import importlib
+                    from open_webui.retrieval.models.base_reranker import BaseReranker
+
+                    mod, clz = engine.rsplit(sep=".", maxsplit=1)
+                    mod = importlib.import_module(mod)
+                    instance: BaseReranker = getattr(mod, clz)(model=reranking_model)
+                    return instance
+                except Exception as e:
+                    log.error(f"Reranker Plugin: {e}")
+                    raise Exception(ERROR_MESSAGES.DEFAULT(e))
             else:
                 import sentence_transformers
 
