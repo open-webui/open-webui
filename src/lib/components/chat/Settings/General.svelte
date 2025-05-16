@@ -233,15 +233,16 @@
 </script>
 
 <section class="flex flex-col h-full justify-between text-sm">
-	<div class="  overflow-y-scroll max-h-[28rem] lg:max-h-full">
+	<div class="overflow-y-scroll max-h-[28rem] lg:max-h-full">
 		<div class="">
 			<h2 class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Settings')}</h2>
 
 			<div class="flex w-full justify-between">
-				<label for="theme-select" class=" self-center text-xs font-medium">{$i18n.t('Theme')}</label>
+				<label for="theme-select" class=" self-center text-xs font-medium">{$i18n.t('Theme')}</label
+				>
 				<div class="flex items-center relative">
 					<select
-					id="theme-select"
+						id="theme-select"
 						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
 						bind:value={selectedTheme}
 						placeholder="Select a theme"
@@ -258,12 +259,14 @@
 				</div>
 			</div>
 
-			<div class=" flex w-full justify-between">
-				<label for="language-select" class=" self-center text-xs font-medium">{$i18n.t('Language')}</label>
+			<div class="flex w-full justify-between">
+				<label for="language-select" class=" self-center text-xs font-medium"
+					>{$i18n.t('Language')}</label
+				>
 				<div class="flex items-center relative">
 					<select
-					id="language-select"
-						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
+						id="language-select"
+						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
 						bind:value={lang}
 						placeholder="Select a language"
 						on:change={(e) => {
@@ -290,15 +293,19 @@
 			{/if}
 
 			<div>
-				<div class=" py-0.5 flex w-full justify-between">
-					<div class=" self-center text-xs font-medium">{$i18n.t('Notifications')}</div>
-
+				<div class="py-0.5 flex w-full justify-between">
+					<label class="self-center text-xs font-medium" id="notification-label">
+						{$i18n.t('Notifications')}
+					</label>
 					<button
 						class="p-1 px-3 text-xs flex rounded-sm transition"
+						type="button"
+						role="switch"
+						aria-checked={notificationEnabled}
+						aria-labelledby="notification-label"
 						on:click={() => {
 							toggleNotification();
 						}}
-						type="button"
 					>
 						{#if notificationEnabled === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
@@ -314,7 +321,9 @@
 			<hr class="border-gray-50 dark:border-gray-850 my-3" />
 
 			<div>
-				<label for="enter-system-prompt" class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</label>
+				<label for="enter-system-prompt" class=" my-2.5 text-sm font-medium"
+					>{$i18n.t('System Prompt')}</label
+				>
 				<Textarea
 					bind:value={system}
 					className="w-full text-sm bg-white dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
