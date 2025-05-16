@@ -58,6 +58,7 @@ class FeedbackResponse(BaseModel):
     type: str
     data: Optional[dict] = None
     meta: Optional[dict] = None
+    snapshot: Optional[dict] = None
     created_at: int
     updated_at: int
 
