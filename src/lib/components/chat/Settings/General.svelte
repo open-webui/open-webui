@@ -238,9 +238,10 @@
 			<div class=" mb-1 text-sm font-medium">{$i18n.t('WebUI Settings')}</div>
 
 			<div class="flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Theme')}</div>
+				<label for="theme-select" class=" self-center text-xs font-medium">{$i18n.t('Theme')}</label>
 				<div class="flex items-center relative">
 					<select
+					id="theme-select"
 						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
 						bind:value={selectedTheme}
 						placeholder="Select a theme"
@@ -258,9 +259,10 @@
 			</div>
 
 			<div class=" flex w-full justify-between">
-				<div class=" self-center text-xs font-medium">{$i18n.t('Language')}</div>
+				<label for="language-select" class=" self-center text-xs font-medium">{$i18n.t('Language')}</label>
 				<div class="flex items-center relative">
 					<select
+					id="language-select"
 						class=" dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right"
 						bind:value={lang}
 						placeholder="Select a language"
@@ -312,11 +314,12 @@
 			<hr class="border-gray-50 dark:border-gray-850 my-3" />
 
 			<div>
-				<div class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</div>
+				<label for="enter-system-prompt" class=" my-2.5 text-sm font-medium">{$i18n.t('System Prompt')}</label>
 				<Textarea
 					bind:value={system}
 					className="w-full text-sm bg-white dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
 					rows="4"
+					id="enter-system-prompt"
 					placeholder={$i18n.t('Enter system prompt here')}
 				/>
 			</div>
@@ -421,4 +424,4 @@
 			{$i18n.t('Save')}
 		</button>
 	</div>
-</div>
+</section>
