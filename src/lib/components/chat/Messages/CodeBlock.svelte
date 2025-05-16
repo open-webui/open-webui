@@ -24,7 +24,7 @@
 	export let id = '';
 
 	export let onSave = (e) => {};
-	export let onCode = (e) => {};
+	export let onUpdate = (e) => {};
 	export let onPreview = (e) => {};
 
 	export let save = false;
@@ -340,6 +340,8 @@
 				await drawMermaidDiagram();
 			})();
 		}
+
+		onUpdate(token);
 	};
 
 	$: if (token) {
@@ -351,8 +353,6 @@
 	$: if (_token) {
 		render();
 	}
-
-	$: onCode({ lang, code });
 
 	$: if (attributes) {
 		onAttributesUpdate();
@@ -386,10 +386,10 @@
 
 	onMount(async () => {
 		console.log('codeblock', lang, code);
-
-		if (lang) {
-			onCode({ lang, code });
+		if (token) {
+			onUpdate(token);
 		}
+
 		if (document.documentElement.classList.contains('dark')) {
 			mermaid.initialize({
 				startOnLoad: true,

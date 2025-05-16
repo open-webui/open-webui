@@ -31,8 +31,8 @@
 	export let save = false;
 	export let preview = false;
 
+	export let onSave: Function = () => {};
 	export let onUpdate: Function = () => {};
-	export let onCode: Function = () => {};
 	export let onPreview: Function = () => {};
 
 	export let onTaskClick: Function = () => {};
@@ -98,15 +98,15 @@
 				{attributes}
 				{save}
 				{preview}
-				{onCode}
-				{onPreview}
 				onSave={(value) => {
-					onUpdate({
+					onSave({
 						raw: token.raw,
 						oldContent: token.text,
 						newContent: value
 					});
 				}}
+				{onUpdate}
+				{onPreview}
 			/>
 		{:else}
 			{token.text}

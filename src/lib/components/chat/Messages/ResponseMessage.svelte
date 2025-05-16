@@ -841,7 +841,7 @@
 										onAddMessages={({ modelId, parentId, messages }) => {
 											addMessages({ modelId, parentId, messages });
 										}}
-										onUpdate={({ raw, oldContent, newContent }) => {
+										onSave={({ raw, oldContent, newContent }) => {
 											history.messages[message.id].content = history.messages[
 												message.id
 											].content.replace(raw, raw.replace(oldContent, newContent));

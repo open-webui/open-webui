@@ -16,8 +16,9 @@
 
 	export let sourceIds = [];
 
+	export let onSave = () => {};
 	export let onUpdate = () => {};
-	export let onCode = () => {};
+
 	export let onPreview = () => {};
 
 	export let onSourceClick = () => {};
@@ -49,8 +50,8 @@
 		{preview}
 		{onTaskClick}
 		{onSourceClick}
+		{onSave}
 		{onUpdate}
-		{onCode}
 		{onPreview}
 	/>
 {/key}

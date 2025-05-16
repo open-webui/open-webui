@@ -25,7 +25,7 @@
 	export let preview = false;
 	export let floatingButtons = true;
 
-	export let onUpdate = () => {};
+	export let onSave = () => {};
 	export let onSourceClick = () => {};
 	export let onTaskClick = () => {};
 
@@ -164,15 +164,9 @@
 		}, [])}
 		{onSourceClick}
 		{onTaskClick}
-		{onUpdate}
-		onPreview={async (value) => {
-			await artifactCode.set(value);
-			await showControls.set(true);
-			await showArtifacts.set(true);
-			await showOverview.set(false);
-		}}
-		onCode={(value) => {
-			const { lang, code } = value;
+		{onSave}
+		onUpdate={(token) => {
+			const { lang, text: code } = token;
 
 			if (
 				($settings?.detectArtifacts ?? true) &&
@@ -183,6 +177,13 @@
 				showArtifacts.set(true);
 				showControls.set(true);
 			}
+		}}
+		onPreview={async (value) => {
+			console.log('Preview', value);
+			await artifactCode.set(value);
+			await showControls.set(true);
+			await showArtifacts.set(true);
+			await showOverview.set(false);
 		}}
 	/>
 </div>
