@@ -464,11 +464,11 @@
 		}
 
 		if (now >= exp) {
-			await userSignOut();
+			const res = await userSignOut();
 			user.set(null);
-
 			localStorage.removeItem('token');
-			location.href = '/auth';
+
+			location.href = res?.redirect_url ?? '/auth';
 		}
 	};
 
