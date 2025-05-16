@@ -330,7 +330,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     try:
         filter_functions = [
             Functions.get_function_by_id(filter_id)
-            for filter_id in get_sorted_filter_ids(model)
+            for filter_id in get_sorted_filter_ids(request, model)
         ]
 
         result, _ = await process_filter_functions(

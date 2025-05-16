@@ -1635,6 +1635,7 @@
 				},
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
+
 				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 				tool_servers: $toolServers,
