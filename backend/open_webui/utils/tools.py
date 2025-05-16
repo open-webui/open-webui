@@ -152,9 +152,9 @@ def get_tools(
                 valves = Tools.get_tool_valves_by_id(tool_id) or {}
                 module.valves = module.Valves(**valves)
             if hasattr(module, "UserValves"):
-                extra_params["__user__"]["valves"] = module.UserValves(  # type: ignore
+                extra_params["__user__"].setdefault("valves", {}).update(module.UserValves(  # type: ignore
                     **Tools.get_user_valves_by_id_and_user_id(tool_id, user.id)
-                )
+                ))
 
             for spec in tool.specs:
                 # TODO: Fix hack for OpenAI API
