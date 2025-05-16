@@ -9,7 +9,7 @@ from fastapi import (
 )
 import logging
 
-from open_webui.utils.auth import get_verified_user
+from open_webui.utils.auth import get_metrics_user
 from open_webui.env import SRC_LOG_LEVELS
 from datetime import datetime
 
@@ -24,12 +24,13 @@ router = APIRouter()
 
 
 @router.get("/prompts")
-async def get_total_prompts(domain: str = None, user=Depends(get_verified_user)):
-    if not user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+async def get_total_prompts(domain: str = None, user=Depends(get_metrics_user)):
+    # For analyst role, enforce domain restriction
+    if user.role == "analyst":
+        # Force domain to user's domain for analysts
+        domain = user.domain
+
+    # Admin and global_analyst can see all domains or filter by domain
 
     total_prompts = (
         MessageMetrics.get_messages_number(domain)
@@ -47,12 +48,13 @@ async def get_total_prompts(domain: str = None, user=Depends(get_verified_user))
 
 
 @router.get("/daily/prompts")
-async def get_daily_prompts_number(domain: str = None, user=Depends(get_verified_user)):
-    if not user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+async def get_daily_prompts_number(domain: str = None, user=Depends(get_metrics_user)):
+    # For analyst role, enforce domain restriction
+    if user.role == "analyst":
+        # Force domain to user's domain for analysts
+        domain = user.domain
+
+    # Admin and global_analyst can see all domains or filter by domain
 
     total_daily_prompts = (
         MessageMetrics.get_daily_messages_number(domain=domain)
@@ -68,12 +70,13 @@ async def get_daily_prompts_number(domain: str = None, user=Depends(get_verified
 
 
 @router.get("/tokens")
-async def get_total_tokens(domain: str = None, user=Depends(get_verified_user)):
-    if not user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+async def get_total_tokens(domain: str = None, user=Depends(get_metrics_user)):
+    # For analyst role, enforce domain restriction
+    if user.role == "analyst":
+        # Force domain to user's domain for analysts
+        domain = user.domain
+
+    # Admin and global_analyst can see all domains or filter by domain
 
     total_tokens = (
         MessageMetrics.get_message_tokens_sum(domain)
@@ -90,12 +93,13 @@ async def get_total_tokens(domain: str = None, user=Depends(get_verified_user)):
 
 
 @router.get("/daily/tokens")
-async def get_daily_tokens(domain: str = None, user=Depends(get_verified_user)):
-    if not user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+async def get_daily_tokens(domain: str = None, user=Depends(get_metrics_user)):
+    # For analyst role, enforce domain restriction
+    if user.role == "analyst":
+        # Force domain to user's domain for analysts
+        domain = user.domain
+
+    # Admin and global_analyst can see all domains or filter by domain
 
     total_daily_tokens = (
         MessageMetrics.get_daily_message_tokens_sum(domain=domain)
@@ -112,13 +116,14 @@ async def get_daily_tokens(domain: str = None, user=Depends(get_verified_user)):
 
 @router.get("/historical/prompts")
 async def get_historical_prompts(
-    days: int = 7, domain: str = None, user=Depends(get_verified_user)
+    days: int = 7, domain: str = None, user=Depends(get_metrics_user)
 ):
-    if not user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    # For analyst role, enforce domain restriction
+    if user.role == "analyst":
+        # Force domain to user's domain for analysts
+        domain = user.domain
+
+    # Admin and global_analyst can see all domains or filter by domain
 
     # Handle both None and empty string for domain
     if domain == "":
@@ -136,13 +141,14 @@ async def get_historical_prompts(
 
 @router.get("/historical/tokens")
 async def get_historical_tokens(
-    days: int = 7, domain: str = None, user=Depends(get_verified_user)
+    days: int = 7, domain: str = None, user=Depends(get_metrics_user)
 ):
-    if not user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    # For analyst role, enforce domain restriction
+    if user.role == "analyst":
+        # Force domain to user's domain for analysts
+        domain = user.domain
+
+    # Admin and global_analyst can see all domains or filter by domain
 
     # Handle both None and empty string for domain
     if domain == "":
@@ -159,13 +165,7 @@ async def get_historical_tokens(
 
 
 @router.get("/models")
-async def get_models(user=Depends(get_verified_user)):
-    if user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
-
+async def get_models(user=Depends(get_metrics_user)):
     models = MessageMetrics.get_used_models() or []
     return {"models": models}
 
@@ -177,13 +177,14 @@ async def get_models(user=Depends(get_verified_user)):
 
 @router.get("/models/prompts")
 async def get_model_prompts(
-    model: str = None, domain: str = None, user=Depends(get_verified_user)
+    model: str = None, domain: str = None, user=Depends(get_metrics_user)
 ):
-    if not user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    # For analyst role, enforce domain restriction
+    if user.role == "analyst":
+        # Force domain to user's domain for analysts
+        domain = user.domain
+
+    # Admin and global_analyst can see all domains or filter by domain
 
     total_prompts = MessageMetrics.get_messages_number(domain, model)
     return {"total_prompts": total_prompts or 0}
@@ -196,13 +197,14 @@ async def get_model_prompts(
 
 @router.get("/models/daily/prompts")
 async def get_model_daily_prompts(
-    model: str = None, domain: str = None, user=Depends(get_verified_user)
+    model: str = None, domain: str = None, user=Depends(get_metrics_user)
 ):
-    if not user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    # For analyst role, enforce domain restriction
+    if user.role == "analyst":
+        # Force domain to user's domain for analysts
+        domain = user.domain
+
+    # Admin and global_analyst can see all domains or filter by domain
 
     total_daily_prompts = MessageMetrics.get_daily_messages_number(
         domain=domain, model=model
@@ -220,13 +222,14 @@ async def get_model_historical_prompts(
     days: int = 7,
     model: str = None,
     domain: str = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_metrics_user),
 ):
-    if not user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    # For analyst role, enforce domain restriction
+    if user.role == "analyst":
+        # Force domain to user's domain for analysts
+        domain = user.domain
+
+    # Admin and global_analyst can see all domains or filter by domain
 
     # Handle both None and empty string
     if domain == "":
@@ -250,14 +253,15 @@ async def get_range_metrics(
     end_date: str,
     domain: str = None,
     model: str = None,
-    user=Depends(get_verified_user),
+    user=Depends(get_metrics_user),
 ):
     """Get metrics for a specific date range"""
-    if not user.role == "admin":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=ERROR_MESSAGES.NOT_FOUND,
-        )
+    # For analyst role, enforce domain restriction
+    if user.role == "analyst":
+        # Force domain to user's domain for analysts
+        domain = user.domain
+
+    # Admin and global_analyst can see all domains or filter by domain
 
     try:
         # Convert dates to timestamps

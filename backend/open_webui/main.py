@@ -876,7 +876,10 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
         )
 
     # Filter out models that the user does not have access to
-    if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
+    # Apply filtering for both regular users and analysts
+    if (
+        user.role == "user" or user.role == "analyst" or user.role == "global_analyst"
+    ) and not BYPASS_MODEL_ACCESS_CONTROL:
         models = get_filtered_models(models, user)
 
     log.debug(

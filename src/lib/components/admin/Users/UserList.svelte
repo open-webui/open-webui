@@ -42,6 +42,23 @@
 	let showUserChatsModal = false;
 	let showEditUserModal = false;
 
+	$: badgeType = (role) => {
+		switch (role) {
+			case 'admin':
+				return 'info';
+			case 'global_analyst':
+				return 'primary';
+			case 'analyst':
+				return 'warning';
+			case 'user':
+				return 'success';
+			case 'pending':
+				return 'muted';
+			default:
+				return 'muted';
+		}
+	};
+
 	const updateRoleHandler = async (id, role) => {
 		const res = await updateUserRole(localStorage.token, id, role).catch((error) => {
 			toast.error(`${error}`);
@@ -327,18 +344,30 @@
 						<button
 							class=" translate-y-0.5"
 							on:click={() => {
-								if (user.role === 'user') {
-									updateRoleHandler(user.id, 'admin');
-								} else if (user.role === 'pending') {
-									updateRoleHandler(user.id, 'user');
-								} else {
-									updateRoleHandler(user.id, 'pending');
+								switch (user.role) {
+									case 'user':
+										updateRoleHandler(user.id, 'analyst');
+										break;
+									case 'analyst':
+										updateRoleHandler(user.id, 'global_analyst');
+										break;
+									case 'global_analyst':
+										updateRoleHandler(user.id, 'admin');
+										break;
+									case 'pending':
+										updateRoleHandler(user.id, 'user');
+										break;
+									default:
+										updateRoleHandler(user.id, 'pending');
+										break;
 								}
 							}}
 						>
 							<Badge
-								type={user.role === 'admin' ? 'info' : user.role === 'user' ? 'success' : 'muted'}
-								content={$i18n.t(user.role)}
+								type={badgeType(user.role)}
+								content={user.role === 'global_analyst'
+									? $i18n.t('global analyst')
+									: $i18n.t(user.role)}
 							/>
 						</button>
 					</td>

@@ -20,6 +20,10 @@
 
 	let loaded = false;
 
+	// Check if user has metrics access based on role
+	$: hasMetricsAccess =
+		$user?.role === 'admin' || $user?.role === 'analyst' || $user?.role === 'global_analyst';
+
 	onMount(async () => {
 		if ($user?.role !== 'admin') {
 			if ($page.url.pathname.includes('/models') && !$user?.permissions?.workspace?.models) {
@@ -35,6 +39,8 @@
 			) {
 				goto('/');
 			} else if ($page.url.pathname.includes('/tools') && !$user?.permissions?.workspace?.tools) {
+				goto('/');
+			} else if ($page.url.pathname.includes('/metrics') && !hasMetricsAccess) {
 				goto('/');
 			}
 		}
@@ -119,6 +125,19 @@
 								href="/workspace/tools"
 							>
 								{$i18n.t('Tools')}
+							</a>
+						{/if}
+
+						{#if hasMetricsAccess}
+							<a
+								class="min-w-fit rounded-full p-1.5 {$page.url.pathname.includes(
+									'/workspace/metrics'
+								)
+									? ''
+									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								href="/workspace/metrics"
+							>
+								{$i18n.t('Metrics')}
 							</a>
 						{/if}
 					</div>

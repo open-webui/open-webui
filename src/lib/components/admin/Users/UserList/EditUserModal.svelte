@@ -19,7 +19,8 @@
 		profile_image_url: '',
 		name: '',
 		email: '',
-		password: ''
+		password: '',
+		role: ''
 	};
 
 	const submitHandler = async () => {
@@ -95,6 +96,24 @@
 					<hr class=" dark:border-gray-800 my-3 w-full" />
 
 					<div class=" flex flex-col space-y-1.5">
+						<div class="flex flex-col w-full">
+							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
+
+							<div class="flex-1">
+								<select
+									class="w-full capitalize rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-800 outline-none"
+									bind:value={_user.role}
+									disabled={_user.id == sessionUser.id}
+								>
+									<option value="pending"> {$i18n.t('pending')} </option>
+									<option value="user"> {$i18n.t('user')} </option>
+									<option value="analyst"> {$i18n.t('analyst')} </option>
+									<option value="global_analyst"> {$i18n.t('global analyst')} </option>
+									<option value="admin"> {$i18n.t('admin')} </option>
+								</select>
+							</div>
+						</div>
+
 						<div class="flex flex-col w-full">
 							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
 
