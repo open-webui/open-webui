@@ -17,7 +17,9 @@ class Vector:
                 return MilvusClient()
             case VectorType.QDRANT:
                 if ENABLE_QDRANT_MULTITENANCY_MODE:
-                    from open_webui.retrieval.vector.dbs.qdrant_multitenancy import QdrantClient
+                    from open_webui.retrieval.vector.dbs.qdrant_multitenancy import (
+                        QdrantClient,
+                    )
 
                     return QdrantClient()
                 else:
