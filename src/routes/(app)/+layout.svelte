@@ -45,6 +45,9 @@
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import CompanySettingsModal from '$lib/components/chat/CompanySettingsModal.svelte';
+	import { isBlocked, subscription } from '$lib/stores';
+	import CustomChatError from '$lib/components/chat/Messages/CustomChatError.svelte';
+	import { getCurrentSubscription } from '$lib/apis/payments';
 
 	const i18n = getContext('i18n');
 
@@ -216,8 +219,32 @@
 			};
 		});
 	};
-</script>
 
+	let selectedTab = 'general-settings';
+
+	$: modalParam = $page.url.searchParams.get('modal');
+	// $: tabParam = $page.url.searchParams.get('tab');
+
+	// Watch for changes in URL params
+	$: {
+		if (modalParam === 'company-settings') {
+			showCompanySettings.set(true);
+			// selectedTab = tabParam || 'general-settings';
+		}
+	}
+
+	onMount(async () => {
+		const sub = await getCurrentSubscription(localStorage.token).catch(error => console.log(error));
+		if(sub){
+			subscription.set(sub);
+		}
+	})
+
+	
+</script>
+{#if $isBlocked}
+	<CustomChatError/>
+{/if}
 <SettingsModal bind:show={$showSettings} />
 <CompanySettingsModal bind:show={$showCompanySettings}/>
 <!-- <ChangelogModal bind:show={$showChangelog} /> -->

@@ -11,6 +11,7 @@
 
     export let users = [];
     export let getUsersHandler: Function;
+    export let getSubscription: Function;
 
     // $: if (activeTab) {
 	// 	getUsersHandler();
@@ -37,7 +38,7 @@
    
     <div>
         {#if activeTab === 'users'}
-            <UsersTab {users} {getUsersHandler}/>
+            <UsersTab {users} {getUsersHandler} {getSubscription}/>
          {:else if activeTab === 'groups'}
             <GroupsTabs {users}/>
         {/if}

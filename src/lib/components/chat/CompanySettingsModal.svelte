@@ -7,18 +7,7 @@
 	import { goto } from '$app/navigation';
 
 	import Modal from '../common/Modal.svelte';
-	import Account from './Settings/Account.svelte';
-	import About from './Settings/About.svelte';
-	import Interface from './Settings/Interface.svelte';
-	import Audio from './Settings/Audio.svelte';
-	import Chats from './Settings/Chats.svelte';
-	import User from '../icons/User.svelte';
-	import Personalization from './Settings/Personalization.svelte';
-	import SearchInput from '../layout/Sidebar/SearchInput.svelte';
-	import Search from '../icons/Search.svelte';
 	import ProfileIcon from '../icons/ProfileIcon.svelte';
-	import PersonalizationIcon from '../icons/PersonalizationIcon.svelte';
-	import ChatIcon from '../icons/ChatIcon.svelte';
     import GeneralSettings from '$lib/components/chat/Settings/CompanySettings/General.svelte';
 	import GroupIcon from '../icons/GroupIcon.svelte';
 	import UserManagement from './Settings/CompanySettings/UserManagement.svelte';
@@ -31,15 +20,30 @@
 	import BillingIcon from '../icons/BillingIcon.svelte';
 	import Billing from './Settings/CompanySettings/Billing.svelte';
 	import { getMonthRange } from '$lib/utils';
+	import { page } from '$app/stores';
+	import {
+		getCurrentSubscription,
+		getSubscriptionPlans
+	} from '$lib/apis/payments';
+	import { subscription } from '$lib/stores';
 	
 	const i18n = getContext('i18n');
 
 	export let show = false;
+	let selectedTab = 'general-settings';
+	let plans = [];
 
 	interface SettingsTab {
 		id: string;
 		title: string;
 		keywords: string[];
+	}
+
+	function updateTabParam(tab) {
+		const url = new URL(window.location.href);
+		url.searchParams.set('tab', tab);
+		url.searchParams.set('modal', 'company-settings'); 
+		window.history.replaceState({}, '', url); 
 	}
 
 	const searchData: SettingsTab[] = [
@@ -67,14 +71,14 @@
 			keywords: [
 
 			]
+		},
+		{
+			id: 'billing',
+			title: 'Billing',
+			keywords: [
+		
+			]
 		}
-		//{
-		//	id: 'billing',
-		//	title: 'Billing',
-		//	keywords: [
-		//
-		//		]
-		//}
 		];
 
 	let search = '';
@@ -113,7 +117,6 @@
 		return await _getModels(localStorage.token);
 	};
 
-	let selectedTab = 'general-settings';
 
 	// Function to handle sideways scrolling
 	const scrollHandler = (event) => {
@@ -199,17 +202,41 @@
 			totalAssistants: totalAssistants?.status === 'fulfilled' ? totalAssistants?.value : {},
 		}
 		console.log(analytics)
-	} catch (error) {
-		console.error('Error fetching analytics:', error);
-	} finally {
-		analyticsLoading = false;
+		} catch (error) {
+			console.error('Error fetching analytics:', error);
+		} finally {
+			analyticsLoading = false;
+		}
 	}
-}
+	let autoRecharge = false;
+	let subscriptionLoading = false;
+	async function getSubscription() {
+		subscriptionLoading = true;
+		const sub = await getCurrentSubscription(localStorage.token).catch(error => {
+			console.log(error);
+			subscriptionLoading = false;
+		});
+		if(sub){
+			subscription.set(sub);
+			autoRecharge = sub?.auto_recharge ? sub?.auto_recharge : false;
+			subscriptionLoading = false;
+		}
+	}
+	async function getPlans() {
+		const res = await getSubscriptionPlans(localStorage.token).catch((error) => console.log(error));
+		if (res) {
+			plans = res;
+		}
+	}
+
 
 	$: if(show){
 		getUsersHandler();
+		getSubscription();
+		getPlans();
 		fetchAnalytics();
-		selectedTab = 'general-settings';
+		const tabParam = $page.url.searchParams.get('tab');
+		selectedTab = tabParam || 'general-settings';
 	}
 
 </script>
@@ -222,7 +249,10 @@
 				<button
 					class="self-center"
 					on:click={() => {
-						show = false;
+						const url = new URL(window.location.href);
+						url.search = ''; 
+						goto(url.pathname, { replaceState: true });
+						show = false;	
 					}}
 				>
 					<svg
@@ -266,6 +296,7 @@
                             : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
                         on:click={() => {
                             selectedTab = 'general-settings';
+							updateTabParam(selectedTab);
                         }}
                     >
                         <div class="flex items-center mb-1">
@@ -283,6 +314,7 @@
                             : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
                         on:click={() => {
                             selectedTab = 'user-management';
+							updateTabParam(selectedTab);
                         }}
                     >
                         <div class="flex items-center mb-1">
@@ -300,6 +332,7 @@
 							: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 						on:click={() => {
 							selectedTab = 'model-control';
+							updateTabParam(selectedTab);
 						}}
 					>
 						<div class="flex items-center mb-1">
@@ -317,6 +350,7 @@
 							: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 						on:click={() => {
 							selectedTab = 'analytics';
+							updateTabParam(selectedTab);
 						}}
 					>
 						<div class="flex items-center mb-1">
@@ -326,7 +360,7 @@
 							<div class=" self-center">{$i18n.t('Analytics')}</div>
 						</div>
 					</button>
-					<!-- {:else if tabId === 'billing'}
+					{:else if tabId === 'billing'}
 					<button
 						class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 						'billing'
@@ -334,6 +368,7 @@
 							: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 						on:click={() => {
 							selectedTab = 'billing';
+							updateTabParam(selectedTab);
 						}}
 					>
 						<div class="flex items-center mb-1">
@@ -342,8 +377,7 @@
 							</div>
 							<div class=" self-center">{$i18n.t('Billing')}</div>
 						</div>
-					</button> -->
-
+					</button>
                     {/if}
 
 						<!-- {#if tabId === 'general'}
@@ -564,6 +598,7 @@
 				{:else if selectedTab === 'user-management'}
 					<UserManagement
 						{users}
+						{getSubscription}
 						{getUsersHandler}
 						on:save={() => {
 							toast.success($i18n.t('Settings saved successfully!'));
@@ -574,7 +609,7 @@
 				{:else if selectedTab === 'analytics'}
 					<Analytics {analytics} {analyticsLoading}/>
 				{:else if selectedTab === 'billing'}
-					<Billing/>
+					<Billing bind:autoRecharge bind:subscriptionLoading {plans}/>
 				{/if}
 			</div>
 		</div>

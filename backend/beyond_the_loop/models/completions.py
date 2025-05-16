@@ -21,7 +21,7 @@ class Completion(Base):
     user_id = Column(String, ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
     chat_id = Column(String)
     model = Column(Text)
-    credits_used = Column(Integer)
+    credits_used = Column(Float)
     created_at = Column(BigInteger)
     time_saved_in_seconds = Column(Float)
 
@@ -30,7 +30,7 @@ class CompletionModel(BaseModel):
     user_id: str
     chat_id: str
     model: str
-    credits_used: int
+    credits_used: float
     created_at: int  # timestamp in epoch
     time_saved_in_seconds: float
 
@@ -38,7 +38,9 @@ class CompletionModel(BaseModel):
 
 
 class CompletionTable:
-    def insert_new_completion(self, user_id: str, chat_id: str, model: str, credits_used: int, time_saved_in_seconds: float) -> Optional[CompletionModel]:
+    def insert_new_completion(self, user_id: str, chat_id: str, model: str, credits_used: float, time_saved_in_seconds: float) -> Optional[CompletionModel]:
+        print("CREDITS USED FOR COMPLETION", credits_used)
+
         id = str(uuid.uuid4())
         completion = CompletionModel(
             **{

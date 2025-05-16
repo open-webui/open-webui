@@ -43,8 +43,6 @@ class User(Base):
     password_reset_token = Column(Text, nullable=True)
     password_reset_token_expires_at = Column(BigInteger, nullable=True)
 
-    stripe_customer_id = Column(String, nullable=True)
-
     company_id = Column(String, ForeignKey("company.id", ondelete="CASCADE"), nullable=False)
     company = relationship("Company", back_populates="users")
 
@@ -82,8 +80,6 @@ class UserModel(BaseModel):
 
     password_reset_token: Optional[str] = None
     password_reset_token_expires_at: Optional[int] = None
-
-    stripe_customer_id: Optional[str] = None
 
 
 ####################
@@ -248,12 +244,6 @@ class UsersTable:
                 return UserModel.model_validate(user)
         except Exception:
             return None
-
-    def get_user_by_stripe_customer_id(self, stripe_customer_id: str):
-        """Get a user by their Stripe customer ID."""
-        with get_db() as db:
-            user = db.query(User).filter(User.stripe_customer_id == stripe_customer_id).first()
-            return user
 
     def get_users_by_company_id(
         self, company_id: str, skip: Optional[int] = None, limit: Optional[int] = None
@@ -503,6 +493,29 @@ class UsersTable:
                 return True
         except Exception:
             return False
+
+    def get_admin_users_by_company(self, company_id: str) -> list[UserModel]:
+        """
+        Returns all admin users for a specific company.
+        """
+        try:
+            with get_db() as db:
+                users = db.query(User).filter(User.company_id == company_id, User.role == "admin").all()
+                return [UserModel.model_validate(user) for user in users]
+        except Exception as e:
+            print(f"Error getting admin users by company: {e}")
+            return []
+
+    def count_users_by_company_id(self, company_id: str) -> int:
+        """
+        Returns the number of users for a specific company.
+        """
+        try:
+            with get_db() as db:
+                return db.query(User).filter(User.company_id == company_id).count()
+        except Exception as e:
+            print(f"Error counting users by company: {e}")
+            return 0
 
 
 def get_users_by_company(company_id: str) -> list[UserModel]:

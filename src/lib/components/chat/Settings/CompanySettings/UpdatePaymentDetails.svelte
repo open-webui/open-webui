@@ -74,83 +74,39 @@
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
 			show = false;
+			const url = new URL(window.location.href);
+			url.searchParams.delete('plans'); 
+			window.history.replaceState({}, '', `${url.pathname}${url.search}`);
 		}}
 	>
 		<div
-			class=" m-auto relative rounded-2xl max-w-full w-[23rem] mx-2 bg-gray-50 dark:bg-customGray-800 max-h-[100dvh] shadow-3xl"
+			class=" m-auto relative rounded-2xl max-w-full w-[36rem] mx-2 bg-gray-50 dark:bg-customGray-800 max-h-[100dvh] shadow-3xl"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();
 			}}
 		>
 			<div class="px-5 py-5 flex flex-col text-left">
-				<div class="border-b border-customGray-700 flex justify-between items-center pb-2.5">
+				<div class="mb-5 border-b border-customGray-700 flex justify-between items-center pb-2.5">
 					<div
 						class=" text-base dark:text-customGray-100 text-left"
 					>
-						{$i18n.t('Add payment method')}
+						{$i18n.t('Explore Plans')}
 					</div>
 					<button
 						class="text-customGray-300"
 						on:click={() => {
 							show = false;
+							const url = new URL(window.location.href);
+							url.searchParams.delete('plans'); 
+							window.history.replaceState({}, '', `${url.pathname}${url.search}`);
 						}}
 					>
 						<CloseIcon />
 					</button>
 				</div>
-
-				<slot>
-					<div class=" text-sm text-gray-500 flex-1 text-center">
-						{#if !noMessage}
-							{#if message !== ''}
-								{message}
-							{:else}
-								{$i18n.t('This action cannot be undone. Do you wish to continue?')}
-							{/if}
-						{/if}
-
-						{#if input}
-							{#if inputType === 'textarea'}
-								<textarea
-									bind:value={inputValue}
-									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
-									class="w-full mt-2 rounded-md px-4 py-2 text-sm dark:text-gray-300 dark:bg-customGray-900 outline-none resize-none"
-									rows="3"
-									required
-								/>
-							{:else}
-								<input
-									bind:value={inputValue}
-									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
-									class="w-full mt-2 rounded-md px-4 py-2 text-sm dark:text-gray-300 dark:bg-customGray-900 outline-none resize-none"
-									required
-								/>
-							{/if}
-						{/if}
-					</div>
-				</slot>
-
-				<div class="mt-6 flex justify-end gap-7">
-					<button
-						class="text-gray-800 w-fit text-sm dark:text-customGray-200 py-2.5 rounded-lg transition"
-						on:click={() => {
-							show = false;
-							dispatch('cancel');
-						}}
-						type="button"
-					>
-						{cancelLabel}
-					</button>
-					<button
-						class="bg-gray-900 text-sm dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 text-gray-100 dark:text-customGray-200 w-1/2 py-2.5 rounded-lg transition"
-						on:click={() => {
-							confirmHandler();
-						}}
-						type="button"
-					>
-						{$i18n.t('Add payment method')}
-					</button>
+				<div class="min-h-[10rem]">
+					<slot/>
 				</div>
 			</div>
 		</div>

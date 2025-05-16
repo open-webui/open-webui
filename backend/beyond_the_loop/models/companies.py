@@ -3,13 +3,13 @@ from pydantic import BaseModel, ConfigDict
 from typing import Optional
 
 from sqlalchemy.orm import relationship
-from sqlalchemy import Integer, String, Column, Text, Boolean
+from sqlalchemy import String, Column, Text, Boolean, Float
 
 from open_webui.internal.db import get_db, Base
 
 # Constants
 NO_COMPANY = "NO_COMPANY"
-EIGHTY_PERCENT_CREDIT_LIMIT = 4000
+EIGHTY_PERCENT_CREDIT_LIMIT = 1
 
 ####################
 # Company DB Schema
@@ -23,12 +23,16 @@ class Company(Base):
     profile_image_url = Column(Text, nullable=True)
     default_model = Column(String, nullable=True)
     allowed_models = Column(Text, nullable=True)
-    credit_balance = Column(Integer, default=0)
+    credit_balance = Column(Float, default=0)
+    flex_credit_balance = Column(Float, nullable=True)
     auto_recharge = Column(Boolean, default=False)
     credit_card_number = Column(String, nullable=True)
     size = Column(String, nullable=True)
     industry = Column(String, nullable=True)
     team_function = Column(String, nullable=True)
+    stripe_customer_id = Column(String, nullable=True)
+    budget_mail_80_sent = Column(Boolean, nullable=True)
+    budget_mail_100_sent = Column(Boolean, nullable=True)
 
     users = relationship("User", back_populates="company", cascade="all, delete-orphan")
 
@@ -38,12 +42,16 @@ class CompanyModel(BaseModel):
     profile_image_url: Optional[str] = None
     default_model: Optional[str] = "GPT 4o"
     allowed_models: Optional[str] = None
-    credit_balance: Optional[int] = 0
+    credit_balance: Optional[float] = 0
+    flex_credit_balance: Optional[float] = None
     auto_recharge: Optional[bool] = False
     credit_card_number: Optional[str] = None
     size: Optional[str] = None
     industry: Optional[str] = None
     team_function: Optional[str] = None
+    stripe_customer_id: Optional[str] = None
+    budget_mail_80_sent: Optional[bool] = False
+    budget_mail_100_sent: Optional[bool] = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -204,25 +212,15 @@ class CompanyTable:
             # Handle exceptions if any
             return False
 
-    def update_credit_balance(self, company_id: str, credits_used: int) -> bool:
-        """Update company's credit balance by subtracting credits used"""
-        with get_db() as db:
-            company = db.query(Company).filter(Company.id == company_id).first()
-            if company and company.credit_balance is not None:
-                company.credit_balance -= credits_used
-                db.commit()
-                return True
-            return False
-
-    def add_credit_balance(self, company_id: str, credits_to_add: int) -> bool:
+    def add_flex_credit_balance(self, company_id: str, credits_to_add: int) -> bool:
         """Add credits to company's balance"""
         with get_db() as db:
             company = db.query(Company).filter(Company.id == company_id).first()
             if company:
-                if company.credit_balance is None:
-                    company.credit_balance = credits_to_add
+                if company.flex_credit_balance is None:
+                    company.flex_credit_balance = credits_to_add
                 else:
-                    company.credit_balance += credits_to_add
+                    company.flex_credit_balance += credits_to_add
                 db.commit()
                 return True
             return False
@@ -232,17 +230,31 @@ class CompanyTable:
         with get_db() as db:
             company = db.query(Company).filter(Company.id == company_id).first()
             if company:
-                if company.credit_balance is not None and company.credit_balance >= credits_to_subtract:
+                # Initialize available credits from both balances
+                credit_balance = company.credit_balance or 0
+                flex_credit_balance = company.flex_credit_balance or 0
+                
+                # First try to subtract from credit_balance
+                if credit_balance >= credits_to_subtract:
                     company.credit_balance -= credits_to_subtract
                     db.commit()
-                    return True
-            return False
+                # If credit_balance is not enough, check if combined balance is sufficient
+                elif (credit_balance + flex_credit_balance) >= credits_to_subtract:
+                    # Subtract what we can from credit_balance
+                    remaining_credits = credits_to_subtract - credit_balance
+                    company.credit_balance = 0
+                    company.flex_credit_balance -= remaining_credits
+                    db.commit()
+                else:
+                    company.credit_balance = 0
+                    company.flex_credit_balance = 0
+                    db.commit()
 
     def get_credit_balance(self, company_id: str) -> Optional[int]:
         """Get company's current credit balance"""
         with get_db() as db:
             company = db.query(Company).filter(Company.id == company_id).first()
-            return company.credit_balance if company else None
+            return company.credit_balance + (company.flex_credit_balance or 0) if company else None
 
     def create_company(self, company_data: dict) -> Optional[CompanyModel]:
         """Create a new company"""
@@ -255,6 +267,15 @@ class CompanyTable:
                 return CompanyModel.model_validate(company)
         except Exception as e:
             print(f"Error creating company: {e}")
+            return None
+
+    def get_company_by_stripe_customer_id(self, stripe_customer_id: str) -> Optional[CompanyModel]:
+        try:
+            with get_db() as db:
+                company = db.query(Company).filter_by(stripe_customer_id=stripe_customer_id).first()
+                return CompanyModel.model_validate(company)
+        except Exception as e:
+            print(f"Error getting company by stripe_customer_id: {e}")
             return None
 
 Companies = CompanyTable()

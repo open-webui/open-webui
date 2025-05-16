@@ -254,7 +254,7 @@
 					</div>
 					{#if selectedSortOrder.value === 'credits'}
 						<div class="text-xs dark:text-customGray-590">
-							{user?.total_credits_used} {$i18n.t('credits')}
+							{(user?.total_credits_used).toFixed(4)} {$i18n.t('credits')}
 						</div>
 					{:else if selectedSortOrder.value === 'messages'}
 						<div class="text-xs dark:text-customGray-590">

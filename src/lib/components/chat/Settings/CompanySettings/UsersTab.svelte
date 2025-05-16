@@ -21,6 +21,7 @@
 
 	export let users = [];
 	export let getUsersHandler: Function;
+	export let getSubscription: Function;
 	let page = 1;
 
 	$: console.log(users, 'users');
@@ -111,6 +112,7 @@
 		if (res?.success){
 			toast.success($i18n.t('Invited successfuly'))
 			getUsersHandler();
+			getSubscription();
 		} else {
 			res?.failed_invites?.forEach(res => {
 				toast.error(`${res.reason}`)
@@ -140,6 +142,7 @@
 		if (res) {
 			toast.success($i18n.t('User deleted successfully'));
 			getUsersHandler();
+			getSubscription();
 		}
 	};
 
@@ -416,7 +419,7 @@
 				{/if}
 			</div>
 				<div class=" h-4">
-					<InviteMenu {user} {getUsersHandler} 
+					<InviteMenu {user} {getUsersHandler} {getSubscription}
 					inviteCompleted={user?.first_name !== 'INVITED'}
 					on:deleteUser={() => {
 						showDeleteConfirm = true;

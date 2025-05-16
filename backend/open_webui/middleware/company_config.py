@@ -46,8 +46,6 @@ class CompanyConfigMiddleware(BaseHTTPMiddleware):
         # Store the company_id in the request state for easy access in route handlers
         request.state.company_id = company_id
 
-        print("COMPANY ID: ", company_id)
-        
         # Update the app's config with company-specific values
         if hasattr(request.app.state, "config") and hasattr(request.app.state.config, "set_company_id"):
             request.app.state.config.set_company_id(company_id)

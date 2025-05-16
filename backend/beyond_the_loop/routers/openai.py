@@ -9,20 +9,17 @@ import aiohttp
 from aiocache import cached
 import requests
 
-
 from fastapi import Depends, HTTPException, Request, APIRouter
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
 from beyond_the_loop.utils import magic_prompt_util
-from beyond_the_loop.routers.payments import charge_customer
 from beyond_the_loop.models.models import Models
-from beyond_the_loop.models.model_message_credit_costs import ModelMessageCreditCosts
 from beyond_the_loop.models.companies import Companies
-from beyond_the_loop.models.companies import EIGHTY_PERCENT_CREDIT_LIMIT
 from beyond_the_loop.models.completions import Completions
 from beyond_the_loop.services.email_service import EmailService
+from beyond_the_loop.services.credit_service import CreditService
 from beyond_the_loop.models.completions import calculate_saved_time_in_seconds
 
 from open_webui.config import (
@@ -50,7 +47,6 @@ from open_webui.utils.access_control import has_access
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OPENAI"])
-
 
 ##########################################
 #
@@ -556,6 +552,7 @@ async def generate_chat_completion(
     bypass_filter: Optional[bool] = False,
     magic_prompt: Optional[bool] = False
 ):
+    global credit_service
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
@@ -572,9 +569,6 @@ async def generate_chat_completion(
 
     has_chat_id = "chat_id" in metadata and metadata["chat_id"] is not None
 
-    # Initialize the credit cost variable
-    model_message_credit_cost = 0
-
     if model_info.base_model_id:
         model_name = Models.get_model_by_id(model_info.base_model_id).name
     else:
@@ -583,43 +577,8 @@ async def generate_chat_completion(
     payload["model"] = model_name
 
     if has_chat_id or magic_prompt:
-        model_message_credit_cost = ModelMessageCreditCosts.get_cost_by_model(model_name)
-
-        # Get current credit balance
-        current_balance = Companies.get_credit_balance(user.company_id)
-
-        # Check if company has sufficient credits
-        if current_balance < model_message_credit_cost:
-            email_service = EmailService()
-            email_service.send_budget_mail_100(to_email=user.email, recipient_name=user.first_name + " " + user.last_name)
-
-            raise HTTPException(
-                status_code=402,  # 402 Payment Required
-                detail=f"Insufficient credits. This operation requires {model_message_credit_cost} credits.",
-            )
-
-        # Check 80% threshold
-        if current_balance - model_message_credit_cost < EIGHTY_PERCENT_CREDIT_LIMIT:  # If balance is less than 125% of required (which means we're below 80%)
-            email_service = EmailService()
-
-            should_send_budget_email_80 = True  # Default to sending email
-
-            if Companies.get_auto_recharge(user.company_id):
-                try:
-                    # Trigger auto-recharge using the charge_customer endpoint
-                    await charge_customer(user)
-                    # Note: The webhook will handle adding the credits when payment succeeds
-                    should_send_budget_email_80 = False  # Don't send email if auto-recharge succeeded
-                except HTTPException as e:
-                    print(f"Auto-recharge failed: {str(e)}")
-                except Exception as e:
-                    print(f"Unexpected error during auto-recharge: {str(e)}")
-
-            if should_send_budget_email_80:
-                email_service.send_budget_mail_80(to_email=user.email, recipient_name=user.first_name + " " + user.last_name)
-
-        # Subtract credits from balance
-        Companies.subtract_credit_balance(user.company_id, model_message_credit_cost)
+        credit_service = CreditService()
+        credit_service.check_for_sufficient_balance(user)
 
     params = model_info.params.model_dump()
     payload = apply_model_params_to_body_openai(params, payload)
@@ -692,6 +651,8 @@ async def generate_chat_completion(
     if "max_tokens" in payload and "max_completion_tokens" in payload:
         del payload["max_tokens"]
 
+    payload["stream_options"] = {"include_usage": True}
+
     # Convert the modified body back to JSON
     payload = json.dumps(payload)
 
@@ -752,11 +713,20 @@ async def generate_chat_completion(
                             delta = data.get('choices', [{}])[0].get('delta', {}).get('content', '')
                             if delta:  # Only use it if there's actual content
                                 full_response += delta
-                            elif data.get('choices', [{}])[0].get('finish_reason'):
+                            elif data.get('usage'):
                                 # End of stream
                                 # Add completion to completion table if it's a chat message from the user
                                 if has_chat_id:
-                                    Completions.insert_new_completion(user.id, metadata["chat_id"], model_name, model_message_credit_cost, calculate_saved_time_in_seconds(last_user_message, full_response))
+                                    input_tokens = data.get('usage', {}).get('prompt_tokens', 0)
+                                    output_tokens = data.get('usage', {}).get('completion_tokens', 0)
+
+                                    reasoning_tokens = data.get('usage', {}).get('completion_tokens_details', {}).get("reasoning_tokens", 0)
+
+                                    with_search_query_cost = "Perplexity" in model_name
+
+                                    credit_cost = await credit_service.subtract_credits_by_user_and_tokens(user, model_name, input_tokens, output_tokens, reasoning_tokens, with_search_query_cost)
+
+                                    Completions.insert_new_completion(user.id, metadata["chat_id"], model_name, credit_cost, calculate_saved_time_in_seconds(last_user_message, full_response))
                         except json.JSONDecodeError:
                             print(f"\n{chunk_str}")
                     yield chunk
@@ -782,7 +752,15 @@ async def generate_chat_completion(
                 # Add completion to completion table
                 response_content = response.get('choices', [{}])[0].get('message', {}).get('content', '')
 
-                Completions.insert_new_completion(user.id, metadata["chat_id"], model_name, model_message_credit_cost, calculate_saved_time_in_seconds(last_user_message, response_content))
+                input_tokens = response.get('usage', {}).get('prompt_tokens', 0)
+                output_tokens = response.get('usage', {}).get('completion_tokens', 0)
+                reasoning_tokens = response.get('usage', {}).get('completion_tokens_details', {}).get("reasoning_tokens", 0)
+
+                with_search_query_cost = "Perplexity" in model_name
+
+                credit_cost = await credit_service.subtract_credits_by_user_and_tokens(user, model_name, input_tokens, output_tokens, reasoning_tokens, with_search_query_cost)
+
+                Completions.insert_new_completion(user.id, metadata["chat_id"], model_name, credit_cost, calculate_saved_time_in_seconds(last_user_message, response_content))
 
             return response
     except Exception as e:
