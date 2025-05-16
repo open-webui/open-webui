@@ -947,12 +947,14 @@ async def process_chat_response(
         message = message_map.get(metadata["message_id"]) if message_map else None
 
         if message:
-            messages = get_message_list(message_map, message.get("id"))
+            message_list = get_message_list(message_map, message.get("id"))
 
             # Remove details tags and files from the messages.
             # as get_message_list creates a new list, it does not affect
             # the original messages outside of this handler
-            for message in messages:
+
+            messages = []
+            for message in message_list:
                 content = message.get("content", "")
                 if isinstance(content, list):
                     for item in content:
@@ -968,10 +970,12 @@ async def process_chat_response(
                         flags=re.S | re.I,
                     ).strip()
 
-                message = {
-                    "role": message["role"],
-                    "content": content,
-                }
+                messages.append(
+                    {
+                        "role": message["role"],
+                        "content": content,
+                    }
+                )
 
             if tasks and messages:
                 if TASKS.TITLE_GENERATION in tasks:
