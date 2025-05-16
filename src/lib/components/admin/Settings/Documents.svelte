@@ -91,7 +91,7 @@
 			return;
 		}
 
-		console.log('Update embedding model attempt:', embeddingModel);
+		console.debug('Update embedding model attempt:', embeddingModel);
 
 		updateEmbeddingModelLoading = true;
 		const res = await updateEmbeddingConfig(localStorage.token, {
@@ -114,7 +114,7 @@
 		updateEmbeddingModelLoading = false;
 
 		if (res) {
-			console.log('embeddingModelUpdateHandler:', res);
+			console.debug('embeddingModelUpdateHandler:', res);
 			if (res.status === true) {
 				toast.success($i18n.t('Embedding model set to "{{embedding_model}}"', res), {
 					duration: 1000 * 10

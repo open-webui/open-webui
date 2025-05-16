@@ -90,7 +90,7 @@
 			}
 		});
 
-		console.log('models', models);
+		console.debug('models', models);
 	};
 </script>
 

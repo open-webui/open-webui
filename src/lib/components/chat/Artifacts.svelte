@@ -154,7 +154,7 @@
 							url.pathname + url.search + url.hash
 						);
 					} else {
-						console.log('External navigation blocked:', url.href);
+						console.info('External navigation blocked:', url.href);
 					}
 				}
 			},
