@@ -110,6 +110,14 @@ async def get_all_models(request, user: UserModel = None):
         for function in Functions.get_functions_by_type("action", active_only=True)
     ]
 
+    global_filter_ids = [
+        function.id for function in Functions.get_global_filter_functions()
+    ]
+    enabled_filter_ids = [
+        function.id
+        for function in Functions.get_functions_by_type("filter", active_only=True)
+    ]
+
     custom_models = Models.get_all_models()
     for custom_model in custom_models:
         if custom_model.base_model_id is None:
@@ -125,13 +133,20 @@ async def get_all_models(request, user: UserModel = None):
                         model["name"] = custom_model.name
                         model["info"] = custom_model.model_dump()
 
+                        # Set action_ids and filter_ids
                         action_ids = []
+                        filter_ids = []
+
                         if "info" in model and "meta" in model["info"]:
                             action_ids.extend(
                                 model["info"]["meta"].get("actionIds", [])
                             )
+                            filter_ids.extend(
+                                model["info"]["meta"].get("filterIds", [])
+                            )
 
                         model["action_ids"] = action_ids
+                        model["filter_ids"] = filter_ids
                     else:
                         models.remove(model)
 
@@ -140,7 +155,9 @@ async def get_all_models(request, user: UserModel = None):
         ):
             owned_by = "openai"
             pipe = None
+
             action_ids = []
+            filter_ids = []
 
             for model in models:
                 if (
@@ -154,8 +171,12 @@ async def get_all_models(request, user: UserModel = None):
 
             if custom_model.meta:
                 meta = custom_model.meta.model_dump()
+
                 if "actionIds" in meta:
                     action_ids.extend(meta["actionIds"])
+
+                if "filterIds" in meta:
+                    filter_ids.extend(meta["filterIds"])
 
             models.append(
                 {
@@ -168,6 +189,7 @@ async def get_all_models(request, user: UserModel = None):
                     "preset": True,
                     **({"pipe": pipe} if pipe is not None else {}),
                     "action_ids": action_ids,
+                    "filter_ids": filter_ids,
                 }
             )
 
@@ -197,6 +219,17 @@ async def get_all_models(request, user: UserModel = None):
                 }
             ]
 
+    # Process filter_ids to get the filters
+    def get_filter_items_from_module(function, module):
+        return [
+            {
+                "id": function.id,
+                "name": function.name,
+                "description": function.meta.description,
+                "icon_url": function.meta.manifest.get("icon_url", None),
+            }
+        ]
+
     def get_function_module_by_id(function_id):
         if function_id in request.app.state.FUNCTIONS:
             function_module = request.app.state.FUNCTIONS[function_id]
@@ -211,6 +244,11 @@ async def get_all_models(request, user: UserModel = None):
             for action_id in list(set(model.pop("action_ids", []) + global_action_ids))
             if action_id in enabled_action_ids
         ]
+        filter_ids = [
+            filter_id
+            for filter_id in list(set(model.pop("filter_ids", []) + global_filter_ids))
+            if filter_id in enabled_filter_ids
+        ]
 
         model["actions"] = []
         for action_id in action_ids:
@@ -222,6 +260,20 @@ async def get_all_models(request, user: UserModel = None):
             model["actions"].extend(
                 get_action_items_from_module(action_function, function_module)
             )
+
+        model["filters"] = []
+        for filter_id in filter_ids:
+            filter_function = Functions.get_function_by_id(filter_id)
+            if filter_function is None:
+                raise Exception(f"Filter not found: {filter_id}")
+
+            function_module = get_function_module_by_id(filter_id)
+
+            if getattr(function_module, "toggle", None):
+                model["filters"].extend(
+                    get_filter_items_from_module(filter_function, function_module)
+                )
+
     log.debug(f"get_all_models() returned {len(models)} models")
 
     request.app.state.MODELS = {model["id"]: model for model in models}
