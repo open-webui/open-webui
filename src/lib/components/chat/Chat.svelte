@@ -122,7 +122,7 @@
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
-	let thinkingEnabled = false;
+	let reasoningEnabled = false;
 
 	let chat = null;
 	let tags = [];
@@ -148,7 +148,7 @@
 			files = [];
 			selectedToolIds = [];
 			webSearchEnabled = false;
-			thinkingEnabled = false;
+			reasoningEnabled = false;
 			imageGenerationEnabled = false;
 
 			if (localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
@@ -162,7 +162,7 @@
 						files = input.files;
 						selectedToolIds = input.selectedToolIds;
 						webSearchEnabled = input.webSearchEnabled;
-						thinkingEnabled = input.thinkingEnabled;
+						reasoningEnabled = input.reasoningEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
 					}
@@ -428,7 +428,7 @@
 			files = [];
 			selectedToolIds = [];
 			webSearchEnabled = false;
-			thinkingEnabled = false;
+			reasoningEnabled = false;
 			imageGenerationEnabled = false;
 			codeInterpreterEnabled = false;
 
@@ -444,7 +444,7 @@
 					webSearchEnabled = input.webSearchEnabled;
 					imageGenerationEnabled = input.imageGenerationEnabled;
 					codeInterpreterEnabled = input.codeInterpreterEnabled;
-					thinkingEnabled = input.thinkingEnabled;
+					reasoningEnabled = input.reasoningEnabled;
 				}
 			} catch (e) {}
 		}
@@ -753,8 +753,8 @@
 			webSearchEnabled = true;
 		}
 
-		if ($page.url.searchParams.get('thinking') === 'true') {
-			thinkingEnabled = true;
+		if ($page.url.searchParams.get('reasoning') === 'true') {
+			reasoningEnabled = true;
 		}
 
 		if ($page.url.searchParams.get('image-generation') === 'true') {
@@ -1645,7 +1645,7 @@
 						($user?.role === 'admin' || $user?.permissions?.features?.web_search)
 							? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
 							: false,
-					thinking: thinkingEnabled
+					reasoning: reasoningEnabled
 				},
 				variables: {
 					...getPromptVariables(
@@ -2071,7 +2071,7 @@
 								bind:imageGenerationEnabled
 								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
-								bind:thinkingEnabled
+								bind:reasoningEnabled
 								bind:atSelectedModel
 								toolServers={$toolServers}
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
@@ -2128,7 +2128,7 @@
 								bind:imageGenerationEnabled
 								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
-								bind:thinkingEnabled
+								bind:reasoningEnabled
 								bind:atSelectedModel
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								toolServers={$toolServers}

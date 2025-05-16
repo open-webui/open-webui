@@ -790,8 +790,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 ),
                 form_data["messages"],
             )
-        if "thinking" in features:
-            form_data["enable_thinking"] = features["thinking"]
+        if "reasoning" in features:
+            form_data["enable_thinking"] = features["reasoning"]
             form_data["chat_template_kwargs"] = {
                 "enable_thinking": features["thinking"]
             }
