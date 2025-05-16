@@ -1,9 +1,11 @@
 <script lang="ts">
 	import type { Banner } from '$lib/types';
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { onMount, createEventDispatcher, getContext } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
+
+	const i18n = getContext('i18n');
 
 	const dispatch = createEventDispatcher();
 
@@ -13,8 +15,9 @@
 		title: '',
 		content: '',
 		url: '',
-		dismissable: true,
-		timestamp: Math.floor(Date.now() / 1000)
+		dismissible: true,
+		timestamp: Math.floor(Date.now() / 1000),
+		lang: ''
 	};
 
 	export let dismissed = false;
@@ -26,6 +29,21 @@
 		success: 'bg-green-500/20 text-green-700 dark:text-green-200',
 		warning: 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-200',
 		error: 'bg-red-500/20 text-red-700 dark:text-red-200'
+	};
+
+	const bannerTypesText = (type: string) => {
+		switch (type) {
+			case 'info':
+				return $i18n.t('Info');
+			case 'success':
+				return $i18n.t('Success');
+			case 'warning':
+				return $i18n.t('Warning');
+			case 'error':
+				return $i18n.t('Error');
+			default:
+				return type;
+		}
 	};
 
 	const dismiss = (id) => {
@@ -50,7 +68,7 @@
 						class=" text-xs font-bold {classNames[banner.type] ??
 							classNames['info']}  w-fit px-2 rounded uppercase line-clamp-1 mr-0.5"
 					>
-						{banner.type}
+						{bannerTypesText(banner.type)}
 					</div>
 
 					{#if banner.url}

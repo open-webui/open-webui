@@ -1104,7 +1104,7 @@
 	"Visibility": "Visibilité",
 	"Voice": "Voix",
 	"Voice Input": "Entrée vocale",
-	"Warning": "Avertissement !",
+	"Warning": "Avertissement",
 	"Warning:": "Avertissement :",
 	"Warning: Enabling this will allow users to upload arbitrary code on the server.": "Avertissement : L'activation de cette option permettra aux utilisateurs de télécharger du code arbitraire sur le serveur.",
 	"Warning: If you update or change your embedding model, you will need to re-import all documents.": "Avertissement : si vous mettez à jour ou modifiez votre modèle d'intégration, vous devrez réimporter tous les documents.",
