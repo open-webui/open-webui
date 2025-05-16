@@ -582,7 +582,7 @@
 	});
 
 	let screenReaderDiv: HTMLDivElement;
-	
+
 	$: if (message.done) {
 		if (screenReaderDiv) {
 			screenReaderDiv.textContent = message.content;
@@ -598,11 +598,7 @@
 	}}
 />
 
-<div 
-	bind:this={screenReaderDiv}
-	aria-live="polite" 
-	class="sr-only"
->
+<div bind:this={screenReaderDiv} aria-live="polite" class="sr-only">
 	{message.done ? message.content : ''}
 </div>
 
