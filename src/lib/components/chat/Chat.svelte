@@ -148,7 +148,7 @@
 			files = [];
 			selectedToolIds = [];
 			webSearchEnabled = false;
-			webSearchEnabled = false;
+			thinkingEnabled = false;
 			imageGenerationEnabled = false;
 
 			if (localStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)) {
