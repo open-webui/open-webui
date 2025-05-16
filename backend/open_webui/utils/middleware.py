@@ -949,15 +949,15 @@ async def process_chat_response(
         if message:
             messages = get_message_list(message_map, message.get("id"))
 
-            # Remove reasoning details and files from the messages.
+            # Remove details tags and files from the messages.
             # as get_message_list creates a new list, it does not affect
             # the original messages outside of this handler
             for message in messages:
                 message["content"] = re.sub(
-                    r"<details\s+type=\"reasoning\"[^>]*>.*?<\/details>",
+                    r"<details\b[^>]*>.*?<\/details>",
                     "",
                     message["content"],
-                    flags=re.S,
+                    flags=re.S | re.I,
                 ).strip()
 
                 if message.get("files"):
