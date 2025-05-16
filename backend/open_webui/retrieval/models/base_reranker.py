@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List, Tuple
 
+
 class BaseReranker(ABC):
 
     @abstractmethod
