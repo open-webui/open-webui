@@ -224,11 +224,6 @@
 		if (selectedModels.length !== 1 && !atSelectedModel) {
 			selectedFilterIds = [];
 		}
-
-		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
-		if (model) {
-			selectedFilterIds = model?.info?.meta?.filterIds ?? [];
-		}
 	};
 
 	const showMessage = async (message) => {
