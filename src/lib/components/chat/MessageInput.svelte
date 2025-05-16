@@ -957,8 +957,6 @@
 																? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
 																: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
 
-														console.log('Enter pressed:', enterPressed);
-
 														if (enterPressed) {
 															e.preventDefault();
 														}

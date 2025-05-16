@@ -806,6 +806,7 @@
 										sources={message.sources}
 										floatingButtons={message?.done && !readOnly}
 										save={!readOnly}
+										preview={!readOnly}
 										{model}
 										onTaskClick={async (e) => {
 											console.log(e);
@@ -840,27 +841,12 @@
 										onAddMessages={({ modelId, parentId, messages }) => {
 											addMessages({ modelId, parentId, messages });
 										}}
-										on:update={(e) => {
-											const { raw, oldContent, newContent } = e.detail;
-
+										onUpdate={({ raw, oldContent, newContent }) => {
 											history.messages[message.id].content = history.messages[
 												message.id
 											].content.replace(raw, raw.replace(oldContent, newContent));
 
 											updateChat();
-										}}
-										on:select={(e) => {
-											const { type, content } = e.detail;
-
-											if (type === 'explain') {
-												submitMessage(
-													message.id,
-													`Explain this section to me in more detail\n\n\`\`\`\n${content}\n\`\`\``
-												);
-											} else if (type === 'ask') {
-												const input = e.detail?.input ?? '';
-												submitMessage(message.id, `\`\`\`\n${content}\n\`\`\`\n${input}`);
-											}
 										}}
 									/>
 								{/if}

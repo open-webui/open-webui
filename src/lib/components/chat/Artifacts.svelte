@@ -4,7 +4,7 @@
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
 
-	import { chatId, settings, showArtifacts, showControls } from '$lib/stores';
+	import { artifactCode, chatId, settings, showArtifacts, showControls } from '$lib/stores';
 	import XMark from '../icons/XMark.svelte';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
@@ -180,7 +180,14 @@
 		}
 	};
 
-	onMount(() => {});
+	onMount(() => {
+		artifactCode.subscribe((value) => {
+			if (contents) {
+				const codeIdx = contents.findIndex((content) => content.content.includes(value));
+				selectedContentIdx = codeIdx !== -1 ? codeIdx : 0;
+			}
+		});
+	});
 </script>
 
 <div class=" w-full h-full relative flex flex-col bg-gray-50 dark:bg-gray-850">

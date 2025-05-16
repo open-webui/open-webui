@@ -29,9 +29,11 @@
 	export let attributes = {};
 
 	export let save = false;
+	export let preview = false;
 
 	export let onUpdate: Function = () => {};
 	export let onCode: Function = () => {};
+	export let onPreview: Function = () => {};
 
 	export let onTaskClick: Function = () => {};
 	export let onSourceClick: Function = () => {};
@@ -95,7 +97,9 @@
 				code={token?.text ?? ''}
 				{attributes}
 				{save}
+				{preview}
 				{onCode}
+				{onPreview}
 				onSave={(value) => {
 					onUpdate({
 						raw: token.raw,
