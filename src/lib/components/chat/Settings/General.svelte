@@ -245,7 +245,6 @@
 						id="theme-select"
 						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 						bind:value={selectedTheme}
-						placeholder="Select a theme"
 						on:change={() => themeChangeHandler(selectedTheme)}
 					>
 						<option value="system">⚙️ {$i18n.t('System')}</option>
@@ -268,7 +267,6 @@
 						id="language-select"
 						class="dark:bg-gray-900 w-fit pr-8 rounded-sm py-2 px-2 text-xs bg-transparent outline-hidden text-right focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 						bind:value={lang}
-						placeholder="Select a language"
 						on:change={(e) => {
 							changeLanguage(lang);
 						}}
