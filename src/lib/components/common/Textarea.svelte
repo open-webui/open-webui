@@ -2,6 +2,7 @@
 	import { onMount, tick } from 'svelte';
 
 	export let value = '';
+	export let id = '';
 	export let placeholder = '';
 	export let rows = 1;
 	export let minSize = null;
@@ -42,6 +43,7 @@
 	bind:value
 	{placeholder}
 	class={className}
+	{id}
 	style="field-sizing: content;"
 	{rows}
 	{required}
