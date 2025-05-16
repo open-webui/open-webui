@@ -170,6 +170,10 @@
 			await embeddingModelUpdateHandler();
 		}
 
+		RAGConfig.ALLOWED_FILE_EXTENSIONS = RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
+			.map((ext) => ext.trim())
+			.filter((ext) => ext !== '');
+
 		const res = await updateRAGConfig(localStorage.token, RAGConfig);
 		dispatch('save');
 	};
@@ -192,7 +196,10 @@
 	onMount(async () => {
 		await setEmbeddingConfig();
 
-		RAGConfig = await getRAGConfig(localStorage.token);
+		const config = await getRAGConfig(localStorage.token);
+		config.ALLOWED_FILE_EXTENSIONS = config.ALLOWED_FILE_EXTENSIONS.join(', ');
+
+		RAGConfig = config;
 	});
 </script>
 
@@ -791,6 +798,26 @@
 					<div class=" mb-2.5 text-base font-medium">{$i18n.t('Files')}</div>
 
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Allowed File Extensions')}</div>
+						<div class="flex items-center relative">
+							<Tooltip
+								content={$i18n.t(
+									'Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.'
+								)}
+								placement="top-start"
+							>
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									type="text"
+									placeholder={$i18n.t('e.g. pdf, docx, txt')}
+									bind:value={RAGConfig.ALLOWED_FILE_EXTENSIONS}
+									autocomplete="off"
+								/>
+							</Tooltip>
+						</div>
+					</div>
 
 					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Max Upload Size')}</div>

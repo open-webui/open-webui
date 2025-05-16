@@ -374,6 +374,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # File upload settings
         "FILE_MAX_SIZE": request.app.state.config.FILE_MAX_SIZE,
         "FILE_MAX_COUNT": request.app.state.config.FILE_MAX_COUNT,
+        "ALLOWED_FILE_EXTENSIONS": request.app.state.config.ALLOWED_FILE_EXTENSIONS,
         # Integration settings
         "ENABLE_GOOGLE_DRIVE_INTEGRATION": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "ENABLE_ONEDRIVE_INTEGRATION": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,
@@ -521,6 +522,7 @@ class ConfigForm(BaseModel):
     # File upload settings
     FILE_MAX_SIZE: Optional[int] = None
     FILE_MAX_COUNT: Optional[int] = None
+    ALLOWED_FILE_EXTENSIONS: Optional[List[str]] = None
 
     # Integration settings
     ENABLE_GOOGLE_DRIVE_INTEGRATION: Optional[bool] = None
@@ -712,6 +714,11 @@ async def update_rag_config(
         if form_data.FILE_MAX_COUNT is not None
         else request.app.state.config.FILE_MAX_COUNT
     )
+    request.app.state.config.ALLOWED_FILE_EXTENSIONS = (
+        form_data.ALLOWED_FILE_EXTENSIONS
+        if form_data.ALLOWED_FILE_EXTENSIONS is not None
+        else request.app.state.config.ALLOWED_FILE_EXTENSIONS
+    )
 
     # Integration settings
     request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = (
@@ -855,6 +862,7 @@ async def update_rag_config(
         # File upload settings
         "FILE_MAX_SIZE": request.app.state.config.FILE_MAX_SIZE,
         "FILE_MAX_COUNT": request.app.state.config.FILE_MAX_COUNT,
+        "ALLOWED_FILE_EXTENSIONS": request.app.state.config.ALLOWED_FILE_EXTENSIONS,
         # Integration settings
         "ENABLE_GOOGLE_DRIVE_INTEGRATION": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "ENABLE_ONEDRIVE_INTEGRATION": request.app.state.config.ENABLE_ONEDRIVE_INTEGRATION,

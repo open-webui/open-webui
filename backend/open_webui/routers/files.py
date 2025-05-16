@@ -97,6 +97,10 @@ def upload_file(
 
         file_extension = os.path.splitext(filename)[1]
         if request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+            request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
+                ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
+            ]
+
             if file_extension not in request.app.state.config.ALLOWED_FILE_EXTENSIONS:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,

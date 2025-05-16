@@ -1751,7 +1751,9 @@ QDRANT_API_KEY = os.environ.get("QDRANT_API_KEY", None)
 QDRANT_ON_DISK = os.environ.get("QDRANT_ON_DISK", "false").lower() == "true"
 QDRANT_PREFER_GRPC = os.environ.get("QDRANT_PREFER_GRPC", "False").lower() == "true"
 QDRANT_GRPC_PORT = int(os.environ.get("QDRANT_GRPC_PORT", "6334"))
-ENABLE_QDRANT_MULTITENANCY_MODE = os.environ.get("ENABLE_QDRANT_MULTITENANCY_MODE", "false").lower() == "true"
+ENABLE_QDRANT_MULTITENANCY_MODE = (
+    os.environ.get("ENABLE_QDRANT_MULTITENANCY_MODE", "false").lower() == "true"
+)
 
 # OpenSearch
 OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
@@ -1962,7 +1964,11 @@ RAG_FILE_MAX_SIZE = PersistentConfig(
 RAG_ALLOWED_FILE_EXTENSIONS = PersistentConfig(
     "RAG_ALLOWED_FILE_EXTENSIONS",
     "rag.file.allowed_extensions",
-    os.environ.get("RAG_ALLOWED_FILE_EXTENSIONS", "").split(","),
+    [
+        ext.strip()
+        for ext in os.environ.get("RAG_ALLOWED_FILE_EXTENSIONS", "").split(",")
+        if ext.strip()
+    ],
 )
 
 RAG_EMBEDDING_ENGINE = PersistentConfig(
