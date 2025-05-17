@@ -108,8 +108,8 @@
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
-				<div class=" mb-1 font-medium flex items-center">
-					<div class=" text-xs mr-1">{$i18n.t('Set Task Model')}</div>
+				<div class=" mb-2 font-medium flex items-center">
+					<div class=" text-xs mr-1">{$i18n.t('Task Model')}</div>
 					<Tooltip
 						content={$i18n.t(
 							'A task model is used when performing tasks such as generating titles for chats and web search queries'
@@ -134,7 +134,7 @@
 
 				<div class=" mb-2.5 flex w-full gap-2">
 					<div class="flex-1">
-						<div class=" text-xs mb-1">{$i18n.t('Local Models')}</div>
+						<div class=" text-xs mb-1">{$i18n.t('Local Task Model')}</div>
 						<select
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							bind:value={taskConfig.TASK_MODEL}
@@ -159,7 +159,7 @@
 							}}
 						>
 							<option value="" selected>{$i18n.t('Current Model')}</option>
-							{#each models.filter((m) => m.owned_by === 'ollama') as model}
+							{#each models.filter((m) => m.connection_type === 'local') as model}
 								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
 									{model.name}
 								</option>
@@ -168,7 +168,7 @@
 					</div>
 
 					<div class="flex-1">
-						<div class=" text-xs mb-1">{$i18n.t('External Models')}</div>
+						<div class=" text-xs mb-1">{$i18n.t('External Task Model')}</div>
 						<select
 							class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
 							bind:value={taskConfig.TASK_MODEL_EXTERNAL}
