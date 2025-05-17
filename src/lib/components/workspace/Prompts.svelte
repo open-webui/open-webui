@@ -24,7 +24,10 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Eye from '../icons/Eye.svelte';
+	import Clipboard from '../icons/Clipboard.svelte'; 
 	import { capitalizeFirstLetter } from '$lib/utils';
+
+	import Pagination from '$lib/components/common/Pagination.svelte';
 
 	const i18n = getContext('i18n');
 	let promptsImportInputElement: HTMLInputElement;
@@ -41,40 +44,81 @@
 	let showPreviewModal = false;
 	let promptToPreview = null;
 
-	// Sorting state
-	let sortBy = 'title'; // 'title' or 'command'
-	let sortDirection = 'asc'; // 'asc' or 'desc'
+	let sortBy: 'title' | 'command' | 'user' = 'title'; // Added 'user' type
+	let sortDirection = 'asc';
 
-	const setSort = (field: 'title' | 'command') => {
+	let currentPage = 1;
+	const ITEMS_PER_PAGE = 27;
+
+	const setSort = (field: 'title' | 'command' | 'user') => { // Updated field type
 		if (sortBy === field) {
 			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
 		} else {
 			sortBy = field;
 			sortDirection = 'asc';
 		}
+		currentPage = 1;
 	};
 
 	let filteredItems = [];
 	$: filteredItems = prompts
-		.filter((p) => query === '' || p.command.toLowerCase().includes(query.toLowerCase()) || p.title.toLowerCase().includes(query.toLowerCase()))
+		.filter((p) => {
+			if (query === '') return true;
+			const lowerQuery = query.toLowerCase();
+			return (
+				(p.title || '').toLowerCase().includes(lowerQuery) ||
+				(p.command || '').toLowerCase().includes(lowerQuery) ||
+				(p.user?.name || '').toLowerCase().includes(lowerQuery) ||
+				(p.user?.email || '').toLowerCase().includes(lowerQuery)
+			);
+		})
 		.sort((a, b) => {
-			const valA = (sortBy === 'title' ? a.title || '' : a.command || '').toLowerCase();
-			const valB = (sortBy === 'title' ? b.title || '' : b.command || '').toLowerCase();
+			let valA_str: string;
+			let valB_str: string;
+
+			if (sortBy === 'title') {
+				valA_str = (a.title || '').toLowerCase();
+				valB_str = (b.title || '').toLowerCase();
+			} else if (sortBy === 'command') {
+				valA_str = (a.command || '').toLowerCase();
+				valB_str = (b.command || '').toLowerCase();
+			} else { // sortBy === 'user'
+				const getUserSortKey = (userObj) => (userObj?.name || userObj?.email || '').toLowerCase();
+				valA_str = getUserSortKey(a.user);
+				valB_str = getUserSortKey(b.user);
+			}
 
 			let comparison = 0;
-			if (valA > valB) {
+			if (valA_str > valB_str) {
 				comparison = 1;
-			} else if (valA < valB) {
+			} else if (valA_str < valB_str) {
 				comparison = -1;
 			}
 			return sortDirection === 'asc' ? comparison : comparison * -1;
 		});
 
+	let paginatedItems = [];
+	$: {
+		const totalFiltered = filteredItems.length;
+		const maxPage = Math.max(1, Math.ceil(totalFiltered / ITEMS_PER_PAGE));
+		if (currentPage > maxPage) {
+			currentPage = maxPage;
+		}
+		if (currentPage < 1 && totalFiltered > 0) {
+			currentPage = 1;
+		} else if (totalFiltered === 0) {
+			currentPage = 1;
+		}
+
+		paginatedItems = filteredItems.slice(
+			(currentPage - 1) * ITEMS_PER_PAGE,
+			currentPage * ITEMS_PER_PAGE
+		);
+	}
+
 	const shareHandler = async (prompt) => {
 		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
-
 		const url = 'https://openwebui.com';
-
 		const tab = await window.open(`${url}/prompts/create`, '_blank');
 		window.addEventListener(
 			'message',
@@ -103,8 +147,22 @@
 	const deleteHandler = async (prompt) => {
 		const command = prompt.command;
 		await deletePromptByCommand(localStorage.token, command);
-		await init();
+		await init(); 
 		toast.success($i18n.t('Prompt "{{command}}" deleted.', { command: prompt.command }));
+	};
+
+	const copyPromptContent = async (content: string) => {
+		if (!navigator.clipboard) {
+			toast.error($i18n.t('Clipboard API not available.'));
+			return;
+		}
+		try {
+			await navigator.clipboard.writeText(content);
+			toast.success($i18n.t('Content copied to clipboard!'));
+		} catch (err) {
+			const errorMessage = err instanceof Error ? err.message : String(err);
+			toast.error($i18n.t('Failed to copy: {{error}}', { error: errorMessage }));
+		}
 	};
 
 	const init = async () => {
@@ -156,7 +214,7 @@
 				{$i18n.t('Prompts')}
 				<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-					>{filteredItems.length}</span
+					>{filteredItems.length} {#if filteredItems.length !== 1}{$i18n.t('items')}{:else}{$i18n.t('item')}{/if}</span
 				>
 			</div>
 		</div>
@@ -169,12 +227,13 @@
 				<input
 					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={query}
+					on:input={() => { currentPage = 1; }}
 					placeholder={$i18n.t('Search Prompts')}
 				/>
 				{#if query}
 					<Tooltip content={$i18n.t('Clear search')} placement="top">
 						<button
-							on:click={() => query = ''}
+							on:click={() => { query = ''; currentPage = 1;}}
 							class="ml-1 p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
 							aria-label={$i18n.t('Clear search')}
 							type="button"
@@ -198,8 +257,7 @@
 				</Tooltip>
 			</div>
 		</div>
-	    
-		<!-- Sorting Controls -->
+
 		<div class="flex items-center space-x-2 my-2.5">
 			<span class="text-xs font-medium text-gray-500 dark:text-gray-400">{$i18n.t('Sort by:')}</span>
 			<button
@@ -228,11 +286,23 @@
 					<span class="ml-1 text-xs">{sortDirection === 'asc' ? $i18n.t('▲') : $i18n.t('▼')}</span>
 				{/if}
 			</button>
+			<button
+			class="flex items-center px-2.5 py-1 rounded-lg text-xs font-medium transition-colors
+				{sortBy === 'user'
+				? 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 ring-1 ring-inset ring-gray-300 dark:ring-gray-500'
+				: 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200'}"
+			on:click={() => setSort('user')}
+			type="button"
+		>
+			{$i18n.t('User')} {#if sortBy === 'user'}
+				<span class="ml-1 text-xs">{sortDirection === 'asc' ? $i18n.t('▲') : $i18n.t('▼')}</span>
+			{/if}
+		</button>
 		</div>
 	</div>
 
-	<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
-		{#each filteredItems as prompt (prompt.command)}
+	<div class="mb-1 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
+		{#each paginatedItems as prompt (prompt.command)}
 			<div
 				class="flex w-full px-3 py-2.5 bg-white dark:bg-gray-850 rounded-xl transition items-start gap-3 hover:bg-black/5 dark:hover:bg-white/5"
 			>
@@ -286,6 +356,17 @@
 							}}
 						>
 							<Eye className="size-4" />
+						</button>
+					</Tooltip>
+
+					<Tooltip content={$i18n.t('Copy Prompt Content')} placement="top">
+						<button
+							class="p-1.5 rounded-xl text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+							type="button"
+							aria-label={$i18n.t('Copy Prompt Content')}
+							on:click={() => copyPromptContent(prompt.content)}
+						>
+							<Clipboard className="size-4" />
 						</button>
 					</Tooltip>
 
@@ -353,149 +434,169 @@
 		{/if}
 	</div>
 
-	{#if $user?.role === 'admin'}
-		<div class=" flex justify-end w-full mb-3">
-			<div class="flex space-x-2">
-				<input
-					id="prompts-import-input"
-					bind:this={promptsImportInputElement}
-					bind:files={importFiles}
-					type="file"
-					accept=".json"
-					hidden
-					on:change={() => {
-						if (!importFiles || importFiles.length === 0) {
-							return;
-						}
-						const file = importFiles[0];
+	<!-- Combined Row for Pagination and Admin Buttons -->
+	{#if filteredItems.length > ITEMS_PER_PAGE || $user?.role === 'admin'}
+		<div class="flex items-center w-full my-4 py-1">
+			
+			<!-- Left Spacer -->
+			<div class="flex-1">
+				<!-- Intentionally empty to push pagination towards center and admin buttons to right -->
+			</div>
 
-						const reader = new FileReader();
-						reader.onload = async (event) => {
-							const fileContent = event.target?.result;
+			<!-- Center: Pagination -->
+			<div class="flex-shrink-0">
+				{#if filteredItems.length > ITEMS_PER_PAGE}
+					<Pagination bind:page={currentPage} count={filteredItems.length} perPage={ITEMS_PER_PAGE} />
+				{/if}
+			</div>
 
-							if (typeof fileContent === 'string') {
-								try {
-									const savedPrompts = JSON.parse(fileContent);
-									if (!Array.isArray(savedPrompts)) {
-										toast.error($i18n.t('Invalid file format. Expected an array of prompts.'));
-										return;
-									}
-
-									let successCount = 0;
-									let failCount = 0;
-									const totalToImport = savedPrompts.length;
-
-									for (const prompt of savedPrompts) {
-										if (!prompt.command || !prompt.title || typeof prompt.content !== 'string') {
-											toast.error($i18n.t('Skipping invalid prompt object (missing command, title, or content): {{promptString}}', {promptString: JSON.stringify(prompt).substring(0,100) + '...'}));
-											failCount++;
-											continue;
-										}
-										await createNewPrompt(localStorage.token, {
-											command:
-												prompt.command.charAt(0) === '/' ? prompt.command.slice(1) : prompt.command,
-											title: prompt.title,
-											content: prompt.content
-										})
-										.then(() => successCount++)
-										.catch((error) => {
-											failCount++;
-											toast.error($i18n.t('Error creating prompt "{{title}}": {{error}}', {title: prompt.title, error: error.message || String(error)}));
-										});
-									}
-									
-									if (successCount > 0) {
-										toast.success($i18n.t('Successfully imported {{count}} out of {{total}} prompts.', {count: successCount, total: totalToImport}));
-									}
-									if (failCount > 0 && successCount === 0) {
-										toast.error($i18n.t('Failed to import {{count}} prompts.', {count: failCount}));
-									} else if (failCount > 0) {
-										toast.info($i18n.t('{{count}} prompts failed to import.', {count: failCount}));
-									}
-									if (successCount === 0 && failCount === 0 && totalToImport > 0) {
-										toast.info($i18n.t('No valid prompts found in the file to import.'));
-									}
-
-
-									await init();
-								} catch (e) {
-									toast.error($i18n.t('Failed to parse the import file (invalid JSON): {{error}}', {error: e.message || String(e)}));
+			<!-- Right side: Admin Buttons -->
+			<div class="flex-1 flex justify-end">
+				{#if $user?.role === 'admin'}
+					<div class="flex space-x-2">
+						<!-- Hidden File Input for Import -->
+						<input
+							id="prompts-import-input"
+							bind:this={promptsImportInputElement}
+							bind:files={importFiles}
+							type="file"
+							accept=".json"
+							hidden
+							on:change={() => {
+								if (!importFiles || importFiles.length === 0) {
+									return;
 								}
-							} else {
-								toast.error($i18n.t('Could not read file content as text.'));
-							}
-							importFiles = null;
-							if (promptsImportInputElement) {
-								promptsImportInputElement.value = '';
-							}
-						};
+								const file = importFiles[0];
 
-						reader.onerror = () => {
-							toast.error($i18n.t('Error reading file.'));
-							// Reset file input
-							importFiles = null;
-							if (promptsImportInputElement) {
-								promptsImportInputElement.value = '';
-							}
-						}
-						reader.readAsText(file);
-					}}
-				/>
+								const reader = new FileReader();
+								reader.onload = async (event) => {
+									const fileContent = event.target?.result;
 
-				<button
-					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition"
-					on:click={() => {
-						promptsImportInputElement.click();
-					}}
-					type="button"
-				>
-					<div class=" self-center mr-1 font-medium line-clamp-1">{$i18n.t('Import Prompts')}</div>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 16 16"
-						fill="currentColor"
-						class="w-4 h-4 self-center"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
-							clip-rule="evenodd"
+									if (typeof fileContent === 'string') {
+										try {
+											const savedPrompts = JSON.parse(fileContent);
+											if (!Array.isArray(savedPrompts)) {
+												toast.error($i18n.t('Invalid file format. Expected an array of prompts.'));
+												return;
+											}
+
+											let successCount = 0;
+											let failCount = 0;
+											const totalToImport = savedPrompts.length;
+
+											for (const prompt of savedPrompts) {
+												if (!prompt.command || !prompt.title || typeof prompt.content !== 'string') {
+													toast.error($i18n.t('Skipping invalid prompt object (missing command, title, or content): {{promptString}}', {promptString: JSON.stringify(prompt).substring(0,100) + '...'}));
+													failCount++;
+													continue;
+												}
+												await createNewPrompt(localStorage.token, {
+													command:
+														prompt.command.charAt(0) === '/' ? prompt.command.slice(1) : prompt.command,
+													title: prompt.title,
+													content: prompt.content
+												})
+												.then(() => successCount++)
+												.catch((error) => {
+													failCount++;
+													const errorMessage = error instanceof Error ? error.message : String(error);
+													toast.error($i18n.t('Error creating prompt "{{title}}": {{error}}', {title: prompt.title, error: errorMessage}));
+												});
+											}
+											
+											if (successCount > 0) {
+												toast.success($i18n.t('Successfully imported {{count}} out of {{total}} prompts.', {count: successCount, total: totalToImport}));
+											}
+											if (failCount > 0 && successCount === 0) {
+												toast.error($i18n.t('Failed to import {{count}} prompts.', {count: failCount}));
+											} else if (failCount > 0) {
+												toast.info($i18n.t('{{count}} prompts failed to import.', {count: failCount}));
+											}
+											if (successCount === 0 && failCount === 0 && totalToImport > 0) {
+												toast.info($i18n.t('No valid prompts found in the file to import.'));
+											}
+											await init();
+										} catch (e) {
+											const errorMessage = e instanceof Error ? e.message : String(e);
+											toast.error($i18n.t('Failed to parse the import file (invalid JSON): {{error}}', {error: errorMessage}));
+										}
+									} else {
+										toast.error($i18n.t('Could not read file content as text.'));
+									}
+									importFiles = null;
+									if (promptsImportInputElement) {
+										promptsImportInputElement.value = '';
+									}
+								};
+								reader.onerror = () => {
+									toast.error($i18n.t('Error reading file.'));
+									importFiles = null;
+									if (promptsImportInputElement) {
+										promptsImportInputElement.value = '';
+									}
+								}
+								reader.readAsText(file);
+							}}
 						/>
-					</svg>
-				</button>
-
-				{#if prompts.length}
-					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition"
-						on:click={async () => {
-							let blob = new Blob([JSON.stringify(prompts)], {
-								type: 'application/json'
-							});
-							saveAs(blob, `prompts-export-all-${Date.now()}.json`);
-							toast.success($i18n.t('All prompts exported.'));
-						}}
-						type="button"
-					>
-						<div class=" self-center mr-1 font-medium line-clamp-1">
-							{$i18n.t('Export Prompts')} ({prompts.length})
-						</div>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4 self-center"
+						<!-- Import Button -->
+						<button
+							class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition"
+							on:click={() => {
+								promptsImportInputElement.click();
+							}}
+							type="button"
 						>
-							<path
-								fill-rule="evenodd"
-								d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</button>
+							<div class=" self-center mr-1 font-medium line-clamp-1">{$i18n.t('Import Prompts')}</div>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 16 16"
+								fill="currentColor"
+								class="w-4 h-4 self-center"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75-.75Z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</button>
+
+						<!-- Export Button -->
+						{#if prompts.length}
+							<button
+								class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition"
+								on:click={async () => {
+									let blob = new Blob([JSON.stringify(prompts)], {
+										type: 'application/json'
+									});
+									saveAs(blob, `prompts-export-all-${Date.now()}.json`);
+									toast.success($i18n.t('All prompts exported.'));
+								}}
+								type="button"
+							>
+								<div class=" self-center mr-1 font-medium line-clamp-1">
+									{$i18n.t('Export Prompts')} ({prompts.length})
+								</div>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 16 16"
+									fill="currentColor"
+									class="w-4 h-4 self-center"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							</button>
+						{/if}
+					</div>
 				{/if}
 			</div>
 		</div>
 	{/if}
+
 
 	{#if $config?.features.enable_community_sharing}
 		<div class=" my-16">
