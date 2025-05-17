@@ -214,7 +214,7 @@
 				{$i18n.t('Prompts')}
 				<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-					>{filteredItems.length} {#if filteredItems.length !== 1}{$i18n.t('items')}{:else}{$i18n.t('item')}{/if}</span
+					>{filteredItems.length} {#if filteredItems.length !== 1}{$i18n.t('prompts')}{:else}{$i18n.t('prompt')}{/if}</span
 				>
 			</div>
 		</div>
