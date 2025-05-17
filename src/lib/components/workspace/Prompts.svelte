@@ -41,9 +41,34 @@
 	let showPreviewModal = false;
 	let promptToPreview = null;
 
-	let filteredItems = [];
-	$: filteredItems = prompts.filter((p) => query === '' || p.command.toLowerCase().includes(query.toLowerCase()) || p.title.toLowerCase().includes(query.toLowerCase()));
+	// Sorting state
+	let sortBy = 'title'; // 'title' or 'command'
+	let sortDirection = 'asc'; // 'asc' or 'desc'
 
+	const setSort = (field: 'title' | 'command') => {
+		if (sortBy === field) {
+			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortBy = field;
+			sortDirection = 'asc';
+		}
+	};
+
+	let filteredItems = [];
+	$: filteredItems = prompts
+		.filter((p) => query === '' || p.command.toLowerCase().includes(query.toLowerCase()) || p.title.toLowerCase().includes(query.toLowerCase()))
+		.sort((a, b) => {
+			const valA = (sortBy === 'title' ? a.title || '' : a.command || '').toLowerCase();
+			const valB = (sortBy === 'title' ? b.title || '' : b.command || '').toLowerCase();
+
+			let comparison = 0;
+			if (valA > valB) {
+				comparison = 1;
+			} else if (valA < valB) {
+				comparison = -1;
+			}
+			return sortDirection === 'asc' ? comparison : comparison * -1;
+		});
 
 	const shareHandler = async (prompt) => {
 		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
@@ -146,6 +171,20 @@
 					bind:value={query}
 					placeholder={$i18n.t('Search Prompts')}
 				/>
+				{#if query}
+					<Tooltip content={$i18n.t('Clear search')} placement="top">
+						<button
+							on:click={() => query = ''}
+							class="ml-1 p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+							aria-label={$i18n.t('Clear search')}
+							type="button"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</button>
+					</Tooltip>
+				{/if}
 			</div>
 
 			<div>
@@ -158,6 +197,37 @@
 					</a>
 				</Tooltip>
 			</div>
+		</div>
+	    
+		<!-- Sorting Controls -->
+		<div class="flex items-center space-x-2 my-2.5">
+			<span class="text-xs font-medium text-gray-500 dark:text-gray-400">{$i18n.t('Sort by:')}</span>
+			<button
+				class="flex items-center px-2.5 py-1 rounded-lg text-xs font-medium transition-colors
+					{sortBy === 'title'
+					? 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 ring-1 ring-inset ring-gray-300 dark:ring-gray-500'
+					: 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200'}"
+				on:click={() => setSort('title')}
+				type="button"
+			>
+				{$i18n.t('Title')}
+				{#if sortBy === 'title'}
+					<span class="ml-1 text-xs">{sortDirection === 'asc' ? $i18n.t('▲') : $i18n.t('▼')}</span>
+				{/if}
+			</button>
+			<button
+				class="flex items-center px-2.5 py-1 rounded-lg text-xs font-medium transition-colors
+					{sortBy === 'command'
+					? 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-100 ring-1 ring-inset ring-gray-300 dark:ring-gray-500'
+					: 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200'}"
+				on:click={() => setSort('command')}
+				type="button"
+			>
+				{$i18n.t('Command')}
+				{#if sortBy === 'command'}
+					<span class="ml-1 text-xs">{sortDirection === 'asc' ? $i18n.t('▲') : $i18n.t('▼')}</span>
+				{/if}
+			</button>
 		</div>
 	</div>
 
@@ -377,6 +447,7 @@
 					on:click={() => {
 						promptsImportInputElement.click();
 					}}
+					type="button"
 				>
 					<div class=" self-center mr-1 font-medium line-clamp-1">{$i18n.t('Import Prompts')}</div>
 					<svg
@@ -403,6 +474,7 @@
 							saveAs(blob, `prompts-export-all-${Date.now()}.json`);
 							toast.success($i18n.t('All prompts exported.'));
 						}}
+						type="button"
 					>
 						<div class=" self-center mr-1 font-medium line-clamp-1">
 							{$i18n.t('Export Prompts')} ({prompts.length})
