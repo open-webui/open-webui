@@ -15,6 +15,7 @@
 	} from '$lib/apis/prompts';
 
 	import PromptMenu from './Prompts/PromptMenu.svelte';
+	import PromptPreviewModal from './Prompts/PromptPreviewModal.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Search from '../icons/Search.svelte';
@@ -22,13 +23,14 @@
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import Eye from '../icons/Eye.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
 
 	const i18n = getContext('i18n');
 	let promptsImportInputElement: HTMLInputElement;
 	let loaded = false;
 
-	let importFiles = '';
+	let importFiles: FileList | null = null;
 	let query = '';
 
 	let prompts = [];
@@ -36,8 +38,12 @@
 	let showDeleteConfirm = false;
 	let deletePrompt = null;
 
+	let showPreviewModal = false;
+	let promptToPreview = null;
+
 	let filteredItems = [];
-	$: filteredItems = prompts.filter((p) => query === '' || p.command.includes(query));
+	$: filteredItems = prompts.filter((p) => query === '' || p.command.toLowerCase().includes(query.toLowerCase()) || p.title.toLowerCase().includes(query.toLowerCase()));
+
 
 	const shareHandler = async (prompt) => {
 		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
@@ -66,13 +72,14 @@
 		let blob = new Blob([JSON.stringify([prompt])], {
 			type: 'application/json'
 		});
-		saveAs(blob, `prompt-export-${Date.now()}.json`);
+		saveAs(blob, `prompt-export-${prompt.command.replace('/','')}-${Date.now()}.json`);
 	};
 
 	const deleteHandler = async (prompt) => {
 		const command = prompt.command;
 		await deletePromptByCommand(localStorage.token, command);
 		await init();
+		toast.success($i18n.t('Prompt "{{command}}" deleted.', { command: prompt.command }));
 	};
 
 	const init = async () => {
@@ -97,13 +104,26 @@
 		bind:show={showDeleteConfirm}
 		title={$i18n.t('Delete prompt?')}
 		on:confirm={() => {
-			deleteHandler(deletePrompt);
+			if (deletePrompt) {
+				deleteHandler(deletePrompt);
+			}
 		}}
 	>
-		<div class=" text-sm text-gray-500">
-			{$i18n.t('This will delete')} <span class="  font-semibold">{deletePrompt.command}</span>.
+		<div class=" text-sm text-gray-500 dark:text-gray-400">
+			{$i18n.t('This will delete')} <span class="font-semibold text-gray-700 dark:text-gray-200">{deletePrompt?.command}</span>.
+			{$i18n.t('Are you sure?')}
 		</div>
 	</DeleteConfirmDialog>
+
+	{#if showPreviewModal && promptToPreview}
+		<PromptPreviewModal
+			bind:show={showPreviewModal}
+			prompt={promptToPreview}
+			on:close={() => {
+				promptToPreview = null;
+			}}
+		/>
+	{/if}
 
 	<div class="flex flex-col gap-1 my-1.5">
 		<div class="flex justify-between items-center">
@@ -129,68 +149,98 @@
 			</div>
 
 			<div>
-				<a
-					class=" px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center space-x-1"
-					href="/workspace/prompts/create"
-				>
-					<Plus className="size-3.5" />
-				</a>
+				<Tooltip content={$i18n.t('Create New Prompt')} placement="top">
+					<a
+						class="px-2 py-2 rounded-xl hover:bg-gray-700/10 dark:hover:bg-gray-100/10 text-gray-600 dark:text-gray-300 dark:hover:text-white transition font-medium text-sm flex items-center"
+						href="/workspace/prompts/create"
+					>
+						<Plus className="size-3.5" />
+					</a>
+				</Tooltip>
 			</div>
 		</div>
 	</div>
 
 	<div class="mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
-		{#each filteredItems as prompt}
+		{#each filteredItems as prompt (prompt.command)}
 			<div
-				class=" flex space-x-4 cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
+				class="flex w-full px-3 py-2.5 bg-white dark:bg-gray-850 rounded-xl transition items-start gap-3 hover:bg-black/5 dark:hover:bg-white/5"
 			>
-				<div class=" flex flex-1 space-x-4 cursor-pointer w-full">
-					<a href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}>
-						<div class=" flex-1 flex items-center gap-2 self-center">
-							<div class=" font-semibold line-clamp-1 capitalize">{prompt.title}</div>
-							<div class=" text-xs overflow-hidden text-ellipsis line-clamp-1">
-								{prompt.command}
-							</div>
-						</div>
-
-						<div class=" text-xs px-0.5">
-							<Tooltip
-								content={prompt?.user?.email ?? $i18n.t('Deleted User')}
-								className="flex shrink-0"
-								placement="top-start"
-							>
-								<div class="shrink-0 text-gray-500">
-									{$i18n.t('By {{name}}', {
-										name: capitalizeFirstLetter(
-											prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
-										)
-									})}
-								</div>
-							</Tooltip>
-						</div>
-					</a>
-				</div>
-				<div class="flex flex-row gap-0.5 self-center">
-					<a
-						class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-						type="button"
-						href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="1.5"
-							stroke="currentColor"
-							class="w-4 h-4"
+				<a
+					href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
+					class="flex-1 min-w-0 group cursor-pointer"
+				>
+					<div class="flex items-center gap-2">
+						<div
+							class="font-semibold line-clamp-1 capitalize group-hover:underline text-gray-800 dark:text-gray-100"
 						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-							/>
-						</svg>
-					</a>
+							{prompt.title}
+						</div>
+						<div
+							class="text-xs text-gray-500 dark:text-gray-400 overflow-hidden text-ellipsis line-clamp-1"
+						>
+							{prompt.command}
+						</div>
+					</div>
+					<div class="text-xs mt-0.5 text-gray-500 dark:text-gray-400">
+						<Tooltip
+							content={prompt?.user?.email ?? $i18n.t('Deleted User')}
+							className="flex shrink-0"
+							placement="top-start"
+						>
+							<div class="shrink-0">
+								{$i18n.t('By {{name}}', {
+									name: capitalizeFirstLetter(
+										prompt?.user?.name ?? prompt?.user?.email ?? $i18n.t('Deleted User')
+									)
+								})}
+							</div>
+						</Tooltip>
+					</div>
+					<div
+						class="mt-1.5 text-sm text-gray-600 dark:text-gray-300 line-clamp-2 leading-snug"
+					>
+						{prompt.content || $i18n.t('No content available.')}
+					</div>
+				</a>
+
+				<div class="flex flex-row gap-0.5 self-start pt-0.5 shrink-0">
+					<Tooltip content={$i18n.t('Preview Prompt')} placement="top">
+						<button
+							class="p-1.5 rounded-xl text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+							type="button"
+							aria-label={$i18n.t('Preview Prompt')}
+							on:click={() => {
+								promptToPreview = prompt;
+								showPreviewModal = true;
+							}}
+						>
+							<Eye className="size-4" />
+						</button>
+					</Tooltip>
+
+					<Tooltip content={$i18n.t('Edit Prompt')} placement="top">
+						<a
+							class="p-1.5 rounded-xl text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors block"
+							aria-label={$i18n.t('Edit Prompt')}
+							href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="1.5"
+								stroke="currentColor"
+								class="w-4 h-4"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
+								/>
+							</svg>
+						</a>
+					</Tooltip>
 
 					<PromptMenu
 						shareHandler={() => {
@@ -208,16 +258,29 @@
 						}}
 						onClose={() => {}}
 					>
-						<button
-							class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-							type="button"
-						>
-							<EllipsisHorizontal className="size-5" />
-						</button>
+						<Tooltip content={$i18n.t('More')} placement="top">
+							<button
+								class="p-1.5 rounded-xl text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+								type="button"
+								aria-label={$i18n.t('More')}
+							>
+								<EllipsisHorizontal className="size-5" />
+							</button>
+						</Tooltip>
 					</PromptMenu>
 				</div>
 			</div>
 		{/each}
+		{#if filteredItems.length === 0 && prompts.length > 0}
+			<div class="text-center py-10 text-gray-500 dark:text-gray-400 md:col-span-2 xl:col-span-3">
+				{$i18n.t('No prompts found matching your search criteria.')}
+			</div>
+		{/if}
+		{#if prompts.length === 0}
+			<div class="text-center py-10 text-gray-500 dark:text-gray-400 md:col-span-2 xl:col-span-3">
+				{$i18n.t('No prompts available. Create one to get started!')}
+			</div>
+		{/if}
 	</div>
 
 	{#if $user?.role === 'admin'}
@@ -231,88 +294,131 @@
 					accept=".json"
 					hidden
 					on:change={() => {
-						console.log(importFiles);
+						if (!importFiles || importFiles.length === 0) {
+							return;
+						}
+						const file = importFiles[0];
 
 						const reader = new FileReader();
 						reader.onload = async (event) => {
-							const savedPrompts = JSON.parse(event.target.result);
-							console.log(savedPrompts);
+							const fileContent = event.target?.result;
 
-							for (const prompt of savedPrompts) {
-								await createNewPrompt(localStorage.token, {
-									command:
-										prompt.command.charAt(0) === '/' ? prompt.command.slice(1) : prompt.command,
-									title: prompt.title,
-									content: prompt.content
-								}).catch((error) => {
-									toast.error(`${error}`);
-									return null;
-								});
+							if (typeof fileContent === 'string') {
+								try {
+									const savedPrompts = JSON.parse(fileContent);
+									if (!Array.isArray(savedPrompts)) {
+										toast.error($i18n.t('Invalid file format. Expected an array of prompts.'));
+										return;
+									}
+
+									let successCount = 0;
+									let failCount = 0;
+									const totalToImport = savedPrompts.length;
+
+									for (const prompt of savedPrompts) {
+										if (!prompt.command || !prompt.title || typeof prompt.content !== 'string') {
+											toast.error($i18n.t('Skipping invalid prompt object (missing command, title, or content): {{promptString}}', {promptString: JSON.stringify(prompt).substring(0,100) + '...'}));
+											failCount++;
+											continue;
+										}
+										await createNewPrompt(localStorage.token, {
+											command:
+												prompt.command.charAt(0) === '/' ? prompt.command.slice(1) : prompt.command,
+											title: prompt.title,
+											content: prompt.content
+										})
+										.then(() => successCount++)
+										.catch((error) => {
+											failCount++;
+											toast.error($i18n.t('Error creating prompt "{{title}}": {{error}}', {title: prompt.title, error: error.message || String(error)}));
+										});
+									}
+									
+									if (successCount > 0) {
+										toast.success($i18n.t('Successfully imported {{count}} out of {{total}} prompts.', {count: successCount, total: totalToImport}));
+									}
+									if (failCount > 0 && successCount === 0) {
+										toast.error($i18n.t('Failed to import {{count}} prompts.', {count: failCount}));
+									} else if (failCount > 0) {
+										toast.info($i18n.t('{{count}} prompts failed to import.', {count: failCount}));
+									}
+									if (successCount === 0 && failCount === 0 && totalToImport > 0) {
+										toast.info($i18n.t('No valid prompts found in the file to import.'));
+									}
+
+
+									await init();
+								} catch (e) {
+									toast.error($i18n.t('Failed to parse the import file (invalid JSON): {{error}}', {error: e.message || String(e)}));
+								}
+							} else {
+								toast.error($i18n.t('Could not read file content as text.'));
 							}
-
-							prompts = await getPromptList(localStorage.token);
-							await _prompts.set(await getPrompts(localStorage.token));
-
-							importFiles = [];
-							promptsImportInputElement.value = '';
+							importFiles = null;
+							if (promptsImportInputElement) {
+								promptsImportInputElement.value = '';
+							}
 						};
 
-						reader.readAsText(importFiles[0]);
+						reader.onerror = () => {
+							toast.error($i18n.t('Error reading file.'));
+							// Reset file input
+							importFiles = null;
+							if (promptsImportInputElement) {
+								promptsImportInputElement.value = '';
+							}
+						}
+						reader.readAsText(file);
 					}}
 				/>
 
 				<button
-					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+					class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition"
 					on:click={() => {
 						promptsImportInputElement.click();
 					}}
 				>
-					<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Import Prompts')}</div>
-
-					<div class=" self-center">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 16 16"
-							fill="currentColor"
-							class="w-4 h-4"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</div>
+					<div class=" self-center mr-1 font-medium line-clamp-1">{$i18n.t('Import Prompts')}</div>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="w-4 h-4 self-center"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 9.5a.75.75 0 0 1-.75-.75V8.06l-.72.72a.75.75 0 0 1-1.06-1.06l2-2a.75.75 0 0 1 1.06 0l2 2a.75.75 0 1 1-1.06 1.06l-.72-.72v2.69a.75.75 0 0 1-.75.75Z"
+							clip-rule="evenodd"
+						/>
+					</svg>
 				</button>
 
 				{#if prompts.length}
 					<button
-						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+						class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition"
 						on:click={async () => {
 							let blob = new Blob([JSON.stringify(prompts)], {
 								type: 'application/json'
 							});
-							saveAs(blob, `prompts-export-${Date.now()}.json`);
+							saveAs(blob, `prompts-export-all-${Date.now()}.json`);
+							toast.success($i18n.t('All prompts exported.'));
 						}}
 					>
-						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Export Prompts')}
+						<div class=" self-center mr-1 font-medium line-clamp-1">
+							{$i18n.t('Export Prompts')} ({prompts.length})
 						</div>
-
-						<div class=" self-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 16 16"
-								fill="currentColor"
-								class="w-4 h-4"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
-									clip-rule="evenodd"
-								/>
-							</svg>
-						</div>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 16 16"
+							fill="currentColor"
+							class="w-4 h-4 self-center"
+						>
+							<path
+								fill-rule="evenodd"
+								d="M4 2a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5V6.621a1.5 1.5 0 0 0-.44-1.06L9.94 2.439A1.5 1.5 0 0 0 8.878 2H4Zm4 3.5a.75.75 0 0 1 .75.75v2.69l.72-.72a.75.75 0 1 1 1.06 1.06l-2 2a.75.75 0 0 1-1.06 0l-2-2a.75.75 0 0 1 1.06-1.06l.72.72V6.25A.75.75 0 0 1 8 5.5Z"
+								clip-rule="evenodd"
+							/>
+						</svg>
 					</button>
 				{/if}
 			</div>
@@ -321,7 +427,7 @@
 
 	{#if $config?.features.enable_community_sharing}
 		<div class=" my-16">
-			<div class=" text-xl font-medium mb-1 line-clamp-1">
+			<div class=" text-xl font-medium mb-2 line-clamp-1">
 				{$i18n.t('Made by Open WebUI Community')}
 			</div>
 
@@ -331,22 +437,19 @@
 				target="_blank"
 			>
 				<div class=" self-center">
-					<div class=" font-semibold line-clamp-1">{$i18n.t('Discover a prompt')}</div>
-					<div class=" text-sm line-clamp-1">
+					<div class=" font-semibold line-clamp-1 text-gray-800 dark:text-gray-100">{$i18n.t('Discover a prompt')}</div>
+					<div class=" text-sm line-clamp-1 text-gray-600 dark:text-gray-300">
 						{$i18n.t('Discover, download, and explore custom prompts')}
 					</div>
 				</div>
-
-				<div>
-					<div>
-						<ChevronRight />
-					</div>
+				<div class="text-gray-400 dark:text-gray-500">
+					<ChevronRight className="size-5" />
 				</div>
 			</a>
 		</div>
 	{/if}
 {:else}
 	<div class="w-full h-full flex justify-center items-center">
-		<Spinner />
+		<Spinner size="lg" />
 	</div>
 {/if}
