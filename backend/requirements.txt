@@ -37,6 +37,7 @@ asgiref==3.8.1
 # AI libraries
 openai
 anthropic
+google-genai==1.13.0
 google-generativeai==0.8.4
 tiktoken
 
