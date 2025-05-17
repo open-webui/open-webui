@@ -15,7 +15,7 @@ export const getAdminDetails = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -42,7 +42,7 @@ export const getAdminConfig = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -70,7 +70,7 @@ export const updateAdminConfig = async (token: string, body: object) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -98,7 +98,7 @@ export const getSessionUser = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -129,7 +129,7 @@ export const ldapUserSignIn = async (user: string, password: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 
 			error = err.detail;
 			return null;
@@ -157,7 +157,7 @@ export const getLdapConfig = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -187,7 +187,7 @@ export const updateLdapConfig = async (token: string = '', enable_ldap: boolean)
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -214,7 +214,7 @@ export const getLdapServer = async (token: string = '') => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -242,7 +242,7 @@ export const updateLdapServer = async (token: string = '', body: object) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -273,7 +273,7 @@ export const userSignIn = async (email: string, password: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 
 			error = err.detail;
 			return null;
@@ -312,7 +312,7 @@ export const userSignUp = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -339,7 +339,7 @@ export const userSignOut = async () => {
 			return res;
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -347,6 +347,7 @@ export const userSignOut = async () => {
 	if (error) {
 		throw error;
 	}
+	return res;
 };
 
 export const addUser = async (
@@ -378,7 +379,7 @@ export const addUser = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -409,7 +410,7 @@ export const updateUserProfile = async (token: string, name: string, profileImag
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -440,7 +441,7 @@ export const updateUserPassword = async (token: string, password: string, newPas
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -467,7 +468,7 @@ export const getSignUpEnabledStatus = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -494,7 +495,7 @@ export const getDefaultUserRole = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -524,7 +525,7 @@ export const updateDefaultUserRole = async (token: string, role: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -551,7 +552,7 @@ export const toggleSignUpEnabledStatus = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -578,7 +579,7 @@ export const getJWTExpiresDuration = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -608,7 +609,7 @@ export const updateJWTExpiresDuration = async (token: string, duration: string) 
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -635,7 +636,7 @@ export const createAPIKey = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -660,7 +661,7 @@ export const getAPIKey = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});
@@ -685,7 +686,7 @@ export const deleteAPIKey = async (token: string) => {
 			return res.json();
 		})
 		.catch((err) => {
-			console.log(err);
+			console.error(err);
 			error = err.detail;
 			return null;
 		});

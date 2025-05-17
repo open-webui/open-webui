@@ -7,7 +7,7 @@
 	export let minSize = null;
 	export let required = false;
 	export let className =
-		'w-full rounded-lg px-3 py-2 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden  h-full';
+		'w-full rounded-lg px-3.5 py-2 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden  h-full';
 
 	let textareaElement;
 

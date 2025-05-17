@@ -12,11 +12,14 @@
 	export let content;
 	export let model = null;
 	export let save = false;
+	export let preview = false;
 
 	export let sourceIds = [];
 
+	export let onSave = () => {};
 	export let onUpdate = () => {};
-	export let onCode = () => {};
+
+	export let onPreview = () => {};
 
 	export let onSourceClick = () => {};
 	export let onTaskClick = () => {};
@@ -40,5 +43,15 @@
 </script>
 
 {#key id}
-	<MarkdownTokens {tokens} {id} {save} {onTaskClick} {onSourceClick} {onUpdate} {onCode} />
+	<MarkdownTokens
+		{tokens}
+		{id}
+		{save}
+		{preview}
+		{onTaskClick}
+		{onSourceClick}
+		{onSave}
+		{onUpdate}
+		{onPreview}
+	/>
 {/key}

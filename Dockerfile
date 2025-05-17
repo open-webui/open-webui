@@ -26,6 +26,9 @@ ARG BUILD_HASH
 
 WORKDIR /app
 
+# to store git revision in build
+RUN apk add --no-cache git
+
 COPY package.json package-lock.json ./
 RUN npm ci
 

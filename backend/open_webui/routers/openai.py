@@ -353,20 +353,21 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
                 ),  # Legacy support
             )
 
+            connection_type = api_config.get("connection_type", "external")
             prefix_id = api_config.get("prefix_id", None)
             tags = api_config.get("tags", [])
 
-            if prefix_id:
-                for model in (
-                    response if isinstance(response, list) else response.get("data", [])
-                ):
+            for model in (
+                response if isinstance(response, list) else response.get("data", [])
+            ):
+                if prefix_id:
                     model["id"] = f"{prefix_id}.{model['id']}"
 
-            if tags:
-                for model in (
-                    response if isinstance(response, list) else response.get("data", [])
-                ):
+                if tags:
                     model["tags"] = tags
+
+                if connection_type:
+                    model["connection_type"] = connection_type
 
     log.debug(f"get_all_models:responses() {responses}")
     return responses
@@ -415,6 +416,7 @@ async def get_all_models(request: Request, user: UserModel) -> dict[str, list]:
                             "name": model.get("name", model["id"]),
                             "owned_by": "openai",
                             "openai": model,
+                            "connection_type": model.get("connection_type", "external"),
                             "urlIdx": idx,
                         }
                         for model in models

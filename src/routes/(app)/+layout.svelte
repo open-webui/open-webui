@@ -77,6 +77,15 @@
 				// IndexedDB Not Found
 			}
 
+			const chatInputKeys = Object.keys(localStorage).filter((key) =>
+				key.startsWith('chat-input-')
+			);
+			if (chatInputKeys.length > 0) {
+				chatInputKeys.forEach((key) => {
+					localStorage.removeItem(key);
+				});
+			}
+
 			const userSettings = await getUserSettings(localStorage.token).catch((error) => {
 				console.error(error);
 				return null;

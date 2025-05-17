@@ -166,7 +166,7 @@
 			hidden: !(model?.meta?.hidden ?? false)
 		};
 
-		console.log(model);
+		console.debug(model);
 
 		toast.success(
 			model.meta.hidden
