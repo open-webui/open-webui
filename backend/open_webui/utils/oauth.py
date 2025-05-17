@@ -78,14 +78,11 @@ auth_manager_config.OAUTH_ADMIN_ROLES = OAUTH_ADMIN_ROLES
 auth_manager_config.OAUTH_ALLOWED_DOMAINS = OAUTH_ALLOWED_DOMAINS
 auth_manager_config.WEBHOOK_URL = WEBHOOK_URL
 auth_manager_config.JWT_EXPIRES_IN = JWT_EXPIRES_IN
-<<<<<<< HEAD
 auth_manager_config.OAUTH_CLIENT_ID = OAUTH_CLIENT_ID
 auth_manager_config.OAUTH_CLIENT_SECRET = OAUTH_CLIENT_SECRET
 auth_manager_config.OAUTH_PROVIDER_NAME = OAUTH_PROVIDER_NAME
 auth_manager_config.OPENID_PROVIDER_URL = OPENID_PROVIDER_URL
-=======
 auth_manager_config.OAUTH_UPDATE_PICTURE_ON_LOGIN = OAUTH_UPDATE_PICTURE_ON_LOGIN
->>>>>>> 7df6d7f325c7eac91845f8acd932c98335df00fa
 
 
 class OAuthManager:
