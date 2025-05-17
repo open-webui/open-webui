@@ -41,8 +41,7 @@ export const replaceTokens = (content, sourceIds, char, user) => {
 		},
 		{
 			regex: /{{HTML_FILE_ID_([a-f0-9-]+)}}/gi,
-			replacement: (_, fileId) =>
-				`<iframe src="${WEBUI_BASE_URL}/api/v1/files/${fileId}/content/html" width="100%" frameborder="0" onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"></iframe>`
+			replacement: (_, fileId) => `<file type="html" id="${fileId}" />`
 		}
 	];
 
@@ -751,7 +750,6 @@ export const removeFormattings = (str: string) => {
 
 			// Cleanup
 			.replace(/\[\^[^\]]*\]/g, '') // Footnotes
-			.replace(/[-*_~]/g, '') // Remaining markers
 			.replace(/\n{2,}/g, '\n')
 	); // Multiple newlines
 };

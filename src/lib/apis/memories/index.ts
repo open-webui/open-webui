@@ -17,7 +17,7 @@ export const getMemories = async (token: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -48,7 +48,7 @@ export const addNewMemory = async (token: string, content: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -79,7 +79,7 @@ export const updateMemoryById = async (token: string, id: string, content: strin
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -110,7 +110,7 @@ export const queryMemory = async (token: string, content: string) => {
 		})
 		.catch((err) => {
 			error = err.detail;
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -142,7 +142,7 @@ export const deleteMemoryById = async (token: string, id: string) => {
 		.catch((err) => {
 			error = err.detail;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 
@@ -174,7 +174,7 @@ export const deleteMemoriesByUserId = async (token: string) => {
 		.catch((err) => {
 			error = err.detail;
 
-			console.log(err);
+			console.error(err);
 			return null;
 		});
 

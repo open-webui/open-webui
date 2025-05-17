@@ -196,7 +196,7 @@
 
 <svelte:head>
 	<title>
-		{$i18n.t('Models')} | {$WEBUI_NAME}
+		{$i18n.t('Models')} • {$WEBUI_NAME}
 	</title>
 </svelte:head>
 
@@ -243,7 +243,7 @@
 	</div>
 
 	<div class=" my-2 mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3" id="model-list">
-		{#each filteredModels as model}
+		{#each filteredModels as model (model.id)}
 			<div
 				class=" flex flex-col cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
 				id="model-item-{model.id}"

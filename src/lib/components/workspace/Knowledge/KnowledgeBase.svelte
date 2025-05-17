@@ -11,7 +11,12 @@
 	import { page } from '$app/stores';
 	import { mobile, showSidebar, knowledge as _knowledge, config, user } from '$lib/stores';
 
-	import { updateFileDataContentById, uploadFile, deleteFileById, getFileById } from '$lib/apis/files';
+	import {
+		updateFileDataContentById,
+		uploadFile,
+		deleteFileById,
+		getFileById
+	} from '$lib/apis/files';
 	import {
 		addFileToKnowledgeById,
 		getKnowledgeById,
@@ -459,7 +464,7 @@
 	const fileSelectHandler = async (file) => {
 		try {
 			selectedFile = file;
-			
+
 			// Check cache first
 			if (fileContentCache.has(file.id)) {
 				selectedFileContent = fileContentCache.get(file.id);
@@ -477,7 +482,7 @@
 		} catch (e) {
 			toast.error($i18n.t('Failed to load file content.'));
 		}
-	};  
+	};
 
 	const onDragOver = (e) => {
 		e.preventDefault();
@@ -759,7 +764,7 @@
 										className="input-prose-sm"
 										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
-										preserveBreaks={true}
+										preserveBreaks={false}
 									/>
 								{/key}
 							</div>
@@ -817,7 +822,7 @@
 										className="input-prose-sm"
 										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
-										preserveBreaks={true}
+										preserveBreaks={false}
 									/>
 								{/key}
 							</div>

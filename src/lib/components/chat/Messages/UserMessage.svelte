@@ -43,6 +43,8 @@
 
 	let edit = false;
 	let editedContent = '';
+	let editedFiles = [];
+
 	let messageEditTextAreaElement: HTMLTextAreaElement;
 
 	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
@@ -62,6 +64,7 @@
 	const editMessageHandler = async () => {
 		edit = true;
 		editedContent = message.content;
+		editedFiles = message.files;
 
 		await tick();
 
@@ -74,15 +77,17 @@
 	};
 
 	const editMessageConfirmHandler = async (submit = true) => {
-		editMessage(message.id, editedContent, submit);
+		editMessage(message.id, { content: editedContent, files: editedFiles }, submit);
 
 		edit = false;
 		editedContent = '';
+		editedFiles = [];
 	};
 
 	const cancelEditMessage = () => {
 		edit = false;
 		editedContent = '';
+		editedFiles = [];
 	};
 
 	const deleteMessageHandler = async () => {
@@ -141,30 +146,90 @@
 		{/if}
 
 		<div class="chat-{message.role} w-full min-w-full markdown-prose">
-			{#if message.files}
-				<div class="mt-2.5 mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
-					{#each message.files as file}
-						<div class={($settings?.chatBubble ?? true) ? 'self-end' : ''}>
-							{#if file.type === 'image'}
-								<Image src={file.url} imageClassName=" max-h-96 rounded-lg" />
-							{:else}
-								<FileItem
-									item={file}
-									url={file.url}
-									name={file.name}
-									type={file.type}
-									size={file?.size}
-									colorClassName="bg-white dark:bg-gray-850 "
-								/>
-							{/if}
-						</div>
-					{/each}
-				</div>
+			{#if edit !== true}
+				{#if message.files}
+					<div class="mt-2.5 mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
+						{#each message.files as file}
+							<div class={($settings?.chatBubble ?? true) ? 'self-end' : ''}>
+								{#if file.type === 'image'}
+									<Image src={file.url} imageClassName=" max-h-96 rounded-lg" />
+								{:else}
+									<FileItem
+										item={file}
+										url={file.url}
+										name={file.name}
+										type={file.type}
+										size={file?.size}
+										colorClassName="bg-white dark:bg-gray-850 "
+									/>
+								{/if}
+							</div>
+						{/each}
+					</div>
+				{/if}
 			{/if}
 
 			{#if message.content !== ''}
 				{#if edit === true}
 					<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
+						{#if (editedFiles ?? []).length > 0}
+							<div class="flex items-center flex-wrap gap-2 -mx-2 mb-1">
+								{#each editedFiles as file, fileIdx}
+									{#if file.type === 'image'}
+										<div class=" relative group">
+											<div class="relative flex items-center">
+												<Image
+													src={file.url}
+													alt="input"
+													imageClassName=" size-14 rounded-xl object-cover"
+												/>
+											</div>
+											<div class=" absolute -top-1 -right-1">
+												<button
+													class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+													type="button"
+													on:click={() => {
+														editedFiles.splice(fileIdx, 1);
+
+														editedFiles = editedFiles;
+													}}
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 20 20"
+														fill="currentColor"
+														class="size-4"
+													>
+														<path
+															d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
+														/>
+													</svg>
+												</button>
+											</div>
+										</div>
+									{:else}
+										<FileItem
+											item={file}
+											name={file.name}
+											type={file.type}
+											size={file?.size}
+											loading={file.status === 'uploading'}
+											dismissible={true}
+											edit={true}
+											on:dismiss={async () => {
+												editedFiles.splice(fileIdx, 1);
+
+												editedFiles = editedFiles;
+											}}
+											on:click={() => {
+												console.log(file);
+											}}
+										/>
+									{/if}
+								{/each}
+							</div>
+						{/if}
+
 						<div class="max-h-96 overflow-auto">
 							<textarea
 								id="message-edit-{message.id}"

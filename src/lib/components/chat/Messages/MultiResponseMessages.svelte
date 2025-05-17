@@ -294,7 +294,7 @@
 
 							<div class="w-full rounded-xl pl-5 pr-2 py-2">
 								<Name>
-									Merged Response
+									{$i18n.t('Merged Response')}
 
 									{#if message.timestamp}
 										<span

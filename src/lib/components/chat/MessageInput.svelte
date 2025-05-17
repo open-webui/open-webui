@@ -38,6 +38,7 @@
 	import VoiceRecording from './MessageInput/VoiceRecording.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import Commands from './MessageInput/Commands.svelte';
+	import ToolServersModal from './ToolServersModal.svelte';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -47,12 +48,12 @@
 	import XMark from '../icons/XMark.svelte';
 	import Headphone from '../icons/Headphone.svelte';
 	import GlobeAlt from '../icons/GlobeAlt.svelte';
-	import PhotoSolid from '../icons/PhotoSolid.svelte';
 	import Photo from '../icons/Photo.svelte';
-	import CommandLine from '../icons/CommandLine.svelte';
-	import { KokoroWorker } from '$lib/workers/KokoroWorker';
-	import ToolServersModal from './ToolServersModal.svelte';
 	import Wrench from '../icons/Wrench.svelte';
+	import CommandLine from '../icons/CommandLine.svelte';
+	import Sparkles from '../icons/Sparkles.svelte';
+
+	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 
 	const i18n = getContext('i18n');
 
@@ -79,6 +80,7 @@
 	export let toolServers = [];
 
 	export let selectedToolIds = [];
+	export let selectedFilterIds = [];
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
@@ -86,10 +88,12 @@
 
 	$: onChange({
 		prompt,
-		files,
+		files: files.filter((file) => file.type !== 'image'),
 		selectedToolIds,
+		selectedFilterIds,
 		imageGenerationEnabled,
-		webSearchEnabled
+		webSearchEnabled,
+		codeInterpreterEnabled
 	});
 
 	let showTools = false;
@@ -115,6 +119,11 @@
 	$: visionCapableModels = [...(atSelectedModel ? [atSelectedModel] : selectedModels)].filter(
 		(model) => $models.find((m) => m.id === model)?.info?.meta?.capabilities?.vision ?? true
 	);
+
+	let toggleFilters = [];
+	$: toggleFilters = (atSelectedModel?.id || selectedModels)
+		.map((id) => ($models.find((model) => model.id === id) || {})?.filters ?? [])
+		.reduce((acc, filters) => acc.filter((f1) => filters.some((f2) => f2.id === f1.id)));
 
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
@@ -354,7 +363,6 @@
 </script>
 
 <FilesOverlay show={dragged} />
-
 <ToolServersModal bind:show={showTools} {selectedToolIds} />
 
 {#if loaded}
@@ -395,39 +403,37 @@
 				</div>
 
 				<div class="w-full relative">
-					{#if atSelectedModel !== undefined || selectedToolIds.length > 0 || webSearchEnabled || ($settings?.webSearch ?? false) === 'always' || imageGenerationEnabled || codeInterpreterEnabled}
+					{#if atSelectedModel !== undefined}
 						<div
 							class="px-3 pb-0.5 pt-1.5 text-left w-full flex flex-col absolute bottom-0 left-0 right-0 bg-linear-to-t from-white dark:from-gray-900 z-10"
 						>
-							{#if atSelectedModel !== undefined}
-								<div class="flex items-center justify-between w-full">
-									<div class="pl-[1px] flex items-center gap-2 text-sm dark:text-gray-500">
-										<img
-											crossorigin="anonymous"
-											alt="model profile"
-											class="size-3.5 max-w-[28px] object-cover rounded-full"
-											src={$models.find((model) => model.id === atSelectedModel.id)?.info?.meta
-												?.profile_image_url ??
-												($i18n.language === 'dg-DG'
-													? `/doge.png`
-													: `${WEBUI_BASE_URL}/static/favicon.png`)}
-										/>
-										<div class="translate-y-[0.5px]">
-											Talking to <span class=" font-medium">{atSelectedModel.name}</span>
-										</div>
-									</div>
-									<div>
-										<button
-											class="flex items-center dark:text-gray-500"
-											on:click={() => {
-												atSelectedModel = undefined;
-											}}
-										>
-											<XMark />
-										</button>
+							<div class="flex items-center justify-between w-full">
+								<div class="pl-[1px] flex items-center gap-2 text-sm dark:text-gray-500">
+									<img
+										crossorigin="anonymous"
+										alt="model profile"
+										class="size-3.5 max-w-[28px] object-cover rounded-full"
+										src={$models.find((model) => model.id === atSelectedModel.id)?.info?.meta
+											?.profile_image_url ??
+											($i18n.language === 'dg-DG'
+												? `/doge.png`
+												: `${WEBUI_BASE_URL}/static/favicon.png`)}
+									/>
+									<div class="translate-y-[0.5px]">
+										Talking to <span class=" font-medium">{atSelectedModel.name}</span>
 									</div>
 								</div>
-							{/if}
+								<div>
+									<button
+										class="flex items-center dark:text-gray-500"
+										on:click={() => {
+											atSelectedModel = undefined;
+										}}
+									>
+										<XMark />
+									</button>
+								</div>
+							</div>
 						</div>
 					{/if}
 
@@ -481,14 +487,14 @@
 					{#if recording}
 						<VoiceRecording
 							bind:recording
-							on:cancel={async () => {
+							onCancel={async () => {
 								recording = false;
 
 								await tick();
 								document.getElementById('chat-input')?.focus();
 							}}
-							on:confirm={async (e) => {
-								const { text, filename } = e.detail;
+							onConfirm={async (data) => {
+								const { text, filename } = data;
 								prompt = `${prompt}${text} `;
 
 								recording = false;
@@ -605,7 +611,7 @@
 								<div class="px-2.5">
 									{#if $settings?.richTextInput ?? true}
 										<div
-											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
+											class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
 											id="chat-input-container"
 										>
 											<RichTextInput
@@ -772,8 +778,11 @@
 														console.log('Escape');
 														atSelectedModel = undefined;
 														selectedToolIds = [];
+														selectedFilterIds = [];
+
 														webSearchEnabled = false;
 														imageGenerationEnabled = false;
+														codeInterpreterEnabled = false;
 													}
 												}}
 												on:paste={async (e) => {
@@ -824,7 +833,7 @@
 											id="chat-input"
 											dir="auto"
 											bind:this={chatInputElement}
-											class="scrollbar-hidden bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none"
+											class="scrollbar-hidden bg-transparent dark:text-gray-200 outline-hidden w-full pt-3 px-1 resize-none"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 											bind:value={prompt}
 											on:compositionstart={() => (isComposing = true)}
@@ -879,20 +888,38 @@
 														e.preventDefault();
 														commandsElement.selectUp();
 
+														const container = document.getElementById('command-options-container');
 														const commandOptionButton = [
 															...document.getElementsByClassName('selected-command-option-button')
 														]?.at(-1);
-														commandOptionButton.scrollIntoView({ block: 'center' });
+
+														if (commandOptionButton && container) {
+															const elTop = commandOptionButton.offsetTop;
+															const elHeight = commandOptionButton.offsetHeight;
+															const containerHeight = container.clientHeight;
+
+															// Center the selected button in the container
+															container.scrollTop = elTop - containerHeight / 2 + elHeight / 2;
+														}
 													}
 
 													if (commandsContainerElement && e.key === 'ArrowDown') {
 														e.preventDefault();
 														commandsElement.selectDown();
 
+														const container = document.getElementById('command-options-container');
 														const commandOptionButton = [
 															...document.getElementsByClassName('selected-command-option-button')
 														]?.at(-1);
-														commandOptionButton.scrollIntoView({ block: 'center' });
+
+														if (commandOptionButton && container) {
+															const elTop = commandOptionButton.offsetTop;
+															const elHeight = commandOptionButton.offsetHeight;
+															const containerHeight = container.clientHeight;
+
+															// Center the selected button in the container
+															container.scrollTop = elTop - containerHeight / 2 + elHeight / 2;
+														}
 													}
 
 													if (commandsContainerElement && e.key === 'Enter') {
@@ -940,8 +967,6 @@
 																? (e.key === 'Enter' || e.keyCode === 13) && isCtrlPressed
 																: (e.key === 'Enter' || e.keyCode === 13) && !e.shiftKey;
 
-														console.log('Enter pressed:', enterPressed);
-
 														if (enterPressed) {
 															e.preventDefault();
 														}
@@ -979,8 +1004,10 @@
 													console.log('Escape');
 													atSelectedModel = undefined;
 													selectedToolIds = [];
+													selectedFilterIds = [];
 													webSearchEnabled = false;
 													imageGenerationEnabled = false;
+													codeInterpreterEnabled = false;
 												}
 											}}
 											rows="1"
@@ -1128,6 +1155,47 @@
 											{/if}
 
 											{#if $_user}
+												{#each toggleFilters as filter, filterIdx (filter.id)}
+													<Tooltip content={filter?.description} placement="top">
+														<button
+															on:click|preventDefault={() => {
+																if (selectedFilterIds.includes(filter.id)) {
+																	selectedFilterIds = selectedFilterIds.filter(
+																		(id) => id !== filter.id
+																	);
+																} else {
+																	selectedFilterIds = [...selectedFilterIds, filter.id];
+																}
+															}}
+															type="button"
+															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {selectedFilterIds.includes(
+																filter.id
+															)
+																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-50 dark:hover:bg-gray-800 '} capitalize"
+														>
+															{#if filter?.icon}
+																<div class="size-5 items-center flex justify-center">
+																	<img
+																		src={filter.icon}
+																		class="size-4.5 {filter.icon.includes('svg')
+																			? 'dark:invert-[80%]'
+																			: ''}"
+																		style="fill: currentColor;"
+																		alt={filter.name}
+																	/>
+																</div>
+															{:else}
+																<Sparkles className="size-5" strokeWidth="1.75" />
+															{/if}
+															<span
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
+																>{filter?.name}</span
+															>
+														</button>
+													</Tooltip>
+												{/each}
+
 												{#if $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
@@ -1136,7 +1204,7 @@
 															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
 																? 'bg-blue-100 dark:bg-blue-500/20 border-blue-400/20 text-blue-500 dark:text-blue-400'
-																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'}"
 														>
 															<GlobeAlt className="size-5" strokeWidth="1.75" />
 															<span
@@ -1155,7 +1223,7 @@
 															type="button"
 															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {imageGenerationEnabled
 																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400'
-																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-50 dark:hover:bg-gray-800 '}"
 														>
 															<Photo className="size-5" strokeWidth="1.75" />
 															<span
@@ -1174,7 +1242,7 @@
 															type="button"
 															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {codeInterpreterEnabled
 																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100  dark:border-gray-700 text-gray-600 dark:text-gray-400  '
-																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-100 dark:hover:bg-gray-800 '}"
+																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-50 dark:hover:bg-gray-800 '}"
 														>
 															<CommandLine className="size-5" strokeWidth="1.75" />
 															<span

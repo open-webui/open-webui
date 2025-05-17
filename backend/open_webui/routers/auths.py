@@ -32,24 +32,27 @@ from open_webui.env import (
     SRC_LOG_LEVELS,
 )
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import RedirectResponse, Response, JSONResponse
 from open_webui.config import OPENID_PROVIDER_URL, ENABLE_OAUTH_SIGNUP, ENABLE_LDAP
 from pydantic import BaseModel
+
 from open_webui.utils.misc import parse_duration, validate_email_format
 from open_webui.utils.auth import (
+    decode_token,
     create_api_key,
     create_token,
     get_admin_user,
     get_verified_user,
     get_current_user,
     get_password_hash,
+    get_http_authorization_cred,
 )
 from open_webui.utils.webhook import post_webhook
 from open_webui.utils.access_control import get_permissions
 
 from typing import Optional, List
 
-from ssl import CERT_REQUIRED, PROTOCOL_TLS
+from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 
 if ENABLE_LDAP.value:
     from ldap3 import Server, Connection, NONE, Tls
@@ -74,31 +77,36 @@ class SessionUserResponse(Token, UserResponse):
 async def get_session_user(
     request: Request, response: Response, user=Depends(get_current_user)
 ):
-    expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+
+    auth_header = request.headers.get("Authorization")
+    auth_token = get_http_authorization_cred(auth_header)
+    token = auth_token.credentials
+    data = decode_token(token)
+
     expires_at = None
-    if expires_delta:
-        expires_at = int(time.time()) + int(expires_delta.total_seconds())
 
-    token = create_token(
-        data={"id": user.id},
-        expires_delta=expires_delta,
-    )
+    if data:
+        expires_at = data.get("exp")
 
-    datetime_expires_at = (
-        datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
-        if expires_at
-        else None
-    )
+        if (expires_at is not None) and int(time.time()) > expires_at:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=ERROR_MESSAGES.INVALID_TOKEN,
+            )
 
-    # Set the cookie token
-    response.set_cookie(
-        key="token",
-        value=token,
-        expires=datetime_expires_at,
-        httponly=True,  # Ensures the cookie is not accessible via JavaScript
-        samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
-        secure=WEBUI_AUTH_COOKIE_SECURE,
-    )
+        # Set the cookie token
+        response.set_cookie(
+            key="token",
+            value=token,
+            expires=(
+                datetime.datetime.fromtimestamp(expires_at, datetime.timezone.utc)
+                if expires_at
+                else None
+            ),
+            httponly=True,  # Ensures the cookie is not accessible via JavaScript
+            samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+            secure=WEBUI_AUTH_COOKIE_SECURE,
+        )
 
     user_permissions = get_permissions(
         user.id, request.app.state.config.USER_PERMISSIONS
@@ -179,6 +187,9 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
     LDAP_APP_PASSWORD = request.app.state.config.LDAP_APP_PASSWORD
     LDAP_USE_TLS = request.app.state.config.LDAP_USE_TLS
     LDAP_CA_CERT_FILE = request.app.state.config.LDAP_CA_CERT_FILE
+    LDAP_VALIDATE_CERT = (
+        CERT_REQUIRED if request.app.state.config.LDAP_VALIDATE_CERT else CERT_NONE
+    )
     LDAP_CIPHERS = (
         request.app.state.config.LDAP_CIPHERS
         if request.app.state.config.LDAP_CIPHERS
@@ -190,7 +201,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
     try:
         tls = Tls(
-            validate=CERT_REQUIRED,
+            validate=LDAP_VALIDATE_CERT,
             version=PROTOCOL_TLS,
             ca_certs_file=LDAP_CA_CERT_FILE,
             ciphers=LDAP_CIPHERS,
@@ -227,12 +238,14 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             ],
         )
 
-        if not search_success:
+        if not search_success or not connection_app.entries:
             raise HTTPException(400, detail="User not found in the LDAP server")
 
         entry = connection_app.entries[0]
         username = str(entry[f"{LDAP_ATTRIBUTE_FOR_USERNAME}"]).lower()
-        email = entry[f"{LDAP_ATTRIBUTE_FOR_MAIL}"].value  # retrive the Attribute value
+        email = entry[
+            f"{LDAP_ATTRIBUTE_FOR_MAIL}"
+        ].value  # retrieve the Attribute value
         if not email:
             raise HTTPException(400, "User does not have a valid email address.")
         elif isinstance(email, str):
@@ -290,18 +303,30 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             user = Auths.authenticate_user_by_trusted_header(email)
 
             if user:
+                expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
+                expires_at = None
+                if expires_delta:
+                    expires_at = int(time.time()) + int(expires_delta.total_seconds())
+
                 token = create_token(
                     data={"id": user.id},
-                    expires_delta=parse_duration(
-                        request.app.state.config.JWT_EXPIRES_IN
-                    ),
+                    expires_delta=expires_delta,
                 )
 
                 # Set the cookie token
                 response.set_cookie(
                     key="token",
                     value=token,
+                    expires=(
+                        datetime.datetime.fromtimestamp(
+                            expires_at, datetime.timezone.utc
+                        )
+                        if expires_at
+                        else None
+                    ),
                     httponly=True,  # Ensures the cookie is not accessible via JavaScript
+                    samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
+                    secure=WEBUI_AUTH_COOKIE_SECURE,
                 )
 
                 user_permissions = get_permissions(
@@ -311,6 +336,7 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                 return {
                     "token": token,
                     "token_type": "Bearer",
+                    "expires_at": expires_at,
                     "id": user.id,
                     "email": user.email,
                     "name": user.name,
@@ -456,10 +482,6 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             "admin" if user_count == 0 else request.app.state.config.DEFAULT_USER_ROLE
         )
 
-        if user_count == 0:
-            # Disable signup after the first user is created
-            request.app.state.config.ENABLE_SIGNUP = False
-
         # The password passed to bcrypt must be 72 bytes or fewer. If it is longer, it will be truncated before hashing.
         if len(form_data.password.encode("utf-8")) > 72:
             raise HTTPException(
@@ -519,6 +541,10 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 user.id, request.app.state.config.USER_PERMISSIONS
             )
 
+            if user_count == 0:
+                # Disable signup after the first user is created
+                request.app.state.config.ENABLE_SIGNUP = False
+
             return {
                 "token": token,
                 "token_type": "Bearer",
@@ -552,9 +578,14 @@ async def signout(request: Request, response: Response):
                             logout_url = openid_data.get("end_session_endpoint")
                             if logout_url:
                                 response.delete_cookie("oauth_id_token")
-                                return RedirectResponse(
+
+                                return JSONResponse(
+                                    status_code=200,
+                                    content={
+                                        "status": True,
+                                        "redirect_url": f"{logout_url}?id_token_hint={oauth_id_token}",
+                                    },
                                     headers=response.headers,
-                                    url=f"{logout_url}?id_token_hint={oauth_id_token}",
                                 )
                         else:
                             raise HTTPException(
@@ -569,12 +600,18 @@ async def signout(request: Request, response: Response):
                 )
 
     if WEBUI_AUTH_SIGNOUT_REDIRECT_URL:
-        return RedirectResponse(
+        return JSONResponse(
+            status_code=200,
+            content={
+                "status": True,
+                "redirect_url": WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
+            },
             headers=response.headers,
-            url=WEBUI_AUTH_SIGNOUT_REDIRECT_URL,
         )
 
-    return {"status": True}
+    return JSONResponse(
+        status_code=200, content={"status": True}, headers=response.headers
+    )
 
 
 ############################
@@ -672,6 +709,7 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
         "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
+        "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
         # OAuth settings
         "ENABLE_OAUTH_SIGNUP": request.app.state.config.ENABLE_OAUTH_SIGNUP,
@@ -690,6 +728,9 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "OAUTH_CLIENT_SECRET": request.app.state.config.OAUTH_CLIENT_SECRET,
         "OAUTH_PROVIDER_NAME": request.app.state.config.OAUTH_PROVIDER_NAME,
         "OPENID_PROVIDER_URL": request.app.state.config.OPENID_PROVIDER_URL,
+        "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
+        "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
+        "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
     }
 
 
@@ -705,6 +746,7 @@ class AdminConfig(BaseModel):
     ENABLE_COMMUNITY_SHARING: bool
     ENABLE_MESSAGE_RATING: bool
     ENABLE_CHANNELS: bool
+    ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
     ENABLE_OAUTH_SIGNUP: bool
     OAUTH_MERGE_ACCOUNTS_BY_EMAIL: bool
@@ -723,6 +765,9 @@ class AdminConfig(BaseModel):
     OAUTH_CLIENT_SECRET: Optional[str] = ""
     OAUTH_PROVIDER_NAME: Optional[str] = "SSO"
     OPENID_PROVIDER_URL: Optional[str] = ""
+    PENDING_USER_OVERLAY_TITLE: Optional[str] = None
+    PENDING_USER_OVERLAY_CONTENT: Optional[str] = None
+    RESPONSE_WATERMARK: Optional[str] = None
 
 
 @router.post("/admin/config")
@@ -895,6 +940,7 @@ class LdapServerConfig(BaseModel):
     search_filters: str = ""
     use_tls: bool = True
     certificate_path: Optional[str] = None
+    validate_cert: bool = True
     ciphers: Optional[str] = "ALL"
 
 
@@ -912,6 +958,7 @@ async def get_ldap_server(request: Request, user=Depends(get_admin_user)):
         "search_filters": request.app.state.config.LDAP_SEARCH_FILTERS,
         "use_tls": request.app.state.config.LDAP_USE_TLS,
         "certificate_path": request.app.state.config.LDAP_CA_CERT_FILE,
+        "validate_cert": request.app.state.config.LDAP_VALIDATE_CERT,
         "ciphers": request.app.state.config.LDAP_CIPHERS,
     }
 
@@ -947,6 +994,7 @@ async def update_ldap_server(
     request.app.state.config.LDAP_SEARCH_FILTERS = form_data.search_filters
     request.app.state.config.LDAP_USE_TLS = form_data.use_tls
     request.app.state.config.LDAP_CA_CERT_FILE = form_data.certificate_path
+    request.app.state.config.LDAP_VALIDATE_CERT = form_data.validate_cert
     request.app.state.config.LDAP_CIPHERS = form_data.ciphers
 
     return {
@@ -961,6 +1009,7 @@ async def update_ldap_server(
         "search_filters": request.app.state.config.LDAP_SEARCH_FILTERS,
         "use_tls": request.app.state.config.LDAP_USE_TLS,
         "certificate_path": request.app.state.config.LDAP_CA_CERT_FILE,
+        "validate_cert": request.app.state.config.LDAP_VALIDATE_CERT,
         "ciphers": request.app.state.config.LDAP_CIPHERS,
     }
 

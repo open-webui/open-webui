@@ -71,4 +71,6 @@
 
 - [Attach any relevant screenshots or videos demonstrating the changes]
 
-By submitting this pull request, you agree to our Contributor License Agreement as outlined in the CONTRIBUTOR_LICENSE_AGREEMENT.md file located in the root directory.
+### Contributor License Agreement
+
+By submitting this pull request, I confirm that I have read and fully agree to the [Contributor License Agreement (CLA)](/CONTRIBUTOR_LICENSE_AGREEMENT), and I am providing my contributions under its terms.

@@ -37,6 +37,7 @@ from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel
 from open_webui.utils.plugin import load_tool_module_by_id
 from open_webui.env import (
+    SRC_LOG_LEVELS,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA,
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
 )
@@ -44,6 +45,7 @@ from open_webui.env import (
 import copy
 
 log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 
 def get_async_tool_function_and_apply_extra_params(
@@ -279,8 +281,8 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
 
     docstring = func.__doc__
 
-    description = parse_description(docstring)
-    function_descriptions = parse_docstring(docstring)
+    function_description = parse_description(docstring)
+    function_param_descriptions = parse_docstring(docstring)
 
     field_defs = {}
     for name, param in parameters.items():
@@ -288,15 +290,17 @@ def convert_function_to_pydantic_model(func: Callable) -> type[BaseModel]:
         type_hint = type_hints.get(name, Any)
         default_value = param.default if param.default is not param.empty else ...
 
-        description = function_descriptions.get(name, None)
+        param_description = function_param_descriptions.get(name, None)
 
-        if description:
-            field_defs[name] = type_hint, Field(default_value, description=description)
+        if param_description:
+            field_defs[name] = type_hint, Field(
+                default_value, description=param_description
+            )
         else:
             field_defs[name] = type_hint, default_value
 
     model = create_model(func.__name__, **field_defs)
-    model.__doc__ = description
+    model.__doc__ = function_description
 
     return model
 
@@ -475,7 +479,7 @@ async def get_tool_server_data(token: str, url: str) -> Dict[str, Any]:
         "specs": convert_openapi_to_tool_payload(res),
     }
 
-    print("Fetched data:", data)
+    log.info("Fetched data:", data)
     return data
 
 
@@ -508,7 +512,7 @@ async def get_tool_servers_data(
     results = []
     for (idx, server, url, _), response in zip(server_entries, responses):
         if isinstance(response, Exception):
-            print(f"Failed to connect to {url} OpenAPI tool server")
+            log.error(f"Failed to connect to {url} OpenAPI tool server")
             continue
 
         results.append(
@@ -618,5 +622,5 @@ async def execute_tool_server(
 
     except Exception as err:
         error = str(err)
-        print("API Request Error:", error)
+        log.exception("API Request Error:", error)
         return {"error": error}
