@@ -60,19 +60,19 @@ def has_access_to_file(
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
 
-    has_access = False
-    knowledge_base_id = file.meta.get("collection_name") if file.meta else None
+    if file.access_control.get("shared", False):
+        return True
 
+    knowledge_base_id = file.meta.get("collection_name") if file.meta else None
     if knowledge_base_id:
         knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(
             user.id, access_type
         )
         for knowledge_base in knowledge_bases:
             if knowledge_base.id == knowledge_base_id:
-                has_access = True
-                break
+                return True
 
-    return has_access
+    return False
 
 
 ############################
