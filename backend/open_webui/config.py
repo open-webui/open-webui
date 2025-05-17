@@ -433,24 +433,6 @@ GITHUB_CLIENT_REDIRECT_URI = PersistentConfig(
     os.environ.get("GITHUB_CLIENT_REDIRECT_URI", ""),
 )
 
-OAUTH_CLIENT_ID = PersistentConfig(
-    "OAUTH_CLIENT_ID",
-    "oauth.client_id",
-    os.environ.get("OAUTH_CLIENT_ID", ""),
-)
-
-OAUTH_CLIENT_SECRET = PersistentConfig(
-    "OAUTH_CLIENT_SECRET",
-    "oauth.client_secret",
-    os.environ.get("OAUTH_CLIENT_SECRET", ""),
-)
-
-OPENID_PROVIDER_URL = PersistentConfig(
-    "OPENID_PROVIDER_URL",
-    "oauth.provider_url",
-    os.environ.get("OPENID_PROVIDER_URL", ""),
-)
-
 OPENID_REDIRECT_URI = PersistentConfig(
     "OPENID_REDIRECT_URI",
     "oauth.redirect_uri",
@@ -467,12 +449,6 @@ OAUTH_CODE_CHALLENGE_METHOD = PersistentConfig(
     "OAUTH_CODE_CHALLENGE_METHOD",
     "oauth.code_challenge_method",
     os.environ.get("OAUTH_CODE_CHALLENGE_METHOD", None),
-)
-
-OAUTH_PROVIDER_NAME = PersistentConfig(
-    "OAUTH_PROVIDER_NAME",
-    "oauth.provider_name",
-    os.environ.get("OAUTH_PROVIDER_NAME", "SSO"),
 )
 
 OAUTH_USERNAME_CLAIM = PersistentConfig(
