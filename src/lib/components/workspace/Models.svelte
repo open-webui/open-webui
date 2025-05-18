@@ -34,6 +34,7 @@
 	import Switch from '../common/Switch.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
+	import XMark from '../icons/XMark.svelte';
 
 	let shiftKey = false;
 
@@ -52,17 +53,17 @@
 
 	$: if (models) {
 		filteredModels = models.filter((m) => {
-			if (searchValue === '') return true;
-			const lowerSearchValue = searchValue.toLowerCase();
+			if (query === '') return true;
+			const lowerQuery = query.toLowerCase();
 			return (
-				(m.name || '').toLowerCase().includes(lowerSearchValue) ||
-				(m.user?.name || '').toLowerCase().includes(lowerSearchValue) || // Search by user name
-				(m.user?.email || '').toLowerCase().includes(lowerSearchValue) // Search by user email
+				(m.name || '').toLowerCase().includes(lowerQuery) ||
+				(m.user?.name || '').toLowerCase().includes(lowerQuery) || // Search by user name
+				(m.user?.email || '').toLowerCase().includes(lowerQuery) // Search by user email
 			);
 		});
 	}
 
-	let searchValue = '';
+	let query = '';
 
 	const deleteModelHandler = async (model) => {
 		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
@@ -232,9 +233,22 @@
 				</div>
 				<input
 					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
-					bind:value={searchValue}
+					bind:value={query}
 					placeholder={$i18n.t('Search Models')}
 				/>
+
+				{#if query}
+					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+						<button
+							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							on:click={() => {
+								query = '';
+							}}
+						>
+							<XMark className="size-3" strokeWidth="2" />
+						</button>
+					</div>
+				{/if}
 			</div>
 
 			<div>
