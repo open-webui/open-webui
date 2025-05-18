@@ -40,7 +40,7 @@
 		} else {
 			searchDebounceTimeout = setTimeout(async () => {
 				chatList = await getChatListBySearchText(localStorage.token, query, page);
-			}, 200);
+			}, 500);
 		}
 
 		if ((chatList ?? []).length === 0) {
