@@ -143,14 +143,14 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[200px] rounded-lg border border-customGray-700 px-1 py-1.5 z-50 bg-white dark:bg-customGray-900 dark:text-white shadow-lg"
+			class="w-full max-w-[200px] rounded-lg border border-lightGray-400 dark:border-customGray-700 px-1 py-1.5 z-50 bg-gray-50 dark:bg-customGray-900 dark:text-white shadow-lg"
 			sideOffset={-2}
 			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-2 py-1.5 text-sm text-customGray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
+				class="font-medium flex gap-2 items-center px-2 py-1.5 text-sm text-lightGray-100 dark:text-customGray-100 cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
 				on:click={() => {
 					pinHandler();
 				}}
@@ -165,7 +165,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-2 py-1.5 text-sm text-customGray-100  cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
+				class="font-medium flex gap-2 items-center px-2 py-1.5 text-sm text-lightGray-100 dark:text-customGray-100  cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
 				on:click={() => {
 					renameHandler();
 				}}
@@ -175,7 +175,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-2 py-1.5 text-sm text-customGray-100  cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
+				class="font-medium flex gap-2 items-center px-2 py-1.5 text-sm text-lightGray-100 dark:text-customGray-100  cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
 				on:click={() => {
 					cloneChatHandler();
 				}}
@@ -185,7 +185,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-2 py-1.5 text-sm text-customGray-100  cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
+				class="font-medium flex gap-2 items-center px-2 py-1.5 text-sm text-lightGray-100 dark:text-customGray-100  cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
 				on:click={() => {
 					archiveChatHandler();
 				}}
@@ -195,7 +195,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-2 py-1.5 text-sm text-customGray-100  cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 dark:hover:text-white  rounded-md"
+				class="font-medium flex gap-2 items-center px-2 py-1.5 text-sm text-lightGray-100 darK:text-customGray-100  cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white  rounded-md"
 				on:click={() => {
 					shareHandler();
 				}}
@@ -206,19 +206,19 @@
 
 			<DropdownMenu.Sub>
 				<DropdownMenu.SubTrigger
-					class="flex gap-2 items-center px-2 py-2 text-sm text-customGray-100  cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
+					class="font-medium flex gap-2 items-center px-2 py-2 text-sm text-lightGray-100 dark:text-customGray-100  cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
 				>
 					<ExportIcon/>
 
 					<div class="flex items-center">{$i18n.t('Download')}</div>
 				</DropdownMenu.SubTrigger>
 				<DropdownMenu.SubContent
-					class="w-full rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+					class="w-full rounded-xl px-1 py-1.5 z-50 bg-gray-50 dark:bg-gray-850 text-lightGray-100 dark:text-white shadow-lg"
 					transition={flyAndScale}
 					sideOffset={8}
 				>
 					<DropdownMenu.Item
-						class="flex gap-2 items-center px-2 py-2 text-sm text-customGray-100  cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
+						class="font-medium  flex gap-2 items-center px-2 py-2 text-sm text-lightGray-100 dark:text-customGray-100  cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
 						on:click={() => {
 							downloadJSONExport();
 						}}
@@ -226,7 +226,7 @@
 						<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
 					</DropdownMenu.Item>
 					<DropdownMenu.Item
-						class="flex gap-2 items-center px-2 py-2 text-sm text-customGray-100  cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
+						class="font-medium flex gap-2 items-center px-2 py-2 text-sm text-lightGray-100 dark:text-customGray-100  cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
 						on:click={() => {
 							downloadTxt();
 						}}
@@ -235,7 +235,7 @@
 					</DropdownMenu.Item>
 
 					<DropdownMenu.Item
-						class="flex gap-2 items-center px-2 py-2 text-sm text-customGray-100  cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
+						class="font-medium flex gap-2 items-center px-2 py-2 text-sm text-lightGray-100 dark:text-customGray-100  cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
 						on:click={() => {
 							downloadPdf();
 						}}
@@ -245,7 +245,7 @@
 				</DropdownMenu.SubContent>
 			</DropdownMenu.Sub>
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-2 py-1.5 text-sm text-customGray-100  cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
+				class="font-medium flex  gap-2  items-center px-2 py-1.5 text-sm text-lightGray-100 dark:text-customGray-100  cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white rounded-md"
 				on:click={() => {
 					deleteHandler();
 				}}

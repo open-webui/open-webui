@@ -161,12 +161,12 @@
 					</div>
 				</button>
 			</div>
-			<div class="flex items-center md:self-center text-base font-medium leading-none px-0.5">
+			<div class="flex items-center md:self-center text-lightGray-100 dark:bg-customGray-100 text-base font-medium leading-none px-0.5">
 				{$i18n.t('Knowledge')}
 			</div>
 			<div class="flex">
 				<div
-					class="flex flex-1 items-center p-2.5 rounded-lg mr-1 border dark:border-customGray-700 hover:bg-gray-100 dark:hover:bg-customGray-950 dark:hover:text-white transition"
+					class="flex flex-1 items-center p-2.5 rounded-lg mr-1 border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-550 dark:hover:bg-customGray-950 dark:hover:text-white transition"
 				>
 					<button
 						class=""
@@ -181,7 +181,7 @@
 					<!-- </div> -->
 					{#if showInput}
 						<input
-							class=" w-full text-xs outline-none bg-transparent leading-none pl-2"
+							class=" w-full text-xs outline-none bg-transparent leading-none pl-2 text-lightGray-100 dark:text-customGray-100"
 							bind:value={query}
 							placeholder={$i18n.t('Search Models')}
 							autofocus
@@ -193,7 +193,7 @@
 				</div>
 				<div>
 					<a
-						class=" px-2 py-2.5 w-[35px] sm:w-[220px] rounded-lg leading-none border border-customGray-700 hover:bg-gray-700/10 dark:hover:bg-customGray-950 dark:text-customGray-200 dark:hover:text-white transition font-medium text-xs flex items-center justify-center space-x-1"
+						class=" px-2 py-2.5 w-[35px] sm:w-[220px] rounded-lg leading-none border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-550 dark:hover:bg-customGray-950 text-lightGray-100 dark:text-customGray-200 dark:hover:text-white transition font-medium text-xs flex items-center justify-center space-x-1"
 						href="/workspace/knowledge/create"
 					>
 						<Plus className="size-3.5" />
@@ -208,20 +208,20 @@
 			id="knowledge-filters"
 			class="flex items-center justify-end py-5 pr-[22px] flex-col md:flex-row"
 		>
-			<div class="flex dark:bg-customGray-800 rounded-md flex-shrink-0">
+			<div class="flex bg-lightGray-700 dark:bg-customGray-800 rounded-md flex-shrink-0">
 				<button
 					on:click={() => (accessFilter = 'all')}
-					class={`${accessFilter === 'all' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'all' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('All')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'private')}
-					class={`${accessFilter === 'private' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'private' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('Private')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'public')}
-					class={`${accessFilter === 'public' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'public' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('Public')}</button
 				>
 			</div>
@@ -241,7 +241,7 @@
 					<button
 					on:mouseenter={() =>  hoveredKowledge = item.id}
 					on:mouseleave={() =>  hoveredKowledge = null}
-						class="group flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 dark:bg-customGray-800 rounded-2xl transition"
+						class="group flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 bg-lightGray-550 dark:bg-customGray-800 rounded-2xl transition"
 						on:click={() => {
 							if (item?.meta?.document) {
 								toast.error(
@@ -261,14 +261,14 @@
 									<div class="flex items-center gap-1 flex-wrap">
 										{#if item.access_control == null}
 											<div
-												class="flex gap-1 items-center text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'dark:text-customGray-300'}"
+												class="flex gap-1 items-center text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md bg-lightGray-400 font-medium {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'text-lightGray-100 dark:text-customGray-300'}"
 											>
 												<PublicIcon />
 												<span>{$i18n.t('Public')}</span>
 											</div>
 										{:else if getGroupNamesFromAccess(item).length < 1}
 											<div
-												class="flex gap-1 items-center text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'dark:text-customGray-300'}"
+												class="flex gap-1 items-center text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md bg-lightGray-400 font-medium {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'text-lightGray-100 dark:text-customGray-300'}"
 											>
 												<PrivateIcon />
 												<span>{$i18n.t('Private')}</span>
@@ -276,7 +276,7 @@
 										{:else}
 											{#each getGroupNamesFromAccess(item) as groupName}
 												<div
-													class="flex items-center text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'dark:text-customGray-300'}"
+													class="flex items-center text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md bg-lightGray-400 font-medium {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'text-lightGray-100 dark:text-customGray-300'}"
 												>
 													<GroupIcon />
 													<span>{groupName}</span>
@@ -305,14 +305,14 @@
 							</div>
 
 							<div class="self-center flex-1 px-1 mb-1">
-								<div class="text-left line-clamp-2 h-fit text-base {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'dark:text-customGray-100'} leading-[1.2] mb-1.5">{item.name}</div>
-								<div class="mb-5 text-left overflow-hidden text-ellipsis line-clamp-1 text-xs dark:text-customGray-100/50">
+								<div class="text-left line-clamp-2 h-fit text-base {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'dark:text-customGray-100'} text-lightGray-100 leading-[1.2] mb-1.5">{item.name}</div>
+								<div class="mb-5 text-left overflow-hidden text-ellipsis line-clamp-1 text-xs text-lightGray-1200 dark:text-customGray-100/50">
 									{item.description}
 								</div>
 							</div>
 						</div>
-						<div class="flex justify-between mt-auto items-center px-0.5 pt-2.5 pb-[2px] border-t dark:border-customGray-700">
-							<div class="text-xs text-gray-500 dark:text-customGray-100 flex items-center">
+						<div class="flex justify-between mt-auto items-center px-0.5 pt-2.5 pb-[2px] border-t border-[#A7A7A7]/10 dark:border-customGray-700">
+							<div class="text-xs text-lightGray-1200 dark:text-customGray-100 flex items-center">
 								{#if item?.user?.profile_image_url}
 									<img class="w-3 h-3 rounded-full mr-1" src={item?.user?.profile_image_url} alt={item?.user?.first_name ?? item?.user?.email ?? $i18n.t('Deleted User')}/>
 								{/if}

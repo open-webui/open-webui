@@ -500,13 +500,13 @@
 											class="rounded-lg size-16 object-cover shrink-0"
 										/>
 									{:else}
-										<div class="rounded-lg size-16 shrink-0 bg-customViolet-300" />
+										<div class="rounded-lg size-16 shrink-0 bg-customViolet-200 dark:bg-customViolet-300" />
 									{/if}
 
 									<div class="absolute bottom-0 right-0 z-10">
 										<div class="-m-2">
 											<div
-												class="p-1 rounded-lg border border-white dark:bg-customGray-900 bg-gray-800 text-white transition dark:border-customGray-700 dark:text-white"
+												class="p-1 rounded-lg border border-lightGray-1200 dark:bg-customGray-900 bg-lightGray-300 dark:bg-gray-800 text-lightGray-1200 transition dark:border-customGray-700 dark:text-white"
 											>
 												<Plus className="size-3" />
 											</div>
@@ -632,11 +632,11 @@
 									{#if  knowledge.length > 0}
 										{#each knowledge as item}
 										<div class="min-h-10 flex rounded-lg my-2">
-											<div class="relative w-full dark:bg-customGray-900 rounded-md px-2.5 py-2.5 text-sm dark:text-white leading-[1.2]">
+											<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md px-2.5 py-4 text-sm text-lightGray-100 dark:text-white leading-[1.2]">
 												<span>{item.name}</span>
 											</div>
 											<button
-												class="px-2 dark:text-customGray-300 dark:hover:text-white"
+												class="px-2 text-lightGray-100 dark:text-customGray-300 dark:hover:text-white"
 												type="button"
 												on:click={() => {
 													knowledge = knowledge.filter((k) => k.id !== item.id);
@@ -651,7 +651,7 @@
 										<ul class="mt-2.5 space-y-1 text-sm">
 											{#each files as file (file.id)}
 												<li
-													class="group flex justify-start items-center dark:text-customGray-100 cursor-pointer dark:hover:text-white"
+													class="group flex justify-start items-center text-lightGray-100 dark:text-customGray-100 cursor-pointer dark:hover:text-white"
 												>
 													<DocumentIcon />
 													<span class="truncate ml-2 mr-3.5">{file.name}</span>

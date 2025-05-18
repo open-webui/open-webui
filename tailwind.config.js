@@ -54,6 +54,7 @@ export default {
 				lightGray: {
 					100: '#232529',
 					200: '#F6F6F6',
+					250: '#E1E1E1',
 					300: '#F1F1F1',
 					350: '#FCFCFC',
 					400: '#E4E4E4',
@@ -77,6 +78,7 @@ export default {
 					800: '#272A6A'
 				},
 				customViolet: {
+					200: '#D6D8F7',
 					300: '#41386E'
 				}
 			},
