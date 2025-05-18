@@ -52,7 +52,7 @@
 	let dynamicItemsPerPage = 27; // Default, will be updated dynamically
 
 	// Estimated height of a single prompt item in pixels. Adjust if necessary.
-	const PROMPT_ITEM_ESTIMATED_HEIGHT_PX = 118;
+	const PROMPT_ITEM_ESTIMATED_HEIGHT_PX = 108;
 
 	let pageContainerRef: HTMLDivElement;
 	let gridParentRef: HTMLDivElement; // This is the flex-grow container for the grid
