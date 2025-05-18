@@ -11,6 +11,7 @@
 		chatId,
 		tags,
 		showSidebar,
+		showSearch,
 		mobile,
 		showArchivedChats,
 		pinnedChats,
@@ -58,6 +59,8 @@
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import Home from '../icons/Home.svelte';
+	import MagnifyingGlass from '../icons/MagnifyingGlass.svelte';
+	import SearchModal from './SearchModal.svelte';
 
 	const BREAKPOINT = 768;
 
@@ -202,32 +205,6 @@
 		await chats.set([...($chats ? $chats : []), ...newChatList]);
 
 		chatListLoading = false;
-	};
-
-	let searchDebounceTimeout;
-
-	const searchDebounceHandler = async () => {
-		console.log('search', search);
-		chats.set(null);
-
-		if (searchDebounceTimeout) {
-			clearTimeout(searchDebounceTimeout);
-		}
-
-		if (search === '') {
-			await initChatList();
-			return;
-		} else {
-			searchDebounceTimeout = setTimeout(async () => {
-				allChatsLoaded = false;
-				currentChatPage.set(1);
-				await chats.set(await getChatListBySearchText(localStorage.token, search));
-
-				if ($chats.length === 0) {
-					tags.set(await getAllTags(localStorage.token));
-				}
-			}, 1000);
-		}
 	};
 
 	const importChatHandler = async (items, pinned = false, folderId = null) => {
@@ -466,6 +443,8 @@
 	/>
 {/if}
 
+<SearchModal bind:show={$showSearch} />
+
 <div
 	bind:this={navElement}
 	id="sidebar"
@@ -651,17 +630,22 @@
 			</div>
 		{/if}
 
-		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
-			{#if $temporaryChatEnabled}
-				<div class="absolute z-40 w-full h-full flex justify-center"></div>
-			{/if}
+		<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+			<button
+				class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				on:click={() => {
+					showSearch.set(true);
+				}}
+				draggable="false"
+			>
+				<div class="self-center">
+					<MagnifyingGlass strokeWidth="2" className="size-[1.1rem]" />
+				</div>
 
-			<SearchInput
-				bind:value={search}
-				on:input={searchDebounceHandler}
-				placeholder={$i18n.t('Search')}
-				showClearButton={true}
-			/>
+				<div class="flex self-center translate-y-[0.5px]">
+					<div class=" self-center font-medium text-sm font-primary">{$i18n.t('Search')}</div>
+				</div>
+			</button>
 		</div>
 
 		<div

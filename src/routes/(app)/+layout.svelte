@@ -36,7 +36,8 @@
 		showSettings,
 		showChangelog,
 		temporaryChatEnabled,
-		toolServers
+		toolServers,
+		showSearch
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -120,6 +121,13 @@
 				const isCtrlPressed = event.ctrlKey || event.metaKey; // metaKey is for Cmd key on Mac
 				// Check if the Shift key is pressed
 				const isShiftPressed = event.shiftKey;
+
+				// Check if Ctrl  + K is pressed
+				if (isCtrlPressed && event.key.toLowerCase() === 'k') {
+					event.preventDefault();
+					console.log('search');
+					showSearch.set(!$showSearch);
+				}
 
 				// Check if Ctrl + Shift + O is pressed
 				if (isCtrlPressed && isShiftPressed && event.key.toLowerCase() === 'o') {
