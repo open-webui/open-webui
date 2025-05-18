@@ -312,16 +312,14 @@
 									<div class=" mb-1 text-xs text-gray-500">{$i18n.t('API Version')}</div>
 
 									<div class="flex-1">
-										<Tooltip content={$i18n.t('Specify the API version to use')}>
-											<input
-												class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-												type="text"
-												bind:value={apiVersion}
-												placeholder={$i18n.t('API Version')}
-												autocomplete="off"
-												required
-											/>
-										</Tooltip>
+										<input
+											class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+											type="text"
+											bind:value={apiVersion}
+											placeholder={$i18n.t('API Version')}
+											autocomplete="off"
+											required
+										/>
 									</div>
 								</div>
 							</div>
@@ -384,12 +382,9 @@
 											url: url
 										})}
 									{:else if azure}
-										{$i18n.t(
-											'Leave empty to include all models from "{{url}}/openai/deployments" endpoint',
-											{
-												url: url
-											}
-										)}
+										{$i18n.t('Leave empty to include all models from "{{url}}" endpoint', {
+											url: `${url}/openai/deployments`
+										})}
 									{:else}
 										{$i18n.t('Leave empty to include all models from "{{url}}/models" endpoint', {
 											url: url
