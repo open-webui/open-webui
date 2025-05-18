@@ -463,60 +463,88 @@ async def get_models(
         url = request.app.state.config.OPENAI_API_BASE_URLS[url_idx]
         key = request.app.state.config.OPENAI_API_KEYS[url_idx]
 
+        api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
+            str(url_idx),
+            request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
+        )
+
         r = None
         async with aiohttp.ClientSession(
             trust_env=True,
             timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
         ) as session:
             try:
-                async with session.get(
-                    f"{url}/models",
-                    headers={
-                        "Authorization": f"Bearer {key}",
-                        "Content-Type": "application/json",
-                        **(
-                            {
-                                "X-OpenWebUI-User-Name": user.name,
-                                "X-OpenWebUI-User-Id": user.id,
-                                "X-OpenWebUI-User-Email": user.email,
-                                "X-OpenWebUI-User-Role": user.role,
-                            }
-                            if ENABLE_FORWARD_USER_INFO_HEADERS
-                            else {}
-                        ),
-                    },
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                ) as r:
-                    if r.status != 200:
-                        # Extract response error details if available
-                        error_detail = f"HTTP Error: {r.status}"
-                        res = await r.json()
-                        if "error" in res:
-                            error_detail = f"External Error: {res['error']}"
-                        raise Exception(error_detail)
+                headers = {
+                    "Content-Type": "application/json",
+                    **(
+                        {
+                            "X-OpenWebUI-User-Name": user.name,
+                            "X-OpenWebUI-User-Id": user.id,
+                            "X-OpenWebUI-User-Email": user.email,
+                            "X-OpenWebUI-User-Role": user.role,
+                        }
+                        if ENABLE_FORWARD_USER_INFO_HEADERS
+                        else {}
+                    ),
+                }
 
-                    response_data = await r.json()
+                if api_config.get("azure", False):
+                    headers["api-key"] = key
 
-                    # Check if we're calling OpenAI API based on the URL
-                    if "api.openai.com" in url:
-                        # Filter models according to the specified conditions
-                        response_data["data"] = [
-                            model
-                            for model in response_data.get("data", [])
-                            if not any(
-                                name in model["id"]
-                                for name in [
-                                    "babbage",
-                                    "dall-e",
-                                    "davinci",
-                                    "embedding",
-                                    "tts",
-                                    "whisper",
-                                ]
-                            )
-                        ]
+                    api_version = api_config.get("api_version", "2023-03-15-preview")
+                    async with session.get(
+                        f"{url}/openai/deployments?api-version={api_version}",
+                        headers=headers,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    ) as r:
+                        if r.status != 200:
+                            # Extract response error details if available
+                            error_detail = f"HTTP Error: {r.status}"
+                            res = await r.json()
+                            if "error" in res:
+                                error_detail = f"External Error: {res['error']}"
+                            raise Exception(error_detail)
 
-                    models = response_data
+                        response_data = await r.json()
+                        models = response_data
+                else:
+                    headers["Authorization"] = f"Bearer {key}"
+
+                    async with session.get(
+                        f"{url}/models",
+                        headers=headers,
+                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                    ) as r:
+                        if r.status != 200:
+                            # Extract response error details if available
+                            error_detail = f"HTTP Error: {r.status}"
+                            res = await r.json()
+                            if "error" in res:
+                                error_detail = f"External Error: {res['error']}"
+                            raise Exception(error_detail)
+
+                        response_data = await r.json()
+
+                        # Check if we're calling OpenAI API based on the URL
+                        if "api.openai.com" in url:
+                            # Filter models according to the specified conditions
+                            response_data["data"] = [
+                                model
+                                for model in response_data.get("data", [])
+                                if not any(
+                                    name in model["id"]
+                                    for name in [
+                                        "babbage",
+                                        "dall-e",
+                                        "davinci",
+                                        "embedding",
+                                        "tts",
+                                        "whisper",
+                                    ]
+                                )
+                            ]
+
+                        models = response_data
             except aiohttp.ClientError as e:
                 # ClientError covers all aiohttp requests issues
                 log.exception(f"Client error: {str(e)}")
@@ -538,6 +566,8 @@ class ConnectionVerificationForm(BaseModel):
     url: str
     key: str
 
+    config: Optional[dict] = None
+
 
 @router.post("/verify")
 async def verify_connection(
@@ -546,39 +576,64 @@ async def verify_connection(
     url = form_data.url
     key = form_data.key
 
+    api_config = form_data.config or {}
+
     async with aiohttp.ClientSession(
         trust_env=True,
         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST),
     ) as session:
         try:
-            async with session.get(
-                f"{url}/models",
-                headers={
-                    "Authorization": f"Bearer {key}",
-                    "Content-Type": "application/json",
-                    **(
-                        {
-                            "X-OpenWebUI-User-Name": user.name,
-                            "X-OpenWebUI-User-Id": user.id,
-                            "X-OpenWebUI-User-Email": user.email,
-                            "X-OpenWebUI-User-Role": user.role,
-                        }
-                        if ENABLE_FORWARD_USER_INFO_HEADERS
-                        else {}
-                    ),
-                },
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
-                if r.status != 200:
-                    # Extract response error details if available
-                    error_detail = f"HTTP Error: {r.status}"
-                    res = await r.json()
-                    if "error" in res:
-                        error_detail = f"External Error: {res['error']}"
-                    raise Exception(error_detail)
+            headers = {
+                "Content-Type": "application/json",
+                **(
+                    {
+                        "X-OpenWebUI-User-Name": user.name,
+                        "X-OpenWebUI-User-Id": user.id,
+                        "X-OpenWebUI-User-Email": user.email,
+                        "X-OpenWebUI-User-Role": user.role,
+                    }
+                    if ENABLE_FORWARD_USER_INFO_HEADERS
+                    else {}
+                ),
+            }
 
-                response_data = await r.json()
-                return response_data
+            if api_config.get("azure", False):
+                headers["api-key"] = key
+
+                api_version = api_config.get("api_version", "2023-03-15-preview")
+                async with session.get(
+                    f"{url}/openai/deployments?api-version={api_version}",
+                    headers=headers,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ) as r:
+                    if r.status != 200:
+                        # Extract response error details if available
+                        error_detail = f"HTTP Error: {r.status}"
+                        res = await r.json()
+                        if "error" in res:
+                            error_detail = f"External Error: {res['error']}"
+                        raise Exception(error_detail)
+
+                    response_data = await r.json()
+                    return response_data
+            else:
+                headers["Authorization"] = f"Bearer {key}"
+
+                async with session.get(
+                    f"{url}/models",
+                    headers=headers,
+                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                ) as r:
+                    if r.status != 200:
+                        # Extract response error details if available
+                        error_detail = f"HTTP Error: {r.status}"
+                        res = await r.json()
+                        if "error" in res:
+                            error_detail = f"External Error: {res['error']}"
+                        raise Exception(error_detail)
+
+                    response_data = await r.json()
+                    return response_data
 
         except aiohttp.ClientError as e:
             # ClientError covers all aiohttp requests issues

@@ -33,7 +33,9 @@
 	let connectionType = 'external';
 	let azure = false;
 	$: azure =
-		url.includes('openai.azure.com') || url.includes('cognitive.microsoft.com') ? true : false;
+		(url.includes('openai.azure.com') || url.includes('cognitive.microsoft.com')) && !direct
+			? true
+			: false;
 
 	let prefixId = '';
 	let enable = true;
@@ -47,7 +49,10 @@
 	let loading = false;
 
 	const verifyOllamaHandler = async () => {
-		const res = await verifyOllamaConnection(localStorage.token, url, key).catch((error) => {
+		const res = await verifyOllamaConnection(localStorage.token, {
+			url,
+			key
+		}).catch((error) => {
 			toast.error(`${error}`);
 		});
 
@@ -57,11 +62,20 @@
 	};
 
 	const verifyOpenAIHandler = async () => {
-		const res = await verifyOpenAIConnection(localStorage.token, url, key, direct).catch(
-			(error) => {
-				toast.error(`${error}`);
-			}
-		);
+		const res = await verifyOpenAIConnection(
+			localStorage.token,
+			{
+				url,
+				key,
+				config: {
+					azure: azure,
+					api_version: apiVersion
+				}
+			},
+			direct
+		).catch((error) => {
+			toast.error(`${error}`);
+		});
 
 		if (res) {
 			toast.success($i18n.t('Server connection verified'));
@@ -187,27 +201,29 @@
 					}}
 				>
 					<div class="px-1">
-						<div class="flex gap-2">
-							<div class="flex w-full justify-between items-center">
-								<div class=" text-xs text-gray-500">{$i18n.t('Connection Type')}</div>
+						{#if !direct}
+							<div class="flex gap-2">
+								<div class="flex w-full justify-between items-center">
+									<div class=" text-xs text-gray-500">{$i18n.t('Connection Type')}</div>
 
-								<div class="">
-									<button
-										on:click={() => {
-											connectionType = connectionType === 'local' ? 'external' : 'local';
-										}}
-										type="button"
-										class=" text-xs text-gray-700 dark:text-gray-300"
-									>
-										{#if connectionType === 'local'}
-											{$i18n.t('Local')}
-										{:else}
-											{$i18n.t('External')}
-										{/if}
-									</button>
+									<div class="">
+										<button
+											on:click={() => {
+												connectionType = connectionType === 'local' ? 'external' : 'local';
+											}}
+											type="button"
+											class=" text-xs text-gray-700 dark:text-gray-300"
+										>
+											{#if connectionType === 'local'}
+												{$i18n.t('Local')}
+											{:else}
+												{$i18n.t('External')}
+											{/if}
+										</button>
+									</div>
 								</div>
 							</div>
-						</div>
+						{/if}
 
 						<div class="flex gap-2 mt-1.5">
 							<div class="flex flex-col w-full">

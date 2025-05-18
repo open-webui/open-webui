@@ -267,10 +267,10 @@ export const getOpenAIModels = async (token: string, urlIdx?: number) => {
 
 export const verifyOpenAIConnection = async (
 	token: string = '',
-	url: string = 'https://api.openai.com/v1',
-	key: string = '',
+	connection: dict = {},
 	direct: boolean = false
 ) => {
+	const { url, key, config } = connection;
 	if (!url) {
 		throw 'OpenAI: URL is required';
 	}
@@ -309,7 +309,8 @@ export const verifyOpenAIConnection = async (
 			},
 			body: JSON.stringify({
 				url,
-				key
+				key,
+				config
 			})
 		})
 			.then(async (res) => {
