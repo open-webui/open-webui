@@ -85,7 +85,7 @@
 	});
 </script>
 
-<Modal size="sm" bind:show>
+<Modal size="md" bind:show>
 	<div class="py-2.5 dark:text-gray-300 text-gray-700">
 		<div class="px-3.5 pb-1.5">
 			<SearchInput
