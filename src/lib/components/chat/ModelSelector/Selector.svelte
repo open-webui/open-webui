@@ -58,7 +58,21 @@
 	let tags = [];
 
 	let selectedModel = '';
-	$: selectedModel = items.find((item) => item.value === value) ?? '';
+	$: {
+			const foundModel = items.find((item) => item.value === value);
+			if (foundModel && !(foundModel.model?.info?.meta?.hidden ?? false)) {
+				selectedModel = foundModel;
+			} else {
+				// hidden model or cannot find model
+				const firstVisibleModel = items.find(item => !(item.model?.info?.meta?.hidden ?? false));
+				if (firstVisibleModel) {
+					value = firstVisibleModel.value; // update
+					selectedModel = firstVisibleModel;
+				} else {
+					selectedModel = '';
+				}
+			}
+		}
 
 	let searchValue = '';
 
