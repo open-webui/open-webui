@@ -214,7 +214,10 @@
 				{$i18n.t('Models')}
 				<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-					>{filteredModels.length}</span
+					>{filteredModels.length}
+					{#if filteredModels.length === 1}{capitalizeFirstLetter(
+							$i18n.t('model')
+						)}{:else}{capitalizeFirstLetter($i18n.t('models'))}{/if}</span
 				>
 			</div>
 		</div>
@@ -243,7 +246,7 @@
 	</div>
 
 	<div class=" my-2 mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3" id="model-list">
-		{#each filteredModels as model (model.id)}
+		{#each filteredModels as model}
 			<div
 				class=" flex flex-col cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
 				id="model-item-{model.id}"
@@ -482,7 +485,7 @@
 						}}
 					>
 						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Export Models')}
+							{$i18n.t('Export Models')} ({models.length})
 						</div>
 
 						<div class=" self-center">

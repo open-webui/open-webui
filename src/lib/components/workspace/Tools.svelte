@@ -175,7 +175,10 @@
 				{$i18n.t('Tools')}
 				<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
 				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-					>{filteredItems.length}</span
+					>{filteredItems.length}
+					{#if filteredItems.length === 1}{capitalizeFirstLetter(
+							$i18n.t('tool')
+						)}{:else}{capitalizeFirstLetter($i18n.t('tools'))}{/if}</span
 				>
 			</div>
 		</div>
@@ -411,7 +414,9 @@
 							}
 						}}
 					>
-						<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Tools')}</div>
+						<div class=" self-center mr-2 font-medium line-clamp-1">
+							{$i18n.t('Export Tools')} ({tools.length})
+						</div>
 
 						<div class=" self-center">
 							<svg
