@@ -109,9 +109,12 @@
 		<div class="flex justify-between items-center">
 			<div class="flex md:self-center text-xl font-medium px-0.5 items-center">
 				{$i18n.t('Prompts')}
-				<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" />
+				<div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850"></div>
 				<span class="text-lg font-medium text-gray-500 dark:text-gray-300"
-					>{filteredItems.length}</span
+					>{filteredItems.length}
+					{#if filteredItems.length === 1}{capitalizeFirstLetter(
+							$i18n.t('prompt')
+						)}{:else}{capitalizeFirstLetter($i18n.t('prompts'))}{/if}</span
 				>
 			</div>
 		</div>
@@ -296,7 +299,7 @@
 						}}
 					>
 						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Export Prompts')}
+							{$i18n.t('Export Prompts')} ({prompts.length})
 						</div>
 
 						<div class=" self-center">
