@@ -35,7 +35,6 @@
 		if (query === '') {
 			page = 1;
 			chatList = await getChatList(localStorage.token, page);
-			return;
 		} else {
 			searchDebounceTimeout = setTimeout(async () => {
 				page = 1;
