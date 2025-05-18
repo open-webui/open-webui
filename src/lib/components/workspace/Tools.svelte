@@ -415,7 +415,9 @@
 							}
 						}}
 					>
-						<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Tools')}</div>
+						<div class=" self-center mr-2 font-medium line-clamp-1">
+							{$i18n.t('Export Tools')} ({tools.length})
+						</div>
 
 						<div class=" self-center">
 							<svg

@@ -488,7 +488,7 @@
 						}}
 					>
 						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Export Models')}
+							{$i18n.t('Export Models')} ({models.length})
 						</div>
 
 						<div class=" self-center">

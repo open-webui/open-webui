@@ -305,7 +305,7 @@
 						}}
 					>
 						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Export Prompts')}
+							{$i18n.t('Export Prompts')} ({prompts.length})
 						</div>
 
 						<div class=" self-center">
