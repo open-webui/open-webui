@@ -140,16 +140,9 @@ def upload_file(
         if process:
             try:
                 if file.content_type:
-                    if file.content_type.startswith(
-                        (
-                            "audio/mpeg",
-                            "audio/wav",
-                            "audio/ogg",
-                            "audio/x-m4a",
-                            "audio/webm",
-                            "video/webm",
-                        )
-                    ):
+                    if file.content_type.startswith("audio/") or file.content_type in {
+                        "video/webm"
+                    }:
                         file_path = Storage.get_file(file_path)
                         result = transcribe(request, file_path)
 
