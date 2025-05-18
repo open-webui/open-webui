@@ -861,7 +861,7 @@
 									{:else}
 										<textarea
 											id="chat-input"
-											dir="auto"
+											dir={$settings?.chatDirection ?? 'auto'}
 											bind:this={chatInputElement}
 											class="scrollbar-hidden bg-transparent dark:text-gray-200 outline-hidden w-full pt-3 px-1 resize-none"
 											placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}

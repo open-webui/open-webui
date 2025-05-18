@@ -8,7 +8,7 @@
 	import { getChatList, getChatListBySearchText } from '$lib/apis/chats';
 	import Spinner from '../common/Spinner.svelte';
 
-	import dayjs from 'dayjs';
+	import dayjs from '$lib/dayjs';
 	import calendar from 'dayjs/plugin/calendar';
 	import Loader from '../common/Loader.svelte';
 	dayjs.extend(calendar);
