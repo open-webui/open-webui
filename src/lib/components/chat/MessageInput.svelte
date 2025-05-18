@@ -86,7 +86,7 @@
 
 	$: onChange({
 		prompt,
-		files,
+		files: files.filter((file) => file.type !== 'image'),
 		selectedToolIds,
 		imageGenerationEnabled,
 		webSearchEnabled,
@@ -604,7 +604,7 @@
 								<div class="px-2.5">
 									{#if $settings?.richTextInput ?? true}
 										<div
-											class="scrollbar-hidden text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
+											class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-3 px-1 resize-none h-fit max-h-80 overflow-auto"
 											id="chat-input-container"
 										>
 											<RichTextInput

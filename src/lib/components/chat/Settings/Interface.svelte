@@ -54,6 +54,9 @@
 		height: ''
 	};
 
+	// chat export
+	let stylizedPdfExport = true;
+
 	// Admin - Show Update Available Toast
 	let showUpdateToast = true;
 	let showChangelog = true;
@@ -150,6 +153,11 @@
 	const toggleHapticFeedback = async () => {
 		hapticFeedback = !hapticFeedback;
 		saveSettings({ hapticFeedback: hapticFeedback });
+	};
+
+	const toggleStylizedPdfExport = async () => {
+		stylizedPdfExport = !stylizedPdfExport;
+		saveSettings({ stylizedPdfExport: stylizedPdfExport });
 	};
 
 	const toggleUserLocation = async () => {
@@ -301,6 +309,11 @@
 
 		notificationSound = $settings?.notificationSound ?? true;
 		notificationSoundAlways = $settings?.notificationSoundAlways ?? false;
+
+		iframeSandboxAllowSameOrigin = $settings?.iframeSandboxAllowSameOrigin ?? false;
+		iframeSandboxAllowForms = $settings?.iframeSandboxAllowForms ?? false;
+
+		stylizedPdfExport = $settings?.stylizedPdfExport ?? true;
 
 		hapticFeedback = $settings.hapticFeedback ?? false;
 		ctrlEnterToSend = $settings.ctrlEnterToSend ?? false;
@@ -956,6 +969,28 @@
 						type="button"
 					>
 						{#if iframeSandboxAllowForms === true}
+							<span class="ml-2 self-center">{$i18n.t('On')}</span>
+						{:else}
+							<span class="ml-2 self-center">{$i18n.t('Off')}</span>
+						{/if}
+					</button>
+				</div>
+			</div>
+
+			<div>
+				<div class=" py-0.5 flex w-full justify-between">
+					<div class=" self-center text-xs">
+						{$i18n.t('Stylized PDF Export')}
+					</div>
+
+					<button
+						class="p-1 px-3 text-xs flex rounded-sm transition"
+						on:click={() => {
+							toggleStylizedPdfExport();
+						}}
+						type="button"
+					>
+						{#if stylizedPdfExport === true}
 							<span class="ml-2 self-center">{$i18n.t('On')}</span>
 						{:else}
 							<span class="ml-2 self-center">{$i18n.t('Off')}</span>

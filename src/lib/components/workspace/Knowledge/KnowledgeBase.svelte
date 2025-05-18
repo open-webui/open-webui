@@ -764,7 +764,7 @@
 										className="input-prose-sm"
 										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
-										preserveBreaks={true}
+										preserveBreaks={false}
 									/>
 								{/key}
 							</div>
@@ -822,7 +822,7 @@
 										className="input-prose-sm"
 										bind:value={selectedFileContent}
 										placeholder={$i18n.t('Add content here')}
-										preserveBreaks={true}
+										preserveBreaks={false}
 									/>
 								{/key}
 							</div>

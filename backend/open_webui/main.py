@@ -103,6 +103,7 @@ from open_webui.config import (
     ENABLE_OPENAI_API,
     ONEDRIVE_CLIENT_ID,
     ONEDRIVE_SHAREPOINT_URL,
+    ONEDRIVE_SHAREPOINT_TENANT_ID,
     OPENAI_API_BASE_URLS,
     OPENAI_API_KEYS,
     OPENAI_API_CONFIGS,
@@ -187,7 +188,10 @@ from open_webui.config import (
     RAG_EMBEDDING_MODEL,
     RAG_EMBEDDING_MODEL_AUTO_UPDATE,
     RAG_EMBEDDING_MODEL_TRUST_REMOTE_CODE,
+    RAG_RERANKING_ENGINE,
     RAG_RERANKING_MODEL,
+    RAG_EXTERNAL_RERANKER_URL,
+    RAG_EXTERNAL_RERANKER_API_KEY,
     RAG_RERANKING_MODEL_AUTO_UPDATE,
     RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
     RAG_EMBEDDING_ENGINE,
@@ -255,6 +259,7 @@ from open_webui.config import (
     GOOGLE_DRIVE_API_KEY,
     ONEDRIVE_CLIENT_ID,
     ONEDRIVE_SHAREPOINT_URL,
+    ONEDRIVE_SHAREPOINT_TENANT_ID,
     ENABLE_RAG_HYBRID_SEARCH,
     ENABLE_RAG_LOCAL_WEB_FETCH,
     ENABLE_WEB_LOADER_SSL_VERIFICATION,
@@ -459,10 +464,9 @@ async def lifespan(app: FastAPI):
     log.info("Installing external dependencies of functions and tools...")
     install_tool_and_function_dependencies()
 
-    pool_size = THREAD_POOL_SIZE
-    if pool_size and pool_size > 0:
+    if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0:
         limiter = anyio.to_thread.current_default_thread_limiter()
-        limiter.total_tokens = pool_size
+        limiter.total_tokens = THREAD_POOL_SIZE
 
     asyncio.create_task(periodic_usage_pool_cleanup())
 
@@ -654,7 +658,12 @@ app.state.config.CHUNK_OVERLAP = CHUNK_OVERLAP
 app.state.config.RAG_EMBEDDING_ENGINE = RAG_EMBEDDING_ENGINE
 app.state.config.RAG_EMBEDDING_MODEL = RAG_EMBEDDING_MODEL
 app.state.config.RAG_EMBEDDING_BATCH_SIZE = RAG_EMBEDDING_BATCH_SIZE
+
+app.state.config.RAG_RERANKING_ENGINE = RAG_RERANKING_ENGINE
 app.state.config.RAG_RERANKING_MODEL = RAG_RERANKING_MODEL
+app.state.config.RAG_EXTERNAL_RERANKER_URL = RAG_EXTERNAL_RERANKER_URL
+app.state.config.RAG_EXTERNAL_RERANKER_API_KEY = RAG_EXTERNAL_RERANKER_API_KEY
+
 app.state.config.RAG_TEMPLATE = RAG_TEMPLATE
 
 app.state.config.RAG_OPENAI_API_BASE_URL = RAG_OPENAI_API_BASE_URL
@@ -735,7 +744,10 @@ try:
     )
 
     app.state.rf = get_rf(
+        app.state.config.RAG_RERANKING_ENGINE,
         app.state.config.RAG_RERANKING_MODEL,
+        app.state.config.RAG_EXTERNAL_RERANKER_URL,
+        app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
         RAG_RERANKING_MODEL_AUTO_UPDATE,
     )
 except Exception as e:
@@ -1381,6 +1393,7 @@ async def get_app_config(request: Request):
                 "onedrive": {
                     "client_id": ONEDRIVE_CLIENT_ID.value,
                     "sharepoint_url": ONEDRIVE_SHAREPOINT_URL.value,
+                    "sharepoint_tenant_id": ONEDRIVE_SHAREPOINT_TENANT_ID.value,
                 },
                 "license_metadata": app.state.LICENSE_METADATA,
                 **(

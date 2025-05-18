@@ -3,6 +3,8 @@ import logging
 import mimetypes
 import os
 import shutil
+import asyncio
+
 
 import uuid
 from datetime import datetime
@@ -135,7 +137,10 @@ def get_ef(
 
 
 def get_rf(
+    engine: str = "",
     reranking_model: Optional[str] = None,
+    external_reranker_url: str = "",
+    external_reranker_api_key: str = "",
     auto_update: bool = False,
 ):
     rf = None
@@ -153,19 +158,33 @@ def get_rf(
                 log.error(f"ColBERT: {e}")
                 raise Exception(ERROR_MESSAGES.DEFAULT(e))
         else:
-            import sentence_transformers
+            if engine == "external":
+                try:
+                    from open_webui.retrieval.models.external import ExternalReranker
 
-            try:
-                rf = sentence_transformers.CrossEncoder(
-                    get_model_path(reranking_model, auto_update),
-                    device=DEVICE_TYPE,
-                    trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
-                    backend=SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
-                    model_kwargs=SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
-                )
-            except Exception as e:
-                log.error(f"CrossEncoder: {e}")
-                raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
+                    rf = ExternalReranker(
+                        url=external_reranker_url,
+                        api_key=external_reranker_api_key,
+                        model=reranking_model,
+                    )
+                except Exception as e:
+                    log.error(f"ExternalReranking: {e}")
+                    raise Exception(ERROR_MESSAGES.DEFAULT(e))
+            else:
+                import sentence_transformers
+
+                try:
+                    rf = sentence_transformers.CrossEncoder(
+                        get_model_path(reranking_model, auto_update),
+                        device=DEVICE_TYPE,
+                        trust_remote_code=RAG_RERANKING_MODEL_TRUST_REMOTE_CODE,
+                        backend=SENTENCE_TRANSFORMERS_CROSS_ENCODER_BACKEND,
+                        model_kwargs=SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
+                    )
+                except Exception as e:
+                    log.error(f"CrossEncoder: {e}")
+                    raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
+
     return rf
 
 
@@ -188,7 +207,7 @@ class ProcessUrlForm(CollectionNameForm):
 
 
 class SearchForm(BaseModel):
-    query: str
+    queries: List[str]
 
 
 @router.get("/")
@@ -220,14 +239,6 @@ async def get_embedding_config(request: Request, user=Depends(get_admin_user)):
             "url": request.app.state.config.RAG_OLLAMA_BASE_URL,
             "key": request.app.state.config.RAG_OLLAMA_API_KEY,
         },
-    }
-
-
-@router.get("/reranking")
-async def get_reraanking_config(request: Request, user=Depends(get_admin_user)):
-    return {
-        "status": True,
-        "reranking_model": request.app.state.config.RAG_RERANKING_MODEL,
     }
 
 
@@ -325,41 +336,6 @@ async def update_embedding_config(
         )
 
 
-class RerankingModelUpdateForm(BaseModel):
-    reranking_model: str
-
-
-@router.post("/reranking/update")
-async def update_reranking_config(
-    request: Request, form_data: RerankingModelUpdateForm, user=Depends(get_admin_user)
-):
-    log.info(
-        f"Updating reranking model: {request.app.state.config.RAG_RERANKING_MODEL} to {form_data.reranking_model}"
-    )
-    try:
-        request.app.state.config.RAG_RERANKING_MODEL = form_data.reranking_model
-
-        try:
-            request.app.state.rf = get_rf(
-                request.app.state.config.RAG_RERANKING_MODEL,
-                True,
-            )
-        except Exception as e:
-            log.error(f"Error loading reranking model: {e}")
-            request.app.state.config.ENABLE_RAG_HYBRID_SEARCH = False
-
-        return {
-            "status": True,
-            "reranking_model": request.app.state.config.RAG_RERANKING_MODEL,
-        }
-    except Exception as e:
-        log.exception(f"Problem updating reranking model: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=ERROR_MESSAGES.DEFAULT(e),
-        )
-
-
 @router.get("/config")
 async def get_rag_config(request: Request, user=Depends(get_admin_user)):
     return {
@@ -383,6 +359,11 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
+        # Reranking settings
+        "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
+        "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
+        "RAG_EXTERNAL_RERANKER_URL": request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
+        "RAG_EXTERNAL_RERANKER_API_KEY": request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
@@ -519,6 +500,12 @@ class ConfigForm(BaseModel):
     DOCUMENT_INTELLIGENCE_KEY: Optional[str] = None
     MISTRAL_OCR_API_KEY: Optional[str] = None
 
+    # Reranking settings
+    RAG_RERANKING_MODEL: Optional[str] = None
+    RAG_RERANKING_ENGINE: Optional[str] = None
+    RAG_EXTERNAL_RERANKER_URL: Optional[str] = None
+    RAG_EXTERNAL_RERANKER_API_KEY: Optional[str] = None
+
     # Chunking settings
     TEXT_SPLITTER: Optional[str] = None
     CHUNK_SIZE: Optional[int] = None
@@ -629,6 +616,49 @@ async def update_rag_config(
         if form_data.MISTRAL_OCR_API_KEY is not None
         else request.app.state.config.MISTRAL_OCR_API_KEY
     )
+
+    # Reranking settings
+    request.app.state.config.RAG_RERANKING_ENGINE = (
+        form_data.RAG_RERANKING_ENGINE
+        if form_data.RAG_RERANKING_ENGINE is not None
+        else request.app.state.config.RAG_RERANKING_ENGINE
+    )
+
+    request.app.state.config.RAG_EXTERNAL_RERANKER_URL = (
+        form_data.RAG_EXTERNAL_RERANKER_URL
+        if form_data.RAG_EXTERNAL_RERANKER_URL is not None
+        else request.app.state.config.RAG_EXTERNAL_RERANKER_URL
+    )
+
+    request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY = (
+        form_data.RAG_EXTERNAL_RERANKER_API_KEY
+        if form_data.RAG_EXTERNAL_RERANKER_API_KEY is not None
+        else request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY
+    )
+
+    log.info(
+        f"Updating reranking model: {request.app.state.config.RAG_RERANKING_MODEL} to {form_data.RAG_RERANKING_MODEL}"
+    )
+    try:
+        request.app.state.config.RAG_RERANKING_MODEL = form_data.RAG_RERANKING_MODEL
+
+        try:
+            request.app.state.rf = get_rf(
+                request.app.state.config.RAG_RERANKING_ENGINE,
+                request.app.state.config.RAG_RERANKING_MODEL,
+                request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
+                request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
+                True,
+            )
+        except Exception as e:
+            log.error(f"Error loading reranking model: {e}")
+            request.app.state.config.ENABLE_RAG_HYBRID_SEARCH = False
+    except Exception as e:
+        log.exception(f"Problem updating reranking model: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=ERROR_MESSAGES.DEFAULT(e),
+        )
 
     # Chunking settings
     request.app.state.config.TEXT_SPLITTER = (
@@ -786,6 +816,11 @@ async def update_rag_config(
         "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
         "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
         "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
+        # Reranking settings
+        "RAG_RERANKING_MODEL": request.app.state.config.RAG_RERANKING_MODEL,
+        "RAG_RERANKING_ENGINE": request.app.state.config.RAG_RERANKING_ENGINE,
+        "RAG_EXTERNAL_RERANKER_URL": request.app.state.config.RAG_EXTERNAL_RERANKER_URL,
+        "RAG_EXTERNAL_RERANKER_API_KEY": request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY,
         # Chunking settings
         "TEXT_SPLITTER": request.app.state.config.TEXT_SPLITTER,
         "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
@@ -1568,16 +1603,34 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
 async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
+
+    urls = []
     try:
         logging.info(
-            f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.query}"
+            f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.queries}"
         )
-        web_results = await run_in_threadpool(
-            search_web,
-            request,
-            request.app.state.config.WEB_SEARCH_ENGINE,
-            form_data.query,
-        )
+
+        search_tasks = [
+            run_in_threadpool(
+                search_web,
+                request,
+                request.app.state.config.WEB_SEARCH_ENGINE,
+                query,
+            )
+            for query in form_data.queries
+        ]
+
+        search_results = await asyncio.gather(*search_tasks)
+
+        for result in search_results:
+            if result:
+                for item in result:
+                    if item and item.link:
+                        urls.append(item.link)
+
+        urls = list(dict.fromkeys(urls))
+        log.debug(f"urls: {urls}")
+
     except Exception as e:
         log.exception(e)
 
@@ -1586,10 +1639,7 @@ async def process_web_search(
             detail=ERROR_MESSAGES.WEB_SEARCH_ERROR(e),
         )
 
-    log.debug(f"web_results: {web_results}")
-
     try:
-        urls = [result.link for result in web_results]
         loader = get_web_loader(
             urls,
             verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
@@ -1599,7 +1649,7 @@ async def process_web_search(
         docs = await loader.aload()
         urls = [
             doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
-        ]  # only keep URLs
+        ]  # only keep the urls returned by the loader
 
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
@@ -1616,29 +1666,28 @@ async def process_web_search(
                 "loaded_count": len(docs),
             }
         else:
-            collection_names = []
-            for doc_idx, doc in enumerate(docs):
-                if doc and doc.page_content:
-                    try:
-                        collection_name = f"web-search-{calculate_sha256_string(form_data.query + '-' + urls[doc_idx])}"[
-                            :63
-                        ]
+            # Create a single collection for all documents
+            collection_name = (
+                f"web-search-{calculate_sha256_string('-'.join(form_data.queries))}"[
+                    :63
+                ]
+            )
 
-                        collection_names.append(collection_name)
-                        await run_in_threadpool(
-                            save_docs_to_vector_db,
-                            request,
-                            [doc],
-                            collection_name,
-                            overwrite=True,
-                            user=user,
-                        )
-                    except Exception as e:
-                        log.debug(f"error saving doc {doc_idx}: {e}")
+            try:
+                await run_in_threadpool(
+                    save_docs_to_vector_db,
+                    request,
+                    docs,
+                    collection_name,
+                    overwrite=True,
+                    user=user,
+                )
+            except Exception as e:
+                log.debug(f"error saving docs: {e}")
 
             return {
                 "status": True,
-                "collection_names": collection_names,
+                "collection_names": [collection_name],
                 "filenames": urls,
                 "loaded_count": len(docs),
             }
