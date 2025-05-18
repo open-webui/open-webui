@@ -33,15 +33,14 @@
 			clearTimeout(searchDebounceTimeout);
 		}
 
+		page = 1;
+		chatList = null;
 		if (query === '') {
-			page = 1;
 			chatList = await getChatList(localStorage.token, page);
 		} else {
 			searchDebounceTimeout = setTimeout(async () => {
-				page = 1;
-				chatList = null;
 				chatList = await getChatListBySearchText(localStorage.token, query, page);
-			}, 100);
+			}, 200);
 		}
 
 		if ((chatList ?? []).length === 0) {
