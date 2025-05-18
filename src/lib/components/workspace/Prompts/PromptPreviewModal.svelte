@@ -56,18 +56,21 @@
 			</div>
 
 			<div class="text-sm text-gray-600 dark:text-gray-400">
-				<span class="font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Command:')}</span> {prompt.command}
+				<span class="font-medium text-gray-700 dark:text-gray-300">{$i18n.t('Command:')}</span>
+				{prompt.command}
 			</div>
 
 			<div class="mt-1 border-t border-gray-200 dark:border-gray-700 pt-3">
-				<h4 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">{$i18n.t('Content:')}</h4>
+				<h4 class="text-md font-medium text-gray-700 dark:text-gray-300 mb-2">
+					{$i18n.t('Content:')}
+				</h4>
 				<div
 					class="relative group max-h-[60vh] overflow-y-auto bg-gray-50 dark:bg-gray-800 p-3 rounded-md text-sm"
 				>
 					<pre
-						class="whitespace-pre-wrap break-words font-sans text-gray-700 dark:text-gray-200 pr-10"
-					>{prompt.content || $i18n.t('No content available.')}</pre>
-					
+						class="whitespace-pre-wrap break-words font-sans text-gray-700 dark:text-gray-200 pr-10">{prompt.content ||
+							$i18n.t('No content available.')}</pre>
+
 					{#if prompt.content}
 						<button
 							type="button"
