@@ -52,12 +52,16 @@
 	let tools = [];
 	let filteredItems = [];
 
-	$: filteredItems = tools.filter(
-		(t) =>
-			query === '' ||
-			t.name.toLowerCase().includes(query.toLowerCase()) ||
-			t.id.toLowerCase().includes(query.toLowerCase())
-	);
+	$: filteredItems = tools.filter((t) => {
+		if (query === '') return true;
+		const lowerQuery = query.toLowerCase();
+		return (
+			(t.name || '').toLowerCase().includes(lowerQuery) ||
+			(t.id || '').toLowerCase().includes(lowerQuery) ||
+			(t.user?.name || '').toLowerCase().includes(lowerQuery) || // Search by user name
+			(t.user?.email || '').toLowerCase().includes(lowerQuery) // Search by user email
+		);
+	});
 
 	const shareHandler = async (tool) => {
 		const item = await getToolById(localStorage.token, tool.id).catch((error) => {

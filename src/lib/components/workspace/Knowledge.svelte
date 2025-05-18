@@ -38,10 +38,20 @@
 	let knowledgeBases = [];
 	let filteredItems = [];
 
-	$: if (knowledgeBases) {
+	$: if (knowledgeBases.length > 0) {
+		// Added a check for non-empty array, good practice
 		fuse = new Fuse(knowledgeBases, {
-			keys: ['name', 'description']
+			keys: [
+				'name',
+				'description',
+				'user.name', // Ensures Fuse looks into item.user.name
+				'user.email' // Ensures Fuse looks into item.user.email
+			],
+			threshold: 0.0 // You might want to adjust this. Lower is more strict. Default is 0.6.
+			// 0.0 is exact match.
 		});
+	} else {
+		fuse = null; // Reset fuse if knowledgeBases is empty
 	}
 
 	$: if (fuse) {

@@ -37,7 +37,16 @@
 	let deletePrompt = null;
 
 	let filteredItems = [];
-	$: filteredItems = prompts.filter((p) => query === '' || p.command.includes(query));
+	$: filteredItems = prompts.filter((p) => {
+		if (query === '') return true;
+		const lowerQuery = query.toLowerCase();
+		return (
+			(p.title || '').toLowerCase().includes(lowerQuery) ||
+			(p.command || '').toLowerCase().includes(lowerQuery) ||
+			(p.user?.name || '').toLowerCase().includes(lowerQuery) ||
+			(p.user?.email || '').toLowerCase().includes(lowerQuery)
+		);
+	});
 
 	const shareHandler = async (prompt) => {
 		toast.success($i18n.t('Redirecting you to Open WebUI Community'));

@@ -51,9 +51,15 @@
 	let group_ids = [];
 
 	$: if (models) {
-		filteredModels = models.filter(
-			(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
-		);
+		filteredModels = models.filter((m) => {
+			if (searchValue === '') return true;
+			const lowerSearchValue = searchValue.toLowerCase();
+			return (
+				(m.name || '').toLowerCase().includes(lowerSearchValue) ||
+				(m.user?.name || '').toLowerCase().includes(lowerSearchValue) || // Search by user name
+				(m.user?.email || '').toLowerCase().includes(lowerSearchValue) // Search by user email
+			);
+		});
 	}
 
 	let searchValue = '';
