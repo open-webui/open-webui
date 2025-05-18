@@ -76,10 +76,6 @@
 		searchHandler();
 	};
 
-	$: if (show) {
-		init();
-	}
-
 	onMount(() => {
 		init();
 	});
