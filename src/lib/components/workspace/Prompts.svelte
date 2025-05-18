@@ -126,6 +126,32 @@
 					bind:value={query}
 					placeholder={$i18n.t('Search Prompts')}
 				/>
+				{#if query}
+					<Tooltip content={$i18n.t('Clear search')} placement="top">
+						<button
+							on:click={() => {
+								query = '';
+								// currentPage = 1; // Assuming currentPage logic might be needed if pagination exists.
+								// In this simplified version, currentPage is not defined, so we'll omit it.
+								// If you re-introduce pagination, you'll want to reset it here.
+							}}
+							class="ml-1 p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
+							aria-label={$i18n.t('Clear search')}
+							type="button"
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="2"
+								stroke="currentColor"
+								class="w-4 h-4"
+							>
+								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</button>
+					</Tooltip>
+				{/if}
 			</div>
 
 			<div>
