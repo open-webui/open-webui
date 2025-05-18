@@ -376,7 +376,14 @@ html.dark .ProseMirror p.is-editor-empty:first-child::before {
 input:-webkit-autofill {
 	background-color: transparent !important;
 	-webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
-	-webkit-text-fill-color: white  !important;
+	-webkit-text-fill-color: #232529  !important;
+	transition: background-color 9999s ease-in-out 0s;
+}
+
+html.dark input:-webkit-autofill {
+	background-color: transparent !important;
+	-webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+	-webkit-text-fill-color: white !important;
 	transition: background-color 9999s ease-in-out 0s;
 }
 #response-content-container strong {
@@ -413,7 +420,7 @@ input:-webkit-autofill {
 	border-radius: 6px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+html.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
 	background-color: #1E1E1E; 
 }
 

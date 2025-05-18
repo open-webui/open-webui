@@ -71,7 +71,7 @@
 
 	onMount(() => {
 		const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-		logoSrc = isDark ? '/logo_dark_transparent.png' : '/logo_dark.png';
+		logoSrc = isDark ? '/logo_dark_transparent.png' : '/logo_light_transparent.png';
 	});
 
 	$: console.log($WEBUI_NAME);
@@ -85,7 +85,7 @@
 
 <CustomToast message={$toastMessage} type={$toastType} visible={$toastVisible} />
 <form
-	class="flex flex-col self-center dark:bg-customGray-800 rounded-2xl w-[31rem] pt-8 px-24 pb-16"
+	class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-[31rem] pt-8 px-24 pb-16"
 	on:submit={(e) => {
 		e.preventDefault();
 		confirmHandler();
@@ -93,9 +93,9 @@
 >
     <div class="self-center flex flex-col items-center mb-5">
         <div>
-            <img crossorigin="anonymous" src="/logo_dark_transparent.png" class=" w-10 mb-5" alt="logo" />
+            <img crossorigin="anonymous" src={logoSrc} class=" w-10 mb-5" alt="logo" />
         </div>
-        <div>{$i18n.t('Add personal information')}</div>
+        <div class="text-lightGray-100 dark:text-customGray-100 font-medium">{$i18n.t('Add personal information')}</div>
     </div>
     <input
 			id="profile-image-input"
@@ -174,7 +174,7 @@
                         class="rounded-lg size-16 object-cover shrink-0"
                     />
                 {:else}
-                    <div class="rounded-lg size-16 shrink-0 bg-customGray-900 dark:text-customGray-800">
+                    <div class="rounded-lg size-16 shrink-0 bg-lightGray-400  dark:bg-customGray-900 dark:text-customGray-800">
                         <UserIcon className="size-16"/>
                     </div>
                 {/if}
@@ -182,7 +182,7 @@
                 <div class="absolute bottom-0 right-0 z-10">
                     <div class="-m-2">
                         <div
-                            class="p-1 rounded-lg border border-white dark:bg-customGray-900 bg-gray-800 text-white transition dark:border-customGray-700 dark:text-white"
+                            class="p-1 rounded-lg border bg-lightGray-300 dark:bg-customGray-900 text-lightGray-1200 transition border-lightGray-1200 dark:border-customGray-700 dark:text-white"
                         >
                             <Plus className="size-3" />
                         </div>
@@ -192,17 +192,17 @@
             </button>
         </div>
     </div>
-    <div class="text-xs dark:text-customGray-100/50 mb-2.5 mt-5">{$i18n.t('We only support PNGs, JPEGs and GIFs under 10MB')}</div>
+    <div class="text-xs font-medium text-[#8A8B8D] dark:text-customGray-100/50 mb-2.5 mt-5">{$i18n.t('We only support PNGs, JPEGs and GIFs under 10MB')}</div>
 	
 	<div class="flex-1 mb-2.5">
-		<div class="relative w-full dark:bg-customGray-900 rounded-md">
+		<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 			{#if first_name}
-				<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+				<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 					{$i18n.t('First Name')}
 				</div>
 			{/if}
 			<input
-				class={`px-2.5 text-sm ${first_name ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+				class={`px-2.5 text-sm ${first_name ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 				placeholder={$i18n.t('First Name')}
 				bind:value={first_name}
 				required
@@ -211,14 +211,14 @@
 	</div>
 
 	<div class="flex-1 mb-2.5">
-		<div class="relative w-full dark:bg-customGray-900 rounded-md">
+		<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 			{#if last_name}
-				<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+				<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 					{$i18n.t('Last Name')}
 				</div>
 			{/if}
 			<input
-				class={`px-2.5 text-sm ${last_name ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+				class={`px-2.5 text-sm ${last_name ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 				placeholder={$i18n.t('Last Name')}
 				bind:value={last_name}
 				required
@@ -227,15 +227,15 @@
 	</div>
 
 	<div class="relative flex flex-col w-full mb-2.5">
-		<div class="relative w-full dark:bg-customGray-900 rounded-md">
+		<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 			{#if password}
-				<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+				<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 					{$i18n.t('Create Password')}
 				</div>
 			{/if}
 			{#if showPassword}
 				<input
-					class={`px-2.5 text-sm ${password ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
+					class={`px-2.5 text-sm ${password ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
 					type="text"
 					bind:value={password}
 					placeholder={$i18n.t('Create Password')}
@@ -244,7 +244,7 @@
 				/>
 			{:else}
 				<input
-					class={`px-2.5 text-sm ${password ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
+					class={`px-2.5 text-sm ${password ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
 					type="password"
 					bind:value={password}
 					placeholder={$i18n.t('Create Password')}
@@ -273,15 +273,15 @@
         </Tooltip>       
 	</div>
 	<div class="flex flex-col w-full mb-2.5">
-		<div class="relative w-full dark:bg-customGray-900 rounded-md">
+		<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 			{#if confirmPassword}
-				<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+				<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 					{$i18n.t('Confirm password')}
 				</div>
 			{/if}
 			{#if showConfirmPassword}
 				<input
-					class={`px-2.5 text-sm ${confirmPassword ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
+					class={`px-2.5 text-sm ${confirmPassword ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
 					type="text"
 					bind:value={confirmPassword}
 					placeholder={$i18n.t('Confirm Password')}
@@ -290,7 +290,7 @@
 				/>
 			{:else}
 				<input
-					class={`px-2.5 text-sm ${confirmPassword ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
+					class={`px-2.5 text-sm ${confirmPassword ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
 					type="password"
 					bind:value={confirmPassword}
 					placeholder={$i18n.t('Confirm Password')}
@@ -314,9 +314,9 @@
 		</div>
 	</div>
 	<button
-		class=" text-xs w-full h-10 px-3 py-2 transition rounded-lg {loading
-			? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
-			: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center items-center"
+		class=" text-xs w-full h-10 px-3 py-2 font-medium transition rounded-lg {loading
+			? ' cursor-not-allowed bg-lightGray-300 hover:bg-lightGray-550 text-lightGray-100 dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border border-lightGray-400 dark:border-customGray-700'
+			: 'bg-lightGray-300 hover:bg-lightGray-550 text-lightGray-100 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border border-lightGray-400 dark:border-customGray-700'} flex justify-center items-center"
 		type="submit"
 		disabled={loading}
 	>
