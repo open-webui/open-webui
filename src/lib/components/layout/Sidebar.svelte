@@ -432,7 +432,14 @@
 	/>
 {/if}
 
-<SearchModal bind:show={$showSearch} />
+<SearchModal
+	bind:show={$showSearch}
+	onClose={() => {
+		if ($mobile) {
+			showSidebar.set(false);
+		}
+	}}
+/>
 
 <div
 	bind:this={navElement}

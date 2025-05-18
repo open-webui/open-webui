@@ -14,6 +14,7 @@
 	dayjs.extend(calendar);
 
 	export let show = false;
+	export let onClose = () => {};
 
 	let query = '';
 	let page = 1;
@@ -137,6 +138,7 @@
 						draggable="false"
 						on:click={() => {
 							show = false;
+							onClose();
 						}}
 					>
 						<div class=" flex-1">
