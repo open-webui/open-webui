@@ -4,7 +4,7 @@
 	const { saveAs } = fileSaver;
 
 	import { goto } from '$app/navigation';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, onDestroy } from 'svelte'; // Added onDestroy
 	import { WEBUI_NAME, config, prompts as _prompts, user } from '$lib/stores';
 
 	import {
@@ -48,7 +48,46 @@
 	let sortDirection = 'asc';
 
 	let currentPage = 1;
-	const ITEMS_PER_PAGE = 27;
+	// const ITEMS_PER_PAGE = 27; // Replaced by dynamicItemsPerPage
+	let dynamicItemsPerPage = 27; // Default, will be updated dynamically
+
+	// Estimated height of a single prompt item in pixels. Adjust if necessary.
+	const PROMPT_ITEM_ESTIMATED_HEIGHT_PX = 118;
+
+	let pageContainerRef: HTMLDivElement;
+	let gridParentRef: HTMLDivElement; // This is the flex-grow container for the grid
+
+	let resizeObserver: ResizeObserver | null = null;
+
+	const recalculateItemsPerPage = () => {
+		if (!gridParentRef || !window || typeof window.innerWidth === 'undefined') {
+			return;
+		}
+
+		const availableGridHeight = gridParentRef.offsetHeight;
+
+		if (availableGridHeight <= 0) {
+			let fallbackNumColumns = 1;
+			if (window.innerWidth >= 1280) fallbackNumColumns = 3;
+			else if (window.innerWidth >= 1024) fallbackNumColumns = 2;
+			dynamicItemsPerPage = fallbackNumColumns; // Show at least one row (by columns)
+			return;
+		}
+
+		let numColumns = 1;
+		if (window.innerWidth >= 1280) {
+			// Tailwind 'xl' breakpoint
+			numColumns = 3;
+		} else if (window.innerWidth >= 1024) {
+			// Tailwind 'lg' breakpoint
+			numColumns = 2;
+		}
+
+		const rowsThatCanFullyFit = Math.floor(availableGridHeight / PROMPT_ITEM_ESTIMATED_HEIGHT_PX);
+		const rowsToDisplay = Math.max(1, rowsThatCanFullyFit); // Always attempt to show at least one row
+
+		dynamicItemsPerPage = rowsToDisplay * numColumns;
+	};
 
 	const setSort = (field: 'title' | 'command' | 'user') => {
 		if (sortBy === field) {
@@ -83,6 +122,7 @@
 				valA_str = (a.command || '').toLowerCase();
 				valB_str = (b.command || '').toLowerCase();
 			} else {
+				// sortBy === 'user'
 				const getUserSortKey = (userObj) => (userObj?.name || userObj?.email || '').toLowerCase();
 				valA_str = getUserSortKey(a.user);
 				valB_str = getUserSortKey(b.user);
@@ -100,7 +140,9 @@
 	let paginatedItems = [];
 	$: {
 		const totalFiltered = filteredItems.length;
-		const maxPage = Math.max(1, Math.ceil(totalFiltered / ITEMS_PER_PAGE));
+		const itemsPerPageToUse = dynamicItemsPerPage > 0 ? dynamicItemsPerPage : 1; // Ensure positive
+		const maxPage = Math.max(1, Math.ceil(totalFiltered / itemsPerPageToUse));
+
 		if (currentPage > maxPage) {
 			currentPage = maxPage;
 		}
@@ -111,8 +153,8 @@
 		}
 
 		paginatedItems = filteredItems.slice(
-			(currentPage - 1) * ITEMS_PER_PAGE,
-			currentPage * ITEMS_PER_PAGE
+			(currentPage - 1) * itemsPerPageToUse,
+			currentPage * itemsPerPageToUse
 		);
 	}
 
@@ -158,7 +200,7 @@
 		}
 		try {
 			await navigator.clipboard.writeText(content);
-			toast.success($i18n.t('Content copied to clipboard!'));
+			toast.success($i18n.t('Prompt content copied to clipboard!'));
 		} catch (err) {
 			const errorMessage = err instanceof Error ? err.message : String(err);
 			toast.error($i18n.t('Failed to copy: {{error}}', { error: errorMessage }));
@@ -173,6 +215,31 @@
 	onMount(async () => {
 		await init();
 		loaded = true;
+
+		// Initial calculation after DOM is rendered and populated
+		setTimeout(() => {
+			recalculateItemsPerPage(); // Initial call
+
+			// Setup ResizeObserver
+			if (pageContainerRef && typeof ResizeObserver !== 'undefined') {
+				resizeObserver = new ResizeObserver(() => {
+					recalculateItemsPerPage();
+				});
+				resizeObserver.observe(pageContainerRef);
+			} else {
+				// Fallback for older browsers or if pageContainerRef isn't bound yet (shouldn't happen here)
+				window.addEventListener('resize', recalculateItemsPerPage);
+			}
+		}, 100); // Delay to allow layout to settle
+	});
+
+	onDestroy(() => {
+		if (resizeObserver && pageContainerRef) {
+			resizeObserver.unobserve(pageContainerRef);
+			resizeObserver.disconnect();
+		} else {
+			window.removeEventListener('resize', recalculateItemsPerPage);
+		}
 	});
 </script>
 
@@ -209,9 +276,7 @@
 		/>
 	{/if}
 
-	<!-- Main flex container for the component's content structure -->
-	<div class="flex flex-col h-full">
-		<!-- Top section: Title, Search, Sort buttons. Does not grow. -->
+	<div class="flex flex-col h-full" bind:this={pageContainerRef}>
 		<div class="shrink-0">
 			<div class="flex flex-col gap-1 my-1.5">
 				<div class="flex justify-between items-center">
@@ -331,8 +396,7 @@
 			</div>
 		</div>
 
-		<!-- Middle section: Prompts grid. Grows to fill space. Content overflows to page scroll. -->
-		<div class="flex-grow min-h-0">
+		<div class="flex-grow min-h-0" bind:this={gridParentRef}>
 			<div class="mb-1 gap-2 grid lg:grid-cols-2 xl:grid-cols-3">
 				{#each paginatedItems as prompt (prompt.command)}
 					<div
@@ -472,24 +536,21 @@
 			</div>
 		</div>
 
-		<!-- Bottom section: Pagination, Admin buttons, Community link. Does not grow. -->
 		<div class="shrink-0">
-			{#if filteredItems.length > ITEMS_PER_PAGE || $user?.role === 'admin'}
+			{#if filteredItems.length > (dynamicItemsPerPage > 0 ? dynamicItemsPerPage : 1) || $user?.role === 'admin'}
 				<div class="flex items-center w-full my-4 py-1">
 					<div class="flex-1">
-						<!-- Intentionally empty to push pagination towards center and admin buttons to right -->
+						<!-- Intentionally empty -->
 					</div>
-
 					<div class="flex-shrink-0">
-						{#if filteredItems.length > ITEMS_PER_PAGE}
+						{#if filteredItems.length > (dynamicItemsPerPage > 0 ? dynamicItemsPerPage : 1)}
 							<Pagination
 								bind:page={currentPage}
 								count={filteredItems.length}
-								perPage={ITEMS_PER_PAGE}
+								perPage={dynamicItemsPerPage > 0 ? dynamicItemsPerPage : 1}
 							/>
 						{/if}
 					</div>
-
 					<div class="flex-1 flex justify-end">
 						{#if $user?.role === 'admin'}
 							<div class="flex space-x-2">
@@ -505,11 +566,9 @@
 											return;
 										}
 										const file = importFiles[0];
-
 										const reader = new FileReader();
 										reader.onload = async (event) => {
 											const fileContent = event.target?.result;
-
 											if (typeof fileContent === 'string') {
 												try {
 													const savedPrompts = JSON.parse(fileContent);
@@ -519,11 +578,9 @@
 														);
 														return;
 													}
-
 													let successCount = 0;
 													let failCount = 0;
 													const totalToImport = savedPrompts.length;
-
 													for (const prompt of savedPrompts) {
 														if (
 															!prompt.command ||
@@ -560,7 +617,6 @@
 																);
 															});
 													}
-
 													if (successCount > 0) {
 														toast.success(
 															$i18n.t('Successfully imported {{count}} out of {{total}} prompts.', {
@@ -594,16 +650,12 @@
 												toast.error($i18n.t('Could not read file content as text.'));
 											}
 											importFiles = null;
-											if (promptsImportInputElement) {
-												promptsImportInputElement.value = '';
-											}
+											if (promptsImportInputElement) promptsImportInputElement.value = '';
 										};
 										reader.onerror = () => {
 											toast.error($i18n.t('Error reading file.'));
 											importFiles = null;
-											if (promptsImportInputElement) {
-												promptsImportInputElement.value = '';
-											}
+											if (promptsImportInputElement) promptsImportInputElement.value = '';
 										};
 										reader.readAsText(file);
 									}}
@@ -636,9 +688,7 @@
 									<button
 										class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition"
 										on:click={async () => {
-											let blob = new Blob([JSON.stringify(prompts)], {
-												type: 'application/json'
-											});
+											let blob = new Blob([JSON.stringify(prompts)], { type: 'application/json' });
 											saveAs(blob, `prompts-export-all-${Date.now()}.json`);
 											toast.success($i18n.t('All prompts exported.'));
 										}}
@@ -672,7 +722,6 @@
 					<div class=" text-xl font-medium mb-2 line-clamp-1">
 						{$i18n.t('Made by Open WebUI Community')}
 					</div>
-
 					<a
 						class=" flex cursor-pointer items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-850 w-full mb-2 px-3.5 py-1.5 rounded-xl transition"
 						href="https://openwebui.com/#open-webui-community"
