@@ -197,7 +197,7 @@
 		await setEmbeddingConfig();
 
 		const config = await getRAGConfig(localStorage.token);
-		config.ALLOWED_FILE_EXTENSIONS = config.ALLOWED_FILE_EXTENSIONS.join(', ');
+		config.ALLOWED_FILE_EXTENSIONS = (config?.ALLOWED_FILE_EXTENSIONS ?? []).join(', ');
 
 		RAGConfig = config;
 	});
