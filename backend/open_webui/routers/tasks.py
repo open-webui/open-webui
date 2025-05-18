@@ -192,15 +192,19 @@ async def generate_title(
         },
     )
 
+    max_tokens = (
+        models[task_model_id].get("info", {}).get("params", {}).get("max_tokens", 1000)
+    )
+
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
         **(
-            {"max_tokens": 1000}
+            {"max_tokens": max_tokens}
             if models[task_model_id].get("owned_by") == "ollama"
             else {
-                "max_completion_tokens": 1000,
+                "max_completion_tokens": max_tokens,
             }
         ),
         "metadata": {
