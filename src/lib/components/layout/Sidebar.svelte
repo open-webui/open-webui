@@ -472,9 +472,9 @@
 			? 'justify-between w-[260px]'
 			: 'justify-start w-[60px] px-2.5'}"
 	>
-		<div class="{$showSidebar ? 'px-1.5' : 'self-center'} flex justify-between space-x-1 text-gray-600 dark:text-gray-400 mb-5 ">
+		<div class="{$showSidebar ? 'px-2.5' : 'self-center'} flex justify-between space-x-1 text-gray-600 dark:text-gray-400 mb-5 ">
 			<button
-				class=" cursor-pointer p-[7px] flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+				class=" cursor-pointer p-2.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 				on:click={() => {
 					showSidebar.set(!$showSidebar);
 				}}
@@ -485,7 +485,7 @@
 			</button>
 		</div>
 
-		<div class="px-1.5 flex justify-center text-gray-600 dark:text-gray-400 {$showSidebar ? '' : 'content-center'}">
+		<div class="px-2.5 flex justify-center text-gray-600 dark:text-gray-400 {$showSidebar ? '' : 'content-center'}">
 			<a
 				id="sidebar-new-chat-button"
 				class="{$showSidebar ? 'flex-grow' : ''} flex space-x-3 rounded p-2.5 bg-transparent text-blue-800 hover:bg-gray-200 dark:hover:bg-gray-900 transition no-drag-region"
@@ -513,7 +513,7 @@
 			</a>
 		</div>
 
-		<div class="px-1.5 flex justify-center text-gray-600 dark:text-gray-400">
+		<div class="px-2.5 flex justify-center text-gray-600 dark:text-gray-400">
 			<a
 				id="sidebar-explore-button"
 				class="{$showSidebar ? 'flex-grow' : ''} flex space-x-3 rounded p-2.5 bg-transparent text-blue-800 hover:bg-gray-200 dark:hover:bg-gray-900 transition no-drag-region"
@@ -582,6 +582,7 @@
 				bind:this={searchInput}
 				on:input={searchDebounceHandler}
 				placeholder={$i18n.t('Search')}
+				class="pl-2.5"
 			/>
 			{:else}
 			<div class="self-center pl-3 py-2 rounded-l-xl bg-transparent"
@@ -634,9 +635,8 @@
 			{/if}
 
 			<Folder
-				collapsible={!search}
-				className="px-2 mt-0.5"
-				name={$i18n.t('Chats')}
+				collapsible={false}
+				className="px-2.5 mt-0.5"
 				on:import={(e) => {
 					importChatHandler(e.detail);
 				}}
@@ -788,7 +788,7 @@
 							{#each $chats as chat, idx}
 								{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
 									<div
-										class="w-full pl-2.5 text-xs text-gray-500 dark:text-gray-500 font-medium {idx ===
+										class="w-full pl-2.5 text-xs text-gray-400 dark:text-gray-500 font-semibold {idx ===
 										0
 											? ''
 											: 'pt-5'} pb-1.5"

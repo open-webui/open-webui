@@ -84,7 +84,7 @@
 	});
 </script>
 
-<div class="px-1 mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
+<div class="px-1 mb-1 flex justify-center space-x-2 relative z-10 {$$props.class}" id="search-container">
 	<div class="flex w-full rounded-lg hover:bg-gray-200" id="chat-search">
 		<div class="self-center pl-3 py-2 rounded-l-xl bg-transparent">
 			<MagnifyingGlass />
