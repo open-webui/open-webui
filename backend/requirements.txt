@@ -128,3 +128,7 @@ colorlog==6.9.0
 langchain-chroma==0.2.2
 langchain-openai==0.3.12
 PyPDF2==3.0.1
+
+# Jupyternotebook editor tool
+ipykernel
+nbformat
