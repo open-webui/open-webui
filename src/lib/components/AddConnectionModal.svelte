@@ -6,6 +6,7 @@
 	import { models } from '$lib/stores';
 	import { verifyOpenAIConnection } from '$lib/apis/openai';
 	import { verifyOllamaConnection } from '$lib/apis/ollama';
+	import { KeySelectionStrategy } from '$lib/utils/apiKeySelection';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
@@ -15,6 +16,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tags from './common/Tags.svelte';
+	import ApiKeyManager from './common/ApiKeyManager.svelte';
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -29,6 +31,10 @@
 
 	let url = '';
 	let key = '';
+	let apiKeys = [''];
+	let keyWeights = {};
+	let keySelectionStrategy = KeySelectionStrategy.RANDOM;
+	let useMultipleKeys = false;
 
 	let connectionType = 'external';
 	let azure = false;
@@ -109,14 +115,20 @@
 		if (azure) {
 			if (!apiVersion) {
 				loading = false;
-
 				toast.error('API Version is required');
 				return;
 			}
 
-			if (!key) {
+			// Check if we have at least one API key when using multiple keys
+			if (useMultipleKeys && (!apiKeys || apiKeys.length === 0 || !apiKeys[0])) {
 				loading = false;
+				toast.error('At least one API key is required');
+				return;
+			}
 
+			// Check if we have a key when using a single key
+			if (!useMultipleKeys && !key) {
+				loading = false;
 				toast.error('Key is required');
 				return;
 			}
@@ -131,15 +143,28 @@
 		// remove trailing slash from url
 		url = url.replace(/\/$/, '');
 
+		// Filter out empty API keys
+		const filteredApiKeys = useMultipleKeys
+			? apiKeys.filter(k => k && k.trim() !== '')
+			: [];
+
+		// Prepare the connection object
 		const connection = {
 			url,
-			key,
+			// Use the first API key as the main key for backward compatibility
+			key: useMultipleKeys && filteredApiKeys.length > 0 ? filteredApiKeys[0] : key,
 			config: {
 				enable: enable,
 				tags: tags,
 				prefix_id: prefixId,
 				model_ids: modelIds,
 				connection_type: connectionType,
+				// Add multiple API keys configuration if enabled
+				...(useMultipleKeys ? {
+					api_keys: filteredApiKeys,
+					key_selection_strategy: keySelectionStrategy,
+					key_weights: keyWeights
+				} : {}),
 				...(!ollama && azure ? { azure: true, api_version: apiVersion } : {})
 			}
 		};
@@ -151,6 +176,10 @@
 
 		url = '';
 		key = '';
+		apiKeys = [''];
+		keyWeights = {};
+		keySelectionStrategy = KeySelectionStrategy.RANDOM;
+		useMultipleKeys = false;
 		prefixId = '';
 		tags = [];
 		modelIds = [];
@@ -160,6 +189,23 @@
 		if (connection) {
 			url = connection.url;
 			key = connection.key;
+
+			// Handle multiple API keys if they exist
+			if (connection.config?.api_keys && Array.isArray(connection.config.api_keys)) {
+				apiKeys = connection.config.api_keys;
+				useMultipleKeys = true;
+			} else if (key) {
+				// If there's a single key, add it to the apiKeys array
+				apiKeys = [key];
+				useMultipleKeys = false;
+			} else {
+				apiKeys = [''];
+				useMultipleKeys = false;
+			}
+
+			// Handle key selection strategy
+			keySelectionStrategy = connection.config?.key_selection_strategy || KeySelectionStrategy.RANDOM;
+			keyWeights = connection.config?.key_weights || {};
 
 			enable = connection.config?.enable ?? true;
 			tags = connection.config?.tags ?? [];
@@ -296,18 +342,35 @@
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
-								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('Key')}</div>
-
-								<div class="flex-1">
-									<SensitiveInput
-										className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
-										bind:value={key}
-										placeholder={$i18n.t('API Key')}
-										required={false}
-									/>
+								<div class="flex justify-between items-center">
+									<div class="mb-0.5 text-xs text-gray-500">{$i18n.t('API Key')}</div>
+									<div class="flex items-center">
+										<div class="text-xs text-gray-500 mr-2">{$i18n.t('Multiple Keys')}</div>
+										<Switch bind:state={useMultipleKeys} />
+									</div>
 								</div>
-							</div>
 
+								{#if useMultipleKeys}
+									<ApiKeyManager
+										bind:apiKeys
+										bind:keyWeights
+										bind:selectionStrategy={keySelectionStrategy}
+										placeholder={$i18n.t('API Key')}
+									/>
+								{:else}
+									<div class="flex-1">
+										<SensitiveInput
+											className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+											bind:value={key}
+											placeholder={$i18n.t('API Key')}
+											required={false}
+										/>
+									</div>
+								{/if}
+							</div>
+						</div>
+
+						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
 								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Prefix ID')}</div>
 

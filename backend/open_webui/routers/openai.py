@@ -32,6 +32,7 @@ from open_webui.models.users import UserModel
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENV, SRC_LOG_LEVELS
 
+from open_webui.utils.api_key_selection import KeySelectionStrategy, select_api_key
 
 from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
@@ -56,8 +57,66 @@ log.setLevel(SRC_LOG_LEVELS["OPENAI"])
 ##########################################
 
 
-async def send_get_request(url, key=None, user: UserModel = None):
+def has_multiple_api_keys(api_config):
+    """
+    Check if the API config has multiple API keys configured.
+
+    Args:
+        api_config: The API configuration dictionary
+
+    Returns:
+        bool: True if multiple API keys are configured, False otherwise
+    """
+    return (
+        api_config
+        and api_config.get("api_keys")
+        and isinstance(api_config.get("api_keys"), list)
+        and len(api_config.get("api_keys")) > 0
+    )
+
+
+def select_key_from_config(api_config, connection_id):
+    """
+    Select an API key from the configuration using the configured strategy.
+
+    Args:
+        api_config: The API configuration dictionary
+        connection_id: A unique identifier for the connection
+
+    Returns:
+        str: The selected API key
+    """
+    # Use the API keys from the config
+    api_keys = api_config.get("api_keys")
+
+    # Get the key selection strategy and weights
+    strategy = api_config.get("key_selection_strategy", KeySelectionStrategy.RANDOM)
+    weights = api_config.get("key_weights", {})
+
+    # Select an API key using our utility
+    key = select_api_key(
+        connection_id=connection_id,
+        keys=api_keys,
+        options={
+            "strategy": strategy,
+            "weights": weights,
+        },
+    )
+
+    log.debug(
+        f"Selected API key for connection {connection_id} using strategy: {strategy}"
+    )
+
+    return key
+
+
+async def send_get_request(url, key=None, user: UserModel = None, connection_id=None, api_config=None):
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MODEL_LIST)
+
+    # Check if we have multiple API keys in the config
+    if api_config and has_multiple_api_keys(api_config) and connection_id:
+        key = select_key_from_config(api_config, connection_id)
+
     try:
         async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
             async with session.get(
@@ -207,6 +266,28 @@ async def speech(request: Request, user=Depends(get_verified_user)):
 
         url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
 
+        # Get API config
+        api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
+            str(idx),
+            request.app.state.config.OPENAI_API_CONFIGS.get(
+                request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
+            ),  # Legacy support
+        )
+
+        # Get API keys and selection strategy from config
+        api_keys = request.app.state.config.OPENAI_API_KEYS[idx]
+
+        # Check if we have multiple API keys in the config
+        if has_multiple_api_keys(api_config):
+            # Create a unique connection ID for this URL
+            connection_id = f"openai-speech-{idx}-{url.replace('/', '-')}"
+
+            # Select an API key using our utility
+            key = select_key_from_config(api_config, connection_id)
+        else:
+            # Use the single API key
+            key = api_keys
+
         r = None
         try:
             r = requests.post(
@@ -214,7 +295,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 data=body,
                 headers={
                     "Content-Type": "application/json",
-                    "Authorization": f"Bearer {request.app.state.config.OPENAI_API_KEYS[idx]}",
+                    "Authorization": f"Bearer {key}",
                     **(
                         {
                             "HTTP-Referer": "https://openwebui.com/",
@@ -293,11 +374,24 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
         if (str(idx) not in request.app.state.config.OPENAI_API_CONFIGS) and (
             url not in request.app.state.config.OPENAI_API_CONFIGS  # Legacy support
         ):
+            # Get API config
+            api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
+                str(idx),
+                request.app.state.config.OPENAI_API_CONFIGS.get(
+                    url, {}
+                ),  # Legacy support
+            )
+
+            # Create a unique connection ID for this URL
+            connection_id = f"openai-models-list-{idx}-{url.replace('/', '-')}"
+
             request_tasks.append(
                 send_get_request(
                     f"{url}/models",
                     request.app.state.config.OPENAI_API_KEYS[idx],
                     user=user,
+                    connection_id=connection_id,
+                    api_config=api_config,
                 )
             )
         else:
@@ -313,11 +407,18 @@ async def get_all_models_responses(request: Request, user: UserModel) -> list:
 
             if enable:
                 if len(model_ids) == 0:
+                    # Create a unique connection ID for this URL
+                    connection_id = (
+                        f"openai-models-list-enabled-{idx}-{url.replace('/', '-')}"
+                    )
+
                     request_tasks.append(
                         send_get_request(
                             f"{url}/models",
                             request.app.state.config.OPENAI_API_KEYS[idx],
                             user=user,
+                            connection_id=connection_id,
+                            api_config=api_config,
                         )
                     )
                 else:
@@ -461,12 +562,26 @@ async def get_models(
         models = await get_all_models(request, user=user)
     else:
         url = request.app.state.config.OPENAI_API_BASE_URLS[url_idx]
-        key = request.app.state.config.OPENAI_API_KEYS[url_idx]
 
+        # Get API config
         api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
             str(url_idx),
             request.app.state.config.OPENAI_API_CONFIGS.get(url, {}),  # Legacy support
         )
+
+        # Get API keys and selection strategy from config
+        api_keys = request.app.state.config.OPENAI_API_KEYS[url_idx]
+
+        # Check if we have multiple API keys in the config
+        if has_multiple_api_keys(api_config):
+            # Create a unique connection ID for this URL
+            connection_id = f"openai-models-{url_idx}-{url.replace('/', '-')}"
+
+            # Select an API key using our utility
+            key = select_key_from_config(api_config, connection_id)
+        else:
+            # Use the single API key
+            key = api_keys
 
         r = None
         async with aiohttp.ClientSession(
@@ -769,7 +884,20 @@ async def generate_chat_completion(
         }
 
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = request.app.state.config.OPENAI_API_KEYS[idx]
+
+    # Get API keys and selection strategy from config
+    api_keys = request.app.state.config.OPENAI_API_KEYS[idx]
+
+    # Check if we have multiple API keys in the config
+    if has_multiple_api_keys(api_config):
+        # Create a unique connection ID for this URL
+        connection_id = f"openai-{idx}-{url.replace('/', '-')}"
+
+        # Select an API key using our utility
+        key = select_key_from_config(api_config, connection_id)
+    else:
+        # Use the single API key
+        key = api_keys
 
     # Check if model is from "o" series
     is_o_series = payload["model"].lower().startswith(("o1", "o3", "o4"))
@@ -893,13 +1021,28 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
     idx = 0
     url = request.app.state.config.OPENAI_API_BASE_URLS[idx]
-    key = request.app.state.config.OPENAI_API_KEYS[idx]
+
+    # Get API config
     api_config = request.app.state.config.OPENAI_API_CONFIGS.get(
         str(idx),
         request.app.state.config.OPENAI_API_CONFIGS.get(
             request.app.state.config.OPENAI_API_BASE_URLS[idx], {}
         ),  # Legacy support
     )
+
+    # Get API keys and selection strategy from config
+    api_keys = request.app.state.config.OPENAI_API_KEYS[idx]
+
+    # Check if we have multiple API keys in the config
+    if has_multiple_api_keys(api_config):
+        # Create a unique connection ID for this URL
+        connection_id = f"openai-proxy-{idx}-{url.replace('/', '-')}"
+
+        # Select an API key using our utility
+        key = select_key_from_config(api_config, connection_id)
+    else:
+        # Use the single API key
+        key = api_keys
 
     r = None
     session = None
