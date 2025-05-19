@@ -24,7 +24,7 @@
 		TIP: {
 			border: 'border-emerald-500',
 			text: 'text-emerald-500',
-			icon: LightBlub
+			icon: LightBulb
 		},
 		IMPORTANT: {
 			border: 'border-purple-500',

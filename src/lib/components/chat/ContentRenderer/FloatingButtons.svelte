@@ -256,7 +256,7 @@
 						explainHandler();
 					}}
 				>
-					<LightBlub className="size-3 shrink-0" />
+					<LightBulb className="size-3 shrink-0" />
 
 					<div class="shrink-0">{$i18n.t('Explain')}</div>
 				</button>
