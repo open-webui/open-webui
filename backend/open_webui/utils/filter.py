@@ -9,7 +9,20 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
 
-def get_sorted_filter_ids(model: dict):
+def get_function_module(request, function_id):
+    """
+    Get the function module by its ID.
+    """
+    if function_id in request.app.state.FUNCTIONS:
+        function_module = request.app.state.FUNCTIONS[function_id]
+    else:
+        function_module, _, _ = load_function_module_by_id(function_id)
+        request.app.state.FUNCTIONS[function_id] = function_module
+
+    return function_module
+
+
+def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list = None):
     def get_priority(function_id):
         function = Functions.get_function_by_id(function_id)
         if function is not None:
@@ -21,14 +34,23 @@ def get_sorted_filter_ids(model: dict):
     if "info" in model and "meta" in model["info"]:
         filter_ids.extend(model["info"]["meta"].get("filterIds", []))
         filter_ids = list(set(filter_ids))
-
-    enabled_filter_ids = [
+    active_filter_ids = [
         function.id
         for function in Functions.get_functions_by_type("filter", active_only=True)
     ]
 
-    filter_ids = [fid for fid in filter_ids if fid in enabled_filter_ids]
+    for filter_id in active_filter_ids:
+        function_module = get_function_module(request, filter_id)
+
+        if getattr(function_module, "toggle", None) and (
+            filter_id not in enabled_filter_ids
+        ):
+            active_filter_ids.remove(filter_id)
+            continue
+
+    filter_ids = [fid for fid in filter_ids if fid in active_filter_ids]
     filter_ids.sort(key=get_priority)
+
     return filter_ids
 
 
@@ -43,12 +65,7 @@ async def process_filter_functions(
         if not filter:
             continue
 
-        if filter_id in request.app.state.FUNCTIONS:
-            function_module = request.app.state.FUNCTIONS[filter_id]
-        else:
-            function_module, _, _ = load_function_module_by_id(filter_id)
-            request.app.state.FUNCTIONS[filter_id] = function_module
-
+        function_module = get_function_module(request, filter_id)
         # Prepare handler function
         handler = getattr(function_module, filter_type, None)
         if not handler:

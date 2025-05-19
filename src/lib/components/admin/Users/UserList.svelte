@@ -167,7 +167,7 @@
 />
 <UserChatsModal bind:show={showUserChatsModal} user={selectedUser} />
 
-{#if ($config?.license_metadata?.seats ?? null) !== null && users.length > $config?.license_metadata?.seats}
+{#if ($config?.license_metadata?.seats ?? null) !== null && total && total > $config?.license_metadata?.seats}
 	<div class=" mt-1 mb-2 text-xs text-red-500">
 		<Banner
 			className="mx-0"
