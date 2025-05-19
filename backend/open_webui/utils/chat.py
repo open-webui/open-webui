@@ -309,6 +309,7 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     metadata = {
         "chat_id": data["chat_id"],
         "message_id": data["id"],
+        "filter_ids": data.get("filter_ids", []),
         "session_id": data["session_id"],
         "user_id": user.id,
     }
@@ -330,7 +331,9 @@ async def chat_completed(request: Request, form_data: dict, user: Any):
     try:
         filter_functions = [
             Functions.get_function_by_id(filter_id)
-            for filter_id in get_sorted_filter_ids(model)
+            for filter_id in get_sorted_filter_ids(
+                request, model, metadata.get("filter_ids", [])
+            )
         ]
 
         result, _ = await process_filter_functions(

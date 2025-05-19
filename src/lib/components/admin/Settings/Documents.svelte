@@ -91,7 +91,7 @@
 			return;
 		}
 
-		console.log('Update embedding model attempt:', embeddingModel);
+		console.debug('Update embedding model attempt:', embeddingModel);
 
 		updateEmbeddingModelLoading = true;
 		const res = await updateEmbeddingConfig(localStorage.token, {
@@ -114,7 +114,7 @@
 		updateEmbeddingModelLoading = false;
 
 		if (res) {
-			console.log('embeddingModelUpdateHandler:', res);
+			console.debug('embeddingModelUpdateHandler:', res);
 			if (res.status === true) {
 				toast.success($i18n.t('Embedding model set to "{{embedding_model}}"', res), {
 					duration: 1000 * 10
@@ -124,6 +124,13 @@
 	};
 
 	const submitHandler = async () => {
+		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'external' &&
+			RAGConfig.EXTERNAL_DOCUMENT_LOADER_URL === ''
+		) {
+			toast.error($i18n.t('External Document Loader URL required.'));
+			return;
+		}
 		if (RAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika' && RAGConfig.TIKA_SERVER_URL === '') {
 			toast.error($i18n.t('Tika Server URL required.'));
 			return;
@@ -163,6 +170,10 @@
 			await embeddingModelUpdateHandler();
 		}
 
+		RAGConfig.ALLOWED_FILE_EXTENSIONS = RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
+			.map((ext) => ext.trim())
+			.filter((ext) => ext !== '');
+
 		const res = await updateRAGConfig(localStorage.token, RAGConfig);
 		dispatch('save');
 	};
@@ -185,7 +196,10 @@
 	onMount(async () => {
 		await setEmbeddingConfig();
 
-		RAGConfig = await getRAGConfig(localStorage.token);
+		const config = await getRAGConfig(localStorage.token);
+		config.ALLOWED_FILE_EXTENSIONS = (config?.ALLOWED_FILE_EXTENSIONS ?? []).join(', ');
+
+		RAGConfig = config;
 	});
 </script>
 
@@ -246,7 +260,7 @@
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="mb-2.5 flex flex-col w-full justify-between">
-						<div class="flex w-full justify-between">
+						<div class="flex w-full justify-between mb-1">
 							<div class="self-center text-xs font-medium">
 								{$i18n.t('Content Extraction Engine')}
 							</div>
@@ -256,6 +270,7 @@
 									bind:value={RAGConfig.CONTENT_EXTRACTION_ENGINE}
 								>
 									<option value="">{$i18n.t('Default')}</option>
+									<option value="external">{$i18n.t('External')}</option>
 									<option value="tika">{$i18n.t('Tika')}</option>
 									<option value="docling">{$i18n.t('Docling')}</option>
 									<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
@@ -275,11 +290,24 @@
 									</div>
 								</div>
 							</div>
+						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'external'}
+							<div class="my-0.5 flex gap-2 pr-2">
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									placeholder={$i18n.t('Enter External Document Loader URL')}
+									bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_URL}
+								/>
+								<SensitiveInput
+									placeholder={$i18n.t('Enter External Document Loader API Key')}
+									required={false}
+									bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_API_KEY}
+								/>
+							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'tika'}
 							<div class="flex w-full mt-1">
 								<div class="flex-1 mr-2">
 									<input
-										class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+										class="flex-1 w-full text-sm bg-transparent outline-hidden"
 										placeholder={$i18n.t('Enter Tika Server URL')}
 										bind:value={RAGConfig.TIKA_SERVER_URL}
 									/>
@@ -288,27 +316,38 @@
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'docling'}
 							<div class="flex w-full mt-1">
 								<input
-									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
 									placeholder={$i18n.t('Enter Docling Server URL')}
 									bind:value={RAGConfig.DOCLING_SERVER_URL}
 								/>
 							</div>
 							<div class="flex w-full mt-2">
 								<input
-									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
 									placeholder={$i18n.t('Enter Docling OCR Engine')}
 									bind:value={RAGConfig.DOCLING_OCR_ENGINE}
 								/>
 								<input
-									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
 									placeholder={$i18n.t('Enter Docling OCR Language(s)')}
 									bind:value={RAGConfig.DOCLING_OCR_LANG}
 								/>
 							</div>
+
+							<div class="flex w-full mt-2">
+								<div class="flex-1 flex justify-between">
+									<div class=" self-center text-xs font-medium">
+										{$i18n.t('Describe Pictures in Documents')}
+									</div>
+									<div class="flex items-center relative">
+										<Switch bind:state={RAGConfig.DOCLING_DO_PICTURE_DESCRIPTION} />
+									</div>
+								</div>
+							</div>
 						{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'document_intelligence'}
 							<div class="my-0.5 flex gap-2 pr-2">
 								<input
-									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
 									placeholder={$i18n.t('Enter Document Intelligence Endpoint')}
 									bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT}
 								/>
@@ -437,7 +476,7 @@
 							{#if embeddingEngine === 'openai'}
 								<div class="my-0.5 flex gap-2 pr-2">
 									<input
-										class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+										class="flex-1 w-full text-sm bg-transparent outline-hidden"
 										placeholder={$i18n.t('API Base URL')}
 										bind:value={OpenAIUrl}
 										required
@@ -448,7 +487,7 @@
 							{:else if embeddingEngine === 'ollama'}
 								<div class="my-0.5 flex gap-2 pr-2">
 									<input
-										class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+										class="flex-1 w-full text-sm bg-transparent outline-hidden"
 										placeholder={$i18n.t('API Base URL')}
 										bind:value={OllamaUrl}
 										required
@@ -471,7 +510,7 @@
 									<div class="flex w-full">
 										<div class="flex-1 mr-2">
 											<input
-												class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+												class="flex-1 w-full text-sm bg-transparent outline-hidden"
 												bind:value={embeddingModel}
 												placeholder={$i18n.t('Set embedding model')}
 												required
@@ -482,7 +521,7 @@
 									<div class="flex w-full">
 										<div class="flex-1 mr-2">
 											<input
-												class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+												class="flex-1 w-full text-sm bg-transparent outline-hidden"
 												placeholder={$i18n.t('Set embedding model (e.g. {{model}})', {
 													model: embeddingModel.slice(-40)
 												})}
@@ -639,7 +678,7 @@
 									{#if RAGConfig.RAG_RERANKING_ENGINE === 'external'}
 										<div class="my-0.5 flex gap-2 pr-2">
 											<input
-												class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+												class="flex-1 w-full text-sm bg-transparent outline-hidden"
 												placeholder={$i18n.t('API Base URL')}
 												bind:value={RAGConfig.RAG_EXTERNAL_RERANKER_URL}
 												required
@@ -661,7 +700,7 @@
 										<div class="flex w-full">
 											<div class="flex-1 mr-2">
 												<input
-													class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+													class="flex-1 w-full text-sm bg-transparent outline-hidden"
 													placeholder={$i18n.t('Set reranking model (e.g. {{model}})', {
 														model: 'BAAI/bge-reranker-v2-m3'
 													})}
@@ -677,7 +716,7 @@
 								<div class=" self-center text-xs font-medium">{$i18n.t('Top K')}</div>
 								<div class="flex items-center relative">
 									<input
-										class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+										class="flex-1 w-full text-sm bg-transparent outline-hidden"
 										type="number"
 										placeholder={$i18n.t('Enter Top K')}
 										bind:value={RAGConfig.TOP_K}
@@ -692,7 +731,7 @@
 									<div class="self-center text-xs font-medium">{$i18n.t('Top K Reranker')}</div>
 									<div class="flex items-center relative">
 										<input
-											class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+											class="flex-1 w-full text-sm bg-transparent outline-hidden"
 											type="number"
 											placeholder={$i18n.t('Enter Top K Reranker')}
 											bind:value={RAGConfig.TOP_K_RERANKER}
@@ -711,7 +750,7 @@
 										</div>
 										<div class="flex items-center relative">
 											<input
-												class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+												class="flex-1 w-full text-sm bg-transparent outline-hidden"
 												type="number"
 												step="0.01"
 												placeholder={$i18n.t('Enter Score')}
@@ -761,6 +800,26 @@
 					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
 					<div class="  mb-2.5 flex w-full justify-between">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Allowed File Extensions')}</div>
+						<div class="flex items-center relative">
+							<Tooltip
+								content={$i18n.t(
+									'Allowed file extensions for upload. Separate multiple extensions with commas. Leave empty for all file types.'
+								)}
+								placement="top-start"
+							>
+								<input
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
+									type="text"
+									placeholder={$i18n.t('e.g. pdf, docx, txt')}
+									bind:value={RAGConfig.ALLOWED_FILE_EXTENSIONS}
+									autocomplete="off"
+								/>
+							</Tooltip>
+						</div>
+					</div>
+
+					<div class="  mb-2.5 flex w-full justify-between">
 						<div class=" self-center text-xs font-medium">{$i18n.t('Max Upload Size')}</div>
 						<div class="flex items-center relative">
 							<Tooltip
@@ -770,7 +829,7 @@
 								placement="top-start"
 							>
 								<input
-									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
 									type="number"
 									placeholder={$i18n.t('Leave empty for unlimited')}
 									bind:value={RAGConfig.FILE_MAX_SIZE}
@@ -791,7 +850,7 @@
 								placement="top-start"
 							>
 								<input
-									class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+									class="flex-1 w-full text-sm bg-transparent outline-hidden"
 									type="number"
 									placeholder={$i18n.t('Leave empty for unlimited')}
 									bind:value={RAGConfig.FILE_MAX_COUNT}
