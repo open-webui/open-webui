@@ -70,7 +70,7 @@ class Config(Base):
     __tablename__ = "config"
 
     id = Column(Integer, primary_key=True)
-    email = Column(String, nullable=False, index=True, default="system")
+    email = Column(String, nullable=False, index=True, default="system@default")
     data = Column(JSON, nullable=False)
     version = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
