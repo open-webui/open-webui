@@ -34,6 +34,7 @@
 	import Switch from '../common/Switch.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
+	import XMark from '../icons/XMark.svelte';
 
 	let shiftKey = false;
 
@@ -51,12 +52,18 @@
 	let group_ids = [];
 
 	$: if (models) {
-		filteredModels = models.filter(
-			(m) => searchValue === '' || m.name.toLowerCase().includes(searchValue.toLowerCase())
-		);
+		filteredModels = models.filter((m) => {
+			if (query === '') return true;
+			const lowerQuery = query.toLowerCase();
+			return (
+				(m.name || '').toLowerCase().includes(lowerQuery) ||
+				(m.user?.name || '').toLowerCase().includes(lowerQuery) || // Search by user name
+				(m.user?.email || '').toLowerCase().includes(lowerQuery) // Search by user email
+			);
+		});
 	}
 
-	let searchValue = '';
+	let query = '';
 
 	const deleteModelHandler = async (model) => {
 		const res = await deleteModelById(localStorage.token, model.id).catch((e) => {
@@ -226,9 +233,22 @@
 				</div>
 				<input
 					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
-					bind:value={searchValue}
+					bind:value={query}
 					placeholder={$i18n.t('Search Models')}
 				/>
+
+				{#if query}
+					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+						<button
+							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							on:click={() => {
+								query = '';
+							}}
+						>
+							<XMark className="size-3" strokeWidth="2" />
+						</button>
+					</div>
+				{/if}
 			</div>
 
 			<div>
@@ -243,7 +263,7 @@
 	</div>
 
 	<div class=" my-2 mb-5 gap-2 grid lg:grid-cols-2 xl:grid-cols-3" id="model-list">
-		{#each filteredModels as model}
+		{#each filteredModels as model (model.id)}
 			<div
 				class=" flex flex-col cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
 				id="model-item-{model.id}"
@@ -482,7 +502,7 @@
 						}}
 					>
 						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Export Models')}
+							{$i18n.t('Export Models')} ({models.length})
 						</div>
 
 						<div class=" self-center">
