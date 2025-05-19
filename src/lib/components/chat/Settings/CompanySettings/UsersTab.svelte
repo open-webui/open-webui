@@ -246,11 +246,11 @@
 					<div class="flex items-center">
 						<div class="text-xs dark:text-customGray-100/50 max-w-[15rem] text-left">
 							{#if selectedRole === 'user'}
-								<span class="bg-[#024D15] rounded-[9px] text-xs text-white dark:text-[#0F8C18] px-2 py-1 w-fit"
+								<span class="bg-[#99C3A3] dark:bg-[#024D15] rounded-[9px] text-xs text-[#1D7732] dark:text-[#0F8C18] px-2 py-1 w-fit font-medium"
 									>{$i18n.t('User')}</span
 								>
 							{:else}
-								<span class="bg-[#33176E] rounded-[9px] text-xs text-white dark:text-[#7147CD] px-2 py-1 w-fit"
+								<span class="bg-[#A99EC2] text-[#5D4497] font-medium dark:bg-[#33176E] rounded-[9px] text-xs  dark:text-[#7147CD] px-2 py-1 w-fit"
 									>{$i18n.t('Admin')}</span
 								>
 							{/if}
@@ -276,11 +276,11 @@
 								>
 									<div class="flex items-center">
 										{#if role === 'user'}
-											<span class="bg-[#024D15] rounded-[9px] py-[3px] text-xs text-white dark:text-[#0F8C18] px-2 w-fit"
+											<span class="bg-[#99C3A3] dark:bg-[#024D15] rounded-[9px] py-[3px] text-xs text-[#1D7732] dark:text-[#0F8C18] px-2 w-fit font-medium"
 												>{$i18n.t('User')}</span
 											>
 										{:else}
-											<span class="bg-[#33176E] rounded-[9px] py-[3px] text-xs text-white dark:text-[#7147CD] px-2 w-fit"
+											<span class="bg-[#A99EC2] text-[#5D4497] font-medium dark:bg-[#33176E] rounded-[9px] py-[3px] text-xs text-white dark:text-[#7147CD] px-2 w-fit"
 												>{$i18n.t('Admin')}</span
 											>
 										{/if}
@@ -370,8 +370,8 @@
 					<button
 						type="button"
 						class="px-2 py-[3px] text-xs rounded-lg {user.role === 'user'
-							? 'bg-[#024D15] text-white dark:text-[#0F8C18]'
-							: 'bg-[#33176E] text-white dark:text-[#7147CD]'}"
+							? 'bg-[#99C3A3] dark:bg-[#024D15] text-[#1D7732] dark:text-[#0F8C18] font-medium'
+							: 'bg-[#A99EC2] text-[#5D4497] font-medium dark:bg-[#33176E]  dark:text-[#7147CD]'}"
 						on:click={() => (openDropdownIdx = openDropdownIdx === userIdx ? null : userIdx)}
 					>
 						{$i18n.t(user.role === 'user' ? 'User' : 'Admin')}
@@ -389,7 +389,7 @@
 									openDropdownIdx = null;
 								}}
 							>
-								<span class="bg-[#024D15] rounded-[9px] text-xs text-white dark:text-[#0F8C18] px-2 py-[3px] w-fit"
+								<span class="bg-[#99C3A3] dark:bg-[#024D15] rounded-[9px] text-xs text-[#1D7732] dark:text-[#0F8C18] px-2 py-[3px] w-fit font-medium"
 									>{$i18n.t('User')}</span
 								>
 							</button>
@@ -400,7 +400,7 @@
 									openDropdownIdx = null;
 								}}
 							>
-								<span class="bg-[#33176E] rounded-[9px] text-xs text-white dark:text-[#7147CD] px-2 py-[3px] w-fit"
+								<span class="bg-[#A99EC2] text-[#5D4497] font-medium dark:bg-[#33176E] rounded-[9px] text-xs dark:text-[#7147CD] px-2 py-[3px] w-fit"
 									>{$i18n.t('Admin')}</span
 								>
 							</button>
@@ -412,7 +412,7 @@
 			<div>
 				{#if user?.first_name === 'INVITED'}
 					<div
-						class="self-center rounded-[9px] text-xs px-2 py-[3px] w-fit whitespace-nowrap bg-[#113272] text-white dark:text-[#3F70CF]"
+						class="self-center rounded-[9px] text-xs px-2 py-[3px] w-fit font-medium whitespace-nowrap bg-[#B4C1DB] dark:bg-[#113272] text-[#4169B8] dark:text-[#3F70CF]"
 					>
 						Invite pending
 					</div>

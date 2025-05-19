@@ -80,16 +80,16 @@
 		}}
 	>
 		<div
-			class=" m-auto relative rounded-2xl max-w-full w-[36rem] mx-2 bg-gray-50 dark:bg-customGray-800 max-h-[100dvh] shadow-3xl"
+			class=" m-auto relative rounded-2xl max-w-full w-[36rem] mx-2 bg-lightGray-550 dark:bg-customGray-800 max-h-[100dvh] shadow-3xl"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();
 			}}
 		>
 			<div class="px-5 py-5 flex flex-col text-left">
-				<div class="mb-5 border-b border-customGray-700 flex justify-between items-center pb-2.5">
+				<div class="mb-5 border-b border-lightGray-400 dark:border-customGray-700 flex justify-between items-center pb-2.5">
 					<div
-						class=" text-base dark:text-customGray-100 text-left"
+						class=" text-base text-lightGray-100 dark:text-customGray-100 text-left"
 					>
 						{$i18n.t('Explore Plans')}
 					</div>
