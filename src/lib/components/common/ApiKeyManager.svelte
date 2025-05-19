@@ -98,8 +98,11 @@
 									class="w-full text-sm bg-transparent outline-hidden text-center"
 									value={keyWeights[apiKey] || 1}
 									on:input={(e) => {
-										const target = e.target as HTMLInputElement;
-										updateKeyWeight(apiKey, parseInt(target.value) || 1);
+										// Handle the input event safely
+										if (e.target && 'value' in e.target) {
+											const value = String(e.target.value);
+											updateKeyWeight(apiKey, parseInt(value) || 1);
+										}
 									}}
 								/>
 							</Tooltip>
@@ -112,7 +115,7 @@
 						on:click={() => removeApiKey(index)}
 						disabled={apiKeys.length === 1 && !apiKeys[0]}
 					>
-						<Minus strokeWidth="2" class="size-3.5" />
+						<Minus strokeWidth="2" className="size-3.5" />
 					</button>
 				</div>
 			{/each}
@@ -131,7 +134,7 @@
 				type="button"
 				on:click={addApiKey}
 			>
-				<Plus class="size-3.5" strokeWidth="2" />
+				<Plus className="size-3.5" strokeWidth="2" />
 			</button>
 		</div>
 	</div>
