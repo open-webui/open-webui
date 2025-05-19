@@ -65,7 +65,7 @@
 <script lang="ts">
 	import Info from '$lib/components/icons/Info.svelte';
 	import Star from '$lib/components/icons/Star.svelte';
-	import LightBlub from '$lib/components/icons/LightBlub.svelte';
+	import LightBulb from '$lib/components/icons/LightBulb.svelte';
 	import Bolt from '$lib/components/icons/Bolt.svelte';
 	import ArrowRightCircle from '$lib/components/icons/ArrowRightCircle.svelte';
 	import MarkdownTokens from './MarkdownTokens.svelte';
