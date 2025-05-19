@@ -29,6 +29,7 @@
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import IonosLogo from '$lib/IONOS/components/icons/IonosLogo.svelte';
 	import PrivacySlogan from '$lib/IONOS/components/PrivacySlogan.svelte';
+	import FilledUserAvatar from '$lib/IONOS/components/icons/FilledUserAvatar.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -94,7 +95,7 @@
 
 			<PrivacySlogan />
 
-			<div class="self-start flex flex-none items-center text-gray-600 dark:text-gray-400">
+			<div class="self-start flex flex-none items-center self-center text-gray-600 dark:text-gray-400">
 				<!-- <div class="md:hidden flex self-center w-[1px] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
 				{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled)}
 					<Menu
@@ -175,13 +176,8 @@
 							class="select-none flex rounded-xl p-1.5 w-full hover:bg-gray-50 dark:hover:bg-gray-850 transition"
 							aria-label="User Menu"
 						>
-							<div class=" self-center">
-								<img
-									src={$user.profile_image_url}
-									class="size-6 object-cover rounded-full"
-									alt="User profile"
-									draggable="false"
-								/>
+							<div class="text-blue-800 self-center">
+								<FilledUserAvatar />
 							</div>
 						</button>
 					</UserMenu>
