@@ -123,7 +123,7 @@
 
 		<div class="chat-{message.role} w-full min-w-full markdown-prose">
 			{#if message.files}
-				<div class="mt-2.5 mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap bg-gray-100 text-blue-800">
+				<div class="mt-2.5 mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap bg-gray-100 text-blue-800 text-sm">
 					{#each message.files as file}
 						<div class={($settings?.chatBubble ?? true) ? 'self-end' : ''}>
 							{#if file.type === 'image'}
@@ -211,7 +211,7 @@
 					<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 						<div
 							class="rounded-2xl {($settings?.chatBubble ?? true)
-								? `max-w-[90%] p-5 bg-gray-100 text-blue-800 ${
+								? `max-w-[90%] p-5 bg-gray-100 text-blue-800 text-sm ${
 										message.files ? 'rounded-tr-lg' : ''
 									}`
 								: ' w-full'}"

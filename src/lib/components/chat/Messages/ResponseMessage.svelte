@@ -494,7 +494,7 @@
 
 {#key message.id}
 	<div
-		class=" flex w-full message-{message.id}"
+		class=" flex w-full message-{message.id} text-sm"
 		id="message-{message.id}"
 		dir={$settings.chatDirection}
 	>
@@ -725,7 +725,7 @@
 				{#if !edit}
 					{#if message.done || siblings.length > 1}
 						<div
-							class=" flex justify-start overflow-x-auto buttons text-blue-800 dark:text-gray-500 mt-0.5"
+							class=" flex justify-start overflow-x-auto buttons text-blue-800 dark:text-gray-500 mt-5 gap-5"
 						>
 							{#if siblings.length > 1}
 								<div class="flex self-center min-w-fit" dir="ltr">
