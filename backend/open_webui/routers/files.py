@@ -210,6 +210,17 @@ async def update_file_data_content_by_id(
                 user=user,
             )
             file = Files.get_file_by_id(id=id)
+            if file.path:
+                try:
+                    file_path = Storage.get_file(file.path)
+                    file_path = Path(file_path)
+                    
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(form_data.content)
+                    log.info(f"Updated physical file content at {file_path}")
+                except Exception as e:
+                    log.exception(e)
+                    log.error(f"Failed to update physical file content: {file.path}")
         except Exception as e:
             log.exception(e)
             log.error(f"Error processing file: {file.id}")
