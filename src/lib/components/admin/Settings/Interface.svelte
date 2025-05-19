@@ -69,7 +69,7 @@
 
 	const init = async () => {
 		workspaceModels = await getBaseModels(localStorage.token);
-		baseModels = await getModels(localStorage.token, null, true);
+		baseModels = await getModels(localStorage.token, null, false);
 
 		models = baseModels.map((m) => {
 			const workspaceModel = workspaceModels.find((wm) => wm.id === m.id);
@@ -159,9 +159,10 @@
 							}}
 						>
 							<option value="" selected>{$i18n.t('Current Model')}</option>
-							{#each models.filter((m) => m.connection_type === 'local') as model}
+							{#each models as model}
 								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
 									{model.name}
+									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
 								</option>
 							{/each}
 						</select>
@@ -196,6 +197,7 @@
 							{#each models as model}
 								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
 									{model.name}
+									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
 								</option>
 							{/each}
 						</select>
