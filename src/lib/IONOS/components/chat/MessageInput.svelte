@@ -438,7 +438,7 @@
 									id="chat-input"
 									lang="de"
 									bind:this={chatInputElement}
-									class="scrollbar-hidden bg-transparent text-blue-700 placeholder:text-gray-400 dark:text-gray-100 outline-none w-full py-3 px-4 rounded-xl resize-none h-[48px]"
+									class="scrollbar-hidden bg-transparent text-blue-700 placeholder:text-gray-400 dark:text-gray-100 outline-none w-full py-3 px-4 rounded-xl resize-none h-[105px] text-sm"
 									placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
 									bind:value={prompt}
 									on:keypress={(e) => {
