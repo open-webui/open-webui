@@ -157,6 +157,10 @@
 	const copyToClipboard = async (text) => {
 		text = removeAllDetails(text);
 
+		if (($config?.ui?.response_watermark ?? '').trim() !== '') {
+			text = `${text}\n\n${$config?.ui?.response_watermark}`;
+		}
+
 		const res = await _copyToClipboard(text, $settings?.copyFormatted ?? false);
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
@@ -560,17 +564,30 @@
 		await tick();
 		if (buttonsContainerElement) {
 			console.log(buttonsContainerElement);
-			buttonsContainerElement.addEventListener('wheel', function (event) {
-				// console.log(event.deltaY);
 
-				event.preventDefault();
-				if (event.deltaY !== 0) {
-					// Adjust horizontal scroll position based on vertical scroll
-					buttonsContainerElement.scrollLeft += event.deltaY;
+			buttonsContainerElement.addEventListener('wheel', function (event) {
+				if (buttonsContainerElement.scrollWidth <= buttonsContainerElement.clientWidth) {
+					// If the container is not scrollable, horizontal scroll
+					return;
+				} else {
+					event.preventDefault();
+
+					if (event.deltaY !== 0) {
+						// Adjust horizontal scroll position based on vertical scroll
+						buttonsContainerElement.scrollLeft += event.deltaY;
+					}
 				}
 			});
 		}
 	});
+
+	let screenReaderDiv: HTMLDivElement;
+
+	$: if (message.done) {
+		if (screenReaderDiv) {
+			screenReaderDiv.textContent = message.content;
+		}
+	}
 </script>
 
 <DeleteConfirmDialog
@@ -580,6 +597,10 @@
 		deleteMessageHandler();
 	}}
 />
+
+<div bind:this={screenReaderDiv} aria-live="polite" class="sr-only">
+	{message.done ? message.content : ''}
+</div>
 
 {#key message.id}
 	<div
@@ -785,6 +806,7 @@
 										sources={message.sources}
 										floatingButtons={message?.done && !readOnly}
 										save={!readOnly}
+										preview={!readOnly}
 										{model}
 										onTaskClick={async (e) => {
 											console.log(e);
@@ -819,27 +841,12 @@
 										onAddMessages={({ modelId, parentId, messages }) => {
 											addMessages({ modelId, parentId, messages });
 										}}
-										on:update={(e) => {
-											const { raw, oldContent, newContent } = e.detail;
-
+										onSave={({ raw, oldContent, newContent }) => {
 											history.messages[message.id].content = history.messages[
 												message.id
 											].content.replace(raw, raw.replace(oldContent, newContent));
 
 											updateChat();
-										}}
-										on:select={(e) => {
-											const { type, content } = e.detail;
-
-											if (type === 'explain') {
-												submitMessage(
-													message.id,
-													`Explain this section to me in more detail\n\n\`\`\`\n${content}\n\`\`\``
-												);
-											} else if (type === 'ask') {
-												const input = e.detail?.input ?? '';
-												submitMessage(message.id, `\`\`\`\n${content}\n\`\`\`\n${input}`);
-											}
 										}}
 									/>
 								{/if}
@@ -1394,11 +1401,11 @@
 														actionMessage(action.id, message);
 													}}
 												>
-													{#if action.icon_url}
+													{#if action?.icon}
 														<div class="size-4">
 															<img
-																src={action.icon_url}
-																class="w-4 h-4 {action.icon_url.includes('svg')
+																src={action.icon}
+																class="w-4 h-4 {action.icon.includes('svg')
 																	? 'dark:invert-[80%]'
 																	: ''}"
 																style="fill: currentColor;"
