@@ -52,7 +52,7 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[160px] rounded-lg px-1 py-1.5 border border-lightGray-400 dark:border-customGray-700 z-50 bg-gray-50 dark:bg-customGray-900 dark:text-white shadow"
+			class="w-full max-w-[160px] rounded-lg px-1 py-1.5 border border-lightGray-400 dark:border-customGray-700 z-50 bg-lightGray-300 dark:bg-customGray-900 dark:text-white shadow"
 			sideOffset={-2}
 			side="bottom"
 			align="end"

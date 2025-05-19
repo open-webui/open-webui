@@ -171,7 +171,7 @@
 			</div>
 		</div>
 		<button
-			class="bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-550 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 dark:text-customGray-200 px-4 h-12 rounded-lg transition"
+			class="bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 dark:text-customGray-200 px-4 h-12 rounded-lg transition"
 			on:click={addGroupHandler}
 			type="button"
 		>

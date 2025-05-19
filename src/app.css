@@ -231,9 +231,14 @@ input[type='number'] {
 	outline: none;
 }
 
-.tippy-box[data-theme~='dark'] {
+html.light .tippy-box {
+	@apply rounded-md bg-lightGray-400 text-xs text-lightGray-100 shadow-md;
+}
+
+html.dark .tippy-box {
 	@apply rounded-md bg-customGray-900 text-xs text-customGray-100 shadow-md;
 }
+
 
 .password {
 	-webkit-text-security: disc;
@@ -389,8 +394,12 @@ html.dark input:-webkit-autofill {
 #response-content-container strong {
 	font-weight: 500;
 }
-#response-content-container li::marker {
+
+html.dark #response-content-container li::marker {
 	color: white;
+}
+html.light #response-content-container li::marker {
+	color: #232529;
 }
 #response-content-container h1 {
 	font-size: 1.375rem;

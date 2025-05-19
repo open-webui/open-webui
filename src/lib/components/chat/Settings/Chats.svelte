@@ -192,13 +192,13 @@
 		</div>
 		<div class="flex justify-end text-sm font-medium border-t border-lightGray-400 dark:border-customGray-700 pt-5 pb-5">
 			<button
-				class=" text-xs h-10 px-4 py-2 transition rounded-lg bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-550 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center"
+				class=" text-xs h-10 px-4 py-2 transition rounded-lg bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center"
 				on:click={async () => {
 					unarchiveAllHandler();
 				}}>{$i18n.t('Unarchive All Chats')}</button
 			>
 			<button
-				class=" text-xs h-10 px-4 py-2 transition rounded-lg bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-550 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center ml-1"
+				class=" text-xs h-10 px-4 py-2 transition rounded-lg bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center ml-1"
 				on:click={async () => {
 					deleteAllArchivedHandler();
 				}}>{$i18n.t('Delete All Conversations')}</button

@@ -149,7 +149,7 @@
 				</div>
 			</div>
 			<button
-				class="text-xs w-full h-10 px-3 py-2 transition rounded-lg bg-lightGray-300 border-lightGray-400 font-medium hover:bg-lightGray-550 text-lightGray-100 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center"
+				class="text-xs w-full h-10 px-3 py-2 transition rounded-lg bg-lightGray-300 border-lightGray-400 font-medium hover:bg-lightGray-700 text-lightGray-100 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center"
 				on:click={() => goto('/login')}
 			>
 				{$i18n.t('Go to Login')}
@@ -263,8 +263,8 @@
 			
 			<button
 				class=" text-xs w-full h-10 font-medium px-3 py-2 transition rounded-lg {loading
-					? ' cursor-not-allowed bg-lightGray-300 hover:bg-lightGray-550 hover:bg-gray-900 text-lightGray-100 border-lightGray-400 dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
-					: 'bg-lightGray-300 hover:bg-lightGray-550 hover:bg-gray-900 text-lightGray-100 border-lightGray-400 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center items-center"
+					? ' cursor-not-allowed bg-lightGray-300 hover:bg-lightGray-700 hover:bg-gray-900 text-lightGray-100 border-lightGray-400 dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
+					: 'bg-lightGray-300 hover:bg-lightGray-700 hover:bg-gray-900 text-lightGray-100 border-lightGray-400 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center items-center"
 				type="submit"
 				disabled={loading}
 			>

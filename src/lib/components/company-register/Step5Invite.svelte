@@ -169,7 +169,7 @@
             {$i18n.t('Skip for now')}
         </button>
         <button
-            class="font-medium bg-lightGray-300 hover:bg-lightGray-550 text-lightGray-100 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 dark:text-customGray-200 w-1/2 py-2.5 rounded-lg transition"
+            class="font-medium bg-lightGray-300 hover:bg-lightGray-700 text-lightGray-100 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 dark:text-customGray-200 w-1/2 py-2.5 rounded-lg transition"
         >
             {$i18n.t('Invite')}
         </button>

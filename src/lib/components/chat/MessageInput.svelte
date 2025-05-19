@@ -490,7 +490,7 @@
 							class=" absolute -top-12 left-0 right-0 flex justify-center z-30 pointer-events-none"
 						>
 							<button
-								class=" border dark:border-none p-1.5 rounded-full pointer-events-auto"
+								class="border-none p-1.5 rounded-full pointer-events-auto text-white dark:text-[#7C7A7A]"
 								on:click={() => {
 									autoScroll = true;
 									scrollToBottom();

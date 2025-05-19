@@ -20,6 +20,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { goto } from '$app/navigation';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 	export let autoRecharge = false;
@@ -348,7 +349,10 @@
 				</div>
 				<div class="flex items-center justify-between pt-2.5">
 					<div class="flex items-center">
-						<div class="text-xs dark:text-customGray-590 mr-2.5">{$i18n.t('Auto recharge')}</div>
+						<Tooltip content={$i18n.t('When enabled, 20€ in credits will be automatically purchased and added to your account once your balance drops to 80% of your base credit amount.')}>
+							<div class="text-xs dark:text-customGray-590 mr-2.5 cursor-pointer">{$i18n.t('Auto recharge')}</div>
+						</Tooltip>
+						
 						<Switch bind:state={autoRecharge} on:change={async (e) => {
 							const res = await updateAutoRecharge(localStorage.token, e.detail).catch(error => console.log(error))
 							toast.success($i18n.t(res.message))

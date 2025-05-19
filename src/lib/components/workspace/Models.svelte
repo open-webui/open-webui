@@ -322,7 +322,7 @@
 			</div>
 			<div class="flex">
 				<div
-					class="flex flex-1 items-center p-2.5 rounded-lg mr-1 border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-550 dark:hover:bg-customGray-950 dark:hover:text-white transition"
+					class="flex flex-1 items-center p-2.5 rounded-lg mr-1 border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white transition"
 				>
 					<!-- <div class=" self-center ml-1 mr-3"> -->
 					<button
@@ -350,7 +350,7 @@
 				</div>
 				<div>
 					<a
-						class=" px-2 py-2.5 w-[35px] sm:w-[220px] rounded-lg leading-none border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-550 dark:hover:bg-customGray-950 text-lightGray-100 dark:text-customGray-200 dark:hover:text-white transition font-medium text-xs flex items-center justify-center space-x-1"
+						class=" px-2 py-2.5 w-[35px] sm:w-[220px] rounded-lg leading-none border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-700 dark:hover:bg-customGray-950 text-lightGray-100 dark:text-customGray-200 dark:hover:text-white transition font-medium text-xs flex items-center justify-center space-x-1"
 						href="/workspace/models/create"
 					>
 						<Plus className="size-3.5" />

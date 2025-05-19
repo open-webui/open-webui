@@ -34,7 +34,7 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="w-full {className} text-sm rounded-lg border border-lightGray-400 dark:border-customGray-700 px-1 py-1.5 z-50 bg-gray-50 dark:bg-customGray-900 dark:text-white shadow-lg font-primary"
+			class="w-full {className} text-sm rounded-lg border border-lightGray-400 dark:border-customGray-700 px-1 py-1.5 z-50 bg-lightGray-300 dark:bg-customGray-900 dark:text-white shadow-lg font-primary"
 			sideOffset={8}
 			side="bottom"
 			align="start"
@@ -81,7 +81,7 @@
 			{/if}
 
 			<!-- <button
-				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-2 px-3 w-full hover:bg-lightGray-300 dark:hover:bg-gray-800 transition"
 				on:click={() => {
 					dispatch('show', 'archived-chat');
 					show = false;
@@ -99,7 +99,7 @@
 
 			<!-- {#if role === 'admin'}
 				<a
-					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					class="flex rounded-md py-2 px-3 w-full hover:bg-lightGray-300 dark:hover:bg-gray-800 transition"
 					href="/playground"
 					on:click={() => {
 						show = false;
@@ -129,7 +129,7 @@
 				</a>
 
 				<a
-					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					class="flex rounded-md py-2 px-3 w-full hover:bg-lightGray-300 dark:hover:bg-gray-800 transition"
 					href="/admin"
 					on:click={() => {
 						show = false;
