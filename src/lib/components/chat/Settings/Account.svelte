@@ -324,7 +324,7 @@
 							</div>
 						{/if}
 						<input
-							class={`px-2.5 text-sm ${firstName ? 'mt-2' : 'mt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							class={`px-2.5 text-sm ${firstName ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 							placeholder={$i18n.t('First Name')}
 							bind:value={firstName}
 						/>
@@ -338,7 +338,7 @@
 							</div>
 						{/if}
 						<input
-							class={`px-2.5 text-sm ${lastName ? 'mt-2' : 'mt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							class={`px-2.5 text-sm ${lastName ? 'mt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 							placeholder={$i18n.t('Last Name')}
 							bind:value={lastName}
 						/>
@@ -395,7 +395,7 @@
 						</div>
 					{/if}
 					<input
-						class={`px-2.5 text-sm ${currentPassword ? 'mt-2' : 'mt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+						class={`px-2.5 text-sm ${currentPassword ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 						type="password"
 						bind:value={currentPassword}
 						placeholder={$i18n.t('Current password')}
@@ -413,7 +413,7 @@
 						</div>
 					{/if}
 					<input
-						class={`px-2.5 text-sm ${newPassword ? 'mt-2' : 'mt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+						class={`px-2.5 text-sm ${newPassword ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 						type="password"
 						bind:value={newPassword}
 						placeholder={$i18n.t('Enter your new password')}
@@ -431,7 +431,7 @@
 						</div>
 					{/if}
 					<input
-						class={`px-2.5 text-sm ${newPasswordConfirm ? 'mt-2' : 'mt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+						class={`px-2.5 text-sm ${newPasswordConfirm ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 						type="password"
 						bind:value={newPasswordConfirm}
 						placeholder={$i18n.t('Confirm password')}

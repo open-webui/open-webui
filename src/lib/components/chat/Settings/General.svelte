@@ -255,7 +255,7 @@
 				<div class="relative" bind:this={languageDropdownRef}>
 					<button
 						type="button"
-						class={`flex items-center justify-between w-full text-sm h-10 px-3 py-2 ${
+						class={`flex items-center justify-between w-full text-sm h-12 px-3 py-2 ${
 							showLanguageDropdown ? 'border' : ''
 						} border-lightGray-400 dark:border-customGray-700 rounded-md bg-lightGray-300 dark:bg-customGray-900 cursor-pointer`}
 						on:click={() => {
@@ -299,7 +299,7 @@
 					<div class="relative" bind:this={voiceDropdownRef}>
 						<button
 							type="button"
-							class={`flex items-center justify-between w-full bg-lightGray-300 text-sm h-10 px-3 py-2 ${
+							class={`flex items-center justify-between w-full bg-lightGray-300 text-sm h-12 px-3 py-2 ${
 								showVoiceDropdown ? 'border' : ''
 							} border-lightGray-400 dark:border-customGray-700 rounded-md bg-lightGray-300 dark:bg-customGray-900 cursor-pointer`}
 							on:click={() => {
@@ -507,7 +507,7 @@
 
 			
 			<div class="mb-2.5">
-				<div class="flex items-center justify-between mb-1 w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md h-10 px-2.5 py-2">
+				<div class="flex items-center justify-between mb-1 w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md h-12 px-2.5 py-2">
 					
 						<div class="text-sm text-lightGray-100 dark:text-customGray-100">
 							{$i18n.t('Memory')}

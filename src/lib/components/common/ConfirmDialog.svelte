@@ -70,14 +70,14 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		bind:this={modalElement}
-		class=" fixed top-0 right-0 left-0 bottom-0 bg-[#1D1A1A]/50 backdrop-blur-[7.44px] w-full h-screen max-h-[100dvh] flex justify-center z-[99999999] overflow-hidden overscroll-contain"
+		class=" fixed top-0 right-0 left-0 bottom-0 bg-lightGray-250/50 dark:bg-[#1D1A1A]/50 backdrop-blur-[7.44px] w-full h-screen max-h-[100dvh] flex justify-center z-[99999999] overflow-hidden overscroll-contain"
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
 			show = false;
 		}}
 	>
 		<div
-			class=" m-auto relative rounded-2xl max-w-full w-[32rem] mx-2 bg-gray-50 dark:bg-customGray-800 max-h-[100dvh] shadow-3xl"
+			class=" m-auto relative rounded-2xl max-w-full w-[32rem] mx-2 bg-lightGray-550 dark:bg-customGray-800 max-h-[100dvh] shadow-3xl"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();
@@ -93,7 +93,7 @@
 			</button>
 
 			<div class="px-10 pt-14 pb-6 py-6 flex flex-col text-center">
-				<div class=" text-base dark:text-white mb-2.5 text-center">
+				<div class=" text-base text-lightGray-100 dark:text-white mb-2.5 text-center">
 					{#if title !== ''}
 						{title}
 					{:else}
@@ -116,7 +116,7 @@
 								<textarea
 									bind:value={inputValue}
 									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
-									class="w-full mt-2 rounded-md px-4 py-2 text-sm dark:text-gray-300 dark:bg-customGray-900 outline-none resize-none"
+									class="w-full mt-2 placeholder:text-lightGray-100 rounded-md px-4 py-2 text-sm bg-lightGray-300 text-lightGray-100 dark:text-gray-300 dark:bg-customGray-900 outline-none resize-none"
 									rows="3"
 									required
 								/>
@@ -124,7 +124,7 @@
 								<input
 									bind:value={inputValue}
 									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
-									class="w-full mt-2 rounded-md px-4 py-2 text-sm dark:text-gray-300 dark:bg-customGray-900 outline-none resize-none"
+									class="w-full mt-2 placeholder:text-lightGray-100 rounded-md px-4 py-3 text-sm bg-lightGray-300 text-lightGray-100 dark:text-gray-300 dark:bg-customGray-900 outline-none resize-none"
 									required
 								/>
 							{/if}
@@ -132,9 +132,9 @@
 					</div>
 				</slot>
 
-				<div class="mt-6 flex justify-end gap-7">
+				<div class="mt-6 flex justify-end gap-7 font-medium">
 					<button
-						class="text-gray-800 w-fit text-sm dark:text-customGray-200 py-2.5 rounded-lg transition"
+						class="text-gray-800 w-fit text-xs dark:text-customGray-200 py-2.5 rounded-lg transition"
 						on:click={() => {
 							show = false;
 							dispatch('cancel');
@@ -144,7 +144,7 @@
 						{cancelLabel}
 					</button>
 					<button
-						class="bg-gray-900 text-sm dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 text-gray-100 dark:text-customGray-200 w-1/2 py-2.5 rounded-lg transition"
+						class="bg-lightGray-300 border-lighGray-400 hover:bg-lightGray-700 text-lightGray-100 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 dark:text-customGray-200 w-1/2 py-2.5 rounded-lg transition"
 						on:click={() => {
 							confirmHandler();
 						}}
