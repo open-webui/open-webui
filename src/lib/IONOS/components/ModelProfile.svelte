@@ -28,11 +28,11 @@
 	allowHTML={true}
 	content={`<div class="flex flex-row rounded-2xl px-px py-[5px] text-blue-800">
 				<div class="flex-shrink-0 pr-4">
-					<img class="w-24 h-24 object-cover rounded-full" src=${model?.info?.meta?.profile_image_url} alt="Model avatar image">
+					<img class="w-[120px] h-[120px] object-cover rounded-full" src=${model?.info?.meta?.profile_image_url} alt="Model avatar image">
 				</div>
 				<div>
-					<h1 class="text-base font-semibold">${model?.name ?? ""}</h1>
-					<h2 class="text-xs mb-2">${subtitle}</h2>
+					<h1 class="text-xs font-semibold">${model?.name ?? ""}</h1>
+					<h2 class="text-xs mb-4">${subtitle}</h2>
 					<p class="text-xs">${description}</p>
 				</div>
 			</div>`}
