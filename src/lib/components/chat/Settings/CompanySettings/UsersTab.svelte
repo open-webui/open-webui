@@ -169,7 +169,7 @@
 		class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5"
 	>
 		<div class="flex w-full justify-between items-center">
-			<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Member Management')}</div>
+			<div class="text-xs text-lightGray-100 dark:text-customGray-300 font-medium">{$i18n.t('Member Management')}</div>
 		</div>
 	</div>
 	<form
@@ -335,8 +335,8 @@
 		class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5"
 	>
 		<div class="flex w-full justify-start items-center">
-			<div class="text-xs text-lightGray-100 dark:text-customGray-300 w-[calc(100%-250px)]">{$i18n.t('Users')}</div>
-			<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Roles')}</div>
+			<div class="text-xs text-lightGray-100 dark:text-customGray-300 w-[calc(100%-250px)] font-medium">{$i18n.t('Users')}</div>
+			<div class="text-xs text-lightGray-100 dark:text-customGray-300 font-medium">{$i18n.t('Roles')}</div>
 		</div>
 	</div>
 

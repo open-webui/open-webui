@@ -293,7 +293,7 @@
                         class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
                         'general-settings'
                             ? 'bg-lightGray-700 dark:bg-customGray-800'
-                            : ' text-lightGray-100 dark:text-gray-600 hover:text-bg-lightGray-700 dark:hover:text-white'}"
+                            : ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
                         on:click={() => {
                             selectedTab = 'general-settings';
 							updateTabParam(selectedTab);

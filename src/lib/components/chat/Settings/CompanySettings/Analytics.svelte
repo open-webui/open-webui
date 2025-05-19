@@ -112,78 +112,78 @@
 <div class="pb-20">
 	{#if !analyticsLoading}
 		<div
-			class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5"
+			class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5"
 		>
 			<div class="flex w-full justify-between items-center">
-				<div class="text-xs dark:text-customGray-300">{$i18n.t('Key Summary')}</div>
+				<div class="text-xs text-lightGray-100 dark:text-customGray-300 font-medium">{$i18n.t('Key Summary')}</div>
 			</div>
 		</div>
 		<div class="grid grid-cols-4 gap-[6px]">
-			<div class="rounded-2xl dark:bg-customGray-900 pt-4 pb-2 flex flex-col items-center">
-				<div class="text-2xl dark:text-customGray-100 mb-2.5">
+			<div class="rounded-2xl bg-lightGray-300 dark:bg-customGray-900 pt-4 pb-2 flex flex-col items-center">
+				<div class="text-2xl text-lightGray-100 dark:text-customGray-100 mb-2.5">
 					{analytics?.totalUsers?.total_users}
 				</div>
-				<div class="text-xs dark:text-customGray-100/50 mb-1">{$i18n.t('Total Users')}</div>
+				<div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 mb-1">{$i18n.t('Total Users')}</div>
 				<Tooltip content="">
 					<div
-						class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full dark:bg-customGray-700"
+						class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full text-white dark:text-white bg-customBlue-600 dark:bg-customGray-700"
 					>
 						<InfoIcon className="size-6" />
 					</div>
 				</Tooltip>
 			</div>
-			<div class="rounded-2xl dark:bg-customGray-900 pt-4 pb-2 flex flex-col items-center">
-				<div class="text-2xl dark:text-customGray-100 mb-2.5">
+			<div class="rounded-2xl bg-lightGray-300 dark:bg-customGray-900 pt-4 pb-2 flex flex-col items-center">
+				<div class="text-2xl text-lightGray-100 dark:text-customGray-100 mb-2.5">
 					{analytics?.adoptionRate?.adoption_rate}%
 				</div>
-				<div class="text-xs dark:text-customGray-100/50 mb-1">{$i18n.t('Adoption Rate')}</div>
+				<div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 mb-1">{$i18n.t('Adoption Rate')}</div>
 				<Tooltip content="">
 					<div
-						class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full dark:bg-customGray-700"
+						class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full text-white dark:text-white bg-customBlue-600 dark:bg-customGray-700"
 					>
 						<InfoIcon className="size-6" />
 					</div>
 				</Tooltip>
 			</div>
-			<div class="rounded-2xl dark:bg-customGray-900 pt-4 pb-2 flex flex-col items-center">
+			<div class="rounded-2xl text-lightGray-100 bg-lightGray-300 dark:bg-customGray-900 pt-4 pb-2 flex flex-col items-center">
 				<div class="text-2xl dark:text-customGray-100 mb-2.5">
 					{analytics?.powerUsers?.power_users_count}
 				</div>
-				<div class="text-xs dark:text-customGray-100/50 mb-1">{$i18n.t('Power Users')}</div>
+				<div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 mb-1">{$i18n.t('Power Users')}</div>
 				<Tooltip content="">
 					<div
-						class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full dark:bg-customGray-700"
+						class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full text-white dark:text-white bg-customBlue-600 dark:bg-customGray-700"
 					>
 						<InfoIcon className="size-6" />
 					</div>
 				</Tooltip>
 			</div>
-			<div class="rounded-2xl dark:bg-customGray-900 pt-4 pb-2 flex flex-col items-center">
+			<div class="rounded-2xl text-lightGray-100 bg-lightGray-300 dark:bg-customGray-900 pt-4 pb-2 flex flex-col items-center">
 				<div class="text-2xl dark:text-customGray-100 mb-2.5">
 					{analytics?.totalAssistants?.total_assistants}
 				</div>
-				<div class="text-xs dark:text-customGray-100/50 mb-1">{$i18n.t('Assistants Created')}</div>
+				<div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 mb-1">{$i18n.t('Assistants Created')}</div>
 				<Tooltip content="">
 					<div
-						class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full dark:bg-customGray-700"
+						class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full text-white dark:text-white bg-customBlue-600 dark:bg-customGray-700"
 					>
 						<InfoIcon className="size-6" />
 					</div>
 				</Tooltip>
 			</div>
 		</div>
-		<div class="dark:bg-customGray-900 rounded-2xl p-4 pb-1 mt-5">
+		<div class="bg-lightGray-300 dark:bg-customGray-900 rounded-2xl p-4 pb-1 mt-5">
 			<div
-				class="flex w-full justify-between items-center pb-2.5 border-b border-customGray-700 mb-2.5"
+				class="flex w-full justify-between items-center pb-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5"
 			>
 				<div class="flex w-full justify-between items-center">
-					<div class="text-xs dark:text-customGray-300">{$i18n.t('Top Users')}</div>
+					<div class="text-xs text-lightGray-100 dark:text-customGray-300 font-medium">{$i18n.t('Top Users')}</div>
 				</div>
 				<div use:onClickOutside={() => (showUsersSortDropdown = false)}>
 					<div class="relative" bind:this={usersSortRef}>
 						<button
 							type="button"
-							class="flex items-center min-w-40 justify-end text-sm border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer"
+							class="flex items-center min-w-40 justify-end text-sm border-lightGray-400 dark:border-customGray-700 rounded-md bg-lightGray-300 dark:bg-customGray-900 cursor-pointer"
 							on:click={() => (showUsersSortDropdown = !showUsersSortDropdown)}
 						>
 							<div class="flex items-center">
@@ -196,7 +196,7 @@
 
 						{#if showUsersSortDropdown}
 							<div
-								class="max-h-60 min-w-40 overflow-y-auto absolute top-6 -right-2 z-50 bg-white dark:bg-customGray-900 border border-gray-300 dark:border-customGray-700 rounded-md shadow"
+								class="max-h-60 min-w-40 overflow-y-auto absolute top-6 -right-2 z-50 bg-lightGray-300 dark:bg-customGray-900 border border-lightGray-400 dark:border-customGray-700 rounded-md shadow"
 							>
 								<div class="px-1 py-1">
 									{#each sortOptions?.filter?.((item) => item?.value !== selectedSortOrder?.value) as option}
@@ -214,7 +214,7 @@
 												}
 												showUsersSortDropdown = false;
 											}}
-											class="flex items-center justify-end w-full cursor-pointer text-xs dark:text-customGray-100 px-2 py-2 dark:hover:bg-customGray-950 rounded-md"
+											class="flex items-center justify-end w-full cursor-pointer text-xs text-lightGray-100 dark:text-customGray-100 px-2 py-2 hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md"
 										>
 											{option?.label}
 										</div>
@@ -268,22 +268,22 @@
 				</div>
 			{/each}
 		</div>
-		<div class="dark:bg-customGray-900 rounded-2xl p-4 pb-1 mt-5">
+		<div class="bg-lightGray-300 dark:bg-customGray-900 rounded-2xl p-4 pb-1 mt-5">
 			<div
-				class="flex w-full justify-between items-center pb-2.5 border-b border-customGray-700 mb-2.5"
+				class="flex w-full justify-between items-center pb-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5"
 			>
 				<div class="flex w-full justify-between items-center">
-					<div class="text-xs dark:text-customGray-300">{$i18n.t('Top 3 models Used')}</div>
+					<div class="text-xs text-lightGray-100 dark:text-customGray-300 font-medium">{$i18n.t('Top 3 models Used')}</div>
 				</div>
 				<div use:onClickOutside={() => (showMonthsDropdown = false)}>
 					<div class="relative" bind:this={monthsRef}>
 						<button
 							type="button"
-							class="flex items-center min-w-40 justify-end text-sm border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer"
+							class="flex items-center min-w-40 justify-end text-sm border-lightGray-400 dark:border-customGray-700 rounded-md bg-lightGray-300 dark:bg-customGray-900 cursor-pointer"
 							on:click={() => (showMonthsDropdown = !showMonthsDropdown)}
 						>
 							<div class="flex items-center">
-								<div class="text-xs dark:text-customGray-200 max-w-[15rem] text-left">
+								<div class="text-xs text-lightGray-100 dark:text-customGray-200 max-w-[15rem] text-left">
 									{selectedMonth?.label}
 								</div>
 								<ChevronDown className="size-2 ml-1" />
@@ -292,7 +292,7 @@
 
 						{#if showMonthsDropdown}
 							<div
-								class="max-h-60 min-w-40 overflow-y-auto absolute top-6 -right-2 z-50 bg-white dark:bg-customGray-900 border border-gray-300 dark:border-customGray-700 rounded-md shadow"
+								class="max-h-60 min-w-40 overflow-y-auto absolute top-6 -right-2 z-50 bg-lightGray-300 dark:bg-customGray-900 border border-gray-300 dark:border-customGray-700 rounded-md shadow"
 							>
 								<div class="px-1 py-1">
 									{#each monthOptions as option}
@@ -312,7 +312,7 @@
 												};
 												showMonthsDropdown = false;
 											}}
-											class="flex items-center justify-end w-full cursor-pointer text-xs dark:text-customGray-100 px-2 py-2 dark:hover:bg-customGray-950 rounded-md"
+											class="flex items-center justify-end w-full cursor-pointer text-xs dark:text-customGray-100 px-2 py-2 hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md"
 										>
 											{option?.label}
 										</div>
@@ -342,25 +342,25 @@
 		</div>
 		<div class="mt-5">
 			<div
-				class="flex w-full justify-between items-center pb-2.5 border-b border-customGray-700 mb-2.5"
+				class="flex w-full justify-between items-center pb-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5"
 			>
 				<div class="flex w-full justify-between items-center">
-					<div class="text-xs dark:text-customGray-300">{$i18n.t('User Activity Insights')}</div>
+					<div class="text-xs text-lightGray-100 dark:text-customGray-300 font-medium">{$i18n.t('User Activity Insights')}</div>
 				</div>
 			</div>
-			<div class="w-fit flex dark:bg-customGray-900 rounded-md mx-auto mb-2.5">
+			<div class="w-fit flex bg-lightGray-700 dark:bg-customGray-900 rounded-md mx-auto mb-2.5">
 				<button
 					on:click={() => (activeTab = 'messages')}
 					class="{activeTab === 'messages'
-						? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700'
-						: ''} px-6 py-2 flex-shrink-0 text-xs leading-none dark:text-customGray-100"
+						? 'text-lightGray-100 bg-lightGray-300 border-lightGray-400 dark:bg-customGray-900 rounded-md border dark:border-customGray-700'
+						: 'text-lightGray-100/70'} px-6 py-2 flex-shrink-0 text-xs font-medium leading-none dark:text-customGray-100"
 					>{$i18n.t('Messages')}</button
 				>
 				<button
 					on:click={() => (activeTab = 'chats')}
 					class="{activeTab === 'chats'
-						? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700'
-						: ''} px-6 py-2 flex-shrink-0 text-xs leading-none dark:text-customGray-100"
+						? 'text-lightGray-100 bg-lightGray-300 border-lightGray-400 dark:bg-customGray-900 rounded-md border dark:border-customGray-700'
+						: 'text-lightGray-100/70'} px-6 py-2 flex-shrink-0 text-xs font-medium leading-none  dark:text-customGray-100"
 					>{$i18n.t('Chats')}</button
 				>
 			</div>

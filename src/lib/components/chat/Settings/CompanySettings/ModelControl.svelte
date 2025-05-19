@@ -261,7 +261,7 @@
 							<div class="px-2 text-xs text-[#8A8B8D] dark:text-customGray-300 flex items-end justify-center">
 								<div>{$i18n.t('Cost Multiple')}</div>
 								<Tooltip content={$i18n?.t('The Cost Multiple shows how different Models compare in price. For details, visit our pricing page.')}>
-									<div class="ml-1 cursor-pointer flex justify-center items-center w-[18px] h-[18px] rounded-full bg-lightGray-700 text-lightGray-100 dark:text-white dark:bg-customGray-700">
+									<div class="ml-1 cursor-pointer flex justify-center items-center w-[18px] h-[18px] rounded-full text-white dark:text-white bg-customBlue-600 dark:bg-customGray-700">
 										<InfoIcon className="size-6" />
 									</div>
 								</Tooltip>

@@ -50,7 +50,7 @@ onMount(() => {
 
 
 <div bind:this={triggerEl}
-on:mouseenter={positionTooltip} class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full text-lightGray-100 dark:text-white bg-lightGray-700 dark:bg-customGray-700">
+on:mouseenter={positionTooltip} class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full text-white dark:text-white bg-customBlue-600 dark:bg-customGray-700">
     <InfoIcon className="size-6" />
 <div
 bind:this={tooltipEl}

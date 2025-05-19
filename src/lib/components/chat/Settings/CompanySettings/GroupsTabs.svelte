@@ -145,7 +145,7 @@
 		class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5"
 	>
 		<div class="flex w-full justify-between items-center">
-			<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Group Management')}</div>
+			<div class="text-xs text-lightGray-100 dark:text-customGray-300 font-medium">{$i18n.t('Group Management')}</div>
 		</div>
 	</div>
 	<div class="flex justify-between items-center mb-5">
