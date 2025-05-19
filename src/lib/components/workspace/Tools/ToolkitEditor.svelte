@@ -158,7 +158,7 @@ class Tools:
 		let emailPrefix = $user?.email?.split('@')[0]
 		const finalName = (!edit && !clone && !name.endsWith(`_${emailPrefix}`))? `${name}_${emailPrefix}`: name;
 		onSave({
-			id,
+			id: finalName,
 			name: finalName,
 			meta,
 			content,
