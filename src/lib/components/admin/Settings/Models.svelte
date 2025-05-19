@@ -166,7 +166,7 @@
 			hidden: !(model?.meta?.hidden ?? false)
 		};
 
-		console.log(model);
+		console.debug(model);
 
 		toast.success(
 			model.meta.hidden
@@ -495,7 +495,7 @@
 						}}
 					>
 						<div class=" self-center mr-2 font-medium line-clamp-1">
-							{$i18n.t('Export Presets')}
+							{$i18n.t('Export Presets')} ({models.length})
 						</div>
 
 						<div class=" self-center">

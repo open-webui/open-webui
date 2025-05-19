@@ -95,6 +95,20 @@ def upload_file(
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)
 
+        file_extension = os.path.splitext(filename)[1]
+        if request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+            request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
+                ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
+            ]
+
+            if file_extension not in request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=ERROR_MESSAGES.DEFAULT(
+                        f"File type {file_extension} is not allowed"
+                    ),
+                )
+
         # replace filename with uuid
         id = str(uuid.uuid4())
         name = filename
@@ -125,33 +139,31 @@ def upload_file(
         )
         if process:
             try:
+                if file.content_type:
+                    if file.content_type.startswith("audio/") or file.content_type in {
+                        "video/webm"
+                    }:
+                        file_path = Storage.get_file(file_path)
+                        result = transcribe(request, file_path)
 
-                if file.content_type.startswith(
-                    (
-                        "audio/mpeg",
-                        "audio/wav",
-                        "audio/ogg",
-                        "audio/x-m4a",
-                        "audio/webm",
-                        "video/webm",
+                        process_file(
+                            request,
+                            ProcessFileForm(file_id=id, content=result.get("text", "")),
+                            user=user,
+                        )
+                    elif file.content_type not in [
+                        "image/png",
+                        "image/jpeg",
+                        "image/gif",
+                        "video/mp4",
+                        "video/ogg",
+                        "video/quicktime",
+                    ]:
+                        process_file(request, ProcessFileForm(file_id=id), user=user)
+                else:
+                    log.info(
+                        f"File type {file.content_type} is not provided, but trying to process anyway"
                     )
-                ):
-                    file_path = Storage.get_file(file_path)
-                    result = transcribe(request, file_path)
-
-                    process_file(
-                        request,
-                        ProcessFileForm(file_id=id, content=result.get("text", "")),
-                        user=user,
-                    )
-                elif file.content_type not in [
-                    "image/png",
-                    "image/jpeg",
-                    "image/gif",
-                    "video/mp4",
-                    "video/ogg",
-                    "video/quicktime",
-                ]:
                     process_file(request, ProcessFileForm(file_id=id), user=user)
 
                 file_item = Files.get_file_by_id(id=id)
