@@ -99,11 +99,11 @@
 
 <div bind:this={root} class="relative w-[1px]" use:onClickOutside={() => (openAccessDropdownId = null)}>
 		<div
-			class="flex flex-col w-[8rem] absolute -left-20 top-4 bg-white dark:bg-customGray-900 px-1 py-2 border-l border-b border-r border-gray-300 dark:border-customGray-700 rounded-lg shadow z-10"
+			class="flex flex-col w-[8rem] absolute -left-20 top-4 bg-lightGray-300 border-lightGray-400 dark:bg-customGray-900 px-1 py-2 border-l border-b border-r dark:border-customGray-700 rounded-lg shadow z-10"
 		>
 			<button
 				type="button"
-				class="flex justify-between items-center px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-customGray-950 cursor-pointer"
+				class="flex justify-between items-center px-3 py-2 rounded-lg hover:bg-lightGray-700 dark:hover:bg-customGray-950 cursor-pointer"
 				on:click={() => {
 					accessControl = {
 						read: {
@@ -118,7 +118,7 @@
 				}}
 			>
 				<div>
-					<div class="flex items-center gap-2 text-xs dark:text-customGray-100">
+					<div class="flex items-center gap-2 text-xs text-lightGray-100 dark:text-customGray-100">
 						<PrivateIcon className="size-3" />{$i18n.t('Private')}
 						{#if accessControl !== null && activeGroupIds.length < 1}
 							<CheckmarkIcon className="size-4" />
@@ -129,7 +129,7 @@
 
 			<button
 				type="button"
-				class="flex justify-start items-center px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-customGray-950 cursor-pointer"
+				class="flex justify-start items-center px-3 py-2 rounded-lg hover:bg-lightGray-700 dark:hover:bg-customGray-950 cursor-pointer"
 				on:click={() => {
 					accessControl = null;
 					updateModel(openAccessDropdownId, accessControl);
@@ -137,7 +137,7 @@
 				}}
 			>
 				<div>
-					<div class="flex items-center gap-2 text-xs dark:text-customGray-100">
+					<div class="flex items-center gap-2 text-xs text-lightGray-100 dark:text-customGray-100">
 						<PublicIcon className="size-3" />{$i18n.t('Public')}
 						{#if accessControl === null}
 							<CheckmarkIcon className="size-4" />
@@ -171,7 +171,7 @@
 						class="flex w-full justify-start items-center rounded-lg px-3 py-2 hover:bg-gray-100 dark:hover:bg-customGray-950 cursor-pointer"
 					>
 						<div>
-							<div class="flex items-center gap-2 text-xs dark:text-customGray-100">
+							<div class="flex items-center gap-2 text-xs text-lightGray-100 dark:text-customGray-100">
 								<GroupIcon className="size-3" />{$i18n.t('Group')}
 								{#if activeGroupIds.length > 0}
 									<CheckmarkIcon className="size-4" />
@@ -189,7 +189,7 @@
 					{#if showSubmenu}
 						<button
 							type="button"
-							class="min-w-[8rem] absolute left-[7.8rem] -bottom-2 bg-white dark:bg-customGray-900 border px-1 py-2 border-gray-300 dark:border-customGray-700 rounded-xl shadow z-20 min-w-30"
+							class="min-w-[8rem] absolute left-[7.8rem] -bottom-2 bg-lightGray-300 dark:bg-customGray-900 border px-1 py-2 border-gray-300 dark:border-customGray-700 rounded-xl shadow z-20 min-w-30"
 							
 							on:mouseenter={() => (hoveringSubmenu = true)}
 							on:mouseleave={() => {
@@ -201,7 +201,7 @@
 								<button
 									type="button"
 									on:click={() => toggleGroup(group.id)}
-									class="grid grid-cols-[16px_1fr] text-xs w-full gap-1 justify-center px-2 py-2 hover:bg-gray-100 dark:hover:bg-customGray-950 rounded-xl"
+									class="grid grid-cols-[16px_1fr] text-xs w-full gap-1 justify-center px-2 py-2 hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-xl"
 								>
 									<div>
 										{#if activeGroupIds.includes(group.id)}
