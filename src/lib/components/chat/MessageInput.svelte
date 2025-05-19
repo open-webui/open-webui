@@ -257,60 +257,54 @@
 		}
 	};
 
-	const inputFilesHandler = async (inputFiles) => {
-		console.log('Input files handler called with:', inputFiles);
-		inputFiles.forEach((file) => {
-			console.log('Processing file:', {
-				name: file.name,
-				type: file.type,
-				size: file.size,
-				extension: file.name.split('.').at(-1)
-			});
+const inputFilesHandler = async (inputFiles) => {
+  console.log('Input files handler called with:', inputFiles);
+  inputFiles.forEach(async (file) => {
+    console.log('Processing file:', {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      extension: file.name.split('.').at(-1)
+    });
 
-			if (
-				($config?.file?.max_size ?? null) !== null &&
-				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
-			) {
-				console.log('File exceeds max size limit:', {
-					fileSize: file.size,
-					maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
-				});
-				toast.error(
-					$i18n.t(`File size should not exceed {{maxSize}} MB.`, {
-						maxSize: $config?.file?.max_size
-					})
-				);
-				return;
-			}
+    if (
+      ($config?.file?.max_size ?? null) !== null &&
+      file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+    ) {
+      // File too large
+      toast.error(
+        $i18n.t(`File size should not exceed {{maxSize}} MB.`, {
+          maxSize: $config?.file?.max_size
+        })
+      );
+      return;
+    }
 
-			if (
-				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
-			) {
-				if (visionCapableModels.length === 0) {
-					toast.error($i18n.t('Selected model(s) do not support image inputs'));
-					return;
-				}
-				let reader = new FileReader();
-				reader.onload = async (event) => {
-					let imageUrl = event.target.result;
-
-					if ($settings?.imageCompression ?? false) {
-						const width = $settings?.imageCompressionSize?.width ?? null;
-						const height = $settings?.imageCompressionSize?.height ?? null;
-
-						if (width || height) {
-							imageUrl = await compressImage(imageUrl, width, height);
-						}
-					}
-
-					files = [
-						...files,
-						{
-							type: 'image',
-							url: `${imageUrl}`
-						}
-					];
-				};
+    if (
+      ['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
+    ) {
+      if (visionCapableModels.length === 0) {
+        toast.error($i18n.t('Selected model(s) do not support image inputs'));
+        return;
+      }
+      let reader = new FileReader();
+      reader.onload = async (event) => {
+        let imageUrl = event.target.result;
+        if ($settings?.imageCompression ?? false) {
+          const width = $settings?.imageCompressionSize?.width ?? null;
+          const height = $settings?.imageCompressionSize?.height ?? null;
+          if (width || height) {
+            imageUrl = await compressImage(imageUrl, width, height);
+          }
+        }
+        files = [
+          ...files,
+          {
+            type: 'image',
+            url: `${imageUrl}`
+          }
+        ];
+      };
 				reader.readAsDataURL(file);
 			} else {
 				uploadFileHandler(file);
