@@ -47,13 +47,13 @@
 	function getStrategyDisplayName(strategy: string): string {
 		switch (strategy) {
 			case KeySelectionStrategy.RANDOM:
-				return i18n.t('Random');
+				return $i18n.t('Random');
 			case KeySelectionStrategy.ROUND_ROBIN:
-				return i18n.t('Round Robin');
+				return $i18n.t('Round Robin');
 			case KeySelectionStrategy.LEAST_RECENTLY_USED:
-				return i18n.t('Least Recently Used');
+				return $i18n.t('Least Recently Used');
 			case KeySelectionStrategy.WEIGHTED:
-				return i18n.t('Weighted');
+				return $i18n.t('Weighted');
 			default:
 				return strategy;
 		}
@@ -62,9 +62,9 @@
 
 <div class="flex flex-col w-full">
 	<div class="mb-1 flex justify-between">
-		<div class="text-xs text-gray-500">{i18n.t('API Keys')}</div>
+		<div class="text-xs text-gray-500">{$i18n.t('API Keys')}</div>
 		<div class="text-xs text-gray-500">
-			<span class="mr-2">{i18n.t('Selection Strategy')}:</span>
+			<span class="mr-2">{$i18n.t('Selection Strategy')}:</span>
 			<select
 				class="bg-transparent outline-hidden text-xs"
 				bind:value={selectionStrategy}
@@ -91,7 +91,7 @@
 
 					{#if selectionStrategy === KeySelectionStrategy.WEIGHTED}
 						<div class="w-16">
-							<Tooltip content={i18n.t('Weight')}>
+							<Tooltip content={$i18n.t('Weight')}>
 								<input
 									type="number"
 									min="1"
@@ -126,7 +126,7 @@
 		<input
 			class="w-full py-1 text-sm rounded-lg bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 			bind:value={newKey}
-			placeholder={i18n.t('Add a new API key')}
+			placeholder={$i18n.t('Add a new API key')}
 		/>
 
 		<div>
@@ -134,20 +134,20 @@
 				type="button"
 				on:click={addApiKey}
 			>
-				<Plus className="size-3.5" strokeWidth="2" />
+				<Plus className="w-3.5 h-3.5" strokeWidth="2" />
 			</button>
 		</div>
 	</div>
 
 	<div class="text-xs text-gray-500 mt-2">
 		{#if selectionStrategy === KeySelectionStrategy.RANDOM}
-			{i18n.t('Random: Selects a random API key for each request')}
+			{$i18n.t('Random: Selects a random API key for each request')}
 		{:else if selectionStrategy === KeySelectionStrategy.ROUND_ROBIN}
-			{i18n.t('Round Robin: Cycles through API keys in sequence')}
+			{$i18n.t('Round Robin: Cycles through API keys in sequence')}
 		{:else if selectionStrategy === KeySelectionStrategy.LEAST_RECENTLY_USED}
-			{i18n.t('Least Recently Used: Selects the key that was used least recently')}
+			{$i18n.t('Least Recently Used: Selects the key that was used least recently')}
 		{:else if selectionStrategy === KeySelectionStrategy.WEIGHTED}
-			{i18n.t('Weighted: Selects keys based on their assigned weights')}
+			{$i18n.t('Weighted: Selects keys based on their assigned weights')}
 		{/if}
 	</div>
 </div>

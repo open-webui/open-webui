@@ -191,9 +191,14 @@
 			key = connection.key;
 
 			// Handle multiple API keys if they exist
-			if (connection.config?.api_keys && Array.isArray(connection.config.api_keys)) {
+			if (connection.config?.api_keys && Array.isArray(connection.config.api_keys) && connection.config.api_keys.length > 0) {
 				apiKeys = connection.config.api_keys;
 				useMultipleKeys = true;
+
+				// Make sure we have the key weights if they exist
+				if (connection.config?.key_weights) {
+					keyWeights = connection.config.key_weights;
+				}
 			} else if (key) {
 				// If there's a single key, add it to the apiKeys array
 				apiKeys = [key];
