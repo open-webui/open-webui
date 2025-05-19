@@ -28,13 +28,13 @@
 					/>
 				</div>
 				<div class="px-4 overflow-hidden">
-					<h1 class="text-sm font-semibold mt-2">
+					<h1 class="text-xs font-semibold mt-2">
 						{name}
 					</h1>
 					<h2 class="text-xs">
 						{subtitle}
 					</h2>
-					<div class="mt-0 overflow-hidden duration-[500ms] transition-[height,margin-top] h-0 group-hover:h-40 group-hover:mt-4 group-focus:h-40 group-focus:mt-4 focus-within:h-40 focus-within:mt-4 max-xs:h-40 max-xs:mt-4 max-xs:h-40 max-xs:mt-4">
+					<div class="mt-0 overflow-hidden duration-[500ms] transition-[height,margin-top] h-0 group-hover:h-36 group-hover:mt-4 group-focus:h-36 group-focus:mt-4 focus-within:h-36 focus-within:mt-4 max-xs:h-36 max-xs:mt-4 max-xs:h-36 max-xs:mt-4">
 						<p class="text-xs">
 							{description}
 						</p>
