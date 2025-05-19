@@ -102,37 +102,37 @@
 	/>
 
 	<div slot="content" class="p-[30px]">
-		<div class="flex pb-5 border-b min-w-[500px]" class:hidden={!loaded}>
-			<div class="flex grow">
-				<div class="self-center ml-1 mr-3">
-					<MagnifyingGlass />
+		{#if loaded}
+			<div class="flex pb-5 border-b min-w-[500px]">
+				<div class="flex grow">
+					<div class="self-center ml-1 mr-3">
+						<MagnifyingGlass />
+					</div>
+					<input
+						class="w-full text-sm py-1 rounded-r-xl outline-none bg-transparent placeholder:text-blue-800"
+						bind:value={query}
+						placeholder={$i18n.t('Search Knowledge', { ns: 'ionos' })}
+					/>
 				</div>
-				<input
-					class="w-full text-sm py-1 rounded-r-xl outline-none bg-transparent placeholder:text-blue-800"
-					bind:value={query}
-					placeholder={$i18n.t('Search Knowledge', { ns: 'ionos' })}
+				<div>
+					<Button
+						on:click={() => create = true}
+						type={ButtonType.secondary}
+					>
+						{$i18n.t('Create knowledge base', { ns: 'ionos' })}
+					</Button>
+				</div>
+			</div>
+			<div class="overflow-y-scroll h-[320px]" >
+				<KnowledgeList
+					items={filteredItems}
+					on:select={select}
 				/>
 			</div>
-			<div>
-				<Button
-					on:click={() => create = true}
-					type={ButtonType.secondary}
-				>
-					{$i18n.t('Create knowledge base', { ns: 'ionos' })}
-				</Button>
+			<div class=" text-gray-500 text-xs py-4 border-t">
+				ⓘ {$i18n.t("Use '#' in the prompt input to load and include your knowledge.", { ns: 'ionos' })}
 			</div>
-		</div>
-		<div class="overflow-y-scroll h-[320px]" class:hidden={!loaded}>
-			<KnowledgeList
-				items={filteredItems}
-				on:select={select}
-			/>
-		</div>
-		<div class=" text-gray-500 text-xs py-4 border-t" class:hidden={!loaded}>
-			ⓘ {$i18n.t("Use '#' in the prompt input to load and include your knowledge.", { ns: 'ionos' })}
-		</div>
-
-		{#if !loaded}
+		{:else}
 			<LoadingCover size="20" />
 		{/if}
 	</div>
