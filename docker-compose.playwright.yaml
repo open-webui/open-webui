@@ -2,6 +2,8 @@ services:
   playwright:
     image: mcr.microsoft.com/playwright:v1.49.1-noble # Version must match requirements.txt
     container_name: playwright
+    environment:
+      - 'PLAYWRIGHT_BROWSERS_PATH=/ms-playwright' # Default browsers directory in playwright:v1.49.1-noble image
     command: npx -y playwright@1.49.1 run-server --port 3000 --host 0.0.0.0
 
   open-webui:
