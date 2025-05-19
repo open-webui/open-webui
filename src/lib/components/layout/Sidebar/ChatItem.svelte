@@ -117,6 +117,7 @@
 			}
 
 			dispatch('change');
+			showDeleteConfirm = false;
 		}
 	};
 
