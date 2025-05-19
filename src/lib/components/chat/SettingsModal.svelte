@@ -356,8 +356,8 @@
 	}
 </script>
 
-<Modal size="md-plus" bind:show className="dark:bg-customGray-800 rounded-2xl" containerClassName="bg-[#1D1A1A]/50 backdrop-blur-[7.44px]">
-	<div class="text-gray-700 dark:text-gray-100">
+<Modal size="md-plus" bind:show className="dark:bg-customGray-800 rounded-2xl" containerClassName="bg-lightGray-250/50 dark:bg-[#1D1A1A]/50 backdrop-blur-[7.44px]">
+	<div class="text-lightGray-100 dark:text-gray-100 bg-lightGray-550 dark:bg-customGray-800 rounded-xl">
 		<div class="px-7">
 			<div class=" flex justify-between dark:text-white pt-5 pb-4 border-b dark:border-customGray-700">
 				<div class="self-center">{$i18n.t('Personal Settings')}</div>
@@ -402,10 +402,10 @@
 					{#each visibleTabs as tabId (tabId)}
 						{#if tabId === 'general'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none text-lightGray-100 flex text-left transition {selectedTab ===
 								'general'
 									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									: 'text-lightGray-100 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'general';
 								}}
@@ -428,10 +428,10 @@
 							</button>
 						{:else if tabId === 'interface'}
 							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
+								class="px-0.5 py-1 min-w-fit rounded-lg text-lightGray-100 flex-1 md:flex-none flex text-left transition {selectedTab ===
 								'interface'
 									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									: ' text-lightGray-100 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'interface';
 								}}
@@ -454,10 +454,10 @@
 							</button>
 						{:else if tabId === 'personalization'}
 							<button
-							class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							class="px-3 py-2.5 min-w-fit rounded-md text-lightGray-100 flex-1 md:flex-none text-left transition {selectedTab ===
 							'personalization'
-								? 'dark:bg-customGray-800'
-								: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								? 'bg-lightGray-700 dark:bg-customGray-800'
+								: ' text-lightGray-100 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'personalization';
 								}}
@@ -502,10 +502,10 @@
 							</button>
 						{:else if tabId === 'chats'}
 							<button
-							class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							class="px-3 py-2.5 min-w-fit text-lightGray-100 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 							'chats'
-								? 'dark:bg-customGray-800'
-								: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+								? 'bg-lightGray-700 dark:bg-customGray-800'
+								: ' text-lightGray-100 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'chats';
 								}}
@@ -523,10 +523,10 @@
 							</button>
 						{:else if tabId === 'account'}
 							<button
-								class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+								class="px-3 py-2.5 min-w-fit rounded-md flex-1 text-lightGray-100 md:flex-none text-left transition {selectedTab ===
 								'account'
-									? 'dark:bg-customGray-800'
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? 'bg-lightGray-700 dark:bg-customGray-800'
+									: ' text-lightGray-100 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
 								on:click={() => {
 									selectedTab = 'account';
 								}}

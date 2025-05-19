@@ -135,10 +135,10 @@
 
 <div class="flex flex-col h-full justify-between space-y-3 text-sm">
 	<div
-		class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700"
+		class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700"
 	>
 		<div class="flex w-full justify-between items-center">
-			<div class="text-xs dark:text-customGray-300">{$i18n.t('Archived Chats')}</div>
+			<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Archived Chats')}</div>
 		</div>
 	</div>
 	<div class="flex flex-col w-full dark:text-gray-200">
@@ -190,15 +190,15 @@
 				</div>
 			{/if}
 		</div>
-		<div class="flex justify-end text-sm font-medium border-t border-customGray-700 pt-5 pb-5">
+		<div class="flex justify-end text-sm font-medium border-t border-lightGray-400 dark:border-customGray-700 pt-5 pb-5">
 			<button
-				class=" text-xs h-10 px-4 py-2 transition rounded-lg bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center"
+				class=" text-xs h-10 px-4 py-2 transition rounded-lg bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-550 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center"
 				on:click={async () => {
 					unarchiveAllHandler();
 				}}>{$i18n.t('Unarchive All Chats')}</button
 			>
 			<button
-				class=" text-xs h-10 px-4 py-2 transition rounded-lg bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center ml-1"
+				class=" text-xs h-10 px-4 py-2 transition rounded-lg bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-550 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center ml-1"
 				on:click={async () => {
 					deleteAllArchivedHandler();
 				}}>{$i18n.t('Delete All Conversations')}</button

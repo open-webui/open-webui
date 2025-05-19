@@ -74,12 +74,12 @@
 					<div class="relative">
 						<textarea
 							bind:value={content}
-							class=" dark:bg-customGray-900 w-full text-sm resize-none rounded-3xl px-6 pt-6 pb-1 outline-none"
+							class="bg-lightGray-300 text-lightGray-100 placeholder:text-lightGray-100 dark:bg-customGray-900 w-full text-sm resize-none rounded-3xl px-6 pt-6 pb-1 outline-none"
 							placeholder={$i18n.t('Enter a detail  about yourself for your LLMs to recall')}
 							rows="2"
 						/>
 
-						<div class="text-xs text-gray-500 dark:text-customGray-100">
+						<div class="text-xs font-medium text-lightGray-100/50 dark:text-customGray-100">
 							ⓘ {$i18n.t('Refer to yourself as "User" (e.g., "User is learning Spanish")')}
 						</div>
 						<button
