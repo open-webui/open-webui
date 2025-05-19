@@ -339,3 +339,47 @@ def moa_response_generation_template(
 def tools_function_calling_generation_template(template: str, tools_specs: str) -> str:
     template = template.replace("{{TOOLS}}", tools_specs)
     return template
+
+
+def filter_message_content_for_tasks(message_list: list[dict]) -> list[dict]:
+    """
+    Filter out the content of messages that are not relevant for task generation.
+    This includes reasoning details, images, and other non-text content.
+
+    Args:
+        message_list (list[dict]): List of messages to filter.
+    Returns:
+        list[dict]: Filtered list of messages with only relevant content.
+    """
+
+    messages = []
+    str_strip_patterns = [
+        r"<details\b[^>]*>.*?<\/details>",  # Reasoning etc. tags
+        r"!\[.*?\]\(.*?\)",  # inline images in markdown format
+    ]
+    str_remove_pattern = "|".join(f"(?:{p})" for p in str_strip_patterns)
+
+    for message in message_list:
+        content = message.get("content", "")
+        if isinstance(content, list):
+            for item in content:
+                if item.get("type") == "text":
+                    content = item["text"]
+                    break
+
+        if isinstance(content, str):
+            content = re.sub(
+                str_remove_pattern,
+                "",
+                content,
+                flags=re.S | re.I,
+            ).strip()
+
+        messages.append(
+            {
+                "role": message["role"],
+                "content": content,
+            }
+        )
+
+    return messages

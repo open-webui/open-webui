@@ -57,6 +57,7 @@ from open_webui.utils.task import (
     get_task_model_id,
     rag_template,
     tools_function_calling_generation_template,
+    filter_message_content_for_tasks,
 )
 from open_webui.utils.misc import (
     deep_update,
@@ -955,30 +956,7 @@ async def process_chat_response(
             # Remove details tags and files from the messages.
             # as get_message_list creates a new list, it does not affect
             # the original messages outside of this handler
-
-            messages = []
-            for message in message_list:
-                content = message.get("content", "")
-                if isinstance(content, list):
-                    for item in content:
-                        if item.get("type") == "text":
-                            content = item["text"]
-                            break
-
-                if isinstance(content, str):
-                    content = re.sub(
-                        r"<details\b[^>]*>.*?<\/details>",
-                        "",
-                        content,
-                        flags=re.S | re.I,
-                    ).strip()
-
-                messages.append(
-                    {
-                        "role": message["role"],
-                        "content": content,
-                    }
-                )
+            messages = filter_message_content_for_tasks(message_list)
 
             if tasks and messages:
                 if TASKS.TITLE_GENERATION in tasks:
