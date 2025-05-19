@@ -241,8 +241,8 @@
 
 </script>
 
-<Modal size="md-plus" bind:show blockBackdropClick={true} className="dark:bg-customGray-800 rounded-2xl" containerClassName="bg-[#1D1A1A]/50 backdrop-blur-[7.44px]">
-	<div class="text-gray-700 dark:text-gray-100">
+<Modal size="md-plus" bind:show blockBackdropClick={true} className="dark:bg-customGray-800 rounded-2xl" containerClassName="bg-lightGray-250/50 dark:bg-[#1D1A1A]/50 backdrop-blur-[7.44px]">
+	<div class="text-lightGray-100 dark:text-customGray-100 bg-lightGray-550 dark:bg-customGray-800 rounded-xl">
 		<div class="px-7">
 			<div class=" flex justify-between dark:text-white pt-5 pb-4 border-b dark:border-customGray-700">
 				<div class="self-center">{$i18n.t('Company Settings')}</div>
@@ -292,8 +292,8 @@
                     <button
                         class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
                         'general-settings'
-                            ? 'dark:bg-customGray-800'
-                            : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+                            ? 'bg-lightGray-700 dark:bg-customGray-800'
+                            : ' text-lightGray-100 dark:text-gray-600 hover:text-bg-lightGray-700 dark:hover:text-white'}"
                         on:click={() => {
                             selectedTab = 'general-settings';
 							updateTabParam(selectedTab);
@@ -310,8 +310,8 @@
 					<button
                         class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
                         'user-management'
-                            ? 'dark:bg-customGray-800'
-                            : ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+                            ? 'bg-lightGray-700 dark:bg-customGray-800'
+                            : ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
                         on:click={() => {
                             selectedTab = 'user-management';
 							updateTabParam(selectedTab);
@@ -328,8 +328,8 @@
 					<button
 						class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 						'model-control'
-							? 'dark:bg-customGray-800'
-							: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+							? 'bg-lightGray-700 dark:bg-customGray-800'
+							: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
 						on:click={() => {
 							selectedTab = 'model-control';
 							updateTabParam(selectedTab);
@@ -346,8 +346,8 @@
 					<button
 						class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 						'analytics'
-							? 'dark:bg-customGray-800'
-							: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+							? 'bg-lightGray-700 dark:bg-customGray-800'
+							: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
 						on:click={() => {
 							selectedTab = 'analytics';
 							updateTabParam(selectedTab);
@@ -364,8 +364,8 @@
 					<button
 						class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 						'billing'
-							? 'dark:bg-customGray-800'
-							: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+							? 'bg-lightGray-700 dark:bg-customGray-800'
+							: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
 						on:click={() => {
 							selectedTab = 'billing';
 							updateTabParam(selectedTab);

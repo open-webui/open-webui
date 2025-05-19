@@ -142,28 +142,28 @@
 
 <div class="pb-56">
 	<div
-		class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5"
+		class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5"
 	>
 		<div class="flex w-full justify-between items-center">
-			<div class="text-xs dark:text-customGray-300">{$i18n.t('Group Management')}</div>
+			<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Group Management')}</div>
 		</div>
 	</div>
 	<div class="flex justify-between items-center mb-5">
 		<div class="flex-1 mr-2">
-			<div class="relative w-full dark:bg-customGray-900 rounded-md">
+			<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 				{#if groupName}
-					<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+					<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 						{$i18n.t('Group name')}
 					</div>
 				{/if}
 				<input
-					class={`px-2.5 text-sm ${groupName ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+					class={`px-2.5 text-sm ${groupName ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent text-lightGray-100 placeholder:text-lightGray-100 dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 					placeholder={$i18n.t('Create a group')}
 					bind:value={groupName}
 				/>
 				{#if !groupName}
 					<span
-						class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+						class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-lightGray-100/50 dark:text-customGray-100/50 pointer-events-none select-none"
 					>
 						{$i18n.t('e.g., Marketing')}
 					</span>
@@ -171,7 +171,7 @@
 			</div>
 		</div>
 		<button
-			class="bg-gray-900 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 text-gray-100 dark:text-customGray-200 px-4 h-10 rounded-lg transition"
+			class="bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-550 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 dark:text-customGray-200 px-4 h-12 rounded-lg transition"
 			on:click={addGroupHandler}
 			type="button"
 		>

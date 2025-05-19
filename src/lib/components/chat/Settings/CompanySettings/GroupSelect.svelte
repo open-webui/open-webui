@@ -51,30 +51,30 @@
 >
 	<button
         type="button"
-		class={`${isFocused ? 'border' : ''} dark:border-customGray-700 w-full flex flex-wrap items-center gap-2 bg-white dark:bg-customGray-900 rounded-md px-2.5 pb-2.5 ${selected?.length > 0 ? 'pt-[22px]' : 'pt-2.5'}`}
+		class={`${isFocused ? 'border' : ''} border-lightGray-400 dark:border-customGray-700 w-full flex flex-wrap items-center gap-2 bg-lightGray-300 dark:bg-customGray-900 rounded-md px-2.5 pb-2.5 ${selected?.length > 0 ? 'pt-[22px]' : 'pt-2.5'}`}
 		on:click={() => {
             inputElement.focus();
             emptyInputPlaceholderVisible = false;
         }}
 	>
         {#if selected?.length > 0}
-        <div class="absolute top-1 text-xs text-customGray-100/50">{$i18n.t('Invite in a group')}</div>
+        <div class="absolute top-1 text-xs text-lightGray-100 dark:text-customGray-100/50">{$i18n.t('Invite in a group')}</div>
         {/if}
         {#if emptyInputPlaceholderVisible}
-        <div class="flex items-center absolute justify-between pr-2.5 w-[calc(100%-10px)] dark:bg-customGray-900">
-            <p class="text-sm dark:text-customGray-100">{$i18n.t('Invite in a group')}</p>
-            <p class="text-xs dark:text-customGray-100/50">{$i18n.t('E.g. Marketing')}</p>
+        <div class="flex items-center absolute justify-between pr-2.5 w-[calc(100%-10px)] bg-lightGray-300 dark:bg-customGray-900">
+            <p class="text-sm text-lightGray-100 dark:text-customGray-100">{$i18n.t('Invite in a group')}</p>
+            <p class="text-xs text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('E.g. Marketing')}</p>
         </div>
         {/if}
 		{#if selected}
 			{#each selected as group, i}
 				<span
-					class="px-2 py-1 dark:bg-customGray-800 rounded-lg text-sm leading-none text-customGray-100 flex items-center"
+					class="px-2 py-1 bg-lightGray-700 text-lightGray-100 dark:bg-customGray-800 rounded-lg text-sm leading-none dark:text-customGray-100 flex items-center"
 				>
 					{group.name}
 					<button
 						type="button"
-						class="ml-1 hover:text-white"
+						class="ml-1 "
 						on:click={() => (selected = selected.filter((_, idx) => idx !== i))}
 					>
 					<CloseTagIcon/>
@@ -101,7 +101,7 @@
                 }    
             }}
 			on:keydown={handleKeyDown}
-			class={`flex-1 min-w-[8ch] outline-none placeholder:text-xs placeholder:text-customGray-100/50 text-sm bg-transparent py-1`}
+			class={`flex-1 min-w-[8ch] outline-none placeholder:text-xs paceholder:text-lightGray-100/50 dark:placeholder:text-customGray-100/50 text-sm bg-transparent py-1`}
 		/>
         </button>
 

@@ -23,15 +23,15 @@
 
 </script>
 <div class="flex flex-col pt-5">
-    <div class="w-fit flex dark:bg-customGray-900 rounded-md mx-auto">
+    <div class="w-fit flex bg-lightGray-700 dark:bg-customGray-900 rounded-md mx-auto">
         <button
             on:click={() => (activeTab = 'users')}
-            class="{activeTab === 'users' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-6 py-2 flex-shrink-0 text-xs leading-none dark:text-customGray-100"
+            class="{activeTab === 'users' ? 'bg-lightGray-400 border-lightGray-250 dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-6 py-2 font-meduim flex-shrink-0 text-xs leading-none dark:text-customGray-100"
             >{$i18n.t('Users')}</button
         >
         <button
             on:click={() => (activeTab = 'groups')}
-            class="{activeTab === 'groups' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-6 py-2 flex-shrink-0 text-xs leading-none dark:text-customGray-100"
+            class="{activeTab === 'groups' ? 'bg-lightGray-400 border-lightGray-250 dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-6 py-2 font-meduim flex-shrink-0 text-xs leading-none dark:text-customGray-100"
             >{$i18n.t('Groups')}</button
         >
     </div>

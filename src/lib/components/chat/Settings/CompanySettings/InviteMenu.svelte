@@ -69,7 +69,7 @@
 	</div>
 		{#if showDropdown}
 			<div
-				class="w-[10rem] flex flex-col absolute left-0 right-0 bg-white dark:bg-customGray-900 px-1 py-2 border border-gray-300 dark:border-customGray-700 rounded-lg z-10"
+				class="w-[10rem] flex flex-col absolute left-0 right-0 bg-lightGray-300 border-lightGray-400 dark:bg-customGray-900 px-1 py-2 border dark:border-customGray-700 rounded-lg z-10"
 			>
 				{#if (inviteCompleted)}
 					<button
@@ -77,7 +77,7 @@
 						on:click={() => {
 							dispatch('deleteUser')
 						}}
-						class="flex gap-2 items-center px-3 py-2 text-xs text-[#F65351] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md"
+						class="flex gap-2 items-center px-3 py-2 text-xs text-[#F65351] font-medium cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md"
 					>
 						<DeleteIcon />
 						<div class="flex items-center">{$i18n.t('Delete user')}</div>
@@ -86,7 +86,7 @@
 					<button
 						type="button"
 						on:click={reinvite}
-						class="flex gap-2 items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
+						class="flex gap-2 items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
 					>
 						<MessageEditIcon />
 						<div class="flex items-center">{$i18n.t('Resend invite')}</div>
@@ -97,7 +97,7 @@
 						on:click={() => {
 							copyInviteLink(user.invite_token)
 						}}
-						class="flex gap-2 items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
+						class="flex gap-2 items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
 					>
 						<ShareIcon />
 						<div class="flex items-center">{$i18n.t('Copy invite link')}</div>
@@ -105,7 +105,7 @@
 					<button
 						type="button"
 						on:click={revokeInviteHandler}
-						class="flex gap-2 items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
+						class="flex gap-2 items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
 					>
 						<RevokeInvite />
 						<div class="flex items-center">{$i18n.t('Revoke invite')}</div>

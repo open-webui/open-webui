@@ -166,10 +166,10 @@
 
 <div class="pb-24 min-h-[32rem]">
 	<div
-		class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5"
+		class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5"
 	>
 		<div class="flex w-full justify-between items-center">
-			<div class="text-xs dark:text-customGray-300">{$i18n.t('Member Management')}</div>
+			<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Member Management')}</div>
 		</div>
 	</div>
 	<form
@@ -179,17 +179,17 @@
 		}}
 	>
 		<div
-			class="bg-white relative dark:bg-customGray-900 rounded-md mb-2.5"
+			class="bg-lightGray-300 relative dark:bg-customGray-900 rounded-md mb-2.5"
 			style="min-height: 82px;"
 		>
 			{#if invitedEmails?.length < 1 && !emailFocused}
 				<div
-					class="absolute left-2.5 text-sm top-2.5 dark:text-customGray-100 dark:bg-customGray-900 pointer-events-none"
+					class="absolute left-2.5 text-sm top-2.5 bg-lightGray-300 text-lightGray-100 dark:text-customGray-100 dark:bg-customGray-900 pointer-events-none"
 				>
 					{$i18n.t('Send invites to')}
 				</div>
 				<span
-					class="absolute top-[26px] w-[12rem] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+					class="absolute top-[26px] w-[12rem] text-lightGray-100/50 text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
 				>
 					Add Team member mails (separated by comma)
 				</span>
@@ -198,7 +198,7 @@
 				{#each invitedEmails as email, index (email)}
 					<div
 						style={`background-color: ${emailColors[index % emailColors.length]}`}
-						class="flex items-start text-xs px-2 py-1 rounded-full dark:text-white"
+						class="flex items-start text-xs px-2 py-1 rounded-full text-white dark:text-white"
 					>
 						{email}
 						<button
@@ -215,7 +215,7 @@
 					bind:this={inputRef}
 					bind:value={input}
 					placeholder="Enter email..."
-					class="text-xs bg-transparent outline-none px-1 h-6"
+					class="text-xs bg-transparent outline-none px-1 h-6 min-w-[100px]"
 					on:keydown={handleKeydown}
 					on:blur={() => {
 						addEmail();
@@ -227,7 +227,7 @@
 				<span bind:this={ghostRef} class="invisible absolute whitespace-pre text-xs px-1"></span>
 			</div>
 		</div>
-		<span class="text-xs dark:text-customGray-100/50 mb-5"
+		<span class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 mb-5"
 			>{$i18n.t('Separate multiple email addresses with commas.')}</span
 		>
 
@@ -239,29 +239,29 @@
 						? 'h-12'
 						: 'h-10'} px-3 py-2 {showUsersRoleDropdown
 						? 'border'
-						: ''} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer"
+						: ''} border-lightGray-400 dark:border-customGray-700 rounded-md bg-lightGray-300 dark:bg-customGray-900 cursor-pointer"
 					on:click={() => (showUsersRoleDropdown = !showUsersRoleDropdown)}
 				>
-					<span class="text-gray-500 dark:text-customGray-100">{$i18n.t('User Permissions')}</span>
+					<span class="text-lightGray-100 dark:text-customGray-100">{$i18n.t('User Permissions')}</span>
 					<div class="flex items-center">
 						<div class="text-xs dark:text-customGray-100/50 max-w-[15rem] text-left">
 							{#if selectedRole === 'user'}
-								<span class="bg-[#024D15] rounded-[9px] text-xs text-[#0F8C18] px-2 py-1 w-fit"
+								<span class="bg-[#024D15] rounded-[9px] text-xs text-white dark:text-[#0F8C18] px-2 py-1 w-fit"
 									>{$i18n.t('User')}</span
 								>
 							{:else}
-								<span class="bg-[#33176E] rounded-[9px] text-xs text-[#7147CD] px-2 py-1 w-fit"
+								<span class="bg-[#33176E] rounded-[9px] text-xs text-white dark:text-[#7147CD] px-2 py-1 w-fit"
 									>{$i18n.t('Admin')}</span
 								>
 							{/if}
 						</div>
-						<ChevronDown className="size-3 ml-1" />
+						<ChevronDown className="size-3 ml-1 text-lightGray-100 dark:text-customGray-100" />
 					</div>
 				</button>
 
 				{#if showUsersRoleDropdown}
 					<div
-						class="max-h-60 overflow-y-auto absolute top-10 right-4 z-50 bg-white dark:bg-customGray-900 border border-gray-300 dark:border-customGray-700 rounded-md shadow"
+						class="max-h-60 overflow-y-auto absolute top-10 right-4 z-50 bg-lightGray-300 dark:bg-customGray-900 border border-gray-300 dark:border-customGray-700 rounded-md shadow"
 					>
 						<div class="px-[6px] py-1">
 							{#each roles as role}
@@ -276,11 +276,11 @@
 								>
 									<div class="flex items-center">
 										{#if role === 'user'}
-											<span class="bg-[#024D15] rounded-[9px] py-[3px] text-xs text-[#0F8C18] px-2 w-fit"
+											<span class="bg-[#024D15] rounded-[9px] py-[3px] text-xs text-white dark:text-[#0F8C18] px-2 w-fit"
 												>{$i18n.t('User')}</span
 											>
 										{:else}
-											<span class="bg-[#33176E] rounded-[9px] py-[3px] text-xs text-[#7147CD] px-2 w-fit"
+											<span class="bg-[#33176E] rounded-[9px] py-[3px] text-xs text-white dark:text-[#7147CD] px-2 w-fit"
 												>{$i18n.t('Admin')}</span
 											>
 										{/if}
@@ -295,7 +295,7 @@
 		<div class="flex w-full items-start justify-between">
 			<GroupSelect bind:selected={selectedGroups} {groups} placeholder="Add group..." />
 			<button
-				class="ml-2.5 whitespace-nowrap bg-gray-900 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 text-gray-100 dark:text-customGray-200 py-2.5 px-4 h-12 rounded-lg transition"
+				class="ml-2.5 whitespace-nowrap bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-550 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 dark:text-customGray-200 py-2.5 px-4 h-12 rounded-lg transition"
 				on:click={() => {
 					inviteUsersHandler();
 				}}
@@ -332,11 +332,11 @@
 	</div>
 
 	<div
-		class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5"
+		class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5"
 	>
 		<div class="flex w-full justify-start items-center">
-			<div class="text-xs dark:text-customGray-300 w-[calc(100%-250px)]">{$i18n.t('Users')}</div>
-			<div class="text-xs dark:text-customGray-300">{$i18n.t('Roles')}</div>
+			<div class="text-xs text-lightGray-100 dark:text-customGray-300 w-[calc(100%-250px)]">{$i18n.t('Users')}</div>
+			<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Roles')}</div>
 		</div>
 	</div>
 
@@ -370,8 +370,8 @@
 					<button
 						type="button"
 						class="px-2 py-[3px] text-xs rounded-lg {user.role === 'user'
-							? 'bg-[#024D15] text-[#0F8C18]'
-							: 'bg-[#33176E] text-[#7147CD]'}"
+							? 'bg-[#024D15] text-white dark:text-[#0F8C18]'
+							: 'bg-[#33176E] text-white dark:text-[#7147CD]'}"
 						on:click={() => (openDropdownIdx = openDropdownIdx === userIdx ? null : userIdx)}
 					>
 						{$i18n.t(user.role === 'user' ? 'User' : 'Admin')}
@@ -380,7 +380,7 @@
 					{#if openDropdownIdx === userIdx}
 						<div
 							use:onClickOutside={() => (openDropdownIdx = null)}
-							class="absolute top-6 -right-4 z-10 py-1 bg-white dark:bg-customGray-900 rounded-md shadow-lg border dark:border-customGray-700"
+							class="absolute top-6 -right-4 z-10 py-1 bg-lightGray-300 dark:bg-customGray-900 rounded-md shadow-lg border dark:border-customGray-700"
 						>
 							<button
 								class="flex justify-end w-full whitespace-nowrap text-left pl-2 pr-[6px] py-1 text-xs"
@@ -389,7 +389,7 @@
 									openDropdownIdx = null;
 								}}
 							>
-								<span class="bg-[#024D15] rounded-[9px] text-xs text-[#0F8C18] px-2 py-[3px] w-fit"
+								<span class="bg-[#024D15] rounded-[9px] text-xs text-white dark:text-[#0F8C18] px-2 py-[3px] w-fit"
 									>{$i18n.t('User')}</span
 								>
 							</button>
@@ -400,7 +400,7 @@
 									openDropdownIdx = null;
 								}}
 							>
-								<span class="bg-[#33176E] rounded-[9px] text-xs text-[#7147CD] px-2 py-[3px] w-fit"
+								<span class="bg-[#33176E] rounded-[9px] text-xs text-white dark:text-[#7147CD] px-2 py-[3px] w-fit"
 									>{$i18n.t('Admin')}</span
 								>
 							</button>
@@ -412,7 +412,7 @@
 			<div>
 				{#if user?.first_name === 'INVITED'}
 					<div
-						class="self-center rounded-[9px] text-xs px-2 py-[3px] w-fit whitespace-nowrap bg-[#113272] text-[#3F70CF]"
+						class="self-center rounded-[9px] text-xs px-2 py-[3px] w-fit whitespace-nowrap bg-[#113272] text-white dark:text-[#3F70CF]"
 					>
 						Invite pending
 					</div>

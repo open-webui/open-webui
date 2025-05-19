@@ -61,7 +61,7 @@
 	</div>
 	{#if showDropdown}
 		<div
-			class="min-w-[18rem] flex flex-col absolute left-0 right-0 bg-white dark:bg-customGray-900 px-2 py-2 border border-gray-300 dark:border-customGray-700 rounded-lg z-10"
+			class="min-w-[18rem] flex flex-col absolute left-0 right-0 bg-lightGray-300 border-lightGray-400 dark:bg-customGray-900 px-2 py-2 border dark:border-customGray-700 rounded-lg z-10"
 		>
 			<div class="flex">
 				<div
@@ -117,7 +117,7 @@
 							});
 							document.getElementById(`group-${group.id}`)?.click();
 						}}
-						class="w-full flex items-center p-1 hover:dark:bg-customGray-950 rounded-lg cursor-pointer"
+						class="w-full flex items-center p-1 hover:bg-lightGray-700 hover:dark:bg-customGray-950 rounded-lg cursor-pointer"
 					>
 						<img
 							class=" rounded-full w-3 h-3 object-cover mr-1 whitespace-nowrap"
@@ -129,12 +129,12 @@
 							alt="user"
 						/>
 						{#if user?.first_name !== "INVITED"}
-							<div class="text-xs dark:text-customGray-100 mr-1 whitespace-nowrap">
+							<div class="text-xs text-lightGray-100 dark:text-customGray-100 mr-1 whitespace-nowrap">
 								{user.first_name}
 								{user.last_name}
 							</div>
 						{/if}
-						<div class="text-xs dark:text-customGray-590 mr-1 whitespace-nowrap">{user.email}</div>
+						<div class="text-xs text-lightGray-100 dark:text-customGray-590 mr-1 whitespace-nowrap">{user.email}</div>
 					</button>
 				{/each}
 			</div>

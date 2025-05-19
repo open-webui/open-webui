@@ -50,12 +50,12 @@
 </script>
 
 <div class="relative">
-	<div class="{editor?.getHTML() === '<p></p>' ? 'text-sm' : 'text-xs'} absolute left-2.5 top-1 dark:text-customGray-100/50">
+	<div class="{editor?.getHTML() === '<p></p>' ? 'text-sm' : 'text-xs'} absolute text-lightGray-100/50 left-2.5 top-1 dark:text-customGray-100/50">
 		{$i18n.t('User notice')}
 	</div>
 	<div
 		id="editor"
-		class="prose rounded p-2 px-2.5 dark:bg-customGray-900 min-h-[48px] dark:text-customGray-100"
+		class="prose rounded p-2 px-2.5 text-lightGray-100 bg-lightGray-300 dark:bg-customGray-900 min-h-[48px] dark:text-customGray-100"
 	></div>
 	<button on:click={setLink} class="absolute right-2 w-4 h-4 top-4">
 		<AddLinkIcon />
@@ -68,11 +68,11 @@
 					type="url"
 					bind:value={url}
 					placeholder="Enter URL"
-					class="outline-none text-sm dark:text-customGray-100 rounded-md p-1 dark:bg-customGray-900 w-[300px]"
+					class="outline-none text-sm text-lightGray-100 placeholder:text-lightGray-100 dark:text-customGray-100 rounded-md p-1 bg-lightGray-300 dark:bg-customGray-900 w-[300px]"
 				/>
 				<button
 					on:click={applyLink}
-					class=" ml-1 text-xs dark:text-customGray-200 h-[30px] border dark:border-customGray-700 dark:bg-customGray-950 rounded-lg px-4 py-1"
+					class=" ml-1 text-xs dark:text-customGray-200 h-[30px] border dark:border-customGray-700 bg-lightGray-300 dark:bg-customGray-950 rounded-lg px-4 py-1"
 					>{$i18n.t('Apply')}</button
 				>
 				<button on:click={removeLink} class="text-xs dark:text-customGray-200">{$i18n.t('Remove Link')}</button>
