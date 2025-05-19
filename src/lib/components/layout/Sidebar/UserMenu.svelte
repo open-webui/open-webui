@@ -31,7 +31,7 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="w-full {className} text-sm rounded-2xl p-2.5 pr-3.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary"
+			class="w-full {className} text-xs font-semibold rounded-2xl p-2.5 pr-3.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg font-primary flex flex-col gap-2"
 			sideOffset={8}
 			side="bottom"
 			align="start"

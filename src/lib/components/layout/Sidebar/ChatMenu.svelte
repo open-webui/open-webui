@@ -133,14 +133,14 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[200px] rounded-2xl p-2.5 pr-3.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+			class="flex flex-col gap-2 w-full max-w-[200px] text-xs font-semibold rounded-2xl p-2.5 pr-3.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 			sideOffset={-2}
 			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
-				class="flex gap-2 items-center p-2.5 text-sm text-blue-800 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md"
+				class="flex gap-2 items-center p-2.5 text-xs text-blue-800 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					pinHandler();
 				}}
@@ -155,7 +155,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center p-2.5 text-sm text-blue-800 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md"
+				class="flex gap-2 items-center p-2.5 text-xs text-blue-800 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
 					renameHandler();
 				}}
@@ -166,7 +166,7 @@
 
 			<DropdownMenu.Sub>
 				<DropdownMenu.SubTrigger
-					class="flex gap-2 items-center p-2.5 text-sm text-blue-800  cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md"
+					class="flex gap-2 items-center p-2.5 text-xs text-blue-800  cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md"
 				>
 					<Download strokeWidth="2" />
 
@@ -178,7 +178,7 @@
 					sideOffset={8}
 				>
 					<DropdownMenu.Item
-						class="flex gap-2 items-center p-2.5 text-sm text-blue-800  cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md"
+						class="flex gap-2 items-center p-2.5 text-xs text-blue-800  cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
 							downloadJSONExport();
 						}}
@@ -186,7 +186,7 @@
 						<div class="flex items-center line-clamp-1">{$i18n.t('Export chat (.json)')}</div>
 					</DropdownMenu.Item>
 					<DropdownMenu.Item
-						class="flex gap-2 items-center p-2.5 text-sm text-blue-800  cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md"
+						class="flex gap-2 items-center p-2.5 text-xs text-blue-800  cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
 							downloadTxt();
 						}}
@@ -195,7 +195,7 @@
 					</DropdownMenu.Item>
 
 					<DropdownMenu.Item
-						class="flex gap-2 items-center p-2.5 text-sm text-blue-800  cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md"
+						class="flex gap-2 items-center p-2.5 text-xs text-blue-800  cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md"
 						on:click={() => {
 							downloadPdf();
 						}}
@@ -205,7 +205,7 @@
 				</DropdownMenu.SubContent>
 			</DropdownMenu.Sub>
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center p-2.5 text-sm text-blue-800  cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md text-red-500"
+				class="flex  gap-2  items-center p-2.5 text-xs text-blue-800  cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 rounded-md text-red-500"
 				on:click={() => {
 					deleteHandler();
 				}}
