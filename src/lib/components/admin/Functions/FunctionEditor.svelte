@@ -277,7 +277,7 @@ class Pipe:
 			await tick();
 
 			if (res) {
-				console.log('Code formatted successfully');
+				console.info('Code formatted successfully');
 
 				saveHandler();
 			}

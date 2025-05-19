@@ -26,6 +26,9 @@ ARG BUILD_HASH
 ENV NODE_OPTIONS="--max-old-space-size=6144"
 WORKDIR /app
 
+# to store git revision in build
+RUN apk add --no-cache git
+
 COPY package.json package-lock.json ./
 RUN npm ci
 
