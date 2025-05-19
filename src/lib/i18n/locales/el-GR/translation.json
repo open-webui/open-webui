@@ -321,6 +321,7 @@
 	"Deleted {{deleteModelTag}}": "Διαγράφηκε το {{deleteModelTag}}",
 	"Deleted {{name}}": "Διαγράφηκε το {{name}}",
 	"Deleted User": "Διαγράφηκε ο Χρήστης",
+	"Deployment names are required for Azure OpenAI": "",
 	"Describe Pictures in Documents": "",
 	"Describe your knowledge base and objectives": "Περιγράψτε τη βάση γνώσης και τους στόχους σας",
 	"Description": "Περιγραφή",

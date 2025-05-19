@@ -321,6 +321,7 @@
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} हटा दिया गया",
 	"Deleted {{name}}": "{{name}} हटा दिया गया",
 	"Deleted User": "",
+	"Deployment names are required for Azure OpenAI": "",
 	"Describe Pictures in Documents": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "विवरण",

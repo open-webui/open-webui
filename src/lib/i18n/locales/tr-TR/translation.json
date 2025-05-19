@@ -321,6 +321,7 @@
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} silindi",
 	"Deleted {{name}}": "{{name}} silindi",
 	"Deleted User": "Kullanıcı Silindi",
+	"Deployment names are required for Azure OpenAI": "",
 	"Describe Pictures in Documents": "",
 	"Describe your knowledge base and objectives": "Bilgi tabanınızı ve hedeflerinizi açıklayın",
 	"Description": "Açıklama",

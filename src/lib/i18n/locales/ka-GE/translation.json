@@ -321,6 +321,7 @@
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} წაშლილია",
 	"Deleted {{name}}": "Deleted {{name}}",
 	"Deleted User": "წაშლილი მომხმარებელი",
+	"Deployment names are required for Azure OpenAI": "",
 	"Describe Pictures in Documents": "",
 	"Describe your knowledge base and objectives": "",
 	"Description": "აღწერა",

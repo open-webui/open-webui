@@ -321,6 +321,7 @@
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} を削除しました",
 	"Deleted {{name}}": "{{name}}を削除しました",
 	"Deleted User": "ユーザーを削除",
+	"Deployment names are required for Azure OpenAI": "",
 	"Describe Pictures in Documents": "ドキュメントの画像を説明",
 	"Describe your knowledge base and objectives": "ナレッジベースと目的を説明してください",
 	"Description": "説明",

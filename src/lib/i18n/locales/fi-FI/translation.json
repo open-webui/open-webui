@@ -321,6 +321,7 @@
 	"Deleted {{deleteModelTag}}": "Poistettu {{deleteModelTag}}",
 	"Deleted {{name}}": "Poistettu {{nimi}}",
 	"Deleted User": "Käyttäjä poistettu",
+	"Deployment names are required for Azure OpenAI": "",
 	"Describe Pictures in Documents": "",
 	"Describe your knowledge base and objectives": "Kuvaa tietokantasi ja tavoitteesi",
 	"Description": "Kuvaus",

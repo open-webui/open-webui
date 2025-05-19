@@ -321,6 +321,7 @@
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} 삭제됨",
 	"Deleted {{name}}": "{{name}}을(를) 삭제했습니다.",
 	"Deleted User": "삭제된 사용자",
+	"Deployment names are required for Azure OpenAI": "",
 	"Describe Pictures in Documents": "",
 	"Describe your knowledge base and objectives": "지식 기반에 대한 설명과 목적을 입력하세요",
 	"Description": "설명",

@@ -321,6 +321,7 @@
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} བསུབས་ཟིན།",
 	"Deleted {{name}}": "{{name}} བསུབས་ཟིན།",
 	"Deleted User": "བེད་སྤྱོད་མཁན་བསུབས་ཟིན།",
+	"Deployment names are required for Azure OpenAI": "",
 	"Describe Pictures in Documents": "",
 	"Describe your knowledge base and objectives": "ཁྱེད་ཀྱི་ཤེས་བྱའི་རྟེན་གཞི་དང་དམིགས་ཡུལ་འགྲེལ་བཤད་བྱེད་པ།",
 	"Description": "འགྲེལ་བཤད།",

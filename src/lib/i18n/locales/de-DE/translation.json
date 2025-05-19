@@ -321,6 +321,7 @@
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} gelöscht",
 	"Deleted {{name}}": "{{name}} gelöscht",
 	"Deleted User": "Benutzer gelöscht",
+	"Deployment names are required for Azure OpenAI": "",
 	"Describe Pictures in Documents": "",
 	"Describe your knowledge base and objectives": "Beschreibe deinen Wissensspeicher und deine Ziele",
 	"Description": "Beschreibung",

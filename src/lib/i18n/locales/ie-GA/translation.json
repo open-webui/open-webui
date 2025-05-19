@@ -321,6 +321,7 @@
 	"Deleted {{deleteModelTag}}": "Scriosta {{deleteModelTag}}",
 	"Deleted {{name}}": "Scriosta {{name}}",
 	"Deleted User": "Úsáideoir Scriosta",
+	"Deployment names are required for Azure OpenAI": "",
 	"Describe Pictures in Documents": "",
 	"Describe your knowledge base and objectives": "Déan cur síos ar do bhunachar eolais agus do chuspóirí",
 	"Description": "Cur síos",

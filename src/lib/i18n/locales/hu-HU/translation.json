@@ -321,6 +321,7 @@
 	"Deleted {{deleteModelTag}}": "{{deleteModelTag}} törölve",
 	"Deleted {{name}}": "{{name}} törölve",
 	"Deleted User": "Felhasználó törölve",
+	"Deployment names are required for Azure OpenAI": "",
 	"Describe Pictures in Documents": "",
 	"Describe your knowledge base and objectives": "Írd le a tudásbázisodat és céljaidat",
 	"Description": "Leírás",

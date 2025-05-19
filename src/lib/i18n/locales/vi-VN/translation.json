@@ -321,6 +321,7 @@
 	"Deleted {{deleteModelTag}}": "Đã xóa {{deleteModelTag}}",
 	"Deleted {{name}}": "Đã xóa {{name}}",
 	"Deleted User": "Người dùng đã xóa",
+	"Deployment names are required for Azure OpenAI": "",
 	"Describe Pictures in Documents": "",
 	"Describe your knowledge base and objectives": "Mô tả cơ sở kiến thức và mục tiêu của bạn",
 	"Description": "Mô tả",
