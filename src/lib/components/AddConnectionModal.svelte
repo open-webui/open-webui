@@ -33,7 +33,7 @@
 	let connectionType = 'external';
 	let azure = false;
 	$: azure =
-		(url.includes('openai.azure.com') || url.includes('cognitive.microsoft.com')) && !direct
+		(url.includes('azure.com') || url.includes('cognitive.microsoft.com')) && !direct
 			? true
 			: false;
 
@@ -106,6 +106,28 @@
 			return;
 		}
 
+		if (azure) {
+			if (!apiVersion) {
+				loading = false;
+
+				toast.error('API Version is required');
+				return;
+			}
+
+			if (!key) {
+				loading = false;
+
+				toast.error('Key is required');
+				return;
+			}
+
+			if (modelIds.length === 0) {
+				loading = false;
+				toast.error('Deployment names are required');
+				return;
+			}
+		}
+
 		// remove trailing slash from url
 		url = url.replace(/\/$/, '');
 
@@ -149,6 +171,7 @@
 			} else {
 				connectionType = connection.config?.connection_type ?? 'external';
 				azure = connection.config?.azure ?? false;
+				apiVersion = connection.config?.api_version ?? '';
 			}
 		}
 	};
@@ -382,9 +405,10 @@
 											url: url
 										})}
 									{:else if azure}
-										{$i18n.t('Leave empty to include all models from "{{url}}" endpoint', {
+										{$i18n.t('Deployment names are required for Azure OpenAI.')}
+										<!-- {$i18n.t('Leave empty to include all models from "{{url}}" endpoint', {
 											url: `${url}/openai/deployments`
-										})}
+										})} -->
 									{:else}
 										{$i18n.t('Leave empty to include all models from "{{url}}/models" endpoint', {
 											url: url
@@ -394,7 +418,7 @@
 							{/if}
 						</div>
 
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+						<hr class=" border-gray-100 dark:border-gray-700/10 my-1.5 w-full" />
 
 						<div class="flex items-center">
 							<input

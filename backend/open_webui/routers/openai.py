@@ -489,24 +489,10 @@ async def get_models(
                 }
 
                 if api_config.get("azure", False):
-                    headers["api-key"] = key
-
-                    api_version = api_config.get("api_version", "2023-03-15-preview")
-                    async with session.get(
-                        f"{url}/openai/deployments?api-version={api_version}",
-                        headers=headers,
-                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                    ) as r:
-                        if r.status != 200:
-                            # Extract response error details if available
-                            error_detail = f"HTTP Error: {r.status}"
-                            res = await r.json()
-                            if "error" in res:
-                                error_detail = f"External Error: {res['error']}"
-                            raise Exception(error_detail)
-
-                        response_data = await r.json()
-                        models = response_data
+                    models = {
+                        "data": api_config.get("model_ids", []) or [],
+                        "object": "list",
+                    }
                 else:
                     headers["Authorization"] = f"Bearer {key}"
 
@@ -599,10 +585,10 @@ async def verify_connection(
 
             if api_config.get("azure", False):
                 headers["api-key"] = key
+                api_version = api_config.get("api_version", "") or "2023-03-15-preview"
 
-                api_version = api_config.get("api_version", "2023-03-15-preview")
                 async with session.get(
-                    f"{url}/openai/deployments?api-version={api_version}",
+                    url=f"{url}/openai/models?api-version={api_version}",
                     headers=headers,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
@@ -828,7 +814,7 @@ async def generate_chat_completion(
 
     if api_config.get("azure", False):
         request_url, payload = convert_to_azure_payload(url, payload)
-        api_version = api_config.get("api_version", "2023-03-15-preview")
+        api_version = api_config.get("api_version", "") or "2023-03-15-preview"
         headers["api-key"] = key
         headers["api-version"] = api_version
         request_url = f"{request_url}/chat/completions?api-version={api_version}"
@@ -936,7 +922,9 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
         if api_config.get("azure", False):
             headers["api-key"] = key
-            headers["api-version"] = api_config.get("api_version", "2023-03-15-preview")
+            headers["api-version"] = (
+                api_config.get("api_version", "") or "2023-03-15-preview"
+            )
 
             payload = json.loads(body)
             url, payload = convert_to_azure_payload(url, payload)
