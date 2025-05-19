@@ -28,7 +28,7 @@
 		.map((model) => ({
 			id: model.id,
 			iconName: model?.info?.meta?.tags?.reduce(tagsToIconName, ''),
-			modelDisplayName: model.name.split(' ')?.[1] ?? model.name,
+			modelDisplayName: model.name ?? '',
 		}));
 
 	const save = async () => {
@@ -53,7 +53,7 @@
 			pressed={id === selectedModels[0]}
 		>
 			<AgentIcon {iconName} />
-			<span class="ml-1">{modelDisplayName}</span>
+			<span class="ml-1 text-nowrap">{modelDisplayName}</span>
 		</Button>
 	{/each}
 </div>
