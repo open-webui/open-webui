@@ -31,6 +31,7 @@
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
+	import XMark from '../icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -52,12 +53,16 @@
 	let tools = [];
 	let filteredItems = [];
 
-	$: filteredItems = tools.filter(
-		(t) =>
-			query === '' ||
-			t.name.toLowerCase().includes(query.toLowerCase()) ||
-			t.id.toLowerCase().includes(query.toLowerCase())
-	);
+	$: filteredItems = tools.filter((t) => {
+		if (query === '') return true;
+		const lowerQuery = query.toLowerCase();
+		return (
+			(t.name || '').toLowerCase().includes(lowerQuery) ||
+			(t.id || '').toLowerCase().includes(lowerQuery) ||
+			(t.user?.name || '').toLowerCase().includes(lowerQuery) || // Search by user name
+			(t.user?.email || '').toLowerCase().includes(lowerQuery) // Search by user email
+		);
+	});
 
 	const shareHandler = async (tool) => {
 		const item = await getToolById(localStorage.token, tool.id).catch((error) => {
@@ -190,6 +195,18 @@
 					bind:value={query}
 					placeholder={$i18n.t('Search Tools')}
 				/>
+				{#if query}
+					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+						<button
+							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							on:click={() => {
+								query = '';
+							}}
+						>
+							<XMark className="size-3" strokeWidth="2" />
+						</button>
+					</div>
+				{/if}
 			</div>
 
 			<div>
@@ -411,7 +428,9 @@
 							}
 						}}
 					>
-						<div class=" self-center mr-2 font-medium line-clamp-1">{$i18n.t('Export Tools')}</div>
+						<div class=" self-center mr-2 font-medium line-clamp-1">
+							{$i18n.t('Export Tools')} ({tools.length})
+						</div>
 
 						<div class=" self-center">
 							<svg

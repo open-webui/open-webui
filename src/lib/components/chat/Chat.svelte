@@ -119,6 +119,7 @@
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 
 	let selectedToolIds = [];
+	let selectedFilterIds = [];
 	let imageGenerationEnabled = false;
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
@@ -146,6 +147,7 @@
 			prompt = '';
 			files = [];
 			selectedToolIds = [];
+			selectedFilterIds = [];
 			webSearchEnabled = false;
 			imageGenerationEnabled = false;
 
@@ -159,6 +161,7 @@
 						prompt = input.prompt;
 						files = input.files;
 						selectedToolIds = input.selectedToolIds;
+						selectedFilterIds = input.selectedFilterIds;
 						webSearchEnabled = input.webSearchEnabled;
 						imageGenerationEnabled = input.imageGenerationEnabled;
 						codeInterpreterEnabled = input.codeInterpreterEnabled;
@@ -192,10 +195,12 @@
 
 	$: if (selectedModels) {
 		setToolIds();
+		setFilterIds();
 	}
 
 	$: if (atSelectedModel || selectedModels) {
 		setToolIds();
+		setFilterIds();
 	}
 
 	const setToolIds = async () => {
@@ -209,9 +214,19 @@
 
 		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
 		if (model) {
-			selectedToolIds = (model?.info?.meta?.toolIds ?? []).filter((id) =>
-				$tools.find((t) => t.id === id)
-			);
+			selectedToolIds = [
+				...new Set(
+					[...selectedToolIds, ...(model?.info?.meta?.toolIds ?? [])].filter((id) =>
+						$tools.find((t) => t.id === id)
+					)
+				)
+			];
+		}
+	};
+
+	const setFilterIds = async () => {
+		if (selectedModels.length !== 1 && !atSelectedModel) {
+			selectedFilterIds = [];
 		}
 	};
 
@@ -424,6 +439,7 @@
 			prompt = '';
 			files = [];
 			selectedToolIds = [];
+			selectedFilterIds = [];
 			webSearchEnabled = false;
 			imageGenerationEnabled = false;
 			codeInterpreterEnabled = false;
@@ -437,6 +453,7 @@
 					prompt = input.prompt;
 					files = input.files;
 					selectedToolIds = input.selectedToolIds;
+					selectedFilterIds = input.selectedFilterIds;
 					webSearchEnabled = input.webSearchEnabled;
 					imageGenerationEnabled = input.imageGenerationEnabled;
 					codeInterpreterEnabled = input.codeInterpreterEnabled;
@@ -668,10 +685,16 @@
 	//////////////////////////
 
 	const initNewChat = async () => {
-		if ($page.url.searchParams.get('models')) {
-			selectedModels = $page.url.searchParams.get('models')?.split(',');
-		} else if ($page.url.searchParams.get('model')) {
-			const urlModels = $page.url.searchParams.get('model')?.split(',');
+		const availableModels = $models
+			.filter((m) => !(m?.info?.meta?.hidden ?? false))
+			.map((m) => m.id);
+
+		if ($page.url.searchParams.get('models') || $page.url.searchParams.get('model')) {
+			const urlModels = (
+				$page.url.searchParams.get('models') ||
+				$page.url.searchParams.get('model') ||
+				''
+			)?.split(',');
 
 			if (urlModels.length === 1) {
 				const m = $models.find((m) => m.id === urlModels[0]);
@@ -694,6 +717,10 @@
 			} else {
 				selectedModels = urlModels;
 			}
+
+			selectedModels = selectedModels.filter((modelId) =>
+				$models.map((m) => m.id).includes(modelId)
+			);
 		} else {
 			if (sessionStorage.selectedModels) {
 				selectedModels = JSON.parse(sessionStorage.selectedModels);
@@ -706,12 +733,12 @@
 					selectedModels = $config?.default_models.split(',');
 				}
 			}
+			selectedModels = selectedModels.filter((modelId) => availableModels.includes(modelId));
 		}
 
-		selectedModels = selectedModels.filter((modelId) => $models.map((m) => m.id).includes(modelId));
 		if (selectedModels.length === 0 || (selectedModels.length === 1 && selectedModels[0] === '')) {
-			if ($models.length > 0) {
-				selectedModels = [$models[0].id];
+			if (availableModels.length > 0) {
+				selectedModels = [availableModels?.at(0) ?? ''];
 			} else {
 				selectedModels = [''];
 			}
@@ -881,6 +908,7 @@
 				...(m.usage ? { usage: m.usage } : {}),
 				...(m.sources ? { sources: m.sources } : {})
 			})),
+			filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 			model_item: $models.find((m) => m.id === modelId),
 			chat_id: chatId,
 			session_id: $socket?.id,
@@ -1617,6 +1645,8 @@
 				},
 
 				files: (files?.length ?? 0) > 0 ? files : undefined,
+
+				filter_ids: selectedFilterIds.length > 0 ? selectedFilterIds : undefined,
 				tool_ids: selectedToolIds.length > 0 ? selectedToolIds : undefined,
 				tool_servers: $toolServers,
 
@@ -2058,6 +2088,7 @@
 								bind:prompt
 								bind:autoScroll
 								bind:selectedToolIds
+								bind:selectedFilterIds
 								bind:imageGenerationEnabled
 								bind:codeInterpreterEnabled
 								bind:webSearchEnabled
@@ -2114,6 +2145,7 @@
 								bind:prompt
 								bind:autoScroll
 								bind:selectedToolIds
+								bind:selectedFilterIds
 								bind:imageGenerationEnabled
 								bind:codeInterpreterEnabled
 								bind:webSearchEnabled

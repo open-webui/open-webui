@@ -91,7 +91,6 @@
 	}
 
 	onMount(() => {
-		console.log(tabs);
 		selectedTab = tabs[0];
 		init();
 	});

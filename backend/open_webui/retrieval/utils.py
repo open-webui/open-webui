@@ -12,7 +12,7 @@ from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
 from open_webui.config import VECTOR_DB
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files

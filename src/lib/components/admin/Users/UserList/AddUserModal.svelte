@@ -73,7 +73,7 @@
 
 					for (const [idx, row] of rows.entries()) {
 						const columns = row.split(',').map((col) => col.trim());
-						console.log(idx, columns);
+						console.debug(idx, columns);
 
 						if (idx > 0) {
 							if (

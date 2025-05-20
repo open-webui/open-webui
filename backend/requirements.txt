@@ -37,7 +37,8 @@ asgiref==3.8.1
 # AI libraries
 openai
 anthropic
-google-generativeai==0.8.4
+google-genai==1.15.0
+google-generativeai==0.8.5
 tiktoken
 
 langchain==0.3.24
@@ -98,7 +99,7 @@ pytube==15.0.0
 
 extract_msg
 pydub
-duckduckgo-search~=8.0.0
+duckduckgo-search==8.0.2
 
 ## Google Drive
 google-api-python-client

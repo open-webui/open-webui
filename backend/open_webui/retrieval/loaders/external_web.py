@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-class ExternalLoader(BaseLoader):
+class ExternalWebLoader(BaseLoader):
     def __init__(
         self,
         web_paths: Union[str, List[str]],
@@ -32,7 +32,7 @@ class ExternalLoader(BaseLoader):
                 response = requests.post(
                     self.external_url,
                     headers={
-                        "User-Agent": "Open WebUI (https://github.com/open-webui/open-webui) RAG Bot",
+                        "User-Agent": "Open WebUI (https://github.com/open-webui/open-webui) External Web Loader",
                         "Authorization": f"Bearer {self.external_api_key}",
                     },
                     json={

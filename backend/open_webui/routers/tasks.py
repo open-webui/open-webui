@@ -20,10 +20,7 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.constants import TASKS
 
 from open_webui.routers.pipelines import process_pipeline_inlet_filter
-from open_webui.utils.filter import (
-    get_sorted_filter_ids,
-    process_filter_functions,
-)
+
 from open_webui.utils.task import get_task_model_id
 
 from open_webui.config import (
@@ -195,15 +192,19 @@ async def generate_title(
         },
     )
 
+    max_tokens = (
+        models[task_model_id].get("info", {}).get("params", {}).get("max_tokens", 1000)
+    )
+
     payload = {
         "model": task_model_id,
         "messages": [{"role": "user", "content": content}],
         "stream": False,
         **(
-            {"max_tokens": 1000}
+            {"max_tokens": max_tokens}
             if models[task_model_id].get("owned_by") == "ollama"
             else {
-                "max_completion_tokens": 1000,
+                "max_completion_tokens": max_tokens,
             }
         ),
         "metadata": {

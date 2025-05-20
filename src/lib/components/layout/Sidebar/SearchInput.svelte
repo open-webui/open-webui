@@ -89,7 +89,7 @@
 
 <div class="px-1 mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
 	<div class="flex w-full rounded-xl" id="chat-search">
-		<div class="self-center pl-3 py-2 rounded-l-xl bg-transparent">
+		<div class="self-center py-2 rounded-l-xl bg-transparent dark:text-gray-300">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				viewBox="0 0 20 20"
@@ -149,7 +149,7 @@
 		/>
 
 		{#if showClearButton && value}
-			<div class="self-center pr-2 pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+			<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 				<button
 					class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
 					on:click={clearSearchInput}
