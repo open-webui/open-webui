@@ -53,6 +53,22 @@ const LOAD_CHUNK_SIZE = 5;
 let loadedMessageCount = 0;
 let loadingChunk = false;
 
+// Completely revised scrolling system - simplified but effective
+function forceScrollToBottom() {
+  const container = document.getElementById('messages-container');
+  if (!container) return;
+  
+  // Direct DOM approach - most reliable
+  container.scrollTop = container.scrollHeight + 5000;
+  
+  // Schedule another scroll to catch any DOM updates
+  setTimeout(() => {
+    if (container) {
+      container.scrollTop = container.scrollHeight + 5000;
+    }
+  }, 50);
+}
+
 // Called from parent when streaming starts
 export function startMessageStream() {
   console.log("Stream started, enabling auto-scroll");
@@ -62,23 +78,27 @@ export function startMessageStream() {
   // Clear any existing interval
   if (scrollCheckInterval) clearInterval(scrollCheckInterval);
   
-  // More aggressive scroll checking during streaming
+  // Set up very frequent scrolling during streaming
   scrollCheckInterval = setInterval(() => {
     if (isStreaming && autoScroll) {
-      requestScrollToBottom();
+      forceScrollToBottom();
     }
-  }, 100); // Check 10 times per second during streaming
+  }, 100); // 10 times per second during streaming
   
   // Initial scroll
-  requestScrollToBottom();
+  forceScrollToBottom();
 }
 
 // Called from parent when streaming ends
 export function endMessageStream() {
   console.log("Stream ended");
   isStreaming = false;
-  // Final scroll to make sure we're at the bottom
-  requestScrollToBottom();
+  
+  // Final scrolls to make sure we're at the bottom
+  forceScrollToBottom();
+  setTimeout(forceScrollToBottom, 100);
+  setTimeout(forceScrollToBottom, 300);
+  
   // Clear the frequent interval
   if (scrollCheckInterval) {
     clearInterval(scrollCheckInterval);
@@ -86,35 +106,11 @@ export function endMessageStream() {
   }
 }
 
-function forceScrollImmediately() {
-  autoScroll = true;
-  requestScrollToBottom();
-  setTimeout(() => requestScrollToBottom(), 100);
-  setTimeout(() => requestScrollToBottom(), 300);
-}
-
-// Reliable scroll implementation using requestAnimationFrame
+// Replace requestScrollToBottom with the more direct approach
 function requestScrollToBottom() {
-  if (!autoScroll) return;
-  
-  // Clear any pending animation frames to prevent multiple scrolls
-  if (window.scrollAnimationFrame) {
-    cancelAnimationFrame(window.scrollAnimationFrame);
+  if (autoScroll) {
+    forceScrollToBottom();
   }
-  
-  window.scrollAnimationFrame = requestAnimationFrame(() => {
-    const container = document.getElementById('messages-container');
-    if (container) {
-      container.scrollTop = container.scrollHeight + 10000;
-      
-      // Verify scroll worked and retry if needed
-      window.scrollVerificationFrame = requestAnimationFrame(() => {
-        if (container.scrollHeight - container.scrollTop > container.clientHeight + 50) {
-          container.scrollTop = container.scrollHeight + 10000;
-        }
-      });
-    }
-  });
 }
 
 // Setup auto-scroll system
@@ -134,36 +130,21 @@ onMount(() => {
       }
     });
   }
-  // Set up mutation observer
-  setupMutationObserver();
+  
+  // Set up a regular scrolling interval for when messages change
+  activeScrollInterval = setInterval(() => {
+    if (autoScroll && isStreaming) {
+      forceScrollToBottom();
+    }
+  }, 500);
+  
   return () => {
     if (activeScrollInterval) clearInterval(activeScrollInterval);
     if (messageWatcher) messageWatcher.disconnect();
     if (scrollCheckInterval) clearInterval(scrollCheckInterval);
   };
 });
-// Set up mutation observer to detect DOM changes in the chat
-function setupMutationObserver() {
-  if (typeof window !== 'undefined' && window.MutationObserver) {
-    setTimeout(() => {
-      const container = document.getElementById('messages-container');
-      if (container) {
-        messageWatcher = new MutationObserver((mutations) => {
-          // If content changed, trigger scroll
-          if (autoScroll) {
-            requestScrollToBottom();
-          }
-        });
-        messageWatcher.observe(container, {
-          childList: true,
-          subtree: true,
-          characterData: true,
-          characterDataOldValue: true
-        });
-      }
-    }, 500);
-  }
-}
+
 // Load messages in chunks for better performance
 function loadNextChunk() {
   if (loadingChunk) return;
@@ -174,8 +155,14 @@ function loadNextChunk() {
       loadedMessageCount = messages.length;
     }
     loadingChunk = false;
+    
+    // Force scroll after loading more content if needed
+    if (autoScroll) {
+      setTimeout(forceScrollToBottom, 50);
+    }
   }, 10);
 }
+
 const loadMoreMessages = async () => {
   // scroll slightly down to disable continuous loading
   const element = document.getElementById('messages-container');
@@ -185,6 +172,7 @@ const loadMoreMessages = async () => {
   await tick();
   messagesLoading = false;
 };
+
 // Update messages when history changes
 $: if (history.currentId !== lastHistoryId) {
   let _messages = [];
@@ -200,32 +188,26 @@ $: if (history.currentId !== lastHistoryId) {
   // Set auto-scroll when messages change
   autoScroll = true;
   // Force scroll to bottom with delay
-  requestScrollToBottom();
-}
-// Track content changes in the last message (critical for streaming responses)
-$: if (messages.length > 0) {
-  const lastMsg = messages[messages.length - 1];
-  // If this is an assistant message and content changed, it's probably streaming
-  if (lastMsg && lastMsg.role === 'assistant' && lastMsg.content !== lastMessageContent) {
-    console.log("Content changed in last message, likely streaming");
-    lastMessageContent = lastMsg.content;
-    isStreaming = true;
-    // Auto-scroll during streaming
-    if (autoScroll) {
-      requestScrollToBottom();
-    }
-  }
+  setTimeout(forceScrollToBottom, 100);
+  setTimeout(forceScrollToBottom, 300);
 }
 
-// Also add this reactive statement to better detect streaming changes
+// Track message changes and force scroll
 $: if (messages.length > 0) {
   const lastMsg = messages[messages.length - 1];
   if (lastMsg && lastMsg.role === 'assistant') {
-    // Force scroll check whenever messages array changes
     if (autoScroll) {
-      setTimeout(() => requestScrollToBottom(), 50);
-      setTimeout(() => requestScrollToBottom(), 150);
-      setTimeout(() => requestScrollToBottom(), 300);
+      // Multiple scroll attempts to catch all updates
+      setTimeout(forceScrollToBottom, 10);
+      setTimeout(forceScrollToBottom, 100);
+      setTimeout(forceScrollToBottom, 300);
+    }
+    
+    // If content is changing, we're likely streaming
+    if (lastMsg.content !== lastMessageContent) {
+      lastMessageContent = lastMsg.content;
+      isStreaming = true;
+      if (autoScroll) forceScrollToBottom();
     }
   }
 }
@@ -234,15 +216,17 @@ $: if (messages.length > 0) {
 $: if (loadedMessageCount < messages.length && !loadingChunk) {
   loadNextChunk();
 }
+
 $: if (autoScroll && bottomPadding) {
   (async () => {
     await tick();
-    requestScrollToBottom();
+    forceScrollToBottom();
   })();
 }
+
 // Update scroll functions to use the new method
-const forceScrollToBottom = requestScrollToBottom;
-const scrollToBottom = requestScrollToBottom;
+const scrollToBottom = forceScrollToBottom;
+
 const updateChat = async () => {
 if (!$temporaryChatEnabled) {
 history = history;
@@ -284,7 +268,7 @@ if ($settings?.scrollOnBranchChange ?? true) {
 const element = document.getElementById('messages-container');
 autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 setTimeout(() => {
-requestScrollToBottom();
+forceScrollToBottom();
 }, 100);
 }
 };
@@ -321,7 +305,7 @@ if ($settings?.scrollOnBranchChange ?? true) {
 const element = document.getElementById('messages-container');
 autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 setTimeout(() => {
-requestScrollToBottom();
+forceScrollToBottom();
 }, 100);
 }
 };
@@ -362,7 +346,7 @@ if ($settings?.scrollOnBranchChange ?? true) {
 const element = document.getElementById('messages-container');
 autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 setTimeout(() => {
-requestScrollToBottom();
+forceScrollToBottom();
 }, 100);
 }
 };
@@ -402,13 +386,15 @@ await tick();
 // Enable streaming mode when sending a new prompt
 startMessageStream();
 await sendPrompt(history, userPrompt, userMessageId);
-// Wait a bit to ensure messages are processed
-for (let i = 0; i < 10; i++) {
-  await tick();
-  requestScrollToBottom();
-  await new Promise(r => setTimeout(r, 100));
-}
-endMessageStream();
+// Multiple scroll attempts to ensure we catch all updates
+forceScrollToBottom();
+setTimeout(forceScrollToBottom, 500);
+setTimeout(forceScrollToBottom, 1000);
+setTimeout(forceScrollToBottom, 2000);
+setTimeout(() => {
+  endMessageStream();
+  forceScrollToBottom();
+}, 2500);
 } else {
 // Edit user message
 history.messages[messageId].content = content;
@@ -440,6 +426,7 @@ responseMessageId
 ];
 }
 await updateChat();
+setTimeout(forceScrollToBottom, 100);
 } else {
 // Edit response message
 history.messages[messageId].originalContent = history.messages[messageId].content;
@@ -487,12 +474,10 @@ await updateChat();
 };
 // Updated triggerScroll implementation
 const triggerScroll = () => {
-  const container = document.getElementById('messages-container');
-  if (container) {
-    console.log("Trigger scroll called");
-    autoScroll = true;
-    requestScrollToBottom();
-  }
+  console.log("Trigger scroll called");
+  autoScroll = true;
+  forceScrollToBottom();
+  setTimeout(forceScrollToBottom, 100);
 };
 // When component is destroyed
 onDestroy(() => {
