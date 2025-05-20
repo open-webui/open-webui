@@ -366,7 +366,7 @@
 		window.addEventListener('touchend', onTouchEnd);
 
 		window.addEventListener('focus', onFocus);
-		window.addEventListener('blur-sm', onBlur);
+		window.addEventListener('blur', onBlur);
 
 		const dropZone = document.getElementById('sidebar');
 
@@ -383,7 +383,7 @@
 		window.removeEventListener('touchend', onTouchEnd);
 
 		window.removeEventListener('focus', onFocus);
-		window.removeEventListener('blur-sm', onBlur);
+		window.removeEventListener('blur', onBlur);
 
 		const dropZone = document.getElementById('sidebar');
 
