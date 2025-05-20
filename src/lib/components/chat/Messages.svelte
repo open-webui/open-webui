@@ -438,29 +438,10 @@ import VirtualList from '@sveltejs/svelte-virtual-list';
 						let:item
 						let:index
 					>
-						<Message
-							{chatId}
-							bind:history
-							messageId={item.id}
-							idx={index}
-							{user}
-							{gotoMessage}
-							{showPreviousMessage}
-							{showNextMessage}
-							{updateChat}
-							{editMessage}
-							{deleteMessage}
-							{rateMessage}
-							{actionMessage}
-							{saveMessage}
-							{submitMessage}
-							{regenerateResponse}
-							{continueResponse}
-							{mergeResponses}
-							{addMessages}
-							{triggerScroll}
-							{readOnly}
-						/>
+						<!-- DEBUG: Show index and item id instead of <Message /> -->
+						<div style="border: 1px solid green; margin: 2px; padding: 6px;">
+							{index}: {item && item.id}
+						</div>
 					</VirtualList>
 				</div>
 				<div class="pb-12" />
