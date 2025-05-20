@@ -53,15 +53,13 @@ const LOAD_CHUNK_SIZE = 5;
 let loadedMessageCount = 0;
 let loadingChunk = false;
 
-// Completely revised scrolling system - simplified but effective
-function forceScrollToBottom() {
+import { tick } from 'svelte';
+
+async function forceScrollToBottom() {
+  await tick(); // Ensure the DOM is updated
   const container = document.getElementById('messages-container');
   if (!container) return;
-  
-  // Direct DOM approach - most reliable
   container.scrollTop = container.scrollHeight + 5000;
-  
-  // Schedule another scroll to catch any DOM updates
   setTimeout(() => {
     if (container) {
       container.scrollTop = container.scrollHeight + 5000;
@@ -95,9 +93,11 @@ export function endMessageStream() {
   isStreaming = false;
   
   // Final scrolls to make sure we're at the bottom
-  forceScrollToBottom();
-  setTimeout(forceScrollToBottom, 100);
-  setTimeout(forceScrollToBottom, 300);
+  (async () => {
+    await forceScrollToBottom();
+    setTimeout(forceScrollToBottom, 100);
+    setTimeout(forceScrollToBottom, 300);
+  })();
   
   // Clear the frequent interval
   if (scrollCheckInterval) {
@@ -158,7 +158,10 @@ function loadNextChunk() {
     
     // Force scroll after loading more content if needed
     if (autoScroll) {
-      setTimeout(forceScrollToBottom, 50);
+      (async () => {
+        await tick();
+        await forceScrollToBottom();
+      })();
     }
   }, 10);
 }
@@ -188,8 +191,11 @@ $: if (history.currentId !== lastHistoryId) {
   // Set auto-scroll when messages change
   autoScroll = true;
   // Force scroll to bottom with delay
-  setTimeout(forceScrollToBottom, 100);
-  setTimeout(forceScrollToBottom, 300);
+  (async () => {
+    await forceScrollToBottom();
+    setTimeout(forceScrollToBottom, 100);
+    setTimeout(forceScrollToBottom, 300);
+  })();
 }
 
 // Track message changes and force scroll
@@ -198,16 +204,18 @@ $: if (messages.length > 0) {
   if (lastMsg && lastMsg.role === 'assistant') {
     if (autoScroll) {
       // Multiple scroll attempts to catch all updates
-      setTimeout(forceScrollToBottom, 10);
-      setTimeout(forceScrollToBottom, 100);
-      setTimeout(forceScrollToBottom, 300);
+      (async () => {
+        await forceScrollToBottom();
+        setTimeout(forceScrollToBottom, 100);
+        setTimeout(forceScrollToBottom, 300);
+      })();
     }
     
     // If content is changing, we're likely streaming
     if (lastMsg.content !== lastMessageContent) {
       lastMessageContent = lastMsg.content;
       isStreaming = true;
-      if (autoScroll) forceScrollToBottom();
+      if (autoScroll) (async () => { await forceScrollToBottom(); })();
     }
   }
 }
@@ -220,7 +228,7 @@ $: if (loadedMessageCount < messages.length && !loadingChunk) {
 $: if (autoScroll && bottomPadding) {
   (async () => {
     await tick();
-    forceScrollToBottom();
+    await forceScrollToBottom();
   })();
 }
 
