@@ -40,181 +40,78 @@ export let bottomPadding = false;
 export let autoScroll;
 let messagesCount = 20;
 let messagesLoading = false;
-let lastHistoryId = null; // Track the last history ID we processed
+let lastHistoryId = null;
 
-// Add these virtualization variables
-let visibleMessages = [];
-let messageHeights = {}; // Store actual heights of messages
-let totalHeight = 0;
-let scrollPosition = 0;
-let containerHeight = 0;
-let estimatedMessageHeight = 300; // Increase default estimate to prevent initial overlap
+// Simple optimization - split loading into chunks
+const LOAD_CHUNK_SIZE = 5;
+let loadedMessageCount = 0;
+let loadingChunk = false;
 
-// Add this action for height measurement
-function measureHeight(node, messageId) {
-  function measure() {
-    const height = node.clientHeight;
-    if (height > 0 && messageHeights[messageId] !== height) {
-      messageHeights[messageId] = height;
-      updateVisibleMessages();
+// Load messages in chunks for better performance
+function loadNextChunk() {
+  if (loadingChunk) return;
+  loadingChunk = true;
+  
+  setTimeout(() => {
+    loadedMessageCount += LOAD_CHUNK_SIZE;
+    if (loadedMessageCount > messages.length) {
+      loadedMessageCount = messages.length;
     }
-  }
-
-  // Set up ResizeObserver for dynamic height changes
-  const resizeObserver = new ResizeObserver(() => {
-    measure();
-  });
-  
-  resizeObserver.observe(node);
-  measure(); // Initial measurement
-  
-  return {
-    destroy() {
-      resizeObserver.disconnect();
-    },
-    update(newMessageId) {
-      messageId = newMessageId;
-      measure();
-    }
-  };
+    loadingChunk = false;
+  }, 10);
 }
-
-// Calculate positions based on actual measured heights
-function calculateMessagePositions() {
-  let positions = {};
-  let currentPosition = 0;
-  
-  for (let i = 0; i < messages.length; i++) {
-    const msg = messages[i];
-    positions[msg.id] = currentPosition;
-    // Use known height or estimate
-    const height = messageHeights[msg.id] || estimatedMessageHeight;
-    currentPosition += height + 10; // Add 10px gap between messages
-  }
-  
-  totalHeight = currentPosition;
-  return positions;
-}
-
-// Update visible messages with better position calculation
-function updateVisibleMessages() {
-  const container = document.getElementById('messages-container');
-  if (!container) return;
-  
-  scrollPosition = container.scrollTop;
-  containerHeight = container.clientHeight;
-  
-  const positions = calculateMessagePositions();
-  
-  // Find visible messages based on position
-  visibleMessages = messages.filter((msg) => {
-    const position = positions[msg.id];
-    const height = messageHeights[msg.id] || estimatedMessageHeight;
-    return (position < scrollPosition + containerHeight + 500) && 
-           (position + height > scrollPosition - 500);
-  }).map(msg => ({
-    message: msg,
-    index: messages.indexOf(msg),
-    position: positions[msg.id]
-  }));
-}
-
-// Force rebuild messages from history
-function rebuildMessages() {
-  if (history.currentId) {
-    let _messages = [];
-    let message = history.messages[history.currentId];
-    while (message && _messages.length <= messagesCount) {
-      _messages.unshift({ ...message });
-      message = message.parentId !== null ? history.messages[message.parentId] : null;
-    }
-    messages = _messages;
-    lastHistoryId = history.currentId;
-    
-    // Schedule update of visible messages and auto-scroll
-    setTimeout(() => {
-      updateVisibleMessages();
-      if (autoScroll) {
-        setTimeout(scrollToBottom, 50);
-      }
-    }, 0);
-  } else {
-    messages = [];
-    lastHistoryId = null;
-  }
-}
-
-onMount(() => {
-  const container = document.getElementById('messages-container');
-  if (container) {
-    container.addEventListener('scroll', () => {
-      updateVisibleMessages();
-    });
-    // Initial update
-    setTimeout(updateVisibleMessages, 100);
-  }
-  
-  return () => {
-    if (container) {
-      container.removeEventListener('scroll', updateVisibleMessages);
-    }
-  };
-});
 
 const loadMoreMessages = async () => {
-// scroll slightly down to disable continuous loading
-const element = document.getElementById('messages-container');
-element.scrollTop = element.scrollTop + 100;
-messagesLoading = true;
-messagesCount += 20;
-await tick();
-messagesLoading = false;
+  // scroll slightly down to disable continuous loading
+  const element = document.getElementById('messages-container');
+  element.scrollTop = element.scrollTop + 100;
+  messagesLoading = true;
+  messagesCount += 20;
+  await tick();
+  messagesLoading = false;
 };
 
-// Watch history changes - critically important for follow-up questions
+// Update messages when history changes
 $: if (history.currentId !== lastHistoryId) {
-  rebuildMessages();
-}
-
-// Update visible messages when messages change
-$: if (messages && messages.length > 0) {
-  setTimeout(() => {
-    updateVisibleMessages();
-    
-    // If autoScroll is enabled, scroll to the newest message
-    if (autoScroll) {
-      setTimeout(scrollToBottom, 0);
-    }
-  }, 0);
-}
-
-// Add this reactive statement to trigger scroll when visible messages change
-$: if (visibleMessages.length > 0 && autoScroll) {
-  const lastMessage = visibleMessages[visibleMessages.length - 1].message;
+  let _messages = [];
+  let message = history.messages[history.currentId];
   
-  // If the last visible message is also the last in the full messages array, 
-  // scroll to bottom (handles auto-scrolling during message generation)
-  if (lastMessage && lastMessage.id === messages[messages.length - 1]?.id) {
-    setTimeout(scrollToBottom, 0);
+  while (message && _messages.length <= messagesCount) {
+    _messages.unshift({ ...message });
+    message = message.parentId !== null ? history.messages[message.parentId] : null;
   }
+  
+  messages = _messages;
+  lastHistoryId = history.currentId;
+  loadedMessageCount = Math.min(LOAD_CHUNK_SIZE, messages.length);
+  
+  // Force scroll to bottom with delay
+  if (autoScroll) {
+    setTimeout(scrollToBottom, 50);
+  }
+}
+
+// More reliable scroll to bottom
+const scrollToBottom = () => {
+  setTimeout(() => {
+    const element = document.getElementById('messages-container');
+    if (element) {
+      element.scrollTop = element.scrollHeight + 5000;
+    }
+  }, 10);
+};
+
+// Check if we need to load more messages
+$: if (loadedMessageCount < messages.length && !loadingChunk) {
+  loadNextChunk();
 }
 
 $: if (autoScroll && bottomPadding) {
-(async () => {
-await tick();
-scrollToBottom();
-})();
+  (async () => {
+    await tick();
+    scrollToBottom();
+  })();
 }
-
-// Update scrollToBottom function to work with virtualization
-const scrollToBottom = () => {
-  requestAnimationFrame(() => {
-    const container = document.getElementById('messages-container');
-    if (container) {
-      container.scrollTop = totalHeight + 1000; // Use our calculated total height plus extra to ensure we're at bottom
-    }
-  });
-};
 
 const updateChat = async () => {
 if (!$temporaryChatEnabled) {
@@ -450,23 +347,19 @@ showMessage({ id: parentMessageId });
 await updateChat();
 };
 
-// Make triggerScroll compatible with virtualization
+// Make triggerScroll compatible with our loading approach
 const triggerScroll = () => {
   const container = document.getElementById('messages-container');
-  
   if (container) {
     // Check if we're near the bottom
-    const isNearBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
-    
-    // If we're near the bottom, enable auto-scrolling
-    autoScroll = isNearBottom;
-    
+    autoScroll = container.scrollHeight - container.scrollTop <= container.clientHeight + 200;
     if (autoScroll) {
-      setTimeout(scrollToBottom, 50);
+      setTimeout(scrollToBottom, 10);
     }
   }
 };
 </script>
+
 <div class={className}>
 {#if Object.keys(history?.messages ?? {}).length == 0}
 <ChatPlaceholder
@@ -489,9 +382,8 @@ await tick();
 <div class="w-full pt-2">
 {#key chatId}
 <div id="messages-container" class="w-full overflow-y-auto h-full">
-  <!-- Spacer for scrolling with correct total height -->
-  <div style="height: {totalHeight}px; position: relative;">
-    {#if messages.at(0)?.parentId !== null && scrollPosition < estimatedMessageHeight}
+  <div class="w-full">
+    {#if messages.at(0)?.parentId !== null}
       <Loader
         on:visible={(e) => {
           console.log('visible');
@@ -507,37 +399,42 @@ await tick();
       </Loader>
     {/if}
     
-    {#each visibleMessages as item (item.message.id)}
-      <div 
-        style="position: absolute; width: 100%; top: {item.position}px;"
-        id="msg-{item.message.id}" 
-        use:measureHeight={item.message.id}
-      >
-        <Message
-          {chatId}
-          bind:history
-          messageId={item.message.id}
-          idx={item.index}
-          {user}
-          {gotoMessage}
-          {showPreviousMessage}
-          {showNextMessage}
-          {updateChat}
-          {editMessage}
-          {deleteMessage}
-          {rateMessage}
-          {actionMessage}
-          {saveMessage}
-          {submitMessage}
-          {regenerateResponse}
-          {continueResponse}
-          {mergeResponses}
-          {addMessages}
-          {triggerScroll}
-          {readOnly}
-        />
-      </div>
+    {#each messages.slice(0, loadedMessageCount) as message, messageIdx (message.id)}
+      <Message
+        {chatId}
+        bind:history
+        messageId={message.id}
+        idx={messageIdx}
+        {user}
+        {gotoMessage}
+        {showPreviousMessage}
+        {showNextMessage}
+        {updateChat}
+        {editMessage}
+        {deleteMessage}
+        {rateMessage}
+        {actionMessage}
+        {saveMessage}
+        {submitMessage}
+        {regenerateResponse}
+        {continueResponse}
+        {mergeResponses}
+        {addMessages}
+        {triggerScroll}
+        {readOnly}
+      />
     {/each}
+    
+    {#if loadedMessageCount < messages.length}
+      <div class="w-full flex justify-center py-2">
+        <button 
+          class="bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-md text-sm"
+          on:click={loadNextChunk}
+        >
+          Load more messages
+        </button>
+      </div>
+    {/if}
   </div>
   
   <div class="pb-12" />
