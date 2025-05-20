@@ -62,7 +62,7 @@
 		"@pyscript/core": "^0.4.32",
 		"@sveltejs/adapter-node": "^2.0.0",
 		"@sveltejs/svelte-virtual-list": "^3.0.1",
-		"svelte-virtual": "^1.1.0",
+		"svelte-virtual": "^0.6.3",
 		"@tiptap/core": "^2.11.9",
 		"@tiptap/extension-code-block-lowlight": "^2.11.9",
 		"@tiptap/extension-highlight": "^2.10.0",
