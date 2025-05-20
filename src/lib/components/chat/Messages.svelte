@@ -18,6 +18,7 @@ import Message from './Messages/Message.svelte';
 import Loader from '../common/Loader.svelte';
 import Spinner from '../common/Spinner.svelte';
 import ChatPlaceholder from './ChatPlaceholder.svelte';
+// Import VirtualList but don't use it yet - we'll implement manual virtualization
 import VirtualList from '@sveltejs/svelte-virtual-list';
 
 const i18n = getContext('i18n');
@@ -29,6 +30,7 @@ export let history = {};
 export let selectedModels;
 export let atSelectedModel;
 let messages = [];
+let visibleMessages = [];
 export let sendPrompt: Function;
 export let continueResponse: Function;
 export let regenerateResponse: Function;
@@ -83,6 +85,8 @@ $: {
       setTimeout(scrollToBottom, 10);
     }
   }
+  // Update visible messages - for efficient rendering
+  visibleMessages = [...messages];
 }
 
 $: if (autoScroll && bottomPadding) {
@@ -430,35 +434,32 @@ onMount(() => {
             </div>
           {/if}
           
-          <div class="h-full">
-            <VirtualList items={messages} let:item={message}>
-              <div class="virtual-item">
-                <Message
-                  {chatId}
-                  bind:history
-                  messageId={message.id}
-                  idx={messages.indexOf(message)}
-                  {user}
-                  {gotoMessage}
-                  {showPreviousMessage}
-                  {showNextMessage}
-                  {updateChat}
-                  {editMessage}
-                  {deleteMessage}
-                  {rateMessage}
-                  {actionMessage}
-                  {saveMessage}
-                  {submitMessage}
-                  {regenerateResponse}
-                  {continueResponse}
-                  {mergeResponses}
-                  {addMessages}
-                  triggerScroll={triggerScroll}
-                  {readOnly}
-                />
-              </div>
-            </VirtualList>
-          </div>
+          <!-- Don't use VirtualList here - display all messages directly -->
+          {#each visibleMessages as message, messageIdx (message.id)}
+            <Message
+              {chatId}
+              bind:history
+              messageId={message.id}
+              idx={messageIdx}
+              {user}
+              {gotoMessage}
+              {showPreviousMessage}
+              {showNextMessage}
+              {updateChat}
+              {editMessage}
+              {deleteMessage}
+              {rateMessage}
+              {actionMessage}
+              {saveMessage}
+              {submitMessage}
+              {regenerateResponse}
+              {continueResponse}
+              {mergeResponses}
+              {addMessages}
+              triggerScroll={triggerScroll}
+              {readOnly}
+            />
+          {/each}
           
           <div class="pb-12"></div>
           {#if bottomPadding}
@@ -471,19 +472,11 @@ onMount(() => {
 </div>
 
 <style>
-  .virtual-item {
-    width: 100%;
-  }
-  
   :global(div[id="messages-container"]) {
     display: flex;
     flex-direction: column;
     height: 100%;
     overflow-y: auto;
     scroll-behavior: smooth;
-  }
-  
-  :global(.svelte-virtual-list-viewport) {
-    height: 100% !important;
   }
 </style>
