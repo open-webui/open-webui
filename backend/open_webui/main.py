@@ -1077,6 +1077,11 @@ if audit_level != AuditLevel.NONE:
 async def get_models(request: Request, user=Depends(get_verified_user)):
     def get_filtered_models(models, user):
         filtered_models = []
+        model_ids_to_fetch = [
+            model["id"] for model in models if not model.get("arena")
+        ]
+        model_infos = Models.get_models_by_ids(model_ids_to_fetch)
+        model_info_dict = {model_info.id: model_info for model_info in model_infos}
         for model in models:
             if model.get("arena"):
                 if has_access(
@@ -1087,14 +1092,15 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
                     .get("access_control", {}),
                 ):
                     filtered_models.append(model)
-                continue
-
-            model_info = Models.get_model_by_id(model["id"])
-            if model_info:
-                if user.id == model_info.user_id or has_access(
-                    user.id, type="read", access_control=model_info.access_control
-                ):
-                    filtered_models.append(model)
+            else:
+                model_info = model_info_dict.get(model["id"])
+                if model_info:
+                    if user.id == model_info.user_id or has_access(
+                        user.id,
+                        type="read",
+                        access_control=model_info.access_control,
+                    ):
+                        filtered_models.append(model)
 
         return filtered_models
 

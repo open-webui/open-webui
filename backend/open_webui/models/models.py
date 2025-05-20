@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Optional
+from typing import Optional,List
 
 from open_webui.internal.db import Base, JSONField, get_db
 from open_webui.env import SRC_LOG_LEVELS
@@ -213,7 +213,12 @@ class ModelsTable:
                 return ModelModel.model_validate(model)
         except Exception:
             return None
-
+        
+    def get_models_by_ids(self, model_ids: List[str]) -> List[ModelModel]:
+        with get_db() as db:
+            models = db.query(Model).filter(Model.id.in_(model_ids)).all()
+            return [ModelModel.model_validate(model) for model in models]
+        
     def toggle_model_by_id(self, id: str) -> Optional[ModelModel]:
         with get_db() as db:
             try:
