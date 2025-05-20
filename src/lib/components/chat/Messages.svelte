@@ -39,10 +39,12 @@ export let submitMessage: Function = () => {};
 export let addMessages: Function = () => {};
 export let readOnly = false;
 export let bottomPadding = false;
-export let autoScroll;
+export let autoScroll = true;
 let messagesCount = 20;
 let messagesLoading = false;
 let messagesContainer;
+let lastMessageCount = 0;
+let isGenerating = false;
 
 // More efficient message loading
 const loadMoreMessages = async () => {
@@ -73,6 +75,16 @@ $: if (history.currentId) {
   messages = [];
 }
 
+// Track when messages change and auto-scroll if needed
+$: {
+  if (messages.length > lastMessageCount) {
+    lastMessageCount = messages.length;
+    if (autoScroll) {
+      setTimeout(scrollToBottom, 10);
+    }
+  }
+}
+
 $: if (autoScroll && bottomPadding) {
   (async () => {
     await tick();
@@ -80,10 +92,22 @@ $: if (autoScroll && bottomPadding) {
   })();
 }
 
+$: if (history.currentId) {
+  // If message branch changes, we may need to scroll
+  setTimeout(() => {
+    const element = document.getElementById('messages-container');
+    if (element && autoScroll) {
+      element.scrollTop = element.scrollHeight;
+    }
+  }, 100);
+}
+
 const scrollToBottom = () => {
   requestAnimationFrame(() => {
     const element = document.getElementById('messages-container');
-    if (element) element.scrollTop = element.scrollHeight;
+    if (element) {
+      element.scrollTop = element.scrollHeight;
+    }
   });
 };
 
@@ -331,38 +355,42 @@ const deleteMessage = async (messageId) => {
 };
 
 const triggerScroll = () => {
-  if (autoScroll) {
-    const element = document.getElementById('messages-container');
-    if (element) {
-      autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-      if (autoScroll) {
-        setTimeout(() => {
-          scrollToBottom();
-        }, 100);
-      }
+  isGenerating = true;
+  const element = document.getElementById('messages-container');
+  if (element) {
+    // Check if we're already near the bottom
+    autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 100;
+    if (autoScroll) {
+      requestAnimationFrame(() => {
+        element.scrollTop = element.scrollHeight;
+      });
     }
   }
+  // Reset after a short delay
+  setTimeout(() => {
+    isGenerating = false;
+  }, 500);
 };
 
 // Add scroll event handling for improved performance
 onMount(() => {
   messagesContainer = document.getElementById('messages-container');
   if (messagesContainer) {
+    // Set initial scroll position to bottom
+    setTimeout(scrollToBottom, 200);
+    
     messagesContainer.addEventListener('scroll', () => {
+      // Only update autoScroll flag if we're not actively generating
+      if (!isGenerating) {
+        autoScroll = messagesContainer.scrollHeight - messagesContainer.scrollTop <= messagesContainer.clientHeight + 100;
+      }
+      
       // Check if near top to load more messages
       if (messagesContainer.scrollTop < 50 && !messagesLoading && 
           messages.length > 0 && messages[0]?.parentId !== null) {
         loadMoreMessages();
       }
-      
-      // Update autoScroll flag based on position
-      autoScroll = messagesContainer.scrollHeight - messagesContainer.scrollTop <= messagesContainer.clientHeight + 50;
     });
-    
-    // Initial scroll to bottom if needed
-    if (autoScroll) {
-      setTimeout(scrollToBottom, 100);
-    }
   }
 });
 </script>
@@ -445,5 +473,17 @@ onMount(() => {
 <style>
   .virtual-item {
     width: 100%;
+  }
+  
+  :global(div[id="messages-container"]) {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+  }
+  
+  :global(.svelte-virtual-list-viewport) {
+    height: 100% !important;
   }
 </style>
