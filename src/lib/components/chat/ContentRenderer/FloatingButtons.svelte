@@ -10,7 +10,7 @@
 	import { chatCompletion } from '$lib/apis/openai';
 
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
-	import LightBlub from '$lib/components/icons/LightBlub.svelte';
+	import LightBulb from '$lib/components/icons/LightBulb.svelte';
 	import Markdown from '../Messages/Markdown.svelte';
 	import Skeleton from '../Messages/Skeleton.svelte';
 
@@ -256,7 +256,7 @@
 						explainHandler();
 					}}
 				>
-					<LightBlub className="size-3 shrink-0" />
+					<LightBulb className="size-3 shrink-0" />
 
 					<div class="shrink-0">{$i18n.t('Explain')}</div>
 				</button>
