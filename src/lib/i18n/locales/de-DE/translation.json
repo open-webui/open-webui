@@ -14,7 +14,7 @@
 	"{{webUIName}} Backend Required": "{{webUIName}}-Backend erforderlich",
 	"*Prompt node ID(s) are required for image generation": "*Prompt-Node-ID(s) sind für die Bildgenerierung erforderlich",
 	"A new version (v{{LATEST_VERSION}}) is now available.": "Eine neue Version (v{{LATEST_VERSION}}) ist jetzt verfügbar.",
-	"A task model is used when performing tasks such as generating titles for chats and web search queries": "Ein Aufgabenmodell wird verwendet, wenn Aufgaben wie das Generieren von Titeln für Chats und Websuchanfragen ausgeführt werden.",
+	"A task model is used when performing tasks such as generating titles for chats and web search queries": "Aufgabenmodelle werden beispielsweise zur Generierung von Chat-Titeln oder Websuchanfragen verwendet",
 	"a user": "ein Benutzer",
 	"About": "Über",
 	"Accept autocomplete generation / Jump to prompt variable": "Automatische Vervollständigung akzeptieren / Zur Prompt-Variable springen",
