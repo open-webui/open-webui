@@ -412,7 +412,7 @@ import VirtualList from '@sveltejs/svelte-virtual-list';
 			}}
 		/>
 	{:else}
-		<div class="w-full pt-2">
+		<div class="w-full pt-2" style="height:600px; border: 2px solid red;">
 			{#key chatId}
 				<div class="w-full">
 					{#if messages.at(0)?.parentId !== null}
@@ -430,6 +430,9 @@ import VirtualList from '@sveltejs/svelte-virtual-list';
 							</div>
 						</Loader>
 					{/if}
+					<p style="color: red; font-weight: bold;">
+						Messages length: {messages.length}
+					</p>
 					<VirtualList
 						items={messages}
 						itemHeight={72}
