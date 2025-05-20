@@ -18,8 +18,6 @@ import Message from './Messages/Message.svelte';
 import Loader from '../common/Loader.svelte';
 import Spinner from '../common/Spinner.svelte';
 import ChatPlaceholder from './ChatPlaceholder.svelte';
-// Import VirtualList but don't use it yet - we'll implement manual virtualization
-import VirtualList from '@sveltejs/svelte-virtual-list';
 
 const i18n = getContext('i18n');
 export let className = 'h-full flex pt-8';
@@ -30,7 +28,6 @@ export let history = {};
 export let selectedModels;
 export let atSelectedModel;
 let messages = [];
-let visibleMessages = [];
 export let sendPrompt: Function;
 export let continueResponse: Function;
 export let regenerateResponse: Function;
@@ -44,37 +41,63 @@ export let bottomPadding = false;
 export let autoScroll = true;
 let messagesCount = 20;
 let messagesLoading = false;
+let allMessagesLoaded = false;
 let messagesContainer;
 let lastMessageCount = 0;
 let isGenerating = false;
+let prevScrollTop = 0;
 
-// More efficient message loading
+// Improved message loading function
 const loadMoreMessages = async () => {
-  if (messagesLoading) return;
+  if (messagesLoading || allMessagesLoaded) return;
   
   messagesLoading = true;
-  // Move viewport slightly to prevent continuous loading
+  // Store current scroll height and position for maintaining position
   const element = document.getElementById('messages-container');
-  if (element) element.scrollTop = element.scrollTop + 100;
+  const oldScrollHeight = element ? element.scrollHeight : 0;
+  const oldScrollTop = element ? element.scrollTop : 0;
   
+  // Increase the number of messages to load
   messagesCount += 20;
+  
+  // Wait for DOM update
   await tick();
+  
+  // If there are still more messages to load, we're not at the top yet
+  if (messages.length > 0 && messages[0]?.parentId !== null) {
+    allMessagesLoaded = false;
+  } else {
+    allMessagesLoaded = true;
+  }
+  
+  // Maintain scroll position after loading more messages
+  if (element) {
+    const newScrollHeight = element.scrollHeight;
+    element.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
+  }
+  
   messagesLoading = false;
 };
 
-// Keep existing messages calculation but optimize the response
+// Message calculation - for a limited window of messages
 $: if (history.currentId) {
   let _messages = [];
   let message = history.messages[history.currentId];
   let count = 0;
-  while (message && count <= messagesCount) {
+  
+  // Build message array from current to past
+  while (message && count < messagesCount) {
     _messages.unshift({ ...message });
     message = message.parentId !== null ? history.messages[message.parentId] : null;
     count++;
   }
+  
+  // Check if we've loaded all messages
+  allMessagesLoaded = message === null;
   messages = _messages;
 } else {
   messages = [];
+  allMessagesLoaded = true;
 }
 
 // Track when messages change and auto-scroll if needed
@@ -85,8 +108,6 @@ $: {
       setTimeout(scrollToBottom, 10);
     }
   }
-  // Update visible messages - for efficient rendering
-  visibleMessages = [...messages];
 }
 
 $: if (autoScroll && bottomPadding) {
@@ -105,6 +126,26 @@ $: if (history.currentId) {
     }
   }, 100);
 }
+
+// More aggressive message loading on scroll
+const handleScroll = (e) => {
+  const container = e.target;
+  
+  // Scrolling up detection
+  const isScrollingUp = container.scrollTop < prevScrollTop;
+  prevScrollTop = container.scrollTop;
+  
+  // Only update autoScroll flag if we're not actively generating
+  if (!isGenerating) {
+    autoScroll = container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
+  }
+  
+  // Check if we need to load more messages (more sensitive near top)
+  if (isScrollingUp && container.scrollTop < 300 && !messagesLoading && 
+      messages.length > 0 && messages[0]?.parentId !== null) {
+    loadMoreMessages();
+  }
+};
 
 const scrollToBottom = () => {
   requestAnimationFrame(() => {
@@ -128,7 +169,6 @@ const updateChat = async () => {
   }
 };
 
-// Existing functions remain unchanged
 const gotoMessage = async (message, idx) => {
   // Determine the correct sibling list (either parent's children or root messages)
   let siblings;
@@ -383,18 +423,12 @@ onMount(() => {
     // Set initial scroll position to bottom
     setTimeout(scrollToBottom, 200);
     
-    messagesContainer.addEventListener('scroll', () => {
-      // Only update autoScroll flag if we're not actively generating
-      if (!isGenerating) {
-        autoScroll = messagesContainer.scrollHeight - messagesContainer.scrollTop <= messagesContainer.clientHeight + 100;
-      }
-      
-      // Check if near top to load more messages
-      if (messagesContainer.scrollTop < 50 && !messagesLoading && 
-          messages.length > 0 && messages[0]?.parentId !== null) {
-        loadMoreMessages();
-      }
-    });
+    // Use our improved scroll handler
+    messagesContainer.addEventListener('scroll', handleScroll);
+    
+    return () => {
+      messagesContainer.removeEventListener('scroll', handleScroll);
+    };
   }
 });
 </script>
@@ -418,24 +452,23 @@ onMount(() => {
       }}
     />
   {:else}
-    <div class="w-full pt-2">
+    <div class="w-full pt-2 h-full">
       {#key chatId}
-        <div id="messages-container" class="w-full h-full overflow-y-auto">
-          {#if messages.length > 0 && messages[0]?.parentId !== null}
-            <div class="w-full flex justify-center py-1 text-xs items-center gap-2">
+        <div id="messages-container" class="w-full h-full overflow-auto">
+          {#if messages.length > 0 && !allMessagesLoaded}
+            <div class="w-full flex justify-center py-2 text-xs items-center gap-2 sticky top-0 bg-white dark:bg-gray-900 z-10">
               {#if messagesLoading}
                 <Spinner className="size-4" />
-                <div class="animate-pulse">Loading...</div>
+                <div class="animate-pulse">Loading older messages...</div>
               {:else}
-                <button on:click={loadMoreMessages} class="px-2 py-1 text-xs rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-                  Load more
+                <button on:click={loadMoreMessages} class="px-3 py-1.5 text-xs rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700">
+                  Load more messages
                 </button>
               {/if}
             </div>
           {/if}
           
-          <!-- Don't use VirtualList here - display all messages directly -->
-          {#each visibleMessages as message, messageIdx (message.id)}
+          {#each messages as message, messageIdx (message.id)}
             <Message
               {chatId}
               bind:history
@@ -478,5 +511,10 @@ onMount(() => {
     height: 100%;
     overflow-y: auto;
     scroll-behavior: smooth;
+  }
+  
+  /* Additional style to ensure the container is scrollable */
+  :global(div[id="messages-container"] > *) {
+    flex-shrink: 0;
   }
 </style>
