@@ -170,7 +170,8 @@
 			await embeddingModelUpdateHandler();
 		}
 
-		RAGConfig.ALLOWED_FILE_EXTENSIONS = RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
+		RAGConfig.ALLOWED_FILE_EXTENSIONS = (RAGConfig?.ALLOWED_FILE_EXTENSIONS ?? '')
+			.split(',')
 			.map((ext) => ext.trim())
 			.filter((ext) => ext !== '');
 
