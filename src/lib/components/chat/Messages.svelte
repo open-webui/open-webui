@@ -41,13 +41,32 @@ export let autoScroll;
 let messagesCount = 20;
 let messagesLoading = false;
 
-// Add these variables for virtualization
+// Add these virtualization variables
 let visibleMessages = [];
+let messageHeights = {}; // Store actual heights of messages
+let totalHeight = 0;
 let scrollPosition = 0;
 let containerHeight = 0;
-let estimatedMessageHeight = 150; // Adjust based on your average message height
+let estimatedMessageHeight = 300; // Increase default estimate to prevent initial overlap
 
-// Add this function to update visible messages
+// Calculate positions based on actual measured heights
+function calculateMessagePositions() {
+  let positions = {};
+  let currentPosition = 0;
+  
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+    positions[msg.id] = currentPosition;
+    // Use known height or estimate
+    const height = messageHeights[msg.id] || estimatedMessageHeight;
+    currentPosition += height + 10; // Add 10px gap between messages
+  }
+  
+  totalHeight = currentPosition;
+  return positions;
+}
+
+// Update visible messages with better position calculation
 function updateVisibleMessages() {
   const container = document.getElementById('messages-container');
   if (!container) return;
@@ -55,18 +74,27 @@ function updateVisibleMessages() {
   scrollPosition = container.scrollTop;
   containerHeight = container.clientHeight;
   
-  // Calculate which messages should be in view (with buffer)
-  const startIndex = Math.max(0, Math.floor(scrollPosition / estimatedMessageHeight) - 3);
-  const endIndex = Math.min(
-    messages.length, 
-    Math.ceil((scrollPosition + containerHeight) / estimatedMessageHeight) + 3
-  );
+  const positions = calculateMessagePositions();
   
-  visibleMessages = messages.slice(startIndex, endIndex).map(msg => ({
+  // Find visible messages based on position
+  visibleMessages = messages.filter((msg) => {
+    const position = positions[msg.id];
+    const height = messageHeights[msg.id] || estimatedMessageHeight;
+    return (position < scrollPosition + containerHeight + 500) && 
+           (position + height > scrollPosition - 500);
+  }).map(msg => ({
     message: msg,
     index: messages.indexOf(msg),
-    position: messages.indexOf(msg) * estimatedMessageHeight
+    position: positions[msg.id]
   }));
+}
+
+// Add function to record message heights after they render
+function recordMessageHeight(messageId, height) {
+  if (height > 50) { // Only record valid heights
+    messageHeights[messageId] = height;
+    updateVisibleMessages();
+  }
 }
 
 onMount(() => {
@@ -387,8 +415,8 @@ await tick();
 <div class="w-full pt-2">
 {#key chatId}
 <div id="messages-container" class="w-full overflow-y-auto h-full">
-  <!-- Spacer for scrolling -->
-  <div style="height: {messages.length * estimatedMessageHeight}px; position: relative;">
+  <!-- Spacer for scrolling with correct total height -->
+  <div style="height: {totalHeight}px; position: relative;">
     {#if messages.at(0)?.parentId !== null && scrollPosition < estimatedMessageHeight}
       <Loader
         on:visible={(e) => {
@@ -406,7 +434,10 @@ await tick();
     {/if}
     
     {#each visibleMessages as item (item.message.id)}
-      <div style="position: absolute; width: 100%; top: {item.position}px;">
+      <div 
+        style="position: absolute; width: 100%; top: {item.position}px;"
+        bind:clientHeight={(h) => recordMessageHeight(item.message.id, h)}
+      >
         <Message
           {chatId}
           bind:history
