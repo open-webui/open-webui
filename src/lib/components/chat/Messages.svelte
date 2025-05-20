@@ -42,6 +42,10 @@ let messagesCount = 20;
 let messagesLoading = false;
 let lastHistoryId = null;
 
+// Add variables to track content changes
+let lastMessageContent = '';
+let isGenerating = false;
+
 // Simple optimization - split loading into chunks
 const LOAD_CHUNK_SIZE = 5;
 let loadedMessageCount = 0;
@@ -83,23 +87,31 @@ $: if (history.currentId !== lastHistoryId) {
   
   messages = _messages;
   lastHistoryId = history.currentId;
-  loadedMessageCount = Math.min(LOAD_CHUNK_SIZE, messages.length);
+  
+  // Show all messages immediately when new ones are added
+  loadedMessageCount = messages.length;
+  
+  // Set auto-scroll when messages change
+  autoScroll = true;
   
   // Force scroll to bottom with delay
-  if (autoScroll) {
-    setTimeout(scrollToBottom, 50);
-  }
+  setTimeout(scrollToBottom, 50);
 }
 
-// More reliable scroll to bottom
-const scrollToBottom = () => {
-  setTimeout(() => {
-    const element = document.getElementById('messages-container');
-    if (element) {
-      element.scrollTop = element.scrollHeight + 5000;
+// Track content changes in the last message (critical for streaming responses)
+$: if (messages.length > 0) {
+  const lastMsg = messages[messages.length - 1];
+  
+  // If this is an assistant message and content changed, it's probably streaming
+  if (lastMsg.role === 'assistant' && lastMsg.content !== lastMessageContent) {
+    lastMessageContent = lastMsg.content;
+    
+    // Auto-scroll during streaming
+    if (autoScroll) {
+      scrollToBottom();
     }
-  }, 10);
-};
+  }
+}
 
 // Check if we need to load more messages
 $: if (loadedMessageCount < messages.length && !loadingChunk) {
@@ -112,6 +124,18 @@ $: if (autoScroll && bottomPadding) {
     scrollToBottom();
   })();
 }
+
+// Much more aggressive scrollToBottom function
+const scrollToBottom = () => {
+  for (let i = 0; i < 3; i++) { // Try multiple times
+    setTimeout(() => {
+      const element = document.getElementById('messages-container');
+      if (element) {
+        element.scrollTop = element.scrollHeight + 10000;
+      }
+    }, i * 100); // Stagger attempts
+  }
+};
 
 const updateChat = async () => {
 if (!$temporaryChatEnabled) {
@@ -347,14 +371,15 @@ showMessage({ id: parentMessageId });
 await updateChat();
 };
 
-// Make triggerScroll compatible with our loading approach
+// More aggressive triggerScroll to ensure auto-scrolling works
 const triggerScroll = () => {
   const container = document.getElementById('messages-container');
   if (container) {
-    // Check if we're near the bottom
-    autoScroll = container.scrollHeight - container.scrollTop <= container.clientHeight + 200;
+    // More generous threshold for auto-scroll
+    autoScroll = container.scrollHeight - container.scrollTop <= container.clientHeight * 1.5;
+    
     if (autoScroll) {
-      setTimeout(scrollToBottom, 10);
+      scrollToBottom();
     }
   }
 };
