@@ -21,6 +21,7 @@
 	import AdditionaModelInfo from '../../ModelSelector/AdditionaModelInfo.svelte';
 	import { getCompanyConfig } from '$lib/apis/auths';
 
+
 	const i18n = getContext('i18n');
 
 	let models = null;
@@ -43,6 +44,9 @@
 	let workspaceModels = null;
 	let baseModels = null;
 	let accessControl = null;
+
+	const desiredOrder = Object.values(organizations).flat();
+	const orderMap = new Map(desiredOrder.map((name, index) => [name, index]));
 
 	const init = async () => {
 		workspaceModels = await getBaseModels(localStorage.token);
@@ -67,7 +71,7 @@
 					is_active: true
 				};
 			}
-		});
+		}).sort((a, b) => (orderMap.get(a?.name) ?? Infinity) - (orderMap.get(b?.name) ?? Infinity));
 		storeModels.set(baseModels);
 	};
 
