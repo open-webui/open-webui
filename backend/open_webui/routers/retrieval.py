@@ -1782,6 +1782,11 @@ def query_doc_handler(
                     if form_data.r
                     else request.app.state.config.RELEVANCE_THRESHOLD
                 ),
+                bm25_weight=(
+                    form_data.bm25_weight
+                    if form_data.bm25_weight
+                    else request.app.state.config.BM25_WEIGHT
+                ),
                 user=user,
             )
         else:
@@ -1832,6 +1837,11 @@ def query_collection_handler(
                     form_data.r
                     if form_data.r
                     else request.app.state.config.RELEVANCE_THRESHOLD
+                ),
+                bm25_weight=(
+                    form_data.bm25_weight
+                    if form_data.bm25_weight
+                    else request.app.state.config.BM25_WEIGHT
                 ),
             )
         else:
