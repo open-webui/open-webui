@@ -9,7 +9,7 @@ mobile,
 currentChatPage,
 temporaryChatEnabled
 } from '$lib/stores';
-import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
+import { tick, getContext, onMount, onDestroy, createEventDispatcher } from 'svelte';
 const dispatch = createEventDispatcher();
 import { toast } from 'svelte-sonner';
 import { getChatList, updateChatById } from '$lib/apis/chats';
@@ -37,19 +37,84 @@ export let submitMessage: Function = () => {};
 export let addMessages: Function = () => {};
 export let readOnly = false;
 export let bottomPadding = false;
-export let autoScroll;
+export let autoScroll = true; // Default to true
 let messagesCount = 20;
 let messagesLoading = false;
 let lastHistoryId = null;
 
 // Add variables to track content changes
 let lastMessageContent = '';
-let isGenerating = false;
+let messageWatcher = null;
+let activeScrollInterval = null;
 
 // Simple optimization - split loading into chunks
 const LOAD_CHUNK_SIZE = 5;
 let loadedMessageCount = 0;
 let loadingChunk = false;
+
+// Setup aggressive auto-scroll system
+onMount(() => {
+  // Start auto-scroll interval
+  startAutoScrollInterval();
+  
+  // Set up mutation observer to detect DOM changes
+  setupMutationObserver();
+  
+  return () => {
+    clearInterval(activeScrollInterval);
+    if (messageWatcher) messageWatcher.disconnect();
+  };
+});
+
+// Set up mutation observer to detect DOM changes in the chat
+function setupMutationObserver() {
+  if (typeof window !== 'undefined' && window.MutationObserver) {
+    setTimeout(() => {
+      const container = document.getElementById('messages-container');
+      if (container) {
+        messageWatcher = new MutationObserver((mutations) => {
+          // If content changed, trigger scroll
+          if (autoScroll) {
+            forceScrollToBottom();
+          }
+        });
+        
+        messageWatcher.observe(container, { 
+          childList: true, 
+          subtree: true, 
+          characterData: true,
+          characterDataOldValue: true
+        });
+      }
+    }, 500);
+  }
+}
+
+// Start auto-scroll interval
+function startAutoScrollInterval() {
+  // Clear any existing interval
+  if (activeScrollInterval) clearInterval(activeScrollInterval);
+  
+  // Set up new interval that regularly checks if we should scroll
+  activeScrollInterval = setInterval(() => {
+    if (autoScroll) {
+      forceScrollToBottom();
+    }
+  }, 500); // Check every 500ms
+}
+
+// Very aggressive scroll to bottom implementation
+function forceScrollToBottom() {
+  // Attempt multiple scrolls with different delays to ensure it happens
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => {
+      const container = document.getElementById('messages-container');
+      if (container) {
+        container.scrollTop = container.scrollHeight + 50000;
+      }
+    }, i * 100);
+  }
+}
 
 // Load messages in chunks for better performance
 function loadNextChunk() {
@@ -95,7 +160,7 @@ $: if (history.currentId !== lastHistoryId) {
   autoScroll = true;
   
   // Force scroll to bottom with delay
-  setTimeout(scrollToBottom, 50);
+  forceScrollToBottom();
 }
 
 // Track content changes in the last message (critical for streaming responses)
@@ -103,12 +168,12 @@ $: if (messages.length > 0) {
   const lastMsg = messages[messages.length - 1];
   
   // If this is an assistant message and content changed, it's probably streaming
-  if (lastMsg.role === 'assistant' && lastMsg.content !== lastMessageContent) {
+  if (lastMsg && lastMsg.role === 'assistant' && lastMsg.content !== lastMessageContent) {
     lastMessageContent = lastMsg.content;
     
     // Auto-scroll during streaming
     if (autoScroll) {
-      scrollToBottom();
+      forceScrollToBottom();
     }
   }
 }
@@ -121,21 +186,12 @@ $: if (loadedMessageCount < messages.length && !loadingChunk) {
 $: if (autoScroll && bottomPadding) {
   (async () => {
     await tick();
-    scrollToBottom();
+    forceScrollToBottom();
   })();
 }
 
-// Much more aggressive scrollToBottom function
-const scrollToBottom = () => {
-  for (let i = 0; i < 3; i++) { // Try multiple times
-    setTimeout(() => {
-      const element = document.getElementById('messages-container');
-      if (element) {
-        element.scrollTop = element.scrollHeight + 10000;
-      }
-    }, i * 100); // Stagger attempts
-  }
-};
+// Replaces the original scrollToBottom function
+const scrollToBottom = forceScrollToBottom;
 
 const updateChat = async () => {
 if (!$temporaryChatEnabled) {
@@ -178,7 +234,7 @@ if ($settings?.scrollOnBranchChange ?? true) {
 const element = document.getElementById('messages-container');
 autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 setTimeout(() => {
-scrollToBottom();
+forceScrollToBottom();
 }, 100);
 }
 };
@@ -215,7 +271,7 @@ if ($settings?.scrollOnBranchChange ?? true) {
 const element = document.getElementById('messages-container');
 autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 setTimeout(() => {
-scrollToBottom();
+forceScrollToBottom();
 }, 100);
 }
 };
@@ -256,7 +312,7 @@ if ($settings?.scrollOnBranchChange ?? true) {
 const element = document.getElementById('messages-container');
 autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
 setTimeout(() => {
-scrollToBottom();
+forceScrollToBottom();
 }, 100);
 }
 };
@@ -371,18 +427,28 @@ showMessage({ id: parentMessageId });
 await updateChat();
 };
 
-// More aggressive triggerScroll to ensure auto-scrolling works
+// Ultra aggressive triggerScroll implementation
 const triggerScroll = () => {
   const container = document.getElementById('messages-container');
   if (container) {
-    // More generous threshold for auto-scroll
-    autoScroll = container.scrollHeight - container.scrollTop <= container.clientHeight * 1.5;
+    // Very generous threshold for staying in auto-scroll mode
+    autoScroll = container.scrollHeight - container.scrollTop <= container.clientHeight * 2;
     
     if (autoScroll) {
-      scrollToBottom();
+      forceScrollToBottom();
     }
   }
 };
+
+// When component is destroyed
+onDestroy(() => {
+  if (activeScrollInterval) {
+    clearInterval(activeScrollInterval);
+  }
+  if (messageWatcher) {
+    messageWatcher.disconnect();
+  }
+});
 </script>
 
 <div class={className}>
