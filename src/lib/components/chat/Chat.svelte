@@ -1421,6 +1421,7 @@
 			}
 		}
 		responseMessage.userContext = userContext;
+		await tick(); //For DOM update
 	}
 
 	const sendPrompt = async (
