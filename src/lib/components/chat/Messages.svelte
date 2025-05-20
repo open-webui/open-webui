@@ -441,11 +441,15 @@ import VirtualList from '@sveltejs/svelte-virtual-list';
 						let:item
 						let:index
 					>
-						<!-- DEBUG: Show index and item id instead of <Message /> -->
 						<div style="border: 1px solid green; margin: 2px; padding: 6px;">
-							{index}: {item && item.id}
+							TEST
 						</div>
 					</VirtualList>
+					{#each messages as message, idx}
+						<div style="border: 1px solid blue; margin: 2px; padding: 6px;">
+							{idx}: {message.id}
+						</div>
+					{/each}
 				</div>
 				<div class="pb-12" />
 				{#if bottomPadding}
