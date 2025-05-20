@@ -9,7 +9,7 @@ mobile,
 currentChatPage,
 temporaryChatEnabled
 } from '$lib/stores';
-import { tick, getContext, onMount, createEventDispatcher } from 'svelte';
+import { tick, getContext, onMount, createEventDispatcher, afterUpdate } from 'svelte';
 const dispatch = createEventDispatcher();
 import { toast } from 'svelte-sonner';
 import { getChatList, updateChatById } from '$lib/apis/chats';
@@ -47,7 +47,7 @@ let lastMessageCount = 0;
 let isGenerating = false;
 let prevScrollTop = 0;
 
-// Improved message loading function
+// More efficient message loading
 const loadMoreMessages = async () => {
   if (messagesLoading || allMessagesLoaded) return;
   
@@ -127,23 +127,19 @@ $: if (history.currentId) {
   }, 100);
 }
 
-// More aggressive message loading on scroll
+// Simplified scroll handler to avoid interfering with native behavior
 const handleScroll = (e) => {
   const container = e.target;
   
-  // Scrolling up detection
-  const isScrollingUp = container.scrollTop < prevScrollTop;
-  prevScrollTop = container.scrollTop;
+  // Check if we're near the top
+  if (container.scrollTop < 300 && !messagesLoading && 
+      messages.length > 0 && messages[0]?.parentId !== null) {
+    loadMoreMessages();
+  }
   
   // Only update autoScroll flag if we're not actively generating
   if (!isGenerating) {
     autoScroll = container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
-  }
-  
-  // Check if we need to load more messages (more sensitive near top)
-  if (isScrollingUp && container.scrollTop < 300 && !messagesLoading && 
-      messages.length > 0 && messages[0]?.parentId !== null) {
-    loadMoreMessages();
   }
 };
 
@@ -416,19 +412,39 @@ const triggerScroll = () => {
   }, 500);
 };
 
-// Add scroll event handling for improved performance
+// Enhanced onMount function to ensure wheel events work properly
 onMount(() => {
   messagesContainer = document.getElementById('messages-container');
   if (messagesContainer) {
     // Set initial scroll position to bottom
     setTimeout(scrollToBottom, 200);
     
-    // Use our improved scroll handler
+    // Use our simplified scroll handler
     messagesContainer.addEventListener('scroll', handleScroll);
+    
+    // Ensure we're not blocking wheel events
+    messagesContainer.addEventListener('wheel', (e) => {
+      // Just let the natural scrolling happen, don't prevent default
+      
+      // We can update tracking variables if needed
+      if (!messagesLoading && !isGenerating) {
+        prevScrollTop = messagesContainer.scrollTop;
+      }
+    }, { passive: true }); // passive: true for better performance
     
     return () => {
       messagesContainer.removeEventListener('scroll', handleScroll);
+      messagesContainer.removeEventListener('wheel', () => {});
     };
+  }
+});
+
+// Ensure scroll behavior recovery if there are errors
+afterUpdate(() => {
+  const container = document.getElementById('messages-container');
+  if (container) {
+    // Ensure scrolling is enabled
+    container.style.overflow = 'auto';
   }
 });
 </script>
@@ -511,9 +527,10 @@ onMount(() => {
     height: 100%;
     overflow-y: auto;
     scroll-behavior: smooth;
+    touch-action: pan-y;
   }
   
-  /* Additional style to ensure the container is scrollable */
+  /* Ensure the container elements don't shrink */
   :global(div[id="messages-container"] > *) {
     flex-shrink: 0;
   }
