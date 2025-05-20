@@ -1928,6 +1928,11 @@ RAG_RELEVANCE_THRESHOLD = PersistentConfig(
     "rag.relevance_threshold",
     float(os.environ.get("RAG_RELEVANCE_THRESHOLD", "0.0")),
 )
+RAG_BM25_WEIGHT = PersistentConfig(
+    "RAG_BM25_WEIGHT",
+    "rag.bm25_weight",
+    float(os.environ.get("RAG_BM25_WEIGHT", "0.5")),
+)
 
 ENABLE_RAG_HYBRID_SEARCH = PersistentConfig(
     "ENABLE_RAG_HYBRID_SEARCH",

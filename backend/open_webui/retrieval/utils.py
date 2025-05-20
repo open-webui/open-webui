@@ -29,6 +29,7 @@ from open_webui.config import (
     RAG_EMBEDDING_QUERY_PREFIX,
     RAG_EMBEDDING_CONTENT_PREFIX,
     RAG_EMBEDDING_PREFIX_FIELD_NAME,
+    RAG_BM25_WEIGHT,
 )
 
 log = logging.getLogger(__name__)
@@ -131,9 +132,20 @@ def query_doc_with_hybrid_search(
             top_k=k,
         )
 
-        ensemble_retriever = EnsembleRetriever(
-            retrievers=[bm25_retriever, vector_search_retriever], weights=[0.5, 0.5]
-        )
+        if RAG_BM25_WEIGHT <= 0:
+            ensemble_retriever = EnsembleRetriever(
+                retrievers=[vector_search_retriever], weights=[1.]
+            )
+        elif RAG_BM25_WEIGHT >= 1:
+            ensemble_retriever = EnsembleRetriever(
+                retrievers=[bm25_retriever], weights=[1.]
+            )
+        else:
+            ensemble_retriever = EnsembleRetriever(
+                retrievers=[bm25_retriever, vector_search_retriever],
+                weights=[RAG_BM25_WEIGHT, 1. - RAG_BM25_WEIGHT]
+            )
+
         compressor = RerankCompressor(
             embedding_function=embedding_function,
             top_n=k_reranker,
