@@ -2124,6 +2124,27 @@ RAG_OPENAI_API_KEY = PersistentConfig(
     os.getenv("RAG_OPENAI_API_KEY", OPENAI_API_KEY),
 )
 
+RAG_AZURE_OPENAI_BASE_URL = PersistentConfig(
+    "RAG_AZURE_OPENAI_BASE_URL",
+    "rag.azure_openai.base_url",
+    os.getenv("RAG_AZURE_OPENAI_BASE_URL", ""),
+)
+RAG_AZURE_OPENAI_API_KEY = PersistentConfig(
+    "RAG_AZURE_OPENAI_API_KEY",
+    "rag.azure_openai.api_key",
+    os.getenv("RAG_AZURE_OPENAI_API_KEY", ""),
+)
+RAG_AZURE_OPENAI_DEPLOYMENT = PersistentConfig(
+    "RAG_AZURE_OPENAI_DEPLOYMENT",
+    "rag.azure_openai.deployment",
+    os.getenv("RAG_AZURE_OPENAI_DEPLOYMENT", ""),
+)
+RAG_AZURE_OPENAI_VERSION = PersistentConfig(
+    "RAG_AZURE_OPENAI_VERSION",
+    "rag.azure_openai.version",
+    os.getenv("RAG_AZURE_OPENAI_VERSION", ""),
+)
+
 RAG_OLLAMA_BASE_URL = PersistentConfig(
     "RAG_OLLAMA_BASE_URL",
     "rag.ollama.url",
