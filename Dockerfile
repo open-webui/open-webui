@@ -32,7 +32,13 @@ RUN apk add --no-cache git
 COPY package.json package-lock.json ./
 RUN npm ci
 
-COPY . .
+# Copy only required files for build
+COPY scripts ./scripts
+COPY static ./static
+COPY CHANGELOG.md ./
+COPY src ./src
+COPY vite.config.ts postcss.config.js tailwind.config.js tsconfig.json svelte.config.js ./
+
 ENV APP_BUILD_HASH=${BUILD_HASH}
 RUN npm run build
 
