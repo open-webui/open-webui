@@ -1221,7 +1221,7 @@
 																<Sparkles className="size-5" strokeWidth="1.75" />
 															{/if}
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none"
 																>{filter?.name}</span
 															>
 														</button>
@@ -1240,7 +1240,7 @@
 														>
 															<GlobeAlt className="size-5" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none"
 																>{$i18n.t('Web Search')}</span
 															>
 														</button>
@@ -1259,7 +1259,7 @@
 														>
 															<Photo className="size-5" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none"
 																>{$i18n.t('Image')}</span
 															>
 														</button>
@@ -1278,7 +1278,7 @@
 														>
 															<CommandLine className="size-5" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis translate-y-[0.5px]"
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none"
 																>{$i18n.t('Code Interpreter')}</span
 															>
 														</button>
