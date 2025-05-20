@@ -1394,6 +1394,35 @@
 		await sendPrompt(history, userPrompt, userMessageId, { newChat: true });
 	};
 
+	const addUserContext = async (
+		prompt: string,
+		responseMessage
+	) => {
+		let userContext = null;
+		if ($settings?.memory ?? false) {
+			if (userContext === null) {
+				const res = await queryMemory(localStorage.token, prompt).catch((error) => {
+					toast.error(`${error}`);
+					return null;
+				});
+				if (res) {
+					if (res.documents[0].length > 0) {
+						userContext = res.documents[0].reduce((acc, doc, index) => {
+							const createdAtTimestamp = res.metadatas[0][index].created_at;
+							const createdAtDate = new Date(createdAtTimestamp * 1000)
+								.toISOString()
+								.split('T')[0];
+							return `${acc}${index + 1}. [${createdAtDate}]. ${doc}\n`;
+						}, '');
+					}
+	
+					console.log(userContext);
+				}
+			}
+		}
+		responseMessage.userContext = userContext;
+	}
+
 	const sendPrompt = async (
 		_history,
 		prompt: string,
@@ -1487,29 +1516,7 @@
 						responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
 					let responseMessage = _history.messages[responseMessageId];
 
-					let userContext = null;
-					if ($settings?.memory ?? false) {
-						if (userContext === null) {
-							const res = await queryMemory(localStorage.token, prompt).catch((error) => {
-								toast.error(`${error}`);
-								return null;
-							});
-							if (res) {
-								if (res.documents[0].length > 0) {
-									userContext = res.documents[0].reduce((acc, doc, index) => {
-										const createdAtTimestamp = res.metadatas[0][index].created_at;
-										const createdAtDate = new Date(createdAtTimestamp * 1000)
-											.toISOString()
-											.split('T')[0];
-										return `${acc}${index + 1}. [${createdAtDate}]. ${doc}\n`;
-									}, '');
-								}
-
-								console.log(userContext);
-							}
-						}
-					}
-					responseMessage.userContext = userContext;
+					await addUserContext(prompt, responseMessage);
 
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
@@ -1866,6 +1873,9 @@
 
 		if (history.currentId && history.messages[history.currentId].done == true) {
 			const responseMessage = history.messages[history.currentId];
+			const prevMessage = history.messages[responseMessage.parentId];
+                        const prompt = prevMessage.content;
+			await addUserContext(prompt, responseMessage);
 			responseMessage.done = false;
 			await tick();
 
