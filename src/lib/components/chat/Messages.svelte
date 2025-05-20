@@ -40,6 +40,7 @@ export let bottomPadding = false;
 export let autoScroll;
 let messagesCount = 20;
 let messagesLoading = false;
+let lastHistoryId = null; // Track the last history ID we processed
 
 // Add these virtualization variables
 let visibleMessages = [];
@@ -118,6 +119,31 @@ function updateVisibleMessages() {
   }));
 }
 
+// Force rebuild messages from history
+function rebuildMessages() {
+  if (history.currentId) {
+    let _messages = [];
+    let message = history.messages[history.currentId];
+    while (message && _messages.length <= messagesCount) {
+      _messages.unshift({ ...message });
+      message = message.parentId !== null ? history.messages[message.parentId] : null;
+    }
+    messages = _messages;
+    lastHistoryId = history.currentId;
+    
+    // Schedule update of visible messages and auto-scroll
+    setTimeout(() => {
+      updateVisibleMessages();
+      if (autoScroll) {
+        setTimeout(scrollToBottom, 50);
+      }
+    }, 0);
+  } else {
+    messages = [];
+    lastHistoryId = null;
+  }
+}
+
 onMount(() => {
   const container = document.getElementById('messages-container');
   if (container) {
@@ -144,21 +170,33 @@ messagesCount += 20;
 await tick();
 messagesLoading = false;
 };
-$: if (history.currentId) {
-let _messages = [];
-let message = history.messages[history.currentId];
-while (message && _messages.length <= messagesCount) {
-_messages.unshift({ ...message });
-message = message.parentId !== null ? history.messages[message.parentId] : null;
-}
-messages = _messages;
-} else {
-messages = [];
+
+// Watch history changes - critically important for follow-up questions
+$: if (history.currentId !== lastHistoryId) {
+  rebuildMessages();
 }
 
 // Update visible messages when messages change
-$: if (messages) {
-  setTimeout(updateVisibleMessages, 0);
+$: if (messages && messages.length > 0) {
+  setTimeout(() => {
+    updateVisibleMessages();
+    
+    // If autoScroll is enabled, scroll to the newest message
+    if (autoScroll) {
+      setTimeout(scrollToBottom, 0);
+    }
+  }, 0);
+}
+
+// Add this reactive statement to trigger scroll when visible messages change
+$: if (visibleMessages.length > 0 && autoScroll) {
+  const lastMessage = visibleMessages[visibleMessages.length - 1].message;
+  
+  // If the last visible message is also the last in the full messages array, 
+  // scroll to bottom (handles auto-scrolling during message generation)
+  if (lastMessage && lastMessage.id === messages[messages.length - 1]?.id) {
+    setTimeout(scrollToBottom, 0);
+  }
 }
 
 $: if (autoScroll && bottomPadding) {
@@ -167,10 +205,17 @@ await tick();
 scrollToBottom();
 })();
 }
+
+// Update scrollToBottom function to work with virtualization
 const scrollToBottom = () => {
-const element = document.getElementById('messages-container');
-element.scrollTop = element.scrollHeight;
+  requestAnimationFrame(() => {
+    const container = document.getElementById('messages-container');
+    if (container) {
+      container.scrollTop = totalHeight + 1000; // Use our calculated total height plus extra to ensure we're at bottom
+    }
+  });
 };
+
 const updateChat = async () => {
 if (!$temporaryChatEnabled) {
 history = history;
@@ -404,14 +449,22 @@ showMessage({ id: parentMessageId });
 // Update the chat
 await updateChat();
 };
+
+// Make triggerScroll compatible with virtualization
 const triggerScroll = () => {
-if (autoScroll) {
-const element = document.getElementById('messages-container');
-autoScroll = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-setTimeout(() => {
-scrollToBottom();
-}, 100);
-}
+  const container = document.getElementById('messages-container');
+  
+  if (container) {
+    // Check if we're near the bottom
+    const isNearBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
+    
+    // If we're near the bottom, enable auto-scrolling
+    autoScroll = isNearBottom;
+    
+    if (autoScroll) {
+      setTimeout(scrollToBottom, 50);
+    }
+  }
 };
 </script>
 <div class={className}>
