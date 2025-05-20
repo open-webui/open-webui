@@ -32,6 +32,7 @@
 	import Search from '../icons/Search.svelte';
 	import Plus from '../icons/Plus.svelte';
 	import ChevronRight from '../icons/ChevronRight.svelte';
+	import XMark from '../icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -215,6 +216,19 @@
 				bind:value={query}
 				placeholder={$i18n.t('Search Functions')}
 			/>
+
+			{#if query}
+				<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+					<button
+						class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+						on:click={() => {
+							query = '';
+						}}
+					>
+						<XMark className="size-3" strokeWidth="2" />
+					</button>
+				</div>
+			{/if}
 		</div>
 
 		<div>
