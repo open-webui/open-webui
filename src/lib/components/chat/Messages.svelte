@@ -438,12 +438,12 @@ import VirtualList from '@sveltejs/svelte-virtual-list';
 						itemHeight={72}
 						height={600}
 						overscan={8}
-						let:item
-						let:index
 					>
-						<div style="border: 1px solid green; margin: 2px; padding: 6px;">
-							TEST
-						</div>
+						{#each items as item, index}
+							<div style="border: 1px solid green; margin: 2px; padding: 6px;">
+								{index}: {item.id}
+							</div>
+						{/each}
 					</VirtualList>
 					{#each messages as message, idx}
 						<div style="border: 1px solid blue; margin: 2px; padding: 6px;">
