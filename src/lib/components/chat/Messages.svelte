@@ -436,20 +436,16 @@ import VirtualList from '@sveltejs/svelte-virtual-list';
 					<VirtualList
 						items={messages}
 						itemHeight={72}
-						height={600}
+						height={200}
 						overscan={8}
 					>
 						{#each items as item, index}
-							<div style="border: 1px solid green; margin: 2px; padding: 6px;">
+							{@html `<script>console.log("VirtualList item", ${index}, '${item.id}')</script>`}
+							<div style="border: 4px solid limegreen; margin: 2px; padding: 6px;">
 								{index}: {item.id}
 							</div>
 						{/each}
 					</VirtualList>
-					{#each messages as message, idx}
-						<div style="border: 1px solid blue; margin: 2px; padding: 6px;">
-							{idx}: {message.id}
-						</div>
-					{/each}
 				</div>
 				<div class="pb-12" />
 				{#if bottomPadding}
