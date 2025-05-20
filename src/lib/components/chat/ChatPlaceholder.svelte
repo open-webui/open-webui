@@ -126,7 +126,7 @@
 		<div class=" w-full font-primary" in:fade={{ duration: 200, delay: 300 }}>
 			<Suggestions
 				className="grid grid-cols-2"
-				suggestionPrompts={models[selectedModelIdx]?.info?.meta?.suggestion_prompts ??
+				suggestionPrompts={models[selectedModelIdx]?.meta?.suggestion_prompts ??
 					$config?.default_prompt_suggestions ??
 					[]}
 				on:select={(e) => {

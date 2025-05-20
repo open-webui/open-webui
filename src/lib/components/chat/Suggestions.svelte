@@ -97,7 +97,7 @@
 						</div>
 					{:else}
 						<div
-							class="font-medium text-xs text-lightGray-1000 dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
+							class="font-medium text-xs text-lightGray-100 dark:text-gray-300 dark:group-hover:text-gray-200 transition line-clamp-1"
 						>
 							{prompt.content}
 						</div>
