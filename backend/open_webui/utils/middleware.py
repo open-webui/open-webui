@@ -1768,7 +1768,7 @@ async def process_chat_response(
                 
                 # Execute tools and handle follow-up using the helper
                 tools = metadata.get("tools", {})
-                MAX_TOOL_CALL_RETRIES = 5
+                MAX_TOOL_CALL_RETRIES = 10
                 
                 # Process tool calls and generate follow-ups
                 content_blocks = await handle_tool_call_loop(
