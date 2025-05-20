@@ -363,7 +363,7 @@
 							);
 
 							if (hasImageFile || hasImageItem) {
-								// If there's an image item, dispatch the event to the parent
+								// If there's an image or image item, dispatch the event to the parent
 								eventDispatch('paste', { event });
 								event.preventDefault();
 								return true;
