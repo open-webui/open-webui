@@ -254,7 +254,7 @@
 					</div>
 					{#if selectedSortOrder.value === 'credits'}
 						<div class="text-xs dark:text-customGray-590">
-							{(user?.total_credits_used).toFixed(0)} {$i18n.t('credits')}
+							€{(user?.total_credits_used).toFixed(2)}
 						</div>
 					{:else if selectedSortOrder.value === 'messages'}
 						<div class="text-xs dark:text-customGray-590">
@@ -336,7 +336,7 @@
 							{model?.model}
 						</div>
 					</div>
-					<div class="text-xs dark:text-customGray-590">{model?.usage_count} credits</div>
+					<div class="text-xs dark:text-customGray-590">€{(model?.usage_count).toFixed(2)}</div>
 				</div>
 			{/each}
 		</div>
