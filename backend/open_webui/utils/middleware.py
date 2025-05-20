@@ -549,10 +549,11 @@ async def chat_image_generation_handler(
 
 
 async def chat_completion_files_handler(
-    request: Request, body: dict, user: UserModel
+    request: Request, body: dict, user: UserModel, extra_params: dict
 ) -> tuple[dict, dict[str, list]]:
     sources = []
 
+    queries_were_generated = False
     if files := body.get("metadata", {}).get("files", None):
         queries = []
         try:
@@ -580,11 +581,33 @@ async def chat_completion_files_handler(
                 queries_response = {"queries": [queries_response]}
 
             queries = queries_response.get("queries", [])
+            if len(queries) > 0:
+                queries_were_generated = True
         except:
             pass
 
         if len(queries) == 0:
             queries = [get_last_user_message(body["messages"])]
+
+        event_emitter = extra_params.get("__event_emitter__")
+        metadata = extra_params.get("__metadata__", {}) 
+        message_id = metadata.get("message_id") 
+
+        if event_emitter and queries_were_generated:
+            # Send retrieval queries as a standalone citation/source event
+            # This ensures they'll appear in the UI even if no relevant sources are found
+            await event_emitter(
+                {
+                    "type": "source",
+                    "message_id": message_id,
+                    "chat_id": metadata.get("chat_id"),
+                    "data": {
+                        "source": {"name": "Retrieval Queries"},
+                        "document": ["The following queries were used to search for relevant information:"],
+                        "metadata": [{"retrieval_queries": queries}]
+                    }
+                }
+            )
 
         try:
             # Offload get_sources_from_files to a separate thread
@@ -607,6 +630,28 @@ async def chat_completion_files_handler(
                         full_context=request.app.state.config.RAG_FULL_CONTEXT,
                     ),
                 )
+                
+                # Add generated queries to the source metadata
+                if queries_were_generated:
+                    # If no sources were found, create a standalone source just for queries
+                    if not sources or len(sources) == 0:
+                        sources = [{
+                            "source": {"name": "Retrieval Queries"},
+                            "document": ["No relevant documents found"],
+                            "metadata": [{"retrieval_queries": queries}]
+                        }]
+                    else:
+                        for source in sources:
+                            if not source.get("metadata"):
+                                source["metadata"] = []
+                            
+                            # Add retrieval_queries to each metadata item
+                            for metadata_item in source["metadata"]:
+                                metadata_item["retrieval_queries"] = queries
+                            
+                            # If no metadata items exist, create one
+                            if len(source["metadata"]) == 0:
+                                source["metadata"] = [{"retrieval_queries": queries}]
         except Exception as e:
             log.exception(e)
 
@@ -862,7 +907,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 log.exception(e)
 
     try:
-        form_data, flags = await chat_completion_files_handler(request, form_data, user)
+        form_data, flags = await chat_completion_files_handler(request, form_data, user, extra_params)
         sources.extend(flags.get("sources", []))
     except Exception as e:
         log.exception(e)
