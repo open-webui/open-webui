@@ -975,6 +975,7 @@ async def process_chat_response(
 
                 messages.append(
                     {
+                        **message,
                         "role": message["role"],
                         "content": content,
                     }
