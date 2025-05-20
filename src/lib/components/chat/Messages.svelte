@@ -41,16 +41,13 @@ export let autoScroll = true; // Default to true
 let messagesCount = 20;
 let messagesLoading = false;
 let lastHistoryId = null;
-
 // Add a specific flag to track streaming state
 let isStreaming = false;
 let scrollCheckInterval = null;
-
 // Add variables to track content changes
 let lastMessageContent = '';
 let messageWatcher = null;
 let activeScrollInterval = null;
-
 // Simple optimization - split loading into chunks
 const LOAD_CHUNK_SIZE = 5;
 let loadedMessageCount = 0;
@@ -60,18 +57,17 @@ let loadingChunk = false;
 export function startMessageStream() {
   console.log("Stream started, enabling auto-scroll");
   isStreaming = true;
-  autoScroll = true; // Force auto-scroll on when streaming starts
+  autoScroll = true;
   
   // Clear any existing interval
   if (scrollCheckInterval) clearInterval(scrollCheckInterval);
   
-  // Set up a very frequent scroll check during streaming
+  // More aggressive scroll checking during streaming
   scrollCheckInterval = setInterval(() => {
     if (isStreaming && autoScroll) {
-      console.log("Auto-scrolling during stream");
       requestScrollToBottom();
     }
-  }, 250); // Check 4 times per second during streaming
+  }, 100); // Check 10 times per second during streaming
   
   // Initial scroll
   requestScrollToBottom();
@@ -81,10 +77,8 @@ export function startMessageStream() {
 export function endMessageStream() {
   console.log("Stream ended");
   isStreaming = false;
-  
   // Final scroll to make sure we're at the bottom
   requestScrollToBottom();
-  
   // Clear the frequent interval
   if (scrollCheckInterval) {
     clearInterval(scrollCheckInterval);
@@ -92,18 +86,30 @@ export function endMessageStream() {
   }
 }
 
+function forceScrollImmediately() {
+  autoScroll = true;
+  requestScrollToBottom();
+  setTimeout(() => requestScrollToBottom(), 100);
+  setTimeout(() => requestScrollToBottom(), 300);
+}
+
 // Reliable scroll implementation using requestAnimationFrame
 function requestScrollToBottom() {
-  requestAnimationFrame(() => {
+  if (!autoScroll) return;
+  
+  // Clear any pending animation frames to prevent multiple scrolls
+  if (window.scrollAnimationFrame) {
+    cancelAnimationFrame(window.scrollAnimationFrame);
+  }
+  
+  window.scrollAnimationFrame = requestAnimationFrame(() => {
     const container = document.getElementById('messages-container');
     if (container) {
-      console.log("Scrolling to:", container.scrollHeight);
       container.scrollTop = container.scrollHeight + 10000;
       
-      // Check if scroll worked in the next frame
-      requestAnimationFrame(() => {
+      // Verify scroll worked and retry if needed
+      window.scrollVerificationFrame = requestAnimationFrame(() => {
         if (container.scrollHeight - container.scrollTop > container.clientHeight + 50) {
-          console.log("Scroll didn't reach bottom, trying again");
           container.scrollTop = container.scrollHeight + 10000;
         }
       });
@@ -128,17 +134,14 @@ onMount(() => {
       }
     });
   }
-  
   // Set up mutation observer
   setupMutationObserver();
-  
   return () => {
     if (activeScrollInterval) clearInterval(activeScrollInterval);
     if (messageWatcher) messageWatcher.disconnect();
     if (scrollCheckInterval) clearInterval(scrollCheckInterval);
   };
 });
-
 // Set up mutation observer to detect DOM changes in the chat
 function setupMutationObserver() {
   if (typeof window !== 'undefined' && window.MutationObserver) {
@@ -151,7 +154,6 @@ function setupMutationObserver() {
             requestScrollToBottom();
           }
         });
-        
         messageWatcher.observe(container, {
           childList: true,
           subtree: true,
@@ -162,7 +164,6 @@ function setupMutationObserver() {
     }, 500);
   }
 }
-
 // Load messages in chunks for better performance
 function loadNextChunk() {
   if (loadingChunk) return;
@@ -175,7 +176,6 @@ function loadNextChunk() {
     loadingChunk = false;
   }, 10);
 }
-
 const loadMoreMessages = async () => {
   // scroll slightly down to disable continuous loading
   const element = document.getElementById('messages-container');
@@ -185,7 +185,6 @@ const loadMoreMessages = async () => {
   await tick();
   messagesLoading = false;
 };
-
 // Update messages when history changes
 $: if (history.currentId !== lastHistoryId) {
   let _messages = [];
@@ -203,7 +202,6 @@ $: if (history.currentId !== lastHistoryId) {
   // Force scroll to bottom with delay
   requestScrollToBottom();
 }
-
 // Track content changes in the last message (critical for streaming responses)
 $: if (messages.length > 0) {
   const lastMsg = messages[messages.length - 1];
@@ -219,22 +217,32 @@ $: if (messages.length > 0) {
   }
 }
 
+// Also add this reactive statement to better detect streaming changes
+$: if (messages.length > 0) {
+  const lastMsg = messages[messages.length - 1];
+  if (lastMsg && lastMsg.role === 'assistant') {
+    // Force scroll check whenever messages array changes
+    if (autoScroll) {
+      setTimeout(() => requestScrollToBottom(), 50);
+      setTimeout(() => requestScrollToBottom(), 150);
+      setTimeout(() => requestScrollToBottom(), 300);
+    }
+  }
+}
+
 // Check if we need to load more messages
 $: if (loadedMessageCount < messages.length && !loadingChunk) {
   loadNextChunk();
 }
-
 $: if (autoScroll && bottomPadding) {
   (async () => {
     await tick();
     requestScrollToBottom();
   })();
 }
-
 // Update scroll functions to use the new method
 const forceScrollToBottom = requestScrollToBottom;
 const scrollToBottom = requestScrollToBottom;
-
 const updateChat = async () => {
 if (!$temporaryChatEnabled) {
 history = history;
@@ -394,8 +402,13 @@ await tick();
 // Enable streaming mode when sending a new prompt
 startMessageStream();
 await sendPrompt(history, userPrompt, userMessageId);
-// End streaming when done
-setTimeout(() => endMessageStream(), 1000);
+// Wait a bit to ensure messages are processed
+for (let i = 0; i < 10; i++) {
+  await tick();
+  requestScrollToBottom();
+  await new Promise(r => setTimeout(r, 100));
+}
+endMessageStream();
 } else {
 // Edit user message
 history.messages[messageId].content = content;
@@ -472,7 +485,6 @@ showMessage({ id: parentMessageId });
 // Update the chat
 await updateChat();
 };
-
 // Updated triggerScroll implementation
 const triggerScroll = () => {
   const container = document.getElementById('messages-container');
@@ -482,12 +494,13 @@ const triggerScroll = () => {
     requestScrollToBottom();
   }
 };
-
 // When component is destroyed
 onDestroy(() => {
   if (activeScrollInterval) clearInterval(activeScrollInterval);
   if (messageWatcher) messageWatcher.disconnect();
   if (scrollCheckInterval) clearInterval(scrollCheckInterval);
+  if (window.scrollAnimationFrame) cancelAnimationFrame(window.scrollAnimationFrame);
+  if (window.scrollVerificationFrame) cancelAnimationFrame(window.scrollVerificationFrame);
 });
 </script>
 <div class={className}>
