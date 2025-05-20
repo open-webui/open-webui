@@ -49,6 +49,35 @@ let scrollPosition = 0;
 let containerHeight = 0;
 let estimatedMessageHeight = 300; // Increase default estimate to prevent initial overlap
 
+// Add this action for height measurement
+function measureHeight(node, messageId) {
+  function measure() {
+    const height = node.clientHeight;
+    if (height > 0 && messageHeights[messageId] !== height) {
+      messageHeights[messageId] = height;
+      updateVisibleMessages();
+    }
+  }
+
+  // Set up ResizeObserver for dynamic height changes
+  const resizeObserver = new ResizeObserver(() => {
+    measure();
+  });
+  
+  resizeObserver.observe(node);
+  measure(); // Initial measurement
+  
+  return {
+    destroy() {
+      resizeObserver.disconnect();
+    },
+    update(newMessageId) {
+      messageId = newMessageId;
+      measure();
+    }
+  };
+}
+
 // Calculate positions based on actual measured heights
 function calculateMessagePositions() {
   let positions = {};
@@ -87,14 +116,6 @@ function updateVisibleMessages() {
     index: messages.indexOf(msg),
     position: positions[msg.id]
   }));
-}
-
-// Add function to record message heights after they render
-function recordMessageHeight(messageId, height) {
-  if (height > 50) { // Only record valid heights
-    messageHeights[messageId] = height;
-    updateVisibleMessages();
-  }
 }
 
 onMount(() => {
@@ -436,7 +457,8 @@ await tick();
     {#each visibleMessages as item (item.message.id)}
       <div 
         style="position: absolute; width: 100%; top: {item.position}px;"
-        bind:clientHeight={(h) => recordMessageHeight(item.message.id, h)}
+        id="msg-{item.message.id}" 
+        use:measureHeight={item.message.id}
       >
         <Message
           {chatId}
