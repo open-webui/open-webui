@@ -53,7 +53,6 @@ const LOAD_CHUNK_SIZE = 5;
 let loadedMessageCount = 0;
 let loadingChunk = false;
 
-import { tick } from 'svelte';
 
 async function forceScrollToBottom() {
   await tick(); // Ensure the DOM is updated
