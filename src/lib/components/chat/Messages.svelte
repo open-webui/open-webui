@@ -16,10 +16,9 @@
 	import { getChatList, updateChatById } from '$lib/apis/chats';
 	import { copyToClipboard, extractCurlyBraceWords } from '$lib/utils';
 
-import Message from './Messages/Message.svelte';
-import Loader from '../common/Loader.svelte';
-import Spinner from '../common/Spinner.svelte';
-import { VirtualList } from 'svelte-virtual';
+	import Message from './Messages/Message.svelte';
+	import Loader from '../common/Loader.svelte';
+	import Spinner from '../common/Spinner.svelte';
 
 	import ChatPlaceholder from './ChatPlaceholder.svelte';
 
@@ -412,7 +411,7 @@ import { VirtualList } from 'svelte-virtual';
 			}}
 		/>
 	{:else}
-		<div id="messages-container" class="w-full pt-2" style="height: 75vh; overflow-y: auto;">
+		<div class="w-full pt-2">
 			{#key chatId}
 				<div class="w-full">
 					{#if messages.at(0)?.parentId !== null}
@@ -431,40 +430,31 @@ import { VirtualList } from 'svelte-virtual';
 						</Loader>
 					{/if}
 
-					<VirtualList
-						items={messages}
-						itemSize={72}
-						overscan={8}
-						let:visibleItems
-					>
-						{#each visibleItems as { item: message, index: messageIdx, style }}
-							<div style={style}>
-								<Message
-									{chatId}
-									bind:history
-									messageId={message.id}
-									idx={messageIdx}
-									{user}
-									{gotoMessage}
-									{showPreviousMessage}
-									{showNextMessage}
-									{updateChat}
-									{editMessage}
-									{deleteMessage}
-									{rateMessage}
-									{actionMessage}
-									{saveMessage}
-									{submitMessage}
-									{regenerateResponse}
-									{continueResponse}
-									{mergeResponses}
-									{addMessages}
-									{triggerScroll}
-									{readOnly}
-								/>
-							</div>
-						{/each}
-					</VirtualList>
+					{#each messages as message, messageIdx (message.id)}
+						<Message
+							{chatId}
+							bind:history
+							messageId={message.id}
+							idx={messageIdx}
+							{user}
+							{gotoMessage}
+							{showPreviousMessage}
+							{showNextMessage}
+							{updateChat}
+							{editMessage}
+							{deleteMessage}
+							{rateMessage}
+							{actionMessage}
+							{saveMessage}
+							{submitMessage}
+							{regenerateResponse}
+							{continueResponse}
+							{mergeResponses}
+							{addMessages}
+							{triggerScroll}
+							{readOnly}
+						/>
+					{/each}
 				</div>
 				<div class="pb-12" />
 				{#if bottomPadding}
