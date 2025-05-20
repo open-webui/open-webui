@@ -2012,7 +2012,7 @@
 	id="chat-container"
 >
 	{#if !loading}
-		<div in:fade={{ duration: 100 }} class="w-full h-full flex flex-col">
+		<div in:fade={{ duration: 50 }} class="w-full h-full flex flex-col">
 			{#if $settings?.backgroundImageUrl ?? null}
 				<div
 					class="absolute {$showSidebar
