@@ -251,7 +251,7 @@ async def chat_completion_tools_handler(
                                     "name": (f"TOOL:{tool_name}"),
                                 },
                                 "document": [tool_result],
-                                "metadata": [{"source": (f"TOOL:{tool_name}")}],
+                                "metadata": [{"source": (f"TOOL:{tool_name}"), "parameters": tool_function_params}],
                             }
                         )
                     else:
