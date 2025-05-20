@@ -262,11 +262,8 @@ async def get_function_valves_spec_by_id(
 ):
     function = Functions.get_function_by_id(id)
     if function:
-        if id in request.app.state.FUNCTIONS:
-            function_module = request.app.state.FUNCTIONS[id]
-        else:
-            function_module, function_type, frontmatter = load_function_module_by_id(id)
-            request.app.state.FUNCTIONS[id] = function_module
+        function_module, function_type, frontmatter = load_function_module_by_id(id)
+        request.app.state.FUNCTIONS[id] = function_module
 
         if hasattr(function_module, "Valves"):
             Valves = function_module.Valves
@@ -290,11 +287,8 @@ async def update_function_valves_by_id(
 ):
     function = Functions.get_function_by_id(id)
     if function:
-        if id in request.app.state.FUNCTIONS:
-            function_module = request.app.state.FUNCTIONS[id]
-        else:
-            function_module, function_type, frontmatter = load_function_module_by_id(id)
-            request.app.state.FUNCTIONS[id] = function_module
+        function_module, function_type, frontmatter = load_function_module_by_id(id)
+        request.app.state.FUNCTIONS[id] = function_module
 
         if hasattr(function_module, "Valves"):
             Valves = function_module.Valves
@@ -353,11 +347,8 @@ async def get_function_user_valves_spec_by_id(
 ):
     function = Functions.get_function_by_id(id)
     if function:
-        if id in request.app.state.FUNCTIONS:
-            function_module = request.app.state.FUNCTIONS[id]
-        else:
-            function_module, function_type, frontmatter = load_function_module_by_id(id)
-            request.app.state.FUNCTIONS[id] = function_module
+        function_module, function_type, frontmatter = load_function_module_by_id(id)
+        request.app.state.FUNCTIONS[id] = function_module
 
         if hasattr(function_module, "UserValves"):
             UserValves = function_module.UserValves
@@ -377,11 +368,8 @@ async def update_function_user_valves_by_id(
     function = Functions.get_function_by_id(id)
 
     if function:
-        if id in request.app.state.FUNCTIONS:
-            function_module = request.app.state.FUNCTIONS[id]
-        else:
-            function_module, function_type, frontmatter = load_function_module_by_id(id)
-            request.app.state.FUNCTIONS[id] = function_module
+        function_module, function_type, frontmatter = load_function_module_by_id(id)
+        request.app.state.FUNCTIONS[id] = function_module
 
         if hasattr(function_module, "UserValves"):
             UserValves = function_module.UserValves
