@@ -6,6 +6,7 @@
 	import Button, { ButtonType } from '$lib/IONOS/components/common/Button.svelte';
 	import Link from '$lib/IONOS/components/common/Link.svelte';
 	import BulletCheckmarkOnLight from '$lib/IONOS/components/icons/BulletCheckmarkOnLight.svelte';
+	import XMark from '$lib/IONOS/components/icons/XMark.svelte';
 
 	const dispatch = createEventDispatcher();
 	const i18n = getContext<Readable<I18Next>>('i18n');
@@ -17,9 +18,14 @@
 	dialogId="register-login"
 	{show}
 >
-	<h1 class="text-3xl p-2.5" slot="header">
-		{$i18n.t('Your AI Experts Are Ready', { ns: 'ionos' })}
-	</h1>
+	<div class="flex justify-between" slot="header">
+		<h1 class="text-[28px] leading-9 font-overpass p-2.5 text-blue-800">
+			{$i18n.t('Your AI Experts Are Ready', { ns: 'ionos' })}
+		</h1>
+		<button class="justify-self-end" on:click={() => dispatch('close')}>
+			<XMark />
+		</button>
+	</div>
 	<content slot="content" class="p-2.5 block flex flex-col gap-5">
 
 		<ul>

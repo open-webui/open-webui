@@ -102,6 +102,7 @@
 <LoginRegisterOverlay
 	on:login={login}
 	on:signup={signup}
+	on:close={() => { selectedAgent = null; selectedPrompt = null; }}
 	show={selectedAgent !== null || selectedPrompt !== null}
 />
 
