@@ -28,7 +28,7 @@
 	</div>
 	<content slot="content" class="p-2.5 block flex flex-col gap-5">
 
-		<ul>
+		<ul class="text-base text-gray-700">
 			<li class="flex items-center my-4">
 				<BulletCheckmarkOnLight className="inline size-6 mr-2"/>
 				{$i18n.t('Chat, write, design, and code with expert AI assistants', { ns: 'ionos' })}
@@ -44,7 +44,7 @@
 		</ul>
 
 		<div>
-			<h3 class="font-semibold">
+			<h3 class="font-semibold text-sm text-blue-700">
 				{$i18n.t('Customer ID, email address or domain', { ns: 'ionos' })}
 			</h3>
 
@@ -58,13 +58,13 @@
 		</div>
 
 		<div>
-			<h3 class="font-semibold text-gray-500">
+			<h3 class="font-semibold text-gray-400 text-sm">
 				{$i18n.t('Not an IONOS customer yet?', { ns: 'ionos' })}
 			</h3>
 
 			<Link
 				on:click={() => dispatch('signup')}
-				className="inline-block mt-3"
+				className="inline-block mt-3 text-sm text-blue-700"
 			>
 				{$i18n.t('Sign up now for FREE to start creating with AI', { ns: 'ionos' })}
 			</Link>
