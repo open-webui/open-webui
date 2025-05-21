@@ -13,7 +13,7 @@
 
 <dialog
 	bind:this={el}
-	class="fixed top-0 right-0 left-0 bottom-0 m-0 bg-black/20 h-screen max-w-[100vw] w-[100vw] max-h-[100dvh] justify-center items-center z-[99999999] overflow-hidden overscroll-contain"
+	class="fixed top-0 right-0 left-0 bottom-0 m-0 bg-black/25 h-screen max-w-[100vw] w-[100vw] max-h-[100dvh] justify-center items-center z-[99999999] overflow-hidden overscroll-contain"
 	class:flex={show}
 >
 	<div
