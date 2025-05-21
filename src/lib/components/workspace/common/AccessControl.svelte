@@ -13,10 +13,7 @@
 	export let onChange: Function = () => {};
 
 	export let accessRoles = ['read'];
-	export let accessControl = {
-		read: { group_ids: [], user_ids: [] },
-		write: { group_ids: [], user_ids: [] }
-	};
+	export let accessControl = null;
 
 	let selectedGroupId = '';
 	let groups = [];
