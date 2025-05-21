@@ -75,6 +75,7 @@
                 *   對於 `tool_ids` 列表中的工具，後端會調用 `get_tools()` 獲取其規格，這些工具**不會**被明確設置 `direct: True`（即預設為 `False`）。
                 *   對於 `tool_servers` 列表中的工具，後端會遍歷這個列表。由於 `tool_servers` 列表中的每個元素都已經是前端獲取到的完整 OpenAPI 規格，後端會將這些工具添加到其內部維護的工具字典中，並**明確地為這些工具設置 `direct: True` 標誌**。
                 *   最終，後端在處理 LLM 的 `function_call` 回應時（主要在 `open_webui/utils/chat.py` 或 `open_webui/functions.py` 內），將根據工具的 `direct` 標誌來決定是自行執行工具還是將其轉發給前端。
+            *   **多使用者環境下的隔離性：** `process_chat_payload` 函數對 `tool_servers` 字段的處理是基於「每請求」的。這意味著每個聊天請求的 `form_data` 和其內部生成的 `tools_dict` 都是獨立的，不會在不同使用者或不同請求之間共享。這種設計確保了即使有多個使用者同時運行各自的本地 `mcpo` 實例，它們的工具處理也是完全隔離且互不影響的避免了潛在的並發問題和數據混淆。
 
 2.  **後端工具定義與發現 (無需修改)：**
     *   **無需修改後端資料庫模式或 `ToolModel`** 來增加 `is_local_client_call` 標誌。後端將完全依賴前端在請求中提供的 `tool_servers` 列表來判斷工具類型。
@@ -151,7 +152,7 @@
 *   **`mcpo` 標準化探索端點：** 鼓勵 `mcpo` 項目未來提供一個標準的、機器可讀的端點（例如 `/mcpo-tools-list`），用於直接列出所有代理工具的名稱和其 OpenAPI 規格路徑，以簡化 Open WebUI 的探索邏輯。
 *   **支援自訂本地 `mcpo` 端點：** 考慮未來允許使用者手動設定或掃描多個/非預設的本地 `mcpo` 實例端點，以支援更廣泛的本地工具部署情境。
 *   **研究現有 JavaScript/TypeScript OpenAPI 客戶端函式庫：** 評估並研究是否可以利用現有的 JavaScript/TypeScript OpenAPI 客戶端函式庫來簡化前端的 OpenAPI 規格解析和請求/回應處理，以降低開發複雜度。
-*   **提供範例 `mcpo` 配置：** 提供一個簡單、文件完善的 `mcpo` 配置文件範例，展示如何代理常見的 MCP 工具，並包含正確的 CORS 設定，供使用者參考調整。
+*   **提供範例 `mcpo` 配置：** 提供一個簡單、文件完善的 `mcpo` 配置 文件範例，展示如何代理常見的 MCP 工具，並包含正確的 CORS 設定，供使用者參考調整。
 
 ## 4. 檔案修改清單與工作事項摘要 (File Modification List and Work Item Summary)
 
@@ -159,48 +160,53 @@
 
 ### 4.1. 前端檔案修改 (Frontend File Modifications)
 
-1.  **`src/lib/components/layout/LocalMcpoInitializer.svelte` (新增檔案)**
-    *   **工作事項摘要：** 創建此新的 Svelte 組件。它將包含 `onMount` 生命週期邏輯，用於自動探索本地 `mcpo` 實例。這包括向預設的 `mcpo` 端點（例如 `http://localhost:8000/openapi.json`）發起主 OpenAPI 規格請求，並啟動兩階段的解析和子工具規格獲取。
+1.  **`src/lib/components/layout/LocalMcpoInitializer.svelte` (新增)**
+    *   **工作事項：** 創建此新的 Svelte 組件。它將包含 `onMount` 生命週期邏輯，用於自動探索本地 `mcpo` 實例。這包括向預設的 `mcpo` 端點（例如 `http://localhost:8000/openapi.json`）發起主 OpenAPI 規格請求，並啟動兩階段的解析和子工具規格獲取。
 
-2.  **`src/routes/(app)/+layout.svelte`**
-    *   **工作事項摘要：** 在此檔案中，僅需導入並使用新的 `LocalMcpoInitializer.svelte` 組件。對核心佈局文件的修改應最小化，僅限於整合此初始化器。
+2.  **`src/routes/(app)/+layout.svelte` (修改)**
+    *   **工作事項：** 在此檔案中，僅需導入並使用新的 `LocalMcpoInitializer.svelte` 組件。同時，需要新增 WebSocket 監聽器，用於接收後端轉發的 `chat:local_tool_call` 事件，並將對核心佈局文件的修改降到最低。
 
-3.  **`src/lib/stores/index.ts`**
-    *   **工作事項摘要：**
+3.  **`src/lib/stores/index.ts` (修改)**
+    *   **工作事項：**
         *   新增一個 `writable` store，命名為 `localMcpoTools`，用於儲存探索到的本地 `mcpo` 代理工具資訊（類型為 `LocalMcpoToolConfig[]`）。
         *   創建一個 `derived` store，命名為 `allAvailableTools`，它將後端提供的工具列表與 `localMcpoTools` store 進行合併，形成一個統一的可用工具集合。
 
-4.  **`src/lib/utils/localMcpoToolDiscoverer.ts` (新增檔案)**
-    *   **工作事項摘要：** 創建此新檔案。此模組將集中處理本地 `mcpo` 實例的核心探索和 OpenAPI 規格聚合邏輯。它將實現兩階段的探索過程：獲取主 `openapi.json`，解析 `info.description` 獲取子工具路徑，然後逐一請求並聚合這些子工具的 OpenAPI 規格。
+4.  **`src/lib/utils/localMcpoToolDiscoverer.ts` (新增)**
+    *   **工作事項：** 創建此新檔案。此模組將集中處理本地 `mcpo` 實例的核心探索和 OpenAPI 規格聚合邏輯。它將實現兩階段的探索過程：獲取主 `openapi.json`，解析 `info.description` 獲取子工具路徑，然後逐一請求並聚合這些子工具的 OpenAPI 規格。
 
-5.  **`src/lib/utils/localMcpoToolExecutor.ts` (新增檔案)**
-    *   **工作事項摘要：** 創建此新檔案。此模組將根據從 `mcpo` 獲取的 OpenAPI 規格和調用細節，直接向運行在使用者本機上的 `mcpo` 代理服務發起標準的 HTTP 請求。
+5.  **`src/lib/utils/localMcpoToolExecutor.ts` (新增)**
+    *   **工作事項：** 創建此新檔案。此模組將根據從 `mcpo` 獲取的 OpenAPI 規格和調用細節，直接向運行在使用者本機上的 `mcpo` 代理服務發起標準的 HTTP 請求。
 
-6.  **`src/lib/components/chat/ToolServersModal.svelte`**
-    *   **工作事項摘要：** 修改此組件。此組件目前作為使用者配置外部工具伺服器連接的界面，並將被擴展以：
+6.  **`src/lib/components/chat/ToolServersModal.svelte` (修改)**
+    *   **工作事項：** 修改此組件。此組件目前作為使用者配置外部工具伺服器連接的界面，並將被擴展以：
         *   使用 `allAvailableTools` 來渲染工具列表。
         *   為本地 `mcpo` 代理工具添加「Local (MCPO)」標籤和啟用/停用開關。
-        *   `ToolServersModal.svelte` 將根據其接收到的 `selectedToolIds` 屬性來顯示工具列表。調用組件將負責傳遞所有工具的 `id`（包括啟用和停用的）或僅傳遞所有已啟用工具的 `id`。
+        *   `ToolServersModal.svelte` 將根據其接收到的 `selectedToolIds` 屬性來顯示工具列表。
+            *   當從「+」號圖標觸發時，調用組件將傳遞所有工具的 `id`（包括啟用和停用的）。
+            *   當從「板手」圖標觸發時，調用組件將僅傳遞所有已啟用工具的 `id`。
         *   此修改將集中在一個專門處理工具列表的組件內。
 
-7.  **`src/lib/components/chat/Chat.svelte` (或相關的訊息處理函數)**
-    *   **工作事項摘要：** 在處理 LLM 工具調用指令的現有邏輯中，引入一個單一的條件判斷。當後端轉發的 LLM 回應中包含一個指示本地工具調用的特定結構（例如，一個包含 `tool_id` 和 `tool_args` 的 `local_tool_call` 字段），前端將判斷為本地 OpenAPI 工具（透過 `mcpo` 代理），並將調用委託給 `localMcpoToolExecutor.ts` 中的函數；否則，維持現有的 OpenAPI 工具調用邏輯。這將對現有核心邏輯的修改降到最低。
+7.  **`src/lib/components/chat/Chat.svelte` (或相關的訊息處理函數) (修改)**
+    *   **工作事項：** 在處理 LLM 工具調用指令的現有邏輯中，引入一個單一的條件判斷。當後端轉發的 LLM 回應中包含一個指示本地工具調用的特定結構（例如，一個包含 `tool_id` 和 `tool_args` 的 `local_tool_call` 字段），前端將判斷為本地 OpenAPI 工具（透過 `mcpo` 代理），並將調用委託給 `localMcpoToolExecutor.ts` 中的函數；否則，維持現有的 OpenAPI 工具調用邏輯。這將對現有核心邏輯的修改降到最低。
+
+8.  **`src/lib/types/tools.ts` (修改/新增)**
+    *   **工作事項：** 定義 `LocalMcpoToolConfig` 類型。確保能夠正確表示從 `mcpo` 獲取的 OpenAPI 規格相關型別。
+
+9.  **UI 錯誤訊息顯示 (跨多個組件)**
+    *   **工作事項：** 確保 `localMcpoToolDiscoverer.ts` 和 `localMcpoToolExecutor.ts` 報告的錯誤能清晰地在 UI 上顯示（例如透過 `svelte-sonner` 或調整 `ResponseMessage`）。
 
 ### 4.2. 後端檔案修改 (Backend File Modifications)
 
-1.  **`backend/open_webui/utils/middleware.py`**
-    *   **工作事項摘要：**
-        *   修改 `process_chat_payload` 函數，使其能夠處理前端傳遞的 `tool_servers` 字段。
-        *   根據 `tool_servers` 字段中包含的工具規格，為這些工具在內部工具字典中設置 `direct: True` 標誌，以便後續判斷由前端執行。
+1.  **`backend/open_webui/utils/middleware.py` (修改)**
+    *   **工作事項：** 修改 `process_chat_payload` 函數，使其能夠處理前端傳遞的 `tool_servers` 字段。
+    *   根據 `tool_servers` 字段中包含的工具規格，為這些工具在內部工具字典中設置 `direct: True` 標誌，以便後續判斷由前端執行。
 
-2.  **`backend/open_webui/utils/chat.py`**
-    *   **工作事項摘要：**
-        *   在 LLM 工具調用處理流程中，增加判斷邏輯，區分外部 OpenAPI 工具和本地 OpenAPI 工具（透過 `mcpo` 代理的）。
-        *   實作後端轉發本地 OpenAPI 工具調用指令給前端的機制（透過 WebSocket 發送 `chat:local_tool_call` 事件，payload 包含工具 ID 和參數）。
-        *   使用 `middleware.py` 中處理好的 `tools_dict`（其中已包含 `direct` 標誌）來進行工具分派。
+2.  **`backend/open_webui/utils/chat.py` (修改)**
+    *   **工作事項：** 在 LLM 工具調用處理流程中，增加判斷邏輯，區分外部 OpenAPI 工具和本地 OpenAPI 工具（透過 `mcpo` 代理的）。
+    *   實作後端轉發本地 OpenAPI 工具調用指令給前端的機制（透過 WebSocket 發送 `chat:local_tool_call` 事件，payload 包含工具 ID 和參數）。
+    *   使用 `middleware.py` 處理後的 `tools_dict`（其中已包含 `direct` 標誌）來進行工具分派。
 
-3.  **`backend/open_webui/functions.py`**
-    *   **工作事項摘要：**
-        *   在 LLM 工具調用處理流程中，增加判斷邏輯，區分外部 OpenAPI 工具和本地 OpenAPI 工具（透過 `mcpo` 代理的）。
-        *   實作後端轉發本地 OpenAPI 工具調用指令給前端的機制（透過 WebSocket 發送 `chat:local_tool_call` 事件，payload 包含工具 ID 和參數）。
-        *   使用 `middleware.py` 中處理好的 `tools_dict`（其中已包含 `direct` 標誌）來進行工具分派。
+3.  **`backend/open_webui/functions.py` (修改)**
+    *   **工作事項：** 在 LLM 工具調用處理流程中，增加判斷邏輯，區分外部 OpenAPI 工具和本地 OpenAPI 工具（透過 `mcpo` 代理的）。
+    *   實作後端轉發本地 OpenAPI 工具調用指令給前端的機制（透過 WebSocket 發送 `chat:local_tool_call` 事件，payload 包含工具 ID 和參數）。
+    *   使用 `middleware.py` 處理後的 `tools_dict`（其中已包含 `direct` 標誌）來進行工具分派。
