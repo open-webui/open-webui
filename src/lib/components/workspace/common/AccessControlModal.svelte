@@ -6,10 +6,7 @@
 	import AccessControl from './AccessControl.svelte';
 
 	export let show = false;
-	export let accessControl = {
-		read: { group_ids: [], user_ids: [] },
-		write: { group_ids: [], user_ids: [] }
-	};
+	export let accessControl = null;
 
 	export let accessRoles = ['read'];
 
