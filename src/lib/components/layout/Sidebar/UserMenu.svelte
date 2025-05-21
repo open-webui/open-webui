@@ -64,6 +64,9 @@
 						const url = new URL(window.location.href);
 						url.searchParams.set('modal', 'company-settings');
 						url.searchParams.set('tab', 'general-settings');
+						if($mobile) {
+							url.searchParams.set('resetTabs', 'true');
+						}
 						goto(`${url.pathname}${url.search}`, { keepfocus: true, replaceState: false });
 	
 						show = false;

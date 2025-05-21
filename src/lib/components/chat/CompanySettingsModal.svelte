@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, tick, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { models, settings, user } from '$lib/stores';
+	import { models, settings, user, mobile } from '$lib/stores';
 	import { updateUserSettings } from '$lib/apis/users';
 	import { getModels as _getModels } from '$lib/apis';
 	import { goto } from '$app/navigation';
@@ -26,6 +26,7 @@
 		getSubscriptionPlans
 	} from '$lib/apis/payments';
 	import { subscription } from '$lib/stores';
+	import BackIcon from '../icons/BackIcon.svelte';
 	
 	const i18n = getContext('i18n');
 
@@ -236,16 +237,30 @@
 		getPlans();
 		fetchAnalytics();
 		const tabParam = $page.url.searchParams.get('tab');
-		selectedTab = tabParam || 'general-settings';
+		const resetTabs = $page.url.searchParams.get('resetTabs');
+		console.log(resetTabs, 'if statement')
+		if(resetTabs) {
+			selectedTab = null;
+		} else {
+			selectedTab = tabParam || 'general-settings';
+		}	
 	}
+
 
 </script>
 
 <Modal size="md-plus" bind:show blockBackdropClick={true} className="dark:bg-customGray-800 rounded-2xl" containerClassName="bg-lightGray-250/50 dark:bg-[#1D1A1A]/50 backdrop-blur-[7.44px]">
-	<div class="text-lightGray-100 dark:text-customGray-100 bg-lightGray-550 dark:bg-customGray-800 rounded-xl">
+	<div class="text-lightGray-100 dark:text-customGray-100 bg-lightGray-550 dark:bg-customGray-800 rounded-xl min-h-[calc(100dvh-24px)] md:h-auto">
 		<div class="px-7">
 			<div class=" flex justify-between dark:text-white pt-5 pb-4 border-b dark:border-customGray-700">
-				<div class="self-center">{$i18n.t('Company Settings')}</div>
+				{#if selectedTab && $mobile}
+					<button class="capitalize flex items-center" on:click={() => selectedTab = null}>
+						<BackIcon className="mr-1 size-4 shrink-0"/>
+						<div class="shrink-0">{$i18n.t(searchData?.find(item => item?.id === selectedTab).title)}</div>
+					</button>
+				{:else}
+					<div class="self-center">{$i18n.t('Company Settings')}</div>
+				{/if}
 				<button
 					class="self-center"
 					on:click={() => {
@@ -269,322 +284,113 @@
 			</div>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full pr-7 md:space-x-4">
-			<div
-				id="settings-tabs-container"
-				class="rounded-bl-lg pl-4 pt-5 pr-2 tabs flex flex-row dark:bg-customGray-900 gap-2.5 md:gap-1 md:flex-col flex-1 md:flex-none md:w-[252px] dark:text-gray-200 text-sm font-medium text-left mb-1 md:mb-0"
-			>
-				<!-- <div class="hidden md:flex w-full rounded-xl -mb-1 px-0.5 gap-2" id="settings-search">
-					<div class="self-center rounded-l-xl bg-transparent">
-						<Search className="size-3.5" />
-					</div>
-					<input
-						class="w-full py-1.5 text-sm bg-transparent dark:text-gray-300 outline-none"
-						bind:value={search}
-						on:input={searchDebounceHandler}
-						placeholder={$i18n.t('Search')}
-					/>
-				</div> -->
-
-				{#if visibleTabs.length > 0}
-					{#each visibleTabs as tabId (tabId)}
-                    {#if tabId === 'general-settings'}
-                    <button
-                        class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
-                        'general-settings'
-                            ? 'bg-lightGray-700 dark:bg-customGray-800'
-                            : ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
-                        on:click={() => {
-                            selectedTab = 'general-settings';
-							updateTabParam(selectedTab);
-                        }}
-                    >
-                        <div class="flex items-center mb-1">
-                            <div class=" self-center mr-2">
-                                <ProfileIcon/>
-                            </div>
-                            <div class=" self-center">{$i18n.t('General Settings')}</div>
-                        </div>
-                    </button>
-					{:else if tabId === 'user-management'}
-					<button
-                        class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
-                        'user-management'
-                            ? 'bg-lightGray-700 dark:bg-customGray-800'
-                            : ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
-                        on:click={() => {
-                            selectedTab = 'user-management';
-							updateTabParam(selectedTab);
-                        }}
-                    >
-                        <div class="flex items-center mb-1">
-                            <div class=" self-center mr-2">
-                                <GroupIcon/>
-                            </div>
-                            <div class=" self-center">{$i18n.t('User management')}</div>
-                        </div>
-                    </button>
-					{:else if tabId === 'model-control'}
-					<button
-						class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
-						'model-control'
-							? 'bg-lightGray-700 dark:bg-customGray-800'
-							: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
-						on:click={() => {
-							selectedTab = 'model-control';
-							updateTabParam(selectedTab);
-						}}
-					>
-						<div class="flex items-center mb-1">
-							<div class=" self-center mr-2">
-								<ModelControlIcon/>
-							</div>
-							<div class=" self-center">{$i18n.t('Model Control')}</div>
-						</div>
-					</button>
-					{:else if tabId === 'analytics'}
-					<button
-						class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
-						'analytics'
-							? 'bg-lightGray-700 dark:bg-customGray-800'
-							: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
-						on:click={() => {
-							selectedTab = 'analytics';
-							updateTabParam(selectedTab);
-						}}
-					>
-						<div class="flex items-center mb-1">
-							<div class=" self-center mr-2">
-								<AnalyticsIcon/>
-							</div>
-							<div class=" self-center">{$i18n.t('Analytics')}</div>
-						</div>
-					</button>
-					{:else if tabId === 'billing'}
-					<button
-						class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
-						'billing'
-							? 'bg-lightGray-700 dark:bg-customGray-800'
-							: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
-						on:click={() => {
-							selectedTab = 'billing';
-							updateTabParam(selectedTab);
-						}}
-					>
-						<div class="flex items-center mb-1">
-							<div class=" self-center mr-2">
-								<BillingIcon/>
-							</div>
-							<div class=" self-center">{$i18n.t('Billing')}</div>
-						</div>
-					</button>
-                    {/if}
-
-						<!-- {#if tabId === 'general'}
-							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-								'general'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-								on:click={() => {
-									selectedTab = 'general';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M8.34 1.804A1 1 0 019.32 1h1.36a1 1 0 01.98.804l.295 1.473c.497.144.971.342 1.416.587l1.25-.834a1 1 0 011.262.125l.962.962a1 1 0 01.125 1.262l-.834 1.25c.245.445.443.919.587 1.416l1.473.294a1 1 0 01.804.98v1.361a1 1 0 01-.804.98l-1.473.295a6.95 6.95 0 01-.587 1.416l.834 1.25a1 1 0 01-.125 1.262l-.962.962a1 1 0 01-1.262.125l-1.25-.834a6.953 6.953 0 01-1.416.587l-.294 1.473a1 1 0 01-.98.804H9.32a1 1 0 01-.98-.804l-.295-1.473a6.957 6.957 0 01-1.416-.587l-1.25.834a1 1 0 01-1.262-.125l-.962-.962a1 1 0 01-.125-1.262l.834-1.25a6.957 6.957 0 01-.587-1.416l-1.473-.294A1 1 0 011 10.68V9.32a1 1 0 01.804-.98l1.473-.295c.144-.497.342-.971.587-1.416l-.834-1.25a1 1 0 01.125-1.262l.962-.962A1 1 0 015.38 3.03l1.25.834a6.957 6.957 0 011.416-.587l.294-1.473zM13 10a3 3 0 11-6 0 3 3 0 016 0z"
-											clip-rule="evenodd"
-										/>
-									</svg>
-								</div>
-								<div class=" self-center">{$i18n.t('General')}</div>
-							</button>
-						{:else if tabId === 'interface'}
-							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-								'interface'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-								on:click={() => {
-									selectedTab = 'interface';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M2 4.25A2.25 2.25 0 0 1 4.25 2h7.5A2.25 2.25 0 0 1 14 4.25v5.5A2.25 2.25 0 0 1 11.75 12h-1.312c.1.128.21.248.328.36a.75.75 0 0 1 .234.545v.345a.75.75 0 0 1-.75.75h-4.5a.75.75 0 0 1-.75-.75v-.345a.75.75 0 0 1 .234-.545c.118-.111.228-.232.328-.36H4.25A2.25 2.25 0 0 1 2 9.75v-5.5Zm2.25-.75a.75.75 0 0 0-.75.75v4.5c0 .414.336.75.75.75h7.5a.75.75 0 0 0 .75-.75v-4.5a.75.75 0 0 0-.75-.75h-7.5Z"
-											clip-rule="evenodd"
-										/>
-									</svg>
-								</div>
-								<div class=" self-center">{$i18n.t('Interface')}</div>
-							</button>
-						{:else if tabId === 'personalization'}
-							<button
-							class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
-							'personalization'
-								? 'dark:bg-customGray-800'
-								: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-								on:click={() => {
-									selectedTab = 'personalization';
-								}}
-							>
+		<div class="flex flex-col md:flex-row w-full pl-4 pr-4 md:pr-7 md:space-x-4">
+			{#if selectedTab === null || !$mobile}
+				<div
+					id="settings-tabs-container"
+					class="rounded-bl-lg pl-4 pt-5 pr-2 tabs flex flex-col dark:bg-customGray-900 gap-2.5 md:gap-1 flex-1 md:w-[252px] dark:text-gray-200 text-sm font-medium text-left mb-1 md:mb-0"
+				>
+					{#if visibleTabs.length > 0}
+						{#each visibleTabs as tabId (tabId)}
+						{#if tabId === 'general-settings'}
+						<button
+							class="md:px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							'general-settings'
+								? 'bg-lightGray-700 dark:bg-customGray-800'
+								: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
+							on:click={() => {
+								selectedTab = 'general-settings';
+								updateTabParam(selectedTab);
+							}}
+						>
 							<div class="flex items-center mb-1">
 								<div class=" self-center mr-2">
-									<PersonalizationIcon/>
+									<ProfileIcon/>
 								</div>
-								<div class=" self-center">{$i18n.t('Personalization')}</div>
+								<div class=" self-center">{$i18n.t('General Settings')}</div>
 							</div>
-								<div class="{selectedTab ===
-								'personalization'
-									? ''
-									: 'invisible'} font-normal text-xs dark:text-white/50">{$i18n.t('Personalise the look and feel')}</div>
-							</button>
-						{:else if tabId === 'audio'}
-							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-								'audio'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-								on:click={() => {
-									selectedTab = 'audio';
-								}}
-							>
-								<div class=" self-center mr-2">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 16 16"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											d="M7.557 2.066A.75.75 0 0 1 8 2.75v10.5a.75.75 0 0 1-1.248.56L3.59 11H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.59l3.162-2.81a.75.75 0 0 1 .805-.124ZM12.95 3.05a.75.75 0 1 0-1.06 1.06 5.5 5.5 0 0 1 0 7.78.75.75 0 1 0 1.06 1.06 7 7 0 0 0 0-9.9Z"
-										/>
-										<path
-											d="M10.828 5.172a.75.75 0 1 0-1.06 1.06 2.5 2.5 0 0 1 0 3.536.75.75 0 1 0 1.06 1.06 4 4 0 0 0 0-5.656Z"
-										/>
-									</svg>
-								</div>
-								<div class=" self-center">{$i18n.t('Audio')}</div>
-							</button>
-						{:else if tabId === 'chats'}
-							<button
-							class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
-							'chats'
-								? 'dark:bg-customGray-800'
-								: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-								on:click={() => {
-									selectedTab = 'chats';
-								}}
-							>
+						</button>
+						{:else if tabId === 'user-management'}
+						<button
+							class="md:px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							'user-management'
+								? 'bg-lightGray-700 dark:bg-customGray-800'
+								: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
+							on:click={() => {
+								selectedTab = 'user-management';
+								updateTabParam(selectedTab);
+							}}
+						>
 							<div class="flex items-center mb-1">
 								<div class=" self-center mr-2">
-									<ChatIcon/>
+									<GroupIcon/>
 								</div>
-								<div class=" self-center">{$i18n.t('Chats')}</div>
+								<div class=" self-center">{$i18n.t('User management')}</div>
 							</div>
-							<div class="{selectedTab ===
-							'chats'
-								? ''
-								: 'invisible'} font-normal text-xs dark:text-white/50">{$i18n.t('Manage your personal details')}</div>
-							</button>
-						{:else if tabId === 'account'}
-							<button
-								class="px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
-								'account'
-									? 'dark:bg-customGray-800'
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-								on:click={() => {
-									selectedTab = 'account';
-								}}
-							>
-								<div class="flex items-center mb-1">
-									<div class=" self-center mr-2">
-										<ProfileIcon/>
-									</div>
-									<div class=" self-center">{$i18n.t('Profile')}</div>
-								</div>
-								<div class="{selectedTab ===
-								'account'
-									? ''
-									: 'invisible'} font-normal text-xs dark:text-white/50">{$i18n.t('Manage your personal details')}</div>
-							</button>
-						{:else if tabId === 'about'}
-							<button
-								class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-								'about'
-									? ''
-									: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-								on:click={() => {
-									selectedTab = 'about';
-								}}
-							>
+						</button>
+						{:else if tabId === 'model-control'}
+						<button
+							class="md:px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							'model-control'
+								? 'bg-lightGray-700 dark:bg-customGray-800'
+								: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
+							on:click={() => {
+								selectedTab = 'model-control';
+								updateTabParam(selectedTab);
+							}}
+						>
+							<div class="flex items-center mb-1">
 								<div class=" self-center mr-2">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											fill-rule="evenodd"
-											d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+									<ModelControlIcon/>
 								</div>
-								<div class=" self-center">{$i18n.t('About')}</div>
-							</button>
-						{:else if tabId === 'admin'}
-							{#if $user.role === 'admin'}
-								<button
-									class="px-0.5 py-1 min-w-fit rounded-lg flex-1 md:flex-none flex text-left transition {selectedTab ===
-									'admin'
-										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
-									on:click={async () => {
-										await goto('/admin/settings');
-										show = false;
-									}}
-								>
-									<div class=" self-center mr-2">
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 24 24"
-											fill="currentColor"
-											class="size-4"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M4.5 3.75a3 3 0 0 0-3 3v10.5a3 3 0 0 0 3 3h15a3 3 0 0 0 3-3V6.75a3 3 0 0 0-3-3h-15Zm4.125 3a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5Zm-3.873 8.703a4.126 4.126 0 0 1 7.746 0 .75.75 0 0 1-.351.92 7.47 7.47 0 0 1-3.522.877 7.47 7.47 0 0 1-3.522-.877.75.75 0 0 1-.351-.92ZM15 8.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15ZM14.25 12a.75.75 0 0 1 .75-.75h3.75a.75.75 0 0 1 0 1.5H15a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3.75a.75.75 0 0 0 0-1.5H15Z"
-												clip-rule="evenodd"
-											/>
-										</svg>
-									</div>
-									<div class=" self-center">{$i18n.t('Admin Settings')}</div>
-								</button>
-							{/if}
-						{/if} -->
-					{/each}
-				{:else}
-					<div class="text-center text-gray-500 mt-4">
-						{$i18n.t('No results found')}
-					</div>
-				{/if}
-			</div>
+								<div class=" self-center">{$i18n.t('Model Control')}</div>
+							</div>
+						</button>
+						{:else if tabId === 'analytics'}
+						<button
+							class="md:px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							'analytics'
+								? 'bg-lightGray-700 dark:bg-customGray-800'
+								: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
+							on:click={() => {
+								selectedTab = 'analytics';
+								updateTabParam(selectedTab);
+							}}
+						>
+							<div class="flex items-center mb-1">
+								<div class=" self-center mr-2">
+									<AnalyticsIcon/>
+								</div>
+								<div class=" self-center">{$i18n.t('Analytics')}</div>
+							</div>
+						</button>
+						{:else if tabId === 'billing'}
+						<button
+							class="md:px-3 py-2.5 min-w-fit rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							'billing'
+								? 'bg-lightGray-700 dark:bg-customGray-800'
+								: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
+							on:click={() => {
+								selectedTab = 'billing';
+								updateTabParam(selectedTab);
+							}}
+						>
+							<div class="flex items-center mb-1">
+								<div class=" self-center mr-2">
+									<BillingIcon/>
+								</div>
+								<div class=" self-center">{$i18n.t('Billing')}</div>
+							</div>
+						</button>
+						{/if}
+						{/each}
+					{:else}
+						<div class="text-center text-gray-500 mt-4">
+							{$i18n.t('No results found')}
+						</div>
+					{/if}
+				</div>
+			{/if}
 			<div class="flex-1 md:min-h-[32rem]">
 				{#if selectedTab === 'general-settings'}
                     <GeneralSettings
