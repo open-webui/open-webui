@@ -332,13 +332,16 @@ class MistralLoader:
             if use_chunked:
                 log.info(f"Using chunked upload for large file ({self.file_size} bytes)")
             
-            # aiohttp file upload using FormData
-            data = aiohttp.FormData()
+            # Read file content into memory first to avoid closed file handle issues
             with open(self.file_path, 'rb') as f:
-                data.add_field('file', 
-                              f, 
-                              filename=file_name, 
-                              content_type='application/pdf')
+                file_content = f.read()
+            
+            # aiohttp file upload using FormData with in-memory file content
+            data = aiohttp.FormData()
+            data.add_field('file', 
+                          file_content, 
+                          filename=file_name, 
+                          content_type='application/pdf')
             data.add_field('purpose', 'ocr')
             
             r = await self._make_api_call("POST", url, data=data)
