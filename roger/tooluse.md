@@ -1,6 +1,6 @@
 # Open WebUI 工具的註冊、發現與調用流程詳解
 
-本文旨在詳細說明 Open WebUI 現有程式碼中，關於工具（Tools）的註冊（Registration）、發現（Discovery）與調用（Invocation/Execution）的完整流程。此流程涉及前端（Svelte）、後端（FastAPI/Python）以及可能的外部工具服務，**並特別涵蓋了新增的本地客戶端 MCP 工具伺服器整合機制。**
+本文旨在詳細說明 Open WebUI 現有程式碼中，關於工具（Tools）的註冊（Registration）、發現（Discovery）與調用（Invocation/Execution）的完整流程。此流程涉及前端（Svelte）、後端（FastAPI/Python）以及可能的外部工具服務。
 
 ## I. 工具註冊 (Tool Registration)
 
@@ -8,7 +8,6 @@
 
 1.  透過靜態環境變數配置 (`TOOL_SERVER_CONNECTIONS`)
 2.  透過管理後台在資料庫中動態註冊
-3.  **透過前端自動探索本地 MCP 伺服器 (新增)**
 
 ### A. 透過靜態配置 (`TOOL_SERVER_CONNECTIONS`)
 
@@ -49,26 +48,12 @@
         *   後端將處理後的工具資訊（`id`, `user_id`, `name`, 原始的 `content` (URL 或規格內容), `meta` (含描述、標頭等), `access_control` 等）儲存到資料庫的 `tool` 表中。
         *   資料庫的 `content` 欄位通常儲存使用者最初提供的 URL 或規格內容。`name` 和 `meta` 則儲存最終確定的值。
 
-### C. 透過前端自動探索本地 MCP 伺服器 (新增)
-
-1.  **自動探索：**
-    Open WebUI 前端在**每次應用程式載入時**，會自動嘗試連接至單一預設的本地 MCP 伺服器端點：`http://localhost:8000/sse` (此預設端點 URL 定義於 `src/lib/constants.ts` 中的 `DEFAULT_LOCAL_MCP_SSE_ENDPOINT` 常數)。此邏輯主要實作於 `src/routes/(app)/+layout.svelte` 的 `onMount` 生命週期鉤子中，透過呼叫 `discoverDefaultLocalMcpServer` 函數來完成。
-
-2.  **MCP 初始化與能力獲取：**
-    前端向該端點發送 MCP `initialize` 請求 (透過 `EventSource`，內含 `MCP_SSE_INIT_TIMEOUT_MS` 定義的 5 秒握手超時)。若連接成功並通過 MCP `initialize` 握手獲取到有效的工具能力，系統將解析回應，提取 `capabilities`、`serverInfo` 以及後續訊息傳輸所需的 `messagePath`。
-
-3.  **本地儲存與啟用：**
-    成功探索到的本地工具資訊（包括能力清單）將更新 `localStorage` 中對應的工具資訊 (key: `open-webui_local-mcp-tools`)。這些工具將被視為可用的本地工具，並預設為啟用狀態。
-
-4.  **狀態同步：**
-    此機制確保了每次載入應用程式時，本地工具的狀態和能力都與本地伺服器的最新狀態同步（類似於透過重新整理網頁更新能力）。
-
 ## II. 工具發現 (Tool Discovery)
 
 指 Open WebUI 前端如何獲取可用工具列表以在聊天界面中顯示。
 
 1.  **前端請求：**
-    使用者打開聊天界面時，前端向後端發起 `GET /api/tools/` 請求，以獲取後端管理的工具列表。同時，前端也會執行本地 MCP 伺服器的自動探索。
+    使用者打開聊天界面時，前端向後端發起 `GET /api/tools/` 請求。
 
 2.  **後端處理 `/api/tools/` 請求 (在 `routers/tools.py` 的 `get_tools` 函數)：**
     *   **a. 處理靜態配置的工具：**
@@ -86,12 +71,8 @@
     *   **e. 返回列表：**
         後端將最終過濾後的工具列表 (`list[ToolUserResponse]`) 作為 JSON 回應給前端。
 
-3.  **前端顯示與整合：**
-    *   前端接收後端返回的工具列表。
-    *   同時，前端會從 `localMcpTools` store (持久化在 `localStorage`) 中獲取已探索到的本地 MCP 工具列表。
-    *   透過 Svelte 的 `derived` store (`allAvailableTools`，主要在 `src/lib/components/chat/ToolServersModal.svelte` 中使用)，將後端工具和本地 MCP 工具結合成統一的工具列表。
-    *   此列表在聊天界面中顯示，通常透過一個「工具圖示 (Tool ICON)」觸發展開的下拉清單或彈出式選單。本地工具會被標記為 "Local"。
-    *   使用者可以透過勾選框 (checkbox) 或開關按鈕 (switch button) 為每個工具進行獨立的啟用或停用操作，此選擇狀態與當前聊天會話的上下文相關聯。
+3.  **前端顯示：**
+    前端接收工具列表，使用 `name` 和 `meta.description` 在 UI 中顯示。
 
 ## III. 工具調用 (Tool Invocation/Execution)
 
@@ -105,22 +86,18 @@
     *   後端將 LLM 的函數調用請求轉發給前端。
     *   前端 JavaScript 根據工具 `id` 找到對應的工具定義。
 
-3.  **執行工具 (區分 OpenAPI "Tool Server" 和本地 MCP 伺服器)：**
-
-    *   **a. OpenAPI "Tool Server" (前端執行，透過後端代理或直接呼叫外部服務)：**
-        *   前端調用 `executeToolServer` 函數 (在 `src/lib/apis/index.ts`)。
-        *   **獲取完整的 OpenAPI 規格：** 若之前 `/api/tools/` 返回的 `content` 欄位是 URL，則前端**此時從該 URL 發起 HTTP GET 請求以獲取完整的 `openapi.json` 內容**（按需發生）。若 `content` 已是規格內容，則直接使用。
-        *   **構造請求：** 前端根據 LLM 提供的 `operationId`、參數及解析後的 OpenAPI 規格，構造實際的 HTTP 請求（URL、方法、body、headers 等）。URL 基於 OpenAPI 規格中的 `servers` 陣列。
-        *   **前端發起 API 呼叫：** 前端 JavaScript 使用 `fetch` API **直接向工具服務的實際端點發起 HTTP 請求**。
+3.  **執行工具 (以 OpenAPI "Tool Server" 為例，前端執行)：**
+    *   前端調用 `executeToolServer` 函數 (在 `src/lib/apis/index.ts`)。
+    *   **a. 獲取完整的 OpenAPI 規格：**
+        *   `executeToolServer` 需要工具的完整 OpenAPI 規格 (`serverData.openapi`)。
+        *   若之前 `/api/tools/` 返回的 `content` 欄位是 URL，則前端**此時從該 URL 發起 HTTP GET 請求以獲取完整的 `openapi.json` 內容**（按需發生）。
+        *   若 `content` 已是規格內容，則直接使用。
+    *   **b. 構造請求：**
+        *   前端根據 LLM 提供的 `operationId`、參數及解析後的 OpenAPI 規格，構造實際的 HTTP 請求（URL、方法、body、headers 等）。URL 基於 OpenAPI 規格中的 `servers` 陣列。
+    *   **c. 前端發起 API 呼叫：**
+        *   前端 JavaScript 使用 `fetch` API **直接向工具服務的實際端點發起 HTTP 請求**。
         *   **CORS 和網路可達性：** 此時，使用者瀏覽器必須能直接訪問工具服務 URL，且工具服務需配置正確的 CORS 標頭。
         *   **接收回應與處理錯誤：** 工具服務處理請求並返回回應給前端。前端需處理 API 呼叫失敗的情況。
-
-    *   **b. 本地客戶端 MCP 伺服器 (前端直接執行)：**
-        *   當觸發工具呼叫時，前端會檢查工具定義中的 `isLocalClientCall` 標記。
-        *   如果為 `true`，則使用 `src/lib/utils/localClientToolExecutor.ts` 中的 `executeLocalClientTool` 函數執行前端呼叫。
-        *   `executeLocalClientTool` 函數根據已獲取的 MCP 能力的 `http` `invocation` 細節和 `messagePath`，建構並向本地工具伺服器（使用 `mcpBaseUrl` 和 `messagePath` 組成目標 URL）發送標準 **HTTP POST** 請求 (`fetch` API)。
-        *   **CORS 和網路可達性：** 本地 MCP 伺服器**必須**正確設定 CORS (Cross-Origin Resource Sharing) 標頭，允許來自 Open WebUI 前端的請求。這是確保瀏覽器前端能成功呼叫本地伺服器的最關鍵步驟。
-        *   **接收回應與處理錯誤：** 本地工具伺服器處理請求並返回回應給前端。前端需強健地處理回應和錯誤（網路錯誤、CORS 錯誤、HTTP 錯誤、MCP 協議錯誤），並顯示本地工具呼叫的載入狀態和特定錯誤訊息。
 
 4.  **將工具結果返回給 LLM：**
     *   前端將工具的成功回應（或錯誤信息）打包，發送回後端，後端再發送給 LLM。
@@ -130,8 +107,11 @@
 
 ## 總結關鍵點
 
-*   **註冊時：** 後端處理靜態配置和資料庫動態註冊的工具。**前端新增了自動探索本地 MCP 伺服器的機制，並將其資訊儲存在 `localStorage`。**
-*   **發現時 (`/api/tools/`)：** 後端快取靜態配置工具的規格，並從資料庫讀取動態註冊工具的記錄。**前端將後端工具和本地 MCP 工具合併，統一顯示在聊天界面中，並為本地工具添加 "Local" 標籤。**
-*   **調用時：**
-    *   **OpenAPI Tool Server：** 前端負責執行，按需獲取完整 OpenAPI 規格，並直接呼叫工具服務端點，依賴瀏覽器網路可達性和工具服務的 CORS 設定。
-    *   **本地客戶端 MCP 伺服器：** **前端直接向本地 MCP 伺服器發送 HTTP POST 請求，執行工具功能。本地伺服器必須正確配置 CORS。**
+*   **註冊時：** 後端嘗試處理 URL 以填充元數據，通常將原始 `content` (URL 或 spec) 存入資料庫。
+*   **發現時 (`/api/tools/`)：**
+    *   靜態配置工具的規格被後端快取（應用程式生命週期內一次）。
+    *   資料庫工具每次從 DB 讀取已含元數據的記錄；此階段通常不為所有資料庫 URL 工具重新獲取完整 spec。
+*   **調用時 (OpenAPI Tool Server)：**
+    *   **前端負責執行。**
+    *   前端按需獲取完整 OpenAPI 規格（若先前只有 URL）。
+    *   前端直接呼叫工具服務端點，依賴瀏覽器網路可達性和工具服務的 CORS 設定。
