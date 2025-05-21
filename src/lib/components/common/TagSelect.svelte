@@ -75,7 +75,7 @@
         {#if emptyInputPlaceholderVisible}
         <div class="flex items-center absolute justify-between pr-2.5 w-[calc(100%-10px)] bg-lightGray-300 dark:bg-customGray-900">
             <p class="text-sm text-lightGray-100 dark:text-customGray-100">{$i18n.t('Category')}</p>
-            <p class="text-xs text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('E.g. Finance or Marketing or Name of project')}</p>
+            <p class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 max-w-[10rem] text-end">{$i18n.t('E.g. Finance or Marketing or Name of project')}</p>
         </div>
         {/if}
 		{#if selected}

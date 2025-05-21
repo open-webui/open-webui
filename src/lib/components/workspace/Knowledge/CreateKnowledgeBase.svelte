@@ -158,7 +158,7 @@
 			{/if}
 		</button>
 	</div>
-	<div class="flex w-[34rem] py-3 px-4">
+	<div class="flex w-full md:w-[34rem] py-3 px-4">
 		<form
 			class="w-full flex flex-col bg-lightGray-550 dark:bg-customGray-800 rounded-2xl pt-6 pb-3 px-3"
 			on:submit|preventDefault={() => {

@@ -5,7 +5,7 @@
 
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, config, prompts as _prompts, user, showSidebar } from '$lib/stores';
+	import { WEBUI_NAME, config, prompts as _prompts, user, showSidebar, mobile } from '$lib/stores';
 
 	import {
 		createNewPrompt,
@@ -28,6 +28,8 @@
 	import GroupIcon from '../icons/GroupIcon.svelte';
 	import PublicIcon from '../icons/PublicIcon.svelte';
 	import PrivateIcon from '../icons/PrivateIcon.svelte';
+	import MenuIcon from '../icons/MenuIcon.svelte';
+	import FilterDropdown from './Models/FilterDropdown.svelte';
 
 	const i18n = getContext('i18n');
 	let promptsImportInputElement: HTMLInputElement;
@@ -189,24 +191,31 @@
 		</div>
 	</DeleteConfirmDialog>
 
-	<div id="prompts-header" class="pl-[22px] pr-[15px] py-2.5 border-b border-lightGray-400 dark:border-customGray-700">
+	<div id="prompts-header" class="pl-4 md:pl-[22px] pr-4 py-2.5 border-b border-lightGray-400 dark:border-customGray-700">
 		<div class="flex justify-between items-center">
-			<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
-				<button
-					id="sidebar-toggle-button"
-					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-					on:click={() => {
-						showSidebar.set(!$showSidebar);
-					}}
-					aria-label="Toggle Sidebar"
-				>
-					<div class=" m-auto self-center">
-						<ShowSidebarIcon />
-					</div>
-				</button>
-			</div>
-			<div class="flex items-center text-lightGray-100 dark:text-customGray-100 md:self-center text-base font-medium leading-none px-0.5">
-				{$i18n.t('Prompts')}
+			<div class="flex items-center">
+				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
+					<button
+						id="sidebar-toggle-button"
+						class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+						on:click={() => {
+							showSidebar.set(!$showSidebar);
+						}}
+						aria-label="Toggle Sidebar"
+					>
+						<div class=" m-auto self-center">
+							{#if ($mobile)}
+								<MenuIcon/>
+							{:else}
+								<ShowSidebarIcon />
+							{/if}
+							
+						</div>
+					</button>
+				</div>
+				<div class="flex items-center text-lightGray-100 dark:text-customGray-100 md:self-center text-base font-medium leading-none px-0.5">
+					{$i18n.t('Prompts')}
+				</div>
 			</div>
 			<div class="flex">
 				<div
@@ -225,7 +234,7 @@
 					<!-- </div> -->
 					{#if showInput}
 						<input
-							class=" w-full text-xs outline-none text-lightGray-100 dark:text-customGray-100 bg-transparent leading-none pl-2"
+							class="w-[5rem] md:w-full text-xs outline-none text-lightGray-100 dark:text-customGray-100 bg-transparent leading-none pl-2"
 							bind:value={query}
 							placeholder={$i18n.t('Search Prompts')}
 							autofocus
@@ -237,61 +246,79 @@
 				</div>
 				<div>
 					<a
-						class=" px-2 py-2.5 w-[35px] sm:w-[220px] rounded-lg leading-none border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-700 dark:hover:bg-customGray-950 text-lightGray-100 dark:text-customGray-200 dark:hover:text-white transition font-medium text-xs flex items-center justify-center space-x-1"
+						class=" px-2 py-2.5 md:w-[220px] rounded-lg leading-none border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-700 dark:hover:bg-customGray-950 text-lightGray-100 dark:text-customGray-200 dark:hover:text-white transition font-medium text-xs flex items-center justify-center space-x-1"
 						href="/workspace/prompts/create"
 					>
 						<Plus className="size-3.5" />
-						<span class="hidden sm:block">{$i18n.t('Create new')}</span>
+						<span class="">{$i18n.t('Create new')}</span>
 					</a>
 				</div>
 			</div>
 		</div>
 	</div>
 
-	<div class="pl-[22px] pr-[15px]">
+	<div class="pl-4 md:pl-[22px] pr-4">
 		<div
 			id="prompts-filters"
-			class="flex justify-between py-5 pr-[22px] flex-col md:flex-row items-start"
+			class="flex justify-between py-5 md:pr-[22px] flex-row items-start"
 		>
 			<div class="flex items-start space-x-[5px] flex-col sm:flex-row mb-3 sm:mb-0">
-				<div
-					class="font-medium text-lightGray-100 dark:text-customGray-300 text-xs whitespace-nowrap h-[22px] flex items-center mb-2 sm:mb-0"
-				>
-					{$i18n.t('Filter by category:')}
-				</div>
-				<div class="flex flex-wrap gap-1">
-					{#each tags as tag}
-						<button
-							class={`font-medium flex items-center justify-center rounded-md text-xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'dark:bg-customBlue-800 bg-customViolet-200' : 'bg-lightGray-400 hover:bg-customViolet-200 dark:bg-customGray-800 dark:hover:bg-customBlue-800'} dark:text-white`}
-							on:click={() => {
-								selectedTags.has(tag) ? selectedTags.delete(tag) : selectedTags.add(tag);
-								selectedTags = new Set(selectedTags);
-							}}
-						>
-							{tag.charAt(0).toUpperCase() + tag.slice(1)}
-						</button>
-					{/each}
-				</div>
+				{#if ($mobile)}
+					<FilterDropdown>
+						<div class="flex flex-wrap gap-1">
+							{#each tags as tag}
+								<button
+									class={`font-medium flex items-center justify-center rounded-md text-xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'dark:bg-customBlue-800 bg-customViolet-200' : 'bg-lightGray-400 dark:bg-customGray-800'} dark:text-white`}
+									on:click={() => {
+										selectedTags.has(tag) ? selectedTags.delete(tag) : selectedTags.add(tag);
+										selectedTags = new Set(selectedTags);
+									}}
+								>
+									{tag.charAt(0).toUpperCase() + tag.slice(1)}
+								</button>
+							{/each}
+						</div>
+					</FilterDropdown>
+				{:else}
+					<div
+						class="font-medium text-lightGray-100 dark:text-customGray-300 text-xs whitespace-nowrap h-[22px] flex items-center mb-2 sm:mb-0"
+					>
+						{$i18n.t('Filter by category:')}
+					</div>
+					<div class="flex flex-wrap gap-1">
+						{#each tags as tag}
+							<button
+								class={`font-medium flex items-center justify-center rounded-md text-xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'dark:bg-customBlue-800 bg-customViolet-200' : 'bg-lightGray-400 hover:bg-customViolet-200 dark:bg-customGray-800 dark:hover:bg-customBlue-800'} dark:text-white`}
+								on:click={() => {
+									selectedTags.has(tag) ? selectedTags.delete(tag) : selectedTags.add(tag);
+									selectedTags = new Set(selectedTags);
+								}}
+							>
+								{tag.charAt(0).toUpperCase() + tag.slice(1)}
+							</button>
+						{/each}
+					</div>
+				{/if}
 			</div>
 			<div class="flex bg-lightGray-700 dark:bg-customGray-800 rounded-md flex-shrink-0">
 				<button
 					on:click={() => (accessFilter = 'all')}
-					class={`${accessFilter === 'all' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'all' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-2 md:px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('All')}</button
 				> 
 				<button
 					on:click={() => (accessFilter = 'private')}
-					class={`${accessFilter === 'private' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'private' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-2 md:px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('My Prompts')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'public')}
-					class={`${accessFilter === 'public' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'public' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-2 md:px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('Public')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'pre-built')}
-					class={`${accessFilter === 'pre-built' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'pre-built' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-2 md:px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('Pre-built')}</button
 				>
 			</div>
@@ -358,7 +385,7 @@
 								</div>
 							</div>
 							{#if !prompt.prebuilt && (prompt.user_id === $user?.id || $user?.role === 'admin')}
-								<div class="{(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'visible' : 'invisible'}">
+								<div class="{(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'md:visible' : 'md:invisible'}">
 									<PromptMenu
 										{prompt}
 										shareHandler={() => {

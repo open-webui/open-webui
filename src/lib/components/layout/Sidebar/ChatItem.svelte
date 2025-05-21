@@ -293,7 +293,7 @@
 			? 'from-gray-200 dark:from-customGray-900'
 			: selected
 				? 'from-gray-100 dark:from-customGray-900'
-				: 'invisible group-hover:visible from-gray-100 dark:from-customGray-900'}
+				: 'md:invisible group-hover:visible'}
             absolute {className === 'pr-2'
 			? 'right-[8px]'
 			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-1 bg-gradient-to-l from-80%

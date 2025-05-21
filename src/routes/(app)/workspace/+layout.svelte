@@ -51,7 +51,7 @@
 
 {#if loaded}
 	<div
-		class=" relative flex flex-col w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+		class=" relative flex flex-col w-full min-h-screen md:h-screen md:max-h-[100dvh] overflow-auto md:overflow-visible transition-width duration-200 ease-in-out {$showSidebar
 			? 'md:max-w-[calc(100%-260px)]'
 			: ''} max-w-full"
 	>
@@ -128,7 +128,7 @@
 			</div>
 		</nav> -->
 
-		<div class="  pb-1 flex-1 max-h-full overflow-y-auto" id="workspace-container">
+		<div class="  pb-1 flex-1 md:max-h-full md:overflow-y-auto" id="workspace-container">
 			<slot />
 		</div>
 	</div>

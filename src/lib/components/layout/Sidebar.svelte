@@ -517,6 +517,7 @@
 			? ''
 			: 'invisible'}"
 	>
+		{#if (!$mobile)}
 		<div
 			class="flex align-center justify-between items-center px-2.5 pb-2 border-b border-lightGray-500 dark:border-customGray-700 mb-2.5"
 		>
@@ -549,28 +550,30 @@
 					</UserMenu>
 				{/if}
 			</div>
-			<button
-				class=" cursor-pointer flex justify-center items-center w-[25px] h-[25px] rounded-lg hover:bg-lightGray-700 dark:hover:bg-customGray-900 border border-transparent dark:hover:border-customGray-700 transition"
-				on:click={() => {
-					showSidebar.set(!$showSidebar);
-				}}
-			>
-				<div class=" m-auto self-center text-customGray-900 dark:text-customGray-300">
-					<ShowSidebarIcon />
-				</div>
-			</button>
+				<button
+					class=" cursor-pointer flex justify-center items-center w-[25px] h-[25px] rounded-lg hover:bg-lightGray-700 dark:hover:bg-customGray-900 border border-transparent dark:hover:border-customGray-700 transition"
+					on:click={() => {
+						showSidebar.set(!$showSidebar);
+					}}
+				>
+					<div class=" m-auto self-center text-customGray-900 dark:text-customGray-300">
+						<ShowSidebarIcon />
+					</div>
+				</button>		
 		</div>
+		{/if}
 
 		<div class="relative {$temporaryChatEnabled ? 'opacity-20' : ''}">
 			{#if $temporaryChatEnabled}
 				<div class="absolute z-40 w-full h-full flex justify-center"></div>
 			{/if}
-
+		
 			<SearchInput
 				bind:value={search}
 				on:input={searchDebounceHandler}
 				placeholder={$i18n.t('Search')}
 			/>
+		
 		</div>
 
 		<div class="px-2">
@@ -639,33 +642,34 @@
 				</div>
 			{/if}
 		</div>
-
-		<div
-			class="pl-[14px] pr-[11px] my-2 flex justify-between space-x-1 text-lightGray-100 dark:text-customGray-200"
-		>
-			<a
-				id="sidebar-new-chat-button"
-				class="font-medium flex justify-center items-center flex-1 rounded-lg text-xs px-2 py-1 border border-lightGray-400 dark:border-customGray-700 h-[35px] text-right text-lightGray-100 dark:text-customGray-200 dark:hover:text-white bg-lightGray-300 dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-customGray-950 transition no-drag-region"
-				href="/"
-				draggable="false"
-				on:click={async () => {
-					selectedChatId = null;
-					await goto('/');
-					const newChatButton = document.getElementById('new-chat-button');
-					setTimeout(() => {
-						newChatButton?.click();
-						if ($mobile) {
-							showSidebar.set(false);
-						}
-					}, 0);
-				}}
+		{#if (!$mobile)}
+			<div
+				class="pl-[14px] pr-[11px] my-2 flex justify-between space-x-1 text-lightGray-100 dark:text-customGray-200"
 			>
-				<div class="relative bottom-[0.5px] mr-[6px]">
-					<Plus className="w-[12px] h-[12px]" />
-				</div>
-				{$i18n.t('New Chat')}
-			</a>
-		</div>
+				<a
+					id="sidebar-new-chat-button"
+					class="font-medium flex justify-center items-center flex-1 rounded-lg text-xs px-2 py-1 border border-lightGray-400 dark:border-customGray-700 h-[35px] text-right text-lightGray-100 dark:text-customGray-200 dark:hover:text-white bg-lightGray-300 dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-customGray-950 transition no-drag-region"
+					href="/"
+					draggable="false"
+					on:click={async () => {
+						selectedChatId = null;
+						await goto('/');
+						const newChatButton = document.getElementById('new-chat-button');
+						setTimeout(() => {
+							newChatButton?.click();
+							if ($mobile) {
+								showSidebar.set(false);
+							}
+						}, 0);
+					}}
+				>
+					<div class="relative bottom-[0.5px] mr-[6px]">
+						<Plus className="w-[12px] h-[12px]" />
+					</div>
+					{$i18n.t('New Chat')}
+				</a>
+			</div>
+		{/if}
 
 		<div
 			class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden {$temporaryChatEnabled

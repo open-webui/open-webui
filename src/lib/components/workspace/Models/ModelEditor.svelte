@@ -925,7 +925,7 @@
 					</form>
 				</div>
 			{/if}
-			<div class="w-1/2"></div>
+			<div class="w-1/2 hidden md:visible"></div>
 		</div>
 	</div>
 {/if}

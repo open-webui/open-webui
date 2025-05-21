@@ -11,7 +11,8 @@
 		showControls,
 		showSidebar,
 		temporaryChatEnabled,
-		user
+		user,
+		company
 	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
@@ -24,9 +25,13 @@
 	import UserMenu from '$lib/components/layout/Sidebar/UserMenu.svelte';
 	import MenuLines from '../icons/MenuLines.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
+	import ChevronDown from '../icons/ChevronDown.svelte';
+
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
 	import ShowSidebarIcon from '../icons/ShowSidebarIcon.svelte';
+	import MenuIcon from '../icons/MenuIcon.svelte';
+	import Plus from '../icons/Plus.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -40,21 +45,23 @@
 
 	let showShareChatModal = false;
 	let showDownloadChatModal = false;
+
+	let showDropdown = false;
 </script>
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 
-<nav class="sticky top-0 z-30 w-full px-1.5 py-1.5 -mb-8 flex items-center drag-region h-8">
-	<div
-		class="bg-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
-	></div>
+<nav class="sticky top-0 z-30 {$mobile ? 'bg-lightGray-300 dark:bg-customGray-900' : 'bg-transparent'} w-full px-1.5 py-1.5 -mb-12 flex items-center drag-region h-12">
+	<!-- <div
+		class="{$mobile ? 'bg-lightGray-300 dark:bg-customGray-900' : 'bg-transparent'} pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
+	></div> -->
 
 	<div class=" max-w-full w-full mx-auto px-1 pt-0.5 bg-transparent">
 		<div class="flex items-center w-full max-w-full">
 			<div
 				class="{$showSidebar
 					? 'md:hidden'
-					: ''} mr-1 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
+					: ''} mr-1 self-center flex flex-none items-center text-gray-600 dark:text-gray-400"
 			>
 				<button
 					id="sidebar-toggle-button"
@@ -64,8 +71,12 @@
 					}}
 					aria-label="Toggle Sidebar"
 				>
-					<div class=" m-auto self-center">
-						<ShowSidebarIcon/>
+					<div class="flex items-center">
+						{#if ($mobile)}
+							<MenuIcon/>
+						{:else}
+							<ShowSidebarIcon/>
+						{/if}	
 					</div>
 				</button>
 			</div>
@@ -75,6 +86,37 @@
 			{$showSidebar ? 'ml-1' : ''}
 			"
 			>
+			{#if ($mobile)}
+			<div class="flex flex-col font-primary">
+				{#if $user !== undefined}
+					<UserMenu
+						role={$user.role}
+						on:show={(e) => {
+							if (e.detail === 'archived-chat') {
+								showArchivedChats.set(true);
+							}
+						}}
+					>
+						<button
+							class=" flex items-center rounded-xl px-2.5 w-full transition"
+							on:click={() => {
+								showDropdown = !showDropdown;
+							}}
+						>
+							<div class=" self-center mr-3">
+								<img
+									src={$company?.profile_image_url}
+									class=" max-w-[28px] object-cover rounded-md"
+									alt="User profile"
+								/>
+							</div>
+							<div class=" self-center font-medium text-sm mr-1 text-lightGray-1300 dark:text-customGray-100">{$company?.name}</div>
+							<ChevronDown className=" size-3" strokeWidth="2.5" />
+						</button>
+					</UserMenu>
+				{/if}
+			</div>
+			{/if}
 			
 			<!-- {#if showModelSelector}
 				<ModelSelector bind:selectedModels showSetDefault={!shareEnabled} />
@@ -148,22 +190,23 @@
 					</Tooltip>
 				{/if} -->
 
-				<Tooltip content={$i18n.t('New Chat')}>
+				{#if ($mobile)}
 					<button
 						id="new-chat-button"
-						class=" hidden {$showSidebar
+						class=" {$showSidebar
 							? 'md:hidden'
-							: ''} cursor-pointer px-2 py-2 rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							: ''} cursor-pointer font-medium flex justify-center items-center flex-1 rounded-lg text-xs px-3 py-1 border border-lightGray-400 dark:border-customGray-700 h-[35px] text-right text-lightGray-100 dark:text-customGray-200 dark:hover:text-white bg-lightGray-300 dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-customGray-950 transition"
 						on:click={() => {
 							initNewChat();
 						}}
 						aria-label="New Chat"
 					>
-						<div class=" m-auto self-center">
-							<PencilSquare className=" size-5" strokeWidth="2" />
-						</div>
+					<div class="relative bottom-[0.5px] mr-[6px]">
+						<Plus className="w-[12px] h-[12px]" />
+					</div>
+						{$i18n.t('New Chat')}	
 					</button>
-				</Tooltip>
+				{/if}
 
 				<!-- {#if $user !== undefined}
 					<UserMenu

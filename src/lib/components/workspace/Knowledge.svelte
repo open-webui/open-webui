@@ -9,7 +9,7 @@
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, knowledge, showSidebar } from '$lib/stores';
+	import { WEBUI_NAME, knowledge, showSidebar, mobile } from '$lib/stores';
 	import {
 		getKnowledgeBases,
 		deleteKnowledgeById,
@@ -32,6 +32,7 @@
 	import PrivateIcon from '../icons/PrivateIcon.svelte';
 	import { getGroups } from '$lib/apis/groups';
 	import { user } from '$lib/stores';
+	import MenuIcon from '../icons/MenuIcon.svelte';
 
 	let loaded = false;
 
@@ -111,9 +112,8 @@
 	let scrollContainer;
 
 	function updateScrollHeight() {
-		const header = document.getElementById('assistants-header');
-		const filters = document.getElementById('assistants-filters');
-
+		const header = document.getElementById('knowledge-header');
+		const filters = document.getElementById('knowledge-filters');
 		if (header && filters && scrollContainer) {
 			const totalOffset = header.offsetHeight + filters.offsetHeight;
 			scrollContainer.style.height = `calc(100dvh - ${totalOffset}px)`;
@@ -126,6 +126,12 @@
 			window.removeEventListener('resize', updateScrollHeight);
 		};
 	});
+
+	$: if (loaded) {
+		setTimeout(() => {
+			updateScrollHeight();
+		}, 0);
+	}
 
 	let hoveredKowledge = null;
 	let menuIdOpened = null;
@@ -145,24 +151,31 @@
 		}}
 	/>
 
-	<div id="knowledge-header" class="pl-[22px] pr-[15px] py-2.5 border-b dark:border-customGray-700">
+	<div id="knowledge-header" class="pl-4 md:pl-[22px] pr-4 py-2.5 border-b dark:border-customGray-700">
 		<div class="flex justify-between items-center">
-			<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
-				<button
-					id="sidebar-toggle-button"
-					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-					on:click={() => {
-						showSidebar.set(!$showSidebar);
-					}}
-					aria-label="Toggle Sidebar"
-				>
-					<div class=" m-auto self-center">
-						<ShowSidebarIcon />
-					</div>
-				</button>
-			</div>
-			<div class="flex items-center md:self-center text-lightGray-100 dark:bg-customGray-100 text-base font-medium leading-none px-0.5">
-				{$i18n.t('Knowledge')}
+			<div class="flex items-center">
+				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
+					<button
+						id="sidebar-toggle-button"
+						class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+						on:click={() => {
+							showSidebar.set(!$showSidebar);
+						}}
+						aria-label="Toggle Sidebar"
+					>
+						<div class=" m-auto self-center">
+							{#if ($mobile)}
+								<MenuIcon/>
+							{:else}
+								<ShowSidebarIcon />
+							{/if}
+							
+						</div>
+					</button>
+				</div>
+				<div class="flex items-center md:self-center text-lightGray-100 dark:bg-customGray-100 text-base font-medium leading-none px-0.5">
+					{$i18n.t('Knowledge')}
+				</div>
 			</div>
 			<div class="flex">
 				<div
@@ -181,7 +194,7 @@
 					<!-- </div> -->
 					{#if showInput}
 						<input
-							class=" w-full text-xs outline-none bg-transparent leading-none pl-2 text-lightGray-100 dark:text-customGray-100"
+							class="w-[5rem] md:w-full text-xs outline-none bg-transparent leading-none pl-2 text-lightGray-100 dark:text-customGray-100"
 							bind:value={query}
 							placeholder={$i18n.t('Search Models')}
 							autofocus
@@ -193,20 +206,20 @@
 				</div>
 				<div>
 					<a
-						class=" px-2 py-2.5 w-[35px] sm:w-[220px] rounded-lg leading-none border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-700 dark:hover:bg-customGray-950 text-lightGray-100 dark:text-customGray-200 dark:hover:text-white transition font-medium text-xs flex items-center justify-center space-x-1"
+						class=" px-2 py-2.5 md:w-[220px] rounded-lg leading-none border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-700 dark:hover:bg-customGray-950 text-lightGray-100 dark:text-customGray-200 dark:hover:text-white transition font-medium text-xs flex items-center justify-center space-x-1"
 						href="/workspace/knowledge/create"
 					>
 						<Plus className="size-3.5" />
-						<span class="hidden sm:block">{$i18n.t('Create new')}</span>
+						<span class="">{$i18n.t('Create new')}</span>
 					</a>
 				</div>
 			</div>
 		</div>
 	</div>
-	<div class="pl-[22px] pr-[15px]">
+	<div class="pl-4 md:pl-[22px] pr-4">
 		<div
 			id="knowledge-filters"
-			class="flex items-center justify-end py-5 pr-[22px] flex-col md:flex-row"
+			class="flex items-center justify-end py-5 md:pr-[22px] flex-row"
 		>
 			<div class="flex bg-lightGray-700 dark:bg-customGray-800 rounded-md flex-shrink-0">
 				<button
@@ -286,7 +299,7 @@
 									</div>
 								</div>
 								{#if ($user.id === item.user_id || $user?.role === 'admin')}
-								<div class="{(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'visible' : 'invisible'}">
+								<div class="{(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'md:visible' : 'md:invisible'}">
 									<ItemMenu
 										{item}
 										on:delete={() => {
