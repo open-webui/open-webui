@@ -29,15 +29,22 @@ import json
 with suppress(ImportError):
     import playhouse.postgres_ext as pw_pext
 
+class Knowledge(pw.Model):
+    class Meta:
+        table_name = 'knowledge'
 
 def migrate(migrator: Migrator, database: pw.Database, *, fake=False):
     """Add rag_config column to knowledge table."""
+    Knowledge._meta.database = database  # manually bind DB
+
     migrator.add_fields(
-        "knowledge",
-        rag_config=pw.TextField(null=True, default=json.dumps({})),  # Store an empty dict as JSON string
+        Knowledge,
+        rag_config=pw.TextField(null=True, default=json.dumps({"DEFAULT_RAG_SETTINGS": True})),
     )
 
 
 def rollback(migrator: Migrator, database: pw.Database, *, fake=False):
     """Remove rag_config column from knowledge table."""
-    migrator.remove_fields("knowledge", "rag_config")
+    Knowledge._meta.database = database  # manually bind DB
+
+    migrator.remove_fields(Knowledge, "rag_config")
