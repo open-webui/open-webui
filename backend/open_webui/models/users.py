@@ -383,7 +383,6 @@ class UsersTable:
 
                 with get_db() as db:
                     query = db.query(User).filter(
-                        User.created_at >= start_time,
                         User.created_at < end_time,
                     )
 

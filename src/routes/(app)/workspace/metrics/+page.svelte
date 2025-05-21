@@ -1,10 +1,8 @@
 <script>
-	import { onMount, getContext } from 'svelte';
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { user } from '$lib/stores';
-	import Metrics from '$lib/components/admin/Metrics.svelte';
-
-	const i18n = getContext('i18n');
+	import Metrics from '$lib/components/workspace/Metrics.svelte';
 
 	// Check if user has metrics access based on role
 	$: hasMetricsAccess =
