@@ -97,9 +97,17 @@
 
 #### 3.2.4. 挑戰與考量
 
-*   **CORS 設定：** 這是使用者面臨的主要技術障礙。本地 MCP 伺服器必須正確設定 CORS 標頭。
-*   **前端 Streamable HTTP 實作複雜度：** 支援 Streamable HTTP 將增加前端的開發複雜度，可能需要引入或開發專門的客戶端函式庫。
+*   **CORS 設定：** 這是使用者面臨的主要技術障礙。本地 MCP 伺服器必須正確設定 CORS (Cross-Origin Resource Sharing) 標頭，以允許來自 Open WebUI 前端的請求。
+*   **前端 Streamable HTTP 實作複雜度：** 支援 Streamable HTTP 將增加前端的開發複雜度，可能需要引入或開發專門的 JavaScript/TypeScript MCP 客戶端函式庫，或者進行更複雜的自訂實作。
 *   **錯誤報告與偵錯：** 針對本地連線，特別是 CORS 問題和 MCP 協議交互，提供更完善的錯誤報告和偵錯工具。
+
+### 3.4. 未來考量 (Future Considerations)
+
+本節列出當前版本未包含，但未來可能考慮的功能或改進：
+
+*   **支援自訂本地 MCP 端點：** 考慮未來允許使用者手動設定或掃描多個/非預設的本地 MCP 伺服器端點，以支援更廣泛的本地工具部署情境。
+*   **研究現有 JavaScript/TypeScript MCP 客戶端函式庫：** 評估並研究是否可以利用現有的 JavaScript/TypeScript MCP 客戶端函式庫來簡化前端的 `initialize` 和請求/回應處理，以降低開發複雜度。
+*   **提供範例 MCP 伺服器：** 提供一個簡單、文件完善的 MCP 伺服器範例（例如，使用 Python FastMCP 搭配 `SSETransport`），該範例應能正確處理前端發起的 `/sse` HTTP GET 初始化請求和伺服器指定的 `messagePath` (預設 `/messages/`) HTTP POST 執行請求，其中包含正確的 CORS 設定，供使用者參考調整。
 
 ### 3.3. 使用者體驗流程 (User Experience Flow)
 
