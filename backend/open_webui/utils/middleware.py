@@ -1521,7 +1521,7 @@ async def process_chat_response(
             results = await execute_tool_calls(
                 tool_calls_block["content"], 
                 tools,
-                event_caller,
+                event_caller, # Can be None
                 session_id
             )
             
@@ -1534,15 +1534,16 @@ async def process_chat_response(
                 "content": "",
             })
             
-            # Update UI with current state
-            await event_emitter(
-                {
-                    "type": "chat:completion",
-                    "data": {
-                        "content": serialize_content_blocks(content_blocks),
-                    },
-                }
-            )
+            # Update UI with current state if event_emitter is available
+            if event_emitter:
+                await event_emitter(
+                    {
+                        "type": "chat:completion",
+                        "data": {
+                            "content": serialize_content_blocks(content_blocks),
+                        },
+                    }
+                )
             
             # Generate follow-up response with the tool results
             try:
@@ -1688,145 +1689,127 @@ async def process_chat_response(
             # Check for tool calls in the response
             if choices and choices[0].get("message", {}).get("tool_calls"):
                 tool_calls = choices[0]["message"]["tool_calls"]
-                log.debug(f"Non-streaming response contains tool calls: {tool_calls}")
+                log.debug(f"Non-streaming response (UI/session) contains tool calls: {tool_calls}")
                 
                 # Skip tool call processing if not using native function calling
                 if metadata.get("function_calling") != "native":
-                    log.debug("Skipping tool call processing in non-native function calling mode")
-                    content = choices[0]["message"].get("content", "")
-                    
-                    if content:
-                        await event_emitter(
-                            {
-                                "type": "chat:completion",
-                                "data": {
-                                    "content": content,
-                                },
-                            }
-                        )
-                        
-                        title = Chats.get_chat_title_by_id(metadata["chat_id"])
-                        
-                        # Save message in the database
-                        Chats.upsert_message_to_chat_by_id_and_message_id(
-                            metadata["chat_id"],
-                            metadata["message_id"],
-                            {
-                                "content": content,
-                            },
-                        )
-                        
-                        await event_emitter(
-                            {
-                                "type": "chat:completion",
-                                "data": {
-                                    "done": True,
-                                    "content": content,
-                                    "title": title,
-                                },
-                            }
-                        )
-                        
-                        # Run background tasks
-                        await background_tasks_handler()
-                    
-                    return response
-                
+                    log.debug("Skipping tool call processing in non-native function calling mode for UI/session")
+                    # Handle simple content case if present
+                    if choices and choices[0].get("message", {}).get("content"):
+                        content = choices[0]["message"]["content"]
+                        if content:
+                            await event_emitter(
+                                {
+                                    "type": "chat:completion",
+                                    "data": response, # Send original response for simple content
+                                }
+                            )
+                            title = Chats.get_chat_title_by_id(metadata["chat_id"])
+                            await event_emitter(
+                                {
+                                    "type": "chat:completion",
+                                    "data": {
+                                        "done": True,
+                                        "content": content,
+                                        "title": title,
+                                    },
+                                }
+                            )
+                            Chats.upsert_message_to_chat_by_id_and_message_id(
+                                metadata["chat_id"],
+                                metadata["message_id"],
+                                {"content": content},
+                            )
+                            await background_tasks_handler()
+                    return response # Return original response for non-native or simple content after UI updates
+
                 # Create content blocks for tool calls
-                content_blocks = [{
-                    "type": "text",
-                    "content": ""
-                }]
-                
-                # Save initial message with tool calls
+                content_blocks = [{"type": "text", "content": ""}]
                 content_blocks.append({
                     "type": "tool_calls",
                     "content": tool_calls,
                 })
                 
-                # Format content with tool calls
-                serialized_content = serialize_content_blocks(content_blocks)
-                
-                # Save message with tool calls in the database
+                serialized_content_initial = serialize_content_blocks(content_blocks)
                 Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
                     metadata["message_id"],
-                    {
-                        "content": serialized_content,
-                    },
+                    {"content": serialized_content_initial},
                 )
-                
-                # Send initial data to client
                 await event_emitter(
                     {
                         "type": "chat:completion",
-                        "data": {
-                            "content": serialized_content,
-                        },
+                        "data": {"content": serialized_content_initial},
                     }
                 )
                 
-                # Execute tools and handle follow-up using the helper
                 tools = metadata.get("tools", {})
-                MAX_TOOL_CALL_RETRIES = 10
+                MAX_TOOL_CALL_RETRIES = 5
                 
-                # Process tool calls and generate follow-ups
                 content_blocks = await handle_tool_call_loop(
                     content_blocks, 
                     form_data, 
                     form_data.get("model", ""), 
                     tools,
-                    event_emitter,
-                    event_caller,
+                    event_emitter, # Pass event_emitter
+                    event_caller,  # Pass event_caller
                     MAX_TOOL_CALL_RETRIES,
                     metadata.get("session_id")
                 )
                 
-                # Send final response with title
                 title = Chats.get_chat_title_by_id(metadata["chat_id"])
-                serialized_content = serialize_content_blocks(content_blocks)
+                final_serialized_content = serialize_content_blocks(content_blocks)
                 
-                # Update message with final content
                 Chats.upsert_message_to_chat_by_id_and_message_id(
                     metadata["chat_id"],
                     metadata["message_id"],
-                    {
-                        "content": serialized_content,
-                    },
+                    {"content": final_serialized_content},
                 )
                 
-                # Send final response to client
                 await event_emitter(
                     {
                         "type": "chat:completion",
                         "data": {
                             "done": True,
-                            "content": serialized_content,
+                            "content": final_serialized_content,
                             "title": title,
                         },
                     }
                 )
                 
-                # Send a webhook notification if the user is not active
                 if not get_active_status_by_user_id(user.id):
                     webhook_url = Users.get_user_webhook_url_by_id(user.id)
                     if webhook_url:
                         post_webhook(
                             request.app.state.WEBUI_NAME,
                             webhook_url,
-                            f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{serialized_content}",
+                            f"{title} - {request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}\n\n{final_serialized_content}",
                             {
                                 "action": "chat",
-                                "message": serialized_content,
+                                "message": final_serialized_content,
                                 "title": title,
                                 "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
                             },
                         )
                 
-                # Run background tasks
                 await background_tasks_handler()
-                
+
+                # Construct and return the MODIFIED response
+                final_messages_from_blocks = convert_content_blocks_to_messages(content_blocks)
+                if final_messages_from_blocks:
+                    final_assistant_message = final_messages_from_blocks[-1]
+                else:
+                    final_assistant_message = {"role": "assistant", "content": ""}
+
+                response["choices"][0]["message"] = final_assistant_message
+                if final_assistant_message.get("tool_calls"):
+                    response["choices"][0]["finish_reason"] = "tool_calls"
+                else:
+                    response["choices"][0]["finish_reason"] = "stop"
+                    if "tool_calls" in response["choices"][0]["message"]:
+                         del response["choices"][0]["message"]["tool_calls"]
                 return response
+
             elif choices and choices[0].get("message", {}).get("content"):
                 content = choices[0]["message"]["content"]
 
@@ -1834,7 +1817,7 @@ async def process_chat_response(
                     await event_emitter(
                         {
                             "type": "chat:completion",
-                            "data": response,
+                            "data": response, # Send original response for simple content
                         }
                     )
 
@@ -1850,17 +1833,11 @@ async def process_chat_response(
                             },
                         }
                     )
-
-                    # Save message in the database
                     Chats.upsert_message_to_chat_by_id_and_message_id(
                         metadata["chat_id"],
                         metadata["message_id"],
-                        {
-                            "content": content,
-                        },
+                        {"content": content},
                     )
-
-                    # Send a webhook notification if the user is not active
                     if not get_active_status_by_user_id(user.id):
                         webhook_url = Users.get_user_webhook_url_by_id(user.id)
                         if webhook_url:
@@ -1875,12 +1852,70 @@ async def process_chat_response(
                                     "url": f"{request.app.state.config.WEBUI_URL}/c/{metadata['chat_id']}",
                                 },
                             )
-
                     await background_tasks_handler()
+            return response # Return original response if no tool calls or simple content after UI updates
+        
+        else: # event_emitter is None (e.g. Postman/direct API call)
+            choices = response.get("choices", [])
+            is_tool_call_response = choices and choices[0].get("message", {}).get("tool_calls")
 
-            return response
-        else:
-            return response
+            if is_tool_call_response:
+                log.debug(f"Non-streaming response (direct API) contains tool calls: {choices[0]['message']['tool_calls']}")
+
+                if metadata.get("function_calling") != "native":
+                    log.debug("Skipping tool call processing in non-native function calling mode for direct API. Returning original response.")
+                    return response
+
+                initial_tool_calls = choices[0]['message']['tool_calls']
+                content_blocks = [{"type": "text", "content": ""}]
+                content_blocks.append({
+                    "type": "tool_calls",
+                    "content": initial_tool_calls,
+                })
+
+                tools = metadata.get("tools", {})
+                MAX_TOOL_CALL_RETRIES = 5
+                
+                final_content_blocks = await handle_tool_call_loop(
+                    content_blocks,
+                    form_data,
+                    form_data.get("model", ""),
+                    tools,
+                    None,  # event_emitter is None
+                    None,  # event_caller is None
+                    MAX_TOOL_CALL_RETRIES,
+                    None   # session_id is None
+                )
+
+                final_messages_from_blocks = convert_content_blocks_to_messages(final_content_blocks)
+                final_assistant_message = {"role": "assistant", "content": ""} # Default
+                if final_messages_from_blocks:
+                    final_assistant_message = final_messages_from_blocks[-1]
+                
+                # Ensure content is null if only tool_calls are present, or empty string if no content.
+                if final_assistant_message.get("tool_calls") and not final_assistant_message.get("content"):
+                    final_assistant_message["content"] = None
+                elif not final_assistant_message.get("content"):
+                     final_assistant_message["content"] = ""
+
+
+                response["choices"][0]["message"] = final_assistant_message
+                if final_assistant_message.get("tool_calls"):
+                    response["choices"][0]["finish_reason"] = "tool_calls"
+                else:
+                    response["choices"][0]["finish_reason"] = "stop"
+                    if "tool_calls" in response["choices"][0]["message"]: # Clean up if not a tool_call finish
+                         del response["choices"][0]["message"]["tool_calls"]
+                
+                # Note: Usage tokens from the original response will be returned.
+                # Aggregating tokens from multiple calls in the loop is a potential enhancement.
+                return response # Return the MODIFIED response
+
+            else:
+                # No tool calls in initial response, direct API call.
+                log.debug("Non-streaming response (direct API) without initial tool calls. Returning original response.")
+                return response
+            
 
     # Non standard response
     if not any(
