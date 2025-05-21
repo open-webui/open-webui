@@ -1,6 +1,6 @@
 # Step 1: Copy raux.env to build/.env
 Write-Host "Copying raux.env to build/.env..."
-$envSource = Join-Path $PSScriptRoot 'raux.env'
+$envSource = Join-Path $PSScriptRoot 'raux-hybrid.env'
 $envDest = Join-Path $PSScriptRoot 'build/.env'
 Copy-Item -Path $envSource -Destination $envDest -Force
 

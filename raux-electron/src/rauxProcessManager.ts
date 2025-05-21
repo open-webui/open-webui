@@ -1,9 +1,9 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
 import { existsSync, copyFileSync, readFileSync, writeFileSync, appendFileSync, openSync } from 'fs';
 import { join, dirname } from 'path';
-import { isDev, getAppInstallDir, getBackendDir, getPythonPath } from './envUtils';
+import { isDev, getAppInstallDir, getBackendDir } from './envUtils';
 import { logInfo, logError } from './logger';
-import { ensurePythonAndPipInstalled } from './pythonSetup';
+import { python } from './pythonExec';
 
 class RauxProcessManager {
   private rauxProcess: ChildProcessWithoutNullStreams | null = null;
@@ -14,7 +14,7 @@ class RauxProcessManager {
 
   constructor() {
     const installDir = getAppInstallDir();
-    this.pythonPath = getPythonPath();
+    this.pythonPath = python.getPath();
     this.backendDir = getBackendDir();
 
     this.logPath = join(installDir, 'raux.log');

@@ -1,40 +1,62 @@
-# Plan for Implementing Separate Environment Configurations for RAUX
+# Refactoring Plan for RAUX Python Setup
 
-## Current State
-- Single environment file `raux.env` used for all builds
-- Single packaging job `package-windows` in the GitHub Action workflow
-- The job copies `raux.env` to `backend\.env` during build
+## Current Structure
 
-## Goals
-- Split configuration into separate environment files for different deployment scenarios
-- Create separate build jobs to produce distinct installers
-- Maintain Windows compatibility throughout the build pipeline
+- `index.ts`: Main entry point that calls Python/RAUX setup and starts RAUX processes
+- `forge.config.ts`: Electron Forge configuration (packaging, resources)
+- `pythonExec.ts`: Handles all Python-related functionality (singleton)
+- `rauxSetup.ts`: Handles all RAUX-specific installation and environment setup (singleton)
 
-## Tasks
+## Progress
 
-### 1. Create Separate Environment Files
-- [x] Create `raux-generic.env` based on current `raux.env` but remove `OPENAI_API_BASE_URLS` line
-- [x] Create `raux-hybrid.env` based on current `raux.env` (keeping `OPENAI_API_BASE_URLS` line)
+### 1. Consolidate Python functionality in `pythonExec.ts`
 
-### 2. Modify GitHub Action Workflow
-- [x] Duplicate the existing `package-windows` job to create:
-  - `package-generic` job
-  - `package-hybrid` job
-- [x] Modify the "Setup RAUX Environment" step in each job:
-  - In `package-generic`: copy `raux-generic.env` to `.env`
-  - In `package-hybrid`: copy `raux-hybrid.env` to `.env`
-- [x] Update the "Rename installer to raux-setup.exe" section name to "Rename installer"
-  - In the "hybrid" version, it will create an "exe" named "raux-hybrid-setup.exe"
-  - In the "generic" version, it will create an "exe" named "raux-generic-setup.exe"
-- [x] Add appropriate output artifact naming to distinguish between builds
-- [x] Update any dependencies between jobs as necessary
+- [x] Create a new `pythonExec.ts` singleton that encapsulates all Python/pip setup and execution logic
+- [x] Expose public methods for Python execution, pip execution, and setup
 
-### 3. Testing
-- [ ] Validate workflow runs successfully
-- [ ] Confirm both installers are generated correctly with the right configurations
-- [ ] Verify the electron app reads the environment variables correctly
+### 2. Create a dedicated RAUX installer module
 
-## Implementation Notes
-- Use Windows-compatible commands in the GitHub Actions
-- Ensure all paths use appropriate Windows path separators (`\`) where needed
-- Consider artifact naming conventions to clearly identify generic vs. hybrid builds
+- [x] Create `rauxSetup.ts` singleton for RAUX-specific installation and environment configuration
+- [x] Use `pythonExec.ts` for all Python/pip operations
+
+### 3. Define clear interface for Python execution
+
+- [x] Create a public interface in `pythonExec.ts`:
+  ```typescript
+  export interface PythonExecutor {
+    runPythonCommand(command: string[], options?: ExecutionOptions): Promise<ExecutionResult>;
+    runPipCommand(command: string[], options?: ExecutionOptions): Promise<ExecutionResult>;
+    getPythonPath(): string;
+    ensurePythonInstalled(): Promise<void>;
+  }
+  ```
+
+### 4. Design module interactions
+
+- [x] `pythonExec.ts`: Handles all Python-related functionality
+  - Private: Installation and setup methods
+  - Public: Execution and environment methods
+- [x] `rauxSetup.ts`: Uses `pythonExec.ts` to install RAUX packages
+
+### 5. Update imports and usage
+
+- [x] Update `index.ts` to use the new module structure
+- [x] Update any other files that directly use Python-related functionality
+- [x] Remove the now obsolete RAUX install logic from `pythonSetup.ts`
+
+### 6. Ensure thread safety and error handling
+
+- [ ] Add proper error handling in new modules (partially done, review for completeness)
+- [ ] Ensure thread-safe execution of Python commands (review if needed)
+- [ ] Add initialization checks to prevent duplicate setup (review if needed)
+
+## Implementation Approach
+
+- [x] Create `pythonExec.ts` by migrating core functionality from `pythonSetup.ts`
+- [x] Create `rauxSetup.ts` for RAUX-specific setup
+- [x] Update `index.ts` to use the new modules
+- [x] Remove RAUX install logic from `pythonSetup.ts` once migration is complete
+
+## TODO
+- [ ] Final review for error handling, thread safety, and initialization checks
+- [ ] Remove/clean up any remaining legacy code or unused files
