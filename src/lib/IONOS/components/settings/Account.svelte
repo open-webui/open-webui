@@ -24,7 +24,7 @@
 	}
 </script>
 
-<div class="flex flex-col gap-5">
+<div class="flex flex-col gap-5 text-sm">
 	<div class="flex flex-row items-center h-10">
 		<div class="flex-grow">
 			{$i18n.t('Email', { ns: 'ionos' })}

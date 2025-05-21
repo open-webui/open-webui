@@ -36,7 +36,7 @@
 				<li class="mb-3">
 					<NavItem bind:group={section} value="general">
 						<Gear slot="icon" className="inline s-4"/>
-						<span class="ml-2">
+						<span class="ml-2 text-sm">
 							{$i18n.t('General', { ns: 'ionos' })}
 						</span>
 					</NavItem>
@@ -44,7 +44,7 @@
 				<li class="mb-3">
 					<NavItem bind:group={section} value="account">
 						<FilledUserAvatar slot="icon" className="inline s-4"/>
-						<span class="ml-2">
+						<span class="ml-2 text-sm">
 							{$i18n.t('Account', { ns: 'ionos' })}
 						</span>
 					</NavItem>
