@@ -770,7 +770,7 @@ try:
         RAG_RERANKING_MODEL_AUTO_UPDATE,
     )
 except Exception as e:
-    log.error(f"Error updating models: {e}")
+    log.exception(f"Error updating models: {e}")
     pass
 
 
@@ -1056,7 +1056,7 @@ app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 try:
     audit_level = AuditLevel(AUDIT_LOG_LEVEL)
 except ValueError as e:
-    logger.error(f"Invalid audit level: {AUDIT_LOG_LEVEL}. Error: {e}")
+    logger.exception(f"Invalid audit level: {AUDIT_LOG_LEVEL}. Error: {e}")
     audit_level = AuditLevel.NONE
 
 if audit_level != AuditLevel.NONE:
@@ -1116,7 +1116,7 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
             tags = list(set(model_tags + tags))
             model["tags"] = [{"name": tag} for tag in tags]
         except Exception as e:
-            log.debug(f"Error processing model tags: {e}")
+            log.exception(f"Error processing model tags: {e}")
             model["tags"] = []
             pass
 
@@ -1170,10 +1170,7 @@ async def chat_completion(
 
             # Check if user has access to the model
             if not BYPASS_MODEL_ACCESS_CONTROL and user.role == "user":
-                try:
-                    check_model_access(user, model)
-                except Exception as e:
-                    raise e
+                check_model_access(user, model)
         else:
             model = model_item
             model_info = None
@@ -1214,7 +1211,7 @@ async def chat_completion(
         )
 
     except Exception as e:
-        log.debug(f"Error processing chat payload: {e}")
+        log.exception(f"Error processing chat payload: {e}")
         if metadata.get("chat_id") and metadata.get("message_id"):
             # Update the chat message with the error
             Chats.upsert_message_to_chat_by_id_and_message_id(
@@ -1327,7 +1324,7 @@ async def get_app_config(request: Request):
         try:
             data = decode_token(token)
         except Exception as e:
-            log.debug(e)
+            log.exception()
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token",
@@ -1480,7 +1477,7 @@ async def get_app_latest_release_version(user=Depends(get_verified_user)):
 
                 return {"current": VERSION, "latest": latest_version[1:]}
     except Exception as e:
-        log.debug(e)
+        log.exception()
         return {"current": VERSION, "latest": VERSION}
 
 
