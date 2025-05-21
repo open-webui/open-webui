@@ -7,7 +7,6 @@
 	import { user as _user } from '$lib/stores';
 	import { copyToClipboard as _copyToClipboard, formatDate } from '$lib/utils';
 
-	// Import components with explicit names to improve readability and debugging
 	import Name from './Name.svelte';
 	import ProfileImage from './ProfileImage.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -21,39 +20,40 @@
 	const i18n = getContext('i18n');
 	dayjs.extend(localizedFormat);
 
-	// Props with explicit types for better type checking
 	export let user;
+
 	export let history;
 	export let messageId;
+
 	export let siblings;
+
 	export let gotoMessage: Function;
 	export let showPreviousMessage: Function;
 	export let showNextMessage: Function;
+
 	export let editMessage: Function;
 	export let deleteMessage: Function;
+
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
 
-	// State variables
 	let showDeleteConfirm = false;
+
 	let messageIndexEdit = false;
+
 	let edit = false;
 	let editedContent = '';
 	let editedFiles = [];
+
 	let messageEditTextAreaElement: HTMLTextAreaElement;
 
-	// PERFORMANCE IMPROVEMENT 1: Use memoization for message data
-	// Create a memoized copy of the message to prevent unnecessary re-renders
-	// Only update when the actual message content changes
 	let message = JSON.parse(JSON.stringify(history.messages[messageId]));
 	$: if (history.messages) {
-		// Only update the message object if it has actually changed
 		if (JSON.stringify(message) !== JSON.stringify(history.messages[messageId])) {
 			message = JSON.parse(JSON.stringify(history.messages[messageId]));
 		}
 	}
 
-	// PERFORMANCE IMPROVEMENT 2: Optimize clipboard operation with feedback
 	const copyToClipboard = async (text) => {
 		const res = await _copyToClipboard(text);
 		if (res) {
@@ -61,52 +61,41 @@
 		}
 	};
 
-	// PERFORMANCE IMPROVEMENT 3: Optimize edit handler with proper async/await
 	const editMessageHandler = async () => {
 		edit = true;
 		editedContent = message.content;
 		editedFiles = message.files;
 
-		// Wait for DOM update before manipulating the textarea
 		await tick();
 
 		if (messageEditTextAreaElement) {
-			// Reset height before calculating the new height to avoid compounding heights
 			messageEditTextAreaElement.style.height = '';
 			messageEditTextAreaElement.style.height = `${messageEditTextAreaElement.scrollHeight}px`;
-			
-			// Focus the textarea for immediate editing
+
 			messageEditTextAreaElement?.focus();
 		}
 	};
 
-	// PERFORMANCE IMPROVEMENT 4: Optimize message editing with clean state management
 	const editMessageConfirmHandler = async (submit = true) => {
-		// Call the parent function to handle the edit
 		editMessage(message.id, { content: editedContent, files: editedFiles }, submit);
 
-		// Reset state variables to clean up memory and prevent stale state
 		edit = false;
 		editedContent = '';
 		editedFiles = [];
 	};
 
-	// PERFORMANCE IMPROVEMENT 5: Add clean cancel function to prevent memory leaks
 	const cancelEditMessage = () => {
 		edit = false;
 		editedContent = '';
 		editedFiles = [];
 	};
 
-	// PERFORMANCE IMPROVEMENT 6: Simplify delete handler
 	const deleteMessageHandler = async () => {
 		deleteMessage(message.id);
 	};
 
-	// PERFORMANCE IMPROVEMENT 7: Add proper component lifecycle management
 	onMount(() => {
-		// Component initialization logic can be added here if needed
-		// Removed console.log to improve performance
+		// console.log('UserMessage mounted');
 	});
 </script>
 
@@ -118,11 +107,9 @@
 	}}
 />
 
-<!-- PERFORMANCE IMPROVEMENT 8: Optimize DOM structure with proper class naming and conditional rendering -->
-<div class="flex w-full user-message" dir={$settings.chatDirection} id="message-{message.id}">
+<div class=" flex w-full user-message" dir={$settings.chatDirection} id="message-{message.id}">
 	{#if !($settings?.chatBubble ?? true)}
 		<div class={`shrink-0 ltr:mr-3 rtl:ml-3`}>
-			<!-- PERFORMANCE IMPROVEMENT 9: Optimize avatar rendering with memoized props -->
 			<ProfileImage
 				src={message.user
 					? ($models.find((m) => m.id === message.user)?.info?.meta?.profile_image_url ??
@@ -135,11 +122,10 @@
 	<div class="flex-auto w-0 max-w-full pl-1">
 		{#if !($settings?.chatBubble ?? true)}
 			<div>
-				<n>
-					<!-- PERFORMANCE IMPROVEMENT 10: Optimize username display with conditional rendering -->
+				<Name>
 					{#if message.user}
 						{$i18n.t('You')}
-						<span class="text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
+						<span class=" text-gray-500 text-sm font-medium">{message?.user ?? ''}</span>
 					{:else if $settings.showUsername || $_user.name !== user.name}
 						{user.name}
 					{:else}
@@ -147,28 +133,26 @@
 					{/if}
 
 					{#if message.timestamp}
-						<!-- PERFORMANCE IMPROVEMENT 11: Optimize timestamp display with tooltip -->
 						<div
-							class="self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
+							class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 						>
 							<Tooltip content={dayjs(message.timestamp * 1000).format('LLLL')}>
 								<span class="line-clamp-1">{formatDate(message.timestamp * 1000)}</span>
 							</Tooltip>
 						</div>
 					{/if}
-				</n>
+				</Name>
 			</div>
 		{/if}
 
 		<div class="chat-{message.role} w-full min-w-full markdown-prose">
 			{#if edit !== true}
-				<!-- PERFORMANCE IMPROVEMENT 12: Optimize file rendering with conditional checks -->
-				{#if message.files && message.files.length > 0}
+				{#if message.files}
 					<div class="mt-2.5 mb-1 w-full flex flex-col justify-end overflow-x-auto gap-1 flex-wrap">
 						{#each message.files as file}
 							<div class={($settings?.chatBubble ?? true) ? 'self-end' : ''}>
 								{#if file.type === 'image'}
-									<Image src={file.url} imageClassName="max-h-96 rounded-lg" />
+									<Image src={file.url} imageClassName=" max-h-96 rounded-lg" />
 								{:else}
 									<FileItem
 										item={file}
@@ -176,7 +160,7 @@
 										name={file.name}
 										type={file.type}
 										size={file?.size}
-										colorClassName="bg-white dark:bg-gray-850"
+										colorClassName="bg-white dark:bg-gray-850 "
 									/>
 								{/if}
 							</div>
@@ -187,28 +171,27 @@
 
 			{#if message.content !== ''}
 				{#if edit === true}
-					<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
-						<!-- PERFORMANCE IMPROVEMENT 13: Optimize file editing UI with conditional rendering -->
+					<div class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 mb-2">
 						{#if (editedFiles ?? []).length > 0}
 							<div class="flex items-center flex-wrap gap-2 -mx-2 mb-1">
 								{#each editedFiles as file, fileIdx}
 									{#if file.type === 'image'}
-										<div class="relative group">
+										<div class=" relative group">
 											<div class="relative flex items-center">
 												<Image
 													src={file.url}
 													alt="input"
-													imageClassName="size-14 rounded-xl object-cover"
+													imageClassName=" size-14 rounded-xl object-cover"
 												/>
 											</div>
-											<div class="absolute -top-1 -right-1">
+											<div class=" absolute -top-1 -right-1">
 												<button
-													class="bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
+													class=" bg-white text-black border border-white rounded-full group-hover:visible invisible transition"
 													type="button"
 													on:click={() => {
-														// PERFORMANCE IMPROVEMENT 14: Optimize array operations
 														editedFiles.splice(fileIdx, 1);
-														editedFiles = editedFiles; // Trigger reactivity
+
+														editedFiles = editedFiles;
 													}}
 												>
 													<svg
@@ -234,12 +217,12 @@
 											dismissible={true}
 											edit={true}
 											on:dismiss={async () => {
-												// PERFORMANCE IMPROVEMENT 15: Optimize array operations
 												editedFiles.splice(fileIdx, 1);
-												editedFiles = editedFiles; // Trigger reactivity
+
+												editedFiles = editedFiles;
 											}}
 											on:click={() => {
-												// Removed console.log to improve performance
+												console.log(file);
 											}}
 										/>
 									{/if}
@@ -247,20 +230,17 @@
 							</div>
 						{/if}
 
-						<!-- PERFORMANCE IMPROVEMENT 16: Optimize textarea with fixed height constraints -->
 						<div class="max-h-96 overflow-auto">
 							<textarea
 								id="message-edit-{message.id}"
 								bind:this={messageEditTextAreaElement}
-								class="bg-transparent outline-hidden w-full resize-none"
+								class=" bg-transparent outline-hidden w-full resize-none"
 								bind:value={editedContent}
 								on:input={(e) => {
-									// Auto-resize textarea based on content
 									e.target.style.height = '';
 									e.target.style.height = `${e.target.scrollHeight}px`;
 								}}
 								on:keydown={(e) => {
-									// PERFORMANCE IMPROVEMENT 17: Optimize keyboard shortcuts
 									if (e.key === 'Escape') {
 										document.getElementById('close-edit-message-button')?.click();
 									}
@@ -275,11 +255,11 @@
 							/>
 						</div>
 
-						<div class="mt-2 mb-1 flex justify-between text-sm font-medium">
+						<div class=" mt-2 mb-1 flex justify-between text-sm font-medium">
 							<div>
 								<button
 									id="save-edit-message-button"
-									class="px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
+									class=" px-4 py-2 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-200 transition rounded-3xl"
 									on:click={() => {
 										editMessageConfirmHandler(false);
 									}}
@@ -301,7 +281,7 @@
 
 								<button
 									id="confirm-edit-message-button"
-									class="px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
+									class=" px-4 py-2 bg-gray-900 dark:bg-white hover:bg-gray-850 text-gray-100 dark:text-gray-800 transition rounded-3xl"
 									on:click={() => {
 										editMessageConfirmHandler();
 									}}
@@ -316,12 +296,11 @@
 						<div class="flex {($settings?.chatBubble ?? true) ? 'justify-end pb-1' : 'w-full'}">
 							<div
 								class="rounded-3xl {($settings?.chatBubble ?? true)
-									? `max-w-[90%] px-5 py-2 bg-gray-50 dark:bg-gray-850 ${
+									? `max-w-[90%] px-5 py-2  bg-gray-50 dark:bg-gray-850 ${
 											message.files ? 'rounded-tr-lg' : ''
 										}`
 									: ' w-full'}"
 							>
-								<!-- PERFORMANCE IMPROVEMENT 18: Only render markdown when content exists -->
 								{#if message.content}
 									<Markdown id={message.id} content={message.content} />
 								{/if}
@@ -329,11 +308,10 @@
 						</div>
 
 						<div
-							class="flex {($settings?.chatBubble ?? true)
+							class=" flex {($settings?.chatBubble ?? true)
 								? 'justify-end'
-								: ''} text-gray-600 dark:text-gray-500"
+								: ''}  text-gray-600 dark:text-gray-500"
 						>
-							<!-- PERFORMANCE IMPROVEMENT 19: Optimize navigation controls with better conditional rendering -->
 							{#if !($settings?.chatBubble ?? true)}
 								{#if siblings.length > 1}
 									<div class="flex self-center" dir="ltr">
@@ -359,7 +337,6 @@
 											</svg>
 										</button>
 
-										<!-- PERFORMANCE IMPROVEMENT 20: Optimize message index editing with better state management -->
 										{#if messageIndexEdit}
 											<div
 												class="text-sm flex justify-center font-semibold self-center dark:text-gray-100 min-w-fit"
@@ -393,7 +370,6 @@
 												on:dblclick={async () => {
 													messageIndexEdit = true;
 
-													// Wait for DOM update before focusing
 													await tick();
 													const input = document.getElementById(
 														`message-index-input-${message.id}`
@@ -432,8 +408,6 @@
 									</div>
 								{/if}
 							{/if}
-							
-							<!-- PERFORMANCE IMPROVEMENT 21: Optimize action buttons with better visibility control -->
 							{#if !readOnly}
 								<Tooltip content={$i18n.t('Edit')} placement="bottom">
 									<button
@@ -484,7 +458,6 @@
 								</button>
 							</Tooltip>
 
-							<!-- PERFORMANCE IMPROVEMENT 22: Optimize delete button visibility with better conditional checks -->
 							{#if !readOnly && (!isFirstMessage || siblings.length > 1)}
 								<Tooltip content={$i18n.t('Delete')} placement="bottom">
 									<button
@@ -511,7 +484,6 @@
 								</Tooltip>
 							{/if}
 
-							<!-- PERFORMANCE IMPROVEMENT 23: Optimize chat bubble navigation with better conditional rendering -->
 							{#if $settings?.chatBubble ?? true}
 								{#if siblings.length > 1}
 									<div class="flex self-center" dir="ltr">
