@@ -548,90 +548,121 @@
 
                 <div class="  mb-2.5 flex flex-col w-full">
                     <div class=" mb-1 text-xs font-medium">{$i18n.t('Embedding Model')}</div>
-
-                    <div class="">
-                        {#if embeddingEngine === 'ollama'}
-                            <div class="flex w-full">
-                                <div class="flex-1 mr-2">
-                                    <input
-                                        class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-                                        bind:value={embeddingModel}
-                                        placeholder={$i18n.t('Set embedding model')}
-                                        required
-                                    />
+                    {#if $user?.role === 'admin'}
+                        <div class="">
+                            {#if embeddingEngine === 'ollama'}
+                                <div class="flex w-full">
+                                    <div class="flex-1 mr-2">
+                                        <input
+                                            class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+                                            bind:value={embeddingModel}
+                                            placeholder={$i18n.t('Set embedding model')}
+                                            required
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        {:else}
-                            <div class="flex w-full">
-                                <div class="flex-1 mr-2">
-                                    <input
-                                        class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-                                        placeholder={$i18n.t('Set embedding model (e.g. {{model}})', {
-                                            model: embeddingModel.slice(-40)
-                                        })}
-                                        bind:value={embeddingModel}
-                                    />
-                                </div>
+                            {:else}
+                                <div class="flex w-full">
+                                    <div class="flex-1 mr-2">
+                                        <input
+                                            class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+                                            placeholder={$i18n.t('Set embedding model (e.g. {{model}})', {
+                                                model: embeddingModel.slice(-40)
+                                            })}
+                                            bind:value={embeddingModel}
+                                        />
+                                    </div>
 
-                                {#if embeddingEngine === ''}
-                                    <button
-                                        class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
-                                        on:click={() => {
-                                            embeddingModelUpdateHandler();
-                                        }}
-                                        disabled={updateEmbeddingModelLoading}
-                                    >
-                                        {#if updateEmbeddingModelLoading}
-                                            <div class="self-center">
-                                                <svg
-                                                    class=" w-4 h-4"
-                                                    viewBox="0 0 24 24"
-                                                    fill="currentColor"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                >
-                                                    <style>
-                                                        .spinner_ajPY {
-                                                            transform-origin: center;
-                                                            animation: spinner_AtaB 0.75s infinite linear;
-                                                        }
-
-                                                        @keyframes spinner_AtaB {
-                                                            100% {
-                                                                transform: rotate(360deg);
+                                    {#if embeddingEngine === ''}
+                                        <button
+                                            class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
+                                            on:click={() => {
+                                                embeddingModelUpdateHandler();
+                                            }}
+                                            disabled={updateEmbeddingModelLoading}
+                                        >
+                                            {#if updateEmbeddingModelLoading}
+                                                <div class="self-center">
+                                                    <svg
+                                                        class=" w-4 h-4"
+                                                        viewBox="0 0 24 24"
+                                                        fill="currentColor"
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                    >
+                                                        <style>
+                                                            .spinner_ajPY {
+                                                                transform-origin: center;
+                                                                animation: spinner_AtaB 0.75s infinite linear;
                                                             }
-                                                        }
-                                                    </style>
+
+                                                            @keyframes spinner_AtaB {
+                                                                100% {
+                                                                    transform: rotate(360deg);
+                                                                }
+                                                            }
+                                                        </style>
+                                                        <path
+                                                            d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+                                                            opacity=".25"
+                                                        />
+                                                        <path
+                                                            d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+                                                            class="spinner_ajPY"
+                                                        />
+                                                    </svg>
+                                                </div>
+                                            {:else}
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    viewBox="0 0 16 16"
+                                                    fill="currentColor"
+                                                    class="w-4 h-4"
+                                                >
                                                     <path
-                                                        d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-                                                        opacity=".25"
+                                                        d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
                                                     />
                                                     <path
-                                                        d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-                                                        class="spinner_ajPY"
+                                                        d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
                                                     />
                                                 </svg>
-                                            </div>
-                                        {:else}
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                viewBox="0 0 16 16"
-                                                fill="currentColor"
-                                                class="w-4 h-4"
-                                            >
-                                                <path
-                                                    d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
-                                                />
-                                                <path
-                                                    d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
-                                                />
-                                            </svg>
-                                        {/if}
-                                    </button>
-                                {/if}
+                                            {/if}
+                                        </button>
+                                    {/if}
+                                </div>
+                            {/if}
+                        </div>
+                    {/if}
+                    <div class="flex w-full">
+                            <div class="flex-1 mr-2">
+                                <select
+                                    class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden p-2 border border-gray-300"
+                                    bind:value={embeddingModel}
+                                    required
+                                >
+                                    <option value="" disabled selected>{$i18n.t('Select embedding model')}</option>
+                                    <!-- Always show the current value first if it's not empty -->
+                                    {#if embeddingModel && embeddingModel.trim() !== ''}
+                                        <option value={embeddingModel} class="py-1 font-semibold">
+                                            {embeddingModel} 
+                                            {#if embeddingEngine && 
+                                                RAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine] && 
+                                                !localRAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine]?.includes(embeddingModel)}
+                                                (custom)
+                                            {/if}
+                                        </option>
+                                    {/if}
+                                    
+                                    <!-- Then show all downloaded models from the selected engine -->
+                                    {#if embeddingEngine && RAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine]}
+                                        {#each RAGConfig.DOWNLOADED_EMBEDDING_MODELS[embeddingEngine] as model}
+                                            {#if model !== embeddingModel} <!-- Skip the current model as it's already shown -->
+                                                <option value={model} class="py-1">{model}</option>
+                                            {/if}
+                                        {/each}
+                                    {/if}
+                                </select>
                             </div>
-                        {/if}
-                    </div>
-
+                        </div>
                     <div class="mt-1 mb-1 text-xs text-gray-400 dark:text-gray-500">
                         {$i18n.t(
                             'Warning: If you update or change your embedding model, you will need to re-import all documents.'
@@ -694,71 +725,102 @@
                     {#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
                         <div class="  mb-2.5 flex flex-col w-full">
                             <div class=" mb-1 text-xs font-medium">{$i18n.t('Reranking Model')}</div>
-
-                            <div class="">
-                                <div class="flex w-full">
-                                    <div class="flex-1 mr-2">
-                                        <input
-                                            class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
-                                            placeholder={$i18n.t('Set reranking model (e.g. {{model}})', {
-                                                model: 'BAAI/bge-reranker-v2-m3'
-                                            })}
-                                            bind:value={rerankingModel}
-                                        />
-                                    </div>
-                                    <button
-                                        class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
-                                        on:click={() => {
-                                            rerankingModelUpdateHandler();
-                                        }}
-                                        disabled={updateRerankingModelLoading}
-                                    >
-                                        {#if updateRerankingModelLoading}
-                                            <div class="self-center">
-                                                <svg
-                                                    class=" w-4 h-4"
-                                                    viewBox="0 0 24 24"
-                                                    fill="currentColor"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                >
-                                                    <style>
-                                                        .spinner_ajPY {
-                                                            transform-origin: center;
-                                                            animation: spinner_AtaB 0.75s infinite linear;
-                                                        }
-
-                                                        @keyframes spinner_AtaB {
-                                                            100% {
-                                                                transform: rotate(360deg);
+                            {#if $user?.role === 'admin'}
+                                <div class="">
+                                    <div class="flex w-full">
+                                        <div class="flex-1 mr-2">
+                                            <input
+                                                class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden"
+                                                placeholder={$i18n.t('Set reranking model (e.g. {{model}})', {
+                                                    model: 'BAAI/bge-reranker-v2-m3'
+                                                })}
+                                                bind:value={rerankingModel}
+                                            />
+                                        </div>
+                                        <button
+                                            class="px-2.5 bg-transparent text-gray-800 dark:bg-transparent dark:text-gray-100 rounded-lg transition"
+                                            on:click={() => {
+                                                rerankingModelUpdateHandler();
+                                            }}
+                                            disabled={updateRerankingModelLoading}
+                                        >
+                                            {#if updateRerankingModelLoading}
+                                                <div class="self-center">
+                                                    <svg
+                                                        class=" w-4 h-4"
+                                                        viewBox="0 0 24 24"
+                                                        fill="currentColor"
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                    >
+                                                        <style>
+                                                            .spinner_ajPY {
+                                                                transform-origin: center;
+                                                                animation: spinner_AtaB 0.75s infinite linear;
                                                             }
-                                                        }
-                                                    </style>
+
+                                                            @keyframes spinner_AtaB {
+                                                                100% {
+                                                                    transform: rotate(360deg);
+                                                                }
+                                                            }
+                                                        </style>
+                                                        <path
+                                                            d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
+                                                            opacity=".25"
+                                                        />
+                                                        <path
+                                                            d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
+                                                            class="spinner_ajPY"
+                                                        />
+                                                    </svg>
+                                                </div>
+                                            {:else}
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    viewBox="0 0 16 16"
+                                                    fill="currentColor"
+                                                    class="w-4 h-4"
+                                                >
                                                     <path
-                                                        d="M12,1A11,11,0,1,0,23,12,11,11,0,0,0,12,1Zm0,19a8,8,0,1,1,8-8A8,8,0,0,1,12,20Z"
-                                                        opacity=".25"
+                                                        d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
                                                     />
                                                     <path
-                                                        d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z"
-                                                        class="spinner_ajPY"
+                                                        d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
                                                     />
                                                 </svg>
-                                            </div>
-                                        {:else}
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                viewBox="0 0 16 16"
-                                                fill="currentColor"
-                                                class="w-4 h-4"
-                                            >
-                                                <path
-                                                    d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z"
-                                                />
-                                                <path
-                                                    d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z"
-                                                />
-                                            </svg>
+                                            {/if}
+                                        </button>
+                                        
+                                    </div>
+                                </div>
+                            {/if}
+                            <div class="flex w-full">
+                                <div class="flex-1 mr-2">
+                                    <select
+                                        class="flex-1 w-full rounded-lg text-sm bg-transparent outline-hidden p-2 border border-gray-300"
+                                        bind:value={rerankingModel}
+                                        required
+                                    >
+                                        <option value="" disabled selected>{$i18n.t('Select reranking model')}</option>
+                                        <!-- Always show the current value first if it's not empty -->
+                                        {#if rerankingModel && rerankingModel.trim() !== ''}
+                                            <option value={rerankingModel} class="py-1 font-semibold">
+                                                {rerankingModel} 
+                                                {#if !RAGConfig.DOWNLOADED_RERANKING_MODELS?.includes(embeddingModel)}
+                                                    (custom)
+                                                {/if}
+                                            </option>
                                         {/if}
-                                    </button>
+                                        
+                                        <!-- Then show all downloaded models from the selected engine -->
+                                        {#if RAGConfig.DOWNLOADED_RERANKING_MODELS}
+                                            {#each RAGConfig.DOWNLOADED_RERANKING_MODELS as model}
+                                                {#if model !== rerankingModel} <!-- Skip the current model as it's already shown -->
+                                                    <option value={model} class="py-1">{model}</option>
+                                                {/if}
+                                            {/each}
+                                        {/if}
+                                    </select>
                                 </div>
                             </div>
                         </div>
