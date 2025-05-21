@@ -94,6 +94,15 @@ class SimpleCache:
 # Global cache instance
 _ocr_cache = SimpleCache(max_size=20, default_ttl=24*3600)  # 24 hour TTL
 
+# Helper function to create or get event loop 
+def get_or_create_event_loop():
+    """Get the current event loop or create a new one if there isn't one."""
+    try:
+        return asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        return loop
 
 class MistralLoader:
     """
@@ -142,20 +151,25 @@ class MistralLoader:
         self.max_retries = max_retries
         self.headers = {"Authorization": f"Bearer {self.api_key}"}
         
-        # Configure aiohttp connection settings
+        # Get or create event loop - prevents "no running event loop" error
+        self._loop = get_or_create_event_loop()
+        
+        # Configure aiohttp connection settings with explicit loop
         connector = aiohttp.TCPConnector(
-            limit=100,  # Max connections (similar to max_connections)
-            limit_per_host=20,  # Max connections per host (similar to max_keepalive_connections)
+            limit=100,
+            limit_per_host=20,
             enable_cleanup_closed=True,
             force_close=False,
-            ttl_dns_cache=300  # Cache DNS results for 5 minutes
+            ttl_dns_cache=300,
+            loop=self._loop  # Explicitly pass the event loop
         )
         
         # Create aiohttp session
         self.session = aiohttp.ClientSession(
             headers=self.headers,
             connector=connector,
-            timeout=aiohttp.ClientTimeout(total=timeout)
+            timeout=aiohttp.ClientTimeout(total=timeout),
+            loop=self._loop  # Explicitly pass the event loop
         )
         
         # Configurable semaphore for throttling
@@ -441,23 +455,23 @@ class MistralLoader:
 
     async def _process_pages_batch(self, pages_data: List[Dict], total_pages: int) -> List[Document]:
         """Process a batch of pages in parallel"""
-        loop = asyncio.get_event_loop()
-        
         tasks = [
-            loop.run_in_executor(
+            self._loop.run_in_executor(
                 None,
                 functools.partial(self._build_document, page_data, total_pages)
             )
             for page_data in pages_data
         ]
         
-        batch_results = await asyncio.gather(*tasks)
+        batch_results = await asyncio.gather(*tasks, loop=self._loop)
         # Filter out any pages that returned None
         return [doc for doc in batch_results if doc is not None]
 
-    async def load(self) -> List[Document]:
+    def load(self) -> List[Document]:
         """
         Executes the full OCR workflow with caching and improved error handling.
+        
+        This is a synchronous wrapper around the async load_async method.
 
         Returns:
             A list of Document objects, one for each page processed.
@@ -468,7 +482,17 @@ class MistralLoader:
             if cached_result:
                 log.info(f"Using cached OCR result for file: {self.file_path}")
                 return cached_result
-
+                
+        # Run the async load in the event loop
+        return self._loop.run_until_complete(self.load_async())
+        
+    async def load_async(self) -> List[Document]:
+        """
+        Asynchronous implementation of the OCR workflow.
+        
+        Returns:
+            A list of Document objects, one for each page processed.
+        """
         # Throttle concurrent load operations
         async with self._sem:
             file_id = None
@@ -547,15 +571,30 @@ class MistralLoader:
                             f"Cleanup error: Could not delete file ID {file_id}. Reason: {del_e}"
                         )
 
+    def __enter__(self):
+        """Enter synchronous context manager."""
+        return self
+        
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit synchronous context manager."""
+        if hasattr(self, 'session') and self.session and not self.session.closed:
+            self._loop.run_until_complete(self.session.close())
+
     async def __aenter__(self):
         """Enter async context manager."""
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Exit async context manager, ensuring session cleanup."""
-        await self.session.close()
+        if hasattr(self, 'session') and self.session and not self.session.closed:
+            await self.session.close()
 
-async def shutdown_loader(loader: MistralLoader):
+def shutdown_loader(loader: MistralLoader):
     """Safely shut down the loader and close its session."""
-    if loader and hasattr(loader, 'session'):
-        await loader.session.close()
+    if loader and hasattr(loader, 'session') and loader.session and not loader.session.closed:
+        if hasattr(loader, '_loop'):
+            loader._loop.run_until_complete(loader.session.close())
+        else:
+            # Fallback
+            loop = get_or_create_event_loop()
+            loop.run_until_complete(loader.session.close())
