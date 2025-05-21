@@ -267,7 +267,7 @@
 				<div class="text-xs text-lightGray-100 dark:text-customGray-100">{$i18n.t('Billing details')}</div>
 				{#if $subscription?.cancel_at_period_end}
 					<div class="text-xs dark:text-customGray-590">
-						Canceled at {dayjs($subscription?.canceled_at * 1000)?.format('DD.MM.YYYY')}
+						Canceled at {dayjs($subscription?.end_date * 1000)?.format('DD.MM.YYYY')}
 					</div>
 				{:else if $subscription?.plan !== 'free'}
 					<div class="text-xs dark:text-customGray-590">
