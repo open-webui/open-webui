@@ -31,3 +31,7 @@ update:
 	$(DOCKER_COMPOSE) up --build -d
 	$(DOCKER_COMPOSE) start
 
+unpriv-image:
+	docker build --build-arg UID=1000 --build-arg GID=1000 --platform linux/amd64 -t open-webui:unpriv-amd64 .
+	docker build --build-arg UID=1000 --build-arg GID=1000 --platform linux/arm64 -t open-webui:unpriv-arm64 .
+
