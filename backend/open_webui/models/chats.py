@@ -12,7 +12,6 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Boolean, Column, String, Text, JSON
 from sqlalchemy import or_, func, select, and_, text
 from sqlalchemy.sql import exists
-from sqlalchemy.dialects.postgresql import JSONB
 
 ####################
 # Chat DB Schema
@@ -28,7 +27,7 @@ class Chat(Base):
     id = Column(String, primary_key=True)
     user_id = Column(String)
     title = Column(Text)
-    chat = Column(JSONB)
+    chat = Column(JSON)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -37,7 +36,7 @@ class Chat(Base):
     archived = Column(Boolean, default=False)
     pinned = Column(Boolean, default=False, nullable=True)
 
-    meta = Column(JSONB, server_default="{}")
+    meta = Column(JSON, server_default="{}")
     folder_id = Column(Text, nullable=True)
 
 
@@ -620,7 +619,7 @@ class ChatTable:
                     )
 
             elif dialect_name == "postgresql":
-                # PostgreSQL: using JSONB optimized queries
+                # PostgreSQL relies on proper JSON query for search
                 query = query.filter(
                     (
                         Chat.title.ilike(
@@ -630,7 +629,7 @@ class ChatTable:
                             """
                             EXISTS (
                                 SELECT 1
-                                FROM jsonb_array_elements(Chat.chat->'messages') AS message
+                                FROM json_array_elements(Chat.chat->'messages') AS message
                                 WHERE LOWER(message->>'content') LIKE '%' || :search_text || '%'
                             )
                             """
@@ -645,7 +644,7 @@ class ChatTable:
                             """
                             NOT EXISTS (
                                 SELECT 1
-                                FROM jsonb_array_elements_text(Chat.meta->'tags') AS tag
+                                FROM json_array_elements_text(Chat.meta->'tags') AS tag
                             )
                             """
                         )
@@ -658,7 +657,7 @@ class ChatTable:
                                     f"""
                                     EXISTS (
                                         SELECT 1
-                                        FROM jsonb_array_elements_text(Chat.meta->'tags') AS tag
+                                        FROM json_array_elements_text(Chat.meta->'tags') AS tag
                                         WHERE tag = :tag_id_{tag_idx}
                                     )
                                     """
@@ -745,10 +744,10 @@ class ChatTable:
                     )
                 ).params(tag_id=tag_id)
             elif db.bind.dialect.name == "postgresql":
-                # PostgreSQL JSONB optimized query with contains operator
+                # PostgreSQL JSON query for tags within the meta JSON field (for `json` type)
                 query = query.filter(
                     text(
-                        "Chat.meta->'tags' ? :tag_id"
+                        "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
                     )
                 ).params(tag_id=tag_id)
             else:
@@ -799,10 +798,10 @@ class ChatTable:
                 ).params(tag_id=tag_id)
 
             elif db.bind.dialect.name == "postgresql":
-                # PostgreSQL JSONB contains operator for better performance
+                # PostgreSQL JSONB support for querying the tags inside the `meta` JSON field
                 query = query.filter(
                     text(
-                        "Chat.meta->'tags' ? :tag_id"
+                        "EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)"
                     )
                 ).params(tag_id=tag_id)
 
