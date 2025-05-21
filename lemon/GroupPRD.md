@@ -34,6 +34,27 @@ Open WebUI 功能說明：使用者、群組與工具管理
     -   無驗證模式 (若 `WEBUI_AUTH == False`):
         -   若系統無使用者，自動建立預設管理員帳號 "admin@localhost"。
     -   登入成功後：產生 JWT 並存入 cookie。
+    -   OIDC (例如 Microsoft) 登入:
+        -   系統支援透過 OpenID Connect (OIDC) 進行第三方身份驗證，允許使用者例如使用其 Microsoft 帳號登入。
+        -   啟用與設定:
+            -   需要在環境變數中設定 `ENABLE_OAUTH_SIGNUP=True` 以允許透過 OIDC 提供者註冊新使用者。
+            -   同時，需要設定 OIDC 提供者的相關資訊。有兩種主要方式：
+                1.  Microsoft 專用設定: 設定 `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_CLIENT_TENANT_ID`, 和 `MICROSOFT_REDIRECT_URI`。
+                2.  通用 OIDC 設定: 設定 `OPENID_PROVIDER_URL` (指向 Microsoft 的 OpenID 端點，例如 `https://login.microsoftonline.com/{TENANT_ID}/v2.0`)，以及 `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET`, 和 `OPENID_REDIRECT_URI`。
+        -   運作流程:
+            1.  使用者在前端介面選擇透過 OIDC (例如 Microsoft) 登入。
+            2.  系統將使用者重新導向至 Microsoft 的登入和授權頁面。
+            3.  使用者在 Microsoft 端完成身份驗證和授權。
+            4.  Microsoft 將使用者重新導向回應用程式設定的重新導向 URI (`MICROSOFT_REDIRECT_URI` 或 `OPENID_REDIRECT_URI`)，並附帶授權碼或 ID Token。
+            5.  後端 (`auths.py` 中透過 OAuth 函式庫間接處理，並由 `config.py` 中的 `load_oauth_providers` 函數設定) 處理此回呼：
+                -   使用授權碼向 Microsoft 換取 Access Token 和 ID Token。
+                -   從 ID Token 中解析出使用者資訊，包括唯一識別碼 (`sub`)、電子郵件和名稱。
+            6.  使用者帳號處理:
+                -   系統使用 `Users.get_user_by_oauth_sub` 檢查該 `sub` 是否已存在於本地 `user` 資料表的 `oauth_sub` 欄位。
+                -   若已存在，則直接登入該使用者。
+                -   若不存在且 `ENABLE_OAUTH_SIGNUP` 為 `True`，則呼叫 `Auths.insert_new_auth` (內部會呼叫 `Users.insert_new_user`) 在本地資料庫中建立新使用者，並將 `oauth_sub` 存入。
+                -   若不存在且 `ENABLE_OAUTH_SIGNUP` 為 `False`，則登入失敗。
+            7.  成功登入或註冊後，產生 JWT 並設定到 cookie。
 
 3.  LDAP 驗證流程 (路由: /ldap, 檔案: backend/open_webui/routers/auths.py)
     -   啟用條件：`ENABLE_LDAP` 設定為 true。
@@ -135,136 +156,144 @@ Open WebUI 功能說明：使用者、群組與工具管理
 
 ---
 
-第五部分：新功能 - 使用者註冊時自動指派群組 (基於 SQL Server 資料)
+**第五部分：新功能 - 使用者登入時同步群組成員資格 (基於 SQL Server 資料)**
 
-功能目標：
-在新使用者註冊成功後，系統將自動查詢外部 SQL Server 資料庫中的 `sp_PBA_HC_Movement` 表。根據使用者的 Email，將其指派到對應的 `[HW_Purchase_Group]` (此欄位儲存群組名稱)。如果 Open WebUI 系統中不存在具有該名稱的群組，則自動建立該群組。此自動指派功能僅在使用者首次註冊完成後執行一次。
+**功能目標：**
 
-詳細實施步驟：
+在使用者每次成功登入 Open WebUI 系統後（無論是透過傳統註冊表單、傳統帳號密碼登入，還是 OIDC 單一登入流程），系統將自動查詢外部 SQL Server 資料庫中的 `sp_PBA_HC_Movement` 表。根據使用者的 Email，系統會將其 Open WebUI 中的群組成員資格與 SQL Server 中 `[HW_Purchase_Group]` 欄位指定的群組進行同步。SQL Server 將作為這些特定群組成員資格的權威來源。
 
-1.  修改觸發點：使用者註冊流程
-    -   影響檔案： `backend/open_webui/routers/auths.py`
-    -   影響函數： `signup`
-    -   具體邏輯： 在 `Auths.insert_new_auth(...)` 函數成功執行並返回 `user` 物件之後，但在向前端返回註冊成功響應之前，插入自動指派群組的相關程式碼。
+*   **新增成員**：如果 SQL Server 的記錄顯示使用者應屬於某個（或某些）群組，而使用者在 Open WebUI 中尚未加入，則系統會將使用者加入到這些群組中。如果 Open WebUI 系統中不存在具有相應名稱的群組，則會自動建立該群組。
+*   **移除成員**：如果 SQL Server 的記錄顯示使用者不應再屬於某個（或某些）群組（例如，該群組不再與該使用者關聯，或使用者在 SQL Server 中已無有效的群組記錄），而使用者在 Open WebUI 中仍是該群組的成員，則系統會將使用者從這些群組中移除。
+*   **執行時機**：此同步邏輯在每次使用者成功登入後執行。
 
-2.  獲取新註冊使用者的資訊
-    -   從 `signup` 函數中成功建立的 `user` 物件中提取：
-        -   `user_email = user.email`
-        -   `new_user_id = user.id`
+**詳細實施步驟：**
 
-3.  執行 SQL 查詢以獲取目標群組名稱
-    -   構建 SQL 查詢語句 (應使用參數化查詢以防 SQL 注入)：
+1.  **修改觸發點：使用者成功登入後**
+    *   **情境1：傳統帳號密碼登入 (`/signin` 路由)**
+        *   影響檔案： `backend/open_webui/routers/auths.py`
+        *   影響函數： `signin`
+        *   具體邏輯： 在成功驗證使用者身份並獲取 `user` 物件之後，但在向前端返回登入成功響應（例如 JWT）之前，插入群組同步的相關程式碼。
+    *   **情境2：OIDC 單一登入 (例如 Microsoft 登入)**
+        *   影響檔案：處理 OIDC 回呼並完成本地使用者驗證/建立的相關邏輯區塊 (主要在 `backend/open_webui/routers/auths.py` 或其依賴的 OAuth 處理函式庫中)。
+        *   具體邏輯：在 OIDC 登入流程中，當使用者成功通過 OIDC 驗證，並且本地 `user` 物件被獲取（無論是既有使用者還是因此次 OIDC 登入而新建立的使用者）之後，但在完成 OIDC 登入流程並返回 JWT 給前端之前，插入群組同步的相關程式碼。
+    *   **情境3：新使用者透過傳統註冊表單首次建立帳號 (`/signup` 路由)**
+        *   影響檔案： `backend/open_webui/routers/auths.py`
+        *   影響函數： `signup`
+        *   具體邏輯： 在 `Auths.insert_new_auth(...)` 函數成功執行並返回 `user` 物件之後，但在向前端返回註冊成功響應之前，插入群組同步的相關程式碼。
+    *   **核心原則**：確保在使用者每次成功認證並獲取到其 `user` 物件後，群組同步邏輯都會被觸發。
+
+2.  **獲取已登入使用者的資訊**
+    *   從成功登入/註冊流程中獲取的 `user` 物件中提取：
+        *   `user_email = user.email`
+        *   `current_user_id = user.id`
+
+3.  **執行 SQL 查詢以獲取目標群組名稱列表**
+    *   構建 SQL 查詢語句 (應使用參數化查詢以防 SQL 注入)：
         ```sql
-        SELECT DISTINCT [HW_Purchase_Group] 
+        SELECT [HW_Purchase_Group] 
         FROM [dbo].[sp_PBA_HC_Movement] 
-        WHERE [Email Address] = %s AND [EndDate] IS NULL 
+        WHERE [Email Address] = %s AND [EndDate] IS NULL
         ```
-        *(註：`%s` 為參數佔位符，實際使用的佔位符需根據所用資料庫驅動程式的語法確定。)*
-    -   執行方式： 使用 `use_mcp_tool`
-        -   `server_name`: "mssql"
-        -   `tool_name`: "execute_sql"
-        -   `arguments`: `{"query": "SQL_QUERY_STRING_HERE", "params": [user_email]}` (假設 `execute_sql` 工具支援傳遞參數列表)。
-    -   預期查詢結果：一個列表。由於查詢中 `EndDate IS NULL` 的條件以及 `DISTINCT [HW_Purchase_Group]` 的使用，預期此列表最多只包含一個元素（如果該使用者在 SQL 表中有對應的有效記錄），該元素代表目標群組的名稱。
+        *(註：`%s` 為參數佔位符，實際使用的佔位符需根據所用資料庫驅動程式的語法確定。此查詢預期返回一個包含零個或多個群組名稱的列表。)*
+    *   執行方式： 使用 `use_mcp_tool`
+        *   `server_name`: "mssql"
+        *   `tool_name`: "execute_sql"
+        *   `arguments`: `{"query": "SQL_QUERY_STRING_HERE", "params": [user_email]}` (假設 `execute_sql` 工具支援傳遞參數列表)。
+    *   預期查詢結果：一個群組名稱的列表，例如 `target_group_names_from_sql`。
 
-4.  處理 SQL 查詢結果並完成群組指派
-    -   檢查 SQL 查詢是否成功執行並且返回了結果 (例如，一個群組名稱列表 `group_names_from_sql`)。
-    -   遍歷 `group_names_from_sql` 列表中的每一個 `group_name`：（註：根據預期，此 `group_names_from_sql` 列表最多包含一個 `group_name`）。
-        -   查找或建立 Open WebUI 內部群組：
-            -   調用 `Groups.get_group_by_name(group_name)` 查找群組 (此方法需在 `GroupTable` 中實現或確認已存在)。
-            -   如果 `target_group` (查找到的群組物件) 為 `None` (即群組不存在)：
-                -   準備群組表單資料：`group_form_data = GroupForm(name=group_name, description="由系統根據 SQL Server 資料自動建立")`。
-                -   調用 `target_group = Groups.insert_new_group(user_id=new_user_id, form_data=group_form_data)` 建立新群組。
-                    *(群組建立者 `user_id` 使用新註冊使用者的 ID)*
-                -   記錄群組建立的日誌。如果建立失敗，記錄錯誤並繼續處理列表中的下一個 `group_name`。
-            -   如果 `target_group` 成功獲取 (無論是查找到的還是新建的)，則取得其 ID：`target_group_id = target_group.id`。
-        -   將使用者加入到目標群組：
-            -   如果 `target_group_id` 有效：
-                -   調用 `success = Groups.add_user_to_group(user_id=new_user_id, group_id=target_group_id)` 將使用者加入群組 (此方法需在 `GroupTable` 中實現或確認已存在)。
-                -   記錄指派結果的日誌。
+4.  **處理 SQL 查詢結果並同步群組成員資格**
+    *   **A. 獲取使用者在 Open WebUI 中的現有群組ID集合**：
+        *   調用 `current_ouw_groups_models = Groups.get_groups_by_user_id(current_user_id)` (此方法需在 `GroupTable` 中實現)。
+        *   從 `current_ouw_groups_models` 提取群組 ID，形成一個集合 `current_ouw_group_ids_set`。
+    *   **B. 處理從 SQL 獲取的目標群組名稱列表，並獲取其在 Open WebUI 中的群組ID集合**：
+        *   初始化一個空集合 `final_target_ouw_group_ids_set`。
+        *   如果 SQL 查詢成功執行並且 `target_group_names_from_sql` 包含群組名稱：
+            *   對於 `target_group_names_from_sql` 中的每一個 `group_name_from_sql`：
+                *   查找或建立 Open WebUI 內部群組：
+                    *   調用 `target_group = Groups.get_group_by_name(group_name_from_sql)`。
+                    *   如果 `target_group` 為 `None` (即群組不存在)：
+                        *   準備群組表單資料：`group_form_data = GroupForm(name=group_name_from_sql, description="由系統根據 SQL Server 資料自動建立/同步")`。
+                        *   調用 `target_group = Groups.insert_new_group(user_id=current_user_id, form_data=group_form_data)` 建立新群組。
+                            *(群組建立者 `user_id` 可考慮使用一個系統帳號 ID，或首次建立該群組的使用者 ID。此處暫定為 `current_user_id`)*
+                        *   記錄群組建立的日誌。如果建立失敗，記錄錯誤並繼續處理列表中的下一個 `group_name_from_sql`。
+                    *   如果 `target_group` 成功獲取 (無論是查找到的還是新建的)，則將其 ID (`target_group.id`) 加入到 `final_target_ouw_group_ids_set` 中。
+    *   **C. 比較並執行同步操作**：
+        *   **要加入的群組**：計算差集 `groups_to_add_ids = final_target_ouw_group_ids_set - current_ouw_group_ids_set`。
+            *   對於 `groups_to_add_ids` 中的每一個 `group_id_to_add`：
+                *   調用 `Groups.add_user_to_group(user_id=current_user_id, group_id=group_id_to_add)`。
+                *   記錄指派結果的日誌。
+        *   **要移除的群組**：計算差集 `groups_to_remove_ids = current_ouw_group_ids_set - final_target_ouw_group_ids_set`。
+            *   對於 `groups_to_remove_ids` 中的每一個 `group_id_to_remove`：
+                *   調用 `Groups.remove_user_from_group(user_id=current_user_id, group_id=group_id_to_remove)` (此方法需在 `GroupTable` 中實現)。
+                *   記錄移除結果的日誌。
 
-5.  必要的程式碼修改點：
-    -   於 `backend/open_webui/routers/auths.py` (在 `signup` 函數內):
-        -   引入 `Groups` 模型及 `GroupForm` Pydantic 模型。
-        -   實現上述步驟 2、3、4 的主要業務邏輯，包括完整的錯誤處理機制 (try-except 區塊) 和詳細的日誌記錄。
-    -   於 `backend/open_webui/models/groups.py` (在 `GroupTable` 類別內):
-        -   實現或確認 `get_group_by_name(self, name: str) -> Optional[GroupModel]` 方法:
+5.  **必要的程式碼修改點：**
+    *   於 `backend/open_webui/routers/auths.py` (在 `signin`, `signup` 函數內，以及處理 OIDC 登入成功的相關邏輯區塊):
+        *   引入 `Groups` 模型及 `GroupForm` Pydantic 模型。
+        *   實現上述步驟 2、3、4 的主要業務邏輯，包括完整的錯誤處理機制 (try-except 區塊) 和詳細的日誌記錄。
+    *   於 `backend/open_webui/models/groups.py` (在 `GroupTable` 類別內):
+        *   實現或確認 `get_group_by_name(self, name: str) -> Optional[GroupModel]` 方法 (參考先前版本，建議使用不區分大小寫查詢)。
+        *   實現或確認 `add_user_to_group(self, user_id: str, group_id: str) -> bool` 方法 (參考先前版本)。
+        *   **新增** `get_groups_by_user_id(self, user_id: str) -> List[GroupModel]` 方法:
             ```python
-            # 參考實現 (需引入相關模組如 time, func, get_db, Group, GroupModel, logging)
-            def get_group_by_name(self, name: str) -> Optional[GroupModel]:
+            # 參考實現 (需引入相關模組)
+            from typing import List, Optional
+            # ... 其他引入 ...
+            # from .. import models # 假設 Group 和 GroupModel 在這裡
+
+            def get_groups_by_user_id(self, user_id: str) -> List[GroupModel]:
                 try:
                     with get_db() as db:
-                        # 建議使用不區分大小寫的方式查詢群組名稱
-                        group_record = db.query(Group).filter(func.lower(Group.name) == func.lower(name)).first()
-                        return GroupModel.model_validate(group_record) if group_record else None
+                        # 查詢 user_ids JSON 陣列包含指定 user_id 的群組
+                        # SQLAlchemy 對 JSON 陣列的查詢方式可能因資料庫後端而異
+                        # 以下為 PostgreSQL 的一個範例，使用 @> 運算子
+                        # groups_records = db.query(Group).filter(Group.user_ids.contains([user_id])).all()
+                        # 更通用的方式可能是獲取所有群組，然後在 Python 中過濾，但效能較差
+                        # 或者，如果 user_ids 儲存為 TEXT 且以特定分隔符分隔，可以使用 LIKE
+                        # 假設 user_ids 是一個 JSON 陣列，並且資料庫支援 JSON 查詢
+                        # 這裡提供一個概念性的實現，具體需根據資料庫和 ORM 能力調整
+                        
+                        # 較為可靠的方式是遍歷所有群組，檢查 user_id 是否在其 user_ids 列表中
+                        # 這在群組數量不多時可行，但群組多時效能不佳
+                        all_groups = db.query(Group).all()
+                        user_groups = []
+                        for group_record in all_groups:
+                            if group_record.user_ids and user_id in group_record.user_ids:
+                                user_groups.append(GroupModel.model_validate(group_record))
+                        return user_groups
                 except Exception as e:
-                    log.error(f"Error getting group by name '{name}': {e}")
-                    return None
+                    log.error(f"Error getting groups for user_id '{user_id}': {e}")
+                    return []
             ```
-        -   實現或確認 `add_user_to_group(self, user_id: str, group_id: str) -> bool` 方法:
+        *   **新增** `remove_user_from_group(self, user_id: str, group_id: str) -> bool` 方法:
             ```python
             # 參考實現
-            def add_user_to_group(self, user_id: str, group_id: str) -> bool:
+            def remove_user_from_group(self, user_id: str, group_id: str) -> bool:
                 try:
                     group_to_update = self.get_group_by_id(group_id)
                     if not group_to_update:
-                        log.error(f"Group with id '{group_id}' not found when trying to add user '{user_id}'.")
+                        log.error(f"Group with id '{group_id}' not found when trying to remove user '{user_id}'.")
                         return False
 
                     current_user_ids = list(group_to_update.user_ids) # 確保操作的是列表副本
-                    if user_id not in current_user_ids:
-                        current_user_ids.append(user_id)
+                    if user_id in current_user_ids:
+                        current_user_ids.remove(user_id)
                         
                         update_data = {"user_ids": current_user_ids, "updated_at": int(time.time())}
                         
                         with get_db() as db:
                             db.query(Group).filter_by(id=group_id).update(update_data)
                             db.commit()
-                        log.info(f"User '{user_id}' successfully added to group '{group_id}'.")
+                        log.info(f"User '{user_id}' successfully removed from group '{group_id}'.")
                         return True
                     else:
-                        log.info(f"User '{user_id}' already in group '{group_id}'. No action taken.")
-                        return True # 使用者已在群組中，也視為成功操作
+                        log.info(f"User '{user_id}' not in group '{group_id}'. No removal action taken.")
+                        return True # 使用者本不在群組中，也視為成功操作
                 except Exception as e:
-                    log.error(f"Error adding user '{user_id}' to group '{group_id}': {e}")
+                    log.error(f"Error removing user '{user_id}' from group '{group_id}': {e}")
                     return False
             ```
-            *(註：在 `add_user_to_group` 的實現中，更新群組時建議僅更新 `user_ids` 和 `updated_at` 欄位，以避免不必要的 `GroupUpdateForm` 構造和潛在的其他欄位意外覆寫。同時，需確保 `time` 模組已正確匯入以使用 `int(time.time())`。)*
 
-6.  錯誤處理與日誌記錄的總體要求：
-    -   在 `signup` 函數中，整個自動指派群組的邏輯區塊應被一個總的 `try-except` 結構包圍。這樣可以確保即使自動指派功能出現任何未預期的失敗，也不會影響核心的使用者註冊流程的完成。
-    -   應詳細記錄流程中的每一步操作及任何潛在的錯誤，例如 SQL 連線失敗、查詢無結果、群組建立失敗等情況，以便於後續追蹤和調試。
-
-第六部分：現有使用者群組初始化腳本
-
-功能目標：
-- 為 Open WebUI 中所有現有的使用者，根據其 Email 從外部 SQL Server 資料庫的 `sp_PBA_HC_Movement` 表中查詢對應的 `[HW_Purchase_Group]`。
-- 將使用者指派到 Open WebUI 內部相應的群組。
-- 如果群組不存在，則自動建立。
-- 此操作旨在作為一次性的初始化過程，由管理員手動執行。
-
-執行方式：
-- 透過一個獨立的 Python 腳本 (`lemon/initial.py`) 執行。
-- 此腳本需要配置資料庫連接資訊和 Open WebUI 管理員 ID。
-
-主要邏輯：
-- 連接資料庫：
-    - 同時連接到 Open WebUI 的內部資料庫和外部的 SQL Server。
-- 獲取現有使用者：
-    - 從 Open WebUI 讀取所有使用者列表。
-- 遍歷使用者（對每一位使用者）：
-    - 使用其 Email 查詢 SQL Server 中的 `sp_PBA_HC_Movement` 表，獲取 `[HW_Purchase_Group]` (條件為 `EndDate IS NULL`)。
-    - 如果查詢到群組名稱：
-        - 在 Open WebUI 中查找是否存在同名群組。
-        - 若群組不存在，則使用預設的管理員 ID 作為建立者，自動建立該群組。
-        - 將目前使用者加入到該 Open WebUI 群組中（如果尚未加入）。
-- 日誌記錄：
-    - 詳細記錄腳本執行的每一步、成功指派、新建群組以及任何錯誤。
-
-腳本實現：
-- 完整的 Python 腳本實現細節、配置說明及執行注意事項，請參閱 `lemon/initial.py` 文件。
-- 該腳本設計為可獨立運行，但需確保其執行環境能夠正確導入 Open WebUI 的相關模組並連接到所需資料庫。
-
-重要提示：
-*   在生產環境中使用此腳本前，務必在測試環境中進行充分測試。
-*   執行前請備份您的 Open WebUI 資料庫。
-*   腳本中的 SQL Server 連接資訊和 Open WebUI 管理員 ID 需要根據實際情況配置。
+6.  **錯誤處理與日誌記錄的總體要求：**
+    *   在 `signin`, `signup` 及 OIDC 處理函數中，整個群組同步的邏輯區塊應被一個總的 `try-except` 結構包圍。這樣可以確保即使同步功能出現任何未預期的失敗（例如 SQL Server 連線問題、資料庫操作錯誤等），也**不會影響核心的使用者登入/註冊流程的完成**。
+    *   應詳細記錄流程中的每一步操作及任何潛在的錯誤，例如 SQL 連線失敗、查詢無結果、群組建立/更新失敗、使用者加入/移除群組失敗等情況，以便於後續追蹤和調試。

@@ -29,6 +29,28 @@
         *   如果系統中沒有使用者，會自動建立一個預設的 "admin@localhost" 管理員帳號。
     *   登入成功後，同樣會產生 JWT 並設定到 cookie。
 
+    *   **OIDC (例如 Microsoft) 登入**:
+        *   系統支援透過 OpenID Connect (OIDC) 進行第三方身份驗證，允許使用者例如使用其 Microsoft 帳號登入。
+        *   **啟用與設定**:
+            *   需要在環境變數中設定 `ENABLE_OAUTH_SIGNUP=True` 以允許透過 OIDC 提供者註冊新使用者。
+            *   同時，需要設定 OIDC 提供者的相關資訊。有兩種主要方式：
+                1.  **Microsoft 專用設定**: 設定 `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_CLIENT_TENANT_ID`, 和 `MICROSOFT_REDIRECT_URI`。
+                2.  **通用 OIDC 設定**: 設定 `OPENID_PROVIDER_URL` (指向 Microsoft 的 OpenID 端點，例如 `https://login.microsoftonline.com/{TENANT_ID}/v2.0`)，以及 `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET`, 和 `OPENID_REDIRECT_URI`。
+        *   **運作流程**:
+            1.  使用者在前端介面選擇透過 OIDC (例如 Microsoft) 登入。
+            2.  系統將使用者重新導向至 Microsoft 的登入和授權頁面。
+            3.  使用者在 Microsoft 端完成身份驗證和授權。
+            4.  Microsoft 將使用者重新導向回應用程式設定的重新導向 URI (`MICROSOFT_REDIRECT_URI` 或 `OPENID_REDIRECT_URI`)，並附帶授權碼或 ID Token。
+            5.  後端 (`auths.py` 中透過 OAuth 函式庫間接處理，並由 `config.py` 中的 `load_oauth_providers` 函數設定) 處理此回呼：
+                *   使用授權碼向 Microsoft 換取 Access Token 和 ID Token。
+                *   從 ID Token 中解析出使用者資訊，包括唯一識別碼 (`sub`)、電子郵件和名稱。
+            6.  **使用者帳號處理**:
+                *   系統使用 `Users.get_user_by_oauth_sub` 檢查該 `sub` 是否已存在於本地 `user` 資料表的 `oauth_sub` 欄位。
+                *   若已存在，則直接登入該使用者。
+                *   若不存在且 `ENABLE_OAUTH_SIGNUP` 為 `True`，則呼叫 `Auths.insert_new_auth` (內部會呼叫 `Users.insert_new_user`) 在本地資料庫中建立新使用者，並將 `oauth_sub` 存入。
+                *   若不存在且 `ENABLE_OAUTH_SIGNUP` 為 `False`，則登入失敗。
+            7.  成功登入或註冊後，產生 JWT 並設定到 cookie。
+
 3.  **LDAP 驗證 (`/ldap` 路由，位於 `backend/open_webui/routers/auths.py`)**
     *   如果啟用了 LDAP (`ENABLE_LDAP` 設定)。
     *   使用者提供 LDAP 使用者名稱和密碼。
