@@ -1,0 +1,191 @@
+name: Build and Package (Reusable)
+
+on:
+  workflow_call:
+    outputs:
+      production_version:
+        description: 'Production version from build-preparation'
+        value: ${{ jobs.build-preparation.outputs.production_version }}
+      electron_version:
+        description: 'Electron version from build-preparation'
+        value: ${{ jobs.build-preparation.outputs.electron_version }}
+      changelog_notes:
+        description: 'Changelog notes from build-electron'
+        value: ${{ jobs.build-electron.outputs.changelog_notes }}
+
+jobs:
+  build-preparation:
+    runs-on: ubuntu-latest
+    outputs:
+      production_version: ${{ steps.get-production-version.outputs.version }}
+      electron_version: ${{ steps.get-electron-version.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get production version from RAUX/package.json
+        id: get-production-version
+        run: |
+          VERSION=$(jq -r .version package.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get electron version from RAUX/raux-electron/package.json
+        id: get-electron-version
+        run: |
+          VERSION=$(jq -r .version raux-electron/package.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Get RAUX version from RAUX/raux-electron/package.json
+        id: get-raux-version
+        run: |
+          VERSION=$(jq -r '."raux-version"' raux-electron/package.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Using RAUX version: $VERSION for wheel building"
+
+  build-wheel:
+    needs: build-preparation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install wheel building dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install wheel setuptools build
+
+      - name: Build wheel
+        run: |
+          python -m build --wheel
+
+      - name: Prepare build context for zipping
+        run: |
+          mkdir build-context
+          cp dist/*.whl build-context/
+          cp raux-hybrid.env build-context/
+          cp raux-generic.env build-context/
+
+      - name: Create build context zip
+        run: |
+          cd build-context
+          zip -r ../raux-wheel-context.zip .
+
+      - name: Upload build context zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: raux-wheel-context
+          path: raux-wheel-context.zip
+          retention-days: 7
+
+  build-electron:
+    needs: [build-preparation, build-wheel]
+    runs-on: ubuntu-latest
+    outputs:
+      changelog_notes: ${{ steps.changelog.outputs.notes }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: 'raux-electron/package-lock.json'
+
+      - name: Extract CHANGELOG entry
+        id: changelog
+        run: |
+          pattern="## [v${{ needs.build-preparation.outputs.production_version }}]"
+          content=$(cat CHANGELOG.md)
+          regex="(?s)$pattern(.*?)(?=\n## \[v|$)"
+          notes=$(echo "$content" | perl -0777 -ne "print $1 if /$regex/")
+          if [ -z "$notes" ]; then
+            notes="Release v${{ needs.build-preparation.outputs.production_version }}%0ANo release notes available."
+          fi
+          notes="${notes//$'\n'/%0A}"
+          echo "notes=$notes" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: |
+          cd raux-electron
+          npm ci
+
+      - name: Update production version in root package.json
+        run: |
+          jq '.version = "${{ needs.build-preparation.outputs.production_version }}"' package.json > package.json.tmp && mv package.json.tmp package.json
+          echo "Updated root package.json version to ${{ needs.build-preparation.outputs.production_version }}"
+
+      - name: Update electron version in raux-electron/package.json
+        run: |
+          cd raux-electron
+          jq '.version = "${{ needs.build-preparation.outputs.electron_version }}"' package.json > package.json.tmp && mv package.json.tmp package.json
+          echo "Updated raux-electron/package.json version to ${{ needs.build-preparation.outputs.electron_version }}"
+
+      - name: Upload build context
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-context
+          path: |
+            raux-electron
+            backend
+            CHANGELOG.md
+            package.json
+
+  package-electron:
+    needs: [build-preparation, build-electron]
+    runs-on: windows-latest
+    steps:
+      - name: Download build context
+        uses: actions/download-artifact@v4
+        with:
+          name: build-context
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: 'raux-electron/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd raux-electron
+          npm ci
+
+      - name: Build Electron app (Windows)
+        run: |
+          cd raux-electron
+          $env:RAUX_VERSION = '${{ needs.build-preparation.outputs.production_version }}'
+          npm run make
+
+      - name: Rename installer to raux-setup.exe
+        run: |
+          mv raux-electron/out/make/squirrel.windows/x64/*.exe raux-electron/out/make/squirrel.windows/x64/raux-setup.exe
+  
+      - name: Create SHA256 checksum
+        run: |
+          $INSTALLER_PATH = "raux-electron/out/make/squirrel.windows/x64/raux-setup.exe"
+          $CHECKSUM = (Get-FileHash -Path $INSTALLER_PATH -Algorithm SHA256).Hash.ToLower()
+          $CHECKSUM | Out-File -FilePath "$INSTALLER_PATH.sha256" -Encoding ascii
+          echo "Created checksum for installer: $CHECKSUM"
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: raux-setup.exe
+          path: raux-electron/out/make/squirrel.windows/x64/raux-setup.exe
+          retention-days: 7
+
+      - name: Upload checksum artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: raux-setup.exe.sha256
+          path: raux-electron/out/make/squirrel.windows/x64/raux-setup.exe.sha256
+          retention-days: 7 

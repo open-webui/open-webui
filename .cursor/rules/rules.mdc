@@ -20,12 +20,14 @@ alwaysApply: true
 - Wait for explicit confirmation before proceeding.
 - Ask clarifying questions if anything is unclear.
 - Do not assume or guess-always clarify with the user.
+- You are encouraged to ask me clarifying questions.
 
 2. ANALYZE FIRST
 - Do this in all modes except edit (Command K)
 - Always start with a plan and analysis, not immediate solutions.
 - Describe what you see in the current state.
 - Identify potential issues before suggesting fixes.
+- Run OS specific CLI tools to help you analyze
 
 3. ONE STEP AT A TIME
 - Focus on one task at a time.
@@ -40,12 +42,5 @@ alwaysApply: true
 
 5. PLAN CONFIRMATION
 - Before modifying code, develop a clear plan and confirm it with the user.
-- Overwrite `.cursor/plan.md` with the current plan before proceeding.
-- Avoid overengineering; keep solutions as simple as possible.
-
-6. PLAN
-- Only if the current mode is named "Plan"
-  - There should be a corresponding `.cursor/plan.md` file containing the current plan; update this file as the plan evolves.
-  - Ensure there is sufficient detail for each step for the implementation to understand what needs to be done
-
-- Feel free to ask me clarifying questions.
+- Avoid overengineering.
+- Keep solutions simple.

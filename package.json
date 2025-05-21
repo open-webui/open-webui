@@ -1,6 +1,6 @@
 {
 	"name": "raux",
-	"version": "0.6.5+raux.0.1.1",
+	"version": "0.6.5+raux.0.2.0",
 	"openWebUIVersion": "0.6.5",
 	"private": true,
 	"scripts": {
@@ -78,6 +78,7 @@
 		"crc-32": "^1.2.2",
 		"dayjs": "^1.11.10",
 		"dompurify": "^3.2.5",
+		"electron-log": "^5.4.0",
 		"eventsource-parser": "^1.1.2",
 		"file-saver": "^2.0.5",
 		"fuse.js": "^7.0.0",
@@ -94,6 +95,7 @@
 		"kokoro-js": "^1.1.1",
 		"marked": "^9.1.0",
 		"mermaid": "^11.6.0",
+		"node-fetch": "^3.3.2",
 		"paneforge": "^0.0.6",
 		"panzoom": "^9.4.3",
 		"prosemirror-commands": "^1.6.0",

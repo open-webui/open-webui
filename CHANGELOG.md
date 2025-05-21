@@ -5,16 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.5+raux.0.1.1] - 2025-04-20
+## [0.6.5+raux.0.2.0] - 2025-05-20
 
 ### Added
 
-- **🔧 Version Increment**: Updated RAUX version from 0.1.0 to 0.1.1 while maintaining OpenWebUI base version at 0.6.5
-- **⚡ Performance Improvements**: Enhanced system stability and performance with backend refinements
-- **🛠️ Installer Enhancements**: Further optimized installation process for better reliability
-- **🐛 Bug Fixes**: Addressed several minor issues to improve overall user experience
+- **⚡ Electron Integration**: Added Electron integration for desktop application support, enabling native desktop experience with RAUX
+- **📦 Desktop Installer**: Created Windows installer (.exe) for easy desktop deployment
+- **📝 Release Automation**: Integrated GitHub Actions workflow for automated builds and releases
+- **🔄 Version Sync**: Synchronized versioning between web and desktop applications
+- **📋 Changelog Integration**: Automated changelog extraction for release notes
 
-## [0.6.5+raux.0.1.0] - 2025-04-14
+
+## [0.6.5+raux.0.1.0] - 2025-04-20
 
 ### Added
 

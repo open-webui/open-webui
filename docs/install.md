@@ -185,6 +185,25 @@ The integration with [GAIA](https://github.com/amd/gaia) happens in the `run_rau
 - Executes the script to perform the installation
 - Intentionally leaves the temporary directory for system cleanup
 
+## Versioning Scheme for Build and Packaging
+
+RAUX uses a dual-versioning scheme to support both rich semantic versioning for npm/GitHub and strict numeric versioning for Electron/Windows packaging:
+
+- **Product version**: This is the full version string (e.g., `0.6.5+raux.0.1.1`) and is set in the root `package.json`. The first part (`0.6.5`) is pegged to the original Open-WebUI version, giving credit and thanks to Open-WebUI and its creator, Timothy Jaeryang Baek (Tim). The second part (`raux.0.1.1`) is the RAUX-specific version, tracking changes made in this fork.
+
+- **Electron version**: This is a simplified, strictly numeric version (e.g., `0.1.1`) and is set in `raux-electron/package.json`. It is derived from the RAUX-specific portion of the product version. This separation is necessary because Electron/Windows packaging requires a version string in the format `Major.Minor.Patch[.Build]` (numbers and dots only), and does not support the richer semantic versioning or build metadata used in npm/GitHub.
+
+**Why this split?**
+- The product version allows us to both credit upstream work and clearly track RAUX's own changes, while remaining compatible with npm and GitHub's versioning systems.
+- The electron version is required because Windows and Electron installers will fail if the version string contains anything other than numbers and dots. By pegging the electron version to the RAUX-specific portion (e.g., `0.1.1` from `raux.0.1.1`), we maintain a clear mapping between the two.
+
+The GitHub Actions workflow (`.github/workflows/build-electron.yml`) takes both versions as inputs:
+
+- `product-version`: Used for the root package.json and release tagging.
+- `electron-version`: Used for the Electron app packaging.
+
+This ensures compatibility with all distribution channels and avoids build errors during Electron packaging. When triggering a build, always supply both versions as workflow inputs.
+
 ## Conclusion
 
 The RAUX integration with [GAIA](https://github.com/amd/gaia) provides a seamless installation experience for users. By leveraging the wheel package and installation scripts, RAUX can be installed either as a standalone application or as part of the GAIA ecosystem.

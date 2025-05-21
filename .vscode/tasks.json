@@ -2,64 +2,6 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Build RAUX Installer",
-			"type": "shell",
-			"command": "makensis",
-			"args": [
-				"${workspaceFolder}/installer/Installer-UX.nsi"
-			],
-			"group": "build",
-			"presentation": {
-				"reveal": "always",
-				"panel": "new"
-			},
-			"problemMatcher": []
-		},
-        {
-            "label": "Run RAUX Installer",
-            "type": "shell",
-            "command": "${workspaceFolder}\\installer\\Installer-UX.exe",
-            "dependsOn": ["Build RAUX Installer"],
-            "group": "build",
-            "presentation": {
-                "reveal": "always",
-                "panel": "new"
-            },
-            "problemMatcher": []
-        },
-		{
-			"label": "Clean RAUX Environment: AppData",
-			"type": "shell",
-			"command": "cmd",
-			"args": [
-				"/c",
-				"conda deactivate & rmdir /s /q \"%LOCALAPPDATA%\\GAIA\\RAUX\" & del /f /q \"%USERPROFILE%\\Desktop\\GAIA-UI-BETA.lnk\" & conda env remove -p \"%LOCALAPPDATA%\\GAIA\\RAUX\\raux_env\" -y"
-			],
-			"presentation": {
-				"reveal": "silent",
-				"panel": "new"
-			},
-			"problemMatcher": []
-		},
-		{
-			"label": "Clean RAUX: Development",
-			"type": "shell",
-			"command": "rm",
-			"args": [
-				"-rf",
-				"${workspaceFolder}/backend/data/cache/",
-				"${workspaceFolder}/backend/data/uploads/",
-				"${workspaceFolder}/backend/data/vector_db/",
-				"${workspaceFolder}/backend/data/webui.db"
-			],
-			"presentation": {
-				"reveal": "always",
-				"panel": "new",
-				"close": true
-			},
-			"problemMatcher": []
-		},
-		{
 			"label": "start-frontend",
 			"type": "npm",
 			"script": "dev",
@@ -91,8 +33,8 @@
 				},
 				"background": {
 					"activeOnStart": true,
-					"beginsPattern": "INFO:     Uvicorn running on",
-					"endsPattern": "INFO:     Application startup complete"
+					"beginsPattern": "INFO: Uvicorn running on",
+					"endsPattern": "INFO: Application startup complete"
 				}
 			},
 			"presentation": {
@@ -117,7 +59,57 @@
 			"type": "shell",
 			"command": "echo ${input:terminateFrontend}",
 			"problemMatcher": []
-		}
+		},
+		{
+			"label": "Build Electron Windows Installer",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy", "Bypass",
+				"-File", "${workspaceFolder}/local-dev-build.ps1"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "new",
+				"close": true
+			},
+			"group": "build",
+			"problemMatcher": []
+		},
+		{
+			"label": "Clean RAUX Environment: AppData",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"rmdir /s /q \"%LOCALAPPDATA%\\raux\" & rmdir /s /q \"%APPDATA%\\raux\""
+			],
+			"presentation": {
+				"reveal": "silent",
+				"panel": "new",
+				"close": true
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "Clean RAUX: Development",
+			"type": "shell",
+			"command": "rm",
+			"args": [
+				"-rf",
+				"${workspaceFolder}/backend/data/cache/",
+				"${workspaceFolder}/backend/data/uploads/",
+				"${workspaceFolder}/backend/data/vector_db/",
+				"${workspaceFolder}/backend/data/webui.db"
+			],
+			"presentation": {
+				"reveal": "always",
+				"panel": "new",
+				"close": true
+			},
+			"problemMatcher": []
+		},
 	],
 	"inputs": [
 		{

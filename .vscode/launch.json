@@ -23,6 +23,16 @@
             "console": "internalConsole"
         },
         {
+            "name": "Electron",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/raux-electron",
+            "runtimeExecutable": "${env:HOME}/.nvm/versions/node/v22.15.0/bin/node",
+            "runtimeArgs": ["${workspaceFolder}/raux-electron/node_modules/.bin/electron", ".", "--remote-debugging-port=9223"],
+            "outputCapture": "std",
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Frontend",
             "type": "chrome",
             "request": "launch",

@@ -3,3 +3,4 @@
 .gitignore
 .git
 .cursor/mcp.json
+out
