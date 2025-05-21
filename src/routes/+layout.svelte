@@ -2,6 +2,10 @@
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
+	import { 
+		setupFetchInterceptor, 
+		forceLogoutAndRedirect
+	} from '$lib/utils/fetchWithTokenRefresh';
 
 	let loadingProgress = spring(0, {
 		stiffness: 0.05
@@ -67,6 +71,7 @@
 	let tokenTimer = null;
 
 	const BREAKPOINT = 768;
+	const TOKEN_EXPIRY_BUFFER = 30;
 
 	const setupSocket = async (enableWebsocket) => {
 		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
@@ -463,16 +468,18 @@
 			return;
 		}
 
-		if (now >= exp) {
-			const res = await userSignOut();
-			user.set(null);
-			localStorage.removeItem('token');
-
-			location.href = res?.redirect_url ?? '/auth';
+		// Check if token is expiring soon with the fixed 30-second buffer
+		if (now >= (exp - TOKEN_EXPIRY_BUFFER)) {			
+			// Use the enhanced forceLogoutAndRedirect which now calls userSignOut internally
+			await forceLogoutAndRedirect('Your session is expiring. Redirecting to login page...');
 		}
 	};
 
 	onMount(async () => {
+		// Setup the fetch interceptor to handle expired tokens
+		// Do this immediately and unconditionally
+		setupFetchInterceptor();
+
 		if (typeof window !== 'undefined' && window.applyTheme) {
 			window.applyTheme();
 		}
@@ -579,7 +586,11 @@
 				if (localStorage.token) {
 					// Get Session User Info
 					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
-						toast.error(`${error}`);
+						console.error('Session user fetch failed:', error);
+						toast.error(`Authentication error: ${error}`);
+
+						// Clear token on auth error
+						localStorage.removeItem('token');
 						return null;
 					});
 
@@ -594,11 +605,32 @@
 						if (tokenTimer) {
 							clearInterval(tokenTimer);
 						}
-						tokenTimer = setInterval(checkTokenExpiry, 1000);
+
+						// Run check immediately
+						checkTokenExpiry();
+
+						// Then set up checks with a reasonable frequency
+						// Don't check too frequently to avoid unnecessary overhead
+						// but check often enough to catch expiration in time
+						tokenTimer = setInterval(checkTokenExpiry, 15000); // Every 15 seconds
+
+						// Add visibility change listener to check token when tab becomes active
+						const handleVisibilityForToken = () => {
+							if (document.visibilityState === 'visible') {
+								// Check immediately when tab becomes visible again
+								checkTokenExpiry();
+							}
+						};
+
+						// Clean up old event listener if exists
+						document.removeEventListener('visibilitychange', handleVisibilityForToken);
+						// Add new event listener
+						document.addEventListener('visibilitychange', handleVisibilityForToken);
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
-						await goto(`/auth?redirect=${encodedUrl}`);
+						// Use window.location for a complete page reload
+						window.location.href = `/auth?redirect=${encodedUrl}&invalid=true`;
 					}
 				} else {
 					// Don't redirect if we're already on the auth page
