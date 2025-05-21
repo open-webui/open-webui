@@ -63,7 +63,7 @@
 			</h2>
 
 			<input
-				class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+				class="w-full rounded-lg py-2 px-4 text-sm bg-gray-100 dark:text-gray-300 dark:bg-gray-850 outline-none text-blue-800 placeholder:text-gray-400"
 				bind:value={name}
 				type="text"
 				required
@@ -77,7 +77,7 @@
 			</h2>
 
 			<textarea
-				class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-none"
+				class="w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-100 text-blue-800 placeholder:text-gray-400 dark:text-gray-300 dark:bg-gray-850 outline-none"
 				bind:value={description}
 				rows="4"
 				required

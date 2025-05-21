@@ -13,8 +13,8 @@
 		data-id={id}
 		class="flex flex-row border-b last:border-none items-center px-2.5"
 	>
-		<div class="grow shrink w-[0] py-3 cursor-default">
-			<span class="block text-nowrap overflow-hidden text-ellipsis">{name}</span>
+		<div class="grow shrink w-[0] py-5 cursor-default max-h-[78px] text-blue-800">
+			<span class="block text-nowrap overflow-hidden text-ellipsis font-semibold text-sm">{name}</span>
 			<span class="block text-sm">{description}</span>
 		</div>
 		<div class="w-5 h-5 ml-5">

@@ -91,7 +91,7 @@
 <Dialog
 	dialogId="knowledge-manager"
 	show={$knowledgeManager}
-	class="max-w-[800px] min-h-[300px]"
+	class="max-w-[800px] min-h-[300px] max-h-[436px] w-full"
 >
 	<DialogHeader
 		slot="header"
@@ -101,7 +101,7 @@
 		class="p-[30px]"
 	/>
 
-	<div slot="content" class="p-[30px]">
+	<div slot="content" class="p-5 flex flex-col">
 		{#if loaded}
 			<div class="flex pb-5 border-b min-w-[500px]">
 				<div class="flex grow">
@@ -123,13 +123,13 @@
 					</Button>
 				</div>
 			</div>
-			<div class="overflow-y-scroll h-[320px]" >
+			<div class="overflow-y-scroll max-h-[190px] h-full" >
 				<KnowledgeList
 					items={filteredItems}
 					on:select={select}
 				/>
 			</div>
-			<div class=" text-gray-500 text-xs py-4 border-t">
+			<div class=" text-gray-400 text-xs py-5 border-t">
 				ⓘ {$i18n.t("Use '#' in the prompt input to load and include your knowledge.", { ns: 'ionos' })}
 			</div>
 		{:else}

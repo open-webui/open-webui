@@ -18,7 +18,7 @@
 >
 	<div
 		data-id={`dialog-${dialogId}`}
-		class="flex flex-col bg-white rounded-xl relative {$$props.class ?? 'p-[30px]'}"
+		class="flex flex-col bg-white relative shadow-xl rounded-2xl {$$props.class ?? 'p-[30px]'}"
 	>
 		<slot name="header" />
 
