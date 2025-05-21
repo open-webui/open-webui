@@ -236,5 +236,31 @@ class KnowledgeTable:
         except Exception as e:
             log.exception(e)
             return None
+        
+    def is_model_in_use_elsewhere(
+        self, model: str, model_type: str, id: Optional[str] = None
+    ) -> bool:
+        try:
+            from sqlalchemy import func
+            with get_db() as db:
+                if db.bind.dialect.name == "sqlite":
+                    func.json_extract(Knowledge.rag_config, f'$.{model_type}') == model,
+                
+                elif db.bind.dialect.name == "postgresql":
+                    query = db.query(Knowledge).filter(
+                    Knowledge.rag_config.op("->>")(model_type) == model,
+                    )
+                else:
+                    raise NotImplementedError(
+                        f"Unsupported dialect: {db.bind.dialect.name}"
+                    )
+                if id:
+                    query = query.filter(Knowledge.id != id)
+
+                return query.first() is not None
+
+        except Exception as e:
+            log.exception(f"Error checking model usage elsewhere: {e}")
+            return False
 
 Knowledges = KnowledgeTable()
