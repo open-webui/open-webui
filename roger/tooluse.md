@@ -4,10 +4,11 @@
 
 ## I. 工具註冊 (Tool Registration)
 
-工具的註冊主要有兩種方式：
+工具的註冊主要有三種方式：
 
 1.  透過靜態環境變數配置 (`TOOL_SERVER_CONNECTIONS`)
-2.  透過管理後台在資料庫中動態註冊
+2.  透過管理後台在資料庫中動態註冊內部 Python 工具
+3.  透過管理後台在資料庫中動態註冊外部 OpenAPI 工具伺服器
 
 ### A. 透過靜態配置 (`TOOL_SERVER_CONNECTIONS`) - 外部 OpenAPI Tool Servers
 
@@ -46,6 +47,26 @@
         *   後端將處理後的工具資訊（`id`, `user_id`, `name`, 原始的 `content` (Python 程式碼), `specs`, `meta` (含描述、標頭等), `access_control` 等）儲存到資料庫的 `tool` 表中。
         *   資料庫的 `content` 欄位儲存使用者提供的 Python 程式碼。`name`, `specs` 和 `meta` 則儲存從程式碼中解析出的值。
 
+### C. 透過管理後台動態註冊 (存入資料庫) - 外部 OpenAPI 工具伺服器
+
+1.  **前端界面 (Admin Panel)：**
+    管理員或有權限的使用者進入 Open WebUI 的管理後台，找到「工具連接」(Tool Connections) 或類似的管理界面。
+
+2.  **填寫表單：**
+    使用者填寫工具伺服器的 URL、認證資訊（例如 API 金鑰）和可見性等。
+    *   **URL：** 外部 OpenAPI 伺服器的基礎 URL，通常指向其 `openapi.json` 或 `openapi.yaml` 文件。
+    *   **認證：** 例如 Bearer Token。
+    *   **可見性/權限控制 (Access Control)：** 設定工具是公開的、私有的，還是與特定使用者/群組共享。
+
+3.  **前端提交：**
+    使用者提交表單後，前端會將這些數據發送到後端的工具伺服器管理 API 端點（例如 `POST /api/tool_servers/create` 或 `PUT /api/tool_servers/{id}/update`）。
+
+4.  **後端處理請求：**
+    *   後端接收表單數據。
+    *   後端會向提供的 URL 發起 HTTP GET 請求，獲取並解析 `openapi.json` 文件，提取工具的 `specs` 和 `meta` 資訊。
+    *   **儲存到資料庫：** 後端將處理後的工具伺服器資訊（包括 URL、認證、從 `openapi.json` 解析出的 `specs` 和 `meta` 等）儲存到資料庫的 `tool_server_connections` 表中（或類似的表）。
+    *   **注意：** 這些工具的實際調用將由前端直接發起，後端僅負責管理其註冊資訊和提供規格。
+
 ## II. 工具發現 (Tool Discovery)
 
 指 Open WebUI 前端如何獲取可用工具列表以在聊天界面中顯示。
@@ -55,6 +76,7 @@
 
 2.  **後端處理 `/api/tools/` 請求 (在 `routers/tools.py` 的 `get_tools` 函數)：**
     *   **a. 處理靜態配置的工具 (外部 OpenAPI Tool Servers)：**
+        *   **注意：** 此處也涵蓋了透過管理後台動態註冊的外部 OpenAPI 工具伺服器，因為它們的配置最終也儲存在 `TOOL_SERVER_CONNECTIONS` 中。
         *   檢查 `request.app.state.TOOL_SERVERS` 是否已快取。
         *   若未快取（通常是伺服器啟動後的首次請求）：調用 `get_tool_servers_data`，此函數會遍歷 `TOOL_SERVER_CONNECTIONS` 中的 URL，**為每個 URL 發起 HTTP GET 請求以獲取其 `openapi.json`**，解析後儲存在 `request.app.state.TOOL_SERVERS` 中（**實現了快取，直到伺服器重啟**）。
         *   從 `request.app.state.TOOL_SERVERS` 中提取已處理的靜態工具數據。
