@@ -1,7 +1,7 @@
 # Chat Flow Documentation
 
 ## Overview
-This document describes the interaction flow between the frontend chat components, backend API endpoints, and external services like LLMs and Tool Servers in the OpenWebUI chat system, **including the new local client-side MCP tool server integration.**
+This document describes the interaction flow between the frontend chat components, backend API endpoints, and external services like LLMs and Tool Servers in the OpenWebUI chat system.
 
 ## Frontend Components
 Located in `src/lib/components/chat/` and related areas:
@@ -12,13 +12,13 @@ Located in `src/lib/components/chat/` and related areas:
 - **`MessageInput.svelte`**: User input area for composing messages, handling attachments, and triggering send.
 - **`ChatControls.svelte`**: Contains action buttons relevant to the current chat (e.g., regenerate, copy, edit).
 - **`ModelSelector.svelte`**: Allows users to select the AI model for the conversation.
-- **`src/routes/+layout.svelte`**: Handles global aspects like WebSocket connections, Python code execution via Pyodide, and orchestrating calls to Tool Servers, **including the discovery and direct invocation of local MCP tool servers.**
+- **`src/routes/+layout.svelte`**: Handles global aspects like WebSocket connections, Python code execution via Pyodide, and orchestrating calls to Tool Servers.
 
 ### Modals & Feature Components
 - **`TagChatModal.svelte`**: For adding/editing tags associated with a chat.
 - **`ShareChatModal.svelte`**: For generating a shareable link for a chat.
 - **`SettingsModal.svelte`**: For user-specific and application-wide settings.
-- **`ToolServersModal.svelte`**: Interface for users to configure connections to external Tool Servers **and to view/manage discovered local MCP tool servers.**
+- **`ToolServersModal.svelte`**: Interface for users to configure connections to external Tool Servers.
 - **File Upload**: Integrated into `MessageInput.svelte`, interacts with `POST /api/v1/files/`.
 
 ## Backend API Endpoints (Primarily from `backend/open_webui/routers/`)
@@ -48,7 +48,7 @@ Base path for most APIs: `/api/v1/`
 - `POST /api/v1/chats/{id}/archive`: Archive/unarchive a chat.
 
 ### LLM Interaction & Generation
-- `POST /api/chat/completions`: Main endpoint for generating chat completions (legacy, from `main.py`).
+- `POST /api/chat/completions`: Main endpoint for generating chat completions, handled in `main.py` and delegating to `open_webui.utils.chat`.
 - Frontend can also make direct calls to OpenAI-compatible APIs if `directConnections` are configured in user settings (handled in `src/routes/+layout.svelte`).
 - Ollama-specific (from `ollama.py` if Ollama is enabled):
     - `GET /api/tags`: Get Ollama-specific models.
@@ -68,10 +68,6 @@ Base path for most APIs: `/api/v1/`
 2.  **Load User-Specific Chat Data (after authentication):**
     *   `FE -> BE: GET /api/v1/chats/` (Loads user's chat list, including pinned status)
     *   `FE -> BE: GET /api/v1/tags/` (Loads all unique chat tags for filtering)
-3.  **Discover Local MCP Servers (Frontend):**
-    *   `FE -> Local MCP Server: HTTP GET http://localhost:8000/sse` (Frontend attempts to discover local MCP servers on predefined ports, e.g., 8000, via SSE `initialize` handshake).
-    *   `Local MCP Server -->> FE: MCP Capabilities & messagePath` (If successful, local server returns its capabilities and message path).
-    *   `FE -> FE: Store local MCP tool info in localStorage` (Frontend stores discovered local tools for later use).
 4.  **If Navigating to an Existing Chat:**
     *   `FE -> BE: GET /api/v1/chats/{id}` (Loads the content of the specific chat)
 
@@ -85,7 +81,6 @@ sequenceDiagram
     participant FE as Frontend (SvelteKit App)
     participant BE as Backend (FastAPI)
     participant LLM as Language Model (Ollama/OpenAI/etc.)
-    participant LMCP as Local MCP Server
 
     U->>FE: Opens chat interface / Loads app
     
@@ -102,11 +97,6 @@ sequenceDiagram
     
     FE->>BE: GET /api/v1/tags/ (All Tags)
     BE-->>FE: Chat tags
-
-    Note over FE,LMCP: Local MCP Server Discovery
-    FE->>LMCP: HTTP GET http://localhost:8000/sse (MCP initialize)
-    LMCP-->>FE: MCP Capabilities & messagePath
-    FE->>FE: Store local MCP tool info
     end
 
     U->>FE: Selects an existing chat or creates a new one
@@ -143,7 +133,6 @@ sequenceDiagram
     participant BE as Backend (FastAPI)
     participant LLM as Language Model
     participant ETS as External Tool Server (OpenAPI)
-    participant LMCP as Local MCP Server
 
     U->>FE: Sends message, LLM decides to use a tool
     FE->>BE: Forward message to LLM (via BE)
@@ -157,10 +146,6 @@ sequenceDiagram
         FE->>FE: Retrieve OpenAPI spec (if not already cached)
         FE->>ETS: Direct HTTP Request (based on OpenAPI spec)
         ETS-->>FE: HTTP Response
-        FE->>BE: Send tool output back to BE
-    else Local MCP Server
-        FE->>LMCP: Direct HTTP POST to messagePath (MCP invocation)
-        LMCP-->>FE: MCP Response
         FE->>BE: Send tool output back to BE
     end
 
@@ -232,7 +217,6 @@ sequenceDiagram
 ### Tool & Function Integration
 - **Code Execution:** Allows running Python code snippets within the chat (via Pyodide). Results are displayed back.
 - **External Tool Servers:** Connects to and utilizes pre-configured external tools.
-- **Local MCP Tool Servers:** Discovers and directly utilizes local MCP tool servers, with their capabilities integrated into the unified tool list.
 - **Knowledge Base Access:** (If RAG is enabled) Allows chat to reference documents from integrated knowledge bases.
 
 ### Organization & Management Features

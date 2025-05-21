@@ -84,20 +84,29 @@
     *   後端接收 LLM 的函數調用請求。
     *   **判斷工具類型：** 後端根據工具 `id` 判斷是外部 OpenAPI Tool Server 還是內部 Python 工具。
 
-### A. 調用外部 OpenAPI Tool Server (前端執行)
+### A. 調用外部 OpenAPI Tool Server (前端或後端執行)
 
-1.  **前端處理 LLM 的函數調用請求：**
+外部 OpenAPI 工具的調用可能由前端或後端執行，具體取決於其註冊方式和配置。
+
+1.  **前端執行 (針對部分外部 OpenAPI 工具)：**
     *   後端將 LLM 的函數調用請求轉發給前端。
     *   前端 JavaScript 根據工具 `id` 找到對應的工具定義。
+    *   執行工具 (在 `src/lib/apis/index.ts` 的 `executeToolServer` 函數)：
+        *   `executeToolServer` 需要工具的完整 OpenAPI 規格 (`serverData.openapi`)。
+        *   若之前 `/api/tools/` 返回的 `content` 欄位是 URL，則前端**此時從該 URL 發起 HTTP GET 請求以獲取完整的 `openapi.json` 內容**（按需發生）。
+        *   若 `content` 已是規格內容，則直接使用。
+        *   前端根據 LLM 提供的 `operationId`、參數及解析後的 OpenAPI 規格，構造實際的 HTTP 請求（URL、方法、body、headers 等）。URL 基於 OpenAPI 規格中的 `servers` 陣列。
+        *   前端 JavaScript 使用 `fetch` API **直接向工具服務的實際端點發起 HTTP 請求**。
+        *   **CORS 和網路可達性：** 此時，使用者瀏覽器必須能直接訪問工具服務 URL，且工具服務需配置正確的 CORS 標頭。
+        *   **接收回應與處理錯誤：** 工具服務處理請求並返回回應給前端。前端需處理 API 呼叫失敗的情況。
 
-2.  **執行工具 (在 `src/lib/apis/index.ts` 的 `executeToolServer` 函數)：**
-    *   `executeToolServer` 需要工具的完整 OpenAPI 規格 (`serverData.openapi`)。
-    *   若之前 `/api/tools/` 返回的 `content` 欄位是 URL，則前端**此時從該 URL 發起 HTTP GET 請求以獲取完整的 `openapi.json` 內容**（按需發生）。
-    *   若 `content` 已是規格內容，則直接使用。
-    *   前端根據 LLM 提供的 `operationId`、參數及解析後的 OpenAPI 規格，構造實際的 HTTP 請求（URL、方法、body、headers 等）。URL 基於 OpenAPI 規格中的 `servers` 陣列。
-    *   前端 JavaScript 使用 `fetch` API **直接向工具服務的實際端點發起 HTTP 請求**。
-    *   **CORS 和網路可達性：** 此時，使用者瀏覽器必須能直接訪問工具服務 URL，且工具服務需配置正確的 CORS 標頭。
-    *   **接收回應與處理錯誤：** 工具服務處理請求並返回回應給前端。前端需處理 API 呼叫失敗的情況。
+2.  **後端執行 (針對靜態配置的外部 OpenAPI 工具)：**
+    *   當 LLM 決定調用一個對應於靜態配置 (`TOOL_SERVER_CONNECTIONS`) 的外部 OpenAPI 工具時，後端會接收到此調用請求。
+    *   後端會根據工具 `id` (通常以 `server:` 開頭) 識別出這類工具。
+    *   後端會調用 `backend/open_webui/utils/tools.py` 中的 `execute_tool_server` 函數。
+    *   `execute_tool_server` 函數會從**後端**向外部工具服務的實際端點發起 HTTP 請求，處理通訊、認證和錯誤。
+    *   **網路可達性：** 此時，Open WebUI 後端服務必須能直接訪問工具服務 URL。
+    *   **接收回應與處理錯誤：** 工具服務處理請求並返回回應給後端。後端需處理 API 呼叫失敗的情況。
 
 ### B. 調用內部 Python 工具 (後端執行)
 
