@@ -94,6 +94,61 @@ export const transcribeAudio = async (token: string, file: File) => {
 	return res;
 };
 
+export const synthesizeStreamingSpeech = async (
+	text: string = '',
+) => {
+	const response = await fetch('http://localhost:8002/tts?text=' + encodeURIComponent(text));
+
+	if (!response.ok || !response.body) {
+		console.log('!!response not ok')
+		return
+	} 
+	
+	const reader = response.body.getReader();
+
+	const ctx = new AudioContext({sampleRate: 24000}) 
+
+	const queue: any[] = []
+	let isPlaying = false;
+
+	function playChunk(pcm: any) {
+		const samples = new Int16Array(pcm);
+		const float32 = new Float32Array(samples.length)
+		for (let i = 0; i < samples.length; i++) {
+			float32[i] = samples[i] / 32768; // normalise 16 bit signed pcm samples into -1 to 1
+		}
+
+		const buffer = ctx.createBuffer(1, float32.length, 24000)
+		buffer.getChannelData(0).set(float32)
+
+		const source = ctx.createBufferSource()
+		source.buffer = buffer
+		source.connect(ctx.destination)
+		source.start()
+		source.onended = () => playNext();
+	}
+
+	function playNext() {
+		if (queue.length == 0) {
+			isPlaying = false;
+			return;
+		}
+		isPlaying = true;
+		playChunk(queue.shift())
+	}
+
+	while (true) { 
+		const { done, value } = await reader.read()
+		if (done) break;
+		queue.push(value.buffer);
+		if (!isPlaying) playNext()
+	}
+	
+	console.log('!!returning reader')
+	return reader
+}
+
+
 export const synthesizeOpenAISpeech = async (
 	token: string = '',
 	speaker: string = 'alloy',

@@ -6,7 +6,7 @@
 
 	import { blobToFile } from '$lib/utils';
 	import { generateEmoji } from '$lib/apis';
-	import { synthesizeOpenAISpeech, transcribeAudio } from '$lib/apis/audio';
+	import { synthesizeOpenAISpeech, transcribeAudio, synthesizeStreamingSpeech } from '$lib/apis/audio';
 
 	import { toast } from 'svelte-sonner';
 
@@ -452,6 +452,13 @@
 	const emojiCache = new Map();
 
 	const fetchAudio = async (content) => {
+		// add flag for feature
+		if ($showCallOverlay) {
+			console.log('!!fetchAudio')
+			await synthesizeStreamingSpeech(content)
+		}
+
+		return 
 		if (!audioCache.has(content)) {
 			try {
 				// Set the emoji for the content if needed
@@ -507,11 +514,15 @@
 	let messages = {};
 
 	const monitorAndPlayAudio = async (id, signal) => {
+		// TODO: implement flag
+		return 
+
 		while (!signal.aborted) {
 			if (messages[id] && messages[id].length > 0) {
 				// Retrieve the next content string from the queue
 				const content = messages[id].shift(); // Dequeues the content for playing
 
+				// ignore cache for orpheus
 				if (audioCache.has(content)) {
 					// If content is available in the cache, play it
 
