@@ -53,7 +53,7 @@
 
 <CustomToast message={$toastMessage} type={$toastType} visible={$toastVisible} />
 <form
-	class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-[31rem] py-7 px-24"
+	class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-full md:w-[31rem] px-5 py-5 md:py-7 md:px-24"
 	on:submit={(e) => {
 		e.preventDefault();
 		registerEmail();
@@ -100,7 +100,7 @@
 			</div>
 		{/if}
 	</button>
-	<div class="mt-5 text-xs dark:text-customGray-300">
+	<div class="mt-5 text-xs text-lightGray-100 dark:text-customGray-300">
 		{$i18n.t('Already have an account?')}
 		<a href="/login" class="text-customBlue-500 font-medium">{$i18n.t('Log in')}</a>
 	</div>

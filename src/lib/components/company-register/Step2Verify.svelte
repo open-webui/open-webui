@@ -59,7 +59,7 @@
 <CustomToast message={$toastMessage} type={$toastType} visible={$toastVisible} />
 
 <form
-	class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-[31rem] pt-8 px-24 pb-16"
+	class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-full md:w-[31rem] px-5 py-5 md:pt-8 md:px-24 md:pb-16"
 	on:submit={(e) => {
 		e.preventDefault();
 		confirmHandler();
@@ -105,7 +105,7 @@
 	<div class="flex-1 mb-2.5">
 		<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 			{#if registration_code}
-				<div class="text-xs absolute left-2.5 top-1 text-customGray-100/50 dark:text-customGray-100/50">
+				<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 					{$i18n.t('Enter the code')}
 				</div>
 			{/if}

@@ -115,12 +115,12 @@
 
 <CustomToast message={$toastMessage} type={$toastType} visible={$toastVisible} />
 <div
-	class="flex flex-col justify-between w-full h-screen max-h-[100dvh] bg-lightGray-300 text-white relative dark:bg-customGray-900"
+	class="flex flex-col justify-between w-full h-screen max-h-[100dvh] px-4 bg-lightGray-300 text-white relative dark:bg-customGray-900"
 >
     <div></div>
 	
 	{#if !tokenValid}
-		<div class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-[31rem] pt-7 px-24 pb-4">
+		<div class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-full md:w-[31rem] px-5 py-5 md:pt-7 md:px-24 md:pb-4">
 			<div class="self-center flex flex-col items-center mb-5">
 				<div>
 					<img crossorigin="anonymous" src={logoSrc} class="w-10 mb-5" alt="logo" />
@@ -138,7 +138,7 @@
 			</button>
 		</div>
 	{:else if resetComplete}
-		<div class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-[31rem] pt-7 px-24 pb-4">
+		<div class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-full md:w-[31rem] px-5 py-5 md:pt-7 md:px-24 md:pb-4">
 			<div class="self-center flex flex-col items-center mb-5">
 				<div>
 					<img crossorigin="anonymous" src={logoSrc} class="w-10 mb-5" alt="logo" />
@@ -157,7 +157,7 @@
 		</div>
 	{:else}
 		<form
-			class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-[31rem] pt-8 px-24 pb-16"
+			class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-full md:w-[31rem] px-5 py-5 md:pt-8 md:px-24 md:pb-16"
 			on:submit={(e) => {
 				e.preventDefault();
 				changePassword();
@@ -277,5 +277,5 @@
 			</button>
 		</form>
 	{/if}
-    <div class="self-center text-xs text-customGray-300 dark:text-customGray-100 pb-5">By using this service, you agree to our <a href="/">Terms</a> and <a href="/">Conditions</a>.</div>
+    <div class="self-center text-xs text-customGray-300 dark:text-customGray-100 pb-5 text-center">By using this service, you agree to our <a href="/">Terms</a> and <a href="/">Conditions</a>.</div>
 </div>

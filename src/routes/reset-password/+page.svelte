@@ -72,11 +72,11 @@
 	Back to Login</a
 >
 <div
-	class="flex flex-col justify-between w-full h-screen max-h-[100dvh] text-white relative bg-lightGray-300 dark:bg-customGray-900"
+	class="flex flex-col justify-between w-full h-screen max-h-[100dvh] px-4 text-white relative bg-lightGray-300 dark:bg-customGray-900"
 >
 	<div></div>
 	<form
-		class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-[31rem] pt-7 px-24 pb-4"
+		class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-full md:w-[31rem] px-5 py-5 md:pt-7 md:px-24 md:pb-4"
 		on:submit={(e) => {
 			e.preventDefault();
 			resetPassword();
@@ -130,7 +130,7 @@
 		</button>
 	</form>
 
-	<div class="self-center text-xs text-customGray-300 dark:text-customGray-100 pb-5">
+	<div class="self-center text-xs text-customGray-300 dark:text-customGray-100 pb-5 text-center">
 		By using this service, you agree to our <a href="/">Terms</a> and <a href="/">Conditions</a>.
 	</div>
 </div>
