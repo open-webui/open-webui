@@ -19,7 +19,7 @@
   
   {#if visible}
     <div
-      class="w-[31rem] fixed top-2 left-1/2 transform -translate-x-1/2 bg-white dark:bg-customGray-800 shadow-lg rounded-lg px-12 py-5 flex flex-col items-center gap-3 z-50"
+      class="w-full md:w-[31rem] fixed top-2 left-1/2 transform -translate-x-1/2 bg-white dark:bg-customGray-800 shadow-lg rounded-lg px-8 md:px-12 py-3 md:py-5 flex flex-col items-center gap-3 z-50"
     >
       {#if type === 'success'}
         <SuccessIcon  />

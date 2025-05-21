@@ -4,7 +4,7 @@
 	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { models, settings, theme, user, config } from '$lib/stores';
+	import { models, settings, theme, user, config, mobile } from '$lib/stores';
 	import { onClickOutside } from '$lib/utils';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import { getVoices as _getVoices } from '$lib/apis/audio';
@@ -409,7 +409,12 @@
 					<img class="rounded-lg max-w-full" src="/system.png" alt="system theme"/>
 					<div class="flex items-center pl-2.5 absolute bottom-[0.625rem] text-customGray-550 text-xs">
 						<SystemIcon className="size-3.5 mr-1"/>
-						{$i18n.t('System (Default)')}
+						{#if ($mobile)}
+							{$i18n.t('System')}
+						{:else}
+							{$i18n.t('System (Default)')}
+						{/if}
+						
 					</div>
 				</div>
 				<div on:click={() => themeChangeHandler('light')}  class="relative rounded-lg {selectedTheme === "light" ? "border-2 border-[#305BE4]" : ""}">
