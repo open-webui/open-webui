@@ -451,7 +451,7 @@ def load_url_image_data(url, headers=None):
         return None
 
 
-def upload_image(request, image_metadata, image_data, content_type, user):
+def upload_image(request, image_data, content_type, metadata, user):
     image_format = mimetypes.guess_extension(content_type)
     file = UploadFile(
         file=io.BytesIO(image_data),
@@ -460,7 +460,7 @@ def upload_image(request, image_metadata, image_data, content_type, user):
             "content-type": content_type,
         },
     )
-    file_item = upload_file(request, file, user, file_metadata=image_metadata)
+    file_item = upload_file(request, file, user, metadata=metadata)
     url = request.app.url_path_for("get_file_content_by_id", id=file_item.id)
     return url
 
@@ -527,7 +527,7 @@ async def image_generations(
                 else:
                     image_data, content_type = load_b64_image_data(image["b64_json"])
 
-                url = upload_image(request, data, image_data, content_type, user)
+                url = upload_image(request, image_data, content_type, data, user)
                 images.append({"url": url})
             return images
 

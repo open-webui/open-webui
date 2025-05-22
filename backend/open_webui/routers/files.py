@@ -85,12 +85,12 @@ def upload_file(
     request: Request,
     file: UploadFile = File(...),
     user=Depends(get_verified_user),
-    file_metadata: dict = None,
+    metadata: dict = None,
     process: bool = Query(True),
 ):
     log.info(f"file.content_type: {file.content_type}")
 
-    file_metadata = file_metadata if file_metadata else {}
+    file_metadata = metadata if metadata else {}
     try:
         unsanitized_filename = file.filename
         filename = os.path.basename(unsanitized_filename)
@@ -99,7 +99,7 @@ def upload_file(
         # Remove the leading dot from the file extension
         file_extension = file_extension[1:] if file_extension else ""
 
-        if request.app.state.config.ALLOWED_FILE_EXTENSIONS:
+        if not file_metadata and request.app.state.config.ALLOWED_FILE_EXTENSIONS:
             request.app.state.config.ALLOWED_FILE_EXTENSIONS = [
                 ext for ext in request.app.state.config.ALLOWED_FILE_EXTENSIONS if ext
             ]
