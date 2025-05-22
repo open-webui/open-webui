@@ -333,10 +333,11 @@ def get_models(request: Request, user=Depends(get_verified_user)):
             return [
                 {"id": "dall-e-2", "name": "DALL·E 2"},
                 {"id": "dall-e-3", "name": "DALL·E 3"},
+                {"id": "gpt-image-1", "name": "GPT-IMAGE 1"},
             ]
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "gemini":
             return [
-                {"id": "imagen-3-0-generate-002", "name": "imagen-3.0 generate-002"},
+                {"id": "imagen-3.0-generate-002", "name": "imagen-3.0 generate-002"},
             ]
         elif request.app.state.config.IMAGE_GENERATION_ENGINE == "comfyui":
             # TODO - get models from comfyui
