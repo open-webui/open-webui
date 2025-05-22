@@ -121,7 +121,6 @@ async def generate_direct_chat_completion(
                             yield data
                 except Exception as e:
                     log.debug(f"Error in event generator: {e}")
-                    pass
 
             # Define a background task to run the event generator
             async def background():

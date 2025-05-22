@@ -144,7 +144,6 @@ def upgrade():
             meta=updates.get("meta", {}), pinned=updates.get("pinned", False)
         )
         conn.execute(update_stmt)
-    pass
 
 
 def downgrade():

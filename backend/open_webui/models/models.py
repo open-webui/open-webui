@@ -30,7 +30,6 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 # ModelParams is a model for the data stored in the params field of the Model table
 class ModelParams(BaseModel):
     model_config = ConfigDict(extra="allow")
-    pass
 
 
 # ModelMeta is a model for the data stored in the meta field of the Model table
@@ -45,8 +44,6 @@ class ModelMeta(BaseModel):
     capabilities: Optional[dict] = None
 
     model_config = ConfigDict(extra="allow")
-
-    pass
 
 
 class Model(Base):
