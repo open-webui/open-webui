@@ -1774,55 +1774,13 @@ def process_file(
                     logger.info(f"Successfully loaded document using load_document: {file.filename}")
                 except Exception as load_error:
                     print(f"🔍 DIAGNOSTIC: load_document FAILED - {str(load_error)}")
+                    print(f"🔍 DIAGNOSTIC: FORCING UNSTRUCTURED - NO FALLBACK!")
                     logger.error(f"Failed to load document {file.filename} with load_document: {load_error}")
-                    logger.info(f"Attempting fallback to file content for: {file.filename}")
-                    
-                    # Fallback to stored file content if available
-                    content = file.data.get("content", "")
-                    print(f"🔍 DIAGNOSTIC: Fallback content available: {'YES' if content else 'NO'}")
-                    if content:
-                        print(f"🔍 DIAGNOSTIC: Using fallback content ({len(content)} chars)")
-                        cleaned_content = _clean_text_for_vector_db(content)
-                        docs = [
-                            Document(
-                                page_content=cleaned_content,
-                                metadata={
-                                    **file.meta,
-                                    "name": file.filename,
-                                    "created_by": file.user_id,
-                                    "file_id": file.id,
-                                    "source": file.filename,
-                                    "fallback_reason": f"load_document failed: {str(load_error)}"
-                                },
-                            )
-                        ]
-                        logger.info(f"Used fallback content for: {file.filename}")
-                    else:
-                        # Try to read file directly as text
-                        try:
-                            with open(file_path, 'r', encoding='utf-8') as f:
-                                raw_content = f.read()
-                            cleaned_content = _clean_text_for_vector_db(raw_content)
-                            docs = [
-                                Document(
-                                    page_content=cleaned_content,
-                                    metadata={
-                                        **file.meta,
-                                        "name": file.filename,
-                                        "created_by": file.user_id,
-                                        "file_id": file.id,
-                                        "source": file.filename,
-                                        "fallback_reason": f"direct file read after load_document failed: {str(load_error)}"
-                                    },
-                                )
-                            ]
-                            logger.info(f"Used direct file read for: {file.filename}")
-                        except Exception as read_error:
-                            logger.error(f"All loading methods failed for {file.filename}: {read_error}")
-                            raise HTTPException(
-                                status_code=status.HTTP_400_BAD_REQUEST,
-                                detail=f"Unable to process file {file.filename}. Load error: {load_error}, Read error: {read_error}"
-                            )
+                    # TEMPORARILY DISABLED FALLBACK TO SEE ACTUAL UNSTRUCTURED ERRORS
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Unstructured failed for {file.filename}: {str(load_error)}"
+                    )
                 
                 docs = [
                     Document(
