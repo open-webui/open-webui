@@ -771,7 +771,6 @@ try:
     )
 except Exception as e:
     log.error(f"Error updating models: {e}")
-    pass
 
 
 app.state.EMBEDDING_FUNCTION = get_embedding_function(
@@ -1118,7 +1117,6 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
         except Exception as e:
             log.debug(f"Error processing model tags: {e}")
             model["tags"] = []
-            pass
 
         models.append(model)
 
