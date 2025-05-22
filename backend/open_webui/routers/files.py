@@ -468,7 +468,7 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
         )
 
     file_user = Users.get_user_by_id(file.user_id)
-    if not file_user.role == "admin":
+    if file_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
