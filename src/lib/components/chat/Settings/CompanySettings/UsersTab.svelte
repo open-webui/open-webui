@@ -342,7 +342,7 @@
 	</div>
 
 	{#each filteredUsers as user, userIdx (user.id)}
-		<div class="grid grid-cols-[1fr_96px_50px_20px] md:grid-cols-[244px_110px_100px_26px] gap-x-2 mb-2 group cursor-pointer">
+		<div class="grid grid-cols-[1fr_96px_50px_20px] md:grid-cols-[238px_110px_100px_26px] gap-x-2 mb-2 group cursor-pointer">
 			<div class="flex md:items-center flex-col md:flex-row">
 				<div class="flex items-center">
 					<img

@@ -258,7 +258,7 @@
 						url.searchParams.set('plans', 'open'); 
 						window.history.replaceState({}, '', `${url.pathname}${url.search}`);
 					}}
-					class="flex items-center justify-center rounded-mdx bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-3 text-xs dark:text-customGray-200"
+					class="flex items-center justify-center rounded-mdx bg-lightGray-300 dark:bg-customGray-900 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-3 text-xs dark:text-customGray-200"
 				>
 					{$i18n.t('Explore Plans')}
 				</button>
@@ -329,7 +329,7 @@
 						url.searchParams.set('tab', 'analytics');
 						goto(`${url.pathname}${url.search}`, { replaceState: false });
 					}}
-					class="flex items-center justify-center rounded-[10px] bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
+					class="flex items-center justify-center rounded-[10px] bg-lightGray-300 dark:bg-customGray-900 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
 				>
 					{$i18n.t('View usage details')}
 				</button>
@@ -373,7 +373,7 @@
 							url.searchParams.set('recharge', 'open'); 
 							window.history.replaceState({}, '', `${url.pathname}${url.search}`);
 						}}
-						class="flex items-center justify-center rounded-[10px] bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-8 py-2 text-xs dark:text-customGray-200"
+						class="flex items-center justify-center rounded-[10px] bg-lightGray-300 dark:bg-customGray-900 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-8 py-2 text-xs dark:text-customGray-200"
 					>
 						{$i18n.t('Buy credits')}
 					</button>

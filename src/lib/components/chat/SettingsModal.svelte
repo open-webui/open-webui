@@ -242,17 +242,17 @@
 			{#if selectedTab === null || !$mobile}
 				<div
 					id="settings-tabs-container"
-					class="rounded-bl-lg md:pl-4 md:pt-5 pr-2 tabs flex flex-col dark:bg-customGray-900 md:gap-1 flex-1 md:flex-none md:w-[253px] dark:text-gray-200 text-sm font-medium text-left mb-1 md:mb-0"
+					class="rounded-bl-lg md:pl-4 md:pt-5 pr-2 tabs flex flex-col  md:dark:bg-customGray-900 md:gap-1 flex-1 md:flex-none md:w-[253px] dark:text-gray-200 text-sm font-medium text-left mb-1 md:mb-0"
 				>
 					{#if visibleTabs.length > 0}
 						{#each visibleTabs as tabId (tabId)}
 							
 							{#if tabId === 'personalization'}
 								<button
-								class="px-3 py-5 md:py-2.5 min-w-fit border-b md:border-b-0 border-lightGray-400 dark:border-customGray-700 rounded-md text-lightGray-100 flex-1 md:flex-none text-left transition {selectedTab ===
+								class="px-3 py-5 md:py-2.5 min-w-fit border-b md:border-b-0 border-lightGray-400 dark:border-customGray-700 md:rounded-md text-lightGray-100 flex-1 md:flex-none text-left transition {selectedTab ===
 								'personalization'
-									? 'bg-lightGray-700 dark:bg-customGray-800'
-									: ' text-lightGray-100 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? 'bg-lightGray-700 dark:bg-customGray-800 dark:text-white'
+									: ' text-lightGray-100 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white'}"
 									on:click={() => {
 										selectedTab = 'personalization';
 									}}
@@ -273,10 +273,10 @@
 							
 							{:else if tabId === 'chats'}
 								<button
-								class="px-3 py-5 md:py-2.5 min-w-fit text-lightGray-100 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+								class="px-3 py-5 md:py-2.5 min-w-fit text-lightGray-100 border-b md:border-b-0 border-lightGray-400 dark:border-customGray-700 md:rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 								'chats'
-									? 'bg-lightGray-700 dark:bg-customGray-800'
-									: ' text-lightGray-100 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? 'bg-lightGray-700 dark:bg-customGray-800 dark:text-white'
+									: ' text-lightGray-100 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white'}"
 									on:click={() => {
 										selectedTab = 'chats';
 									}}
@@ -296,10 +296,10 @@
 							</button>
 							{:else if tabId === 'account'}
 								<button
-									class="px-3 py-5 md:py-2.5 min-w-fit border-b md:border-b-0 border-lightGray-400 dark:border-customGray-700 rounded-md flex-1 text-lightGray-100 md:flex-none text-left transition {selectedTab ===
+									class="px-3 py-5 md:py-2.5 min-w-fit border-b md:border-b-0 border-lightGray-400 dark:border-customGray-700 md:rounded-md flex-1 text-lightGray-100 md:flex-none text-left transition {selectedTab ===
 									'account'
-										? 'bg-lightGray-700 dark:bg-customGray-800'
-										: ' text-lightGray-100 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+										? 'bg-lightGray-700 dark:bg-customGray-800 dark:text-white'
+										: ' text-lightGray-100 dark:text-customGray-100 hover:text-gray-700 dark:hover:text-white'}"
 									on:click={() => {
 										selectedTab = 'account';
 									}}

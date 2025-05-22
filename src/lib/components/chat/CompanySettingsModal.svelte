@@ -288,16 +288,16 @@
 			{#if selectedTab === null || !$mobile}
 				<div
 					id="settings-tabs-container"
-					class="rounded-bl-lg md:pl-4 md:pt-5 pr-2 tabs flex flex-col dark:bg-customGray-900 md:gap-1 w-full md:w-[252px] dark:text-gray-200 text-sm font-medium text-left mb-1 md:mb-0"
+					class="rounded-bl-lg md:pl-4 md:pt-5 pr-2 tabs flex flex-col md:dark:bg-customGray-900 md:gap-1 w-full md:w-[252px] dark:text-gray-200 text-sm font-medium text-left mb-1 md:mb-0"
 				>
 					{#if visibleTabs.length > 0}
 						{#each visibleTabs as tabId (tabId)}
 						{#if tabId === 'general-settings'}
 						<button
-							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 dark:border-customGray-700 md:rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 							'general-settings'
 								? 'bg-lightGray-700 dark:bg-customGray-800'
-								: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
+								: ' text-lightGray-100 dark:text-customGray-100 hover:bg-lightGray-700 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'general-settings';
 								updateTabParam(selectedTab);
@@ -312,10 +312,10 @@
 						</button>
 						{:else if tabId === 'user-management'}
 						<button
-							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 dark:border-customGray-700 md:rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 							'user-management'
 								? 'bg-lightGray-700 dark:bg-customGray-800'
-								: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
+								: 'text-lightGray-100 dark:text-customGray-100 hover:bg-lightGray-700 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'user-management';
 								updateTabParam(selectedTab);
@@ -330,10 +330,10 @@
 						</button>
 						{:else if tabId === 'model-control'}
 						<button
-							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 dark:border-customGray-700 md:rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 							'model-control'
 								? 'bg-lightGray-700 dark:bg-customGray-800'
-								: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
+								: ' text-lightGray-100 dark:text-customGray-100 hover:bg-lightGray-700 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'model-control';
 								updateTabParam(selectedTab);
@@ -348,10 +348,10 @@
 						</button>
 						{:else if tabId === 'analytics'}
 						<button
-							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 dark:border-customGray-700 md:rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 							'analytics'
 								? 'bg-lightGray-700 dark:bg-customGray-800'
-								: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
+								: ' text-lightGray-100 dark:text-customGray-100 hover:bg-lightGray-700 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'analytics';
 								updateTabParam(selectedTab);
@@ -366,10 +366,10 @@
 						</button>
 						{:else if tabId === 'billing'}
 						<button
-							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 dark:border-customGray-700 md:rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 							'billing'
 								? 'bg-lightGray-700 dark:bg-customGray-800'
-								: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
+								: ' text-lightGray-100 dark:text-customGray-100 hover:bg-lightGray-700 dark:hover:text-white'}"
 							on:click={() => {
 								selectedTab = 'billing';
 								updateTabParam(selectedTab);

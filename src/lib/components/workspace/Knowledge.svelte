@@ -179,7 +179,7 @@
 					{/if}
 				</div>
 				{#if (!$mobile)}
-					<div class="flex items-center md:self-center text-lightGray-100 dark:bg-customGray-100 text-base font-medium leading-none px-0.5">
+					<div class="flex items-center md:self-center text-lightGray-100 dark:text-customGray-100 text-base font-medium leading-none px-0.5">
 						{$i18n.t('Knowledge')}
 					</div>
 				{/if}
