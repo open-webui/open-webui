@@ -4,6 +4,7 @@ import mimetypes
 import os
 import shutil
 import asyncio
+import re  # Add this for regex-based text cleaning
 
 
 import uuid
@@ -111,6 +112,48 @@ log.setLevel(SRC_LOG_LEVELS["RAG"])
 # Utility functions
 #
 ##########################################
+
+def _clean_text_for_vector_db(text: str) -> str:
+    """
+    Clean and normalize text before storage in vector databases.
+    Handles escaped characters, control characters, and normalizes whitespace.
+    
+    Args:
+        text: Raw text to clean
+        
+    Returns:
+        Cleaned text safe for embedding and storage
+    """
+    if not text:
+        return ""
+        
+    # Convert literal newline sequences to actual newlines
+    # This is the most common problematic pattern
+    text = text.replace("\\n", "\n")
+    
+    # Handle other common escape sequences
+    text = text.replace("\\t", "\t")
+    text = text.replace('\\\"', '"')
+    text = text.replace("\\'", "'")
+    
+    # Remove problematic control characters that cause JSON serialization issues
+    text = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\uFEFF\uFFFE\uFFFF]', '', text)
+    
+    # Remove zero-width spaces and other invisible characters
+    text = re.sub(r'[\u200B-\u200D\uFEFF]', '', text)
+    
+    # Normalize whitespace (reduce multiple spaces/newlines but preserve paragraph structure)
+    text = re.sub(r'\n{3,}', '\n\n', text)  # Limit consecutive newlines
+    text = re.sub(r' {2,}', ' ', text)      # Reduce multiple spaces
+    text = text.strip()                      # Remove leading/trailing whitespace
+    
+    # Ensure proper UTF-8 encoding (handle encoding issues)
+    try:
+        text = text.encode('utf-8', 'ignore').decode('utf-8')
+    except Exception:
+        pass
+        
+    return text
 
 
 def get_ef(
@@ -996,7 +1039,9 @@ def save_docs_to_vector_db(
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
-    texts = [doc.page_content for doc in docs]
+    # Clean text content before embedding
+    texts = [_clean_text_for_vector_db(doc.page_content) for doc in docs]
+    
     metadatas = [
         {
             **doc.metadata,
@@ -1021,6 +1066,10 @@ def save_docs_to_vector_db(
                 or isinstance(value, dict)
             ):
                 metadata[key] = str(value)
+            
+            # Clean string values in metadata too to prevent issues
+            if isinstance(value, str) and key not in ['hash', 'id']:
+                metadata[key] = _clean_text_for_vector_db(value)
 
     try:
         if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
@@ -1286,13 +1335,16 @@ def process_text(
     if collection_name is None:
         collection_name = calculate_sha256_string(form_data.content)
 
+    # Clean text before creating document
+    cleaned_content = _clean_text_for_vector_db(form_data.content)
+    
     docs = [
         Document(
-            page_content=form_data.content,
+            page_content=cleaned_content,
             metadata={"name": form_data.name, "created_by": user.id},
         )
     ]
-    text_content = form_data.content
+    text_content = cleaned_content
     log.debug(f"text_content: {text_content}")
 
     result = save_docs_to_vector_db(request, docs, collection_name, user=user)
