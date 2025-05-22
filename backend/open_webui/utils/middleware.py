@@ -967,7 +967,7 @@ async def process_chat_response(
 
                 if isinstance(content, str):
                     content = re.sub(
-                        r"<details\b[^>]*>.*?<\/details>",
+                        r"<details\b[^>]*>.*?<\/details>|!\[.*?\]\(.*?\)",
                         "",
                         content,
                         flags=re.S | re.I,
