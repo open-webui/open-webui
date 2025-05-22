@@ -269,11 +269,6 @@ tbody + tbody {
 	margin-bottom: 0;
 }
 
-/* Add a rule to reset margin-bottom for <p> not followed by <ul> */
-.markdown-section p + ul {
-	margin-top: 0;
-}
-
 /* List item styles */
 .markdown-section li {
 	padding: 2px;
