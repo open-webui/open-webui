@@ -12,6 +12,7 @@
 	import { AllSelection } from 'prosemirror-state';
 	import CheckmarkIcon from '../icons/CheckmarkIcon.svelte';
     import ChevronDown from '../icons/ChevronDown.svelte';
+	import { mobile } from '$lib/stores';
 
 	export let onChange: Function = () => {};
 
@@ -197,9 +198,14 @@
                             hoveringGroup = true;
                             if (groupTriggerEl) {
                                 const rect = groupTriggerEl.getBoundingClientRect();
-                                submenuX = rect.right + 8;
-                                submenuY = rect.top - ((groups.length - 1) * 30);
-                                showSubmenu = true;
+								if($mobile){
+									submenuX = rect.left;
+                               		submenuY = rect.bottom;
+								}else{
+									submenuX = rect.right + 8;
+                               		submenuY = rect.top - ((groups.length - 1) * 30);
+								}
+								showSubmenu = true;
                             }
                         }}
                         on:mouseleave={() => {
@@ -210,7 +216,12 @@
                         }}
                     >
                         <button
-                        on:click={() => (showDropdown = false)}
+							type="button"
+							on:click={() => {
+								if(!$mobile){
+									showDropdown = false;
+								}
+							}}
                             class="flex w-full justify-start items-center rounded-lg px-3 py-2 hover:bg-lightGray-700 dark:hover:bg-customGray-950 cursor-pointer"
                         >
                             <div>
@@ -232,7 +243,7 @@
                         ></div>
 
                         <!-- Submenu -->
-                        {#if showSubmenu}
+                        {#if (showSubmenu)}
                             <button
                                 type="button"
                                 class="fixed bg-lightGray-300 dark:bg-customGray-900 border px-1 py-2 border-lightGray-400 dark:border-customGray-700 rounded-xl shadow z-20 min-w-30"
