@@ -1431,7 +1431,6 @@
 					model: model.id,
 					modelName: model.name ?? model.id,
 					modelIdx: modelIdx ? modelIdx : _modelIdx,
-					userContext: null,
 					timestamp: Math.floor(Date.now() / 1000) // Unix epoch
 				};
 
@@ -1486,32 +1485,6 @@
 
 					let responseMessageId =
 						responseMessageIds[`${modelId}-${modelIdx ? modelIdx : _modelIdx}`];
-					let responseMessage = _history.messages[responseMessageId];
-
-					let userContext = null;
-					if ($settings?.memory ?? false) {
-						if (userContext === null) {
-							const res = await queryMemory(localStorage.token, prompt).catch((error) => {
-								toast.error(`${error}`);
-								return null;
-							});
-							if (res) {
-								if (res.documents[0].length > 0) {
-									userContext = res.documents[0].reduce((acc, doc, index) => {
-										const createdAtTimestamp = res.metadatas[0][index].created_at;
-										const createdAtDate = new Date(createdAtTimestamp * 1000)
-											.toISOString()
-											.split('T')[0];
-										return `${acc}${index + 1}. [${createdAtDate}]. ${doc}\n`;
-									}, '');
-								}
-
-								console.log(userContext);
-							}
-						}
-					}
-					responseMessage.userContext = userContext;
-
 					const chatEventEmitter = await getChatEventEmitter(model.id, _chatId);
 
 					scrollToBottom();
@@ -1573,7 +1546,7 @@
 			true;
 
 		let messages = [
-			params?.system || $settings.system || (responseMessage?.userContext ?? null)
+			params?.system || $settings.system
 				? {
 						role: 'system',
 						content: `${promptTemplate(
@@ -1585,11 +1558,7 @@
 										return undefined;
 									})
 								: undefined
-						)}${
-							(responseMessage?.userContext ?? null)
-								? `\n\nUser Context:\n${responseMessage?.userContext ?? ''}`
-								: ''
-						}`
+						)}`
 					}
 				: undefined,
 			...createMessagesList(_history, responseMessageId).map((message) => ({
@@ -1666,7 +1635,8 @@
 						$config?.features?.enable_web_search &&
 						($user?.role === 'admin' || $user?.permissions?.features?.web_search)
 							? webSearchEnabled || ($settings?.webSearch ?? false) === 'always'
-							: false
+							: false,
+					memory: $settings?.memory ?? false
 				},
 				variables: {
 					...getPromptVariables(
