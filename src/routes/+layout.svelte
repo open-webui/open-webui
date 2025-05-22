@@ -541,6 +541,12 @@
 
 				$socket?.on('chat-events', chatEventHandler);
 				$socket?.on('channel-events', channelEventHandler);
+
+				// Set up the token expiry check
+				if (tokenTimer) {
+					clearInterval(tokenTimer);
+				}
+				tokenTimer = setInterval(checkTokenExpiry, 15000);
 			} else {
 				$socket?.off('chat-events', chatEventHandler);
 				$socket?.off('channel-events', channelEventHandler);
@@ -593,12 +599,6 @@
 
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
-
-						// Set up the token expiry check
-						if (tokenTimer) {
-							clearInterval(tokenTimer);
-						}
-						tokenTimer = setInterval(checkTokenExpiry, 1000);
 					} else {
 						// Redirect Invalid Session User to /auth Page
 						localStorage.removeItem('token');
