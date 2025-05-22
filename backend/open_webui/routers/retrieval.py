@@ -4,7 +4,7 @@ import mimetypes
 import os
 import shutil
 import asyncio
-import re  # Add this for regex-based text cleaning
+import re  # For regex-based text cleaning
 
 
 import uuid
@@ -107,16 +107,19 @@ from open_webui.constants import ERROR_MESSAGES
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
+# Log that text cleaning is enabled
+log.info("Text cleaning enabled: Special characters will be cleaned before vector database storage")
+
 ##########################################
 #
 # Utility functions
 #
 ##########################################
 
-def _clean_text_for_vector_db(text: str) -> str:
+def clean_text(text: str) -> str:
     """
-    Clean and normalize text before storage in vector databases.
-    Handles escaped characters, control characters, and normalizes whitespace.
+    Clean text by handling special characters before storing in vector database.
+    Handles the most common problematic patterns.
     
     Args:
         text: Raw text to clean
@@ -128,7 +131,6 @@ def _clean_text_for_vector_db(text: str) -> str:
         return ""
         
     # Convert literal newline sequences to actual newlines
-    # This is the most common problematic pattern
     text = text.replace("\\n", "\n")
     
     # Handle other common escape sequences
@@ -1040,7 +1042,7 @@ def save_docs_to_vector_db(
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
     # Clean text content before embedding
-    texts = [_clean_text_for_vector_db(doc.page_content) for doc in docs]
+    texts = [clean_text(doc.page_content) for doc in docs]
     
     metadatas = [
         {
@@ -1069,7 +1071,7 @@ def save_docs_to_vector_db(
             
             # Clean string values in metadata too to prevent issues
             if isinstance(value, str) and key not in ['hash', 'id']:
-                metadata[key] = _clean_text_for_vector_db(value)
+                metadata[key] = clean_text(value)
 
     try:
         if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
@@ -1160,9 +1162,12 @@ def process_file(
                 # Audio file upload pipeline
                 pass
 
+            # Clean content early
+            cleaned_content = clean_text(form_data.content.replace("<br/>", "\n"))
+
             docs = [
                 Document(
-                    page_content=form_data.content.replace("<br/>", "\n"),
+                    page_content=cleaned_content,
                     metadata={
                         **file.meta,
                         "name": file.filename,
@@ -1173,7 +1178,7 @@ def process_file(
                 )
             ]
 
-            text_content = form_data.content
+            text_content = cleaned_content
         elif form_data.collection_name:
             # Check if the file has already been processed and save the content
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
@@ -1185,15 +1190,17 @@ def process_file(
             if result is not None and len(result.ids[0]) > 0:
                 docs = [
                     Document(
-                        page_content=result.documents[0][idx],
+                        page_content=clean_text(result.documents[0][idx]),
                         metadata=result.metadatas[0][idx],
                     )
                     for idx, id in enumerate(result.ids[0])
                 ]
             else:
+                # Clean content
+                cleaned_content = clean_text(file.data.get("content", ""))
                 docs = [
                     Document(
-                        page_content=file.data.get("content", ""),
+                        page_content=cleaned_content,
                         metadata={
                             **file.meta,
                             "name": file.filename,
@@ -1205,6 +1212,8 @@ def process_file(
                 ]
 
             text_content = file.data.get("content", "")
+            # Clean before saving
+            text_content = clean_text(text_content)
         else:
             # Process the file and save the content
             # Usage: /files/
@@ -1231,7 +1240,7 @@ def process_file(
 
                 docs = [
                     Document(
-                        page_content=doc.page_content,
+                        page_content=clean_text(doc.page_content),
                         metadata={
                             **doc.metadata,
                             "name": file.filename,
@@ -1245,7 +1254,7 @@ def process_file(
             else:
                 docs = [
                     Document(
-                        page_content=file.data.get("content", ""),
+                        page_content=clean_text(file.data.get("content", "")),
                         metadata={
                             **file.meta,
                             "name": file.filename,
@@ -1258,12 +1267,16 @@ def process_file(
             text_content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {text_content}")
+        
+        # Clean again before saving
+        cleaned_text = clean_text(text_content)
+        
         Files.update_file_data_by_id(
             file.id,
-            {"content": text_content},
+            {"content": cleaned_text},
         )
 
-        hash = calculate_sha256_string(text_content)
+        hash = calculate_sha256_string(cleaned_text)
         Files.update_file_hash_by_id(file.id, hash)
 
         if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
@@ -1336,7 +1349,7 @@ def process_text(
         collection_name = calculate_sha256_string(form_data.content)
 
     # Clean text before creating document
-    cleaned_content = _clean_text_for_vector_db(form_data.content)
+    cleaned_content = clean_text(form_data.content)
     
     docs = [
         Document(
@@ -1376,7 +1389,17 @@ def process_youtube_video(
             proxy_url=request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
         )
 
-        docs = loader.load()
+        raw_docs = loader.load()
+        
+        # Clean each document content
+        docs = [
+            Document(
+                page_content=clean_text(doc.page_content),
+                metadata=doc.metadata
+            )
+            for doc in raw_docs
+        ]
+        
         content = " ".join([doc.page_content for doc in docs])
         log.debug(f"text_content: {content}")
 
@@ -1419,7 +1442,17 @@ def process_web(
             verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
             requests_per_second=request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
         )
-        docs = loader.load()
+        raw_docs = loader.load()
+        
+        # Clean each document content
+        docs = [
+            Document(
+                page_content=clean_text(doc.page_content),
+                metadata=doc.metadata
+            )
+            for doc in raw_docs
+        ]
+        
         content = " ".join([doc.page_content for doc in docs])
 
         log.debug(f"text_content: {content}")
@@ -1736,7 +1769,17 @@ async def process_web_search(
             requests_per_second=request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
             trust_env=request.app.state.config.WEB_SEARCH_TRUST_ENV,
         )
-        docs = await loader.aload()
+        raw_docs = await loader.aload()
+        
+        # Clean each document content
+        docs = [
+            Document(
+                page_content=clean_text(doc.page_content),
+                metadata=doc.metadata
+            )
+            for doc in raw_docs
+        ]
+        
         urls = [
             doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
         ]  # only keep the urls returned by the loader
@@ -2001,10 +2044,13 @@ def process_files_batch(
     for file in form_data.files:
         try:
             text_content = file.data.get("content", "")
+            
+            # Clean text content
+            cleaned_content = clean_text(text_content.replace("<br/>", "\n"))
 
             docs: List[Document] = [
                 Document(
-                    page_content=text_content.replace("<br/>", "\n"),
+                    page_content=cleaned_content,
                     metadata={
                         **file.meta,
                         "name": file.filename,
@@ -2015,9 +2061,9 @@ def process_files_batch(
                 )
             ]
 
-            hash = calculate_sha256_string(text_content)
+            hash = calculate_sha256_string(cleaned_content)
             Files.update_file_hash_by_id(file.id, hash)
-            Files.update_file_data_by_id(file.id, {"content": text_content})
+            Files.update_file_data_by_id(file.id, {"content": cleaned_content})
 
             all_docs.extend(docs)
             results.append(BatchProcessFilesResult(file_id=file.id, status="prepared"))
