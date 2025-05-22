@@ -41,7 +41,6 @@ class User(Base):
 class UserSettings(BaseModel):
     ui: Optional[dict] = {}
     model_config = ConfigDict(extra="allow")
-    pass
 
 
 class UserModel(BaseModel):
