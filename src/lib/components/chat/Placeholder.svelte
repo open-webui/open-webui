@@ -145,7 +145,7 @@
 					</div>
 				</div>
 
-				<div class="text-3xl @sm:text-4xl line-clamp-1" in:fade={{ duration: 100 }}>Albert</div>
+				<div class="text-3xl @sm:text-4xl line-clamp-1" in:fade={{ duration: 100 }}>Assistant IA</div>
 			</div>
 
 			<div class="flex mt-1 mb-2">

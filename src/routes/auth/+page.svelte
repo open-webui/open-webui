@@ -48,17 +48,17 @@
 	const carouselItems = [
 		{
 			title: $i18n.t('Ask your questions'),
-			description: $i18n.t('Albert answers your everyday questions.'),
+			description: $i18n.t('Assistant IA answers your everyday questions.'),
 			image: '/assets/illustrations/question.svg'
 		},
 		{
 			title: $i18n.t('Integrate your documents'),
-			description: $i18n.t('Albert helps you chat with your documents.'),
+			description: $i18n.t('Assistant IA helps you chat with your documents.'),
 			image: '/assets/illustrations/file-search.svg'
 		},
 		{
 			title: $i18n.t('AI ❤️ Internet'),
-			description: $i18n.t('Albert can use the internet to answer your questions.'),
+			description: $i18n.t('Assistant IA can use the internet to answer your questions.'),
 			image: '/assets/illustrations/internet.svg'
 		}
 	];

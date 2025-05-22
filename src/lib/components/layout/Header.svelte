@@ -25,7 +25,7 @@
 				{#if $_x}
 					<img src="/cam.svg" alt="@cam" class="h-14 mt-[3.7vh]" />
 				{:else}
-					<div class="text-2xl font-bold fr-text-title--blue-france">Albert</div>
+					<div class="text-2xl font-bold fr-text-title--blue-france">Assistant IA</div>
 				{/if}
 				<div
 					class="px-2 py-0.5 text-xs rounded-full fr-background-action-low--blue-france fr-text-label--blue-cumulus font-bold flex items-center"
@@ -85,7 +85,7 @@
 		>
 			<div class="mx-auto flex flex-col sm:flex-row sm:gap-3 px-4 sm:px-0">
 				<span class="text-sm text-gray-700 dark:text-gray-200 align-middle">
-					💬 {$i18n.t('We would love to hear what you think about Albert')}
+					💬 {$i18n.t('We would love to hear what you think about Assistant IA')}
 				</span>
 				<a
 					href="https://grist.numerique.gouv.fr/o/albert/forms/3YqFNWKSkYjLTK9quzcSLq/75"

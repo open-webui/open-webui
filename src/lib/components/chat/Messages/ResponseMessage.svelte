@@ -598,7 +598,7 @@
 		<div class="flex-auto w-0 pl-1">
 			<Name>
 				<Tooltip content={model?.name ?? message.model} placement="top-start">
-					<span class="line-clamp-1 text-black dark:text-white"> Albert </span>
+					<span class="line-clamp-1 text-black dark:text-white"> Assistant IA </span>
 				</Tooltip>
 
 				{#if message.timestamp}

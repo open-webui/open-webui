@@ -109,7 +109,7 @@ for source in log_sources:
 
 log.setLevel(SRC_LOG_LEVELS["CONFIG"])
 
-WEBUI_NAME = os.environ.get("WEBUI_NAME", "Open WebUI")
+WEBUI_NAME = os.environ.get("WEBUI_NAME", "Assistant IA")
 
 WEBUI_FAVICON_URL = "https://www.systeme-de-design.gouv.fr/uploads/apple_touch_icon_8ffa1fa80c.png" 
 
