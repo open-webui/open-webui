@@ -4,7 +4,8 @@ import time
 from typing import Optional, List
 import uuid
 
-from open_webui.internal.db import Base, get_db
+from sqlalchemy.orm import Session
+from open_webui.internal.db import Base, get_session
 from open_webui.env import SRC_LOG_LEVELS
 
 from open_webui.models.files import FileMetadataResponse
@@ -80,13 +81,13 @@ class GroupUpdateForm(GroupForm):
 
 class GroupTable:
     def __init__(self, db: Optional[Session] = None):
-        self.db = db if db else next(get_db())
+        self.db = db if db else next(get_session())
 
     def insert_new_group(
         self, user_id: str, form_data: GroupForm
     ) -> Optional[GroupModel]:
         # Ensure self.db is used if passed during instantiation, or get a new session
-        db_session = self.db if self.db else next(get_db())
+        db_session = self.db if self.db else next(get_session())
         try:
             group_data = {
                 **form_data.model_dump(exclude_none=True),
@@ -116,7 +117,7 @@ class GroupTable:
 
 
     def get_groups(self) -> List[GroupModel]:
-        db_session = self.db if self.db else next(get_db())
+        db_session = self.db if self.db else next(get_session())
         try:
             return [
                 GroupModel.model_validate(group)
@@ -129,7 +130,7 @@ class GroupTable:
     def get_groups_by_member_id(self, user_id: str) -> List[GroupModel]:
         # This is the existing method, kept for compatibility if used elsewhere,
         # but get_groups_by_user_id is preferred for clarity and directness.
-        db_session = self.db if self.db else next(get_db())
+        db_session = self.db if self.db else next(get_session())
         try:
             # This query might be inefficient for large JSON arrays or many groups.
             # It relies on string casting and LIKE, which isn't ideal for JSON array membership.
@@ -158,7 +159,7 @@ class GroupTable:
                 db_session.close()
 
     def get_group_by_id(self, id: str) -> Optional[GroupModel]:
-        db_session = self.db if self.db else next(get_db())
+        db_session = self.db if self.db else next(get_session())
         try:
             group = db_session.query(Group).filter_by(id=id).first()
             return GroupModel.model_validate(group) if group else None
@@ -170,7 +171,7 @@ class GroupTable:
                 db_session.close()
 
     def get_group_by_name(self, name: str) -> Optional[GroupModel]:
-        db_session = self.db if self.db else next(get_db())
+        db_session = self.db if self.db else next(get_session())
         try:
             group = db_session.query(Group).filter(func.lower(Group.name) == func.lower(name)).first()
             return GroupModel.model_validate(group) if group else None
@@ -188,7 +189,7 @@ class GroupTable:
         For very large datasets, a more optimized DB query (e.g., using JSON array functions)
         would be preferable if the database supports it efficiently for this structure.
         """
-        db_session = self.db if self.db else next(get_db())
+        db_session = self.db if self.db else next(get_session())
         try:
             all_groups_records = db_session.query(Group).all()
             user_groups_models = []
@@ -211,7 +212,7 @@ class GroupTable:
     def update_group_by_id(
         self, id: str, form_data: GroupUpdateForm, overwrite: bool = False # overwrite seems unused
     ) -> Optional[GroupModel]:
-        db_session = self.db if self.db else next(get_db())
+        db_session = self.db if self.db else next(get_session())
         try:
             update_data = form_data.model_dump(exclude_none=True)
             update_data["updated_at"] = int(time.time())
@@ -229,7 +230,7 @@ class GroupTable:
                 db_session.close()
 
     def delete_group_by_id(self, id: str) -> bool:
-        db_session = self.db if self.db else next(get_db())
+        db_session = self.db if self.db else next(get_session())
         try:
             db_session.query(Group).filter_by(id=id).delete()
             db_session.commit()
@@ -244,7 +245,7 @@ class GroupTable:
                 db_session.close()
 
     def delete_all_groups(self) -> bool:
-        db_session = self.db if self.db else next(get_db())
+        db_session = self.db if self.db else next(get_session())
         try:
             db_session.query(Group).delete()
             db_session.commit()
@@ -260,7 +261,7 @@ class GroupTable:
 
     def remove_user_from_all_groups(self, user_id: str) -> bool:
         # This method now uses the more direct get_groups_by_user_id
-        db_session = self.db if self.db else next(get_db())
+        db_session = self.db if self.db else next(get_session())
         try:
             # Get groups the user is part of, using a method that handles its own session if needed
             groups_models = self.get_groups_by_user_id(user_id=user_id) 
@@ -294,7 +295,7 @@ class GroupTable:
                 db_session.close()
 
     def add_user_to_group(self, user_id: str, group_id: str) -> bool:
-        db_session = self.db if self.db else next(get_db())
+        db_session = self.db if self.db else next(get_session())
         try:
             group_record = db_session.query(Group).filter_by(id=group_id).first()
             if not group_record:
@@ -323,7 +324,7 @@ class GroupTable:
                 db_session.close()
 
     def remove_user_from_group(self, user_id: str, group_id: str) -> bool:
-        db_session = self.db if self.db else next(get_db())
+        db_session = self.db if self.db else next(get_session())
         try:
             group_record = db_session.query(Group).filter_by(id=group_id).first()
             if not group_record:

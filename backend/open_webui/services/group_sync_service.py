@@ -10,7 +10,7 @@ from ..models.groups import Groups, GroupForm, GroupModel # Assuming GroupModel 
 # Placeholder for MCP tool usage, actual import might differ
 # from ..utils.mcp_utils import mcp_execute_sql # Or however MCP tools are accessed
 
-log = logging.getLogger(config.LOGGER_NAME)
+log = logging.getLogger(__name__) # Changed to use __name__
 
 # This is a placeholder. The actual MCP tool usage will depend on its integration.
 # For now, we'll simulate the call and its expected response structure.

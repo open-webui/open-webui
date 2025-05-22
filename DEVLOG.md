@@ -32,3 +32,16 @@
     *   在 `ldap_auth` (LDAP 登入) 函式中加入同步邏輯。
     *   在 OIDC 回呼處理 (`OAuthManager.handle_callback`) 中加入同步邏輯。
 - [ ] 測試與驗證 (待手動執行)
+
+---
+
+## 2025-05-22 (下午)
+
+### 修復
+- **修正 `backend/open_webui/models/groups.py` 中的 `NameError`**:
+    *   在檔案頂部從 `sqlalchemy.orm` 新增 `Session` 的匯入，以解決 `GroupTable` 類別中 `Session` 未定義的問題。
+- **修正 `backend/open_webui/models/groups.py` 中的 `TypeError`**:
+    *   將 `GroupTable` 類別中所有 `next(get_db())` 的實例替換為 `next(get_session())`。
+    *   更新匯入語句，從 `open_webui.internal.db` 匯入 `get_session` 而不是 `get_db`，以解決 `_GeneratorContextManager` 物件不可迭代的問題。
+- **修正 `backend/open_webui/services/group_sync_service.py` 中的 `AttributeError`**:
+    *   將 `log = logging.getLogger(config.LOGGER_NAME)` 修改為 `log = logging.getLogger(__name__)`，以使用模組自身的名稱作為記錄器名稱，避免依賴未定義的 `config.LOGGER_NAME`。
