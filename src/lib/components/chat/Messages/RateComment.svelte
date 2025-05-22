@@ -143,7 +143,7 @@
 				{#each Array.from({ length: 10 }).map((_, i) => i + 1) as rating}
 					<button
 						class="size-7 text-sm border border-gray-100 dark:border-gray-850 hover:bg-gray-50 dark:hover:bg-gray-800 transition rounded-full disabled:cursor-not-allowed disabled:text-gray-500 disabled:bg-white dark:disabled:bg-gray-900"
-						class:!bg-gray-50={detailedRating === rating}
+						class:!bg-gray-100={detailedRating === rating}
 						class:dark:!bg-gray-800={detailedRating === rating}
 						on:click={() => {
 							detailedRating = rating;
