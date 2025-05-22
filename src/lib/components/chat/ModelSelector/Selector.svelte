@@ -557,7 +557,7 @@
 											</svg>
 										</div>
 									</Tooltip>
-								{:else if item.model.owned_by === 'openai'}
+								{:else if item.model.connection_type === 'external'}
 									<Tooltip content={`${'External'}`}>
 										<div class="translate-y-[1px]">
 											<svg
