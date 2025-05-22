@@ -24,6 +24,7 @@ bcrypt==4.3.0
 
 pymongo
 redis
+rq
 boto3==1.35.53
 
 argon2-cffi==23.1.0
