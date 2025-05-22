@@ -18,9 +18,12 @@ from open_webui.models.auths import (
     UpdateProfileForm,
     UserResponse,
 )
-from open_webui.models.users import Users
+from open_webui.models.users import Users, UserModel
+from open_webui.internal.db import get_db
+from sqlalchemy.orm import Session
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
+from open_webui.services.group_sync_service import synchronize_user_groups_from_sql
 from open_webui.env import (
     WEBUI_AUTH,
     WEBUI_AUTH_TRUSTED_EMAIL_HEADER,
@@ -285,9 +288,18 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
                         500, detail="Internal error occurred during LDAP user creation."
                     )
 
-            user = Auths.authenticate_user_by_trusted_header(email)
+            user = Auths.authenticate_user_by_trusted_header(email) # This effectively gets the user model
 
             if user:
+                # Successful LDAP authentication, now synchronize groups
+                try:
+                    db_session: Session = next(get_db())
+                    await synchronize_user_groups_from_sql(user=user, db=db_session)
+                    db_session.close()
+                except Exception as e_sync:
+                    log.error(f"Group synchronization failed for LDAP user {user.email} during ldap_auth: {e_sync}", exc_info=True)
+                    # Do not re-raise, login should proceed
+
                 token = create_token(
                     data={"id": user.id},
                     expires_delta=parse_duration(
@@ -372,6 +384,17 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
     if user:
+        # Sucessful login, now synchronize groups
+        try:
+            # We need a DB session here. If signin doesn't already have one, we get it.
+            # Assuming UserModel is compatible with what synchronize_user_groups_from_sql expects
+            # The 'user' object from Auths.authenticate_user should be a UserModel instance or compatible.
+            db_session: Session = next(get_db())
+            await synchronize_user_groups_from_sql(user=user, db=db_session) # Pass the db session
+            db_session.close() # Close the session if locally obtained
+        except Exception as e_sync:
+            log.error(f"Group synchronization failed for user {user.email} during signin: {e_sync}", exc_info=True)
+            # Do not re-raise, login should proceed
 
         expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
         expires_at = None
@@ -472,9 +495,18 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
             form_data.name,
             form_data.profile_image_url,
             role,
-        )
+            )
 
         if user:
+            # Sucessful signup, now synchronize groups
+            try:
+                db_session: Session = next(get_db())
+                await synchronize_user_groups_from_sql(user=user, db=db_session)
+                db_session.close()
+            except Exception as e_sync:
+                log.error(f"Group synchronization failed for new user {user.email} during signup: {e_sync}", exc_info=True)
+                # Do not re-raise, signup should proceed
+
             expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
             expires_at = None
             if expires_delta:

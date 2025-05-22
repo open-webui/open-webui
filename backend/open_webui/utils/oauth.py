@@ -47,6 +47,10 @@ from open_webui.utils.webhook import post_webhook
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
+from open_webui.services.group_sync_service import synchronize_user_groups_from_sql
+from open_webui.internal.db import get_db
+from sqlalchemy.orm import Session
+
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["OAUTH"])
@@ -407,6 +411,15 @@ class OAuthManager:
             data={"id": user.id},
             expires_delta=parse_duration(auth_manager_config.JWT_EXPIRES_IN),
         )
+
+        # Synchronize groups from SQL before OIDC group management and before returning token
+        try:
+            db_session: Session = next(get_db())
+            await synchronize_user_groups_from_sql(user=user, db=db_session)
+            db_session.close()
+        except Exception as e_sync:
+            log.error(f"Group synchronization from SQL failed for OIDC user {user.email} during callback: {e_sync}", exc_info=True)
+            # Do not re-raise, login should proceed
 
         if auth_manager_config.ENABLE_OAUTH_GROUP_MANAGEMENT and user.role != "admin":
             self.update_user_groups(
