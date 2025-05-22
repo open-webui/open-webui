@@ -33,7 +33,6 @@ class ColBERT:
             name,
             colbert_config=ColBERTConfig(model_name=name),
         ).to(self.device)
-        pass
 
     def calculate_similarity_scores(self, query_embeddings, document_embeddings):
 
