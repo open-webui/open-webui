@@ -525,7 +525,6 @@ def remove_file_from_knowledge_by_id(
     except Exception as e:
         log.debug("This was most likely caused by bypassing embedding processing")
         log.debug(e)
-        pass
 
     try:
         # Remove the file's collection from vector database
@@ -535,7 +534,6 @@ def remove_file_from_knowledge_by_id(
     except Exception as e:
         log.debug("This was most likely caused by bypassing embedding processing")
         log.debug(e)
-        pass
 
     # Delete file from database
     Files.delete_file_by_id(form_data.file_id)
