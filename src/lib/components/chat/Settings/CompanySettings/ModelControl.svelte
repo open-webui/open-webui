@@ -8,7 +8,7 @@
 	import { onClickOutside } from '$lib/utils';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { getModelsConfig, setModelsConfig } from '$lib/apis/configs';
-	import { companyConfig, models as storeModels } from '$lib/stores';
+	import { companyConfig, mobile, models as storeModels } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	import GroupIcon from '$lib/components/icons/GroupIcon.svelte';
 	import PublicIcon from '$lib/components/icons/PublicIcon.svelte';
@@ -259,18 +259,20 @@
 		<div>
 			{#each Object.keys(organizations) as organization, idx (organization)}
 				<div class="mb-5">
-					<div class="grid grid-cols-[60%_1fr_1fr] mb-2.5">
-						<div class="text-sm text-lightGray-100 dark:text-customGray-100 flex items-end">{organization}</div>
+					<div class="grid grid-cols-[55%_15%_1fr] md:grid-cols-[60%_1fr_1fr] mb-2.5 gap-x-1">
+						<div class="text-sm text-lightGray-100 dark:text-customGray-100 flex items-end justify-start">{organization}</div>
 						{#if idx === 0}
-							<div class="px-2 text-xs text-[#8A8B8D] dark:text-customGray-300 flex items-end justify-center">
+							<div class="text-2xs md:text-xs text-[#8A8B8D] dark:text-customGray-300 flex items-end justify-center">
 								<div>{$i18n.t('Cost Multiple')}</div>
-								<Tooltip content={$i18n?.t('The Cost Multiple shows how different Models compare in price. For details, visit our pricing page.')}>
-									<div class="ml-1 cursor-pointer flex justify-center items-center w-[18px] h-[18px] rounded-full text-white dark:text-white bg-customBlue-600 dark:bg-customGray-700">
-										<InfoIcon className="size-6" />
-									</div>
-								</Tooltip>
+								{#if (!$mobile)}
+									<Tooltip content={$i18n?.t('The Cost Multiple shows how different Models compare in price. For details, visit our pricing page.')}>
+										<div class="ml-1 cursor-pointer flex justify-center items-center w-[18px] h-[18px] rounded-full text-white dark:text-white bg-customBlue-600 dark:bg-customGray-700">
+											<InfoIcon className="size-6" />
+										</div>
+									</Tooltip>
+								{/if}
 							</div>
-							<div class="text-xs text-[#8A8B8D] dark:text-customGray-300 flex items-end">{$i18n.t('Access Rights')}</div>
+							<div class="text-2xs md:text-xs text-[#8A8B8D] dark:text-customGray-300 flex items-end">{$i18n.t('Access Rights')}</div>
 						{/if}
 						
 					</div>
@@ -280,14 +282,12 @@
 								return item.toLowerCase()
 							})
 							.includes(m.name.toLowerCase())) as model (model.name)}
-						<div class="grid grid-cols-[60%_1fr_1fr] border-t last:border-b border-lightGray-400 dark:border-customGray-700">
+						<div class="grid grid-cols-[55%_15%_1fr] md:grid-cols-[60%_1fr_1fr] border-t last:border-b border-lightGray-400 dark:border-customGray-700">
 							<div class="border-l border-r border-lightGray-400 dark:border-customGray-700 py-2 px-2">
 								<div class="flex items-center mb-1">
 									<img class="w-4 h-4 rounded-full" src={getModelIcon(model.name)} alt={model.name} />
 									<div class="text-xs dark:text-white ml-2">{model.name}</div>
-									
 										<AdditionaModelInfo hoveredItem={model} />
-									
 								</div>
 								<div class="text-xs text-[#8A8B8D] dark:text-customGray-590">
 									{modelsInfo[model.name].description}

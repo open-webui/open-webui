@@ -503,7 +503,7 @@
 			<DeleteIcon className="mr-1 size-4" />
 			{$i18n.t('Delete account')}
 		</button>
-		<div class="shrink-0 w-[218px] dark:text-customGray-100/50 text-xs">
+		<div class="shrink-0 w-[180px] md:w-[218px] dark:text-customGray-100/50 text-xs">
 			{$i18n.t('This action is not reversible, so please continue with caution.')}
 		</div>
 	</div>

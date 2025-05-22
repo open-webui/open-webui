@@ -61,7 +61,7 @@
 	</div>
 	{#if showDropdown}
 		<div
-			class="min-w-[18rem] flex flex-col absolute left-0 right-0 bg-lightGray-300 border-lightGray-400 dark:bg-customGray-900 px-2 py-2 border dark:border-customGray-700 rounded-lg z-10"
+			class="min-w-[18rem] flex flex-col absolute md:left-0 right-0 bg-lightGray-300 border-lightGray-400 dark:bg-customGray-900 px-2 py-2 border dark:border-customGray-700 rounded-lg z-10"
 		>
 			<div class="flex">
 				<div

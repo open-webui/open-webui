@@ -143,7 +143,7 @@
 >
 	<div>
 		{#if plans?.length > 0}
-			<div class="grid grid-cols-3 gap-2">
+			<div class="grid md:grid-cols-3 gap-2">
 				{#each plans as plan}
 					<div class="bg-lightGray-300 dark:bg-customGray-900 rounded-lg p-5 flex flex-col items-center">
 						{#if plan.id === 'starter'}

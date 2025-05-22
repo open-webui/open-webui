@@ -148,8 +148,8 @@
 			<div class="text-xs text-lightGray-100 dark:text-customGray-300 font-medium">{$i18n.t('Group Management')}</div>
 		</div>
 	</div>
-	<div class="flex justify-between items-center mb-5">
-		<div class="flex-1 mr-2">
+	<div class="flex flex-col md:flex-row justify-between items-center mb-5">
+		<div class="w-full flex-1 md:mr-2">
 			<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 				{#if groupName}
 					<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
@@ -171,7 +171,7 @@
 			</div>
 		</div>
 		<button
-			class="bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 dark:text-customGray-200 px-4 h-12 rounded-lg transition"
+			class="w-full md:w-[25%] mt-2 md:mt-0 bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 dark:text-customGray-200 px-4 h-12 rounded-lg transition"
 			on:click={addGroupHandler}
 			type="button"
 		>
@@ -252,7 +252,7 @@
 							user_ids: [...group.user_ids?.filter(id => id !== user.id)]
 						});
                     }}>
-                        <button type="button" class="invisible group-hover:visible">
+                        <button type="button" class="md:invisible group-hover:visible">
                             <EllipsisHorizontal/>
                         </button>
                     </RemoveFromGroup>

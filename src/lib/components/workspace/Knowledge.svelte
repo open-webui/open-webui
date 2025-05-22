@@ -33,6 +33,7 @@
 	import { getGroups } from '$lib/apis/groups';
 	import { user } from '$lib/stores';
 	import MenuIcon from '../icons/MenuIcon.svelte';
+	import BackIcon from '../icons/BackIcon.svelte';
 
 	let loaded = false;
 
@@ -155,27 +156,33 @@
 		<div class="flex justify-between items-center">
 			<div class="flex items-center">
 				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
-					<button
-						id="sidebar-toggle-button"
-						class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-						on:click={() => {
-							showSidebar.set(!$showSidebar);
-						}}
-						aria-label="Toggle Sidebar"
-					>
-						<div class=" m-auto self-center">
-							{#if ($mobile)}
-								<MenuIcon/>
-							{:else}
+					{#if ($mobile)}
+						<button class="flex items-center gap-1" on:click={() => history.back()}>
+							<BackIcon />
+							<div class="flex items-center md:self-center text-base font-medium leading-none px-0.5 text-lightGray-100 dark:text-customGray-100">
+								{$i18n.t('Knowledge')}
+							</div>
+						</button>
+					{:else}
+						<button
+							id="sidebar-toggle-button"
+							class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							on:click={() => {
+								showSidebar.set(!$showSidebar);
+							}}
+							aria-label="Toggle Sidebar"
+						>
+							<div class=" m-auto self-center">
 								<ShowSidebarIcon />
-							{/if}
-							
-						</div>
-					</button>
+							</div>
+						</button>
+					{/if}
 				</div>
-				<div class="flex items-center md:self-center text-lightGray-100 dark:bg-customGray-100 text-base font-medium leading-none px-0.5">
-					{$i18n.t('Knowledge')}
-				</div>
+				{#if (!$mobile)}
+					<div class="flex items-center md:self-center text-lightGray-100 dark:bg-customGray-100 text-base font-medium leading-none px-0.5">
+						{$i18n.t('Knowledge')}
+					</div>
+				{/if}
 			</div>
 			<div class="flex">
 				<div

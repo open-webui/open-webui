@@ -251,7 +251,7 @@
 
 <Modal size="md-plus" bind:show blockBackdropClick={true} className="dark:bg-customGray-800 rounded-2xl" containerClassName="bg-lightGray-250/50 dark:bg-[#1D1A1A]/50 backdrop-blur-[7.44px]">
 	<div class="text-lightGray-100 dark:text-customGray-100 bg-lightGray-550 dark:bg-customGray-800 rounded-xl min-h-[calc(100dvh-24px)] md:h-auto">
-		<div class="px-7">
+		<div class="px-4 md:px-7">
 			<div class=" flex justify-between dark:text-white pt-5 pb-4 border-b dark:border-customGray-700">
 				{#if selectedTab && $mobile}
 					<button class="capitalize flex items-center" on:click={() => selectedTab = null}>
@@ -284,17 +284,17 @@
 			</div>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full pl-4 pr-4 md:pr-7 md:space-x-4">
+		<div class="flex flex-col md:flex-row w-full pl-4 pr-4 md:pl-4 md:pr-7 md:space-x-4">
 			{#if selectedTab === null || !$mobile}
 				<div
 					id="settings-tabs-container"
-					class="rounded-bl-lg pl-4 pt-5 pr-2 tabs flex flex-col dark:bg-customGray-900 gap-2.5 md:gap-1 w-[252px] dark:text-gray-200 text-sm font-medium text-left mb-1 md:mb-0"
+					class="rounded-bl-lg md:pl-4 md:pt-5 pr-2 tabs flex flex-col dark:bg-customGray-900 md:gap-1 w-full md:w-[252px] dark:text-gray-200 text-sm font-medium text-left mb-1 md:mb-0"
 				>
 					{#if visibleTabs.length > 0}
 						{#each visibleTabs as tabId (tabId)}
 						{#if tabId === 'general-settings'}
 						<button
-							class="md:px-3 py-2.5 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 							'general-settings'
 								? 'bg-lightGray-700 dark:bg-customGray-800'
 								: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
@@ -303,7 +303,7 @@
 								updateTabParam(selectedTab);
 							}}
 						>
-							<div class="flex items-center mb-1">
+							<div class="flex items-center md:mb-1">
 								<div class=" self-center mr-2">
 									<ProfileIcon/>
 								</div>
@@ -312,7 +312,7 @@
 						</button>
 						{:else if tabId === 'user-management'}
 						<button
-							class="md:px-3 py-2.5 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 							'user-management'
 								? 'bg-lightGray-700 dark:bg-customGray-800'
 								: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
@@ -321,7 +321,7 @@
 								updateTabParam(selectedTab);
 							}}
 						>
-							<div class="flex items-center mb-1">
+							<div class="flex items-center md:mb-1">
 								<div class=" self-center mr-2">
 									<GroupIcon/>
 								</div>
@@ -330,7 +330,7 @@
 						</button>
 						{:else if tabId === 'model-control'}
 						<button
-							class="md:px-3 py-2.5 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 							'model-control'
 								? 'bg-lightGray-700 dark:bg-customGray-800'
 								: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
@@ -339,7 +339,7 @@
 								updateTabParam(selectedTab);
 							}}
 						>
-							<div class="flex items-center mb-1">
+							<div class="flex items-center md:mb-1">
 								<div class=" self-center mr-2">
 									<ModelControlIcon/>
 								</div>
@@ -348,7 +348,7 @@
 						</button>
 						{:else if tabId === 'analytics'}
 						<button
-							class="md:px-3 py-2.5 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 							'analytics'
 								? 'bg-lightGray-700 dark:bg-customGray-800'
 								: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
@@ -357,7 +357,7 @@
 								updateTabParam(selectedTab);
 							}}
 						>
-							<div class="flex items-center mb-1">
+							<div class="flex items-center md:mb-1">
 								<div class=" self-center mr-2">
 									<AnalyticsIcon/>
 								</div>
@@ -366,7 +366,7 @@
 						</button>
 						{:else if tabId === 'billing'}
 						<button
-							class="md:px-3 py-2.5 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
+							class="md:px-3 py-5 md:py-2.5 border-b md:border-b-0 border-lightGray-400 rounded-md flex-1 md:flex-none text-left transition {selectedTab ===
 							'billing'
 								? 'bg-lightGray-700 dark:bg-customGray-800'
 								: ' text-lightGray-100 dark:text-gray-600 hover:bg-lightGray-700 dark:hover:text-white'}"
@@ -375,7 +375,7 @@
 								updateTabParam(selectedTab);
 							}}
 						>
-							<div class="flex items-center mb-1">
+							<div class="flex items-center md:mb-1">
 								<div class=" self-center mr-2">
 									<BillingIcon/>
 								</div>

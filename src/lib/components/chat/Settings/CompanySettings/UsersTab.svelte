@@ -3,6 +3,7 @@
 	import { onClickOutside } from '$lib/utils';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import { updateUserRole, getUsers, deleteUserById } from '$lib/apis/users';
+	import { mobile } from '$lib/stores';
 	import Pagination from '$lib/components/common/Pagination.svelte';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
@@ -292,10 +293,10 @@
 				{/if}
 			</div>
 		</div>
-		<div class="flex w-full items-start justify-between">
+		<div class="flex flex-col md:flex-row w-full items-start justify-between">
 			<GroupSelect bind:selected={selectedGroups} {groups} placeholder="Add group..." />
 			<button
-				class="ml-2.5 whitespace-nowrap bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 dark:text-customGray-200 py-2.5 px-4 h-12 rounded-lg transition"
+				class="md:ml-2.5 w-full md:w-auto mt-2 md:mt-0 whitespace-nowrap bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 dark:text-customGray-200 py-2.5 px-4 h-12 rounded-lg transition"
 				on:click={() => {
 					inviteUsersHandler();
 				}}
@@ -307,7 +308,7 @@
 	</form>
 	<div class="flex justify-end mt-5 mb-1">
 		<div
-			class="flex w-[12rem] border dark:border-customGray-700 rounded-lg dark:bg-customGray-900 dark:text-customGray-200"
+			class="flex w-full md:w-[12rem] border dark:border-customGray-700 rounded-lg dark:bg-customGray-900 dark:text-customGray-200"
 		>
 			<div class=" self-center ml-4 mr-2">
 				<svg
@@ -341,23 +342,25 @@
 	</div>
 
 	{#each filteredUsers as user, userIdx (user.id)}
-		<div class="grid grid-cols-[244px_110px_100px_26px] gap-x-2 mb-2 group cursor-pointer">
-			<div class="flex items-center">
-				<img
-					class=" rounded-full w-3 h-3 object-cover mr-2.5"
-					src={user.profile_image_url.startsWith(WEBUI_BASE_URL) ||
-					user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
-					user.profile_image_url.startsWith('data:')
-						? user.profile_image_url
-						: `/user.png`}
-					alt="user"
-				/>
-				{#if user?.first_name !== 'INVITED'}
-					<div class="text-xs dark:text-customGray-100 mr-1 whitespace-nowrap">
-						{user.first_name}
-						{user.last_name}
-					</div>
-				{/if}
+		<div class="grid grid-cols-[1fr_96px_50px_20px] md:grid-cols-[244px_110px_100px_26px] gap-x-2 mb-2 group cursor-pointer">
+			<div class="flex md:items-center flex-col md:flex-row">
+				<div class="flex items-center">
+					<img
+						class=" rounded-full w-3 h-3 object-cover md:mr-2.5"
+						src={user.profile_image_url.startsWith(WEBUI_BASE_URL) ||
+						user.profile_image_url.startsWith('https://www.gravatar.com/avatar/') ||
+						user.profile_image_url.startsWith('data:')
+							? user.profile_image_url
+							: `/user.png`}
+						alt="user"
+					/>
+					{#if user?.first_name !== 'INVITED'}
+						<div class="text-xs dark:text-customGray-100 mr-1 whitespace-nowrap">
+							{user.first_name}
+							{user.last_name}
+						</div>
+					{/if}
+				</div>
 				<Tooltip
 					content={user.email}
 					className=" w-fit overflow-hidden"
@@ -369,7 +372,7 @@
 				<div class="relative flex items-start w-fit">
 					<button
 						type="button"
-						class="px-2 py-[3px] text-xs rounded-lg {user.role === 'user'
+						class="px-2 py-[3px] text-2xs md:text-xs rounded-lg {user.role === 'user'
 							? 'bg-[#99C3A3] dark:bg-[#024D15] text-[#1D7732] dark:text-[#0F8C18] font-medium'
 							: 'bg-[#A99EC2] text-[#5D4497] font-medium dark:bg-[#33176E]  dark:text-[#7147CD]'}"
 						on:click={() => (openDropdownIdx = openDropdownIdx === userIdx ? null : userIdx)}
@@ -409,31 +412,35 @@
 				</div>
 				<ChevronDown className="size-2 ml-[3px]" />
 			</div>
-			<div>
+			<div class="flex items-center">
 				{#if user?.first_name === 'INVITED'}
 					<div
-						class="self-center rounded-[9px] text-xs px-2 py-[3px] w-fit font-medium whitespace-nowrap bg-[#B4C1DB] dark:bg-[#113272] text-[#4169B8] dark:text-[#3F70CF]"
+						class="self-center rounded-[9px] text-2xs md:text-xs px-2 py-[3px] w-fit font-medium whitespace-nowrap bg-[#B4C1DB] dark:bg-[#113272] text-[#4169B8] dark:text-[#3F70CF]"
 					>
-						Invite pending
+						{#if ($mobile)}
+							{$i18n.t('Pending')}
+						{:else}
+							{$i18n.t('Invite pending')}
+						{/if}
 					</div>
 				{/if}
 			</div>
-				<div class=" h-4">
-					<InviteMenu {user} {getUsersHandler} {getSubscription}
-					inviteCompleted={user?.first_name !== 'INVITED'}
-					on:deleteUser={() => {
-						showDeleteConfirm = true;
-						userToDelete = user;
-					}}
+			<div class="flex items-center">
+				<InviteMenu {user} {getUsersHandler} {getSubscription}
+				inviteCompleted={user?.first_name !== 'INVITED'}
+				on:deleteUser={() => {
+					showDeleteConfirm = true;
+					userToDelete = user;
+				}}
+				>
+					<button
+						type="button"
+						class="dark:text-white flex justify-between items-center rounded-md cursor-pointer md:invisible group-hover:visible"
 					>
-						<button
-							type="button"
-							class="dark:text-white flex justify-between items-center rounded-md cursor-pointer invisible group-hover:visible"
-						>
-							<EllipsisHorizontal className="size-5" />
-						</button>
-					</InviteMenu>
-				</div>
+						<EllipsisHorizontal className="size-5" />
+					</button>
+				</InviteMenu>
+			</div>
 		</div>
 	{/each}
 </div>

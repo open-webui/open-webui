@@ -58,7 +58,7 @@
         }}
 	>
         {#if selected?.length > 0}
-        <div class="absolute top-1 text-xs text-lightGray-100 dark:text-customGray-100/50">{$i18n.t('Invite in a group')}</div>
+        <div class="absolute top-1 text-xs text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('Invite in a group')}</div>
         {/if}
         {#if emptyInputPlaceholderVisible}
         <div class="flex items-center absolute justify-between pr-2.5 w-[calc(100%-10px)] bg-lightGray-300 dark:bg-customGray-900">
@@ -107,13 +107,13 @@
 
 	{#if showDropdown && (available?.length > 0 || input)}
 		<div
-			class="max-h-60 overflow-y-auto absolute left-0 right-0 -mt-1 bg-white dark:bg-customGray-900 px-1 py-2 border-l border-b border-r border-gray-300 dark:border-customGray-700 rounded-b-lg shadow z-10"
+			class="max-h-60 overflow-y-auto absolute left-0 right-0 -mt-1 bg-lightGray-300 dark:bg-customGray-900 px-1 py-2 border-l border-b border-r border-lightGray-400 dark:border-customGray-700 rounded-b-lg z-10"
 		>
-        <hr class="border-t border-customGray-700 mb-2"/>
+        <hr class="border-t border-lightGray-400 md:border-customGray-700 mb-2"/>
         <div class="px-3">
 			{#each available as group}
 				<div
-					class="px-2 py-1 dark:bg-customGray-800 rounded-lg text-sm w-fit cursor-pointer mb-2 text-customGray-100"
+					class="px-2 py-1 bg-lightGray-700 dark:bg-customGray-800 rounded-lg text-sm w-fit cursor-pointer mb-2 text-lightGray-100 dark:text-customGray-100"
 					on:click={() => addGroup(group.name, group?.id)}
 				>
 					{group.name}

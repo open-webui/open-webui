@@ -118,7 +118,7 @@
 				<div class="text-xs text-lightGray-100 dark:text-customGray-300 font-medium">{$i18n.t('Key Summary')}</div>
 			</div>
 		</div>
-		<div class="grid grid-cols-4 gap-[6px]">
+		<div class="grid grid-cols-2 md:grid-cols-4 gap-[6px]">
 			<div class="rounded-2xl bg-lightGray-300 dark:bg-customGray-900 pt-4 pb-2 flex flex-col items-center">
 				<div class="text-2xl text-lightGray-100 dark:text-customGray-100 mb-2.5">
 					{analytics?.totalUsers?.total_users}

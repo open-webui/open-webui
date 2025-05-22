@@ -105,7 +105,7 @@
 						<CloseIcon />
 					</button>
 				</div>
-				<div class="min-h-[10rem]">
+				<div class="min-h-[10rem] overflow-y-scroll pb-4 md:pb-0 h-[calc(100dvh-80px)] md:h-auto md:overflow-y-visible">
 					<slot/>
 				</div>
 			</div>

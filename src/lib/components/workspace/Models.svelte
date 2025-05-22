@@ -49,6 +49,7 @@
 	import dayjs from 'dayjs';
 	import MenuIcon from '../icons/MenuIcon.svelte';
 	import FilterDropdown from './Models/FilterDropdown.svelte';
+	import BackIcon from '../icons/BackIcon.svelte';
 
 	let shiftKey = false;
 
@@ -306,28 +307,33 @@
 		<div class="flex justify-between items-center">
 			<div class="flex items-center">
 				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
-					<button
-						id="sidebar-toggle-button"
-						class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-						on:click={() => {
-							showSidebar.set(!$showSidebar);
-						}}
-						aria-label="Toggle Sidebar"
-					>
-						<div class=" m-auto self-center">
-							{#if ($mobile)}
-								<MenuIcon/>
-							{:else}
+					{#if ($mobile)}
+						<button class="flex items-center gap-1" on:click={() => history.back()}>
+							<BackIcon />
+							<div class="flex items-center md:self-center text-base font-medium leading-none px-0.5 text-lightGray-100 dark:text-customGray-100">
+								{$i18n.t('Assistants')}
+							</div>
+						</button>
+					{:else}
+						<button
+							id="sidebar-toggle-button"
+							class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							on:click={() => {
+								showSidebar.set(!$showSidebar);
+							}}
+							aria-label="Toggle Sidebar"
+						>
+							<div class=" m-auto self-center">
 								<ShowSidebarIcon />
-							{/if}
-							
-						</div>
-					</button>
+							</div>
+						</button>
+					{/if}
 				</div>
-				<div class="flex items-center md:self-center text-base font-medium leading-none px-0.5 text-lightGray-100 dark:text-customGray-100">
-					{$i18n.t('Assistants')}
-					<!-- <div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" /> -->
-				</div>
+				{#if (!$mobile)}
+					<div class="flex items-center md:self-center text-base font-medium leading-none px-0.5 text-lightGray-100 dark:text-customGray-100">
+						{$i18n.t('Assistants')}
+					</div>
+				{/if}
 			</div>
 			<div class="flex">
 				<div
