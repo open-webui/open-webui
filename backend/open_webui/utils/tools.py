@@ -160,7 +160,7 @@ def get_tools(
                 # TODO: Fix hack for OpenAI API
                 # Some times breaks OpenAI but others don't. Leaving the comment
                 for val in spec.get("parameters", {}).get("properties", {}).values():
-                    if val["type"] == "str":
+                    if val.get("type") == "str":
                         val["type"] = "string"
 
                 # Remove internal reserved parameters (e.g. __id__, __user__)
