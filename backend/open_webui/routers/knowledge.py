@@ -630,7 +630,6 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:
         log.debug(e)
-        pass
     result = Knowledges.delete_knowledge_by_id(id=id)
     return result
 
@@ -663,7 +662,6 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         VECTOR_DB_CLIENT.delete_collection(collection_name=id)
     except Exception as e:
         log.debug(e)
-        pass
 
     knowledge = Knowledges.update_knowledge_data_by_id(id=id, data={"file_ids": []})
 
