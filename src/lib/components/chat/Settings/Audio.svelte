@@ -35,7 +35,6 @@
 
 	// Audio speed control
 	let playbackRate = 1;
-	const speedOptions = [2, 1.75, 1.5, 1.25, 1, 0.75, 0.5];
 
 	const getVoices = async () => {
 		if (TTSEngine === 'browser-kokoro') {
@@ -270,15 +269,15 @@
 			<div class=" py-0.5 flex w-full justify-between">
 				<div class=" self-center text-xs font-medium">{$i18n.t('Speech Playback Speed')}</div>
 
-				<div class="flex items-center relative">
-					<select
-						class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden text-right"
+				<div class="flex items-center relative text-xs">
+					<input
+						type="number"
+						min="0"
+						step="0.01"
 						bind:value={playbackRate}
-					>
-						{#each speedOptions as option}
-							<option value={option} selected={playbackRate === option}>{option}x</option>
-						{/each}
-					</select>
+						class=" text-sm text-right bg-transparent dark:text-gray-300 outline-hidden"
+					/>
+					x
 				</div>
 			</div>
 		</div>
