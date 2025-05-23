@@ -349,7 +349,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_RAG_HYBRID_SEARCH": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
         "TOP_K_RERANKER": request.app.state.config.TOP_K_RERANKER,
         "RELEVANCE_THRESHOLD": request.app.state.config.RELEVANCE_THRESHOLD,
-        "BM25_WEIGHT": request.app.state.config.BM25_WEIGHT,
+        "HYBRID_BM25_WEIGHT": request.app.state.config.HYBRID_BM25_WEIGHT,
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
@@ -493,7 +493,7 @@ class ConfigForm(BaseModel):
     ENABLE_RAG_HYBRID_SEARCH: Optional[bool] = None
     TOP_K_RERANKER: Optional[int] = None
     RELEVANCE_THRESHOLD: Optional[float] = None
-    BM25_WEIGHT: Optional[float] = None
+    HYBRID_BM25_WEIGHT: Optional[float] = None
 
     # Content extraction settings
     CONTENT_EXTRACTION_ENGINE: Optional[str] = None
@@ -580,10 +580,10 @@ async def update_rag_config(
         if form_data.RELEVANCE_THRESHOLD is not None
         else request.app.state.config.RELEVANCE_THRESHOLD
     )
-    request.app.state.config.BM25_WEIGHT = (
-        form_data.BM25_WEIGHT
-        if form_data.BM25_WEIGHT is not None
-        else request.app.state.config.BM25_WEIGHT
+    request.app.state.config.HYBRID_BM25_WEIGHT = (
+        form_data.HYBRID_BM25_WEIGHT
+        if form_data.HYBRID_BM25_WEIGHT is not None
+        else request.app.state.config.HYBRID_BM25_WEIGHT
     )
 
     # Content extraction settings
@@ -844,7 +844,7 @@ async def update_rag_config(
         "ENABLE_RAG_HYBRID_SEARCH": request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
         "TOP_K_RERANKER": request.app.state.config.TOP_K_RERANKER,
         "RELEVANCE_THRESHOLD": request.app.state.config.RELEVANCE_THRESHOLD,
-        "BM25_WEIGHT": request.app.state.config.BM25_WEIGHT,
+        "HYBRID_BM25_WEIGHT": request.app.state.config.HYBRID_BM25_WEIGHT,
         # Content extraction settings
         "CONTENT_EXTRACTION_ENGINE": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
         "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
@@ -1782,10 +1782,10 @@ def query_doc_handler(
                     if form_data.r
                     else request.app.state.config.RELEVANCE_THRESHOLD
                 ),
-                bm25_weight=(
-                    form_data.bm25_weight
-                    if form_data.bm25_weight
-                    else request.app.state.config.BM25_WEIGHT
+                hybrid_bm25_weight=(
+                    form_data.hybrid_bm25_weight
+                    if form_data.hybrid_bm25_weight
+                    else request.app.state.config.HYBRID_BM25_WEIGHT
                 ),
                 user=user,
             )
@@ -1838,10 +1838,10 @@ def query_collection_handler(
                     if form_data.r
                     else request.app.state.config.RELEVANCE_THRESHOLD
                 ),
-                bm25_weight=(
-                    form_data.bm25_weight
-                    if form_data.bm25_weight
-                    else request.app.state.config.BM25_WEIGHT
+                hybrid_bm25_weight=(
+                    form_data.hybrid_bm25_weight
+                    if form_data.hybrid_bm25_weight
+                    else request.app.state.config.HYBRID_BM25_WEIGHT
                 ),
             )
         else:

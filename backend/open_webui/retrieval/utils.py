@@ -116,7 +116,7 @@ def query_doc_with_hybrid_search(
     reranking_function,
     k_reranker: int,
     r: float,
-    bm25_weight: float,
+    hybrid_bm25_weight: float,
 ) -> dict:
     try:
         log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
@@ -132,18 +132,18 @@ def query_doc_with_hybrid_search(
             top_k=k,
         )
 
-        if bm25_weight <= 0:
+        if hybrid_bm25_weight <= 0:
             ensemble_retriever = EnsembleRetriever(
                 retrievers=[vector_search_retriever], weights=[1.]
             )
-        elif bm25_weight >= 1:
+        elif hybrid_bm25_weight >= 1:
             ensemble_retriever = EnsembleRetriever(
                 retrievers=[bm25_retriever], weights=[1.]
             )
         else:
             ensemble_retriever = EnsembleRetriever(
                 retrievers=[bm25_retriever, vector_search_retriever],
-                weights=[bm25_weight, 1. - bm25_weight]
+                weights=[hybrid_bm25_weight, 1. - hybrid_bm25_weight]
             )
 
         compressor = RerankCompressor(
@@ -325,7 +325,7 @@ def query_collection_with_hybrid_search(
     reranking_function,
     k_reranker: int,
     r: float,
-    bm25_weight: float,
+    hybrid_bm25_weight: float,
 ) -> dict:
     results = []
     error = False
@@ -359,7 +359,7 @@ def query_collection_with_hybrid_search(
                 reranking_function=reranking_function,
                 k_reranker=k_reranker,
                 r=r,
-                bm25_weight=bm25_weight,
+                hybrid_bm25_weight=hybrid_bm25_weight,
             )
             return result, None
         except Exception as e:
@@ -447,7 +447,7 @@ def get_sources_from_files(
     reranking_function,
     k_reranker,
     r,
-    bm25_weight,
+    hybrid_bm25_weight,
     hybrid_search,
     full_context=False,
 ):
@@ -565,7 +565,7 @@ def get_sources_from_files(
                                     reranking_function=reranking_function,
                                     k_reranker=k_reranker,
                                     r=r,
-                                    bm25_weight=bm25_weight,
+                                    hybrid_bm25_weight=hybrid_bm25_weight,
                                 )
                             except Exception as e:
                                 log.debug(
