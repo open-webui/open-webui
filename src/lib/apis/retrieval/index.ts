@@ -1,14 +1,17 @@
 import { RETRIEVAL_API_BASE_URL } from '$lib/constants';
 
-export const getRAGConfig = async (token: string) => {
+export const getRAGConfig = async (token: string,  collectionForm?: CollectionForm) => {
 	let error = null;
 
 	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/config`, {
-		method: 'GET',
+		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
-		}
+		},
+		body: JSON.stringify(
+			collectionForm ? {collectionForm: collectionForm} : {}
+		)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -57,6 +60,7 @@ type RAGConfigForm = {
 	content_extraction?: ContentExtractConfigForm;
 	web_loader_ssl_verification?: boolean;
 	youtube?: YoutubeConfigForm;
+	knowledge_id?: string;
 };
 
 export const updateRAGConfig = async (token: string, payload: RAGConfigForm) => {
@@ -152,15 +156,18 @@ export const updateQuerySettings = async (token: string, settings: QuerySettings
 	return res;
 };
 
-export const getEmbeddingConfig = async (token: string) => {
+export const getEmbeddingConfig = async (token: string, collectionForm?: CollectionForm) => {
 	let error = null;
 
 	const res = await fetch(`${RETRIEVAL_API_BASE_URL}/embedding`, {
-		method: 'GET',
+		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
-		}
+		},
+		body: JSON.stringify(
+			collectionForm ? {collectionForm: collectionForm} : {}
+		)
 	})
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -189,6 +196,7 @@ type EmbeddingModelUpdateForm = {
 	embedding_engine: string;
 	embedding_model: string;
 	embedding_batch_size?: number;
+	knowledge_id?: string;
 };
 
 export const updateEmbeddingConfig = async (token: string, payload: EmbeddingModelUpdateForm) => {
