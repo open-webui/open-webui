@@ -774,7 +774,9 @@
 
 							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
 								<div class="mb-2.5 flex w-full justify-between">
-									<div class="self-center text-xs font-medium">{$i18n.t('Weight of BM25 Retrieval')}</div>
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('Weight of BM25 Retrieval')}
+									</div>
 									<div class="flex items-center relative">
 										<input
 											class="flex-1 w-full text-sm bg-transparent outline-hidden"
