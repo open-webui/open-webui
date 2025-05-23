@@ -43,6 +43,7 @@ from open_webui.routers.pipelines import (
     process_pipeline_outlet_filter,
 )
 from open_webui.routers.files import upload_file
+from open_webui.routers.memories import query_memory, QueryMemoryForm
 
 from open_webui.utils.webhook import post_webhook
 
@@ -253,7 +254,12 @@ async def chat_completion_tools_handler(
                                     "name": (f"TOOL:{tool_name}"),
                                 },
                                 "document": [tool_result],
-                                "metadata": [{"source": (f"TOOL:{tool_name}")}],
+                                "metadata": [
+                                    {
+                                        "source": (f"TOOL:{tool_name}"),
+                                        "parameters": tool_function_params,
+                                    }
+                                ],
                             }
                         )
                     else:
@@ -290,6 +296,38 @@ async def chat_completion_tools_handler(
         del body["metadata"]["files"]
 
     return body, {"sources": sources}
+
+
+async def chat_memory_handler(
+    request: Request, form_data: dict, extra_params: dict, user
+):
+    results = await query_memory(
+        request,
+        QueryMemoryForm(
+            **{"content": get_last_user_message(form_data["messages"]), "k": 3}
+        ),
+        user,
+    )
+
+    user_context = ""
+    if results and hasattr(results, "documents"):
+        if results.documents and len(results.documents) > 0:
+            for doc_idx, doc in enumerate(results.documents[0]):
+                created_at_date = "Unknown Date"
+
+                if results.metadatas[0][doc_idx].get("created_at"):
+                    created_at_timestamp = results.metadatas[0][doc_idx]["created_at"]
+                    created_at_date = time.strftime(
+                        "%Y-%m-%d", time.localtime(created_at_timestamp)
+                    )
+
+                user_context += f"{doc_idx + 1}. [{created_at_date}] {doc}\n"
+
+    form_data["messages"] = add_or_update_system_message(
+        f"User Context:\n{user_context}\n", form_data["messages"], append=True
+    )
+
+    return form_data
 
 
 async def chat_web_search_handler(
@@ -342,6 +380,11 @@ async def chat_web_search_handler(
         log.exception(e)
         queries = [user_message]
 
+    # Check if generated queries are empty
+    if len(queries) == 1 and queries[0].strip() == "":
+        queries = [user_message]
+
+    # Check if queries are not found
     if len(queries) == 0:
         await event_emitter(
             {
@@ -653,7 +696,7 @@ def apply_params_to_form_data(form_data, model):
                     convert_logit_bias_input_to_json(params["logit_bias"])
                 )
             except Exception as e:
-                print(f"Error parsing logit_bias: {e}")
+                log.exception(f"Error parsing logit_bias: {e}")
 
     return form_data
 
@@ -751,9 +794,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         raise e
 
     try:
+
         filter_functions = [
             Functions.get_function_by_id(filter_id)
-            for filter_id in get_sorted_filter_ids(model)
+            for filter_id in get_sorted_filter_ids(
+                request, model, metadata.get("filter_ids", [])
+            )
         ]
 
         form_data, flags = await process_filter_functions(
@@ -768,6 +814,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     features = form_data.pop("features", None)
     if features:
+        if "memory" in features and features["memory"]:
+            form_data = await chat_memory_handler(
+                request, form_data, extra_params, user
+            )
+
         if "web_search" in features and features["web_search"]:
             form_data = await chat_web_search_handler(
                 request, form_data, extra_params, user
@@ -870,6 +921,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 for doc_context, doc_meta in zip(
                     source["document"], source["metadata"]
                 ):
+                    source_name = source.get("source", {}).get("name", None)
                     citation_id = (
                         doc_meta.get("source", None)
                         or source.get("source", {}).get("id", None)
@@ -877,7 +929,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     )
                     if citation_id not in citation_idx:
                         citation_idx[citation_id] = len(citation_idx) + 1
-                    context_string += f'<source id="{citation_idx[citation_id]}">{doc_context}</source>\n'
+                    context_string += (
+                        f'<source id="{citation_idx[citation_id]}"'
+                        + (f' name="{source_name}"' if source_name else "")
+                        + f">{doc_context}</source>\n"
+                    )
 
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])
@@ -944,21 +1000,36 @@ async def process_chat_response(
         message = message_map.get(metadata["message_id"]) if message_map else None
 
         if message:
-            messages = get_message_list(message_map, message.get("id"))
+            message_list = get_message_list(message_map, message.get("id"))
 
-            # Remove reasoning details and files from the messages.
+            # Remove details tags and files from the messages.
             # as get_message_list creates a new list, it does not affect
             # the original messages outside of this handler
-            for message in messages:
-                message["content"] = re.sub(
-                    r"<details\s+type=\"reasoning\"[^>]*>.*?<\/details>",
-                    "",
-                    message["content"],
-                    flags=re.S,
-                ).strip()
 
-                if message.get("files"):
-                    message["files"] = []
+            messages = []
+            for message in message_list:
+                content = message.get("content", "")
+                if isinstance(content, list):
+                    for item in content:
+                        if item.get("type") == "text":
+                            content = item["text"]
+                            break
+
+                if isinstance(content, str):
+                    content = re.sub(
+                        r"<details\b[^>]*>.*?<\/details>|!\[.*?\]\(.*?\)",
+                        "",
+                        content,
+                        flags=re.S | re.I,
+                    ).strip()
+
+                messages.append(
+                    {
+                        **message,
+                        "role": message["role"],
+                        "content": content,
+                    }
+                )
 
             if tasks and messages:
                 if TASKS.TITLE_GENERATION in tasks:
@@ -1171,7 +1242,9 @@ async def process_chat_response(
     }
     filter_functions = [
         Functions.get_function_by_id(filter_id)
-        for filter_id in get_sorted_filter_ids(model)
+        for filter_id in get_sorted_filter_ids(
+            request, model, metadata.get("filter_ids", [])
+        )
     ]
 
     # Streaming response
