@@ -427,6 +427,7 @@ async def chat_web_search_handler(
                             "name": ", ".join(queries),
                             "type": "web_search",
                             "urls": results["filenames"],
+                            "queries": queries,
                         }
                     )
             elif results.get("docs"):
@@ -438,6 +439,7 @@ async def chat_web_search_handler(
                         "name": ", ".join(queries),
                         "type": "web_search",
                         "urls": results["filenames"],
+                        "queries": queries,
                     }
                 )
 
