@@ -94,18 +94,7 @@ export const transcribeAudio = async (token: string, file: File) => {
 	return res;
 };
 
-export const synthesizeStreamingSpeech = async (
-	text: string = '',
-) => {
-	const response = await fetch('http://localhost:8002/tts?text=' + encodeURIComponent(text));
-
-	if (!response.ok || !response.body) {
-		console.log('!!response not ok')
-		return
-	} 
-	
-	const reader = response.body.getReader();
-
+export const streamAudio = async (reader: any) => {		
 	const ctx = new AudioContext({sampleRate: 24000}) 
 
 	const queue: any[] = []
@@ -143,8 +132,24 @@ export const synthesizeStreamingSpeech = async (
 		queue.push(value.buffer);
 		if (!isPlaying) playNext()
 	}
+}
+
+export const synthesizeStreamingSpeech = async (
+	text: string = '',
+) => {
+	const response = await fetch('http://localhost:8002/tts?text=' + encodeURIComponent(text));
+
+	if (!response.ok || !response.body) {
+		console.log('!!response not ok')
+		return
+	} 
+	
+	const reader = response.body.getReader();
+
+	
 	
 	console.log('!!returning reader')
+
 	return reader
 }
 
