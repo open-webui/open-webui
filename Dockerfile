@@ -6,7 +6,7 @@ ARG USE_OLLAMA=false
 # Tested with cu117 for CUDA 11 and cu121 for CUDA 12 (default)
 ARG USE_CUDA_VER=cu121
 # any sentence transformer model; models to use can be found at https://huggingface.co/models?library=sentence-transformers
-# Leaderboard: https://huggingface.co/spaces/mteb/leaderboard 
+# Leaderboard: https://huggingface.co/spaces/mteb/leaderboard
 # for better performance and multilangauge support use "intfloat/multilingual-e5-large" (~2.5GB) or "intfloat/multilingual-e5-base" (~1.5GB)
 # IMPORTANT: If you change the embedding model (sentence-transformers/all-MiniLM-L6-v2) and vice versa, you aren't able to use RAG Chat with your previous documents loaded in the WebUI! You need to re-embed them.
 ARG USE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
@@ -28,14 +28,9 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 COPY scripts ./scripts/
-# Create the install-dsfr.sh script directly in the container
-RUN echo '#!/bin/sh\n\n# Copy DSFR files to static\nmkdir -p static/utility\ncp -R \\\n  node_modules/@gouvfr/dsfr/dist/dsfr.min.css \\\n  node_modules/@gouvfr/dsfr/dist/dsfr.module.min.js \\\n  node_modules/@gouvfr/dsfr/dist/dsfr.module.min.js.map \\\n  node_modules/@gouvfr/dsfr/dist/dsfr.nomodule.min.js \\\n  node_modules/@gouvfr/dsfr/dist/dsfr.nomodule.min.js.map \\\n  node_modules/@gouvfr/dsfr/dist/favicon \\\n  node_modules/@gouvfr/dsfr/dist/fonts \\\n  node_modules/@gouvfr/dsfr/dist/icons \\\n  static/\ncp -R \\\n  node_modules/@gouvfr/dsfr/dist/utility/utility.min.css \\\n  static/utility/' > ./scripts/install-dsfr.sh
-RUN chmod +x ./scripts/install-dsfr.sh
 # Create static directory in advance
 RUN mkdir -p static/utility
-RUN rm -f package-lock.json && npm install --ignore-scripts --unsafe-perm && npm cache clean --force
-# Run DSFR install script manually
-RUN sh ./scripts/install-dsfr.sh
+RUN npm ci --unsafe-perm && npm cache clean --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
