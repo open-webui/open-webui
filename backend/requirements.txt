@@ -60,6 +60,7 @@ accelerate
 colbert-ai==0.2.21
 einops==0.8.1
 
+
 ftfy==6.2.3
 pypdf==4.3.1
 fpdf2==2.8.2
@@ -79,13 +80,6 @@ psutil
 sentencepiece
 soundfile==0.13.1
 azure-ai-documentintelligence==1.0.0
-
-# NEW ADDITIONS FOR BETTER DOCUMENT PROCESSING
-beautifulsoup4==4.12.3
-python-magic==0.4.27
-filetype==1.2.0
-python-docx==1.1.2
-langchain-text-splitters==0.3.2
 
 pillow==11.1.0
 opencv-python-headless==4.11.0.86
@@ -124,6 +118,7 @@ google-cloud-storage==2.19.0
 azure-identity==1.21.0
 azure-storage-blob==12.24.1
 
+
 ## LDAP
 ldap3==2.9.1
 
@@ -147,3 +142,5 @@ opentelemetry-instrumentation-httpx==0.53b1
 opentelemetry-instrumentation-aiohttp-client==0.53b1
 
 ## PVBLIC Foundation
+beautifulsoup4==4.12.3
+langchain-text-splitters==0.3.2
