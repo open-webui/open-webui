@@ -23,7 +23,7 @@
 	let filteredPrompts = [];
 
 	$: {
-		if (command && command.length > 1) {
+		if (command && command.length > 0) {
 			const commandName = command.substring(1).toLowerCase();
 			const cleanedCommandName = commandName.replace(/<\/?p>/gi, '').trim();
 
