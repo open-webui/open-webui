@@ -35,6 +35,7 @@ class Knowledge(Base):
 
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
+    rag_config = Column(JSON, nullable=True)  # Configuration for RAG (Retrieval-Augmented Generation) model.
 
     access_control = Column(JSON, nullable=True)  # Controls data access levels.
     # Defines access control rules for this entry.
@@ -68,6 +69,7 @@ class KnowledgeModel(BaseModel):
 
     data: Optional[dict] = None
     meta: Optional[dict] = None
+    rag_config: Optional[dict] = None  # Configuration for RAG (Retrieval-Augmented Generation) model.
 
     access_control: Optional[dict] = None
 
@@ -97,6 +99,7 @@ class KnowledgeForm(BaseModel):
     description: str
     data: Optional[dict] = None
     access_control: Optional[dict] = None
+    rag_config: Optional[dict] = {}
 
 
 class KnowledgeTable:
@@ -217,5 +220,48 @@ class KnowledgeTable:
             except Exception:
                 return False
 
+    def update_rag_config_by_id(
+        self, id: str, rag_config: dict
+    ) -> Optional[KnowledgeModel]:
+        try:
+            with get_db() as db:
+                knowledge = self.get_knowledge_by_id(id=id)
+                db.query(Knowledge).filter_by(id=id).update(
+                    {
+                        "rag_config": rag_config,
+                        "updated_at": int(time.time()),
+                    }
+                )
+                db.commit()
+                return self.get_knowledge_by_id(id=id)
+        except Exception as e:
+            log.exception(e)
+            return None
+        
+    def is_model_in_use_elsewhere(
+        self, model: str, model_type: str, id: Optional[str] = None
+    ) -> bool:
+        try:
+            from sqlalchemy import func
+            with get_db() as db:
+                if db.bind.dialect.name == "sqlite":
+                    func.json_extract(Knowledge.rag_config, f'$.{model_type}') == model,
+                
+                elif db.bind.dialect.name == "postgresql":
+                    query = db.query(Knowledge).filter(
+                    Knowledge.rag_config.op("->>")(model_type) == model,
+                    )
+                else:
+                    raise NotImplementedError(
+                        f"Unsupported dialect: {db.bind.dialect.name}"
+                    )
+                if id:
+                    query = query.filter(Knowledge.id != id)
+
+                return query.first() is not None
+
+        except Exception as e:
+            log.exception(f"Error checking model usage elsewhere: {e}")
+            return False
 
 Knowledges = KnowledgeTable()
