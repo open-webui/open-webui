@@ -21,6 +21,7 @@ from fastapi import (
     APIRouter,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 import tiktoken
 
@@ -347,6 +348,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
     return {
         "status": True,
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
+        "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
         "enable_google_drive_integration": request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION,
         "content_extraction": {
             "engine": request.app.state.config.CONTENT_EXTRACTION_ENGINE,
@@ -446,6 +448,7 @@ class WebConfig(BaseModel):
 
 
 class ConfigUpdateForm(BaseModel):
+    RAG_FULL_CONTEXT: Optional[bool] = None
     pdf_extract_images: Optional[bool] = None
     enable_google_drive_integration: Optional[bool] = None
     file: Optional[FileConfig] = None
@@ -463,6 +466,12 @@ async def update_rag_config(
         form_data.pdf_extract_images
         if form_data.pdf_extract_images is not None
         else request.app.state.config.PDF_EXTRACT_IMAGES
+    )
+
+    request.app.state.config.RAG_FULL_CONTEXT = (
+        form_data.RAG_FULL_CONTEXT
+        if form_data.RAG_FULL_CONTEXT is not None
+        else request.app.state.config.RAG_FULL_CONTEXT
     )
 
     request.app.state.config.ENABLE_GOOGLE_DRIVE_INTEGRATION = (
@@ -552,6 +561,7 @@ async def update_rag_config(
     return {
         "status": True,
         "pdf_extract_images": request.app.state.config.PDF_EXTRACT_IMAGES,
+        "RAG_FULL_CONTEXT": request.app.state.config.RAG_FULL_CONTEXT,
         "file": {
             "max_size": request.app.state.config.FILE_MAX_SIZE,
             "max_count": request.app.state.config.FILE_MAX_COUNT,
@@ -1238,7 +1248,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
 
 
 @router.post("/process/web/search")
-def process_web_search(
+async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
     try:
@@ -1274,11 +1284,35 @@ def process_web_search(
         docs = loader.load()
         save_docs_to_vector_db(request, docs, collection_name, overwrite=True)
 
-        return {
-            "status": True,
-            "collection_name": collection_name,
-            "filenames": urls,
-        }
+        if request.app.state.config.RAG_WEB_SEARCH_FULL_CONTEXT:
+            return {
+                "status": True,
+                "docs": [
+                    {
+                        "content": doc.page_content,
+                        "metadata": doc.metadata,
+                    }
+                    for doc in docs
+                ],
+                "filenames": urls,
+                "loaded_count": len(docs),
+            }
+        else:
+            await run_in_threadpool(
+                save_docs_to_vector_db,
+                request,
+                docs,
+                collection_name,
+                overwrite=True,
+                user=user,
+            )
+
+            return {
+                "status": True,
+                "collection_name": collection_name,
+                "filenames": urls,
+                "loaded_count": len(docs),
+            }
     except Exception as e:
         log.exception(e)
         raise HTTPException(
