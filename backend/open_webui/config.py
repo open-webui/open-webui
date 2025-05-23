@@ -2153,6 +2153,42 @@ YOUTUBE_LOADER_PROXY_URL = PersistentConfig(
     os.getenv("YOUTUBE_LOADER_PROXY_URL", ""),
 )
 
+DEFAULT_RAG_SETTINGS = PersistentConfig(
+    "DEFAULT_RAG_SETTINGS",
+    "rag.default_settings",
+    os.getenv("DEFAULT_RAG_SETTINGS", "True").lower() == "true",
+)
+
+DOWNLOADED_EMBEDDING_MODELS = PersistentConfig(
+    "DOWNLOADED_EMBEDDING_MODELS",
+    "rag.downloaded_embedding_models",
+    os.getenv("DOWNLOADED_EMBEDDING_MODELS", {"":["sentence-transformers/all-MiniLM-L6-v2"],
+                                              "openai":["text-embedding-3-small"],
+                                              "ollama":[]})
+)
+
+DOWNLOADED_RERANKING_MODELS = PersistentConfig(
+    "DOWNLOADED_RERANKING_MODELS",
+    "rag.downloaded_reranking_models",
+    os.getenv("DOWNLOADED_RERANKING_MODELS", {"":[],
+                                              "external":[]})
+)
+
+LOADED_EMBEDDING_MODELS = PersistentConfig(
+    "LOADED_EMBEDDING_MODELS",
+    "rag.loaded_embedding_models",
+    os.getenv("LOADED_EMBEDDING_MODELS", {"":["sentence-transformers/all-MiniLM-L6-v2"],
+                                          "openai":[],
+                                          "ollama":[]})
+)
+
+LOADED_RERANKING_MODELS = PersistentConfig(
+    "LOADED_RERANKING_MODELS",
+    "rag.loaded_reranking_models",
+    os.getenv("LOADED_RERANKING_MODELS", {"":[],
+                                          "external":[]})
+)
+
 
 ####################################
 # Web Search (RAG)
