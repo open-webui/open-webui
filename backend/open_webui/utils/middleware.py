@@ -919,6 +919,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 for doc_context, doc_meta in zip(
                     source["document"], source["metadata"]
                 ):
+                    source_name = source.get("source", {}).get("name", None)
                     citation_id = (
                         doc_meta.get("source", None)
                         or source.get("source", {}).get("id", None)
@@ -926,7 +927,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     )
                     if citation_id not in citation_idx:
                         citation_idx[citation_id] = len(citation_idx) + 1
-                    context_string += f'<source id="{citation_idx[citation_id]}">{doc_context}</source>\n'
+                    context_string += (
+                        f'<source id="{citation_idx[citation_id]}"'
+                        + (f' name="{source_name}"' if source_name else "")
+                        + f">{doc_context}</source>\n"
+                    )
 
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])
