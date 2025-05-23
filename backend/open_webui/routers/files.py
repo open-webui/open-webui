@@ -15,6 +15,7 @@ from fastapi import (
     UploadFile,
     status,
     Query,
+    Form
 )
 from fastapi.responses import FileResponse, StreamingResponse
 from open_webui.constants import ERROR_MESSAGES
@@ -87,6 +88,7 @@ def upload_file(
     user=Depends(get_verified_user),
     file_metadata: dict = None,
     process: bool = Query(True),
+    knowledge_id: Optional[str] = Form(None)
 ):
     log.info(f"file.content_type: {file.content_type}")
 
@@ -148,7 +150,7 @@ def upload_file(
 
                         process_file(
                             request,
-                            ProcessFileForm(file_id=id, content=result.get("text", "")),
+                            ProcessFileForm(file_id=id, content=result.get("text", ""), knowledge_id=knowledge_id),
                             user=user,
                         )
                     elif file.content_type not in [
@@ -159,12 +161,12 @@ def upload_file(
                         "video/ogg",
                         "video/quicktime",
                     ]:
-                        process_file(request, ProcessFileForm(file_id=id), user=user)
+                        process_file(request, ProcessFileForm(file_id=id, knowledge_id=knowledge_id), user=user)
                 else:
                     log.info(
                         f"File type {file.content_type} is not provided, but trying to process anyway"
                     )
-                    process_file(request, ProcessFileForm(file_id=id), user=user)
+                    process_file(request, ProcessFileForm(file_id=id, knowledge_id=knowledge_id), user=user)
 
                 file_item = Files.get_file_by_id(id=id)
             except Exception as e:
