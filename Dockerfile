@@ -30,7 +30,9 @@ COPY package.json package-lock.json ./
 COPY scripts ./scripts/
 # Create static directory in advance
 RUN mkdir -p static/utility
-RUN npm ci --unsafe-perm && npm cache clean --force
+RUN npm ci --unsafe-perm && \
+    npm cache clean --force && \
+    npm run postinstall
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
