@@ -195,15 +195,27 @@
 		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
 
-	$: if (selectedModels) {
-		setToolIds();
-		setFilterIds();
+	let oldSelectedModelIds = [''];
+	$: if (JSON.stringify(selectedModelIds) !== JSON.stringify(oldSelectedModelIds)) {
+		onSelectedModelIdsChange();
 	}
 
-	$: if (atSelectedModel || selectedModels) {
+	const onSelectedModelIdsChange = () => {
+		if (oldSelectedModelIds.filter((id) => id).length > 0) {
+			resetInput();
+		}
+		oldSelectedModelIds = selectedModelIds;
+	};
+
+	const resetInput = () => {
+		console.debug('resetInput');
 		setToolIds();
-		setFilterIds();
-	}
+
+		selectedFilterIds = [];
+		webSearchEnabled = false;
+		imageGenerationEnabled = false;
+		codeInterpreterEnabled = false;
+	};
 
 	const setToolIds = async () => {
 		if (!$tools) {
@@ -215,20 +227,14 @@
 		}
 
 		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
-		if (model) {
+		if (model && model?.info?.meta?.toolIds) {
 			selectedToolIds = [
 				...new Set(
-					[...selectedToolIds, ...(model?.info?.meta?.toolIds ?? [])].filter((id) =>
-						$tools.find((t) => t.id === id)
-					)
+					[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
 				)
 			];
-		}
-	};
-
-	const setFilterIds = async () => {
-		if (selectedModels.length !== 1 && !atSelectedModel) {
-			selectedFilterIds = [];
+		} else {
+			selectedToolIds = [];
 		}
 	};
 
@@ -846,6 +852,8 @@
 					(chatContent?.models ?? undefined) !== undefined
 						? chatContent.models
 						: [chatContent.models ?? ''];
+				oldSelectedModelIds = selectedModels;
+
 				history =
 					(chatContent?.history ?? undefined) !== undefined
 						? chatContent.history
