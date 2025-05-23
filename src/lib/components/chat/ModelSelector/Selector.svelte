@@ -10,7 +10,7 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 
-	import { deleteModel, getOllamaVersion, pullModel } from '$lib/apis/ollama';
+	import { deleteModel, getOllamaVersion, pullModel, unloadModel } from '$lib/apis/ollama';
 
 	import {
 		user,
@@ -31,6 +31,7 @@
 	import { goto } from '$app/navigation';
 	import dayjs from '$lib/dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
+	import ArrowUpTray from '$lib/components/icons/ArrowUpTray.svelte';
 	dayjs.extend(relativeTime);
 
 	const i18n = getContext('i18n');
@@ -310,6 +311,22 @@
 			});
 			await deleteModel(localStorage.token, model);
 			toast.success(`${model} download has been canceled`);
+		}
+	};
+
+	const unloadModelHandler = async (model: string) => {
+		const res = await unloadModel(localStorage.token, model).catch((error) => {
+			toast.error($i18n.t('Error unloading model: {{error}}', { error }));
+		});
+
+		if (res) {
+			toast.success($i18n.t('Model unloaded successfully'));
+			models.set(
+				await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+				)
+			);
 		}
 	};
 </script>
@@ -660,11 +677,26 @@
 							</div>
 						</div>
 
-						{#if value === item.value}
-							<div class="ml-auto pl-2 pr-2 md:pr-0">
-								<Check />
-							</div>
-						{/if}
+						<div class="ml-auto pl-2 pr-1 flex gap-1.5 items-center">
+							{#if $user?.role === 'admin' && item.model.owned_by === 'ollama' && item.model.ollama?.expires_at && new Date(item.model.ollama?.expires_at * 1000) > new Date()}
+								<Tooltip content={`${$i18n.t('Eject')}`} className="flex-shrink-0">
+									<button
+										class="flex"
+										on:click={() => {
+											unloadModelHandler(item.value);
+										}}
+									>
+										<ArrowUpTray className="size-3" />
+									</button>
+								</Tooltip>
+							{/if}
+
+							{#if value === item.value}
+								<div>
+									<Check className="size-3" />
+								</div>
+							{/if}
+						</div>
 					</button>
 				{:else}
 					<div class="">
