@@ -28,6 +28,7 @@ from open_webui.config import (
     DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_WEB_QUERY_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_MOA_GENERATION_PROMPT_TEMPLATE,
@@ -63,6 +64,7 @@ async def get_task_config(request: Request, user=Depends(get_verified_user)):
         "ENABLE_SEARCH_QUERY_GENERATION": request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
         "ENABLE_RETRIEVAL_QUERY_GENERATION": request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
         "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
+        "WEB_QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.WEB_QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     }
 
@@ -80,6 +82,7 @@ class TaskConfigForm(BaseModel):
     ENABLE_SEARCH_QUERY_GENERATION: bool
     ENABLE_RETRIEVAL_QUERY_GENERATION: bool
     QUERY_GENERATION_PROMPT_TEMPLATE: str
+    WEB_QUERY_GENERATION_PROMPT_TEMPLATE: str
     TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: str
 
 
@@ -119,6 +122,9 @@ async def update_task_config(
     request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE = (
         form_data.QUERY_GENERATION_PROMPT_TEMPLATE
     )
+    request.app.state.config.WEB_QUERY_GENERATION_PROMPT_TEMPLATE = (
+        form_data.WEB_QUERY_GENERATION_PROMPT_TEMPLATE
+    )
     request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE = (
         form_data.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE
     )
@@ -136,6 +142,7 @@ async def update_task_config(
         "ENABLE_SEARCH_QUERY_GENERATION": request.app.state.config.ENABLE_SEARCH_QUERY_GENERATION,
         "ENABLE_RETRIEVAL_QUERY_GENERATION": request.app.state.config.ENABLE_RETRIEVAL_QUERY_GENERATION,
         "QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE,
+        "WEB_QUERY_GENERATION_PROMPT_TEMPLATE": request.app.state.config.WEB_QUERY_GENERATION_PROMPT_TEMPLATE,
         "TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE": request.app.state.config.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE,
     }
 
@@ -424,10 +431,17 @@ async def generate_queries(
         f"generating {type} queries using model {task_model_id} for user {user.email}"
     )
 
-    if (request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE).strip() != "":
-        template = request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE
-    else:
-        template = DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE
+    # Use different templates based on query type
+    if type == "web_search":
+        if (request.app.state.config.WEB_QUERY_GENERATION_PROMPT_TEMPLATE).strip() != "":
+            template = request.app.state.config.WEB_QUERY_GENERATION_PROMPT_TEMPLATE
+        else:
+            template = DEFAULT_WEB_QUERY_GENERATION_PROMPT_TEMPLATE
+    else:  # type == "retrieval"
+        if (request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE).strip() != "":
+            template = request.app.state.config.QUERY_GENERATION_PROMPT_TEMPLATE
+        else:
+            template = DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE
 
     content = query_generation_template(
         template, form_data["messages"], {"name": user.name}

@@ -389,6 +389,7 @@ async def chat_web_search_handler(
                             "name": ", ".join(queries),
                             "type": "web_search",
                             "urls": results["filenames"],
+                            "web_search_queries": queries
                         }
                     )
             elif results.get("docs"):
@@ -400,6 +401,7 @@ async def chat_web_search_handler(
                         "name": ", ".join(queries),
                         "type": "web_search",
                         "urls": results["filenames"],
+                        "web_search_queries": queries
                     }
                 )
 
@@ -554,34 +556,38 @@ async def chat_completion_files_handler(
     sources = []
 
     if files := body.get("metadata", {}).get("files", None):
+        # Generate retrieval queries only for knowledge base files (non-web-search files)
+        knowledge_base_files = [f for f in files if f.get("type") != "web_search"]
         queries = []
-        try:
-            queries_response = await generate_queries(
-                request,
-                {
-                    "model": body["model"],
-                    "messages": body["messages"],
-                    "type": "retrieval",
-                },
-                user,
-            )
-            queries_response = queries_response["choices"][0]["message"]["content"]
-
+        
+        if knowledge_base_files:
             try:
-                bracket_start = queries_response.find("{")
-                bracket_end = queries_response.rfind("}") + 1
+                queries_response = await generate_queries(
+                    request,
+                    {
+                        "model": body["model"],
+                        "messages": body["messages"],
+                        "type": "retrieval",
+                    },
+                    user,
+                )
+                queries_response = queries_response["choices"][0]["message"]["content"]
 
-                if bracket_start == -1 or bracket_end == -1:
-                    raise Exception("No JSON object found in the response")
+                try:
+                    bracket_start = queries_response.find("{")
+                    bracket_end = queries_response.rfind("}") + 1
 
-                queries_response = queries_response[bracket_start:bracket_end]
-                queries_response = json.loads(queries_response)
-            except Exception as e:
-                queries_response = {"queries": [queries_response]}
+                    if bracket_start == -1 or bracket_end == -1:
+                        raise Exception("No JSON object found in the response")
 
-            queries = queries_response.get("queries", [])
-        except:
-            pass
+                    queries_response = queries_response[bracket_start:bracket_end]
+                    queries_response = json.loads(queries_response)
+                except Exception as e:
+                    queries_response = {"queries": [queries_response]}
+
+                queries = queries_response.get("queries", [])
+            except:
+                pass
 
         if len(queries) == 0:
             queries = [get_last_user_message(body["messages"])]
@@ -607,6 +613,29 @@ async def chat_completion_files_handler(
                         full_context=request.app.state.config.RAG_FULL_CONTEXT,
                     ),
                 )
+
+                # Add query metadata to sources
+                for source in sources:
+                    if not source.get("metadata"):
+                        source["metadata"] = []
+                    
+                    # Determine source type and appropriate queries
+                    source_file = source.get("source", {})
+                    is_web_search = source_file.get("type") == "web_search"
+                    queries_to_add = source_file.get("web_search_queries", []) if is_web_search else queries
+                    source_type = "Web Search" if is_web_search else "Knowledge Base"
+                    query_field = "web_search_queries" if is_web_search else "retrieval_queries"
+                    
+                    # Add queries to each metadata item or create new ones
+                    if source["metadata"]:
+                        for metadata_item in source["metadata"]:
+                            metadata_item[query_field] = queries_to_add
+                            metadata_item["source_type"] = source_type
+                    else:
+                        source["metadata"] = [{
+                            query_field: queries_to_add,
+                            "source_type": source_type
+                        }]
         except Exception as e:
             log.exception(e)
 

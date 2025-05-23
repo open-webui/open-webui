@@ -2,6 +2,7 @@
 	import { getContext, onMount, tick } from 'svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Search from '$lib/components/icons/Search.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	const i18n = getContext('i18n');
@@ -84,6 +85,49 @@
 			<div
 				class="flex flex-col w-full dark:text-gray-200 overflow-y-scroll max-h-[22rem] scrollbar-hidden"
 			>
+				{#if mergedDocuments.some(doc => doc.metadata?.retrieval_queries || doc.metadata?.web_search_queries)}
+					{@const getQueriesByType = (type) => {
+						const doc = mergedDocuments.find(d => d.metadata?.source_type === type);
+						return type === "Knowledge Base" ? doc?.metadata?.retrieval_queries : doc?.metadata?.web_search_queries;
+					}}
+					
+					{@const knowledgeBaseQueries = getQueriesByType("Knowledge Base")}
+					{@const webSearchQueries = getQueriesByType("Web Search")}
+
+					{#each [
+						{ queries: knowledgeBaseQueries, title: 'Knowledge Base Queries' },
+						{ queries: webSearchQueries, title: 'Web Search Queries' }
+					] as { queries, title }}
+						{#if queries}
+							<div class="text-sm font-medium dark:text-gray-300 mb-1">
+								{$i18n.t(title)}
+							</div>
+							<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-md mb-3">
+								{#if Array.isArray(queries)}
+									<div class="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+										{#each queries as query}
+											<div class="flex items-start gap-2">
+												<div class="flex-shrink-0 mt-0.5">
+													<Search className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+												</div>
+												<div class="flex-1">{query}</div>
+											</div>
+										{/each}
+									</div>
+								{:else}
+									<div class="text-sm text-gray-600 dark:text-gray-400 p-1">
+										{queries}
+									</div>
+								{/if}
+							</div>
+						{/if}
+					{/each}
+
+					{#if knowledgeBaseQueries || webSearchQueries}
+						<hr class="border-gray-100 dark:border-gray-850 my-3" />
+					{/if}
+				{/if}
+
 				{#each mergedDocuments as document, documentIdx}
 					<div class="flex flex-col w-full">
 						<div class="text-sm font-medium dark:text-gray-300">
