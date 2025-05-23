@@ -771,7 +771,7 @@ ENABLE_OLLAMA_API = PersistentConfig(
 )
 
 OLLAMA_API_BASE_URL = os.environ.get(
-    "OLLAMA_API_BASE_URL", "http://localhost:11434/api"
+    "OLLAMA_API_BASE_URL", "http://0.0.0.0:11434/api"
 )
 
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "")
@@ -797,7 +797,7 @@ if ENV == "prod":
         if USE_OLLAMA_DOCKER.lower() == "true":
             # if you use all-in-one docker container (Open WebUI + Ollama)
             # with the docker build arg USE_OLLAMA=true (--build-arg="USE_OLLAMA=true") this only works with http://localhost:11434
-            OLLAMA_BASE_URL = "http://localhost:11434"
+            OLLAMA_BASE_URL = "http://0.0.0.0:11434"
         else:
             OLLAMA_BASE_URL = "http://host.docker.internal:11434"
     elif K8S_FLAG:
@@ -902,7 +902,7 @@ TOOL_SERVER_CONNECTIONS = PersistentConfig(
 
 
 WEBUI_URL = PersistentConfig(
-    "WEBUI_URL", "webui.url", os.environ.get("WEBUI_URL", "http://localhost:3000")
+    "WEBUI_URL", "webui.url", os.environ.get("WEBUI_URL", "http://0.0.0.0:3000")
 )
 
 
@@ -1273,7 +1273,7 @@ def validate_cors_origin(origin):
 # CORS_ALLOW_ORIGIN=http://localhost:5173;http://localhost:8080
 # in your .env file depending on your frontend port, 5173 in this case.
 CORS_ALLOW_ORIGIN = os.environ.get(
-    "CORS_ALLOW_ORIGIN", "*;http://localhost:5173;http://localhost:8080"
+    "CORS_ALLOW_ORIGIN", "*;http://0.0.0.0:5173;http://0.0.0.0:8080"
 ).split(";")
 
 if "*" in CORS_ALLOW_ORIGIN:
@@ -1756,7 +1756,7 @@ ENABLE_QDRANT_MULTITENANCY_MODE = (
 )
 
 # OpenSearch
-OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://localhost:9200")
+OPENSEARCH_URI = os.environ.get("OPENSEARCH_URI", "https://0.0.0.0:9200")
 OPENSEARCH_SSL = os.environ.get("OPENSEARCH_SSL", "true").lower() == "true"
 OPENSEARCH_CERT_VERIFY = (
     os.environ.get("OPENSEARCH_CERT_VERIFY", "false").lower() == "true"
@@ -1765,7 +1765,7 @@ OPENSEARCH_USERNAME = os.environ.get("OPENSEARCH_USERNAME", None)
 OPENSEARCH_PASSWORD = os.environ.get("OPENSEARCH_PASSWORD", None)
 
 # ElasticSearch
-ELASTICSEARCH_URL = os.environ.get("ELASTICSEARCH_URL", "https://localhost:9200")
+ELASTICSEARCH_URL = os.environ.get("ELASTICSEARCH_URL", "https://0.0.0.0:9200")
 ELASTICSEARCH_CA_CERTS = os.environ.get("ELASTICSEARCH_CA_CERTS", None)
 ELASTICSEARCH_API_KEY = os.environ.get("ELASTICSEARCH_API_KEY", None)
 ELASTICSEARCH_USERNAME = os.environ.get("ELASTICSEARCH_USERNAME", None)
@@ -2837,7 +2837,7 @@ LDAP_SERVER_LABEL = PersistentConfig(
 LDAP_SERVER_HOST = PersistentConfig(
     "LDAP_SERVER_HOST",
     "ldap.server.host",
-    os.environ.get("LDAP_SERVER_HOST", "localhost"),
+    os.environ.get("LDAP_SERVER_HOST", "0.0.0.0"),
 )
 
 LDAP_SERVER_PORT = PersistentConfig(

@@ -38,7 +38,7 @@ class JupyterCodeExecuter:
         timeout: int = 60,
     ):
         """
-        :param base_url: Jupyter server URL (e.g., "http://localhost:8888")
+        :param base_url: Jupyter server URL (e.g., "http://0.0.0.0:8888")
         :param code: Code to execute
         :param token: Jupyter authentication token (optional)
         :param password: Jupyter password (optional)

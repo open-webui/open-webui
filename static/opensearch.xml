@@ -2,7 +2,7 @@
 <ShortName>Open WebUI</ShortName>
 <Description>Search Open WebUI</Description>
 <InputEncoding>UTF-8</InputEncoding>
-<Image width="16" height="16" type="image/x-icon">http://localhost:5137/favicon.png</Image>
-<Url type="text/html" method="get" template="http://localhost:5137/?q={searchTerms}"/>
-<moz:SearchForm>http://localhost:5137</moz:SearchForm>
+<Image width="16" height="16" type="image/x-icon">http://0.0.0.0:5137/favicon.png</Image>
+<Url type="text/html" method="get" template="http://0.0.0.0:5137/?q={searchTerms}"/>
+<moz:SearchForm>http://0.0.0.0:5137</moz:SearchForm>
 </OpenSearchDescription>
