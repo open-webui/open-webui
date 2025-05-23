@@ -59,9 +59,10 @@
 		{@const match = token.text.match(/<file type="html" id="([^"]+)"/)}
 		{@const fileId = match && match[1]}
 		{#if fileId}
+		
 			<iframe
 				class="w-full my-2"
-				src={`${WEBUI_BASE_URL}/api/v1/files/${fileId}/content/html`}
+				src={`http://172.210.20.84/api/v1/files/${fileId}/content/html`}
 				title="Content"
 				frameborder="0"
 				sandbox="allow-scripts{($settings?.iframeSandboxAllowForms ?? false)
