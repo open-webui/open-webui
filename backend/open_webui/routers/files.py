@@ -154,10 +154,8 @@ def upload_file(
                             ProcessFileForm(file_id=id, content=result.get("text", "")),
                             user=user,
                         )
-                    elif (
-                        not file.content_type.startswith(("image/", "video/"))
-                        or request.app.state.config.CONTENT_EXTRACTION_ENGINE
-                        == "external"
+                    elif (not file.content_type.startswith(("image/", "video/"))) or (
+                        request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
                     ):
                         process_file(request, ProcessFileForm(file_id=id), user=user)
                 else:
