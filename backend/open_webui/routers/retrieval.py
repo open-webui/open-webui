@@ -4,8 +4,6 @@ import mimetypes
 import os
 import shutil
 import asyncio
-import re  # For regex-based text cleaning
-import functools
 
 
 import uuid
@@ -29,26 +27,11 @@ from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 import tiktoken
 
-# Optional imports with availability checks
-try:
-    from bs4 import BeautifulSoup
-    BEAUTIFULSOUP_AVAILABLE = True
-except ImportError:
-    BEAUTIFULSOUP_AVAILABLE = False
-
-try:
-    import nltk
-    NLTK_AVAILABLE = True
-    # Try to download required NLTK data if not available
-    try:
-        nltk.data.find('tokenizers/punkt')
-    except LookupError:
-        try:
-            nltk.download('punkt', quiet=True)
-        except:
-            pass
-except ImportError:
-    NLTK_AVAILABLE = False
+# Enhanced text processing imports
+import re
+import unicodedata
+from html import unescape
+from urllib.parse import unquote
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
 from langchain_core.documents import Document
@@ -63,13 +46,6 @@ from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 # Document loaders
 from open_webui.retrieval.loaders.main import Loader
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
-from open_webui.retrieval.loaders.mistral import MistralLoader
-from langchain_core.documents import Document
-try:
-    from unstructured.partition.auto import partition
-    UNSTRUCTURED_AVAILABLE = True
-except ImportError:
-    UNSTRUCTURED_AVAILABLE = False
 
 # Web search engines
 from open_webui.retrieval.web.main import SearchResult
@@ -132,455 +108,463 @@ from open_webui.env import (
 
 from open_webui.constants import ERROR_MESSAGES
 
-logger = logging.getLogger(__name__)
-logger.setLevel(SRC_LOG_LEVELS["RAG"])
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["RAG"])
 
-# Log that text cleaning is enabled
-logger.info("Text cleaning enabled: Special characters will be cleaned before vector database storage")
+##########################################
+#
+# Enhanced Document Cleaning Functions
+#
+##########################################
+
+
+def clean_text_for_vector_db(text: str) -> str:
+    """
+    Comprehensive text cleaning function that removes unwanted characters,
+    normalizes encoding, and prepares text for vector database storage.
+    
+    Args:
+        text (str): Raw text content from document processing
+        
+    Returns:
+        str: Cleaned and normalized text ready for embedding
+    """
+    if not text or not isinstance(text, str):
+        return ""
+    
+    try:
+        # Step 1: Handle HTML entities and URL encoding
+        text = unescape(text)  # Convert HTML entities like &amp; to &
+        text = unquote(text)   # Decode URL-encoded characters
+        
+        # Step 2: Normalize Unicode characters
+        text = unicodedata.normalize('NFKC', text)
+        
+        # Step 3: Remove or replace problematic control characters
+        # Keep newlines, tabs, and carriage returns but remove other control chars
+        control_chars = re.compile(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]')
+        text = control_chars.sub('', text)
+        
+        # Step 4: Clean up escape sequences and special characters
+        escape_patterns = [
+            (r'\\n', '\n'),           # Convert literal \n to actual newlines
+            (r'\\t', '\t'),           # Convert literal \t to actual tabs
+            (r'\\r', '\r'),           # Convert literal \r to carriage returns
+            (r'\\/', '/'),            # Convert literal \/ to /
+            (r'\\"', '"'),            # Convert literal \" to "
+            (r"\\\'", "'"),           # Convert literal \' to '
+            (r'\\\\', '\\'),          # Convert double backslashes to single
+        ]
+        
+        for pattern, replacement in escape_patterns:
+            text = re.sub(pattern, replacement, text)
+        
+        # Step 5: Remove excessive whitespace while preserving structure
+        # Replace multiple consecutive spaces with single space
+        text = re.sub(r' {2,}', ' ', text)
+        
+        # Replace multiple consecutive newlines with double newline (paragraph break)
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        
+        # Remove trailing/leading whitespace from each line
+        lines = text.split('\n')
+        lines = [line.strip() for line in lines]
+        text = '\n'.join(lines)
+        
+        # Step 6: Remove common document artifacts
+        # Remove page numbers at start/end of lines
+        text = re.sub(r'^\s*\d+\s*$', '', text, flags=re.MULTILINE)
+        
+        # Remove common headers/footers patterns
+        header_footer_patterns = [
+            r'^\s*Page \d+ of \d+\s*$',
+            r'^\s*\d+/\d+\s*$',
+            r'^\s*\[Page \d+\]\s*$',
+            r'^\s*- \d+ -\s*$',
+        ]
+        
+        for pattern in header_footer_patterns:
+            text = re.sub(pattern, '', text, flags=re.MULTILINE)
+        
+        # Step 7: Clean up document structure markers
+        # Remove excessive dashes or underscores used as separators
+        text = re.sub(r'^[-_]{3,}\s*$', '', text, flags=re.MULTILINE)
+        
+        # Remove table-of-contents dots
+        text = re.sub(r'\.{3,}', '...', text)
+        
+        # Step 8: Handle special PDF/OCR artifacts
+        # Remove soft hyphens and zero-width characters
+        text = text.replace('\u00AD', '')  # Soft hyphen
+        text = text.replace('\u200B', '')  # Zero-width space
+        text = text.replace('\u200C', '')  # Zero-width non-joiner
+        text = text.replace('\u200D', '')  # Zero-width joiner
+        text = text.replace('\uFEFF', '')  # Byte order mark
+        
+        # Step 9: Fix common OCR/extraction errors
+        # Fix common letter substitutions (be careful not to break legitimate text)
+        text = re.sub(r'\.([A-Z])', r'. \1', text)  # Add space after periods if missing
+        
+        # Step 10: Final cleanup
+        # Remove any remaining excessive whitespace
+        text = re.sub(r'\s+', ' ', text)
+        text = text.strip()
+        
+        # Step 11: Validate result
+        if len(text) == 0:
+            log.warning("Text cleaning resulted in empty string")
+            return ""
+        
+        # Check for encoding issues by trying to encode/decode
+        try:
+            text.encode('utf-8').decode('utf-8')
+        except UnicodeError as e:
+            log.warning(f"Text contains encoding issues after cleaning: {e}")
+            # Fall back to replacing problematic characters
+            text = text.encode('utf-8', errors='replace').decode('utf-8')
+        
+        log.debug(f"Text cleaned successfully. Length: {len(text)} chars")
+        return text
+        
+    except Exception as e:
+        log.error(f"Error during text cleaning: {e}")
+        # Return original text if cleaning fails
+        return text if isinstance(text, str) else str(text)
+
+
+def clean_document_content(doc: Document) -> Document:
+    """
+    Clean a Document object's page_content using the comprehensive text cleaner.
+    
+    Args:
+        doc (Document): Document with potentially messy content
+        
+    Returns:
+        Document: Document with cleaned content
+    """
+    try:
+        cleaned_content = clean_text_for_vector_db(doc.page_content)
+        
+        # Create new document with cleaned content
+        return Document(
+            page_content=cleaned_content,
+            metadata=doc.metadata
+        )
+    except Exception as e:
+        log.error(f"Error cleaning document content: {e}")
+        return doc
+
+
+##########################################
+#
+# Content-Aware Text Splitting
+#
+##########################################
+
+
+class ContentAwareTextSplitter:
+    """
+    Advanced text splitter that recognizes document structure and splits on semantic boundaries.
+    Preserves context and hierarchical relationships while respecting chunk size limits.
+    
+    Available TEXT_SPLITTER options in OpenWebUI config:
+    - "character" or "": Basic recursive character splitting (legacy)
+    - "token": Token-based splitting using tiktoken
+    - "content_aware": Intelligent document structure-aware splitting (NEW)
+    - Any other value: Defaults to content_aware splitting (ENHANCED DEFAULT)
+    
+    Features:
+    - Document structure detection (headings, sections, paragraphs)
+    - Semantic boundary detection and preservation
+    - Hierarchical context preservation
+    - Intelligent overlap handling
+    - Fallback to character-based splitting if needed
+    - Enhanced metadata with chunk information
+    """
+    
+    def __init__(
+        self,
+        chunk_size: int = 1000,
+        chunk_overlap: int = 200,
+        min_chunk_size: int = 100,
+        max_chunk_size: int = 2000,
+        preserve_headers: bool = True,
+        add_start_index: bool = True,
+    ):
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
+        self.min_chunk_size = min_chunk_size
+        self.max_chunk_size = max_chunk_size
+        self.preserve_headers = preserve_headers
+        self.add_start_index = add_start_index
+        
+        # Patterns for detecting document structure
+        self.heading_patterns = [
+            # Markdown-style headings
+            (r'^#{1,6}\s+(.+)$', 'markdown_heading'),
+            # Numbered sections
+            (r'^\d+\.?\s+([A-Z][^.!?]*[.!?]?)$', 'numbered_section'),
+            # Chapter/Section titles
+            (r'^(Chapter|Section|Part|Article)\s+\d+[:\s]+(.+)$', 'chapter_section'),
+            # All caps headings
+            (r'^[A-Z\s]{3,}$', 'caps_heading'),
+            # Underlined headings (text followed by === or ---)
+            (r'^(.+)\n[=-]{3,}$', 'underlined_heading'),
+        ]
+        
+        # Patterns for semantic boundaries
+        self.boundary_patterns = [
+            # Paragraph breaks (double newline)
+            (r'\n\s*\n', 'paragraph_break'),
+            # List items
+            (r'^\s*[-*+•]\s+', 'list_item'),
+            (r'^\s*\d+\.\s+', 'numbered_list'),
+            # Table rows (basic detection)
+            (r'\|.*\|', 'table_row'),
+            # Code blocks
+            (r'```[\s\S]*?```', 'code_block'),
+            (r'`[^`]+`', 'inline_code'),
+        ]
+    
+    def _detect_document_structure(self, text: str) -> list:
+        """
+        Analyze text to identify document structure elements.
+        Returns list of (start_pos, end_pos, element_type, content, hierarchy_level)
+        """
+        elements = []
+        lines = text.split('\n')
+        current_pos = 0
+        
+        for i, line in enumerate(lines):
+            line_start = current_pos
+            line_end = current_pos + len(line)
+            
+            # Check for headings
+            for pattern, element_type in self.heading_patterns:
+                match = re.match(pattern, line.strip(), re.MULTILINE)
+                if match:
+                    # Determine hierarchy level
+                    if element_type == 'markdown_heading':
+                        level = len(line.strip()) - len(line.strip().lstrip('#'))
+                    elif element_type in ['numbered_section', 'chapter_section']:
+                        level = 1
+                    else:
+                        level = 2
+                    
+                    elements.append((
+                        line_start, line_end, element_type, 
+                        line.strip(), level
+                    ))
+                    break
+            
+            # Check for list items and other elements
+            for pattern, element_type in self.boundary_patterns:
+                if re.match(pattern, line.strip()):
+                    elements.append((
+                        line_start, line_end, element_type, 
+                        line.strip(), 0
+                    ))
+                    break
+            
+            current_pos = line_end + 1  # +1 for newline
+        
+        return elements
+    
+    def _find_optimal_split_points(self, text: str, elements: list) -> list:
+        """
+        Find optimal split points based on document structure and chunk size constraints.
+        """
+        split_points = [0]  # Always start at beginning
+        
+        # Sort elements by position
+        elements.sort(key=lambda x: x[0])
+        
+        current_chunk_start = 0
+        current_chunk_size = 0
+        
+        for start_pos, end_pos, element_type, content, level in elements:
+            # Calculate distance from chunk start
+            distance_from_start = start_pos - current_chunk_start
+            
+            # If we're approaching chunk size limit, consider this as a split point
+            if (distance_from_start >= self.chunk_size - self.chunk_overlap and 
+                element_type in ['paragraph_break', 'markdown_heading', 'numbered_section', 'chapter_section']):
+                
+                # Ensure minimum chunk size
+                if distance_from_start >= self.min_chunk_size:
+                    split_points.append(start_pos)
+                    current_chunk_start = start_pos
+                    current_chunk_size = 0
+            
+            # Force split if we exceed max chunk size
+            elif distance_from_start >= self.max_chunk_size:
+                split_points.append(start_pos)
+                current_chunk_start = start_pos
+                current_chunk_size = 0
+        
+        # Always end at text end
+        if split_points[-1] != len(text):
+            split_points.append(len(text))
+        
+        return split_points
+    
+    def _create_chunk_with_context(self, text: str, start: int, end: int, 
+                                  elements: list, chunk_index: int) -> str:
+        """
+        Create a text chunk with preserved context and hierarchy.
+        """
+        chunk_text = text[start:end].strip()
+        
+        if not self.preserve_headers:
+            return chunk_text
+        
+        # Find relevant headers that provide context
+        context_headers = []
+        for elem_start, elem_end, element_type, content, level in elements:
+            if (elem_start < start and 
+                element_type in ['markdown_heading', 'numbered_section', 'chapter_section'] and
+                level <= 3):  # Only include top-level headers for context
+                context_headers.append((level, content))
+        
+        # Add hierarchical context at the beginning of chunk
+        if context_headers and chunk_index > 0:
+            # Sort by hierarchy level and take the most relevant
+            context_headers.sort(key=lambda x: x[0])
+            context_text = " > ".join([header[1] for header in context_headers[-2:]])
+            chunk_text = f"[Context: {context_text}]\n\n{chunk_text}"
+        
+        return chunk_text
+    
+    def _handle_overlap(self, text: str, split_points: list) -> list:
+        """
+        Adjust split points to include overlap between chunks.
+        """
+        if len(split_points) <= 2:
+            return split_points
+        
+        adjusted_points = [split_points[0]]
+        
+        for i in range(1, len(split_points) - 1):
+            current_start = split_points[i]
+            overlap_start = max(
+                adjusted_points[-1],
+                current_start - self.chunk_overlap
+            )
+            adjusted_points.append(overlap_start)
+        
+        adjusted_points.append(split_points[-1])
+        return adjusted_points
+    
+    def split_text(self, text: str) -> list:
+        """
+        Split text into content-aware chunks.
+        """
+        if not text or len(text) <= self.min_chunk_size:
+            return [text] if text else []
+        
+        try:
+            # Detect document structure
+            elements = self._detect_document_structure(text)
+            
+            # Find optimal split points
+            split_points = self._find_optimal_split_points(text, elements)
+            
+            # Handle overlap
+            split_points = self._handle_overlap(text, split_points)
+            
+            # Create chunks with context
+            chunks = []
+            for i in range(len(split_points) - 1):
+                start = split_points[i]
+                end = split_points[i + 1]
+                
+                chunk_text = self._create_chunk_with_context(
+                    text, start, end, elements, i
+                )
+                
+                if chunk_text.strip():
+                    chunks.append(chunk_text)
+            
+            # Validate chunks
+            valid_chunks = []
+            for chunk in chunks:
+                if len(chunk) >= self.min_chunk_size or len(chunks) == 1:
+                    valid_chunks.append(chunk)
+                elif valid_chunks:
+                    # Merge small chunks with previous chunk
+                    valid_chunks[-1] += "\n\n" + chunk
+            
+            return valid_chunks if valid_chunks else [text]
+            
+        except Exception as e:
+            log.warning(f"Content-aware splitting failed: {e}. Falling back to simple splitting.")
+            # Fallback to simple character-based splitting
+            return self._fallback_split(text)
+    
+    def _fallback_split(self, text: str) -> list:
+        """
+        Fallback to simple character-based splitting if content-aware splitting fails.
+        """
+        chunks = []
+        start = 0
+        
+        while start < len(text):
+            end = min(start + self.chunk_size, len(text))
+            
+            # Try to break at word boundary
+            if end < len(text):
+                # Look for sentence or paragraph boundary within overlap range
+                for boundary in ['. ', '.\n', '\n\n', '\n', '. ']:
+                    boundary_pos = text.rfind(boundary, start, end)
+                    if boundary_pos > start:
+                        end = boundary_pos + len(boundary)
+                        break
+            
+            chunk = text[start:end].strip()
+            if chunk:
+                chunks.append(chunk)
+            
+            start = max(start + self.chunk_size - self.chunk_overlap, end)
+        
+        return chunks
+    
+    def split_documents(self, documents: list) -> list:
+        """
+        Split a list of Document objects using content-aware splitting.
+        """
+        split_docs = []
+        
+        for doc in documents:
+            chunks = self.split_text(doc.page_content)
+            
+            for i, chunk in enumerate(chunks):
+                # Create new document with chunk
+                chunk_metadata = doc.metadata.copy()
+                
+                if self.add_start_index:
+                    # Calculate approximate start index
+                    chunk_start = doc.page_content.find(chunk.split('\n\n')[-1][:50])
+                    if chunk_start == -1:
+                        chunk_start = i * self.chunk_size
+                    chunk_metadata['start_index'] = chunk_start
+                
+                chunk_metadata['chunk_index'] = i
+                chunk_metadata['total_chunks'] = len(chunks)
+                chunk_metadata['chunk_method'] = 'content_aware'
+                
+                split_docs.append(Document(
+                    page_content=chunk,
+                    metadata=chunk_metadata
+                ))
+        
+        return split_docs
+
 
 ##########################################
 #
 # Utility functions
 #
 ##########################################
-
-def _clean_text_for_vector_db(text: str) -> str:
-    """
-    Enhanced text cleaning function that properly handles escape sequences
-    and special characters for vector database storage.
-    """
-    if not text:
-        return ""
-    
-    logger.debug(f"Cleaning text (first 100 chars): {repr(text[:100])}")
-    
-    # Step 1: Handle literal escape sequences (like "\\n" as strings)
-    # These often come from unstructured document parsing
-    text = text.replace('\\n\\n', '\n\n')  # Double newlines first
-    text = text.replace('\\n', '\n')      # Then single newlines
-    text = text.replace('\\t', '\t')      # Tabs
-    text = text.replace('\\r', '\r')      # Carriage returns
-    text = text.replace('\\"', '"')       # Escaped quotes
-    text = text.replace("\\'", "'")       # Escaped single quotes
-    text = text.replace('\\\\', '\\')     # Escaped backslashes
-    
-    # Step 2: Try unicode_escape decoding for any remaining sequences
-    try:
-        # Only try if it looks like it might have escape sequences
-        if '\\' in text:
-            decoded = text.encode('utf-8').decode('unicode_escape')
-            # Only use decoded version if it didn't introduce weird characters
-            if not any(ord(c) < 32 and c not in '\n\t\r' for c in decoded):
-                text = decoded
-    except (UnicodeDecodeError, UnicodeEncodeError):
-        pass
-    
-    # Step 3: Remove problematic control characters but preserve important whitespace
-    # Remove control characters except newline, tab, and carriage return
-    text = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]', '', text)
-    
-    # Remove zero-width spaces and other problematic Unicode characters
-    text = re.sub(r'[\uFEFF\uFFFE\uFFFF\u200B\u200C\u200D\u2060]', '', text)
-    
-    # Step 4: Normalize whitespace while preserving paragraph structure
-    # Replace multiple spaces with single space
-    text = re.sub(r' {2,}', ' ', text)
-    
-    # Replace multiple newlines with double newline (preserve paragraph breaks)
-    text = re.sub(r'\n{3,}', '\n\n', text)
-    
-    # Clean up mixed whitespace
-    text = re.sub(r'[ \t]+\n', '\n', text)  # Remove trailing spaces before newlines
-    text = re.sub(r'\n[ \t]+', '\n', text)  # Remove leading spaces after newlines
-    
-    # Step 5: Ensure proper UTF-8 encoding
-    try:
-        text = text.encode('utf-8', errors='ignore').decode('utf-8')
-    except (UnicodeDecodeError, UnicodeEncodeError):
-        logger.warning("Failed to ensure UTF-8 encoding for text")
-    
-    # Final cleanup
-    text = text.strip()
-    
-    logger.debug(f"Cleaned text (first 100 chars): {repr(text[:100])}")
-    
-    return text
-
-# Keep the old function name for backward compatibility
-def clean_text(text: str) -> str:
-    return _clean_text_for_vector_db(text)
-
-
-class ContentAwareTextSplitter:
-    """
-    Intelligent text splitter that recognizes document structure and splits content
-    at semantic boundaries while preserving context and hierarchical information.
-    """
-    
-    def __init__(self, chunk_size: int = 1000, chunk_overlap: int = 200):
-        self.chunk_size = chunk_size
-        self.chunk_overlap = chunk_overlap
-        
-        # Heading patterns for different document types
-        self.heading_patterns = [
-            # Markdown headings
-            r'^#{1,6}\s+(.+)$',
-            # Numbered sections (1. 1.1 1.1.1 etc.)
-            r'^(\d+\.)+\s+(.+)$',
-            # Roman numerals
-            r'^[IVX]+\.\s+(.+)$',
-            # Letter headings (A. B. etc.)
-            r'^[A-Z]\.\s+(.+)$',
-            # Title case headings (at least 3 words, most capitalized)
-            r'^([A-Z][a-z]+\s+){2,}[A-Z][a-z]*\s*$',
-            # ALL CAPS headings (legal documents, etc.)
-            r'^[A-Z][A-Z\s]{10,}$',
-            # Underlined text (=== or --- below text)
-            r'^.+\n[=-]{3,}$',
-        ]
-        
-        # Compile patterns for efficiency
-        self.compiled_patterns = [re.compile(pattern, re.MULTILINE) for pattern in self.heading_patterns]
-        
-        logger.info(f"ContentAwareTextSplitter initialized with chunk_size={chunk_size}, chunk_overlap={chunk_overlap}")
-    
-    def _detect_headings(self, text: str) -> List[dict]:
-        """Detect headings and their positions in the text."""
-        headings = []
-        lines = text.split('\n')
-        
-        for i, line in enumerate(lines):
-            line = line.strip()
-            if not line:
-                continue
-                
-            for pattern_idx, pattern in enumerate(self.compiled_patterns):
-                if pattern.match(line):
-                    # Calculate character position
-                    char_pos = sum(len(lines[j]) + 1 for j in range(i))
-                    
-                    # Determine heading level based on pattern type
-                    level = self._get_heading_level(line, pattern_idx)
-                    
-                    headings.append({
-                        'text': line,
-                        'line': i,
-                        'char_pos': char_pos,
-                        'level': level,
-                        'pattern_type': pattern_idx
-                    })
-                    break
-        
-        logger.debug(f"Detected {len(headings)} headings")
-        return headings
-    
-    def _get_heading_level(self, text: str, pattern_type: int) -> int:
-        """Determine the hierarchical level of a heading."""
-        if pattern_type == 0:  # Markdown headings
-            return len(text) - len(text.lstrip('#'))
-        elif pattern_type == 1:  # Numbered sections
-            return text.count('.')
-        else:
-            return 1  # Default level for other types
-    
-    def _split_by_semantic_boundaries(self, text: str) -> List[str]:
-        """Split text at semantic boundaries like paragraphs, sentences, etc."""
-        # First try to split by double newlines (paragraphs)
-        paragraphs = text.split('\n\n')
-        
-        chunks = []
-        current_chunk = ""
-        
-        for paragraph in paragraphs:
-            paragraph = paragraph.strip()
-            if not paragraph:
-                continue
-            
-            # If adding this paragraph would exceed chunk size
-            if len(current_chunk) + len(paragraph) + 2 > self.chunk_size:
-                if current_chunk:
-                    # Try to split the current chunk by sentences
-                    sentence_chunks = self._split_by_sentences(current_chunk)
-                    chunks.extend(sentence_chunks)
-                    current_chunk = ""
-                
-                # If single paragraph is too long, split it
-                if len(paragraph) > self.chunk_size:
-                    sentence_chunks = self._split_by_sentences(paragraph)
-                    chunks.extend(sentence_chunks)
-                else:
-                    current_chunk = paragraph
-            else:
-                current_chunk = current_chunk + "\n\n" + paragraph if current_chunk else paragraph
-        
-        if current_chunk:
-            chunks.append(current_chunk)
-        
-        return chunks
-    
-    def _split_by_sentences(self, text: str) -> List[str]:
-        """Split text by sentences using NLTK if available, otherwise use regex."""
-        if NLTK_AVAILABLE:
-            try:
-                sentences = nltk.sent_tokenize(text)
-            except Exception as e:
-                logger.warning(f"NLTK sentence tokenization failed: {e}")
-                sentences = self._regex_sentence_split(text)
-        else:
-            sentences = self._regex_sentence_split(text)
-        
-        chunks = []
-        current_chunk = ""
-        
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if not sentence:
-                continue
-            
-            if len(current_chunk) + len(sentence) + 1 > self.chunk_size:
-                if current_chunk:
-                    chunks.append(current_chunk.strip())
-                    current_chunk = ""
-                
-                # If single sentence is too long, split it further
-                if len(sentence) > self.chunk_size:
-                    word_chunks = self._split_by_words(sentence)
-                    chunks.extend(word_chunks)
-                else:
-                    current_chunk = sentence
-            else:
-                current_chunk = current_chunk + " " + sentence if current_chunk else sentence
-        
-        if current_chunk:
-            chunks.append(current_chunk.strip())
-        
-        return chunks
-    
-    def _regex_sentence_split(self, text: str) -> List[str]:
-        """Split text by sentences using regex patterns."""
-        # Simple sentence splitting regex
-        sentence_pattern = r'(?<=[.!?])\s+(?=[A-Z])'
-        sentences = re.split(sentence_pattern, text)
-        return [s.strip() for s in sentences if s.strip()]
-    
-    def _split_by_words(self, text: str) -> List[str]:
-        """Split text by words when all else fails."""
-        words = text.split()
-        chunks = []
-        current_chunk = ""
-        
-        for word in words:
-            if len(current_chunk) + len(word) + 1 > self.chunk_size:
-                if current_chunk:
-                    chunks.append(current_chunk.strip())
-                    current_chunk = word
-                else:
-                    # Single word is longer than chunk size
-                    chunks.append(word)
-            else:
-                current_chunk = current_chunk + " " + word if current_chunk else word
-        
-        if current_chunk:
-            chunks.append(current_chunk.strip())
-        
-        return chunks
-    
-    def _handle_html_content(self, text: str) -> str:
-        """Extract text content from HTML if BeautifulSoup is available."""
-        if not BEAUTIFULSOUP_AVAILABLE:
-            return text
-        
-        try:
-            # Check if text looks like HTML
-            if '<' in text and '>' in text:
-                soup = BeautifulSoup(text, 'html.parser')
-                # Extract text and preserve some structure
-                for elem in soup(['script', 'style']):
-                    elem.decompose()
-                
-                text = soup.get_text(separator='\n', strip=True)
-                logger.debug("Extracted text from HTML content")
-            
-            return text
-        except Exception as e:
-            logger.warning(f"Failed to parse HTML content: {e}")
-            return text
-    
-    def _add_context_to_chunks(self, chunks: List[str], headings: List[dict], text: str) -> List[str]:
-        """Add hierarchical context to chunks based on their position relative to headings."""
-        if not headings:
-            return chunks
-        
-        contextual_chunks = []
-        
-        for chunk in chunks:
-            # Find the position of this chunk in the original text
-            chunk_start = text.find(chunk)
-            if chunk_start == -1:
-                contextual_chunks.append(chunk)
-                continue
-            
-            # Find the most recent heading before this chunk
-            applicable_headings = []
-            for heading in headings:
-                if heading['char_pos'] <= chunk_start:
-                    applicable_headings.append(heading)
-            
-            if applicable_headings:
-                # Sort by level to build hierarchy
-                applicable_headings.sort(key=lambda x: (x['char_pos'], x['level']))
-                
-                # Build context from hierarchical headings
-                context_parts = []
-                current_level = 0
-                
-                for heading in applicable_headings[-3:]:  # Last 3 headings max
-                    if heading['level'] >= current_level or not context_parts:
-                        context_parts.append(heading['text'])
-                        current_level = heading['level']
-                
-                if context_parts:
-                    context = " > ".join(context_parts)
-                    chunk_with_context = f"[Context: {context}]\n\n{chunk}"
-                    contextual_chunks.append(chunk_with_context)
-                else:
-                    contextual_chunks.append(chunk)
-            else:
-                contextual_chunks.append(chunk)
-        
-        return contextual_chunks
-    
-    def split_documents(self, documents: List[Document]) -> List[Document]:
-        """Split documents using content-aware chunking."""
-        split_docs = []
-        
-        for doc in documents:
-            logger.info(f"Processing document: {doc.metadata.get('source', 'unknown')}")
-            
-            try:
-                text = doc.page_content
-                
-                # Handle HTML content
-                text = self._handle_html_content(text)
-                
-                # Clean text for vector database
-                text = _clean_text_for_vector_db(text)
-                
-                if not text.strip():
-                    logger.warning(f"Document is empty after cleaning: {doc.metadata.get('source', 'unknown')}")
-                    continue
-                
-                # Detect document structure
-                headings = self._detect_headings(text)
-                
-                # Split by semantic boundaries
-                chunks = self._split_by_semantic_boundaries(text)
-                
-                # Add hierarchical context
-                chunks = self._add_context_to_chunks(chunks, headings, text)
-                
-                # Handle overlap
-                final_chunks = self._apply_overlap(chunks)
-                
-                logger.info(f"Split into {len(final_chunks)} chunks with content-aware splitting")
-                
-                # Create new documents for each chunk
-                for i, chunk in enumerate(final_chunks):
-                    if chunk.strip():  # Only add non-empty chunks
-                        new_metadata = doc.metadata.copy()
-                        new_metadata.update({
-                            'chunk_index': i,
-                            'total_chunks': len(final_chunks),
-                            'chunk_method': 'content_aware',
-                            'has_headings': len(headings) > 0,
-                            'heading_count': len(headings)
-                        })
-                        
-                        split_docs.append(Document(
-                            page_content=chunk,
-                            metadata=new_metadata
-                        ))
-                
-            except Exception as e:
-                logger.error(f"Content-aware splitting failed for document {doc.metadata.get('source', 'unknown')}: {e}")
-                logger.info("Falling back to recursive character splitting")
-                
-                # Fallback to recursive splitting
-                fallback_splitter = RecursiveCharacterTextSplitter(
-                    chunk_size=self.chunk_size,
-                    chunk_overlap=self.chunk_overlap,
-                    add_start_index=True,
-                )
-                
-                # Clean the text before fallback splitting
-                cleaned_text = _clean_text_for_vector_db(doc.page_content)
-                cleaned_doc = Document(page_content=cleaned_text, metadata=doc.metadata)
-                
-                fallback_chunks = fallback_splitter.split_documents([cleaned_doc])
-                
-                for chunk_doc in fallback_chunks:
-                    chunk_doc.metadata.update({
-                        'chunk_method': 'recursive_fallback',
-                        'original_error': str(e)
-                    })
-                
-                split_docs.extend(fallback_chunks)
-        
-        logger.info(f"Total documents after content-aware splitting: {len(split_docs)}")
-        return split_docs
-    
-    def _apply_overlap(self, chunks: List[str]) -> List[str]:
-        """Apply overlap between chunks for better context preservation."""
-        if len(chunks) <= 1 or self.chunk_overlap <= 0:
-            return chunks
-        
-        overlapped_chunks = []
-        
-        for i, chunk in enumerate(chunks):
-            if i == 0:
-                overlapped_chunks.append(chunk)
-            else:
-                # Calculate overlap with previous chunk
-                prev_chunk = chunks[i-1]
-                
-                # Try to find a good overlap point (sentence boundary if possible)
-                overlap_text = self._get_overlap_text(prev_chunk, self.chunk_overlap)
-                
-                if overlap_text:
-                    overlapped_chunk = overlap_text + "\n\n" + chunk
-                    overlapped_chunks.append(overlapped_chunk)
-                else:
-                    overlapped_chunks.append(chunk)
-        
-        return overlapped_chunks
-    
-    def _get_overlap_text(self, text: str, overlap_size: int) -> str:
-        """Extract overlap text from the end of a chunk, preferring sentence boundaries."""
-        if len(text) <= overlap_size:
-            return text
-        
-        # Try to find the last sentence boundary within overlap size
-        overlap_candidate = text[-overlap_size:]
-        
-        # Look for sentence endings
-        sentence_ends = ['.', '!', '?']
-        best_split = -1
-        
-        for i in range(len(overlap_candidate) - 1, -1, -1):
-            if overlap_candidate[i] in sentence_ends and i < len(overlap_candidate) - 1:
-                if overlap_candidate[i + 1].isspace():
-                    best_split = i + 1
-                    break
-        
-        if best_split > 0:
-            return overlap_candidate[best_split:].strip()
-        else:
-            # Fallback to word boundary
-            words = overlap_candidate.split()
-            if len(words) > 1:
-                return ' '.join(words[1:])  # Skip first partial word
-            else:
-                return overlap_candidate
 
 
 def get_ef(
@@ -601,7 +585,7 @@ def get_ef(
                 model_kwargs=SENTENCE_TRANSFORMERS_MODEL_KWARGS,
             )
         except Exception as e:
-            logger.debug(f"Error loading SentenceTransformer: {e}")
+            log.debug(f"Error loading SentenceTransformer: {e}")
 
     return ef
 
@@ -625,7 +609,7 @@ def get_rf(
                 )
 
             except Exception as e:
-                logger.error(f"ColBERT: {e}")
+                log.error(f"ColBERT: {e}")
                 raise Exception(ERROR_MESSAGES.DEFAULT(e))
         else:
             if engine == "external":
@@ -638,7 +622,7 @@ def get_rf(
                         model=reranking_model,
                     )
                 except Exception as e:
-                    logger.error(f"ExternalReranking: {e}")
+                    log.error(f"ExternalReranking: {e}")
                     raise Exception(ERROR_MESSAGES.DEFAULT(e))
             else:
                 import sentence_transformers
@@ -652,7 +636,7 @@ def get_rf(
                         model_kwargs=SENTENCE_TRANSFORMERS_CROSS_ENCODER_MODEL_KWARGS,
                     )
                 except Exception as e:
-                    logger.error(f"CrossEncoder: {e}")
+                    log.error(f"CrossEncoder: {e}")
                     raise Exception(ERROR_MESSAGES.DEFAULT("CrossEncoder error"))
 
     return rf
@@ -734,7 +718,7 @@ class EmbeddingModelUpdateForm(BaseModel):
 async def update_embedding_config(
     request: Request, form_data: EmbeddingModelUpdateForm, user=Depends(get_admin_user)
 ):
-    logger.info(
+    log.info(
         f"Updating embedding model: {request.app.state.config.RAG_EMBEDDING_MODEL} to {form_data.embedding_model}"
     )
     try:
@@ -799,7 +783,7 @@ async def update_embedding_config(
             },
         }
     except Exception as e:
-        logger.exception(f"Problem updating embedding model: {e}")
+        log.exception(f"Problem updating embedding model: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ERROR_MESSAGES.DEFAULT(e),
@@ -1132,7 +1116,7 @@ async def update_rag_config(
         else request.app.state.config.RAG_EXTERNAL_RERANKER_API_KEY
     )
 
-    logger.info(
+    log.info(
         f"Updating reranking model: {request.app.state.config.RAG_RERANKING_MODEL} to {form_data.RAG_RERANKING_MODEL}"
     )
     try:
@@ -1147,10 +1131,10 @@ async def update_rag_config(
                 True,
             )
         except Exception as e:
-            logger.error(f"Error loading reranking model: {e}")
+            log.error(f"Error loading reranking model: {e}")
             request.app.state.config.ENABLE_RAG_HYBRID_SEARCH = False
     except Exception as e:
-        logger.exception(f"Problem updating reranking model: {e}")
+        log.exception(f"Problem updating reranking model: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=ERROR_MESSAGES.DEFAULT(e),
@@ -1422,7 +1406,7 @@ def save_docs_to_vector_db(
 
         return ", ".join(docs_info)
 
-    logger.info(
+    log.info(
         f"save_docs_to_vector_db: document {_get_docs_info(docs)} {collection_name}"
     )
 
@@ -1436,19 +1420,18 @@ def save_docs_to_vector_db(
         if result is not None:
             existing_doc_ids = result.ids[0]
             if existing_doc_ids:
-                logger.info(f"Document with hash {metadata['hash']} already exists")
+                log.info(f"Document with hash {metadata['hash']} already exists")
                 raise ValueError(ERROR_MESSAGES.DUPLICATE_CONTENT)
 
     if split:
         if request.app.state.config.TEXT_SPLITTER in ["", "character"]:
-            # Use ContentAwareTextSplitter by default for better document structure recognition
-            logger.info("Using ContentAwareTextSplitter for intelligent document chunking")
-            text_splitter = ContentAwareTextSplitter(
+            text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=request.app.state.config.CHUNK_SIZE,
                 chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                add_start_index=True,
             )
         elif request.app.state.config.TEXT_SPLITTER == "token":
-            logger.info(
+            log.info(
                 f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
             )
 
@@ -1459,17 +1442,34 @@ def save_docs_to_vector_db(
                 chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
                 add_start_index=True,
             )
+        elif request.app.state.config.TEXT_SPLITTER == "content_aware":
+            log.info("Using content-aware text splitter for intelligent document structure recognition")
+            print(f"REFACTORED: Using CONTENT-AWARE text splitter for enhanced chunking")
+            text_splitter = ContentAwareTextSplitter(
+                chunk_size=request.app.state.config.CHUNK_SIZE,
+                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                preserve_headers=True,
+                add_start_index=True,
+            )
         else:
-            raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
+            # DEFAULT TO CONTENT-AWARE for better document processing
+            log.info("Using DEFAULT content-aware text splitter for enhanced document structure recognition")
+            print(f"REFACTORED: Using DEFAULT CONTENT-AWARE text splitter (fallback from invalid option)")
+            text_splitter = ContentAwareTextSplitter(
+                chunk_size=request.app.state.config.CHUNK_SIZE,
+                chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                preserve_headers=True,
+                add_start_index=True,
+            )
 
+        print(f"REFACTORED: Splitting {len(docs)} documents into content-aware chunks...")
         docs = text_splitter.split_documents(docs)
+        print(f"REFACTORED: Content-aware splitting completed. Result: {len(docs)} chunks")
 
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
 
-    # Clean text content before embedding
-    texts = [_clean_text_for_vector_db(doc.page_content) for doc in docs]
-    
+    texts = [doc.page_content for doc in docs]
     metadatas = [
         {
             **doc.metadata,
@@ -1486,33 +1486,29 @@ def save_docs_to_vector_db(
 
     # ChromaDB does not like datetime formats
     # for meta-data so convert them to string.
-    for metadata_item in metadatas:
-        for key, value in metadata_item.items():
+    for metadata in metadatas:
+        for key, value in metadata.items():
             if (
                 isinstance(value, datetime)
                 or isinstance(value, list)
                 or isinstance(value, dict)
             ):
-                metadata_item[key] = str(value)
-            
-            # Clean string values in metadata too to prevent issues
-            if isinstance(value, str) and key not in ['hash', 'id']:
-                metadata_item[key] = _clean_text_for_vector_db(value)
+                metadata[key] = str(value)
 
     try:
         if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
-            logger.info(f"collection {collection_name} already exists")
+            log.info(f"collection {collection_name} already exists")
 
             if overwrite:
                 VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
-                logger.info(f"deleting existing collection {collection_name}")
+                log.info(f"deleting existing collection {collection_name}")
             elif add is False:
-                logger.info(
+                log.info(
                     f"collection {collection_name} already exists, overwrite is False and add is False"
                 )
                 return True
 
-        logger.info(f"adding to collection {collection_name}")
+        log.info(f"adding to collection {collection_name}")
         embedding_function = get_embedding_function(
             request.app.state.config.RAG_EMBEDDING_ENGINE,
             request.app.state.config.RAG_EMBEDDING_MODEL,
@@ -1553,101 +1549,8 @@ def save_docs_to_vector_db(
 
         return True
     except Exception as e:
-        logger.exception(e)
+        log.exception(e)
         raise e
-
-
-# Monkey patching for database operations to ensure consistent character cleaning
-def _patch_vector_db_operations():
-    """
-    Monkey patch VECTOR_DB_CLIENT methods to ensure all text is cleaned
-    before being stored in the vector database.
-    """
-    logger.info("Applying monkey patches for vector database operations")
-    
-    # Store original methods
-    original_insert = VECTOR_DB_CLIENT.insert
-    original_upsert = getattr(VECTOR_DB_CLIENT, 'upsert', None)
-    
-    @functools.wraps(original_insert)
-    def patched_insert(collection_name, items, **kwargs):
-        """Patched insert method that cleans text and metadata before storage."""
-        logger.debug(f"Patched insert called for collection: {collection_name}")
-        
-        cleaned_items = []
-        for item in items:
-            cleaned_item = item.copy()
-            
-            # Clean text content
-            if 'text' in cleaned_item:
-                original_text = cleaned_item['text']
-                cleaned_text = _clean_text_for_vector_db(original_text)
-                cleaned_item['text'] = cleaned_text
-                
-                if original_text != cleaned_text:
-                    logger.debug(f"Cleaned text in insert operation")
-            
-            # Clean metadata
-            if 'metadata' in cleaned_item and isinstance(cleaned_item['metadata'], dict):
-                cleaned_metadata = {}
-                for key, value in cleaned_item['metadata'].items():
-                    if isinstance(value, str) and key not in ['hash', 'id']:
-                        cleaned_metadata[key] = _clean_text_for_vector_db(value)
-                    else:
-                        cleaned_metadata[key] = value
-                cleaned_item['metadata'] = cleaned_metadata
-            
-            cleaned_items.append(cleaned_item)
-        
-        return original_insert(collection_name, cleaned_items, **kwargs)
-    
-    # Apply insert patch
-    VECTOR_DB_CLIENT.insert = patched_insert
-    
-    # Apply upsert patch if method exists
-    if original_upsert:
-        @functools.wraps(original_upsert)
-        def patched_upsert(collection_name, items, **kwargs):
-            """Patched upsert method that cleans text and metadata before storage."""
-            logger.debug(f"Patched upsert called for collection: {collection_name}")
-            
-            cleaned_items = []
-            for item in items:
-                cleaned_item = item.copy()
-                
-                # Clean text content
-                if 'text' in cleaned_item:
-                    original_text = cleaned_item['text']
-                    cleaned_text = _clean_text_for_vector_db(original_text)
-                    cleaned_item['text'] = cleaned_text
-                    
-                    if original_text != cleaned_text:
-                        logger.debug(f"Cleaned text in upsert operation")
-                
-                # Clean metadata
-                if 'metadata' in cleaned_item and isinstance(cleaned_item['metadata'], dict):
-                    cleaned_metadata = {}
-                    for key, value in cleaned_item['metadata'].items():
-                        if isinstance(value, str) and key not in ['hash', 'id']:
-                            cleaned_metadata[key] = _clean_text_for_vector_db(value)
-                        else:
-                            cleaned_metadata[key] = value
-                    cleaned_item['metadata'] = cleaned_metadata
-                
-                cleaned_items.append(cleaned_item)
-            
-            return original_upsert(collection_name, cleaned_items, **kwargs)
-        
-        VECTOR_DB_CLIENT.upsert = patched_upsert
-    
-    logger.info("Vector database operation patches applied successfully")
-
-# Apply the monkey patches
-try:
-    _patch_vector_db_operations()
-except Exception as e:
-    logger.warning(f"Failed to apply vector database patches: {e}")
-    logger.warning("Text cleaning will only occur in save_docs_to_vector_db function")
 
 
 class ProcessFileForm(BaseModel):
@@ -1662,14 +1565,8 @@ def process_file(
     form_data: ProcessFileForm,
     user=Depends(get_verified_user),
 ):
-    # DIAGNOSTIC: Force output regardless of log level
-    print(f"🔍 DIAGNOSTIC: process_file called with file_id={form_data.file_id}")
-    print(f"🔍 DIAGNOSTIC: content={'provided' if form_data.content else 'None'}")
-    print(f"🔍 DIAGNOSTIC: collection_name={form_data.collection_name}")
-    
     try:
         file = Files.get_file_by_id(form_data.file_id)
-        print(f"🔍 DIAGNOSTIC: File found - filename={file.filename}, content_type={file.meta.get('content_type')}")
 
         collection_name = form_data.collection_name
 
@@ -1677,7 +1574,6 @@ def process_file(
             collection_name = f"file-{file.id}"
 
         if form_data.content:
-            print("🔍 DIAGNOSTIC: Taking form_data.content path")
             # Update the content in the file
             # Usage: /files/{file_id}/data/content/update, /files/ (audio file upload pipeline)
 
@@ -1688,9 +1584,9 @@ def process_file(
                 # Audio file upload pipeline
                 pass
 
-            # Clean content early
-            cleaned_content = _clean_text_for_vector_db(form_data.content.replace("<br/>", "\n"))
-
+            # Clean the provided content before creating document
+            cleaned_content = clean_text_for_vector_db(form_data.content.replace("<br/>", "\n"))
+            
             docs = [
                 Document(
                     page_content=cleaned_content,
@@ -1706,7 +1602,6 @@ def process_file(
 
             text_content = cleaned_content
         elif form_data.collection_name:
-            print("🔍 DIAGNOSTIC: Taking form_data.collection_name path")
             # Check if the file has already been processed and save the content
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
@@ -1717,14 +1612,18 @@ def process_file(
             if result is not None and len(result.ids[0]) > 0:
                 docs = [
                     Document(
-                        page_content=_clean_text_for_vector_db(result.documents[0][idx]),
+                        page_content=result.documents[0][idx],
                         metadata=result.metadatas[0][idx],
                     )
                     for idx, id in enumerate(result.ids[0])
                 ]
+                # Clean existing documents from vector DB
+                docs = [clean_document_content(doc) for doc in docs]
             else:
-                # Clean content
-                cleaned_content = _clean_text_for_vector_db(file.data.get("content", ""))
+                # Clean the file content before creating document
+                raw_content = file.data.get("content", "")
+                cleaned_content = clean_text_for_vector_db(raw_content)
+                
                 docs = [
                     Document(
                         page_content=cleaned_content,
@@ -1738,49 +1637,43 @@ def process_file(
                     )
                 ]
 
-            text_content = file.data.get("content", "")
-            # Clean before saving
-            text_content = _clean_text_for_vector_db(text_content)
+            text_content = " ".join([doc.page_content for doc in docs])
         else:
-            print("🔍 DIAGNOSTIC: Taking UNSTRUCTURED path - this is where unstructured should run!")
-            print(f"🔍 DIAGNOSTIC: file.path = {file.path}")
-            print(f"🔍 DIAGNOSTIC: file.data keys = {list(file.data.keys()) if file.data else 'None'}")
-            if file.data and 'content' in file.data:
-                print(f"🔍 DIAGNOSTIC: file.data['content'] length = {len(file.data['content'])}")
-            # Process the file and save the content
+            # Process the file and save the content - DEFAULT TO UNSTRUCTURED
             # Usage: /files/
             file_path = file.path
             if file_path:
                 file_path = Storage.get_file(file_path)
-                mistral_loader = MistralLoader(
-                    api_key=request.app.state.config.MISTRAL_OCR_API_KEY,
-                    file_path=file_path
+                
+                # Force unstructured processing for better document extraction
+                print(f"REFACTORED: Processing file {file.filename} with UNSTRUCTURED engine")
+                
+                loader = Loader(
+                    engine="unstructured",  # DEFAULT TO UNSTRUCTURED
+                    EXTERNAL_DOCUMENT_LOADER_URL=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
+                    EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
+                    TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
+                    DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
+                    DOCLING_OCR_ENGINE=request.app.state.config.DOCLING_OCR_ENGINE,
+                    DOCLING_OCR_LANG=request.app.state.config.DOCLING_OCR_LANG,
+                    DOCLING_DO_PICTURE_DESCRIPTION=request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
+                    PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
+                    DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
+                    DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+                    MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
                 )
                 
-                try:
-                    print(f"🔍 DIAGNOSTIC: Calling load_document for {file.filename}")
-                    docs = load_document(
-                        file_path=file_path,
-                        file_name=file.filename,
-                        content_type=file.meta.get("content_type"),
-                        mistral_loader=mistral_loader,
-                        unstructured_loader=unstructured_loader
-                    )
-                    print(f"🔍 DIAGNOSTIC: load_document SUCCESS - got {len(docs)} docs")
-                    logger.info(f"Successfully loaded document using load_document: {file.filename}")
-                except Exception as load_error:
-                    print(f"🔍 DIAGNOSTIC: load_document FAILED - {str(load_error)}")
-                    print(f"🔍 DIAGNOSTIC: FORCING UNSTRUCTURED - NO FALLBACK!")
-                    logger.error(f"Failed to load document {file.filename} with load_document: {load_error}")
-                    # TEMPORARILY DISABLED FALLBACK TO SEE ACTUAL UNSTRUCTURED ERRORS
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Unstructured failed for {file.filename}: {str(load_error)}"
-                    )
+                print(f"REFACTORED: Loading file with unstructured...")
+                docs = loader.load(
+                    file.filename, file.meta.get("content_type"), file_path
+                )
                 
+                print(f"REFACTORED: Loaded {len(docs)} documents, applying comprehensive cleaning...")
+                
+                # Apply comprehensive cleaning to all extracted documents
                 docs = [
                     Document(
-                        page_content=doc.page_content,
+                        page_content=clean_text_for_vector_db(doc.page_content),
                         metadata={
                             **doc.metadata,
                             "name": file.filename,
@@ -1791,41 +1684,34 @@ def process_file(
                     )
                     for doc in docs
                 ]
+                
+                print(f"REFACTORED: Document cleaning completed")
             else:
-                # Fallback when no file path is available
-                content = file.data.get("content", "")
-                if content:
-                    cleaned_content = _clean_text_for_vector_db(content)
-                    docs = [
-                        Document(
-                            page_content=cleaned_content,
-                            metadata={
-                                **file.meta,
-                                "name": file.filename,
-                                "created_by": file.user_id,
-                                "file_id": file.id,
-                                "source": file.filename,
-                                "fallback_reason": "no file path available"
-                            },
-                        )
-                    ]
-                    logger.info(f"Used stored content for file without path: {file.filename}")
-                else:
-                    raise ValueError(f"No file path or content available for processing: {file.filename}")
-            
+                # Fallback: clean existing file content
+                raw_content = file.data.get("content", "")
+                cleaned_content = clean_text_for_vector_db(raw_content)
+                
+                docs = [
+                    Document(
+                        page_content=cleaned_content,
+                        metadata={
+                            **file.meta,
+                            "name": file.filename,
+                            "created_by": file.user_id,
+                            "file_id": file.id,
+                            "source": file.filename,
+                        },
+                    )
+                ]
             text_content = " ".join([doc.page_content for doc in docs])
 
-        logger.debug(f"text_content: {text_content}")
-        
-        # Clean again before saving
-        cleaned_text = _clean_text_for_vector_db(text_content)
-        
+        log.debug(f"text_content: {text_content}")
         Files.update_file_data_by_id(
             file.id,
-            {"content": cleaned_text},
+            {"content": text_content},
         )
 
-        hash = calculate_sha256_string(cleaned_text)
+        hash = calculate_sha256_string(text_content)
         Files.update_file_hash_by_id(file.id, hash)
 
         if not request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL:
@@ -1868,7 +1754,7 @@ def process_file(
             }
 
     except Exception as e:
-        logger.exception(e)
+        log.exception(e)
         if "No pandoc was found" in str(e):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -1897,8 +1783,8 @@ def process_text(
     if collection_name is None:
         collection_name = calculate_sha256_string(form_data.content)
 
-    # Clean text before creating document
-    cleaned_content = _clean_text_for_vector_db(form_data.content)
+    # Clean the text content before creating document
+    cleaned_content = clean_text_for_vector_db(form_data.content)
     
     docs = [
         Document(
@@ -1907,7 +1793,7 @@ def process_text(
         )
     ]
     text_content = cleaned_content
-    logger.debug(f"text_content: {text_content}")
+    log.debug(f"text_content: {text_content}")
 
     result = save_docs_to_vector_db(request, docs, collection_name, user=user)
     if result:
@@ -1938,19 +1824,13 @@ def process_youtube_video(
             proxy_url=request.app.state.config.YOUTUBE_LOADER_PROXY_URL,
         )
 
-        raw_docs = loader.load()
+        docs = loader.load()
         
-        # Clean each document content
-        docs = [
-            Document(
-                page_content=_clean_text_for_vector_db(doc.page_content),
-                metadata=doc.metadata
-            )
-            for doc in raw_docs
-        ]
+        # Apply comprehensive cleaning to YouTube transcript content
+        docs = [clean_document_content(doc) for doc in docs]
         
         content = " ".join([doc.page_content for doc in docs])
-        logger.debug(f"text_content: {content}")
+        log.debug(f"text_content: {content}")
 
         save_docs_to_vector_db(
             request, docs, collection_name, overwrite=True, user=user
@@ -1970,7 +1850,7 @@ def process_youtube_video(
             },
         }
     except Exception as e:
-        logger.exception(e)
+        log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
@@ -1991,20 +1871,14 @@ def process_web(
             verify_ssl=request.app.state.config.ENABLE_WEB_LOADER_SSL_VERIFICATION,
             requests_per_second=request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
         )
-        raw_docs = loader.load()
+        docs = loader.load()
         
-        # Clean each document content
-        docs = [
-            Document(
-                page_content=_clean_text_for_vector_db(doc.page_content),
-                metadata=doc.metadata
-            )
-            for doc in raw_docs
-        ]
+        # Apply comprehensive cleaning to web content
+        docs = [clean_document_content(doc) for doc in docs]
         
         content = " ".join([doc.page_content for doc in docs])
 
-        logger.debug(f"text_content: {content}")
+        log.debug(f"text_content: {content}")
 
         if not request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             save_docs_to_vector_db(
@@ -2028,7 +1902,7 @@ def process_web(
             },
         }
     except Exception as e:
-        logger.exception(e)
+        log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
@@ -2301,10 +2175,10 @@ async def process_web_search(
                         urls.append(item.link)
 
         urls = list(dict.fromkeys(urls))
-        logger.debug(f"urls: {urls}")
+        log.debug(f"urls: {urls}")
 
     except Exception as e:
-        logger.exception(e)
+        log.exception(e)
 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -2318,16 +2192,10 @@ async def process_web_search(
             requests_per_second=request.app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS,
             trust_env=request.app.state.config.WEB_SEARCH_TRUST_ENV,
         )
-        raw_docs = await loader.aload()
+        docs = await loader.aload()
         
-        # Clean each document content
-        docs = [
-            Document(
-                page_content=_clean_text_for_vector_db(doc.page_content),
-                metadata=doc.metadata
-            )
-            for doc in raw_docs
-        ]
+        # Apply comprehensive cleaning to web search content
+        docs = [clean_document_content(doc) for doc in docs]
         
         urls = [
             doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
@@ -2365,7 +2233,7 @@ async def process_web_search(
                     user=user,
                 )
             except Exception as e:
-                logger.debug(f"error saving docs: {e}")
+                log.debug(f"error saving docs: {e}")
 
             return {
                 "status": True,
@@ -2374,7 +2242,7 @@ async def process_web_search(
                 "loaded_count": len(docs),
             }
     except Exception as e:
-        logger.exception(e)
+        log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
@@ -2430,7 +2298,7 @@ def query_doc_handler(
                 user=user,
             )
     except Exception as e:
-        logger.exception(e)
+        log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
@@ -2481,7 +2349,7 @@ def query_collection_handler(
             )
 
     except Exception as e:
-        logger.exception(e)
+        log.exception(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
@@ -2515,7 +2383,7 @@ def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin
         else:
             return {"status": False}
     except Exception as e:
-        logger.exception(e)
+        log.exception(e)
         return {"status": False}
 
 
@@ -2540,11 +2408,11 @@ def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
                     elif os.path.isdir(file_path):
                         shutil.rmtree(file_path)  # Remove the directory
                 except Exception as e:
-                    logger.exception(f"Failed to delete {file_path}. Reason: {e}")
+                    log.exception(f"Failed to delete {file_path}. Reason: {e}")
         else:
-            logger.warning(f"The directory {folder} does not exist")
+            log.warning(f"The directory {folder} does not exist")
     except Exception as e:
-        logger.exception(f"Failed to process the directory {folder}. Reason: {e}")
+        log.exception(f"Failed to process the directory {folder}. Reason: {e}")
     return True
 
 
@@ -2582,7 +2450,7 @@ def process_files_batch(
     user=Depends(get_verified_user),
 ) -> BatchProcessFilesResponse:
     """
-    Batch process multiple files for efficient vector database storage.
+    Process a batch of files and save them to the vector database.
     """
     results: List[BatchProcessFilesResult] = []
     errors: List[BatchProcessFilesResult] = []
@@ -2594,8 +2462,8 @@ def process_files_batch(
         try:
             text_content = file.data.get("content", "")
             
-            # Clean text content
-            cleaned_content = _clean_text_for_vector_db(text_content.replace("<br/>", "\n"))
+            # Apply comprehensive cleaning to batch file content
+            cleaned_content = clean_text_for_vector_db(text_content.replace("<br/>", "\n"))
 
             docs: List[Document] = [
                 Document(
@@ -2618,7 +2486,7 @@ def process_files_batch(
             results.append(BatchProcessFilesResult(file_id=file.id, status="prepared"))
 
         except Exception as e:
-            logger.error(f"process_files_batch: Error processing file {file.id}: {str(e)}")
+            log.error(f"process_files_batch: Error processing file {file.id}: {str(e)}")
             errors.append(
                 BatchProcessFilesResult(file_id=file.id, status="failed", error=str(e))
             )
@@ -2642,130 +2510,13 @@ def process_files_batch(
                 result.status = "completed"
 
         except Exception as e:
-            logger.error(
+            log.error(
                 f"process_files_batch: Error saving documents to vector DB: {str(e)}"
             )
             for result in results:
                 result.status = "failed"
                 errors.append(
-                    BatchProcessFilesResult(file_id=result.file_id, status="failed", error=str(e))
+                    BatchProcessFilesResult(file_id=result.file_id, error=str(e))
                 )
 
     return BatchProcessFilesResponse(results=results, errors=errors)
-
-
-def unstructured_loader(file_path):
-    """Load document using unstructured with comprehensive error handling."""
-    if not UNSTRUCTURED_AVAILABLE:
-        raise ImportError("unstructured is not installed. Please install it with: pip install unstructured")
-    
-    try:
-        return partition(filename=file_path)
-    except Exception as e:
-        logger.error(f"Unstructured partition failed for {file_path}: {e}")
-        raise
-
-def load_document(file_path, file_name, content_type, mistral_loader, unstructured_loader):
-    """
-    Load document using the most appropriate loader with comprehensive fallbacks.
-    """
-    print(f"🔍 DIAGNOSTIC [LOADER]: Starting load_document for {file_name}")
-    print(f"🔍 DIAGNOSTIC [LOADER]: file_path={file_path}")
-    print(f"🔍 DIAGNOSTIC [LOADER]: content_type={content_type}")
-    print(f"🔍 DIAGNOSTIC [LOADER]: UNSTRUCTURED_AVAILABLE={UNSTRUCTURED_AVAILABLE}")
-    logger.info(f"[LOADER] Loading document: {file_name} (type: {content_type})")
-    
-    # Try MistralLoader for PDFs first
-    if content_type == "application/pdf" or file_name.lower().endswith(".pdf"):
-        try:
-            logger.info(f"[LOADER] Using MistralLoader for {file_name}")
-            docs = mistral_loader.load()
-            logger.info(f"[LOADER] MistralLoader successfully loaded {len(docs)} documents from {file_name}")
-            return docs
-        except Exception as e:
-            logger.warning(f"[LOADER] MistralLoader failed for {file_name}: {e}")
-            logger.info(f"[LOADER] Falling back to Unstructured for PDF: {file_name}")
-    
-    # Try unstructured for all other files (and PDF fallback)
-    try:
-        logger.info(f"[LOADER] Using Unstructured for {file_name}")
-        elements = unstructured_loader(file_path)
-        
-        print(f"🔍 DIAGNOSTIC [LOADER]: Unstructured returned {len(elements) if hasattr(elements, '__len__') else 'unknown'} elements")
-        
-        # Normalize to a list of strings
-        if isinstance(elements, str):
-            elements = [elements]
-            print(f"🔍 DIAGNOSTIC [LOADER]: Single string element, length: {len(elements[0])}")
-        elif hasattr(elements, "__iter__"):
-            element_texts = [getattr(el, "text", str(el)) for el in elements if hasattr(el, "text") or str(el).strip()]
-            print(f"🔍 DIAGNOSTIC [LOADER]: Extracted {len(element_texts)} text elements")
-            total_chars = sum(len(str(text)) for text in element_texts)
-            print(f"🔍 DIAGNOSTIC [LOADER]: Total raw characters: {total_chars}")
-            elements = element_texts
-        else:
-            elements = [str(elements)]
-            print(f"🔍 DIAGNOSTIC [LOADER]: Converted to string, length: {len(elements[0])}")
-        
-        # Clean and create documents
-        docs = []
-        combined_content = []
-        
-        for i, text in enumerate(elements):
-            if text and str(text).strip():
-                raw_length = len(str(text))
-                cleaned_text = _clean_text_for_vector_db(str(text))
-                cleaned_length = len(cleaned_text)
-                print(f"🔍 DIAGNOSTIC [LOADER]: Element {i}: raw={raw_length} chars, cleaned={cleaned_length} chars")
-                if cleaned_text.strip():  # Only add non-empty cleaned text
-                    combined_content.append(cleaned_text)
-        
-        if combined_content:
-            # Combine all elements into one document for better semantic chunking
-            full_content = "\n\n".join(combined_content)
-            total_final_chars = len(full_content)
-            print(f"🔍 DIAGNOSTIC [LOADER]: Combined into 1 document with {total_final_chars} total characters")
-            
-            docs = [Document(page_content=full_content)]
-            logger.info(f"[LOADER] Unstructured successfully loaded and combined {len(combined_content)} elements into 1 document from {file_name}")
-            return docs
-        else:
-            print(f"🔍 DIAGNOSTIC [LOADER]: No valid content after cleaning!")
-            logger.warning(f"[LOADER] Unstructured returned no valid content for {file_name}")
-            
-    except Exception as e:
-        logger.error(f"[LOADER] Unstructured failed for {file_name}: {e}")
-    
-    # Final fallback: try to read as plain text
-    logger.info(f"[LOADER] Attempting plain text fallback for {file_name}")
-    try:
-        # Try different encodings
-        encodings = ['utf-8', 'utf-8-sig', 'latin-1', 'cp1252']
-        content = None
-        
-        for encoding in encodings:
-            try:
-                with open(file_path, 'r', encoding=encoding) as f:
-                    content = f.read()
-                logger.info(f"[LOADER] Successfully read {file_name} with {encoding} encoding")
-                break
-            except UnicodeDecodeError:
-                continue
-        
-        if content:
-            cleaned_content = _clean_text_for_vector_db(content)
-            if cleaned_content.strip():
-                docs = [Document(page_content=cleaned_content)]
-                logger.info(f"[LOADER] Plain text fallback successful for {file_name}")
-                return docs
-        
-        logger.error(f"[LOADER] Plain text fallback failed - no valid content found in {file_name}")
-        
-    except Exception as e:
-        logger.error(f"[LOADER] Plain text fallback error for {file_name}: {e}")
-    
-    # If all methods fail, raise an informative error
-    raise ValueError(f"All document loading methods failed for {file_name}. "
-                    f"File type: {content_type}. "
-                    f"Unstructured available: {UNSTRUCTURED_AVAILABLE}. "
-                    f"Please check the file format and ensure required dependencies are installed.")
