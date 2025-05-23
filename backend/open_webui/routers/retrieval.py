@@ -1760,17 +1760,21 @@ def process_file(
 
             text_content = " ".join([doc.page_content for doc in docs])
         else:
-            # Process the file and save the content - DEFAULT TO UNSTRUCTURED
+            # Process the file and save the content - RESPECT USER'S ENGINE CHOICE
             # Usage: /files/
             file_path = file.path
             if file_path:
                 file_path = Storage.get_file(file_path)
                 
-                # Force unstructured processing for better document extraction
-                print(f"REFACTORED: Processing file {file.filename} with UNSTRUCTURED engine")
+                # Respect user's choice of content extraction engine, default to unstructured
+                engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE
+                if not engine or engine.lower() in ["default", ""]:
+                    engine = "unstructured"
                 
-                # Check if unstructured is available
-                if not UNSTRUCTURED_AVAILABLE:
+                print(f"REFACTORED: Processing file {file.filename} with {engine.upper()} engine (user choice: {request.app.state.config.CONTENT_EXTRACTION_ENGINE})")
+                
+                # Check if unstructured is available for unstructured engine
+                if engine == "unstructured" and not UNSTRUCTURED_AVAILABLE:
                     print(f"WARNING: Unstructured library not available. Install with: pip install unstructured")
                     print(f"FALLBACK: Using basic content extraction...")
                     # Fallback to basic file content if unstructured not available
@@ -1791,7 +1795,7 @@ def process_file(
                     ]
                 else:
                     loader = Loader(
-                        engine="unstructured",  # DEFAULT TO UNSTRUCTURED
+                        engine=engine,  # USE USER'S SELECTED ENGINE
                         EXTERNAL_DOCUMENT_LOADER_URL=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
                         EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
                         TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
@@ -1805,7 +1809,7 @@ def process_file(
                         MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
                     )
                     
-                    print(f"REFACTORED: Loading file with unstructured...")
+                    print(f"REFACTORED: Loading file with {engine} engine...")
                     docs = loader.load(
                         file.filename, file.meta.get("content_type"), file_path
                     )
