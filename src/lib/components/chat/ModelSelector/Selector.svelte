@@ -29,6 +29,9 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 	import { goto } from '$app/navigation';
+	import dayjs from '$lib/dayjs';
+	import relativeTime from 'dayjs/plugin/relativeTime';
+	dayjs.extend(relativeTime);
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -326,8 +329,17 @@
 		aria-label={placeholder}
 		id="model-selector-{id}-button"
 	>
-		<div
+		<button
 			class="flex w-full text-left px-0.5 outline-hidden bg-transparent truncate {triggerClassName} justify-between font-medium placeholder-gray-400 focus:outline-hidden"
+			on:mouseenter={async () => {
+				models.set(
+					await getModels(
+						localStorage.token,
+						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
+					)
+				);
+			}}
+			type="button"
 		>
 			{#if selectedModel}
 				{selectedModel.label}
@@ -335,7 +347,7 @@
 				{placeholder}
 			{/if}
 			<ChevronDown className=" self-center ml-2 size-3" strokeWidth="2.5" />
-		</div>
+		</button>
 	</DropdownMenu.Trigger>
 
 	<DropdownMenu.Content
@@ -510,38 +522,57 @@
 													<div class="line-clamp-1">
 														{item.label}
 													</div>
-
-													{#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
-														<div class="flex ml-1 items-center translate-y-[0.5px]">
-															<Tooltip
-																content={`${
-																	item.model.ollama?.details?.quantization_level
-																		? item.model.ollama?.details?.quantization_level + ' '
-																		: ''
-																}${
-																	item.model.ollama?.size
-																		? `(${(item.model.ollama?.size / 1024 ** 3).toFixed(1)}GB)`
-																		: ''
-																}`}
-																className="self-end"
-															>
-																<span
-																	class=" text-xs font-medium text-gray-600 dark:text-gray-400 line-clamp-1"
-																	>{item.model.ollama?.details?.parameter_size ?? ''}</span
-																>
-															</Tooltip>
-														</div>
-													{/if}
 												</div>
 											</Tooltip>
 										</div>
 									</div>
 								</div>
 
+								{#if item.model.owned_by === 'ollama'}
+									{#if (item.model.ollama?.details?.parameter_size ?? '') !== ''}
+										<div class="flex items-center translate-y-[0.5px]">
+											<Tooltip
+												content={`${
+													item.model.ollama?.details?.quantization_level
+														? item.model.ollama?.details?.quantization_level + ' '
+														: ''
+												}${
+													item.model.ollama?.size
+														? `(${(item.model.ollama?.size / 1024 ** 3).toFixed(1)}GB)`
+														: ''
+												}`}
+												className="self-end"
+											>
+												<span
+													class=" text-xs font-medium text-gray-600 dark:text-gray-400 line-clamp-1"
+													>{item.model.ollama?.details?.parameter_size ?? ''}</span
+												>
+											</Tooltip>
+										</div>
+									{/if}
+									{#if item.model.ollama?.expires_at && new Date(item.model.ollama?.expires_at * 1000) > new Date()}
+										<div class="flex items-center translate-y-[0.5px] px-0.5">
+											<Tooltip
+												content={`${dayjs(item.model.ollama?.expires_at * 1000).fromNow()}`}
+												className="self-end"
+											>
+												<div class=" flex items-center">
+													<span class="relative flex size-2">
+														<span
+															class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"
+														/>
+														<span class="relative inline-flex rounded-full size-2 bg-green-500" />
+													</span>
+												</div>
+											</Tooltip>
+										</div>
+									{/if}
+								{/if}
+
 								<!-- {JSON.stringify(item.info)} -->
 
 								{#if item.model?.direct}
-									<Tooltip content={`${'Direct'}`}>
+									<Tooltip content={`${$i18n.t('Direct')}`}>
 										<div class="translate-y-[1px]">
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
@@ -558,7 +589,7 @@
 										</div>
 									</Tooltip>
 								{:else if item.model.connection_type === 'external'}
-									<Tooltip content={`${'External'}`}>
+									<Tooltip content={`${$i18n.t('External')}`}>
 										<div class="translate-y-[1px]">
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
@@ -746,7 +777,7 @@
 			</div>
 
 			{#if showTemporaryChatControl}
-				<div class="flex items-center mx-2 mb-2">
+				<div class="flex items-center mx-2 mt-1 mb-2">
 					<button
 						class="flex justify-between w-full font-medium line-clamp-1 select-none items-center rounded-button py-2 px-3 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-highlighted:bg-muted"
 						on:click={async () => {

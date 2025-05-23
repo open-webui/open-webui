@@ -9,6 +9,8 @@ import os
 import random
 import re
 import time
+from datetime import datetime
+
 from typing import Optional, Union
 from urllib.parse import urlparse
 import aiohttp
@@ -389,6 +391,19 @@ async def get_all_models(request: Request, user: UserModel = None):
             )
         }
 
+        loaded_models = await get_ollama_loaded_models(request, user=user)
+        expires_map = {
+            m["name"]: m["expires_at"]
+            for m in loaded_models["models"]
+            if "expires_at" in m
+        }
+
+        for m in models["models"]:
+            if m["name"] in expires_map:
+                # Parse ISO8601 datetime with offset, get unix timestamp as int
+                dt = datetime.fromisoformat(expires_map[m["name"]])
+                m["expires_at"] = int(dt.timestamp())
+
     else:
         models = {"models": []}
 
@@ -470,7 +485,7 @@ async def get_ollama_tags(
 
 
 @router.get("/api/ps")
-async def get_ollama_loaded_models(request: Request, user=Depends(get_verified_user)):
+async def get_ollama_loaded_models(request: Request, user=Depends(get_admin_user)):
     """
     List models that are currently loaded into Ollama memory, and which node they are loaded on.
     """
@@ -525,10 +540,6 @@ async def get_ollama_loaded_models(request: Request, user=Depends(get_verified_u
                 )
             )
         }
-
-        if user.role == "user" and not BYPASS_MODEL_ACCESS_CONTROL:
-            models["models"] = await get_filtered_models(models, user)
-
     else:
         models = {"models": []}
 
