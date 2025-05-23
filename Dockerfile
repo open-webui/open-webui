@@ -31,8 +31,7 @@ COPY scripts ./scripts/
 # Create static directory in advance
 RUN mkdir -p static/utility
 RUN npm ci --unsafe-perm && \
-    npm cache clean --force && \
-    npm run postinstall
+    npm cache clean --force
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
