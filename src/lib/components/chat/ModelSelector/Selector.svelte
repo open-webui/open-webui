@@ -553,7 +553,9 @@
 									{#if item.model.ollama?.expires_at && new Date(item.model.ollama?.expires_at * 1000) > new Date()}
 										<div class="flex items-center translate-y-[0.5px] px-0.5">
 											<Tooltip
-												content={`${dayjs(item.model.ollama?.expires_at * 1000).fromNow()}`}
+												content={`${$i18n.t('Unloads {{FROM_NOW}}', {
+													FROM_NOW: dayjs(item.model.ollama?.expires_at * 1000).fromNow()
+												})}`}
 												className="self-end"
 											>
 												<div class=" flex items-center">
