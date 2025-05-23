@@ -1317,6 +1317,7 @@
 	"What’s New in": "",
 	"When enabled, the model will respond to each chat message in real-time, generating a response as soon as the user sends a message. This mode is useful for live chat applications, but may impact performance on slower hardware.": "",
 	"wherever you are": "",
+	"Weight of BM25 Retrieval": "",
 	"Whisper (Local)": "",
 	"Why?": "",
 	"Widescreen Mode": "",
