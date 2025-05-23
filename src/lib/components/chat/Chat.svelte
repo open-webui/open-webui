@@ -49,7 +49,8 @@
 		sleep,
 		removeDetails,
 		getPromptVariables,
-		processDetails
+		processDetails,
+		removeAllDetails
 	} from '$lib/utils';
 
 	import { generateChatCompletion } from '$lib/apis/ollama';
@@ -1172,7 +1173,7 @@
 
 					// Emit chat event for TTS
 					const messageContentParts = getMessageContentParts(
-						message.content,
+						removeAllDetails(message.content),
 						$config?.audio?.tts?.split_on ?? 'punctuation'
 					);
 					messageContentParts.pop();
@@ -1206,7 +1207,7 @@
 
 			// Emit chat event for TTS
 			const messageContentParts = getMessageContentParts(
-				message.content,
+				removeAllDetails(message.content),
 				$config?.audio?.tts?.split_on ?? 'punctuation'
 			);
 			messageContentParts.pop();
@@ -1253,9 +1254,10 @@
 
 			// Emit chat event for TTS
 			let lastMessageContentPart =
-				getMessageContentParts(message.content, $config?.audio?.tts?.split_on ?? 'punctuation')?.at(
-					-1
-				) ?? '';
+				getMessageContentParts(
+					removeAllDetails(message.content),
+					$config?.audio?.tts?.split_on ?? 'punctuation'
+				)?.at(-1) ?? '';
 			if (lastMessageContentPart) {
 				eventTarget.dispatchEvent(
 					new CustomEvent('chat', {

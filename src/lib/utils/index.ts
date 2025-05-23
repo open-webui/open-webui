@@ -867,11 +867,10 @@ export const extractSentencesForAudio = (text: string) => {
 	}, [] as string[]);
 };
 
-export const getMessageContentParts = (content: string, split_on: string = 'punctuation') => {
-	content = removeDetails(content, ['reasoning', 'code_interpreter', 'tool_calls']);
+export const getMessageContentParts = (content: string, splitOn: string = 'punctuation') => {
 	const messageContentParts: string[] = [];
 
-	switch (split_on) {
+	switch (splitOn) {
 		default:
 		case TTS_RESPONSE_SPLIT.PUNCTUATION:
 			messageContentParts.push(...extractSentencesForAudio(content));
