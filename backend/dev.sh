@@ -27,7 +27,7 @@ uvicorn open_webui.main:app --port $PORT --host 0.0.0.0 --log-level=info --forwa
 FASTAPI_PID=$!
 
 sleep 10
-export CELERY_BROKER_URL="amqp://guest:guest@localhost:5672//"
+export CELERY_BROKER_URL=amqp://guest:guest@localhost:5672//
 echo "Iniciando o Celery worker..."
 celery -A open_webui.celery_worker worker --loglevel=INFO --concurrency=10 &
 CELERY_PID=$!
