@@ -46,7 +46,7 @@
 		}
 		prompt = [
 			// Blockquote each line of the selected text
-			...selectedText.split('\n').map(line => `> ${line}`),
+			...selectedText.split('\n').map((line) => `> ${line}`),
 			'',
 			// Then your question
 			floatingInputValue
@@ -129,7 +129,7 @@
 		}
 		const quotedText = selectedText
 			.split('\n')
-			.map(line => `> ${line}`)
+			.map((line) => `> ${line}`)
 			.join('\n');
 		prompt = `${quotedText}\n\nExplain`;
 
