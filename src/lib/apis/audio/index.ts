@@ -97,6 +97,8 @@ export const transcribeAudio = async (token: string, file: File) => {
 export const streamAudio = async (reader: any) => {		
 	const ctx = new AudioContext({sampleRate: 24000}) 
 
+	let time = ctx.currentTime
+
 	const queue: any[] = []
 	let isPlaying = false;
 
@@ -113,8 +115,9 @@ export const streamAudio = async (reader: any) => {
 		const source = ctx.createBufferSource()
 		source.buffer = buffer
 		source.connect(ctx.destination)
-		source.start()
-		source.onended = () => playNext();
+		source.start(time)
+		time += buffer.duration
+		// source.onended = () => playNext();
 	}
 
 	function playNext() {
@@ -123,14 +126,20 @@ export const streamAudio = async (reader: any) => {
 			return;
 		}
 		isPlaying = true;
-		playChunk(queue.shift())
+		// playChunk()
 	}
 
 	while (true) { 
 		const { done, value } = await reader.read()
+		console.log('!!ctx.currentTime', ctx.currentTime)
+		console.log('!!time', time)
+		if (time < ctx.currentTime) {
+			time = ctx.currentTime + 0.25
+		}
 		if (done) break;
-		queue.push(value.buffer);
-		if (!isPlaying) playNext()
+		playChunk(value.buffer)
+		// queue.push(value.buffer);
+		// if (!isPlaying) playNext()
 	}
 }
 
