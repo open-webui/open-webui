@@ -4,7 +4,10 @@ import time
 import datetime
 import logging
 from aiohttp import ClientSession
+from sqlalchemy.orm import Session
 
+from open_webui.services.group_sync_service import synchronize_user_groups_from_sql
+from open_webui.internal.db import get_db
 from open_webui.models.auths import (
     AddUserForm,
     ApiKey,
@@ -164,7 +167,12 @@ async def update_password(
 # LDAP Authentication
 ############################
 @router.post("/ldap", response_model=SessionUserResponse)
-async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
+async def ldap_auth(
+    request: Request, 
+    response: Response, 
+    form_data: LdapForm,
+    db: Session = Depends(get_db)
+):
     ENABLE_LDAP = request.app.state.config.ENABLE_LDAP
     LDAP_SERVER_LABEL = request.app.state.config.LDAP_SERVER_LABEL
     LDAP_SERVER_HOST = request.app.state.config.LDAP_SERVER_HOST
@@ -288,6 +296,13 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
             user = Auths.authenticate_user_by_trusted_header(email)
 
             if user:
+                # LDAP 登入成功後進行群組同步
+                try:
+                    await synchronize_user_groups_from_sql(user=user, db=db)
+                except Exception as e:
+                    log.error(f"Group synchronization failed for LDAP user {user.email}: {e}", exc_info=True)
+                    # 同步失敗不影響登入流程
+
                 token = create_token(
                     data={"id": user.id},
                     expires_delta=parse_duration(
@@ -331,7 +346,12 @@ async def ldap_auth(request: Request, response: Response, form_data: LdapForm):
 
 
 @router.post("/signin", response_model=SessionUserResponse)
-async def signin(request: Request, response: Response, form_data: SigninForm):
+async def signin(
+    request: Request, 
+    response: Response, 
+    form_data: SigninForm,
+    db: Session = Depends(get_db)
+):
     if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
         if WEBUI_AUTH_TRUSTED_EMAIL_HEADER not in request.headers:
             raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_TRUSTED_HEADER)
@@ -349,6 +369,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
                 SignupForm(
                     email=trusted_email, password=str(uuid.uuid4()), name=trusted_name
                 ),
+                db=db
             )
         user = Auths.authenticate_user_by_trusted_header(trusted_email)
     elif WEBUI_AUTH == False:
@@ -365,6 +386,7 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
                 request,
                 response,
                 SignupForm(email=admin_email, password=admin_password, name="User"),
+                db=db
             )
 
             user = Auths.authenticate_user(admin_email.lower(), admin_password)
@@ -372,6 +394,12 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
         user = Auths.authenticate_user(form_data.email.lower(), form_data.password)
 
     if user:
+        # 進行群組同步
+        try:
+            await synchronize_user_groups_from_sql(user=user, db=db)
+        except Exception as e:
+            log.error(f"Group synchronization failed for user {user.email}: {e}", exc_info=True)
+            # 同步失敗不影響登入流程
 
         expires_delta = parse_duration(request.app.state.config.JWT_EXPIRES_IN)
         expires_at = None
@@ -424,7 +452,12 @@ async def signin(request: Request, response: Response, form_data: SigninForm):
 
 
 @router.post("/signup", response_model=SessionUserResponse)
-async def signup(request: Request, response: Response, form_data: SignupForm):
+async def signup(
+    request: Request, 
+    response: Response, 
+    form_data: SignupForm,
+    db: Session = Depends(get_db)
+):
 
     if WEBUI_AUTH:
         if (
@@ -500,6 +533,13 @@ async def signup(request: Request, response: Response, form_data: SignupForm):
                 samesite=WEBUI_AUTH_COOKIE_SAME_SITE,
                 secure=WEBUI_AUTH_COOKIE_SECURE,
             )
+
+            # 註冊成功後進行群組同步
+            try:
+                await synchronize_user_groups_from_sql(user=user, db=db)
+            except Exception as e:
+                log.error(f"Group synchronization failed for new user {user.email}: {e}", exc_info=True)
+                # 同步失敗不影響註冊流程
 
             if request.app.state.config.WEBHOOK_URL:
                 post_webhook(
