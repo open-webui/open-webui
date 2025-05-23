@@ -78,6 +78,8 @@ from open_webui.routers import (
     tools,
     users,
     utils,
+    roles,
+    permissions,
 )
 
 from open_webui.routers.retrieval import (
@@ -589,6 +591,7 @@ app.state.config.PENDING_USER_OVERLAY_TITLE = PENDING_USER_OVERLAY_TITLE
 app.state.config.RESPONSE_WATERMARK = RESPONSE_WATERMARK
 
 app.state.config.USER_PERMISSIONS = USER_PERMISSIONS
+
 app.state.config.WEBHOOK_URL = WEBHOOK_URL
 app.state.config.BANNERS = WEBUI_BANNERS
 app.state.config.MODEL_ORDER_LIST = MODEL_ORDER_LIST
@@ -1054,6 +1057,11 @@ app.include_router(
 )
 app.include_router(utils.router, prefix="/api/v1/utils", tags=["utils"])
 
+app.include_router(roles.router, prefix="/api/v1/roles", tags=["roles"])
+app.include_router(
+    permissions.router, prefix="/api/v1/permissions", tags=["permissions"]
+)
+
 
 try:
     audit_level = AuditLevel(AUDIT_LOG_LEVEL)
@@ -1407,7 +1415,7 @@ async def get_app_config(request: Request):
                     "max_size": app.state.config.FILE_MAX_SIZE,
                     "max_count": app.state.config.FILE_MAX_COUNT,
                 },
-                "permissions": {**app.state.config.USER_PERMISSIONS},
+                "permissions": USER_PERMISSIONS,
                 "google_drive": {
                     "client_id": GOOGLE_DRIVE_CLIENT_ID.value,
                     "api_key": GOOGLE_DRIVE_API_KEY.value,
