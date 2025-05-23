@@ -179,7 +179,12 @@ def clean_text_for_vector_db(text: str) -> str:
         
         for pattern, replacement in escape_patterns:
             try:
-                text = re.sub(pattern, replacement, text)
+                # Special handling for backslash pattern to avoid regex errors
+                if pattern == r'\\\\':
+                    # Use string replacement for double backslashes instead of regex
+                    text = text.replace('\\\\', '\\')
+                else:
+                    text = re.sub(pattern, replacement, text)
             except re.error as e:
                 log.warning(f"Regex error with pattern '{pattern}': {e}")
                 continue
