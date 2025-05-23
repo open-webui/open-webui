@@ -1078,7 +1078,7 @@ export function onClickOutside(node, callback) {
 
 export function getModelIcon(label: string): string {
 	if(!label) return '';
-	const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+	const isDark = localStorage.getItem('theme') === 'dark';
 	const lower = label.toLowerCase();
 
 	if (lower.includes('perplexity')) {
