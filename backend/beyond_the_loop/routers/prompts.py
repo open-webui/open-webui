@@ -1,14 +1,14 @@
 from typing import Optional
 
-from open_webui.models.prompts import (
+from beyond_the_loop.models.prompts import (
     PromptForm,
     PromptUserResponse,
     PromptModel,
-    Prompts,
+    Prompts, PromptBookmarkForm,
 )
 from open_webui.constants import ERROR_MESSAGES
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_verified_user
 from open_webui.utils.access_control import has_access, has_permission
 
 router = APIRouter()
@@ -75,6 +75,24 @@ async def get_prompt_by_command(command: str, user=Depends(get_verified_user)):
             prompt.user_id == user.id
             or has_access(user.id, "read", prompt.access_control)
         ):
+            return prompt
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.NOT_FOUND,
+        )
+
+@router.post("/command/{command}/bookmark/update", response_model=Optional[PromptModel])
+async def get_prompt_by_command(command: str, form_data: PromptBookmarkForm, user=Depends(get_verified_user)):
+    prompt = Prompts.get_prompt_by_command_and_company(f"/{command}", user.company_id)
+
+    if prompt:
+        if (
+            prompt.user_id == user.id
+            or has_access(user.id, "read", prompt.access_control)
+        ):
+            prompt.bookmarked = form_data.bookmarked
+            Prompts.update_prompt_by_command_and_company(f"/{command}", prompt, user.company_id)
             return prompt
     else:
         raise HTTPException(

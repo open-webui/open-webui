@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import mimetypes
 import os
@@ -33,7 +32,6 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response
 
-from beyond_the_loop.routers import payments
 from open_webui.middleware.company_config import CompanyConfigMiddleware
 from open_webui.socket.main import (
     app as socket_app,
@@ -53,17 +51,15 @@ from open_webui.routers import (
     files,
     functions,
     memories,
-    models,
     knowledge,
-    prompts,
     evaluations,
     tools,
     users,
     utils,
 )
+from beyond_the_loop.routers import models
+from beyond_the_loop.routers import prompts
 from beyond_the_loop.routers import openai, audio
-from beyond_the_loop.routers import auths
-from beyond_the_loop.routers import analytics
 from beyond_the_loop.routers import payments
 from beyond_the_loop.routers import companies
 
@@ -272,7 +268,6 @@ from open_webui.env import (
 
 from open_webui.utils.models import (
     get_all_models,
-    get_all_base_models,
     check_model_access,
 )
 from open_webui.utils.chat import (
@@ -281,7 +276,6 @@ from open_webui.utils.chat import (
     chat_action as chat_action_handler,
 )
 from open_webui.utils.middleware import process_chat_payload, process_chat_response
-from open_webui.utils.access_control import has_access
 
 from open_webui.utils.auth import (
     decode_token,

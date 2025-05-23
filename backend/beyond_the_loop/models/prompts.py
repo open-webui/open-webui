@@ -25,6 +25,7 @@ class Prompt(Base):
     timestamp = Column(BigInteger)
     description = Column(Text)
     prebuilt = Column(Boolean)
+    bookmarked = Column(Boolean, nullable=True)
 
     access_control = Column(JSON, nullable=True)  # Controls data access levels.
     # Defines access control rules for this entry.
@@ -69,6 +70,7 @@ class PromptModel(BaseModel):
     meta: Optional[PromptMeta] = None
     description: Optional[str] = None
     prebuilt: Optional[bool] = None
+    bookmarked: Optional[bool] = None
 
 ####################
 # Forms
@@ -87,6 +89,9 @@ class PromptForm(BaseModel):
     meta: PromptMeta
     description: Optional[str] = None
 
+
+class PromptBookmarkForm(BaseModel):
+    bookmarked: bool
 
 class PromptsTable:
     def insert_new_prompt(
@@ -164,6 +169,7 @@ class PromptsTable:
                 prompt.access_control = form_data.access_control
                 prompt.timestamp = int(time.time())
                 prompt.description = form_data.description
+                prompt.bookmarked = form_data.bookmarked
                 db.commit()
                 return PromptModel.model_validate(prompt)
         except Exception:
