@@ -908,21 +908,44 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # If context is not empty, insert it into the messages
     if len(sources) > 0:
         context_string = ""
-        citation_idx = {}
-        for source in sources:
-            if "document" in source:
-                for doc_context, doc_meta in zip(
-                    source["document"], source["metadata"]
-                ):
-                    citation_id = (
-                        doc_meta.get("source", None)
-                        or source.get("source", {}).get("id", None)
-                        or "N/A"
-                    )
-                    if citation_id not in citation_idx:
-                        citation_idx[citation_id] = len(citation_idx) + 1
-                    context_string += f'<source id="{citation_idx[citation_id]}">{doc_context}</source>\n'
+        citation_idx = {} # Used to generate unique numeric IDs for distinct source_content_identifiers
+        for source_element in sources:
+            # original_file_info is the dictionary representing the file or tool,
+            original_file_info = source_element.get("source", {})
+            
+            # Get the display name of the file or tool (e.g., "mydoc.pdf")
+            file_display_name = original_file_info.get("name", "Unknown Source Name") 
+            escaped_file_display_name = html.escape(str(file_display_name)) # Ensure string and escape
 
+            if "document" in source_element:
+                for doc_context, doc_meta in zip(
+                    source_element["document"], source_element["metadata"]
+                ):
+                    # Determine the primary string identifier for this specific document chunk.
+                    # This is often the filename from metadata, a URL, the tool's name, or the ID of the parent file/collection.
+                    # For a file "mydoc.pdf" with id "file-xyz", this might be "mydoc.pdf" (from doc_meta) or "file-xyz".
+                    source_content_identifier = doc_meta.get("source", None) or \
+                                                original_file_info.get("id", None) or \
+                                                "N/A"
+                    escaped_source_content_identifier = html.escape(str(source_content_identifier)) # Ensure string and escape
+
+                    # Generate a unique numeric ID (e.g., 1, 2, 3...) for this source_content_identifier
+                    # This numeric ID is used for the 'id' attribute of the <source> tag for compact referencing.
+                    if source_content_identifier not in citation_idx:
+                        citation_idx[source_content_identifier] = len(citation_idx) + 1
+                    
+                    numeric_citation_id = citation_idx[source_content_identifier]
+                    
+                    # Construct the <source> tag
+                    # - id: The unique numeric reference for this context block.
+                    # - name: The display name of the overall file/tool.
+                    # - source_identifier: The specific string identifier for this piece of content.
+                    context_string += (
+                        f'<source id="{numeric_citation_id}" '
+                        f'name="{escaped_file_display_name}" '
+                        f'source_identifier="{escaped_source_content_identifier}">'
+                        f'{doc_context}</source>\n'
+                    )
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])
 
