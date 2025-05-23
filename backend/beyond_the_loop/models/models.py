@@ -78,7 +78,9 @@ class Model(Base):
 
     user_id = Column(Text, nullable=True)
 
-    company_id = Column(Text, nullable=False)
+    company_id = Column(Text, nullable=True)
+
+    bookmarked = Column(Boolean, nullable=False)
 
     access_control = Column(JSON, nullable=True)  # Controls data access levels.
     # Defines access control rules for this entry.
@@ -120,6 +122,8 @@ class ModelModel(BaseModel):
     user_id: Optional[str]
     company_id: str
 
+    bookmarked: Optional[bool] = None
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -133,6 +137,8 @@ class ModelResponse(ModelModel):
 class ModelUserResponse(ModelModel):
     user: Optional[UserResponse] = None
 
+class ModelBookmarkForm(BaseModel):
+    bookmarked: bool
 
 class ModelForm(BaseModel):
     id: str
