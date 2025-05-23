@@ -1,7 +1,7 @@
 import json
 import logging
 import time
-from typing import Optional, List
+from typing import Optional
 import uuid
 
 from sqlalchemy.orm import Session
@@ -10,8 +10,10 @@ from open_webui.env import SRC_LOG_LEVELS
 
 from open_webui.models.files import FileMetadataResponse
 
+
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import BigInteger, Column, String, Text, JSON, func
+
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
@@ -20,11 +22,12 @@ log.setLevel(SRC_LOG_LEVELS["MODELS"])
 # UserGroup DB Schema
 ####################
 
+
 class Group(Base):
     __tablename__ = "group"
 
     id = Column(Text, unique=True, primary_key=True)
-    user_id = Column(Text) # Creator of the group
+    user_id = Column(Text)
 
     name = Column(Text)
     description = Column(Text)
@@ -33,10 +36,11 @@ class Group(Base):
     meta = Column(JSON, nullable=True)
 
     permissions = Column(JSON, nullable=True)
-    user_ids = Column(JSON, nullable=True, default=[]) # List of user IDs belonging to this group
+    user_ids = Column(JSON, nullable=True)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
+
 
 class GroupModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -50,14 +54,16 @@ class GroupModel(BaseModel):
     meta: Optional[dict] = None
 
     permissions: Optional[dict] = None
-    user_ids: List[str] = [] # Changed to List[str] for consistency with Pydantic
+    user_ids: list[str] = []
 
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
 
+
 ####################
 # Forms
 ####################
+
 
 class GroupResponse(BaseModel):
     id: str
@@ -67,19 +73,23 @@ class GroupResponse(BaseModel):
     permissions: Optional[dict] = None
     data: Optional[dict] = None
     meta: Optional[dict] = None
-    user_ids: List[str] = []
+    user_ids: list[str] = []
     created_at: int  # timestamp in epoch
     updated_at: int  # timestamp in epoch
+
 
 class GroupForm(BaseModel):
     name: str
     description: str
     permissions: Optional[dict] = None
 
+
 class GroupUpdateForm(GroupForm):
-    user_ids: Optional[List[str]] = None
+    user_ids: Optional[list[str]] = None
+
 
 class GroupTable:
+<<<<<<< HEAD
     def __init__(self, db: Optional[Session] = None):
         self.db = db if db else next(get_session())
 
@@ -114,19 +124,49 @@ class GroupTable:
         finally:
             if not self.db and db_session: # Close only if db was locally obtained
                 db_session.close()
+=======
+    def insert_new_group(
+        self, user_id: str, form_data: GroupForm
+    ) -> Optional[GroupModel]:
+        with get_db() as db:
+            group = GroupModel(
+                **{
+                    **form_data.model_dump(exclude_none=True),
+                    "id": str(uuid.uuid4()),
+                    "user_id": user_id,
+                    "created_at": int(time.time()),
+                    "updated_at": int(time.time()),
+                }
+            )
+>>>>>>> parent of b6be2f751 (feat: implement group synchronization service for user login)
 
+            try:
+                result = Group(**group.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                if result:
+                    return GroupModel.model_validate(result)
+                else:
+                    return None
 
+<<<<<<< HEAD
     def get_groups(self) -> List[GroupModel]:
         db_session = self.db if self.db else next(get_session())
         try:
+=======
+            except Exception:
+                return None
+
+    def get_groups(self) -> list[GroupModel]:
+        with get_db() as db:
+>>>>>>> parent of b6be2f751 (feat: implement group synchronization service for user login)
             return [
                 GroupModel.model_validate(group)
-                for group in db_session.query(Group).order_by(Group.updated_at.desc()).all()
+                for group in db.query(Group).order_by(Group.updated_at.desc()).all()
             ]
-        finally:
-            if not self.db and db_session:
-                db_session.close()
 
+<<<<<<< HEAD
     def get_groups_by_member_id(self, user_id: str) -> List[GroupModel]:
         # This is the existing method, kept for compatibility if used elsewhere,
         # but get_groups_by_user_id is preferred for clarity and directness.
@@ -135,41 +175,36 @@ class GroupTable:
             # This query might be inefficient for large JSON arrays or many groups.
             # It relies on string casting and LIKE, which isn't ideal for JSON array membership.
             # Consider DB-specific JSON functions if performance becomes an issue.
+=======
+    def get_groups_by_member_id(self, user_id: str) -> list[GroupModel]:
+        with get_db() as db:
+>>>>>>> parent of b6be2f751 (feat: implement group synchronization service for user login)
             return [
                 GroupModel.model_validate(group)
-                for group in db_session.query(Group)
-                .filter(Group.user_ids.isnot(None)) # Ensure user_ids is not null
-                .filter(func.json_contains(Group.user_ids, json.dumps(user_id))) # More robust JSON check if supported
+                for group in db.query(Group)
+                .filter(
+                    func.json_array_length(Group.user_ids) > 0
+                )  # Ensure array exists
+                .filter(
+                    Group.user_ids.cast(String).like(f'%"{user_id}"%')
+                )  # String-based check
                 .order_by(Group.updated_at.desc())
                 .all()
             ]
-        except Exception as e:
-            # Fallback or alternative for databases not supporting json_contains well with lists of strings
-            # This is a simplified version of the original, assuming user_ids is a list of strings.
-            log.warning(f"JSON_CONTAINS might not be fully effective for lists of strings or on all DBs. Consider alternative for user_id '{user_id}'. Error: {e}")
-            # Reverting to a Python-based check if the above fails or is not suitable
-            all_groups = db_session.query(Group).order_by(Group.updated_at.desc()).all()
-            user_member_groups = []
-            for group_db in all_groups:
-                if group_db.user_ids and isinstance(group_db.user_ids, list) and user_id in group_db.user_ids:
-                    user_member_groups.append(GroupModel.model_validate(group_db))
-            return user_member_groups
-        finally:
-            if not self.db and db_session:
-                db_session.close()
 
     def get_group_by_id(self, id: str) -> Optional[GroupModel]:
+<<<<<<< HEAD
         db_session = self.db if self.db else next(get_session())
+=======
+>>>>>>> parent of b6be2f751 (feat: implement group synchronization service for user login)
         try:
-            group = db_session.query(Group).filter_by(id=id).first()
-            return GroupModel.model_validate(group) if group else None
-        except Exception as e:
-            log.error(f"Error getting group by id '{id}': {e}", exc_info=True)
+            with get_db() as db:
+                group = db.query(Group).filter_by(id=id).first()
+                return GroupModel.model_validate(group) if group else None
+        except Exception:
             return None
-        finally:
-            if not self.db and db_session:
-                db_session.close()
 
+<<<<<<< HEAD
     def get_group_by_name(self, name: str) -> Optional[GroupModel]:
         db_session = self.db if self.db else next(get_session())
         try:
@@ -206,45 +241,51 @@ class GroupTable:
                 db_session.close()
     
     def get_group_user_ids_by_id(self, id: str) -> Optional[List[str]]: # Return type changed to List[str]
+=======
+    def get_group_user_ids_by_id(self, id: str) -> Optional[str]:
+>>>>>>> parent of b6be2f751 (feat: implement group synchronization service for user login)
         group = self.get_group_by_id(id)
-        return group.user_ids if group else None
+        if group:
+            return group.user_ids
+        else:
+            return None
 
     def update_group_by_id(
-        self, id: str, form_data: GroupUpdateForm, overwrite: bool = False # overwrite seems unused
+        self, id: str, form_data: GroupUpdateForm, overwrite: bool = False
     ) -> Optional[GroupModel]:
+<<<<<<< HEAD
         db_session = self.db if self.db else next(get_session())
+=======
+>>>>>>> parent of b6be2f751 (feat: implement group synchronization service for user login)
         try:
-            update_data = form_data.model_dump(exclude_none=True)
-            update_data["updated_at"] = int(time.time())
-            
-            db_session.query(Group).filter_by(id=id).update(update_data)
-            db_session.commit()
-            return self.get_group_by_id(id=id) # Uses its own session management
+            with get_db() as db:
+                db.query(Group).filter_by(id=id).update(
+                    {
+                        **form_data.model_dump(exclude_none=True),
+                        "updated_at": int(time.time()),
+                    }
+                )
+                db.commit()
+                return self.get_group_by_id(id=id)
         except Exception as e:
-            log.error(f"Error updating group by id '{id}': {e}", exc_info=True)
-            if db_session:
-                db_session.rollback()
+            log.exception(e)
             return None
-        finally:
-            if not self.db and db_session:
-                db_session.close()
 
     def delete_group_by_id(self, id: str) -> bool:
+<<<<<<< HEAD
         db_session = self.db if self.db else next(get_session())
+=======
+>>>>>>> parent of b6be2f751 (feat: implement group synchronization service for user login)
         try:
-            db_session.query(Group).filter_by(id=id).delete()
-            db_session.commit()
-            return True
-        except Exception as e:
-            log.error(f"Error deleting group by id '{id}': {e}", exc_info=True)
-            if db_session:
-                db_session.rollback()
+            with get_db() as db:
+                db.query(Group).filter_by(id=id).delete()
+                db.commit()
+                return True
+        except Exception:
             return False
-        finally:
-            if not self.db and db_session:
-                db_session.close()
 
     def delete_all_groups(self) -> bool:
+<<<<<<< HEAD
         db_session = self.db if self.db else next(get_session())
         try:
             db_session.query(Group).delete()
@@ -273,16 +314,33 @@ class GroupTable:
                 if user_id in current_user_ids:
                     current_user_ids.remove(user_id)
                     db_session.query(Group).filter_by(id=group_model.id).update(
+=======
+        with get_db() as db:
+            try:
+                db.query(Group).delete()
+                db.commit()
+
+                return True
+            except Exception:
+                return False
+
+    def remove_user_from_all_groups(self, user_id: str) -> bool:
+        with get_db() as db:
+            try:
+                groups = self.get_groups_by_member_id(user_id)
+
+                for group in groups:
+                    group.user_ids.remove(user_id)
+                    db.query(Group).filter_by(id=group.id).update(
+>>>>>>> parent of b6be2f751 (feat: implement group synchronization service for user login)
                         {
-                            "user_ids": current_user_ids,
+                            "user_ids": group.user_ids,
                             "updated_at": int(time.time()),
                         }
                     )
-                    log.info(f"User '{user_id}' removed from group '{group_model.id}' during remove_user_from_all_groups.")
-                else:
-                    # This case should ideally not happen if get_groups_by_user_id is correct
-                    log.warning(f"User '{user_id}' not found in group '{group_model.name}' (ID: {group_model.id}) during mass removal, though expected.")
+                    db.commit()
 
+<<<<<<< HEAD
             db_session.commit() # Commit all changes at once
             return success
         except Exception as e:
@@ -351,5 +409,11 @@ class GroupTable:
         finally:
             if not self.db and db_session:
                 db_session.close()
+=======
+                return True
+            except Exception:
+                return False
+
+>>>>>>> parent of b6be2f751 (feat: implement group synchronization service for user login)
 
 Groups = GroupTable()
