@@ -16,7 +16,7 @@
 	import { generateTags } from '$lib/apis';
 
 	import { config, models, settings, temporaryChatEnabled, TTSWorker, user } from '$lib/stores';
-	import { synthesizeOpenAISpeech, synthesizeStreamingSpeech } from '$lib/apis/audio';
+	import { synthesizeOpenAISpeech, synthesizeStreamingSpeech, streamAudio } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
 		copyToClipboard as _copyToClipboard,
@@ -177,45 +177,7 @@
 		});
 	};
 
-	const streamAudio = async (reader: any) => {		
-		const ctx = new AudioContext({sampleRate: 24000}) 
-
-		const queue: any[] = []
-		let isPlaying = false;
-
-		function playChunk(pcm: any) {
-			const samples = new Int16Array(pcm);
-			const float32 = new Float32Array(samples.length)
-			for (let i = 0; i < samples.length; i++) {
-				float32[i] = samples[i] / 32768; // normalise 16 bit signed pcm samples into -1 to 1
-			}
-
-			const buffer = ctx.createBuffer(1, float32.length, 24000)
-			buffer.getChannelData(0).set(float32)
-
-			const source = ctx.createBufferSource()
-			source.buffer = buffer
-			source.connect(ctx.destination)
-			source.start()
-			source.onended = () => playNext();
-		}
-
-		function playNext() {
-			if (queue.length == 0) {
-				isPlaying = false;
-				return;
-			}
-			isPlaying = true;
-			playChunk(queue.shift())
-		}
-
-		while (true) { 
-			const { done, value } = await reader.read()
-			if (done) break;
-			queue.push(value.buffer);
-			if (!isPlaying) playNext()
-		}
-	}
+	
 
 	const toggleSpeakMessage = async () => {
 
@@ -242,9 +204,11 @@
 		speaking = true;
 
 		print('!!message?.content', message?.content)
-		await synthesizeStreamingSpeech(message?.content)
-		
-		return 
+		const reader = await synthesizeStreamingSpeech(message?.content)
+		await streamAudio(reader)
+
+		return
+
 		//TODO: flag for orpheus
 		if ($config.audio.tts.engine === '') {
 			let voices = [];

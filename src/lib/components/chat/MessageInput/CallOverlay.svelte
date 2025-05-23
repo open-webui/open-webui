@@ -6,7 +6,7 @@
 
 	import { blobToFile } from '$lib/utils';
 	import { generateEmoji } from '$lib/apis';
-	import { synthesizeOpenAISpeech, transcribeAudio, synthesizeStreamingSpeech } from '$lib/apis/audio';
+	import { synthesizeOpenAISpeech, transcribeAudio, synthesizeStreamingSpeech, streamAudio } from '$lib/apis/audio';
 
 	import { toast } from 'svelte-sonner';
 
@@ -452,10 +452,11 @@
 	const emojiCache = new Map();
 
 	const fetchAudio = async (content) => {
-		// add flag for feature
+		// TODO: add flag for feature
 		if ($showCallOverlay) {
 			console.log('!!fetchAudio')
-			await synthesizeStreamingSpeech(content)
+			const reader = await synthesizeStreamingSpeech(content)
+			await streamAudio(reader)
 		}
 
 		return 
