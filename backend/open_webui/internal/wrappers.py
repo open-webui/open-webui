@@ -1,7 +1,7 @@
 import logging
 from contextvars import ContextVar
 
-from open_webui.env import SRC_LOG_LEVELS
+from open_webui.env import SRC_LOG_LEVELS, DATABASE_SCHEMA
 from peewee import *
 from peewee import InterfaceError as PeeWeeInterfaceError
 from peewee import PostgresqlDatabase
@@ -52,6 +52,11 @@ def register_connection(db_url):
 
         # Get the connection details
         connection = parse(db_url, unquote_user=True, unquote_password=True)
+        if DATABASE_SCHEMA:
+            if "options" not in connection:
+                connection["options"] = f"-c search_path={DATABASE_SCHEMA},public"
+            else:
+                connection["options"] += f" -c search_path={DATABASE_SCHEMA},public"
 
         # Use our custom database class that supports reconnection
         db = ReconnectingPostgresqlDatabase(**connection)
