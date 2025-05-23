@@ -2695,26 +2695,46 @@ def load_document(file_path, file_name, content_type, mistral_loader, unstructur
         logger.info(f"[LOADER] Using Unstructured for {file_name}")
         elements = unstructured_loader(file_path)
         
+        print(f"🔍 DIAGNOSTIC [LOADER]: Unstructured returned {len(elements) if hasattr(elements, '__len__') else 'unknown'} elements")
+        
         # Normalize to a list of strings
         if isinstance(elements, str):
             elements = [elements]
+            print(f"🔍 DIAGNOSTIC [LOADER]: Single string element, length: {len(elements[0])}")
         elif hasattr(elements, "__iter__"):
-            elements = [getattr(el, "text", str(el)) for el in elements if hasattr(el, "text") or str(el).strip()]
+            element_texts = [getattr(el, "text", str(el)) for el in elements if hasattr(el, "text") or str(el).strip()]
+            print(f"🔍 DIAGNOSTIC [LOADER]: Extracted {len(element_texts)} text elements")
+            total_chars = sum(len(str(text)) for text in element_texts)
+            print(f"🔍 DIAGNOSTIC [LOADER]: Total raw characters: {total_chars}")
+            elements = element_texts
         else:
             elements = [str(elements)]
+            print(f"🔍 DIAGNOSTIC [LOADER]: Converted to string, length: {len(elements[0])}")
         
         # Clean and create documents
         docs = []
-        for text in elements:
-            if text and str(text).strip():
-                cleaned_text = _clean_text_for_vector_db(str(text))
-                if cleaned_text.strip():  # Only add non-empty cleaned text
-                    docs.append(Document(page_content=cleaned_text))
+        combined_content = []
         
-        if docs:
-            logger.info(f"[LOADER] Unstructured successfully loaded {len(docs)} documents from {file_name}")
+        for i, text in enumerate(elements):
+            if text and str(text).strip():
+                raw_length = len(str(text))
+                cleaned_text = _clean_text_for_vector_db(str(text))
+                cleaned_length = len(cleaned_text)
+                print(f"🔍 DIAGNOSTIC [LOADER]: Element {i}: raw={raw_length} chars, cleaned={cleaned_length} chars")
+                if cleaned_text.strip():  # Only add non-empty cleaned text
+                    combined_content.append(cleaned_text)
+        
+        if combined_content:
+            # Combine all elements into one document for better semantic chunking
+            full_content = "\n\n".join(combined_content)
+            total_final_chars = len(full_content)
+            print(f"🔍 DIAGNOSTIC [LOADER]: Combined into 1 document with {total_final_chars} total characters")
+            
+            docs = [Document(page_content=full_content)]
+            logger.info(f"[LOADER] Unstructured successfully loaded and combined {len(combined_content)} elements into 1 document from {file_name}")
             return docs
         else:
+            print(f"🔍 DIAGNOSTIC [LOADER]: No valid content after cleaning!")
             logger.warning(f"[LOADER] Unstructured returned no valid content for {file_name}")
             
     except Exception as e:
