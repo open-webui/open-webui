@@ -134,16 +134,16 @@ def query_doc_with_hybrid_search(
 
         if hybrid_bm25_weight <= 0:
             ensemble_retriever = EnsembleRetriever(
-                retrievers=[vector_search_retriever], weights=[1.]
+                retrievers=[vector_search_retriever], weights=[1.0]
             )
         elif hybrid_bm25_weight >= 1:
             ensemble_retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever], weights=[1.]
+                retrievers=[bm25_retriever], weights=[1.0]
             )
         else:
             ensemble_retriever = EnsembleRetriever(
                 retrievers=[bm25_retriever, vector_search_retriever],
-                weights=[hybrid_bm25_weight, 1. - hybrid_bm25_weight]
+                weights=[hybrid_bm25_weight, 1.0 - hybrid_bm25_weight],
             )
 
         compressor = RerankCompressor(
