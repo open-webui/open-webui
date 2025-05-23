@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Union
 import asyncio
 import re
+import base64
+
 
 from fastapi import (
     Depends,
@@ -99,15 +101,17 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
-def is_valid_pdf(filepath):
-    try:
-        with open(filepath, 'rb') as f:
-            header = f.read(5)
-            if header != b'%PDF-':
-                raise InvalidPDFError(
-                    f"Arquivo {filepath} não tem cabeçalho PDF válido.")
-    except Exception as e:
-        raise InvalidPDFError(f"Erro ao validar o PDF {filepath}: {e}")
+def is_valid_pdf(b64_data):
+    # try:
+    # Decodifica o base64
+    pdf_bytes = base64.b64decode(b64_data)
+
+    # Verifica o cabeçalho PDF
+    if pdf_bytes[:5] != b'%PDF-':
+        raise InvalidPDFError(
+            "O conteúdo não tem um cabeçalho PDF válido.")
+    # except Exception as e:
+    #    raise InvalidPDFError(f"Erro ao validar o PDF: {e}")
 
 ##########################################
 #

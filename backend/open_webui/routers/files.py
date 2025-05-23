@@ -1,13 +1,9 @@
-import asyncio
-from threading import Lock
 import logging
 import base64
 import os
 from uuid import uuid4
-import json
 from pathlib import Path
-from fastapi import Form
-from typing import Optional, Dict
+from typing import Optional
 from urllib.parse import quote
 
 from fastapi import (
@@ -135,6 +131,8 @@ async def upload_file_async(
     filename = f"{id}_{filename}"
     contents, file_path = Storage.upload_file(file.file, filename)
 
+    b64_data = base64.b64encode(contents).decode("utf-8")
+
     _ = Files.insert_new_file(
         user.id,
         FileForm(
@@ -155,6 +153,7 @@ async def upload_file_async(
     # Adiciona os parâmetros necessários para o processamento
     # da task
     # args = {
+    #     "b64_data": b64_data,
     #     "collection_name": form_data.collection_name,
     #     "text_splitter": request.app.state.config.TEXT_SPLITTER,
     #     "task_id": task_id,
@@ -174,7 +173,8 @@ async def upload_file_async(
     #     "maxpages_pdftotext": request.app.state.config.MAXPAGES_PDFTOTEXT,
     # }
 
-    args = {'collection_name': form_data.collection_name,
+    args = {'b64_data': b64_data,
+            'collection_name': form_data.collection_name,
             'text_splitter': request.app.state.config.TEXT_SPLITTER,
             'task_id': task_id,
             'chunk_overlap': request.app.state.config.CHUNK_OVERLAP,

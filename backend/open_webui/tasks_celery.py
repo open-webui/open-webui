@@ -71,7 +71,7 @@ def process_file_celery(args):
             file_ext = file.filename.split(".")[-1].lower()
             if file_ext == "pdf":
                 try:
-                    is_valid_pdf(file_path)
+                    is_valid_pdf(args["b64_data"])
                 except InvalidPDFError as e:
                     log.exception(f"Erro na tarefa em background: {e}")
                     raise e
