@@ -45,7 +45,7 @@
 	let logoSrc = '/logo_light.png';
 
 	onMount(() => {
-		const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+		const isDark = localStorage.getItem('theme') === 'dark';
 		logoSrc = isDark ? '/logo_dark_transparent.png' : '/logo_light_transparent.png';
 	});
 </script>
@@ -63,7 +63,7 @@
 		<div>
 			<img crossorigin="anonymous" src={logoSrc} class=" w-10 mb-5" alt="logo" />
 		</div>
-		<div class="mb-2.5 font-medium text-lightGray-100 dak:text-customGray-100">{$i18n.t('Create Your Account')}</div>
+		<div class="mb-2.5 font-medium text-lightGray-100 dark:text-customGray-100">{$i18n.t('Create Your Account')}</div>
 		<div class="text-center text-xs font-medium text-[#8A8B8D] dark:text-customGray-300">
 			{$i18n.t('Sign up to Beyond the Loop to continue.')}
 		</div>

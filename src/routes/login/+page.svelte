@@ -110,10 +110,10 @@
 		}
 		await checkOauthCallback();
     });
-	let logoSrc = '/logo_light.png';
+	let logoSrc = '/logo_dark_transparent.png';
 
 	onMount(() => {
-		const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+		const isDark = localStorage.getItem('theme') === 'dark';
 		logoSrc = isDark ? '/logo_dark_transparent.png' : '/logo_light_transparent.png';
 	});
 

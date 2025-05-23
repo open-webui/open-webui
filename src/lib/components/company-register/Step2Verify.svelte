@@ -43,7 +43,7 @@
 	let logoSrc = '/logo_light.png';
 
 	onMount(() => {
-		const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+		const isDark = localStorage.getItem('theme') === 'dark';
 		logoSrc = isDark ? '/logo_dark_transparent.png' : '/logo_light_transparent.png';
 	});
 

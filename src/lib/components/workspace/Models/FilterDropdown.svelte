@@ -28,7 +28,7 @@
 	}}
 >
 	<DropdownMenu.Trigger>
-		<div class="text-2xs bg-lightGray-700 py-2 px-2 rounded-lg">{$i18n.t('Filter by category')}</div>
+		<div class="text-2xs bg-lightGray-700 dark:bg-[#252323] py-2 px-2 rounded-lg">{$i18n.t('Filter by category')}</div>
 	</DropdownMenu.Trigger>
 
 		<DropdownMenu.Content
