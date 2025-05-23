@@ -178,10 +178,10 @@ Open WebUI 功能說明：使用者、群組與工具管理
                 ```sql
                 SELECT [HW_Purchase_Group] 
                 FROM [dbo].[sp_PBA_HC_Movement] 
-                WHERE [Email Address] = %s AND [EndDate] IS NULL 
+                WHERE [Email Address] = ? AND [EndDate] IS NULL 
                 ```
-                *(註：`%s` 為參數佔位符，實際使用的佔位符需根據所用資料庫驅動程式的語法確定。)*
-            *   使用 `use_mcp_tool` 呼叫 "mssql" 服務的 "execute_sql" 工具，傳遞查詢和使用者 Email 作為參數。
+                *(註：`?` 為 `pyodbc` 常用的參數佔位符。)*
+            *   在 `group_sync_service.py` 內部，使用 Python 資料庫連接庫 (例如 `pyodbc`) 直接連接到 SQL Server 並執行此查詢，傳遞使用者 Email 作為參數。
             *   處理預期的查詢結果：一個群組名稱的列表 (`target_group_names_from_sql`)。
         *   **處理 SQL 查詢結果並同步群組成員資格**：
             *   **A. 獲取使用者在 Open WebUI 中的現有群組ID集合**：
@@ -198,7 +198,7 @@ Open WebUI 功能說明：使用者、群組與工具管理
                 *   **要加入的群組** (`groups_to_add_ids = final_target_ouw_group_ids_set - current_ouw_group_ids_set`)：對於每個 ID，調用 `groups_table.add_user_to_group(user_id=user.id, group_id=group_id_to_add)`。記錄結果。
                 *   **要移除的群組** (`groups_to_remove_ids = current_ouw_group_ids_set - final_target_ouw_group_ids_set`)：對於每個 ID，調用 `groups_table.remove_user_from_group(user_id=user.id, group_id=group_id_to_remove)`。記錄結果。
     *   **錯誤處理與日誌**：函式內部應包含完整的 `try-except` 結構，詳細記錄操作和錯誤，確保任何同步失敗都不會影響核心登入/註冊流程（即不應向上拋出未處理的異常給呼叫它的 `auths.py` 中的函式）。
-    *   **依賴**：此服務函式需要引入 `UserModel`, `Groups`, `GroupForm`, `Session`, `log`，以及可能的 MCP 工具封裝。
+    *   **依賴**：此服務函式需要引入 `UserModel`, `Groups`, `GroupForm`, `Session`, `log`。
 
 2.  **修改觸發點：在 `auths.py` 中呼叫同步服務**
     *   **引入服務函式**：在 `backend/open_webui/routers/auths.py` 頂部引入：
@@ -237,7 +237,6 @@ Open WebUI 功能說明：使用者、群組與工具管理
             # from .. import config # 用於日誌
             # import logging
             # log = logging.getLogger(config.LOGGER_NAME)
-
 
             def get_groups_by_user_id(self, user_id: str) -> List[GroupModel]:
                 # (此處的 db 應為 self.db，假設 GroupTable 實例化時傳入 db)
