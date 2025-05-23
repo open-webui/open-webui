@@ -151,6 +151,30 @@
 		.map((id) => ($models.find((model) => model.id === id) || {})?.filters ?? [])
 		.reduce((acc, filters) => acc.filter((f1) => filters.some((f2) => f2.id === f1.id)));
 
+	let showToolsButton = false;
+	$: showToolsButton = toolServers.length + selectedToolIds.length > 0;
+
+	let showWebSearchButton = false;
+	$: showWebSearchButton =
+		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
+			webSearchCapableModels.length &&
+		$config?.features?.enable_web_search &&
+		($_user.role === 'admin' || $_user?.permissions?.features?.web_search);
+
+	let showImageGenerationButton = false;
+	$: showImageGenerationButton =
+		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
+			imageGenerationCapableModels.length &&
+		$config?.features?.enable_image_generation &&
+		($_user.role === 'admin' || $_user?.permissions?.features?.image_generation);
+
+	let showCodeInterpreterButton = false;
+	$: showCodeInterpreterButton =
+		(atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length ===
+			codeInterpreterCapableModels.length &&
+		$config?.features?.enable_code_interpreter &&
+		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
+
 	const scrollToBottom = () => {
 		const element = document.getElementById('messages-container');
 		element.scrollTo({
@@ -1092,8 +1116,8 @@
 									{/if}
 								</div>
 
-								<div class=" flex justify-between mt-1 mb-2.5 mx-0.5 max-w-full" dir="ltr">
-									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%] gap-0.5">
+								<div class=" flex justify-between mt-0.5 mb-2.5 mx-0.5 max-w-full" dir="ltr">
+									<div class="ml-1 self-end flex items-center flex-1 max-w-[80%]">
 										<InputMenu
 											bind:selectedToolIds
 											selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
@@ -1163,31 +1187,35 @@
 											</button>
 										</InputMenu>
 
-										<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
-											{#if toolServers.length + selectedToolIds.length > 0}
-												<Tooltip
-													content={$i18n.t('{{COUNT}} Available Tools', {
-														COUNT: toolServers.length + selectedToolIds.length
-													})}
-												>
-													<button
-														class="translate-y-[0.5px] flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg p-1 self-center transition"
-														aria-label="Available Tools"
-														type="button"
-														on:click={() => {
-															showTools = !showTools;
-														}}
+										{#if $_user && (showToolsButton || (toggleFilters && toggleFilters.length > 0) || showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton)}
+											<div
+												class="flex self-center w-[1px] h-4 mx-1.5 bg-gray-50 dark:bg-gray-800"
+											/>
+
+											<div class="flex gap-1 items-center overflow-x-auto scrollbar-none flex-1">
+												{#if showToolsButton}
+													<Tooltip
+														content={$i18n.t('{{COUNT}} Available Tools', {
+															COUNT: toolServers.length + selectedToolIds.length
+														})}
 													>
-														<Wrench className="size-4" strokeWidth="1.75" />
+														<button
+															class="translate-y-[0.5px] flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg p-1 self-center transition"
+															aria-label="Available Tools"
+															type="button"
+															on:click={() => {
+																showTools = !showTools;
+															}}
+														>
+															<Wrench className="size-4" strokeWidth="1.75" />
 
-														<span class="text-sm font-medium text-gray-600 dark:text-gray-300">
-															{toolServers.length + selectedToolIds.length}
-														</span>
-													</button>
-												</Tooltip>
-											{/if}
+															<span class="text-sm font-medium text-gray-600 dark:text-gray-300">
+																{toolServers.length + selectedToolIds.length}
+															</span>
+														</button>
+													</Tooltip>
+												{/if}
 
-											{#if $_user}
 												{#each toggleFilters as filter, filterIdx (filter.id)}
 													<Tooltip content={filter?.description} placement="top">
 														<button
@@ -1201,17 +1229,17 @@
 																}
 															}}
 															type="button"
-															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {selectedFilterIds.includes(
+															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {selectedFilterIds.includes(
 																filter.id
 															)
-																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400'
-																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-50 dark:hover:bg-gray-800 '} capitalize"
+																? 'text-sky-500 dark:text-sky-300 bg-sky-100 dark:bg-sky-200/5'
+																: 'bg-transparent text-gray-600 dark:text-gray-300  '} capitalize"
 														>
 															{#if filter?.icon}
-																<div class="size-5 items-center flex justify-center">
+																<div class="size-4 items-center flex justify-center">
 																	<img
 																		src={filter.icon}
-																		class="size-4.5 {filter.icon.includes('svg')
+																		class="size-3.5 {filter.icon.includes('svg')
 																			? 'dark:invert-[80%]'
 																			: ''}"
 																		style="fill: currentColor;"
@@ -1219,74 +1247,74 @@
 																	/>
 																</div>
 															{:else}
-																<Sparkles className="size-5" strokeWidth="1.75" />
+																<Sparkles className="size-4" strokeWidth="1.75" />
 															{/if}
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none"
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
 																>{filter?.name}</span
 															>
 														</button>
 													</Tooltip>
 												{/each}
 
-												{#if (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length === webSearchCapableModels.length && $config?.features?.enable_web_search && ($_user.role === 'admin' || $_user?.permissions?.features?.web_search)}
+												{#if showWebSearchButton}
 													<Tooltip content={$i18n.t('Search the internet')} placement="top">
 														<button
 															on:click|preventDefault={() => (webSearchEnabled = !webSearchEnabled)}
 															type="button"
-															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {webSearchEnabled ||
+															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {webSearchEnabled ||
 															($settings?.webSearch ?? false) === 'always'
-																? 'bg-blue-100 dark:bg-blue-500/20 border-blue-400/20 text-blue-500 dark:text-blue-400'
-																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300 border-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'}"
+																? ' text-sky-500 dark:text-sky-300 bg-sky-100 dark:bg-sky-200/5'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 														>
-															<GlobeAlt className="size-5" strokeWidth="1.75" />
+															<GlobeAlt className="size-4" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none"
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
 																>{$i18n.t('Web Search')}</span
 															>
 														</button>
 													</Tooltip>
 												{/if}
 
-												{#if (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length === imageGenerationCapableModels.length && $config?.features?.enable_image_generation && ($_user.role === 'admin' || $_user?.permissions?.features?.image_generation)}
+												{#if showImageGenerationButton}
 													<Tooltip content={$i18n.t('Generate an image')} placement="top">
 														<button
 															on:click|preventDefault={() =>
 																(imageGenerationEnabled = !imageGenerationEnabled)}
 															type="button"
-															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {imageGenerationEnabled
-																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400'
-																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-50 dark:hover:bg-gray-800 '}"
+															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {imageGenerationEnabled
+																? ' text-sky-500 dark:text-sky-300 bg-sky-100 dark:bg-sky-200/5'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 														>
-															<Photo className="size-5" strokeWidth="1.75" />
+															<Photo className="size-4" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none"
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
 																>{$i18n.t('Image')}</span
 															>
 														</button>
 													</Tooltip>
 												{/if}
 
-												{#if (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).length === codeInterpreterCapableModels.length && $config?.features?.enable_code_interpreter && ($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter)}
+												{#if showCodeInterpreterButton}
 													<Tooltip content={$i18n.t('Execute code for analysis')} placement="top">
 														<button
 															on:click|preventDefault={() =>
 																(codeInterpreterEnabled = !codeInterpreterEnabled)}
 															type="button"
-															class="px-1.5 @xl:px-2.5 py-1.5 flex gap-1.5 items-center text-sm rounded-full font-medium transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden border {codeInterpreterEnabled
-																? 'bg-gray-50 dark:bg-gray-400/10 border-gray-100  dark:border-gray-700 text-gray-600 dark:text-gray-400  '
-																: 'bg-transparent border-transparent text-gray-600 dark:text-gray-300  hover:bg-gray-50 dark:hover:bg-gray-800 '}"
+															class="px-2 @xl:px-2.5 py-2 flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-800 {codeInterpreterEnabled
+																? ' text-sky-500 dark:text-sky-300 bg-sky-100 dark:bg-sky-200/5'
+																: 'bg-transparent text-gray-600 dark:text-gray-300 '}"
 														>
-															<CommandLine className="size-5" strokeWidth="1.75" />
+															<CommandLine className="size-4" strokeWidth="1.75" />
 															<span
-																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none"
+																class="hidden @xl:block whitespace-nowrap overflow-hidden text-ellipsis leading-none pr-0.5"
 																>{$i18n.t('Code Interpreter')}</span
 															>
 														</button>
 													</Tooltip>
 												{/if}
-											{/if}
-										</div>
+											</div>
+										{/if}
 									</div>
 
 									<div class="self-end flex space-x-1 mr-1 shrink-0">

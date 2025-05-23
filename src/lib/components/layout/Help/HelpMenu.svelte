@@ -7,8 +7,9 @@
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import QuestionMarkCircle from '$lib/components/icons/QuestionMarkCircle.svelte';
-	import Lifebuoy from '$lib/components/icons/Lifebuoy.svelte';
 	import Keyboard from '$lib/components/icons/Keyboard.svelte';
+	import Map from '$lib/components/icons/Map.svelte';
+
 	const i18n = getContext('i18n');
 
 	export let showDocsHandler: Function;
@@ -43,6 +44,18 @@
 			>
 				<QuestionMarkCircle className="size-5" />
 				<div class="flex items-center">{$i18n.t('Documentation')}</div>
+			</DropdownMenu.Item>
+
+			<!-- Releases -->
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-2 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				id="menu-item-releases"
+				on:click={() => {
+					window.open('https://github.com/open-webui/open-webui/releases', '_blank');
+				}}
+			>
+				<Map className="size-5" />
+				<div class="flex items-center">{$i18n.t('Releases')}</div>
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item

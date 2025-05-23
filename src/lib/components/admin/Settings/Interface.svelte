@@ -10,13 +10,14 @@
 	import { banners as _banners } from '$lib/stores';
 	import type { Banner } from '$lib/types';
 
+	import { getBaseModels } from '$lib/apis/models';
 	import { getBanners, setBanners } from '$lib/apis/configs';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { getBaseModels } from '$lib/apis/models';
+	import Banners from './Interface/Banners.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -355,9 +356,9 @@
 
 				<hr class=" border-gray-100 dark:border-gray-850 my-2" />
 
-				<div class="  {banners.length > 0 ? ' mb-3' : ''}">
-					<div class="mb-2.5 flex w-full justify-between">
-						<div class=" self-center text-sm font-semibold">
+				<div class="mb-2.5">
+					<div class="flex w-full justify-between">
+						<div class=" self-center text-sm">
 							{$i18n.t('Banners')}
 						</div>
 
@@ -393,69 +394,13 @@
 						</button>
 					</div>
 
-					<div class=" flex flex-col space-y-1">
-						{#each banners as banner, bannerIdx}
-							<div class=" flex justify-between">
-								<div
-									class="flex flex-row flex-1 border rounded-xl border-gray-100 dark:border-gray-850"
-								>
-									<select
-										class="w-fit capitalize rounded-xl py-2 px-4 text-xs bg-transparent outline-hidden"
-										bind:value={banner.type}
-										required
-									>
-										{#if banner.type == ''}
-											<option value="" selected disabled class="text-gray-900"
-												>{$i18n.t('Type')}</option
-											>
-										{/if}
-										<option value="info" class="text-gray-900">{$i18n.t('Info')}</option>
-										<option value="warning" class="text-gray-900">{$i18n.t('Warning')}</option>
-										<option value="error" class="text-gray-900">{$i18n.t('Error')}</option>
-										<option value="success" class="text-gray-900">{$i18n.t('Success')}</option>
-									</select>
-
-									<input
-										class="pr-5 py-1.5 text-xs w-full bg-transparent outline-hidden"
-										placeholder={$i18n.t('Content')}
-										bind:value={banner.content}
-									/>
-
-									<div class="relative top-1.5 -left-2">
-										<Tooltip content={$i18n.t('Dismissible')} className="flex h-fit items-center">
-											<Switch bind:state={banner.dismissible} />
-										</Tooltip>
-									</div>
-								</div>
-
-								<button
-									class="px-2"
-									type="button"
-									on:click={() => {
-										banners.splice(bannerIdx, 1);
-										banners = banners;
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-										/>
-									</svg>
-								</button>
-							</div>
-						{/each}
-					</div>
+					<Banners bind:banners />
 				</div>
 
 				{#if $user?.role === 'admin'}
 					<div class=" space-y-3">
 						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm font-semibold">
+							<div class=" self-center text-sm">
 								{$i18n.t('Default Prompt Suggestions')}
 							</div>
 

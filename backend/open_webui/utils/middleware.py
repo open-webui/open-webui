@@ -41,6 +41,7 @@ from open_webui.routers.pipelines import (
     process_pipeline_inlet_filter,
     process_pipeline_outlet_filter,
 )
+from open_webui.routers.memories import query_memory, QueryMemoryForm
 
 from open_webui.utils.webhook import post_webhook
 
@@ -288,6 +289,38 @@ async def chat_completion_tools_handler(
         del body["metadata"]["files"]
 
     return body, {"sources": sources}
+
+
+async def chat_memory_handler(
+    request: Request, form_data: dict, extra_params: dict, user
+):
+    results = await query_memory(
+        request,
+        QueryMemoryForm(
+            **{"content": get_last_user_message(form_data["messages"]), "k": 3}
+        ),
+        user,
+    )
+
+    user_context = ""
+    if results and hasattr(results, "documents"):
+        if results.documents and len(results.documents) > 0:
+            for doc_idx, doc in enumerate(results.documents[0]):
+                created_at_date = "Unknown Date"
+
+                if results.metadatas[0][doc_idx].get("created_at"):
+                    created_at_timestamp = results.metadatas[0][doc_idx]["created_at"]
+                    created_at_date = time.strftime(
+                        "%Y-%m-%d", time.localtime(created_at_timestamp)
+                    )
+
+                user_context += f"{doc_idx + 1}. [{created_at_date}] {doc}\n"
+
+    form_data["messages"] = add_or_update_system_message(
+        f"User Context:\n{user_context}\n", form_data["messages"], append=True
+    )
+
+    return form_data
 
 
 async def chat_web_search_handler(
@@ -774,6 +807,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     features = form_data.pop("features", None)
     if features:
+        if "memory" in features and features["memory"]:
+            form_data = await chat_memory_handler(
+                request, form_data, extra_params, user
+            )
+
         if "web_search" in features and features["web_search"]:
             form_data = await chat_web_search_handler(
                 request, form_data, extra_params, user
@@ -967,7 +1005,7 @@ async def process_chat_response(
 
                 if isinstance(content, str):
                     content = re.sub(
-                        r"<details\b[^>]*>.*?<\/details>",
+                        r"<details\b[^>]*>.*?<\/details>|!\[.*?\]\(.*?\)",
                         "",
                         content,
                         flags=re.S | re.I,
@@ -975,6 +1013,7 @@ async def process_chat_response(
 
                 messages.append(
                     {
+                        **message,
                         "role": message["role"],
                         "content": content,
                     }
