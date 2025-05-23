@@ -47,6 +47,14 @@ from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.retrieval.loaders.main import Loader
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
 
+# Add unstructured import for direct document processing
+try:
+    from unstructured.partition.auto import partition
+    UNSTRUCTURED_AVAILABLE = True
+except ImportError:
+    UNSTRUCTURED_AVAILABLE = False
+    partition = None
+
 # Web search engines
 from open_webui.retrieval.web.main import SearchResult
 from open_webui.retrieval.web.utils import get_web_loader
@@ -133,6 +141,19 @@ def clean_text_for_vector_db(text: str) -> str:
         return ""
     
     try:
+        # Pre-sanitization: Handle edge cases that could break regex
+        # Remove null bytes and other problematic characters that could cause regex errors
+        text = text.replace('\x00', '')  # Remove null bytes
+        
+        # Ensure we have a valid string (convert bytes if needed)
+        if isinstance(text, bytes):
+            text = text.decode('utf-8', errors='replace')
+        
+        # Handle extremely malformed text that could break regex
+        if len(text) > 1000000:  # Limit extremely large texts
+            log.warning("Text is very large, truncating for safety")
+            text = text[:1000000]
+        
         # Step 1: Handle HTML entities and URL encoding
         text = unescape(text)  # Convert HTML entities like &amp; to &
         text = unquote(text)   # Decode URL-encoded characters
@@ -157,14 +178,24 @@ def clean_text_for_vector_db(text: str) -> str:
         ]
         
         for pattern, replacement in escape_patterns:
-            text = re.sub(pattern, replacement, text)
+            try:
+                text = re.sub(pattern, replacement, text)
+            except re.error as e:
+                log.warning(f"Regex error with pattern '{pattern}': {e}")
+                continue
         
         # Step 5: Remove excessive whitespace while preserving structure
         # Replace multiple consecutive spaces with single space
-        text = re.sub(r' {2,}', ' ', text)
+        try:
+            text = re.sub(r' {2,}', ' ', text)
+        except re.error:
+            log.warning("Error removing excessive spaces")
         
         # Replace multiple consecutive newlines with double newline (paragraph break)
-        text = re.sub(r'\n{3,}', '\n\n', text)
+        try:
+            text = re.sub(r'\n{3,}', '\n\n', text)
+        except re.error:
+            log.warning("Error normalizing newlines")
         
         # Remove trailing/leading whitespace from each line
         lines = text.split('\n')
@@ -173,7 +204,10 @@ def clean_text_for_vector_db(text: str) -> str:
         
         # Step 6: Remove common document artifacts
         # Remove page numbers at start/end of lines
-        text = re.sub(r'^\s*\d+\s*$', '', text, flags=re.MULTILINE)
+        try:
+            text = re.sub(r'^\s*\d+\s*$', '', text, flags=re.MULTILINE)
+        except re.error:
+            log.warning("Error removing page numbers")
         
         # Remove common headers/footers patterns
         header_footer_patterns = [
@@ -184,14 +218,24 @@ def clean_text_for_vector_db(text: str) -> str:
         ]
         
         for pattern in header_footer_patterns:
-            text = re.sub(pattern, '', text, flags=re.MULTILINE)
+            try:
+                text = re.sub(pattern, '', text, flags=re.MULTILINE)
+            except re.error as e:
+                log.warning(f"Regex error with header/footer pattern '{pattern}': {e}")
+                continue
         
         # Step 7: Clean up document structure markers
         # Remove excessive dashes or underscores used as separators
-        text = re.sub(r'^[-_]{3,}\s*$', '', text, flags=re.MULTILINE)
+        try:
+            text = re.sub(r'^[-_]{3,}\s*$', '', text, flags=re.MULTILINE)
+        except re.error:
+            log.warning("Error removing document separators")
         
         # Remove table-of-contents dots
-        text = re.sub(r'\.{3,}', '...', text)
+        try:
+            text = re.sub(r'\.{3,}', '...', text)
+        except re.error:
+            log.warning("Error cleaning table-of-contents dots")
         
         # Step 8: Handle special PDF/OCR artifacts
         # Remove soft hyphens and zero-width characters
@@ -203,11 +247,17 @@ def clean_text_for_vector_db(text: str) -> str:
         
         # Step 9: Fix common OCR/extraction errors
         # Fix common letter substitutions (be careful not to break legitimate text)
-        text = re.sub(r'\.([A-Z])', r'. \1', text)  # Add space after periods if missing
+        try:
+            text = re.sub(r'\.([A-Z])', r'. \1', text)  # Add space after periods if missing
+        except re.error:
+            log.warning("Error fixing sentence spacing")
         
         # Step 10: Final cleanup
         # Remove any remaining excessive whitespace
-        text = re.sub(r'\s+', ' ', text)
+        try:
+            text = re.sub(r'\s+', ' ', text)
+        except re.error:
+            log.warning("Error in final whitespace cleanup")
         text = text.strip()
         
         # Step 11: Validate result
@@ -335,6 +385,8 @@ class ContentAwareTextSplitter:
         lines = text.split('\n')
         current_pos = 0
         
+        print(f"CONTENT-AWARE DIAGNOSTICS: Analyzing document structure for {len(lines)} lines...")
+        
         for i, line in enumerate(lines):
             line_start = current_pos
             line_end = current_pos + len(line)
@@ -355,6 +407,7 @@ class ContentAwareTextSplitter:
                         line_start, line_end, element_type, 
                         line.strip(), level
                     ))
+                    print(f"  📋 Found {element_type} (level {level}): '{line.strip()[:50]}...'")
                     break
             
             # Check for list items and other elements
@@ -364,10 +417,12 @@ class ContentAwareTextSplitter:
                         line_start, line_end, element_type, 
                         line.strip(), 0
                     ))
+                    print(f"  🔹 Found {element_type}: '{line.strip()[:30]}...'")
                     break
             
             current_pos = line_end + 1  # +1 for newline
         
+        print(f"CONTENT-AWARE DIAGNOSTICS: Detected {len(elements)} structure elements")
         return elements
     
     def _find_optimal_split_points(self, text: str, elements: list) -> list:
@@ -382,6 +437,8 @@ class ContentAwareTextSplitter:
         current_chunk_start = 0
         current_chunk_size = 0
         
+        print(f"CONTENT-AWARE DIAGNOSTICS: Finding optimal split points (target chunk size: {self.chunk_size})")
+        
         for start_pos, end_pos, element_type, content, level in elements:
             # Calculate distance from chunk start
             distance_from_start = start_pos - current_chunk_start
@@ -393,12 +450,16 @@ class ContentAwareTextSplitter:
                 # Ensure minimum chunk size
                 if distance_from_start >= self.min_chunk_size:
                     split_points.append(start_pos)
+                    print(f"  ✂️ Split point at {start_pos} (distance: {distance_from_start}) - {element_type}")
                     current_chunk_start = start_pos
                     current_chunk_size = 0
+                else:
+                    print(f"  ⚠️ Skipping split at {start_pos} - below minimum chunk size ({distance_from_start} < {self.min_chunk_size})")
             
             # Force split if we exceed max chunk size
             elif distance_from_start >= self.max_chunk_size:
                 split_points.append(start_pos)
+                print(f"  🚨 FORCED split at {start_pos} (distance: {distance_from_start}) - exceeded max chunk size")
                 current_chunk_start = start_pos
                 current_chunk_size = 0
         
@@ -406,6 +467,7 @@ class ContentAwareTextSplitter:
         if split_points[-1] != len(text):
             split_points.append(len(text))
         
+        print(f"CONTENT-AWARE DIAGNOSTICS: Generated {len(split_points)} split points: {split_points}")
         return split_points
     
     def _create_chunk_with_context(self, text: str, start: int, end: int, 
@@ -462,17 +524,26 @@ class ContentAwareTextSplitter:
         if not text or len(text) <= self.min_chunk_size:
             return [text] if text else []
         
+        print(f"CONTENT-AWARE DIAGNOSTICS: Starting content-aware text splitting...")
+        print(f"  📊 Input text length: {len(text)} characters")
+        print(f"  ⚙️ Chunk size: {self.chunk_size}, Overlap: {self.chunk_overlap}")
+        print(f"  📏 Min chunk: {self.min_chunk_size}, Max chunk: {self.max_chunk_size}")
+        
         try:
             # Detect document structure
+            print(f"  🔍 Step 1: Detecting document structure...")
             elements = self._detect_document_structure(text)
             
             # Find optimal split points
+            print(f"  ✂️ Step 2: Finding optimal split points...")
             split_points = self._find_optimal_split_points(text, elements)
             
             # Handle overlap
+            print(f"  🔄 Step 3: Handling overlap...")
             split_points = self._handle_overlap(text, split_points)
             
             # Create chunks with context
+            print(f"  📝 Step 4: Creating chunks with context...")
             chunks = []
             for i in range(len(split_points) - 1):
                 start = split_points[i]
@@ -484,22 +555,37 @@ class ContentAwareTextSplitter:
                 
                 if chunk_text.strip():
                     chunks.append(chunk_text)
+                    print(f"    📄 Chunk {i+1}: {len(chunk_text)} chars (positions {start}-{end})")
             
             # Validate chunks
+            print(f"  ✅ Step 5: Validating chunks...")
             valid_chunks = []
-            for chunk in chunks:
+            for i, chunk in enumerate(chunks):
                 if len(chunk) >= self.min_chunk_size or len(chunks) == 1:
                     valid_chunks.append(chunk)
+                    print(f"    ✓ Chunk {i+1} validated: {len(chunk)} chars")
                 elif valid_chunks:
                     # Merge small chunks with previous chunk
+                    print(f"    🔗 Merging small chunk {i+1} ({len(chunk)} chars) with previous chunk")
                     valid_chunks[-1] += "\n\n" + chunk
+            
+            print(f"CONTENT-AWARE DIAGNOSTICS: ✨ Splitting completed successfully!")
+            print(f"  📈 Final result: {len(valid_chunks)} content-aware chunks")
+            
+            # Show chunk size distribution
+            chunk_sizes = [len(chunk) for chunk in valid_chunks]
+            if chunk_sizes:
+                print(f"  📊 Chunk size stats: min={min(chunk_sizes)}, max={max(chunk_sizes)}, avg={sum(chunk_sizes)//len(chunk_sizes)}")
             
             return valid_chunks if valid_chunks else [text]
             
         except Exception as e:
+            print(f"CONTENT-AWARE DIAGNOSTICS: ❌ Error during content-aware splitting: {e}")
             log.warning(f"Content-aware splitting failed: {e}. Falling back to simple splitting.")
             # Fallback to simple character-based splitting
-            return self._fallback_split(text)
+            fallback_chunks = self._fallback_split(text)
+            print(f"CONTENT-AWARE DIAGNOSTICS: 🔄 Fallback splitting produced {len(fallback_chunks)} chunks")
+            return fallback_chunks
     
     def _fallback_split(self, text: str) -> list:
         """
@@ -1463,8 +1549,38 @@ def save_docs_to_vector_db(
             )
 
         print(f"REFACTORED: Splitting {len(docs)} documents into content-aware chunks...")
+        
+        # Show original document info
+        total_chars = sum(len(doc.page_content) for doc in docs)
+        print(f"CONTENT-AWARE SPLITTING INFO:")
+        print(f"  📊 Total documents: {len(docs)}")
+        print(f"  📏 Total characters: {total_chars}")
+        print(f"  ⚙️ Chunk settings: size={request.app.state.config.CHUNK_SIZE}, overlap={request.app.state.config.CHUNK_OVERLAP}")
+        
         docs = text_splitter.split_documents(docs)
+        
+        # Show results and comparison
+        final_chars = sum(len(doc.page_content) for doc in docs)
         print(f"REFACTORED: Content-aware splitting completed. Result: {len(docs)} chunks")
+        print(f"CONTENT-AWARE SPLITTING RESULTS:")
+        print(f"  📈 Final chunks: {len(docs)}")
+        print(f"  📏 Total characters after chunking: {final_chars}")
+        print(f"  📊 Average chunk size: {final_chars // len(docs) if docs else 0} characters")
+        
+        # Quick comparison with what basic splitting would produce
+        if docs and len(docs) > 0:
+            try:
+                # Sample one document for comparison
+                sample_doc = docs[0] if docs else None
+                if sample_doc and len(sample_doc.page_content) > 200:
+                    basic_splitter = RecursiveCharacterTextSplitter(
+                        chunk_size=request.app.state.config.CHUNK_SIZE,
+                        chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                    )
+                    basic_chunks = basic_splitter.split_text(sample_doc.page_content)
+                    print(f"  🔄 Comparison (sample doc): Content-aware=1 chunk vs Basic={len(basic_chunks)} chunks")
+            except:
+                pass
 
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
@@ -1648,44 +1764,65 @@ def process_file(
                 # Force unstructured processing for better document extraction
                 print(f"REFACTORED: Processing file {file.filename} with UNSTRUCTURED engine")
                 
-                loader = Loader(
-                    engine="unstructured",  # DEFAULT TO UNSTRUCTURED
-                    EXTERNAL_DOCUMENT_LOADER_URL=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
-                    EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
-                    TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
-                    DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
-                    DOCLING_OCR_ENGINE=request.app.state.config.DOCLING_OCR_ENGINE,
-                    DOCLING_OCR_LANG=request.app.state.config.DOCLING_OCR_LANG,
-                    DOCLING_DO_PICTURE_DESCRIPTION=request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
-                    PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
-                    DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
-                    DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
-                    MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
-                )
-                
-                print(f"REFACTORED: Loading file with unstructured...")
-                docs = loader.load(
-                    file.filename, file.meta.get("content_type"), file_path
-                )
-                
-                print(f"REFACTORED: Loaded {len(docs)} documents, applying comprehensive cleaning...")
-                
-                # Apply comprehensive cleaning to all extracted documents
-                docs = [
-                    Document(
-                        page_content=clean_text_for_vector_db(doc.page_content),
-                        metadata={
-                            **doc.metadata,
-                            "name": file.filename,
-                            "created_by": file.user_id,
-                            "file_id": file.id,
-                            "source": file.filename,
-                        },
+                # Check if unstructured is available
+                if not UNSTRUCTURED_AVAILABLE:
+                    print(f"WARNING: Unstructured library not available. Install with: pip install unstructured")
+                    print(f"FALLBACK: Using basic content extraction...")
+                    # Fallback to basic file content if unstructured not available
+                    raw_content = file.data.get("content", "")
+                    cleaned_content = clean_text_for_vector_db(raw_content)
+                    
+                    docs = [
+                        Document(
+                            page_content=cleaned_content,
+                            metadata={
+                                **file.meta,
+                                "name": file.filename,
+                                "created_by": file.user_id,
+                                "file_id": file.id,
+                                "source": file.filename,
+                            },
+                        )
+                    ]
+                else:
+                    loader = Loader(
+                        engine="unstructured",  # DEFAULT TO UNSTRUCTURED
+                        EXTERNAL_DOCUMENT_LOADER_URL=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
+                        EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
+                        TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
+                        DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
+                        DOCLING_OCR_ENGINE=request.app.state.config.DOCLING_OCR_ENGINE,
+                        DOCLING_OCR_LANG=request.app.state.config.DOCLING_OCR_LANG,
+                        DOCLING_DO_PICTURE_DESCRIPTION=request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
+                        PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
+                        DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
+                        DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+                        MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
                     )
-                    for doc in docs
-                ]
-                
-                print(f"REFACTORED: Document cleaning completed")
+                    
+                    print(f"REFACTORED: Loading file with unstructured...")
+                    docs = loader.load(
+                        file.filename, file.meta.get("content_type"), file_path
+                    )
+                    
+                    print(f"REFACTORED: Loaded {len(docs)} documents, applying comprehensive cleaning...")
+                    
+                    # Apply comprehensive cleaning to all extracted documents
+                    docs = [
+                        Document(
+                            page_content=clean_text_for_vector_db(doc.page_content),
+                            metadata={
+                                **doc.metadata,
+                                "name": file.filename,
+                                "created_by": file.user_id,
+                                "file_id": file.id,
+                                "source": file.filename,
+                            },
+                        )
+                        for doc in docs
+                    ]
+                    
+                    print(f"REFACTORED: Document cleaning completed")
             else:
                 # Fallback: clean existing file content
                 raw_content = file.data.get("content", "")
