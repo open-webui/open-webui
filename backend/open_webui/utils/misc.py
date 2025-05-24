@@ -33,21 +33,32 @@ def get_message_list(messages, message_id):
     :param messages: Message history dict containing all messages
     :return: List of ordered messages starting from the root to the given message
     """
+    # Input validation
+    if not messages:
+        log.debug(f"get_message_list: messages dict is empty or None")
+        return []
+    
+    if not message_id:
+        log.debug(f"get_message_list: message_id is empty or None")
+        return []
 
     # Find the message by its id
     current_message = messages.get(message_id)
 
     if not current_message:
-        return None
+        log.debug(f"get_message_list: message_id '{message_id}' not found in messages")
+        return []
 
     # Reconstruct the chain by following the parentId links
     message_list = []
+    seen_ids = set()  # Prevent infinite loops in case of circular references
 
-    while current_message:
+    while current_message and current_message.get("id") not in seen_ids:
+        seen_ids.add(current_message.get("id"))
         message_list.insert(
             0, current_message
         )  # Insert the message at the beginning of the list
-        parent_id = current_message["parentId"]
+        parent_id = current_message.get("parentId")
         current_message = messages.get(parent_id) if parent_id else None
 
     return message_list
