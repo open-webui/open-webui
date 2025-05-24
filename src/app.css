@@ -103,8 +103,8 @@ li p {
 
 ::-webkit-scrollbar-thumb {
 	--tw-border-opacity: 1;
-	background-color: rgba(236, 236, 236, 0.8);
-	border-color: rgba(220, 220, 220, var(--tw-border-opacity));
+	background-color: rgba(120, 120, 120, 0.8);
+	border-color: rgba(150, 150, 150, var(--tw-border-opacity));
 	border-radius: 9999px;
 	border-width: 1px;
 }
