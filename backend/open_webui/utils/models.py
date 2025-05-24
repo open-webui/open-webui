@@ -239,11 +239,8 @@ async def get_all_models(request, user: UserModel = None):
         ]
 
     def get_function_module_by_id(function_id):
-        if function_id in request.app.state.FUNCTIONS:
-            function_module = request.app.state.FUNCTIONS[function_id]
-        else:
-            function_module, _, _ = load_function_module_by_id(function_id)
-            request.app.state.FUNCTIONS[function_id] = function_module
+        function_module, _, _ = load_function_module_by_id(function_id)
+        request.app.state.FUNCTIONS[function_id] = function_module
         return function_module
 
     for model in models:

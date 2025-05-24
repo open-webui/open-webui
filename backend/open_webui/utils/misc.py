@@ -130,7 +130,9 @@ def prepend_to_first_user_message_content(
     return messages
 
 
-def add_or_update_system_message(content: str, messages: list[dict]):
+def add_or_update_system_message(
+    content: str, messages: list[dict], append: bool = False
+):
     """
     Adds a new system message at the beginning of the messages list
     or updates the existing system message at the beginning.
@@ -141,7 +143,10 @@ def add_or_update_system_message(content: str, messages: list[dict]):
     """
 
     if messages and messages[0].get("role") == "system":
-        messages[0]["content"] = f"{content}\n{messages[0]['content']}"
+        if append:
+            messages[0]["content"] = f"{messages[0]['content']}\n{content}"
+        else:
+            messages[0]["content"] = f"{content}\n{messages[0]['content']}"
     else:
         # Insert at the beginning
         messages.insert(0, {"role": "system", "content": content})

@@ -1,11 +1,15 @@
 <script lang="ts">
 	import { marked } from 'marked';
 	import TurndownService from 'turndown';
+	import { gfm } from 'turndown-plugin-gfm';
 	const turndownService = new TurndownService({
 		codeBlockStyle: 'fenced',
 		headingStyle: 'atx'
 	});
 	turndownService.escape = (string) => string;
+
+	// Use turndown-plugin-gfm for proper GFM table support
+	turndownService.use(gfm);
 
 	import { onMount, onDestroy } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
@@ -13,17 +17,20 @@
 
 	import { EditorState, Plugin, PluginKey, TextSelection } from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
-
 	import { Editor } from '@tiptap/core';
 
 	import { AIAutocompletion } from './RichTextInput/AutoCompletion.js';
+	import Table from '@tiptap/extension-table';
+	import TableRow from '@tiptap/extension-table-row';
+	import TableHeader from '@tiptap/extension-table-header';
+	import TableCell from '@tiptap/extension-table-cell';
 
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 	import Placeholder from '@tiptap/extension-placeholder';
+	import { all, createLowlight } from 'lowlight';
+	import StarterKit from '@tiptap/starter-kit';
 	import Highlight from '@tiptap/extension-highlight';
 	import Typography from '@tiptap/extension-typography';
-	import StarterKit from '@tiptap/starter-kit';
-	import { all, createLowlight } from 'lowlight';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
@@ -194,6 +201,10 @@
 				Highlight,
 				Typography,
 				Placeholder.configure({ placeholder }),
+				Table.configure({ resizable: true }),
+				TableRow,
+				TableHeader,
+				TableCell,
 				...(autocomplete
 					? [
 							AIAutocompletion.configure({

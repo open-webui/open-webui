@@ -165,7 +165,10 @@
 		getUserList();
 	}}
 />
-<UserChatsModal bind:show={showUserChatsModal} user={selectedUser} />
+
+{#if selectedUser}
+	<UserChatsModal bind:show={showUserChatsModal} user={selectedUser} />
+{/if}
 
 {#if ($config?.license_metadata?.seats ?? null) !== null && total && total > $config?.license_metadata?.seats}
 	<div class=" mt-1 mb-2 text-xs text-red-500">

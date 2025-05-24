@@ -8,6 +8,8 @@ from pathlib import Path
 from pydub import AudioSegment
 from pydub.silence import split_on_silence
 from concurrent.futures import ThreadPoolExecutor
+from typing import Optional
+
 
 import aiohttp
 import aiofiles
@@ -18,6 +20,7 @@ from fastapi import (
     Depends,
     FastAPI,
     File,
+    Form,
     HTTPException,
     Request,
     UploadFile,
@@ -527,10 +530,12 @@ async def speech(request: Request, user=Depends(get_verified_user)):
         return FileResponse(file_path)
 
 
-def transcription_handler(request, file_path):
+def transcription_handler(request, file_path, metadata):
     filename = os.path.basename(file_path)
     file_dir = os.path.dirname(file_path)
     id = filename.split(".")[0]
+
+    metadata = metadata or {}
 
     if request.app.state.config.STT_ENGINE == "":
         if request.app.state.faster_whisper_model is None:
@@ -543,7 +548,7 @@ def transcription_handler(request, file_path):
             file_path,
             beam_size=5,
             vad_filter=request.app.state.config.WHISPER_VAD_FILTER,
-            language=WHISPER_LANGUAGE,
+            language=metadata.get("language") or WHISPER_LANGUAGE,
         )
         log.info(
             "Detected language '%s' with probability %f"
@@ -569,7 +574,14 @@ def transcription_handler(request, file_path):
                     "Authorization": f"Bearer {request.app.state.config.STT_OPENAI_API_KEY}"
                 },
                 files={"file": (filename, open(file_path, "rb"))},
-                data={"model": request.app.state.config.STT_MODEL},
+                data={
+                    "model": request.app.state.config.STT_MODEL,
+                    **(
+                        {"language": metadata.get("language")}
+                        if metadata.get("language")
+                        else {}
+                    ),
+                },
             )
 
             r.raise_for_status()
@@ -777,8 +789,8 @@ def transcription_handler(request, file_path):
             )
 
 
-def transcribe(request: Request, file_path):
-    log.info(f"transcribe: {file_path}")
+def transcribe(request: Request, file_path: str, metadata: Optional[dict] = None):
+    log.info(f"transcribe: {file_path} {metadata}")
 
     if is_audio_conversion_required(file_path):
         file_path = convert_audio_to_mp3(file_path)
@@ -804,7 +816,7 @@ def transcribe(request: Request, file_path):
         with ThreadPoolExecutor() as executor:
             # Submit tasks for each chunk_path
             futures = [
-                executor.submit(transcription_handler, request, chunk_path)
+                executor.submit(transcription_handler, request, chunk_path, metadata)
                 for chunk_path in chunk_paths
             ]
             # Gather results as they complete
@@ -812,10 +824,9 @@ def transcribe(request: Request, file_path):
                 try:
                     results.append(future.result())
                 except Exception as transcribe_exc:
-                    log.exception(f"Error transcribing chunk: {transcribe_exc}")
                     raise HTTPException(
                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                        detail="Error during transcription.",
+                        detail=f"Error transcribing chunk: {transcribe_exc}",
                     )
     finally:
         # Clean up only the temporary chunks, never the original file
@@ -897,6 +908,7 @@ def split_audio(file_path, max_bytes, format="mp3", bitrate="32k"):
 def transcription(
     request: Request,
     file: UploadFile = File(...),
+    language: Optional[str] = Form(None),
     user=Depends(get_verified_user),
 ):
     log.info(f"file.content_type: {file.content_type}")
@@ -926,7 +938,12 @@ def transcription(
             f.write(contents)
 
         try:
-            result = transcribe(request, file_path)
+            metadata = None
+
+            if language:
+                metadata = {"language": language}
+
+            result = transcribe(request, file_path, metadata)
 
             return {
                 **result,

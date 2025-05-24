@@ -536,5 +536,10 @@ class OAuthManager:
                 secure=WEBUI_AUTH_COOKIE_SECURE,
             )
         # Redirect back to the frontend with the JWT token
-        redirect_url = f"{request.base_url}auth#token={jwt_token}"
+
+        redirect_base_url = request.app.state.config.WEBUI_URL or request.base_url
+        if redirect_base_url.endswith("/"):
+            redirect_base_url = redirect_base_url[:-1]
+        redirect_url = f"{redirect_base_url}/auth#token={jwt_token}"
+
         return RedirectResponse(url=redirect_url, headers=response.headers)

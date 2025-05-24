@@ -11,6 +11,7 @@
 	export let placeholder = '';
 	export let value = '';
 	export let showClearButton = false;
+	export let onKeydown = (e) => {};
 
 	let selectedIdx = 0;
 
@@ -145,6 +146,10 @@
 					// if the user types something, reset to the top selection.
 					selectedIdx = 0;
 				}
+
+				if (!document.getElementById('search-options-container')) {
+					onKeydown(e);
+				}
 			}}
 		/>
 
@@ -164,6 +169,7 @@
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
 			class="absolute top-0 mt-8 left-0 right-1 border border-gray-100 dark:border-gray-900 bg-gray-50 dark:bg-gray-950 rounded-lg z-10 shadow-lg"
+			id="search-options-container"
 			in:fade={{ duration: 50 }}
 			on:mouseenter={() => {
 				selectedIdx = null;

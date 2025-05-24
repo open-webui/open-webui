@@ -355,6 +355,31 @@ export const generateChatCompletion = async (token: string = '', body: object) =
 	return [res, controller];
 };
 
+export const unloadModel = async (token: string, tagName: string) => {
+	let error = null;
+
+	const res = await fetch(`${OLLAMA_API_BASE_URL}/api/unload`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			name: tagName
+		})
+	}).catch((err) => {
+		error = err;
+		return null;
+	});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const createModel = async (token: string, payload: object, urlIdx: string | null = null) => {
 	let error = null;
 

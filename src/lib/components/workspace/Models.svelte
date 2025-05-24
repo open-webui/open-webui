@@ -35,6 +35,8 @@
 	import Spinner from '../common/Spinner.svelte';
 	import { capitalizeFirstLetter } from '$lib/utils';
 	import XMark from '../icons/XMark.svelte';
+	import EyeSlash from '../icons/EyeSlash.svelte';
+	import Eye from '../icons/Eye.svelte';
 
 	let shiftKey = false;
 
@@ -112,33 +114,20 @@
 	};
 
 	const hideModelHandler = async (model) => {
-		let info = model.info;
-
-		if (!info) {
-			info = {
-				id: model.id,
-				name: model.name,
-				meta: {
-					suggestion_prompts: null
-				},
-				params: {}
-			};
-		}
-
-		info.meta = {
-			...info.meta,
-			hidden: !(info?.meta?.hidden ?? false)
+		model.meta = {
+			...model.meta,
+			hidden: !(model?.meta?.hidden ?? false)
 		};
 
-		console.log(info);
+		console.log(model);
 
-		const res = await updateModelById(localStorage.token, info.id, info);
+		const res = await updateModelById(localStorage.token, model.id, model);
 
 		if (res) {
 			toast.success(
 				$i18n.t(`Model {{name}} is now {{status}}`, {
-					name: info.id,
-					status: info.meta.hidden ? 'hidden' : 'visible'
+					name: model.id,
+					status: model.meta.hidden ? 'hidden' : 'visible'
 				})
 			);
 		}
@@ -328,6 +317,22 @@
 
 					<div class="flex flex-row gap-0.5 items-center">
 						{#if shiftKey}
+							<Tooltip content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}>
+								<button
+									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+									type="button"
+									on:click={() => {
+										hideModelHandler(model);
+									}}
+								>
+									{#if model?.meta?.hidden}
+										<EyeSlash />
+									{:else}
+										<Eye />
+									{/if}
+								</button>
+							</Tooltip>
+
 							<Tooltip content={$i18n.t('Delete')}>
 								<button
 									class="self-center w-fit text-sm px-2 py-2 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"

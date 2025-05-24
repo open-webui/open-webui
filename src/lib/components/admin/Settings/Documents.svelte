@@ -771,6 +771,26 @@
 									</div>
 								</div>
 							{/if}
+
+							{#if RAGConfig.ENABLE_RAG_HYBRID_SEARCH === true}
+								<div class="mb-2.5 flex w-full justify-between">
+									<div class="self-center text-xs font-medium">
+										{$i18n.t('Weight of BM25 Retrieval')}
+									</div>
+									<div class="flex items-center relative">
+										<input
+											class="flex-1 w-full text-sm bg-transparent outline-hidden"
+											type="number"
+											step="0.01"
+											placeholder={$i18n.t('Enter BM25 Weight')}
+											bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
+											autocomplete="off"
+											min="0.0"
+											max="1.0"
+										/>
+									</div>
+								</div>
+							{/if}
 						{/if}
 
 						<div class="  mb-2.5 flex flex-col w-full justify-between">
