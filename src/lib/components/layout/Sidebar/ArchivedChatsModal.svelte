@@ -29,6 +29,18 @@
 	let searchValue = '';
 	let showUnarchiveAllConfirmDialog = false;
 
+	let sortKey = 'created_at';
+	let sortOrder = 'desc';
+
+	function setSortKey(key) {
+		if (sortKey === key) {
+			sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortKey = key;
+			sortOrder = 'asc';
+		}
+	}
+
 	const unarchiveChatHandler = async (chatId) => {
 		const res = await archiveChatById(localStorage.token, chatId).catch((error) => {
 			toast.error(`${error}`);
@@ -137,17 +149,50 @@
 										class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-2 border-gray-50 dark:border-gray-850"
 									>
 										<tr>
-											<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
-											<th scope="col" class="px-3 py-2 hidden md:flex">
+											<th
+												scope="col"
+												class="px-3 py-2 cursor-pointer select-none"
+												on:click={() => setSortKey('title')}
+											>
+												{$i18n.t('Name')}
+												{#if sortKey === 'title'}
+													{sortOrder === 'asc' ? '▲' : '▼'}
+												{:else}
+													<span class="invisible">▲</span>
+												{/if}
+											</th>
+											<th
+												scope="col"
+												class="px-3 py-2 hidden md:flex cursor-pointer select-none justify-end"
+												on:click={() => setSortKey('created_at')}
+											>
 												{$i18n.t('Created At')}
+												{#if sortKey === 'created_at'}
+													{sortOrder === 'asc' ? '▲' : '▼'}
+												{:else}
+													<span class="invisible">▲</span>
+												{/if}
 											</th>
 											<th scope="col" class="px-3 py-2 text-right" />
 										</tr>
 									</thead>
 									<tbody>
-										{#each chats.filter((c) => searchValue === '' || c.title
-													.toLowerCase()
-													.includes(searchValue.toLowerCase())) as chat, idx}
+										{#each chats
+											.filter((c) => searchValue === '' || c.title
+														.toLowerCase()
+														.includes(searchValue.toLowerCase()))
+											.sort((a, b) => {
+												const aValue = a[sortKey];
+												const bValue = b[sortKey];
+
+												if (aValue < bValue) {
+													return sortOrder === 'asc' ? -1 : 1;
+												}
+												if (aValue > bValue) {
+													return sortOrder === 'asc' ? 1 : -1;
+												}
+												return 0;
+											}) as chat, idx}
 											<tr
 												class="bg-transparent {idx !== chats.length - 1 &&
 													'border-b'} dark:bg-gray-900 border-gray-50 dark:border-gray-850 text-xs"
@@ -160,7 +205,7 @@
 													</a>
 												</td>
 
-												<td class=" px-3 py-1 hidden md:flex h-[2.5rem]">
+												<td class=" px-3 py-1 hidden md:flex h-[2.5rem] justify-end">
 													<div class="my-auto">
 														{dayjs(chat.created_at * 1000).format('LLL')}
 													</div>
@@ -231,7 +276,7 @@
 									showUnarchiveAllConfirmDialog = true;
 								}}
 							>
-								{$i18n.t('Unarchive All Archived Chats')}
+								{$i18n.t('Unarchive All')}
 							</button>
 
 							<button
@@ -240,7 +285,7 @@
 									exportChatsHandler();
 								}}
 							>
-								{$i18n.t('Export All Archived Chats')}
+								{$i18n.t('Export All')}
 							</button>
 						</div>
 					</div>
