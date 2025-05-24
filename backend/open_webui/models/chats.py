@@ -2176,9 +2176,12 @@ class ChatTableSafetyWrapper:
     
     def __getattr__(self, name):
         attr = getattr(self._chat_table, name)
+        # Log ALL attribute access to find what the middleware is actually using
+        log.info(f"🔍 ATTRIBUTE ACCESS: {name} -> {type(attr)}")
         if callable(attr):
             def safe_wrapper(*args, **kwargs):
-                log.debug(f"🛡️  SAFETY WRAPPER: Calling {name} with args={args[:2] if args else []} kwargs={kwargs}")
+                # Log ALL method calls to find the real culprit
+                log.info(f"🛡️  SAFETY WRAPPER: Calling {name} with args={args[:2] if args else []} kwargs={kwargs}")
                 try:
                     result = attr(*args, **kwargs)
                     # Special handling for methods that middleware might iterate over
@@ -2188,7 +2191,11 @@ class ChatTableSafetyWrapper:
                             return []
                         else:
                             return {}
-                    log.debug(f"✅ SAFETY WRAPPER: {name} returned {type(result)}")
+                    # Log return types for ALL methods to help debugging
+                    if result is None:
+                        log.warning(f"⚠️  SAFETY WRAPPER: {name} returned None")
+                    else:
+                        log.info(f"✅ SAFETY WRAPPER: {name} returned {type(result)}")
                     return result
                 except Exception as e:
                     log.error(f"❌ SAFETY WRAPPER: {name} failed: {e}")
@@ -2201,3 +2208,9 @@ class ChatTableSafetyWrapper:
 
 # Replace the global Chats object with safety wrapper
 Chats = ChatTableSafetyWrapper(Chats)
+
+# Log that the safety wrapper is active
+log.info("🛡️  SAFETY WRAPPER ACTIVATED: All Chats method calls will be logged and protected")
+
+# Also expose the original for debugging if needed
+_original_chats = Chats._chat_table
