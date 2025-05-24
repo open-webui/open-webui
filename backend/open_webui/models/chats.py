@@ -417,6 +417,7 @@ class ChatTable:
         self,
         user_id: str,
         include_archived: bool = False,
+        filter: Optional[dict] = None,
         skip: int = 0,
         limit: int = 50,
     ) -> list[ChatModel]:
@@ -425,7 +426,23 @@ class ChatTable:
             if not include_archived:
                 query = query.filter_by(archived=False)
 
-            query = query.order_by(Chat.updated_at.desc())
+            if filter:
+                query_key = filter.get("query")
+                if query_key:
+                    query = query.filter(Chat.title.ilike(f"%{query_key}%"))
+
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
+
+                if order_by and direction and getattr(Chat, order_by):
+                    if direction.lower() == "asc":
+                        query = query.order_by(getattr(Chat, order_by).asc())
+                    elif direction.lower() == "desc":
+                        query = query.order_by(getattr(Chat, order_by).desc())
+                    else:
+                        raise ValueError("Invalid direction for ordering")
+            else:
+                query = query.order_by(Chat.updated_at.desc())
 
             if skip:
                 query = query.offset(skip)
@@ -566,7 +583,9 @@ class ChatTable:
         search_text = search_text.lower().strip()
 
         if not search_text:
-            return self.get_chat_list_by_user_id(user_id, include_archived, skip, limit)
+            return self.get_chat_list_by_user_id(
+                user_id, include_archived, filter={}, skip=skip, limit=limit
+            )
 
         search_text_words = search_text.split(" ")
 
