@@ -76,6 +76,7 @@
                 *   對於 `tool_servers` 列表中的工具，後端會遍歷這個列表。由於 `tool_servers` 列表中的每個元素都已經是前端獲取到的完整 OpenAPI 規格，後端會將這些工具添加到其內部維護的工具字典中，並**明確地為這些工具設置 `direct: True` 標誌**。
                 *   最終，後端在處理 LLM 的 `function_call` 回應時（主要在 `open_webui/utils/chat.py` 或 `open_webui/functions.py` 內），將根據工具的 `direct` 標誌來決定是自行執行工具還是將其轉發給前端。
             *   **多使用者環境下的隔離性：** `process_chat_payload` 函數對 `tool_servers` 字段的處理是基於「每請求」的。這意味著每個聊天請求的 `form_data` 和其內部生成的 `tools_dict` 都是獨立的，不會在不同使用者或不同請求之間共享。這種設計確保了即使有多個使用者同時運行各自的本地 `mcpo` 實例，它們的工具處理也是完全隔離且互不影響的避免了潛在的並發問題和數據混淆。
+            *   **重要發現：** 經程式碼檢視，`backend/open_webui/utils/middleware.py` 中處理 `tool_servers` 並設置 `direct: True` 的邏輯**已存在**。
 
 2.  **後端工具定義與發現 (無需修改)：**
     *   **無需修改後端資料庫模式或 `ToolModel`** 來增加 `is_local_client_call` 標誌。後端將完全依賴前端在請求中提供的 `tool_servers` 列表來判斷工具類型。
@@ -94,6 +95,7 @@
         }
         ```
     *   前端的 Socket.IO 客戶端將監聽此事件，並觸發本地工具的執行。
+    *   **重要發現：** 經程式碼檢視，`backend/open_webui/functions.py` 中已存在判斷 `direct: True` 工具並透過 `event_caller`（即 WebSocket 事件發送器）轉發工具調用（使用 `execute:tool` 事件）的邏輯。因此，此部分功能**已實現**，前端將監聽 `execute:tool` 事件。
 
 4.  **本地工具配置持久化：**
     *   **無需任何後端調整**，因為本地工具的配置持久化將完全在前端處理（透過 `localStorage`）。

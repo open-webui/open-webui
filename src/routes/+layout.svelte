@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
 	import PyodideWorker from '$lib/workers/pyodide.worker?worker';
@@ -26,8 +26,11 @@
 		isLastActiveTab,
 		isApp,
 		appInfo,
-		toolServers
+		toolServers,
+		localMcpoTools // Added for local MCPO tool handling
 	} from '$lib/stores';
+	import { get } from 'svelte/store'; // Added for accessing store values
+	import { executeLocalMcpoTool } from '$lib/utils/localMcpoToolExecutor'; // Added for local MCPO execution
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Toaster, toast } from 'svelte-sonner';
@@ -56,8 +59,8 @@
 
 	const BREAKPOINT = 768;
 
-	const setupSocket = async (enableWebsocket) => {
-		const _socket = io(`${WEBUI_BASE_URL}` || undefined, {
+	const setupSocket = async (enableWebsocket: any) => {
+		const _socket = io(`${WEBUI_BASE_URL ?? ''}`, {
 			reconnection: true,
 			reconnectionDelay: 1000,
 			reconnectionDelayMax: 5000,
@@ -103,10 +106,10 @@
 		});
 	};
 
-	const executePythonAsWorker = async (id, code, cb) => {
-		let result = null;
-		let stdout = null;
-		let stderr = null;
+	const executePythonAsWorker = async (id: any, code: any, cb: any) => {
+		let result: any = null;
+		let stdout: any = null;
+		let stderr: any = null;
 
 		let executing = true;
 		let packages = [
@@ -204,40 +207,84 @@
 		};
 	};
 
-	const executeTool = async (data, cb) => {
-		const toolServer = $settings?.toolServers?.find((server) => server.url === data.server?.url);
-		const toolServerData = $toolServers?.find((server) => server.url === data.server?.url);
+	const executeTool = async (data: any, cb: any) => {
+    // data contains: { id: string, name: string, params: any, server: { url: string, ... }, ... }
+    // data.name is the toolCallId (operationId)
+    // data.params are the toolArgs
 
-		console.log('executeTool', data, toolServer);
+    // --- BEGIN NEW LOGIC FOR LOCAL MCPO ---
+    const localMcpoServerUrl = 'http://localhost:8000'; // Define the base URL for your local MCPO
 
-		if (toolServer) {
-			console.log(toolServer);
-			const res = await executeToolServer(
-				(toolServer?.auth_type ?? 'bearer') === 'bearer' ? toolServer?.key : localStorage.token,
-				toolServer.url,
-				data?.name,
-				data?.params,
-				toolServerData
-			);
+    if (data.server?.url && data.server.url.startsWith(localMcpoServerUrl)) {
+        console.log('[+layout.svelte executeTool] Handling as local MCPO tool:', data.name);
+        
+        const localToolsAvailable = get(localMcpoTools);
+        console.log('[+layout.svelte executeTool] Current localMcpoTools store content:', localToolsAvailable); // DEBUGGING LINE
+        const foundToolConfig = localToolsAvailable.find(t => t.operationId === data.name); // Changed to compare with t.operationId
 
-			console.log('executeToolServer', res);
-			if (cb) {
-				cb(JSON.parse(JSON.stringify(res)));
-			}
-		} else {
-			if (cb) {
-				cb(
-					JSON.parse(
-						JSON.stringify({
-							error: 'Tool Server Not Found'
-						})
-					)
-				);
-			}
-		}
-	};
+        if (!foundToolConfig) {
+            const errorMsg = `[+layout.svelte executeTool] Local MCPO tool config not found for: ${data.name}. This tool might not be enabled or discovered.`;
+            console.error(errorMsg);
+            if (cb) {
+                cb({ success: false, error: errorMsg }); // Ensure consistent error format
+            }
+            return;
+        }
+        
+        try {
+            // executeLocalMcpoTool will find the toolConfig again using data.name from localMcpoTools store
+            const result = await executeLocalMcpoTool(data.name, data.params);
+            if (cb) {
+                cb(result); // executeLocalMcpoTool returns { success: boolean, data?: any, error?: string }
+            }
+            return; // Local tool handled, exit the function
+            } catch (error: any) {
+                const errorMsg = `[+layout.svelte executeTool] Error executing local MCPO tool ${data.name}: ${error.message}`;
+            console.error(errorMsg);
+            if (cb) {
+                // Ensure the callback receives an object in the expected ExecutionResult format
+                cb({ success: false, error: errorMsg });
+            }
+            return; // Local tool execution failed, exit
+        }
+    }
+    // --- END NEW LOGIC FOR LOCAL MCPO ---
 
-	const chatEventHandler = async (event, cb) => {
+    // Existing logic for remote tools (from $settings.toolServers)
+    // This part will only be reached if data.server.url does not match localMcpoServerUrl
+    const toolServer = $settings?.toolServers?.find((server) => server.url === data.server?.url);
+    const toolServerData = $toolServers?.find((server) => server.url === data.server?.url);
+
+    console.log('[+layout.svelte executeTool] Handling as remote/fallback tool:', data.name, toolServer);
+
+    if (toolServer && toolServerData) { // Added check for toolServerData
+        console.log(toolServer); // Original log
+        const res = await executeToolServer(
+            (toolServer?.auth_type ?? 'bearer') === 'bearer' ? toolServer?.key : localStorage.token,
+            toolServer.url,
+            data?.name,
+            data?.params,
+            toolServerData as any // Cast to any to resolve type mismatch
+        );
+
+        console.log('executeToolServer response:', res); // Original log
+        if (cb) {
+            cb(JSON.parse(JSON.stringify(res)));
+        }
+    } else {
+        if (cb) {
+            cb(
+                JSON.parse(
+                    JSON.stringify({
+                        error: 'Tool Server Not Found' // This error will now only apply to non-local tools not found in $settings.toolServers
+                    })
+                )
+            );
+        }
+    }
+};
+
+	const chatEventHandler = async (event: any, cb: any) => {
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
 
 		let isFocused = document.visibilityState !== 'visible';
@@ -332,32 +379,39 @@
 									console.log({ status: true });
 
 									// res will either be SSE or JSON
-									const reader = res.body.getReader();
-									const decoder = new TextDecoder();
+									const reader = res.body?.getReader();
+									
+									if (reader) { // Added check for reader
+										const decoder = new TextDecoder();
+										const processStream = async () => {
+											while (true) {
+												// Read data chunks from the response stream
+												const { done, value } = await reader.read();
+												if (done) {
+													break;
+												}
 
-									const processStream = async () => {
-										while (true) {
-											// Read data chunks from the response stream
-											const { done, value } = await reader.read();
-											if (done) {
-												break;
+												// Decode the received chunk
+												const chunk = decoder.decode(value, { stream: true });
+
+												// Process lines within the chunk
+												const lines = chunk.split('\n').filter((line) => line.trim() !== '');
+
+												for (const line of lines) {
+													console.log(line);
+													$socket?.emit(channel, line);
+												}
 											}
-
-											// Decode the received chunk
-											const chunk = decoder.decode(value, { stream: true });
-
-											// Process lines within the chunk
-											const lines = chunk.split('\n').filter((line) => line.trim() !== '');
-
-											for (const line of lines) {
-												console.log(line);
-												$socket?.emit(channel, line);
-											}
+										};
+										// Process the stream in the background
+										await processStream();
+									} else {
+										console.error('[+layout.svelte chatEventHandler] Response body or reader is null in stream for request:chat:completion.');
+										if (cb) {
+											// Propagate an error back if the stream cannot be read
+											cb({ success: false, error: 'Failed to read response stream from chat completion.' });
 										}
-									};
-
-									// Process the stream in the background
-									await processStream();
+									}
 								} else {
 									const data = await res.json();
 									cb(data);
@@ -365,16 +419,16 @@
 							} else {
 								throw new Error('An error occurred while fetching the completion');
 							}
-						} catch (error) {
+						} catch (error: any) {
 							console.error('chatCompletion', error);
 							cb(error);
 						}
 					}
-				} catch (error) {
+				} catch (error: any) {
 					console.error('chatCompletion', error);
 					cb(error);
 				} finally {
-					$socket.emit(channel, {
+					$socket?.emit(channel, {
 						done: true
 					});
 				}
@@ -384,7 +438,7 @@
 		}
 	};
 
-	const channelEventHandler = async (event) => {
+	const channelEventHandler = async (event: any) => {
 		if (event.data?.type === 'typing') {
 			return;
 		}
@@ -451,7 +505,7 @@
 				});
 
 				if (data) {
-					appData.set(data);
+					// appData.set(data); // Commenting out for now as appData is not defined/imported
 				}
 			}
 		}
@@ -518,7 +572,7 @@
 			const languages = await getLanguages();
 			const browserLanguages = navigator.languages
 				? navigator.languages
-				: [navigator.language || navigator.userLanguage];
+				: [navigator.language];
 			const lang = backendConfig.default_locale
 				? backendConfig.default_locale
 				: bestMatchingLanguage(languages, browserLanguages, 'en-US');
@@ -531,7 +585,7 @@
 			await WEBUI_NAME.set(backendConfig.name);
 
 			if ($config) {
-				await setupSocket($config.features?.enable_websocket ?? true);
+				await setupSocket(($config.features as any)?.enable_websocket ?? true);
 
 				const currentUrl = `${window.location.pathname}${window.location.search}`;
 				const encodedUrl = encodeURIComponent(currentUrl);
@@ -545,7 +599,7 @@
 
 					if (sessionUser) {
 						// Save Session User to Store
-						$socket.emit('user-join', { auth: { token: sessionUser.token } });
+						$socket?.emit('user-join', { auth: { token: sessionUser.token } });
 
 						await user.set(sessionUser);
 						await config.set(await getBackendConfig());
