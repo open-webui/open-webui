@@ -185,12 +185,19 @@
 		}
 	};
 
+	let previousWidth = window.innerWidth;
+
 	const handleResize = () => {
-		if (show) {
-			if ($mobile && selectedTab !== null) {
-				selectedTab = null; 
-			} else if (!$mobile && selectedTab === null) {
-				selectedTab = 'account'; 
+		const currentWidth = window.innerWidth;
+		if (currentWidth !== previousWidth) {
+			previousWidth = currentWidth;
+
+			if (show) {
+				if (currentWidth < 768 && selectedTab !== null) {
+					selectedTab = null;
+				} else if (currentWidth >= 768 && selectedTab === null) {
+					selectedTab = 'account';
+				}
 			}
 		}
 	};
