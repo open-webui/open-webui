@@ -19,6 +19,7 @@ from open_webui.models.auths import (
     UserResponse,
 )
 from open_webui.models.users import Users
+from open_webui.config import CONFIG_DATA, save_config
 
 from open_webui.constants import ERROR_MESSAGES, WEBHOOK_MESSAGES
 from open_webui.env import (
@@ -710,6 +711,23 @@ async def get_admin_config(request: Request, user=Depends(get_admin_user)):
         "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
         "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
         "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
+        # OAuth settings
+        "ENABLE_OAUTH_SIGNUP": request.app.state.config.ENABLE_OAUTH_SIGNUP,
+        "OAUTH_MERGE_ACCOUNTS_BY_EMAIL": request.app.state.config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
+        "ENABLE_OAUTH_ROLE_MANAGEMENT": request.app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT,
+        "ENABLE_OAUTH_GROUP_MANAGEMENT": request.app.state.config.ENABLE_OAUTH_GROUP_MANAGEMENT,
+        "OAUTH_ROLES_CLAIM": request.app.state.config.OAUTH_ROLES_CLAIM,
+        "OAUTH_GROUP_CLAIM": request.app.state.config.OAUTH_GROUP_CLAIM,
+        "OAUTH_EMAIL_CLAIM": request.app.state.config.OAUTH_EMAIL_CLAIM,
+        "OAUTH_PICTURE_CLAIM": request.app.state.config.OAUTH_PICTURE_CLAIM,
+        "OAUTH_USERNAME_CLAIM": request.app.state.config.OAUTH_USERNAME_CLAIM,
+        "OAUTH_ALLOWED_ROLES": request.app.state.config.OAUTH_ALLOWED_ROLES,
+        "OAUTH_ADMIN_ROLES": request.app.state.config.OAUTH_ADMIN_ROLES,
+        "OAUTH_ALLOWED_DOMAINS": request.app.state.config.OAUTH_ALLOWED_DOMAINS,
+        "OAUTH_CLIENT_ID": request.app.state.config.OAUTH_CLIENT_ID,
+        "OAUTH_CLIENT_SECRET": request.app.state.config.OAUTH_CLIENT_SECRET,
+        "OAUTH_PROVIDER_NAME": request.app.state.config.OAUTH_PROVIDER_NAME,
+        "OPENID_PROVIDER_URL": request.app.state.config.OPENID_PROVIDER_URL,
         "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
         "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
         "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
@@ -730,6 +748,23 @@ class AdminConfig(BaseModel):
     ENABLE_CHANNELS: bool
     ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
+    ENABLE_OAUTH_SIGNUP: bool
+    OAUTH_MERGE_ACCOUNTS_BY_EMAIL: bool
+    ENABLE_OAUTH_ROLE_MANAGEMENT: bool
+    ENABLE_OAUTH_GROUP_MANAGEMENT: bool
+    ENABLE_OAUTH_GROUP_CREATION: Optional[bool] = None
+    OAUTH_ROLES_CLAIM: Optional[str] = ""
+    OAUTH_GROUP_CLAIM: Optional[str] = ""
+    OAUTH_EMAIL_CLAIM: Optional[str] = ""
+    OAUTH_PICTURE_CLAIM: Optional[str] = ""
+    OAUTH_USERNAME_CLAIM: Optional[str] = ""
+    OAUTH_ALLOWED_ROLES: Optional[str] = ""
+    OAUTH_ADMIN_ROLES: Optional[str] = ""
+    OAUTH_ALLOWED_DOMAINS: Optional[str] = ""
+    OAUTH_CLIENT_ID: Optional[str] = ""
+    OAUTH_CLIENT_SECRET: Optional[str] = ""
+    OAUTH_PROVIDER_NAME: Optional[str] = "SSO"
+    OPENID_PROVIDER_URL: Optional[str] = ""
     PENDING_USER_OVERLAY_TITLE: Optional[str] = None
     PENDING_USER_OVERLAY_CONTENT: Optional[str] = None
     RESPONSE_WATERMARK: Optional[str] = None
@@ -739,64 +774,158 @@ class AdminConfig(BaseModel):
 async def update_admin_config(
     request: Request, form_data: AdminConfig, user=Depends(get_admin_user)
 ):
-    request.app.state.config.SHOW_ADMIN_DETAILS = form_data.SHOW_ADMIN_DETAILS
-    request.app.state.config.WEBUI_URL = form_data.WEBUI_URL
-    request.app.state.config.ENABLE_SIGNUP = form_data.ENABLE_SIGNUP
-
-    request.app.state.config.ENABLE_API_KEY = form_data.ENABLE_API_KEY
-    request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS = (
-        form_data.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS
-    )
-    request.app.state.config.API_KEY_ALLOWED_ENDPOINTS = (
-        form_data.API_KEY_ALLOWED_ENDPOINTS
-    )
-
-    request.app.state.config.ENABLE_CHANNELS = form_data.ENABLE_CHANNELS
-    request.app.state.config.ENABLE_NOTES = form_data.ENABLE_NOTES
-
-    if form_data.DEFAULT_USER_ROLE in ["pending", "user", "admin"]:
-        request.app.state.config.DEFAULT_USER_ROLE = form_data.DEFAULT_USER_ROLE
-
-    pattern = r"^(-1|0|(-?\d+(\.\d+)?)(ms|s|m|h|d|w))$"
-
-    # Check if the input string matches the pattern
-    if re.match(pattern, form_data.JWT_EXPIRES_IN):
-        request.app.state.config.JWT_EXPIRES_IN = form_data.JWT_EXPIRES_IN
-
-    request.app.state.config.ENABLE_COMMUNITY_SHARING = (
-        form_data.ENABLE_COMMUNITY_SHARING
-    )
-    request.app.state.config.ENABLE_MESSAGE_RATING = form_data.ENABLE_MESSAGE_RATING
-
-    request.app.state.config.ENABLE_USER_WEBHOOKS = form_data.ENABLE_USER_WEBHOOKS
-
-    request.app.state.config.PENDING_USER_OVERLAY_TITLE = (
-        form_data.PENDING_USER_OVERLAY_TITLE
-    )
-    request.app.state.config.PENDING_USER_OVERLAY_CONTENT = (
-        form_data.PENDING_USER_OVERLAY_CONTENT
-    )
-
-    request.app.state.config.RESPONSE_WATERMARK = form_data.RESPONSE_WATERMARK
-
-    return {
-        "SHOW_ADMIN_DETAILS": request.app.state.config.SHOW_ADMIN_DETAILS,
-        "WEBUI_URL": request.app.state.config.WEBUI_URL,
-        "ENABLE_SIGNUP": request.app.state.config.ENABLE_SIGNUP,
-        "ENABLE_API_KEY": request.app.state.config.ENABLE_API_KEY,
-        "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS": request.app.state.config.ENABLE_API_KEY_ENDPOINT_RESTRICTIONS,
-        "API_KEY_ALLOWED_ENDPOINTS": request.app.state.config.API_KEY_ALLOWED_ENDPOINTS,
-        "DEFAULT_USER_ROLE": request.app.state.config.DEFAULT_USER_ROLE,
-        "JWT_EXPIRES_IN": request.app.state.config.JWT_EXPIRES_IN,
-        "ENABLE_COMMUNITY_SHARING": request.app.state.config.ENABLE_COMMUNITY_SHARING,
-        "ENABLE_MESSAGE_RATING": request.app.state.config.ENABLE_MESSAGE_RATING,
-        "ENABLE_CHANNELS": request.app.state.config.ENABLE_CHANNELS,
-        "ENABLE_NOTES": request.app.state.config.ENABLE_NOTES,
-        "ENABLE_USER_WEBHOOKS": request.app.state.config.ENABLE_USER_WEBHOOKS,
-        "PENDING_USER_OVERLAY_TITLE": request.app.state.config.PENDING_USER_OVERLAY_TITLE,
-        "PENDING_USER_OVERLAY_CONTENT": request.app.state.config.PENDING_USER_OVERLAY_CONTENT,
-        "RESPONSE_WATERMARK": request.app.state.config.RESPONSE_WATERMARK,
+    # Define keys that belong under the 'oauth' nested structure based on PersistentConfig paths
+    oauth_mapping = {
+        "ENABLE_OAUTH_SIGNUP": "enable_signup",
+        "OAUTH_MERGE_ACCOUNTS_BY_EMAIL": "merge_accounts_by_email",
+        "ENABLE_OAUTH_ROLE_MANAGEMENT": "enable_role_management",
+        "ENABLE_OAUTH_GROUP_MANAGEMENT": "enable_group_management",
+        "ENABLE_OAUTH_GROUP_CREATION": "enable_group_creation",
+        "OAUTH_ROLES_CLAIM": "roles_claim",
+        "OAUTH_GROUP_CLAIM": "group_claim",
+        "OAUTH_EMAIL_CLAIM": "email_claim",
+        "OAUTH_PICTURE_CLAIM": "picture_claim",
+        "OAUTH_USERNAME_CLAIM": "username_claim",
+        "OAUTH_ALLOWED_ROLES": "allowed_roles",
+        "OAUTH_ADMIN_ROLES": "admin_roles",
+        "OAUTH_ALLOWED_DOMAINS": "allowed_domains",
+        "OAUTH_CLIENT_ID": "client_id",
+        "OAUTH_CLIENT_SECRET": "client_secret",
+        "OAUTH_PROVIDER_NAME": "provider_name",
+        "OPENID_PROVIDER_URL": "provider_url",
+        "OPENID_REDIRECT_URI": "redirect_uri",
+        "OAUTH_SCOPES": "scopes",
+        "OAUTH_CODE_CHALLENGE_METHOD": "code_challenge_method",
+        "GOOGLE_CLIENT_ID": "google.client_id",
+        "GOOGLE_CLIENT_SECRET": "google.client_secret",
+        "GOOGLE_OAUTH_SCOPE": "google.scope",
+        "GOOGLE_REDIRECT_URI": "google.redirect_uri",
+        "MICROSOFT_CLIENT_ID": "microsoft.client_id",
+        "MICROSOFT_CLIENT_SECRET": "microsoft.client_secret",
+        "MICROSOFT_CLIENT_TENANT_ID": "microsoft.tenant_id",
+        "MICROSOFT_OAUTH_SCOPE": "microsoft.scope",
+        "MICROSOFT_REDIRECT_URI": "microsoft.redirect_uri",
+        "GITHUB_CLIENT_ID": "github.client_id",
+        "GITHUB_CLIENT_SECRET": "github.client_secret",
+        "GITHUB_CLIENT_SCOPE": "github.scope",
+        "GITHUB_CLIENT_REDIRECT_URI": "github.redirect_uri",
     }
+
+    # Define keys that belong under the 'auth.api_key' structure
+    api_key_mapping = {
+        "ENABLE_API_KEY": "enable",
+        "ENABLE_API_KEY_ENDPOINT_RESTRICTIONS": "endpoint_restrictions",
+        "API_KEY_ALLOWED_ENDPOINTS": "allowed_endpoints",
+    }
+
+    # Define keys that belong under the 'auth' structure (excluding api_key)
+    auth_mapping = {
+        "JWT_EXPIRES_IN": "jwt_expiry",
+    }
+
+    # Define keys that belong under the 'ui' structure
+    ui_mapping = {
+        "DEFAULT_LOCALE": "default_locale",
+    }
+
+    # Define top-level keys managed here
+    top_level_keys = {
+        "ENABLE_SIGNUP",
+        "ENABLE_CHANNELS",
+        "DEFAULT_USER_ROLE",
+        "ENABLE_COMMUNITY_SHARING",
+        "ENABLE_MESSAGE_RATING",
+        "ENABLE_USER_WEBHOOKS",
+        "SHOW_ADMIN_DETAILS",
+        "WEBUI_URL",
+    }
+
+    updated_config = CONFIG_DATA.copy() # Work on a copy
+    form_data_dict = form_data.model_dump()
+
+    # Ensure base dictionaries exist
+    if "oauth" not in updated_config: updated_config["oauth"] = {}
+    if "auth" not in updated_config: updated_config["auth"] = {}
+    if "api_key" not in updated_config["auth"]: updated_config["auth"]["api_key"] = {}
+    if "ui" not in updated_config: updated_config["ui"] = {}
+    # Ensure provider sub-dictionaries exist if managing them here
+    if "google" not in updated_config["oauth"]: updated_config["oauth"]["google"] = {}
+    if "microsoft" not in updated_config["oauth"]: updated_config["oauth"]["microsoft"] = {}
+    if "github" not in updated_config["oauth"]: updated_config["oauth"]["github"] = {}
+
+
+    for key, value in form_data_dict.items():
+        processed = False
+        # Handle OAuth keys
+        if key in oauth_mapping:
+            path = oauth_mapping[key]
+            parts = path.split('.')
+            target_dict = updated_config["oauth"]
+            # Handle nested provider paths
+            if len(parts) > 1:
+                provider = parts[0]
+                config_key = parts[1]
+                if provider not in target_dict: target_dict[provider] = {} # Ensure provider dict exists
+                target_dict[provider][config_key] = value
+            else: # Direct key under 'oauth'
+                target_dict[path] = value
+            processed = True
+
+        # Handle API Key keys
+        elif key in api_key_mapping:
+            config_key = api_key_mapping[key]
+            updated_config["auth"]["api_key"][config_key] = value
+            processed = True
+
+        # Handle other Auth keys
+        elif key in auth_mapping:
+             config_key = auth_mapping[key]
+             updated_config["auth"][config_key] = value
+             processed = True
+
+        # Handle UI keys
+        elif key in ui_mapping:
+             config_key = ui_mapping[key]
+             updated_config["ui"][config_key] = value
+             processed = True
+
+        # Handle top-level keys
+        elif key in top_level_keys:
+             # Special handling for role and JWT expiration validation
+             if key == "DEFAULT_USER_ROLE":
+                 if value in ["pending", "user", "admin"]:
+                     updated_config[key] = value
+                 else:
+                     log.warning(f"Invalid value for DEFAULT_USER_ROLE: {value}")
+                     continue # Skip saving invalid value
+             elif key == "JWT_EXPIRES_IN":
+                 pattern = r"^(-1|0|(-?\d+(\.\d+)?)(ms|s|m|h|d|w))$"
+                 if re.match(pattern, value):
+                     updated_config[key] = value
+                 else:
+                     log.warning(f"Invalid value for JWT_EXPIRES_IN: {value}")
+                     continue # Skip saving invalid value
+             else:
+                 updated_config[key] = value
+             processed = True
+
+        # Log unprocessed keys for debugging
+        if not processed:
+            log.warning(f"Unprocessed admin config key from frontend: {key}")
+
+
+    # Save the structured config using the imported function
+    if save_config(updated_config):
+        log.info("Admin config updated successfully using structured save.")
+        # Return the updated config as confirmation (optional, could return simple success)
+        # Note: This returns the *entire* config blob, might want to be more specific
+        return updated_config
+    else:
+        log.error("Failed to save admin config using structured save.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save configuration.",
+        )
 
 
 class LdapServerConfig(BaseModel):

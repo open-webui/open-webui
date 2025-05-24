@@ -395,6 +395,219 @@
 						</div>
 					</div>
 
+				</div>
+
+				<div class="mb-3">
+					<div class=" mb-2.5 text-base font-medium">{$i18n.t('OAuth / OIDC')}</div>
+
+					<hr class=" border-gray-100 dark:border-gray-850 my-2" />
+
+					<div class=" mb-2.5 flex w-full justify-between pr-2">
+						<div class=" self-center text-xs font-medium">{$i18n.t('Enable OAuth Sign Up')}</div>
+						<Switch bind:state={adminConfig.ENABLE_OAUTH_SIGNUP} />
+					</div>
+
+					{#if adminConfig?.ENABLE_OAUTH_SIGNUP}
+						<div class=" mb-2.5 flex w-full justify-between pr-2">
+							<div class=" self-center text-xs font-medium">{$i18n.t('Merge OAuth Accounts by Email')}</div>
+							<Switch bind:state={adminConfig.OAUTH_MERGE_ACCOUNTS_BY_EMAIL} />
+						</div>
+
+						<div class=" mb-2.5 flex w-full justify-between pr-2">
+							<div class=" self-center text-xs font-medium">{$i18n.t('Enable OAuth Role Management')}</div>
+							<Switch bind:state={adminConfig.ENABLE_OAUTH_ROLE_MANAGEMENT} />
+						</div>
+
+						{#if adminConfig?.ENABLE_OAUTH_ROLE_MANAGEMENT}
+							<div class=" mb-2.5 w-full justify-between pl-4">
+								<div class="flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Roles Claim')}</div>
+								</div>
+								<div class="flex mt-2 space-x-2">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="text"
+										placeholder={$i18n.t('e.g., roles or realm_access.roles')}
+										bind:value={adminConfig.OAUTH_ROLES_CLAIM}
+									/>
+								</div>
+								<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+									{$i18n.t('Dot notation supported for nested claims.')}
+								</div>
+							</div>
+							<div class=" mb-2.5 w-full justify-between pl-4">
+								<div class="flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Allowed Roles')}</div>
+								</div>
+								<div class="flex mt-2 space-x-2">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="text"
+										placeholder={$i18n.t('Comma-separated list, e.g., user,member')}
+										bind:value={adminConfig.OAUTH_ALLOWED_ROLES}
+									/>
+								</div>
+							</div>
+							<div class=" mb-2.5 w-full justify-between pl-4">
+								<div class="flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Admin Roles')}</div>
+								</div>
+								<div class="flex mt-2 space-x-2">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="text"
+										placeholder={$i18n.t('Comma-separated list, e.g., admin,superuser')}
+										bind:value={adminConfig.OAUTH_ADMIN_ROLES}
+									/>
+								</div>
+							</div>
+						{/if}
+
+						<div class=" mb-2.5 flex w-full justify-between pr-2">
+							<div class=" self-center text-xs font-medium">{$i18n.t('Enable OAuth Group Management')}</div>
+							<Switch bind:state={adminConfig.ENABLE_OAUTH_GROUP_MANAGEMENT} />
+						</div>
+
+						{#if adminConfig?.ENABLE_OAUTH_GROUP_MANAGEMENT}
+							<div class=" mb-2.5 flex w-full justify-between pr-2 pl-4">
+								<div class=" self-center text-xs font-medium">{$i18n.t('Enable OAuth Group Creation')}</div>
+								<Switch bind:state={adminConfig.ENABLE_OAUTH_GROUP_CREATION} />
+							</div>
+
+							<div class=" mb-2.5 w-full justify-between pl-4">
+								<div class="flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Groups Claim')}</div>
+								</div>
+								<div class="flex mt-2 space-x-2">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="text"
+										placeholder={$i18n.t('e.g., groups or resource_access.account.roles')}
+										bind:value={adminConfig.OAUTH_GROUP_CLAIM}
+									/>
+								</div>
+								<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+									{$i18n.t('Dot notation supported for nested claims.')}
+								</div>
+							</div>
+						{/if}
+
+						{#if adminConfig?.ENABLE_OAUTH_SIGNUP}
+							<div class=" mb-2.5 w-full justify-between">
+								<div class="flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Email Claim')}</div>
+								</div>
+								<div class="flex mt-2 space-x-2">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="text"
+										placeholder={$i18n.t('e.g., email')}
+										bind:value={adminConfig.OAUTH_EMAIL_CLAIM}
+									/>
+								</div>
+							</div>
+
+							<div class=" mb-2.5 w-full justify-between">
+								<div class="flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Username Claim')}</div>
+								</div>
+								<div class="flex mt-2 space-x-2">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="text"
+										placeholder={$i18n.t('e.g., name or preferred_username')}
+										bind:value={adminConfig.OAUTH_USERNAME_CLAIM}
+									/>
+								</div>
+							</div>
+
+							<div class=" mb-2.5 w-full justify-between">
+								<div class="flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Picture Claim')}</div>
+								</div>
+								<div class="flex mt-2 space-x-2">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="text"
+										placeholder={$i18n.t('e.g., picture')}
+										bind:value={adminConfig.OAUTH_PICTURE_CLAIM}
+									/>
+								</div>
+							</div>
+
+							<div class=" mb-2.5 w-full justify-between">
+								<div class="flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Allowed Domains')}</div>
+								</div>
+								<div class="flex mt-2 space-x-2">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="text"
+										placeholder={$i18n.t('Comma-separated list, e.g., example.com,another.org or * for all')}
+										bind:value={adminConfig.OAUTH_ALLOWED_DOMAINS}
+									/>
+								</div>
+							</div>
+						{/if}
+
+						{#if adminConfig?.ENABLE_OAUTH_SIGNUP}
+							<div class=" mb-2.5 w-full justify-between">
+								<div class="flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Client ID')}</div>
+								</div>
+								<div class="flex mt-2 space-x-2">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="text"
+										placeholder={$i18n.t('e.g., your-client-id')}
+										bind:value={adminConfig.OAUTH_CLIENT_ID}
+									/>
+								</div>
+							</div>
+
+							<div class=" mb-2.5 w-full justify-between">
+								<div class="flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Client Secret')}</div>
+								</div>
+								<div class="flex mt-2 space-x-2">
+									<SensitiveInput
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										placeholder={$i18n.t('e.g., your-client-secret')}
+										bind:value={adminConfig.OAUTH_CLIENT_SECRET}
+									/>
+								</div>
+							</div>
+
+							<div class=" mb-2.5 w-full justify-between">
+								<div class="flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">{$i18n.t('OAuth Provider Name')}</div>
+								</div>
+								<div class="flex mt-2 space-x-2">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="text"
+										placeholder={$i18n.t('e.g., SSO')}
+										bind:value={adminConfig.OAUTH_PROVIDER_NAME}
+									/>
+								</div>
+							</div>
+
+							<div class=" mb-2.5 w-full justify-between">
+								<div class="flex w-full justify-between">
+									<div class=" self-center text-xs font-medium">{$i18n.t('OpenID Provider URL')}</div>
+								</div>
+								<div class="flex mt-2 space-x-2">
+									<input
+										class="w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden"
+										type="text"
+										placeholder={$i18n.t('e.g., https://your-provider/.well-known/openid-configuration')}
+										bind:value={adminConfig.OPENID_PROVIDER_URL}
+									/>
+								</div>
+							</div>
+						{/if}
+					{/if}
+
 					<div class=" space-y-3">
 						<div class="mt-2 space-y-2 pr-1.5">
 							<div class="flex justify-between items-center text-sm">

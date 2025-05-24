@@ -99,6 +99,17 @@ from open_webui.config import (
     ENABLE_OLLAMA_API,
     OLLAMA_BASE_URLS,
     OLLAMA_API_CONFIGS,
+    # OAuth
+    ENABLE_OAUTH_SIGNUP,
+    OAUTH_MERGE_ACCOUNTS_BY_EMAIL,
+    ENABLE_OAUTH_GROUP_MANAGEMENT,
+    ENABLE_OAUTH_GROUP_CREATION,
+    OAUTH_GROUP_CLAIM,
+    OAUTH_CLIENT_ID,
+    OAUTH_CLIENT_SECRET,
+    OAUTH_PROVIDER_NAME,
+    OPENID_PROVIDER_URL,
+    OAUTH_ALLOWED_DOMAINS,
     # OpenAI
     ENABLE_OPENAI_API,
     ONEDRIVE_CLIENT_ID,
@@ -543,6 +554,17 @@ app.state.OPENAI_MODELS = {}
 
 ########################################
 #
+# OAuth
+#
+########################################
+
+app.state.config.OAUTH_CLIENT_ID = OAUTH_CLIENT_ID
+app.state.config.OAUTH_CLIENT_SECRET = OAUTH_CLIENT_SECRET
+app.state.config.OAUTH_PROVIDER_NAME = OAUTH_PROVIDER_NAME
+app.state.config.OPENID_PROVIDER_URL = OPENID_PROVIDER_URL
+
+########################################
+#
 # TOOL SERVERS
 #
 ########################################
@@ -608,10 +630,18 @@ app.state.config.OAUTH_USERNAME_CLAIM = OAUTH_USERNAME_CLAIM
 app.state.config.OAUTH_PICTURE_CLAIM = OAUTH_PICTURE_CLAIM
 app.state.config.OAUTH_EMAIL_CLAIM = OAUTH_EMAIL_CLAIM
 
+app.state.config.ENABLE_OAUTH_SIGNUP = ENABLE_OAUTH_SIGNUP
 app.state.config.ENABLE_OAUTH_ROLE_MANAGEMENT = ENABLE_OAUTH_ROLE_MANAGEMENT
 app.state.config.OAUTH_ROLES_CLAIM = OAUTH_ROLES_CLAIM
 app.state.config.OAUTH_ALLOWED_ROLES = OAUTH_ALLOWED_ROLES
 app.state.config.OAUTH_ADMIN_ROLES = OAUTH_ADMIN_ROLES
+app.state.config.OAUTH_MERGE_ACCOUNTS_BY_EMAIL = OAUTH_MERGE_ACCOUNTS_BY_EMAIL
+app.state.config.ENABLE_OAUTH_GROUP_MANAGEMENT = ENABLE_OAUTH_GROUP_MANAGEMENT
+app.state.config.ENABLE_OAUTH_GROUP_CREATION = ENABLE_OAUTH_GROUP_CREATION
+app.state.config.OAUTH_GROUP_CLAIM = OAUTH_GROUP_CLAIM
+app.state.config.OAUTH_ALLOWED_DOMAINS = OAUTH_ALLOWED_DOMAINS
+
+app.state.OAUTH_PROVIDERS = OAUTH_PROVIDERS
 
 app.state.config.ENABLE_LDAP = ENABLE_LDAP
 app.state.config.LDAP_SERVER_LABEL = LDAP_SERVER_LABEL
@@ -1345,6 +1375,7 @@ async def get_app_config(request: Request):
     if user is None:
         onboarding = user_count == 0
 
+    # Removed load_oauth_providers() call from here
     return {
         **({"onboarding": True} if onboarding else {}),
         "status": True,
