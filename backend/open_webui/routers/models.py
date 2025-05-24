@@ -26,7 +26,7 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ModelUserResponse])
 async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
-    if user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_ACCESS.value:
+    if user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_ACCESS:
         all_models = Models.get_models()
         filtered_models = []
         for model in all_models:
