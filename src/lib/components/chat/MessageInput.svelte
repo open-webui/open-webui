@@ -111,6 +111,9 @@
 	let inputFiles;
 	let dragged = false;
 
+	let isShiftPressed = false;
+	let isCtrlMetaPressed = false;
+
 	let user = null;
 	export let placeholder = '';
 
@@ -180,6 +183,26 @@
 			top: element.scrollHeight,
 			behavior: 'smooth'
 		});
+	};
+
+	const handleGlobalKeyDown = (event: KeyboardEvent) => {
+		if (event.key === 'Shift') {
+			isShiftPressed = true;
+		}
+		if (event.key === 'Control' || event.key === 'Meta') {
+			isCtrlMetaPressed = true;
+		}
+	};
+
+	const handleGlobalKeyUp = (event: KeyboardEvent) => {
+		if (event.key === 'Shift') {
+			isShiftPressed = false;
+		}
+		if (event.key === 'Control' || event.key === 'Meta') {
+			isCtrlMetaPressed = false;
+		}
+		if (!event.ctrlKey && !event.metaKey) isCtrlMetaPressed = false;
+		if (!event.shiftKey) isShiftPressed = false;
 	};
 
 	const screenCaptureHandler = async () => {
@@ -399,6 +422,8 @@
 
 		window.addEventListener('keydown', handleKeyDown);
 
+		window.addEventListener('keydown', handleGlobalKeyDown, true);
+		window.addEventListener('keyup', handleGlobalKeyUp, true);
 		await tick();
 
 		const dropzoneElement = document.getElementById('chat-container');
@@ -412,6 +437,8 @@
 		console.log('destroy');
 		window.removeEventListener('keydown', handleKeyDown);
 
+		window.removeEventListener('keydown', handleGlobalKeyDown, true);
+		window.removeEventListener('keyup', handleGlobalKeyUp, true);
 		const dropzoneElement = document.getElementById('chat-container');
 
 		if (dropzoneElement) {
@@ -849,44 +876,52 @@
 														codeInterpreterEnabled = false;
 													}
 												}}
-												on:paste={async (e) => {
-													e = e.detail.event;
-													console.log(e);
-
-													const clipboardData = e.clipboardData || window.clipboardData;
+												on:paste={async (customEvent) => {
+													const tiptapEvent = customEvent.detail.event;
+													const clipboardData = tiptapEvent.clipboardData || window.clipboardData;
 
 													if (clipboardData && clipboardData.items) {
+														let textContentToProcess = null;
+
 														for (const item of clipboardData.items) {
 															if (item.type.indexOf('image') !== -1) {
 																const blob = item.getAsFile();
 																const reader = new FileReader();
-
-																reader.onload = function (e) {
+																reader.onload = function (loadEvent) {
 																	files = [
 																		...files,
 																		{
 																			type: 'image',
-																			url: `${e.target.result}`
+																			url: `${loadEvent.target.result}`
 																		}
 																	];
 																};
 
 																reader.readAsDataURL(blob);
-															} else if (item.type === 'text/plain') {
-																if ($settings?.largeTextAsFile ?? false) {
-																	const text = clipboardData.getData('text/plain');
+																return;
+															} else if (item.type === 'text/plain' && textContentToProcess === null) {
+																textContentToProcess = clipboardData.getData('text/plain');
+															}
+														}
 
-																	if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
-																		e.preventDefault();
-																		const blob = new Blob([text], { type: 'text/plain' });
-																		const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
-																			type: 'text/plain'
-																		});
+														if (textContentToProcess !== null) {
+															const isBypass = isShiftPressed && isCtrlMetaPressed;
 
-																		await uploadFileHandler(file, true);
+															if (($settings?.largeTextAsFile ?? false) && textContentToProcess.length > PASTED_TEXT_CHARACTER_LIMIT) {
+																if (isBypass) {
+																	if (chatInputElement && typeof chatInputElement.insertPlainText === 'function') {
+																		chatInputElement.insertPlainText(textContentToProcess);
 																	}
+																} else {
+																	const blob = new Blob([textContentToProcess], { type: 'text/plain' });
+																	const file = new File([blob], `Pasted_Text_${Date.now()}.txt`, {
+																		type: 'text/plain'
+																	});
+																	await uploadFileHandler(file, true);
 																}
 															}
+															isShiftPressed = false;
+															isCtrlMetaPressed = false;
 														}
 													}
 												}}
@@ -1104,7 +1139,7 @@
 
 															reader.readAsDataURL(blob);
 														} else if (item.type === 'text/plain') {
-															if ($settings?.largeTextAsFile ?? false) {
+															if (($settings?.largeTextAsFile ?? false) && !(e.shiftKey && (e.ctrlKey || e.metaKey))) {
 																const text = clipboardData.getData('text/plain');
 
 																if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {

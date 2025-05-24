@@ -133,6 +133,12 @@
 		editor.commands.setContent(content);
 	};
 
+	export const insertPlainText = (textToInsert: string) => {
+		if (editor) {
+			editor.chain().focus().insertContent(textToInsert).run();
+		}
+	};
+
 	const selectTemplate = () => {
 		if (value !== '') {
 			// After updating the state, try to find and select the next template
@@ -366,22 +372,14 @@
 							const hasImageItem = Array.from(event.clipboardData.items).some((item) =>
 								item.type.startsWith('image/')
 							);
-							if (hasImageFile) {
-								// If there's an image, dispatch the event to the parent
-								eventDispatch('paste', { event });
-								event.preventDefault();
-								return true;
-							}
 
-							if (hasImageItem) {
-								// If there's an image item, dispatch the event to the parent
+							if (hasImageFile || hasImageItem) {
+								// If there's an image or image item, dispatch the event to the parent
 								eventDispatch('paste', { event });
 								event.preventDefault();
 								return true;
 							}
 						}
-
-						// For all other cases (text, formatted text, etc.), let ProseMirror handle it
 						view.dispatch(view.state.tr.scrollIntoView()); // Move viewport to the cursor after pasting
 						return false;
 					}
