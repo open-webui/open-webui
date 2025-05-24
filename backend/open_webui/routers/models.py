@@ -30,12 +30,7 @@ async def get_models(id: Optional[str] = None, user=Depends(get_verified_user)):
         all_models = Models.get_models()
         filtered_models = []
         for model in all_models:
-            # Check if the model is private and belongs to another user
-            is_private_other_user = (
-                model.access_control == {} and model.user_id != user.id
-            )
-
-            if not is_private_other_user and (
+            if (
                 model.user_id == user.id
                 or model.access_control is None
                 or has_access(user.id, "read", model.access_control)
