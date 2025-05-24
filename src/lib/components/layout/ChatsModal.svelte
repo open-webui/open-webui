@@ -13,6 +13,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
+	import XMark from '../icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -69,7 +70,7 @@
 		</div>
 
 		<div class="flex flex-col w-full px-5 pb-4 dark:text-gray-200">
-			<div class=" flex w-full mb-1 space-x-2">
+			<div class=" flex w-full space-x-2">
 				<div class="flex flex-1">
 					<div class=" self-center ml-1 mr-3">
 						<svg
@@ -90,14 +91,29 @@
 						bind:value={query}
 						placeholder={$i18n.t('Search Chats')}
 					/>
+
+					{#if query}
+						<div class="self-center pl-1.5 pr-1 translate-y-[0.5px] rounded-l-xl bg-transparent">
+							<button
+								class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+								on:click={() => {
+									query = '';
+									selectedIdx = 0;
+								}}
+							>
+								<XMark className="size-3" strokeWidth="2" />
+							</button>
+						</div>
+					{/if}
 				</div>
 			</div>
+
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				{#if chatList}
 					<div class="w-full">
 						<div class="text-left text-sm w-full mb-3 max-h-[22rem] overflow-y-scroll">
 							{#if chatList.length === 0}
-								<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5">
+								<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 min-h-20">
 									{$i18n.t('No results found')}
 								</div>
 							{/if}
