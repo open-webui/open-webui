@@ -31,13 +31,13 @@ log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MODELS"])
 
 ####################
-# Performance Monitoring & Caching
+# Performance Monitoring & Caching - FIXED VERSION
 ####################
 
 # Simple in-memory cache for frequently accessed data
 class SimpleCache:
     """Thread-safe simple cache with TTL support and size limit."""
-    def __init__(self, default_ttl: int = 300, max_size: int = 1000):  # 5 minutes default, 1000 items max
+    def __init__(self, default_ttl: int = 300, max_size: int = 500):  # Reduced size to prevent memory issues
         self._cache = {}
         self._timestamps = {}
         self.default_ttl = default_ttl
@@ -83,24 +83,25 @@ class SimpleCache:
 _cache = SimpleCache()
 
 def performance_monitor(func):
-    """Enhanced decorator to monitor query performance with caching support."""
+    """FIXED: Enhanced decorator with better cache key generation and reduced caching."""
     @wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.time()
         
-        # Generate cache key for read operations
+        # FIXED: More conservative caching - only cache specific read operations
         cache_key = None
-        if func.__name__.startswith(('get_', 'count_')) and len(args) > 0:
-            # Better cache key generation that handles methods properly
-            # Skip 'self' argument for methods and create a more stable key
-            if len(args) > 1 and hasattr(args[0], '__class__'):
-                # This is a method call, skip self and use next few args
-                cache_args = str(args[1:4]) if len(args) > 1 else ""
-            else:
-                # This is a function call, use first few args
-                cache_args = str(args[:3])
-            
-            cache_key = f"{func.__name__}:{hash(cache_args)}"
+        is_cacheable = (
+            func.__name__ in ['get_chat_by_id', 'get_chat_by_id_and_user_id'] and 
+            len(args) >= 2 and  # Ensure we have enough args
+            isinstance(args[1], str)  # First real arg should be a string ID
+        )
+        
+        if is_cacheable:
+            # FIXED: Simple, stable cache key generation
+            method_name = func.__name__
+            primary_arg = str(args[1])  # chat_id or similar
+            secondary_arg = str(args[2]) if len(args) > 2 else ""
+            cache_key = f"{method_name}:{primary_arg}:{secondary_arg}"
             
             # Check cache first for read operations
             cached_result = _cache.get(cache_key)
@@ -113,23 +114,19 @@ def performance_monitor(func):
             result = func(*args, **kwargs)
             execution_time = time.time() - start_time
             
-            # Cache read operations results (only cache serializable results)
-            if cache_key and result is not None:
+            # FIXED: Only cache simple, serializable results and only for specific methods
+            if cache_key and result is not None and is_cacheable:
                 try:
-                    # Quick serializability check - try to convert to dict if it's a Pydantic model
+                    # Quick serializability check - only cache ChatModel objects
                     if hasattr(result, 'model_dump'):
-                        _cache.set(cache_key, result, ttl=60)  # 1 minute TTL for read operations
-                    elif isinstance(result, (list, dict, str, int, float, bool)):
-                        _cache.set(cache_key, result, ttl=60)
+                        _cache.set(cache_key, result, ttl=30)  # FIXED: Shorter TTL (30 seconds)
                 except Exception:
                     # Skip caching if result is not serializable
                     pass
             
-            # Performance logging
-            if execution_time > 1.0:
+            # Performance logging - only log slow queries
+            if execution_time > 0.5:  # FIXED: Only log queries slower than 0.5s
                 log.warning(f"Slow query detected: {func.__name__} took {execution_time:.2f}s")
-            elif execution_time > 0.1:
-                log.info(f"Query performance: {func.__name__} took {execution_time:.3f}s")
             
             # Record stats
             QueryStats.record(func.__name__, execution_time, True)
@@ -208,29 +205,36 @@ class QueryStats:
         cls._stats.clear()
 
 ####################
-# Connection Pool Optimization
+# Connection Pool Optimization - FIXED VERSION
 ####################
 
+# FIXED: Track optimization per connection to avoid repeated calls
+_connection_optimized = False
+
 def optimize_db_connection():
-    """Apply database connection optimizations."""
+    """Apply database connection optimizations - only once."""
+    global _connection_optimized
+    if _connection_optimized:
+        return
+        
     try:
         with get_db() as db:
             dialect_name = db.bind.dialect.name
             
             if dialect_name == "postgresql":
                 # PostgreSQL optimizations
-                db.execute(text("SET work_mem = '64MB'"))  # Increase work memory for queries
-                db.execute(text("SET random_page_cost = 1.1"))  # Assume SSD storage
-                db.execute(text("SET effective_cache_size = '1GB'"))  # Adjust based on available RAM
+                db.execute(text("SET work_mem = '32MB'"))  # Reduced from 64MB
+                db.execute(text("SET random_page_cost = 1.1"))
                 log.info("Applied PostgreSQL connection optimizations")
                 
             elif dialect_name == "sqlite":
                 # SQLite optimizations
-                db.execute(text("PRAGMA cache_size = -64000"))  # 64MB cache
-                db.execute(text("PRAGMA temp_store = MEMORY"))  # Use memory for temp tables
-                db.execute(text("PRAGMA mmap_size = 268435456"))  # 256MB memory-mapped I/O
-                db.execute(text("PRAGMA optimize"))  # Optimize database
+                db.execute(text("PRAGMA cache_size = -32000"))  # Reduced from 64MB to 32MB
+                db.execute(text("PRAGMA temp_store = MEMORY"))
                 log.info("Applied SQLite connection optimizations")
+            
+            _connection_optimized = True
+            db.commit()
                 
     except Exception as e:
         log.warning(f"Could not apply database optimizations: {e}")
@@ -460,14 +464,12 @@ class ChatTitleIdResponse(BaseModel):
 
 class ChatTable:
     def __init__(self):
-        """Initialize ChatTable with performance optimizations."""
-        # Index creation moved to lazy initialization to avoid issues
-        # with non-PostgreSQL databases and performance overhead
+        """FIXED: Initialize ChatTable with less aggressive optimizations."""
+        # FIXED: Only create indexes once and don't do it automatically
         self._indexes_created = False
-        self._connection_optimized = False
     
     def _ensure_indexes_created(self, db):
-        """Lazy index creation - only create indexes when needed and for PostgreSQL."""
+        """FIXED: Lazy index creation - only when explicitly needed."""
         if self._indexes_created or db.bind.dialect.name not in ["postgresql", "sqlite"]:
             return
             
@@ -480,31 +482,28 @@ class ChatTable:
             log.warning(f"Could not create indexes: {e}")
     
     def _ensure_connection_optimized(self, db):
-        """Apply connection-level optimizations once per session."""
-        if self._connection_optimized:
-            return
-        
-        try:
-            optimize_db_connection()
-            self._connection_optimized = True
-        except Exception as e:
-            log.warning(f"Could not optimize connection: {e}")
+        """FIXED: Apply connection-level optimizations once globally."""
+        optimize_db_connection()
 
     def _invalidate_cache_for_user(self, user_id: str):
-        """Invalidate cache entries for a specific user after write operations."""
-        # Clear cache entries that might be affected by user changes
+        """FIXED: More targeted cache invalidation to prevent excessive clearing."""
+        # Only clear cache entries for specific methods and user
         keys_to_clear = []
-        for key in _cache._cache.keys():
-            if f"user_id='{user_id}'" in key or f"'{user_id}'" in key:
+        for key in list(_cache._cache.keys()):  # Convert to list to avoid modification during iteration
+            if (key.startswith(('get_chat_by_id:', 'get_chat_by_id_and_user_id:')) and 
+                user_id in key):
                 keys_to_clear.append(key)
         
         for key in keys_to_clear:
             _cache.delete(key)
+        
+        # FIXED: Log cache invalidation for debugging
+        if keys_to_clear:
+            log.debug(f"Invalidated {len(keys_to_clear)} cache entries for user {user_id}")
 
     @performance_monitor
     def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
         with get_db() as db:
-            self._ensure_indexes_created(db)
             self._ensure_connection_optimized(db)
             
             id = str(uuid.uuid4())
@@ -528,7 +527,7 @@ class ChatTable:
             db.commit()
             db.refresh(result)
             
-            # Invalidate cache for this user
+            # FIXED: Only invalidate cache after successful commit
             self._invalidate_cache_for_user(user_id)
             
             return ChatModel.model_validate(result) if result else None
@@ -683,9 +682,12 @@ class ChatTable:
         with get_db() as db:
             # Get the existing chat to share
             chat = db.get(Chat, chat_id)
+            if not chat:
+                return None
+                
             # Check if the chat is already shared
             if chat.share_id:
-                return self.get_chat_by_id_and_user_id(chat.share_id, "shared")
+                return self.get_chat_by_id(chat.share_id)
             # Create a new chat with the same data, but with a new ID
             shared_chat = ChatModel(
                 **{
@@ -715,6 +717,9 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.get(Chat, chat_id)
+                if not chat:
+                    return None
+                    
                 shared_chat = (
                     db.query(Chat).filter_by(user_id=f"shared-{chat_id}").first()
                 )
@@ -908,7 +913,7 @@ class ChatTable:
                 self._ensure_connection_optimized(db)
                 
                 chat = db.get(Chat, id)
-                return ChatModel.model_validate(chat)
+                return ChatModel.model_validate(chat) if chat else None
         except Exception:
             return None
 
@@ -933,7 +938,7 @@ class ChatTable:
                 self._ensure_connection_optimized(db)
                 
                 chat = db.query(Chat).filter_by(id=id, user_id=user_id).first()
-                return ChatModel.model_validate(chat)
+                return ChatModel.model_validate(chat) if chat else None
         except Exception:
             return None
 
@@ -1187,7 +1192,6 @@ class ChatTable:
             # Validate and return chats
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
-    @performance_monitor
     def get_chats_by_folder_id_and_user_id(
         self, folder_id: str, user_id: str
     ) -> list[ChatModel]:
@@ -1756,7 +1760,7 @@ class ChatTable:
                     "dialect": db.bind.dialect.name,
                     "jsonb_enabled": is_using_jsonb(db) if db.bind.dialect.name == "postgresql" else False,
                     "use_jsonb_env": USE_JSONB,
-                    "optimizations_applied": self._connection_optimized
+                    "optimizations_applied": _connection_optimized
                 },
                 "table_stats": {}
             }
@@ -1878,7 +1882,7 @@ class ChatTable:
                     "column_types": {},
                     "cache_enabled": True,
                     "cache_size": _cache.size(),
-                    "optimizations_applied": self._connection_optimized
+                    "optimizations_applied": _connection_optimized
                 }
             }
             
