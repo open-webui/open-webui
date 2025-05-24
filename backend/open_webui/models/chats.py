@@ -215,29 +215,43 @@ def optimize_db_connection():
     """Apply database connection optimizations - only once."""
     global _connection_optimized
     if _connection_optimized:
+        log.info("⏭️  CONNECTION OPTIMIZATION: Already applied, skipping")
         return
         
+    log.info("🚀 CONNECTION OPTIMIZATION: Starting database-specific optimizations...")
+    
     try:
         with get_db() as db:
             dialect_name = db.bind.dialect.name
+            log.info(f"🔍 OPTIMIZING: Database dialect = {dialect_name}")
             
             if dialect_name == "postgresql":
+                log.info("🚀 POSTGRESQL: Applying PostgreSQL optimizations...")
                 # PostgreSQL optimizations
+                log.info("🔧 SETTING: work_mem = 32MB")
                 db.execute(text("SET work_mem = '32MB'"))  # Reduced from 64MB
+                log.info("🔧 SETTING: random_page_cost = 1.1")
                 db.execute(text("SET random_page_cost = 1.1"))
-                log.info("Applied PostgreSQL connection optimizations")
+                log.info("✅ POSTGRESQL: Connection optimizations applied successfully")
                 
             elif dialect_name == "sqlite":
+                log.info("🚀 SQLITE: Applying SQLite optimizations...")
                 # SQLite optimizations
+                log.info("🔧 SETTING: cache_size = -32000 (32MB)")
                 db.execute(text("PRAGMA cache_size = -32000"))  # Reduced from 64MB to 32MB
+                log.info("🔧 SETTING: temp_store = MEMORY")
                 db.execute(text("PRAGMA temp_store = MEMORY"))
-                log.info("Applied SQLite connection optimizations")
+                log.info("✅ SQLITE: Connection optimizations applied successfully")
+            else:
+                log.warning(f"⚠️  UNSUPPORTED: No optimizations available for {dialect_name}")
             
             _connection_optimized = True
             db.commit()
+            log.info("✅ CONNECTION OPTIMIZATION: All optimizations committed successfully")
                 
     except Exception as e:
-        log.warning(f"Could not apply database optimizations: {e}")
+        log.warning(f"⚠️  OPTIMIZATION FAILED: Could not apply database optimizations: {e}")
+        log.info("🔄 CONTINUING: Application will continue without optimizations")
 
 ####################
 # Chat DB Schema
@@ -253,60 +267,101 @@ def get_json_column_type():
 
 def is_using_jsonb(db):
     """Detect if the database is using JSONB columns with safety checks."""
-    if db.bind.dialect.name != "postgresql":
+    dialect_name = db.bind.dialect.name
+    log.info(f"🔍 Database dialect detected: {dialect_name}")
+    
+    if dialect_name != "postgresql":
+        log.info(f"✅ Non-PostgreSQL database ({dialect_name}) - JSONB not applicable")
         return False
     
     # Check if JSONB is enabled via environment variable
+    log.info(f"🔍 Environment USE_JSONB setting: {USE_JSONB}")
     if USE_JSONB:
+        log.info("🔍 USE_JSONB=true - Verifying actual column types...")
         # SAFETY CHECK: Verify that columns are actually JSONB
         try:
             from sqlalchemy import inspect
             inspector = inspect(db.bind)
             columns = inspector.get_columns('chat')
             
+            jsonb_columns = []
+            json_columns = []
+            
             for column in columns:
                 if column['name'] in ['chat', 'meta']:
                     column_type = str(column['type']).upper()
-                    if 'JSON' in column_type and 'JSONB' not in column_type:
-                        log.warning(f"USE_JSONB=true but column {column['name']} is JSON, not JSONB!")
-                        log.warning("This may cause query failures. Consider migrating to JSONB or setting USE_JSONB=false")
-                        return False  # Use JSON queries for safety
-            return True
+                    log.info(f"🔍 Column '{column['name']}' type: {column_type}")
+                    
+                    if 'JSONB' in column_type:
+                        jsonb_columns.append(column['name'])
+                    elif 'JSON' in column_type:
+                        json_columns.append(column['name'])
+                        
+            if json_columns and not jsonb_columns:
+                log.warning(f"⚠️  USE_JSONB=true but columns {json_columns} are JSON, not JSONB!")
+                log.warning("⚠️  This may cause query failures. Consider migrating to JSONB or setting USE_JSONB=false")
+                log.info("🔄 Falling back to JSON queries for safety")
+                return False  # Use JSON queries for safety
+            elif jsonb_columns:
+                log.info(f"✅ Confirmed JSONB columns: {jsonb_columns}")
+                return True
+            else:
+                log.warning("⚠️  No JSON/JSONB columns found in expected columns")
+                return False
+                
         except Exception as e:
-            log.error(f"Could not verify column types: {e}")
+            log.error(f"❌ Could not verify column types: {e}")
             # Fallback to environment variable, but log warning
-            log.warning("Could not verify JSONB column types, proceeding with environment variable setting")
+            log.warning("⚠️  Could not verify JSONB column types, proceeding with environment variable setting")
             return True
     
     # For backwards compatibility, try to detect JSONB usage from actual schema
+    log.info("🔍 AUTO-DETECTING: Checking actual schema for JSONB columns...")
     try:
         from sqlalchemy import inspect
         inspector = inspect(db.bind)
         columns = inspector.get_columns('chat')
+        detected_jsonb = []
+        
         for column in columns:
             if column['name'] in ['chat', 'meta']:
                 column_type = str(column['type']).upper()
                 if 'JSONB' in column_type:
-                    log.info(f"Detected JSONB column: {column['name']}")
-                    return True
+                    detected_jsonb.append(column['name'])
+                    log.info(f"✅ Auto-detected JSONB column: {column['name']}")
+                    
+        if detected_jsonb:
+            log.info(f"✅ Auto-detection found JSONB columns: {detected_jsonb}")
+            return True
+        else:
+            log.info("ℹ️  Auto-detection: No JSONB columns found, using JSON queries")
+            
     except Exception as e:
-        log.debug(f"Could not detect column types: {e}")
+        log.debug(f"🔍 Could not auto-detect column types: {e}")
     
+    log.info("✅ Final decision: Using JSON queries")
     return False
 
 def create_gin_indexes_if_needed(db):
     """Safely create GIN indexes for JSONB columns with error handling."""
+    dialect_name = db.bind.dialect.name
+    log.info(f"🔍 INDEX CREATION: Database dialect = {dialect_name}")
+    
     if not is_using_jsonb(db):
-        log.info("Skipping GIN index creation - not using JSONB")
+        log.info("⏭️  SKIPPING GIN indexes: Not using JSONB columns")
         return
+    
+    log.info("🚀 CREATING GIN INDEXES: Starting JSONB index creation...")
     
     # Verify we can actually query the columns before creating indexes
     try:
         # Test with a simple query first to verify column compatibility
+        log.info("🔍 TESTING: Verifying column compatibility...")
         test_query = text("SELECT meta FROM chat LIMIT 1")
         db.execute(test_query)
+        log.info("✅ COLUMN TEST: Successfully queried JSONB columns")
     except Exception as e:
-        log.error(f"Cannot query JSON columns, skipping index creation: {e}")
+        log.error(f"❌ COLUMN TEST FAILED: Cannot query JSON columns, skipping index creation: {e}")
         return
     
     gin_indexes = [
@@ -316,26 +371,42 @@ def create_gin_indexes_if_needed(db):
         ("idx_chat_messages", "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_messages ON chat USING GIN ((chat->'history'->'messages'))"),
     ]
     
+    successful_indexes = []
+    failed_indexes = []
+    
     for index_name, index_sql in gin_indexes:
         try:
+            log.info(f"🔨 CREATING INDEX: {index_name}...")
             db.execute(text(index_sql))
-            log.info(f"Created/verified GIN index: {index_name}")
+            log.info(f"✅ INDEX SUCCESS: {index_name}")
+            successful_indexes.append(index_name)
         except Exception as e:
-            log.warning(f"Could not create GIN index {index_name}: {e}")
+            log.warning(f"⚠️  INDEX FAILED: {index_name} - {e}")
+            failed_indexes.append((index_name, str(e)))
             # Don't fail completely, just skip this index
             continue
     
     try:
         db.commit()
+        log.info(f"✅ GIN INDEXES COMMITTED: {len(successful_indexes)} successful, {len(failed_indexes)} failed")
+        if successful_indexes:
+            log.info(f"✅ Successful indexes: {', '.join(successful_indexes)}")
+        if failed_indexes:
+            log.warning(f"⚠️  Failed indexes: {[name for name, _ in failed_indexes]}")
     except Exception as e:
-        log.error(f"Error committing GIN indexes: {e}")
+        log.error(f"❌ COMMIT FAILED: Error committing GIN indexes: {e}")
         db.rollback()
+        log.info("🔄 ROLLBACK: GIN index transaction rolled back")
 
 def create_composite_indexes_if_needed(db):
     """Create composite indexes for common query patterns with enhanced performance."""
+    dialect_name = db.bind.dialect.name
+    log.info(f"🔍 COMPOSITE INDEXES: Starting creation for {dialect_name}")
+    
     try:
         # Use CONCURRENTLY only for PostgreSQL
-        concurrent = "CONCURRENTLY " if db.bind.dialect.name == "postgresql" else ""
+        concurrent = "CONCURRENTLY " if dialect_name == "postgresql" else ""
+        log.info(f"🔍 INDEX MODE: {'CONCURRENT' if concurrent else 'STANDARD'} creation")
         
         composite_indexes = [
             # Enhanced common filtering patterns
@@ -349,7 +420,8 @@ def create_composite_indexes_if_needed(db):
         ]
         
         # PostgreSQL-specific indexes with WHERE clauses and GIN
-        if db.bind.dialect.name == "postgresql":
+        if dialect_name == "postgresql":
+            log.info("🚀 POSTGRESQL: Adding PostgreSQL-specific indexes...")
             pg_specific_indexes = [
                 f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_archived ON chat (user_id, archived) WHERE archived = false;",
                 f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_pinned ON chat (user_id, pinned) WHERE pinned = true;",
@@ -358,26 +430,47 @@ def create_composite_indexes_if_needed(db):
                 f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_folder_updated ON chat (user_id, folder_id, updated_at DESC) WHERE archived = false;",
             ]
             composite_indexes.extend(pg_specific_indexes)
+            log.info(f"📊 POSTGRESQL: Total {len(pg_specific_indexes)} PostgreSQL-specific indexes added")
         
         # SQLite-specific optimizations
-        elif db.bind.dialect.name == "sqlite":
+        elif dialect_name == "sqlite":
+            log.info("🚀 SQLITE: Adding SQLite-specific indexes...")
             sqlite_indexes = [
                 f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_title_search ON chat (user_id, title COLLATE NOCASE);",
                 f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_active ON chat (user_id, archived, updated_at DESC);",
             ]
             composite_indexes.extend(sqlite_indexes)
+            log.info(f"📊 SQLITE: Total {len(sqlite_indexes)} SQLite-specific indexes added")
+        
+        log.info(f"📊 TOTAL INDEXES: {len(composite_indexes)} indexes to create/verify")
+        successful_indexes = 0
+        failed_indexes = 0
         
         for index_sql in composite_indexes:
             try:
+                # Extract index name for logging
+                index_name = "unknown"
+                if "idx_" in index_sql:
+                    start = index_sql.find("idx_")
+                    end = index_sql.find(" ON", start)
+                    if end > start:
+                        index_name = index_sql[start:end]
+                
+                log.info(f"🔨 CREATING: {index_name}...")
                 db.execute(text(index_sql))
-                log.info(f"Created/verified composite index")
+                log.info(f"✅ INDEX SUCCESS: {index_name}")
+                successful_indexes += 1
             except Exception as e:
-                log.warning(f"Could not create composite index: {e}")
+                log.warning(f"⚠️  INDEX FAILED: {index_name} - {e}")
+                failed_indexes += 1
         
         db.commit()
+        log.info(f"✅ COMPOSITE INDEXES COMPLETED: {successful_indexes} successful, {failed_indexes} failed")
+        
     except Exception as e:
-        log.error(f"Error creating composite indexes: {e}")
+        log.error(f"❌ COMPOSITE INDEX ERROR: {e}")
         db.rollback()
+        log.info("🔄 ROLLBACK: Composite index transaction rolled back")
 
 class Chat(Base):
     __tablename__ = "chat"
@@ -465,28 +558,43 @@ class ChatTitleIdResponse(BaseModel):
 class ChatTable:
     def __init__(self):
         """FIXED: Initialize ChatTable with less aggressive optimizations."""
+        log.info("🚀 CHAT TABLE: Initializing ChatTable...")
         # FIXED: Only create indexes once and don't do it automatically
         self._indexes_created = False
+        log.info("✅ CHAT TABLE: Initialization complete - indexes will be created lazily")
     
     def _ensure_indexes_created(self, db):
         """FIXED: Lazy index creation - only when explicitly needed."""
-        if self._indexes_created or db.bind.dialect.name not in ["postgresql", "sqlite"]:
+        if self._indexes_created:
+            log.info("⏭️  INDEX CHECK: Indexes already created, skipping")
+            return
+            
+        dialect_name = db.bind.dialect.name
+        log.info(f"🔍 INDEX CHECK: Database dialect = {dialect_name}")
+        
+        if dialect_name not in ["postgresql", "sqlite"]:
+            log.warning(f"⚠️  UNSUPPORTED: No index support for {dialect_name}")
             return
             
         try:
+            log.info("🚀 INDEX CREATION: Starting lazy index creation...")
             create_composite_indexes_if_needed(db)
-            if db.bind.dialect.name == "postgresql":
+            if dialect_name == "postgresql":
                 create_gin_indexes_if_needed(db)
             self._indexes_created = True
+            log.info("✅ INDEX CREATION: Lazy index creation completed successfully")
         except Exception as e:
-            log.warning(f"Could not create indexes: {e}")
+            log.warning(f"⚠️  INDEX CREATION FAILED: Could not create indexes: {e}")
     
     def _ensure_connection_optimized(self, db):
         """FIXED: Apply connection-level optimizations once globally."""
+        log.debug("🔍 CONNECTION CHECK: Ensuring connection optimizations...")
         optimize_db_connection()
 
     def _invalidate_cache_for_user(self, user_id: str):
         """FIXED: More targeted cache invalidation to prevent excessive clearing."""
+        log.debug(f"🔍 CACHE INVALIDATION: Starting for user {user_id}")
+        
         # Only clear cache entries for specific methods and user
         keys_to_clear = []
         for key in list(_cache._cache.keys()):  # Convert to list to avoid modification during iteration
@@ -499,7 +607,12 @@ class ChatTable:
         
         # FIXED: Log cache invalidation for debugging
         if keys_to_clear:
-            log.debug(f"Invalidated {len(keys_to_clear)} cache entries for user {user_id}")
+            log.info(f"🗑️  CACHE CLEARED: Invalidated {len(keys_to_clear)} cache entries for user {user_id}")
+        else:
+            log.debug(f"🔍 CACHE CHECK: No cache entries found for user {user_id}")
+        
+        # Log current cache state
+        log.debug(f"📊 CACHE STATUS: {_cache.size()} total entries remaining")
 
     @performance_monitor
     def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
@@ -621,12 +734,30 @@ class ChatTable:
 
         return chat.chat.get("title", "New Chat")
 
-    def get_messages_by_chat_id(self, id: str) -> Optional[dict]:
+    def get_messages_by_chat_id(self, id: str) -> dict:
         chat = self.get_chat_by_id(id)
         if chat is None:
-            return None
+            return {}  # Return empty dict instead of None
 
-        return chat.chat.get("history", {}).get("messages", {}) or {}
+        messages = chat.chat.get("history", {}).get("messages", {})
+        return messages if messages is not None else {}
+
+    def get_message_list_by_chat_id(self, id: str) -> list[dict]:
+        """
+        Get messages as a list for middleware compatibility.
+        Returns empty list if chat doesn't exist or has no messages.
+        """
+        messages_dict = self.get_messages_by_chat_id(id)
+        if not messages_dict:
+            return []
+        
+        # Convert dict of messages to list, preserving order by creation time if available
+        messages_list = []
+        for message_id, message in messages_dict.items():
+            message_with_id = {"id": message_id, **message}
+            messages_list.append(message_with_id)
+        
+        return messages_list
 
     def get_message_by_id_and_message_id(
         self, id: str, message_id: str
@@ -1001,8 +1132,10 @@ class ChatTable:
         Enhanced with caching and performance optimizations.
         """
         search_text = search_text.lower().strip()
+        log.info(f"🔍 SEARCH REQUEST: user_id={user_id}, search='{search_text}', archived={include_archived}, skip={skip}, limit={limit}")
 
         if not search_text:
+            log.info("📋 EMPTY SEARCH: Returning all chats for user")
             return self.get_chat_list_by_user_id(user_id, include_archived, skip, limit)
 
         search_text_words = search_text.split(" ")
@@ -1019,6 +1152,11 @@ class ChatTable:
         ]
 
         search_text = " ".join(search_text_words)
+        
+        if tag_ids:
+            log.info(f"🏷️  TAG FILTERS: {tag_ids}")
+        if search_text:
+            log.info(f"📝 TEXT SEARCH: '{search_text}'")
 
         with get_db() as db:
             self._ensure_connection_optimized(db)
@@ -1032,27 +1170,33 @@ class ChatTable:
 
             # Check if the database dialect is either 'sqlite' or 'postgresql'
             dialect_name = db.bind.dialect.name
+            log.info(f"🔍 DATABASE: Using {dialect_name} for search queries")
+            
             if dialect_name == "sqlite":
+                log.info("🚀 SQLITE: Executing SQLite JSON1 search queries...")
                 # SQLite case: using JSON1 extension for JSON searching
-                query = query.filter(
-                    (
-                        Chat.title.ilike(
-                            f"%{search_text}%"
-                        )  # Case-insensitive search in title
-                        | text(
-                            """
-                            EXISTS (
-                                SELECT 1 
-                                FROM json_each(Chat.chat, '$.messages') AS message 
-                                WHERE LOWER(message.value->>'content') LIKE '%' || :search_text || '%'
+                if search_text:
+                    log.info("🔍 SQLITE: Adding title and message content search")
+                    query = query.filter(
+                        (
+                            Chat.title.ilike(
+                                f"%{search_text}%"
+                            )  # Case-insensitive search in title
+                            | text(
+                                """
+                                EXISTS (
+                                    SELECT 1 
+                                    FROM json_each(Chat.chat, '$.messages') AS message 
+                                    WHERE LOWER(message.value->>'content') LIKE '%' || :search_text || '%'
+                                )
+                                """
                             )
-                            """
-                        )
-                    ).params(search_text=search_text)
-                )
+                        ).params(search_text=search_text)
+                    )
 
                 # Check if there are any tags to filter, it should have all the tags
                 if "none" in tag_ids:
+                    log.info("🏷️  SQLITE: Adding 'no tags' filter")
                     query = query.filter(
                         text(
                             """
@@ -1064,6 +1208,7 @@ class ChatTable:
                         )
                     )
                 elif tag_ids:
+                    log.info(f"🏷️  SQLITE: Adding tag filters for {len(tag_ids)} tags")
                     query = query.filter(
                         and_(
                             *[
@@ -1084,26 +1229,30 @@ class ChatTable:
             elif dialect_name == "postgresql":
                 # Check if we're using JSONB or JSON and use appropriate queries
                 if is_using_jsonb(db):
+                    log.info("🚀 POSTGRESQL JSONB: Executing JSONB optimized search queries...")
                     # PostgreSQL: using JSONB optimized queries
-                    query = query.filter(
-                        (
-                            Chat.title.ilike(
-                                f"%{search_text}%"
-                            )  # Case-insensitive search in title
-                            | text(
-                                """
-                                EXISTS (
-                                    SELECT 1
-                                    FROM jsonb_array_elements(Chat.chat->'messages') AS message
-                                    WHERE LOWER(message->>'content') LIKE '%' || :search_text || '%'
+                    if search_text:
+                        log.info("🔍 JSONB: Adding title and message content search with JSONB functions")
+                        query = query.filter(
+                            (
+                                Chat.title.ilike(
+                                    f"%{search_text}%"
+                                )  # Case-insensitive search in title
+                                | text(
+                                    """
+                                    EXISTS (
+                                        SELECT 1
+                                        FROM jsonb_array_elements(Chat.chat->'messages') AS message
+                                        WHERE LOWER(message->>'content') LIKE '%' || :search_text || '%'
+                                    )
+                                    """
                                 )
-                                """
-                            )
-                        ).params(search_text=search_text)
-                    )
+                            ).params(search_text=search_text)
+                        )
 
                     # Check if there are any tags to filter, it should have all the tags
                     if "none" in tag_ids:
+                        log.info("🏷️  JSONB: Adding 'no tags' filter with JSONB functions")
                         query = query.filter(
                             text(
                                 """
@@ -1115,6 +1264,7 @@ class ChatTable:
                             )
                         )
                     elif tag_ids:
+                        log.info(f"🏷️  JSONB: Adding tag filters for {len(tag_ids)} tags using JSONB")
                         query = query.filter(
                             and_(
                                 *[
@@ -1132,26 +1282,30 @@ class ChatTable:
                             )
                         )
                 else:
+                    log.info("🚀 POSTGRESQL JSON: Executing JSON search queries...")
                     # PostgreSQL relies on proper JSON query for search
-                    query = query.filter(
-                        (
-                            Chat.title.ilike(
-                                f"%{search_text}%"
-                            )  # Case-insensitive search in title
-                            | text(
-                                """
-                                EXISTS (
-                                    SELECT 1
-                                    FROM json_array_elements(Chat.chat->'messages') AS message
-                                    WHERE LOWER(message->>'content') LIKE '%' || :search_text || '%'
+                    if search_text:
+                        log.info("🔍 JSON: Adding title and message content search with JSON functions")
+                        query = query.filter(
+                            (
+                                Chat.title.ilike(
+                                    f"%{search_text}%"
+                                )  # Case-insensitive search in title
+                                | text(
+                                    """
+                                    EXISTS (
+                                        SELECT 1
+                                        FROM json_array_elements(Chat.chat->'messages') AS message
+                                        WHERE LOWER(message->>'content') LIKE '%' || :search_text || '%'
+                                    )
+                                    """
                                 )
-                                """
-                            )
-                        ).params(search_text=search_text)
-                    )
+                            ).params(search_text=search_text)
+                        )
 
                     # Check if there are any tags to filter, it should have all the tags
                     if "none" in tag_ids:
+                        log.info("🏷️  JSON: Adding 'no tags' filter with JSON functions")
                         query = query.filter(
                             text(
                                 """
@@ -1163,6 +1317,7 @@ class ChatTable:
                             )
                         )
                     elif tag_ids:
+                        log.info(f"🏷️  JSON: Adding tag filters for {len(tag_ids)} tags using JSON")
                         query = query.filter(
                             and_(
                                 *[
@@ -1180,14 +1335,16 @@ class ChatTable:
                             )
                         )
             else:
+                log.error(f"❌ UNSUPPORTED DATABASE: {dialect_name}")
                 raise NotImplementedError(
                     f"Unsupported dialect: {db.bind.dialect.name}"
                 )
 
             # Perform pagination at the SQL level
+            log.info(f"📄 PAGINATION: Applying skip={skip}, limit={limit}")
             all_chats = query.offset(skip).limit(limit).all()
 
-            log.info(f"The number of chats: {len(all_chats)}")
+            log.info(f"✅ SEARCH COMPLETE: Found {len(all_chats)} chats")
 
             # Validate and return chats
             return [ChatModel.model_validate(chat) for chat in all_chats]
@@ -1978,4 +2135,4 @@ class ChatTable:
         }
 
 
-Chats = ChatTable() 
+Chats = ChatTable()
