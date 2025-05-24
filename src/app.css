@@ -103,7 +103,7 @@ li p {
 
 ::-webkit-scrollbar-thumb {
 	--tw-border-opacity: 1;
-	background-color: rgba(200, 200, 200, 0.8);
+	background-color: rgba(215, 215, 215, 0.8);
 	border-color: rgba(255, 255, 255, var(--tw-border-opacity));
 	border-radius: 9999px;
 	border-width: 1px;
@@ -117,7 +117,7 @@ li p {
 
 ::-webkit-scrollbar {
 	height: 0.8rem;
-	width: 0.45rem;
+	width: 0.4rem;
 }
 
 ::-webkit-scrollbar-track {
