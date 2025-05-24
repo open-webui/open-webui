@@ -11,6 +11,8 @@
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
 	import XMark from '../icons/XMark.svelte';
@@ -33,7 +35,9 @@
 	export let allChatsLoaded = false;
 	export let chatListLoading = false;
 
+	let selectedChatId = null;
 	let selectedIdx = 0;
+	let showDeleteConfirmDialog = false;
 
 	export let onUpdate = () => {};
 
@@ -57,6 +61,16 @@
 		onUpdate();
 	};
 </script>
+
+<ConfirmDialog
+	bind:show={showDeleteConfirmDialog}
+	on:confirm={() => {
+		if (selectedChatId) {
+			deleteHandler(selectedChatId);
+			selectedChatId = null;
+		}
+	}}
+/>
 
 <Modal size="lg" bind:show>
 	<div>
@@ -261,7 +275,8 @@
 													on:click={async (e) => {
 														e.stopImmediatePropagation();
 														e.stopPropagation();
-														deleteHandler(chat.id);
+														selectedChatId = chat.id;
+														showDeleteConfirmDialog = true;
 													}}
 												>
 													<svg
