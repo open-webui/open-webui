@@ -72,18 +72,15 @@ async def get_tools(request: Request, user=Depends(get_verified_user)):
 
     # Apply admin workspace access control first to DB tools
     if user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_ACCESS:
-        db_tools = Tools.get_tools()
-        filtered_db_tools = []
-        for tool in db_tools:
-            is_private_other_user = (
-                tool.access_control == {} and tool.user_id != user.id
-            )
-            if not is_private_other_user and (
-                tool.user_id == user.id
-                or tool.access_control is None
-                or has_access(user.id, "read", tool.access_control)
-            ):
-                filtered_db_tools.append(tool)
+    db_tools_from_db = Tools.get_tools() # Renamed to avoid confusion
+    filtered_db_tools = []
+    for tool in db_tools_from_db: # Iterate over DB tools
+        if (
+            tool.user_id == user.id
+            or tool.access_control is None
+            or has_access(user.id, "read", tool.access_control)
+        ):
+            filtered_db_tools.append(tool)
         tools = filtered_db_tools
     else:
         # Original logic for fetching DB tools if not admin or flag is true
@@ -171,13 +168,10 @@ async def get_tool_list(user=Depends(get_verified_user)):
         all_tools = Tools.get_tools()
         filtered_tools = []
         for tool in all_tools:
-            is_private_other_user = (
-                tool.access_control == {} and tool.user_id != user.id
-            )
-            if not is_private_other_user and (
+            if (
                 tool.user_id == user.id
                 or tool.access_control is None
-                or has_access(user.id, "write", tool.access_control) # "write" for this list
+                or has_access(user.id, "write", tool.access_control) # "write"
             ):
                 filtered_tools.append(tool)
         return filtered_tools
