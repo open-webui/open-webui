@@ -116,7 +116,7 @@ li p {
 }
 
 ::-webkit-scrollbar {
-	height: 0.8rem;
+	height: 0.6rem;
 	width: 0.4rem;
 }
 
@@ -422,7 +422,8 @@ input[type='number'] {
 	@apply text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 border-none;
 }
 
-.tiptap th, .tiptap td {
+.tiptap th,
+.tiptap td {
 	@apply px-3 py-1.5 border border-gray-100 dark:border-gray-850;
 }
 
