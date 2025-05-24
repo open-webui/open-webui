@@ -56,11 +56,15 @@
             initialized = true;
         }
     }
+	
 
 </script>
 
 <div>
-	<div bind:this={root} class="relative w-full h-4" use:onClickOutside={() => (showDropdown = false)}>
+	<div bind:this={root} class="relative w-full h-4" use:onClickOutside={() => {
+		showDropdown = false;
+		showSubmenu = false;
+		}}>
 		<div
 		on:click={() => (showDropdown = !showDropdown)}
 	>
@@ -112,6 +116,8 @@
 						on:click={() => {
 							if($mobile) {
 								showSubmenu = true;
+								submenuX = -183;
+								submenuY = -40;
 							}else{
 								showDropdown = false;
 							}
