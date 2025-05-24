@@ -43,6 +43,22 @@ async def get_functions(user=Depends(get_admin_user)):
 
 
 ############################
+# SyncFunctions
+############################
+
+
+class SyncFunctionsForm(FunctionForm):
+    functions: list[FunctionModel] = []
+
+
+@router.post("/sync", response_model=Optional[FunctionModel])
+async def sync_functions(
+    request: Request, form_data: SyncFunctionsForm, user=Depends(get_admin_user)
+):
+    return Functions.sync_functions(user.id, form_data.functions)
+
+
+############################
 # CreateNewFunction
 ############################
 
