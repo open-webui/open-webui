@@ -1,5 +1,6 @@
 from typing import Optional
 
+from open_webui.config import ENABLE_ADMIN_WORKSPACE_ACCESS
 from open_webui.models.prompts import (
     PromptForm,
     PromptUserResponse,
@@ -20,7 +21,23 @@ router = APIRouter()
 
 @router.get("/", response_model=list[PromptModel])
 async def get_prompts(user=Depends(get_verified_user)):
-    if user.role == "admin":
+    if user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_ACCESS.value:
+        all_prompts = Prompts.get_prompts()
+        filtered_prompts = []
+        for prompt in all_prompts:
+            # Check if the prompt is private and belongs to another user
+            is_private_other_user = (
+                prompt.access_control == {} and prompt.user_id != user.id
+            )
+
+            if not is_private_other_user and (
+                prompt.user_id == user.id
+                or prompt.access_control is None
+                or has_access(user.id, "read", prompt.access_control)
+            ):
+                filtered_prompts.append(prompt)
+        return filtered_prompts
+    elif user.role == "admin":
         prompts = Prompts.get_prompts()
     else:
         prompts = Prompts.get_prompts_by_user_id(user.id, "read")
@@ -30,7 +47,23 @@ async def get_prompts(user=Depends(get_verified_user)):
 
 @router.get("/list", response_model=list[PromptUserResponse])
 async def get_prompt_list(user=Depends(get_verified_user)):
-    if user.role == "admin":
+    if user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_ACCESS.value:
+        all_prompts = Prompts.get_prompts()
+        filtered_prompts = []
+        for prompt in all_prompts:
+            # Check if the prompt is private and belongs to another user
+            is_private_other_user = (
+                prompt.access_control == {} and prompt.user_id != user.id
+            )
+
+            if not is_private_other_user and (
+                prompt.user_id == user.id
+                or prompt.access_control is None
+                or has_access(user.id, "write", prompt.access_control)
+            ):
+                filtered_prompts.append(prompt)
+        return filtered_prompts
+    elif user.role == "admin":
         prompts = Prompts.get_prompts()
     else:
         prompts = Prompts.get_prompts_by_user_id(user.id, "write")
