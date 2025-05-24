@@ -42,22 +42,19 @@ router = APIRouter()
 @router.get("/", response_model=list[KnowledgeUserResponse])
 async def get_knowledge(user=Depends(get_verified_user)):
     knowledge_bases = []
-
     if user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_ACCESS:
         all_knowledge_bases = Knowledges.get_knowledge_bases()
         filtered_knowledge_bases = []
         for kb in all_knowledge_bases:
-            is_private_other_user = (
-                kb.access_control == {} and kb.user_id != user.id
-            )
-            if not is_private_other_user and (
+            # If admin owns it, it's public, or admin has specific read access (group/direct)
+            if (
                 kb.user_id == user.id
                 or kb.access_control is None
                 or has_access(user.id, "read", kb.access_control)
             ):
                 filtered_knowledge_bases.append(kb)
         knowledge_bases = filtered_knowledge_bases
-    elif user.role == "admin":
+    elif user.role == "admin": # implies ENABLE_ADMIN_WORKSPACE_ACCESS is True
         knowledge_bases = Knowledges.get_knowledge_bases()
     else:
         knowledge_bases = Knowledges.get_knowledge_bases_by_user_id(user.id, "read")
