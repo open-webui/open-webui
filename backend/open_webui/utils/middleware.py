@@ -957,14 +957,40 @@ async def process_chat_response(
             # the original messages outside of this handler
 
             messages = []
-            for message in message_list:
+            # SAFETY CHECK: Only process message_list if it's not empty
+            if message_list:
+                for message in message_list:
+                    content = message.get("content", "")
+                    if isinstance(content, list):
+                        for item in content:
+                            if item.get("type") == "text":
+                                content = item["text"]
+                                break
+
+                    if isinstance(content, str):
+                        content = re.sub(
+                            r"<details\b[^>]*>.*?<\/details>",
+                            "",
+                            content,
+                            flags=re.S | re.I,
+                        ).strip()
+
+                    messages.append(
+                        {
+                            "role": message["role"],
+                            "content": content,
+                        }
+                    )
+            else:
+                # If message_list is empty but we have a message, create a single-message list for fallback
+                log.debug(f"get_message_list returned empty for chat_id={metadata['chat_id']}, using fallback")
                 content = message.get("content", "")
                 if isinstance(content, list):
                     for item in content:
                         if item.get("type") == "text":
                             content = item["text"]
                             break
-
+                            
                 if isinstance(content, str):
                     content = re.sub(
                         r"<details\b[^>]*>.*?<\/details>",
@@ -972,10 +998,10 @@ async def process_chat_response(
                         content,
                         flags=re.S | re.I,
                     ).strip()
-
+                    
                 messages.append(
                     {
-                        "role": message["role"],
+                        "role": message.get("role", "assistant"),
                         "content": content,
                     }
                 )
