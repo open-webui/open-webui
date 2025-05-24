@@ -105,7 +105,7 @@ async def get_knowledge(user=Depends(get_verified_user)):
 async def get_knowledge_list(user=Depends(get_verified_user)):
     knowledge_bases = []
 
-    if user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_ACCESS.value:
+    if user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_ACCESS:
         all_knowledge_bases = Knowledges.get_knowledge_bases()
         filtered_knowledge_bases = []
         for kb in all_knowledge_bases:
