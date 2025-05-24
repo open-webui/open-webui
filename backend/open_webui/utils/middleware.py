@@ -252,7 +252,12 @@ async def chat_completion_tools_handler(
                                     "name": (f"TOOL:{tool_name}"),
                                 },
                                 "document": [tool_result],
-                                "metadata": [{"source": (f"TOOL:{tool_name}")}],
+                                "metadata": [
+                                    {
+                                        "source": (f"TOOL:{tool_name}"),
+                                        "parameters": tool_function_params,
+                                    }
+                                ],
                             }
                         )
                     else:
@@ -422,6 +427,7 @@ async def chat_web_search_handler(
                             "name": ", ".join(queries),
                             "type": "web_search",
                             "urls": results["filenames"],
+                            "queries": queries,
                         }
                     )
             elif results.get("docs"):
@@ -433,6 +439,7 @@ async def chat_web_search_handler(
                         "name": ", ".join(queries),
                         "type": "web_search",
                         "urls": results["filenames"],
+                        "queries": queries,
                     }
                 )
 
@@ -636,6 +643,7 @@ async def chat_completion_files_handler(
                         reranking_function=request.app.state.rf,
                         k_reranker=request.app.state.config.TOP_K_RERANKER,
                         r=request.app.state.config.RELEVANCE_THRESHOLD,
+                        hybrid_bm25_weight=request.app.state.config.HYBRID_BM25_WEIGHT,
                         hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
                         full_context=request.app.state.config.RAG_FULL_CONTEXT,
                     ),
@@ -914,6 +922,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 for doc_context, doc_meta in zip(
                     source["document"], source["metadata"]
                 ):
+                    source_name = source.get("source", {}).get("name", None)
                     citation_id = (
                         doc_meta.get("source", None)
                         or source.get("source", {}).get("id", None)
@@ -921,7 +930,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     )
                     if citation_id not in citation_idx:
                         citation_idx[citation_id] = len(citation_idx) + 1
-                    context_string += f'<source id="{citation_idx[citation_id]}">{doc_context}</source>\n'
+                    context_string += (
+                        f'<source id="{citation_idx[citation_id]}"'
+                        + (f' name="{source_name}"' if source_name else "")
+                        + f">{doc_context}</source>\n"
+                    )
 
         context_string = context_string.strip()
         prompt = get_last_user_message(form_data["messages"])

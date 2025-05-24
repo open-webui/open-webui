@@ -195,15 +195,27 @@
 		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
 
-	$: if (selectedModels) {
-		setToolIds();
-		setFilterIds();
+	let oldSelectedModelIds = [''];
+	$: if (JSON.stringify(selectedModelIds) !== JSON.stringify(oldSelectedModelIds)) {
+		onSelectedModelIdsChange();
 	}
 
-	$: if (atSelectedModel || selectedModels) {
+	const onSelectedModelIdsChange = () => {
+		if (oldSelectedModelIds.filter((id) => id).length > 0) {
+			resetInput();
+		}
+		oldSelectedModelIds = selectedModelIds;
+	};
+
+	const resetInput = () => {
+		console.debug('resetInput');
 		setToolIds();
-		setFilterIds();
-	}
+
+		selectedFilterIds = [];
+		webSearchEnabled = false;
+		imageGenerationEnabled = false;
+		codeInterpreterEnabled = false;
+	};
 
 	const setToolIds = async () => {
 		if (!$tools) {
@@ -215,20 +227,14 @@
 		}
 
 		const model = atSelectedModel ?? $models.find((m) => m.id === selectedModels[0]);
-		if (model) {
+		if (model && model?.info?.meta?.toolIds) {
 			selectedToolIds = [
 				...new Set(
-					[...selectedToolIds, ...(model?.info?.meta?.toolIds ?? [])].filter((id) =>
-						$tools.find((t) => t.id === id)
-					)
+					[...(model?.info?.meta?.toolIds ?? [])].filter((id) => $tools.find((t) => t.id === id))
 				)
 			];
-		}
-	};
-
-	const setFilterIds = async () => {
-		if (selectedModels.length !== 1 && !atSelectedModel) {
-			selectedFilterIds = [];
+		} else {
+			selectedToolIds = [];
 		}
 	};
 
@@ -585,9 +591,20 @@
 				throw new Error('Created file is empty');
 			}
 
+			// If the file is an audio file, provide the language for STT.
+			let metadata = null;
+			if (
+				(file.type.startsWith('audio/') || file.type.startsWith('video/')) &&
+				$settings?.audio?.stt?.language
+			) {
+				metadata = {
+					language: $settings?.audio?.stt?.language
+				};
+			}
+
 			// Upload file to server
 			console.log('Uploading file to server...');
-			const uploadedFile = await uploadFile(localStorage.token, file);
+			const uploadedFile = await uploadFile(localStorage.token, file, metadata);
 
 			if (!uploadedFile) {
 				throw new Error('Server returned null response for file upload');
@@ -846,6 +863,8 @@
 					(chatContent?.models ?? undefined) !== undefined
 						? chatContent.models
 						: [chatContent.models ?? ''];
+				oldSelectedModelIds = selectedModels;
+
 				history =
 					(chatContent?.history ?? undefined) !== undefined
 						? chatContent.history

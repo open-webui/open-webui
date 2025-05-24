@@ -460,7 +460,7 @@ def upload_image(request, image_data, content_type, metadata, user):
             "content-type": content_type,
         },
     )
-    file_item = upload_file(request, file, user, metadata=metadata)
+    file_item = upload_file(request, file, metadata=metadata, internal=True, user=user)
     url = request.app.url_path_for("get_file_content_by_id", id=file_item.id)
     return url
 
