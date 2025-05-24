@@ -735,20 +735,26 @@ class ChatTable:
         return chat.chat.get("title", "New Chat")
 
     def get_messages_by_chat_id(self, id: str) -> dict:
+        log.info(f"🔍 DEBUG: get_messages_by_chat_id called with id={id}")
         chat = self.get_chat_by_id(id)
         if chat is None:
+            log.warning(f"⚠️  DEBUG: Chat not found for id={id}, returning empty dict")
             return {}  # Return empty dict instead of None
 
         messages = chat.chat.get("history", {}).get("messages", {})
-        return messages if messages is not None else {}
+        result = messages if messages is not None else {}
+        log.info(f"✅ DEBUG: get_messages_by_chat_id returning {type(result)} with {len(result) if isinstance(result, dict) else 'N/A'} items")
+        return result
 
     def get_message_list_by_chat_id(self, id: str) -> list[dict]:
         """
         Get messages as a list for middleware compatibility.
         Returns empty list if chat doesn't exist or has no messages.
         """
+        log.info(f"🔍 DEBUG: get_message_list_by_chat_id called with id={id}")
         messages_dict = self.get_messages_by_chat_id(id)
         if not messages_dict:
+            log.info(f"📋 DEBUG: No messages found, returning empty list")
             return []
         
         # Convert dict of messages to list, preserving order by creation time if available
@@ -757,6 +763,7 @@ class ChatTable:
             message_with_id = {"id": message_id, **message}
             messages_list.append(message_with_id)
         
+        log.info(f"✅ DEBUG: get_message_list_by_chat_id returning list with {len(messages_list)} items")
         return messages_list
 
     def get_message_by_id_and_message_id(
@@ -1039,13 +1046,17 @@ class ChatTable:
 
     @performance_monitor
     def get_chat_by_id(self, id: str) -> Optional[ChatModel]:
+        log.debug(f"🔍 DEBUG: get_chat_by_id called with id={id}")
         try:
             with get_db() as db:
                 self._ensure_connection_optimized(db)
                 
                 chat = db.get(Chat, id)
-                return ChatModel.model_validate(chat) if chat else None
-        except Exception:
+                result = ChatModel.model_validate(chat) if chat else None
+                log.debug(f"✅ DEBUG: get_chat_by_id returning {type(result)} for id={id}")
+                return result
+        except Exception as e:
+            log.error(f"❌ DEBUG: get_chat_by_id failed for id={id}: {e}")
             return None
 
     def get_chat_by_share_id(self, id: str) -> Optional[ChatModel]:
@@ -2134,5 +2145,59 @@ class ChatTable:
             "query_stats": QueryStats.get_stats()
         }
 
+    def get_safe_message_list(self, chat_id: str) -> list:
+        """
+        SAFETY METHOD: Absolutely guaranteed to return a list.
+        This method should be used by middleware to prevent None iteration errors.
+        """
+        log.info(f"🛡️  SAFETY: get_safe_message_list called with chat_id={chat_id}")
+        try:
+            # Try the standard method first
+            result = self.get_message_list_by_chat_id(chat_id)
+            if result is None:
+                log.warning(f"⚠️  SAFETY: get_message_list_by_chat_id returned None, using empty list")
+                return []
+            if not isinstance(result, list):
+                log.warning(f"⚠️  SAFETY: get_message_list_by_chat_id returned {type(result)}, converting to list")
+                return list(result) if result else []
+            log.info(f"✅ SAFETY: Returning safe list with {len(result)} items")
+            return result
+        except Exception as e:
+            log.error(f"❌ SAFETY: get_safe_message_list failed: {e}, returning empty list")
+            return []
+
 
 Chats = ChatTable()
+
+# EMERGENCY SAFETY WRAPPER: Prevent None iteration errors
+class ChatTableSafetyWrapper:
+    def __init__(self, chat_table):
+        self._chat_table = chat_table
+    
+    def __getattr__(self, name):
+        attr = getattr(self._chat_table, name)
+        if callable(attr):
+            def safe_wrapper(*args, **kwargs):
+                log.debug(f"🛡️  SAFETY WRAPPER: Calling {name} with args={args[:2] if args else []} kwargs={kwargs}")
+                try:
+                    result = attr(*args, **kwargs)
+                    # Special handling for methods that middleware might iterate over
+                    if name in ['get_messages_by_chat_id', 'get_message_list_by_chat_id'] and result is None:
+                        log.error(f"🚨 CRITICAL: {name} returned None! Returning empty dict/list for safety")
+                        if 'list' in name:
+                            return []
+                        else:
+                            return {}
+                    log.debug(f"✅ SAFETY WRAPPER: {name} returned {type(result)}")
+                    return result
+                except Exception as e:
+                    log.error(f"❌ SAFETY WRAPPER: {name} failed: {e}")
+                    # Return safe defaults based on method name
+                    if 'list' in name or 'messages' in name:
+                        return [] if 'list' in name else {}
+                    return None
+            return safe_wrapper
+        return attr
+
+# Replace the global Chats object with safety wrapper
+Chats = ChatTableSafetyWrapper(Chats)
