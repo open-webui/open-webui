@@ -392,7 +392,18 @@ class ChatTable:
                 if query_key:
                     query = query.filter(Chat.title.ilike(f"%{query_key}%"))
 
-            query = query.order_by(Chat.updated_at.desc())
+                order_by = filter.get("order_by")
+                direction = filter.get("direction")
+
+                if order_by and direction and getattr(Chat, order_by):
+                    if direction.lower() == "asc":
+                        query = query.order_by(getattr(Chat, order_by).asc())
+                    elif direction.lower() == "desc":
+                        query = query.order_by(getattr(Chat, order_by).desc())
+                    else:
+                        raise ValueError("Invalid direction for ordering")
+            else:
+                query = query.order_by(Chat.updated_at.desc())
 
             if skip:
                 query = query.offset(skip)

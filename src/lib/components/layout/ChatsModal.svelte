@@ -14,6 +14,8 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
 	import XMark from '../icons/XMark.svelte';
+	import ChevronUp from '../icons/ChevronUp.svelte';
+	import ChevronDown from '../icons/ChevronDown.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -23,6 +25,9 @@
 	export let emptyPlaceholder = '';
 
 	export let query = '';
+
+	export let orderBy = 'updated_at';
+	export let direction = 'desc'; // 'asc' or 'desc'
 
 	export let chatList = null;
 	export let allChatsLoaded = false;
@@ -34,6 +39,15 @@
 
 	export let loadHandler: null | Function = null;
 	export let unarchiveHandler: null | Function = null;
+
+	const setSortKey = (key) => {
+		if (orderBy === key) {
+			direction = direction === 'asc' ? 'desc' : 'asc';
+		} else {
+			orderBy = key;
+			direction = 'asc';
+		}
+	};
 
 	const deleteHandler = async (chatId) => {
 		const res = await deleteChatById(localStorage.token, chatId).catch((error) => {
@@ -111,6 +125,54 @@
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				{#if chatList}
 					<div class="w-full">
+						{#if chatList.length > 0}
+							<div class="flex text-xs font-medium">
+								<button
+									class="px-1.5 py-1 cursor-pointer select-none basis-3/5"
+									on:click={() => setSortKey('title')}
+								>
+									<div class="flex gap-1.5 items-center">
+										{$i18n.t('Title')}
+
+										{#if orderBy === 'title'}
+											<span class="font-normal"
+												>{#if direction === 'asc'}
+													<ChevronUp className="size-2" />
+												{:else}
+													<ChevronDown className="size-2" />
+												{/if}
+											</span>
+										{:else}
+											<span class="invisible">
+												<ChevronUp className="size-2" />
+											</span>
+										{/if}
+									</div>
+								</button>
+								<button
+									class="px-1.5 py-1 cursor-pointer select-none hidden sm:flex sm:basis-2/5 justify-end"
+									on:click={() => setSortKey('updated_at')}
+								>
+									<div class="flex gap-1.5 items-center">
+										{$i18n.t('Updated at')}
+
+										{#if orderBy === 'updated_at'}
+											<span class="font-normal"
+												>{#if direction === 'asc'}
+													<ChevronUp className="size-2" />
+												{:else}
+													<ChevronDown className="size-2" />
+												{/if}
+											</span>
+										{:else}
+											<span class="invisible">
+												<ChevronUp className="size-2" />
+											</span>
+										{/if}
+									</div>
+								</button>
+							</div>
+						{/if}
 						<div class="text-left text-sm w-full mb-3 max-h-[22rem] overflow-y-scroll">
 							{#if chatList.length === 0}
 								<div
@@ -121,7 +183,7 @@
 							{/if}
 
 							{#each chatList as chat, idx (chat.id)}
-								{#if idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)}
+								{#if (idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)) && chat?.time_range}
 									<div
 										class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
 											? ''
@@ -153,25 +215,53 @@
 									class=" w-full flex justify-between items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850"
 									draggable="false"
 								>
-									<a class=" flex-1" href="/c/{chat.id}" on:click={() => (show = false)}>
+									<a class=" basis-3/5" href="/c/{chat.id}" on:click={() => (show = false)}>
 										<div class="text-ellipsis line-clamp-1 w-full">
 											{chat?.title}
 										</div>
 									</a>
 
-									<div class=" pl-3 shrink-0 text-gray-500 dark:text-gray-400 text-xs">
-										{dayjs(chat?.updated_at * 1000).calendar()}
-									</div>
+									<div class="basis-2/5 flex items-center justify-end">
+										<div class="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs">
+											{dayjs(chat?.updated_at * 1000).calendar()}
+										</div>
 
-									<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">
-										{#if unarchiveHandler}
-											<Tooltip content={$i18n.t('Unarchive Chat')}>
+										<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">
+											{#if unarchiveHandler}
+												<Tooltip content={$i18n.t('Unarchive Chat')}>
+													<button
+														class="self-center w-fit px-1 text-sm rounded-xl"
+														on:click={async (e) => {
+															e.stopImmediatePropagation();
+															e.stopPropagation();
+															unarchiveHandler(chat.id);
+														}}
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															fill="none"
+															viewBox="0 0 24 24"
+															stroke-width="1.5"
+															stroke="currentColor"
+															class="size-4"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15m0-3-3-3m0 0-3 3m3-3V15"
+															/>
+														</svg>
+													</button>
+												</Tooltip>
+											{/if}
+
+											<Tooltip content={$i18n.t('Delete Chat')}>
 												<button
 													class="self-center w-fit px-1 text-sm rounded-xl"
 													on:click={async (e) => {
 														e.stopImmediatePropagation();
 														e.stopPropagation();
-														unarchiveHandler(chat.id);
+														deleteHandler(chat.id);
 													}}
 												>
 													<svg
@@ -180,43 +270,17 @@
 														viewBox="0 0 24 24"
 														stroke-width="1.5"
 														stroke="currentColor"
-														class="size-4"
+														class="w-4 h-4"
 													>
 														<path
 															stroke-linecap="round"
 															stroke-linejoin="round"
-															d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15m0-3-3-3m0 0-3 3m3-3V15"
+															d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
 														/>
 													</svg>
 												</button>
 											</Tooltip>
-										{/if}
-
-										<Tooltip content={$i18n.t('Delete Chat')}>
-											<button
-												class="self-center w-fit px-1 text-sm rounded-xl"
-												on:click={async (e) => {
-													e.stopImmediatePropagation();
-													e.stopPropagation();
-													deleteHandler(chat.id);
-												}}
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="1.5"
-													stroke="currentColor"
-													class="w-4 h-4"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-													/>
-												</svg>
-											</button>
-										</Tooltip>
+										</div>
 									</div>
 								</div>
 							{/each}

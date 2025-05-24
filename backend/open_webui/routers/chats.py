@@ -269,6 +269,8 @@ async def get_all_user_chats_in_db(user=Depends(get_admin_user)):
 async def get_archived_session_user_chat_list(
     page: Optional[int] = None,
     query: Optional[str] = None,
+    order_by: Optional[str] = None,
+    direction: Optional[str] = None,
     user=Depends(get_verified_user),
 ):
     if page is None:
@@ -277,13 +279,19 @@ async def get_archived_session_user_chat_list(
     limit = 60
     skip = (page - 1) * limit
 
+    filter = {}
+    if query:
+        filter["query"] = query
+    if order_by:
+        filter["order_by"] = order_by
+    if direction:
+        filter["direction"] = direction
+
     chat_list = [
         ChatTitleIdResponse(**chat.model_dump())
         for chat in Chats.get_archived_chat_list_by_user_id(
             user.id,
-            {
-                "query": query if query else None,
-            },
+            filter=filter,
             skip=skip,
             limit=limit,
         )

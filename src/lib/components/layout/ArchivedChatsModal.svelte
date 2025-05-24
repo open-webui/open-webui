@@ -18,6 +18,8 @@
 	let page = 1;
 
 	let query = '';
+	let orderBy = 'updated_at';
+	let direction = 'desc';
 
 	let allChatsLoaded = false;
 	let chatListLoading = false;
@@ -25,7 +27,14 @@
 
 	let showUnarchiveAllConfirmDialog = false;
 
-	$: if (query !== null) {
+	let filter = {};
+	$: filter = {
+		...(query ? { query } : {}),
+		...(orderBy ? { order_by: orderBy } : {}),
+		...(direction ? { direction } : {})
+	};
+
+	$: if (filter !== null) {
 		searchHandler();
 	}
 
@@ -40,10 +49,10 @@
 		chatList = null;
 
 		if (query === '') {
-			chatList = await getArchivedChatList(localStorage.token, page);
+			chatList = await getArchivedChatList(localStorage.token, page, filter);
 		} else {
 			searchDebounceTimeout = setTimeout(async () => {
-				chatList = await getArchivedChatList(localStorage.token, page, query);
+				chatList = await getArchivedChatList(localStorage.token, page, filter);
 			}, 500);
 		}
 
@@ -61,9 +70,9 @@
 		let newChatList = [];
 
 		if (query) {
-			newChatList = await getArchivedChatList(localStorage.token, page, query);
+			newChatList = await getArchivedChatList(localStorage.token, page, filter);
 		} else {
-			newChatList = await getArchivedChatList(localStorage.token, page);
+			newChatList = await getArchivedChatList(localStorage.token, page, filter);
 		}
 
 		// once the bottom of the list has been reached (no results) there is no need to continue querying
@@ -124,6 +133,8 @@
 <ChatsModal
 	bind:show
 	bind:query
+	bind:orderBy
+	bind:direction
 	title={$i18n.t('Archived Chats')}
 	emptyPlaceholder={$i18n.t('You have no archived conversations.')}
 	{chatList}

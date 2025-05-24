@@ -145,13 +145,22 @@ export const getChatListByUserId = async (token: string = '', userId: string) =>
 	}));
 };
 
-export const getArchivedChatList = async (token: string = '', page: number = 1, query?: string) => {
+export const getArchivedChatList = async (
+	token: string = '',
+	page: number = 1,
+	filter?: object
+) => {
 	let error = null;
 
 	const searchParams = new URLSearchParams();
 	searchParams.append('page', `${page}`);
-	if (query) {
-		searchParams.append('query', query);
+
+	if (filter) {
+		Object.entries(filter).forEach(([key, value]) => {
+			if (value !== undefined && value !== null) {
+				searchParams.append(key, value.toString());
+			}
+		});
 	}
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/archived?${searchParams.toString()}`, {
