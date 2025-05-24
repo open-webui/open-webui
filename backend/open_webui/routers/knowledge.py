@@ -106,10 +106,8 @@ async def get_knowledge_list(user=Depends(get_verified_user)):
         all_knowledge_bases = Knowledges.get_knowledge_bases()
         filtered_knowledge_bases = []
         for kb in all_knowledge_bases:
-            is_private_other_user = (
-                kb.access_control == {} and kb.user_id != user.id
-            )
-            if not is_private_other_user and (
+            # If admin owns it, it's public, or admin has specific write access (group/direct)
+            if (
                 kb.user_id == user.id
                 or kb.access_control is None
                 or has_access(user.id, "write", kb.access_control)
