@@ -154,7 +154,7 @@
 												class="px-3 py-2 cursor-pointer select-none"
 												on:click={() => setSortKey('title')}
 											>
-												{$i18n.t('Name')}
+												{$i18n.t('Title')}
 												{#if sortKey === 'title'}
 													{sortOrder === 'asc' ? '▲' : '▼'}
 												{:else}
