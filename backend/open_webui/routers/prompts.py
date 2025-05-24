@@ -21,7 +21,7 @@ router = APIRouter()
 
 @router.get("/", response_model=list[PromptModel])
 async def get_prompts(user=Depends(get_verified_user)):
-    if user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_ACCESS.value:
+    if user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_ACCESS:
         all_prompts = Prompts.get_prompts()
         filtered_prompts = []
         for prompt in all_prompts:
@@ -47,7 +47,7 @@ async def get_prompts(user=Depends(get_verified_user)):
 
 @router.get("/list", response_model=list[PromptUserResponse])
 async def get_prompt_list(user=Depends(get_verified_user)):
-    if user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_ACCESS.value:
+    if user.role == "admin" and not ENABLE_ADMIN_WORKSPACE_ACCESS:
         all_prompts = Prompts.get_prompts()
         filtered_prompts = []
         for prompt in all_prompts:
