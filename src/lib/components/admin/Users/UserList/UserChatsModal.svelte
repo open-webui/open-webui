@@ -13,6 +13,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -111,27 +112,39 @@
 	</div>
 
 	<div class="flex flex-col w-full px-5 pt-2 pb-4 dark:text-gray-200">
-		<div class=" flex w-full mt-2 space-x-2">
-			<div class="flex flex-1">
-				<div class=" self-center ml-1 mr-3">
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-						class="w-4 h-4"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				</div>
+		<div class="flex w-full mt-2 space-x-2">
+			<div class="self-center ml-1 mr-3">
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					class="w-4 h-4"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</div>
+
+			<div class="flex flex-1 relative">
 				<input
 					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
 					bind:value={searchValue}
 					placeholder={$i18n.t('Search Chats')}
 				/>
+
+				{#if searchValue}
+					<button
+						class="absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition flex items-center justify-center"
+						on:click={() => {
+							searchValue = '';
+						}}
+					>
+						<XMark className="size-3" strokeWidth="2" />
+					</button>
+				{/if}
 			</div>
 		</div>
 		<hr class="border-gray-100 dark:border-gray-850 my-2" />
