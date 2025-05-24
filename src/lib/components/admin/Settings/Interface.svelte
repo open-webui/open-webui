@@ -504,25 +504,35 @@
 
 									let reader = new FileReader();
 									reader.onload = async (event) => {
-										let suggestions = JSON.parse(event.target.result);
+										try {
+											let suggestions = JSON.parse(event.target.result);
 
-										promptSuggestions = suggestions.map((s) => {
-											if (typeof s.title === 'string') {
-												s.title = [s.title, ''];
-											} else if (!Array.isArray(s.title)) {
-												s.title = ['', ''];
-											}
+											suggestions = suggestions.map((s) => {
+												if (typeof s.title === 'string') {
+													s.title = [s.title, ''];
+												} else if (!Array.isArray(s.title)) {
+													s.title = ['', ''];
+												}
 
-											return s;
-										});
+												return s;
+											});
+
+											promptSuggestions = [...promptSuggestions, ...suggestions];
+										} catch (error) {
+											toast.error($i18n.t('Invalid JSON file'));
+											return;
+										}
 									};
 
 									reader.readAsText(files[0]);
+
+									e.target.value = ''; // Reset the input value
 								}}
 							/>
 
 							<button
 								class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+								type="button"
 								on:click={() => {
 									const input = document.getElementById('prompt-suggestions-import-input');
 									if (input) {
@@ -553,6 +563,7 @@
 							{#if promptSuggestions.length}
 								<button
 									class="flex text-xs items-center space-x-1 px-3 py-1.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 transition"
+									type="button"
 									on:click={async () => {
 										let blob = new Blob([JSON.stringify(promptSuggestions)], {
 											type: 'application/json'
