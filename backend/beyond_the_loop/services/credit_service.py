@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import HTTPException
 
 from beyond_the_loop.models.users import Users
-from beyond_the_loop.models.companies import Companies, EIGHTY_PERCENT_CREDIT_LIMIT
+from beyond_the_loop.models.companies import Companies
 from beyond_the_loop.services.email_service import EmailService
 from beyond_the_loop.models.model_costs import ModelCosts
 from beyond_the_loop.routers.payments import FLEX_CREDITS_DEFAULT_PRICE_IN_CENTS
@@ -32,9 +32,12 @@ class CreditService:
 
         # Get current balance
         current_balance = Companies.get_credit_balance(user.company_id)
-        
+
+        # Get the dynamic credit limit based on subscription
+        eighty_percent_credit_limit = Companies.get_eighty_percent_credit_limit(user.company_id)
+
         # Check 80% threshold
-        if current_balance - credit_cost < EIGHTY_PERCENT_CREDIT_LIMIT:  # If balance is less than 125% of required (which means we're below 80%)
+        if current_balance - credit_cost < eighty_percent_credit_limit:
             should_send_budget_email_80 = True  # Default to sending email
 
             company = Companies.get_company_by_id(user.company_id)
@@ -52,6 +55,8 @@ class CreditService:
                                 customer=company.stripe_customer_id,
                                 type="card"
                             )
+
+                            print("Payment methods", payment_methods)
 
                             if not payment_methods or len(payment_methods.data) == 0:
                                 print(

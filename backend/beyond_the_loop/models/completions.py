@@ -5,9 +5,6 @@ from sqlalchemy import String, Column, BigInteger, Integer, Text, ForeignKey, Fl
 import uuid
 import time
 
-# Constants
-COST_PER_TOKEN = 0.00125  # in EUR (25€ / 20000 tokens)
-
 from open_webui.internal.db import get_db, Base
 
 ####################

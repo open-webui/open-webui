@@ -70,9 +70,44 @@ async def invite_user(form_data: UserInviteForm, user=Depends(get_admin_user)):
                 if not validate_email_format(email):
                     failed_invites.append({"email": email, "reason": ERROR_MESSAGES.INVALID_EMAIL_FORMAT})
                     continue
-                
+
                 # Check if user already exists
-                if Users.get_user_by_email(email):
+                existing_user = Users.get_user_by_email(email)
+                
+                # Check if user already exists and is not fully registered
+                if existing_user and existing_user.registration_code:
+                    # Generate invite token
+                    invite_token = hashlib.sha256(email.encode()).hexdigest()
+                    
+                    # Send welcome email
+                    email_service = EmailService()
+                    email_service.send_invite_mail(
+                        to_email=email,
+                        invite_token=invite_token
+                    )
+                    
+                    # Update existing user with invite information
+                    updated_user = Users.update_user_by_id(
+                        existing_user.id,
+                        {
+                            "first_name": "INVITED",
+                            "last_name": "INVITED",
+                            "role": invitee.role,
+                            "registration_code": None,
+                            "company_id": user.company_id,
+                            "invite_token": invite_token
+                        }
+                    )
+                    
+                    # Add user to groups
+                    for group in groups:
+                        if updated_user.id not in group.user_ids:
+                            group.user_ids.append(updated_user.id)
+                            Groups.update_group_by_id(group.id, group)
+                    
+                    successful_invites.append(email)
+                    continue
+                elif existing_user:
                     failed_invites.append({"email": email, "reason": f"Email {email} is already taken"})
                     continue
                 
@@ -92,7 +127,7 @@ async def invite_user(form_data: UserInviteForm, user=Depends(get_admin_user)):
                     "INVITED", 
                     "INVITED", 
                     email, 
-                    user.company_id, 
+                    user.company_id,
                     role=invitee.role,
                     invite_token=invite_token
                 )
@@ -147,9 +182,11 @@ async def create_user(form_data: UserCreateForm):
     if user and not user.registration_code:
         raise HTTPException(400, detail=ERROR_MESSAGES.EMAIL_TAKEN)
 
-    registration_code = str(random.randint(10**8, 10**9 - 1))
-
-    user = Users.insert_new_user(str(uuid.uuid4()), "NEW", "NEW", form_data.email.lower(), "NEW", role="admin", registration_code=registration_code)
+    if not user:
+        registration_code = str(random.randint(10**8, 10**9 - 1))
+        user = Users.insert_new_user(str(uuid.uuid4()), "NEW", "NEW", form_data.email.lower(), "NEW", role="admin", registration_code=registration_code)
+    else:
+        registration_code = user.registration_code
 
     # Send welcome email with the generated password
     email_service = EmailService()

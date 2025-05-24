@@ -133,7 +133,7 @@
 	}}
 >
 	<div class=" text-sm text-gray-500 flex-1 line-clamp-3">
-		{$i18n.t('You will be charged for')} <span class="  font-semibold">€{(25).toFixed(2)}</span>.
+		{$i18n.t('You will be charged for')} <span class="  font-semibold">€{(20).toFixed(2)}</span>.
 	</div>
 </ConfirmDialog>
 

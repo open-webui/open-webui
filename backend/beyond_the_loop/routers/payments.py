@@ -17,7 +17,7 @@ webhook_secret = os.environ.get('WEBHOOK_SECRET')
 stripe.api_key = os.environ.get('STRIPE_API_KEY')
 
 # Constants
-FLEX_CREDITS_DEFAULT_PRICE_IN_CENTS = 2500 # Amount in cents (25 euro)
+FLEX_CREDITS_DEFAULT_PRICE_IN_CENTS = 2000 # Amount in cents (20 euro)
 
 # Subscription Plans
 SUBSCRIPTION_PLANS = {
