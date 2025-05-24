@@ -3,8 +3,8 @@ import json
 import time
 import uuid
 import os
-from typing import Optional
-from functools import wraps
+from typing import Optional, Dict, Any, List
+from functools import wraps, lru_cache
 
 from open_webui.internal.db import Base, get_db
 from open_webui.models.tags import TagModel, Tag, Tags
@@ -24,33 +24,126 @@ except ImportError:
     JSONB = JSON  # Fallback to JSON if JSONB is not available
 
 ####################
-# Performance Monitoring
+# Logging Setup (moved to top to avoid NameError)
 ####################
 
+log = logging.getLogger(__name__)
+log.setLevel(SRC_LOG_LEVELS["MODELS"])
+
+####################
+# Performance Monitoring & Caching
+####################
+
+# Simple in-memory cache for frequently accessed data
+class SimpleCache:
+    """Thread-safe simple cache with TTL support and size limit."""
+    def __init__(self, default_ttl: int = 300, max_size: int = 1000):  # 5 minutes default, 1000 items max
+        self._cache = {}
+        self._timestamps = {}
+        self.default_ttl = default_ttl
+        self.max_size = max_size
+    
+    def get(self, key: str, default=None):
+        """Get cached value if not expired."""
+        if key not in self._cache:
+            return default
+        
+        if time.time() - self._timestamps[key] > self.default_ttl:
+            self.delete(key)
+            return default
+        
+        return self._cache[key]
+    
+    def set(self, key: str, value: Any, ttl: Optional[int] = None):
+        """Set cached value with optional TTL."""
+        # Implement simple LRU eviction if cache is full
+        if len(self._cache) >= self.max_size:
+            # Remove oldest entry
+            oldest_key = min(self._timestamps.keys(), key=lambda k: self._timestamps[k])
+            self.delete(oldest_key)
+        
+        self._cache[key] = value
+        self._timestamps[key] = time.time()
+    
+    def delete(self, key: str):
+        """Delete cached value."""
+        self._cache.pop(key, None)
+        self._timestamps.pop(key, None)
+    
+    def clear(self):
+        """Clear all cached values."""
+        self._cache.clear()
+        self._timestamps.clear()
+    
+    def size(self) -> int:
+        """Get cache size."""
+        return len(self._cache)
+
+# Global cache instance
+_cache = SimpleCache()
+
 def performance_monitor(func):
-    """Decorator to monitor query performance."""
+    """Enhanced decorator to monitor query performance with caching support."""
     @wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.time()
+        
+        # Generate cache key for read operations
+        cache_key = None
+        if func.__name__.startswith(('get_', 'count_')) and len(args) > 0:
+            # Better cache key generation that handles methods properly
+            # Skip 'self' argument for methods and create a more stable key
+            if len(args) > 1 and hasattr(args[0], '__class__'):
+                # This is a method call, skip self and use next few args
+                cache_args = str(args[1:4]) if len(args) > 1 else ""
+            else:
+                # This is a function call, use first few args
+                cache_args = str(args[:3])
+            
+            cache_key = f"{func.__name__}:{hash(cache_args)}"
+            
+            # Check cache first for read operations
+            cached_result = _cache.get(cache_key)
+            if cached_result is not None:
+                log.debug(f"Cache hit for {func.__name__}")
+                QueryStats.record_cache_hit(func.__name__)
+                return cached_result
+        
         try:
             result = func(*args, **kwargs)
             execution_time = time.time() - start_time
             
-            # Log slow queries (> 1 second)
+            # Cache read operations results (only cache serializable results)
+            if cache_key and result is not None:
+                try:
+                    # Quick serializability check - try to convert to dict if it's a Pydantic model
+                    if hasattr(result, 'model_dump'):
+                        _cache.set(cache_key, result, ttl=60)  # 1 minute TTL for read operations
+                    elif isinstance(result, (list, dict, str, int, float, bool)):
+                        _cache.set(cache_key, result, ttl=60)
+                except Exception:
+                    # Skip caching if result is not serializable
+                    pass
+            
+            # Performance logging
             if execution_time > 1.0:
                 log.warning(f"Slow query detected: {func.__name__} took {execution_time:.2f}s")
             elif execution_time > 0.1:
                 log.info(f"Query performance: {func.__name__} took {execution_time:.3f}s")
             
+            # Record stats
+            QueryStats.record(func.__name__, execution_time, True)
+            
             return result
         except Exception as e:
             execution_time = time.time() - start_time
             log.error(f"Query failed: {func.__name__} failed after {execution_time:.3f}s - {e}")
+            QueryStats.record(func.__name__, execution_time, False)
             raise
     return wrapper
 
 class QueryStats:
-    """Simple query performance statistics collector."""
+    """Enhanced query performance statistics collector."""
     _stats = {}
     
     @classmethod
@@ -62,7 +155,8 @@ class QueryStats:
                 "total_time": 0.0,
                 "min_time": float('inf'),
                 "max_time": 0.0,
-                "failures": 0
+                "failures": 0,
+                "cache_hits": 0
             }
         
         stats = cls._stats[operation]
@@ -76,33 +170,82 @@ class QueryStats:
             stats["failures"] += 1
     
     @classmethod
+    def record_cache_hit(cls, operation: str):
+        """Record cache hit."""
+        if operation not in cls._stats:
+            cls._stats[operation] = {
+                "count": 0, "total_time": 0.0, "min_time": float('inf'),
+                "max_time": 0.0, "failures": 0, "cache_hits": 0
+            }
+        cls._stats[operation]["cache_hits"] += 1
+    
+    @classmethod
     def get_stats(cls) -> dict:
         """Get performance statistics."""
         result = {}
         for op, stats in cls._stats.items():
-            if stats["count"] > 0:
-                avg_time = stats["total_time"] / (stats["count"] - stats["failures"]) if stats["count"] > stats["failures"] else 0
+            if stats["count"] > 0 or stats["cache_hits"] > 0:
+                total_calls = stats["count"] + stats["cache_hits"]
+                successful_db_calls = stats["count"] - stats["failures"]
+                avg_time = stats["total_time"] / successful_db_calls if successful_db_calls > 0 else 0
+                
                 result[op] = {
-                    "calls": stats["count"],
+                    "total_calls": total_calls,
+                    "db_calls": stats["count"],
+                    "cache_hits": stats["cache_hits"],
+                    "cache_hit_rate": round((stats["cache_hits"] / total_calls * 100), 1) if total_calls > 0 else 0,
                     "avg_time": round(avg_time, 3),
                     "min_time": round(stats["min_time"], 3) if stats["min_time"] != float('inf') else 0,
                     "max_time": round(stats["max_time"], 3),
                     "failures": stats["failures"],
-                    "success_rate": round((stats["count"] - stats["failures"]) / stats["count"] * 100, 1)
+                    "success_rate": round(successful_db_calls / stats["count"] * 100, 1) if stats["count"] > 0 else 100
                 }
         return result
+    
+    @classmethod
+    def clear_stats(cls):
+        """Clear all statistics."""
+        cls._stats.clear()
+
+####################
+# Connection Pool Optimization
+####################
+
+def optimize_db_connection():
+    """Apply database connection optimizations."""
+    try:
+        with get_db() as db:
+            dialect_name = db.bind.dialect.name
+            
+            if dialect_name == "postgresql":
+                # PostgreSQL optimizations
+                db.execute(text("SET work_mem = '64MB'"))  # Increase work memory for queries
+                db.execute(text("SET random_page_cost = 1.1"))  # Assume SSD storage
+                db.execute(text("SET effective_cache_size = '1GB'"))  # Adjust based on available RAM
+                log.info("Applied PostgreSQL connection optimizations")
+                
+            elif dialect_name == "sqlite":
+                # SQLite optimizations
+                db.execute(text("PRAGMA cache_size = -64000"))  # 64MB cache
+                db.execute(text("PRAGMA temp_store = MEMORY"))  # Use memory for temp tables
+                db.execute(text("PRAGMA mmap_size = 268435456"))  # 256MB memory-mapped I/O
+                db.execute(text("PRAGMA optimize"))  # Optimize database
+                log.info("Applied SQLite connection optimizations")
+                
+    except Exception as e:
+        log.warning(f"Could not apply database optimizations: {e}")
 
 ####################
 # Chat DB Schema
 ####################
 
-log = logging.getLogger(__name__)
-log.setLevel(SRC_LOG_LEVELS["MODELS"])
-
 # Check if JSONB should be used for PostgreSQL
 USE_JSONB = os.getenv("USE_JSONB", "false").lower() == "true" and JSONB_AVAILABLE
 
-
+@lru_cache(maxsize=1)
+def get_json_column_type():
+    """Cached function to determine JSON column type."""
+    return JSONB if USE_JSONB else JSON
 
 def is_using_jsonb(db):
     """Detect if the database is using JSONB columns with safety checks."""
@@ -185,17 +328,20 @@ def create_gin_indexes_if_needed(db):
         db.rollback()
 
 def create_composite_indexes_if_needed(db):
-    """Create composite indexes for common query patterns."""
+    """Create composite indexes for common query patterns with enhanced performance."""
     try:
         # Use CONCURRENTLY only for PostgreSQL
         concurrent = "CONCURRENTLY " if db.bind.dialect.name == "postgresql" else ""
         
         composite_indexes = [
-            # Common filtering patterns
+            # Enhanced common filtering patterns
             f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_updated ON chat (user_id, updated_at DESC);",
             f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_folder ON chat (user_id, folder_id);",
+            f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_created ON chat (user_id, created_at DESC);",
             # Share functionality
             f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_share_id ON chat (share_id);",
+            # Enhanced search patterns
+            f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_title_lower ON chat (user_id, LOWER(title));",
         ]
         
         # PostgreSQL-specific indexes with WHERE clauses and GIN
@@ -204,8 +350,18 @@ def create_composite_indexes_if_needed(db):
                 f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_archived ON chat (user_id, archived) WHERE archived = false;",
                 f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_pinned ON chat (user_id, pinned) WHERE pinned = true;",
                 f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_title_search ON chat USING GIN (to_tsvector('english', title));",
+                # Additional performance indexes
+                f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_folder_updated ON chat (user_id, folder_id, updated_at DESC) WHERE archived = false;",
             ]
             composite_indexes.extend(pg_specific_indexes)
+        
+        # SQLite-specific optimizations
+        elif db.bind.dialect.name == "sqlite":
+            sqlite_indexes = [
+                f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_title_search ON chat (user_id, title COLLATE NOCASE);",
+                f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_active ON chat (user_id, archived, updated_at DESC);",
+            ]
+            composite_indexes.extend(sqlite_indexes)
         
         for index_sql in composite_indexes:
             try:
@@ -225,7 +381,7 @@ class Chat(Base):
     id = Column(String, primary_key=True)
     user_id = Column(String)
     title = Column(Text)
-    chat = Column(JSONB if USE_JSONB else JSON)
+    chat = Column(get_json_column_type())
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
@@ -234,7 +390,7 @@ class Chat(Base):
     archived = Column(Boolean, default=False)
     pinned = Column(Boolean, default=False, nullable=True)
 
-    meta = Column(JSONB if USE_JSONB else JSON, server_default="{}")
+    meta = Column(get_json_column_type(), server_default="{}")
     folder_id = Column(Text, nullable=True)
 
 
@@ -304,26 +460,53 @@ class ChatTitleIdResponse(BaseModel):
 
 class ChatTable:
     def __init__(self):
-        """Initialize ChatTable."""
+        """Initialize ChatTable with performance optimizations."""
         # Index creation moved to lazy initialization to avoid issues
         # with non-PostgreSQL databases and performance overhead
         self._indexes_created = False
+        self._connection_optimized = False
     
     def _ensure_indexes_created(self, db):
         """Lazy index creation - only create indexes when needed and for PostgreSQL."""
-        if self._indexes_created or db.bind.dialect.name != "postgresql":
+        if self._indexes_created or db.bind.dialect.name not in ["postgresql", "sqlite"]:
             return
             
         try:
             create_composite_indexes_if_needed(db)
-            create_gin_indexes_if_needed(db)
+            if db.bind.dialect.name == "postgresql":
+                create_gin_indexes_if_needed(db)
             self._indexes_created = True
         except Exception as e:
             log.warning(f"Could not create indexes: {e}")
+    
+    def _ensure_connection_optimized(self, db):
+        """Apply connection-level optimizations once per session."""
+        if self._connection_optimized:
+            return
+        
+        try:
+            optimize_db_connection()
+            self._connection_optimized = True
+        except Exception as e:
+            log.warning(f"Could not optimize connection: {e}")
 
+    def _invalidate_cache_for_user(self, user_id: str):
+        """Invalidate cache entries for a specific user after write operations."""
+        # Clear cache entries that might be affected by user changes
+        keys_to_clear = []
+        for key in _cache._cache.keys():
+            if f"user_id='{user_id}'" in key or f"'{user_id}'" in key:
+                keys_to_clear.append(key)
+        
+        for key in keys_to_clear:
+            _cache.delete(key)
+
+    @performance_monitor
     def insert_new_chat(self, user_id: str, form_data: ChatForm) -> Optional[ChatModel]:
         with get_db() as db:
             self._ensure_indexes_created(db)
+            self._ensure_connection_optimized(db)
+            
             id = str(uuid.uuid4())
             chat = ChatModel(
                 **{
@@ -344,6 +527,10 @@ class ChatTable:
             db.add(result)
             db.commit()
             db.refresh(result)
+            
+            # Invalidate cache for this user
+            self._invalidate_cache_for_user(user_id)
+            
             return ChatModel.model_validate(result) if result else None
 
     def import_chat(
@@ -373,17 +560,25 @@ class ChatTable:
             db.add(result)
             db.commit()
             db.refresh(result)
+            
+            # Invalidate cache for this user
+            self._invalidate_cache_for_user(user_id)
+            
             return ChatModel.model_validate(result) if result else None
 
     def update_chat_by_id(self, id: str, chat: dict) -> Optional[ChatModel]:
         try:
             with get_db() as db:
                 chat_item = db.get(Chat, id)
+                user_id = chat_item.user_id
                 chat_item.chat = chat
                 chat_item.title = chat["title"] if "title" in chat else "New Chat"
                 chat_item.updated_at = int(time.time())
                 db.commit()
                 db.refresh(chat_item)
+
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
 
                 return ChatModel.model_validate(chat_item)
         except Exception:
@@ -394,10 +589,10 @@ class ChatTable:
         if chat is None:
             return None
 
-        chat = chat.chat
-        chat["title"] = title
+        chat_data = chat.chat
+        chat_data["title"] = title
 
-        return self.update_chat_by_id(id, chat)
+        return self.update_chat_by_id(id, chat_data)
 
     def update_chat_tags_by_id(
         self, id: str, tags: list[str], user
@@ -419,6 +614,7 @@ class ChatTable:
             self.add_chat_tag_by_id_and_user_id_and_tag_name(id, user.id, tag_name)
         return self.get_chat_by_id(id)
 
+    @performance_monitor
     def get_chat_title_by_id(self, id: str) -> Optional[str]:
         chat = self.get_chat_by_id(id)
         if chat is None:
@@ -449,8 +645,8 @@ class ChatTable:
         if chat is None:
             return None
 
-        chat = chat.chat
-        history = chat.get("history", {})
+        chat_data = chat.chat
+        history = chat_data.get("history", {})
 
         if message_id in history.get("messages", {}):
             history["messages"][message_id] = {
@@ -462,8 +658,8 @@ class ChatTable:
 
         history["currentId"] = message_id
 
-        chat["history"] = history
-        return self.update_chat_by_id(id, chat)
+        chat_data["history"] = history
+        return self.update_chat_by_id(id, chat_data)
 
     def add_message_status_to_chat_by_id_and_message_id(
         self, id: str, message_id: str, status: dict
@@ -472,16 +668,16 @@ class ChatTable:
         if chat is None:
             return None
 
-        chat = chat.chat
-        history = chat.get("history", {})
+        chat_data = chat.chat
+        history = chat_data.get("history", {})
 
         if message_id in history.get("messages", {}):
             status_history = history["messages"][message_id].get("statusHistory", [])
             status_history.append(status)
             history["messages"][message_id]["statusHistory"] = status_history
 
-        chat["history"] = history
-        return self.update_chat_by_id(id, chat)
+        chat_data["history"] = history
+        return self.update_chat_by_id(id, chat_data)
 
     def insert_shared_chat_by_chat_id(self, chat_id: str) -> Optional[ChatModel]:
         with get_db() as db:
@@ -564,10 +760,15 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.get(Chat, id)
+                user_id = chat.user_id
                 chat.pinned = not chat.pinned
                 chat.updated_at = int(time.time())
                 db.commit()
                 db.refresh(chat)
+                
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
+                
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
@@ -576,10 +777,15 @@ class ChatTable:
         try:
             with get_db() as db:
                 chat = db.get(Chat, id)
+                user_id = chat.user_id
                 chat.archived = not chat.archived
                 chat.updated_at = int(time.time())
                 db.commit()
                 db.refresh(chat)
+                
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
+                
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
@@ -589,14 +795,21 @@ class ChatTable:
             with get_db() as db:
                 db.query(Chat).filter_by(user_id=user_id).update({"archived": True})
                 db.commit()
+                
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
+                
                 return True
         except Exception:
             return False
 
+    @performance_monitor
     def get_archived_chat_list_by_user_id(
         self, user_id: str, skip: int = 0, limit: int = 50
     ) -> list[ChatModel]:
         with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
             all_chats = (
                 db.query(Chat)
                 .filter_by(user_id=user_id, archived=True)
@@ -606,6 +819,7 @@ class ChatTable:
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
+    @performance_monitor
     def get_chat_list_by_user_id(
         self,
         user_id: str,
@@ -614,6 +828,8 @@ class ChatTable:
         limit: int = 50,
     ) -> list[ChatModel]:
         with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
             query = db.query(Chat).filter_by(user_id=user_id)
             if not include_archived:
                 query = query.filter_by(archived=False)
@@ -628,6 +844,7 @@ class ChatTable:
             all_chats = query.all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
+    @performance_monitor
     def get_chat_title_id_list_by_user_id(
         self,
         user_id: str,
@@ -636,6 +853,8 @@ class ChatTable:
         limit: Optional[int] = None,
     ) -> list[ChatTitleIdResponse]:
         with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
             query = db.query(Chat).filter_by(user_id=user_id).filter_by(folder_id=None)
             query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
 
@@ -666,10 +885,13 @@ class ChatTable:
                 for chat in all_chats
             ]
 
+    @performance_monitor
     def get_chat_list_by_chat_ids(
         self, chat_ids: list[str], skip: int = 0, limit: int = 50
     ) -> list[ChatModel]:
         with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
             all_chats = (
                 db.query(Chat)
                 .filter(Chat.id.in_(chat_ids))
@@ -679,9 +901,12 @@ class ChatTable:
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
+    @performance_monitor
     def get_chat_by_id(self, id: str) -> Optional[ChatModel]:
         try:
             with get_db() as db:
+                self._ensure_connection_optimized(db)
+                
                 chat = db.get(Chat, id)
                 return ChatModel.model_validate(chat)
         except Exception:
@@ -701,9 +926,12 @@ class ChatTable:
         except Exception:
             return None
 
+    @performance_monitor
     def get_chat_by_id_and_user_id(self, id: str, user_id: str) -> Optional[ChatModel]:
         try:
             with get_db() as db:
+                self._ensure_connection_optimized(db)
+                
                 chat = db.query(Chat).filter_by(id=id, user_id=user_id).first()
                 return ChatModel.model_validate(chat)
         except Exception:
@@ -718,8 +946,11 @@ class ChatTable:
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
+    @performance_monitor
     def get_chats_by_user_id(self, user_id: str) -> list[ChatModel]:
         with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
             all_chats = (
                 db.query(Chat)
                 .filter_by(user_id=user_id)
@@ -727,8 +958,11 @@ class ChatTable:
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
+    @performance_monitor
     def get_pinned_chats_by_user_id(self, user_id: str) -> list[ChatModel]:
         with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
             all_chats = (
                 db.query(Chat)
                 .filter_by(user_id=user_id, pinned=True, archived=False)
@@ -736,8 +970,11 @@ class ChatTable:
             )
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
+    @performance_monitor
     def get_archived_chats_by_user_id(self, user_id: str) -> list[ChatModel]:
         with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
             all_chats = (
                 db.query(Chat)
                 .filter_by(user_id=user_id, archived=True)
@@ -756,6 +993,7 @@ class ChatTable:
     ) -> list[ChatModel]:
         """
         Filters chats based on a search query using Python, allowing pagination using skip and limit.
+        Enhanced with caching and performance optimizations.
         """
         search_text = search_text.lower().strip()
 
@@ -778,6 +1016,8 @@ class ChatTable:
         search_text = " ".join(search_text_words)
 
         with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
             query = db.query(Chat).filter(Chat.user_id == user_id)
 
             if not include_archived:
@@ -947,10 +1187,13 @@ class ChatTable:
             # Validate and return chats
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
+    @performance_monitor
     def get_chats_by_folder_id_and_user_id(
         self, folder_id: str, user_id: str
     ) -> list[ChatModel]:
         with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
             query = db.query(Chat).filter_by(folder_id=folder_id, user_id=user_id)
             query = query.filter(or_(Chat.pinned == False, Chat.pinned == None))
             query = query.filter_by(archived=False)
@@ -960,10 +1203,13 @@ class ChatTable:
             all_chats = query.all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
+    @performance_monitor
     def get_chats_by_folder_ids_and_user_id(
         self, folder_ids: list[str], user_id: str
     ) -> list[ChatModel]:
         with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
             query = db.query(Chat).filter(
                 Chat.folder_id.in_(folder_ids), Chat.user_id == user_id
             )
@@ -986,20 +1232,28 @@ class ChatTable:
                 chat.pinned = False
                 db.commit()
                 db.refresh(chat)
+                
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
+                
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
 
+    @performance_monitor
     def get_chat_tags_by_id_and_user_id(self, id: str, user_id: str) -> list[TagModel]:
         with get_db() as db:
             chat = db.get(Chat, id)
             tags = chat.meta.get("tags", [])
             return [Tags.get_tag_by_name_and_user_id(tag, user_id) for tag in tags]
 
+    @performance_monitor
     def get_chat_list_by_user_id_and_tag_name(
         self, user_id: str, tag_name: str, skip: int = 0, limit: int = 50
     ) -> list[ChatModel]:
         with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
             query = db.query(Chat).filter_by(user_id=user_id)
             tag_id = tag_name.replace(" ", "_").lower()
 
@@ -1055,12 +1309,19 @@ class ChatTable:
 
                 db.commit()
                 db.refresh(chat)
+                
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
+                
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
 
+    @performance_monitor
     def count_chats_by_tag_name_and_user_id(self, tag_name: str, user_id: str) -> int:
         with get_db() as db:  # Assuming `get_db()` returns a session object
+            self._ensure_connection_optimized(db)
+            
             query = db.query(Chat).filter_by(user_id=user_id, archived=False)
 
             # Normalize the tag_name for consistency
@@ -1119,6 +1380,10 @@ class ChatTable:
                     "tags": list(set(tags)),
                 }
                 db.commit()
+                
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
+                
                 return True
         except Exception:
             return False
@@ -1133,6 +1398,9 @@ class ChatTable:
                 }
                 db.commit()
 
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
+
                 return True
         except Exception:
             return False
@@ -1140,8 +1408,16 @@ class ChatTable:
     def delete_chat_by_id(self, id: str) -> bool:
         try:
             with get_db() as db:
+                # Get user_id before deletion for cache invalidation
+                chat = db.get(Chat, id)
+                user_id = chat.user_id if chat else None
+                
                 db.query(Chat).filter_by(id=id).delete()
                 db.commit()
+
+                # Invalidate cache for this user
+                if user_id:
+                    self._invalidate_cache_for_user(user_id)
 
                 return True and self.delete_shared_chat_by_chat_id(id)
         except Exception:
@@ -1152,6 +1428,9 @@ class ChatTable:
             with get_db() as db:
                 db.query(Chat).filter_by(id=id, user_id=user_id).delete()
                 db.commit()
+
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
 
                 return True and self.delete_shared_chat_by_chat_id(id)
         except Exception:
@@ -1165,6 +1444,9 @@ class ChatTable:
                 db.query(Chat).filter_by(user_id=user_id).delete()
                 db.commit()
 
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
+
                 return True
         except Exception:
             return False
@@ -1176,6 +1458,9 @@ class ChatTable:
             with get_db() as db:
                 db.query(Chat).filter_by(user_id=user_id, folder_id=folder_id).delete()
                 db.commit()
+
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
 
                 return True
         except Exception:
@@ -1229,6 +1514,8 @@ class ChatTable:
         search_text = " ".join(search_text_words)
 
         with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
             query = db.query(Chat).filter(Chat.user_id == user_id)
 
             if not include_archived:
@@ -1308,6 +1595,8 @@ class ChatTable:
         Uses PostgreSQL's ON CONFLICT for better performance, falls back to manual upsert for other DBs.
         """
         with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
             dialect_name = db.bind.dialect.name
             
             if dialect_name == "postgresql":
@@ -1336,6 +1625,9 @@ class ChatTable:
                     
                     result = db.execute(upsert_query, chat_data).fetchone()
                     db.commit()
+                    
+                    # Invalidate cache for this user
+                    self._invalidate_cache_for_user(user_id)
                     
                     if result:
                         return ChatModel.model_validate({
@@ -1374,6 +1666,10 @@ class ChatTable:
                 db.add(result)
                 db.commit()
                 db.refresh(result)
+                
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
+                
                 return ChatModel.model_validate(result) if result else None
 
     def bulk_update_chats(self, updates: list[dict]) -> int:
@@ -1386,8 +1682,11 @@ class ChatTable:
             return 0
             
         with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
             dialect_name = db.bind.dialect.name
             updated_count = 0
+            affected_users = set()
             
             if dialect_name == "postgresql":
                 # Use PostgreSQL's efficient bulk update
@@ -1396,6 +1695,11 @@ class ChatTable:
                         if "id" not in update:
                             continue
                             
+                        # Track affected user for cache invalidation
+                        chat = db.get(Chat, update["id"])
+                        if chat:
+                            affected_users.add(chat.user_id)
+                        
                         update_query = text("""
                             UPDATE chat 
                             SET title = COALESCE(:title, title),
@@ -1424,9 +1728,18 @@ class ChatTable:
                 # Fallback for other databases
                 for update in updates:
                     if "id" in update and "chat" in update:
+                        # Track affected user
+                        chat = self.get_chat_by_id(update["id"])
+                        if chat:
+                            affected_users.add(chat.user_id)
+                            
                         result = self.update_chat_by_id(update["id"], update["chat"])
                         if result:
                             updated_count += 1
+            
+            # Invalidate cache for all affected users
+            for user_id in affected_users:
+                self._invalidate_cache_for_user(user_id)
                             
             return updated_count
 
@@ -1435,10 +1748,15 @@ class ChatTable:
         with get_db() as db:
             stats = {
                 "query_stats": QueryStats.get_stats(),
+                "cache_stats": {
+                    "size": _cache.size(),
+                    "cache_info": "In-memory cache with TTL support"
+                },
                 "database_info": {
                     "dialect": db.bind.dialect.name,
                     "jsonb_enabled": is_using_jsonb(db) if db.bind.dialect.name == "postgresql" else False,
                     "use_jsonb_env": USE_JSONB,
+                    "optimizations_applied": self._connection_optimized
                 },
                 "table_stats": {}
             }
@@ -1485,7 +1803,7 @@ class ChatTable:
                     index_results = db.execute(index_stats_query).fetchall()
                     stats["index_usage"] = [
                         {
-                            "index_name": row.index_name,
+                            "index_name": row.indexname,
                             "tuples_read": row.tuples_read,
                             "tuples_fetched": row.tuples_fetched,
                             "scans": row.scans
@@ -1526,6 +1844,15 @@ class ChatTable:
                         results["actions"].append(f"Recommend VACUUM: {vacuum_stats.dead_tuple_pct:.1f}% dead tuples")
                     
                     db.commit()
+                
+                elif db.bind.dialect.name == "sqlite":
+                    # SQLite optimizations
+                    db.execute(text("PRAGMA optimize;"))
+                    results["actions"].append("Optimized SQLite database")
+                    
+                    # Clear cache for all users to ensure fresh data
+                    _cache.clear()
+                    results["actions"].append("Cleared application cache")
                     
             except Exception as e:
                 results["errors"].append(f"Optimization error: {e}")
@@ -1548,9 +1875,17 @@ class ChatTable:
                     "use_jsonb_env": USE_JSONB,
                     "jsonb_available": JSONB_AVAILABLE,
                     "detected_jsonb": False,
-                    "column_types": {}
+                    "column_types": {},
+                    "cache_enabled": True,
+                    "cache_size": _cache.size(),
+                    "optimizations_applied": self._connection_optimized
                 }
             }
+            
+            if db.bind.dialect.name not in ["postgresql", "sqlite"]:
+                report["status"] = "error"
+                report["errors"].append(f"Unsupported database: {db.bind.dialect.name}. Only PostgreSQL and SQLite are supported.")
+                return report
             
             if db.bind.dialect.name != "postgresql":
                 report["configuration"]["note"] = "Not using PostgreSQL - JSON/JSONB features not applicable"
@@ -1626,5 +1961,17 @@ class ChatTable:
             
             return report
 
+    def clear_cache(self):
+        """Clear the application cache."""
+        _cache.clear()
+        log.info("Application cache cleared")
 
-Chats = ChatTable()
+    def get_cache_stats(self) -> dict:
+        """Get cache statistics."""
+        return {
+            "size": _cache.size(),
+            "query_stats": QueryStats.get_stats()
+        }
+
+
+Chats = ChatTable() 
