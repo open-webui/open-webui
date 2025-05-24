@@ -8,6 +8,7 @@
 	import CodeInterpreterIcon from '$lib/components/icons/CodeInterpreterIcon.svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
     import RenameIcon from '$lib/components/icons/RenameIcon.svelte';
+	import { mobile } from '$lib/stores';
     
     
     const dispatch = createEventDispatcher();
@@ -108,7 +109,13 @@
 					}}
 				>
 					<button
-						on:click={() => (showDropdown = false)}
+						on:click={() => {
+							if($mobile) {
+								showSubmenu = true;
+							}else{
+								showDropdown = false;
+							}
+						}}
 						class="w-full flex justify-between gap-2 items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
 					>	<div class="flex items-center gap-2">
 							<PermissionIcon />
