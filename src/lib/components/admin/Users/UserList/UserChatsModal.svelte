@@ -7,7 +7,7 @@
 	const dispatch = createEventDispatcher();
 	dayjs.extend(localizedFormat);
 
-	import { getChatListByUserId, deleteChatById, getArchivedChatList } from '$lib/apis/chats';
+	import { getChatListByUserId, deleteChatById } from '$lib/apis/chats';
 
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -22,34 +22,51 @@
 	let chats = null;
 	let showDeleteConfirmDialog = false;
 	let chatToDelete = null;
+	let searchValue = '';
+	let sortKey = 'updated_at';
+	let sortOrder = 'desc';
 
-	const deleteChatHandler = async (chatId) => {
-		const res = await deleteChatById(localStorage.token, chatId).catch((error) => {
-			toast.error(`${error}`);
-		});
-
-		chats = await getChatListByUserId(localStorage.token, user.id);
-	};
-
-	$: if (show) {
-		(async () => {
-			if (user.id) {
-				chats = await getChatListByUserId(localStorage.token, user.id);
-			}
-		})();
-	} else {
-		chats = null;
-	}
-
-	let sortKey = 'updated_at'; // default sort key
-	let sortOrder = 'desc'; // default sort order
-	function setSortKey(key) {
+	function setSortKey(key: 'title' | 'updated_at') {
 		if (sortKey === key) {
 			sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
 		} else {
 			sortKey = key;
-			sortOrder = 'asc';
+			sortOrder = key === 'updated_at' ? 'desc' : 'asc';
 		}
+	}
+
+	const fetchUserChats = async (userId) => {
+		try {
+			chats = await getChatListByUserId(localStorage.token, userId);
+		} catch (error) {
+			toast.error(`${error}`);
+			chats = [];
+		}
+	};
+
+	const resetModalState = () => {
+		chats = null;
+		searchValue = '';
+		sortKey = 'updated_at';
+		sortOrder = 'desc';
+		chatToDelete = null;
+	};
+
+	const deleteChatHandler = async (chatId) => {
+		showDeleteConfirmDialog = false;
+
+		await deleteChatById(localStorage.token, chatId).catch((error) => {
+			toast.error(`${error}`);
+		});
+
+		if (show && user?.id) {
+			fetchUserChats(user.id);
+		}
+	};
+
+	$: if (show && user?.id && chats === null) {
+		fetchUserChats(user.id);
+	} else if (!show) {
 	}
 </script>
 
@@ -58,15 +75,21 @@
 	on:confirm={() => {
 		if (chatToDelete) {
 			deleteChatHandler(chatToDelete);
-			chatToDelete = null;
 		}
+	}}
+	on:cancel={() => {
+		chatToDelete = null;
 	}}
 />
 
 <Modal size="lg" bind:show>
 	<div class=" flex justify-between dark:text-gray-300 px-5 pt-4">
 		<div class=" text-lg font-medium self-center capitalize">
-			{$i18n.t("{{user}}'s Chats", { user: user.name })}
+			{#if user}
+				{$i18n.t("{{user}}'s Chats", { user: user.name })}
+			{:else}
+				{$i18n.t('User Chats')}
+			{/if}
 		</div>
 		<button
 			class="self-center"
@@ -87,10 +110,43 @@
 		</button>
 	</div>
 
-	<div class="flex flex-col md:flex-row w-full px-5 pt-2 pb-4 md:space-x-4 dark:text-gray-200">
+	<div class="flex flex-col w-full px-5 pt-2 pb-4 dark:text-gray-200">
+		<div class=" flex w-full mt-2 space-x-2">
+			<div class="flex flex-1">
+				<div class=" self-center ml-1 mr-3">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						class="w-4 h-4"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</div>
+				<input
+					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+					bind:value={searchValue}
+					placeholder={$i18n.t('Search Chats')}
+				/>
+			</div>
+		</div>
+		<hr class="border-gray-100 dark:border-gray-850 my-2" />
+
 		<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
-			{#if chats}
-				{#if chats.length > 0}
+			{#if chats === null}
+				<Spinner />
+			{:else if chats.length > 0}
+				{@const filteredChats = chats.filter(
+					(chat) =>
+						searchValue === '' ||
+						(chat.title ?? '').toLowerCase().includes(searchValue.toLowerCase())
+				)}
+
+				{#if filteredChats.length > 0}
 					<div class="text-left text-sm w-full mb-4 max-h-[22rem] overflow-y-scroll">
 						<div class="relative overflow-x-auto">
 							<table class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto">
@@ -126,13 +182,24 @@
 									</tr>
 								</thead>
 								<tbody>
-									{#each chats.sort((a, b) => {
-										if (a[sortKey] < b[sortKey]) return sortOrder === 'asc' ? -1 : 1;
-										if (a[sortKey] > b[sortKey]) return sortOrder === 'asc' ? 1 : -1;
-										return 0;
+									{#each filteredChats.sort((a, b) => {
+										const aValue = a[sortKey];
+										const bValue = b[sortKey];
+
+										if (aValue == null && bValue == null) return 0;
+										if (aValue == null) return sortOrder === 'asc' ? -1 : 1;
+										if (bValue == null) return sortOrder === 'asc' ? 1 : -1;
+
+										if (typeof aValue === 'string' && typeof bValue === 'string') {
+											return sortOrder === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+										} else {
+											if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+											if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+											return 0;
+										}
 									}) as chat, idx}
 										<tr
-											class="bg-transparent {idx !== chats.length - 1 &&
+											class="bg-transparent {idx !== filteredChats.length - 1 &&
 												'border-b'} dark:bg-gray-900 dark:border-gray-850 text-xs"
 										>
 											<td class="px-3 py-1">
@@ -154,7 +221,7 @@
 													<Tooltip content={$i18n.t('Delete Chat')}>
 														<button
 															class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
-															on:click={async () => {
+															on:click={() => {
 																chatToDelete = chat.id;
 																showDeleteConfirmDialog = true;
 															}}
@@ -182,20 +249,17 @@
 								</tbody>
 							</table>
 						</div>
-						<!-- {#each chats as chat}
-							<div>
-								{JSON.stringify(chat)}
-							</div>
-						{/each} -->
 					</div>
 				{:else}
 					<div class="text-left text-sm w-full mb-8">
-						{user.name}
-						{$i18n.t('has no conversations.')}
+						{$i18n.t('No chats found matching your search.')}
 					</div>
 				{/if}
 			{:else}
-				<Spinner />
+				<div class="text-left text-sm w-full mb-8">
+					{user?.name ?? 'User'}
+					{$i18n.t('has no conversations.')}
+				</div>
 			{/if}
 		</div>
 	</div>
