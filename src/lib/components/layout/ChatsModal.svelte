@@ -113,7 +113,9 @@
 					<div class="w-full">
 						<div class="text-left text-sm w-full mb-3 max-h-[22rem] overflow-y-scroll">
 							{#if chatList.length === 0}
-								<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 min-h-20">
+								<div
+									class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 min-h-20 w-full h-full flex justify-center items-center"
+								>
 									{$i18n.t('No results found')}
 								</div>
 							{/if}
