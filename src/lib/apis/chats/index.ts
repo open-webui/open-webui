@@ -145,10 +145,16 @@ export const getChatListByUserId = async (token: string = '', userId: string) =>
 	}));
 };
 
-export const getArchivedChatList = async (token: string = '') => {
+export const getArchivedChatList = async (token: string = '', page: number = 1, query?: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/archived`, {
+	const searchParams = new URLSearchParams();
+	searchParams.append('page', `${page}`);
+	if (query) {
+		searchParams.append('query', query);
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/archived?${searchParams.toString()}`, {
 		method: 'GET',
 		headers: {
 			Accept: 'application/json',

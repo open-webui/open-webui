@@ -267,9 +267,29 @@ async def get_all_user_chats_in_db(user=Depends(get_admin_user)):
 
 @router.get("/archived", response_model=list[ChatTitleIdResponse])
 async def get_archived_session_user_chat_list(
-    user=Depends(get_verified_user), skip: int = 0, limit: int = 50
+    page: Optional[int] = None,
+    query: Optional[str] = None,
+    user=Depends(get_verified_user),
 ):
-    return Chats.get_archived_chat_list_by_user_id(user.id, skip, limit)
+    if page is None:
+        page = 1
+
+    limit = 60
+    skip = (page - 1) * limit
+
+    chat_list = [
+        ChatTitleIdResponse(**chat.model_dump())
+        for chat in Chats.get_archived_chat_list_by_user_id(
+            user.id,
+            {
+                "query": query if query else None,
+            },
+            skip=skip,
+            limit=limit,
+        )
+    ]
+
+    return chat_list
 
 
 ############################

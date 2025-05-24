@@ -377,16 +377,29 @@ class ChatTable:
             return False
 
     def get_archived_chat_list_by_user_id(
-        self, user_id: str, skip: int = 0, limit: int = 50
+        self,
+        user_id: str,
+        filter: Optional[dict] = None,
+        skip: int = 0,
+        limit: int = 50,
     ) -> list[ChatModel]:
+
         with get_db() as db:
-            all_chats = (
-                db.query(Chat)
-                .filter_by(user_id=user_id, archived=True)
-                .order_by(Chat.updated_at.desc())
-                # .limit(limit).offset(skip)
-                .all()
-            )
+            query = db.query(Chat).filter_by(user_id=user_id, archived=True)
+
+            if filter:
+                query_key = filter.get("query")
+                if query_key:
+                    query = query.filter(Chat.title.ilike(f"%{query_key}%"))
+
+            query = query.order_by(Chat.updated_at.desc())
+
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+
+            all_chats = query.all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     def get_chat_list_by_user_id(

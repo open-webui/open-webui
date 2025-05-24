@@ -43,7 +43,7 @@
 	import { createNewFolder, getFolders, updateFolderParentIdById } from '$lib/apis/folders';
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
-	import ArchivedChatsModal from './Sidebar/ArchivedChatsModal.svelte';
+	import ArchivedChatsModal from './ArchivedChatsModal.svelte';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -395,7 +395,7 @@
 
 <ArchivedChatsModal
 	bind:show={$showArchivedChats}
-	on:change={async () => {
+	onUpdate={async () => {
 		await initChatList();
 	}}
 />
