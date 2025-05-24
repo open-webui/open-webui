@@ -105,6 +105,7 @@
 	bind:direction
 	title={$i18n.t("{{user}}'s Chats", { user: user.name })}
 	emptyPlaceholder={$i18n.t('No chats found for this user.')}
+	shareUrl={true}
 	{chatList}
 	{allChatsLoaded}
 	{chatListLoading}

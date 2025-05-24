@@ -25,6 +25,7 @@
 
 	export let title = 'Chats';
 	export let emptyPlaceholder = '';
+	export let shareUrl = false;
 
 	export let query = '';
 
@@ -229,7 +230,11 @@
 									class=" w-full flex justify-between items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850"
 									draggable="false"
 								>
-									<a class=" basis-3/5" href="/c/{chat.id}" on:click={() => (show = false)}>
+									<a
+										class=" basis-3/5"
+										href={shareUrl ? `/s/${chat.id}` : `/c/${chat.id}`}
+										on:click={() => (show = false)}
+									>
 										<div class="text-ellipsis line-clamp-1 w-full">
 											{chat?.title}
 										</div>
