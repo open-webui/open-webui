@@ -39,8 +39,6 @@
 	}
 
 	const searchHandler = async () => {
-		console.log('search', query);
-
 		if (searchDebounceTimeout) {
 			clearTimeout(searchDebounceTimeout);
 		}
