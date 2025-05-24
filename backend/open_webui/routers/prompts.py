@@ -25,12 +25,7 @@ async def get_prompts(user=Depends(get_verified_user)):
         all_prompts = Prompts.get_prompts()
         filtered_prompts = []
         for prompt in all_prompts:
-            # Check if the prompt is private and belongs to another user
-            is_private_other_user = (
-                prompt.access_control == {} and prompt.user_id != user.id
-            )
-
-            if not is_private_other_user and (
+            if (
                 prompt.user_id == user.id
                 or prompt.access_control is None
                 or has_access(user.id, "read", prompt.access_control)
@@ -51,12 +46,7 @@ async def get_prompt_list(user=Depends(get_verified_user)):
         all_prompts = Prompts.get_prompts()
         filtered_prompts = []
         for prompt in all_prompts:
-            # Check if the prompt is private and belongs to another user
-            is_private_other_user = (
-                prompt.access_control == {} and prompt.user_id != user.id
-            )
-
-            if not is_private_other_user and (
+            if (
                 prompt.user_id == user.id
                 or prompt.access_control is None
                 or has_access(user.id, "write", prompt.access_control)
