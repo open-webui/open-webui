@@ -2169,48 +2169,5 @@ class ChatTable:
 
 Chats = ChatTable()
 
-# EMERGENCY SAFETY WRAPPER: Prevent None iteration errors
-class ChatTableSafetyWrapper:
-    def __init__(self, chat_table):
-        self._chat_table = chat_table
-    
-    def __getattr__(self, name):
-        attr = getattr(self._chat_table, name)
-        # Log ALL attribute access to find what the middleware is actually using
-        log.info(f"🔍 ATTRIBUTE ACCESS: {name} -> {type(attr)}")
-        if callable(attr):
-            def safe_wrapper(*args, **kwargs):
-                # Log ALL method calls to find the real culprit
-                log.info(f"🛡️  SAFETY WRAPPER: Calling {name} with args={args[:2] if args else []} kwargs={kwargs}")
-                try:
-                    result = attr(*args, **kwargs)
-                    # Special handling for methods that middleware might iterate over
-                    if name in ['get_messages_by_chat_id', 'get_message_list_by_chat_id'] and result is None:
-                        log.error(f"🚨 CRITICAL: {name} returned None! Returning empty dict/list for safety")
-                        if 'list' in name:
-                            return []
-                        else:
-                            return {}
-                    # Log return types for ALL methods to help debugging
-                    if result is None:
-                        log.warning(f"⚠️  SAFETY WRAPPER: {name} returned None")
-                    else:
-                        log.info(f"✅ SAFETY WRAPPER: {name} returned {type(result)}")
-                    return result
-                except Exception as e:
-                    log.error(f"❌ SAFETY WRAPPER: {name} failed: {e}")
-                    # Return safe defaults based on method name
-                    if 'list' in name or 'messages' in name:
-                        return [] if 'list' in name else {}
-                    return None
-            return safe_wrapper
-        return attr
-
-# Replace the global Chats object with safety wrapper
-Chats = ChatTableSafetyWrapper(Chats)
-
-# Log that the safety wrapper is active
-log.info("🛡️  SAFETY WRAPPER ACTIVATED: All Chats method calls will be logged and protected")
-
-# Also expose the original for debugging if needed
-_original_chats = Chats._chat_table
+# Performance and safety enhancements applied to prevent None iteration errors
+# All core fixes have been moved to utils/misc.py and utils/middleware.py
