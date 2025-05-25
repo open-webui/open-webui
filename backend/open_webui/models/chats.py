@@ -950,18 +950,43 @@ class ChatTable:
 
     @performance_monitor
     def get_archived_chat_list_by_user_id(
-        self, user_id: str, skip: int = 0, limit: int = 50
+        self, user_id: str, skip: int = 0, limit: int = 50, filter: Optional[dict] = None
     ) -> list[ChatModel]:
         with get_db() as db:
             self._ensure_connection_optimized(db)
             
-            all_chats = (
-                db.query(Chat)
-                .filter_by(user_id=user_id, archived=True)
-                .order_by(Chat.updated_at.desc())
-                # .limit(limit).offset(skip)
-                .all()
-            )
+            query = db.query(Chat).filter_by(user_id=user_id, archived=True)
+            
+            # Apply filtering if provided
+            if filter:
+                if filter.get("query"):
+                    search_text = filter["query"].lower()
+                    query = query.filter(Chat.title.ilike(f"%{search_text}%"))
+                
+                # Apply ordering
+                order_by = filter.get("order_by", "updated_at")
+                direction = filter.get("direction", "desc")
+                
+                if order_by == "created_at":
+                    if direction == "asc":
+                        query = query.order_by(Chat.created_at.asc())
+                    else:
+                        query = query.order_by(Chat.created_at.desc())
+                else:  # default to updated_at
+                    if direction == "asc":
+                        query = query.order_by(Chat.updated_at.asc())
+                    else:
+                        query = query.order_by(Chat.updated_at.desc())
+            else:
+                query = query.order_by(Chat.updated_at.desc())
+            
+            # Apply pagination
+            if skip:
+                query = query.offset(skip)
+            if limit:
+                query = query.limit(limit)
+            
+            all_chats = query.all()
             return [ChatModel.model_validate(chat) for chat in all_chats]
 
     @performance_monitor
@@ -971,6 +996,7 @@ class ChatTable:
         include_archived: bool = False,
         skip: int = 0,
         limit: int = 50,
+        filter: Optional[dict] = None,
     ) -> list[ChatModel]:
         with get_db() as db:
             self._ensure_connection_optimized(db)
@@ -979,7 +1005,28 @@ class ChatTable:
             if not include_archived:
                 query = query.filter_by(archived=False)
 
-            query = query.order_by(Chat.updated_at.desc())
+            # Apply filtering if provided
+            if filter:
+                if filter.get("query"):
+                    search_text = filter["query"].lower()
+                    query = query.filter(Chat.title.ilike(f"%{search_text}%"))
+                
+                # Apply ordering
+                order_by = filter.get("order_by", "updated_at")
+                direction = filter.get("direction", "desc")
+                
+                if order_by == "created_at":
+                    if direction == "asc":
+                        query = query.order_by(Chat.created_at.asc())
+                    else:
+                        query = query.order_by(Chat.created_at.desc())
+                else:  # default to updated_at
+                    if direction == "asc":
+                        query = query.order_by(Chat.updated_at.asc())
+                    else:
+                        query = query.order_by(Chat.updated_at.desc())
+            else:
+                query = query.order_by(Chat.updated_at.desc())
 
             if skip:
                 query = query.offset(skip)
@@ -1165,6 +1212,11 @@ class ChatTable:
         ]
 
         search_text = " ".join(search_text_words)
+        
+        if tag_ids:
+            log.info(f"🏷️  TAG FILTERS: {tag_ids}")
+        if search_text:
+            log.info(f"📝 TEXT SEARCH: '{search_text}'")
 
         with get_db() as db:
             self._ensure_connection_optimized(db)
@@ -1343,6 +1395,7 @@ class ChatTable:
                             )
                         )
             else:
+                log.error(f"❌ UNSUPPORTED DATABASE: {dialect_name}")
                 raise NotImplementedError(
                     f"Unsupported dialect: {db.bind.dialect.name}"
                 )
@@ -1689,9 +1742,6 @@ class ChatTable:
             if not include_archived:
                 query = query.filter(Chat.archived == False)
 
-            query = query.order_by(Chat.updated_at.desc())
-
-            # Check if the database dialect is either 'sqlite' or 'postgresql'
             dialect_name = db.bind.dialect.name
             
             if dialect_name == "postgresql" and use_full_text_search and search_text:
@@ -1711,18 +1761,43 @@ class ChatTable:
                             )
                         """).params(search_text=search_text)
                     )
+                else:
+                    # JSON with full-text search
+                    query = query.filter(
+                        text("""
+                            (to_tsvector('english', Chat.title) @@ plainto_tsquery('english', :search_text))
+                            OR 
+                            EXISTS (
+                                SELECT 1
+                                FROM json_array_elements(Chat.chat->'history'->'messages') AS message
+                                WHERE to_tsvector('english', message->>'content') @@ plainto_tsquery('english', :search_text)
+                            )
+                        """).params(search_text=search_text)
+                    )
 
                 # Handle tag filtering for PostgreSQL
                 if "none" in tag_ids:
-                    query = query.filter(text("NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(Chat.meta->'tags') AS tag)"))
+                    if is_using_jsonb(db):
+                        query = query.filter(text("NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(Chat.meta->'tags') AS tag)"))
+                    else:
+                        query = query.filter(text("NOT EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') AS tag)"))
                 elif tag_ids:
-                    query = query.filter(
-                        and_(*[
-                            text("Chat.meta->'tags' ? :tag_id_{idx}".format(idx=idx))
-                            .params(**{f"tag_id_{idx}": tag_id})
-                            for idx, tag_id in enumerate(tag_ids)
-                        ])
-                    )
+                    if is_using_jsonb(db):
+                        query = query.filter(
+                            and_(*[
+                                text("Chat.meta->'tags' ? :tag_id_{idx}".format(idx=idx))
+                                .params(**{f"tag_id_{idx}": tag_id})
+                                for idx, tag_id in enumerate(tag_ids)
+                            ])
+                        )
+                    else:
+                        query = query.filter(
+                            and_(*[
+                                text("EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id_{idx})".format(idx=idx))
+                                .params(**{f"tag_id_{idx}": tag_id})
+                                for idx, tag_id in enumerate(tag_ids)
+                            ])
+                        )
             else:
                 # Fallback to original search method
                 return self.get_chats_by_user_id_and_search_text(
