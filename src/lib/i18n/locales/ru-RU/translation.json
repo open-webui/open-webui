@@ -751,7 +751,7 @@
 	"Made by Open WebUI Community": "Сделано сообществом OpenWebUI",
 	"Make sure to enclose them with": "Убедитесь, что они заключены в",
 	"Make sure to export a workflow.json file as API format from ComfyUI.": "Убедитесь, что экспортируете файл workflow.json в формате API из ComfyUI.",
-	"Manage": "Управлять",
+	"Manage": "Управление",
 	"Manage Direct Connections": "Управление прямыми подключениями",
 	"Manage Models": "Управление моделями",
 	"Manage Ollama": "Управление Ollama",
