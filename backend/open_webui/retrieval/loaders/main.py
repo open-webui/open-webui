@@ -27,6 +27,14 @@ from open_webui.retrieval.loaders.mistral import MistralLoader
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
+# Import unstructured for default document processing on all docs
+try:
+    from unstructured.partition.auto import partition
+    UNSTRUCTURED_AVAILABLE = True
+except ImportError:
+    UNSTRUCTURED_AVAILABLE = False
+    partition = None
+
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -189,6 +197,137 @@ class DoclingLoader:
             raise Exception(f"Error calling Docling: {error_msg}")
 
 
+class UnstructuredLoader:
+    """
+    Unstructured.io loader for comprehensive document processing.
+    This is the DEFAULT loader when no specific engine is selected.
+    """
+    def __init__(self, file_path, extract_images=None, chunk_size=1000, chunk_overlap=100):
+        self.file_path = file_path
+        self.extract_images = extract_images
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
+        self.nltk_ready = self._ensure_nltk_data()
+
+    def _ensure_nltk_data(self):
+        """Ensure required NLTK data is available for Unstructured.io"""
+        try:
+            import nltk
+            # Download required NLTK data if not already present
+            nltk.download('punkt_tab', quiet=True)
+            nltk.download('averaged_perceptron_tagger_eng', quiet=True)
+            log.debug("NLTK data ensured for Unstructured.io")
+            return True
+        except Exception as e:
+            log.warning(f"Could not download NLTK data during initialization: {e}")
+            return False
+
+    def load(self) -> list[Document]:
+        if not UNSTRUCTURED_AVAILABLE:
+            raise Exception(
+                "Unstructured library not available. Install with: pip install unstructured[all-docs]"
+            )
+        
+        try:
+            # Retry NLTK data download if it failed during initialization
+            if not self.nltk_ready:
+                log.info("Retrying NLTK data download before processing...")
+                self.nltk_ready = self._ensure_nltk_data()
+            
+            # Use unstructured.io's auto partition with minimal parameters to avoid conflicts
+            elements = partition(filename=self.file_path)
+            
+            if not elements:
+                log.warning("No elements extracted from document")
+                return [Document(page_content="No content extracted", metadata={"source": self.file_path})]
+            
+                                    # Convert elements to documents with intelligent chunking
+            docs = []
+            current_chunk = ""
+            current_metadata = None
+            # Use configurable minimum chunk size (10% of target chunk size, minimum 50)
+            min_chunk_size = max(50, self.chunk_size // 10)
+            
+            for i, element in enumerate(elements):
+                # Get text content
+                text = str(element).strip()
+                if not text:
+                    continue
+                
+                # Get element metadata
+                element_metadata = {
+                    "source": self.file_path,
+                    "element_id": i,
+                    "element_type": element.category if hasattr(element, 'category') else 'unknown',
+                }
+                
+                # Add page number if available and not None (Pinecone rejects null values)
+                if hasattr(element, 'metadata') and element.metadata:
+                    if hasattr(element.metadata, 'page_number') and element.metadata.page_number is not None:
+                        element_metadata["page"] = element.metadata.page_number
+                    if hasattr(element.metadata, 'filename') and element.metadata.filename is not None:
+                        element_metadata["filename"] = element.metadata.filename
+                
+                # If this is a title or header, and we have accumulated content, save the current chunk
+                if (element.category in ['Title', 'Header'] if hasattr(element, 'category') else False) and current_chunk:
+                    if len(current_chunk) >= min_chunk_size:
+                        docs.append(Document(page_content=current_chunk.strip(), metadata=current_metadata))
+                    current_chunk = ""
+                    current_metadata = None
+                
+                # Start new chunk or continue current one
+                if not current_chunk:
+                    current_chunk = text
+                    current_metadata = element_metadata.copy()
+                else:
+                    # Add to current chunk with appropriate spacing
+                    if current_chunk.endswith('.') or current_chunk.endswith(':') or current_chunk.endswith(';'):
+                        current_chunk += " " + text
+                    else:
+                        current_chunk += " " + text
+                    
+                    # Update metadata to reflect combined elements
+                    if current_metadata:
+                        current_metadata["element_type"] = "combined"
+                        # Keep the page number from the first element
+                
+                # If chunk is getting large, save it
+                if len(current_chunk) >= self.chunk_size:  # Use configurable max chunk size
+                    docs.append(Document(page_content=current_chunk.strip(), metadata=current_metadata))
+                    current_chunk = ""
+                    current_metadata = None
+            
+            # Don't forget the last chunk
+            if current_chunk and len(current_chunk) >= min_chunk_size:
+                docs.append(Document(page_content=current_chunk.strip(), metadata=current_metadata))
+            
+            # Clean metadata to ensure compatibility with vector databases (remove null values)
+            cleaned_docs = []
+            for doc in docs:
+                cleaned_metadata = {k: v for k, v in doc.metadata.items() if v is not None}
+                cleaned_docs.append(Document(page_content=doc.page_content, metadata=cleaned_metadata))
+            
+            log.info(f"Unstructured.io extracted {len(cleaned_docs)} document elements using chunk_size={self.chunk_size}, min_chunk_size={min_chunk_size}")
+            return cleaned_docs if cleaned_docs else [Document(page_content="No content extracted", metadata={"source": self.file_path})]
+            
+        except Exception as e:
+            error_msg = str(e)
+            log.error(f"Error processing document with Unstructured.io: {error_msg}")
+            
+            # Provide specific guidance for common NLTK errors
+            if "punkt_tab" in error_msg or "NLTK" in error_msg:
+                detailed_error = (
+                    f"Unstructured.io processing failed due to missing NLTK data: {error_msg}\n"
+                    "To fix this issue, run the following commands:\n"
+                    "1. pip install nltk\n"
+                    "2. python -c \"import nltk; nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger_eng')\""
+                )
+                raise Exception(detailed_error)
+            
+            # Re-raise the exception to force proper error handling
+            raise Exception(f"Unstructured.io processing failed: {error_msg}")
+
+
 class Loader:
     def __init__(self, engine: str = "", **kwargs):
         self.engine = engine
@@ -226,7 +365,7 @@ class Loader:
                 api_key=self.kwargs.get("EXTERNAL_DOCUMENT_LOADER_API_KEY"),
                 mime_type=file_content_type,
             )
-        elif self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
+        if self.engine == "tika" and self.kwargs.get("TIKA_SERVER_URL"):
             if self._is_text_file(file_ext, file_content_type):
                 loader = TextLoader(file_path, autodetect_encoding=True)
             else:
@@ -282,53 +421,17 @@ class Loader:
             loader = MistralLoader(
                 api_key=self.kwargs.get("MISTRAL_OCR_API_KEY"), file_path=file_path
             )
-        elif (
-            self.engine == "external"
-            and self.kwargs.get("MISTRAL_OCR_API_KEY") != ""
-            and file_ext
-            in ["pdf"]  # Mistral OCR currently only supports PDF and images
-        ):
-            loader = MistralLoader(
-                api_key=self.kwargs.get("MISTRAL_OCR_API_KEY"), file_path=file_path
-            )
+        # REMOVED: Duplicate Mistral OCR condition that was incorrectly triggering for external engine
+        # This was causing Mistral OCR to be used even when engine was set to "default"
         else:
-            if file_ext == "pdf":
-                loader = PyPDFLoader(
-                    file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
-                )
-            elif file_ext == "csv":
-                loader = CSVLoader(file_path, autodetect_encoding=True)
-            elif file_ext == "rst":
-                loader = UnstructuredRSTLoader(file_path, mode="elements")
-            elif file_ext == "xml":
-                loader = UnstructuredXMLLoader(file_path)
-            elif file_ext in ["htm", "html"]:
-                loader = BSHTMLLoader(file_path, open_encoding="unicode_escape")
-            elif file_ext == "md":
-                loader = TextLoader(file_path, autodetect_encoding=True)
-            elif file_content_type == "application/epub+zip":
-                loader = UnstructuredEPubLoader(file_path)
-            elif (
-                file_content_type
-                == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                or file_ext == "docx"
-            ):
-                loader = Docx2txtLoader(file_path)
-            elif file_content_type in [
-                "application/vnd.ms-excel",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            ] or file_ext in ["xls", "xlsx"]:
-                loader = UnstructuredExcelLoader(file_path)
-            elif file_content_type in [
-                "application/vnd.ms-powerpoint",
-                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            ] or file_ext in ["ppt", "pptx"]:
-                loader = UnstructuredPowerPointLoader(file_path)
-            elif file_ext == "msg":
-                loader = OutlookMessageLoader(file_path)
-            elif self._is_text_file(file_ext, file_content_type):
-                loader = TextLoader(file_path, autodetect_encoding=True)
-            else:
-                loader = TextLoader(file_path, autodetect_encoding=True)
+            # DEFAULT: Use Unstructured.io for comprehensive document processing
+            # This handles ALL file types with intelligent processing
+            log.info(f"Using DEFAULT Unstructured.io engine for file: {filename}")
+            loader = UnstructuredLoader(
+                file_path=file_path,
+                extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
+                chunk_size=self.kwargs.get("CHUNK_SIZE", 1000),
+                chunk_overlap=self.kwargs.get("CHUNK_OVERLAP", 100)
+            )
 
         return loader
