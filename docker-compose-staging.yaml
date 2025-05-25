@@ -16,7 +16,7 @@ services:
       - host.docker.internal:host-gateway
 
   beyond-the-loop:
-    image: ghcr.io/philszalay/beyond-the-loop:staging
+    image: ghcr.io/beyond-the-loop/beyond-the-loop:staging
     pull_policy: always
     container_name: beyond-the-loop
     env_file:

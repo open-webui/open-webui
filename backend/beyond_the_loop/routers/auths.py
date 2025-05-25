@@ -60,13 +60,14 @@ from ldap3 import Server, Connection, NONE, Tls
 from ldap3.utils.conv import escape_filter_chars
 
 from beyond_the_loop.routers import openai
+from beyond_the_loop.routers.payments import SUBSCRIPTION_PLANS
 
 router = APIRouter()
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
 
-INITIAL_CREDIT_BALANCE = 5
+INITIAL_CREDIT_BALANCE = 0
 
 def validate_password(password: str) -> bool:
     """
@@ -570,6 +571,46 @@ async def complete_registration(request: Request, response: Response, form_data:
                     user_id=None,
                     company_id=user.company_id
                 )
+
+        # Create Stripe customer for the new company
+        from beyond_the_loop.routers.payments import stripe
+        
+        # Create a Stripe customer for the company (without payment details)
+        stripe_customer = stripe.Customer.create(
+            email=user.email,
+            name=form_data.company_name,
+            metadata={
+                "company_id": new_company_id,
+                "user_id": user.id
+            }
+        )
+        
+        # Update company with Stripe customer ID
+        Companies.update_company_by_id(new_company_id, {
+            "stripe_customer_id": stripe_customer.id
+        })
+        
+        # Create the subscription with the price
+        stripe.Subscription.create(
+            customer=stripe_customer.id,
+            trial_period_days=7,  # 7-day trial
+            trial_settings={
+                "end_behavior": {
+                    "missing_payment_method": "cancel"  # Cancel when trial ends if no payment method
+                }
+            },
+            items=[
+                {
+                    "price": SUBSCRIPTION_PLANS["free"]["stripe_price_id"]
+                }
+            ],
+            metadata={
+                "company_id": new_company_id,
+                "is_trial": "true",
+                "plan_id": "free",
+                'user_email': user.email
+            }
+        )
 
     except Exception as err:
         raise HTTPException(500, detail=ERROR_MESSAGES.DEFAULT(err))

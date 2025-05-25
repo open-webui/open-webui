@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from fastapi import Depends, HTTPException, Request, Header, APIRouter
 import os
 from typing import Optional
+import time
 
 from beyond_the_loop.models.users import Users
 from beyond_the_loop.models.companies import Companies
@@ -21,25 +22,32 @@ FLEX_CREDITS_DEFAULT_PRICE_IN_CENTS = 2000 # Amount in cents (20 euro)
 
 # Subscription Plans
 SUBSCRIPTION_PLANS = {
+    "free": {
+        "name": "Free",
+        "price_monthly": 0,
+        "credits_per_month": 5,
+        "stripe_price_id": "price_1RSIfGBBwyxb4MZjoc5Oz8zJ",
+        "seats": 1
+    },
     "starter": {
         "name": "Starter",
         "price_monthly": 2500,  # 25€ in cents
         "credits_per_month": 5,
-        "stripe_price_id": "price_1RNq8xBBwyxb4MZjy1k0SneL",
+        "stripe_price_id": "price_1RNqhyBBwyxb4MZjNJU4b13w",
         "seats": 5
     },
     "team": {
         "name": "Business",
         "price_monthly": 14900,  # 149€ in cents
         "credits_per_month": 50,
-        "stripe_price_id": "price_1RNqAcBBwyxb4MZjAGivhdo7",
+        "stripe_price_id": "price_1RNqiZBBwyxb4MZj6bXjHenV",
         "seats": 25
     },
     "growth": {
         "name": "Growth",
         "price_monthly": 84900,  # 849€ in cents
         "credits_per_month": 150,
-        "stripe_price_id": "price_1RNqIXBBwyxb4MZjUY83qDes",
+        "stripe_price_id": "price_1RNqj4BBwyxb4MZjz4vVypid",
         "seats": 1000
     }
 }
@@ -73,7 +81,7 @@ class UpdateSubscriptionRequest(BaseModel):
 @router.post("/create-subscription-session/")
 async def create_subscription_session(request: CreateSubscriptionRequest, user=Depends(get_verified_user)):
     try:
-        if request.plan_id not in SUBSCRIPTION_PLANS:
+        if request.plan_id == "free" or request.plan_id not in SUBSCRIPTION_PLANS:
             raise HTTPException(status_code=400, detail=f"Invalid plan ID: {request.plan_id}")
 
         plan = SUBSCRIPTION_PLANS[request.plan_id]
@@ -85,16 +93,75 @@ async def create_subscription_session(request: CreateSubscriptionRequest, user=D
         company = Companies.get_company_by_id(user.company_id)
         stripe_customer_id = company.stripe_customer_id
 
-        # Get subscription from Stripe
-        subscriptions = stripe.Subscription.list(
+        if not stripe_customer_id:
+            raise HTTPException(status_code=400, detail="No Stripe customer found for this company")
+
+        # Check for trial subscriptions first
+        trial_subscriptions = stripe.Subscription.list(
             customer=stripe_customer_id,
-            status='active',
+            status='trialing',
             limit=1
         )
+        
+        # If there's an active trial subscription, handle it specially
+        if trial_subscriptions.data and len(trial_subscriptions.data) > 0:
+            # Create a Stripe Checkout session for upgrading from trial
+            session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[{
+                    'price': stripe_price_id,
+                    'quantity': 1,
+                }],
+                mode='subscription',
+                customer=stripe_customer_id,
+                success_url=os.getenv('BACKEND_ADDRESS') + "?modal=company-settings&tab=billing",
+                cancel_url=os.getenv('BACKEND_ADDRESS'),
+                subscription_data={
+                    'metadata': {
+                        'company_id': user.company_id,
+                        'plan_id': request.plan_id,
+                        'user_email': user.email,
+                        'upgraded_from_trial': 'true'
+                    }
+                }
+            )
+            
+            return {"url": session.url}
+        
+        # Check for existing active subscriptions
+        all_subscriptions = stripe.Subscription.list(
+            customer=stripe_customer_id,
+            limit=1
+        )
+        
+        if all_subscriptions.data:
+            current_subscription = all_subscriptions.data[0]
+            
+            # Check if subscription is active or just marked for cancellation
+            if current_subscription.status == 'active' or current_subscription.cancel_at_period_end:
+                # Update the subscription immediately with proration and un-cancel if needed
+                updated_subscription = stripe.Subscription.modify(
+                    current_subscription.id,
+                    items=[{
+                        'id': current_subscription['items']['data'][0].id,
+                        'price': stripe_price_id,
+                    }],
+                    proration_behavior='create_prorations',  # Apply prorated charges/credits
+                    cancel_at_period_end=False,  # Un-cancel the subscription if it was marked for cancellation
+                    metadata={
+                        'company_id': user.company_id,
+                        'plan_id': request.plan_id,
+                        'user_email': user.email
+                    },
+                )
 
-        if company.stripe_customer_id and subscriptions.data:
-            raise HTTPException(status_code=400, detail="Customer has already active subscription")
+                session = stripe.billing_portal.Session.create(
+                    customer=stripe_customer_id,
+                    return_url=os.getenv('BACKEND_ADDRESS') + "?modal=company-settings&tab=billing"
+                )
+                return {"url": session.url}
 
+        # If no active trial or subscription, create a new subscription
         print(f"Using price ID: {stripe_price_id} for plan: {request.plan_id}")
         
         # Create a Stripe Checkout session for subscription
@@ -105,8 +172,7 @@ async def create_subscription_session(request: CreateSubscriptionRequest, user=D
                 'quantity': 1,
             }],
             mode='subscription',
-            customer=stripe_customer_id if stripe_customer_id else None,
-            customer_email=None if stripe_customer_id else user.email,
+            customer=stripe_customer_id,
             success_url=os.getenv('BACKEND_ADDRESS') + "?modal=company-settings&tab=billing",
             cancel_url=os.getenv('BACKEND_ADDRESS'),
             subscription_data={
@@ -148,8 +214,12 @@ async def get_subscription(user=Depends(get_verified_user)):
 
         if company.stripe_customer_id is None:
             return {
-                'credits_remaining': company.credit_balance,
-                'plan': 'free'
+                "plan": "free",
+                "flex_credits_remaining": company.flex_credit_balance,
+                "credits_remaining": company.credit_balance,
+                "seats": 1,
+                "seats_taken": Users.count_users_by_company_id(user.company_id),
+                "auto_recharge": company.auto_recharge
             }
 
         # Get subscription from Stripe
@@ -159,7 +229,34 @@ async def get_subscription(user=Depends(get_verified_user)):
             limit=1
         )
 
-        if subscriptions.data is None:
+        # Check for trial subscriptions
+        trial_subscriptions = stripe.Subscription.list(
+            customer=company.stripe_customer_id,
+            status='trialing',
+            limit=1
+        )
+
+        # If there's an active trial subscription
+        if trial_subscriptions.data and len(trial_subscriptions.data) > 0 and not subscriptions.data:
+            trial_subscription = trial_subscriptions.data[0]
+            
+            # Calculate days remaining in trial
+            current_time = int(time.time())
+            trial_end = trial_subscription.trial_end
+            days_remaining = max(0, int((trial_end - current_time) / (24 * 60 * 60)))
+            
+            return {
+                'credits_remaining': company.credit_balance,
+                'flex_credits_remaining': company.flex_credit_balance,
+                'plan': 'free',
+                'is_trial': True,
+                "seats": 1,
+                "seats_taken": Users.count_users_by_company_id(user.company_id),
+                'trial_end': trial_end,
+                'days_remaining': days_remaining
+            }
+
+        if not subscriptions.data:
             return {
                 'credits_remaining': company.credit_balance,
                 'plan': 'free'
@@ -359,11 +456,13 @@ def handle_subscription_created(event_data):
         subscription_id = event_data.get("id")
         customer_id = event_data.get("customer")
         metadata = event_data.get("metadata", {})
+        status = event_data.get("status")
+        is_trial = status == "trialing" or metadata.get("is_trial") == "true"
         
         company_id = metadata.get("company_id")
         plan_id = metadata.get("plan_id")
         
-        if not company_id or not plan_id:
+        if not company_id:
             # Try to find company by customer ID
             if customer_id:
                 company = Companies.get_company_by_stripe_customer_id(customer_id)
@@ -374,19 +473,27 @@ def handle_subscription_created(event_data):
                 print(f"Subscription created: Company ID not found for subscription {subscription_id}")
                 return
         
-        # Get plan details
+        # Get company
+        company = Companies.get_company_by_id(company_id)
+        if not company:
+            print(f"Company not found with ID: {company_id}")
+            return
+            
+        # For trial subscriptions, set initial credit balance to 5
+        if is_trial:
+            Companies.update_company_by_id(company_id, {
+                "credit_balance": SUBSCRIPTION_PLANS[plan_id]["credits_per_month"],  # credits for trial as specified
+            })
+            print(f"Trial subscription created for company {company_id} with 5 initial credits")
+            return
+            
+        # For regular subscriptions, handle as before
         if plan_id not in SUBSCRIPTION_PLANS:
             print(f"Invalid plan ID: {plan_id} for subscription {subscription_id}")
             return
             
         plan = SUBSCRIPTION_PLANS[plan_id]
         
-        # Update company with new credit balance
-        company = Companies.get_company_by_id(company_id)
-        if not company:
-            print(f"Company not found with ID: {company_id}")
-            return
-            
         # Update company credit balance
         Companies.update_company_by_id(company_id, {
             "credit_balance": plan["credits_per_month"]
@@ -537,6 +644,41 @@ def handle_payment_intent_succeeded(data):
         print(f"Error handling payment_intent.succeeded: {e}")
 
 
+@router.get("/customer-billing-page/")
+async def customer_billing_page(user=Depends(get_verified_user)):
+    try:
+        company = Companies.get_company_by_id(user.company_id)
+        
+        if not company.stripe_customer_id:
+            raise HTTPException(status_code=400, detail="No stripe customer method found for company")
+        
+        # Create a billing portal session
+        session = stripe.billing_portal.Session.create(
+            customer=company.stripe_customer_id,
+            return_url=os.getenv('BACKEND_ADDRESS')
+        )
+        
+        return {"url": session.url}
+    except Exception as e:
+        print(f"Error creating billing portal: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create billing portal")
+
+
+class UpdateAutoRechargeRequest(BaseModel):
+    auto_recharge: bool
+
+@router.post("/update-auto-recharge/")
+async def update_auto_recharge(request: UpdateAutoRechargeRequest, user=Depends(get_verified_user)):
+    try:
+        result = Companies.update_auto_recharge(user.company_id, request.auto_recharge)
+        if result:
+            return {"message": f"Auto-recharge {'enabled' if request.auto_recharge else 'disabled'} successfully"}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to update auto-recharge setting")
+    except Exception as e:
+        print(f"Error updating auto-recharge: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update auto-recharge setting")
+
 @router.post("/recharge-flex-credits/")
 async def recharge_flex_credits(user=Depends(get_verified_user)):
     try:
@@ -587,39 +729,3 @@ async def recharge_flex_credits(user=Depends(get_verified_user)):
     except Exception as e:
         print(f"Error recharging credits: {e}")
         raise HTTPException(status_code=500, detail="Failed to recharge credits")
-
-
-@router.get("/customer-billing-page/")
-async def customer_billing_page(user=Depends(get_verified_user)):
-    try:
-        company = Companies.get_company_by_id(user.company_id)
-        
-        if not company.stripe_customer_id:
-            raise HTTPException(status_code=400, detail="No stripe customer method found for company")
-        
-        # Create a billing portal session
-        session = stripe.billing_portal.Session.create(
-            customer=company.stripe_customer_id,
-            return_url=os.getenv('BACKEND_ADDRESS')
-        )
-        
-        return {"url": session.url}
-    except Exception as e:
-        print(f"Error creating billing portal: {e}")
-        raise HTTPException(status_code=500, detail="Failed to create billing portal")
-
-
-class UpdateAutoRechargeRequest(BaseModel):
-    auto_recharge: bool
-
-@router.post("/update-auto-recharge/")
-async def update_auto_recharge(request: UpdateAutoRechargeRequest, user=Depends(get_verified_user)):
-    try:
-        result = Companies.update_auto_recharge(user.company_id, request.auto_recharge)
-        if result:
-            return {"message": f"Auto-recharge {'enabled' if request.auto_recharge else 'disabled'} successfully"}
-        else:
-            raise HTTPException(status_code=400, detail="Failed to update auto-recharge setting")
-    except Exception as e:
-        print(f"Error updating auto-recharge: {e}")
-        raise HTTPException(status_code=500, detail="Failed to update auto-recharge setting")

@@ -237,7 +237,7 @@ def load_speech_pipeline(request):
 @router.post("/speech")
 async def speech(request: Request, user=Depends(get_verified_user)):
     credit_service = CreditService()
-    credit_service.check_for_sufficient_balance(user)
+    await credit_service.check_for_subscription_and_sufficient_balance_and_seats(user)
 
     body = await request.body()
     name = hashlib.sha256(
@@ -557,7 +557,7 @@ async def transcription(
     log.info(f"file.content_type: {file.content_type}")
 
     credit_service = CreditService()
-    credit_service.check_for_sufficient_balance(user)
+    await credit_service.check_for_subscription_and_sufficient_balance_and_seats(user)
 
     if file.content_type not in ["audio/mpeg", "audio/wav", "audio/ogg", "audio/x-m4a"]:
         raise HTTPException(

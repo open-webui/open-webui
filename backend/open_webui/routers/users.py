@@ -41,6 +41,27 @@ async def invite_user(form_data: UserInviteForm, user=Depends(get_admin_user)):
     groups = []
     
     try:
+        # Get the active subscription to check seat limits
+        from beyond_the_loop.routers.payments import get_subscription
+        from beyond_the_loop.models.users import Users
+        
+        # Get subscription details
+        subscription_details = await get_subscription(user)
+        
+        # Get current seat count and limit
+        seats_limit = subscription_details.get("seats", 0)
+        seats_taken = subscription_details.get("seats_taken", 0)
+        
+        # Calculate how many seats are available
+        available_seats = max(0, seats_limit - seats_taken)
+        
+        # Check if there are enough seats for all invitees
+        if len(form_data.invitees) > available_seats:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Not enough seats available in your subscription. You have {available_seats} seats available but are trying to invite {len(form_data.invitees)} users. Please upgrade your plan or remove some users."
+            )
+        
         # Create new groups
         for group_name in form_data.group_names or []:
             try:
@@ -48,18 +69,27 @@ async def invite_user(form_data: UserInviteForm, user=Depends(get_admin_user)):
                 groups.append(group)
             except Exception as e:
                 log.error(f"Failed to create group {group_name}: {str(e)}")
-                return {"success": False, "message": f"Failed to create group {group_name}"}
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Failed to create group {group_name}"
+                )
         
         # Get existing groups
         for group_id in form_data.group_ids or []:
             try:
                 group = Groups.get_group_by_id(group_id)
                 if not group:
-                    return {"success": False, "message": f"Group with ID {group_id} not found"}
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Group with ID {group_id} not found"
+                    )
                 groups.append(group)
             except Exception as e:
                 log.error(f"Failed to get group with ID {group_id}: {str(e)}")
-                return {"success": False, "message": f"Failed to get group with ID {group_id}"}
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Failed to get group with ID {group_id}"
+                )
         
         # Invite users
         for invitee in form_data.invitees:
@@ -146,7 +176,10 @@ async def invite_user(form_data: UserInviteForm, user=Depends(get_admin_user)):
         
         # Determine overall success
         if not form_data.invitees:
-            return {"success": False, "message": "No invitees provided"}
+            raise HTTPException(
+                status_code=400,
+                detail="No invitees provided"
+            )
         
         if len(successful_invites) == len(form_data.invitees):
             return {"success": True, "message": "All users invited successfully"}
@@ -158,11 +191,17 @@ async def invite_user(form_data: UserInviteForm, user=Depends(get_admin_user)):
                 "failed_invites": failed_invites
             }
         else:
-            return {"success": False, "message": "Failed to invite any users", "failed_invites": failed_invites}
+            raise HTTPException(
+                status_code=400,
+                detail="Failed to invite any users"
+            )
             
     except Exception as e:
         log.error(f"Error in invite_user: {str(e)}")
-        return {"success": False, "message": f"An error occurred: {str(e)}"}
+        raise HTTPException(
+            status_code=400,
+            detail=f"An error occurred: {str(e)}"
+        )
 
 
 ############################
