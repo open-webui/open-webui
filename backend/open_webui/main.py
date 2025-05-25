@@ -45,6 +45,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 
+from starlette_compress import CompressMiddleware
+
 
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
@@ -965,6 +967,7 @@ class RedirectMiddleware(BaseHTTPMiddleware):
 # Add the middleware to the app
 app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(CompressMiddleware)
 
 
 @app.middleware("http")
