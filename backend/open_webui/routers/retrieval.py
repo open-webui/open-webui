@@ -29,6 +29,7 @@ import tiktoken
 
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSplitter
+from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_core.documents import Document
 
 from open_webui.models.files import FileModel, Files
@@ -990,6 +991,7 @@ def save_docs_to_vector_db(
                 chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
                 add_start_index=True,
             )
+            docs = text_splitter.split_documents(docs)
         elif request.app.state.config.TEXT_SPLITTER == "token":
             log.info(
                 f"Using token text splitter: {request.app.state.config.TIKTOKEN_ENCODING_NAME}"
@@ -1002,10 +1004,39 @@ def save_docs_to_vector_db(
                 chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
                 add_start_index=True,
             )
+            docs = text_splitter.split_documents(docs)
+        elif request.app.state.config.TEXT_SPLITTER == "markdown_header":
+            log.info("Using markdown header text splitter")
+            
+            # Define headers to split on - covering most common markdown header levels
+            headers_to_split_on = [
+                ("#", "Header 1"),
+                ("##", "Header 2"), 
+                ("###", "Header 3"),
+                ("####", "Header 4"),
+                ("#####", "Header 5"),
+                ("######", "Header 6"),
+            ]
+            
+            markdown_splitter = MarkdownHeaderTextSplitter(
+                headers_to_split_on=headers_to_split_on,
+                strip_headers=False,  # Keep headers in content for context
+            )
+            
+            md_split_docs = []
+            for doc in docs:
+                md_header_splits = markdown_splitter.split_text(doc.page_content)
+                
+                # Convert back to Document objects, preserving original metadata
+                for split in md_header_splits:
+                    md_split_docs.append(Document(
+                        page_content=split.page_content,
+                        metadata={**doc.metadata, **split.metadata}
+                    ))
+
+            docs = md_split_docs
         else:
             raise ValueError(ERROR_MESSAGES.DEFAULT("Invalid text splitter"))
-
-        docs = text_splitter.split_documents(docs)
 
     if len(docs) == 0:
         raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
