@@ -66,7 +66,7 @@ fpdf2==2.8.2
 pymdown-extensions==10.14.2
 docx2txt==0.8
 python-pptx==1.0.0
-unstructured==0.16.17
+unstructured==[all-docs]
 nltk==3.9.1
 Markdown==3.7
 pypandoc==1.15
