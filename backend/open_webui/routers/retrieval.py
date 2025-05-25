@@ -47,13 +47,8 @@ from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from open_webui.retrieval.loaders.main import Loader
 from open_webui.retrieval.loaders.youtube import YoutubeLoader
 
-# Add unstructured import for direct document processing
-try:
-    from unstructured.partition.auto import partition
-    UNSTRUCTURED_AVAILABLE = True
-except ImportError:
-    UNSTRUCTURED_AVAILABLE = False
-    partition = None
+# Note: Unstructured.io is now the DEFAULT document processing engine
+# It's imported and handled in the Loader class in retrieval/loaders/main.py
 
 # Web search engines
 from open_webui.retrieval.web.main import SearchResult
@@ -1760,78 +1755,65 @@ def process_file(
 
             text_content = " ".join([doc.page_content for doc in docs])
         else:
-            # Process the file and save the content - RESPECT USER'S ENGINE CHOICE
+                        # Process the file and save the content - RESPECT USER'S ENGINE CHOICE
             # Usage: /files/
             file_path = file.path
             if file_path:
                 file_path = Storage.get_file(file_path)
                 
-                # Respect user's choice of content extraction engine, default to unstructured
+                # Respect user's choice of content extraction engine
+                # When empty/default, use Unstructured.io as the DEFAULT engine
                 engine = request.app.state.config.CONTENT_EXTRACTION_ENGINE
+                
                 if not engine or engine.lower() in ["default", ""]:
-                    engine = "unstructured"
-                
-                print(f"REFACTORED: Processing file {file.filename} with {engine.upper()} engine (user choice: {request.app.state.config.CONTENT_EXTRACTION_ENGINE})")
-                
-                # Check if unstructured is available for unstructured engine
-                if engine == "unstructured" and not UNSTRUCTURED_AVAILABLE:
-                    print(f"WARNING: Unstructured library not available. Install with: pip install unstructured")
-                    print(f"FALLBACK: Using basic content extraction...")
-                    # Fallback to basic file content if unstructured not available
-                    raw_content = file.data.get("content", "")
-                    cleaned_content = clean_text_for_vector_db(raw_content)
-                    
-                    docs = [
-                        Document(
-                            page_content=cleaned_content,
-                            metadata={
-                                **file.meta,
-                                "name": file.filename,
-                                "created_by": file.user_id,
-                                "file_id": file.id,
-                                "source": file.filename,
-                            },
-                        )
-                    ]
+                    engine_display = "DEFAULT (Unstructured.io)"
+                    actual_engine = ""  # Empty string triggers Unstructured.io default
                 else:
-                    loader = Loader(
-                        engine=engine,  # USE USER'S SELECTED ENGINE
-                        EXTERNAL_DOCUMENT_LOADER_URL=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
-                        EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
-                        TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
-                        DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
-                        DOCLING_OCR_ENGINE=request.app.state.config.DOCLING_OCR_ENGINE,
-                        DOCLING_OCR_LANG=request.app.state.config.DOCLING_OCR_LANG,
-                        DOCLING_DO_PICTURE_DESCRIPTION=request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
-                        PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
-                        DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
-                        DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
-                        MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
+                    engine_display = engine.upper()
+                    actual_engine = engine
+                
+                print(f"REFACTORED: Processing file {file.filename} with {engine_display} engine")
+                print(f"  📋 User setting: '{request.app.state.config.CONTENT_EXTRACTION_ENGINE}'")
+                print(f"  ⚙️ Actual engine: '{actual_engine}' (empty = Unstructured.io default)")
+                
+                loader = Loader(
+                    engine=actual_engine,  # Pass empty string for Unstructured.io default
+                    EXTERNAL_DOCUMENT_LOADER_URL=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
+                    EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
+                    TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
+                    DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
+                    DOCLING_OCR_ENGINE=request.app.state.config.DOCLING_OCR_ENGINE,
+                    DOCLING_OCR_LANG=request.app.state.config.DOCLING_OCR_LANG,
+                    DOCLING_DO_PICTURE_DESCRIPTION=request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
+                    PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
+                    DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
+                    DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+                    MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
+                )
+                
+                print(f"REFACTORED: Loading file with {engine_display}...")
+                docs = loader.load(
+                    file.filename, file.meta.get("content_type"), file_path
+                )
+                
+                print(f"REFACTORED: Loaded {len(docs)} documents, applying comprehensive cleaning...")
+                
+                # Apply comprehensive cleaning to all extracted documents
+                docs = [
+                    Document(
+                        page_content=clean_text_for_vector_db(doc.page_content),
+                        metadata={
+                            **doc.metadata,
+                            "name": file.filename,
+                            "created_by": file.user_id,
+                            "file_id": file.id,
+                            "source": file.filename,
+                        },
                     )
-                    
-                    print(f"REFACTORED: Loading file with {engine} engine...")
-                    docs = loader.load(
-                        file.filename, file.meta.get("content_type"), file_path
-                    )
-                    
-                    print(f"REFACTORED: Loaded {len(docs)} documents, applying comprehensive cleaning...")
-                    
-                    # Apply comprehensive cleaning to all extracted documents
-                    docs = [
-                        Document(
-                            page_content=clean_text_for_vector_db(doc.page_content),
-                            metadata={
-                                **doc.metadata,
-                                "name": file.filename,
-                                "created_by": file.user_id,
-                                "file_id": file.id,
-                                "source": file.filename,
-                            },
-                        )
-                        for doc in docs
-                    ]
-                    
-                    print(f"REFACTORED: Document cleaning completed")
+                    for doc in docs
+                ]
+                
+                print(f"REFACTORED: Document cleaning completed")
             else:
                 # Fallback: clean existing file content
                 raw_content = file.data.get("content", "")
