@@ -1807,7 +1807,8 @@ def process_file(
                     Document(
                         page_content=clean_text_for_vector_db(doc.page_content),
                         metadata={
-                            **doc.metadata,
+                            # Clean metadata to remove null values (Pinecone compatibility)
+                            **{k: v for k, v in doc.metadata.items() if v is not None},
                             "name": file.filename,
                             "created_by": file.user_id,
                             "file_id": file.id,
@@ -1827,7 +1828,8 @@ def process_file(
                     Document(
                         page_content=cleaned_content,
                         metadata={
-                            **file.meta,
+                            # Clean metadata to remove null values (Pinecone compatibility)
+                            **{k: v for k, v in file.meta.items() if v is not None},
                             "name": file.filename,
                             "created_by": file.user_id,
                             "file_id": file.id,

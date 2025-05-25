@@ -261,11 +261,11 @@ class UnstructuredLoader:
                     "element_type": element.category if hasattr(element, 'category') else 'unknown',
                 }
                 
-                # Add page number if available
+                # Add page number if available and not None (Pinecone rejects null values)
                 if hasattr(element, 'metadata') and element.metadata:
-                    if hasattr(element.metadata, 'page_number'):
+                    if hasattr(element.metadata, 'page_number') and element.metadata.page_number is not None:
                         element_metadata["page"] = element.metadata.page_number
-                    if hasattr(element.metadata, 'filename'):
+                    if hasattr(element.metadata, 'filename') and element.metadata.filename is not None:
                         element_metadata["filename"] = element.metadata.filename
                 
                 # If this is a title or header, and we have accumulated content, save the current chunk
@@ -301,8 +301,14 @@ class UnstructuredLoader:
             if current_chunk and len(current_chunk) >= min_chunk_size:
                 docs.append(Document(page_content=current_chunk.strip(), metadata=current_metadata))
             
-            log.info(f"Unstructured.io extracted {len(docs)} document elements using chunk_size={self.chunk_size}, min_chunk_size={min_chunk_size}")
-            return docs if docs else [Document(page_content="No content extracted", metadata={"source": self.file_path})]
+            # Clean metadata to ensure compatibility with vector databases (remove null values)
+            cleaned_docs = []
+            for doc in docs:
+                cleaned_metadata = {k: v for k, v in doc.metadata.items() if v is not None}
+                cleaned_docs.append(Document(page_content=doc.page_content, metadata=cleaned_metadata))
+            
+            log.info(f"Unstructured.io extracted {len(cleaned_docs)} document elements using chunk_size={self.chunk_size}, min_chunk_size={min_chunk_size}")
+            return cleaned_docs if cleaned_docs else [Document(page_content="No content extracted", metadata={"source": self.file_path})]
             
         except Exception as e:
             error_msg = str(e)
