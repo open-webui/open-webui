@@ -214,14 +214,14 @@ class UnstructuredLoader:
         
         try:
             # Use unstructured.io's auto partition for comprehensive document processing
+            # Note: Some parameters may conflict with specific file type handlers, so we use basic options
             elements = partition(
                 filename=self.file_path,
-                # Enable various processing options
+                # Enable page breaks for better structure
                 include_page_breaks=True,
-                infer_table_structure=True,
-                # Extract images if requested
-                extract_images_in_pdf=bool(self.extract_images),
-                # Chunking strategy
+                # Extract images if requested (for PDFs)
+                extract_images_in_pdf=bool(self.extract_images) if self.extract_images else False,
+                # Use chunking strategy for better document organization
                 chunking_strategy="by_title",
                 max_characters=4000,
                 new_after_n_chars=3800,
