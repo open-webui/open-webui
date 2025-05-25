@@ -365,10 +365,10 @@ def create_gin_indexes_if_needed(db):
         return
     
     gin_indexes = [
-        ("idx_chat_meta_gin", "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_meta_gin ON chat USING GIN (meta)"),
-        ("idx_chat_chat_gin", "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_chat_gin ON chat USING GIN (chat)"),
-        ("idx_chat_meta_tags", "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_meta_tags ON chat USING GIN ((meta->'tags'))"),
-        ("idx_chat_messages", "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_chat_messages ON chat USING GIN ((chat->'history'->'messages'))"),
+        ("idx_chat_meta_gin", "CREATE INDEX IF NOT EXISTS idx_chat_meta_gin ON chat USING GIN (meta)"),
+        ("idx_chat_chat_gin", "CREATE INDEX IF NOT EXISTS idx_chat_chat_gin ON chat USING GIN (chat)"),
+        ("idx_chat_meta_tags", "CREATE INDEX IF NOT EXISTS idx_chat_meta_tags ON chat USING GIN ((meta->'tags'))"),
+        ("idx_chat_messages", "CREATE INDEX IF NOT EXISTS idx_chat_messages ON chat USING GIN ((chat->'history'->'messages'))"),
     ]
     
     successful_indexes = []
@@ -404,30 +404,30 @@ def create_composite_indexes_if_needed(db):
     log.info(f"🔍 COMPOSITE INDEXES: Starting creation for {dialect_name}")
     
     try:
-        # Use CONCURRENTLY only for PostgreSQL
-        concurrent = "CONCURRENTLY " if dialect_name == "postgresql" else ""
-        log.info(f"🔍 INDEX MODE: {'CONCURRENT' if concurrent else 'STANDARD'} creation")
+        # FIXED: Remove CONCURRENTLY for automatic creation since we're in a transaction
+        # CONCURRENTLY can only be used outside transaction blocks
+        log.info(f"🔍 INDEX MODE: STANDARD creation (transaction-safe)")
         
         composite_indexes = [
             # Enhanced common filtering patterns
-            f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_updated ON chat (user_id, updated_at DESC);",
-            f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_folder ON chat (user_id, folder_id);",
-            f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_created ON chat (user_id, created_at DESC);",
+            f"CREATE INDEX IF NOT EXISTS idx_chat_user_updated ON chat (user_id, updated_at DESC);",
+            f"CREATE INDEX IF NOT EXISTS idx_chat_user_folder ON chat (user_id, folder_id);",
+            f"CREATE INDEX IF NOT EXISTS idx_chat_user_created ON chat (user_id, created_at DESC);",
             # Share functionality
-            f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_share_id ON chat (share_id);",
+            f"CREATE INDEX IF NOT EXISTS idx_chat_share_id ON chat (share_id);",
             # Enhanced search patterns
-            f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_title_lower ON chat (user_id, LOWER(title));",
+            f"CREATE INDEX IF NOT EXISTS idx_chat_title_lower ON chat (user_id, LOWER(title));",
         ]
         
         # PostgreSQL-specific indexes with WHERE clauses and GIN
         if dialect_name == "postgresql":
             log.info("🚀 POSTGRESQL: Adding PostgreSQL-specific indexes...")
             pg_specific_indexes = [
-                f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_archived ON chat (user_id, archived) WHERE archived = false;",
-                f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_pinned ON chat (user_id, pinned) WHERE pinned = true;",
-                f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_title_search ON chat USING GIN (to_tsvector('english', title));",
+                f"CREATE INDEX IF NOT EXISTS idx_chat_user_archived ON chat (user_id, archived) WHERE archived = false;",
+                f"CREATE INDEX IF NOT EXISTS idx_chat_user_pinned ON chat (user_id, pinned) WHERE pinned = true;",
+                f"CREATE INDEX IF NOT EXISTS idx_chat_title_search ON chat USING GIN (to_tsvector('english', title));",
                 # Additional performance indexes
-                f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_folder_updated ON chat (user_id, folder_id, updated_at DESC) WHERE archived = false;",
+                f"CREATE INDEX IF NOT EXISTS idx_chat_user_folder_updated ON chat (user_id, folder_id, updated_at DESC) WHERE archived = false;",
             ]
             composite_indexes.extend(pg_specific_indexes)
             log.info(f"📊 POSTGRESQL: Total {len(pg_specific_indexes)} PostgreSQL-specific indexes added")
@@ -436,8 +436,8 @@ def create_composite_indexes_if_needed(db):
         elif dialect_name == "sqlite":
             log.info("🚀 SQLITE: Adding SQLite-specific indexes...")
             sqlite_indexes = [
-                f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_title_search ON chat (user_id, title COLLATE NOCASE);",
-                f"CREATE INDEX {concurrent}IF NOT EXISTS idx_chat_user_active ON chat (user_id, archived, updated_at DESC);",
+                f"CREATE INDEX IF NOT EXISTS idx_chat_user_title_search ON chat (user_id, title COLLATE NOCASE);",
+                f"CREATE INDEX IF NOT EXISTS idx_chat_user_active ON chat (user_id, archived, updated_at DESC);",
             ]
             composite_indexes.extend(sqlite_indexes)
             log.info(f"📊 SQLITE: Total {len(sqlite_indexes)} SQLite-specific indexes added")
