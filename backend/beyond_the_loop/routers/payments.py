@@ -37,7 +37,7 @@ SUBSCRIPTION_PLANS = {
         "seats": 5
     },
     "team": {
-        "name": "Business",
+        "name": "Team",
         "price_monthly": 14900,  # 149€ in cents
         "credits_per_month": 50,
         "stripe_price_id": "price_1RNqiZBBwyxb4MZj6bXjHenV",
@@ -99,35 +99,81 @@ async def create_subscription_session(request: CreateSubscriptionRequest, user=D
         # Create a new Stripe Checkout session for the new subscription
         print(f"Creating new subscription with price ID: {stripe_price_id} for plan: {request.plan_id}")
         
-        # Check for existing subscriptions to include in metadata
+        # Check for existing subscriptions
         existing_subscriptions = stripe.Subscription.list(
             customer=stripe_customer_id,
             status='all',
             limit=10
         )
         
-        # Collect IDs of existing subscriptions to cancel after payment
-        subscription_ids_to_cancel = [sub.id for sub in existing_subscriptions.data if sub.status in ['active', 'trialing']]
+        # Get current active subscription if any
+        current_subscription = next((sub for sub in existing_subscriptions.data if sub.status in ['active', 'trialing']), None)
+        current_plan_id = current_subscription.metadata.get('plan_id')
+        current_plan = SUBSCRIPTION_PLANS[current_plan_id]
+        new_plan = SUBSCRIPTION_PLANS[request.plan_id]
+
+        if current_plan["name"] == new_plan["name"]:
+            raise HTTPException(status_code=400, detail="You are already subscribed to this plan")
+
+        # Determine if this is an upgrade or downgrade
+        is_downgrade = False
+        if current_subscription:
+            if current_plan_id in SUBSCRIPTION_PLANS:
+                # If new plan price is less than current plan price, it's a downgrade
+                is_downgrade = new_plan["price_monthly"] < current_plan["price_monthly"]
         
-        session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
-            line_items=[{
-                'price': stripe_price_id,
-                'quantity': 1,
-            }],
-            mode='subscription',
-            customer=stripe_customer_id,
-            success_url=os.getenv('BACKEND_ADDRESS') + "?modal=company-settings&tab=billing",
-            cancel_url=os.getenv('BACKEND_ADDRESS'),
-            subscription_data={
-                'metadata': {
-                    'company_id': user.company_id,
-                    'plan_id': request.plan_id,
-                    'user_email': user.email,
-                    'subscriptions_to_cancel': ','.join(subscription_ids_to_cancel) if subscription_ids_to_cancel else ''
+        # For downgrades, we want to schedule the new subscription to start at the end of the current period
+        if is_downgrade and current_subscription:
+            # For downgrades, we'll create a checkout session with trial_end set to current period end
+            # This ensures the subscription is not active until the current subscription period ends
+            session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[{
+                    'price': stripe_price_id,
+                    'quantity': 1,
+                }],
+                mode='subscription',
+                customer=stripe_customer_id,
+                success_url=os.getenv('BACKEND_ADDRESS') + "?modal=company-settings&tab=billing",
+                cancel_url=os.getenv('BACKEND_ADDRESS'),
+                subscription_data={
+                    'trial_end': current_subscription.current_period_end,
+                    'metadata': {
+                        'company_id': user.company_id,
+                        'plan_id': request.plan_id,
+                        'user_email': user.email,
+                        'is_downgrade': 'true',
+                        'previous_subscription_id': current_subscription.id,
+                        'start_after_current_period': 'true',
+                        'current_period_end': str(current_subscription.current_period_end)
+                    }
                 }
-            }
-        )
+            )
+        else:
+            # For upgrades or new subscriptions, proceed as before
+            # Collect IDs of existing subscriptions to cancel after payment
+            subscription_ids_to_cancel = [sub.id for sub in existing_subscriptions.data if sub.status in ['active', 'trialing']]
+            
+            session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=[{
+                    'price': stripe_price_id,
+                    'quantity': 1,
+                }],
+                mode='subscription',
+                customer=stripe_customer_id,
+                success_url=os.getenv('BACKEND_ADDRESS') + "?modal=company-settings&tab=billing",
+                cancel_url=os.getenv('BACKEND_ADDRESS'),
+                subscription_data={
+                    'metadata': {
+                        'company_id': user.company_id,
+                        'plan_id': request.plan_id,
+                        'user_email': user.email,
+                        'is_downgrade': 'false',
+                        'subscriptions_to_cancel': ','.join(subscription_ids_to_cancel) if subscription_ids_to_cancel else ''
+                    }
+                }
+            )
         return {"url": session.url}
     except Exception as e:
         print(f"Error creating subscription session: {e}")
@@ -415,33 +461,61 @@ def handle_subscription_created(event_data):
             print("Missing plan_id or company_id in subscription metadata")
             return
             
-        # Check if there are subscriptions to cancel
-        subscriptions_to_cancel = metadata.get('subscriptions_to_cancel', '')
-
-        print(subscriptions_to_cancel)
-
-        if subscriptions_to_cancel:
-            subscription_ids = subscriptions_to_cancel.split(',')
-            for sub_id in subscription_ids:
-                if sub_id and sub_id != subscription['id']:  # Don't cancel the new subscription
+        # Check if this is a downgrade
+        is_downgrade = metadata.get('is_downgrade') == 'true'
+        previous_subscription_id = metadata.get('previous_subscription_id')
+        start_after_current_period = metadata.get('start_after_current_period') == 'true'
+        current_period_end = metadata.get('current_period_end')
+        
+        # For downgrades, we need to set the previous subscription to cancel at period end
+        # and schedule the new subscription to start after the current period ends
+        if is_downgrade and previous_subscription_id:
+            print(f"Downgrade detected. New subscription {subscription['id']} will start after previous subscription {previous_subscription_id} ends")
+            try:
+                # Update the previous subscription to cancel at period end
+                stripe.Subscription.modify(
+                    previous_subscription_id,
+                    cancel_at_period_end=True
+                )
+                print(f"Set previous subscription {previous_subscription_id} to cancel at period end")
+                
+                # If this subscription should start after the current period ends
+                if start_after_current_period and current_period_end:
+                    # Schedule this subscription to start at the end of the current period
+                    # First, we need to pause the billing until the current period ends
                     try:
-                        stripe.Subscription.delete(sub_id)
-                        print(f"Cancelled old subscription {sub_id} after new subscription {subscription['id']} was created")
+                        period_end = int(current_period_end)
+                        stripe.Subscription.modify(
+                            subscription['id'],
+                            pause_collection={
+                                'behavior': 'keep_as_draft',
+                                'resumes_at': period_end
+                            },
+                            proration_behavior='none'
+                        )
+                        print(f"Scheduled new subscription {subscription['id']} to start at {period_end}")
                     except Exception as e:
-                        print(f"Error cancelling subscription {sub_id}: {e}")
+                        print(f"Error scheduling new subscription start time: {e}")
+            except Exception as e:
+                print(f"Error updating previous subscription {previous_subscription_id}: {e}")
+        else:
+            # For upgrades or new subscriptions, check if there are subscriptions to cancel
+            subscriptions_to_cancel = metadata.get('subscriptions_to_cancel', '')
+    
+            if subscriptions_to_cancel:
+                subscription_ids = subscriptions_to_cancel.split(',')
+                for sub_id in subscription_ids:
+                    if sub_id and sub_id != subscription['id']:  # Don't cancel the new subscription
+                        try:
+                            stripe.Subscription.delete(sub_id)
+                            print(f"Cancelled old subscription {sub_id} after new subscription {subscription['id']} was created")
+                        except Exception as e:
+                            print(f"Error cancelling subscription {sub_id}: {e}")
         
         # Get the company from the database
         company = Companies.get_company_by_id(company_id)
         if not company:
             print(f"Company {company_id} not found")
-            return
-        
-        # For trial subscriptions, set initial credit balance to 5
-        if status == "trialing":
-            Companies.update_company_by_id(company_id, {
-                "credit_balance": SUBSCRIPTION_PLANS[plan_id]["credits_per_month"],  # credits for trial as specified
-            })
-            print(f"Trial subscription created for company {company_id} with 5 initial credits")
             return
             
         # For regular subscriptions, handle as before
@@ -450,11 +524,6 @@ def handle_subscription_created(event_data):
             return
             
         plan = SUBSCRIPTION_PLANS[plan_id]
-        
-        # Update company credit balance
-        Companies.update_company_by_id(company_id, {
-            "credit_balance": plan["credits_per_month"]
-        })
         
         print(f"Subscription created for company {company_id} with plan {plan_id}")
         
@@ -468,18 +537,14 @@ def handle_subscription_updated(event_data):
         subscription_id = event_data.get("id")
         customer_id = event_data.get("customer")
         metadata = event_data.get("metadata", {})
+        status = event_data.get("status")
         
         # Get company by customer ID
         company = Companies.get_company_by_stripe_customer_id(customer_id)
+
         if not company:
             print(f"Company not found for customer ID: {customer_id}")
             return
-            
-        # Check if plan was changed
-        plan_id = metadata.get("plan_id")
-        if plan_id and plan_id in SUBSCRIPTION_PLANS:
-            # Plan was changed, update credits on next renewal
-            print(f"Subscription updated for company {company.id} with new plan {plan_id}")
         
     except Exception as e:
         print(f"Error handling subscription.updated: {e}")
@@ -507,10 +572,9 @@ def handle_subscription_deleted(event_data):
 def handle_invoice_payment_succeeded(event_data):
     try:
         # event_data is already the invoice object
-        invoice_id = event_data.get("id")
         customer_id = event_data.get("customer")
         subscription_id = event_data.get("subscription")
-        
+
         if not subscription_id:
             # Not a subscription invoice
             return
@@ -523,22 +587,25 @@ def handle_invoice_payment_succeeded(event_data):
             
         # Get subscription details
         subscription = stripe.Subscription.retrieve(subscription_id)
+
         plan_id = subscription.metadata.get("plan_id")
+        is_downgrade = subscription.metadata.get("is_downgrade")
         
         if not plan_id or plan_id not in SUBSCRIPTION_PLANS:
             print(f"Invalid plan ID: {plan_id} for subscription {subscription_id}")
             return
             
         plan = SUBSCRIPTION_PLANS[plan_id]
-        
-        # Reset credit balance for the new billing period
-        Companies.update_company_by_id(company.id, {
-            "credit_balance": plan["credits_per_month"],
-            "budget_mail_80_sent": False,
-            "budget_mail_100_sent": False
-        })
 
-        print(f"Credits renewed for company {company.id} with plan {plan_id}")
+        if is_downgrade != "true":
+            # Reset credit balance for the new billing period
+            Companies.update_company_by_id(company.id, {
+                "credit_balance": plan["credits_per_month"],
+                "budget_mail_80_sent": False,
+                "budget_mail_100_sent": False
+            })
+
+            print(f"Credits renewed for company {company.id} with plan {plan_id}")
         
     except Exception as e:
         print(f"Error handling invoice.payment_succeeded: {e}")
@@ -598,9 +665,7 @@ def handle_payment_intent_succeeded(data):
             }
 
         StripePaymentHistories.log_payment(payment_data)
-        
-        print(f"Auto-recharge successful for company {company.id}")
-        
+
     except Exception as e:
         print(f"Error handling payment_intent.succeeded: {e}")
 
