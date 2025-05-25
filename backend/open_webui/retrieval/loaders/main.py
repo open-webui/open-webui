@@ -202,9 +202,11 @@ class UnstructuredLoader:
     Unstructured.io loader for comprehensive document processing.
     This is the DEFAULT loader when no specific engine is selected.
     """
-    def __init__(self, file_path, extract_images=None):
+    def __init__(self, file_path, extract_images=None, chunk_size=1000, chunk_overlap=100):
         self.file_path = file_path
         self.extract_images = extract_images
+        self.chunk_size = chunk_size
+        self.chunk_overlap = chunk_overlap
         self.nltk_ready = self._ensure_nltk_data()
 
     def _ensure_nltk_data(self):
@@ -239,16 +241,21 @@ class UnstructuredLoader:
                 log.warning("No elements extracted from document")
                 return [Document(page_content="No content extracted", metadata={"source": self.file_path})]
             
-            # Convert elements to documents
+                                    # Convert elements to documents with intelligent chunking
             docs = []
+            current_chunk = ""
+            current_metadata = None
+            # Use configurable minimum chunk size (10% of target chunk size, minimum 50)
+            min_chunk_size = max(50, self.chunk_size // 10)
+            
             for i, element in enumerate(elements):
                 # Get text content
-                text = str(element)
-                if not text.strip():
+                text = str(element).strip()
+                if not text:
                     continue
                 
-                # Create metadata
-                metadata = {
+                # Get element metadata
+                element_metadata = {
                     "source": self.file_path,
                     "element_id": i,
                     "element_type": element.category if hasattr(element, 'category') else 'unknown',
@@ -257,13 +264,44 @@ class UnstructuredLoader:
                 # Add page number if available
                 if hasattr(element, 'metadata') and element.metadata:
                     if hasattr(element.metadata, 'page_number'):
-                        metadata["page"] = element.metadata.page_number
+                        element_metadata["page"] = element.metadata.page_number
                     if hasattr(element.metadata, 'filename'):
-                        metadata["filename"] = element.metadata.filename
+                        element_metadata["filename"] = element.metadata.filename
                 
-                docs.append(Document(page_content=text, metadata=metadata))
+                # If this is a title or header, and we have accumulated content, save the current chunk
+                if (element.category in ['Title', 'Header'] if hasattr(element, 'category') else False) and current_chunk:
+                    if len(current_chunk) >= min_chunk_size:
+                        docs.append(Document(page_content=current_chunk.strip(), metadata=current_metadata))
+                    current_chunk = ""
+                    current_metadata = None
+                
+                # Start new chunk or continue current one
+                if not current_chunk:
+                    current_chunk = text
+                    current_metadata = element_metadata.copy()
+                else:
+                    # Add to current chunk with appropriate spacing
+                    if current_chunk.endswith('.') or current_chunk.endswith(':') or current_chunk.endswith(';'):
+                        current_chunk += " " + text
+                    else:
+                        current_chunk += " " + text
+                    
+                    # Update metadata to reflect combined elements
+                    if current_metadata:
+                        current_metadata["element_type"] = "combined"
+                        # Keep the page number from the first element
+                
+                # If chunk is getting large, save it
+                if len(current_chunk) >= self.chunk_size:  # Use configurable max chunk size
+                    docs.append(Document(page_content=current_chunk.strip(), metadata=current_metadata))
+                    current_chunk = ""
+                    current_metadata = None
             
-            log.info(f"Unstructured.io extracted {len(docs)} document elements")
+            # Don't forget the last chunk
+            if current_chunk and len(current_chunk) >= min_chunk_size:
+                docs.append(Document(page_content=current_chunk.strip(), metadata=current_metadata))
+            
+            log.info(f"Unstructured.io extracted {len(docs)} document elements using chunk_size={self.chunk_size}, min_chunk_size={min_chunk_size}")
             return docs if docs else [Document(page_content="No content extracted", metadata={"source": self.file_path})]
             
         except Exception as e:
@@ -392,7 +430,9 @@ class Loader:
             log.info(f"Using DEFAULT Unstructured.io engine for file: {filename}")
             loader = UnstructuredLoader(
                 file_path=file_path,
-                extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
+                extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
+                chunk_size=self.kwargs.get("CHUNK_SIZE", 1000),
+                chunk_overlap=self.kwargs.get("CHUNK_OVERLAP", 100)
             )
 
         return loader
