@@ -47,7 +47,6 @@ from starlette.responses import Response, StreamingResponse
 
 from starlette_compress import CompressMiddleware
 
-
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.logger import start_logger
