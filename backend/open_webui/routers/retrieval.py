@@ -1534,6 +1534,7 @@ def save_docs_to_vector_db(
             text_splitter = ContentAwareTextSplitter(
                 chunk_size=request.app.state.config.CHUNK_SIZE,
                 chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                min_chunk_size=max(50, request.app.state.config.CHUNK_SIZE // 10),
                 preserve_headers=True,
                 add_start_index=True,
             )
@@ -1544,6 +1545,7 @@ def save_docs_to_vector_db(
             text_splitter = ContentAwareTextSplitter(
                 chunk_size=request.app.state.config.CHUNK_SIZE,
                 chunk_overlap=request.app.state.config.CHUNK_OVERLAP,
+                min_chunk_size=max(50, request.app.state.config.CHUNK_SIZE // 10),
                 preserve_headers=True,
                 add_start_index=True,
             )
