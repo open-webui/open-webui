@@ -205,6 +205,20 @@ class UnstructuredLoader:
     def __init__(self, file_path, extract_images=None):
         self.file_path = file_path
         self.extract_images = extract_images
+        self.nltk_ready = self._ensure_nltk_data()
+
+    def _ensure_nltk_data(self):
+        """Ensure required NLTK data is available for Unstructured.io"""
+        try:
+            import nltk
+            # Download required NLTK data if not already present
+            nltk.download('punkt_tab', quiet=True)
+            nltk.download('averaged_perceptron_tagger_eng', quiet=True)
+            log.debug("NLTK data ensured for Unstructured.io")
+            return True
+        except Exception as e:
+            log.warning(f"Could not download NLTK data during initialization: {e}")
+            return False
 
     def load(self) -> list[Document]:
         if not UNSTRUCTURED_AVAILABLE:
@@ -213,6 +227,11 @@ class UnstructuredLoader:
             )
         
         try:
+            # Retry NLTK data download if it failed during initialization
+            if not self.nltk_ready:
+                log.info("Retrying NLTK data download before processing...")
+                self.nltk_ready = self._ensure_nltk_data()
+            
             # Use unstructured.io's auto partition with minimal parameters to avoid conflicts
             elements = partition(filename=self.file_path)
             
@@ -248,9 +267,21 @@ class UnstructuredLoader:
             return docs if docs else [Document(page_content="No content extracted", metadata={"source": self.file_path})]
             
         except Exception as e:
-            log.error(f"Error processing document with Unstructured.io: {e}")
+            error_msg = str(e)
+            log.error(f"Error processing document with Unstructured.io: {error_msg}")
+            
+            # Provide specific guidance for common NLTK errors
+            if "punkt_tab" in error_msg or "NLTK" in error_msg:
+                detailed_error = (
+                    f"Unstructured.io processing failed due to missing NLTK data: {error_msg}\n"
+                    "To fix this issue, run the following commands:\n"
+                    "1. pip install nltk\n"
+                    "2. python -c \"import nltk; nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger_eng')\""
+                )
+                raise Exception(detailed_error)
+            
             # Re-raise the exception to force proper error handling
-            raise Exception(f"Unstructured.io processing failed: {e}")
+            raise Exception(f"Unstructured.io processing failed: {error_msg}")
 
 
 class Loader:
