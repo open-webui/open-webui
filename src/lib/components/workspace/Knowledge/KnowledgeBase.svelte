@@ -49,6 +49,7 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import AccessControlModal from '../common/AccessControlModal.svelte';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	let largeScreen = true;
 
@@ -752,7 +753,7 @@
 								<div class=" flex-1 text-xl font-medium">
 									<a
 										class="hover:text-gray-500 dark:hover:text-gray-100 hover:underline grow line-clamp-1"
-										href={selectedFile.id ? `/api/v1/files/${selectedFile.id}/content` : '#'}
+										href={selectedFile.id ? `${WEBUI_API_BASE_URL}/files/${selectedFile.id}/content` : '#'}
 										target="_blank"
 									>
 										{decodeString(selectedFile?.meta?.name)}
