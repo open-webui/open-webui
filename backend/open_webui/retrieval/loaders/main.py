@@ -27,6 +27,14 @@ from open_webui.retrieval.loaders.mistral import MistralLoader
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
+# Import unstructured for default document processing
+try:
+    from unstructured.partition.auto import partition
+    UNSTRUCTURED_AVAILABLE = True
+except ImportError:
+    UNSTRUCTURED_AVAILABLE = False
+    partition = None
+
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
@@ -189,6 +197,80 @@ class DoclingLoader:
             raise Exception(f"Error calling Docling: {error_msg}")
 
 
+class UnstructuredLoader:
+    """
+    Unstructured.io loader for comprehensive document processing.
+    This is the DEFAULT loader when no specific engine is selected.
+    """
+    def __init__(self, file_path, extract_images=None):
+        self.file_path = file_path
+        self.extract_images = extract_images
+
+    def load(self) -> list[Document]:
+        if not UNSTRUCTURED_AVAILABLE:
+            raise Exception(
+                "Unstructured library not available. Install with: pip install unstructured[all-docs]"
+            )
+        
+        try:
+            # Use unstructured.io's auto partition for comprehensive document processing
+            elements = partition(
+                filename=self.file_path,
+                # Enable various processing options
+                include_page_breaks=True,
+                infer_table_structure=True,
+                # Extract images if requested
+                extract_images_in_pdf=bool(self.extract_images),
+                # Chunking strategy
+                chunking_strategy="by_title",
+                max_characters=4000,
+                new_after_n_chars=3800,
+                combine_text_under_n_chars=2000,
+            )
+            
+            if not elements:
+                log.warning("No elements extracted from document")
+                return [Document(page_content="No content extracted", metadata={"source": self.file_path})]
+            
+            # Convert elements to documents
+            docs = []
+            for i, element in enumerate(elements):
+                # Get text content
+                text = str(element)
+                if not text.strip():
+                    continue
+                
+                # Create metadata
+                metadata = {
+                    "source": self.file_path,
+                    "element_id": i,
+                    "element_type": element.category if hasattr(element, 'category') else 'unknown',
+                }
+                
+                # Add page number if available
+                if hasattr(element, 'metadata') and element.metadata:
+                    if hasattr(element.metadata, 'page_number'):
+                        metadata["page"] = element.metadata.page_number
+                    if hasattr(element.metadata, 'filename'):
+                        metadata["filename"] = element.metadata.filename
+                
+                docs.append(Document(page_content=text, metadata=metadata))
+            
+            log.info(f"Unstructured.io extracted {len(docs)} document elements")
+            return docs if docs else [Document(page_content="No content extracted", metadata={"source": self.file_path})]
+            
+        except Exception as e:
+            log.error(f"Error processing document with Unstructured.io: {e}")
+            # Fallback to simple text extraction
+            try:
+                with open(self.file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+                return [Document(page_content=content, metadata={"source": self.file_path, "extraction_method": "fallback"})]
+            except Exception as fallback_error:
+                log.error(f"Fallback text extraction also failed: {fallback_error}")
+                raise Exception(f"Both Unstructured.io and fallback extraction failed: {e}")
+
+
 class Loader:
     def __init__(self, engine: str = "", **kwargs):
         self.engine = engine
@@ -292,43 +374,12 @@ class Loader:
                 api_key=self.kwargs.get("MISTRAL_OCR_API_KEY"), file_path=file_path
             )
         else:
-            if file_ext == "pdf":
-                loader = PyPDFLoader(
-                    file_path, extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
-                )
-            elif file_ext == "csv":
-                loader = CSVLoader(file_path, autodetect_encoding=True)
-            elif file_ext == "rst":
-                loader = UnstructuredRSTLoader(file_path, mode="elements")
-            elif file_ext == "xml":
-                loader = UnstructuredXMLLoader(file_path)
-            elif file_ext in ["htm", "html"]:
-                loader = BSHTMLLoader(file_path, open_encoding="unicode_escape")
-            elif file_ext == "md":
-                loader = TextLoader(file_path, autodetect_encoding=True)
-            elif file_content_type == "application/epub+zip":
-                loader = UnstructuredEPubLoader(file_path)
-            elif (
-                file_content_type
-                == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                or file_ext == "docx"
-            ):
-                loader = Docx2txtLoader(file_path)
-            elif file_content_type in [
-                "application/vnd.ms-excel",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            ] or file_ext in ["xls", "xlsx"]:
-                loader = UnstructuredExcelLoader(file_path)
-            elif file_content_type in [
-                "application/vnd.ms-powerpoint",
-                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            ] or file_ext in ["ppt", "pptx"]:
-                loader = UnstructuredPowerPointLoader(file_path)
-            elif file_ext == "msg":
-                loader = OutlookMessageLoader(file_path)
-            elif self._is_text_file(file_ext, file_content_type):
-                loader = TextLoader(file_path, autodetect_encoding=True)
-            else:
-                loader = TextLoader(file_path, autodetect_encoding=True)
+            # DEFAULT: Use Unstructured.io for comprehensive document processing
+            # This handles ALL file types with intelligent processing
+            log.info(f"Using DEFAULT Unstructured.io engine for file: {filename}")
+            loader = UnstructuredLoader(
+                file_path=file_path,
+                extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES")
+            )
 
         return loader
