@@ -1778,22 +1778,39 @@ def process_file(
                 print(f"  📋 User setting: '{request.app.state.config.CONTENT_EXTRACTION_ENGINE}'")
                 print(f"  ⚙️ Actual engine: '{actual_engine}' (empty = Unstructured.io default)")
                 
-                loader = Loader(
-                    engine=actual_engine,  # Pass empty string for Unstructured.io default
-                    EXTERNAL_DOCUMENT_LOADER_URL=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
-                    EXTERNAL_DOCUMENT_LOADER_API_KEY=request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
-                    TIKA_SERVER_URL=request.app.state.config.TIKA_SERVER_URL,
-                    DOCLING_SERVER_URL=request.app.state.config.DOCLING_SERVER_URL,
-                    DOCLING_OCR_ENGINE=request.app.state.config.DOCLING_OCR_ENGINE,
-                    DOCLING_OCR_LANG=request.app.state.config.DOCLING_OCR_LANG,
-                    DOCLING_DO_PICTURE_DESCRIPTION=request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
-                    PDF_EXTRACT_IMAGES=request.app.state.config.PDF_EXTRACT_IMAGES,
-                    DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
-                    DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
-                    MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
-                    CHUNK_SIZE=request.app.state.config.CHUNK_SIZE,
-                    CHUNK_OVERLAP=request.app.state.config.CHUNK_OVERLAP,
-                )
+                # Build loader kwargs based on engine to avoid unnecessary API key loading
+                loader_kwargs = {
+                    "CHUNK_SIZE": request.app.state.config.CHUNK_SIZE,
+                    "CHUNK_OVERLAP": request.app.state.config.CHUNK_OVERLAP,
+                    "PDF_EXTRACT_IMAGES": request.app.state.config.PDF_EXTRACT_IMAGES,
+                }
+                
+                # Only add engine-specific configurations when needed
+                if actual_engine == "external":
+                    loader_kwargs.update({
+                        "EXTERNAL_DOCUMENT_LOADER_URL": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_URL,
+                        "EXTERNAL_DOCUMENT_LOADER_API_KEY": request.app.state.config.EXTERNAL_DOCUMENT_LOADER_API_KEY,
+                        "MISTRAL_OCR_API_KEY": request.app.state.config.MISTRAL_OCR_API_KEY,
+                    })
+                elif actual_engine == "tika":
+                    loader_kwargs["TIKA_SERVER_URL"] = request.app.state.config.TIKA_SERVER_URL
+                elif actual_engine == "docling":
+                    loader_kwargs.update({
+                        "DOCLING_SERVER_URL": request.app.state.config.DOCLING_SERVER_URL,
+                        "DOCLING_OCR_ENGINE": request.app.state.config.DOCLING_OCR_ENGINE,
+                        "DOCLING_OCR_LANG": request.app.state.config.DOCLING_OCR_LANG,
+                        "DOCLING_DO_PICTURE_DESCRIPTION": request.app.state.config.DOCLING_DO_PICTURE_DESCRIPTION,
+                    })
+                elif actual_engine == "document_intelligence":
+                    loader_kwargs.update({
+                        "DOCUMENT_INTELLIGENCE_ENDPOINT": request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
+                        "DOCUMENT_INTELLIGENCE_KEY": request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
+                    })
+                elif actual_engine == "mistral_ocr":
+                    loader_kwargs["MISTRAL_OCR_API_KEY"] = request.app.state.config.MISTRAL_OCR_API_KEY
+                # For default/empty engine (Unstructured.io), no additional configs needed
+                
+                loader = Loader(engine=actual_engine, **loader_kwargs)
                 
                 print(f"REFACTORED: Loading file with {engine_display}...")
                 docs = loader.load(
