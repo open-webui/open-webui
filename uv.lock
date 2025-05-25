@@ -2877,7 +2877,7 @@ requires-dist = [
     { name = "opensearch-py", specifier = "==2.8.0" },
     { name = "pandas", specifier = "==2.2.3" },
     { name = "passlib", extras = ["bcrypt"], specifier = "==1.7.4" },
-    { name = "peewee", specifier = "==3.17.9" },
+    { name = "peewee", specifier = "==3.18.1" },
     { name = "peewee-migrate", specifier = "==1.12.2" },
     { name = "pgvector", specifier = "==0.4.0" },
     { name = "pillow", specifier = "==11.1.0" },
@@ -3247,9 +3247,9 @@ wheels = [
 
 [[package]]
 name = "peewee"
-version = "3.17.9"
+version = "3.18.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/57/09/4393bd378e70b7fc3163ee83353cc27bb520010a5c2b3c924121e7e7e068/peewee-3.17.9.tar.gz", hash = "sha256:fe15cd001758e324c8e3ca8c8ed900e7397c2907291789e1efc383e66b9bc7a8", size = 3026085 }
+sdist = { url = "https://files.pythonhosted.org/packages/1e/ce/c2bb58d00cb12d19dea28d5a98d05a14350197a3d03eba60be9bae708bac/peewee-3.18.1.tar.gz", hash = "sha256:a76a694b3b3012ce22f00d51fd83e55bf80b595275a90ed62cd36eb45496cf1d", size = 3026130 }
 
 [[package]]
 name = "peewee-migrate"
