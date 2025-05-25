@@ -50,8 +50,8 @@
 	let logoSrc = '/logo_light.png';
 
 	onMount(() => {
-		const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-		logoSrc = isDark ? '/logo_dark_transparent.png' : '/logo_dark.png';
+		const isDark = localStorage.getItem('theme') === 'dark';
+		logoSrc = isDark ? '/logo_dark_transparent.png' : '/logo_light_transparent.png';
 	});
 
 	$: console.log($config?.oauth?.providers?.google);
@@ -66,17 +66,17 @@
 <CustomToast message={$toastMessage} type={$toastType} visible={$toastVisible} />
 <a
 	href="/login"
-	class="bg-transparent flex items-center text-xs dark:text-customGray-200 w-fit fixed z-30 top-4 left-4"
+	class="bg-transparent flex items-center text-xs font-medium text-lightGray-100 dark:text-customGray-200 w-fit fixed z-30 top-4 left-4"
 >
 	<ArrowLeft className="size-3 mr-1" />
 	Back to Login</a
 >
 <div
-	class="flex flex-col justify-between w-full h-screen max-h-[100dvh] text-white relative dark:bg-customGray-900"
+	class="flex flex-col justify-between w-full h-screen max-h-[100dvh] px-4 text-white relative bg-lightGray-300 dark:bg-customGray-900"
 >
 	<div></div>
 	<form
-		class="flex flex-col self-center dark:bg-customGray-800 rounded-2xl w-[31rem] pt-7 px-24 pb-4"
+		class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-full md:w-[31rem] px-5 py-5 md:pt-7 md:px-24 md:pb-4"
 		on:submit={(e) => {
 			e.preventDefault();
 			resetPassword();
@@ -86,25 +86,25 @@
 			<div>
 				<img
 					crossorigin="anonymous"
-					src="/logo_dark_transparent.png"
+					src={logoSrc}
 					class=" w-10 mb-5"
 					alt="logo"
 				/>
 			</div>
-			<div class="mb-2.5">{$i18n.t('Reset password')}</div>
-			<div class="text-center text-xs dark:text-customGray-300">
+			<div class="mb-2.5 font-medium text-lightGray-100 dark:text-customGray-100">{$i18n.t('Reset password')}</div>
+			<div class="font-medium text-center text-xs text-[#8A8B8D] dark:text-customGray-300">
 				{$i18n.t('Enter your email to get a reset link')}
 			</div>
 		</div>
 		<div class="flex-1 mb-2.5">
-			<div class="relative w-full dark:bg-customGray-900 rounded-md">
+			<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 				{#if email}
-					<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+					<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 						{$i18n.t('Email address')}
 					</div>
 				{/if}
 				<input
-					class={`px-2.5 text-sm ${email ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+					class={`px-2.5 text-sm ${email ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent text-lightGray-100 placeholder:text-lightGray-100 dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 					placeholder={$i18n.t('Email address')}
 					bind:value={email}
 					type="email"
@@ -115,9 +115,9 @@
 			</div>
 		</div>
 		<button
-			class=" text-xs w-full h-10 px-3 py-2 transition rounded-lg {loading
-				? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
-				: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center items-center"
+			class="font-medium text-xs w-full h-10 px-3 py-2 transition rounded-lg {loading
+				? ' cursor-not-allowed bg-lightGray-300 hover:bg-lightGray-700 hover:bg-gray-900 text-lightGray-100 dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border border-lightGray-400 dark:border-customGray-700'
+				: 'bg-lightGray-300 hover:bg-lightGray-700 hover:bg-gray-900 text-lightGray-100 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border border-lightGray-400 dark:border-customGray-700'} flex justify-center items-center"
 			type="submit"
 			disabled={loading}
 		>
@@ -130,7 +130,7 @@
 		</button>
 	</form>
 
-	<div class="self-center text-xs dark:text-customGray-100 pb-5">
+	<div class="self-center text-xs text-customGray-300 dark:text-customGray-100 pb-5 text-center">
 		By using this service, you agree to our <a href="/">Terms</a> and <a href="/">Conditions</a>.
 	</div>
 </div>

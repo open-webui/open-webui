@@ -29,10 +29,10 @@
 	}
 </script>
 
-<Modal size="md-plus" containerClassName="bg-[#1D1A1A]/50 backdrop-blur-[6px]" bind:show>
-	<div class="px-8 py-6 dark:bg-customGray-800 rounded-2xl">
-		<div class="flex justify-between border-b dark:border-customGray-700 pb-7">
-			<div class="dark:text-white">{$i18n.t('Knowledge')}</div>
+<Modal size="md-plus" containerClassName="bg-lightGray-250/50 dark:bg-[#1D1A1A]/50 backdrop-blur-[6px]" bind:show>
+	<div class="px-8 py-6 bg-lightGray-550 dark:bg-customGray-800 rounded-2xl">
+		<div class="flex justify-between border-b border-lightGray-400 dark:border-customGray-700 pb-7">
+			<div class="text-lightGray-100 dark:text-white">{$i18n.t('Knowledge')}</div>
 			<button type="button" class="dark:text-white" on:click={() => {
                 selectedKnowledge = [];
                 show = false;
@@ -43,7 +43,7 @@
 		<div>
 			<ul>
 				{#each collections as knowledge}
-					<li class="grid grid-cols-[40px_80px_340px_1fr_1fr] gap-4 py-2.5 border-b dark:border-customGray-700">
+					<li class="grid grid-cols-[40px_80px_340px_1fr_1fr] gap-4 py-2.5 border-b border-lightGray-400 dark:border-customGray-700">
 						<div class="flex items-start justify-center">
 							<Checkbox
 								state={selectedKnowledge.find((k) => k.id === knowledge.id)
@@ -64,21 +64,21 @@
 						<div class="">
 							{#if knowledge.access_control == null}
 								<div
-									class="w-fit flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+									class="w-fit flex gap-1 items-center bg-lightGray-400 text-lightGray-100 font-medium dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 								>
 									<PublicIcon />
 									<span>{$i18n.t('Public')}</span>
 								</div>
 							{:else if hasGroupAccess(knowledge)}
 								<div
-									class="w-fit flex items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+									class="w-fit flex items-center bg-lightGray-400 text-lightGray-100 font-medium dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 								>
 									<GroupIcon />
 									<span class="ml-1">{$i18n.t('Group')}</span>
 								</div>
 							{:else}
 								<div
-									class="w-fit flex gap-1 items-center dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+									class="w-fit flex gap-1 items-center bg-lightGray-400 text-lightGray-100 font-medium dark:text-white text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 								>
 									<PrivateIcon />
 									<span>{$i18n.t('Private')}</span>
@@ -88,19 +88,19 @@
 
 						<div class="truncate">
 							<div
-								class="text-left line-clamp-2 h-fit text-base dark:text-customGray-100 leading-[1.2] mb-1"
+								class="text-left line-clamp-2 h-fit text-base text-lightGray-100 dark:text-customGray-100 leading-[1.2] mb-1"
 							>
 								{knowledge.name}
 							</div>
 							<div
-								class="text-left overflow-hidden text-ellipsis line-clamp-1 text-xs dark:text-customGray-100/50"
+								class="text-left overflow-hidden text-ellipsis line-clamp-1 text-xs text-lightGray-1200 dark:text-customGray-100/50"
 							>
 								{knowledge.description}
 							</div>
 						</div>
 
 						<div class="flex items-center">
-							<div class="whitespace-nowrap text-xs text-gray-500 dark:text-customGray-100 flex items-center">
+							<div class="whitespace-nowrap text-xs text-lightGray-1200 dark:text-customGray-100 flex items-center">
 								{#if knowledge?.user?.profile_image_url}
 									<img
 										class="w-3 h-3 rounded-full mr-1"
@@ -117,7 +117,7 @@
 							</div>
 						</div>
 
-						<div class="flex items-center text-xs text-gray-500 line-clamp-1 dark:text-customGray-100">
+						<div class="flex items-center text-xs text-lightGray-1200 line-clamp-1 dark:text-customGray-100">
 							{dayjs(knowledge.updated_at * 1000).fromNow()}
 						</div>
 					</li>
@@ -126,7 +126,7 @@
 		</div>
         <div class="mt-3 flex justify-end">
             <button
-                class=" text-xs w-[168px] h-10 px-3 py-2 transition rounded-lg bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center"
+                class=" text-xs w-[168px] h-10 px-3 py-2 transition rounded-lg hover:bg-lightGray-500 text-lightGray-100 bg-lightGray-300 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center"
                 type="button"
                 on:click={() => (show = false)}
             >

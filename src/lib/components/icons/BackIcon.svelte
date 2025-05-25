@@ -1,4 +1,7 @@
-<svg width="16" height="16" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+<script lang="ts">
+	export let className = 'size-4';
+</script>
+<svg class={className} viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
 	<g clip-path="url(#clip0_462_21406)">
 		<path
 			d="M2.70825 6.5H10.2916"

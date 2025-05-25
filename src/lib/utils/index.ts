@@ -1078,6 +1078,7 @@ export function onClickOutside(node, callback) {
 
 export function getModelIcon(label: string): string {
 	if(!label) return '';
+	const isDark = localStorage.getItem('theme') === 'dark';
 	const lower = label.toLowerCase();
 
 	if (lower.includes('perplexity')) {
@@ -1091,7 +1092,11 @@ export function getModelIcon(label: string): string {
 	} else if (lower.includes('mistral') || lower.includes('pixtral')) {
 		return '/mistral-color.svg';
 	} else if (lower.includes('lama')) {
-		return '/ollama-1.svg';
+		if(isDark) {
+			return '/ollama-1.svg';
+		} else {
+			return '/ollama-light.svg';
+		}	
 	} else {
 		return '/static/favicon.png';
 	}

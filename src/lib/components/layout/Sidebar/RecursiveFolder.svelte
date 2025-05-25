@@ -377,12 +377,12 @@
 		<div class="w-full group">
 			<button
 				id="folder-{folderId}-button"
-				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-sm text-gray-500 dark:text-customGray-100 font-medium hover:bg-gray-100 dark:hover:bg-customGray-900 transition"
+				class="relative w-full py-1.5 px-2 rounded-md flex items-center gap-1.5 text-sm text-lightGray-100 dark:text-customGray-100 font-medium hover:bg-lightGray-700 dark:hover:bg-customGray-900 transition"
 				on:dblclick={() => {
 					editHandler();
 				}}
 			>
-				<div class="text-gray-300 dark:text-customGray-300">
+				<div class="text-lightGray-100 dark:text-customGray-300">
 					{#if open}
 						<ChevronDown className=" size-2" strokeWidth="2.5" />
 					{:else}
@@ -390,7 +390,7 @@
 					{/if}
 				</div>
 				
-				<div class="text-gray-300 dark:text-customGray-300">
+				<div class="text-lightGray-100 dark:text-customGray-300">
 					{#if open}
 						<FolderOpenIcon className="size-3.5"/>	
 					{:else}
@@ -422,7 +422,7 @@
 									edit = false;
 								}
 							}}
-							class="w-full h-full bg-transparent text-gray-500 dark:text-gray-500 outline-none"
+							class="w-full h-full bg-transparent text-lightGray-100 dark:text-gray-500 outline-none"
 						/>
 					{:else}
 						{folders[folderId].name}
@@ -430,7 +430,7 @@
 				</div>
 
 				<button
-					class="absolute z-10 right-2 invisible group-hover:visible self-center flex items-center dark:text-gray-300"
+					class="absolute z-10 right-2 md:invisible group-hover:visible self-center flex items-center dark:text-gray-300"
 					on:pointerup={(e) => {
 						e.stopPropagation();
 					}}

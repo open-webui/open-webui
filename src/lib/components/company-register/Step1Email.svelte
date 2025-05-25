@@ -42,12 +42,18 @@
 		});
 		dispatch('next', { email: user.email });
 	}
+	let logoSrc = '/logo_light.png';
+
+	onMount(() => {
+		const isDark = localStorage.getItem('theme') === 'dark';
+		logoSrc = isDark ? '/logo_dark_transparent.png' : '/logo_light_transparent.png';
+	});
 </script>
 
 
 <CustomToast message={$toastMessage} type={$toastType} visible={$toastVisible} />
 <form
-	class="flex flex-col self-center dark:bg-customGray-800 rounded-2xl w-[31rem] py-7 px-24"
+	class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-full md:w-[31rem] px-5 py-5 md:py-7 md:px-24"
 	on:submit={(e) => {
 		e.preventDefault();
 		registerEmail();
@@ -55,22 +61,22 @@
 >
 	<div class="self-center flex flex-col items-center mb-5">
 		<div>
-			<img crossorigin="anonymous" src="/logo_dark_transparent.png" class=" w-10 mb-5" alt="logo" />
+			<img crossorigin="anonymous" src={logoSrc} class=" w-10 mb-5" alt="logo" />
 		</div>
-		<div class="mb-2.5">{$i18n.t('Create Your Account')}</div>
-		<div class="text-center text-xs dark:text-customGray-300">
+		<div class="mb-2.5 font-medium text-lightGray-100 dark:text-customGray-100">{$i18n.t('Create Your Account')}</div>
+		<div class="text-center text-xs font-medium text-[#8A8B8D] dark:text-customGray-300">
 			{$i18n.t('Sign up to Beyond the Loop to continue.')}
 		</div>
 	</div>
 	<div class="flex-1 mb-2.5">
-		<div class="relative w-full dark:bg-customGray-900 rounded-md">
+		<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 			{#if email}
-				<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+				<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 					{$i18n.t('Email address')}
 				</div>
 			{/if}
 			<input
-				class={`px-2.5 text-sm ${email ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+				class={`px-2.5 text-sm ${email ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 				placeholder={$i18n.t('Email address')}
 				bind:value={email}
 				type="email"
@@ -81,9 +87,9 @@
 		</div>
 	</div>
 	<button
-		class=" text-xs w-full h-10 px-3 py-2 transition rounded-lg {loading
-			? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
-			: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center items-center"
+		class=" text-xs w-full font-medium h-10 px-3 py-2 transition rounded-lg {loading
+			? ' cursor-not-allowed bg-lightGray-300 hover:bg-lightGray-700 text-lightGray-100 border-lightGray-400 dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
+			: 'bg-lightGray-300 hover:bg-lightGray-700 text-lightGray-100 border-lightGray-400 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center items-center"
 		type="submit"
 		disabled={loading}
 	>
@@ -94,9 +100,9 @@
 			</div>
 		{/if}
 	</button>
-	<div class="mt-5 text-xs dark:text-customGray-300">
+	<div class="mt-5 text-xs text-lightGray-100 dark:text-customGray-300">
 		{$i18n.t('Already have an account?')}
-		<a href="/login" class="text-customBlue-500">{$i18n.t('Log in')}</a>
+		<a href="/login" class="text-customBlue-500 font-medium">{$i18n.t('Log in')}</a>
 	</div>
 	<!-- <hr class=" border-gray-50 dark:border-customGray-700 mb-2 mt-6" />
 	<div class="text-xs dark:text-customGray-300 text-center font-medium mb-2.5">Or</div>

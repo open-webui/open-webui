@@ -5,14 +5,14 @@
 	<g clip-path="url(#clip0_1316_20401)">
 		<path
 			d="M9.00708 6.75391H9.01459"
-			stroke="white"
+			stroke="currentColor"
 			stroke-width="0.96"
 			stroke-linecap="round"
 			stroke-linejoin="round"
 		/>
 		<path
 			d="M8.25647 9.00781H9.00706V12.0102H9.75764"
-			stroke="white"
+			stroke="currentColor"
 			stroke-width="0.96"
 			stroke-linecap="round"
 			stroke-linejoin="round"
@@ -20,7 +20,7 @@
 	</g>
 	<defs>
 		<clipPath id="clip0_1316_20401">
-			<rect width="18.0141" height="18.0141" fill="white" />
+			<rect width="18.0141" height="18.0141" fill="currentColor" />
 		</clipPath>
 	</defs>
 </svg>

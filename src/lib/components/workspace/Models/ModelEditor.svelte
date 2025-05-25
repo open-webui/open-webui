@@ -395,10 +395,10 @@
 	{/if} -->
 	<AddKnowledgeModal bind:show={showAddKnowledge} bind:selectedKnowledge={knowledge} collections={$knowledgeCollections}/>
 	<div class="flex flex-col h-screen">
-		<div class="py-[22px] px-[15px] border-b border-customGray-700">
+		<div class="py-[22px] px-[15px] border-b border-lightGray-400 dark:border-customGray-700">
 			<button class="flex items-center gap-1" on:click={() => history.back()}>
 				<BackIcon />
-				<div class="flex items-center md:self-center text-sm-plus font-medium leading-none px-0.5">
+				<div class="flex items-center text-lightGray-100 dark:text-customGray-100 md:self-center text-sm-plus font-medium leading-none px-0.5">
 					{$i18n.t('Create assistant')}
 				</div>
 			</button>
@@ -476,7 +476,7 @@
 			{#if !edit || (edit && model)}
 				<div class="overflow-y-auto overflow-x-hidden w-[34rem] py-3 px-4">
 					<form
-						class="flex flex-col gap-3 dark:bg-customGray-800 rounded-2xl py-5 px-2.5"
+						class="flex flex-col gap-3 bg-lightGray-550 dark:bg-customGray-800 rounded-2xl py-5 px-2.5"
 						on:submit|preventDefault={() => {
 							submitHandler();
 						}}
@@ -500,103 +500,57 @@
 											class="rounded-lg size-16 object-cover shrink-0"
 										/>
 									{:else}
-										<div class="rounded-lg size-16 shrink-0 bg-customViolet-300" />
-
-										<!-- <img
-									src="/static/favicon.png"
-									alt="model profile"
-									class=" rounded-lg size-16 object-cover shrink-0"
-								/> -->
+										<div class="rounded-lg size-16 shrink-0 bg-customViolet-200 dark:bg-customViolet-300" />
 									{/if}
 
 									<div class="absolute bottom-0 right-0 z-10">
 										<div class="-m-2">
 											<div
-												class="p-1 rounded-lg border border-white dark:bg-customGray-900 bg-gray-800 text-white transition dark:border-customGray-700 dark:text-white"
+												class="p-1 rounded-lg border border-lightGray-1200 dark:bg-customGray-900 bg-lightGray-300 dark:bg-gray-800 text-lightGray-1200 transition dark:border-customGray-700 dark:text-white"
 											>
 												<Plus className="size-3" />
-												<!-- <svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 16 16"
-											fill="currentColor"
-											class="size-5"
-										>
-											<path
-												fill-rule="evenodd"
-												d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
-												clip-rule="evenodd"
-											/>
-										</svg> -->
 											</div>
 										</div>
 									</div>
-
-									<!-- <div
-								class="absolute top-0 bottom-0 left-0 right-0 bg-white dark:bg-black rounded-lg opacity-0 group-hover:opacity-20 transition"
-							></div> -->
 								</button>
-
-								<!-- <div class="flex w-full mt-1 justify-end">
-							<button
-								class="px-2 py-1 text-gray-500 rounded-lg text-xs"
-								on:click={() => {
-									info.meta.profile_image_url = '/static/favicon.png';
-								}}
-								type="button"
-							>
-								Reset Image</button
-							>
-						</div> -->
 							</div>
 						</div>
 
 						<div class="w-full">
 							<div class="mt-2 my-2 flex flex-col">
 								<div class="flex-1 mb-1.5">
-									<div class="relative w-full dark:bg-customGray-900 rounded-md">
+									<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 										{#if name}
-											<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">{$i18n.t('Name')}</div>
+											<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('Name')}</div>
 										{/if}
 										<input
-											class={`px-2.5 text-sm ${name ? "mt-2" : "mt-0"} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+											class={`px-2.5 text-sm ${name ? "pt-2" : "pt-0"} w-full h-12 bg-transparent text-lightGray-100 dark:text-customGray-100 placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 outline-none`}
 											placeholder={$i18n.t('Name')}
 											bind:value={name}
 											required
 										/>
 										{#if !name}
 											<span
-												class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+												class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-lightGray-100/50 dark:text-customGray-100/50 pointer-events-none select-none"
 											>
 												{$i18n.t('E.g. Super Mario')}
 											</span>
 										{/if}
 									</div>
 								</div>
-
-								<!-- <div class="flex-1 mb-1.5">
-							<div>
-								<input
-									class="px-2.5 text-sm h-10 w-full dark:bg-customGray-900 dark:text-white dark:placeholder:text-white rounded-md outline-none"
-									placeholder={$i18n.t('Model ID')}
-									bind:value={id}
-									disabled={edit}
-									required
-								/>
-							</div>
-						</div> -->
 								<div class="flex-1 mb-1.5">
-									<div class="relative w-full dark:bg-customGray-900 rounded-md">
+									<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 										{#if info.meta.description}
-											<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">{$i18n.t('Description')}</div>
+											<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('Description')}</div>
 										{/if}
 										<input
-											class={`px-2.5 text-sm ${info.meta.description ? "mt-2" : "mt-0"} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+											class={`px-2.5 text-sm ${info.meta.description ? "pt-2" : "pt-0"} w-full h-12 bg-transparent text-lightGray-100 dark:text-customGray-100 placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 outline-none`}
 											placeholder={$i18n.t('Description')}
 											bind:value={info.meta.description}
 										/>
 										{#if !info.meta.description}
 											<span
-												class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+												class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-lightGray-100/50 dark:text-customGray-100/50 pointer-events-none select-none"
 											>
 												{$i18n.t('About what this model does')}
 											</span>
@@ -604,19 +558,19 @@
 									</div>
 								</div>
 								<div class="mb-1.5">
-									<div class="relative w-full dark:bg-customGray-900 rounded-md">
+									<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 										{#if info.params.system}
-											<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">{$i18n.t('System Prompt')}</div>
+											<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('System Prompt')}</div>
 										{/if}
 										<Textarea
-											className={`px-2.5 py-2 text-sm ${info.params.system ? "mt-2" : "mt-0"} w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+											className={`px-2.5 py-2 text-sm ${info.params.system ? "pt-4" : "pt-2"} w-full h-20 bg-transparent text-lightGray-100 dark:text-customGray-100 placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 outline-none`}
 											placeholder={$i18n.t('System Prompt')}
 											rows={4}
 											bind:value={info.params.system}
 										/>
 										{#if !info.params.system}
 											<span
-												class="absolute top-[26px] w-[180px] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+												class="absolute top-[26px] w-[180px] text-right right-2.5 -translate-y-1/2 text-xs text-lightGray-100/50 dark:text-customGray-100/50 pointer-events-none select-none"
 											>
 												{$i18n.t('E.g. You are Mario Bros, acting as an assistant')}
 											</span>
@@ -626,13 +580,13 @@
 
 								<div class="mb-5">
 									<div
-										class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2"
+										class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2"
 									>
 											<div class="flex w-full justify-between items-center">
-												<div class="text-xs dark:text-customGray-300">{$i18n.t('Knowledge')}</div>
+												<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Knowledge')}</div>
 												{#if $knowledgeCollections.length > 0}
 												<button
-													class="shrink-0 text-xs dark:text-customGray-200 flex rounded transition"
+													class="shrink-0 text-xs text-lightGray-100 dark:text-customGray-200 flex rounded transition"
 													type="button"
 													on:click={() => {
 														showAddKnowledge = true;
@@ -673,33 +627,16 @@
 
 											{/if}
 										</div>
-										<!-- <button
-											class="shrink-0 text-xs dark:text-customGray-200 flex rounded transition"
-											type="button"
-											on:click={() => {}}
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 20 20"
-												fill="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-												/>
-											</svg>
-											{$i18n.t('Add')}
-										</button> -->
 									</div>
 									<Dropzone {uploadFileHandler} />
 									{#if  knowledge.length > 0}
 										{#each knowledge as item}
 										<div class="min-h-10 flex rounded-lg my-2">
-											<div class="relative w-full dark:bg-customGray-900 rounded-md px-2.5 py-2.5 text-sm dark:text-white leading-[1.2]">
+											<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md px-2.5 py-4 text-sm text-lightGray-100 dark:text-white leading-[1.2]">
 												<span>{item.name}</span>
 											</div>
 											<button
-												class="px-2 dark:text-customGray-300 dark:hover:text-white"
+												class="px-2 text-lightGray-100 dark:text-customGray-300 dark:hover:text-white"
 												type="button"
 												on:click={() => {
 													knowledge = knowledge.filter((k) => k.id !== item.id);
@@ -714,7 +651,7 @@
 										<ul class="mt-2.5 space-y-1 text-sm">
 											{#each files as file (file.id)}
 												<li
-													class="group flex justify-start items-center dark:text-customGray-100 cursor-pointer dark:hover:text-white"
+													class="group flex justify-start items-center text-lightGray-100 dark:text-customGray-100 cursor-pointer dark:hover:text-white"
 												>
 													<DocumentIcon />
 													<span class="truncate ml-2 mr-3.5">{file.name}</span>
@@ -734,33 +671,13 @@
 
 								<div class="mb-1.5">
 									<div
-										class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700"
+										class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700"
 									>
 										<div class="flex w-full justify-between items-center">
-											<div class="text-xs dark:text-customGray-300">
+											<div class="text-xs text-lightGray-100 dark:text-customGray-300">
 												{$i18n.t('Prompt suggestions')}
 											</div>
-
-											<!-- <button
-										class="p-1 text-xs flex rounded transition"
-										type="button"
-										on:click={() => {
-											if ((info?.meta?.suggestion_prompts ?? null) === null) {
-												info.meta.suggestion_prompts = [{ content: '' }];
-											} else {
-												info.meta.suggestion_prompts = null;
-											}
-										}}
-									>
-										{#if (info?.meta?.suggestion_prompts ?? null) === null}
-											<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-										{:else}
-											<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-										{/if}
-									</button> -->
 										</div>
-
-										<!-- {#if (info?.meta?.suggestion_prompts ?? null) !== null} -->
 										<button
 											class="shrink-0 text-xs dark:text-customGray-200 flex rounded transition"
 											type="button"
@@ -796,15 +713,15 @@
 											{#if info.meta.suggestion_prompts.length > 0}
 												{#each info.meta.suggestion_prompts as prompt, promptIdx}
 													<div class=" flex rounded-lg">
-														<div class="relative w-full dark:bg-customGray-900 rounded-md">
+														<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 															<input
-																class="px-2.5 text-sm h-10 w-full dark:bg-customGray-900 dark:text-white dark:placeholder:text-customGray-100 rounded-md outline-none"
+																class="px-2.5 text-sm h-12 w-full bg-lightGray-300 dark:bg-customGray-900 text-lightGray-100 dark:text-customGray-100 placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 rounded-md outline-none"
 																placeholder={$i18n.t('Prompt suggestion')}
 																bind:value={prompt.content}
 															/>
 															{#if !prompt.content}
 																<span
-																	class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+																	class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-lightGray-100/50 dark:text-customGray-100/50 pointer-events-none select-none"
 																>
 																	{$i18n.t('Who are you')}
 																</span>
@@ -823,15 +740,15 @@
 													</div>
 												{/each}
 											{:else}
-												<div class="text-xs text-center">No suggestion prompts</div>
+												<div class="text-xs text-center">{$i18n.t('No suggestion prompts')}</div>
 											{/if}
 										</div>
 									{/if}
 								</div>
 
 								<div>
-									<div class="py-2.5 border-b border-customGray-700">
-										<div class="text-xs dark:text-customGray-300">{$i18n.t('Organization')}</div>
+									<div class="py-2.5 border-b border-lightGray-400 dark:border-customGray-700">
+										<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Organization')}</div>
 									</div>
 									<div class="py-3">
 										<div class="mb-2">
@@ -842,8 +759,8 @@
 								</div>
 
 								<div>
-									<div class="py-2.5 border-b border-customGray-700 mb-2">
-										<div class="text-xs dark:text-customGray-300">{$i18n.t('Output settings')}</div>
+									<div class="py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2">
+										<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Output settings')}</div>
 									</div>
 								</div>
 
@@ -852,16 +769,16 @@
 										<div class="relative" bind:this={dropdownRef}>
 											<button
 												type="button"
-												class={`flex items-center justify-between w-full text-sm h-10 px-3 py-2  ${showDropdown ? 'border' : ''} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer`}
+												class={`flex items-center justify-between w-full text-sm h-12 px-3 py-2  ${showDropdown ? 'border' : ''} border-lightGray-400 dark:border-customGray-700 rounded-md bg-lightGray-300 dark:bg-customGray-900 cursor-pointer`}
 												on:click={() => (showDropdown = !showDropdown)}
 											>
-												<span class="text-gray-500 dark:text-customGray-100"
+												<span class="text-lightGray-100 dark:text-customGray-100"
 													>{$i18n.t('Model Selection')}</span
 												>
 												<div class="flex items-center gap-2">
 													{#if info.base_model_id}
 														<div
-															class="flex items-center gap-2 text-xs dark:text-customGray-100/50"
+															class="flex items-center gap-2 text-xs text-lightGray-100/50  dark:text-customGray-100/50"
 														>
 															<img
 																src={getModelIcon(selectedModel.name)}
@@ -877,13 +794,13 @@
 
 											{#if showDropdown}
 												<div
-													class="max-h-60 overflow-y-auto custom-scrollbar absolute z-50 w-full -mt-1 bg-white dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
+													class="max-h-60 overflow-y-auto custom-scrollbar absolute z-50 w-full -mt-1 bg-lightGray-300 dark:bg-customGray-900 border-l border-r border-b border-lightGray-400 dark:border-customGray-700 rounded-b-md"
 												>
-													<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
+													<hr class="border-t border-lightGray-400 dark:border-customGray-700 mb-2 mt-1 mx-0.5" />
 													<div class="px-1">
 														{#each $models?.filter(item => !item.base_model_id)?.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena') as model}
 															<button
-																class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
+																class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-lightGray-700 dark:hover:bg-customGray-950 text-lightGray-100 dark:text-customGray-100 cursor-pointer "
 																on:click={() => {
 																	info.base_model_id = model.id;
 																	if(model.name === "GPT o3-mini" || model?.name === "GPT o1" || model?.name === "GPT o1-mini"){
@@ -913,19 +830,19 @@
 									<div class="relative" bind:this={temperatureDropdownRef}>
 										<button
 											type="button"
-											class={`flex items-center justify-between w-full text-sm h-10 px-3 py-2 ${
+											class={`flex items-center justify-between w-full text-sm h-12 px-3 py-2 ${
 												showTemperatureDropdown ? 'border' : ''
-											} border-gray-300 dark:border-customGray-700 rounded-md bg-white ${disableCreativity ? "bg-gray-500 dark:bg-customGray-800" : "dark:bg-customGray-900 bg-white"}  cursor-pointer`}
+											} border-lightGray-400 dark:border-customGray-700 rounded-md bg-lightGray-300 ${disableCreativity ? "bg-lightGray-300 dark:bg-customGray-800" : "dark:bg-customGray-900 bg-lightGray-300"}  cursor-pointer`}
 											on:click={() => {
 												if(disableCreativity) return;
 												showTemperatureDropdown = !showTemperatureDropdown
 												}}
 										>
-											<span class="text-gray-500 dark:text-customGray-100"
+											<span class="text-lightGray-100 dark:text-customGray-100"
 												>{$i18n.t('Creativity Scale')}</span
 											>
 											{#if !disableCreativity}
-											<div class="flex items-center gap-2 text-xs dark:text-customGray-100/50">
+											<div class="flex items-center gap-2 text-xs text-lightGray-100/50 dark:text-customGray-100/50">
 												{selectedTemperatureLabel}
 												<ChevronDown className="size-3" />
 											</div>
@@ -934,13 +851,13 @@
 
 										{#if showTemperatureDropdown}
 											<div
-												class="max-h-40 overflow-y-auto absolute z-50 w-full -mt-1 bg-white pb-1 dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
+												class="max-h-40 overflow-y-auto absolute z-50 w-full -mt-1 bg-lightGray-300 pb-1 dark:bg-customGray-900 border-l border-r border-b border-lightGray-400 dark:border-customGray-700 rounded-b-md"
 											>
-												<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
+												<hr class="border-t border-lightGray-400 dark:border-customGray-700 mb-2 mt-1 mx-0.5" />
 												<div class="px-1">
 													{#each temperatureOptions as option}
 														<button
-															class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
+															class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-lightGray-100"
 															on:click={() => {
 																info.params.temperature = option.value;
 																showTemperatureDropdown = false;
@@ -957,304 +874,13 @@
 
 								<CapabilitiesNew bind:capabilities />
 
-								<!-------------------->
 							</div>
-
-							<!-- {#if preset}
-						<div class="my-1">
-							<div class=" text-sm font-semibold mb-1">{$i18n.t('Base Model (From)')}</div>
-
-							<div>
-								<select
-									class="text-sm w-full bg-transparent outline-none"
-									placeholder="Select a base model (e.g. llama3, gpt-4o)"
-									bind:value={info.base_model_id}
-									on:change={(e) => {
-										addUsage(e.target.value);
-									}}
-									required
-								>
-									<option value={null} class=" text-gray-900"
-										>{$i18n.t('Select a base model')}</option
-									>
-									{#each $models.filter((m) => (model ? m.id !== model.id : true) && !m?.preset && m?.owned_by !== 'arena') as model}
-										<option value={model.id} class=" text-gray-900">{model.name}</option>
-									{/each}
-								</select>
-							</div>
-						</div>
-					{/if} -->
-
-							<!-- <div class="my-1">
-						<div class="mb-1 flex w-full justify-between items-center">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('Description')}</div>
-
-							<button
-								class="p-1 text-xs flex rounded transition"
-								type="button"
-								on:click={() => {
-									enableDescription = !enableDescription;
-								}}
-							>
-								{#if !enableDescription}
-									<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-								{:else}
-									<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-								{/if}
-							</button>
-						</div>
-
-						{#if enableDescription}
-							<Textarea
-								className=" text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden "
-								placeholder={$i18n.t('Add a short description about what this model does')}
-								bind:value={info.meta.description}
-							/>
-						{/if}
-					</div> -->
-
-							<!-- <div class=" mt-2 my-1">
-						<div class="">
-							<Tags
-								tags={info?.meta?.tags ?? []}
-								on:delete={(e) => {
-									const tagName = e.detail;
-									info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
-								}}
-								on:add={(e) => {
-									const tagName = e.detail;
-									if (!(info?.meta?.tags ?? null)) {
-										info.meta.tags = [{ name: tagName }];
-									} else {
-										info.meta.tags = [...info.meta.tags, { name: tagName }];
-									}
-								}}
-							/>
-						</div>
-					</div> -->
-
-							<!-- <div class="my-2">
-						 <div class="px-3 py-2 bg-gray-50 dark:bg-gray-950 rounded-lg">
-							<AccessControl bind:accessControl accessRoles={['read', 'write']} />
-						</div> 
-					</div> -->
-
-							<!-- <hr class=" border-gray-50 dark:border-gray-850 my-1.5" />
-
-					<div class="my-2">
-						<div class="flex w-full justify-between">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('Model Params')}</div>
-						</div>
-
-						<div class="mt-2">
-							<div class="my-1">
-								<div class=" text-xs font-semibold mb-2">{$i18n.t('System Prompt')}</div>
-								<div>
-									<Textarea
-										className=" text-sm w-full bg-transparent outline-none resize-none overflow-y-hidden "
-										placeholder={`Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.`}
-										rows={4}
-										bind:value={info.params.system}
-									/>
-								</div>
-							</div> 
-
-							<div class="flex w-full justify-between">
-								<div class=" self-center text-xs font-semibold">
-									{$i18n.t('Advanced Params')}
-								</div>
-
-								<button
-									class="p-1 px-3 text-xs flex rounded transition"
-									type="button"
-									on:click={() => {
-										showAdvanced = !showAdvanced;
-									}}
-								>
-									{#if showAdvanced}
-										<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
-									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Show')}</span>
-									{/if}
-								</button>
-							</div>
-
-							{#if showAdvanced}
-								<div class="my-2">
-									<AdvancedParams
-										admin={true}
-										bind:params
-										on:change={(e) => {
-											info.params = { ...info.params, ...params };
-										}}
-									/>
-								</div>
-							{/if}
-						</div>
-					</div> -->
-
-							<!-- <hr class=" border-gray-50 dark:border-gray-850 my-1" /> -->
-
-							<!-- <div class="my-2">
-						<div class="flex w-full justify-between items-center">
-							<div class="flex w-full justify-between items-center">
-								<div class=" self-center text-sm font-semibold">
-									{$i18n.t('Prompt suggestions')}
-								</div>
-
-								<button
-									class="p-1 text-xs flex rounded transition"
-									type="button"
-									on:click={() => {
-										if ((info?.meta?.suggestion_prompts ?? null) === null) {
-											info.meta.suggestion_prompts = [{ content: '' }];
-										} else {
-											info.meta.suggestion_prompts = null;
-										}
-									}}
-								>
-									{#if (info?.meta?.suggestion_prompts ?? null) === null}
-										<span class="ml-2 self-center">{$i18n.t('Default')}</span>
-									{:else}
-										<span class="ml-2 self-center">{$i18n.t('Custom')}</span>
-									{/if}
-								</button>
-							</div>
-
-							{#if (info?.meta?.suggestion_prompts ?? null) !== null}
-								<button
-									class="p-1 px-2 text-xs flex rounded transition"
-									type="button"
-									on:click={() => {
-										if (
-											info.meta.suggestion_prompts.length === 0 ||
-											info.meta.suggestion_prompts.at(-1).content !== ''
-										) {
-											info.meta.suggestion_prompts = [
-												...info.meta.suggestion_prompts,
-												{ content: '' }
-											];
-										}
-									}}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 20 20"
-										fill="currentColor"
-										class="w-4 h-4"
-									>
-										<path
-											d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-										/>
-									</svg>
-								</button>
-							{/if}
-						</div>
-
-						{#if info?.meta?.suggestion_prompts}
-							<div class="flex flex-col space-y-1 mt-1 mb-3">
-								{#if info.meta.suggestion_prompts.length > 0}
-									{#each info.meta.suggestion_prompts as prompt, promptIdx}
-										<div class=" flex rounded-lg">
-											<input
-												class=" text-sm w-full bg-transparent outline-none border-r border-gray-50 dark:border-gray-850"
-												placeholder={$i18n.t('Write a prompt suggestion (e.g. Who are you?)')}
-												bind:value={prompt.content}
-											/>
-
-											<button
-												class="px-2"
-												type="button"
-												on:click={() => {
-													info.meta.suggestion_prompts.splice(promptIdx, 1);
-													info.meta.suggestion_prompts = info.meta.suggestion_prompts;
-												}}
-											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="w-4 h-4"
-												>
-													<path
-														d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-													/>
-												</svg>
-											</button>
-										</div>
-									{/each}
-								{:else}
-									<div class="text-xs text-center">No suggestion prompts</div>
-								{/if}
-							</div>
-						{/if}
-					</div> -->
-
-							<!-- <hr class=" border-gray-50 dark:border-gray-850 my-1.5" /> -->
-
-							<!-- <div class="my-2">
-								<Knowledge bind:selectedKnowledge={knowledge} collections={$knowledgeCollections} />
-							</div> -->
-
-							<!-- <div class="my-2">
-						<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools} />
-					</div>
-
-					<div class="my-2">
-						<FiltersSelector
-							bind:selectedFilterIds={filterIds}
-							filters={$functions.filter((func) => func.type === 'filter')}
-						/>
-					</div>
-
-					<div class="my-2">
-						<ActionsSelector
-							bind:selectedActionIds={actionIds}
-							actions={$functions.filter((func) => func.type === 'action')}
-						/>
-					</div> -->
-
-							<!-- <div class="my-2">
-						<Capabilities bind:capabilities />
-					</div> -->
-
-							<!-- <div class="my-2 text-gray-300 dark:text-gray-700">
-						<div class="flex w-full justify-between mb-2">
-							<div class=" self-center text-sm font-semibold">{$i18n.t('JSON Preview')}</div>
-
-							<button
-								class="p-1 px-3 text-xs flex rounded transition"
-								type="button"
-								on:click={() => {
-									showPreview = !showPreview;
-								}}
-							>
-								{#if showPreview}
-									<span class="ml-2 self-center">{$i18n.t('Hide')}</span>
-								{:else}
-									<span class="ml-2 self-center">{$i18n.t('Show')}</span>
-								{/if}
-							</button>
-						</div>
-
-						{#if showPreview}
-							<div>
-								<textarea
-									class="text-sm w-full bg-transparent outline-none resize-none"
-									rows="10"
-									value={JSON.stringify(info, null, 2)}
-									disabled
-									readonly
-								/>
-							</div>
-						{/if}
-					</div> -->
 
 							<div class="my-2 flex justify-end">
 								<button
-									class=" text-xs w-[168px] h-10 px-3 py-2 transition rounded-lg {loading
-										? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
-										: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center"
+									class=" text-xs w-[168px] h-10 px-3 py-2 font-medium transition rounded-lg {loading
+										? ' cursor-not-allowed bg-lightGray-300 hover:bg-lightGray-500 text-lightGray-100 dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
+										: 'bg-lightGray-300 hover:bg-lightGray-500 text-lightGray-100 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center"
 									type="submit"
 									disabled={loading}
 								>
@@ -1299,7 +925,7 @@
 					</form>
 				</div>
 			{/if}
-			<div class="w-1/2"></div>
+			<div class="w-1/2 hidden md:visible"></div>
 		</div>
 	</div>
 {/if}

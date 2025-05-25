@@ -80,12 +80,20 @@
 		await inviteUsers(localStorage.token, invitees).catch(error => showToast('error', error));
 		goto('/');			
 	}
+
+	let logoSrc = '/logo_light.png';
+
+	onMount(() => {
+		const isDark = localStorage.getItem('theme') === 'dark';
+		logoSrc = isDark ? '/logo_dark_transparent.png' : '/logo_light_transparent.png';
+	});
+
 </script>
 
 <CustomToast message={$toastMessage} type={$toastType} visible={$toastVisible} />
 
 <form
-	class="flex flex-col self-center dark:bg-customGray-800 rounded-2xl w-[31rem] pt-8 px-24 pb-16"
+	class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-full md:w-[31rem] px-5 py-5 md:pt-8 md:px-24 md:pb-16"
 	on:submit={(e) => {
 		e.preventDefault();
 		inviteHandler();
@@ -93,22 +101,22 @@
 >
 	<div class="self-center flex flex-col items-center mb-5">
 		<div>
-			<img crossorigin="anonymous" src="/logo_dark_transparent.png" class=" w-10 mb-5" alt="logo" />
+			<img crossorigin="anonymous" src={logoSrc} class=" w-10 mb-5" alt="logo" />
 		</div>
-		<div class="mb-2.5">{$i18n.t('Invite your team')}</div>
-		<div class="text-center text-xs dark:text-customGray-300">
+		<div class="mb-2.5 font-medium text-lightGray-100 dark:text-customGray-100">{$i18n.t('Invite your team')}</div>
+		<div class="text-center text-xs font-medium text-[#8A8B8D] dark:text-customGray-300">
 			{$i18n.t('Invite your team to join your workspace')}
 		</div>
 	</div>
-    <div class="bg-white dark:bg-customGray-900 rounded-md relative" style="min-height: 100px;">
+    <div class="bg-lightGray-300 dark:bg-customGray-900 rounded-md relative" style="min-height: 100px;">
 		{#if invitedEmails?.length < 1 && !emailFocused}
 				<div
-					class="absolute left-2.5 text-sm top-2.5 dark:text-customGray-100 dark:bg-customGray-900 pointer-events-none w-[100px] h-6"
+					class="absolute left-2.5 text-sm top-2.5 text-lightGray-100 bg-lightGray-300 dark:text-customGray-100 dark:bg-customGray-900 pointer-events-none w-[100px] h-6"
 				>
 					{$i18n.t('Emails')}
 				</div>
 				<span
-					class="absolute top-[26px] w-[12rem] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+					class="absolute top-[26px] w-[12rem] text-lightGray-100/50 text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
 				>
 					{$i18n.t('Add Team member mails (separated by comma)')}
 				</span>
@@ -121,7 +129,7 @@
             {#each invitedEmails as email, index (email)}
                 <div
                     style={`background-color: ${emailColors[index%emailColors.length]}`}
-                    class="flex items-start  text-xs px-2 py-1 rounded-full dark:text-white"
+                    class="flex items-start  text-xs px-2 py-1 rounded-full text-white dark:text-white"
                 >
                     {email}
                     <button
@@ -138,7 +146,7 @@
                 bind:this={inputRef}
                 bind:value={input}
                 placeholder="Enter email..."
-                class="text-xs bg-transparent outline-none px-1 h-6"
+                class="text-xs bg-transparent outline-none px-1 h-6 min-w-[80px] text-lightGray-100 dark:text-customGray-100"
                 on:keydown={handleKeydown}
                 on:blur={() => {
 					addEmail()
@@ -152,7 +160,7 @@
     </div>
     <div class="mt-2.5 flex justify-end gap-7">
         <button
-            class="text-gray-800 w-fit text-xs dark:text-customGray-200 py-2.5 rounded-lg transition"
+            class="font-medium w-fit text-xs text-lightGray-100 dark:text-customGray-200 py-2.5 rounded-lg transition"
             on:click={() => {
               goto('/');
             }}
@@ -161,7 +169,7 @@
             {$i18n.t('Skip for now')}
         </button>
         <button
-            class="bg-gray-900 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 text-gray-100 dark:text-customGray-200 w-1/2 py-2.5 rounded-lg transition"
+            class="font-medium bg-lightGray-300 hover:bg-lightGray-700 text-lightGray-100 text-xs dark:bg-customGray-900 border dark:border-customGray-700 dark:hover:bg-customGray-950 dark:text-customGray-200 w-1/2 py-2.5 rounded-lg transition"
         >
             {$i18n.t('Invite')}
         </button>

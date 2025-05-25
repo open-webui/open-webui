@@ -263,7 +263,7 @@
 
 <div class="app relative">
 	<div
-		class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-[#1E1E1E] h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
+		class=" text-lightGray-100 dark:text-gray-100 bg-lightGray-300 dark:bg-customGray-900 md:h-screen md:max-h-[100dvh] md:overflow-auto flex flex-row justify-end"
 	>
 		{#if loaded}
 			{#if !['user', 'admin'].includes($user.role)}

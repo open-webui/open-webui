@@ -43,7 +43,7 @@
 	
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[160px] rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-customGray-700 z-50 bg-white dark:bg-customGray-900 dark:text-white shadow"
+			class="w-full max-w-[160px] rounded-lg px-1 py-1.5 border border-lightGray-400 dark:border-customGray-700 z-50 bg-lightGray-300 dark:bg-customGray-900 dark:text-white shadow"
 			sideOffset={-2}
 			side="bottom"
 			align="end"
@@ -51,7 +51,7 @@
 		>
 			<DropdownMenu.Item>
 			<a
-			class="flex w-full items-center gap-2 self-center text-xs dark:text-cusromGray-100 px-3 py-2 dark:text-gray-300 dark:hover:bg-customGray-950 dark:hover:text-white hover:bg-black/5 rounded-md"
+			class="font-medium flex w-full items-center gap-2 self-center text-xs text-lightGray-100 dark:text-cusromGray-100 px-3 py-2 dark:text-gray-300 dark:hover:bg-customGray-950 dark:hover:text-white hover:bg-lightGray-700 rounded-md"
 			type="button"
 			href={`/workspace/prompts/edit?command=${encodeURIComponent(prompt.command)}`}
 		>
@@ -61,7 +61,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
+				class="flex  gap-2  items-center px-3 py-2 text-xs text-lightGray-100 dark:text-customGray-100 font-medium cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
 				on:click={() => {
 					deleteHandler();
 				}}

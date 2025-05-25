@@ -32,14 +32,14 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[160px] rounded-lg border border-customGray-700 px-1 py-1.5  z-50 bg-white dark:bg-customGray-900 dark:text-white shadow-lg"
+			class="w-full max-w-[160px] rounded-lg border border-lightGray-400 dark:border-customGray-700 px-1 py-1.5  z-50 bg-lightGray-300 dark:bg-customGray-900 dark:text-white shadow-lg"
 			sideOffset={-2}
 			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-2 py-1.5 text-sm  text-customGray-100 dark:hover:text-white cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md"
+				class="font-medium flex gap-2 items-center px-2 py-1.5 text-sm  text-lightGray-100 dark:text-customGray-100 dark:hover:text-white cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md"
 				on:click={() => {
 					dispatch('rename');
 				}}
@@ -49,7 +49,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex gap-2 items-center px-2 py-1.5 text-sm  text-customGray-100 dark:hover:text-white cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md"
+				class="font-medium flex gap-2 items-center px-2 py-1.5 text-sm  text-lightGray-100 dark:text-customGray-100 dark:hover:text-white cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md"
 				on:click={() => {
 					dispatch('export');
 				}}
@@ -60,7 +60,7 @@
 			</DropdownMenu.Item>
 
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-2 py-1.5 text-sm text-customGray-100 dark:hover:text-white cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md"
+				class="font-medium flex  gap-2  items-center px-2 py-1.5 text-sm text-lightGray-100 dark:text-customGray-100 dark:hover:text-white cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md"
 				on:click={() => {
 					dispatch('delete');
 				}}

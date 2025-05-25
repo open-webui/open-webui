@@ -32,14 +32,14 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
-			class="w-full max-w-[160px] rounded-lg px-1 py-1.5 border border-gray-300/30 dark:border-customGray-700 z-[10000] bg-white dark:bg-customGray-900 dark:text-white shadow"
+			class="w-full max-w-[160px] rounded-lg px-1 py-1.5 border border-lightGray-400 bg-gray-50 dark:border-customGray-700 z-[10000]  dark:bg-customGray-900 dark:text-white shadow"
 			sideOffset={-2}
 			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
             <DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
+				class="flex  gap-2  items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
 				on:click={() => {
 					editHandler();
 				}}
@@ -48,7 +48,7 @@
 				<div class="flex items-center">{$i18n.t('Edit')}</div>
 			</DropdownMenu.Item>
 			<DropdownMenu.Item
-				class="flex  gap-2  items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
+				class="flex  gap-2  items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
 				on:click={() => {
 					deleteHandler();
 				}}

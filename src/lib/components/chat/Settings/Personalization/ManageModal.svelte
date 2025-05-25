@@ -40,11 +40,11 @@
 	let showDeleteConfirm = false;
 </script>
 
-<Modal size="md-plus" bind:show className="dark:bg-customGray-800 rounded-2xl">
-	<div>
+<Modal size="md-plus" bind:show className="dark:bg-customGray-800 rounded-2xl" containerClassName="bg-lightGray-250/50 dark:bg-[#1D1A1A]/50 backdrop-blur-[7.44px]">
+	<div class="bg-lightGray-550 dark:bg-customGray-800 rounded-xl">
 		<div class="px-7">
 			<div
-				class=" flex justify-between dark:text-white pt-5 pb-4 border-b dark:border-customGray-700"
+				class=" flex justify-between text-lightGray-100 dark:text-white pt-5 pb-4 border-b border-lightGray-400 dark:border-customGray-700"
 			>
 				<div class="self-center">{$i18n.t('Memory')}</div>
 				<button
@@ -79,7 +79,7 @@
 									id="memory-{memory.id}"
 									class="flex justify-between items-center group rounded-md w-full dark:hover:bg-customGray-900 py-2 px-3 cursor-pointer"
 								>
-									<div class="line-clamp-1 text-sm dark:text-customGray-100">
+									<div class="line-clamp-1 text-sm text-lightGray-100 dark:text-customGray-100">
 										{memory.content}
 									</div>
 									<div class="invisible group-hover:visible">
@@ -131,7 +131,7 @@
 					selectedMemory = null;
 				}}
 			/>
-			<div class="flex justify-end text-sm font-medium border-t border-customGray-700 pt-5">
+			<div class="flex justify-end text-sm font-medium border-t border-lightGray-400 dark:border-customGray-700 pt-5">
 				<!-- <button
 					class=" px-3.5 py-1.5 font-medium hover:bg-black/5 dark:hover:bg-white/5 outline outline-1 outline-gray-300 dark:outline-gray-800 rounded-3xl"
 					on:click={() => {
@@ -139,7 +139,7 @@
 					}}>{$i18n.t('Add Memory')}</button
 				> -->
 				<button
-					class=" text-xs h-10 px-4 py-2 transition rounded-lg bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center"
+					class=" text-xs h-10 px-4 py-2 transition rounded-lg bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 hover:bg-gray-900 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center"
 					on:click={async () => {
 						if(memories.length < 1) return;
 						showDeleteConfirm = true;

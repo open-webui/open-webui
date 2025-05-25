@@ -4,7 +4,7 @@
 	import { getLanguages } from '$lib/i18n';
 	const dispatch = createEventDispatcher();
 
-	import { models, settings, theme, user, config } from '$lib/stores';
+	import { models, settings, theme, user, config, mobile } from '$lib/stores';
 	import { onClickOutside } from '$lib/utils';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import { getVoices as _getVoices } from '$lib/apis/audio';
@@ -255,17 +255,17 @@
 				<div class="relative" bind:this={languageDropdownRef}>
 					<button
 						type="button"
-						class={`flex items-center justify-between w-full text-sm h-10 px-3 py-2 ${
+						class={`flex items-center justify-between w-full text-sm h-12 px-3 py-2 ${
 							showLanguageDropdown ? 'border' : ''
-						} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer`}
+						} border-lightGray-400 dark:border-customGray-700 rounded-md bg-lightGray-300 dark:bg-customGray-900 cursor-pointer`}
 						on:click={() => {
 							showLanguageDropdown = !showLanguageDropdown
 							}}
 					>
-						<span class="text-gray-500 dark:text-customGray-100"
+						<span class="text-lightGray-100 dark:text-customGray-100"
 							>{$i18n.t('Language')}</span
 						>
-						<div class="flex items-center gap-2 text-xs dark:text-customGray-100/50">
+						<div class="flex items-center gap-2 text-xs text-lightGray-100 dark:text-customGray-100/50">
 							{selectedLanguage?.['title']?.replace(/\s*\(.*?\)/, '')}
 							<ChevronDown className="size-3" />
 						</div>
@@ -273,9 +273,9 @@
 
 					{#if showLanguageDropdown}
 						<div
-							class="max-h-40 overflow-y-auto absolute z-50 w-full -mt-1 bg-white pb-1 dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
+							class="max-h-40 overflow-y-auto absolute z-50 w-full -mt-1 bg-lightGray-300 pb-1 dark:bg-customGray-900 border-l border-r border-b border-lightGray-400 dark:border-customGray-700 rounded-b-md"
 						>
-							<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
+							<hr class="border-t border-lightGray-400 dark:border-customGray-700 mb-2 mt-1 mx-0.5" />
 							<div class="px-1">
 								{#each languages as language}
 									<button
@@ -299,17 +299,17 @@
 					<div class="relative" bind:this={voiceDropdownRef}>
 						<button
 							type="button"
-							class={`flex items-center justify-between w-full text-sm h-10 px-3 py-2 ${
+							class={`flex items-center justify-between w-full bg-lightGray-300 text-sm h-12 px-3 py-2 ${
 								showVoiceDropdown ? 'border' : ''
-							} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer`}
+							} border-lightGray-400 dark:border-customGray-700 rounded-md bg-lightGray-300 dark:bg-customGray-900 cursor-pointer`}
 							on:click={() => {
 								showVoiceDropdown = !showVoiceDropdown
 								}}
 						>
-							<span class="text-gray-500 dark:text-customGray-100"
+							<span class="text-lightGray-100 dark:text-customGray-100"
 								>{$i18n.t('Voice for audio output')}</span>
-							<div class="flex items-center gap-2 text-xs dark:text-customGray-100/50">
-								<div class="flex items-center gap-2 text-xs dark:text-customGray-100/50 capitalize">
+							<div class="flex items-center gap-2 text-xs text-lightGray-100 dark:text-customGray-100/50">
+								<div class="flex items-center gap-2 text-xs text-lightGray-100 dark:text-customGray-100/50 capitalize">
 									{voice}
 								<ChevronDown className="size-3" />
 							</div>
@@ -317,9 +317,9 @@
 
 						{#if showVoiceDropdown}
 							<div
-								class="max-h-40 overflow-y-auto absolute z-50 w-full -mt-1 bg-white pb-1 dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
+								class="max-h-40 overflow-y-auto absolute z-50 w-full -mt-1 pb-1 bg-lightGray-300 dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
 							>
-								<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
+								<hr class="border-t border-lightGray-400 dark:border-customGray-700 mb-2 mt-1 mx-0.5" />
 								<div class="px-1">
 									{#each voices.filter((v) => nonLocalVoices || v.localService === true) as _voice}
 										<button
@@ -397,10 +397,10 @@
 			</div> -->
 
 			<div
-				class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2"
+				class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2"
 			>
 				<div class="flex w-full justify-between items-center">
-					<div class="text-xs dark:text-customGray-300">{$i18n.t('Theme')}</div>
+					<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Theme')}</div>
 				</div>
 			</div>
 
@@ -409,7 +409,12 @@
 					<img class="rounded-lg max-w-full" src="/system.png" alt="system theme"/>
 					<div class="flex items-center pl-2.5 absolute bottom-[0.625rem] text-customGray-550 text-xs">
 						<SystemIcon className="size-3.5 mr-1"/>
-						{$i18n.t('System (Default)')}
+						{#if ($mobile)}
+							{$i18n.t('System')}
+						{:else}
+							{$i18n.t('System (Default)')}
+						{/if}
+						
 					</div>
 				</div>
 				<div on:click={() => themeChangeHandler('light')}  class="relative rounded-lg {selectedTheme === "light" ? "border-2 border-[#305BE4]" : ""}">
@@ -481,21 +486,21 @@
 
 		 {#if $user.role === 'admin' || $user?.permissions.chat?.controls}
 			<div
-				class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2"
+				class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2"
 			>
 				<div class="flex w-full justify-between items-center">
-					<div class="text-xs dark:text-customGray-300">{$i18n.t('Custom Instructions')}</div>
+					<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Custom Instructions')}</div>
 				</div>
 			</div>
 
-			<div class="relative w-full dark:bg-customGray-900 rounded-md mb-2.5">
+			<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md mb-2.5">
 				{#if system}
-					<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('System Prompt')}</div>
+					<div class="text-xs absolute left-2 top-1 text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('System Prompt')}</div>
 				{/if}
 				<textarea
 					bind:value={system}
 					placeholder={$i18n.t('System Prompt')}
-					class="px-2.5 py-2 text-sm {system ? "mt-2" : "mt-0"} w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none"
+					class="px-2.5 py-2 text-sm {system ? "pt-4" : "pt-2"} text-lightGray-100 placeholder:text-lightGray-100 w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none"
 					rows="4"
 				/>
 			</div>
@@ -507,9 +512,9 @@
 
 			
 			<div class="mb-2.5">
-				<div class="flex items-center justify-between mb-1 w-full dark:bg-customGray-900 rounded-md h-10 px-2.5 py-2">
+				<div class="flex items-center justify-between mb-1 w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md h-12 px-2.5 py-2">
 					
-						<div class="text-sm dark:text-customGray-100">
+						<div class="text-sm text-lightGray-100 dark:text-customGray-100">
 							{$i18n.t('Memory')}
 						</div>
 	
@@ -535,7 +540,7 @@
 			<div class="mt-3 mb-1 ml-1">
 				<button
 					type="button"
-					class=" text-xs w-[132px] h-10 px-3 py-2 transition rounded-lg bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center"
+					class=" text-xs w-[132px] h-10 px-3 py-2 transition rounded-lg bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center"
 					on:click={() => {
 						showManageModal = true;
 					}}
@@ -617,7 +622,7 @@
 
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
-		class=" text-xs w-[168px] h-10 px-3 py-2 transition rounded-lg bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center"
+		class=" text-xs w-[168px] h-10 px-3 py-2 transition rounded-lg bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700 flex justify-center items-center"
 		type="submit"
 			on:click={() => {
 				saveSettings({

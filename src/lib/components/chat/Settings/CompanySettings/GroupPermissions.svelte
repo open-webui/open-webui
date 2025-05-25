@@ -8,6 +8,7 @@
 	import CodeInterpreterIcon from '$lib/components/icons/CodeInterpreterIcon.svelte';
 	import Checkbox from '$lib/components/common/Checkbox.svelte';
     import RenameIcon from '$lib/components/icons/RenameIcon.svelte';
+	import { mobile } from '$lib/stores';
     
     
     const dispatch = createEventDispatcher();
@@ -55,11 +56,15 @@
             initialized = true;
         }
     }
+	
 
 </script>
 
 <div>
-	<div bind:this={root} class="relative w-full h-4" use:onClickOutside={() => (showDropdown = false)}>
+	<div bind:this={root} class="relative w-full h-4" use:onClickOutside={() => {
+		showDropdown = false;
+		showSubmenu = false;
+		}}>
 		<div
 		on:click={() => (showDropdown = !showDropdown)}
 	>
@@ -67,14 +72,14 @@
 	</div>
 		{#if showDropdown}
 			<div
-				class="w-[10rem] flex flex-col absolute left-0 right-0 bg-white dark:bg-customGray-900 px-1 py-2 border border-gray-300 dark:border-customGray-700 rounded-lg z-10"
+				class="w-[10rem] flex flex-col absolute md:left-0 right-0 bg-lightGray-300 dark:bg-customGray-900 px-1 py-2 border border-lightGray-400 dark:border-customGray-700 rounded-lg z-10"
 			>
 				<button
 					type="button"
 					on:click={() => {
                         dispatch('editName')
                     }}
-					class="flex gap-2 items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
+					class="flex gap-2 items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
 				>
 					<RenameIcon />
 					<div class="flex items-center">{$i18n.t('Rename')}</div>
@@ -108,8 +113,16 @@
 					}}
 				>
 					<button
-						on:click={() => (showDropdown = false)}
-						class="w-full flex justify-between gap-2 items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
+						on:click={() => {
+							if($mobile) {
+								showSubmenu = true;
+								submenuX = -183;
+								submenuY = -40;
+							}else{
+								showDropdown = false;
+							}
+						}}
+						class="w-full flex justify-between gap-2 items-center px-3 py-2 text-xs dark:text-customGray-100 font-medium cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md dark:hover:text-white"
 					>	<div class="flex items-center gap-2">
 							<PermissionIcon />
 							<div class="flex items-center">{$i18n.t('Permission')}</div>
@@ -142,7 +155,7 @@
 					{#if showSubmenu}
 						<button
 							type="button"
-							class="w-[11rem] absolute bg-white dark:bg-customGray-900 border px-1 py-2 border-gray-300 dark:border-customGray-700 rounded-xl shadow z-20 min-w-30"
+							class="w-[11rem] absolute dark:bg-customGray-900 border px-1 py-2 border-lightGray-400 bg-lightGray-300 dark:border-customGray-700 rounded-xl shadow z-20 min-w-30"
 							style="top: {submenuY}px; left: {submenuX}px"
 							on:mouseenter={() => (hoveringSubmenu = true)}
 							on:mouseleave={() => {
@@ -154,7 +167,7 @@
 								<div
 									role="button"
 									tabindex="0"
-									class="flex items-center rounded-xl w-full justify-start px-2 py-2 hover:bg-gray-100 dark:hover:bg-customGray-950 cursor-pointer text-xs dark:text-customGray-100"
+									class="flex items-center rounded-xl w-full justify-start px-2 py-2 hover:bg-lightGray-700 dark:hover:bg-customGray-950 cursor-pointer text-xs dark:text-customGray-100"
 								>
 									<Checkbox
 										state={capabilities[capability] ? 'checked' : 'unchecked'}
@@ -180,7 +193,7 @@
 					on:click={() => {
                         dispatch('deleteGroup')
                     }}
-					class="flex gap-2 items-center px-3 py-2 text-xs text-[#F65351] font-medium cursor-pointer hover:bg-gray-50 dark:hover:bg-customGray-950 rounded-md"
+					class="flex gap-2 items-center px-3 py-2 text-xs text-[#F65351] font-medium cursor-pointer hover:bg-lightGray-700 dark:hover:bg-customGray-950 rounded-md"
 				>
 					<DeleteIcon />
 					<div class="flex items-center">{$i18n.t('Delete group')}</div>

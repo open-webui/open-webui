@@ -317,28 +317,28 @@
 
 			<div class="pt-0.5">
 				<div class="flex flex-col w-full mb-2.5">
-					<div class="relative w-full dark:bg-customGray-900 rounded-md">
+					<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 						{#if firstName}
-							<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+							<div class="text-xs absolute text-lightGray-100/50 left-2.5 top-1 dark:text-customGray-100/50">
 								{$i18n.t('First Name')}
 							</div>
 						{/if}
 						<input
-							class={`px-2.5 text-sm ${firstName ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							class={`px-2.5 text-sm ${firstName ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 							placeholder={$i18n.t('First Name')}
 							bind:value={firstName}
 						/>
 					</div>
 				</div>
 				<div class="flex flex-col w-full mb-2.5">
-					<div class="relative w-full dark:bg-customGray-900 rounded-md">
+					<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 						{#if lastName}
-							<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+							<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 								{$i18n.t('Last Name')}
 							</div>
 						{/if}
 						<input
-							class={`px-2.5 text-sm ${lastName ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							class={`px-2.5 text-sm ${lastName ? 'mt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 							placeholder={$i18n.t('Last Name')}
 							bind:value={lastName}
 						/>
@@ -381,21 +381,21 @@
 
 		<div>
 			<div
-				class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2"
+				class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2"
 			>
 				<div class="flex w-full justify-between items-center">
-					<div class="text-xs dark:text-customGray-300">{$i18n.t('Change password')}</div>
+					<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Change password')}</div>
 				</div>
 			</div>
 			<div class="flex flex-col w-full mb-2.5">
-				<div class="relative w-full dark:bg-customGray-900 rounded-md">
+				<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 					{#if currentPassword}
-						<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+						<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 							{$i18n.t('Current password')}
 						</div>
 					{/if}
 					<input
-						class={`px-2.5 text-sm ${currentPassword ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+						class={`px-2.5 text-sm ${currentPassword ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 						type="password"
 						bind:value={currentPassword}
 						placeholder={$i18n.t('Current password')}
@@ -406,14 +406,14 @@
 			</div>
 
 			<div class="flex flex-col w-full mb-2.5">
-				<div class="relative w-full dark:bg-customGray-900 rounded-md">
+				<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 					{#if newPassword}
-						<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+						<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 							{$i18n.t('New password')}
 						</div>
 					{/if}
 					<input
-						class={`px-2.5 text-sm ${newPassword ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+						class={`px-2.5 text-sm ${newPassword ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 						type="password"
 						bind:value={newPassword}
 						placeholder={$i18n.t('Enter your new password')}
@@ -424,14 +424,14 @@
 			</div>
 
 			<div class="flex flex-col w-full">
-				<div class="relative w-full dark:bg-customGray-900 rounded-md">
+				<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 					{#if newPasswordConfirm}
-						<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+						<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 							{$i18n.t('Confirm password')}
 						</div>
 					{/if}
 					<input
-						class={`px-2.5 text-sm ${newPasswordConfirm ? 'mt-2' : 'mt-0'} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+						class={`px-2.5 text-sm ${newPasswordConfirm ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 						type="password"
 						bind:value={newPasswordConfirm}
 						placeholder={$i18n.t('Confirm password')}
@@ -609,8 +609,8 @@
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
 			class=" text-xs w-[168px] h-10 px-3 py-2 transition rounded-lg {loading
-				? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
-				: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center items-center"
+				? ' cursor-not-allowed bg-lightGray-300 hover:bg-lightGray-700 text-lightGray-100 dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border border-lightGray-400 dark:border-customGray-700'
+				: 'bg-lightGray-300 hover:bg-lightGray-700 text-lightGray-100 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border border-lightGray-400 dark:border-customGray-700'} flex justify-center items-center"
 			type="submit"
 			disabled={loading}
 			on:click={async () => {
@@ -624,7 +624,7 @@
 			{$i18n.t('Save')}
 		</button>
 	</div>
-	<div class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2">
+	<div class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2">
 		<div class="flex w-full justify-between items-center">
 			<div class="text-xs dark:text-customGray-300">{$i18n.t('Delete account')}</div>
 		</div>

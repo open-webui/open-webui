@@ -50,11 +50,11 @@ onMount(() => {
 
 
 <div bind:this={triggerEl}
-on:mouseenter={positionTooltip} class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full dark:bg-customGray-700">
+on:mouseenter={positionTooltip} class="ml-1 cursor-pointer group relative flex justify-center items-center w-[18px] h-[18px] rounded-full text-white dark:text-white bg-customBlue-600 dark:bg-customGray-700">
     <InfoIcon className="size-6" />
 <div
 bind:this={tooltipEl}
-class={`invisible group-hover:visible absolute px-3 py-1 left-full ml-2 w-52 p-2 rounded-xl border border-customGray-700 bg-white dark:bg-customGray-900 text-sm text-gray-800 dark:text-white z-50
+class={`invisible group-hover:visible absolute -left-5 md:left-0 px-3 py-1 left-full ml-2 w-52 p-2 rounded-xl border border-lightGray-400 dark:border-customGray-700 bg-lightGray-550 dark:bg-customGray-900 text-sm text-gray-800 dark:text-white z-50 shadow
 	${placeAbove ? 'bottom-full mb-2' : 'top-0'}`}
 >
 	{#if modelsInfo?.[hoveredItem?.name]?.organization}

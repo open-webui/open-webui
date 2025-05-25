@@ -109,7 +109,7 @@
 
 <CustomToast message={$toastMessage} type={$toastType} visible={$toastVisible} />
 <div
-	class="flex flex-col justify-between w-full h-screen max-h-[100dvh] text-white relative dark:bg-customGray-900"
+	class="flex flex-col justify-between w-full h-screen max-h-[100dvh]  px-4 text-white relative bg-lightGray-300 dark:bg-customGray-900"
 >
 	<div></div>
 	{#if step === 1}

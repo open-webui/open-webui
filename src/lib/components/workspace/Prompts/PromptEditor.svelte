@@ -92,37 +92,37 @@
 </script>
 
 <div class="flex flex-col">
-	<div class="py-[22px] px-[15px] border-b border-customGray-700">
+	<div class="py-[22px] px-[15px] border-b border-lightGray-400 dark:border-customGray-700 ">
 		<button class="flex items-center gap-1" on:click={() => history.back()}>
 			<BackIcon />
-			<div class="flex items-center md:self-center text-sm-plus font-medium leading-none px-0.5">
+			<div class="flex items-center text-lightGray-100 dark:text-customGray-100 md:self-center text-sm-plus font-medium leading-none px-0.5">
 				{$i18n.t('Create prompt')}
 			</div>
 		</button>
 	</div>
 
-	<div class="max-h-full flex justify-center w-[34rem] py-3 px-4">
+	<div class="flex justify-center w-full md:w-[34rem] py-3 px-4">
 		<form
-			class="flex flex-col dark:bg-customGray-800 rounded-2xl pt-6 pb-3 px-3"
+			class="flex flex-col bg-lightGray-550 dark:bg-customGray-800 rounded-2xl pt-6 pb-3 px-3"
 			on:submit|preventDefault={() => {
 				submitHandler();
 			}}
 		>
 			<div class="flex flex-col w-full mb-1.5">
 				<div class="flex-1">
-					<div class="relative w-full dark:bg-customGray-900 rounded-md">
+					<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 						{#if title}
-							<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Title')}</div>
+							<div class="text-xs absolute left-2 top-1 text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('Title')}</div>
 						{/if}
 						<input
-							class={`px-2.5 text-sm ${title ? "mt-2" : "mt-0"} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+							class={`px-2.5 text-sm ${title ? "pt-2" : "pt-0"} w-full h-12 bg-transparent text-lightGray-100 placeholder:text-lightGray-100 dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 							placeholder={$i18n.t('Title')}
 							bind:value={title}
 							required
 						/>
 						{#if !title}
 							<span
-							class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+							class="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-lightGray-100/50 dark:text-customGray-100/50 pointer-events-none select-none"
 							>
 							{$i18n.t('E.g. Paraphrase')}
 							</span>
@@ -147,12 +147,12 @@
 			</div>
 
 			<div class="mb-1.5">
-				<div class="relative w-full dark:bg-customGray-900 rounded-md">
+				<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 					{#if description}
-						<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Description')}</div>
+						<div class="text-xs absolute left-2 top-1 text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('Description')}</div>
 					{/if}
 					<input
-						class={`px-2.5 text-sm ${description ? "mt-2" : "mt-0"} w-full h-10 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+						class={`px-2.5 text-sm ${description ? "pt-2" : "pt-0"} w-full text-lightGray-100 placeholder:text-lightGray-100 h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 						placeholder={$i18n.t('Description')}
 						bind:value={description}
 						required
@@ -160,12 +160,12 @@
 				</div>
 			</div>
 			<div class="mb-1">
-				<div class="relative w-full dark:bg-customGray-900 rounded-md">
+				<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 					{#if content}
-						<div class="text-xs absolute left-2 top-1 dark:text-customGray-100/50">{$i18n.t('Prompt Content')}</div>
+						<div class="text-xs absolute left-2 top-1 text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('Prompt Content')}</div>
 					{/if}
 					<Textarea
-						className={`px-2.5 py-2 text-sm ${content ? "mt-2" : "mt-0"} w-full h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+						className={`px-2.5 py-2 text-sm ${content ? "pt-4" : "pt-2"} w-full text-lightGray-100 placeholder:text-lightGray-100 h-20 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
 						placeholder={$i18n.t('Prompt Content')}
 						bind:value={content}
 						rows={4}
@@ -173,7 +173,7 @@
 					/>
 					{#if !content}
 						<span
-						class="absolute top-[26px] w-[180px] text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
+						class="absolute top-[26px] w-[180px] text-lightGray-100/50 text-right right-2.5 -translate-y-1/2 text-xs dark:text-customGray-100/50 pointer-events-none select-none"
 						>
 							{$i18n.t('Write a summary that summarizes [topic or keyword].')}
 						</span>
@@ -181,19 +181,19 @@
 				</div>
 			</div>
 			<div class="mb-2.5">
-				<div class="text-xs text-gray-400 dark:text-white/50">
+				<div class="text-xs text-lightGray-100/50 dark:text-white/50">
 					ⓘ {$i18n.t('Format your variables using brackets like this:')}&nbsp;<span
-						class=" text-gray-600 dark:text-white/50 font-medium"
+						class=" text-lightGray-100/50 dark:text-white/50 font-medium"
 						>{'['}{$i18n.t('variable')}{']'}</span
 					>.
 					{$i18n.t('Make sure to enclose them with')}
-					<span class=" text-gray-600 dark:text-white/50 font-medium">{"'['"}</span>
+					<span class=" text-lightGray-100/50 dark:text-white/50 font-medium">{"'['"}</span>
 					{$i18n.t('and')}
-					<span class=" text-gray-600 dark:text-white/50 font-medium">{"']'"}</span>.
+					<span class=" text-lightGray-100/50 dark:text-white/50 font-medium">{"']'"}</span>.
 				</div>
 
-				<div class="text-xs text-gray-400 dark:text-white/50">
-					{$i18n.t('Utilize')}<span class=" text-gray-600 dark:text-white/50 font-medium">
+				<div class="text-xs text-lightGray-100/50 dark:text-white/50">
+					{$i18n.t('Utilize')}<span class=" text-lightGray-100/50 dark:text-white/50 font-medium">
 						{` {{CLIPBOARD}}`}</span
 					>
 					{$i18n.t('variable to have them replaced with clipboard content.')}
@@ -206,9 +206,9 @@
 
 			<div class="mt-2.5 mb-1 flex justify-end">
 				<button
-					class=" text-xs w-[168px] h-10 px-3 py-2 transition rounded-lg {loading
-					? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
-					: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center"
+					class=" text-xs w-[168px] h-12 px-3 py-2 transition rounded-lg {loading
+					? ' cursor-not-allowed bg-lightGray-300 hover:bg-lightGray-500 text-lightGray-100 dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border border-lightGray-400 dark:border-customGray-700'
+					: 'bg-lightGray-300 hover:bg-lightGray-500 text-lightGray-100 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border border-lightGray-400 dark:border-customGray-700'} flex justify-center"
 					type="submit"
 					disabled={loading}
 				>

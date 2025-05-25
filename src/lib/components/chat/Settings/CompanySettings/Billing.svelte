@@ -20,6 +20,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { goto } from '$app/navigation';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 	export let autoRecharge = false;
@@ -142,9 +143,9 @@
 >
 	<div>
 		{#if plans?.length > 0}
-			<div class="grid grid-cols-3 gap-2">
+			<div class="grid md:grid-cols-3 gap-2">
 				{#each plans as plan}
-					<div class="dark:bg-customGray-900 rounded-lg p-5 flex flex-col items-center">
+					<div class="bg-lightGray-300 dark:bg-customGray-900 rounded-lg p-5 flex flex-col items-center">
 						{#if plan.id === 'starter'}
 							<div
 								class="mb-2.5 flex justify-center items-center w-[50px] h-[50px] bg-[#024D15] rounded-mdx text-[#0F8C18]"
@@ -164,12 +165,12 @@
 								<GrowthPlanIcon className="size-6" />
 							</div>
 						{/if}
-						<div class="text-base dark:text-customGray-100 mb-5">
+						<div class="text-base text-lightGray-100 dark:text-customGray-100 mb-5">
 							{plan?.name}
 							{$i18n.t('Plan')}
 						</div>
-						<div class="dark:text-customGray-100 mb-5 text-2xl">
-							€{plan?.price_monthly / 100}/<span class="text-xs dark:text-customGray-100/50"
+						<div class="text-lightGray-100 dark:text-customGray-100 mb-5 text-2xl">
+							€{plan?.price_monthly / 100}/<span class="text-xs text-lightGray-100/50 dark:text-customGray-100/50"
 								>month</span
 							>
 						</div>
@@ -186,7 +187,7 @@
 							on:click={() => upgradeSubscription(plan.id)}
 							type="button"
 							disabled={plan?.id === $subscription?.plan}
-							class="w-full mt-auto flex h-10 items-center justify-center rounded-[10px] dark:bg-customGray-900 {plan?.id !== $subscription?.plan ? 'dark:hover:bg-customGray-950' : ''} border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
+							class="w-full mt-auto flex h-10 items-center justify-center rounded-[10px] font-medium hover:bg-lightGray-700 dark:bg-customGray-900 {plan?.id !== $subscription?.plan ? 'dark:hover:bg-customGray-950' : ''} border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
 						>
 							{#if plan?.id === $subscription?.plan}
 								{$i18n.t('Current Plan')}
@@ -206,18 +207,18 @@
 {#if !subscriptionLoading}
 	<div class="pb-20">
 		<div
-			class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5"
+			class="font-medium flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5"
 		>
 			<div class="flex w-full justify-between items-center">
-				<div class="text-xs dark:text-customGray-300">{$i18n.t('Current plan')}</div>
+				<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Current plan')}</div>
 			</div>
 		</div>
-		<div class="rounded-2xl dark:bg-customGray-900 pt-4 px-4 mb-2.5">
+		<div class="rounded-2xl bg-lightGray-300 dark:bg-customGray-900 pt-4 px-4 mb-2.5">
 			<div class="flex items-center justify-between pb-2.5 border-b dark:border-customGray-700">
 				<div class="flex items-center gap-2.5">
 					{#if $subscription?.plan === 'starter' || $subscription?.plan === 'free'}
 						<div
-							class="flex justify-center items-center w-[50px] h-[50px] bg-[#024D15] rounded-mdx text-[#0F8C18]"
+							class="flex justify-center items-center w-[50px] h-[50px] bg-[#024D15] dark:bg-[#024D15] rounded-mdx text-[#0F8C18]"
 						>
 							<StarterPlanIcon className="size-6" />
 						</div>
@@ -236,7 +237,7 @@
 					{/if}
 					<div>
 						<div class="flex items-center gap-2.5">
-							<div class="text-sm dark:text-customGray-100 capitalize">
+							<div class="text-sm text-lightGray-100 dark:text-customGray-100 capitalize">
 								{$i18n.t($subscription?.plan)}
 							</div>
 							<div
@@ -245,7 +246,7 @@
 								{$i18n.t('Monthly')}
 							</div>
 						</div>
-						<div class="text-xs dark:text-customGray-100/50">
+						<div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50">
 							€{currentPlan?.price_monthly ? (currentPlan?.price_monthly / 100).toFixed(2) : '0.00'}/mo
 						</div>
 					</div>
@@ -257,16 +258,16 @@
 						url.searchParams.set('plans', 'open'); 
 						window.history.replaceState({}, '', `${url.pathname}${url.search}`);
 					}}
-					class="flex items-center justify-center rounded-mdx dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-3 text-xs dark:text-customGray-200"
+					class="flex items-center justify-center rounded-mdx bg-lightGray-300 dark:bg-customGray-900 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-3 text-xs dark:text-customGray-200"
 				>
 					{$i18n.t('Explore Plans')}
 				</button>
 			</div>
 			<div class="flex items-center justify-between pt-2.5 pb-3">
-				<div class="text-xs dark:text-customGray-100">{$i18n.t('Billing details')}</div>
+				<div class="text-xs text-lightGray-100 dark:text-customGray-100">{$i18n.t('Billing details')}</div>
 				{#if $subscription?.cancel_at_period_end}
 					<div class="text-xs dark:text-customGray-590">
-						Canceled at {dayjs($subscription?.canceled_at * 1000)?.format('DD.MM.YYYY')}
+						Canceled at {dayjs($subscription?.end_date * 1000)?.format('DD.MM.YYYY')}
 					</div>
 				{:else if $subscription?.plan !== 'free'}
 					<div class="text-xs dark:text-customGray-590">
@@ -276,42 +277,42 @@
 			</div>
 		</div>
 
-		<div class="rounded-2xl dark:bg-customGray-900 pt-4 px-4 pb-4 mb-2.5">
+		<div class="rounded-2xl bg-lightGray-300 dark:bg-customGray-900 pt-4 px-4 pb-4 mb-2.5">
 			<div class="flex items-center justify-between pb-3">
 				<div class="text-xs dark:text-customGray-300 font-medium">{$i18n.t('Seats')}</div>
 				<div class="text-xs dark:text-customGray-590">
 					{#if $subscription?.plan !== "free"}
-					<span class="text-xs dark:text-customGray-100">{$subscription?.seats_taken} {$i18n.t('used')}</span><span
+					<span class="text-xs text-lightGray-100 dark:text-customGray-100">{$subscription?.seats_taken} {$i18n.t('used')}</span><span
 						class="dark:text-customGray-590">/ {$subscription?.seats} {$i18n.t('included')}</span
 					>
 					{:else}
-					<span class="text-xs dark:text-customGray-100">1 {$i18n.t('used')}</span><span
+					<span class="text-xs text-lightGray-100 dark:text-customGray-100">1 {$i18n.t('used')}</span><span
 						class="dark:text-customGray-590">/ 1 {$i18n.t('included')}</span
 					>
 					{/if}
 				</div>
 			</div>
-			<div class="relative w-full h-1 rounded-sm bg-customGray-800">
-				<div style={`width: ${seatsWidth};`} class="absolute left-0 h-1 rounded-sm bg-[#024D15]"></div>
+			<div class="relative w-full h-1 rounded-sm bg-lightGray-700 dark:bg-customGray-800">
+				<div style={`width: ${seatsWidth};`} class="absolute left-0 h-1 rounded-sm bg-[#024D15]/80 dark:bg-[#024D15]"></div>
 			</div>
 		</div>
-		<div class="rounded-2xl dark:bg-customGray-900 pt-4 px-4 pb-4 mb-2.5">
+		<div class="rounded-2xl bg-lightGray-300 dark:bg-customGray-900 pt-4 px-4 pb-4 mb-2.5">
 			<div class="flex items-center justify-between pb-2.5 border-b dark:border-customGray-700 mb-5">
 				<div class="text-xs dark:text-customGray-300 font-medium">{$i18n.t('Base credits')}</div>
 				<div class="text-xs dark:text-customGray-590">
 					{#if $subscription?.plan !== 'free'}
-					<span class="text-xs dark:text-customGray-100">€{(currentPlan?.credits_per_month - $subscription?.credits_remaining)?.toFixed(2)} {$i18n.t('used')}</span><span
+					<span class="text-xs text-lightGray-100 dark:text-customGray-100">€{(currentPlan?.credits_per_month - $subscription?.credits_remaining)?.toFixed(2)} {$i18n.t('used')}</span><span
 						class="dark:text-customGray-590">/ €{(currentPlan?.credits_per_month).toFixed(2)} {$i18n.t('included')}</span
 					>
 					{:else}
-					<span class="text-xs dark:text-customGray-100">€{(5 - $subscription?.credits_remaining)?.toFixed(2)} {$i18n.t('used')}</span><span
+					<span class="text-xs text-lightGray-100 dark:text-customGray-100">€{(5 - $subscription?.credits_remaining)?.toFixed(2)} {$i18n.t('used')}</span><span
 						class="dark:text-customGray-590">/ €{(5).toFixed(2)} {$i18n.t('included')}</span
 					>
 					{/if}
 				</div>
 			</div>
-			<div class="relative w-full h-1 rounded-sm bg-customGray-800 mb-2.5">
-				<div style={`width: ${creditsWidth};`} class="absolute left-0 h-1 rounded-sm bg-[#024D15]"></div>
+			<div class="relative w-full h-1 rounded-sm bg-lightGray-700 dark:bg-customGray-800 mb-2.5">
+				<div style={`width: ${creditsWidth};`} class="absolute left-0 h-1 rounded-sm bg-[#024D15]/80 dark:bg-[#024D15]"></div>
 			</div>
 			<div class="flex items-center justify-between pt-2.5">
 				{#if $subscription?.plan !== 'free' && $subscription?.cancel_at_period_end !== true}
@@ -328,7 +329,7 @@
 						url.searchParams.set('tab', 'analytics');
 						goto(`${url.pathname}${url.search}`, { replaceState: false });
 					}}
-					class="flex items-center justify-center rounded-[10px] dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
+					class="flex items-center justify-center rounded-[10px] bg-lightGray-300 dark:bg-customGray-900 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
 				>
 					{$i18n.t('View usage details')}
 				</button>
@@ -336,19 +337,22 @@
 		</div>
 
 		{#if $subscription?.plan !== "free"}
-			<div class="rounded-2xl dark:bg-customGray-900 pt-4 px-4 pb-4">
+			<div class="rounded-2xl bg-lightGray-300 dark:bg-customGray-900 pt-4 px-4 pb-4">
 				<div class="flex items-center justify-between pb-2.5 border-b dark:border-customGray-700">
 					<div class="text-xs dark:text-customGray-300 font-medium">{$i18n.t('Flex credits')}</div>
 					<div class="text-xs dark:text-customGray-590">
 						<!-- <span class="text-xs dark:text-customGray-100">0 {$i18n.t('used')}</span> -->
 						<span
-							class="dark:text-customGray-100">€{($subscription?.flex_credits_remaining ? $subscription?.flex_credits_remaining : 0).toFixed(2)} {$i18n.t('remaining')}</span
+							class="text-lightGray-100 dark:text-customGray-100">€{($subscription?.flex_credits_remaining ? $subscription?.flex_credits_remaining : 0).toFixed(2)} {$i18n.t('remaining')}</span
 						>
 					</div>
 				</div>
 				<div class="flex items-center justify-between pt-2.5">
 					<div class="flex items-center">
-						<div class="text-xs dark:text-customGray-590 mr-2.5">{$i18n.t('Auto recharge')}</div>
+						<Tooltip content={$i18n.t('When enabled, 20€ in credits will be automatically purchased and added to your account once your balance drops to 80% of your base credit amount.')}>
+							<div class="text-xs dark:text-customGray-590 mr-2.5 cursor-pointer">{$i18n.t('Auto recharge')}</div>
+						</Tooltip>
+						
 						<Switch bind:state={autoRecharge} on:change={async (e) => {
 							const res = await updateAutoRecharge(localStorage.token, e.detail).catch(error => console.log(error))
 							toast.success($i18n.t(res.message))
@@ -369,7 +373,7 @@
 							url.searchParams.set('recharge', 'open'); 
 							window.history.replaceState({}, '', `${url.pathname}${url.search}`);
 						}}
-						class="flex items-center justify-center rounded-[10px] dark:hover:bg-customGray-950 border dark:border-customGray-700 px-8 py-2 text-xs dark:text-customGray-200"
+						class="flex items-center justify-center rounded-[10px] bg-lightGray-300 dark:bg-customGray-900 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-8 py-2 text-xs dark:text-customGray-200"
 					>
 						{$i18n.t('Buy credits')}
 					</button>
@@ -379,28 +383,28 @@
 
 		{#if $subscription?.plan !== "free"}
 			<div
-				class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5 mt-2.5"
+				class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5 mt-2.5"
 			>
 				<div class="flex w-full justify-between items-center">
-					<div class="text-xs dark:text-customGray-300">{$i18n.t('Billing details')}</div>
+					<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Billing details')}</div>
 				</div>
 			</div>
 			<button
 				on:click={goToCustomerPortal}
-				class="flex items-center justify-center rounded-[10px] dark:bg-customGray-900 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
+				class="flex items-center justify-center rounded-[10px] bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:bg-customGray-900 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
 			>
 				{$i18n.t('Update billing details')}
 			</button>
 			<div
-				class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5 mt-2.5"
+				class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5 mt-2.5"
 			>
 				<div class="flex w-full justify-between items-center">
-					<div class="text-xs dark:text-customGray-300">{$i18n.t('History')}</div>
+					<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('History')}</div>
 				</div>
 			</div>
 			<button
 				on:click={goToCustomerPortal}
-				class="flex items-center justify-center rounded-[10px] dark:bg-customGray-900 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
+				class="flex items-center justify-center rounded-[10px] bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:bg-customGray-900 dark:hover:bg-customGray-950 border dark:border-customGray-700 px-4 py-2 text-xs dark:text-customGray-200"
 			>
 				{$i18n.t('View billing statement')}
 			</button>

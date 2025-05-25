@@ -5,7 +5,7 @@
 
 	import { goto } from '$app/navigation';
 	import { onMount, getContext } from 'svelte';
-	import { WEBUI_NAME, config, prompts as _prompts, user, showSidebar } from '$lib/stores';
+	import { WEBUI_NAME, config, prompts as _prompts, user, showSidebar, mobile } from '$lib/stores';
 
 	import {
 		createNewPrompt,
@@ -28,6 +28,9 @@
 	import GroupIcon from '../icons/GroupIcon.svelte';
 	import PublicIcon from '../icons/PublicIcon.svelte';
 	import PrivateIcon from '../icons/PrivateIcon.svelte';
+	import MenuIcon from '../icons/MenuIcon.svelte';
+	import FilterDropdown from './Models/FilterDropdown.svelte';
+	import BackIcon from '../icons/BackIcon.svelte';
 
 	const i18n = getContext('i18n');
 	let promptsImportInputElement: HTMLInputElement;
@@ -189,28 +192,41 @@
 		</div>
 	</DeleteConfirmDialog>
 
-	<div id="prompts-header" class="pl-[22px] pr-[15px] py-2.5 border-b dark:border-customGray-700">
+	<div id="prompts-header" class="pl-4 md:pl-[22px] pr-4 py-2.5 border-b border-lightGray-400 dark:border-customGray-700">
 		<div class="flex justify-between items-center">
-			<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
-				<button
-					id="sidebar-toggle-button"
-					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-					on:click={() => {
-						showSidebar.set(!$showSidebar);
-					}}
-					aria-label="Toggle Sidebar"
-				>
-					<div class=" m-auto self-center">
-						<ShowSidebarIcon />
+			<div class="flex items-center">
+				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
+					{#if ($mobile)}
+						<button class="flex items-center gap-1" on:click={() => history.back()}>
+							<BackIcon />
+							<div class="flex items-center md:self-center text-base font-medium leading-none px-0.5 text-lightGray-100 dark:text-customGray-100">
+								{$i18n.t('Prompts')}
+							</div>
+						</button>
+					{:else}
+						<button
+							id="sidebar-toggle-button"
+							class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							on:click={() => {
+								showSidebar.set(!$showSidebar);
+							}}
+							aria-label="Toggle Sidebar"
+						>
+							<div class=" m-auto self-center">
+								<ShowSidebarIcon />
+							</div>
+						</button>
+					{/if}	
+				</div>
+				{#if (!$mobile)}
+					<div class="flex items-center text-lightGray-100 dark:text-customGray-100 md:self-center text-base font-medium leading-none px-0.5">
+						{$i18n.t('Prompts')}
 					</div>
-				</button>
-			</div>
-			<div class="flex items-center md:self-center text-base font-medium leading-none px-0.5">
-				{$i18n.t('Prompts')}
+				{/if}
 			</div>
 			<div class="flex">
 				<div
-					class="flex flex-1 items-center p-2.5 rounded-lg mr-1 border dark:border-customGray-700 hover:bg-gray-100 dark:hover:bg-customGray-950 dark:hover:text-white transition"
+					class="flex flex-1 items-center p-2.5 rounded-lg mr-1 border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white transition"
 				>
 					<button
 						class=""
@@ -225,7 +241,7 @@
 					<!-- </div> -->
 					{#if showInput}
 						<input
-							class=" w-full text-xs outline-none bg-transparent leading-none pl-2"
+							class="w-[5rem] md:w-full text-xs outline-none text-lightGray-100 dark:text-customGray-100 bg-transparent leading-none pl-2"
 							bind:value={query}
 							placeholder={$i18n.t('Search Prompts')}
 							autofocus
@@ -237,61 +253,79 @@
 				</div>
 				<div>
 					<a
-						class=" px-2 py-2.5 w-[35px] sm:w-[220px] rounded-lg leading-none border border-customGray-700 hover:bg-gray-700/10 dark:hover:bg-customGray-950 dark:text-customGray-200 dark:hover:text-white transition font-medium text-xs flex items-center justify-center space-x-1"
+						class=" px-2 py-2.5 md:w-[220px] rounded-lg leading-none border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-700 dark:hover:bg-customGray-950 text-lightGray-100 dark:text-customGray-200 dark:hover:text-white transition font-medium text-xs flex items-center justify-center space-x-1"
 						href="/workspace/prompts/create"
 					>
 						<Plus className="size-3.5" />
-						<span class="hidden sm:block">{$i18n.t('Create new')}</span>
+						<span class="">{$i18n.t('Create new')}</span>
 					</a>
 				</div>
 			</div>
 		</div>
 	</div>
 
-	<div class="pl-[22px] pr-[15px]">
+	<div class="pl-4 md:pl-[22px] pr-4">
 		<div
 			id="prompts-filters"
-			class="flex justify-between py-5 pr-[22px] flex-col md:flex-row items-start"
+			class="flex justify-between py-5 md:pr-[22px] flex-row items-start"
 		>
 			<div class="flex items-start space-x-[5px] flex-col sm:flex-row mb-3 sm:mb-0">
-				<div
-					class="dark:text-customGray-300 text-xs whitespace-nowrap h-[22px] flex items-center mb-2 sm:mb-0"
-				>
-					{$i18n.t('Filter by category:')}
-				</div>
-				<div class="flex flex-wrap gap-1">
-					{#each tags as tag}
-						<button
-							class={`flex items-center justify-center rounded-md text-xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'dark:bg-customBlue-800' : 'dark:bg-customGray-800 dark:hover:bg-customBlue-800'} dark:text-white`}
-							on:click={() => {
-								selectedTags.has(tag) ? selectedTags.delete(tag) : selectedTags.add(tag);
-								selectedTags = new Set(selectedTags);
-							}}
-						>
-							{tag.charAt(0).toUpperCase() + tag.slice(1)}
-						</button>
-					{/each}
-				</div>
+				{#if ($mobile)}
+					<FilterDropdown>
+						<div class="flex flex-wrap gap-1">
+							{#each tags as tag}
+								<button
+									class={`font-medium flex items-center justify-center rounded-md text-xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'dark:bg-customBlue-800 bg-customViolet-200' : 'bg-lightGray-400 dark:bg-customGray-800'} dark:text-white`}
+									on:click={() => {
+										selectedTags.has(tag) ? selectedTags.delete(tag) : selectedTags.add(tag);
+										selectedTags = new Set(selectedTags);
+									}}
+								>
+									{tag.charAt(0).toUpperCase() + tag.slice(1)}
+								</button>
+							{/each}
+						</div>
+					</FilterDropdown>
+				{:else}
+					<div
+						class="font-medium text-lightGray-100 dark:text-customGray-300 text-xs whitespace-nowrap h-[22px] flex items-center mb-2 sm:mb-0"
+					>
+						{$i18n.t('Filter by category:')}
+					</div>
+					<div class="flex flex-wrap gap-1">
+						{#each tags as tag}
+							<button
+								class={`font-medium flex items-center justify-center rounded-md text-xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'dark:bg-customBlue-800 bg-customViolet-200' : 'bg-lightGray-400 hover:bg-customViolet-200 dark:bg-customGray-800 dark:hover:bg-customBlue-800'} dark:text-white`}
+								on:click={() => {
+									selectedTags.has(tag) ? selectedTags.delete(tag) : selectedTags.add(tag);
+									selectedTags = new Set(selectedTags);
+								}}
+							>
+								{tag.charAt(0).toUpperCase() + tag.slice(1)}
+							</button>
+						{/each}
+					</div>
+				{/if}
 			</div>
-			<div class="flex dark:bg-customGray-800 rounded-md flex-shrink-0">
+			<div class="flex bg-lightGray-700 dark:bg-customGray-800 rounded-md flex-shrink-0">
 				<button
 					on:click={() => (accessFilter = 'all')}
-					class={`${accessFilter === 'all' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'all' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-2 md:px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('All')}</button
-				>
+				> 
 				<button
 					on:click={() => (accessFilter = 'private')}
-					class={`${accessFilter === 'private' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'private' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-2 md:px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('My Prompts')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'public')}
-					class={`${accessFilter === 'public' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'public' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-2 md:px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('Public')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'pre-built')}
-					class={`${accessFilter === 'pre-built' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'pre-built' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-2 md:px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('Pre-built')}</button
 				>
 			</div>
@@ -311,27 +345,27 @@
 					<div
 						on:mouseenter={() => hoveredPrompt = prompt.command}
 						on:mouseleave={() => hoveredPrompt = null}
-						class=" group flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 dark:bg-customGray-800 rounded-2xl transition"
+						class=" group flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 bg-lightGray-550 dark:bg-customGray-800 rounded-2xl transition"
 					>
 						<div class="flex items-start justify-between">
 							<div class="flex items-center">
 								<div class="flex items-center gap-1 flex-wrap">
 									{#if prompt.access_control == null && prompt.prebuilt}
 										<div
-											class="flex gap-1 items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-300'} text-lightGray-100 font-medium bg-lightGray-400 text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<span>{$i18n.t('Prebuilt')}</span>
 										</div>
 									{:else if prompt.access_control == null}
 										<div
-											class="flex gap-1 items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-300'} text-lightGray-100 font-medium bg-lightGray-400 text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<PublicIcon />
 											<span>{$i18n.t('Public')}</span>
 										</div>
 									{:else if getGroupNamesFromAccess(prompt).length < 1}
 										<div
-											class="flex gap-1 items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-300'} text-lightGray-100 font-medium bg-lightGray-400 text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<PrivateIcon />
 											<span>{$i18n.t('Private')}</span>
@@ -339,7 +373,7 @@
 									{:else}
 										{#each getGroupNamesFromAccess(prompt) as groupName}
 											<div
-												class="flex gap-1 items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+												class="flex gap-1 items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-300'} text-lightGray-100 font-medium bg-lightGray-400 text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 											>
 												<GroupIcon />
 												<span>{groupName}</span>
@@ -349,7 +383,7 @@
 									{#if prompt.meta && Array.isArray(prompt.meta.tags)}
 										{#each prompt?.meta?.tags as promptTag}
 											<div
-												class="flex items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-100'} text-xs dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
+												class="flex items-center {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-100'} text-xs text-lightGray-100 font-medium bg-customViolet-200 dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
 											>
 												{promptTag.name}
 											</div>
@@ -358,7 +392,7 @@
 								</div>
 							</div>
 							{#if !prompt.prebuilt && (prompt.user_id === $user?.id || $user?.role === 'admin')}
-								<div class="{(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'visible' : 'invisible'}">
+								<div class="{(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'md:visible' : 'md:invisible'}">
 									<PromptMenu
 										{prompt}
 										shareHandler={() => {
@@ -400,37 +434,13 @@
 							  }} 
 							>
 								<div class=" flex-1 flex items-center gap-2 self-center">
-									<div class="text-left text-base line-clamp-1 capitalize {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-100'}">
+									<div class="text-left text-base line-clamp-1 capitalize text-lightGray-100 {(hoveredPrompt === prompt.command || menuIdOpened === prompt.command) ? 'dark:text-white' : 'dark:text-customGray-100'}">
 										{prompt.title}
 									</div>
-									<!-- <div
-										class=" text-xs overflow-hidden dark:text-customGray-100 text-ellipsis line-clamp-1"
-									>
-										{prompt.command}
-									</div> -->
 								</div>
-								<div class="text-xs line-clamp-1 dark:text-customGray-100/50 text-left">
+								<div class="text-xs line-clamp-1 text-lightGray-1200 dark:text-customGray-100/50 text-left">
 									{prompt.description}
 								</div>
-								<!-- {#if !prompt.prebuilt}
-									<div class=" text-xs px-0.5 dark:text-customGray-100">
-										<Tooltip
-											content={prompt?.user?.email ?? $i18n.t('Deleted User')}
-											className="flex shrink-0"
-											placement="top-start"
-										>
-											<div class="shrink-0 text-gray-500">
-												{#if (prompt?.user?.first_name && prompt?.user?.last_name)}
-													{prompt?.user?.first_name} {prompt?.user?.last_name}
-												{:else if (prompt?.user?.email)}
-													{prompt?.user?.email}
-												{:else}
-													{$i18n.t('Deleted User')}
-												{/if}
-											</div>
-										</Tooltip>
-									</div>
-								{/if} -->
 							</button>
 						</div>
 					</div>

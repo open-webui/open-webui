@@ -301,31 +301,31 @@
 
 			<div class="pt-0.5">
 				<div class="flex flex-col w-full mb-2.5">
-					<div class="relative w-full dark:bg-customGray-900 rounded-md">
+					<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 						{#if companyName}
-							<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+							<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 								{$i18n.t('Name')}
 							</div>
 						{/if}
 						<input
-							class={`px-2.5 text-sm ${companyName ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-customGray-100 dark:placeholder:text-customGray-100 outline-none`}
+							class={`px-2.5 text-sm ${companyName ? 'pt-2' : 'pt-0'} text-lightGray-100 placeholder:text-lightGray-100 w-full h-12 bg-transparent dark:text-customGray-100 dark:placeholder:text-customGray-100 outline-none`}
 							placeholder={$i18n.t(' Name')}
 							bind:value={companyName}
 						/>
 					</div>
 				</div>
 				<div class="mb-2.5">
-					<div class="flex items-center justify-between mb-1 w-full dark:bg-customGray-900 rounded-md h-12 px-2.5 py-2">
+					<div class="flex items-center justify-between mb-1 w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md h-12 px-2.5 py-2">
 						
-							<div class="text-sm dark:text-customGray-100">
+							<div class="text-sm text-lightGray-100 dark:text-customGray-100">
 								{$i18n.t('Hide model logo in chat')}
 							</div>
 		
 						<div class="flex items-center">
 							{#if hideModelLogo}
-								<div class="text-xs dark:text-customGray-100/50 mr-2">On</div>
+								<div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 mr-2">On</div>
 							{:else}
-								<div class="text-xs dark:text-customGray-100/50 mr-2">Off</div>
+								<div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 mr-2">Off</div>
 							{/if}
 							<Switch
 								bind:state={hideModelLogo}
@@ -333,16 +333,16 @@
 						</div>
 					</div>
 				</div>	
-				<span class="text-xs dark:text-customGray-100/50">{$i18n.t('Hide the model logo in chat responses and show workspace logo instead')}</span>
+				<span class="text-xs text-lightGray-100/50 dark:text-customGray-100/50">{$i18n.t('Hide the model logo in chat responses and show workspace logo instead')}</span>
 			</div>	
 		</div>
 		
 		<div>
 			<div
-				class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5"
+				class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5"
 			>
 				<div class="flex w-full justify-between items-center">
-					<div class="text-xs dark:text-customGray-300">{$i18n.t('User permissions')}</div>
+					<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('User permissions')}</div>
 				</div>
 			</div>
 			<div class="mb-2.5" use:onClickOutside={() => (showUserPermissionsDropdown = false)}>
@@ -351,12 +351,12 @@
 						type="button"
 						class="flex items-center justify-between w-full text-sm h-12 px-3 py-2 {
 							showUserPermissionsDropdown ? 'border' : ''
-						} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer"
+						} border-lightGray-400 dark:border-customGray-700 rounded-md bg-lightGray-300 dark:bg-customGray-900 cursor-pointer"
 						on:click={() => (showUserPermissionsDropdown = !showUserPermissionsDropdown)}
 					>
-						<span class="text-gray-500 dark:text-customGray-100">{$i18n.t('User Permissions')}</span>
+						<span class="text-lightGray-100 dark:text-customGray-100">{$i18n.t('User Permissions')}</span>
 						<div class="flex items-center">
-							<div class="text-xs dark:text-customGray-100/50 max-w-[15rem] text-left">
+							<div class="text-xs text-lightGray-100/50 dark:text-customGray-100/50 max-w-[15rem] text-left">
 								{Object.keys(userPermissions)?.filter(item => userPermissions?.[item]).map(el => userPermissionsText[el]).join(', ')}
 							</div>
 						<ChevronDown className="size-3 ml-1" />
@@ -365,15 +365,15 @@
 			
 					{#if showUserPermissionsDropdown}
 						<div
-							class="max-h-60 pb-1 overflow-y-auto absolute z-50 w-full -mt-1 bg-white dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
+							class="max-h-60 pb-1 overflow-y-auto absolute z-50 w-full -mt-1 bg-lightGray-300 dark:bg-customGray-900 border-l border-r border-b border-lightGray-400 dark:border-customGray-700 rounded-b-md"
 						>
-							<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
+							<hr class="border-t border-lightGray-400 dark:border-customGray-700 mb-2 mt-1 mx-0.5" />
 							<div class="px-1">
 								{#each Object.keys(userPermissions) as permission}
 									<div
 										role="button"
 										tabindex="0"
-										class="flex items-center rounded-xl w-full justify-between px-3 py-2 hover:bg-gray-100 dark:hover:bg-customGray-950 cursor-pointer text-sm dark:text-customGray-100"
+										class="flex items-center rounded-xl w-full justify-between px-3 py-2 hover:bg-lightGray-700 dark:hover:bg-customGray-950 cursor-pointer text-sm dark:text-customGray-100"
 									>
 										<div class="flex items-center gap-2">
 											{#if userPermissionsIcons?.[permission]}
@@ -402,10 +402,10 @@
 
 		<div>
 			<div
-				class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2.5"
+				class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2.5"
 			>
 				<div class="flex w-full justify-between items-center">
-					<div class="text-xs dark:text-customGray-300">{$i18n.t('Safety & Compliance')}</div>
+					<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Safety & Compliance')}</div>
 				</div>
 			</div>
 			<div class="mb-2.5" use:onClickOutside={() => (showChatLifetimeDropdown = false)}>
@@ -414,16 +414,16 @@
 						type="button"
 						class={`flex items-center justify-between w-full text-sm h-12 px-3 py-2 ${
 							showChatLifetimeDropdown ? 'border' : ''
-						} border-gray-300 dark:border-customGray-700 rounded-md bg-white dark:bg-customGray-900 cursor-pointer`}
+						} border-lightGray-400 dark:border-customGray-700 rounded-md bg-lightGray-300 dark:bg-customGray-900 cursor-pointer`}
 						on:click={() => {
 							showChatLifetimeDropdown = !showChatLifetimeDropdown
 							}}
 					>
-						<span class="text-gray-500 dark:text-customGray-100"
+						<span class="text-lightGray-100 dark:text-customGray-100"
 							>{$i18n.t('How long should chats be saved')}</span
 						>
 						
-						<div class="flex items-center gap-2 text-xs dark:text-customGray-100/50">
+						<div class="flex items-center gap-2 text-xs text-lightGray-100 dark:text-customGray-100/50">
 							{chatLifetime.label}
 							<ChevronDown className="size-3" />
 						</div>
@@ -432,13 +432,13 @@
 
 					{#if showChatLifetimeDropdown}
 						<div
-							class="max-h-40 overflow-y-auto absolute z-50 w-full -mt-1 bg-white pb-1 dark:bg-customGray-900 border-l border-r border-b border-gray-300 dark:border-customGray-700 rounded-b-md shadow"
+							class="max-h-40 overflow-y-auto absolute z-50 w-full -mt-1 bg-lightGray-300 pb-1 dark:bg-customGray-900 border-l border-r border-b border-lightGray-400 dark:border-customGray-700 rounded-b-md"
 						>
-							<hr class="border-t border-customGray-700 mb-2 mt-1 mx-0.5" />
+							<hr class="border-t border-lightGray-400 dark:border-customGray-700 mb-2 mt-1 mx-0.5" />
 							<div class="px-1">
 								{#each chatLifetimeOptions as option}
 									<button
-										class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-gray-100 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
+										class="px-3 py-2 flex items-center gap-2 w-full rounded-xl text-sm hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:text-customGray-100 cursor-pointer text-gray-900"
 										on:click={() => {
 											chatLifetime = option;
 											showChatLifetimeDropdown = false;
@@ -468,7 +468,7 @@
 			</div> -->
 			<LinkEditor on:updateContent={(e) => userNotice = e.detail}/>
 			<!-- <LinkEditor bind:text={userNotice} label={$i18n.t('User notice')}/> -->
-			<span class="text-xs dark:text-customGray-100/50">
+			<span class="text-xs text-lightGray-100/50 dark:text-customGray-100/50">
 				{$i18n.t('The disclaimer is displayed at the bottom of the user interface')}
 			</span>
 		</div>
@@ -477,8 +477,8 @@
 	<div class="flex justify-end pt-3 text-sm font-medium">
 		<button
 			class=" text-xs w-[168px] h-10 px-3 py-2 transition rounded-lg {loading
-				? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
-				: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center items-center"
+				? ' cursor-not-allowed bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
+				: 'bg-lightGray-300 border-lightGray-400 text-lightGray-100 font-medium hover:bg-lightGray-700 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center items-center"
 			type="button"
 			disabled={loading}
 			on:click={onSubmit}
@@ -491,9 +491,9 @@
 			{/if}
 		</button>
 	</div>
-	<div class="flex w-full justify-between items-center py-2.5 border-b border-customGray-700 mb-2">
+	<div class="flex w-full justify-between items-center py-2.5 border-b border-lightGray-400 dark:border-customGray-700 mb-2">
 		<div class="flex w-full justify-between items-center">
-			<div class="text-xs dark:text-customGray-300">{$i18n.t('Delete account')}</div>
+			<div class="text-xs text-lightGray-100 dark:text-customGray-300">{$i18n.t('Delete account')}</div>
 		</div>
 	</div>
 	<div class="flex justify-between items-start pt-3 pb-5">
@@ -503,7 +503,7 @@
 			<DeleteIcon className="mr-1 size-4" />
 			{$i18n.t('Delete account')}
 		</button>
-		<div class="shrink-0 w-[218px] dark:text-customGray-100/50 text-xs">
+		<div class="shrink-0 w-[180px] md:w-[218px] dark:text-customGray-100/50 text-xs">
 			{$i18n.t('This action is not reversible, so please continue with caution.')}
 		</div>
 	</div>

@@ -12,10 +12,10 @@
 </script>
 
 <button
-	class=" outline -outline-offset-1 outline-[1.5px] outline-gray-200 dark:outline-gray-600 {state !==
+	class=" outline -outline-offset-1 outline-[1.5px] outline-lightGray-1000 dark:outline-gray-600 {state !==
 	'unchecked'
-		? 'bg-black dark:bg-customGray-900 outline-black '
-		: 'hover:outline-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'} text-white transition-all rounded inline-block w-3.5 h-3.5 relative"
+		? 'bg-white dark:bg-customGray-900 outline-black '
+		: 'hover:outline-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'} text-lightGray-100 dark:text-white transition-all rounded inline-block w-3.5 h-3.5 relative"
 	on:click={() => {
 		if (_state === 'unchecked') {
 			_state = 'checked';

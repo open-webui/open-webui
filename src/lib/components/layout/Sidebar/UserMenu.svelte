@@ -34,14 +34,14 @@
 
 	<slot name="content">
 		<DropdownMenu.Content
-			class="w-full {className} text-sm rounded-lg border border-customGray-700 px-1 py-1.5 z-50 bg-white dark:bg-customGray-900 dark:text-white shadow-lg font-primary"
+			class="w-full {className} text-sm rounded-lg border border-lightGray-400 dark:border-customGray-700 px-1 py-1.5 z-50 bg-lightGray-300 dark:bg-customGray-900 dark:text-white shadow-lg font-primary"
 			sideOffset={8}
 			side="bottom"
 			align="start"
 			transition={(e) => fade(e, { duration: 100 })}
 		>
 			<button
-				class="flex rounded-md text-sm text-customGray-100 py-2 px-3 w-full hover:bg-gray-50 dark:hover:text-white dark:hover:bg-customGray-950 transition"
+				class="font-medium flex rounded-md text-sm text-lightGray-100 dark:text-customGray-100 py-2 px-3 w-full hover:bg-lightGray-700 dark:hover:text-white dark:hover:bg-customGray-950 transition"
 				on:click={async () => {
 					await showSettings.set(true);
 					show = false;
@@ -58,12 +58,15 @@
 			</button>
 			{#if role === 'admin'}
 				<button
-					class="flex rounded-md text-sm text-customGray-100 py-2 px-3 w-full hover:bg-gray-50 dark:hover:text-white dark:hover:bg-customGray-950 transition"
+					class="font-medium flex rounded-md text-sm text-lightGray-100 dark:text-customGray-100 py-2 px-3 w-full hover:bg-lightGray-700 dark:hover:text-white dark:hover:bg-customGray-950 transition"
 					on:click={async () => {
 						// showCompanySettings.set(true);
 						const url = new URL(window.location.href);
 						url.searchParams.set('modal', 'company-settings');
 						url.searchParams.set('tab', 'general-settings');
+						if($mobile) {
+							url.searchParams.set('resetTabs', 'true');
+						}
 						goto(`${url.pathname}${url.search}`, { keepfocus: true, replaceState: false });
 	
 						show = false;
@@ -81,7 +84,7 @@
 			{/if}
 
 			<!-- <button
-				class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+				class="flex rounded-md py-2 px-3 w-full hover:bg-lightGray-300 dark:hover:bg-gray-800 transition"
 				on:click={() => {
 					dispatch('show', 'archived-chat');
 					show = false;
@@ -99,7 +102,7 @@
 
 			<!-- {#if role === 'admin'}
 				<a
-					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					class="flex rounded-md py-2 px-3 w-full hover:bg-lightGray-300 dark:hover:bg-gray-800 transition"
 					href="/playground"
 					on:click={() => {
 						show = false;
@@ -129,7 +132,7 @@
 				</a>
 
 				<a
-					class="flex rounded-md py-2 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+					class="flex rounded-md py-2 px-3 w-full hover:bg-lightGray-300 dark:hover:bg-gray-800 transition"
 					href="/admin"
 					on:click={() => {
 						show = false;
@@ -159,10 +162,10 @@
 				</a>
 			{/if} -->
 
-			<hr class=" border-gray-50 dark:border-gray-850 my-1 p-0" />
+			<hr class=" border-lightGray-400 dark:border-gray-850 my-1 p-0" />
 
 			<button
-				class="flex rounded-md text-sm text-customGray-100 py-2 px-3 w-full hover:bg-gray-50 dark:hover:text-white dark:hover:bg-customGray-950 transition"
+				class="font-medium flex rounded-md text-sm text-lightGray-100 dark:text-customGray-100 py-2 px-3 w-full hover:bg-lightGray-700 dark:hover:text-white dark:hover:bg-customGray-950 transition"
 				on:click={async () => {
 					await userSignOut();
 					localStorage.removeItem('token');

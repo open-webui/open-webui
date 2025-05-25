@@ -9,7 +9,7 @@
 	import { onMount, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import { WEBUI_NAME, knowledge, showSidebar } from '$lib/stores';
+	import { WEBUI_NAME, knowledge, showSidebar, mobile } from '$lib/stores';
 	import {
 		getKnowledgeBases,
 		deleteKnowledgeById,
@@ -32,6 +32,8 @@
 	import PrivateIcon from '../icons/PrivateIcon.svelte';
 	import { getGroups } from '$lib/apis/groups';
 	import { user } from '$lib/stores';
+	import MenuIcon from '../icons/MenuIcon.svelte';
+	import BackIcon from '../icons/BackIcon.svelte';
 
 	let loaded = false;
 
@@ -111,9 +113,8 @@
 	let scrollContainer;
 
 	function updateScrollHeight() {
-		const header = document.getElementById('assistants-header');
-		const filters = document.getElementById('assistants-filters');
-
+		const header = document.getElementById('knowledge-header');
+		const filters = document.getElementById('knowledge-filters');
 		if (header && filters && scrollContainer) {
 			const totalOffset = header.offsetHeight + filters.offsetHeight;
 			scrollContainer.style.height = `calc(100dvh - ${totalOffset}px)`;
@@ -126,6 +127,12 @@
 			window.removeEventListener('resize', updateScrollHeight);
 		};
 	});
+
+	$: if (loaded) {
+		setTimeout(() => {
+			updateScrollHeight();
+		}, 0);
+	}
 
 	let hoveredKowledge = null;
 	let menuIdOpened = null;
@@ -145,28 +152,41 @@
 		}}
 	/>
 
-	<div id="knowledge-header" class="pl-[22px] pr-[15px] py-2.5 border-b dark:border-customGray-700">
+	<div id="knowledge-header" class="pl-4 md:pl-[22px] pr-4 py-2.5 border-b dark:border-customGray-700">
 		<div class="flex justify-between items-center">
-			<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
-				<button
-					id="sidebar-toggle-button"
-					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-					on:click={() => {
-						showSidebar.set(!$showSidebar);
-					}}
-					aria-label="Toggle Sidebar"
-				>
-					<div class=" m-auto self-center">
-						<ShowSidebarIcon />
+			<div class="flex items-center">
+				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
+					{#if ($mobile)}
+						<button class="flex items-center gap-1" on:click={() => history.back()}>
+							<BackIcon />
+							<div class="flex items-center md:self-center text-base font-medium leading-none px-0.5 text-lightGray-100 dark:text-customGray-100">
+								{$i18n.t('Knowledge')}
+							</div>
+						</button>
+					{:else}
+						<button
+							id="sidebar-toggle-button"
+							class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							on:click={() => {
+								showSidebar.set(!$showSidebar);
+							}}
+							aria-label="Toggle Sidebar"
+						>
+							<div class=" m-auto self-center">
+								<ShowSidebarIcon />
+							</div>
+						</button>
+					{/if}
+				</div>
+				{#if (!$mobile)}
+					<div class="flex items-center md:self-center text-lightGray-100 dark:text-customGray-100 text-base font-medium leading-none px-0.5">
+						{$i18n.t('Knowledge')}
 					</div>
-				</button>
-			</div>
-			<div class="flex items-center md:self-center text-base font-medium leading-none px-0.5">
-				{$i18n.t('Knowledge')}
+				{/if}
 			</div>
 			<div class="flex">
 				<div
-					class="flex flex-1 items-center p-2.5 rounded-lg mr-1 border dark:border-customGray-700 hover:bg-gray-100 dark:hover:bg-customGray-950 dark:hover:text-white transition"
+					class="flex flex-1 items-center p-2.5 rounded-lg mr-1 border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white transition"
 				>
 					<button
 						class=""
@@ -181,7 +201,7 @@
 					<!-- </div> -->
 					{#if showInput}
 						<input
-							class=" w-full text-xs outline-none bg-transparent leading-none pl-2"
+							class="w-[5rem] md:w-full text-xs outline-none bg-transparent leading-none pl-2 text-lightGray-100 dark:text-customGray-100"
 							bind:value={query}
 							placeholder={$i18n.t('Search Models')}
 							autofocus
@@ -193,35 +213,35 @@
 				</div>
 				<div>
 					<a
-						class=" px-2 py-2.5 w-[35px] sm:w-[220px] rounded-lg leading-none border border-customGray-700 hover:bg-gray-700/10 dark:hover:bg-customGray-950 dark:text-customGray-200 dark:hover:text-white transition font-medium text-xs flex items-center justify-center space-x-1"
+						class=" px-2 py-2.5 md:w-[220px] rounded-lg leading-none border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-700 dark:hover:bg-customGray-950 text-lightGray-100 dark:text-customGray-200 dark:hover:text-white transition font-medium text-xs flex items-center justify-center space-x-1"
 						href="/workspace/knowledge/create"
 					>
 						<Plus className="size-3.5" />
-						<span class="hidden sm:block">{$i18n.t('Create new')}</span>
+						<span class="">{$i18n.t('Create new')}</span>
 					</a>
 				</div>
 			</div>
 		</div>
 	</div>
-	<div class="pl-[22px] pr-[15px]">
+	<div class="pl-4 md:pl-[22px] pr-4">
 		<div
 			id="knowledge-filters"
-			class="flex items-center justify-end py-5 pr-[22px] flex-col md:flex-row"
+			class="flex items-center justify-end py-5 md:pr-[22px] flex-row"
 		>
-			<div class="flex dark:bg-customGray-800 rounded-md flex-shrink-0">
+			<div class="flex bg-lightGray-700 dark:bg-customGray-800 rounded-md flex-shrink-0">
 				<button
 					on:click={() => (accessFilter = 'all')}
-					class={`${accessFilter === 'all' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'all' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('All')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'private')}
-					class={`${accessFilter === 'private' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'private' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('Private')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'public')}
-					class={`${accessFilter === 'public' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'public' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('Public')}</button
 				>
 			</div>
@@ -241,7 +261,7 @@
 					<button
 					on:mouseenter={() =>  hoveredKowledge = item.id}
 					on:mouseleave={() =>  hoveredKowledge = null}
-						class="group flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 dark:bg-customGray-800 rounded-2xl transition"
+						class="group flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 bg-lightGray-550 dark:bg-customGray-800 rounded-2xl transition"
 						on:click={() => {
 							if (item?.meta?.document) {
 								toast.error(
@@ -261,14 +281,14 @@
 									<div class="flex items-center gap-1 flex-wrap">
 										{#if item.access_control == null}
 											<div
-												class="flex gap-1 items-center text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'dark:text-customGray-300'}"
+												class="flex gap-1 items-center text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md bg-lightGray-400 font-medium {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'text-lightGray-100 dark:text-customGray-300'}"
 											>
 												<PublicIcon />
 												<span>{$i18n.t('Public')}</span>
 											</div>
 										{:else if getGroupNamesFromAccess(item).length < 1}
 											<div
-												class="flex gap-1 items-center text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'dark:text-customGray-300'}"
+												class="flex gap-1 items-center text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md bg-lightGray-400 font-medium {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'text-lightGray-100 dark:text-customGray-300'}"
 											>
 												<PrivateIcon />
 												<span>{$i18n.t('Private')}</span>
@@ -276,7 +296,7 @@
 										{:else}
 											{#each getGroupNamesFromAccess(item) as groupName}
 												<div
-													class="flex items-center text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'dark:text-customGray-300'}"
+													class="flex items-center text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md bg-lightGray-400 font-medium {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'text-lightGray-100 dark:text-customGray-300'}"
 												>
 													<GroupIcon />
 													<span>{groupName}</span>
@@ -286,7 +306,7 @@
 									</div>
 								</div>
 								{#if ($user.id === item.user_id || $user?.role === 'admin')}
-								<div class="{(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'visible' : 'invisible'}">
+								<div class="{(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'md:visible' : 'md:invisible'}">
 									<ItemMenu
 										{item}
 										on:delete={() => {
@@ -305,14 +325,14 @@
 							</div>
 
 							<div class="self-center flex-1 px-1 mb-1">
-								<div class="text-left line-clamp-2 h-fit text-base {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'dark:text-customGray-100'} leading-[1.2] mb-1.5">{item.name}</div>
-								<div class="mb-5 text-left overflow-hidden text-ellipsis line-clamp-1 text-xs dark:text-customGray-100/50">
+								<div class="text-left line-clamp-2 h-fit text-base {(hoveredKowledge === item.id || menuIdOpened === item.id) ? 'dark:text-white' : 'dark:text-customGray-100'} text-lightGray-100 leading-[1.2] mb-1.5">{item.name}</div>
+								<div class="mb-5 text-left overflow-hidden text-ellipsis line-clamp-1 text-xs text-lightGray-1200 dark:text-customGray-100/50">
 									{item.description}
 								</div>
 							</div>
 						</div>
-						<div class="flex justify-between mt-auto items-center px-0.5 pt-2.5 pb-[2px] border-t dark:border-customGray-700">
-							<div class="text-xs text-gray-500 dark:text-customGray-100 flex items-center">
+						<div class="flex justify-between mt-auto items-center px-0.5 pt-2.5 pb-[2px] border-t border-[#A7A7A7]/10 dark:border-customGray-700">
+							<div class="text-xs text-lightGray-1200 dark:text-customGray-100 flex items-center">
 								{#if item?.user?.profile_image_url}
 									<img class="w-3 h-3 rounded-full mr-1" src={item?.user?.profile_image_url} alt={item?.user?.first_name ?? item?.user?.email ?? $i18n.t('Deleted User')}/>
 								{/if}

@@ -310,7 +310,7 @@
 	<DropdownMenu.Content
 		class=" z-40 {$mobile
 			? `w-full`
-			: `${className}`} w-[180px] justify-start rounded-xl border dark:border-customGray-700 bg-white dark:bg-customGray-900 dark:text-white shadow-lg  outline-none"
+			: `${className}`} w-[180px] justify-start rounded-xl border dark:border-customGray-700 bg-lightGray-550 border-lightGray-400 dark:bg-customGray-900 dark:text-white shadow-lg  outline-none"
 		transition={flyAndScale}
 		side={$mobile ? 'bottom' : 'bottom-start'}
 		sideOffset={5}
@@ -325,7 +325,7 @@
 					<input
 						id="model-search-input"
 						bind:value={searchValue}
-						class="w-full text-xs bg-transparent outline-none pl-7 h-[25px] rounded-lg border border-customGray-700 placeholder:text-xs"
+						class="w-full text-xs bg-transparent outline-none pl-7 h-[25px] rounded-lg border border-lightGray-400 dark:border-customGray-700 placeholder:text-xs"
 						placeholder={searchPlaceholder}
 						autocomplete="off"
 						on:keydown={(e) => {
@@ -353,9 +353,9 @@
 				{#each filteredItems as item, index}
 					<button
 						aria-label="model-item"
-						class="flex w-full text-left line-clamp-1 select-none items-center rounded-button py-[5px] px-2 text-sm text-gray-700 dark:text-customGray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-customGray-950 dark:hover:text-white rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
+						class="flex w-full text-left line-clamp-1 select-none items-center rounded-button py-[5px] px-2 text-sm text-lightGray-100 dark:text-customGray-100 outline-none transition-all duration-75 hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
 						selectedModelIdx
-							? 'bg-gray-100 dark:bg-customGray-900 group-hover:bg-transparent'
+							? 'bg-lightGray-700 dark:bg-customGray-900 group-hover:bg-transparent'
 							: ''}"
 						data-arrow-selected={index === selectedModelIdx}
 						on:mouseenter={() => (hoveredItem = item)}
@@ -493,7 +493,7 @@
 						</div>
 
 						{#if value === item.value}
-							<div class="ml-auto pl-2 pr-2 md:pr-0">
+							<div class="ml-auto pl-2 pr-2 md:pr-0 text-lightGray-100 dark:text-customGray-100">
 								<svg
 									width="13"
 									height="14"
@@ -503,7 +503,7 @@
 								>
 									<path
 										d="M4.16004 6.27718C4.08868 6.27718 4.02088 6.24863 3.97093 6.19868L2.96115 5.1889C2.85768 5.08542 2.85768 4.91415 2.96115 4.81068C3.06463 4.7072 3.2359 4.7072 3.33937 4.81068L4.16004 5.63135L5.99405 3.79733C6.09753 3.69386 6.2688 3.69386 6.37227 3.79733C6.47575 3.90081 6.47575 4.07208 6.37227 4.17555L4.34915 6.19868C4.2992 6.24863 4.2314 6.27718 4.16004 6.27718Z"
-										fill="white"
+										fill="currentColor"
 									/>
 								</svg>
 							</div>
@@ -518,7 +518,7 @@
 				{/each}
 				{#if hoveredItem}
 					<div
-						class="absolute px-3 py-1 left-full ml-1 top-0 w-52 p-2 rounded-xl border border-customGray-700 bg-white dark:bg-customGray-900 text-sm text-gray-800 dark:text-white z-50"
+						class="absolute px-3 py-1 left-full ml-1 top-0 w-52 p-2 rounded-xl border border-lightGray-400 bg-lightGray-550 dark:border-customGray-700 dark:bg-customGray-900 text-sm text-gray-800 dark:text-white z-50"
 					>
 						{#if modelsInfo?.[hoveredItem?.label]?.organization}
 							<div class="py-1.5 border-b dark:border-customGray-700 last:border-b-0">

@@ -23,7 +23,7 @@
 	</div>
 	{#if showDropdown}
 		<div
-			class="min-w-[12rem] flex flex-col absolute left-0 right-0 bg-white dark:bg-customGray-900 px-2 py-2 border border-gray-300 dark:border-customGray-700 rounded-lg z-10"
+			class="min-w-[12rem] flex flex-col absolute md:left-0 right-0 bg-lightGray-300 dark:bg-customGray-900 px-2 py-2 border border-lightGray-400 dark:border-customGray-700 rounded-lg z-10"
 		>
 			<button
 				type="button"

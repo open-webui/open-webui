@@ -47,6 +47,9 @@
 	import PublicIcon from '../icons/PublicIcon.svelte';
 	import PrivateIcon from '../icons/PrivateIcon.svelte';
 	import dayjs from 'dayjs';
+	import MenuIcon from '../icons/MenuIcon.svelte';
+	import FilterDropdown from './Models/FilterDropdown.svelte';
+	import BackIcon from '../icons/BackIcon.svelte';
 
 	let shiftKey = false;
 
@@ -268,10 +271,10 @@
 	});
 	
 	let logoSrc = '/logo_light.png';
-	onMount(() => {
-		const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-		logoSrc = isDark ? '/logo_light.png' : '/logo_dark.png';
-	});
+	// onMount(() => {
+	// 	const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+	// 	logoSrc = isDark ? '/logo_light.png' : '/logo_dark.png';
+	// });
 
 	$: if (loaded) {
 		setTimeout(() => {
@@ -299,30 +302,42 @@
 
 	<div
 		id="assistants-header"
-		class="pl-[22px] pr-[15px] py-2.5 border-b dark:border-customGray-700"
+		class="pl-4 md:pl-[22px] pr-4 py-2.5 border-b border-lightGray-400 dark:border-customGray-700"
 	>
 		<div class="flex justify-between items-center">
-			<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
-				<button
-					id="sidebar-toggle-button"
-					class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
-					on:click={() => {
-						showSidebar.set(!$showSidebar);
-					}}
-					aria-label="Toggle Sidebar"
-				>
-					<div class=" m-auto self-center">
-						<ShowSidebarIcon />
+			<div class="flex items-center">
+				<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
+					{#if ($mobile)}
+						<button class="flex items-center gap-1" on:click={() => history.back()}>
+							<BackIcon />
+							<div class="flex items-center md:self-center text-base font-medium leading-none px-0.5 text-lightGray-100 dark:text-customGray-100">
+								{$i18n.t('Assistants')}
+							</div>
+						</button>
+					{:else}
+						<button
+							id="sidebar-toggle-button"
+							class="cursor-pointer p-1.5 flex rounded-xl hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							on:click={() => {
+								showSidebar.set(!$showSidebar);
+							}}
+							aria-label="Toggle Sidebar"
+						>
+							<div class=" m-auto self-center">
+								<ShowSidebarIcon />
+							</div>
+						</button>
+					{/if}
+				</div>
+				{#if (!$mobile)}
+					<div class="flex items-center md:self-center text-base font-medium leading-none px-0.5 text-lightGray-100 dark:text-customGray-100">
+						{$i18n.t('Assistants')}
 					</div>
-				</button>
-			</div>
-			<div class="flex items-center md:self-center text-base font-medium leading-none px-0.5">
-				{$i18n.t('Assistants')}
-				<!-- <div class="flex self-center w-[1px] h-6 mx-2.5 bg-gray-50 dark:bg-gray-850" /> -->
+				{/if}
 			</div>
 			<div class="flex">
 				<div
-					class="flex flex-1 items-center p-2.5 rounded-lg mr-1 border dark:border-customGray-700 hover:bg-gray-100 dark:hover:bg-customGray-950 dark:hover:text-white transition"
+					class="flex flex-1 items-center p-2.5 rounded-lg mr-1 border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-700 dark:hover:bg-customGray-950 dark:hover:text-white transition"
 				>
 					<!-- <div class=" self-center ml-1 mr-3"> -->
 					<button
@@ -338,7 +353,7 @@
 					<!-- </div> -->
 					{#if showInput}
 						<input
-							class=" w-full text-xs outline-none bg-transparent leading-none pl-2"
+							class=" w-[5rem] md:w-full text-xs outline-none bg-transparent leading-none pl-2"
 							bind:value={searchValue}
 							placeholder={$i18n.t('Search Models')}
 							autofocus
@@ -350,31 +365,48 @@
 				</div>
 				<div>
 					<a
-						class=" px-2 py-2.5 w-[35px] sm:w-[220px] rounded-lg leading-none border border-customGray-700 hover:bg-gray-700/10 dark:hover:bg-customGray-950 dark:text-customGray-200 dark:hover:text-white transition font-medium text-xs flex items-center justify-center space-x-1"
+						class=" px-2 py-2.5 md:w-[220px] rounded-lg leading-none border border-lightGray-400 dark:border-customGray-700 hover:bg-lightGray-700 dark:hover:bg-customGray-950 text-lightGray-100 dark:text-customGray-200 dark:hover:text-white transition font-medium text-xs flex items-center justify-center space-x-1"
 						href="/workspace/models/create"
 					>
 						<Plus className="size-3.5" />
-						<span class="hidden sm:block">{$i18n.t('Create new')}</span>
+						<span class="">{$i18n.t('Create new')}</span>
 					</a>
 				</div>
 			</div>
 		</div>
 	</div>
-	<div class="pl-[22px] pr-[15px]">
+	<div class="pl-4 md:pl-[22px] pr-4">
 		<div
 			id="assistants-filters"
-			class="flex items-start justify-between py-5 pr-[22px] flex-col md:flex-row"
+			class="flex items-start justify-between pt-5 pb-3 md:pt-5 md:pb-5 md:pr-[22px] flex-row"
 		>
-			<div class="flex items-start space-x-[5px] flex-col sm:flex-row mb-3 sm:mb-0">
+			<div class="flex items-center md:items-start space-x-[5px] flex-col sm:flex-row mb-3 sm:mb-0">
+				{#if ($mobile)}
+				<FilterDropdown>
+					<div class="flex flex-wrap gap-1">
+						{#each tags as tag}
+							<button
+								class={`flex items-center justify-center rounded-md text-xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'bg-customViolet-200 dark:bg-customBlue-800' : 'bg-lightGray-400  dark:bg-customGray-800 '} font-medium text-lightGray-100 dark:text-white`}
+								on:click={() => {
+									selectedTags.has(tag) ? selectedTags.delete(tag) : selectedTags.add(tag);
+									selectedTags = new Set(selectedTags);
+								}}
+							>
+								{tag.charAt(0).toUpperCase() + tag.slice(1)}
+							</button>
+						{/each}
+					</div>
+				</FilterDropdown>
+				{:else}
 				<div
-					class="dark:text-customGray-300 text-xs whitespace-nowrap h-[22px] flex items-center mb-2 sm:mb-0"
+					class="font-medium text-lightGray-100 dark:text-customGray-300 text-xs whitespace-nowrap h-[22px] flex items-center md:mb-2 sm:mb-0"
 				>
-					{$i18n.t('Filter by category:')}
+					{$i18n.t('Filter by category')}
 				</div>
 				<div class="flex flex-wrap gap-1">
 					{#each tags as tag}
 						<button
-							class={`flex items-center justify-center rounded-md text-xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'dark:bg-customBlue-800' : 'dark:bg-customGray-800 dark:hover:bg-customGray-950'} dark:text-white`}
+							class={`flex items-center justify-center rounded-md text-xs leading-none px-[6px] py-[6px] ${selectedTags.has(tag) ? 'bg-customViolet-200 dark:bg-customBlue-800' : 'bg-lightGray-400 hover:bg-customViolet-200 dark:bg-customGray-800 dark:hover:bg-customGray-950'} font-medium text-lightGray-100 dark:text-white`}
 							on:click={() => {
 								selectedTags.has(tag) ? selectedTags.delete(tag) : selectedTags.add(tag);
 								selectedTags = new Set(selectedTags);
@@ -384,21 +416,22 @@
 						</button>
 					{/each}
 				</div>
+				{/if}
 			</div>
-			<div class="flex dark:bg-customGray-800 rounded-md flex-shrink-0">
+			<div class="flex bg-lightGray-700 dark:bg-customGray-800 rounded-md flex-shrink-0">
 				<button
 					on:click={() => (accessFilter = 'all')}
-					class={`${accessFilter === 'all' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'all' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-4 md:px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('All')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'private')}
-					class={`${accessFilter === 'private' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'private' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-4 md:px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('My Assistants')}</button
 				>
 				<button
 					on:click={() => (accessFilter = 'public')}
-					class={`${accessFilter === 'public' ? 'dark:bg-customGray-900 rounded-md border dark:border-customGray-700' : ''} px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
+					class={`${accessFilter === 'public' ? 'bg-lightGray-400 text-lightGray-100 dark:bg-customGray-900 rounded-md border border-lightGray-250 dark:border-customGray-700' : 'text-lightGray-100/70'} font-medium px-4 md:px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white`}
 					>{$i18n.t('Public')}</button
 				>
 				<!-- <button class="px-[23px] py-[7px] flex-shrink-0 text-xs leading-none dark:text-white"
@@ -421,7 +454,7 @@
 					<div
 						on:mouseenter={() => hoveredModel = model.id}
 						on:mouseleave={() => hoveredModel = null}
-						class="flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 bg-customGray-800 rounded-2xl transition"
+						class="flex flex-col gap-y-1 cursor-pointer w-full px-3 py-2 bg-lightGray-550 dark:bg-customGray-800 rounded-2xl transition"
 						id="model-item-{model.id}"
 					>
 						<div class="flex items-start justify-between">
@@ -429,14 +462,14 @@
 								<div class="flex items-center gap-1 flex-wrap">
 									{#if model.access_control == null}
 										<div
-											class="flex gap-1 items-center {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'text-lightGray-100 dark:text-customGray-300'} text-xs bg-lightGray-400 font-medium dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<PublicIcon />
 											<span>{$i18n.t('Public')}</span>
 										</div>
 									{:else if getGroupNamesFromAccess(model).length < 1}
 										<div
-											class="flex gap-1 items-center {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+											class="flex gap-1 items-center {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'text-lightGray-100 dark:text-customGray-300'} text-xs bg-lightGray-400 font-medium dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 										>
 											<PrivateIcon />
 											<span>{$i18n.t('Private')}</span>
@@ -444,7 +477,7 @@
 									{:else}
 										{#each getGroupNamesFromAccess(model) as groupName}
 											<div
-												class="flex items-center {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'dark:text-customGray-300'} text-xs dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
+												class="flex items-center {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'text-lightGray-100 dark:text-customGray-300'} text-xs bg-lightGray-400 font-medium dark:bg-customGray-900 px-[6px] py-[3px] rounded-md"
 											>
 												<GroupIcon />
 												<span>{groupName}</span>
@@ -454,7 +487,7 @@
 
 									{#each model.meta?.tags as modelTag}
 										<div
-											class="flex items-center {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'dark:text-customGray-100'} text-xs dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
+											class="flex items-center {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'text-lightGray-100 dark:text-customGray-100'} text-xs bg-customViolet-200 dark:bg-customBlue-800 px-[6px] py-[3px] rounded-md"
 										>
 											{modelTag.name}
 										</div>
@@ -462,7 +495,7 @@
 								</div>
 							</div>
 							{#if $user?.role === 'admin' || model.user_id === $user?.id || model?.access_control?.write.group_ids?.some( (wg) => group_ids.includes(wg) )}
-							<div class="{(hoveredModel === model.id || menuIdOpened === model.id) ? 'visible' : 'invisible'} ">
+							<div class="{(hoveredModel === model.id || menuIdOpened === model.id) ? 'md:visible' : 'md:invisible'} ">
 								<ModelMenu
 									user={$user}
 									{model}
@@ -524,12 +557,12 @@
 							>
 								<div class=" flex-1 self-center">
 									
-									<div class="text-base {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'dark:text-customGray-100'}  line-clamp-2 leading-[1.2]">
+									<div class="text-base {(hoveredModel === model.id || menuIdOpened === model.id) ? 'dark:text-white' : 'text-lightGray-100 dark:text-customGray-100'}  line-clamp-2 leading-[1.2]">
 										{model.name}
 									</div>
 								
 									<div class="mt-[5px] flex gap-1 text-xs overflow-hidden">
-										<div class="line-clamp-1 text-xs dark:text-customGray-100/50">
+										<div class="line-clamp-1 text-xs text-lightGray-1200 dark:text-customGray-100/50">
 											{#if (model?.meta?.description ?? '').trim()}
 												{model?.meta?.description}
 											{/if}
@@ -540,7 +573,7 @@
 						</div>
 
 						<div
-							class="flex justify-between mt-auto items-center px-0.5 pt-2.5 pb-[2px] border-t dark:border-customGray-700"
+							class="flex justify-between mt-auto items-center px-0.5 pt-2.5 pb-[2px] border-t border-[#A7A7A7]/10 dark:border-customGray-700"
 						>
 							<div class=" text-xs mt-0.5">
 								<Tooltip
@@ -555,7 +588,7 @@
 											alt={model?.user?.first_name ?? model?.user?.email ?? $i18n.t('Deleted User')}
 										/>
 									{/if}
-									<div class="shrink-0 text-customGray-100">
+									<div class="shrink-0 text-lightGray-1200 dark:text-customGray-100">
 										{#if (model?.user?.first_name && model?.user?.last_name)}
 											{model?.user?.first_name} {model?.user?.last_name}
 										{:else if (model?.user?.email)}
@@ -566,7 +599,7 @@
 									</div>
 								</Tooltip>
 							</div>
-							<div class="text-xs dark:text-customGray-100/50">
+							<div class="text-xs text-lightGray-1200 dark:text-customGray-100/50">
 								{dayjs(model.updated_at * 1000).format('DD.MM.YYYY')}
 							</div>
 

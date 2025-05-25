@@ -770,7 +770,7 @@
 				{#if !edit}
 					{#if message.done || siblings.length > 1}
 						<div
-							class=" flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
+							class=" flex justify-start overflow-x-auto buttons text-lightGray-100 dark:text-gray-500 mt-0.5"
 						>
 							{#if siblings.length > 1}
 								<div class="flex self-center min-w-fit" dir="ltr">

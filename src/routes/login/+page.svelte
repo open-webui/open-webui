@@ -110,11 +110,11 @@
 		}
 		await checkOauthCallback();
     });
-	let logoSrc = '/logo_light.png';
+	let logoSrc = '/logo_dark_transparent.png';
 
 	onMount(() => {
-		const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-		logoSrc = isDark ? '/logo_dark_transparent.png' : '/logo_dark.png';
+		const isDark = localStorage.getItem('theme') === 'dark';
+		logoSrc = isDark ? '/logo_dark_transparent.png' : '/logo_light_transparent.png';
 	});
 
 	$: console.log($config?.oauth?.providers?.google);
@@ -128,11 +128,11 @@
 
 <CustomToast message={$toastMessage} type={$toastType} visible={$toastVisible} />
 <div
-	class="flex flex-col justify-between w-full h-screen max-h-[100dvh] text-white relative dark:bg-customGray-900"
+	class="flex flex-col justify-between w-full h-screen max-h-[100dvh] px-4 text-white relative bg-lightGray-300 dark:bg-customGray-900"
 >
     <div></div>
 	<form
-		class="flex flex-col self-center dark:bg-customGray-800 rounded-2xl w-[31rem] py-7 px-24"
+		class="flex flex-col self-center bg-lightGray-800 dark:bg-customGray-800 rounded-2xl w-full md:w-[31rem] py-5 px-5 md:py-7 md:px-24"
 		on:submit={(e) => {
 			e.preventDefault();
 			signInHandler();
@@ -140,20 +140,20 @@
 	>	
         <div class="self-center flex flex-col items-center mb-5">
             <div>
-                <img crossorigin="anonymous" src="/logo_dark_transparent.png" class=" w-10 mb-5" alt="logo" />
+                <img crossorigin="anonymous" src={logoSrc} class=" w-10 mb-5" alt="logo" />
             </div>
-            <div class="mb-2.5">{$i18n.t('Welcome to')} {$WEBUI_NAME}</div>
-            <div class="text-center text-xs dark:text-customGray-300">{$i18n.t('Sign Up to Beyond the Loop to continue  Beyond the Loop')}</div>
+            <div class="font-medium mb-2.5 text-lightGray-100 dark:text-customGray-100">{$i18n.t('Welcome to')} {$WEBUI_NAME}</div>
+            <div class="font-medium text-center text-xs text-[#8A8B8D] dark:text-customGray-300">{$i18n.t('Sign in to continue')}</div>
         </div>
 		<div class="flex-1 mb-2.5">
-			<div class="relative w-full dark:bg-customGray-900 rounded-md">
+			<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 				{#if email}
-					<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+					<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 						{$i18n.t('Email address')}
 					</div>
 				{/if}
 				<input
-					class={`px-2.5 text-sm ${email ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none`}
+					class={`px-2.5 text-sm ${email ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent text-lightGray-100 dark:text-white placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 outline-none`}
 					placeholder={$i18n.t('Email address')}
 					bind:value={email}
                     type="email"
@@ -165,15 +165,15 @@
 		</div>
 	
 		<div class="flex flex-col w-full mb-1">
-			<div class="relative w-full dark:bg-customGray-900 rounded-md">
+			<div class="relative w-full bg-lightGray-300 dark:bg-customGray-900 rounded-md">
 				{#if password}
-					<div class="text-xs absolute left-2.5 top-1 dark:text-customGray-100/50">
+					<div class="text-xs absolute left-2.5 top-1 text-lightGray-100/50 dark:text-customGray-100/50">
 						{$i18n.t('Password')}
 					</div>
 				{/if}
 				{#if showPassword}
 					<input
-						class={`px-2.5 text-sm ${password ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
+						class={`px-2.5 text-sm ${password ? 'pt-2' : 'pt-0'} text-lightGray-100 w-full h-12 bg-transparent dark:text-white placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 outline-none pr-10`}
 						type="text"
 						bind:value={password}
 						placeholder={$i18n.t('Password')}
@@ -183,7 +183,7 @@
 					/>
 				{:else}
 					<input
-						class={`px-2.5 text-sm ${password ? 'pt-2' : 'pt-0'} w-full h-12 bg-transparent dark:text-white dark:placeholder:text-customGray-100 outline-none pr-10`}
+						class={`px-2.5 text-sm ${password ? 'pt-2' : 'pt-0'} text-lightGray-100 w-full h-12 bg-transparent dark:text-white placeholder:text-lightGray-100 dark:placeholder:text-customGray-100 outline-none pr-10`}
 						type="password"
 						bind:value={password}
 						placeholder={$i18n.t('Password')}
@@ -208,12 +208,12 @@
 			</div>
 		</div>
         <div class="flex justify-end mb-2.5">
-            <a href="/reset-password" class="text-customBlue-500 text-xs">{$i18n.t('Forgot password?')}</a>
+            <a href="/reset-password" class="font-medium text-customBlue-500 text-xs">{$i18n.t('Forgot password?')}</a>
         </div>
         <button
-			class=" text-xs w-full h-10 px-3 py-2 transition rounded-lg {loading
-				? ' cursor-not-allowed bg-black hover:bg-gray-900 text-white dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border dark:border-customGray-700'
-				: 'bg-black hover:bg-gray-900 text-white dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border dark:border-customGray-700'} flex justify-center items-center"
+			class="font-medium text-xs w-full h-10 px-3 py-2 transition rounded-lg {loading
+				? ' cursor-not-allowed bg-lightGray-300 hover:bg-lightGray-700 text-lightGray-100 dark:bg-customGray-950 dark:hover:bg-customGray-950 dark:text-white border border-lightGray-400 dark:border-customGray-700'
+				: 'bg-lightGray-300 hover:bg-lightGray-700 text-lightGray-100 dark:bg-customGray-900 dark:hover:bg-customGray-950 dark:text-customGray-200 border border-lightGray-400 dark:border-customGray-700'} flex justify-center items-center"
 			type="submit"
 			disabled={loading}
 		>
@@ -226,7 +226,7 @@
 		</button>
 		<div class="mt-5 text-xs dark:text-customGray-300">
 			{$i18n.t(`Don’t have an account?`)}
-			<a href="/company-register" class="text-customBlue-500">{$i18n.t('Register now')}</a>
+			<a href="/company-register" class="font-medium text-customBlue-500">{$i18n.t('Register now')}</a>
 		</div>
         <!-- <hr class=" border-gray-50 dark:border-customGray-700 mb-2 mt-6" />
         <div class="text-xs dark:text-customGray-300 text-center font-medium mb-2.5">Or</div>
@@ -284,5 +284,5 @@
 		</div> -->
 	</form>
     
-    <div class="self-center text-xs dark:text-customGray-100 pb-5">By using this service, you agree to our <a href="/">Terms</a> and <a href="/">Conditions</a>.</div>
+    <div class="self-center text-xs text-customGray-300 dark:text-customGray-100 pb-5 text-center">By using this service, you agree to our <a href="/">Terms</a> and <a href="/">Conditions</a>.</div>
 </div>
