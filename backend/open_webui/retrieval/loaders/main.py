@@ -27,7 +27,7 @@ from open_webui.retrieval.loaders.mistral import MistralLoader
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL
 
-# Import unstructured for default document processing
+# Import unstructured for default document processing on all docs
 try:
     from unstructured.partition.auto import partition
     UNSTRUCTURED_AVAILABLE = True
