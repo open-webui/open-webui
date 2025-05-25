@@ -964,9 +964,9 @@ class RedirectMiddleware(BaseHTTPMiddleware):
 
 
 # Add the middleware to the app
+app.add_middleware(CompressMiddleware)
 app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(CompressMiddleware)
 
 
 @app.middleware("http")
