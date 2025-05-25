@@ -96,75 +96,19 @@ async def create_subscription_session(request: CreateSubscriptionRequest, user=D
         if not stripe_customer_id:
             raise HTTPException(status_code=400, detail="No Stripe customer found for this company")
 
-        # Check for trial subscriptions first
-        trial_subscriptions = stripe.Subscription.list(
+        # Create a new Stripe Checkout session for the new subscription
+        print(f"Creating new subscription with price ID: {stripe_price_id} for plan: {request.plan_id}")
+        
+        # Check for existing subscriptions to include in metadata
+        existing_subscriptions = stripe.Subscription.list(
             customer=stripe_customer_id,
-            status='trialing',
-            limit=1
+            status='all',
+            limit=10
         )
         
-        # If there's an active trial subscription, handle it specially
-        if trial_subscriptions.data and len(trial_subscriptions.data) > 0:
-            # Create a Stripe Checkout session for upgrading from trial
-            session = stripe.checkout.Session.create(
-                payment_method_types=['card'],
-                line_items=[{
-                    'price': stripe_price_id,
-                    'quantity': 1,
-                }],
-                mode='subscription',
-                customer=stripe_customer_id,
-                success_url=os.getenv('BACKEND_ADDRESS') + "?modal=company-settings&tab=billing",
-                cancel_url=os.getenv('BACKEND_ADDRESS'),
-                subscription_data={
-                    'metadata': {
-                        'company_id': user.company_id,
-                        'plan_id': request.plan_id,
-                        'user_email': user.email,
-                        'upgraded_from_trial': 'true'
-                    }
-                }
-            )
-            
-            return {"url": session.url}
+        # Collect IDs of existing subscriptions to cancel after payment
+        subscription_ids_to_cancel = [sub.id for sub in existing_subscriptions.data if sub.status in ['active', 'trialing']]
         
-        # Check for existing active subscriptions
-        all_subscriptions = stripe.Subscription.list(
-            customer=stripe_customer_id,
-            limit=1
-        )
-        
-        if all_subscriptions.data:
-            current_subscription = all_subscriptions.data[0]
-            
-            # Check if subscription is active or just marked for cancellation
-            if current_subscription.status == 'active' or current_subscription.cancel_at_period_end:
-                # Update the subscription immediately with proration and un-cancel if needed
-                updated_subscription = stripe.Subscription.modify(
-                    current_subscription.id,
-                    items=[{
-                        'id': current_subscription['items']['data'][0].id,
-                        'price': stripe_price_id,
-                    }],
-                    proration_behavior='create_prorations',  # Apply prorated charges/credits
-                    cancel_at_period_end=False,  # Un-cancel the subscription if it was marked for cancellation
-                    metadata={
-                        'company_id': user.company_id,
-                        'plan_id': request.plan_id,
-                        'user_email': user.email
-                    },
-                )
-
-                session = stripe.billing_portal.Session.create(
-                    customer=stripe_customer_id,
-                    return_url=os.getenv('BACKEND_ADDRESS') + "?modal=company-settings&tab=billing"
-                )
-                return {"url": session.url}
-
-        # If no active trial or subscription, create a new subscription
-        print(f"Using price ID: {stripe_price_id} for plan: {request.plan_id}")
-        
-        # Create a Stripe Checkout session for subscription
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
             line_items=[{
@@ -179,7 +123,8 @@ async def create_subscription_session(request: CreateSubscriptionRequest, user=D
                 'metadata': {
                     'company_id': user.company_id,
                     'plan_id': request.plan_id,
-                    'user_email': user.email
+                    'user_email': user.email,
+                    'subscriptions_to_cancel': ','.join(subscription_ids_to_cancel) if subscription_ids_to_cancel else ''
                 }
             }
         )
@@ -452,35 +397,47 @@ def handle_checkout_session_completed(data):
 
 
 def handle_subscription_created(event_data):
+    """
+    Handle the customer.subscription.created event from Stripe.
+    This is triggered when a new subscription is created.
+    """
     try:
-        subscription_id = event_data.get("id")
-        customer_id = event_data.get("customer")
-        metadata = event_data.get("metadata", {})
-        status = event_data.get("status")
-        is_trial = status == "trialing" or metadata.get("is_trial") == "true"
+        # event_data is already the subscription object from the webhook handler
+        subscription = event_data
+        status = subscription['status']
+        metadata = subscription['metadata']
         
-        company_id = metadata.get("company_id")
-        plan_id = metadata.get("plan_id")
+        # Get the plan ID from metadata
+        plan_id = metadata.get('plan_id')
+        company_id = metadata.get('company_id')
         
-        if not company_id:
-            # Try to find company by customer ID
-            if customer_id:
-                company = Companies.get_company_by_stripe_customer_id(customer_id)
-                if company:
-                    company_id = company.id
-            
-            if not company_id:
-                print(f"Subscription created: Company ID not found for subscription {subscription_id}")
-                return
-        
-        # Get company
-        company = Companies.get_company_by_id(company_id)
-        if not company:
-            print(f"Company not found with ID: {company_id}")
+        if not plan_id or not company_id:
+            print("Missing plan_id or company_id in subscription metadata")
             return
             
+        # Check if there are subscriptions to cancel
+        subscriptions_to_cancel = metadata.get('subscriptions_to_cancel', '')
+
+        print(subscriptions_to_cancel)
+
+        if subscriptions_to_cancel:
+            subscription_ids = subscriptions_to_cancel.split(',')
+            for sub_id in subscription_ids:
+                if sub_id and sub_id != subscription['id']:  # Don't cancel the new subscription
+                    try:
+                        stripe.Subscription.delete(sub_id)
+                        print(f"Cancelled old subscription {sub_id} after new subscription {subscription['id']} was created")
+                    except Exception as e:
+                        print(f"Error cancelling subscription {sub_id}: {e}")
+        
+        # Get the company from the database
+        company = Companies.get_company_by_id(company_id)
+        if not company:
+            print(f"Company {company_id} not found")
+            return
+        
         # For trial subscriptions, set initial credit balance to 5
-        if is_trial:
+        if status == "trialing":
             Companies.update_company_by_id(company_id, {
                 "credit_balance": SUBSCRIPTION_PLANS[plan_id]["credits_per_month"],  # credits for trial as specified
             })
@@ -489,7 +446,7 @@ def handle_subscription_created(event_data):
             
         # For regular subscriptions, handle as before
         if plan_id not in SUBSCRIPTION_PLANS:
-            print(f"Invalid plan ID: {plan_id} for subscription {subscription_id}")
+            print(f"Invalid plan ID: {plan_id} for subscription {subscription['id']}")
             return
             
         plan = SUBSCRIPTION_PLANS[plan_id]
@@ -507,6 +464,7 @@ def handle_subscription_created(event_data):
 
 def handle_subscription_updated(event_data):
     try:
+        # event_data is already the subscription object
         subscription_id = event_data.get("id")
         customer_id = event_data.get("customer")
         metadata = event_data.get("metadata", {})
@@ -529,6 +487,7 @@ def handle_subscription_updated(event_data):
 
 def handle_subscription_deleted(event_data):
     try:
+        # event_data is already the subscription object
         subscription_id = event_data.get("id")
         customer_id = event_data.get("customer")
         
@@ -547,6 +506,7 @@ def handle_subscription_deleted(event_data):
 
 def handle_invoice_payment_succeeded(event_data):
     try:
+        # event_data is already the invoice object
         invoice_id = event_data.get("id")
         customer_id = event_data.get("customer")
         subscription_id = event_data.get("subscription")
@@ -586,6 +546,7 @@ def handle_invoice_payment_succeeded(event_data):
 
 def handle_payment_intent_succeeded(data):
     try:
+        # event_data is already the payment intent object
         payment_intent_id = data.get("id")
         customer_id = data.get("customer")
         
