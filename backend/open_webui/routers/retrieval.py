@@ -1789,6 +1789,8 @@ def process_file(
                     DOCUMENT_INTELLIGENCE_ENDPOINT=request.app.state.config.DOCUMENT_INTELLIGENCE_ENDPOINT,
                     DOCUMENT_INTELLIGENCE_KEY=request.app.state.config.DOCUMENT_INTELLIGENCE_KEY,
                     MISTRAL_OCR_API_KEY=request.app.state.config.MISTRAL_OCR_API_KEY,
+                    CHUNK_SIZE=request.app.state.config.CHUNK_SIZE,
+                    CHUNK_OVERLAP=request.app.state.config.CHUNK_OVERLAP,
                 )
                 
                 print(f"REFACTORED: Loading file with {engine_display}...")
