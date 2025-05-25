@@ -116,7 +116,6 @@ def query_doc_with_hybrid_search(
     reranking_function,
     k_reranker: int,
     r: float,
-    hybrid_bm25_weight: float,
 ) -> dict:
     try:
         log.debug(f"query_doc_with_hybrid_search:doc {collection_name}")
@@ -132,20 +131,9 @@ def query_doc_with_hybrid_search(
             top_k=k,
         )
 
-        if hybrid_bm25_weight <= 0:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[vector_search_retriever], weights=[1.0]
-            )
-        elif hybrid_bm25_weight >= 1:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever], weights=[1.0]
-            )
-        else:
-            ensemble_retriever = EnsembleRetriever(
-                retrievers=[bm25_retriever, vector_search_retriever],
-                weights=[hybrid_bm25_weight, 1.0 - hybrid_bm25_weight],
-            )
-
+        ensemble_retriever = EnsembleRetriever(
+            retrievers=[bm25_retriever, vector_search_retriever], weights=[0.5, 0.5]
+        )
         compressor = RerankCompressor(
             embedding_function=embedding_function,
             top_n=k_reranker,
@@ -325,7 +313,6 @@ def query_collection_with_hybrid_search(
     reranking_function,
     k_reranker: int,
     r: float,
-    hybrid_bm25_weight: float,
 ) -> dict:
     results = []
     error = False
@@ -359,7 +346,6 @@ def query_collection_with_hybrid_search(
                 reranking_function=reranking_function,
                 k_reranker=k_reranker,
                 r=r,
-                hybrid_bm25_weight=hybrid_bm25_weight,
             )
             return result, None
         except Exception as e:
@@ -447,13 +433,17 @@ def get_sources_from_files(
     reranking_function,
     k_reranker,
     r,
-    hybrid_bm25_weight,
     hybrid_search,
     full_context=False,
 ):
     log.debug(
         f"files: {files} {queries} {embedding_function} {reranking_function} {full_context}"
     )
+
+    # DEBUG: Enhanced logging for full context mode
+    log.info(f"DEBUG get_sources_from_files: full_context={full_context}, files_count={len(files)}")
+    for i, file in enumerate(files):
+        log.info(f"DEBUG File {i}: id={file.get('id')}, name={file.get('name')}, type={file.get('type')}")
 
     extracted_collections = []
     relevant_contexts = []
@@ -538,18 +528,30 @@ def get_sources_from_files(
                 else:
                     collection_names.append(f"file-{file['id']}")
 
+            # DEBUG: Log collection names being queried
+            log.info(f"DEBUG: Generated collection_names for file {file.get('name', 'Unknown')}: {collection_names}")
+
             collection_names = set(collection_names).difference(extracted_collections)
             if not collection_names:
                 log.debug(f"skipping {file} as it has already been extracted")
                 continue
 
+            # DEBUG: Log the path taken based on full_context
             if full_context:
+                log.info(f"DEBUG: Using FULL CONTEXT mode for collections: {collection_names}")
                 try:
                     context = get_all_items_from_collections(collection_names)
+                    # DEBUG: Log what get_all_items_from_collections returned
+                    if context:
+                        doc_count = len(context.get("documents", [[]])[0]) if context.get("documents") else 0
+                        log.info(f"DEBUG: get_all_items_from_collections returned {doc_count} documents")
+                    else:
+                        log.warning(f"DEBUG: get_all_items_from_collections returned None/empty for {collection_names}")
                 except Exception as e:
-                    log.exception(e)
+                    log.exception(f"DEBUG: Error in get_all_items_from_collections: {e}")
 
             else:
+                log.info(f"DEBUG: Using QUERY mode (not full context) for collections: {collection_names}")
                 try:
                     context = None
                     if file.get("type") == "text":
@@ -565,7 +567,6 @@ def get_sources_from_files(
                                     reranking_function=reranking_function,
                                     k_reranker=k_reranker,
                                     r=r,
-                                    hybrid_bm25_weight=hybrid_bm25_weight,
                                 )
                             except Exception as e:
                                 log.debug(
@@ -585,11 +586,19 @@ def get_sources_from_files(
 
             extracted_collections.extend(collection_names)
 
+        # DEBUG: Log the final context for this file
         if context:
+            doc_count = len(context.get("documents", [[]])[0]) if context.get("documents") else 0
+            log.info(f"DEBUG: Final context for file {file.get('name', 'Unknown')}: {doc_count} documents")
             if "data" in file:
                 del file["data"]
 
             relevant_contexts.append({**context, "file": file})
+        else:
+            log.warning(f"DEBUG: No context found for file {file.get('name', 'Unknown')}")
+
+    # DEBUG: Log final results
+    log.info(f"DEBUG: Total relevant_contexts found: {len(relevant_contexts)}")
 
     sources = []
     for context in relevant_contexts:
@@ -607,6 +616,13 @@ def get_sources_from_files(
                     sources.append(source)
         except Exception as e:
             log.exception(e)
+
+    # DEBUG: Final sources count
+    log.info(f"DEBUG: Final sources count: {len(sources)}")
+    for i, source in enumerate(sources):
+        doc_count = len(source.get("document", [])) if source.get("document") else 0
+        source_name = source.get("source", {}).get("name", "Unknown")
+        log.info(f"DEBUG: Final source {i}: name={source_name}, documents={doc_count}")
 
     return sources
 
