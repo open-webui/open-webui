@@ -51,6 +51,8 @@ from open_webui.utils.filter import (
     get_sorted_filter_ids,
     process_filter_functions,
 )
+from open_webui.utils.intent_processors import image_generation_intent_detector
+from open_webui.models.chats import Chats # Required for saving the message
 
 from open_webui.env import SRC_LOG_LEVELS, GLOBAL_LOG_LEVEL, BYPASS_MODEL_ACCESS_CONTROL
 
@@ -162,6 +164,101 @@ async def generate_chat_completion(
     bypass_filter: bool = False,
 ):
     log.debug(f"generate_chat_completion: {form_data}")
+
+    # Extract chat_id, user_message, and history for the intent detector
+    # The form_data["messages"] is expected to be the full history including the latest user message
+    messages = form_data.get("messages", [])
+    chat_id = form_data.get("chat_id") # Assuming chat_id is available in form_data
+
+    if not chat_id and hasattr(request.state, "chat_id"): # Try to get from request state if available
+        chat_id = request.state.chat_id
+    
+    log.debug(f"Messages for detector: {messages}")
+
+    user_message_content = ""
+    chat_history_for_detector = []
+
+    if messages:
+        # The last message is the current user message
+        user_message_obj = messages[-1]
+        if user_message_obj.get("role") == "user":
+            user_message_content = user_message_obj.get("content", "")
+            # History is all messages before the last one
+            chat_history_for_detector = messages[:-1]
+        else:
+            # This case should ideally not happen if form_data is well-formed for a new turn
+            log.warning("Last message is not from user, cannot process with intent detector.")
+            # Fall through to normal processing without detector call
+
+    if user_message_content and not getattr(request.state, "direct", False): # Don't run detector for direct model connections
+        log.debug(f"Calling ImageGenerationIntentDetector for chat_id '{chat_id}' with message: '{user_message_content}'")
+        try:
+            detector_response = await image_generation_intent_detector(
+                user_message=user_message_content,
+                chat_history=chat_history_for_detector,
+                request=request,
+                current_chat_id=chat_id,
+            )
+        except Exception as e:
+            log.exception("ImageGenerationIntentDetector raised an exception.")
+            detector_response = None # Proceed to LLM on detector error
+
+        if detector_response:
+            log.info(f"ImageGenerationIntentDetector returned a response for chat_id '{chat_id}': {detector_response}")
+            
+            # The detector's response is a complete assistant message dict.
+            # This message needs to be added to the chat history.
+            # The `generate_chat_completion` function itself typically returns the content
+            # that the calling router then uses.
+            # For now, we'll assume the calling router is responsible for saving the full chat context
+            # including this new message.
+            # We need to return it in a format that mimics a non-streaming LLM response if possible,
+            # or handle it specially if streaming.
+
+            # If the original request was for streaming, this is tricky.
+            # For simplicity in this integration, if detector responds, we won't stream.
+            # We will return the single message. The frontend will need to handle it.
+            if form_data.get("stream"):
+                log.warn("ImageGenerationIntentDetector responded, but original request was for stream. Returning as single event.")
+                async def single_event_stream():
+                    yield f"data: {json.dumps({'id': str(uuid.uuid4()), 'choices': [{'delta': detector_response}]})}\n\n"
+                    yield f"data: {json.dumps({'done': True})}\n\n"
+                
+                # The response needs to be structured somewhat like an OpenAI streaming chunk
+                # to be minimally disruptive to existing stream handling.
+                # A more robust solution would be custom event types for this.
+                # For now, we send the whole message as a 'delta' in the first chunk.
+                # This is a HACK for streaming.
+                # A better way would be to have the socket emit this message directly.
+                return StreamingResponse(single_event_stream(), media_type="text/event-stream")
+
+            # For non-streaming, the detector_response is already a dict like:
+            # {"role": "assistant", "content": "...", "metadata": {...}}
+            # The typical non-streaming response from generate_openai_chat_completion is a dict
+            # that includes a "choices" list, e.g., {"choices": [{"message": detector_response}] }
+            return {
+                "id": str(uuid.uuid4()), # Generate a unique ID for this "response"
+                "object": "chat.completion",
+                "created": int(time.time()),
+                "model": detector_response.get("metadata", {}).get("engine_used") or form_data.get("model"), # Use engine from metadata or original model
+                "choices": [
+                    {
+                        "index": 0,
+                        "message": detector_response, # The full message from the detector
+                        "finish_reason": "stop",
+                    }
+                ],
+                "usage": { # Dummy usage
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                }
+            }
+            # IMPORTANT: The above response will be handled by the router.
+            # The router (e.g., in chats.py or a socket handler) is responsible for taking this response
+            # and saving the `detector_response` message to the database.
+            # This function `generate_chat_completion` is primarily for *generating* the content.
+
     if BYPASS_MODEL_ACCESS_CONTROL:
         bypass_filter = True
 
@@ -174,6 +271,9 @@ async def generate_chat_completion(
                 **request.state.metadata,
             }
 
+    # If detector did not handle it, proceed with normal LLM flow
+    log.debug("ImageGenerationIntentDetector did not handle the message, proceeding to LLM.")
+
     if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
         models = {
             request.state.model["id"]: request.state.model,
@@ -184,11 +284,14 @@ async def generate_chat_completion(
 
     model_id = form_data["model"]
     if model_id not in models:
+        # This check might be redundant if the detector already ran and returned,
+        # but good for the path where detector doesn't run or returns None.
         raise Exception("Model not found")
 
     model = models[model_id]
 
     if getattr(request.state, "direct", False):
+        # Detector is currently skipped for direct connections, so this path remains unchanged.
         return await generate_direct_chat_completion(
             request, form_data, user=user, models=models
         )

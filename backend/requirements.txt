@@ -9,6 +9,7 @@ passlib[bcrypt]==1.7.4
 
 requests==2.32.3
 aiohttp==3.11.11
+httpx>=0.25.0
 async-timeout
 aiocache
 aiofiles
