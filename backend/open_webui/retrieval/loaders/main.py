@@ -213,20 +213,8 @@ class UnstructuredLoader:
             )
         
         try:
-            # Use unstructured.io's auto partition for comprehensive document processing
-            # Note: Some parameters may conflict with specific file type handlers, so we use basic options
-            elements = partition(
-                filename=self.file_path,
-                # Enable page breaks for better structure
-                include_page_breaks=True,
-                # Extract images if requested (for PDFs)
-                extract_images_in_pdf=bool(self.extract_images) if self.extract_images else False,
-                # Use chunking strategy for better document organization
-                chunking_strategy="by_title",
-                max_characters=4000,
-                new_after_n_chars=3800,
-                combine_text_under_n_chars=2000,
-            )
+            # Use unstructured.io's auto partition with minimal parameters to avoid conflicts
+            elements = partition(filename=self.file_path)
             
             if not elements:
                 log.warning("No elements extracted from document")
@@ -261,14 +249,8 @@ class UnstructuredLoader:
             
         except Exception as e:
             log.error(f"Error processing document with Unstructured.io: {e}")
-            # Fallback to simple text extraction
-            try:
-                with open(self.file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                    content = f.read()
-                return [Document(page_content=content, metadata={"source": self.file_path, "extraction_method": "fallback"})]
-            except Exception as fallback_error:
-                log.error(f"Fallback text extraction also failed: {fallback_error}")
-                raise Exception(f"Both Unstructured.io and fallback extraction failed: {e}")
+            # Re-raise the exception to force proper error handling
+            raise Exception(f"Unstructured.io processing failed: {e}")
 
 
 class Loader:
