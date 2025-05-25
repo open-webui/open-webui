@@ -1008,6 +1008,11 @@ async def process_chat_response(
             # the original messages outside of this handler
 
             messages = []
+            # SAFETY CHECK: Ensure message_list is not None and is iterable
+            if message_list is None:
+                log.warning(f"get_message_list returned None for chat_id={metadata['chat_id']}, using empty list")
+                message_list = []
+            
             for message in message_list:
                 content = message.get("content", "")
                 if isinstance(content, list):
