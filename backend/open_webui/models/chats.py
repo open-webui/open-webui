@@ -587,9 +587,11 @@ class ChatTable:
             log.warning(f"⚠️  INDEX CREATION FAILED: Could not create indexes: {e}")
     
     def _ensure_connection_optimized(self, db):
-        """FIXED: Apply connection-level optimizations once globally."""
+        """FIXED: Apply connection-level optimizations and create indexes once globally."""
         log.debug("🔍 CONNECTION CHECK: Ensuring connection optimizations...")
         optimize_db_connection()
+        # FIXED: Actually trigger lazy index creation!
+        self._ensure_indexes_created(db)
 
     def _invalidate_cache_for_user(self, user_id: str):
         """FIXED: More targeted cache invalidation to prevent excessive clearing."""
