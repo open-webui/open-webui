@@ -20,6 +20,8 @@ import markedExtension from '$lib/utils/marked/extension';
 import markedKatexExtension from '$lib/utils/marked/katex-extension';
 import hljs from 'highlight.js';
 
+import { specialCases } from '$lib/utils/processResponseContent/special-cases'
+
 //////////////////////////
 // Helper functions
 //////////////////////////
@@ -90,6 +92,9 @@ export const sanitizeResponseContent = (content: string) => {
 };
 
 export const processResponseContent = (content: string) => {
+	// This function is used to process the response content 
+	// before the response content is rendered.
+	content = specialCases(content);
 	return content.trim();
 };
 
@@ -324,6 +329,7 @@ export const copyToClipboard = async (text, formatted = false) => {
 		};
 		marked.use(markedKatexExtension(options));
 		marked.use(markedExtension(options));
+		// DEVELOPER NOTE: Go to `$lib/components/chat/Messages/Markdown.svelte` to add extra markdown extensions for rendering.
 
 		const htmlContent = marked.parse(text);
 
