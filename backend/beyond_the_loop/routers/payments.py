@@ -186,13 +186,14 @@ async def get_subscription_plans():
     """Get all available subscription plans"""
     plans = []
     for plan_id, plan_details in SUBSCRIPTION_PLANS.items():
-        plans.append(SubscriptionPlanResponse(
-            id=plan_id,
-            name=plan_details["name"],
-            price_monthly=plan_details["price_monthly"],
-            credits_per_month=plan_details["credits_per_month"],
-            seats=plan_details["seats"]
-        ))
+        if (plan_details["name"] != "Free"):
+            plans.append(SubscriptionPlanResponse(
+                id=plan_id,
+                name=plan_details["name"],
+                price_monthly=plan_details["price_monthly"],
+                credits_per_month=plan_details["credits_per_month"],
+                seats=plan_details["seats"]
+            ))
     return plans
 
 
