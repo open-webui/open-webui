@@ -20,7 +20,7 @@ import markedExtension from '$lib/utils/marked/extension';
 import markedKatexExtension from '$lib/utils/marked/katex-extension';
 import hljs from 'highlight.js';
 
-import { specialCases } from '$lib/utils/processResponseContent/special-cases'
+import { specialCases } from '$lib/utils/processResponseContent/special-cases';
 
 //////////////////////////
 // Helper functions
@@ -92,7 +92,7 @@ export const sanitizeResponseContent = (content: string) => {
 };
 
 export const processResponseContent = (content: string) => {
-	// This function is used to process the response content 
+	// This function is used to process the response content
 	// before the response content is rendered.
 	content = specialCases(content);
 	return content.trim();
