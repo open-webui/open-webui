@@ -2170,6 +2170,3 @@ class ChatTable:
 
 
 Chats = ChatTable()
-
-# Performance and safety enhancements applied to prevent None iteration errors
-# All core fixes have been moved to utils/misc.py and utils/middleware.py
