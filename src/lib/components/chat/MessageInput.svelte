@@ -293,7 +293,7 @@
 
 	const inputFilesHandler = async (inputFiles) => {
 		console.log('Input files handler called with:', inputFiles);
-		inputFiles.forEach((file) => {
+		for (const file of inputFiles) {
 			console.log('Processing file:', {
 				name: file.name,
 				type: file.type,
@@ -317,20 +317,21 @@
 				return;
 			}
 
-					if (
-			['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
-		) {
-			if (visionCapableModels.length === 0) {
-				// Smart Fallback: Use OCR text extraction when no vision models are available
-				// This feature can be disabled via ENABLE_IMAGE_OCR_FALLBACK config
-				console.log('No vision models available, using OCR text extraction for image:', file.name);
-				toast.info($i18n.t('No vision models available. Extracting text from image using OCR...'));
+			if (
+				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
+			) {
+				if (visionCapableModels.length === 0) {
+					// Smart Fallback: Use OCR text extraction when no vision models are available
+					// This feature can be disabled via ENABLE_IMAGE_OCR_FALLBACK config
+					console.log('No vision models available, using OCR text extraction for image:', file.name);
+					toast.info($i18n.t('No vision models available. Extracting text from image using OCR...'));
+					
+					// Process the image file for OCR text extraction instead of vision
+					// This will upload the file and extract text content for RAG
+					await uploadFileHandler(file);
+					return;
+				}
 				
-				// Process the image file for OCR text extraction instead of vision
-				// This will upload the file and extract text content for RAG
-				await uploadFileHandler(file);
-				return;
-			}
 				let reader = new FileReader();
 				reader.onload = async (event) => {
 					let imageUrl = event.target.result;
@@ -356,7 +357,7 @@
 			} else {
 				uploadFileHandler(file);
 			}
-		});
+		}
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
