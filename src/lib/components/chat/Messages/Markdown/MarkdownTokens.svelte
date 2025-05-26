@@ -8,6 +8,7 @@
 
 	import { marked, type Token } from 'marked';
 	import { unescapeHtml } from '$lib/utils';
+	import { PiiSessionManager, highlightUnmaskedEntities } from '$lib/utils/pii';
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
 
@@ -40,6 +41,18 @@
 
 	const headerComponent = (depth: number) => {
 		return 'h' + depth;
+	};
+	
+	// PII highlighting function
+	const addPiiHighlighting = (text: string): string => {
+		const piiSessionManager = PiiSessionManager.getInstance();
+		const entities = piiSessionManager.getEntities();
+		
+		if (!entities.length) {
+			return text;
+		}
+		
+		return highlightUnmaskedEntities(text, entities);
 	};
 
 	const exportTableToCSVHandler = (token, tokenIdx = 0) => {
@@ -294,7 +307,12 @@
 				{#if token.tokens}
 					<MarkdownInlineTokens id={`${id}-${tokenIdx}-t`} tokens={token.tokens} {onSourceClick} />
 				{:else}
-					{unescapeHtml(token.text)}
+					{@const highlightedText = addPiiHighlighting(unescapeHtml(token.text))}
+					{#if highlightedText !== unescapeHtml(token.text)}
+						{@html DOMPurify.sanitize(highlightedText)}
+					{:else}
+						{unescapeHtml(token.text)}
+					{/if}
 				{/if}
 			</p>
 		{:else if token.tokens}
@@ -304,8 +322,9 @@
 				{onSourceClick}
 			/>
 		{:else}
-			{#if token.text && token.text.includes('class="pii-highlight')}
-				{@html DOMPurify.sanitize(token.text)}
+			{@const highlightedText = addPiiHighlighting(unescapeHtml(token.text))}
+			{#if highlightedText !== unescapeHtml(token.text)}
+				{@html DOMPurify.sanitize(highlightedText)}
 			{:else}
 				{unescapeHtml(token.text)}
 			{/if}

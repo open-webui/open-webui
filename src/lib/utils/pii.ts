@@ -192,10 +192,38 @@ export function unmaskTextWithEntities(text: string, entities: ExtendedPiiEntity
 		});
 	});
 	
-	// Replace masked patterns [{LABEL_ID}] with original text
-	const maskedPattern = /\[\{([^}]+)\}\]/g;
-	unmaskedText = unmaskedText.replace(maskedPattern, (match, labelId) => {
-		return labelToTextMap[labelId] || match;
+	// Handle various masking pattern variations that models might produce:
+	// 1. [{LABEL_ID}] - correct format
+	// 2. {LABEL_ID} - missing brackets
+	// 3. [LABEL_ID] - missing braces
+	// 4. LABEL_ID - no brackets or braces
+	
+	const patterns = [
+		/\[\{([^}]+)\}\]/g,  // [{LABEL_ID}]
+		/\{([^}]+)\}/g,      // {LABEL_ID}
+		/\[([^\]]+)\]/g,     // [LABEL_ID]
+	];
+	
+	patterns.forEach(pattern => {
+		unmaskedText = unmaskedText.replace(pattern, (match, labelId) => {
+			// Check if this labelId exists in our entities
+			if (labelToTextMap[labelId]) {
+				return labelToTextMap[labelId];
+			}
+			// If not found, return the original match
+			return match;
+		});
+	});
+	
+	// Also handle standalone label IDs (without any brackets/braces)
+	// But be more careful to avoid false positives
+	Object.keys(labelToTextMap).forEach(labelId => {
+		// Only replace if the label ID appears as a standalone word
+		// and follows the pattern of our generated labels (e.g., PERSON_1, EMAIL_2, etc.)
+		if (/^[A-Z_]+_\d+$/.test(labelId)) {
+			const standalonePattern = new RegExp(`\\b${labelId}\\b`, 'g');
+			unmaskedText = unmaskedText.replace(standalonePattern, labelToTextMap[labelId]);
+		}
 	});
 	
 	return unmaskedText;

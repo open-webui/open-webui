@@ -35,16 +35,8 @@
 
 	$: (async () => {
 		if (content) {
-			// Check if content already contains PII highlighting HTML
-			const containsPiiHighlighting = content.includes('class="pii-highlight');
-			
-			// If content contains PII highlighting, skip processResponseContent to preserve HTML
-			const processedContent = containsPiiHighlighting 
-				? content 
-				: processResponseContent(content);
-				
 			tokens = marked.lexer(
-				replaceTokens(processedContent, sourceIds, model?.name, $user?.name)
+				replaceTokens(processResponseContent(content), sourceIds, model?.name, $user?.name)
 			);
 		}
 	})();
