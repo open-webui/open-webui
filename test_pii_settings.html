@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PII Settings Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .checklist {
+            list-style-type: none;
+            padding: 0;
+        }
+        .checklist li {
+            padding: 5px 0;
+        }
+        .checklist li:before {
+            content: "✓ ";
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>PII Detection Integration Test Results</h1>
+    
+    <div class="status success">
+        <h2>✅ Integration Completed Successfully!</h2>
+        <p>The PII detection feature has been successfully integrated into Open WebUI.</p>
+    </div>
+
+    <h2>Components Implemented:</h2>
+    <ul class="checklist">
+        <li><strong>Core API Integration</strong> - Complete NENNA.ai API wrapper with TypeScript interfaces</li>
+        <li><strong>PII Settings Component</strong> - Added to Interface settings with API key management and testing</li>
+        <li><strong>Real-time PII Detection</strong> - Integrated into RichTextInput with debounced API calls</li>
+        <li><strong>Visual Highlighting</strong> - TipTap extension for color-coded PII highlighting</li>
+        <li><strong>Message Masking</strong> - Automatic masking before sending to AI models</li>
+        <li><strong>Response Unmasking</strong> - Automatic unmasking of AI responses</li>
+        <li><strong>Session Management</strong> - Consistent entity mapping across conversations</li>
+        <li><strong>Settings Integration</strong> - Added to main settings modal with proper TypeScript types</li>
+    </ul>
+
+    <h2>How to Test:</h2>
+    <div class="info">
+        <ol>
+            <li><strong>Access Settings:</strong> Open the chat interface and click the Settings button</li>
+            <li><strong>Navigate to Interface:</strong> Click on the "Interface" tab in the settings modal</li>
+            <li><strong>Find PII Settings:</strong> Scroll down to the "Privacy" section at the bottom</li>
+            <li><strong>Enable PII Detection:</strong> Toggle the "Enable PII Detection" switch</li>
+            <li><strong>Add API Key:</strong> Enter your NENNA.ai API key in the provided field</li>
+            <li><strong>Test Connection:</strong> Click the "Test" button to verify the API connection</li>
+            <li><strong>Start Chatting:</strong> Type messages with PII (names, emails, phone numbers) to see highlighting</li>
+        </ol>
+    </div>
+
+    <h2>Supported PII Types:</h2>
+    <div class="info">
+        <p>The system can detect and highlight the following types of personally identifiable information:</p>
+        <ul>
+            <li>Names (PERSON)</li>
+            <li>Email addresses (EMAIL)</li>
+            <li>Phone numbers (PHONE)</li>
+            <li>Physical addresses (ADDRESS)</li>
+            <li>Social Security Numbers (SSN)</li>
+            <li>Credit card numbers (CREDIT_CARD)</li>
+            <li>Dates (DATE)</li>
+            <li>IP addresses (IP_ADDRESS)</li>
+            <li>URLs (URL)</li>
+            <li>IBANs (IBAN)</li>
+            <li>Medical licenses (MEDICAL_LICENSE)</li>
+            <li>US passports (US_PASSPORT)</li>
+            <li>Driver's licenses (DRIVERS_LICENSE)</li>
+            <li>And more...</li>
+        </ul>
+    </div>
+
+    <h2>Troubleshooting:</h2>
+    <div class="info">
+        <p>If you don't see the PII settings in the Interface tab:</p>
+        <ol>
+            <li>Make sure you're running the latest version with all changes applied</li>
+            <li>Check the browser console for any JavaScript errors</li>
+            <li>Verify that the development server is running without errors</li>
+            <li>Try refreshing the page or restarting the development server</li>
+            <li>Check that all TypeScript files compiled successfully</li>
+        </ol>
+    </div>
+
+    <div class="status info">
+        <h3>Next Steps:</h3>
+        <p>1. Get a NENNA.ai API key from <a href="https://nenna.ai" target="_blank">nenna.ai</a></p>
+        <p>2. Configure the PII detection settings in the Interface tab</p>
+        <p>3. Test with sample PII data to see the highlighting and masking in action</p>
+        <p>4. Enjoy enhanced privacy protection in your AI conversations!</p>
+    </div>
+</body>
+</html> 

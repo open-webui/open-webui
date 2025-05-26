@@ -120,7 +120,16 @@
 				'save',
 				'interfaceoptions',
 				'interfacecustomization',
-				'alwaysonwebsearch'
+				'alwaysonwebsearch',
+				'pii',
+				'piidetection',
+				'privacy',
+				'personallyidentifiableinformation',
+				'dataprotection',
+				'masking',
+				'nenna',
+				'nennaai',
+				'sensitivedata'
 			]
 		},
 		...($user?.role === 'admin' ||
