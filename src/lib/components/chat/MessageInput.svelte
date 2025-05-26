@@ -328,7 +328,8 @@
 					
 					// Process the image file for OCR text extraction instead of vision
 					// This will upload the file and extract text content for RAG
-					await uploadFileHandler(file);
+					// Use fullContext=true to ensure the file gets processed for vector storage
+					await uploadFileHandler(file, true);
 					return;
 				}
 				
