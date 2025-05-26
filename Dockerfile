@@ -113,8 +113,8 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     # Install pandoc and netcat
     apt-get install -y --no-install-recommends git build-essential pandoc netcat-openbsd curl && \
     apt-get install -y --no-install-recommends gcc python3-dev && \
-    # for RAG OCR
-    apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+    # for RAG OCR (including Tesseract for image text extraction with multiple languages)
+    apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 tesseract-ocr tesseract-ocr-eng tesseract-ocr-fra tesseract-ocr-deu tesseract-ocr-spa && \
     # install helper tools
     apt-get install -y --no-install-recommends curl jq && \
     # install ollama
@@ -126,8 +126,8 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     # Install pandoc, netcat and gcc
     apt-get install -y --no-install-recommends git build-essential pandoc gcc netcat-openbsd curl jq && \
     apt-get install -y --no-install-recommends gcc python3-dev && \
-    # for RAG OCR
-    apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 && \
+    # for RAG OCR (including Tesseract for image text extraction with multiple languages)
+    apt-get install -y --no-install-recommends ffmpeg libsm6 libxext6 tesseract-ocr tesseract-ocr-eng tesseract-ocr-fra tesseract-ocr-deu tesseract-ocr-spa && \
     # cleanup
     rm -rf /var/lib/apt/lists/*; \
     fi
