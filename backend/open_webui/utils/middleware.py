@@ -1001,7 +1001,7 @@ async def process_chat_response(
         message = message_map.get(metadata["message_id"]) if message_map else None
 
         if message:
-            message_list = get_message_list(message_map, message.get("id"))
+            message_list = get_message_list(message_map, metadata["message_id"])
 
             # Remove details tags and files from the messages.
             # as get_message_list creates a new list, it does not affect
@@ -1027,7 +1027,7 @@ async def process_chat_response(
                 messages.append(
                     {
                         **message,
-                        "role": message["role"],
+                        "role": message.get("role", "assistant"),  # Safe fallback for missing role
                         "content": content,
                     }
                 )
@@ -1195,6 +1195,7 @@ async def process_chat_response(
                         metadata["chat_id"],
                         metadata["message_id"],
                         {
+                            "role": "assistant",
                             "content": content,
                         },
                     )

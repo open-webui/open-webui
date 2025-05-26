@@ -34,11 +34,15 @@ def get_message_list(messages, message_id):
     :return: List of ordered messages starting from the root to the given message
     """
 
+    # Handle case where messages is None
+    if not messages:
+        return []  # Return empty list instead of None to prevent iteration errors
+
     # Find the message by its id
     current_message = messages.get(message_id)
 
     if not current_message:
-        return None
+        return []  # Return empty list instead of None to prevent iteration errors
 
     # Reconstruct the chain by following the parentId links
     message_list = []
@@ -47,7 +51,7 @@ def get_message_list(messages, message_id):
         message_list.insert(
             0, current_message
         )  # Insert the message at the beginning of the list
-        parent_id = current_message["parentId"]
+        parent_id = current_message.get("parentId")  # Use .get() for safety
         current_message = messages.get(parent_id) if parent_id else None
 
     return message_list
