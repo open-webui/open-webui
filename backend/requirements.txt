@@ -12,6 +12,8 @@ aiohttp==3.11.11
 async-timeout
 aiocache
 aiofiles
+starlette-compress==1.6.0
+
 
 sqlalchemy==2.0.38
 alembic==1.14.0
