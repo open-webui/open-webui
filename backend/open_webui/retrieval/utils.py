@@ -252,7 +252,17 @@ def get_all_items_from_collections(collection_names: list[str], limit: Optional[
                     result = get_doc(collection_name=collection_name)
                     
                 if result is not None:
-                    results.append(result)
+                    # Convert GetResult object to dictionary format expected by merge_get_results
+                    if hasattr(result, 'model_dump'):
+                        results.append(result.model_dump())
+                    else:
+                        # Fallback: manually convert GetResult to dict format
+                        result_dict = {
+                            "documents": [result.documents[0]] if result.documents else [[]],
+                            "metadatas": [result.metadatas[0]] if result.metadatas else [[]],
+                            "ids": [result.ids[0]] if result.ids else [[]]
+                        }
+                        results.append(result_dict)
             except Exception as e:
                 log.exception(f"Error when getting all items from collection: {e}")
 
@@ -878,6 +888,3 @@ class RerankCompressor(BaseDocumentCompressor):
             )
             final_results.append(doc)
         return final_results
-
-
-
