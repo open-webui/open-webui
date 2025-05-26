@@ -74,8 +74,8 @@
 					<div class="relative">
 						<textarea
 							bind:value={content}
-							class="bg-lightGray-300 text-lightGray-100 placeholder:text-lightGray-100 dark:bg-customGray-900 w-full text-sm resize-none rounded-3xl px-6 pt-6 pb-1 outline-none"
-							placeholder={$i18n.t('Enter a detail  about yourself for your LLMs to recall')}
+							class="bg-lightGray-300 text-lightGray-100 dark:text-customGray-100 placeholder:text-lightGray-100/80 dark:placeholder:text-customGray-100/50 dark:bg-customGray-900 w-full text-sm resize-none rounded-3xl px-6 pt-6 pb-1 outline-none"
+							placeholder={$i18n.t('Enter a detail about yourself for your LLMs to recall')}
 							rows="2"
 						/>
 

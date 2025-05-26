@@ -42,7 +42,7 @@
 			} border-lightGray-400 dark:border-customGray-700 rounded-md bg-lightGray-300 dark:bg-customGray-900 cursor-pointer`}
 			on:click={() => (showCapabilitiesDropdown = !showCapabilitiesDropdown)}
 		>
-			<span class="text-lightGray-100 dark:text-customGray-100">{$i18n.t('Chat View')}</span>
+			<span class="text-lightGray-100 dark:text-customGray-100">{$i18n.t('Tools')}</span>
 			<ChevronDown className="size-3" />
 		</button>
 

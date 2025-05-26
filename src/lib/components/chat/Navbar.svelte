@@ -190,12 +190,10 @@
 					</Tooltip>
 				{/if} -->
 
-				{#if ($mobile)}
+				<!-- {#if ($mobile)} -->
 					<button
 						id="new-chat-button"
-						class=" {$showSidebar
-							? 'md:hidden'
-							: ''} cursor-pointer font-medium flex justify-center items-center flex-1 rounded-lg text-xs px-3 py-1 border border-lightGray-400 dark:border-customGray-700 h-[35px] text-right text-lightGray-100 dark:text-customGray-200 dark:hover:text-white bg-lightGray-300 dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-customGray-950 transition"
+						class="md:hidden cursor-pointer font-medium flex justify-center items-center flex-1 rounded-lg text-xs px-3 py-1 border border-lightGray-400 dark:border-customGray-700 h-[35px] text-right text-lightGray-100 dark:text-customGray-200 dark:hover:text-white bg-lightGray-300 dark:bg-customGray-900 hover:bg-gray-100 dark:hover:bg-customGray-950 transition"
 						on:click={() => {
 							initNewChat();
 						}}
@@ -206,7 +204,7 @@
 					</div>
 						{$i18n.t('New Chat')}	
 					</button>
-				{/if}
+				<!-- {/if} -->
 
 				<!-- {#if $user !== undefined}
 					<UserMenu
