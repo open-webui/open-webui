@@ -9,7 +9,7 @@
 **Open WebUI is an [extensible](https://docs.openwebui.com/features/plugin/), feature-rich, and user-friendly self-hosted AI platform designed to operate entirely offline.** It supports various LLM runners like **Ollama** and **OpenAI-compatible APIs**, with **built-in inference engine** for RAG, making it a **powerful AI deployment solution**.
 
 ![Open WebUI Demo](./demo.gif)
-https://ailabs.chat
+http://ailabs.chat (live demo)
 
 For more information, be sure to check out our [Open WebUI Documentation](https://docs.openwebui.com/).
 
