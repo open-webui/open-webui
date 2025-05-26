@@ -1000,8 +1000,14 @@ async def process_chat_response(
         message_map = Chats.get_messages_by_chat_id(metadata["chat_id"])
         message = message_map.get(metadata["message_id"]) if message_map else None
 
-        if message:
-            message_list = get_message_list(message_map, message.get("id"))
+        if message and metadata.get("message_id"):
+            # Use the metadata message_id directly instead of message.get("id")
+            message_list = get_message_list(message_map, metadata["message_id"])
+            
+            # Additional safety check to ensure message_list is valid
+            if not message_list:
+                log.warning(f"⚠️  MIDDLEWARE: get_message_list returned empty for chat_id={metadata.get('chat_id')}, message_id={metadata.get('message_id')}")
+                return  # Exit early if no valid message list
 
             # Remove details tags and files from the messages.
             # as get_message_list creates a new list, it does not affect
