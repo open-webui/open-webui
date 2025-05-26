@@ -34,6 +34,10 @@ def get_message_list(messages, message_id):
     :return: List of ordered messages starting from the root to the given message
     """
 
+    # Handle case where messages is None
+    if not messages:
+        return []  # Return empty list instead of None to prevent iteration errors
+
     # Find the message by its id
     current_message = messages.get(message_id)
 
