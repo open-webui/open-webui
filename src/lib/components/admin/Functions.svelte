@@ -34,6 +34,7 @@
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import AddFunctionMenu from './Functions/AddFunctionMenu.svelte';
+	import ImportModal from './Functions/ImportModal.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -200,6 +201,16 @@
 	</title>
 </svelte:head>
 
+<ImportModal
+	bind:show={showImportModal}
+	onImport={(func) => {
+		sessionStorage.function = JSON.stringify({
+			...func
+		});
+		goto('/admin/functions/create');
+	}}
+/>
+
 <div class="flex flex-col gap-1 mt-1.5 mb-2">
 	<div class="flex justify-between items-center">
 		<div class="flex md:self-center text-xl items-center font-medium px-0.5">
@@ -239,7 +250,7 @@
 				createHandler={() => {
 					goto('/admin/functions/create');
 				}}
-				importFromGithubHandler={() => {
+				importFromLinkHandler={() => {
 					showImportModal = true;
 				}}
 			>

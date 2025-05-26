@@ -15,11 +15,12 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import PencilSolid from '$lib/components/icons/PencilSolid.svelte';
+	import Link from '$lib/components/icons/Link.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let createHandler: Function;
-	export let importFromGithubHandler: Function;
+	export let importFromLinkHandler: Function;
 
 	export let onClose: Function = () => {};
 
@@ -62,14 +63,14 @@
 			<button
 				class="flex rounded-md py-1.5 px-3 w-full hover:bg-gray-50 dark:hover:bg-gray-800 transition"
 				on:click={async () => {
-					importFromGithubHandler();
+					importFromLinkHandler();
 					show = false;
 				}}
 			>
 				<div class=" self-center mr-2">
-					<Github />
+					<Link />
 				</div>
-				<div class=" self-center truncate">{$i18n.t('Import From Github')}</div>
+				<div class=" self-center truncate">{$i18n.t('Import From Link')}</div>
 			</button>
 		</DropdownMenu.Content>
 	</div>
