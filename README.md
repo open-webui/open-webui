@@ -1,4 +1,4 @@
-# Open WebUI 👋
+# Open Chat (based on Open WebUI v0.6.5) with BSD-3-Clause license
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
