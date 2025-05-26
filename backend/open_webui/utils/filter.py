@@ -36,16 +36,17 @@ def get_sorted_filter_ids(request, model: dict, enabled_filter_ids: list = None)
         function.id
         for function in Functions.get_functions_by_type("filter", active_only=True)
     ]
-   
-    def should_keep_filter(filter_id):
+
+    def get_active_status(filter_id):
         function_module = get_function_module(request, filter_id)
-        
-        return not (getattr(function_module, "toggle", None) and 
-                   filter_id not in (enabled_filter_ids or []))
+
+        if getattr(function_module, "toggle", None):
+            return filter_id in (enabled_filter_ids or [])
+
+        return True
 
     active_filter_ids = [
-        filter_id for filter_id in active_filter_ids 
-        if should_keep_filter(filter_id)
+        filter_id for filter_id in active_filter_ids if get_active_status(filter_id)
     ]
 
     filter_ids = [fid for fid in filter_ids if fid in active_filter_ids]
