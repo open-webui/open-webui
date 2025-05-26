@@ -21,6 +21,9 @@
 	import Spinner from '../common/Spinner.svelte';
 
 	import ChatPlaceholder from './ChatPlaceholder.svelte';
+	import SearchMessages from './SearchMessages.svelte';
+	import DateNavigation from './DateNavigation.svelte';
+	import NavigationToolbar from './NavigationToolbar.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -35,6 +38,11 @@
 	export let atSelectedModel;
 
 	let messages = [];
+	let showSearch = false;
+	let showDateNav = false;
+	let searchQuery = '';
+	let searchResults = [];
+	let currentSearchIndex = -1;
 
 	export let sendPrompt: Function;
 	export let continueResponse: Function;
@@ -53,6 +61,102 @@
 
 	let messagesCount = 20;
 	let messagesLoading = false;
+
+	// Search functionality
+	const searchMessages = (query) => {
+		if (!query.trim()) {
+			searchResults = [];
+			currentSearchIndex = -1;
+			return;
+		}
+
+		const allMessages = Object.values(history.messages || {});
+		const results = allMessages
+			.filter(msg => 
+				msg.content && 
+				msg.content.toLowerCase().includes(query.toLowerCase())
+			)
+			.map(msg => ({
+				id: msg.id,
+				content: msg.content,
+				role: msg.role,
+				timestamp: msg.timestamp
+			}))
+			.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+		searchResults = results;
+		currentSearchIndex = results.length > 0 ? 0 : -1;
+	};
+
+	const jumpToMessage = (messageId) => {
+		// Find the message and ensure it's loaded
+		const targetMessage = history.messages[messageId];
+		if (!targetMessage) return;
+
+		// Build the message chain to this message
+		let currentMessage = targetMessage;
+		let chainLength = 0;
+		
+		while (currentMessage) {
+			chainLength++;
+			currentMessage = currentMessage.parentId ? history.messages[currentMessage.parentId] : null;
+		}
+
+		// Ensure we have enough messages loaded
+		if (chainLength > messagesCount) {
+			messagesCount = Math.max(messagesCount, chainLength + 10);
+		}
+
+		// Set this message as current and scroll to it
+		history.currentId = messageId;
+		
+		setTimeout(() => {
+			const messageElement = document.getElementById(`message-${messageId}`);
+			if (messageElement) {
+				messageElement.scrollIntoView({ 
+					behavior: 'smooth', 
+					block: 'center' 
+				});
+				// Highlight the message briefly
+				messageElement.classList.add('bg-yellow-100', 'dark:bg-yellow-900/30');
+				setTimeout(() => {
+					messageElement.classList.remove('bg-yellow-100', 'dark:bg-yellow-900/30');
+				}, 2000);
+			}
+		}, 100);
+	};
+
+	const nextSearchResult = () => {
+		if (searchResults.length === 0) return;
+		currentSearchIndex = (currentSearchIndex + 1) % searchResults.length;
+		jumpToMessage(searchResults[currentSearchIndex].id);
+	};
+
+	const previousSearchResult = () => {
+		if (searchResults.length === 0) return;
+		currentSearchIndex = currentSearchIndex <= 0 ? searchResults.length - 1 : currentSearchIndex - 1;
+		jumpToMessage(searchResults[currentSearchIndex].id);
+	};
+
+	// Keyboard shortcuts
+	const handleKeydown = (e) => {
+		if (e.ctrlKey || e.metaKey) {
+			if (e.key === 'f') {
+				e.preventDefault();
+				showSearch = !showSearch;
+				if (showSearch) {
+					setTimeout(() => {
+						document.getElementById('message-search-input')?.focus();
+					}, 100);
+				}
+			}
+		}
+		if (showSearch && e.key === 'Escape') {
+			showSearch = false;
+			searchQuery = '';
+			searchResults = [];
+		}
+	};
 
 	const loadMoreMessages = async () => {
 		// scroll slightly down to disable continuous loading
@@ -388,6 +492,54 @@
 		}
 	};
 </script>
+
+<svelte:window on:keydown={handleKeydown} />
+
+<SearchMessages
+	bind:searchQuery
+	bind:searchResults
+	bind:currentSearchIndex
+	show={showSearch}
+	on:search={(e) => searchMessages(e.detail)}
+	on:next={nextSearchResult}
+	on:previous={previousSearchResult}
+	on:jump={(e) => jumpToMessage(e.detail)}
+	on:close={() => {
+		showSearch = false;
+		searchQuery = '';
+		searchResults = [];
+	}}
+/>
+
+<DateNavigation
+	{history}
+	show={showDateNav}
+	on:jump={(e) => jumpToMessage(e.detail)}
+	on:close={() => showDateNav = false}
+/>
+
+<NavigationToolbar
+	{history}
+	{messagesCount}
+	on:search={() => showSearch = true}
+	on:dateNav={() => showDateNav = true}
+	on:loadAll={() => messagesCount = Object.keys(history?.messages || {}).length}
+	on:export={() => {
+		// Trigger export functionality
+		const chatData = {
+			title: history.title || 'Chat Export',
+			messages: Object.values(history.messages || {}),
+			exportDate: new Date().toISOString()
+		};
+		const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `chat-export-${new Date().toISOString().split('T')[0]}.json`;
+		a.click();
+		URL.revokeObjectURL(url);
+	}}
+/>
 
 <div class={className}>
 	{#if Object.keys(history?.messages ?? {}).length == 0}
