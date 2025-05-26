@@ -91,38 +91,39 @@ export const sanitizeResponseContent = (content: string) => {
 
 export const processResponseContent = (content: string) => {
 	// This function is used to process the response content before the response content is rendered.
-	content = processChineseContent(content);
-	return content.trim();
-};
-
-function processChineseContent(content: string): string {
-	// Tackle "Model output issue not following the standard Markdown/LaTeX format" in Chinese.
 	const lines = content.split('\n');
 	const processedLines = lines.map((line) => {
 		if (/[\u4e00-\u9fa5]/.test(line)) {
-			// Problems caused by Chinese parentheses
-			/* Discription:
-			 *   When `*` has Chinese parentheses on the inside, markdown parser ignore bold or italic style.
-			 *   - e.g. `**中文名（English）**中文内容` will be parsed directly,
-			 *          instead of `<strong>中文名（English）</strong>中文内容`.
-			 * Solution:
-			 *   Adding a `space` before and after the bold/italic part can solve the problem.
-			 *   - e.g. `**中文名（English）**中文内容` -> ` **中文名（English）** 中文内容`
-			 * Note:
-			 *   Similar problem was found with English parentheses and other full delimiters,
-			 *   but they are not handled here because they are less likely to appear in LLM output.
-			 *   Change the behavior in future if needed.
-			 */
-			if (line.includes('*')) {
-				// Handle **bold** with Chinese parentheses
-				line = processChineseContent_ParenthesesRelated(line, '**', '（', '）');
-				// Handle *italic* with Chinese parentheses
-				line = processChineseContent_ParenthesesRelated(line, '*', '（', '）');
-			}
+			line = processChineseContent(line);
 		}
 		return line;
 	});
-	return processedLines.join('\n');
+	content = processedLines.join('\n');
+	return content.trim();
+};
+
+// Tackle "Model output issue not following the standard Markdown/LaTeX format" in Chinese.
+function processChineseContent(line: string): string {
+	// Problems caused by Chinese parentheses
+	/* Discription:
+	 *   When `*` has Chinese parentheses on the inside, markdown parser ignore bold or italic style.
+	 *   - e.g. `**中文名（English）**中文内容` will be parsed directly,
+	 *          instead of `<strong>中文名（English）</strong>中文内容`.
+	 * Solution:
+	 *   Adding a `space` before and after the bold/italic part can solve the problem.
+	 *   - e.g. `**中文名（English）**中文内容` -> ` **中文名（English）** 中文内容`
+	 * Note:
+	 *   Similar problem was found with English parentheses and other full delimiters,
+	 *   but they are not handled here because they are less likely to appear in LLM output.
+	 *   Change the behavior in future if needed.
+	 */
+	if (line.includes('*')) {
+		// Handle **bold** with Chinese parentheses
+		line = processChineseParentheses(line, '**', '（', '）');
+		// Handle *italic* with Chinese parentheses
+		line = processChineseParentheses(line, '*', '（', '）');
+	}
+	return line;
 }
 
 function isChineseChar(char: string): boolean {
@@ -130,7 +131,7 @@ function isChineseChar(char: string): boolean {
 }
 
 // Helper function for `processChineseContent`
-function processChineseContent_ParenthesesRelated(
+function processChineseParentheses(
 	line: string,
 	symbol: string,
 	leftSymbol: string,
