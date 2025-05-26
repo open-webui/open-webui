@@ -1027,7 +1027,9 @@ async def process_chat_response(
                 messages.append(
                     {
                         **message,
-                        "role": message.get("role", "assistant"),  # Safe fallback for missing role
+                        "role": message.get(
+                            "role", "assistant"
+                        ),  # Safe fallback for missing role
                         "content": content,
                     }
                 )
