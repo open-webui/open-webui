@@ -561,7 +561,7 @@ async def image_generations(
                 image_data, content_type = load_b64_image_data(
                     image["bytesBase64Encoded"]
                 )
-                url = upload_image(request, data, image_data, content_type, user)
+                url = upload_image(request, image_data, content_type, data, user)
                 images.append({"url": url})
 
             return images
@@ -612,9 +612,9 @@ async def image_generations(
                 image_data, content_type = load_url_image_data(image["url"], headers)
                 url = upload_image(
                     request,
-                    form_data.model_dump(exclude_none=True),
                     image_data,
                     content_type,
+                    form_data.model_dump(exclude_none=True),
                     user,
                 )
                 images.append({"url": url})
@@ -665,9 +665,9 @@ async def image_generations(
                 image_data, content_type = load_b64_image_data(image)
                 url = upload_image(
                     request,
-                    {**data, "info": res["info"]},
                     image_data,
                     content_type,
+                    {**data, "info": res["info"]},
                     user,
                 )
                 images.append({"url": url})
