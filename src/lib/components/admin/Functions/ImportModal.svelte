@@ -42,7 +42,10 @@
 			}
 
 			if (frontmatter?.description) {
-				func.meta.description = frontmatter.description;
+				func.meta = {
+					...func.meta,
+					description: frontmatter.description
+				};
 			}
 
 			onImport(func);
