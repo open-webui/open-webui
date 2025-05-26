@@ -596,28 +596,37 @@ async def chat_completion_files_handler(
         log.info(f"DEBUG: RAG_FULL_CONTEXT setting: {request.app.state.config.RAG_FULL_CONTEXT}")
 
         try:
-            # Offload get_sources_from_files to a separate thread
+            # Offload get_sources_from_files to a separate thread with proper resource management
             loop = asyncio.get_running_loop()
-            with ThreadPoolExecutor() as executor:
-                sources = await loop.run_in_executor(
-                    executor,
-                    lambda: get_sources_from_files(
-                        request=request,
-                        files=files,
-                        queries=queries,
-                        embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
-                            query, prefix=prefix, user=user
+            # Use a limited thread pool to prevent resource exhaustion
+            with ThreadPoolExecutor(max_workers=2, thread_name_prefix="rag_processing") as executor:
+                try:
+                    sources = await loop.run_in_executor(
+                        executor,
+                        lambda: get_sources_from_files(
+                            request=request,
+                            files=files,
+                            queries=queries,
+                            embedding_function=lambda query, prefix: request.app.state.EMBEDDING_FUNCTION(
+                                query, prefix=prefix, user=user
+                            ),
+                            k=request.app.state.config.TOP_K,
+                            reranking_function=request.app.state.rf,
+                            k_reranker=request.app.state.config.TOP_K_RERANKER,
+                            r=request.app.state.config.RELEVANCE_THRESHOLD,
+                            hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
+                            full_context=request.app.state.config.RAG_FULL_CONTEXT,
                         ),
-                        k=request.app.state.config.TOP_K,
-                        reranking_function=request.app.state.rf,
-                        k_reranker=request.app.state.config.TOP_K_RERANKER,
-                        r=request.app.state.config.RELEVANCE_THRESHOLD,
-                        hybrid_search=request.app.state.config.ENABLE_RAG_HYBRID_SEARCH,
-                        full_context=request.app.state.config.RAG_FULL_CONTEXT,
-                    ),
-                )
+                    )
+                except Exception as processing_error:
+                    log.error(f"Error in RAG processing thread: {processing_error}")
+                    sources = []  # Graceful fallback
+                finally:
+                    # Ensure executor is properly shut down
+                    executor.shutdown(wait=True, cancel_futures=False)
         except Exception as e:
-            log.exception(e)
+            log.exception(f"Critical error in file processing: {e}")
+            sources = []  # Graceful fallback
 
         # DEBUG: Log the sources returned
         log.info(f"DEBUG: Retrieved {len(sources)} sources from files")

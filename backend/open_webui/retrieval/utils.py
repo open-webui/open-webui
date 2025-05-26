@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from typing import Optional, Union
 
 import requests
@@ -38,6 +39,75 @@ from typing import Any
 
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.retrievers import BaseRetriever
+
+
+# Circuit breaker for vector database operations
+class VectorDBCircuitBreaker:
+    """Simple circuit breaker to prevent cascading failures in vector DB operations."""
+    
+    def __init__(self, failure_threshold=5, recovery_timeout=60, operation_timeout=30):
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.operation_timeout = operation_timeout
+        self.failure_count = 0
+        self.last_failure_time = None
+        self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
+    
+    def can_execute(self):
+        """Check if operation can be executed based on circuit breaker state."""
+        if self.state == "CLOSED":
+            return True
+        elif self.state == "OPEN":
+            if time.time() - self.last_failure_time > self.recovery_timeout:
+                self.state = "HALF_OPEN"
+                log.info("Circuit breaker transitioning to HALF_OPEN state")
+                return True
+            return False
+        elif self.state == "HALF_OPEN":
+            return True
+        return False
+    
+    def record_success(self):
+        """Record successful operation."""
+        if self.state == "HALF_OPEN":
+            self.state = "CLOSED"
+            self.failure_count = 0
+            log.info("Circuit breaker reset to CLOSED state")
+    
+    def record_failure(self):
+        """Record failed operation."""
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+        
+        if self.failure_count >= self.failure_threshold:
+            self.state = "OPEN"
+            log.warning(f"Circuit breaker OPENED after {self.failure_count} failures")
+    
+    def execute_with_timeout(self, operation, *args, **kwargs):
+        """Execute operation with timeout and circuit breaker protection."""
+        if not self.can_execute():
+            raise Exception("Circuit breaker is OPEN - operation blocked")
+        
+        try:
+            # Simple timeout implementation
+            start_time = time.time()
+            result = operation(*args, **kwargs)
+            
+            # Check if operation took too long (basic timeout check)
+            if time.time() - start_time > self.operation_timeout:
+                raise TimeoutError(f"Operation exceeded {self.operation_timeout}s timeout")
+            
+            self.record_success()
+            return result
+            
+        except Exception as e:
+            self.record_failure()
+            log.error(f"Vector DB operation failed: {e}")
+            raise
+
+
+# Global circuit breaker instance
+vector_db_circuit_breaker = VectorDBCircuitBreaker()
 
 
 class VectorSearchRetriever(BaseRetriever):
@@ -241,15 +311,18 @@ def get_all_items_from_collections(collection_names: list[str], limit: Optional[
     for collection_name in collection_names:
         if collection_name:
             try:
-                # Simple fix: if limit is specified, use query instead of get_doc
-                if limit:
-                    result = VECTOR_DB_CLIENT.query(
-                        collection_name=collection_name,
-                        filter={},
-                        limit=limit
-                    )
-                else:
-                    result = get_doc(collection_name=collection_name)
+                # Use circuit breaker for vector DB operations
+                def vector_operation():
+                    if limit:
+                        return VECTOR_DB_CLIENT.query(
+                            collection_name=collection_name,
+                            filter={},
+                            limit=limit
+                        )
+                    else:
+                        return get_doc(collection_name=collection_name)
+                
+                result = vector_db_circuit_breaker.execute_with_timeout(vector_operation)
                     
                 if result is not None:
                     # Convert GetResult object to dictionary format expected by merge_get_results
@@ -264,7 +337,8 @@ def get_all_items_from_collections(collection_names: list[str], limit: Optional[
                         }
                         results.append(result_dict)
             except Exception as e:
-                log.exception(f"Error when getting all items from collection: {e}")
+                log.exception(f"Error when getting all items from collection {collection_name}: {e}")
+                # Continue with other collections even if one fails
 
     return merge_get_results(results)
 
@@ -277,20 +351,37 @@ def query_collection(
 ) -> dict:
     results = []
     error = False
+    
+    # Memory safety limits
+    MAX_COLLECTIONS_QUERY = 20  # Maximum collections for regular query
+    MAX_QUERIES = 10  # Maximum queries to process
+    
+    # Limit collections and queries to prevent resource exhaustion
+    if len(collection_names) > MAX_COLLECTIONS_QUERY:
+        log.warning(f"Too many collections ({len(collection_names)}), limiting to {MAX_COLLECTIONS_QUERY}")
+        collection_names = collection_names[:MAX_COLLECTIONS_QUERY]
+    
+    if len(queries) > MAX_QUERIES:
+        log.warning(f"Too many queries ({len(queries)}), limiting to {MAX_QUERIES}")
+        queries = queries[:MAX_QUERIES]
 
     def process_query_collection(collection_name, query_embedding):
         try:
             if collection_name:
-                result = query_doc(
-                    collection_name=collection_name,
-                    k=k,
-                    query_embedding=query_embedding,
-                )
+                # Use circuit breaker for vector DB operations
+                def query_operation():
+                    return query_doc(
+                        collection_name=collection_name,
+                        k=k,
+                        query_embedding=query_embedding,
+                    )
+                
+                result = vector_db_circuit_breaker.execute_with_timeout(query_operation)
                 if result is not None:
                     return result.model_dump(), None
             return None, None
         except Exception as e:
-            log.exception(f"Error when querying the collection: {e}")
+            log.exception(f"Error when querying the collection {collection_name}: {e}")
             return None, e
 
     # Generate all query embeddings (in one call) - this is already optimized
@@ -300,9 +391,9 @@ def query_collection(
     )
 
     # Optimize: Use smaller thread pool to prevent overwhelming the vector DB
-    max_workers = min(4, len(collection_names) * len(query_embeddings))
+    max_workers = min(4, len(collection_names) * len(query_embeddings), 8)  # Hard cap at 8 workers
     
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+    with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="vector_query") as executor:
         future_results = []
         for query_embedding in query_embeddings:
             for collection_name in collection_names:
@@ -336,26 +427,52 @@ def query_collection_with_hybrid_search(
     results = []
     error = False
     
-    # Optimize: Add a reasonable limit for collection data fetching
-    HYBRID_SEARCH_COLLECTION_LIMIT = 2000  # Limit documents for hybrid search
+    # Memory-safe limits for hybrid search operations
+    HYBRID_SEARCH_COLLECTION_LIMIT = 1000  # Reduced from 2000 for memory safety
+    MAX_TOTAL_DOCUMENTS = 5000  # Maximum total documents across all collections
+    MAX_COLLECTIONS = 10  # Maximum number of collections to process
     
-    # Fetch collection data once per collection sequentially
+    # Limit number of collections to prevent memory exhaustion
+    if len(collection_names) > MAX_COLLECTIONS:
+        log.warning(f"Too many collections ({len(collection_names)}), limiting to {MAX_COLLECTIONS}")
+        collection_names = collection_names[:MAX_COLLECTIONS]
+    
+    # Fetch collection data once per collection sequentially with memory monitoring
     # Avoid fetching the same data multiple times later
     collection_results = {}
+    total_documents_loaded = 0
+    
     for collection_name in collection_names:
         try:
             log.debug(
                 f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
             )
-            # Use query with limit instead of get() for better performance
-            collection_results[collection_name] = VECTOR_DB_CLIENT.query(
-                collection_name=collection_name,
-                filter={},
-                limit=HYBRID_SEARCH_COLLECTION_LIMIT
-            )
+            
+            # Check if we've already loaded too many documents
+            if total_documents_loaded >= MAX_TOTAL_DOCUMENTS:
+                log.warning(f"Reached maximum document limit ({MAX_TOTAL_DOCUMENTS}), skipping remaining collections")
+                break
+            
+            # Calculate remaining document budget
+            remaining_budget = min(HYBRID_SEARCH_COLLECTION_LIMIT, MAX_TOTAL_DOCUMENTS - total_documents_loaded)
+            
+            # Use circuit breaker for vector DB operations
+            def fetch_collection():
+                return VECTOR_DB_CLIENT.query(
+                    collection_name=collection_name,
+                    filter={},
+                    limit=remaining_budget
+                )
+            
+            collection_results[collection_name] = vector_db_circuit_breaker.execute_with_timeout(fetch_collection)
+            
             if collection_results[collection_name]:
                 doc_count = len(collection_results[collection_name].documents[0])
-                log.debug(f"Loaded {doc_count} documents from {collection_name} for hybrid search (limited to {HYBRID_SEARCH_COLLECTION_LIMIT})")
+                total_documents_loaded += doc_count
+                log.debug(f"Loaded {doc_count} documents from {collection_name} for hybrid search (total: {total_documents_loaded}/{MAX_TOTAL_DOCUMENTS})")
+            else:
+                collection_results[collection_name] = None
+                
         except Exception as e:
             log.exception(f"Failed to fetch collection {collection_name}: {e}")
             collection_results[collection_name] = None
@@ -390,7 +507,10 @@ def query_collection_with_hybrid_search(
         for q in queries
     ]
 
-    with ThreadPoolExecutor() as executor:
+    # Use limited thread pool for hybrid search to prevent resource exhaustion
+    max_workers = min(4, len(tasks), 6)  # Hard cap at 6 workers for hybrid search
+    
+    with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="hybrid_search") as executor:
         future_results = [executor.submit(process_query, cn, q) for cn, q in tasks]
         task_results = [future.result() for future in future_results]
 
