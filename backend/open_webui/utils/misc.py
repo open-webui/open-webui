@@ -33,12 +33,19 @@ def get_message_list(messages, message_id):
     :param messages: Message history dict containing all messages
     :return: List of ordered messages starting from the root to the given message
     """
+    log.info(f"🔍 DEBUG: get_message_list called with message_id={message_id}")
+    
+    # Safety check for inputs
+    if not messages or not message_id:
+        log.warning(f"⚠️  DEBUG: Invalid inputs - messages={bool(messages)}, message_id={message_id}")
+        return []  # Return empty list instead of None
 
     # Find the message by its id
     current_message = messages.get(message_id)
 
     if not current_message:
-        return None
+        log.warning(f"⚠️  DEBUG: Message not found for id={message_id}, returning empty list")
+        return []  # Return empty list instead of None
 
     # Reconstruct the chain by following the parentId links
     message_list = []
@@ -47,9 +54,10 @@ def get_message_list(messages, message_id):
         message_list.insert(
             0, current_message
         )  # Insert the message at the beginning of the list
-        parent_id = current_message["parentId"]
+        parent_id = current_message.get("parentId")  # Use .get() for safety
         current_message = messages.get(parent_id) if parent_id else None
 
+    log.info(f"✅ DEBUG: get_message_list returning list with {len(message_list)} messages")
     return message_list
 
 
