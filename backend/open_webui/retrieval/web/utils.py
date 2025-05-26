@@ -517,7 +517,6 @@ class SafeWebBaseLoader(WebBaseLoader):
                     async with session.get(
                         url,
                         **(self.requests_kwargs | kwargs),
-                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
                     ) as response:
                         if self.raise_for_status:
                             response.raise_for_status()

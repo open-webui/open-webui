@@ -26,9 +26,9 @@
 
 	let searchDebounceTimeout;
 
-	const searchHandler = async () => {
-		console.log('search', query);
+	let selectedIdx = 0;
 
+	const searchHandler = async () => {
 		if (searchDebounceTimeout) {
 			clearTimeout(searchDebounceTimeout);
 		}
@@ -89,25 +89,47 @@
 				on:input={searchHandler}
 				placeholder={$i18n.t('Search')}
 				showClearButton={true}
+				onKeydown={(e) => {
+					console.log('e', e);
+
+					if (e.code === 'Enter' && (chatList ?? []).length > 0) {
+						const item = document.querySelector(`[data-arrow-selected="true"]`);
+						if (item) {
+							item?.click();
+						}
+
+						show = false;
+						return;
+					} else if (e.code === 'ArrowDown') {
+						selectedIdx = Math.min(selectedIdx + 1, (chatList ?? []).length - 1);
+					} else if (e.code === 'ArrowUp') {
+						selectedIdx = Math.max(selectedIdx - 1, 0);
+					} else {
+						selectedIdx = 0;
+					}
+
+					const item = document.querySelector(`[data-arrow-selected="true"]`);
+					item?.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+				}}
 			/>
 		</div>
 
 		<!-- <hr class="border-gray-100 dark:border-gray-850 my-1" /> -->
 
-		<div class="flex flex-col overflow-y-auto h-80 scrollbar-hidden px-5 pb-1">
+		<div class="flex flex-col overflow-y-auto h-80 scrollbar-hidden px-3 pb-1">
 			{#if chatList}
 				{#if chatList.length === 0}
-					<div class="text-xs text-gray-500 dark:text-gray-400 text-center">
+					<div class="text-xs text-gray-500 dark:text-gray-400 text-center px-5">
 						{$i18n.t('No results found')}
 					</div>
 				{/if}
 
-				{#each chatList as chat, idx}
+				{#each chatList as chat, idx (chat.id)}
 					{#if idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)}
 						<div
 							class="w-full text-xs text-gray-500 dark:text-gray-500 font-medium {idx === 0
 								? ''
-								: 'pt-5'} pb-2"
+								: 'pt-5'} pb-2 px-2"
 						>
 							{$i18n.t(chat.time_range)}
 							<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
@@ -132,9 +154,16 @@
 					{/if}
 
 					<a
-						class=" w-full flex justify-between items-center rounded-lg text-sm py-1 px-1 my-1"
+						class=" w-full flex justify-between items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50 dark:hover:bg-gray-850 {selectedIdx ===
+						idx
+							? 'bg-gray-50 dark:bg-gray-850'
+							: ''}"
 						href="/c/{chat.id}"
 						draggable="false"
+						data-arrow-selected={selectedIdx === idx ? 'true' : undefined}
+						on:mouseenter={() => {
+							selectedIdx = idx;
+						}}
 						on:click={() => {
 							show = false;
 							onClose();
