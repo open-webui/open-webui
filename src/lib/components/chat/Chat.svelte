@@ -872,6 +872,13 @@
 
 				chatTitle.set(chatContent.title);
 
+				// Load PII state for this conversation if available
+				if (chatContent?.piiState && $chatId) {
+					const { PiiSessionManager } = await import('$lib/utils/pii');
+					const piiManager = PiiSessionManager.getInstance();
+					piiManager.loadConversationState($chatId, chatContent.piiState);
+				}
+
 				const userSettings = await getUserSettings(localStorage.token);
 
 				if (userSettings) {
@@ -1953,13 +1960,21 @@
 	const saveChatHandler = async (_chatId, history) => {
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
+				// Get PII state for this conversation
+				const { PiiSessionManager } = await import('$lib/utils/pii');
+				const piiManager = PiiSessionManager.getInstance();
+				const piiState = piiManager.getConversationStateForStorage(_chatId);
+
+				const chatData = {
 					models: selectedModels,
 					history: history,
 					messages: createMessagesList(history, history.currentId),
 					params: params,
-					files: chatFiles
-				});
+					files: chatFiles,
+					...(piiState && { piiState })
+				};
+
+				chat = await updateChatById(localStorage.token, _chatId, chatData);
 				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
@@ -2072,36 +2087,37 @@
 								</div>
 							</div>
 
-							<div class=" pb-[1rem]">
-								<MessageInput
-									{history}
-									{taskIds}
-									{selectedModels}
-									bind:files
-									bind:prompt
-									bind:autoScroll
-									bind:selectedToolIds
-									bind:selectedFilterIds
-									bind:imageGenerationEnabled
-									bind:codeInterpreterEnabled
-									bind:webSearchEnabled
-									bind:atSelectedModel
-									toolServers={$toolServers}
-									transparentBackground={$settings?.backgroundImageUrl ?? false}
-									{stopResponse}
-									{createMessagePair}
-									onChange={(input) => {
-										if (input.prompt !== null) {
-											localStorage.setItem(
-												`chat-input${$chatId ? `-${$chatId}` : ''}`,
-												JSON.stringify(input)
-											);
-										} else {
-											localStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
-										}
-									}}
-									on:upload={async (e) => {
-										const { type, data } = e.detail;
+						<div class=" pb-[1rem]">
+							<MessageInput
+								{history}
+								{taskIds}
+								{selectedModels}
+								bind:files
+								bind:prompt
+								bind:autoScroll
+								bind:selectedToolIds
+								bind:selectedFilterIds
+								bind:imageGenerationEnabled
+								bind:codeInterpreterEnabled
+								bind:webSearchEnabled
+								bind:atSelectedModel
+								toolServers={$toolServers}
+								transparentBackground={$settings?.backgroundImageUrl ?? false}
+								{stopResponse}
+								{createMessagePair}
+								chatId={$chatId}
+								onChange={(input) => {
+									if (input.prompt !== null) {
+										localStorage.setItem(
+											`chat-input${$chatId ? `-${$chatId}` : ''}`,
+											JSON.stringify(input)
+										);
+									} else {
+										localStorage.removeItem(`chat-input${$chatId ? `-${$chatId}` : ''}`);
+									}
+								}}
+								on:upload={async (e) => {
+									const { type, data } = e.detail;
 
 										if (type === 'web') {
 											await uploadWeb(data);
@@ -2123,32 +2139,33 @@
 									}}
 								/>
 
-								<div
-									class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
-								>
-									<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
-								</div>
+							<div
+								class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
+							>
+								<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
 							</div>
-						{:else}
-							<div class="overflow-auto w-full h-full flex items-center">
-								<Placeholder
-									{history}
-									{selectedModels}
-									bind:files
-									bind:prompt
-									bind:autoScroll
-									bind:selectedToolIds
-									bind:selectedFilterIds
-									bind:imageGenerationEnabled
-									bind:codeInterpreterEnabled
-									bind:webSearchEnabled
-									bind:atSelectedModel
-									transparentBackground={$settings?.backgroundImageUrl ?? false}
-									toolServers={$toolServers}
-									{stopResponse}
-									{createMessagePair}
-									on:upload={async (e) => {
-										const { type, data } = e.detail;
+						</div>
+					{:else}
+						<div class="overflow-auto w-full h-full flex items-center">
+							<Placeholder
+								{history}
+								{selectedModels}
+								bind:files
+								bind:prompt
+								bind:autoScroll
+								bind:selectedToolIds
+								bind:selectedFilterIds
+								bind:imageGenerationEnabled
+								bind:codeInterpreterEnabled
+								bind:webSearchEnabled
+								bind:atSelectedModel
+								transparentBackground={$settings?.backgroundImageUrl ?? false}
+								toolServers={$toolServers}
+								{stopResponse}
+								{createMessagePair}
+								chatId={$chatId}
+								on:upload={async (e) => {
+									const { type, data } = e.detail;
 
 										if (type === 'web') {
 											await uploadWeb(data);

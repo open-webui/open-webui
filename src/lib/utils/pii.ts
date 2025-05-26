@@ -118,12 +118,22 @@ function hexToRgba(hex: string, alpha: number): string {
 	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+// Conversation-specific PII state for storing with chat data
+export interface ConversationPiiState {
+	entities: ExtendedPiiEntity[];
+	sessionId?: string;
+	apiKey?: string;
+	lastUpdated: number;
+}
+
 // Store for PII session management
 export class PiiSessionManager {
 	private static instance: PiiSessionManager;
 	private sessionId: string | null = null;
 	private entities: ExtendedPiiEntity[] = [];
 	private apiKey: string | null = null;
+	// Conversation-specific storage
+	private conversationStates: Map<string, ConversationPiiState> = new Map();
 
 	static getInstance(): PiiSessionManager {
 		if (!PiiSessionManager.instance) {
@@ -148,6 +158,7 @@ export class PiiSessionManager {
 		return this.sessionId;
 	}
 
+	// Set entities for the current global session (backwards compatibility)
 	setEntities(entities: PiiEntity[]) {
 		// Convert to extended entities with default masking enabled
 		this.entities = entities.map(entity => ({
@@ -156,10 +167,113 @@ export class PiiSessionManager {
 		}));
 	}
 
+	// Get entities for the current global session (backwards compatibility)
 	getEntities(): ExtendedPiiEntity[] {
 		return this.entities;
 	}
 
+	// Conversation-specific methods
+	setConversationEntities(conversationId: string, entities: PiiEntity[], sessionId?: string) {
+		const newExtendedEntities = entities.map(entity => ({
+			...entity,
+			shouldMask: true // Default to masking enabled
+		}));
+
+		// Get existing entities for this conversation
+		const existingState = this.conversationStates.get(conversationId);
+		const existingEntities = existingState?.entities || [];
+
+		// Merge new entities with existing ones, avoiding duplicates by label
+		const mergedEntities = [...existingEntities];
+		
+		console.log(`PiiSessionManager: Merging ${newExtendedEntities.length} new entities with ${existingEntities.length} existing entities for conversation: ${conversationId}`);
+		
+		newExtendedEntities.forEach(newEntity => {
+			const existingIndex = mergedEntities.findIndex(e => e.label === newEntity.label);
+			if (existingIndex >= 0) {
+				// Update existing entity (preserve shouldMask state)
+				console.log(`PiiSessionManager: Updating existing entity: ${newEntity.label}`);
+				mergedEntities[existingIndex] = {
+					...newEntity,
+					shouldMask: mergedEntities[existingIndex].shouldMask
+				};
+			} else {
+				// Add new entity
+				console.log(`PiiSessionManager: Adding new entity: ${newEntity.label}`);
+				mergedEntities.push(newEntity);
+			}
+		});
+		
+		console.log(`PiiSessionManager: Final merged entities count: ${mergedEntities.length}`);
+
+		this.conversationStates.set(conversationId, {
+			entities: mergedEntities,
+			sessionId: sessionId || existingState?.sessionId,
+			apiKey: this.apiKey || existingState?.apiKey,
+			lastUpdated: Date.now()
+		});
+
+		// Also update global state for current conversation
+		this.entities = mergedEntities;
+		if (sessionId) {
+			this.sessionId = sessionId;
+		}
+	}
+
+	getConversationEntities(conversationId: string): ExtendedPiiEntity[] {
+		const state = this.conversationStates.get(conversationId);
+		return state?.entities || [];
+	}
+
+	getConversationState(conversationId: string): ConversationPiiState | null {
+		return this.conversationStates.get(conversationId) || null;
+	}
+
+	// Load conversation state from localStorage (chat data)
+	loadConversationState(conversationId: string, piiState?: ConversationPiiState) {
+		if (piiState) {
+			this.conversationStates.set(conversationId, piiState);
+			// Set as current global state
+			this.entities = piiState.entities;
+			this.sessionId = piiState.sessionId || null;
+			this.apiKey = piiState.apiKey || this.apiKey;
+		}
+	}
+
+	// Get state for saving to localStorage (chat data)
+	getConversationStateForStorage(conversationId: string): ConversationPiiState | null {
+		return this.conversationStates.get(conversationId) || null;
+	}
+
+	// Convert conversation entities to known entities format for API
+	getKnownEntitiesForApi(conversationId: string): Array<{id: number, label: string, name: string}> {
+		const entities = this.getConversationEntities(conversationId);
+		return entities.map(entity => ({
+			id: entity.id,
+			label: entity.label,
+			name: entity.text
+		}));
+	}
+
+	// Toggle entity masking for specific conversation
+	toggleConversationEntityMasking(conversationId: string, entityId: string, occurrenceIndex: number) {
+		const state = this.conversationStates.get(conversationId);
+		if (state) {
+			const entity = state.entities.find(e => e.label === entityId);
+			if (entity && entity.occurrences[occurrenceIndex]) {
+				entity.shouldMask = !entity.shouldMask;
+				state.lastUpdated = Date.now();
+				
+				// Update global state if this is the current conversation
+				const globalEntity = this.entities.find(e => e.label === entityId);
+				if (globalEntity) {
+					globalEntity.shouldMask = entity.shouldMask;
+				}
+			}
+		}
+	}
+
+	// Backwards compatibility
 	toggleEntityMasking(entityId: string, occurrenceIndex: number) {
 		const entity = this.entities.find(e => e.label === entityId);
 		if (entity && entity.occurrences[occurrenceIndex]) {
@@ -176,56 +290,67 @@ export class PiiSessionManager {
 		this.sessionId = null;
 		this.entities = [];
 	}
+
+	// Clear conversation-specific state
+	clearConversationState(conversationId: string) {
+		this.conversationStates.delete(conversationId);
+	}
+
+	// Clear all conversation states
+	clearAllConversationStates() {
+		this.conversationStates.clear();
+	}
+}
+
+// Get label variations to handle different spellings
+function getLabelVariations(label: string): string {
+	const labelMap: Record<string, string[]> = {
+		ORGANIZATION: ['ORGANIZATION', 'ORGANISATION', 'ORGANIZACION'],
+		PERSON: ['PERSON', 'PERSONS', 'PERSONNE'],
+		LOCATION: ['LOCATION', 'LIEU', 'LUGAR'],
+		// Add more mappings as needed
+	};
+
+	// Find the canonical form (first matching key or value in the map)
+	const canonicalLabel =
+		Object.entries(labelMap).find(([, variations]) => variations.includes(label.toUpperCase()))?.[0] || label;
+
+	return labelMap[canonicalLabel] ? `(?:${labelMap[canonicalLabel].join('|')})` : label;
 }
 
 // Function to detect masked patterns in text and unmask them
 export function unmaskTextWithEntities(text: string, entities: ExtendedPiiEntity[]): string {
-	if (!entities.length) return text;
-	
+	if (!text) return '';
+	if (!entities || !entities.length) return text;
+
+	// Replace each masked pattern with its original text
 	let unmaskedText = text;
-	
-	// Create a map of label to original text
-	const labelToTextMap: Record<string, string> = {};
 	entities.forEach(entity => {
-		entity.occurrences.forEach(occurrence => {
-			labelToTextMap[entity.label] = entity.text;
-		});
+		const { label } = entity;
+		// Use entity.text as the raw text for unmasking
+		const rawText = entity.text;
+
+		if (!label || !rawText) return;
+		
+		// Extract the base type and ID from the label (e.g., "PERSON_1" -> baseType="PERSON", labelId="1")
+		const labelMatch = label.match(/^(.+)_(\d+)$/);
+		if (!labelMatch) return; // Skip if label doesn't match expected format
+		
+		const [, baseType, labelId] = labelMatch;
+		const labelVariations = getLabelVariations(baseType);
+		
+		// Create patterns for the exact label as it appears in masked text
+		// The pattern should be {baseType_labelId}, not {baseType_entity.id}
+		const labelRegex = new RegExp(
+			`\\[\\{${labelVariations}_${labelId}\\}\\]|` + // [{TYPE_ID}]
+				`\\[${labelVariations}_${labelId}\\]|` + // [TYPE_ID]
+				`\\{${labelVariations}_${labelId}\\}|` + // {TYPE_ID}
+				`\\b${labelVariations}_${labelId}\\b`, // TYPE_ID
+			'g',
+		);
+		unmaskedText = unmaskedText.replace(labelRegex, rawText);
 	});
-	
-	// Handle various masking pattern variations that models might produce:
-	// 1. [{LABEL_ID}] - correct format
-	// 2. {LABEL_ID} - missing brackets
-	// 3. [LABEL_ID] - missing braces
-	// 4. LABEL_ID - no brackets or braces
-	
-	const patterns = [
-		/\[\{([^}]+)\}\]/g,  // [{LABEL_ID}]
-		/\{([^}]+)\}/g,      // {LABEL_ID}
-		/\[([^\]]+)\]/g,     // [LABEL_ID]
-	];
-	
-	patterns.forEach(pattern => {
-		unmaskedText = unmaskedText.replace(pattern, (match, labelId) => {
-			// Check if this labelId exists in our entities
-			if (labelToTextMap[labelId]) {
-				return labelToTextMap[labelId];
-			}
-			// If not found, return the original match
-			return match;
-		});
-	});
-	
-	// Also handle standalone label IDs (without any brackets/braces)
-	// But be more careful to avoid false positives
-	Object.keys(labelToTextMap).forEach(labelId => {
-		// Only replace if the label ID appears as a standalone word
-		// and follows the pattern of our generated labels (e.g., PERSON_1, EMAIL_2, etc.)
-		if (/^[A-Z_]+_\d+$/.test(labelId)) {
-			const standalonePattern = new RegExp(`\\b${labelId}\\b`, 'g');
-			unmaskedText = unmaskedText.replace(standalonePattern, labelToTextMap[labelId]);
-		}
-	});
-	
+
 	return unmaskedText;
 }
 

@@ -12,6 +12,13 @@ export interface PiiEntity {
 	}>;
 }
 
+// Interface for known entities to send to API
+export interface KnownPiiEntity {
+	id: number;
+	label: string;
+	name: string;
+}
+
 export interface PiiMaskResponse {
 	text: string[];
 	pii: PiiEntity[][];
@@ -60,6 +67,7 @@ export const createPiiSession = async (apiKey: string, ttl: string = '24h'): Pro
 export const maskPiiText = async (
 	apiKey: string,
 	text: string[],
+	knownEntities: KnownPiiEntity[] = [],
 	createSession: boolean = false,
 	quiet: boolean = false
 ): Promise<PiiMaskResponse> => {
@@ -67,18 +75,25 @@ export const maskPiiText = async (
 	if (createSession) url.searchParams.set('create_session', 'true');
 	if (quiet) url.searchParams.set('quiet', 'true');
 
+	const requestBody: any = {
+		text,
+		pii_labels: {
+			detect: ['ALL']
+		}
+	};
+
+	// Add known entities if provided
+	if (knownEntities.length > 0) {
+		requestBody.known_entities = knownEntities;
+	}
+
 	const response = await fetch(url.toString(), {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 			'X-API-Key': apiKey
 		},
-		body: JSON.stringify({
-			text,
-			pii_labels: {
-				detect: ['ALL']
-			}
-		})
+		body: JSON.stringify(requestBody)
 	});
 
 	if (!response.ok) {
@@ -118,10 +133,23 @@ export const maskPiiTextWithSession = async (
 	apiKey: string,
 	sessionId: string,
 	text: string[],
+	knownEntities: KnownPiiEntity[] = [],
 	quiet: boolean = false
 ): Promise<PiiMaskResponse> => {
 	const url = new URL(`${NENNA_API_BASE_URL}/sessions/${sessionId}/text/mask`);
 	if (quiet) url.searchParams.set('quiet', 'true');
+
+	const requestBody: any = {
+		text,
+		pii_labels: {
+			detect: ['ALL']
+		}
+	};
+
+	// Add known entities if provided
+	if (knownEntities.length > 0) {
+		requestBody.known_entities = knownEntities;
+	}
 
 	const response = await fetch(url.toString(), {
 		method: 'POST',
@@ -129,12 +157,7 @@ export const maskPiiTextWithSession = async (
 			'Content-Type': 'application/json',
 			'X-API-Key': apiKey
 		},
-		body: JSON.stringify({
-			text,
-			pii_labels: {
-				detect: ['ALL']
-			}
-		})
+		body: JSON.stringify(requestBody)
 	});
 
 	if (!response.ok) {
