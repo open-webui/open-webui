@@ -40,6 +40,7 @@ anthropic
 google-genai==1.15.0
 google-generativeai==0.8.5
 tiktoken
+protobuf>=3.20.0
 
 langchain==0.3.24
 langchain-community==0.3.23
@@ -53,9 +54,9 @@ playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
 elasticsearch==9.0.1
 pinecone==6.0.2
 
-transformers
+transformers==4.44.2
 sentence-transformers==4.1.0
-accelerate
+accelerate==0.34.2
 colbert-ai==0.2.21
 einops==0.8.1
 
