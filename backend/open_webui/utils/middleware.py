@@ -1217,8 +1217,34 @@ async def process_chat_response(
 
                     await background_tasks_handler()
 
+            if events and isinstance(events, list) and isinstance(response, dict):
+                extra_response = {}
+                for event in events:
+                    if isinstance(event, dict):
+                        extra_response.update(event)
+                    else:
+                        extra_response[event] = True
+
+                response = {
+                    **extra_response,
+                    **response,
+                }
+
             return response
         else:
+            if events and isinstance(events, list) and isinstance(response, dict):
+                extra_response = {}
+                for event in events:
+                    if isinstance(event, dict):
+                        extra_response.update(event)
+                    else:
+                        extra_response[event] = True
+
+                response = {
+                    **extra_response,
+                    **response,
+                }
+
             return response
 
     # Non standard response
