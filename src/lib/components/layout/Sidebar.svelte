@@ -463,7 +463,7 @@
 		? 'md:relative w-[260px] max-w-[260px]'
 		: 'w-[60px]'} {$isApp
 		? `ml-[4.5rem] md:ml-0 `
-		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-gray-100 text-blue-800 dark:bg-gray-950 dark:text-gray-200 text-sm fixed z-50 top-0 left-0 overflow-x-hidden
+		: 'transition-width duration-200 ease-in-out'}  flex-shrink-0 bg-gray-100 text-blue-800 dark:bg-gray-950 dark:text-gray-200 text-sm z-50 overflow-x-hidden
         "
 	data-state={$showSidebar}
 >

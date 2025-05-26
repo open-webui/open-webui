@@ -17,7 +17,7 @@
 		<Sidebar />
 	{/if}
 	<div class="h-[100vh] overflow-scroll">
-		<nav class="fixed z-30 {($user !== undefined) ? ($showSidebar ? 'w-[calc(100%-260px)]' : 'w-[calc(100%-60px)] ml-[60px]') : 'w-full' } px-1.5 py-4 -mb-8 pt-10 flex items-center drag-region transition-[width]">
+		<nav class="fixed z-30 {($user !== undefined) ? ($showSidebar ? 'w-[calc(100%-260px)]' : 'w-[calc(100%-60px)]') : 'w-full' } px-1.5 py-4 -mb-8 pt-10 flex items-center drag-region transition-width duration-200 ease-in-out">
 			<div
 				class=" bg-gradient-to-b from-gray-100 from-30% to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-10 -top-6 z-[-1] blur"
 			></div>
