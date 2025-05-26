@@ -1,6 +1,6 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
 # PII API Integration Guide
@@ -16,19 +16,29 @@ export const maskPiiText = async (
   apiKey: string,
   texts: string[],
   unmask: boolean = false,
-  returnOriginal: boolean = false
+  returnOriginal: boolean = false,
+  knownEntities?: KnownPiiEntity[]  // NEW: Support for known entities
 ) => {
   // Main API call for PII detection and masking
+  // knownEntities provides context for consistent labeling
   // Returns: { text: string[], pii: PiiEntity[][] }
 };
 
-export const unmaskPiiTextWithSession = async (
+export const maskPiiTextWithSession = async (
   apiKey: string,
   sessionId: string,
-  texts: string[]
+  texts: string[],
+  knownEntities?: KnownPiiEntity[]  // NEW: Support for known entities
 ) => {
-  // Session-based unmasking for previously detected PII
+  // Session-based masking with known entities for consistent labeling
 };
+
+// NEW: Known entities interface for API
+interface KnownPiiEntity {
+  id: number;
+  label: string;
+  name: string;
+}
 ```
 
 ### API Response Format
@@ -55,17 +65,40 @@ class PiiSessionManager {
   private static instance: PiiSessionManager;
   private entities: ExtendedPiiEntity[] = [];
   private apiKey: string = '';
+  private conversationStates: Map<string, ConversationPiiState> = new Map(); // NEW
 
   static getInstance(): PiiSessionManager {
     // Singleton pattern for cross-component state
   }
 
+  // Legacy methods (backward compatibility)
   setEntities(entities: PiiEntity[]): void {
     // Convert PiiEntity[] to ExtendedPiiEntity[] with masking state
   }
 
   toggleEntityMasking(label: string, occurrenceIndex: number): void {
     // Toggle shouldMask state for specific entity occurrence
+  }
+
+  // NEW: Conversation-specific methods
+  setConversationEntities(conversationId: string, entities: PiiEntity[], sessionId?: string): void {
+    // Store entities per conversation with merging logic
+  }
+
+  getConversationEntities(conversationId: string): ExtendedPiiEntity[] {
+    // Retrieve entities for specific conversation
+  }
+
+  getKnownEntitiesForApi(conversationId: string): KnownPiiEntity[] {
+    // Convert conversation entities to API format for known_entities parameter
+  }
+
+  loadConversationState(conversationId: string, piiState?: ConversationPiiState): void {
+    // Load PII state from localStorage chat data
+  }
+
+  getConversationStateForStorage(conversationId: string): ConversationPiiState | null {
+    // Get state for saving to localStorage with chat data
   }
 }
 ```
@@ -79,6 +112,14 @@ interface ExtendedPiiEntity extends PiiEntity {
     end: number;
     shouldMask: boolean;
   }>;
+}
+
+// NEW: Conversation-specific PII state
+interface ConversationPiiState {
+  entities: ExtendedPiiEntity[];
+  sessionId?: string;
+  apiKey?: string;
+  lastUpdated: number;
 }
 ```
 
@@ -94,9 +135,51 @@ interface ExtendedPiiEntity extends PiiEntity {
 ### Response Processing
 1. **AI Response**: Contains masked patterns like `[{PERSON_1}]`
 2. **Pattern Detection**: [PiiAwareText.svelte](mdc:src/lib/components/chat/Messages/Markdown/PiiAwareText.svelte) detects patterns
-3. **Unmasking**: Replaces patterns with original text from session
+3. **Unmasking**: Replaces patterns with original text from session using `unmaskTextWithEntities()` 
 4. **Highlighting**: Applies visual highlighting to unmasked entities
 5. **Interaction**: Same overlay system as input field
+
+### Unmasking Function ([pii.ts](mdc:src/lib/utils/pii.ts))
+```javascript
+export function unmaskTextWithEntities(text: string, entities: ExtendedPiiEntity[]): string {
+  // FIXED: Correctly extracts base type and ID from entity label
+  // Entity label format: "PERSON_1" -> baseType: "PERSON", labelId: "1"
+  // Supports multiple masking patterns: [{TYPE_ID}], [TYPE_ID], {TYPE_ID}, TYPE_ID
+  // Handles label variations: ORGANIZATION/ORGANISATION/ORGANIZACION
+}
+```
+
+**Critical Fix**: The unmasking regex was previously building incorrect patterns like `{PERSON_1_1}` instead of `{PERSON_1}`. Fixed by extracting the base type and ID correctly from the entity label format.
+
+## Chat Integration & State Persistence
+
+### Chat Data Storage ([Chat.svelte](mdc:src/lib/components/chat/Chat.svelte))
+PII state now persists automatically with chat data:
+
+```javascript
+// Loading chat - restore PII state
+const loadChat = async (chatId) => {
+  const chatContent = await getChatById(chatId);
+  if (chatContent?.piiState) {
+    PiiSessionManager.getInstance().loadConversationState(chatId, chatContent.piiState);
+  }
+};
+
+// Saving chat - include PII state
+const saveChatHandler = async () => {
+  const piiState = PiiSessionManager.getInstance().getConversationStateForStorage(currentChatId);
+  await updateChatById(currentChatId, {
+    ...chatData,
+    piiState  // Automatically included in localStorage
+  });
+};
+```
+
+### Per-Conversation Consistency
+- Each chat conversation maintains its own PII entity state
+- Entity labels remain consistent across the conversation (PERSON_1 always refers to the same person)
+- Known entities are sent to API for consistent labeling on new detections
+- State automatically loads/saves with chat data in localStorage
 
 ## Error Handling
 
