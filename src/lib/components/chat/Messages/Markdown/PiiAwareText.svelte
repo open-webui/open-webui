@@ -17,23 +17,43 @@
 	let hoverTimeout: ReturnType<typeof setTimeout>;
 
 	$: entities = piiSessionManager.getEntities();
+	$: {
+		console.log('PiiAwareText debug:', {
+			id,
+			text: text.substring(0, 50) + '...',
+			entitiesCount: entities.length,
+			entities: entities.map(e => ({ label: e.label, text: e.text })),
+			hasContainer: !!containerElement
+		});
+	}
 	$: processedText = (() => {
 		if (!entities.length) {
+			console.log('PiiAwareText: No entities, returning original text');
 			return text;
 		}
 		
 		// First, check if the text contains masked patterns like [{LABEL_ID}]
-		const maskedPatternRegex = /\[?\{?([A-Z_]+_\d+)\}?\]?/g;
+		// Create a fresh regex each time to avoid state issues
+		const maskedPatternRegex = /\[?\{?([A-Z_]+_\d+)\}?\]?/;
 		const hasMaskedPatterns = maskedPatternRegex.test(text);
+		
+		console.log('PiiAwareText processing:', {
+			hasMaskedPatterns,
+			textSample: text.substring(0, 100)
+		});
 		
 		if (hasMaskedPatterns) {
 			// If it has masked patterns, unmask them first
 			const unmaskedText = unmaskTextWithEntities(text, entities);
 			// Then apply highlighting to the unmasked text
-			return highlightUnmaskedEntities(unmaskedText, entities);
+			const highlighted = highlightUnmaskedEntities(unmaskedText, entities);
+			console.log('PiiAwareText: Unmasked and highlighted', { unmaskedText, highlighted });
+			return highlighted;
 		} else {
 			// If no masked patterns, just apply highlighting directly
-			return highlightUnmaskedEntities(text, entities);
+			const highlighted = highlightUnmaskedEntities(text, entities);
+			console.log('PiiAwareText: Direct highlighting', { original: text, highlighted });
+			return highlighted;
 		}
 	})();
 	$: hasHighlighting = processedText !== text;
@@ -61,25 +81,33 @@
 
 	// Add event listeners for PII highlights
 	const addPiiEventListeners = () => {
-		if (!containerElement) return;
+		if (!containerElement) {
+			console.log('PiiAwareText: No container element for adding event listeners');
+			return;
+		}
 
 		const piiElements = containerElement.querySelectorAll('.pii-highlight');
+		console.log('PiiAwareText: Adding event listeners to', piiElements.length, 'PII elements');
 		
 		piiElements.forEach((element) => {
 			const htmlElement = element as HTMLElement;
 			
 			const handleMouseEnter = (event: MouseEvent) => {
+				console.log('PiiAwareText: Mouse enter event triggered');
 				const target = event.target as HTMLElement;
 				const entityLabel = target.getAttribute('data-pii-label');
+				console.log('PiiAwareText: Entity label found:', entityLabel);
 				
 				if (entityLabel) {
 					const entity = entities.find(e => e.label === entityLabel);
+					console.log('PiiAwareText: Found entity:', entity);
 					if (entity) {
 						const rect = target.getBoundingClientRect();
 						const position = {
 							x: rect.left + rect.width / 2,
 							y: rect.top
 						};
+						console.log('PiiAwareText: Calling handlePiiHover with position:', position);
 						handlePiiHover(entity, position);
 					}
 				}

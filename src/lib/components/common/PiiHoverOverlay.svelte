@@ -14,33 +14,11 @@
 	let piiSessionManager = PiiSessionManager.getInstance();
 	
 	$: shouldMask = entity?.shouldMask ?? true;
-	$: statusText = shouldMask ? 'Will be masked' : 'Will NOT be masked';
-	$: statusColor = shouldMask ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
-	$: statusBgColor = shouldMask ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20';
+	$: statusText = shouldMask ? 'Protected by NENNA.AI' : 'Unprotected';
+	$: statusColor = shouldMask ? 'text-[#3f3d8a]' : 'text-red-600 dark:text-red-400';
+	$: statusBgColor = shouldMask ? 'bg-[#f8b76b]/20' : 'bg-red-50 dark:bg-red-900/20';
 	
-	const toggleMasking = () => {
-		if (entity) {
-			piiSessionManager.toggleEntityMasking(entity.label, 0);
-			// Update the entity reference
-			entity = { ...entity, shouldMask: !entity.shouldMask };
-			dispatch('toggle', { entity });
-		}
-	};
-	
-	const copyOriginalText = () => {
-		if (entity) {
-			navigator.clipboard.writeText(entity.text);
-			dispatch('copy', { text: entity.text });
-		}
-	};
-	
-	const copyMaskedText = () => {
-		if (entity) {
-			const maskedText = `[{${entity.label}}]`;
-			navigator.clipboard.writeText(maskedText);
-			dispatch('copy', { text: maskedText });
-		}
-	};
+
 	
 	// Position the overlay to avoid going off-screen
 	$: overlayStyle = (() => {
@@ -76,6 +54,17 @@
 		}
 	};
 	
+	// Prevent overlay from disappearing when hovering over it
+	const handleOverlayMouseEnter = () => {
+		// Dispatch event to parent to prevent hiding
+		dispatch('overlayMouseEnter');
+	};
+	
+	const handleOverlayMouseLeave = () => {
+		// Dispatch event to parent to potentially hide after delay
+		dispatch('overlayMouseLeave');
+	};
+	
 	onMount(() => {
 		document.addEventListener('click', handleClickOutside);
 	});
@@ -90,27 +79,35 @@
 		bind:this={overlayElement}
 		class="fixed z-50 pointer-events-auto"
 		style={overlayStyle}
-		transition:fade={{ duration: 150 }}
 		on:click|stopPropagation
+		on:mouseenter={handleOverlayMouseEnter}
+		on:mouseleave={handleOverlayMouseLeave}
 	>
 		<div
-			class="bg-white dark:bg-gray-850 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 min-w-72 max-w-96"
+			class="bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-[#f8b76b] dark:border-[#3f3d8a] min-w-56 max-w-80 custom-overlay"
 			transition:fly={{ y: 10, duration: 200 }}
 		>
 			<!-- Header -->
-			<div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+			<div class="px-3 py-2 border-b border-[#f8b76b]/30 dark:border-[#3f3d8a]/50 bg-gradient-to-r from-[#f8b76b]/10 to-[#f9c689]/20 dark:from-[#3f3d8a]/10 dark:to-[#3f3d8a]/20">
 				<div class="flex items-center justify-between">
 					<div class="flex items-center gap-2">
-						<div class="w-3 h-3 rounded-full {shouldMask ? 'bg-green-500' : 'bg-red-500'}"></div>
-						<h3 class="font-semibold text-gray-900 dark:text-gray-100">
-							PII Detected
+						<!-- Custom Logo/Icon -->
+						<div class="flex items-center gap-1.5">
+							<div class="w-4 h-4 rounded flex items-center justify-center overflow-hidden">
+								<img src="/static/static/icon-purple-128.png" alt="Logo" class="w-full h-full object-cover" />
+							</div>
+							<div class="text-xs font-bold text-[#3f3d8a] tracking-wider">NENNA.AI</div>
+						</div>
+						<div class="w-2 h-2 rounded-full {shouldMask ? 'bg-[#f8b76b]' : 'bg-red-500'}"></div>
+						<h3 class="font-medium text-sm text-[#3f3d8a] dark:text-[#f8b76b]">
+							PII
 						</h3>
 					</div>
 					<button
-						class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+						class="text-[#3f3d8a] hover:text-[#3f3d8a]/80 dark:text-[#f8b76b] dark:hover:text-[#f9c689] transition-colors p-0.5 hover:bg-[#f9c689]/30 dark:hover:bg-[#3f3d8a]/20 rounded"
 						on:click={() => visible = false}
 					>
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
 						</svg>
 					</button>
@@ -118,89 +115,49 @@
 			</div>
 			
 			<!-- Content -->
-			<div class="px-4 py-3 space-y-3">
+			<div class="px-3 py-2 space-y-2">
 				<!-- Entity Info -->
-				<div class="space-y-2">
+				<div class="space-y-1.5">
 					<div class="flex items-center justify-between">
-						<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Type:</span>
-						<span class="text-sm font-semibold text-gray-900 dark:text-gray-100 uppercase">
+						<span class="text-xs font-medium text-[#3f3d8a] dark:text-[#f8b76b]">Type:</span>
+						<span class="text-xs font-semibold text-[#3f3d8a] dark:text-white uppercase px-1.5 py-0.5 bg-[#f8b76b]/20 dark:bg-[#3f3d8a]/20 rounded">
 							{entity.type}
 						</span>
 					</div>
 					
 					<div class="flex items-center justify-between">
-						<span class="text-sm font-medium text-gray-600 dark:text-gray-400">Label:</span>
-						<span class="text-sm font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-gray-900 dark:text-gray-100">
-							{entity.label}
+						<span class="text-xs font-medium text-[#3f3d8a] dark:text-[#f8b76b]">Text:</span>
+						<span class="text-xs text-[#3f3d8a] dark:text-white text-right break-all bg-[#f8b76b]/10 dark:bg-[#3f3d8a]/10 px-1.5 py-0.5 rounded italic max-w-32">
+							"{entity.text}"
 						</span>
 					</div>
 					
-					<div class="flex items-start justify-between gap-2">
-						<span class="text-sm font-medium text-gray-600 dark:text-gray-400 flex-shrink-0">Text:</span>
-						<span class="text-sm text-gray-900 dark:text-gray-100 text-right break-all">
-							"{entity.text}"
+					<div class="flex items-center justify-between">
+						<span class="text-xs font-medium text-[#3f3d8a] dark:text-[#f8b76b]">Masked as:</span>
+						<span class="text-xs font-mono text-[#3f3d8a] dark:text-white text-right break-all bg-[#f8b76b]/10 dark:bg-[#3f3d8a]/10 px-1.5 py-0.5 rounded font-semibold max-w-32">
+							[{`{${entity.label}}`}]
 						</span>
 					</div>
 				</div>
 				
 				<!-- Status -->
-				<div class="p-3 rounded-lg {statusBgColor}">
-					<div class="flex items-center gap-2">
-						<svg class="w-4 h-4 {statusColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<div class="p-2 rounded {statusBgColor} border border-current border-opacity-20">
+					<div class="flex items-center gap-1.5">
+						<svg class="w-3 h-3 {statusColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							{#if shouldMask}
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 							{:else}
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
 							{/if}
 						</svg>
-						<span class="text-sm font-medium {statusColor}">
-							{statusText}
+						<span class="text-xs font-medium {statusColor}">
+							{shouldMask ? 'Protected' : 'Unprotected'}
 						</span>
 					</div>
-					<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-						{#if shouldMask}
-							This entity will be replaced with [{entity.label}] when sent to AI models.
-						{:else}
-							This entity will be sent as-is to AI models without masking.
-						{/if}
-					</p>
 				</div>
 			</div>
 			
-			<!-- Actions -->
-			<div class="px-4 py-3 border-t border-gray-100 dark:border-gray-700">
-				<div class="flex gap-2">
-					<button
-						class="flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors {shouldMask 
-							? 'bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-400'
-							: 'bg-green-100 hover:bg-green-200 text-green-700 dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:text-green-400'
-						}"
-						on:click={toggleMasking}
-					>
-						{shouldMask ? 'Don\'t Mask' : 'Mask This'}
-					</button>
-					
-					<button
-						class="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-						on:click={copyOriginalText}
-						title="Copy original text"
-					>
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-						</svg>
-					</button>
-					
-					<button
-						class="px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-						on:click={copyMaskedText}
-						title="Copy masked format"
-					>
-						<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-						</svg>
-					</button>
-				</div>
-			</div>
+
 		</div>
 	</div>
 {/if}
@@ -209,5 +166,26 @@
 	/* Ensure the overlay appears above other elements */
 	:global(.pii-hover-overlay) {
 		z-index: 9999;
+	}
+
+	/* Custom Color Theme with Orange/Purple */
+	:global(.custom-overlay) {
+		backdrop-filter: blur(8px);
+		box-shadow: 
+			0 20px 25px -5px rgba(248, 183, 107, 0.15),
+			0 10px 10px -5px rgba(248, 183, 107, 0.08);
+	}
+
+	:global(.dark .custom-overlay) {
+		box-shadow: 
+			0 20px 25px -5px rgba(63, 61, 138, 0.25),
+			0 10px 10px -5px rgba(63, 61, 138, 0.15);
+	}
+
+	/* Ensure proper image sizing and fit */
+	:global(.custom-overlay img) {
+		object-fit: contain;
+		max-width: 100%;
+		max-height: 100%;
 	}
 </style> 

@@ -24,6 +24,8 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 	},
 
 	addProseMirrorPlugins() {
+		const options = this.options;
+		
 		return [
 			new Plugin({
 				key: new PluginKey('piiHighlighter'),
@@ -37,7 +39,7 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 						
 						// Update decorations based on current PII entities
 						const decorations: Decoration[] = [];
-						const { piiEntities, highlightClass } = this.options;
+						const { piiEntities, highlightClass } = options;
 
 						piiEntities.forEach((entity) => {
 							entity.occurrences.forEach((occurrence, occurrenceIndex) => {
@@ -49,7 +51,6 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 								if (from >= 1 && to <= tr.doc.content.size && from < to) {
 									const shouldMask = entity.shouldMask ?? true;
 									const maskingClass = shouldMask ? 'pii-masked' : 'pii-unmasked';
-									const statusText = shouldMask ? 'Will be masked' : 'Will NOT be masked';
 									
 									decorations.push(
 										Decoration.inline(from, to, {
@@ -96,27 +97,58 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 						return false;
 					},
 					handleDOMEvents: {
-						mouseenter: (view, event) => {
+						mouseover: (view, event) => {
 							const target = event.target as HTMLElement;
+							
+							// Find the PII element - could be the target itself or need to traverse up
+							let piiElement: HTMLElement | null = null;
+							
 							if (target.classList.contains('pii-highlight')) {
-								const entityIndex = parseInt(target.getAttribute('data-entity-index') || '0');
-								const { piiEntities, onHover } = this.options;
+								piiElement = target;
+							} else {
+								// Check if we're inside a PII element by traversing up
+								let current = target.parentElement;
+								while (current && current !== view.dom) {
+									if (current.classList.contains('pii-highlight')) {
+										piiElement = current;
+										break;
+									}
+									current = current.parentElement;
+								}
+							}
+							
+							if (piiElement) {
+								const entityIndex = parseInt(piiElement.getAttribute('data-entity-index') || '0');
+								const { piiEntities, onHover } = options;
 								
 								if (onHover && piiEntities[entityIndex]) {
-									const rect = target.getBoundingClientRect();
+									const rect = piiElement.getBoundingClientRect();
 									const position = {
 										x: rect.left + rect.width / 2,
 										y: rect.top
 									};
 									onHover(piiEntities[entityIndex], position);
 								}
+								return true; // Prevent further event handling
 							}
 							return false;
 						},
-						mouseleave: (view, event) => {
+						mouseout: (view, event) => {
 							const target = event.target as HTMLElement;
+							const relatedTarget = event.relatedTarget as HTMLElement;
+							
+							// Find if we're leaving a PII element
+							let leavingPiiElement = false;
+							
 							if (target.classList.contains('pii-highlight')) {
-								const { onHoverEnd } = this.options;
+								// Check if we're moving to a non-PII element
+								if (!relatedTarget || !relatedTarget.classList.contains('pii-highlight')) {
+									leavingPiiElement = true;
+								}
+							}
+							
+							if (leavingPiiElement) {
+								const { onHoverEnd } = options;
 								if (onHoverEnd) {
 									// Add a small delay to prevent flickering when moving between elements
 									setTimeout(onHoverEnd, 100);
@@ -131,11 +163,12 @@ export const PiiHighlighter = Extension.create<PiiHighlighterOptions>({
 	},
 
 	addCommands() {
+		const self = this;
 		return {
 			updatePiiEntities: (entities: ExtendedPiiEntity[]) => ({ tr, dispatch }: any) => {
 				if (dispatch) {
 					// Update the options with new entities
-					this.options.piiEntities = entities;
+					self.options.piiEntities = entities;
 					// Force a state update to refresh decorations
 					dispatch(tr.setMeta('piiHighlighter', { entities }));
 				}
