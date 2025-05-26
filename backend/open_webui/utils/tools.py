@@ -490,8 +490,17 @@ async def get_tool_servers_data(
     server_entries = []
     for idx, server in enumerate(servers):
         if server.get("config", {}).get("enable"):
-            url_path = server.get("path", "openapi.json")
-            full_url = f"{server.get('url')}/{url_path}"
+            # Path (to OpenAPI spec URL) can be either a full URL or a path to append to the base URL
+            openapi_path = server.get("path", "openapi.json")
+            if "://" in openapi_path:
+                # If it contains "://", it's a full URL
+                full_url = openapi_path
+            else:
+                if not openapi_path.startswith("/"):
+                    # Ensure the path starts with a slash
+                    openapi_path = f"/{openapi_path}"
+
+                full_url = f"{server.get('url')}{openapi_path}"
 
             info = server.get("info", {})
 

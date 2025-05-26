@@ -53,7 +53,7 @@
 		if (direct) {
 			const res = await getToolServerData(
 				auth_type === 'bearer' ? key : localStorage.token,
-				`${url}/${path}`
+				path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`
 			).catch((err) => {
 				toast.error($i18n.t('Connection failed'));
 			});
@@ -237,12 +237,11 @@
 								</div>
 
 								<div class="flex-1 flex items-center">
-									<div class="text-sm">/</div>
 									<input
 										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										type="text"
 										bind:value={path}
-										placeholder={$i18n.t('openapi.json Path')}
+										placeholder={$i18n.t('openapi.json URL or Path')}
 										autocomplete="off"
 										required
 									/>
@@ -252,7 +251,7 @@
 
 						<div class="text-xs text-gray-500 mt-1">
 							{$i18n.t(`WebUI will make requests to "{{url}}"`, {
-								url: `${url}/${path}`
+								url: path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`
 							})}
 						</div>
 
