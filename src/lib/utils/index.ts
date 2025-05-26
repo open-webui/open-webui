@@ -91,27 +91,16 @@ export const sanitizeResponseContent = (content: string) => {
 
 export const processResponseContent = (content: string) => {
 	// This function is used to process the response content before the response content is rendered.
-	/* Discription:
-	 *   In future development, it is recommended to seperate `line to line` processes and `whole content` processes.
-	 *   To improve the maintainability, contents here are numbered with indexes to indicate their function，
-	 *   because the solution to problems under same category might be scattered between `line to line` and `whole content`.
-	 *
-	 * Index:
-	 *   1. Tackle "Model output issue not following the standard Markdown/LaTeX format".
-	 *      - This part obeys the rule of modifying original text as **LITTLE** as possible.
-	 *      - Detailed documentation of rendering problems must be provided in comments.
-	 *   1.1. Special cases
-	 *   1.1.1. 中文 (Chinese, CN)
-	 *   1.1.1.1. Handle **bold** with Chinese parentheses
-	 *   1.1.1.2. Handle *italic* with Chinese parentheses
-	 */
+	content = processChineseContent(content);
+	return content.trim();
+};
 
-	// Process from line to line.
+function processChineseContent(content: string): string {
+	// Tackle "Model output issue not following the standard Markdown/LaTeX format" in Chinese.
 	const lines = content.split('\n');
 	const processedLines = lines.map((line) => {
-		// 1.1.1. 中文 (Chinese, CN)
 		if (/[\u4e00-\u9fa5]/.test(line)) {
-			// 1.1.1.x Problems caused by Chinese parentheses
+			// Problems caused by Chinese parentheses
 			/* Discription:
 			 *   When `*` has Chinese parentheses on the inside, markdown parser ignore bold or italic style.
 			 *   - e.g. `**中文名（English）**中文内容` will be parsed directly,
@@ -125,25 +114,23 @@ export const processResponseContent = (content: string) => {
 			 *   Change the behavior in future if needed.
 			 */
 			if (line.includes('*')) {
-				// 1.1.1.1. Handle **bold** with Chinese parentheses
-				line = processResponseContent_CN_ParenthesesRelated(line, '**', '（', '）');
-				// 1.1.1.2. Handle *italic* with Chinese parentheses
-				line = processResponseContent_CN_ParenthesesRelated(line, '*', '（', '）');
+				// Handle **bold** with Chinese parentheses
+				line = processChineseContent_ParenthesesRelated(line, '**', '（', '）');
+				// Handle *italic* with Chinese parentheses
+				line = processChineseContent_ParenthesesRelated(line, '*', '（', '）');
 			}
 		}
 		return line;
 	});
-	content = processedLines.join('\n');
-
-	return content.trim();
-};
+	return processedLines.join('\n');
+}
 
 function isChineseChar(char: string): boolean {
 	return /\p{Script=Han}/u.test(char);
 }
 
-// Helper function for `processResponseContent` case `1.1.1.1` and `1.1.1.2`
-function processResponseContent_CN_ParenthesesRelated(
+// Helper function for `processChineseContent`
+function processChineseContent_ParenthesesRelated(
 	line: string,
 	symbol: string,
 	leftSymbol: string,
