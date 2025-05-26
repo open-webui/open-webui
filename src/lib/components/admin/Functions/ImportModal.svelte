@@ -41,12 +41,10 @@
 				func.name = frontmatter.title;
 			}
 
-			if (frontmatter?.description) {
-				func.meta = {
-					...func.meta,
-					description: frontmatter.description
-				};
-			}
+			func.meta = {
+				...(func.meta ?? {}),
+				description: frontmatter?.description ?? func.name
+			};
 
 			onImport(func);
 			show = false;
