@@ -47,7 +47,7 @@ langchain-community==0.3.23
 fake-useragent==2.1.0
 chromadb==0.6.3
 pymilvus==2.5.0
-qdrant-client~=1.12.0
+qdrant-client==1.12.1
 opensearch-py==2.8.0
 playwright==1.49.1 # Caution: version must match docker-compose.playwright.yaml
 elasticsearch==9.0.1
@@ -66,7 +66,7 @@ fpdf2==2.8.2
 pymdown-extensions==10.14.2
 docx2txt==0.8
 python-pptx==1.0.0
-uunstructured[all-docs]
+unstructured[all-docs]
 nltk==3.9.1
 Markdown==3.7
 pypandoc==1.15
@@ -107,9 +107,9 @@ google-auth-httplib2
 google-auth-oauthlib
 
 ## Tests
-docker~=7.1.0
-pytest~=8.3.5
-pytest-docker~=3.1.1
+docker==7.1.0
+pytest==8.3.5
+pytest-docker==3.1.1
 
 googleapis-common-protos==1.63.2
 google-cloud-storage==2.19.0
