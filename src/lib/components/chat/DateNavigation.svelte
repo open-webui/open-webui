@@ -72,7 +72,7 @@
 
 {#if show}
 	<div 
-		class="fixed top-4 left-4 z-50 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 w-72"
+		class="fixed top-20 left-4 z-50 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 w-72"
 		transition:fade={{ duration: 200 }}
 	>
 		<div class="flex items-center justify-between mb-3">
