@@ -26,10 +26,15 @@
 	import { all, createLowlight } from 'lowlight';
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
+	
+	// PII Detection imports
+	import { maskPiiText, type PiiEntity } from '$lib/apis/pii';
+	import { PiiHighlighter } from './RichTextInput/PiiHighlighter';
+	import { debounce, extractPlainTextFromEditor, createPiiHighlightStyles, PiiSessionManager, type ExtendedPiiEntity } from '$lib/utils/pii';
 
-	export let oncompositionstart = (e) => {};
-	export let oncompositionend = (e) => {};
-	export let onChange = (e) => {};
+	export let oncompositionstart = (e: CompositionEvent) => {};
+	export let oncompositionend = (e: CompositionEvent) => {};
+	export let onChange = (e: any) => {};
 
 	// create a lowlight instance with all languages loaded
 	const lowlight = createLowlight(all);
@@ -51,9 +56,20 @@
 	export let messageInput = false;
 	export let shiftEnter = false;
 	export let largeTextAsFile = false;
+	
+	// PII Detection props
+	export let enablePiiDetection = false;
+	export let piiApiKey = '';
+	export let onPiiDetected: (entities: ExtendedPiiEntity[], maskedText: string) => void = () => {};
 
-	let element;
-	let editor;
+	let element: HTMLElement;
+	let editor: any;
+	
+	// PII Detection state
+	let piiEntities: ExtendedPiiEntity[] = [];
+	let isDetectingPii = false;
+	let lastDetectedText = '';
+	let piiSessionManager = PiiSessionManager.getInstance();
 
 	const options = {
 		throwOnError: false
@@ -122,9 +138,43 @@
 		return false;
 	}
 
-	export const setContent = (content) => {
+	export const setContent = (content: any) => {
 		editor.commands.setContent(content);
 	};
+	
+	// PII Detection function
+	const detectPii = async (text: string) => {
+		if (!enablePiiDetection || !piiApiKey || !text.trim() || text === lastDetectedText) {
+			return;
+		}
+		
+		isDetectingPii = true;
+		lastDetectedText = text;
+		
+		try {
+			const response = await maskPiiText(piiApiKey, [text], false, false);
+			if (response.pii && response.pii[0]) {
+				// Set entities in session manager (this converts them to ExtendedPiiEntity)
+				piiSessionManager.setEntities(response.pii[0]);
+				piiEntities = piiSessionManager.getEntities();
+				
+				// Update the editor with PII highlighting
+				if (editor && editor.commands.updatePiiEntities) {
+					editor.commands.updatePiiEntities(piiEntities);
+				}
+				
+				// Notify parent component
+				onPiiDetected(piiEntities, response.text[0]);
+			}
+		} catch (error) {
+			console.error('PII detection failed:', error);
+		} finally {
+			isDetectingPii = false;
+		}
+	};
+	
+	// Debounced PII detection
+	const debouncedDetectPii = debounce(detectPii, 500);
 
 	const selectTemplate = () => {
 		if (value !== '') {
@@ -143,6 +193,18 @@
 	};
 
 	onMount(async () => {
+		// Initialize PII session manager
+		if (enablePiiDetection && piiApiKey) {
+			piiSessionManager.setApiKey(piiApiKey);
+		}
+		
+		// Add PII highlighting styles
+		if (enablePiiDetection) {
+			const styleElement = document.createElement('style');
+			styleElement.textContent = createPiiHighlightStyles();
+			document.head.appendChild(styleElement);
+		}
+		
 		let content = value;
 
 		if (!json) {
@@ -194,6 +256,14 @@
 				Highlight,
 				Typography,
 				Placeholder.configure({ placeholder }),
+				...(enablePiiDetection
+					? [
+							PiiHighlighter.configure({
+								piiEntities: piiEntities,
+								highlightClass: 'pii-highlight'
+							})
+						]
+					: []),
 				...(autocomplete
 					? [
 							AIAutocompletion.configure({
@@ -256,6 +326,14 @@
 						}
 					} else {
 						value = editor.getHTML();
+					}
+				}
+				
+				// Trigger PII detection on content change
+				if (enablePiiDetection && piiApiKey) {
+					const plainText = extractPlainTextFromEditor(editor.getHTML());
+					if (plainText.trim()) {
+						debouncedDetectPii(plainText);
 					}
 				}
 			},

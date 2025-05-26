@@ -304,7 +304,11 @@
 				{onSourceClick}
 			/>
 		{:else}
-			{unescapeHtml(token.text)}
+			{#if token.text && token.text.includes('class="pii-highlight')}
+				{@html DOMPurify.sanitize(token.text)}
+			{:else}
+				{unescapeHtml(token.text)}
+			{/if}
 		{/if}
 	{:else if token.type === 'inlineKatex'}
 		{#if token.text}

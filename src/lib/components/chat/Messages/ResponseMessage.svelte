@@ -14,6 +14,10 @@
 	import { createNewFeedback, getFeedbackById, updateFeedbackById } from '$lib/apis/evaluations';
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
+	
+	// PII Detection imports
+	import { unmaskPiiTextWithSession, type PiiEntity } from '$lib/apis/pii';
+	import { PiiSessionManager, unmaskTextWithEntities, highlightUnmaskedEntities, type ExtendedPiiEntity } from '$lib/utils/pii';
 
 	import { config, models, settings, temporaryChatEnabled, TTSWorker, user } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
@@ -110,6 +114,11 @@
 			message = JSON.parse(JSON.stringify(history.messages[messageId]));
 		}
 	}
+	
+	// PII Detection state
+	let piiSessionManager = PiiSessionManager.getInstance();
+	let unmaskedContent = '';
+	let isUnmaskingPii = false;
 
 	export let siblings;
 
@@ -165,6 +174,23 @@
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
 		}
+	};
+	
+	// PII Unmasking and highlighting function
+	const processResponseContent = (content: string): string => {
+		const entities = piiSessionManager.getEntities();
+		
+		if (!entities.length) {
+			return content;
+		}
+		
+		// First unmask any [{LABEL_ID}] patterns
+		let processedContent = unmaskTextWithEntities(content, entities);
+		
+		// Then highlight the unmasked entities
+		processedContent = highlightUnmaskedEntities(processedContent, entities);
+		
+		return processedContent;
 	};
 
 	const playAudio = (idx: number) => {
@@ -561,6 +587,45 @@
 	onMount(async () => {
 		// console.log('ResponseMessage mounted');
 
+		// Add PII highlighting styles if not already present
+		if (!document.getElementById('pii-response-styles')) {
+			const styleElement = document.createElement('style');
+			styleElement.id = 'pii-response-styles';
+			styleElement.textContent = `
+				.pii-highlight {
+					border-radius: 3px;
+					padding: 1px 2px;
+					position: relative;
+					transition: all 0.2s ease;
+					border: 1px solid transparent;
+				}
+				
+				.pii-highlight:hover {
+					border: 1px solid #333;
+					box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+				}
+				
+				/* Masked entities - green background */
+				.pii-highlight.pii-masked {
+					background-color: rgba(34, 197, 94, 0.2);
+				}
+				
+				.pii-highlight.pii-masked:hover {
+					background-color: rgba(34, 197, 94, 0.3);
+				}
+				
+				/* Unmasked entities - red background */
+				.pii-highlight.pii-unmasked {
+					background-color: rgba(239, 68, 68, 0.2);
+				}
+				
+				.pii-highlight.pii-unmasked:hover {
+					background-color: rgba(239, 68, 68, 0.3);
+				}
+			`;
+			document.head.appendChild(styleElement);
+		}
+
 		await tick();
 		if (buttonsContainerElement) {
 			console.log(buttonsContainerElement);
@@ -802,7 +867,7 @@
 									<ContentRenderer
 										id={message.id}
 										{history}
-										content={message.content}
+										content={processResponseContent(message.content)}
 										sources={message.sources}
 										floatingButtons={message?.done && !readOnly}
 										save={!readOnly}

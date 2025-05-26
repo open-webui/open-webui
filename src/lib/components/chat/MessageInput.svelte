@@ -54,6 +54,10 @@
 	import Sparkles from '../icons/Sparkles.svelte';
 
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
+	
+	// PII Detection imports
+	import { maskPiiTextWithSession, createPiiSession, type PiiEntity } from '$lib/apis/pii';
+	import { PiiSessionManager, type ExtendedPiiEntity } from '$lib/utils/pii';
 
 	const i18n = getContext('i18n');
 
@@ -75,12 +79,12 @@
 	export let taskIds = null;
 
 	export let prompt = '';
-	export let files = [];
+	export let files: any[] = [];
 
-	export let toolServers = [];
+	export let toolServers: any[] = [];
 
-	export let selectedToolIds = [];
-	export let selectedFilterIds = [];
+	export let selectedToolIds: any[] = [];
+	export let selectedFilterIds: any[] = [];
 
 	export let imageGenerationEnabled = false;
 	export let webSearchEnabled = false;
@@ -106,14 +110,23 @@
 	let chatInputContainerElement;
 	let chatInputElement;
 
-	let filesInputElement;
-	let commandsElement;
+	let filesInputElement: any;
+	let commandsElement: any;
 
-	let inputFiles;
+	let inputFiles: any;
 	let dragged = false;
 
 	let user = null;
 	export let placeholder = '';
+	
+	// PII Detection state
+	let piiSessionManager = PiiSessionManager.getInstance();
+	let currentPiiEntities: ExtendedPiiEntity[] = [];
+	let maskedPrompt = '';
+	
+	// Get PII settings from store
+	$: enablePiiDetection = $settings?.piiDetection?.enabled ?? false;
+	$: piiApiKey = $settings?.piiDetection?.apiKey ?? '';
 
 	let visionCapableModels = [];
 	$: visionCapableModels = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels).filter(
@@ -157,6 +170,41 @@
 			top: element.scrollHeight,
 			behavior: 'smooth'
 		});
+	};
+	
+	// PII Detection handler
+	const handlePiiDetected = (entities: ExtendedPiiEntity[], maskedText: string) => {
+		currentPiiEntities = entities;
+		maskedPrompt = maskedText;
+	};
+	
+	// Function to get the prompt to send (masked if PII detected)
+	const getPromptToSend = (): string => {
+		if (!enablePiiDetection || !currentPiiEntities.length) {
+			return prompt;
+		}
+		
+		// Create a masked version based on user's masking preferences
+		let maskedText = prompt;
+		const entitiesToMask = currentPiiEntities.filter(entity => entity.shouldMask);
+		
+		// Sort occurrences by start position in reverse order to avoid index shifting
+		const allOccurrences = entitiesToMask.flatMap(entity => 
+			entity.occurrences.map(occ => ({
+				...occ,
+				label: entity.label,
+				type: entity.type
+			}))
+		).sort((a, b) => b.start_idx - a.start_idx);
+		
+		// Replace text with masked versions using LABEL_ID pattern
+		allOccurrences.forEach(occurrence => {
+			const before = maskedText.substring(0, occurrence.start_idx);
+			const after = maskedText.substring(occurrence.end_idx);
+			maskedText = before + `[{${occurrence.label}}]` + after;
+		});
+		
+		return maskedText;
 	};
 
 	const screenCaptureHandler = async () => {
@@ -525,12 +573,12 @@
 
 								recording = false;
 
-								await tick();
-								document.getElementById('chat-input')?.focus();
+																								await tick();
+																document.getElementById('chat-input')?.focus();
 
-								if ($settings?.speechAutoSend ?? false) {
-									dispatch('submit', prompt);
-								}
+																if ($settings?.speechAutoSend ?? false) {
+																	dispatch('submit', getPromptToSend());
+																}
 							}}
 						/>
 					{:else}
@@ -538,7 +586,7 @@
 							class="w-full flex gap-1.5"
 							on:submit|preventDefault={() => {
 								// check if selectedModels support image input
-								dispatch('submit', prompt);
+								dispatch('submit', getPromptToSend());
 							}}
 						>
 							<div
@@ -660,6 +708,9 @@
 												largeTextAsFile={$settings?.largeTextAsFile ?? false}
 												autocomplete={$config?.features?.enable_autocomplete_generation &&
 													($settings?.promptAutocomplete ?? false)}
+												enablePiiDetection={enablePiiDetection}
+												piiApiKey={piiApiKey}
+												onPiiDetected={handlePiiDetected}
 												generateAutoCompletion={async (text) => {
 													if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {
 														toast.error($i18n.t('Please select a model first.'));
@@ -697,7 +748,7 @@
 													// Command/Ctrl + Shift + Enter to submit a message pair
 													if (isCtrlPressed && e.key === 'Enter' && e.shiftKey) {
 														e.preventDefault();
-														createMessagePair(prompt);
+														createMessagePair(getPromptToSend());
 													}
 
 													// Check if Ctrl + R is pressed
@@ -798,7 +849,7 @@
 															if (enterPressed) {
 																e.preventDefault();
 																if (prompt !== '' || files.length > 0) {
-																	dispatch('submit', prompt);
+																	dispatch('submit', getPromptToSend());
 																}
 															}
 														}

@@ -39,5 +39,29 @@ export default defineConfig({
 	},
 	worker: {
 		format: 'es'
+	},
+	// Development optimizations
+	server: {
+		fs: {
+			// Allow serving files from one level up to the project root
+			allow: ['..']
+		}
+	},
+	optimizeDeps: {
+		include: [
+			'@codemirror/lang-javascript',
+			'@codemirror/lang-python',
+			'@codemirror/language-data',
+			'@codemirror/theme-one-dark',
+			'marked',
+			'katex',
+			'highlight.js'
+		],
+		// Force pre-bundling of large dependencies
+		force: process.env.NODE_ENV === 'development'
+	},
+	// Enable esbuild for faster builds in development
+	esbuild: {
+		target: 'es2022'
 	}
 });

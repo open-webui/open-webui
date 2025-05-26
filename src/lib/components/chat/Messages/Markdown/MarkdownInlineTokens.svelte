@@ -66,6 +66,10 @@
 			onload="this.style.height=(this.contentWindow.document.body.scrollHeight+20)+'px';"
 		></iframe>
 	{:else if token.type === 'text'}
-		{token.raw}
+		{#if token.raw && token.raw.includes('class="pii-highlight')}
+			{@html DOMPurify.sanitize(token.raw)}
+		{:else}
+			{token.raw}
+		{/if}
 	{/if}
 {/each}

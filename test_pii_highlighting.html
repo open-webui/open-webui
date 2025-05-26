@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PII Highlighting Test</title>
+    <style>
+        .pii-highlight {
+            border-radius: 3px;
+            padding: 1px 2px;
+            position: relative;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+        
+        .pii-highlight:hover {
+            border: 1px solid #333;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        /* Masked entities - green background */
+        .pii-highlight.pii-masked {
+            background-color: rgba(34, 197, 94, 0.2);
+        }
+        
+        .pii-highlight.pii-masked:hover {
+            background-color: rgba(34, 197, 94, 0.3);
+        }
+        
+        /* Unmasked entities - red background */
+        .pii-highlight.pii-unmasked {
+            background-color: rgba(239, 68, 68, 0.2);
+        }
+        
+        .pii-highlight.pii-unmasked:hover {
+            background-color: rgba(239, 68, 68, 0.3);
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>PII Highlighting Test</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Basic PII Highlighting</h2>
+        <p>This is a test with <span class="pii-highlight pii-unmasked" title="PERSON_1 (PERSON) - Was NOT masked in input" data-pii-type="PERSON" data-pii-label="PERSON_1">Max F</span> from <span class="pii-highlight pii-masked" title="LOCATION_2 (LOCATION) - Was masked in input" data-pii-type="LOCATION" data-pii-label="LOCATION_2">Berlin</span>.</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Multiple PII Types</h2>
+        <p>Contact <span class="pii-highlight pii-masked" title="PERSON_1 (PERSON) - Was masked in input" data-pii-type="PERSON" data-pii-label="PERSON_1">John Doe</span> at <span class="pii-highlight pii-unmasked" title="EMAIL_1 (EMAIL) - Was NOT masked in input" data-pii-type="EMAIL" data-pii-label="EMAIL_1">john@example.com</span> or call <span class="pii-highlight pii-masked" title="PHONE_1 (PHONE_NUMBER) - Was masked in input" data-pii-type="PHONE_NUMBER" data-pii-label="PHONE_1">555-123-4567</span>.</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: German Text (like the example)</h2>
+        <p>Es tut mir leid, aber ohne weitere Informationen oder Kontext kann ich nicht genau sagen, wen oder was du meinst, als "<span class="pii-highlight pii-unmasked" title="PERSON_1 (PERSON) - Was NOT masked in input" data-pii-type="PERSON" data-pii-label="PERSON_1">Max F</span>" aus <span class="pii-highlight pii-masked" title="LOCATION_2 (LOCATION) - Was masked in input" data-pii-type="LOCATION" data-pii-label="LOCATION_2">Berlin</span>.</p>
+    </div>
+    
+    <script>
+        // Add click handlers to test interactivity
+        document.querySelectorAll('.pii-highlight').forEach(element => {
+            element.addEventListener('click', function() {
+                const label = this.getAttribute('data-pii-label');
+                const type = this.getAttribute('data-pii-type');
+                const isMasked = this.classList.contains('pii-masked');
+                alert(`Clicked PII: ${label} (${type}) - Currently ${isMasked ? 'masked' : 'unmasked'}`);
+            });
+        });
+    </script>
+</body>
+</html> 

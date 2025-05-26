@@ -5,6 +5,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import { updateUserInfo } from '$lib/apis/users';
 	import { getUserPosition } from '$lib/utils';
+	import PiiSettings from './PiiSettings.svelte';
 	const dispatch = createEventDispatcher();
 
 	const i18n = getContext('i18n');
@@ -1118,6 +1119,10 @@
 					</div>
 				</div>
 			{/if}
+
+					<div class=" my-1.5 text-sm font-medium">Privacy</div>
+
+		<PiiSettings {saveSettings} />
 		</div>
 	</div>
 
