@@ -79,6 +79,10 @@ def github_url_to_raw_url(url: str) -> str:
 async def load_function_from_url(
     request: Request, form_data: LoadUrlForm, user=Depends(get_admin_user)
 ):
+    # NOTE: This is NOT a SSRF vulnerability:
+    # This endpoint is admin-only (see get_admin_user), meant for *trusted* internal use,
+    # and does NOT accept untrusted user input. Access is enforced by authentication.
+
     url = str(form_data.url)
     if not url:
         raise HTTPException(status_code=400, detail="Please enter a valid URL")
