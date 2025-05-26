@@ -268,7 +268,7 @@
 				class=" flex flex-col cursor-pointer w-full px-3 py-2 dark:hover:bg-white/5 hover:bg-black/5 rounded-xl transition"
 				id="model-item-{model.id}"
 			>
-				<div class="flex gap-4 mt-0.5 mb-0.5">
+				<div class="flex gap-4 mt-1 mb-0.5">
 					<div class=" w-[44px]">
 						<div
 							class=" rounded-full object-cover {model.is_active
@@ -309,7 +309,7 @@
 					</a>
 				</div>
 
-				<div class="flex justify-between items-center -mb-0.5 px-0.5">
+				<div class="flex justify-between items-center -mb-0.5 px-0.5 mt-1.5">
 					<div class=" text-xs mt-0.5">
 						<Tooltip
 							content={model?.user?.email ?? $i18n.t('Deleted User')}
