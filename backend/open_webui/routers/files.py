@@ -168,6 +168,9 @@ def upload_file(
                         )
                     elif (not file.content_type.startswith(("image/", "video/"))) or (
                         request.app.state.config.CONTENT_EXTRACTION_ENGINE == "external"
+                    ) or (
+                        file.content_type.startswith("image/") and 
+                        request.app.state.config.ENABLE_IMAGE_OCR_FALLBACK
                     ):
                         process_file(request, ProcessFileForm(file_id=id), user=user)
                 else:

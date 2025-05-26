@@ -317,17 +317,19 @@
 				return;
 			}
 
-			if (
-				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
-			) {
-				if (visionCapableModels.length === 0) {
-					// Smart Fallback: Use OCR text extraction when no vision models are available
-					// This feature can be disabled via ENABLE_IMAGE_OCR_FALLBACK config
-					console.log('No vision models available, using OCR text extraction for image:', file.name);
-					toast.info($i18n.t('No vision models available. Extracting text from image using OCR...'));
-					uploadFileHandler(file);
-					return;
-				}
+					if (
+			['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
+		) {
+			if (visionCapableModels.length === 0) {
+				// Smart Fallback: Use OCR text extraction when no vision models are available
+				// This feature can be disabled via ENABLE_IMAGE_OCR_FALLBACK config
+				console.log('No vision models available, using OCR text extraction for image:', file.name);
+				toast.info($i18n.t('No vision models available. Extracting text from image using OCR...'));
+				
+				// Process the image file for OCR text extraction instead of vision
+				uploadFileHandler(file);
+				return;
+			}
 				let reader = new FileReader();
 				reader.onload = async (event) => {
 					let imageUrl = event.target.result;
