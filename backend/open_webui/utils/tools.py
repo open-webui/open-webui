@@ -493,6 +493,8 @@ async def get_tool_servers_data(
             url_path = server.get("path", "openapi.json")
             full_url = f"{server.get('url')}/{url_path}"
 
+            info = server.get("info", {})
+
             auth_type = server.get("auth_type", "bearer")
             token = None
 
@@ -500,26 +502,37 @@ async def get_tool_servers_data(
                 token = server.get("key", "")
             elif auth_type == "session":
                 token = session_token
-            server_entries.append((idx, server, full_url, token))
+            server_entries.append((idx, server, full_url, info, token))
 
     # Create async tasks to fetch data
-    tasks = [get_tool_server_data(token, url) for (_, _, url, token) in server_entries]
+    tasks = [
+        get_tool_server_data(token, url) for (_, _, url, _, token) in server_entries
+    ]
 
     # Execute tasks concurrently
     responses = await asyncio.gather(*tasks, return_exceptions=True)
 
     # Build final results with index and server metadata
     results = []
-    for (idx, server, url, _), response in zip(server_entries, responses):
+    for (idx, server, url, info, _), response in zip(server_entries, responses):
         if isinstance(response, Exception):
             log.error(f"Failed to connect to {url} OpenAPI tool server")
             continue
+
+        openapi_data = response.get("openapi", {})
+
+        if info and isinstance(openapi_data, dict):
+            if "name" in info:
+                openapi_data["info"]["title"] = info.get("name", "Tool Server")
+
+            if "description" in info:
+                openapi_data["info"]["description"] = info.get("description", "")
 
         results.append(
             {
                 "idx": idx,
                 "url": server.get("url"),
-                "openapi": response.get("openapi"),
+                "openapi": openapi_data,
                 "info": response.get("info"),
                 "specs": response.get("specs"),
             }
