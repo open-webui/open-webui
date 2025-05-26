@@ -712,17 +712,25 @@ class ChatTable:
             db.add(result)
             db.commit()
             db.refresh(result)
+            
+            # Invalidate cache for this user
+            self._invalidate_cache_for_user(user_id)
+            
             return ChatModel.model_validate(result) if result else None
 
     def update_chat_by_id(self, id: str, chat: dict) -> Optional[ChatModel]:
         try:
             with get_db() as db:
                 chat_item = db.get(Chat, id)
+                user_id = chat_item.user_id
                 chat_item.chat = chat
                 chat_item.title = chat["title"] if "title" in chat else "New Chat"
                 chat_item.updated_at = int(time.time())
                 db.commit()
                 db.refresh(chat_item)
+
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
 
                 return ChatModel.model_validate(chat_item)
         except Exception:
@@ -765,12 +773,37 @@ class ChatTable:
 
         return chat.chat.get("title", "New Chat")
 
-    def get_messages_by_chat_id(self, id: str) -> Optional[dict]:
+    def get_messages_by_chat_id(self, id: str) -> dict:
+        log.info(f"🔍 DEBUG: get_messages_by_chat_id called with id={id}")
         chat = self.get_chat_by_id(id)
         if chat is None:
-            return None
+            log.warning(f"⚠️  DEBUG: Chat not found for id={id}, returning empty dict")
+            return {}  # Return empty dict instead of None
 
-        return chat.chat.get("history", {}).get("messages", {}) or {}
+        messages = chat.chat.get("history", {}).get("messages", {})
+        result = messages if messages is not None else {}
+        log.info(f"✅ DEBUG: get_messages_by_chat_id returning {type(result)} with {len(result) if isinstance(result, dict) else 'N/A'} items")
+        return result
+
+    def get_message_list_by_chat_id(self, id: str) -> list[dict]:
+        """
+        Get messages as a list for middleware compatibility.
+        Returns empty list if chat doesn't exist or has no messages.
+        """
+        log.info(f"🔍 DEBUG: get_message_list_by_chat_id called with id={id}")
+        messages_dict = self.get_messages_by_chat_id(id)
+        if not messages_dict:
+            log.info(f"📋 DEBUG: No messages found, returning empty list")
+            return []
+        
+        # Convert dict of messages to list, preserving order by creation time if available
+        messages_list = []
+        for message_id, message in messages_dict.items():
+            message_with_id = {"id": message_id, **message}
+            messages_list.append(message_with_id)
+        
+        log.info(f"✅ DEBUG: get_message_list_by_chat_id returning list with {len(messages_list)} items")
+        return messages_list
 
     def get_message_by_id_and_message_id(
         self, id: str, message_id: str
@@ -1417,6 +1450,10 @@ class ChatTable:
                 chat.pinned = False
                 db.commit()
                 db.refresh(chat)
+                
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
+                
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
@@ -1495,6 +1532,10 @@ class ChatTable:
 
                 db.commit()
                 db.refresh(chat)
+                
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
+                
                 return ChatModel.model_validate(chat)
         except Exception:
             return None
@@ -1569,6 +1610,10 @@ class ChatTable:
                     "tags": list(set(tags)),
                 }
                 db.commit()
+                
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
+                
                 return True
         except Exception:
             return False
@@ -1583,6 +1628,9 @@ class ChatTable:
                 }
                 db.commit()
 
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
+
                 return True
         except Exception:
             return False
@@ -1590,8 +1638,16 @@ class ChatTable:
     def delete_chat_by_id(self, id: str) -> bool:
         try:
             with get_db() as db:
+                # Get user_id before deletion for cache invalidation
+                chat = db.get(Chat, id)
+                user_id = chat.user_id if chat else None
+                
                 db.query(Chat).filter_by(id=id).delete()
                 db.commit()
+
+                # Invalidate cache for this user
+                if user_id:
+                    self._invalidate_cache_for_user(user_id)
 
                 return True and self.delete_shared_chat_by_chat_id(id)
         except Exception:
@@ -1602,6 +1658,9 @@ class ChatTable:
             with get_db() as db:
                 db.query(Chat).filter_by(id=id, user_id=user_id).delete()
                 db.commit()
+
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
 
                 return True and self.delete_shared_chat_by_chat_id(id)
         except Exception:
@@ -1615,6 +1674,9 @@ class ChatTable:
                 db.query(Chat).filter_by(user_id=user_id).delete()
                 db.commit()
 
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
+
                 return True
         except Exception:
             return False
@@ -1626,6 +1688,9 @@ class ChatTable:
             with get_db() as db:
                 db.query(Chat).filter_by(user_id=user_id, folder_id=folder_id).delete()
                 db.commit()
+
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
 
                 return True
         except Exception:
@@ -1658,8 +1723,63 @@ class ChatTable:
                     "jsonb_enabled": is_using_jsonb(db) if db.bind.dialect.name == "postgresql" else False,
                     "use_jsonb_env": USE_JSONB,
                     "optimizations_applied": _connection_optimized
-                }
+                },
+                "table_stats": {}
             }
+            
+            try:
+                # Get table statistics
+                if db.bind.dialect.name == "postgresql":
+                    table_stats_query = text("""
+                        SELECT 
+                            schemaname,
+                            tablename,
+                            n_tup_ins as inserts,
+                            n_tup_upd as updates,
+                            n_tup_del as deletes,
+                            n_live_tup as live_rows,
+                            n_dead_tup as dead_rows
+                        FROM pg_stat_user_tables 
+                        WHERE tablename = 'chat'
+                    """)
+                    
+                    result = db.execute(table_stats_query).fetchone()
+                    if result:
+                        stats["table_stats"] = {
+                            "inserts": result.inserts,
+                            "updates": result.updates,
+                            "deletes": result.deletes,
+                            "live_rows": result.live_rows,
+                            "dead_rows": result.dead_rows,
+                        }
+                
+                # Get index usage statistics for PostgreSQL
+                if db.bind.dialect.name == "postgresql":
+                    index_stats_query = text("""
+                        SELECT 
+                            indexrelname as index_name,
+                            idx_tup_read as tuples_read,
+                            idx_tup_fetch as tuples_fetched,
+                            idx_scan as scans
+                        FROM pg_stat_user_indexes 
+                        WHERE relname = 'chat'
+                        ORDER BY idx_scan DESC
+                    """)
+                    
+                    index_results = db.execute(index_stats_query).fetchall()
+                    stats["index_usage"] = [
+                        {
+                            "index_name": row.index_name,
+                            "tuples_read": row.tuples_read,
+                            "tuples_fetched": row.tuples_fetched,
+                            "scans": row.scans
+                        }
+                        for row in index_results
+                    ]
+                    
+            except Exception as e:
+                log.warning(f"Could not retrieve extended database stats: {e}")
+                
             return stats
 
     def clear_cache(self):
@@ -1966,6 +2086,335 @@ class ChatTable:
             status["error"] = f"Critical error getting index status: {e}"
         
         return status
+
+    @performance_monitor
+    def get_chats_by_user_id_and_search_text_enhanced(
+        self,
+        user_id: str,
+        search_text: str,
+        include_archived: bool = False,
+        skip: int = 0,
+        limit: int = 60,
+        use_full_text_search: bool = True,
+    ) -> list[ChatModel]:
+        """
+        Enhanced search with PostgreSQL full-text search support.
+        Falls back to regular search for other databases.
+        """
+        search_text = search_text.lower().strip()
+
+        if not search_text:
+            return self.get_chat_list_by_user_id(user_id, include_archived, skip, limit)
+
+        search_text_words = search_text.split(" ")
+
+        # Extract tag filters
+        tag_ids = [
+            word.replace("tag:", "").replace(" ", "_").lower()
+            for word in search_text_words
+            if word.startswith("tag:")
+        ]
+
+        search_text_words = [
+            word for word in search_text_words if not word.startswith("tag:")
+        ]
+
+        search_text = " ".join(search_text_words)
+
+        with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
+            query = db.query(Chat).filter(Chat.user_id == user_id)
+
+            if not include_archived:
+                query = query.filter(Chat.archived == False)
+
+            dialect_name = db.bind.dialect.name
+            
+            if dialect_name == "postgresql" and use_full_text_search and search_text:
+                # Enhanced PostgreSQL full-text search
+                search_query = " & ".join(search_text.split())  # Convert to tsquery format
+                
+                if is_using_jsonb(db):
+                    # JSONB with full-text search
+                    query = query.filter(
+                        text("""
+                            (to_tsvector('english', Chat.title) @@ plainto_tsquery('english', :search_text))
+                            OR 
+                            EXISTS (
+                                SELECT 1
+                                FROM jsonb_array_elements(Chat.chat->'history'->'messages') AS message
+                                WHERE to_tsvector('english', message->>'content') @@ plainto_tsquery('english', :search_text)
+                            )
+                        """).params(search_text=search_text)
+                    )
+                else:
+                    # JSON with full-text search
+                    query = query.filter(
+                        text("""
+                            (to_tsvector('english', Chat.title) @@ plainto_tsquery('english', :search_text))
+                            OR 
+                            EXISTS (
+                                SELECT 1
+                                FROM json_array_elements(Chat.chat->'history'->'messages') AS message
+                                WHERE to_tsvector('english', message->>'content') @@ plainto_tsquery('english', :search_text)
+                            )
+                        """).params(search_text=search_text)
+                    )
+
+                # Handle tag filtering for PostgreSQL
+                if "none" in tag_ids:
+                    if is_using_jsonb(db):
+                        query = query.filter(text("NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(Chat.meta->'tags') AS tag)"))
+                    else:
+                        query = query.filter(text("NOT EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') AS tag)"))
+                elif tag_ids:
+                    if is_using_jsonb(db):
+                        query = query.filter(
+                            and_(*[
+                                text("Chat.meta->'tags' ? :tag_id_{idx}".format(idx=idx))
+                                .params(**{f"tag_id_{idx}": tag_id})
+                                for idx, tag_id in enumerate(tag_ids)
+                            ])
+                        )
+                    else:
+                        query = query.filter(
+                            and_(*[
+                                text("EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id_{idx})".format(idx=idx))
+                                .params(**{f"tag_id_{idx}": tag_id})
+                                for idx, tag_id in enumerate(tag_ids)
+                            ])
+                        )
+            else:
+                # Fallback to original search method
+                return self.get_chats_by_user_id_and_search_text(
+                    user_id, search_text, include_archived, skip, limit
+                )
+
+            query = query.order_by(Chat.updated_at.desc())
+            all_chats = query.offset(skip).limit(limit).all()
+
+            log.info(f"Enhanced search found {len(all_chats)} chats")
+            return [ChatModel.model_validate(chat) for chat in all_chats]
+
+    def upsert_chat(self, user_id: str, chat_id: str, form_data: ChatForm) -> Optional[ChatModel]:
+        """
+        High-performance UPSERT operation for chat data.
+        Uses PostgreSQL's ON CONFLICT for better performance, falls back to manual upsert for other DBs.
+        """
+        with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
+            dialect_name = db.bind.dialect.name
+            
+            if dialect_name == "postgresql":
+                # Use PostgreSQL's efficient UPSERT with ON CONFLICT
+                chat_data = {
+                    "id": chat_id,
+                    "user_id": user_id,
+                    "title": form_data.chat.get("title", "New Chat"),
+                    "chat": form_data.chat,
+                    "updated_at": int(time.time()),
+                    "created_at": int(time.time()),  # Will be ignored on update
+                }
+                
+                try:
+                    # PostgreSQL UPSERT
+                    upsert_query = text("""
+                        INSERT INTO chat (id, user_id, title, chat, created_at, updated_at, meta)
+                        VALUES (:id, :user_id, :title, :chat, :created_at, :updated_at, '{}')
+                        ON CONFLICT (id) 
+                        DO UPDATE SET 
+                            title = EXCLUDED.title,
+                            chat = EXCLUDED.chat,
+                            updated_at = EXCLUDED.updated_at
+                        RETURNING *
+                    """)
+                    
+                    result = db.execute(upsert_query, chat_data).fetchone()
+                    db.commit()
+                    
+                    # Invalidate cache for this user
+                    self._invalidate_cache_for_user(user_id)
+                    
+                    if result:
+                        return ChatModel.model_validate({
+                            "id": result.id,
+                            "user_id": result.user_id,
+                            "title": result.title,
+                            "chat": result.chat,
+                            "created_at": result.created_at,
+                            "updated_at": result.updated_at,
+                            "share_id": result.share_id,
+                            "archived": result.archived,
+                            "pinned": result.pinned,
+                            "meta": result.meta or {},
+                            "folder_id": result.folder_id,
+                        })
+                except Exception as e:
+                    log.error(f"PostgreSQL UPSERT failed: {e}")
+                    db.rollback()
+                    
+            # Fallback to manual UPSERT for other databases or if PostgreSQL fails
+            existing_chat = self.get_chat_by_id(chat_id)
+            if existing_chat:
+                return self.update_chat_by_id(chat_id, form_data.chat)
+            else:
+                # Create new chat with specific ID
+                chat = ChatModel(
+                    id=chat_id,
+                    user_id=user_id,
+                    title=form_data.chat.get("title", "New Chat"),
+                    chat=form_data.chat,
+                    created_at=int(time.time()),
+                    updated_at=int(time.time()),
+                )
+                
+                result = Chat(**chat.model_dump())
+                db.add(result)
+                db.commit()
+                db.refresh(result)
+                
+                # Invalidate cache for this user
+                self._invalidate_cache_for_user(user_id)
+                
+                return ChatModel.model_validate(result) if result else None
+
+    def bulk_update_chats(self, updates: list[dict]) -> int:
+        """
+        Bulk update multiple chats for better performance.
+        Updates format: [{"id": "chat_id", "title": "new_title", "chat": {...}}, ...]
+        Returns number of updated chats.
+        """
+        if not updates:
+            return 0
+            
+        with get_db() as db:
+            self._ensure_connection_optimized(db)
+            
+            dialect_name = db.bind.dialect.name
+            updated_count = 0
+            affected_users = set()
+            
+            if dialect_name == "postgresql":
+                # Use PostgreSQL's efficient bulk update
+                try:
+                    for update in updates:
+                        if "id" not in update:
+                            continue
+                            
+                        # Track affected user for cache invalidation
+                        chat = db.get(Chat, update["id"])
+                        if chat:
+                            affected_users.add(chat.user_id)
+                        
+                        update_query = text("""
+                            UPDATE chat 
+                            SET title = COALESCE(:title, title),
+                                chat = COALESCE(:chat, chat),
+                                updated_at = :updated_at
+                            WHERE id = :id
+                        """)
+                        
+                        result = db.execute(update_query, {
+                            "id": update["id"],
+                            "title": update.get("title"),
+                            "chat": update.get("chat"),
+                            "updated_at": int(time.time())
+                        })
+                        
+                        updated_count += result.rowcount
+                    
+                    db.commit()
+                    log.info(f"Bulk updated {updated_count} chats")
+                    
+                except Exception as e:
+                    log.error(f"Bulk update failed: {e}")
+                    db.rollback()
+                    updated_count = 0
+            else:
+                # Fallback for other databases
+                for update in updates:
+                    if "id" in update and "chat" in update:
+                        # Track affected user
+                        chat = self.get_chat_by_id(update["id"])
+                        if chat:
+                            affected_users.add(chat.user_id)
+                            
+                        result = self.update_chat_by_id(update["id"], update["chat"])
+                        if result:
+                            updated_count += 1
+            
+            # Invalidate cache for all affected users
+            for user_id in affected_users:
+                self._invalidate_cache_for_user(user_id)
+                            
+            return updated_count
+
+    def optimize_database(self) -> dict:
+        """Run database optimization tasks."""
+        with get_db() as db:
+            results = {"actions": [], "errors": []}
+            
+            try:
+                if db.bind.dialect.name == "postgresql":
+                    # Create indexes if they don't exist
+                    create_gin_indexes_if_needed(db)
+                    create_composite_indexes_if_needed(db)
+                    results["actions"].append("Verified/created indexes")
+                    
+                    # Analyze table for better query planning
+                    db.execute(text("ANALYZE chat;"))
+                    results["actions"].append("Analyzed chat table")
+                    
+                    # Get vacuum recommendations
+                    vacuum_stats = db.execute(text("""
+                        SELECT n_dead_tup, n_live_tup, 
+                               (n_dead_tup::float / GREATEST(n_live_tup, 1)) * 100 as dead_tuple_pct
+                        FROM pg_stat_user_tables 
+                        WHERE tablename = 'chat'
+                    """)).fetchone()
+                    
+                    if vacuum_stats and vacuum_stats.dead_tuple_pct > 10:
+                        results["actions"].append(f"Recommend VACUUM: {vacuum_stats.dead_tuple_pct:.1f}% dead tuples")
+                    
+                    db.commit()
+                
+                elif db.bind.dialect.name == "sqlite":
+                    # SQLite optimizations
+                    db.execute(text("PRAGMA optimize;"))
+                    results["actions"].append("Optimized SQLite database")
+                    
+                    # Clear cache for all users to ensure fresh data
+                    _cache.clear()
+                    results["actions"].append("Cleared application cache")
+                    
+            except Exception as e:
+                results["errors"].append(f"Optimization error: {e}")
+                log.error(f"Database optimization failed: {e}")
+                
+            return results
+
+    def get_safe_message_list(self, chat_id: str) -> list:
+        """
+        SAFETY METHOD: Absolutely guaranteed to return a list.
+        This method should be used by middleware to prevent None iteration errors.
+        """
+        log.info(f"🛡️  SAFETY: get_safe_message_list called with chat_id={chat_id}")
+        try:
+            # Try the standard method first
+            result = self.get_message_list_by_chat_id(chat_id)
+            if result is None:
+                log.warning(f"⚠️  SAFETY: get_message_list_by_chat_id returned None, using empty list")
+                return []
+            if not isinstance(result, list):
+                log.warning(f"⚠️  SAFETY: get_message_list_by_chat_id returned {type(result)}, converting to list")
+                return list(result) if result else []
+            log.info(f"✅ SAFETY: Returning safe list with {len(result)} items")
+            return result
+        except Exception as e:
+            log.error(f"❌ SAFETY: get_safe_message_list failed: {e}, returning empty list")
+            return []
 
 
 Chats = ChatTable()
