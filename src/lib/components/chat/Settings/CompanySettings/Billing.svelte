@@ -272,6 +272,10 @@
 					<div class="text-xs dark:text-customGray-590">
 						Monthly (renews ({dayjs($subscription?.next_billing_date * 1000)?.format('DD.MM.YYYY')}))
 					</div>
+				{:else if $subscription?.plan === 'free'}
+					<div class="text-xs dark:text-customGray-590">
+						Trial ends {dayjs($subscription?.trial_end * 1000)?.format('DD.MM.YYYY')}
+					</div>
 				{/if}
 			</div>
 		</div>

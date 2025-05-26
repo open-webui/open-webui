@@ -9,7 +9,7 @@
 
 	const dispatch = createEventDispatcher();
 
-	import { config, models, settings, user, company, companyConfig, isBlocked } from '$lib/stores';
+	import { config, models, settings, user, company, companyConfig, isBlocked, blockedMessage } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -111,9 +111,9 @@
 		}
 	}
 	$: {
-		if(message?.error?.content?.includes('402: Insufficient credits')){
-			console.log('errr----------------------->')
+		if(message?.error?.content?.includes('402')){
 			isBlocked.set(true);
+			blockedMessage.set(message?.error?.content);
 		}
 	}
 
