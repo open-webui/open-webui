@@ -77,6 +77,7 @@
 
 	export let history;
 	export let taskIds = null;
+	export let chatId = '';
 
 	export let prompt = '';
 	export let files: any[] = [];
@@ -710,6 +711,7 @@
 													($settings?.promptAutocomplete ?? false)}
 												enablePiiDetection={enablePiiDetection}
 												piiApiKey={piiApiKey}
+												conversationId={chatId || ''}
 												onPiiDetected={handlePiiDetected}
 												generateAutoCompletion={async (text) => {
 													if (selectedModelIds.length === 0 || !selectedModelIds.at(0)) {

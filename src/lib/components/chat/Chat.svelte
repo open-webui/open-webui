@@ -851,6 +851,13 @@
 
 				chatTitle.set(chatContent.title);
 
+				// Load PII state for this conversation if available
+				if (chatContent?.piiState && $chatId) {
+					const { PiiSessionManager } = await import('$lib/utils/pii');
+					const piiManager = PiiSessionManager.getInstance();
+					piiManager.loadConversationState($chatId, chatContent.piiState);
+				}
+
 				const userSettings = await getUserSettings(localStorage.token);
 
 				if (userSettings) {
@@ -1961,13 +1968,21 @@
 	const saveChatHandler = async (_chatId, history) => {
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
-				chat = await updateChatById(localStorage.token, _chatId, {
+				// Get PII state for this conversation
+				const { PiiSessionManager } = await import('$lib/utils/pii');
+				const piiManager = PiiSessionManager.getInstance();
+				const piiState = piiManager.getConversationStateForStorage(_chatId);
+
+				const chatData = {
 					models: selectedModels,
 					history: history,
 					messages: createMessagesList(history, history.currentId),
 					params: params,
-					files: chatFiles
-				});
+					files: chatFiles,
+					...(piiState && { piiState })
+				};
+
+				chat = await updateChatById(localStorage.token, _chatId, chatData);
 				currentChatPage.set(1);
 				await chats.set(await getChatList(localStorage.token, $currentChatPage));
 			}
@@ -2097,6 +2112,7 @@
 								transparentBackground={$settings?.backgroundImageUrl ?? false}
 								{stopResponse}
 								{createMessagePair}
+								chatId={$chatId}
 								onChange={(input) => {
 									if (input.prompt !== null) {
 										localStorage.setItem(
@@ -2154,6 +2170,7 @@
 								toolServers={$toolServers}
 								{stopResponse}
 								{createMessagePair}
+								chatId={$chatId}
 								on:upload={async (e) => {
 									const { type, data } = e.detail;
 

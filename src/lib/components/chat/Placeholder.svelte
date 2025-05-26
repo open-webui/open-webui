@@ -29,6 +29,7 @@
 	export let selectedModels: [''];
 
 	export let history;
+	export let chatId = '';
 
 	export let prompt = '';
 	export let files = [];
@@ -203,6 +204,7 @@
 					{transparentBackground}
 					{stopResponse}
 					{createMessagePair}
+					{chatId}
 					placeholder={$i18n.t('How can I help you today?')}
 					onChange={(input) => {
 						if (input.prompt !== null) {
