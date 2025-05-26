@@ -391,18 +391,21 @@ async def get_all_models(request: Request, user: UserModel = None):
             )
         }
 
-        loaded_models = await get_ollama_loaded_models(request, user=user)
-        expires_map = {
-            m["name"]: m["expires_at"]
-            for m in loaded_models["models"]
-            if "expires_at" in m
-        }
+        try:
+            loaded_models = await get_ollama_loaded_models(request, user=user)
+            expires_map = {
+                m["name"]: m["expires_at"]
+                for m in loaded_models["models"]
+                if "expires_at" in m
+            }
 
-        for m in models["models"]:
-            if m["name"] in expires_map:
-                # Parse ISO8601 datetime with offset, get unix timestamp as int
-                dt = datetime.fromisoformat(expires_map[m["name"]])
-                m["expires_at"] = int(dt.timestamp())
+            for m in models["models"]:
+                if m["name"] in expires_map:
+                    # Parse ISO8601 datetime with offset, get unix timestamp as int
+                    dt = datetime.fromisoformat(expires_map[m["name"]])
+                    m["expires_at"] = int(dt.timestamp())
+        except Exception as e:
+            log.debug(f"Failed to get loaded models: {e}")
 
     else:
         models = {"models": []}
