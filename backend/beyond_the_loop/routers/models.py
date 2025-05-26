@@ -25,7 +25,9 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ModelUserResponse])
 async def get_models(user=Depends(get_verified_user)):
-    return Models.get_models_by_user_and_company(user.id, user.company_id)
+    models = Models.get_models_by_user_and_company(user.id, user.company_id)
+    sorted_models = sorted(models, key=lambda m: not m.bookmarked)
+    return sorted_models
 
 
 ###########################

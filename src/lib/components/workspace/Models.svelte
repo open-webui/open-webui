@@ -21,6 +21,7 @@
 		showSidebar
 	} from '$lib/stores';
 	import {
+	bookmarkModel,
 		createNewModel,
 		deleteModelById,
 		getModels as getWorkspaceModels,
@@ -50,6 +51,11 @@
 	import MenuIcon from '../icons/MenuIcon.svelte';
 	import FilterDropdown from './Models/FilterDropdown.svelte';
 	import BackIcon from '../icons/BackIcon.svelte';
+	import BookIcon from '../icons/BookIcon.svelte';
+	import BookmarkIcon from '../icons/BookmarkIcon.svelte';
+	import BookmarkedIcon from '../icons/BookmarkedIcon.svelte';
+
+
 
 	let shiftKey = false;
 
@@ -283,6 +289,17 @@
 	}
 	let hoveredModel = null;
 	let menuIdOpened = null;
+
+	$: console.log(filteredModels, 'filtered Models')
+
+	const bookmarkAssistant = async (id, bookmarkedModel) => {
+		const bookmarked = !bookmarkedModel;
+		const res = await bookmarkModel(localStorage.token, id, bookmarked);
+		if (res) {
+			_models.set(await getModels(localStorage.token));
+			models = await getWorkspaceModels(localStorage.token);
+		}
+	}
 	
 </script>
 
@@ -459,6 +476,14 @@
 					>
 						<div class="flex items-start justify-between">
 							<div class="flex items-center">
+								<button on:click={() => bookmarkAssistant(model.id, model.bookmarked)} class="text-lightGray-100 dark:text-customGray-300">
+									{#if model?.bookmarked}
+										<BookmarkedIcon/>
+									{:else}
+										<BookmarkIcon/>
+									{/if}
+									
+								</button>
 								<div class="flex items-center gap-1 flex-wrap">
 									{#if model.access_control == null}
 										<div
