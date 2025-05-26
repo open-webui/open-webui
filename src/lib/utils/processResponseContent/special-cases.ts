@@ -15,8 +15,6 @@ export const specialCases = (src: string): string => {
 	const processedLines = lines.map((line) => {
 		// 1. 中文 (Chinese, CN)
 		if (/[\u4e00-\u9fa5]/.test(line)) {
-			// Only execute if there are Chinese characters.
-
 			// 1.1. Problems caused by Chinese parentheses
 			/* Discription:
 			 *   When `*` has Chinese parentheses on the inside, markdown parser ignore bold or italic style.
@@ -32,8 +30,6 @@ export const specialCases = (src: string): string => {
 			 */
 
 			if (line.includes('*')) {
-				// Only execute if `*` is found in line.
-
 				// 1.1.1. Handle **bold** with Chinese parentheses
 				line = processCN_01(line, '**', '（', '）');
 				// 1.1.2. Handle *italic* with Chinese parentheses
@@ -71,16 +67,16 @@ function processCN_01(
 ): string {
 	const escapedSymbol = escapeRegExp(symbol);
 	const regex = new RegExp(
-		`(.*?)(?<!${escapedSymbol})(${escapedSymbol})([^${escapedSymbol}]+)(${escapedSymbol})(?!${escapedSymbol})(.*?)`,
+		`(.?)(?<!${escapedSymbol})(${escapedSymbol})([^${escapedSymbol}]+)(${escapedSymbol})(?!${escapedSymbol})(.)`,
 		'g'
 	);
 	return line.replace(regex, (match, l, left, content, right, r) => {
 		const result =
-			(content.startsWith(leftSymbol) || content.endsWith(rightSymbol)) &&
-			(!l || (l && l.length > 0 && isChineseChar(l[l.length - 1]))) &&
-			(!r || (r && r.length > 0 && isChineseChar(r[0])));
+			(content.startsWith(leftSymbol) && l && l.length > 0 && isChineseChar(l[l.length - 1])) ||
+			(content.endsWith(rightSymbol) && r && r.length > 0 && isChineseChar(r[0]));
+
 		if (result) {
-			return ` ${left}${content}${right} `;
+			return `${l} ${left}${content}${right} ${r}`;
 		} else {
 			return match;
 		}
