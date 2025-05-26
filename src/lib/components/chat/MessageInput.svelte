@@ -109,7 +109,9 @@
 	let commandsElement;
 
 	let inputFiles;
+
 	let dragged = false;
+	let shiftKey = false;
 
 	let user = null;
 	export let placeholder = '';
@@ -352,13 +354,6 @@
 		});
 	};
 
-	const handleKeyDown = (event: KeyboardEvent) => {
-		if (event.key === 'Escape') {
-			console.log('Escape');
-			dragged = false;
-		}
-	};
-
 	const onDragOver = (e) => {
 		e.preventDefault();
 
@@ -389,6 +384,30 @@
 		dragged = false;
 	};
 
+	const onKeyDown = (e) => {
+		if (e.key === 'Shift') {
+			shiftKey = true;
+		}
+
+		if (e.key === 'Escape') {
+			console.log('Escape');
+			dragged = false;
+		}
+	};
+
+	const onKeyUp = (e) => {
+		if (e.key === 'Shift') {
+			shiftKey = false;
+		}
+	};
+
+	const onFocus = () => {};
+
+	const onBlur = () => {
+		shiftKey = false;
+		selectedChatId = null;
+	};
+
 	onMount(async () => {
 		loaded = true;
 
@@ -397,7 +416,11 @@
 			chatInput?.focus();
 		}, 0);
 
-		window.addEventListener('keydown', handleKeyDown);
+		window.addEventListener('keydown', onKeyDown);
+		window.addEventListener('keyup', onKeyUp);
+
+		window.addEventListener('focus', onFocus);
+		window.addEventListener('blur', onBlur);
 
 		await tick();
 
@@ -410,7 +433,11 @@
 
 	onDestroy(() => {
 		console.log('destroy');
-		window.removeEventListener('keydown', handleKeyDown);
+		window.removeEventListener('keydown', onKeyDown);
+		window.removeEventListener('keyup', onKeyUp);
+
+		window.removeEventListener('focus', onFocus);
+		window.removeEventListener('blur', onBlur);
 
 		const dropzoneElement = document.getElementById('chat-container');
 
@@ -691,7 +718,7 @@
 															navigator.msMaxTouchPoints > 0
 														))}
 												placeholder={placeholder ? placeholder : $i18n.t('Send a Message')}
-												largeTextAsFile={$settings?.largeTextAsFile ?? false}
+												largeTextAsFile={($settings?.largeTextAsFile ?? false) && !shiftKey}
 												autocomplete={$config?.features?.enable_autocomplete_generation &&
 													($settings?.promptAutocomplete ?? false)}
 												generateAutoCompletion={async (text) => {
@@ -873,7 +900,7 @@
 
 																reader.readAsDataURL(blob);
 															} else if (item.type === 'text/plain') {
-																if ($settings?.largeTextAsFile ?? false) {
+																if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
 																	const text = clipboardData.getData('text/plain');
 
 																	if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
@@ -1104,7 +1131,7 @@
 
 															reader.readAsDataURL(blob);
 														} else if (item.type === 'text/plain') {
-															if ($settings?.largeTextAsFile ?? false) {
+															if (($settings?.largeTextAsFile ?? false) && !shiftKey) {
 																const text = clipboardData.getData('text/plain');
 
 																if (text.length > PASTED_TEXT_CHARACTER_LIMIT) {
