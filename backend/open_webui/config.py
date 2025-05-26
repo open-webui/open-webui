@@ -2146,6 +2146,12 @@ ENABLE_RAG_LOCAL_WEB_FETCH = (
     os.getenv("ENABLE_RAG_LOCAL_WEB_FETCH", "False").lower() == "true"
 )
 
+ENABLE_IMAGE_OCR_FALLBACK = PersistentConfig(
+    "ENABLE_IMAGE_OCR_FALLBACK",
+    "rag.image_ocr_fallback",
+    os.getenv("ENABLE_IMAGE_OCR_FALLBACK", "True").lower() == "true",
+)
+
 YOUTUBE_LOADER_LANGUAGE = PersistentConfig(
     "YOUTUBE_LOADER_LANGUAGE",
     "rag.youtube_loader_language",

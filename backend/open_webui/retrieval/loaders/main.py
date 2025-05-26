@@ -93,6 +93,20 @@ known_source_ext = [
     "json",
 ]
 
+# Image file extensions that support OCR text extraction
+image_source_ext = [
+    "jpg",
+    "jpeg", 
+    "png",
+    "gif",
+    "bmp",
+    "tiff",
+    "tif",
+    "webp",
+    "avif",
+    "svg",
+]
+
 
 class TikaLoader:
     def __init__(self, url, file_path, mime_type=None, extract_images=None):
@@ -201,12 +215,14 @@ class UnstructuredLoader:
     """
     Unstructured.io loader for comprehensive document processing.
     This is the DEFAULT loader when no specific engine is selected.
+    Supports OCR text extraction from images when no vision models are available.
     """
-    def __init__(self, file_path, extract_images=None, chunk_size=1000, chunk_overlap=100):
+    def __init__(self, file_path, extract_images=None, chunk_size=1000, chunk_overlap=100, is_image=False):
         self.file_path = file_path
         self.extract_images = extract_images
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
+        self.is_image = is_image
         self.nltk_ready = self._ensure_nltk_data()
 
     def _ensure_nltk_data(self):
@@ -234,12 +250,27 @@ class UnstructuredLoader:
                 log.info("Retrying NLTK data download before processing...")
                 self.nltk_ready = self._ensure_nltk_data()
             
-            # Use unstructured.io's auto partition with minimal parameters to avoid conflicts
-            elements = partition(filename=self.file_path)
+            # Configure OCR strategy for images
+            partition_kwargs = {"filename": self.file_path}
+            
+            if self.is_image:
+                log.info(f"Processing image file with OCR: {self.file_path}")
+                # Enable OCR for image files to extract text
+                partition_kwargs.update({
+                    "strategy": "ocr_only",  # Use OCR for text extraction from images
+                    "languages": ["eng"],    # Default to English, can be made configurable
+                })
+            
+            # Use unstructured.io's auto partition with OCR support for images
+            elements = partition(**partition_kwargs)
             
             if not elements:
-                log.warning("No elements extracted from document")
-                return [Document(page_content="No content extracted", metadata={"source": self.file_path})]
+                if self.is_image:
+                    log.warning(f"No text extracted from image: {self.file_path}")
+                    return [Document(page_content="No text found in image", metadata={"source": self.file_path, "type": "image_ocr"})]
+                else:
+                    log.warning("No elements extracted from document")
+                    return [Document(page_content="No content extracted", metadata={"source": self.file_path})]
             
                                     # Convert elements to documents with intelligent chunking
             docs = []
@@ -260,6 +291,11 @@ class UnstructuredLoader:
                     "element_id": i,
                     "element_type": element.category if hasattr(element, 'category') else 'unknown',
                 }
+                
+                # Add image-specific metadata
+                if self.is_image:
+                    element_metadata["type"] = "image_ocr"
+                    element_metadata["extraction_method"] = "unstructured_ocr"
                 
                 # Add page number if available and not None (Pinecone rejects null values)
                 if hasattr(element, 'metadata') and element.metadata:
@@ -307,14 +343,22 @@ class UnstructuredLoader:
                 cleaned_metadata = {k: v for k, v in doc.metadata.items() if v is not None}
                 cleaned_docs.append(Document(page_content=doc.page_content, metadata=cleaned_metadata))
             
-            log.info(f"Unstructured.io extracted {len(cleaned_docs)} document elements using chunk_size={self.chunk_size}, min_chunk_size={min_chunk_size}")
+            if self.is_image:
+                log.info(f"Unstructured.io OCR extracted {len(cleaned_docs)} text elements from image using chunk_size={self.chunk_size}, min_chunk_size={min_chunk_size}")
+            else:
+                log.info(f"Unstructured.io extracted {len(cleaned_docs)} document elements using chunk_size={self.chunk_size}, min_chunk_size={min_chunk_size}")
+            
             return cleaned_docs if cleaned_docs else [Document(page_content="No content extracted", metadata={"source": self.file_path})]
             
         except Exception as e:
             error_msg = str(e)
-            log.error(f"Error processing document with Unstructured.io: {error_msg}")
             
-            # Provide specific guidance for common NLTK errors
+            if self.is_image:
+                log.error(f"Error processing image with Unstructured.io OCR: {error_msg}")
+            else:
+                log.error(f"Error processing document with Unstructured.io: {error_msg}")
+            
+            # Provide specific guidance for common errors
             if "punkt_tab" in error_msg or "NLTK" in error_msg:
                 detailed_error = (
                     f"Unstructured.io processing failed due to missing NLTK data: {error_msg}\n"
@@ -323,9 +367,22 @@ class UnstructuredLoader:
                     "2. python -c \"import nltk; nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger_eng')\""
                 )
                 raise Exception(detailed_error)
+            elif "tesseract" in error_msg.lower() and self.is_image:
+                detailed_error = (
+                    f"OCR processing failed due to missing Tesseract: {error_msg}\n"
+                    "To fix this issue, install Tesseract OCR:\n"
+                    "- Ubuntu/Debian: sudo apt-get install tesseract-ocr\n"
+                    "- macOS: brew install tesseract\n"
+                    "- Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki\n"
+                    "Then install Python package: pip install pytesseract"
+                )
+                raise Exception(detailed_error)
             
             # Re-raise the exception to force proper error handling
-            raise Exception(f"Unstructured.io processing failed: {error_msg}")
+            if self.is_image:
+                raise Exception(f"Image OCR processing failed: {error_msg}")
+            else:
+                raise Exception(f"Unstructured.io processing failed: {error_msg}")
 
 
 class Loader:
@@ -349,6 +406,11 @@ class Loader:
     def _is_text_file(self, file_ext: str, file_content_type: str) -> bool:
         return file_ext in known_source_ext or (
             file_content_type and file_content_type.find("text/") >= 0
+        )
+    
+    def _is_image_file(self, file_ext: str, file_content_type: str) -> bool:
+        return file_ext in image_source_ext or (
+            file_content_type and file_content_type.startswith("image/")
         )
 
     def _get_loader(self, filename: str, file_content_type: str, file_path: str):
@@ -426,12 +488,19 @@ class Loader:
         else:
             # DEFAULT: Use Unstructured.io for comprehensive document processing
             # This handles ALL file types with intelligent processing
-            log.info(f"Using DEFAULT Unstructured.io engine for file: {filename}")
+            is_image = self._is_image_file(file_ext, file_content_type)
+            
+            if is_image:
+                log.info(f"Using Unstructured.io with OCR for image file: {filename}")
+            else:
+                log.info(f"Using DEFAULT Unstructured.io engine for file: {filename}")
+                
             loader = UnstructuredLoader(
                 file_path=file_path,
                 extract_images=self.kwargs.get("PDF_EXTRACT_IMAGES"),
                 chunk_size=self.kwargs.get("CHUNK_SIZE", 1000),
-                chunk_overlap=self.kwargs.get("CHUNK_OVERLAP", 100)
+                chunk_overlap=self.kwargs.get("CHUNK_OVERLAP", 100),
+                is_image=is_image
             )
 
         return loader

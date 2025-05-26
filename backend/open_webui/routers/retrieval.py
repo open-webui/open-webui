@@ -1067,6 +1067,9 @@ class ConfigForm(BaseModel):
     # Integration settings
     ENABLE_GOOGLE_DRIVE_INTEGRATION: Optional[bool] = None
     ENABLE_ONEDRIVE_INTEGRATION: Optional[bool] = None
+    
+    # Image OCR fallback settings
+    ENABLE_IMAGE_OCR_FALLBACK: Optional[bool] = None
 
     # Web search settings
     web: Optional[WebConfig] = None

@@ -321,7 +321,11 @@
 				['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/avif'].includes(file['type'])
 			) {
 				if (visionCapableModels.length === 0) {
-					toast.error($i18n.t('Selected model(s) do not support image inputs'));
+					// Smart Fallback: Use OCR text extraction when no vision models are available
+					// This feature can be disabled via ENABLE_IMAGE_OCR_FALLBACK config
+					console.log('No vision models available, using OCR text extraction for image:', file.name);
+					toast.info($i18n.t('No vision models available. Extracting text from image using OCR...'));
+					uploadFileHandler(file);
 					return;
 				}
 				let reader = new FileReader();
