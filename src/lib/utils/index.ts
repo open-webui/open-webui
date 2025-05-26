@@ -20,8 +20,6 @@ import markedExtension from '$lib/utils/marked/extension';
 import markedKatexExtension from '$lib/utils/marked/katex-extension';
 import hljs from 'highlight.js';
 
-import { specialCases } from '$lib/utils/processResponseContent/special-cases';
-
 //////////////////////////
 // Helper functions
 //////////////////////////
@@ -92,11 +90,83 @@ export const sanitizeResponseContent = (content: string) => {
 };
 
 export const processResponseContent = (content: string) => {
-	// This function is used to process the response content
-	// before the response content is rendered.
-	content = specialCases(content);
+	// This function is used to process the response content before the response content is rendered.
+	/* Discription:
+	 *   In future development, it is recommended to seperate `line to line` processes and `whole content` processes.
+	 *   To improve the maintainability, contents here are numbered with indexes to indicate their function，
+	 *   because the solution to problems under same category might be scattered between `line to line` and `whole content`.
+	 *
+	 * Index:
+	 *   1. Tackle "Model output issue not following the standard Markdown/LaTeX format".
+	 *      - This part obeys the rule of modifying original text as **LITTLE** as possible.
+	 *      - Detailed documentation of rendering problems must be provided in comments.
+	 *   1.1. Special cases
+	 *   1.1.1. 中文 (Chinese, CN)
+	 *   1.1.1.1. Handle **bold** with Chinese parentheses
+	 *   1.1.1.2. Handle *italic* with Chinese parentheses
+	 */
+
+	// Process from line to line.
+	const lines = content.split('\n');
+	const processedLines = lines.map((line) => {
+		// 1.1.1. 中文 (Chinese, CN)
+		if (/[\u4e00-\u9fa5]/.test(line)) {
+			// 1.1.1.x Problems caused by Chinese parentheses
+			/* Discription:
+			 *   When `*` has Chinese parentheses on the inside, markdown parser ignore bold or italic style.
+			 *   - e.g. `**中文名（English）**中文内容` will be parsed directly,
+			 *          instead of `<strong>中文名（English）</strong>中文内容`.
+			 * Solution:
+			 *   Adding a `space` before and after the bold/italic part can solve the problem.
+			 *   - e.g. `**中文名（English）**中文内容` -> ` **中文名（English）** 中文内容`
+			 * Note:
+			 *   Similar problem was found with English parentheses and other full delimiters,
+			 *   but they are not handled here because they are less likely to appear in LLM output.
+			 *   Change the behavior in future if needed.
+			 */
+			if (line.includes('*')) {
+				// 1.1.1.1. Handle **bold** with Chinese parentheses
+				line = processResponseContent_CN_ParenthesesRelated(line, '**', '（', '）');
+				// 1.1.1.2. Handle *italic* with Chinese parentheses
+				line = processResponseContent_CN_ParenthesesRelated(line, '*', '（', '）');
+			}
+		}
+		return line;
+	});
+	content = processedLines.join('\n');
+
 	return content.trim();
 };
+
+function isChineseChar(char: string): boolean {
+	return /\p{Script=Han}/u.test(char);
+}
+
+// Helper function for `processResponseContent` case `1.1.1.1` and `1.1.1.2`
+function processResponseContent_CN_ParenthesesRelated(
+	line: string,
+	symbol: string,
+	leftSymbol: string,
+	rightSymbol: string
+): string {
+	// NOTE: If needed, with a little modification, this function can be applied to more cases.
+	const escapedSymbol = escapeRegExp(symbol);
+	const regex = new RegExp(
+		`(.?)(?<!${escapedSymbol})(${escapedSymbol})([^${escapedSymbol}]+)(${escapedSymbol})(?!${escapedSymbol})(.)`,
+		'g'
+	);
+	return line.replace(regex, (match, l, left, content, right, r) => {
+		const result =
+			(content.startsWith(leftSymbol) && l && l.length > 0 && isChineseChar(l[l.length - 1])) ||
+			(content.endsWith(rightSymbol) && r && r.length > 0 && isChineseChar(r[0]));
+
+		if (result) {
+			return `${l} ${left}${content}${right} ${r}`;
+		} else {
+			return match;
+		}
+	});
+}
 
 export function unescapeHtml(html: string) {
 	const doc = new DOMParser().parseFromString(html, 'text/html');
