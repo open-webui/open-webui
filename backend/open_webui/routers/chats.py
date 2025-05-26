@@ -211,10 +211,10 @@ async def get_chats_by_folder_id(folder_id: str, user=Depends(get_verified_user)
 ############################
 
 
-@router.get("/pinned", response_model=list[ChatResponse])
+@router.get("/pinned", response_model=list[ChatTitleIdResponse])
 async def get_user_pinned_chats(user=Depends(get_verified_user)):
     return [
-        ChatResponse(**chat.model_dump())
+        ChatTitleIdResponse(**chat.model_dump())
         for chat in Chats.get_pinned_chats_by_user_id(user.id)
     ]
 
